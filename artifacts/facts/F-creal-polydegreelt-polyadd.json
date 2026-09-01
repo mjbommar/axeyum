@@ -5,7 +5,7 @@
   "statement": "If polyDegreeLt c n and polyDegreeLt g n then polyDegreeLt (polyAdd c g) n -- the degree bound is preserved (not merely bounded by the max) when both summands already share the same bound n.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal.polyDegreeLt x0 x2) -> ((x4 : CReal.polyDegreeLt x1 x2) -> CReal.polyDegreeLt (CReal.polyAdd x0 x1) x2)))))",
+    "statement": "theorem CReal.polyDegreeLt_polyAdd : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal.polyDegreeLt x0 x2) -> ((x4 : CReal.polyDegreeLt x1 x2) -> CReal.polyDegreeLt (CReal.polyAdd x0 x1) x2)))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

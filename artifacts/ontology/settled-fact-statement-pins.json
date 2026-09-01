@@ -5,7 +5,7 @@
   "coverage_floor": {
     "max_unpinned_settled": 0,
     "min_identity_bound": 2076,
-    "max_header_exempt": 67
+    "max_header_exempt": 0
   },
   "amendments": [
     {
@@ -54,6 +54,638 @@
       "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
       "recorded_by": "coordinator",
       "recorded_in": "da61dcef9"
+    },
+    {
+      "fact_id": "F:cassini-as-determinant-of-a-matrix-power",
+      "date": "2026-08-31",
+      "from_sha256": "3522a7ed0d14737c8c724c3205c476bf610267558effa94447897e2b3c049776",
+      "to_sha256": "7a1eba098faf69a18544dd6c800caaec5312f42eef7e6f3b1d5f3936c05e5ee9",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Rat.det2_fib (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Rat.det2_fib : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:cassini-identity-over-constructed-integers",
+      "date": "2026-08-31",
+      "from_sha256": "aea2558cc06f655bcfa3f988a41e61c115252ebefba90ae3c40ac20d72031d2b",
+      "to_sha256": "43a0f2dcbe5bc31c44fbfbabe9a67a5b3e84d57df4b0b9dd210007d06c14fb7b",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Int.fib_cassini (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Int.fib_cassini : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:cauchy-schwarz-over-constructed-plane",
+      "date": "2026-08-31",
+      "from_sha256": "321f805e953a45de42f1af1fc6b09e01b22c79a2a033e6f33254d1e7d0f32a72",
+      "to_sha256": "8a7170922b6e585acc5edf5aa80306960cca831e586a09512249ae47c10022ad",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CPoint.cauchy_schwarz (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CPoint.cauchy_schwarz : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-factorquotient-degreelt",
+      "date": "2026-08-31",
+      "from_sha256": "64e4a00ac5e5372a174e5aa4eb88beb42824f1e742fbe01ea76846af5045082f",
+      "to_sha256": "52639b52e9785940252c05b176cf9e9f8c43c79ed71e5d71884da0b50d9b241d",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.factorQuotient_degreeLt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.factorQuotient_degreeLt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-factorquotient",
+      "date": "2026-08-31",
+      "from_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+      "to_sha256": "ff927eb83d8570c869860afc1c0a925c97e44fc7b7e6bd37a594130ef8dd8c92",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.factorQuotient (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def Complex.factorQuotient : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-hornerfromtop-succsucc",
+      "date": "2026-08-31",
+      "from_sha256": "47cab076e80b470e5386a4c18290801c0eeac387f14384c03fca64aefcd50797",
+      "to_sha256": "fad04414dc5cca1e7b9ae0554db6cfc40433d1b0e23d6a87be08c829f7195c98",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop_succ_succ (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.hornerFromTop_succ_succ : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-hornerfromtop-succzero",
+      "date": "2026-08-31",
+      "from_sha256": "db3e06a6bbf7085bca6b9f1085f40f824f1a70dfb7250c9be92894fb667383d1",
+      "to_sha256": "b681a179fffd60c0fa41b463e5ddc26a1cdd23cd83c129c1fbd9c13631084ca6",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop_succ_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.hornerFromTop_succ_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-hornerfromtop-zero",
+      "date": "2026-08-31",
+      "from_sha256": "17d34e9efb719fdc43a6fc8933ebda3a3aa467f3740231b5e379aec2aa28f70d",
+      "to_sha256": "36bc21fa7322efa4f7cde8197a42f4e0a0072016c2aa08a7f76510ab1b870563",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.hornerFromTop_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-hornerfromtop",
+      "date": "2026-08-31",
+      "from_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+      "to_sha256": "f983f82bd0bbbc4dcf64ca0757bae21218900a0c47dee867929760db499bb303",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def Complex.hornerFromTop : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-polydegreelt-polymul",
+      "date": "2026-08-31",
+      "from_sha256": "1efdd08ee0c40ad3f80340845ac326383f5fe959d32a17b49e43b5bbc4b9b677",
+      "to_sha256": "e35e71188e80b0996e9a44659018633d2936dbef2b9d893b40881a88f857018d",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.polyDegreeLt_polyMul (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.polyDegreeLt_polyMul : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:covariance-sq-le-variance-mul-over-constructed-rationals",
+      "date": "2026-08-31",
+      "from_sha256": "9280ae909f188f9953b7bf00788069893a157fb8ae291237d84b69413236bd3a",
+      "to_sha256": "8009837b931e3dcb8944ad40de2a8a962bf4bbd9e7372ea96e29bdb1fadfd95b",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Rat.covariance_sq_le_variance_mul (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Rat.covariance_sq_le_variance_mul : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:cramer-rule-forward-direction-over-constructed-rationals",
+      "date": "2026-08-31",
+      "from_sha256": "508e1c97d15ffa76c6a348a1abd228da08d290b4043f2670777db0dab28e5d18",
+      "to_sha256": "3eeebab067b92aecf602a471e2a81a5d93327874b43d4150d3e1ecb560b0fc16",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Rat.cramer_two_unique_x (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Rat.cramer_two_unique_x : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-alternatingbracket",
+      "date": "2026-08-31",
+      "from_sha256": "41624e7719de60d0b238e69b022883eaa581f8717c31c7ae374e88db34212ac0",
+      "to_sha256": "049dfb41fecfbdf89ae3c9ae5d1d268bfe09f93729486e307a95ddfde3fd4735",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.alternatingBracket (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.alternatingBracket : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-alternatingeleo",
+      "date": "2026-08-31",
+      "from_sha256": "fefade6d2d8c8ebde579090989881f2d0243e63eeeb85e66d547fe4fde2c856b",
+      "to_sha256": "54329c73ab7745a6dcb79073656ceba380c018368adf6b65bb37030fecea6582",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.alternatingELeO (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.alternatingELeO : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-crossingclose",
+      "date": "2026-08-31",
+      "from_sha256": "730d86a002da03bb9231fc37cf84a4e5ad487337374bd503582f8f06a180b0d5",
+      "to_sha256": "9959935d8333c83402181f50e108538220a0efcfec41612d4d9e036bd0aae580",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.crossingClose (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.crossingClose : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-meshscaledleofge",
+      "date": "2026-08-31",
+      "from_sha256": "db162acea724ca0079a5efdaef0415253ab4da606240313a2f6e490acb764e28",
+      "to_sha256": "940eae5ebdce12f3b9fca8f766fb07808cf2cb1ea1baff3e309b27958fb68230",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.meshScaledLeOfGe (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.meshScaledLeOfGe : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-negonepowdouble",
+      "date": "2026-08-31",
+      "from_sha256": "5d681da90c0164079fe07390ac68467f55a3da6c8e9a96b3c13514ea48134dd1",
+      "to_sha256": "2d071ed8570c3ee7a76bd0dda728c1a298852587cdb868fb54d54a2de30a06b4",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.negOnePowDouble (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.negOnePowDouble : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyadd",
+      "date": "2026-08-31",
+      "from_sha256": "8d751421fe400a5e31f6cea7695766e042284a15dd7a679ff43ebeba1bb75396",
+      "to_sha256": "22147e659d85ebeb60134606f4769c6b3b50afeb6df578738a6f5d862306d68e",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyAdd (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyAdd : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polydegreelt-polyadd",
+      "date": "2026-08-31",
+      "from_sha256": "aed26d190860a8367bfe5a01bd685d82be89cd3ce0f478e4098e318619b6ac43",
+      "to_sha256": "aafdc9f86c4552edf5862b9c712a7444cf103425e63434596b56885b23c625d2",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyDegreeLt_polyAdd (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyDegreeLt_polyAdd : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polydegreelt-polyscale",
+      "date": "2026-08-31",
+      "from_sha256": "7ec516ea5e4588784789533b6d485bc1e486cb0fdcb19ca618db931624871de4",
+      "to_sha256": "10d46ff42b7bfd1584ea1f8c5ae41bc17fe039dd941f9b32e5bc81803aaa05f8",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyDegreeLt_polyScale (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyDegreeLt_polyScale : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polydegreelt",
+      "date": "2026-08-31",
+      "from_sha256": "41102d058f00ed60338abc311db53e8ee555dff34eec60c989372cab7685aa24",
+      "to_sha256": "89862f85fd5fe80a493684f1e12d5c4c8ce76095f89df63c204a567dbb9d4fc2",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyDegreeLt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyDegreeLt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyeval-polyadd",
+      "date": "2026-08-31",
+      "from_sha256": "ccc9ef14386642a23608a6af393e79fa7431adeb1b3a6b4c99dc23586514c63b",
+      "to_sha256": "ec810e30d7b1d19f308654a9131c8ca604817254aa5b764dd00c6e5204aa1d6d",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval_polyAdd (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyEval_polyAdd : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyeval-polyscale",
+      "date": "2026-08-31",
+      "from_sha256": "23dc28a32f66c139c9bb1d09cc6f09a3856c2dc5ed9ae06c95b5170dc048a6b9",
+      "to_sha256": "75b030e2d9a62a3a2357b06e0fb574aed7d177b9223474dfa0d22bc9973a1394",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval_polyScale (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyEval_polyScale : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyeval-succ",
+      "date": "2026-08-31",
+      "from_sha256": "8800ad6a1298245c3bc0b6a42e05d0bf1915113a3c89ec01e7b9b586c156e4e1",
+      "to_sha256": "e905c9c12caaa3d2887fb74fed55fe7382485fe3982ec5267c50f12c478de998",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval_succ (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyEval_succ : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyeval-zero",
+      "date": "2026-08-31",
+      "from_sha256": "08187cbbe31305f6e01338e169dcf7481c6faca6ccd7fdac10289a426277b4eb",
+      "to_sha256": "be31f59116945c38e1560530f03299ed3b0ea9e59c3f1eafabf73c6dd1c7f14a",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyEval_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyeval",
+      "date": "2026-08-31",
+      "from_sha256": "091438075dfa0c8352ac7ef78bcb16d81f6b65fe108263fd62900e40878e536d",
+      "to_sha256": "8f60520e236fc15a255a3f1d4dc0f9a3794229977d0178015ba7166d9d78fb0a",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyEval : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-polyscale",
+      "date": "2026-08-31",
+      "from_sha256": "6e96602d4ee761adc335a0c12cd7dc2e283ce217914ea5e9d43f2d7b9ad71d79",
+      "to_sha256": "a2713165fcc12b82a2c079769505e2653c6260c7c885189dccde41391db28786",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyScale (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyScale : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-uniform-converges-geom-half",
+      "date": "2026-08-31",
+      "from_sha256": "5be9104fc8470b8b0d7b84678f0119cd8a66dde2dfbd2da42f3fd63ed28ccf5b",
+      "to_sha256": "2cc079fdb5c78d217efc9aabf4d6f66cf7599590b28a0f4ddb769a0903d51287",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.uniform_converges_geom_half (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.uniform_converges_geom_half : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-uniform-converges-id",
+      "date": "2026-08-31",
+      "from_sha256": "9e472ae59218e2096ca771121722834a9245f4d210b43fd3278e4622384c5e6a",
+      "to_sha256": "64bdf671f11f5d14c3290ce8a907ffb12cadb1d9ffb95638563050da15b1b04d",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.uniform_converges_id (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.uniform_converges_id : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-uniform-limit-uniformly-continuous",
+      "date": "2026-08-31",
+      "from_sha256": "f0bcecd0cdf40d9b09c9a162a0cf3a8f50003c8fe83a1ba08144124cebbaec26",
+      "to_sha256": "17598448cfa73ed8cbf1e07581528ff28f36ae517d3a626471f3f7a5068c324f",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.uniform_limit_uniformly_continuous (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.uniform_limit_uniformly_continuous : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:creal-uniformconvergeson",
+      "date": "2026-08-31",
+      "from_sha256": "0ae1804c6089733658ce542f64b50ea1027c9f25940a13063d7af6cadc5dcfcf",
+      "to_sha256": "23d11c659377aa5605f14276d85499bcb898ce2c13afcfbcf3f41f1ab857063e",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.UniformConvergesOn (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `inductive CReal.UniformConvergesOn : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:determinant-multiplicative-over-constructed-rationals",
+      "date": "2026-08-31",
+      "from_sha256": "4e2bd1dc0611bbc27d0717434adaeb19515369c514ae74482ac3d78225ec6479",
+      "to_sha256": "9edb8eabb4d8b8b302a54e8c25d1f0be74b9e8cad5308fa69d00928d806dca50",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Rat.det2_mul (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Rat.det2_mul : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:fermat-little-theorem-over-constructed-naturals",
+      "date": "2026-08-31",
+      "from_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
+      "to_sha256": "5b1a1b3ccaf2520e7517cc9da933ddd65019d0881174be6ee7e20c487ac40ca0",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.pow_prime_modeq_self (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.pow_prime_modeq_self : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
+      "date": "2026-08-31",
+      "from_sha256": "11865c055a6f373f1ad61585e35d8f6c6bbe82e6c7579746b197a4c45831b930",
+      "to_sha256": "299fec4a2257a19355ead59020192d63d5d7d99e29e27e4c6fd4c15502ae8036",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.sumRange_mul_eq_diag_add_corner (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.sumRange_mul_eq_diag_add_corner : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
+      "date": "2026-08-31",
+      "from_sha256": "c56c1af1063cbb3119612670b8e1777395a5a8b0d00c8f82499de1ed8b2579e3",
+      "to_sha256": "eef9ade28f74389da17e65e7672cf31a4293d7b42337dafc199ce54f927fdbb9",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.sumRange_rect_eq_diag_add_corner (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.sumRange_rect_eq_diag_add_corner : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:geometry-stewart-over-constructed-reals",
+      "date": "2026-08-31",
+      "from_sha256": "f1502205ecb6460bb2198bb682feddd13a035773fee491be71630239f4fa6d82",
+      "to_sha256": "2d436b7a2ff09afcede885e0a9588dedc1de1c6a9ffbde818161a8f84d823ce8",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CPoint.stewart (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CPoint.stewart : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:geometry-varignon-over-constructed-reals",
+      "date": "2026-08-31",
+      "from_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589",
+      "to_sha256": "b0366da339735370b7bc28951222a495edac65d4144fcd114d6663c9511b163f",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CPoint.varignon_vector_parallel (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CPoint.varignon_vector_parallel : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:menelaus-and-ceva-over-constructed-plane",
+      "date": "2026-08-31",
+      "from_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
+      "to_sha256": "90f9882f7dc062254236e92f8c333591684e6669db377d0bdacd84648952eae7",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CPoint.menelaus_collinear_of_ratio_product (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CPoint.menelaus_collinear_of_ratio_product : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-binary-rec-fuel-irrelevance",
+      "date": "2026-08-31",
+      "from_sha256": "d2415be904a387ce4e2fd88715c9784b4201a435f7a3c68245632b9c27cf13a3",
+      "to_sha256": "2a58a65de35c377d8c0ab3b38c65ecdb5d2edf624f07ae832eaf42990d6aa164",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.binaryRecAux_agree_of_fuel (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.binaryRecAux_agree_of_fuel : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-binary-rec-succ",
+      "date": "2026-08-31",
+      "from_sha256": "f2df54c1baeec24f1dbd50edc24d62c97138fdb618c1a9f7abcb1067b81b62fd",
+      "to_sha256": "d29fc8c2595e3e9d4a2f72c8e095fb3d5929b73e87a1847ac58e6005cce7ab71",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.binaryRec_succ (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.binaryRec_succ : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-and-eq-land-three-five",
+      "date": "2026-08-31",
+      "from_sha256": "178c80a192d4944baa557340ee19cde1e527723d3410dee69d2de62f6e20f555",
+      "to_sha256": "40e4922ab460ad70d5207dfeb35e939935b871dbdc31c30cb3f950e527847212",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_and_eq_land_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_and_eq_land_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-and-eq-land",
+      "date": "2026-08-31",
+      "from_sha256": "8e8299eedc3985898bff1ce0e327aaf5a6d7a7c9d54cd383f91c8b80448e2c05",
+      "to_sha256": "70d0e0bd8a8f81f28efb08551e2bf5a12ee9fe8ca77d73db7e5a0b53c10a4a29",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_and_eq_land (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_and_eq_land : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-bit",
+      "date": "2026-08-31",
+      "from_sha256": "d96d67d7b44417e96d92d87898d9d68ba677dedd8cd4d02f63627a0377b26fc2",
+      "to_sha256": "7b4d3679cff6144239afc6a5ab2ffbadb39dd96677573a74944824939c7c297f",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_bit' (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_bit' : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-comm",
+      "date": "2026-08-31",
+      "from_sha256": "793d31134bbe75c27023c5c6b92db68b21c9bf83e7cb4e61f0af658c3287f04b",
+      "to_sha256": "9d3141665705964dc4fd4eb38a763011a6b0d286548f78a3a9a06e491c5ec9d9",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_comm (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_comm : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-or-eq-lor-three-five",
+      "date": "2026-08-31",
+      "from_sha256": "8a73f2c69ed7f14e5801a5967f03c77e06636f5be17e5193fc79785b44ebceec",
+      "to_sha256": "3b4ab40364f66c297e55482229655a24785564ded226734b3dd4d8643bccd2d8",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_or_eq_lor_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_or_eq_lor_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-or-eq-lor",
+      "date": "2026-08-31",
+      "from_sha256": "bf0cc45f6d2bf1b71b436f3fb05832b9e90cb5ae24285a20562fe4ea1e6138a3",
+      "to_sha256": "4b45e9d571d7084a89fc5b2f4649219dbb7f8eb0edc5e9c871615f5c806baa12",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_or_eq_lor (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_or_eq_lor : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-swap",
+      "date": "2026-08-31",
+      "from_sha256": "ca9b8977f42f6a0bc61397472c16879089a13f16a1b7fbef2e860b84e48e6fe2",
+      "to_sha256": "a3eda38575023d8c98a9d006fc12f7230a81c03ac00e2abdcdbd3c79a4759a77",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_swap (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_swap : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-xor-three-five",
+      "date": "2026-08-31",
+      "from_sha256": "df6c99a945a8b39598c0ac39777ddc99d8de87da4906e407bcc5d2a3f02eee2e",
+      "to_sha256": "667915edaa0ee66d92e6651f836c7ee55eb2c6434f97a17cb2906420d4d9f0fb",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_xor_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_xor_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-zero-left",
+      "date": "2026-08-31",
+      "from_sha256": "95cd2796621e27f733b9ba41de8bf0370342bcad612df996f166cd148c344cea",
+      "to_sha256": "aab018163d17cfa091e85c9d77fe93b0cf561d89838b7f3226d368acf3558007",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_zero_left (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_zero_left : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-zero-right",
+      "date": "2026-08-31",
+      "from_sha256": "2c4995e9d335c6cc1f898e824093b92389b8564e6a74c608ce16db7e2bf28cb2",
+      "to_sha256": "ba88f0b8f903dfb0e2b632b323ac54a2e2f60cf524da50a61c57878de2caf4be",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_zero_right (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_zero_right : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-coprime-of-lt-minfac",
+      "date": "2026-08-31",
+      "from_sha256": "b4485d76a7dd8d927154c112a9da243c4013370070e544b969150446bc9bdc69",
+      "to_sha256": "4eb7268c70e2db428aae88f03a37541536ff23b528d28e54d6018a8f72488854",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.coprime_of_lt_min_fac (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.coprime_of_lt_min_fac : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-eq-of-testbit-eq",
+      "date": "2026-08-31",
+      "from_sha256": "2121a177dc6cf4a64e44fa3c411ab31ca15dd44e9e0e427bc2f277a4bd73efd2",
+      "to_sha256": "5b2ad1da1b2326a189d5f4cff4a57d7ce2be3007267f5c2988e678cedf7acd5f",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.eq_of_testBit_eq (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.eq_of_testBit_eq : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-even-xor",
+      "date": "2026-08-31",
+      "from_sha256": "22012a1f800cdfd9b2c14e79fe220fce350f7827d435bab844e6cd340de683ea",
+      "to_sha256": "aa4cb9502e9797782e3ec17db6d8a3348f423d97f3a86e7b074b1be870b560de",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.even_xor (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.even_xor : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-exists-most-significant-bit",
+      "date": "2026-08-31",
+      "from_sha256": "bae38c6297a08ab635924859c29166f7015149d77f971853b9b43297c1adb454",
+      "to_sha256": "ef04cf3a504c422318f44429be03fb446650a6a6aca6741887084f7a1034eb41",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.exists_most_significant_bit (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.exists_most_significant_bit : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-land-assoc",
+      "date": "2026-08-31",
+      "from_sha256": "7c8b84e5f8f2ecb0c34abc865a34f96ea4108f10bdb6fab74f8b3951cc728268",
+      "to_sha256": "dbb1f4ea2ee841b341024efa35d759952a3da6e715bed83365c52316028ac631",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.land_assoc (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.land_assoc : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-land-aux-eq-land-of-le",
+      "date": "2026-08-31",
+      "from_sha256": "0739d690d10e367c2f9bc71da7bebc5020c09091f54fc0fdb2efc501a175320f",
+      "to_sha256": "905c7ad3603596dd2bb69cf2d4d7e0edcea7d699b79c52990f861f0bcf4150db",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.land_aux_eq_land_of_le (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.land_aux_eq_land_of_le : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-land-bit",
+      "date": "2026-08-31",
+      "from_sha256": "c441a0ca8530d23bc80a46e656056fd3e3dbab5e7d17fa5d1e58e5964c5acd4e",
+      "to_sha256": "2353a24d8bb563508ae19f3d4139e74f24d86331b2b5c0b2fb7c070fabde64a2",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.land_bit (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.land_bit : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-land-comm",
+      "date": "2026-08-31",
+      "from_sha256": "6aa86b3686190ba93a1457e0e30eef941e818a0ef2b3bfbeb6019f3400543692",
+      "to_sha256": "777083f8077e1ab6e54a07fad428931044d0bf89b8eea3ffa69c960812c8a0b2",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.land_comm (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.land_comm : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-ldiff-bit",
+      "date": "2026-08-31",
+      "from_sha256": "1738fbe2f623c6184b8cba8bc9469278ce5d9abae247f078eaf2c52521033530",
+      "to_sha256": "36d30181577f87d24e643a51f708f454caf7ebbff01407a6f96409493a51285b",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.ldiff_bit (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.ldiff_bit : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-lor-assoc",
+      "date": "2026-08-31",
+      "from_sha256": "913735abd2993140b76003ad69467924031d1f63cb165bffea90a80e422bc685",
+      "to_sha256": "658eaf8b85e76aad4d681b033b0e26c273bf9f83bec0fcec1f8763c230a7f258",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.lor_assoc (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.lor_assoc : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-lor-bit",
+      "date": "2026-08-31",
+      "from_sha256": "d4aef96caa5b38f60615d0fa1f96a7894be10688bfbca200155b2fba322989f3",
+      "to_sha256": "4fd301c94b4e058676be1102484256eb31fed0531b6961e11b15f264710ed6ee",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.lor_bit (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.lor_bit : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-lor-comm",
+      "date": "2026-08-31",
+      "from_sha256": "57d2af43bd1694d3be48dd70e3038c4edc67dbea110058f45c2ba508e53db248",
+      "to_sha256": "4cd007552c0e2ce8caf433d83a41d06e6c70113352ca65479eb4f3568f6162e2",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.lor_comm (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.lor_comm : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-lt-of-testbit",
+      "date": "2026-08-31",
+      "from_sha256": "dc4142925e65879931013809a16044757c680b43824ea935d57e5b41ac9dd1d6",
+      "to_sha256": "4adfc7da60f2b8f76cd513463b356bec6d81392210239817c9de36fd862d35bb",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.lt_of_testBit (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.lt_of_testBit : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-mod-two-eq-zero-or-one",
+      "date": "2026-08-31",
+      "from_sha256": "52102355ed922345ad096f9dcd891337bc333883e20becfd7b80e1e7581c09e6",
+      "to_sha256": "c55ee7353087a29083b2b5b7da72c1debe48bbf73c4cf5255311db624f4cfa20",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.mod_two_eq_zero_or_one (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.mod_two_eq_zero_or_one : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-sqrt-one",
+      "date": "2026-08-31",
+      "from_sha256": "d759e7bba09e7494037d6b6d44626cad353d84b62d3f2897f14fb673cd848e1e",
+      "to_sha256": "1b5629555eaf0d88112f97404c0c91ea15b8b0bd922a35da0ed2d7c813890f20",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.sqrt_one (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.sqrt_one : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-sqrt-zero",
+      "date": "2026-08-31",
+      "from_sha256": "4c19e828b4843a77aa74ddc3373bdfa4178f4ad4dd98eeeabf3f1312076b108d",
+      "to_sha256": "1cbdf81833a406962d523b3d5886bd422dbd16cbd16880adad658c249a551f61",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.sqrt_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.sqrt_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-testbit-eq-zero-of-lt",
+      "date": "2026-08-31",
+      "from_sha256": "8caa58b07ce393433f8e278e91c277940e1e023e44399c6ec1656d8b578698ee",
+      "to_sha256": "859d47bd52a583bbc75d92849f426640091bef3c500d6b4084d5a48467aab143",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.testBit_eq_zero_of_lt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.testBit_eq_zero_of_lt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-testbit-land",
+      "date": "2026-08-31",
+      "from_sha256": "2605a8a0d1407176cb7caf317ab10699d9b4b9c49e2a1aef3e1d8667eb11e0fc",
+      "to_sha256": "7ab0d3e3c8a4244bb1e4c8dda19676c437ba496fab0c46778d35dad195943b69",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.testBit_land (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.testBit_land : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-testbit-lor",
+      "date": "2026-08-31",
+      "from_sha256": "50df2832a80f0e44775eaa8369ab22bcd3b393854c23ceb0dba992ffedbb3ff0",
+      "to_sha256": "38dccf6c681cab6f92bf47da29da82803ee0f78d6ffeaa30186e81472948e864",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.testBit_lor (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.testBit_lor : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-testbit-xor",
+      "date": "2026-08-31",
+      "from_sha256": "35d2ded02042b093d18cdc0315b0af42def90f85a7514554a9711d9c3401d9c9",
+      "to_sha256": "41ab493e40ce2fdcdd4a1d63b83e6b5aca8d0d10b1d1c1e50a627200995db766",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.testBit_xor (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.testBit_xor : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-xor-assoc",
+      "date": "2026-08-31",
+      "from_sha256": "955a023fa7c958434cf29d5554115c6a38757bbe559929c3fafed04380c0f87c",
+      "to_sha256": "e554a82717e86ec7464701ebd0ddff82855d568b43fe9e4938accf419db90fc3",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.xor_assoc (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.xor_assoc : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-xor-ne-zero-iff",
+      "date": "2026-08-31",
+      "from_sha256": "90045057e1f030c94d89a8276465a46c1797b3e8ba41767a96383694e9f19287",
+      "to_sha256": "46d9c0e8d71a08374c5df564f44f85c55ce854fd2dc140d7203136ba43991493",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.xor_ne_zero_iff (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.xor_ne_zero_iff : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-xor-xor-cancel-left",
+      "date": "2026-08-31",
+      "from_sha256": "d7a0b24a1abf9212313c03e512e1ea91a64f427336ede0640dd97c4092733d95",
+      "to_sha256": "35be2bd894f956ca1d8ceb5a2069b4a31efc9de5c0bfe232fa6a873a878af719",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.xor_xor_cancel_left (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.xor_xor_cancel_left : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-xor-xor-cancel-right",
+      "date": "2026-08-31",
+      "from_sha256": "39a7d4c4827de0ed2caf1c41d70e50f070351c33ce5bbbf1d039ad7a41b5d47d",
+      "to_sha256": "16be20678777105699b619239ef9f2fc0b64d991cb1069868d593264277c3e72",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.xor_xor_cancel_right (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.xor_xor_cancel_right : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-zero-of-testbit-eq-zero",
+      "date": "2026-08-31",
+      "from_sha256": "6c8a40233817fc01e319628650227439540dab36051e354c607eeeaa4f0d97cc",
+      "to_sha256": "fb63a26c79b5638b2994da28342afcb1020d36531e8e947bb0310586df15791b",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.zero_of_testBit_eq_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.zero_of_testBit_eq_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:natdivsucc-antitone-over-constructed-rationals",
+      "date": "2026-08-31",
+      "from_sha256": "0dd3b8c10c6d2cfa016fd1a1e7239d3bb50b05715324d6f957b01d8b252d1c9a",
+      "to_sha256": "ce97f0c716743562973c4b28ebd44725027609a56b35655c137e22e950c9b92f",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Rat.natDivSucc_antitone (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Rat.natDivSucc_antitone : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:prodrange-collapses-under-a-fixed-point-free-involution",
+      "date": "2026-08-31",
+      "from_sha256": "89bdc4d1186415e5318251298b521954eac939729b7c5b0bf1a36a7c23f78a2e",
+      "to_sha256": "88fdbfcea09ae9de7df3a96222c817a532f2405f8a19717a4fbd9f9de3980cd0",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Int.prod_range_pairing_collapse (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Int.prod_range_pairing_collapse : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:wilson-theorem-over-constructed-integers",
+      "date": "2026-08-31",
+      "from_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
+      "to_sha256": "64a7355ea9d2949253357d81263b9f774b89f5748434e6b50a1e16dc7f082c95",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Int.wilson (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Int.wilson : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-admits-no-compatible-order",
+      "date": "2026-08-31",
+      "from_sha256": "d570df8a21ed8ad9ae565871e2e7398783375b35ce6b0bd63e3ffc7eef1ff596",
+      "to_sha256": "be991eafaa2b42231e74a999623080a45feb3b8a86303a120cfb52c485bb8d87",
+      "reason": "CORRECTION TOWARD THE KERNEL, not a route change and not a widening. `formal.statement` was a hand-written Lean-ish paraphrase that no tool produced and none could check; it is now `Kernel::render_lean`'s own rendering of the SAME declaration `Complex.no_compatible_order`, headed so that `check-settled-fact-statements.py`'s structural bind -- the header must name the fact's `kernel_theorem` -- applies to it. This is the same kind of edit as `66cb03eff`, which replaced hand-written seed types with kernel-dumped ones. The two forms agree hypothesis for hypothesis (le_refl, lt_irrefl, lt_of_le_of_lt, add_le_add, le_congr, sq_nonneg, zero_lt_one, then False), checked by hand against the rendered type; the reader-facing `statement`, which is what most readers see, is BYTE-IDENTICAL (from_prose == to_prose, so no prose digests are recorded here); and the superseded text is preserved verbatim in the fact's `notes`. Nothing is claimed that was not claimed before. The lane's tool `scripts/header-settled-fact-statements.py` REFUSED this one as DIVERGENT precisely because it is a content change; it was made by hand, with this record, rather than made to look mechanical.",
+      "recorded_by": "statement-headers"
     }
   ],
   "pins": [
@@ -241,21 +873,37 @@
     {
       "fact_id": "F:cassini-as-determinant-of-a-matrix-power",
       "language": "lean4",
-      "statement_sha256": "3522a7ed0d14737c8c724c3205c476bf610267558effa94447897e2b3c049776",
+      "statement_sha256": "7a1eba098faf69a18544dd6c800caaec5312f42eef7e6f3b1d5f3936c05e5ee9",
       "prose_sha256": "2350f121ccd5ecba8b39d135f7067deb4c66bcf201b6b089b4c17938f1a4a8f4",
-      "kernel_theorem": "Rat.det2_fib"
+      "kernel_theorem": "Rat.det2_fib",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "3522a7ed0d14737c8c724c3205c476bf610267558effa94447897e2b3c049776",
+          "prose_sha256": "2350f121ccd5ecba8b39d135f7067deb4c66bcf201b6b089b4c17938f1a4a8f4",
+          "kernel_theorem": "Rat.det2_fib"
+        }
+      ]
     },
     {
       "fact_id": "F:cassini-identity-over-constructed-integers",
       "language": "lean4",
-      "statement_sha256": "aea2558cc06f655bcfa3f988a41e61c115252ebefba90ae3c40ac20d72031d2b",
+      "statement_sha256": "43a0f2dcbe5bc31c44fbfbabe9a67a5b3e84d57df4b0b9dd210007d06c14fb7b",
       "prose_sha256": "facd535c3d8cb28dc131c8376eff13ba480524657d7dde9665be80fb90432479",
-      "kernel_theorem": "Int.fib_cassini"
+      "kernel_theorem": "Int.fib_cassini",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "aea2558cc06f655bcfa3f988a41e61c115252ebefba90ae3c40ac20d72031d2b",
+          "prose_sha256": "facd535c3d8cb28dc131c8376eff13ba480524657d7dde9665be80fb90432479",
+          "kernel_theorem": "Int.fib_cassini"
+        }
+      ]
     },
     {
       "fact_id": "F:cauchy-schwarz-over-constructed-plane",
       "language": "lean4",
-      "statement_sha256": "321f805e953a45de42f1af1fc6b09e01b22c79a2a033e6f33254d1e7d0f32a72",
+      "statement_sha256": "8a7170922b6e585acc5edf5aa80306960cca831e586a09512249ae47c10022ad",
       "prose_sha256": "52ca55a6f1a2e6ffa9716c4464437c55239a96a7bcc7cf3624950f5e23ad409b",
       "kernel_theorem": "CPoint.cauchy_schwarz",
       "history": [
@@ -263,6 +911,12 @@
           "language": "lean4",
           "statement_sha256": "321f805e953a45de42f1af1fc6b09e01b22c79a2a033e6f33254d1e7d0f32a72",
           "prose_sha256": "52ca55a6f1a2e6ffa9716c4464437c55239a96a7bcc7cf3624950f5e23ad409b"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "321f805e953a45de42f1af1fc6b09e01b22c79a2a033e6f33254d1e7d0f32a72",
+          "prose_sha256": "52ca55a6f1a2e6ffa9716c4464437c55239a96a7bcc7cf3624950f5e23ad409b",
+          "kernel_theorem": "CPoint.cauchy_schwarz"
         }
       ]
     },
@@ -419,13 +1073,19 @@
     {
       "fact_id": "F:complex-admits-no-compatible-order",
       "language": "lean4",
-      "statement_sha256": "d570df8a21ed8ad9ae565871e2e7398783375b35ce6b0bd63e3ffc7eef1ff596",
+      "statement_sha256": "be991eafaa2b42231e74a999623080a45feb3b8a86303a120cfb52c485bb8d87",
       "prose_sha256": "5bddbdbc7f559066098374bba46c895d48d335982a5bd9cf511f71a866f1cda3",
       "kernel_theorem": "Complex.no_compatible_order",
       "history": [
         {
           "language": "lean4",
           "statement_sha256": "d570df8a21ed8ad9ae565871e2e7398783375b35ce6b0bd63e3ffc7eef1ff596"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "d570df8a21ed8ad9ae565871e2e7398783375b35ce6b0bd63e3ffc7eef1ff596",
+          "prose_sha256": "5bddbdbc7f559066098374bba46c895d48d335982a5bd9cf511f71a866f1cda3",
+          "kernel_theorem": "Complex.no_compatible_order"
         }
       ]
     },
@@ -642,16 +1302,32 @@
     {
       "fact_id": "F:complex-factorquotient",
       "language": "lean4",
-      "statement_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+      "statement_sha256": "ff927eb83d8570c869860afc1c0a925c97e44fc7b7e6bd37a594130ef8dd8c92",
       "prose_sha256": "195064e346bae3a62214be804f46b259e5a8f5f53209f49df4a110b95dd5e081",
-      "kernel_theorem": "Complex.factorQuotient"
+      "kernel_theorem": "Complex.factorQuotient",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+          "prose_sha256": "195064e346bae3a62214be804f46b259e5a8f5f53209f49df4a110b95dd5e081",
+          "kernel_theorem": "Complex.factorQuotient"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-factorquotient-degreelt",
       "language": "lean4",
-      "statement_sha256": "64e4a00ac5e5372a174e5aa4eb88beb42824f1e742fbe01ea76846af5045082f",
+      "statement_sha256": "52639b52e9785940252c05b176cf9e9f8c43c79ed71e5d71884da0b50d9b241d",
       "prose_sha256": "6e686dd485b6963cbf209adc3106b688044ddc76e22434ace3911444fc1c66ef",
-      "kernel_theorem": "Complex.factorQuotient_degreeLt"
+      "kernel_theorem": "Complex.factorQuotient_degreeLt",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "64e4a00ac5e5372a174e5aa4eb88beb42824f1e742fbe01ea76846af5045082f",
+          "prose_sha256": "6e686dd485b6963cbf209adc3106b688044ddc76e22434ace3911444fc1c66ef",
+          "kernel_theorem": "Complex.factorQuotient_degreeLt"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-factorquotient-succ-eq",
@@ -684,9 +1360,17 @@
     {
       "fact_id": "F:complex-hornerfromtop",
       "language": "lean4",
-      "statement_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+      "statement_sha256": "f983f82bd0bbbc4dcf64ca0757bae21218900a0c47dee867929760db499bb303",
       "prose_sha256": "21b5666d6f7813ef2018a40a2fcad1b3970f151e7413acfce92f5ca3a1c48801",
-      "kernel_theorem": "Complex.hornerFromTop"
+      "kernel_theorem": "Complex.hornerFromTop",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+          "prose_sha256": "21b5666d6f7813ef2018a40a2fcad1b3970f151e7413acfce92f5ca3a1c48801",
+          "kernel_theorem": "Complex.hornerFromTop"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-hornerfromtop-diag-eq-polyeval",
@@ -698,23 +1382,47 @@
     {
       "fact_id": "F:complex-hornerfromtop-succsucc",
       "language": "lean4",
-      "statement_sha256": "47cab076e80b470e5386a4c18290801c0eeac387f14384c03fca64aefcd50797",
+      "statement_sha256": "fad04414dc5cca1e7b9ae0554db6cfc40433d1b0e23d6a87be08c829f7195c98",
       "prose_sha256": "49cbffb0a7c232b8bb8845ee18a82c54f343bc8b52d9c2754f86746feef3bfc6",
-      "kernel_theorem": "Complex.hornerFromTop_succ_succ"
+      "kernel_theorem": "Complex.hornerFromTop_succ_succ",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "47cab076e80b470e5386a4c18290801c0eeac387f14384c03fca64aefcd50797",
+          "prose_sha256": "49cbffb0a7c232b8bb8845ee18a82c54f343bc8b52d9c2754f86746feef3bfc6",
+          "kernel_theorem": "Complex.hornerFromTop_succ_succ"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-hornerfromtop-succzero",
       "language": "lean4",
-      "statement_sha256": "db3e06a6bbf7085bca6b9f1085f40f824f1a70dfb7250c9be92894fb667383d1",
+      "statement_sha256": "b681a179fffd60c0fa41b463e5ddc26a1cdd23cd83c129c1fbd9c13631084ca6",
       "prose_sha256": "d1f50763f140c058bd290b180e4ae2e519bc62e60029fe4cd9e5ed6159e8d8e4",
-      "kernel_theorem": "Complex.hornerFromTop_succ_zero"
+      "kernel_theorem": "Complex.hornerFromTop_succ_zero",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "db3e06a6bbf7085bca6b9f1085f40f824f1a70dfb7250c9be92894fb667383d1",
+          "prose_sha256": "d1f50763f140c058bd290b180e4ae2e519bc62e60029fe4cd9e5ed6159e8d8e4",
+          "kernel_theorem": "Complex.hornerFromTop_succ_zero"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-hornerfromtop-zero",
       "language": "lean4",
-      "statement_sha256": "17d34e9efb719fdc43a6fc8933ebda3a3aa467f3740231b5e379aec2aa28f70d",
+      "statement_sha256": "36bc21fa7322efa4f7cde8197a42f4e0a0072016c2aa08a7f76510ab1b870563",
       "prose_sha256": "327fd6bf6cb9a6c7d2f90d514747399a8a92166bb3745e90beab09628bf97dbf",
-      "kernel_theorem": "Complex.hornerFromTop_zero"
+      "kernel_theorem": "Complex.hornerFromTop_zero",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "17d34e9efb719fdc43a6fc8933ebda3a3aa467f3740231b5e379aec2aa28f70d",
+          "prose_sha256": "327fd6bf6cb9a6c7d2f90d514747399a8a92166bb3745e90beab09628bf97dbf",
+          "kernel_theorem": "Complex.hornerFromTop_zero"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-i-is-fourth-root",
@@ -1083,9 +1791,17 @@
     {
       "fact_id": "F:complex-polydegreelt-polymul",
       "language": "lean4",
-      "statement_sha256": "1efdd08ee0c40ad3f80340845ac326383f5fe959d32a17b49e43b5bbc4b9b677",
+      "statement_sha256": "e35e71188e80b0996e9a44659018633d2936dbef2b9d893b40881a88f857018d",
       "prose_sha256": "8d2b5f567f009270aa8c8e9dd003d90339ec93868a68d08bcbf1d7bc6cd08a5f",
-      "kernel_theorem": "Complex.polyDegreeLt_polyMul"
+      "kernel_theorem": "Complex.polyDegreeLt_polyMul",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "1efdd08ee0c40ad3f80340845ac326383f5fe959d32a17b49e43b5bbc4b9b677",
+          "prose_sha256": "8d2b5f567f009270aa8c8e9dd003d90339ec93868a68d08bcbf1d7bc6cd08a5f",
+          "kernel_theorem": "Complex.polyDegreeLt_polyMul"
+        }
+      ]
     },
     {
       "fact_id": "F:complex-polydegreelt-polyscale",
@@ -1371,7 +2087,7 @@
     {
       "fact_id": "F:covariance-sq-le-variance-mul-over-constructed-rationals",
       "language": "lean4",
-      "statement_sha256": "9280ae909f188f9953b7bf00788069893a157fb8ae291237d84b69413236bd3a",
+      "statement_sha256": "8009837b931e3dcb8944ad40de2a8a962bf4bbd9e7372ea96e29bdb1fadfd95b",
       "prose_sha256": "e0458b57ab4120a177ef8dcff168e7988aeee6b8540b8d0c2f066b9023d32e67",
       "kernel_theorem": "Rat.covariance_sq_le_variance_mul",
       "history": [
@@ -1379,6 +2095,12 @@
           "language": "lean4",
           "statement_sha256": "9280ae909f188f9953b7bf00788069893a157fb8ae291237d84b69413236bd3a",
           "prose_sha256": "e0458b57ab4120a177ef8dcff168e7988aeee6b8540b8d0c2f066b9023d32e67"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "9280ae909f188f9953b7bf00788069893a157fb8ae291237d84b69413236bd3a",
+          "prose_sha256": "e0458b57ab4120a177ef8dcff168e7988aeee6b8540b8d0c2f066b9023d32e67",
+          "kernel_theorem": "Rat.covariance_sq_le_variance_mul"
         }
       ]
     },
@@ -2197,7 +2919,7 @@
     {
       "fact_id": "F:cramer-rule-forward-direction-over-constructed-rationals",
       "language": "lean4",
-      "statement_sha256": "508e1c97d15ffa76c6a348a1abd228da08d290b4043f2670777db0dab28e5d18",
+      "statement_sha256": "3eeebab067b92aecf602a471e2a81a5d93327874b43d4150d3e1ecb560b0fc16",
       "prose_sha256": "7fbbd7545e330450c3a535f67d94a3c732cd48a59f1cca459ba0abb2a40a3f66",
       "kernel_theorem": "Rat.cramer_two_unique_x",
       "history": [
@@ -2205,6 +2927,12 @@
           "language": "lean4",
           "statement_sha256": "508e1c97d15ffa76c6a348a1abd228da08d290b4043f2670777db0dab28e5d18",
           "prose_sha256": "7fbbd7545e330450c3a535f67d94a3c732cd48a59f1cca459ba0abb2a40a3f66"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "508e1c97d15ffa76c6a348a1abd228da08d290b4043f2670777db0dab28e5d18",
+          "prose_sha256": "7fbbd7545e330450c3a535f67d94a3c732cd48a59f1cca459ba0abb2a40a3f66",
+          "kernel_theorem": "Rat.cramer_two_unique_x"
         }
       ]
     },
@@ -2407,9 +3135,17 @@
     {
       "fact_id": "F:creal-alternatingbracket",
       "language": "lean4",
-      "statement_sha256": "41624e7719de60d0b238e69b022883eaa581f8717c31c7ae374e88db34212ac0",
+      "statement_sha256": "049dfb41fecfbdf89ae3c9ae5d1d268bfe09f93729486e307a95ddfde3fd4735",
       "prose_sha256": "c1085f919836876c74f5f0bb59cb1b8190992cdd1db3cd4b000a0541762d8b6f",
-      "kernel_theorem": "CReal.alternatingBracket"
+      "kernel_theorem": "CReal.alternatingBracket",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "41624e7719de60d0b238e69b022883eaa581f8717c31c7ae374e88db34212ac0",
+          "prose_sha256": "c1085f919836876c74f5f0bb59cb1b8190992cdd1db3cd4b000a0541762d8b6f",
+          "kernel_theorem": "CReal.alternatingBracket"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-alternatingbracketupper",
@@ -2421,9 +3157,17 @@
     {
       "fact_id": "F:creal-alternatingeleo",
       "language": "lean4",
-      "statement_sha256": "fefade6d2d8c8ebde579090989881f2d0243e63eeeb85e66d547fe4fde2c856b",
+      "statement_sha256": "54329c73ab7745a6dcb79073656ceba380c018368adf6b65bb37030fecea6582",
       "prose_sha256": "8df8138b8a4afd83186be484db0532d40c80cf84755f78f2b857a14941e080f9",
-      "kernel_theorem": "CReal.alternatingELeO"
+      "kernel_theorem": "CReal.alternatingELeO",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "fefade6d2d8c8ebde579090989881f2d0243e63eeeb85e66d547fe4fde2c856b",
+          "prose_sha256": "8df8138b8a4afd83186be484db0532d40c80cf84755f78f2b857a14941e080f9",
+          "kernel_theorem": "CReal.alternatingELeO"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-alternatinglowerbound",
@@ -2974,9 +3718,17 @@
     {
       "fact_id": "F:creal-crossingclose",
       "language": "lean4",
-      "statement_sha256": "730d86a002da03bb9231fc37cf84a4e5ad487337374bd503582f8f06a180b0d5",
+      "statement_sha256": "9959935d8333c83402181f50e108538220a0efcfec41612d4d9e036bd0aae580",
       "prose_sha256": "804f8d4e16041a63507e863603985c052c938c2ee1a0999c71fa0c989b84f0b1",
-      "kernel_theorem": "CReal.crossingClose"
+      "kernel_theorem": "CReal.crossingClose",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "730d86a002da03bb9231fc37cf84a4e5ad487337374bd503582f8f06a180b0d5",
+          "prose_sha256": "804f8d4e16041a63507e863603985c052c938c2ee1a0999c71fa0c989b84f0b1",
+          "kernel_theorem": "CReal.crossingClose"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-crossingcloseclamped",
@@ -4220,9 +4972,17 @@
     {
       "fact_id": "F:creal-meshscaledleofge",
       "language": "lean4",
-      "statement_sha256": "db162acea724ca0079a5efdaef0415253ab4da606240313a2f6e490acb764e28",
+      "statement_sha256": "940eae5ebdce12f3b9fca8f766fb07808cf2cb1ea1baff3e309b27958fb68230",
       "prose_sha256": "13fa705efa03fafdfb66234486c10c80a5635a86abfa147d453ad82f7730a839",
-      "kernel_theorem": "CReal.meshScaledLeOfGe"
+      "kernel_theorem": "CReal.meshScaledLeOfGe",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "db162acea724ca0079a5efdaef0415253ab4da606240313a2f6e490acb764e28",
+          "prose_sha256": "13fa705efa03fafdfb66234486c10c80a5635a86abfa147d453ad82f7730a839",
+          "kernel_theorem": "CReal.meshScaledLeOfGe"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-min-congr",
@@ -4542,9 +5302,17 @@
     {
       "fact_id": "F:creal-negonepowdouble",
       "language": "lean4",
-      "statement_sha256": "5d681da90c0164079fe07390ac68467f55a3da6c8e9a96b3c13514ea48134dd1",
+      "statement_sha256": "2d071ed8570c3ee7a76bd0dda728c1a298852587cdb868fb54d54a2de30a06b4",
       "prose_sha256": "c0512bbf3028e24874ac97fdaea1c3f755a56c84c057b43f3bb7f9dbdd55dc24",
-      "kernel_theorem": "CReal.negOnePowDouble"
+      "kernel_theorem": "CReal.negOnePowDouble",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "5d681da90c0164079fe07390ac68467f55a3da6c8e9a96b3c13514ea48134dd1",
+          "prose_sha256": "c0512bbf3028e24874ac97fdaea1c3f755a56c84c057b43f3bb7f9dbdd55dc24",
+          "kernel_theorem": "CReal.negOnePowDouble"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-not-apart-one-of-pow-succ-eq-one",
@@ -4696,72 +5464,152 @@
     {
       "fact_id": "F:creal-polyadd",
       "language": "lean4",
-      "statement_sha256": "8d751421fe400a5e31f6cea7695766e042284a15dd7a679ff43ebeba1bb75396",
+      "statement_sha256": "22147e659d85ebeb60134606f4769c6b3b50afeb6df578738a6f5d862306d68e",
       "prose_sha256": "db092bdae6336fece99c3995c03a684386cd11efb5f35768e4922ac57f3800e8",
-      "kernel_theorem": "CReal.polyAdd"
+      "kernel_theorem": "CReal.polyAdd",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "8d751421fe400a5e31f6cea7695766e042284a15dd7a679ff43ebeba1bb75396",
+          "prose_sha256": "db092bdae6336fece99c3995c03a684386cd11efb5f35768e4922ac57f3800e8",
+          "kernel_theorem": "CReal.polyAdd"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polydegreelt",
       "language": "lean4",
-      "statement_sha256": "41102d058f00ed60338abc311db53e8ee555dff34eec60c989372cab7685aa24",
+      "statement_sha256": "89862f85fd5fe80a493684f1e12d5c4c8ce76095f89df63c204a567dbb9d4fc2",
       "prose_sha256": "89acdece9753d6d3eacd8d9ba002ea56c40dbd5742b8fc11e87e536c3b7e5448",
-      "kernel_theorem": "CReal.polyDegreeLt"
+      "kernel_theorem": "CReal.polyDegreeLt",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "41102d058f00ed60338abc311db53e8ee555dff34eec60c989372cab7685aa24",
+          "prose_sha256": "89acdece9753d6d3eacd8d9ba002ea56c40dbd5742b8fc11e87e536c3b7e5448",
+          "kernel_theorem": "CReal.polyDegreeLt"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polydegreelt-polyadd",
       "language": "lean4",
-      "statement_sha256": "aed26d190860a8367bfe5a01bd685d82be89cd3ce0f478e4098e318619b6ac43",
+      "statement_sha256": "aafdc9f86c4552edf5862b9c712a7444cf103425e63434596b56885b23c625d2",
       "prose_sha256": "b0fc9192001644e36bac6aaa085b85e0797e38046062f96532601c3343683349",
-      "kernel_theorem": "CReal.polyDegreeLt_polyAdd"
+      "kernel_theorem": "CReal.polyDegreeLt_polyAdd",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "aed26d190860a8367bfe5a01bd685d82be89cd3ce0f478e4098e318619b6ac43",
+          "prose_sha256": "b0fc9192001644e36bac6aaa085b85e0797e38046062f96532601c3343683349",
+          "kernel_theorem": "CReal.polyDegreeLt_polyAdd"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polydegreelt-polyscale",
       "language": "lean4",
-      "statement_sha256": "7ec516ea5e4588784789533b6d485bc1e486cb0fdcb19ca618db931624871de4",
+      "statement_sha256": "10d46ff42b7bfd1584ea1f8c5ae41bc17fe039dd941f9b32e5bc81803aaa05f8",
       "prose_sha256": "d28a875d913a32e749b72c3b10544021f0889ed1df9ae8e91e59aeae3360e5a2",
-      "kernel_theorem": "CReal.polyDegreeLt_polyScale"
+      "kernel_theorem": "CReal.polyDegreeLt_polyScale",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "7ec516ea5e4588784789533b6d485bc1e486cb0fdcb19ca618db931624871de4",
+          "prose_sha256": "d28a875d913a32e749b72c3b10544021f0889ed1df9ae8e91e59aeae3360e5a2",
+          "kernel_theorem": "CReal.polyDegreeLt_polyScale"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polyeval",
       "language": "lean4",
-      "statement_sha256": "091438075dfa0c8352ac7ef78bcb16d81f6b65fe108263fd62900e40878e536d",
+      "statement_sha256": "8f60520e236fc15a255a3f1d4dc0f9a3794229977d0178015ba7166d9d78fb0a",
       "prose_sha256": "49bd016663fac35d95781af9961318f7f757c15c581ece64a172ccd3831c5c0c",
-      "kernel_theorem": "CReal.polyEval"
+      "kernel_theorem": "CReal.polyEval",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "091438075dfa0c8352ac7ef78bcb16d81f6b65fe108263fd62900e40878e536d",
+          "prose_sha256": "49bd016663fac35d95781af9961318f7f757c15c581ece64a172ccd3831c5c0c",
+          "kernel_theorem": "CReal.polyEval"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polyeval-polyadd",
       "language": "lean4",
-      "statement_sha256": "ccc9ef14386642a23608a6af393e79fa7431adeb1b3a6b4c99dc23586514c63b",
+      "statement_sha256": "ec810e30d7b1d19f308654a9131c8ca604817254aa5b764dd00c6e5204aa1d6d",
       "prose_sha256": "44757b2c3d6eb940d4bb27e0ac9d89d537ba022f1b61316a9194b58e8deddaba",
-      "kernel_theorem": "CReal.polyEval_polyAdd"
+      "kernel_theorem": "CReal.polyEval_polyAdd",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "ccc9ef14386642a23608a6af393e79fa7431adeb1b3a6b4c99dc23586514c63b",
+          "prose_sha256": "44757b2c3d6eb940d4bb27e0ac9d89d537ba022f1b61316a9194b58e8deddaba",
+          "kernel_theorem": "CReal.polyEval_polyAdd"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polyeval-polyscale",
       "language": "lean4",
-      "statement_sha256": "23dc28a32f66c139c9bb1d09cc6f09a3856c2dc5ed9ae06c95b5170dc048a6b9",
+      "statement_sha256": "75b030e2d9a62a3a2357b06e0fb574aed7d177b9223474dfa0d22bc9973a1394",
       "prose_sha256": "3fe672502edfffba602807e2ed528c0f68fcd3c106bcbed84051531fddfda702",
-      "kernel_theorem": "CReal.polyEval_polyScale"
+      "kernel_theorem": "CReal.polyEval_polyScale",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "23dc28a32f66c139c9bb1d09cc6f09a3856c2dc5ed9ae06c95b5170dc048a6b9",
+          "prose_sha256": "3fe672502edfffba602807e2ed528c0f68fcd3c106bcbed84051531fddfda702",
+          "kernel_theorem": "CReal.polyEval_polyScale"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polyeval-succ",
       "language": "lean4",
-      "statement_sha256": "8800ad6a1298245c3bc0b6a42e05d0bf1915113a3c89ec01e7b9b586c156e4e1",
+      "statement_sha256": "e905c9c12caaa3d2887fb74fed55fe7382485fe3982ec5267c50f12c478de998",
       "prose_sha256": "d7e96efa31fab31594cd4d924dfb2303651b3b5cbb331b0171736acdc5415eb1",
-      "kernel_theorem": "CReal.polyEval_succ"
+      "kernel_theorem": "CReal.polyEval_succ",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "8800ad6a1298245c3bc0b6a42e05d0bf1915113a3c89ec01e7b9b586c156e4e1",
+          "prose_sha256": "d7e96efa31fab31594cd4d924dfb2303651b3b5cbb331b0171736acdc5415eb1",
+          "kernel_theorem": "CReal.polyEval_succ"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polyeval-zero",
       "language": "lean4",
-      "statement_sha256": "08187cbbe31305f6e01338e169dcf7481c6faca6ccd7fdac10289a426277b4eb",
+      "statement_sha256": "be31f59116945c38e1560530f03299ed3b0ea9e59c3f1eafabf73c6dd1c7f14a",
       "prose_sha256": "f509ef2a1da280401879963d9fb47ac56ee17febb918de2187fb3ac8903a7e19",
-      "kernel_theorem": "CReal.polyEval_zero"
+      "kernel_theorem": "CReal.polyEval_zero",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "08187cbbe31305f6e01338e169dcf7481c6faca6ccd7fdac10289a426277b4eb",
+          "prose_sha256": "f509ef2a1da280401879963d9fb47ac56ee17febb918de2187fb3ac8903a7e19",
+          "kernel_theorem": "CReal.polyEval_zero"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-polyscale",
       "language": "lean4",
-      "statement_sha256": "6e96602d4ee761adc335a0c12cd7dc2e283ce217914ea5e9d43f2d7b9ad71d79",
+      "statement_sha256": "a2713165fcc12b82a2c079769505e2653c6260c7c885189dccde41391db28786",
       "prose_sha256": "0821d5659d70798580ebf39f894964c9c3570b4501270f4a5ab495990d9acde3",
-      "kernel_theorem": "CReal.polyScale"
+      "kernel_theorem": "CReal.polyScale",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "6e96602d4ee761adc335a0c12cd7dc2e283ce217914ea5e9d43f2d7b9ad71d79",
+          "prose_sha256": "0821d5659d70798580ebf39f894964c9c3570b4501270f4a5ab495990d9acde3",
+          "kernel_theorem": "CReal.polyScale"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-pos-bound-of-lt",
@@ -5697,23 +6545,47 @@
     {
       "fact_id": "F:creal-uniform-converges-geom-half",
       "language": "lean4",
-      "statement_sha256": "5be9104fc8470b8b0d7b84678f0119cd8a66dde2dfbd2da42f3fd63ed28ccf5b",
+      "statement_sha256": "2cc079fdb5c78d217efc9aabf4d6f66cf7599590b28a0f4ddb769a0903d51287",
       "prose_sha256": "0522ac3d4bd5b8870c1fc6aa36fe98130b454d0d18dfdab4196ff53a9f5f17ed",
-      "kernel_theorem": "CReal.uniform_converges_geom_half"
+      "kernel_theorem": "CReal.uniform_converges_geom_half",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "5be9104fc8470b8b0d7b84678f0119cd8a66dde2dfbd2da42f3fd63ed28ccf5b",
+          "prose_sha256": "0522ac3d4bd5b8870c1fc6aa36fe98130b454d0d18dfdab4196ff53a9f5f17ed",
+          "kernel_theorem": "CReal.uniform_converges_geom_half"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-uniform-converges-id",
       "language": "lean4",
-      "statement_sha256": "9e472ae59218e2096ca771121722834a9245f4d210b43fd3278e4622384c5e6a",
+      "statement_sha256": "64bdf671f11f5d14c3290ce8a907ffb12cadb1d9ffb95638563050da15b1b04d",
       "prose_sha256": "7efb79fd08ee3d887d1ab87fc4c689bf34d8ad9a83dcff12b46b54526e1e68c9",
-      "kernel_theorem": "CReal.uniform_converges_id"
+      "kernel_theorem": "CReal.uniform_converges_id",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "9e472ae59218e2096ca771121722834a9245f4d210b43fd3278e4622384c5e6a",
+          "prose_sha256": "7efb79fd08ee3d887d1ab87fc4c689bf34d8ad9a83dcff12b46b54526e1e68c9",
+          "kernel_theorem": "CReal.uniform_converges_id"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-uniform-limit-uniformly-continuous",
       "language": "lean4",
-      "statement_sha256": "f0bcecd0cdf40d9b09c9a162a0cf3a8f50003c8fe83a1ba08144124cebbaec26",
+      "statement_sha256": "17598448cfa73ed8cbf1e07581528ff28f36ae517d3a626471f3f7a5068c324f",
       "prose_sha256": "c86defb20e9ae6599892ceffcbca6d7e663ad46f5159b32c7108bfe13cb5e5e0",
-      "kernel_theorem": "CReal.uniform_limit_uniformly_continuous"
+      "kernel_theorem": "CReal.uniform_limit_uniformly_continuous",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "f0bcecd0cdf40d9b09c9a162a0cf3a8f50003c8fe83a1ba08144124cebbaec26",
+          "prose_sha256": "c86defb20e9ae6599892ceffcbca6d7e663ad46f5159b32c7108bfe13cb5e5e0",
+          "kernel_theorem": "CReal.uniform_limit_uniformly_continuous"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-uniformconvergesneg",
@@ -5725,9 +6597,17 @@
     {
       "fact_id": "F:creal-uniformconvergeson",
       "language": "lean4",
-      "statement_sha256": "0ae1804c6089733658ce542f64b50ea1027c9f25940a13063d7af6cadc5dcfcf",
+      "statement_sha256": "23d11c659377aa5605f14276d85499bcb898ce2c13afcfbcf3f41f1ab857063e",
       "prose_sha256": "8f9644322446b8120c594cd652216bec6feb02a7d976dabafdbebafe69c250a8",
-      "kernel_theorem": "CReal.UniformConvergesOn"
+      "kernel_theorem": "CReal.UniformConvergesOn",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "0ae1804c6089733658ce542f64b50ea1027c9f25940a13063d7af6cadc5dcfcf",
+          "prose_sha256": "8f9644322446b8120c594cd652216bec6feb02a7d976dabafdbebafe69c250a8",
+          "kernel_theorem": "CReal.UniformConvergesOn"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-uniformconvergeson-spec",
@@ -5875,9 +6755,17 @@
     {
       "fact_id": "F:determinant-multiplicative-over-constructed-rationals",
       "language": "lean4",
-      "statement_sha256": "4e2bd1dc0611bbc27d0717434adaeb19515369c514ae74482ac3d78225ec6479",
+      "statement_sha256": "9edb8eabb4d8b8b302a54e8c25d1f0be74b9e8cad5308fa69d00928d806dca50",
       "prose_sha256": "8d76f8b9783afbf72b7aabed8a97de34342cb7b98619decc0484639b14e03e70",
-      "kernel_theorem": "Rat.det2_mul"
+      "kernel_theorem": "Rat.det2_mul",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "4e2bd1dc0611bbc27d0717434adaeb19515369c514ae74482ac3d78225ec6479",
+          "prose_sha256": "8d76f8b9783afbf72b7aabed8a97de34342cb7b98619decc0484639b14e03e70",
+          "kernel_theorem": "Rat.det2_mul"
+        }
+      ]
     },
     {
       "fact_id": "F:double-negation-elimination",
@@ -5961,7 +6849,7 @@
     {
       "fact_id": "F:fermat-little-theorem-over-constructed-naturals",
       "language": "lean4",
-      "statement_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
+      "statement_sha256": "5b1a1b3ccaf2520e7517cc9da933ddd65019d0881174be6ee7e20c487ac40ca0",
       "prose_sha256": "68473bbe61786e4fb7163f0d43e0c48ea7f6ce341eb5ed58c666412f203bbfb5",
       "kernel_theorem": "Nat.pow_prime_modeq_self",
       "history": [
@@ -5969,13 +6857,19 @@
           "language": "lean4",
           "statement_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
           "prose_sha256": "68473bbe61786e4fb7163f0d43e0c48ea7f6ce341eb5ed58c666412f203bbfb5"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
+          "prose_sha256": "68473bbe61786e4fb7163f0d43e0c48ea7f6ce341eb5ed58c666412f203bbfb5",
+          "kernel_theorem": "Nat.pow_prime_modeq_self"
         }
       ]
     },
     {
       "fact_id": "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
       "language": "lean4",
-      "statement_sha256": "11865c055a6f373f1ad61585e35d8f6c6bbe82e6c7579746b197a4c45831b930",
+      "statement_sha256": "299fec4a2257a19355ead59020192d63d5d7d99e29e27e4c6fd4c15502ae8036",
       "prose_sha256": "422d3f9fa94663275189b042b217898dc257abc407bda50811ea1cbfd343f250",
       "kernel_theorem": "Complex.sumRange_mul_eq_diag_add_corner",
       "history": [
@@ -5983,13 +6877,19 @@
           "language": "lean4",
           "statement_sha256": "11865c055a6f373f1ad61585e35d8f6c6bbe82e6c7579746b197a4c45831b930",
           "prose_sha256": "422d3f9fa94663275189b042b217898dc257abc407bda50811ea1cbfd343f250"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "11865c055a6f373f1ad61585e35d8f6c6bbe82e6c7579746b197a4c45831b930",
+          "prose_sha256": "422d3f9fa94663275189b042b217898dc257abc407bda50811ea1cbfd343f250",
+          "kernel_theorem": "Complex.sumRange_mul_eq_diag_add_corner"
         }
       ]
     },
     {
       "fact_id": "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
       "language": "lean4",
-      "statement_sha256": "c56c1af1063cbb3119612670b8e1777395a5a8b0d00c8f82499de1ed8b2579e3",
+      "statement_sha256": "eef9ade28f74389da17e65e7672cf31a4293d7b42337dafc199ce54f927fdbb9",
       "prose_sha256": "07ede82e18030de51a20651ce9974ba55a5f76aedd6b0726f03e94dde9d8a0cf",
       "kernel_theorem": "Nat.sumRange_rect_eq_diag_add_corner",
       "history": [
@@ -5997,6 +6897,12 @@
           "language": "lean4",
           "statement_sha256": "c56c1af1063cbb3119612670b8e1777395a5a8b0d00c8f82499de1ed8b2579e3",
           "prose_sha256": "07ede82e18030de51a20651ce9974ba55a5f76aedd6b0726f03e94dde9d8a0cf"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "c56c1af1063cbb3119612670b8e1777395a5a8b0d00c8f82499de1ed8b2579e3",
+          "prose_sha256": "07ede82e18030de51a20651ce9974ba55a5f76aedd6b0726f03e94dde9d8a0cf",
+          "kernel_theorem": "Nat.sumRange_rect_eq_diag_add_corner"
         }
       ]
     },
@@ -6201,7 +7107,7 @@
     {
       "fact_id": "F:geometry-stewart-over-constructed-reals",
       "language": "lean4",
-      "statement_sha256": "f1502205ecb6460bb2198bb682feddd13a035773fee491be71630239f4fa6d82",
+      "statement_sha256": "2d436b7a2ff09afcede885e0a9588dedc1de1c6a9ffbde818161a8f84d823ce8",
       "prose_sha256": "d58a0b901050e7430704df1d7f3022ac3b6cc061f3618178fb686f7188256330",
       "kernel_theorem": "CPoint.stewart",
       "history": [
@@ -6209,6 +7115,12 @@
           "language": "lean4",
           "statement_sha256": "f1502205ecb6460bb2198bb682feddd13a035773fee491be71630239f4fa6d82",
           "prose_sha256": "d58a0b901050e7430704df1d7f3022ac3b6cc061f3618178fb686f7188256330"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "f1502205ecb6460bb2198bb682feddd13a035773fee491be71630239f4fa6d82",
+          "prose_sha256": "d58a0b901050e7430704df1d7f3022ac3b6cc061f3618178fb686f7188256330",
+          "kernel_theorem": "CPoint.stewart"
         }
       ]
     },
@@ -6245,7 +7157,7 @@
     {
       "fact_id": "F:geometry-varignon-over-constructed-reals",
       "language": "lean4",
-      "statement_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589",
+      "statement_sha256": "b0366da339735370b7bc28951222a495edac65d4144fcd114d6663c9511b163f",
       "prose_sha256": "77fcffc4f3db1b81753a9b192cb5475c48c25d0b4d1e0d71c03cf8df7556f903",
       "kernel_theorem": "CPoint.varignon_vector_parallel",
       "history": [
@@ -6257,6 +7169,12 @@
           "language": "lean4",
           "statement_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589",
           "prose_sha256": "77fcffc4f3db1b81753a9b192cb5475c48c25d0b4d1e0d71c03cf8df7556f903"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589",
+          "prose_sha256": "77fcffc4f3db1b81753a9b192cb5475c48c25d0b4d1e0d71c03cf8df7556f903",
+          "kernel_theorem": "CPoint.varignon_vector_parallel"
         }
       ]
     },
@@ -8471,7 +9389,7 @@
     {
       "fact_id": "F:menelaus-and-ceva-over-constructed-plane",
       "language": "lean4",
-      "statement_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
+      "statement_sha256": "90f9882f7dc062254236e92f8c333591684e6669db377d0bdacd84648952eae7",
       "prose_sha256": "8027c25eff5e40b8306577e2867777e94fff68e5c584eda0cda8d7f3019071f1",
       "kernel_theorem": "CPoint.menelaus_collinear_of_ratio_product",
       "history": [
@@ -8479,6 +9397,12 @@
           "language": "lean4",
           "statement_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
           "prose_sha256": "8027c25eff5e40b8306577e2867777e94fff68e5c584eda0cda8d7f3019071f1"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
+          "prose_sha256": "8027c25eff5e40b8306577e2867777e94fff68e5c584eda0cda8d7f3019071f1",
+          "kernel_theorem": "CPoint.menelaus_collinear_of_ratio_product"
         }
       ]
     },
@@ -13746,7 +14670,7 @@
     {
       "fact_id": "F:nat-binary-rec-fuel-irrelevance",
       "language": "lean4",
-      "statement_sha256": "d2415be904a387ce4e2fd88715c9784b4201a435f7a3c68245632b9c27cf13a3",
+      "statement_sha256": "2a58a65de35c377d8c0ab3b38c65ecdb5d2edf624f07ae832eaf42990d6aa164",
       "prose_sha256": "1d5b1cecb1177d3c2e9de967d438e68cf9d8e7b7fa3fa1c84f24de6da53a595a",
       "kernel_theorem": "Nat.binaryRecAux_agree_of_fuel",
       "history": [
@@ -13754,13 +14678,19 @@
           "language": "lean4",
           "statement_sha256": "d2415be904a387ce4e2fd88715c9784b4201a435f7a3c68245632b9c27cf13a3",
           "prose_sha256": "1d5b1cecb1177d3c2e9de967d438e68cf9d8e7b7fa3fa1c84f24de6da53a595a"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "d2415be904a387ce4e2fd88715c9784b4201a435f7a3c68245632b9c27cf13a3",
+          "prose_sha256": "1d5b1cecb1177d3c2e9de967d438e68cf9d8e7b7fa3fa1c84f24de6da53a595a",
+          "kernel_theorem": "Nat.binaryRecAux_agree_of_fuel"
         }
       ]
     },
     {
       "fact_id": "F:nat-binary-rec-succ",
       "language": "lean4",
-      "statement_sha256": "f2df54c1baeec24f1dbd50edc24d62c97138fdb618c1a9f7abcb1067b81b62fd",
+      "statement_sha256": "d29fc8c2595e3e9d4a2f72c8e095fb3d5929b73e87a1847ac58e6005cce7ab71",
       "prose_sha256": "bce58ffa62135edc60f0ba8242a65ffa886237682349c2d3e273af7990a02e8e",
       "kernel_theorem": "Nat.binaryRec_succ",
       "history": [
@@ -13768,6 +14698,12 @@
           "language": "lean4",
           "statement_sha256": "f2df54c1baeec24f1dbd50edc24d62c97138fdb618c1a9f7abcb1067b81b62fd",
           "prose_sha256": "bce58ffa62135edc60f0ba8242a65ffa886237682349c2d3e273af7990a02e8e"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "f2df54c1baeec24f1dbd50edc24d62c97138fdb618c1a9f7abcb1067b81b62fd",
+          "prose_sha256": "bce58ffa62135edc60f0ba8242a65ffa886237682349c2d3e273af7990a02e8e",
+          "kernel_theorem": "Nat.binaryRec_succ"
         }
       ]
     },
@@ -13830,7 +14766,7 @@
     {
       "fact_id": "F:nat-bitwise-and-eq-land",
       "language": "lean4",
-      "statement_sha256": "8e8299eedc3985898bff1ce0e327aaf5a6d7a7c9d54cd383f91c8b80448e2c05",
+      "statement_sha256": "70d0e0bd8a8f81f28efb08551e2bf5a12ee9fe8ca77d73db7e5a0b53c10a4a29",
       "prose_sha256": "4f22118e0ab46d72bcc9c5c14f0626a0f8bdd7306b418ee005ad64667a70e389",
       "kernel_theorem": "Nat.bitwise_and_eq_land",
       "history": [
@@ -13838,13 +14774,19 @@
           "language": "lean4",
           "statement_sha256": "8e8299eedc3985898bff1ce0e327aaf5a6d7a7c9d54cd383f91c8b80448e2c05",
           "prose_sha256": "4f22118e0ab46d72bcc9c5c14f0626a0f8bdd7306b418ee005ad64667a70e389"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "8e8299eedc3985898bff1ce0e327aaf5a6d7a7c9d54cd383f91c8b80448e2c05",
+          "prose_sha256": "4f22118e0ab46d72bcc9c5c14f0626a0f8bdd7306b418ee005ad64667a70e389",
+          "kernel_theorem": "Nat.bitwise_and_eq_land"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-and-eq-land-three-five",
       "language": "lean4",
-      "statement_sha256": "178c80a192d4944baa557340ee19cde1e527723d3410dee69d2de62f6e20f555",
+      "statement_sha256": "40e4922ab460ad70d5207dfeb35e939935b871dbdc31c30cb3f950e527847212",
       "prose_sha256": "dcb705d37e242adfb074ba886f294d1a02584669576558b29d241256ca0d0757",
       "kernel_theorem": "Nat.bitwise_and_eq_land_three_five",
       "history": [
@@ -13852,13 +14794,19 @@
           "language": "lean4",
           "statement_sha256": "178c80a192d4944baa557340ee19cde1e527723d3410dee69d2de62f6e20f555",
           "prose_sha256": "dcb705d37e242adfb074ba886f294d1a02584669576558b29d241256ca0d0757"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "178c80a192d4944baa557340ee19cde1e527723d3410dee69d2de62f6e20f555",
+          "prose_sha256": "dcb705d37e242adfb074ba886f294d1a02584669576558b29d241256ca0d0757",
+          "kernel_theorem": "Nat.bitwise_and_eq_land_three_five"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-bit",
       "language": "lean4",
-      "statement_sha256": "d96d67d7b44417e96d92d87898d9d68ba677dedd8cd4d02f63627a0377b26fc2",
+      "statement_sha256": "7b4d3679cff6144239afc6a5ab2ffbadb39dd96677573a74944824939c7c297f",
       "prose_sha256": "83f6f1ea66a7e4a18a030afc621bf28aac71e4e4c9b7b864a45caea19c850e75",
       "kernel_theorem": "Nat.bitwise_bit'",
       "history": [
@@ -13866,13 +14814,19 @@
           "language": "lean4",
           "statement_sha256": "d96d67d7b44417e96d92d87898d9d68ba677dedd8cd4d02f63627a0377b26fc2",
           "prose_sha256": "83f6f1ea66a7e4a18a030afc621bf28aac71e4e4c9b7b864a45caea19c850e75"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "d96d67d7b44417e96d92d87898d9d68ba677dedd8cd4d02f63627a0377b26fc2",
+          "prose_sha256": "83f6f1ea66a7e4a18a030afc621bf28aac71e4e4c9b7b864a45caea19c850e75",
+          "kernel_theorem": "Nat.bitwise_bit'"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-comm",
       "language": "lean4",
-      "statement_sha256": "793d31134bbe75c27023c5c6b92db68b21c9bf83e7cb4e61f0af658c3287f04b",
+      "statement_sha256": "9d3141665705964dc4fd4eb38a763011a6b0d286548f78a3a9a06e491c5ec9d9",
       "prose_sha256": "c85d01c3cf4e03fb3d6f4e8f4aeb2c51df066a98eada5f6454652a2bfa0a4a69",
       "kernel_theorem": "Nat.bitwise_comm",
       "history": [
@@ -13880,13 +14834,19 @@
           "language": "lean4",
           "statement_sha256": "793d31134bbe75c27023c5c6b92db68b21c9bf83e7cb4e61f0af658c3287f04b",
           "prose_sha256": "c85d01c3cf4e03fb3d6f4e8f4aeb2c51df066a98eada5f6454652a2bfa0a4a69"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "793d31134bbe75c27023c5c6b92db68b21c9bf83e7cb4e61f0af658c3287f04b",
+          "prose_sha256": "c85d01c3cf4e03fb3d6f4e8f4aeb2c51df066a98eada5f6454652a2bfa0a4a69",
+          "kernel_theorem": "Nat.bitwise_comm"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-or-eq-lor",
       "language": "lean4",
-      "statement_sha256": "bf0cc45f6d2bf1b71b436f3fb05832b9e90cb5ae24285a20562fe4ea1e6138a3",
+      "statement_sha256": "4b45e9d571d7084a89fc5b2f4649219dbb7f8eb0edc5e9c871615f5c806baa12",
       "prose_sha256": "3a14851a0cd8fff3b53965f0e7cbf42cfe85db172986b84f1b88941416d31fd9",
       "kernel_theorem": "Nat.bitwise_or_eq_lor",
       "history": [
@@ -13894,13 +14854,19 @@
           "language": "lean4",
           "statement_sha256": "bf0cc45f6d2bf1b71b436f3fb05832b9e90cb5ae24285a20562fe4ea1e6138a3",
           "prose_sha256": "3a14851a0cd8fff3b53965f0e7cbf42cfe85db172986b84f1b88941416d31fd9"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "bf0cc45f6d2bf1b71b436f3fb05832b9e90cb5ae24285a20562fe4ea1e6138a3",
+          "prose_sha256": "3a14851a0cd8fff3b53965f0e7cbf42cfe85db172986b84f1b88941416d31fd9",
+          "kernel_theorem": "Nat.bitwise_or_eq_lor"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-or-eq-lor-three-five",
       "language": "lean4",
-      "statement_sha256": "8a73f2c69ed7f14e5801a5967f03c77e06636f5be17e5193fc79785b44ebceec",
+      "statement_sha256": "3b4ab40364f66c297e55482229655a24785564ded226734b3dd4d8643bccd2d8",
       "prose_sha256": "af93e23ac18c21d281e9efb1c2f2b25b5a7dd03ca302460fce2211776afdc29e",
       "kernel_theorem": "Nat.bitwise_or_eq_lor_three_five",
       "history": [
@@ -13908,13 +14874,19 @@
           "language": "lean4",
           "statement_sha256": "8a73f2c69ed7f14e5801a5967f03c77e06636f5be17e5193fc79785b44ebceec",
           "prose_sha256": "af93e23ac18c21d281e9efb1c2f2b25b5a7dd03ca302460fce2211776afdc29e"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "8a73f2c69ed7f14e5801a5967f03c77e06636f5be17e5193fc79785b44ebceec",
+          "prose_sha256": "af93e23ac18c21d281e9efb1c2f2b25b5a7dd03ca302460fce2211776afdc29e",
+          "kernel_theorem": "Nat.bitwise_or_eq_lor_three_five"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-swap",
       "language": "lean4",
-      "statement_sha256": "ca9b8977f42f6a0bc61397472c16879089a13f16a1b7fbef2e860b84e48e6fe2",
+      "statement_sha256": "a3eda38575023d8c98a9d006fc12f7230a81c03ac00e2abdcdbd3c79a4759a77",
       "prose_sha256": "b337680cbb0473252148584302475e150bb6f019a2b690b0c01d9854cdada05e",
       "kernel_theorem": "Nat.bitwise_swap",
       "history": [
@@ -13922,13 +14894,19 @@
           "language": "lean4",
           "statement_sha256": "ca9b8977f42f6a0bc61397472c16879089a13f16a1b7fbef2e860b84e48e6fe2",
           "prose_sha256": "b337680cbb0473252148584302475e150bb6f019a2b690b0c01d9854cdada05e"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "ca9b8977f42f6a0bc61397472c16879089a13f16a1b7fbef2e860b84e48e6fe2",
+          "prose_sha256": "b337680cbb0473252148584302475e150bb6f019a2b690b0c01d9854cdada05e",
+          "kernel_theorem": "Nat.bitwise_swap"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-xor-three-five",
       "language": "lean4",
-      "statement_sha256": "df6c99a945a8b39598c0ac39777ddc99d8de87da4906e407bcc5d2a3f02eee2e",
+      "statement_sha256": "667915edaa0ee66d92e6651f836c7ee55eb2c6434f97a17cb2906420d4d9f0fb",
       "prose_sha256": "9e5e0870a80791045faef25c5d1dfec0af1941fb77141b83fdace8c3ce97cf3f",
       "kernel_theorem": "Nat.bitwise_xor_three_five",
       "history": [
@@ -13936,13 +14914,19 @@
           "language": "lean4",
           "statement_sha256": "df6c99a945a8b39598c0ac39777ddc99d8de87da4906e407bcc5d2a3f02eee2e",
           "prose_sha256": "9e5e0870a80791045faef25c5d1dfec0af1941fb77141b83fdace8c3ce97cf3f"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "df6c99a945a8b39598c0ac39777ddc99d8de87da4906e407bcc5d2a3f02eee2e",
+          "prose_sha256": "9e5e0870a80791045faef25c5d1dfec0af1941fb77141b83fdace8c3ce97cf3f",
+          "kernel_theorem": "Nat.bitwise_xor_three_five"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-zero-left",
       "language": "lean4",
-      "statement_sha256": "95cd2796621e27f733b9ba41de8bf0370342bcad612df996f166cd148c344cea",
+      "statement_sha256": "aab018163d17cfa091e85c9d77fe93b0cf561d89838b7f3226d368acf3558007",
       "prose_sha256": "8cc11a1110d06d41ff26f2b4cc8c9b07e1b4d851dbcf39a31af10696baf71b3a",
       "kernel_theorem": "Nat.bitwise_zero_left",
       "history": [
@@ -13950,13 +14934,19 @@
           "language": "lean4",
           "statement_sha256": "95cd2796621e27f733b9ba41de8bf0370342bcad612df996f166cd148c344cea",
           "prose_sha256": "8cc11a1110d06d41ff26f2b4cc8c9b07e1b4d851dbcf39a31af10696baf71b3a"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "95cd2796621e27f733b9ba41de8bf0370342bcad612df996f166cd148c344cea",
+          "prose_sha256": "8cc11a1110d06d41ff26f2b4cc8c9b07e1b4d851dbcf39a31af10696baf71b3a",
+          "kernel_theorem": "Nat.bitwise_zero_left"
         }
       ]
     },
     {
       "fact_id": "F:nat-bitwise-zero-right",
       "language": "lean4",
-      "statement_sha256": "2c4995e9d335c6cc1f898e824093b92389b8564e6a74c608ce16db7e2bf28cb2",
+      "statement_sha256": "ba88f0b8f903dfb0e2b632b323ac54a2e2f60cf524da50a61c57878de2caf4be",
       "prose_sha256": "6f72bc0be2adf461d6bbdc96ee26d8781f78f7391538bf9a565f21686346dc9a",
       "kernel_theorem": "Nat.bitwise_zero_right",
       "history": [
@@ -13964,6 +14954,12 @@
           "language": "lean4",
           "statement_sha256": "2c4995e9d335c6cc1f898e824093b92389b8564e6a74c608ce16db7e2bf28cb2",
           "prose_sha256": "6f72bc0be2adf461d6bbdc96ee26d8781f78f7391538bf9a565f21686346dc9a"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "2c4995e9d335c6cc1f898e824093b92389b8564e6a74c608ce16db7e2bf28cb2",
+          "prose_sha256": "6f72bc0be2adf461d6bbdc96ee26d8781f78f7391538bf9a565f21686346dc9a",
+          "kernel_theorem": "Nat.bitwise_zero_right"
         }
       ]
     },
@@ -14236,7 +15232,7 @@
     {
       "fact_id": "F:nat-coprime-of-lt-minfac",
       "language": "lean4",
-      "statement_sha256": "b4485d76a7dd8d927154c112a9da243c4013370070e544b969150446bc9bdc69",
+      "statement_sha256": "4eb7268c70e2db428aae88f03a37541536ff23b528d28e54d6018a8f72488854",
       "prose_sha256": "9ef84dd55ebbda349d7f6b2ba6c80a6db8aa3b189dac6c307e6f7a17ab47e53c",
       "kernel_theorem": "Nat.coprime_of_lt_min_fac",
       "history": [
@@ -14244,6 +15240,12 @@
           "language": "lean4",
           "statement_sha256": "b4485d76a7dd8d927154c112a9da243c4013370070e544b969150446bc9bdc69",
           "prose_sha256": "9ef84dd55ebbda349d7f6b2ba6c80a6db8aa3b189dac6c307e6f7a17ab47e53c"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "b4485d76a7dd8d927154c112a9da243c4013370070e544b969150446bc9bdc69",
+          "prose_sha256": "9ef84dd55ebbda349d7f6b2ba6c80a6db8aa3b189dac6c307e6f7a17ab47e53c",
+          "kernel_theorem": "Nat.coprime_of_lt_min_fac"
         }
       ]
     },
@@ -14770,7 +15772,7 @@
     {
       "fact_id": "F:nat-eq-of-testbit-eq",
       "language": "lean4",
-      "statement_sha256": "2121a177dc6cf4a64e44fa3c411ab31ca15dd44e9e0e427bc2f277a4bd73efd2",
+      "statement_sha256": "5b2ad1da1b2326a189d5f4cff4a57d7ce2be3007267f5c2988e678cedf7acd5f",
       "prose_sha256": "7fbe42957b37b09a781925d742ed998bcc730ca8e0c059060209c33cef863acc",
       "kernel_theorem": "Nat.eq_of_testBit_eq",
       "history": [
@@ -14778,6 +15780,12 @@
           "language": "lean4",
           "statement_sha256": "2121a177dc6cf4a64e44fa3c411ab31ca15dd44e9e0e427bc2f277a4bd73efd2",
           "prose_sha256": "7fbe42957b37b09a781925d742ed998bcc730ca8e0c059060209c33cef863acc"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "2121a177dc6cf4a64e44fa3c411ab31ca15dd44e9e0e427bc2f277a4bd73efd2",
+          "prose_sha256": "7fbe42957b37b09a781925d742ed998bcc730ca8e0c059060209c33cef863acc",
+          "kernel_theorem": "Nat.eq_of_testBit_eq"
         }
       ]
     },
@@ -14846,7 +15854,7 @@
     {
       "fact_id": "F:nat-even-xor",
       "language": "lean4",
-      "statement_sha256": "22012a1f800cdfd9b2c14e79fe220fce350f7827d435bab844e6cd340de683ea",
+      "statement_sha256": "aa4cb9502e9797782e3ec17db6d8a3348f423d97f3a86e7b074b1be870b560de",
       "prose_sha256": "bf567fcf9b393513b6775bc8a48d3eb2df613db393cdb551ac9a80e734b5fe4b",
       "kernel_theorem": "Nat.even_xor",
       "history": [
@@ -14854,13 +15862,19 @@
           "language": "lean4",
           "statement_sha256": "22012a1f800cdfd9b2c14e79fe220fce350f7827d435bab844e6cd340de683ea",
           "prose_sha256": "bf567fcf9b393513b6775bc8a48d3eb2df613db393cdb551ac9a80e734b5fe4b"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "22012a1f800cdfd9b2c14e79fe220fce350f7827d435bab844e6cd340de683ea",
+          "prose_sha256": "bf567fcf9b393513b6775bc8a48d3eb2df613db393cdb551ac9a80e734b5fe4b",
+          "kernel_theorem": "Nat.even_xor"
         }
       ]
     },
     {
       "fact_id": "F:nat-exists-most-significant-bit",
       "language": "lean4",
-      "statement_sha256": "bae38c6297a08ab635924859c29166f7015149d77f971853b9b43297c1adb454",
+      "statement_sha256": "ef04cf3a504c422318f44429be03fb446650a6a6aca6741887084f7a1034eb41",
       "prose_sha256": "b061987de568161680b4ea07c0adcc60680e2b629c673bcf60e7ebacef19f041",
       "kernel_theorem": "Nat.exists_most_significant_bit",
       "history": [
@@ -14868,6 +15882,12 @@
           "language": "lean4",
           "statement_sha256": "bae38c6297a08ab635924859c29166f7015149d77f971853b9b43297c1adb454",
           "prose_sha256": "b061987de568161680b4ea07c0adcc60680e2b629c673bcf60e7ebacef19f041"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "bae38c6297a08ab635924859c29166f7015149d77f971853b9b43297c1adb454",
+          "prose_sha256": "b061987de568161680b4ea07c0adcc60680e2b629c673bcf60e7ebacef19f041",
+          "kernel_theorem": "Nat.exists_most_significant_bit"
         }
       ]
     },
@@ -15174,7 +16194,7 @@
     {
       "fact_id": "F:nat-land-assoc",
       "language": "lean4",
-      "statement_sha256": "7c8b84e5f8f2ecb0c34abc865a34f96ea4108f10bdb6fab74f8b3951cc728268",
+      "statement_sha256": "dbb1f4ea2ee841b341024efa35d759952a3da6e715bed83365c52316028ac631",
       "prose_sha256": "23e7f35472b7db54f9c156e87e427c21e94532ffd4619f71a03aa4ec29df0e90",
       "kernel_theorem": "Nat.land_assoc",
       "history": [
@@ -15182,13 +16202,19 @@
           "language": "lean4",
           "statement_sha256": "7c8b84e5f8f2ecb0c34abc865a34f96ea4108f10bdb6fab74f8b3951cc728268",
           "prose_sha256": "23e7f35472b7db54f9c156e87e427c21e94532ffd4619f71a03aa4ec29df0e90"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "7c8b84e5f8f2ecb0c34abc865a34f96ea4108f10bdb6fab74f8b3951cc728268",
+          "prose_sha256": "23e7f35472b7db54f9c156e87e427c21e94532ffd4619f71a03aa4ec29df0e90",
+          "kernel_theorem": "Nat.land_assoc"
         }
       ]
     },
     {
       "fact_id": "F:nat-land-aux-eq-land-of-le",
       "language": "lean4",
-      "statement_sha256": "0739d690d10e367c2f9bc71da7bebc5020c09091f54fc0fdb2efc501a175320f",
+      "statement_sha256": "905c7ad3603596dd2bb69cf2d4d7e0edcea7d699b79c52990f861f0bcf4150db",
       "prose_sha256": "53a5b2a66dc66154d72bb889307e49c839f1bbd899e72a0ea45b9a9d47974cda",
       "kernel_theorem": "Nat.land_aux_eq_land_of_le",
       "history": [
@@ -15196,13 +16222,19 @@
           "language": "lean4",
           "statement_sha256": "0739d690d10e367c2f9bc71da7bebc5020c09091f54fc0fdb2efc501a175320f",
           "prose_sha256": "53a5b2a66dc66154d72bb889307e49c839f1bbd899e72a0ea45b9a9d47974cda"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "0739d690d10e367c2f9bc71da7bebc5020c09091f54fc0fdb2efc501a175320f",
+          "prose_sha256": "53a5b2a66dc66154d72bb889307e49c839f1bbd899e72a0ea45b9a9d47974cda",
+          "kernel_theorem": "Nat.land_aux_eq_land_of_le"
         }
       ]
     },
     {
       "fact_id": "F:nat-land-bit",
       "language": "lean4",
-      "statement_sha256": "c441a0ca8530d23bc80a46e656056fd3e3dbab5e7d17fa5d1e58e5964c5acd4e",
+      "statement_sha256": "2353a24d8bb563508ae19f3d4139e74f24d86331b2b5c0b2fb7c070fabde64a2",
       "prose_sha256": "1fbac0ec161a891bbbbdb97dd1db43f75215d3e284c16d38e4172d5b53e21c4e",
       "kernel_theorem": "Nat.land_bit",
       "history": [
@@ -15210,13 +16242,19 @@
           "language": "lean4",
           "statement_sha256": "c441a0ca8530d23bc80a46e656056fd3e3dbab5e7d17fa5d1e58e5964c5acd4e",
           "prose_sha256": "1fbac0ec161a891bbbbdb97dd1db43f75215d3e284c16d38e4172d5b53e21c4e"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "c441a0ca8530d23bc80a46e656056fd3e3dbab5e7d17fa5d1e58e5964c5acd4e",
+          "prose_sha256": "1fbac0ec161a891bbbbdb97dd1db43f75215d3e284c16d38e4172d5b53e21c4e",
+          "kernel_theorem": "Nat.land_bit"
         }
       ]
     },
     {
       "fact_id": "F:nat-land-comm",
       "language": "lean4",
-      "statement_sha256": "6aa86b3686190ba93a1457e0e30eef941e818a0ef2b3bfbeb6019f3400543692",
+      "statement_sha256": "777083f8077e1ab6e54a07fad428931044d0bf89b8eea3ffa69c960812c8a0b2",
       "prose_sha256": "a05f9ad14b1f6d93371321a89956ffc60b2e3ecb8353683866f9e9f68447978b",
       "kernel_theorem": "Nat.land_comm",
       "history": [
@@ -15224,6 +16262,12 @@
           "language": "lean4",
           "statement_sha256": "6aa86b3686190ba93a1457e0e30eef941e818a0ef2b3bfbeb6019f3400543692",
           "prose_sha256": "a05f9ad14b1f6d93371321a89956ffc60b2e3ecb8353683866f9e9f68447978b"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "6aa86b3686190ba93a1457e0e30eef941e818a0ef2b3bfbeb6019f3400543692",
+          "prose_sha256": "a05f9ad14b1f6d93371321a89956ffc60b2e3ecb8353683866f9e9f68447978b",
+          "kernel_theorem": "Nat.land_comm"
         }
       ]
     },
@@ -15307,7 +16351,7 @@
     {
       "fact_id": "F:nat-ldiff-bit",
       "language": "lean4",
-      "statement_sha256": "1738fbe2f623c6184b8cba8bc9469278ce5d9abae247f078eaf2c52521033530",
+      "statement_sha256": "36d30181577f87d24e643a51f708f454caf7ebbff01407a6f96409493a51285b",
       "prose_sha256": "d72cd29fb9abd213d15ac88d07079d78fd7d9fefbd36d7aa105052570e69457b",
       "kernel_theorem": "Nat.ldiff_bit",
       "history": [
@@ -15315,6 +16359,12 @@
           "language": "lean4",
           "statement_sha256": "1738fbe2f623c6184b8cba8bc9469278ce5d9abae247f078eaf2c52521033530",
           "prose_sha256": "d72cd29fb9abd213d15ac88d07079d78fd7d9fefbd36d7aa105052570e69457b"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "1738fbe2f623c6184b8cba8bc9469278ce5d9abae247f078eaf2c52521033530",
+          "prose_sha256": "d72cd29fb9abd213d15ac88d07079d78fd7d9fefbd36d7aa105052570e69457b",
+          "kernel_theorem": "Nat.ldiff_bit"
         }
       ]
     },
@@ -15727,7 +16777,7 @@
     {
       "fact_id": "F:nat-lor-assoc",
       "language": "lean4",
-      "statement_sha256": "913735abd2993140b76003ad69467924031d1f63cb165bffea90a80e422bc685",
+      "statement_sha256": "658eaf8b85e76aad4d681b033b0e26c273bf9f83bec0fcec1f8763c230a7f258",
       "prose_sha256": "50b8491dc7e2a41a2cd9cbea9c480d757b8a48f865a6470f0518805aa219b020",
       "kernel_theorem": "Nat.lor_assoc",
       "history": [
@@ -15735,13 +16785,19 @@
           "language": "lean4",
           "statement_sha256": "913735abd2993140b76003ad69467924031d1f63cb165bffea90a80e422bc685",
           "prose_sha256": "50b8491dc7e2a41a2cd9cbea9c480d757b8a48f865a6470f0518805aa219b020"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "913735abd2993140b76003ad69467924031d1f63cb165bffea90a80e422bc685",
+          "prose_sha256": "50b8491dc7e2a41a2cd9cbea9c480d757b8a48f865a6470f0518805aa219b020",
+          "kernel_theorem": "Nat.lor_assoc"
         }
       ]
     },
     {
       "fact_id": "F:nat-lor-bit",
       "language": "lean4",
-      "statement_sha256": "d4aef96caa5b38f60615d0fa1f96a7894be10688bfbca200155b2fba322989f3",
+      "statement_sha256": "4fd301c94b4e058676be1102484256eb31fed0531b6961e11b15f264710ed6ee",
       "prose_sha256": "a7d2e5b721fbb38f1d26bbb22f72581e7360d8c8e7e7e13a4c4bfdb2831e6282",
       "kernel_theorem": "Nat.lor_bit",
       "history": [
@@ -15749,13 +16805,19 @@
           "language": "lean4",
           "statement_sha256": "d4aef96caa5b38f60615d0fa1f96a7894be10688bfbca200155b2fba322989f3",
           "prose_sha256": "a7d2e5b721fbb38f1d26bbb22f72581e7360d8c8e7e7e13a4c4bfdb2831e6282"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "d4aef96caa5b38f60615d0fa1f96a7894be10688bfbca200155b2fba322989f3",
+          "prose_sha256": "a7d2e5b721fbb38f1d26bbb22f72581e7360d8c8e7e7e13a4c4bfdb2831e6282",
+          "kernel_theorem": "Nat.lor_bit"
         }
       ]
     },
     {
       "fact_id": "F:nat-lor-comm",
       "language": "lean4",
-      "statement_sha256": "57d2af43bd1694d3be48dd70e3038c4edc67dbea110058f45c2ba508e53db248",
+      "statement_sha256": "4cd007552c0e2ce8caf433d83a41d06e6c70113352ca65479eb4f3568f6162e2",
       "prose_sha256": "cda94bccc7723f4eb8444d231431515fbe675cc6093d304354ed4b268e3ebaf3",
       "kernel_theorem": "Nat.lor_comm",
       "history": [
@@ -15763,6 +16825,12 @@
           "language": "lean4",
           "statement_sha256": "57d2af43bd1694d3be48dd70e3038c4edc67dbea110058f45c2ba508e53db248",
           "prose_sha256": "cda94bccc7723f4eb8444d231431515fbe675cc6093d304354ed4b268e3ebaf3"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "57d2af43bd1694d3be48dd70e3038c4edc67dbea110058f45c2ba508e53db248",
+          "prose_sha256": "cda94bccc7723f4eb8444d231431515fbe675cc6093d304354ed4b268e3ebaf3",
+          "kernel_theorem": "Nat.lor_comm"
         }
       ]
     },
@@ -15853,7 +16921,7 @@
     {
       "fact_id": "F:nat-lt-of-testbit",
       "language": "lean4",
-      "statement_sha256": "dc4142925e65879931013809a16044757c680b43824ea935d57e5b41ac9dd1d6",
+      "statement_sha256": "4adfc7da60f2b8f76cd513463b356bec6d81392210239817c9de36fd862d35bb",
       "prose_sha256": "c4b975af4cf536856a186a76cd2890f8abb685cc43d035e66ded5707a50f3081",
       "kernel_theorem": "Nat.lt_of_testBit",
       "history": [
@@ -15861,6 +16929,12 @@
           "language": "lean4",
           "statement_sha256": "dc4142925e65879931013809a16044757c680b43824ea935d57e5b41ac9dd1d6",
           "prose_sha256": "c4b975af4cf536856a186a76cd2890f8abb685cc43d035e66ded5707a50f3081"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "dc4142925e65879931013809a16044757c680b43824ea935d57e5b41ac9dd1d6",
+          "prose_sha256": "c4b975af4cf536856a186a76cd2890f8abb685cc43d035e66ded5707a50f3081",
+          "kernel_theorem": "Nat.lt_of_testBit"
         }
       ]
     },
@@ -16102,7 +17176,7 @@
     {
       "fact_id": "F:nat-mod-two-eq-zero-or-one",
       "language": "lean4",
-      "statement_sha256": "52102355ed922345ad096f9dcd891337bc333883e20becfd7b80e1e7581c09e6",
+      "statement_sha256": "c55ee7353087a29083b2b5b7da72c1debe48bbf73c4cf5255311db624f4cfa20",
       "prose_sha256": "a2863659a1e30fbbf270120ee6f14cf912ba2714bf78aef18804057d3f5e8c4b",
       "kernel_theorem": "Nat.mod_two_eq_zero_or_one",
       "history": [
@@ -16110,6 +17184,12 @@
           "language": "lean4",
           "statement_sha256": "52102355ed922345ad096f9dcd891337bc333883e20becfd7b80e1e7581c09e6",
           "prose_sha256": "a2863659a1e30fbbf270120ee6f14cf912ba2714bf78aef18804057d3f5e8c4b"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "52102355ed922345ad096f9dcd891337bc333883e20becfd7b80e1e7581c09e6",
+          "prose_sha256": "a2863659a1e30fbbf270120ee6f14cf912ba2714bf78aef18804057d3f5e8c4b",
+          "kernel_theorem": "Nat.mod_two_eq_zero_or_one"
         }
       ]
     },
@@ -16958,7 +18038,7 @@
     {
       "fact_id": "F:nat-sqrt-one",
       "language": "lean4",
-      "statement_sha256": "d759e7bba09e7494037d6b6d44626cad353d84b62d3f2897f14fb673cd848e1e",
+      "statement_sha256": "1b5629555eaf0d88112f97404c0c91ea15b8b0bd922a35da0ed2d7c813890f20",
       "prose_sha256": "2ceb0c56f24b9122b3516bc378c12b06ca6c172220c49a82e3307b2a8b4c5a7d",
       "kernel_theorem": "Nat.sqrt_one",
       "history": [
@@ -16966,13 +18046,19 @@
           "language": "lean4",
           "statement_sha256": "d759e7bba09e7494037d6b6d44626cad353d84b62d3f2897f14fb673cd848e1e",
           "prose_sha256": "2ceb0c56f24b9122b3516bc378c12b06ca6c172220c49a82e3307b2a8b4c5a7d"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "d759e7bba09e7494037d6b6d44626cad353d84b62d3f2897f14fb673cd848e1e",
+          "prose_sha256": "2ceb0c56f24b9122b3516bc378c12b06ca6c172220c49a82e3307b2a8b4c5a7d",
+          "kernel_theorem": "Nat.sqrt_one"
         }
       ]
     },
     {
       "fact_id": "F:nat-sqrt-zero",
       "language": "lean4",
-      "statement_sha256": "4c19e828b4843a77aa74ddc3373bdfa4178f4ad4dd98eeeabf3f1312076b108d",
+      "statement_sha256": "1cbdf81833a406962d523b3d5886bd422dbd16cbd16880adad658c249a551f61",
       "prose_sha256": "94e3bb1c07485ebbd588fd4ff508b0213e60e90ee17dd3f4a28f7a72a6160cb6",
       "kernel_theorem": "Nat.sqrt_zero",
       "history": [
@@ -16980,6 +18066,12 @@
           "language": "lean4",
           "statement_sha256": "4c19e828b4843a77aa74ddc3373bdfa4178f4ad4dd98eeeabf3f1312076b108d",
           "prose_sha256": "94e3bb1c07485ebbd588fd4ff508b0213e60e90ee17dd3f4a28f7a72a6160cb6"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "4c19e828b4843a77aa74ddc3373bdfa4178f4ad4dd98eeeabf3f1312076b108d",
+          "prose_sha256": "94e3bb1c07485ebbd588fd4ff508b0213e60e90ee17dd3f4a28f7a72a6160cb6",
+          "kernel_theorem": "Nat.sqrt_zero"
         }
       ]
     },
@@ -17340,7 +18432,7 @@
     {
       "fact_id": "F:nat-testbit-eq-zero-of-lt",
       "language": "lean4",
-      "statement_sha256": "8caa58b07ce393433f8e278e91c277940e1e023e44399c6ec1656d8b578698ee",
+      "statement_sha256": "859d47bd52a583bbc75d92849f426640091bef3c500d6b4084d5a48467aab143",
       "prose_sha256": "23e0bfea62003913d8a184da2430b521b85b166be166d7c35aa9ec80716e0699",
       "kernel_theorem": "Nat.testBit_eq_zero_of_lt",
       "history": [
@@ -17348,13 +18440,19 @@
           "language": "lean4",
           "statement_sha256": "8caa58b07ce393433f8e278e91c277940e1e023e44399c6ec1656d8b578698ee",
           "prose_sha256": "23e0bfea62003913d8a184da2430b521b85b166be166d7c35aa9ec80716e0699"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "8caa58b07ce393433f8e278e91c277940e1e023e44399c6ec1656d8b578698ee",
+          "prose_sha256": "23e0bfea62003913d8a184da2430b521b85b166be166d7c35aa9ec80716e0699",
+          "kernel_theorem": "Nat.testBit_eq_zero_of_lt"
         }
       ]
     },
     {
       "fact_id": "F:nat-testbit-land",
       "language": "lean4",
-      "statement_sha256": "2605a8a0d1407176cb7caf317ab10699d9b4b9c49e2a1aef3e1d8667eb11e0fc",
+      "statement_sha256": "7ab0d3e3c8a4244bb1e4c8dda19676c437ba496fab0c46778d35dad195943b69",
       "prose_sha256": "db1090c580d3041172316f16ca926d851eefcaa578ad6d994570f5b5bb45e7a5",
       "kernel_theorem": "Nat.testBit_land",
       "history": [
@@ -17362,6 +18460,12 @@
           "language": "lean4",
           "statement_sha256": "2605a8a0d1407176cb7caf317ab10699d9b4b9c49e2a1aef3e1d8667eb11e0fc",
           "prose_sha256": "db1090c580d3041172316f16ca926d851eefcaa578ad6d994570f5b5bb45e7a5"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "2605a8a0d1407176cb7caf317ab10699d9b4b9c49e2a1aef3e1d8667eb11e0fc",
+          "prose_sha256": "db1090c580d3041172316f16ca926d851eefcaa578ad6d994570f5b5bb45e7a5",
+          "kernel_theorem": "Nat.testBit_land"
         }
       ]
     },
@@ -17375,7 +18479,7 @@
     {
       "fact_id": "F:nat-testbit-lor",
       "language": "lean4",
-      "statement_sha256": "50df2832a80f0e44775eaa8369ab22bcd3b393854c23ceb0dba992ffedbb3ff0",
+      "statement_sha256": "38dccf6c681cab6f92bf47da29da82803ee0f78d6ffeaa30186e81472948e864",
       "prose_sha256": "7de448595aefdf4712ecd78ae84174f464948bce442b139a9e87276fb0a464ad",
       "kernel_theorem": "Nat.testBit_lor",
       "history": [
@@ -17383,6 +18487,12 @@
           "language": "lean4",
           "statement_sha256": "50df2832a80f0e44775eaa8369ab22bcd3b393854c23ceb0dba992ffedbb3ff0",
           "prose_sha256": "7de448595aefdf4712ecd78ae84174f464948bce442b139a9e87276fb0a464ad"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "50df2832a80f0e44775eaa8369ab22bcd3b393854c23ceb0dba992ffedbb3ff0",
+          "prose_sha256": "7de448595aefdf4712ecd78ae84174f464948bce442b139a9e87276fb0a464ad",
+          "kernel_theorem": "Nat.testBit_lor"
         }
       ]
     },
@@ -17396,7 +18506,7 @@
     {
       "fact_id": "F:nat-testbit-xor",
       "language": "lean4",
-      "statement_sha256": "35d2ded02042b093d18cdc0315b0af42def90f85a7514554a9711d9c3401d9c9",
+      "statement_sha256": "41ab493e40ce2fdcdd4a1d63b83e6b5aca8d0d10b1d1c1e50a627200995db766",
       "prose_sha256": "b2d0efde9f4fca6520cb8ed2dbc22df14fba3d54fe1e102d3dbc18e39361617d",
       "kernel_theorem": "Nat.testBit_xor",
       "history": [
@@ -17404,6 +18514,12 @@
           "language": "lean4",
           "statement_sha256": "35d2ded02042b093d18cdc0315b0af42def90f85a7514554a9711d9c3401d9c9",
           "prose_sha256": "b2d0efde9f4fca6520cb8ed2dbc22df14fba3d54fe1e102d3dbc18e39361617d"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "35d2ded02042b093d18cdc0315b0af42def90f85a7514554a9711d9c3401d9c9",
+          "prose_sha256": "b2d0efde9f4fca6520cb8ed2dbc22df14fba3d54fe1e102d3dbc18e39361617d",
+          "kernel_theorem": "Nat.testBit_xor"
         }
       ]
     },
@@ -17494,7 +18610,7 @@
     {
       "fact_id": "F:nat-xor-assoc",
       "language": "lean4",
-      "statement_sha256": "955a023fa7c958434cf29d5554115c6a38757bbe559929c3fafed04380c0f87c",
+      "statement_sha256": "e554a82717e86ec7464701ebd0ddff82855d568b43fe9e4938accf419db90fc3",
       "prose_sha256": "19834573a6c62ee4e4c7713ba5b228e9954d5902824daa0c99666d5fb57b8653",
       "kernel_theorem": "Nat.xor_assoc",
       "history": [
@@ -17502,13 +18618,19 @@
           "language": "lean4",
           "statement_sha256": "955a023fa7c958434cf29d5554115c6a38757bbe559929c3fafed04380c0f87c",
           "prose_sha256": "19834573a6c62ee4e4c7713ba5b228e9954d5902824daa0c99666d5fb57b8653"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "955a023fa7c958434cf29d5554115c6a38757bbe559929c3fafed04380c0f87c",
+          "prose_sha256": "19834573a6c62ee4e4c7713ba5b228e9954d5902824daa0c99666d5fb57b8653",
+          "kernel_theorem": "Nat.xor_assoc"
         }
       ]
     },
     {
       "fact_id": "F:nat-xor-ne-zero-iff",
       "language": "lean4",
-      "statement_sha256": "90045057e1f030c94d89a8276465a46c1797b3e8ba41767a96383694e9f19287",
+      "statement_sha256": "46d9c0e8d71a08374c5df564f44f85c55ce854fd2dc140d7203136ba43991493",
       "prose_sha256": "256e9bb1444be279399434654fcd87646b8a1ae0427d6395a77afde145435b2f",
       "kernel_theorem": "Nat.xor_ne_zero_iff",
       "history": [
@@ -17516,13 +18638,19 @@
           "language": "lean4",
           "statement_sha256": "90045057e1f030c94d89a8276465a46c1797b3e8ba41767a96383694e9f19287",
           "prose_sha256": "256e9bb1444be279399434654fcd87646b8a1ae0427d6395a77afde145435b2f"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "90045057e1f030c94d89a8276465a46c1797b3e8ba41767a96383694e9f19287",
+          "prose_sha256": "256e9bb1444be279399434654fcd87646b8a1ae0427d6395a77afde145435b2f",
+          "kernel_theorem": "Nat.xor_ne_zero_iff"
         }
       ]
     },
     {
       "fact_id": "F:nat-xor-xor-cancel-left",
       "language": "lean4",
-      "statement_sha256": "d7a0b24a1abf9212313c03e512e1ea91a64f427336ede0640dd97c4092733d95",
+      "statement_sha256": "35be2bd894f956ca1d8ceb5a2069b4a31efc9de5c0bfe232fa6a873a878af719",
       "prose_sha256": "bae984bfbbb00e7c45aabdcb3d615f3266a0bfd3c8e05f453f770814b286ec3d",
       "kernel_theorem": "Nat.xor_xor_cancel_left",
       "history": [
@@ -17530,13 +18658,19 @@
           "language": "lean4",
           "statement_sha256": "d7a0b24a1abf9212313c03e512e1ea91a64f427336ede0640dd97c4092733d95",
           "prose_sha256": "bae984bfbbb00e7c45aabdcb3d615f3266a0bfd3c8e05f453f770814b286ec3d"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "d7a0b24a1abf9212313c03e512e1ea91a64f427336ede0640dd97c4092733d95",
+          "prose_sha256": "bae984bfbbb00e7c45aabdcb3d615f3266a0bfd3c8e05f453f770814b286ec3d",
+          "kernel_theorem": "Nat.xor_xor_cancel_left"
         }
       ]
     },
     {
       "fact_id": "F:nat-xor-xor-cancel-right",
       "language": "lean4",
-      "statement_sha256": "39a7d4c4827de0ed2caf1c41d70e50f070351c33ce5bbbf1d039ad7a41b5d47d",
+      "statement_sha256": "16be20678777105699b619239ef9f2fc0b64d991cb1069868d593264277c3e72",
       "prose_sha256": "b21b4536170e1e03ebb598b02f6401da81cd7403e1c7a67348ab06972dcf99b0",
       "kernel_theorem": "Nat.xor_xor_cancel_right",
       "history": [
@@ -17544,6 +18678,12 @@
           "language": "lean4",
           "statement_sha256": "39a7d4c4827de0ed2caf1c41d70e50f070351c33ce5bbbf1d039ad7a41b5d47d",
           "prose_sha256": "b21b4536170e1e03ebb598b02f6401da81cd7403e1c7a67348ab06972dcf99b0"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "39a7d4c4827de0ed2caf1c41d70e50f070351c33ce5bbbf1d039ad7a41b5d47d",
+          "prose_sha256": "b21b4536170e1e03ebb598b02f6401da81cd7403e1c7a67348ab06972dcf99b0",
+          "kernel_theorem": "Nat.xor_xor_cancel_right"
         }
       ]
     },
@@ -17638,7 +18778,7 @@
     {
       "fact_id": "F:nat-zero-of-testbit-eq-zero",
       "language": "lean4",
-      "statement_sha256": "6c8a40233817fc01e319628650227439540dab36051e354c607eeeaa4f0d97cc",
+      "statement_sha256": "fb63a26c79b5638b2994da28342afcb1020d36531e8e947bb0310586df15791b",
       "prose_sha256": "f88c5303c4d0ba82e81d35bd1107529b2bc5c2ce34ed1915cb215da2e709b5ce",
       "kernel_theorem": "Nat.zero_of_testBit_eq_zero",
       "history": [
@@ -17646,13 +18786,19 @@
           "language": "lean4",
           "statement_sha256": "6c8a40233817fc01e319628650227439540dab36051e354c607eeeaa4f0d97cc",
           "prose_sha256": "f88c5303c4d0ba82e81d35bd1107529b2bc5c2ce34ed1915cb215da2e709b5ce"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "6c8a40233817fc01e319628650227439540dab36051e354c607eeeaa4f0d97cc",
+          "prose_sha256": "f88c5303c4d0ba82e81d35bd1107529b2bc5c2ce34ed1915cb215da2e709b5ce",
+          "kernel_theorem": "Nat.zero_of_testBit_eq_zero"
         }
       ]
     },
     {
       "fact_id": "F:natdivsucc-antitone-over-constructed-rationals",
       "language": "lean4",
-      "statement_sha256": "0dd3b8c10c6d2cfa016fd1a1e7239d3bb50b05715324d6f957b01d8b252d1c9a",
+      "statement_sha256": "ce97f0c716743562973c4b28ebd44725027609a56b35655c137e22e950c9b92f",
       "prose_sha256": "b12ecfb2081e702c3db5f8c8a672905c80970b5af2a0af1a17d50c22adc4ab5b",
       "kernel_theorem": "Rat.natDivSucc_antitone",
       "history": [
@@ -17660,6 +18806,12 @@
           "language": "lean4",
           "statement_sha256": "0dd3b8c10c6d2cfa016fd1a1e7239d3bb50b05715324d6f957b01d8b252d1c9a",
           "prose_sha256": "b12ecfb2081e702c3db5f8c8a672905c80970b5af2a0af1a17d50c22adc4ab5b"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "0dd3b8c10c6d2cfa016fd1a1e7239d3bb50b05715324d6f957b01d8b252d1c9a",
+          "prose_sha256": "b12ecfb2081e702c3db5f8c8a672905c80970b5af2a0af1a17d50c22adc4ab5b",
+          "kernel_theorem": "Rat.natDivSucc_antitone"
         }
       ]
     },
@@ -17783,7 +18935,7 @@
     {
       "fact_id": "F:prodrange-collapses-under-a-fixed-point-free-involution",
       "language": "lean4",
-      "statement_sha256": "89bdc4d1186415e5318251298b521954eac939729b7c5b0bf1a36a7c23f78a2e",
+      "statement_sha256": "88fdbfcea09ae9de7df3a96222c817a532f2405f8a19717a4fbd9f9de3980cd0",
       "prose_sha256": "d4d2c010981c4a8411b96694323626c77f41c16b5c58a7cdd3d8c8dcf7c0dff5",
       "kernel_theorem": "Int.prod_range_pairing_collapse",
       "history": [
@@ -17791,6 +18943,12 @@
           "language": "lean4",
           "statement_sha256": "89bdc4d1186415e5318251298b521954eac939729b7c5b0bf1a36a7c23f78a2e",
           "prose_sha256": "d4d2c010981c4a8411b96694323626c77f41c16b5c58a7cdd3d8c8dcf7c0dff5"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "89bdc4d1186415e5318251298b521954eac939729b7c5b0bf1a36a7c23f78a2e",
+          "prose_sha256": "d4d2c010981c4a8411b96694323626c77f41c16b5c58a7cdd3d8c8dcf7c0dff5",
+          "kernel_theorem": "Int.prod_range_pairing_collapse"
         }
       ]
     },
@@ -21335,7 +22493,7 @@
     {
       "fact_id": "F:wilson-theorem-over-constructed-integers",
       "language": "lean4",
-      "statement_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
+      "statement_sha256": "64a7355ea9d2949253357d81263b9f774b89f5748434e6b50a1e16dc7f082c95",
       "prose_sha256": "a50d06378565e636236ae2516b7a02bfd8a1cacd1904fedb50c2c6240a36fdaa",
       "kernel_theorem": "Int.wilson",
       "history": [
@@ -21343,6 +22501,12 @@
           "language": "lean4",
           "statement_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
           "prose_sha256": "a50d06378565e636236ae2516b7a02bfd8a1cacd1904fedb50c2c6240a36fdaa"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
+          "prose_sha256": "a50d06378565e636236ae2516b7a02bfd8a1cacd1904fedb50c2c6240a36fdaa",
+          "kernel_theorem": "Int.wilson"
         }
       ]
     },

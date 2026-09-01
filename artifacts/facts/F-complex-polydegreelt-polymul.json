@@ -5,7 +5,7 @@
   "statement": "If polyDegreeLt c m and polyDegreeLt g n then polyDegreeLt (polyMul c g) (m+n) -- multiplying two coefficient functions (via the antidiagonal Cauchy-product convolution polyMul) adds their degree bounds.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Complex.polyDegreeLt x0 x2) -> ((x5 : Complex.polyDegreeLt x1 x3) -> Complex.polyDegreeLt (Complex.polyMul x0 x1) (AxNat.add x2 x3)))))))",
+    "statement": "theorem Complex.polyDegreeLt_polyMul : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Complex.polyDegreeLt x0 x2) -> ((x5 : Complex.polyDegreeLt x1 x3) -> Complex.polyDegreeLt (Complex.polyMul x0 x1) (AxNat.add x2 x3)))))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

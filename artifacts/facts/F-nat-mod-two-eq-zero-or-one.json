@@ -44,7 +44,7 @@
     "kernel_theorem": "Nat.mod_two_eq_zero_or_one",
     "free_symbols": [],
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> Or (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero) (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero)))"
+    "statement": "theorem Nat.mod_two_eq_zero_or_one : ((x0 : AxNat) -> Or (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero) (Eq.{1} AxNat (AxNat.mod x0 (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero)))"
   },
   "id": "F:nat-mod-two-eq-zero-or-one",
   "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nThis is the lemma `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`'s module doc named as absent -- \"a `Nat.mod _ 2 in {0,1}` case-split lemma this prelude does not yet carry\" -- and which two lanes independently sized as blocking work. The prelude's nearest pre-existing relatives were both strictly weaker: `powsq.rs`'s PRIVATE `mod_two_eq_one_of_ne_zero` produces only the `= 1` half and requires the caller to already hold `r != 0`, and `Nat.even_or_odd` states a `div`-shaped disjunction (`n = n/2 + n/2` or `n = succ (n/2 + n/2)`) that never mentions `Nat.mod` at all.\n\nThe eliminator form callers actually use is `ops::cases_mod_two`, which takes a motive that VARIES with the remainder's value; this theorem is the propositional statement of the same fact.",

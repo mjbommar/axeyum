@@ -5,7 +5,7 @@
   "statement": "Complex.factorQuotient c a n k := Nat.rec (fun _ => Complex) zero (fun r' _ => hornerFromTop c a n r') (n - k) -- the synthetic-division quotient of the degree-<n+1 polynomial c by (X - a), COMPUTED via hornerFromTop rather than extracted from an existence proof. The zero-then-hornerFromTop shape (prepending a forced zero base case and reindexing hornerFromTop's own index DOWN by one) is deliberate, not cosmetic: the natural first attempt, reindexing directly as hornerFromTop c a n (n - k), sends every k >= n through truncated Nat.sub to the SAME index 0, and hornerFromTop c a n 0 returns c(n) -- the polynomial's own LEADING coefficient, not zero -- which would make the intended degree bound on factorQuotient flatly false once type-checked against a real k >= n. Reindexing hornerFromTop's own index down by one instead sends every k >= n through n - k = 0 to the forced zero base case, and any k < n unwraps to n - k >= 1 and the correct hornerFromTop c a n (n-k-1).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Complex))))",
+    "statement": "def Complex.factorQuotient : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Complex))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

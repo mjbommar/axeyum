@@ -5,7 +5,7 @@
   "statement": "For every natural a, b, c: land(land(a, b), c) = land(a, land(b, c)).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.land (AxNat.land x0 x1) x2) (AxNat.land x0 (AxNat.land x1 x2)))))",
+    "statement": "theorem Nat.land_assoc : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.land (AxNat.land x0 x1) x2) (AxNat.land x0 (AxNat.land x1 x2)))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.land_assoc",
     "free_symbols": []

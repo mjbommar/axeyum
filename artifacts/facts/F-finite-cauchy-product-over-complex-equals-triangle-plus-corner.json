@@ -6,7 +6,7 @@
   "formal": {
     "kernel_theorem": "Complex.sumRange_mul_eq_diag_add_corner",
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> Complex.Equiv (Complex.mul (Complex.sumRange x0 x2) (Complex.sumRange x1 x2)) (Complex.add (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => fun (x6 : AxNat) => Complex.mul (x0 x5) (x1 x6)) x4 (AxNat.sub x3 x4)) (AxNat.succ x3)) x2) (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => (fun (x6 : AxNat) => fun (x7 : AxNat) => Complex.mul (x0 x6) (x1 x7)) x3 x5) (AxNat.add (AxNat.sub x2 x3) x4)) x3) x2)))))",
+    "statement": "theorem Complex.sumRange_mul_eq_diag_add_corner : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> Complex.Equiv (Complex.mul (Complex.sumRange x0 x2) (Complex.sumRange x1 x2)) (Complex.add (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => fun (x6 : AxNat) => Complex.mul (x0 x5) (x1 x6)) x4 (AxNat.sub x3 x4)) (AxNat.succ x3)) x2) (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => (fun (x6 : AxNat) => fun (x7 : AxNat) => Complex.mul (x0 x6) (x1 x7)) x3 x5) (AxNat.add (AxNat.sub x2 x3) x4)) x3) x2)))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

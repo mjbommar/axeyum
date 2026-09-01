@@ -6,7 +6,7 @@
   "formal": {
     "kernel_theorem": "Rat.natDivSucc_antitone",
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x1) (Rat.natDivSucc (AxNat.succ AxNat.zero) x0))))",
+    "statement": "theorem Rat.natDivSucc_antitone : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x1) (Rat.natDivSucc (AxNat.succ AxNat.zero) x0))))",
     "fragment": "Rat",
     "free_symbols": [
       "x0",

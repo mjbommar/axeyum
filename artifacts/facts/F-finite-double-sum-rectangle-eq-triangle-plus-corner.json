@@ -6,7 +6,7 @@
   "formal": {
     "kernel_theorem": "Nat.sumRange_rect_eq_diag_add_corner",
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x2 x3) x1) x1) (AxNat.add (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x3 (AxNat.sub x2 x3)) (AxNat.succ x2)) x1) (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => (fun (x4 : AxNat) => x0 x2 x4) (AxNat.add (AxNat.sub x1 x2) x3)) x2) x1))))",
+    "statement": "theorem Nat.sumRange_rect_eq_diag_add_corner : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x2 x3) x1) x1) (AxNat.add (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x3 (AxNat.sub x2 x3)) (AxNat.succ x2)) x1) (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => (fun (x4 : AxNat) => x0 x2 x4) (AxNat.add (AxNat.sub x1 x2) x3)) x2) x1))))",
     "fragment": "Nat",
     "free_symbols": [
       "x0",

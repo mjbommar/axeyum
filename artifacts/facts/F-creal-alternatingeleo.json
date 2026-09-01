@@ -5,7 +5,7 @@
   "statement": "For a : Nat -> CReal with every a k >= 0: for every k, sumRange (fun i => (-1)^i * a i) (2k) <= sumRange (fun i => (-1)^i * a i) (2k+1) -- the even-index partial sum E(k) is at most the very next partial sum O(k), the E <= O half of the Leibniz alternating-series bracket, using only nonnegativity of the terms (not monotonicity).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal.le CReal.zero (x0 x1))) -> ((x2 : AxNat) -> CReal.le (CReal.sumRange (fun (x3 : AxNat) => CReal.mul (CReal.pow (CReal.neg CReal.one) x3) (x0 x3)) (AxNat.add x2 x2)) (CReal.sumRange (fun (x3 : AxNat) => CReal.mul (CReal.pow (CReal.neg CReal.one) x3) (x0 x3)) (AxNat.succ (AxNat.add x2 x2))))))",
+    "statement": "theorem CReal.alternatingELeO : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal.le CReal.zero (x0 x1))) -> ((x2 : AxNat) -> CReal.le (CReal.sumRange (fun (x3 : AxNat) => CReal.mul (CReal.pow (CReal.neg CReal.one) x3) (x0 x3)) (AxNat.add x2 x2)) (CReal.sumRange (fun (x3 : AxNat) => CReal.mul (CReal.pow (CReal.neg CReal.one) x3) (x0 x3)) (AxNat.succ (AxNat.add x2 x2))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

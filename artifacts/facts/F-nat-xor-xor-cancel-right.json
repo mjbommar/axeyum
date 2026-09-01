@@ -5,7 +5,7 @@
   "statement": "For every natural a, b: xor(xor(a, b), b) equals a.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.xor (AxNat.xor x0 x1) x1) x0))",
+    "statement": "theorem Nat.xor_xor_cancel_right : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.xor (AxNat.xor x0 x1) x1) x0))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.xor_xor_cancel_right",
     "free_symbols": []

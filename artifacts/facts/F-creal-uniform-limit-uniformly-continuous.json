@@ -5,7 +5,7 @@
   "statement": "For F : Nat -> CReal -> CReal, G : CReal -> CReal, a b : CReal: if F converges uniformly to G on [a,b] (CReal.UniformConvergesOn F G a b) and every F n is uniformly continuous on [a,b], then G is uniformly continuous on [a,b]. Ch.24's headline theorem. Proving it requires CONSTRUCTING a UniformlyContinuousOn witness for G, whose modulus field is built from literal Nat data derived from the convergence rate -- exactly the construction UniformConvergesOn's Type-valued (not Prop-valued) design exists to make possible, since Exists.rec cannot eliminate a Prop witness into Type-valued data.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> ((x1 : CReal) -> CReal))) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.UniformConvergesOn x0 x1 x2 x3) -> ((x5 : ((x5 : AxNat) -> CReal.UniformlyContinuousOn (x0 x5) x2 x3)) -> CReal.UniformlyContinuousOn x1 x2 x3))))))",
+    "statement": "theorem CReal.uniform_limit_uniformly_continuous : ((x0 : ((x0 : AxNat) -> ((x1 : CReal) -> CReal))) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.UniformConvergesOn x0 x1 x2 x3) -> ((x5 : ((x5 : AxNat) -> CReal.UniformlyContinuousOn (x0 x5) x2 x3)) -> CReal.UniformlyContinuousOn x1 x2 x3))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

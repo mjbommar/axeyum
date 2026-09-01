@@ -48,7 +48,7 @@
     "kernel_theorem": "Nat.bitwise_or_eq_lor",
     "free_symbols": [],
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x2 : Bool) => fun (x3 : Bool) => Bool.rec.{1} (fun (x4 : Bool) => Bool) x3 Bool.true x2) x0 x1) (AxNat.lor x0 x1)))"
+    "statement": "theorem Nat.bitwise_or_eq_lor : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x2 : Bool) => fun (x3 : Bool) => Bool.rec.{1} (fun (x4 : Bool) => Bool) x3 Bool.true x2) x0 x1) (AxNat.lor x0 x1)))"
   },
   "id": "F:nat-bitwise-or-eq-lor",
   "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*).\n\nSUPERSEDES the single-point `F:nat-bitwise-or-eq-lor-three-five`. Proved by the same builder as `F:nat-bitwise-and-eq-land`, parameterized by the specialization's two zero-guard values and its per-bit formula -- for `lor` those are `m` / `n` (no absorbing zero on either guard) and `max` built from `Nat.ble` + `bool_select_nat`, against `land`'s constant `0` / `0` and `Nat.mul`. That both operators go through one builder with only those three closures differing is the evidence that the route is not specific to an operator with an absorbing zero on the fuel operand, which is what `land.rs`/`lor.rs`/`ldiff.rs` spend their module docs distinguishing.\n\nThe fuel-generalized inner lemma is `Nat.bitwise_aux_eq_lor_aux`.\n\nDoes not flip any `F:ml430-nat-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",

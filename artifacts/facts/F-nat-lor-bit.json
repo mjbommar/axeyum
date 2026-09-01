@@ -5,7 +5,7 @@
   "statement": "For every Bool a, Nat m, Bool b, Nat n: lor(bit(a, m), bit(b, n)) = bit(a || b, lor(m, n)).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.lor (AxNat.bit x0 x1) (AxNat.bit x2 x3)) (AxNat.bit ((fun (x4 : Bool) => fun (x5 : Bool) => Bool.rec.{1} (fun (x6 : Bool) => Bool) x5 Bool.true x4) x0 x2) (AxNat.lor x1 x3))))))",
+    "statement": "theorem Nat.lor_bit : ((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.lor (AxNat.bit x0 x1) (AxNat.bit x2 x3)) (AxNat.bit ((fun (x4 : Bool) => fun (x5 : Bool) => Bool.rec.{1} (fun (x6 : Bool) => Bool) x5 Bool.true x4) x0 x2) (AxNat.lor x1 x3))))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.lor_bit",
     "free_symbols": []

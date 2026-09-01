@@ -6,7 +6,7 @@
   "formal": {
     "kernel_theorem": "CPoint.varignon_vector_parallel",
     "language": "lean4",
-    "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CPoint.Equiv (CPoint.sub (CPoint.midpoint x1 x2) (CPoint.midpoint x0 x1)) (CPoint.sub (CPoint.midpoint x2 x3) (CPoint.midpoint x3 x0))))))",
+    "statement": "theorem CPoint.varignon_vector_parallel : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CPoint.Equiv (CPoint.sub (CPoint.midpoint x1 x2) (CPoint.midpoint x0 x1)) (CPoint.sub (CPoint.midpoint x2 x3) (CPoint.midpoint x3 x0))))))",
     "fragment": "CPoint",
     "free_symbols": [
       "x0",

@@ -5,7 +5,7 @@
   "statement": "Complex.hornerFromTop c a m j is the synthetic-division accumulator for dividing the degree-<=m+1 polynomial with coefficient function c by (X - a), computed by a nested Nat.rec (outer on m, inner on j): hornerFromTop c a 0 j = c 0 for any j; hornerFromTop c a (m+1) 0 = c (m+1); hornerFromTop c a (m+1) (j+1) = hornerFromTop c a m j + a^(j+1) * c(m+1). A total, axiom-free definition; never extracts an existing quotient via Exists-elimination.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Complex))))",
+    "statement": "def Complex.hornerFromTop : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Complex))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

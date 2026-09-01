@@ -5,7 +5,7 @@
   "statement": "Complex.hornerFromTop c a 0 j = c(0) for any j -- the first of hornerFromTop's three defining equations.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> Eq.{1} Complex (Complex.hornerFromTop x0 x1 AxNat.zero x2) (x0 AxNat.zero))))",
+    "statement": "theorem Complex.hornerFromTop_zero : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> Eq.{1} Complex (Complex.hornerFromTop x0 x1 AxNat.zero x2) (x0 AxNat.zero))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

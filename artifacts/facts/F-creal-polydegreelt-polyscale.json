@@ -5,7 +5,7 @@
   "statement": "If polyDegreeLt c n then polyDegreeLt (polyScale s c) n for any scalar s -- scaling a coefficient function never raises its degree bound.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal.polyDegreeLt x1 x2) -> ((x4 : AxNat) -> ((x5 : AxNat.le x2 x4) -> CReal.Equiv (CReal.mul x0 (x1 x4)) CReal.zero))))))",
+    "statement": "theorem CReal.polyDegreeLt_polyScale : ((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal.polyDegreeLt x1 x2) -> ((x4 : AxNat) -> ((x5 : AxNat.le x2 x4) -> CReal.Equiv (CReal.mul x0 (x1 x4)) CReal.zero))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

@@ -5,7 +5,7 @@
   "statement": "Complex.hornerFromTop c a (m+1) (j+1) = hornerFromTop c a m j + pow a (j+1) * c(m+1) -- the third and final defining equation of hornerFromTop, its genuine recursive step.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} Complex (Complex.hornerFromTop x0 x1 (AxNat.succ x2) (AxNat.succ x3)) (Complex.add (Complex.hornerFromTop x0 x1 x2 x3) (Complex.mul (Complex.pow x1 (AxNat.succ x3)) (x0 (AxNat.succ x2))))))))",
+    "statement": "theorem Complex.hornerFromTop_succ_succ : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} Complex (Complex.hornerFromTop x0 x1 (AxNat.succ x2) (AxNat.succ x3)) (Complex.add (Complex.hornerFromTop x0 x1 x2 x3) (Complex.mul (Complex.pow x1 (AxNat.succ x3)) (x0 (AxNat.succ x2))))))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",
