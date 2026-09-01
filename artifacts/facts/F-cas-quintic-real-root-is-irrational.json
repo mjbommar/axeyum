@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-quintic-real-root-is-irrational",
+  "title": "The real root of x^5 - x - 1 is irrational: axeyum-cas decides it and certifies the answer by the rational root theorem",
+  "statement": "The polynomial x^5 - x - 1 has exactly one real root (Sturm-isolated). That root is IRRATIONAL, and axeyum-cas decides this rather than asserting it. The two sides use different algorithms. The producer, rationality::decide_rationality, reads the answer off the algebraic degree: crate::factor_univariate_over_q gives the true minimal polynomial, and a number is rational exactly when that polynomial has degree 1. The checker, rationality::verify_rationality_certificate, never factors anything: it re-derives the verdict by the RATIONAL ROOT THEOREM, clearing denominators to an integer polynomial and enumerating the finite candidate set +-n/d with n a positive divisor of |a_0| and d a positive divisor of |a_n| -- here a_0 = a_n = 1, so the candidates are exactly {-1, +1} -- evaluating the polynomial exactly at each, and confirming that none of the rational roots (there are none at all) lies inside the isolating bracket. It also re-derives the candidate set itself and compares it against the one the certificate records, so a producer that narrowed its search is visible as a set mismatch rather than as an unfalsifiable 'no rational root found'. It accepts: Some(true). The number in question is a root of an irreducible quintic and is therefore not expressible in radicals; the decision procedure never needs that fact.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (- (- (^ x 5) x) 1))\n(assert (exists ((c Real))\n  (and (= (poly-eval p c) 0)\n       (< 1 c) (< c 2)\n       (not (exists ((n Int) (d Int)) (and (not (= d 0)) (= c (/ n d))))))))\n; decided, not assumed: the checker enumerates the complete rational-root-theorem\n; candidate set {-1, +1} and confirms neither is a root, which for a bracket\n; isolating exactly one root settles irrationality without any factorization.",
+    "fragment": "real-algebraic-rationality",
+    "free_symbols": ["x", "c", "n", "d"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.sturm-sequence-real-root-isolation-and-counting",
+    "cas.rational-root-theorem-divisor-enumeration",
+    "cas.rationality-certificate-not-kernel-reconstructed"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-quintic-real-root-is-irrational",
+      "kind": "witness-replay",
+      "supports": "the irrationality verdict for the real root of x^5 - x - 1 is re-derived by a checker that uses a completely different algorithm from the producer -- divisor enumeration under the rational root theorem, against the producer's polynomial factorization -- and that also re-derives the candidate set itself so an incomplete search cannot pass as a negative result",
+      "check_status": "checked",
+      "checkers": [
+        "rationality::decide_rationality (untrusted producer: reads the verdict off the algebraic degree, i.e. off crate::factor_univariate_over_q's irreducible factorization, via AlgebraicReal::rational_value)",
+        "rationality::verify_rationality_certificate (independent checker: never factors; re-runs the Sturm count to confirm the bracket isolates exactly one root, re-derives the complete rational-root-theorem candidate set with checker-local trial-division divisor enumeration and requires it to match the certificate's, evaluates the polynomial exactly at every candidate, and confirms that no rational root lies inside the bracket)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib rationality::tests::a_quintic_root_beyond_radicals_is_decided_irrational -- --exact 2>/dev/null | grep -cE '^test rationality::tests::a_quintic_root_beyond_radicals_is_decided_irrational \\.\\.\\. ok$'",
+      "checker_seconds": 2,
+      "artifact": "crates/axeyum-cas/src/rationality.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies it as cas-internal. No Kernel::add_declaration term exists for this claim. The checker's falsifiability was MEASURED by deleting each check in a lane snapshot: 8 checks, 3 killed by exactly one test, 5 killed by more than one, 0 survive -- against the sibling inverse-function checker in the same session, where 10 of 14 checks survive deletion because its checker and producer share the Sturm layer. Two checks were deleted from this module rather than kept, because the run showed they could not fail alone. The enumeration itself had a real SOUNDNESS BUG found by this module's own test on its first run: the rational root theorem's 'n divides a_0' clause is vacuous when a_0 = 0, so for p = x^2 - x the divisor list is empty and the candidate 1 -- an actual root -- is never offered, which would have let the checker accept an Irrational verdict for a rational number. Fixed by stripping the x^k factor first; pinned end-to-end by rationality::tests::a_zero_constant_term_does_not_open_a_soundness_hole, which builds exactly that forged certificate and requires rejection."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-cas rationality::decide_rationality / rationality::verify_rationality_certificate (crates/axeyum-cas/src/rationality.rs, landed as ADR-0603 row 3 for the irrationality question)",
+    "source": "the concrete instance is the unit test rationality::tests::a_quintic_root_beyond_radicals_is_decided_irrational, read directly from crates/axeyum-cas/src/rationality.rs rather than hand-transcribed. x^5 - x - 1 is the standard example of a quintic with non-solvable Galois group, used here because it puts the decision procedure somewhere no radical formula reaches.",
+    "prior_art": [
+      {
+        "who": "classical elementary number theory",
+        "what": "the rational root theorem: a rational root p/q in lowest terms of an integer polynomial has p dividing the constant term and q dividing the leading coefficient",
+        "year": 1637,
+        "where": "the checker's entire independent route; attributed loosely to the Descartes-era development of polynomial root theory",
+        "attribution": "standard textbook attribution; this lane did not consult a primary source"
+      },
+      {
+        "who": "Sturm",
+        "what": "Sturm's theorem, used here only to confirm the bracket isolates exactly one root",
+        "year": 1829,
+        "where": "crates/axeyum-cas/src/sturm.rs, which predates this fact",
+        "attribution": "standard attribution"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and ADR-0603. This is row 3 of the irrationality family. Row 1 exists only for individual numbers, one proof each -- Nat.no_rational_sqrt_two is the kernel theorem -- and there cannot be a general constructive predicate, which is row 2: a decision procedure for 'x is rational' over arbitrary CReal would decide x = 0, the same undecidable comparison crates/axeyum-lean-kernel/src/creal/ivt.rs refutes the exact-root construction on. Row 4 has no target: AxReal has no notion of the rationals sitting inside it. What row 3 buys is the whole real-algebraic field: every root of every rational polynomial is decided, with a certificate on BOTH answers, while e and pi stay outside the fragment because they are transcendental -- which is what a graded family is for rather than a defect in it. The mathematically load-bearing clause is that the checker asks whether a rational root lies IN THE BRACKET, not whether the polynomial has one at all: p = (x - 1)(x^2 - 2) has the rational root 1 while the root isolated in (1.4, 1.5] is sqrt 2, so the anywhere-version is sufficient and not necessary. rationality::tests::verify_rejects_a_rational_root_outside_the_bracket pins that in both directions."
+}
