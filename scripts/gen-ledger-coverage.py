@@ -224,9 +224,17 @@ def prelude_of(name: str) -> str:
     would yield `axeyum`, which matches nothing in `NAMESPACE_TO_PRELUDE` and
     would otherwise silently fall through to `logic` -- wrong, and exactly
     the kind of silent misclassification this function exists to avoid.
+
+    `ipc_*` (the intuitionistic-propositional-calculus soundness package) is
+    the same shape: flat, lowercase, no dotted namespace segment, so it too
+    would fall through to `logic` unless checked explicitly. This prelude
+    was added to `prelude_theorem_inventory` on 2026-08-31; before this fix
+    its ~16 theorems were silently counted as `logic`'s.
     """
     if name.startswith("axeyum.string."):
         return "string"
+    if name.startswith("ipc_"):
+        return "ipc"
     head = name.split(".", 1)[0]
     return NAMESPACE_TO_PRELUDE.get(head, "logic")
 
