@@ -1088,6 +1088,43 @@ def frozen_partitions() -> dict[str, str]:
     return dict(partitions)
 
 
+def drawn_freeze() -> dict[str, list[dict[str, Any]]]:
+    """The ROWS an earlier draw already preregistered, keyed by family.
+
+    ADR-1445. `frozen_partitions()` freezes a drawn family's PARTITION against
+    re-derivation; this freezes its MEMBERSHIP, for the same reason and by the
+    same trust route -- the manifest is believed only against its own
+    `extension_sha256`, so a hand-added row cannot become the freeze.
+
+    Why membership needs freezing at all: `select()` re-screens every family on
+    every invocation, and the screens change. The divergence registry only ever
+    grows, so an honest entry registered after a draw takes rows out of that
+    draw's pool retroactively -- measured 2026-09-01, `a3da5621c` took 31 rows
+    across four families, three of them under the ten-candidate floor and the
+    fourth merely shifting which tenth row was selected. There is no legal
+    remedy for that under re-derivation: un-registering a true divergence
+    manufactures a green gate, and deleting the rows (30 of the 31 held-out) is
+    the silent alteration of a blind population ADR-0542 forbids.
+
+    Every other layer of this generator already reads a completed draw as
+    history -- `guard()` scopes R4, R5, R9, R11 and R12 to `new_entries`, and
+    R9's comment says so outright. `select()` was the one place that did not.
+    """
+    if not EXTENSION.is_file():
+        return {}
+    manifest = load_json(EXTENSION)
+    recorded = manifest.get("extension_sha256")
+    body = {k: v for k, v in manifest.items() if k != "extension_sha256"}
+    if digest(body) != recorded:
+        raise RefillError(
+            f"{EXTENSION.name} does not match its own extension_sha256, so its "
+            f"recorded entries cannot be trusted as the drawn freeze")
+    by_family: dict[str, list[dict[str, Any]]] = {}
+    for entry in manifest.get("entries", []):
+        by_family.setdefault(entry["family"], []).append(entry)
+    return by_family
+
+
 def preregistered_freeze() -> dict[str, str]:
     """What each earlier draw PREREGISTERED, before any ADR-0542 amendment.
 
@@ -1368,40 +1405,174 @@ def select(inventory: dict[str, dict[str, Any]], env: set[str],
             "constants": sorted(constants),
         })
     partitions = assign_partitions()
+    drawn = drawn_freeze()
     entries: list[dict[str, Any]] = []
     for family in sorted(per_family):
+        # ADR-1445: a family an earlier draw preregistered is HISTORY. Its rows
+        # are re-emitted in recorded order rather than re-screened -- but they
+        # are rebuilt from the pinned inventory first, so this is a freeze on
+        # MEMBERSHIP and not on content, and it still fails on a drawn row whose
+        # source moved.
+        recorded = drawn.get(family)
+        if recorded is not None:
+            entries.extend(
+                frozen_family_entries(family, recorded, inventory,
+                                      module_family, partitions))
+            reasons[f"frozen:{family}"] = len(recorded)
+            continue
         pool = per_family[family]
         if len(pool) < PER_FAMILY:
             raise RefillError(
                 f"family {family!r} yields {len(pool)} screened candidates, "
                 f"fewer than the {PER_FAMILY} the refill takes")
         for cand in pool[:PER_FAMILY]:
-            name = cand["source_name"]
-            candidate_id = hashlib.sha256(
-                (name + "\0" + cand["statement"]).encode()).hexdigest()
-            shape = statement_shape(cand["statement"])
-            entries.append({
-                "answer_access": "withheld-during-episode",
-                "candidate_id": candidate_id,
-                "constants": cand["constants"],
-                "fact_id": f"F:ml430-{slug(name)}-{candidate_id[:8]}",
-                "family": family,
-                "fragment": "Int" if name.startswith("Int.") else "Nat",
-                "module": cand["module"],
-                "mutation_of": None,
-                "partition": partitions[family],
-                "proof_shape": f"{family}:{shape}",
-                "provenance_class": "external-transcribed",
-                "route_hypotheses": list(FAMILY_ROUTES[family]),
-                "source_group": cand["module"],
-                "source_name": name,
-                "source_statement_sha256": hashlib.sha256(
-                    cand["statement"].encode()).hexdigest(),
-                "statement": cand["statement"],
-                "statement_shape": shape,
-            })
+            entries.append(entry_for(cand["source_name"],
+                                     inventory[cand["source_name"]],
+                                     family, partitions))
         reasons[f"selected:{family}"] = PER_FAMILY
     return entries, reasons
+
+
+def entry_for(name: str, record: dict[str, Any], family: str,
+              partitions: dict[str, str]) -> dict[str, Any]:
+    """One manifest row, derived entirely from the pinned statement inventory.
+
+    Shared by the fresh-draw path and the ADR-1445 frozen path, which is what
+    makes the frozen path a re-derivation rather than a copy: a drawn row is
+    rebuilt here and must agree with what the manifest recorded.
+    """
+    statement = record["type"]
+    constants = sorted(set(CONST_RE.findall(record["type_repr"])))
+    candidate_id = hashlib.sha256(
+        (name + "\0" + statement).encode()).hexdigest()
+    shape = statement_shape(statement)
+    return {
+        "answer_access": "withheld-during-episode",
+        "candidate_id": candidate_id,
+        "constants": constants,
+        "fact_id": f"F:ml430-{slug(name)}-{candidate_id[:8]}",
+        "family": family,
+        "fragment": "Int" if name.startswith("Int.") else "Nat",
+        "module": record["module"],
+        "mutation_of": None,
+        "partition": partitions[family],
+        "proof_shape": f"{family}:{shape}",
+        "provenance_class": "external-transcribed",
+        "route_hypotheses": list(FAMILY_ROUTES[family]),
+        "source_group": record["module"],
+        "source_name": name,
+        "source_statement_sha256": hashlib.sha256(
+            statement.encode()).hexdigest(),
+        "statement": statement,
+        "statement_shape": shape,
+    }
+
+
+# Everything in a manifest row that is a function of the PINNED source alone. A
+# frozen row is rebuilt and must agree on every one of these; disagreement is a
+# refusal, not a quiet re-draw.
+#
+# `partition` and `route_hypotheses` are deliberately absent: both derive from
+# live in-repo rules (`assign_partitions()`, `FAMILY_ROUTES`), and re-stamping
+# them is what keeps an ADR-0542 amendment able to move a frozen family. Freezing
+# them here instead would refuse exactly the repair ADR-0542 prescribes -- the
+# same trap R8 fell into before ADR-0542 split it from R10.
+PINNED_ENTRY_FIELDS = (
+    "answer_access", "candidate_id", "constants", "fact_id", "family",
+    "fragment", "module", "mutation_of", "proof_shape", "provenance_class",
+    "source_group", "source_name", "source_statement_sha256", "statement",
+    "statement_shape",
+)
+
+
+def frozen_family_entries(family: str, recorded: list[dict[str, Any]],
+                          inventory: dict[str, dict[str, Any]],
+                          module_family: dict[str, str],
+                          partitions: dict[str, str]) -> list[dict[str, Any]]:
+    """ADR-1445's frozen path, and the four ways it can still fail.
+
+    A freeze that merely copied `recorded` through would be a checker that
+    cannot fail -- the manifest would be its own authority about its own rows,
+    which is the hole R10 closes for partitions. So each row is rebuilt from the
+    pinned inventory by the same function the fresh path uses.
+    """
+    if len(recorded) != PER_FAMILY:
+        raise RefillError(
+            f"F4 drawn family {family!r} records {len(recorded)} rows, not the "
+            f"{PER_FAMILY} a draw takes; the manifest has been edited")
+    rebuilt_rows: list[dict[str, Any]] = []
+    for row in recorded:
+        name = row["source_name"]
+        record = inventory.get(name)
+        if record is None:
+            raise RefillError(
+                f"F1 drawn row {row['fact_id']} names {name!r}, which is absent "
+                f"from the pinned statement inventory; a preregistered row is "
+                f"repaired by amendment, never dropped (ADR-0542, ADR-1445)")
+        if module_family.get(record["module"]) != family:
+            raise RefillError(
+                f"F2 drawn row {row['fact_id']} was preregistered under family "
+                f"{family!r}, but its module {record['module']!r} now maps to "
+                f"{module_family.get(record['module'])!r}")
+        rebuilt = entry_for(name, record, family, partitions)
+        differing = sorted(field for field in PINNED_ENTRY_FIELDS
+                           if rebuilt[field] != row.get(field))
+        if differing:
+            raise RefillError(
+                f"F3 drawn row {row['fact_id']} no longer re-derives from the "
+                f"pinned source; {', '.join(differing)} differ")
+        rebuilt_rows.append(rebuilt)
+    return rebuilt_rows
+
+
+def screen_drift(entries: list[dict[str, Any]],
+                 inventory: dict[str, dict[str, Any]], env: set[str],
+                 vocabulary: dict[str, Any], registry: list[dict[str, Any]],
+                 catalogued: set[str]) -> list[dict[str, Any]]:
+    """Drawn rows TODAY's screens would reject. Published, never acted on.
+
+    ADR-1445 freezes membership; this is the other half of that decision. A
+    thinning population is real information -- 30 held-out rows became
+    unclosable on 2026-09-01 -- and the answer to "the floor is a live
+    invariant" is to make the thinning countable by a referee, not to convert it
+    into a gate failure whose only remedies are forbidden.
+    """
+    adm = admissible(env, vocabulary)
+    rows: list[dict[str, Any]] = []
+    for entry in entries:
+        name = entry["source_name"]
+        record = inventory.get(name)
+        reason: str | None = None
+        detail: list[str] = []
+        if record is None:
+            reason = "absent-from-inventory"
+        elif name in catalogued:
+            reason = "already-catalogued"
+        elif HYGIENE.search(name):
+            reason = "hygienic-or-generated"
+        else:
+            constants = set(CONST_RE.findall(record["type_repr"]))
+            missing = sorted(constants - adm)
+            held = sorted(constants & HELD_OUT_CONSTRUCTIONS)
+            blocked = blockers_for(record["type"], registry)
+            if missing:
+                reason, detail = "not-statable-here", missing
+            elif held:
+                reason, detail = "held-out-construction", held
+            elif blocked:
+                reason, detail = "divergence-registry", blocked
+        if reason is None:
+            continue
+        rows.append({
+            "blocked_by": detail,
+            "fact_id": entry["fact_id"],
+            "family": entry["family"],
+            "partition": entry["partition"],
+            "reason": reason,
+            "source_name": name,
+        })
+    rows.sort(key=lambda r: (r["family"], r["source_name"]))
+    return rows
 
 
 def guard(entries: list[dict[str, Any]], v1_nursery: dict[str, Any],
@@ -1936,9 +2107,32 @@ def limitations(validation: dict[str, Any]) -> list[str]:
     ]
 
 
+def drift_block(drift: list[dict[str, Any]]) -> dict[str, Any]:
+    """The published form of `screen_drift`, counts first so a referee can read
+    the size of the thinning without reading 31 rows."""
+    return {
+        "rule": (
+            "ADR-1445: a family an earlier draw preregistered is frozen in "
+            "membership as well as in partition, so a screen registered AFTER a "
+            "draw does not retroactively delete rows from it. These are the "
+            "drawn rows today's screens would reject. They remain in the "
+            "population and remain undispatchable -- "
+            "check-dispatchable-frontier.py's classify() consults the same "
+            "divergence registry -- and are listed here so the thinning is "
+            "countable rather than silent. Repairing one is an ADR-0542 "
+            "amendment, never a regeneration."),
+        "rows": len(drift),
+        "by_reason": dict(sorted(Counter(r["reason"] for r in drift).items())),
+        "by_partition": dict(sorted(Counter(r["partition"] for r in drift).items())),
+        "by_family": dict(sorted(Counter(r["family"] for r in drift).items())),
+        "entries": drift,
+    }
+
+
 def build_extension(entries: list[dict[str, Any]],
                     reasons: Counter,
-                    validation: dict[str, Any]) -> dict[str, Any]:
+                    validation: dict[str, Any],
+                    drift: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     partitions = assign_partitions()
     counts = Counter(e["partition"] for e in entries)
     attested = V1_EVALUATION_ENTRIES + len(validation.get("attested", []))
@@ -1971,7 +2165,12 @@ def build_extension(entries: list[dict[str, Any]],
                 "construction exclusion before entering this manifest. A "
                 "generator that emits unclosable rows inflates the open count "
                 "without adding work, which is how the v1 population came to "
-                "be 72% closed with an empty dispatchable set."),
+                "be 72% closed with an empty dispatchable set. ADR-1445: that "
+                "is a statement about the moment each row was DRAWN. The "
+                "screens keep moving -- the divergence registry only grows -- "
+                "and a drawn family is not re-screened, so rows a later screen "
+                "would now reject are listed in "
+                "historical_draw_screen_drift rather than deleted."),
         },
         "partition_assignment_rule": (
             "New families are ordered by the lexicographic path of their "
@@ -2022,8 +2221,16 @@ def build_extension(entries: list[dict[str, Any]],
                 "When this binds, attest (scripts/attest-nursery-surface.py) "
                 "rather than raise it."),
             "screen_rejections": dict(sorted(
-                (k, v) for k, v in reasons.items() if not k.startswith("selected:"))),
+                (k, v) for k, v in reasons.items()
+                if not k.startswith(("selected:", "frozen:")))),
         },
+        # ADR-1445. Drawn rows today's screens would now reject. The membership
+        # freeze means these rows STAY, correctly classified and undispatchable
+        # (check-dispatchable-frontier.py's classify() consults the same
+        # registry); this block is what keeps the thinning countable instead of
+        # invisible. It sits outside `entries` on purpose -- publishing it must
+        # not change one byte of a preregistered row.
+        "historical_draw_screen_drift": drift_block(drift or []),
         "limitations": limitations(validation),
         "entries": entries,
         # ADR-0855, carried forward rather than derived here -- see
@@ -2331,7 +2538,14 @@ def main() -> int:
         validation = surface_validation(entries,
                                         args.ingest_surface_attestation)
         guard(entries, v1_nursery, env, validation)
-        extension = build_extension(entries, reasons, validation)
+        # ADR-1445: measured against the SAME screens `select` applies, over the
+        # rows the membership freeze kept. Computed here rather than inside
+        # `select` so that the freeze and the report cannot drift apart in the
+        # only direction that matters -- a row absorbed by the freeze and absent
+        # from the report.
+        drift = screen_drift(entries, inventory, env, vocabulary, registry,
+                             catalogued)
+        extension = build_extension(entries, reasons, validation, drift)
 
         # One entry, and it must stay one: VOCABULARY belongs to
         # gen-autogenesis-statable-vocabulary.py (ADR-0652), and
@@ -2383,7 +2597,12 @@ def main() -> int:
               # entry count alone hid that 197 rows had been attested while the
               # ceiling still counted all 200 as scaffolding.
               + f"|attested={extension['coverage']['attested_cohort_entries']}"
-              + f"|unattested={extension['coverage']['unattested_cohort_entries']}")
+              + f"|unattested={extension['coverage']['unattested_cohort_entries']}"
+              # ADR-1445: the thinning, on the line every gate run prints. A
+              # freeze that reported nothing would make a growing dead
+              # population invisible, which is the objection the "live
+              # invariant" reading was right about.
+              + f"|screen_drift={len(drift)}")
     except RefillError as error:
         print(f"autogenesis-nursery-refill: {error}", file=sys.stderr)
         return 1
