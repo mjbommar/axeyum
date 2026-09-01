@@ -94,7 +94,17 @@ COLLISION_SOURCE = (
     ROOT / "crates" / "axeyum-lean-kernel" / "src" / "cross_prelude_collision_tests.rs"
 )
 
-_LABEL_RE = re.compile(r'label:\s*"([A-Za-z0-9_]+)"')
+# Two shapes, because the file has used both. `Group { label: "..." }` was the
+# original struct literal; `Group::of("...", &kernel)` is the constructor it was
+# refactored to, and after that refactor this regex matched ZERO occurrences.
+# It refuses an empty result, so the checker went hard red rather than quietly
+# comparing against an empty set -- which is the correct direction to fail, and
+# is also why nobody noticed: it is registered in no aggregate gate, so the only
+# way to see it was to run it by hand. Found 2026-08-31 while adding the `ipc`
+# group, which is exactly the defect class this checker exists to catch.
+_LABEL_RE = re.compile(
+    r'(?:label:\s*"([A-Za-z0-9_]+)"|Group::of\(\s*"([A-Za-z0-9_]+)")'
+)
 
 
 class CompletenessError(Exception):
@@ -224,13 +234,19 @@ def collision_group_labels(source_text: str) -> set[str]:
     false MATCH by inventing an extra label that happens to agree with the
     other two tools.
 
-    Refuses an empty result: if this file's `Group` literal shape ever
-    changes away from `label: "..."`, or the file is empty or missing, that
+    Refuses an empty result: if this file's `Group` construction shape ever
+    changes away from BOTH `label: "..."` and `Group::of("...", ...)`, or the
+    file is empty or missing, that
     must fail loudly rather than silently compare against an empty set (which
     `check_group_labels` would otherwise report as "every other tool's label
     is missing from this one" -- true, but for the wrong reason).
     """
-    labels = set(_LABEL_RE.findall(source_text))
+    labels = {
+        label
+        for match in _LABEL_RE.findall(source_text)
+        for label in match
+        if label
+    }
     if not labels:
         raise CompletenessError(
             "cross_prelude_collision_tests.rs: found ZERO `label: \"...\"` "

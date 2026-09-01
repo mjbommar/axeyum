@@ -272,6 +272,33 @@ class GroupLabelAgreementTests(unittest.TestCase):
         with self.assertRaises(MODULE.CompletenessError):
             MODULE.collision_group_labels("struct Group { name: &'static str }")
 
+    def test_constructor_shape_is_recognised(self) -> None:
+        # `cross_prelude_collision_tests.rs` was refactored from the
+        # `Group { label: "..." }` struct literal to a `Group::of("...", &k)`
+        # constructor, and the label regex matched ZERO occurrences afterwards
+        # -- so this checker was hard red from the refactor until 2026-08-31,
+        # unnoticed because it is registered in no aggregate gate. Both shapes
+        # are accepted now, and this pins the constructor half: without it the
+        # widening is untested and could be reverted with everything green.
+        source = (
+            'groups.push(Group::of("logic", &logic));\n'
+            'groups.push(Group::of("nat", &nat));\n'
+        )
+        self.assertEqual(
+            MODULE.collision_group_labels(source), {"logic", "nat"}
+        )
+
+    def test_both_shapes_together_are_recognised(self) -> None:
+        # A file mid-refactor carrying both shapes must yield the union, not
+        # whichever one the regex happens to try first.
+        source = (
+            'Group { label: "axreal", all: Default::default() }\n'
+            'groups.push(Group::of("rat", &rat));\n'
+        )
+        self.assertEqual(
+            MODULE.collision_group_labels(source), {"axreal", "rat"}
+        )
+
     def test_empty_kdp_prelude_labels_is_an_error(self) -> None:
         with self.assertRaises(MODULE.CompletenessError):
             MODULE.kdp_prelude_labels("")

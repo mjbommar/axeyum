@@ -53,8 +53,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude, on_a_deep_stack,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
+    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
+    on_a_deep_stack,
 };
 
 /// Every declaration name currently in `kernel`'s environment, in canonical
@@ -223,6 +224,26 @@ fn build_groups() -> Vec<Group> {
     let mut characterization = Kernel::new();
     build_characterization(&mut characterization).expect("Nat/Int characterization must build");
     groups.push(Group::of("characterization", &characterization));
+
+    // The IPC package. `build_ipc_soundness_prelude` transitively builds
+    // provable -> heyting -> nat, so one group covers the whole
+    // intuitionistic-logic surface. Unconditional, for `characterization`'s
+    // reason: it is `build_nat_prelude` plus the IPC declarations, so it costs
+    // no more than the already-unconditional `nat` group.
+    //
+    // Absent from all three tools until 2026-08-31, and the omission had a
+    // measured cost outside the kernel: `scripts/check-trust-closure.py` read
+    // `F:excluded-middle-not-intuitionistic` and
+    // `F:heyting-3-chain-refutes-excluded-middle` as having no identifiable
+    // subject, and a census wrote them down as "umbrella facts" -- about
+    // several theorems at once. Each is about exactly one theorem
+    // (`ipc_excluded_middle_not_provable`, `ipc_heyting_join_not_ne_top`,
+    // both verified byte-for-byte against the fact's `formal.statement`).
+    // A prelude group no tool builds is indistinguishable from declarations
+    // that do not exist.
+    let mut ipc = Kernel::new();
+    build_ipc_soundness_prelude(&mut ipc).expect("IPC soundness prelude must build");
+    groups.push(Group::of("ipc", &ipc));
 
     let mut rat = Kernel::new();
     build_rat_prelude(&mut rat).expect("Rat prelude must build");

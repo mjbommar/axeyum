@@ -6,6 +6,7 @@
   "formal": {
     "language": "lean4",
     "statement": "Not (Eq.{1} AxNat (join3 (AxNat.succ AxNat.zero) (not3 (AxNat.succ AxNat.zero))) (AxNat.succ (AxNat.succ AxNat.zero)))",
+    "kernel_theorem": "ipc_heyting_join_not_ne_top",
     "fragment": "Nat",
     "free_symbols": []
   },
