@@ -15,21 +15,9 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
     vec![
         ("CReal.piHalfCoef", p.pi_half_coef, "def"),
         ("CReal.piHalfTerm", p.pi_half_term, "def"),
-        (
-            "CReal.piHalfSeriesPartial",
-            p.pi_half_series_partial,
-            "def",
-        ),
-        (
-            "CReal.piHalfCoefNonneg",
-            p.pi_half_coef_nonneg,
-            "theorem",
-        ),
-        (
-            "CReal.piHalfTermNonneg",
-            p.pi_half_term_nonneg,
-            "theorem",
-        ),
+        ("CReal.piHalfSeriesPartial", p.pi_half_series_partial, "def"),
+        ("CReal.piHalfCoefNonneg", p.pi_half_coef_nonneg, "theorem"),
+        ("CReal.piHalfTermNonneg", p.pi_half_term_nonneg, "theorem"),
         (
             "CReal.piHalfTermLePowHalf",
             p.pi_half_term_le_pow_half,

@@ -88,9 +88,7 @@ use crate::expr::{BinderInfo, ExprId};
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
-use crate::rat_prelude::ops::{
-    nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rle, rmul, rzero,
-};
+use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rle, rmul, rzero};
 
 /// Height for the `pi` family's thin definitional wrappers, mirroring
 /// `trig.rs::TRIG_HEIGHT`.
@@ -105,9 +103,6 @@ const PI_HEIGHT: u16 = DERIVED_HEIGHT + 1;
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_pi_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    if std::env::var("AXEYUM_PI_BISECT").as_deref() == Ok("none") {
-        return Ok(());
-    }
     declare_pi_half_coef(d, p)?;
     declare_pi_half_term(d, p)?;
     declare_pi_half_series_partial(d, p)?;
@@ -125,15 +120,9 @@ pub(super) fn declare_pi_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     declare_pi_half(d, p, raw, k_final, body)?;
     declare_pi_half_converges(d, p, raw, k_final, body)?;
     declare_pi(d, p)?;
-    if std::env::var("AXEYUM_PI_BISECT").as_deref() == Ok("core") {
-        return Ok(());
-    }
     declare_pi_half_le_two(d, p)?;
     declare_pi_le_four(d, p)?;
     declare_two_le_pi(d, p)?;
-    if std::env::var("AXEYUM_PI_BISECT").as_deref() == Ok("four") {
-        return Ok(());
-    }
     declare_three_le_pi(d, p)
 }
 
@@ -569,7 +558,10 @@ fn declare_pi_half_term_le_pow_half(
         );
         // B : mul half term_j ≤ mul half (pow half j).
         let half_nn = half_nonneg_proof(d, p);
-        let step_b = d.lemma(p.mul_le_mul_of_nonneg_left, &[hp, term_j, pw_j, half_nn, ih]);
+        let step_b = d.lemma(
+            p.mul_le_mul_of_nonneg_left,
+            &[hp, term_j, pw_j, half_nn, ih],
+        );
 
         let mul_tj_c = cmul(d, p, term_j, c_c);
         let mul_tj_h = cmul(d, p, term_j, hp);
@@ -578,7 +570,9 @@ fn declare_pi_half_term_le_pow_half(
         let refl_l = d.lemma(p.equiv_refl, &[mul_tj_c]);
         let step_a2 = d.lemma(
             p.le_congr,
-            &[mul_tj_c, mul_tj_c, mul_tj_h, mul_h_tj, refl_l, comm1, step_a],
+            &[
+                mul_tj_c, mul_tj_c, mul_tj_h, mul_h_tj, refl_l, comm1, step_a,
+            ],
         );
 
         let mul_h_pw = cmul(d, p, hp, pw_j);
@@ -637,13 +631,7 @@ fn pow_half_le_dominant(d: &mut IntDev<'_>, p: CRealPrelude, k: ExprId) -> ExprI
     d.lemma(
         p.le_congr,
         &[
-            mul_pw_one,
-            pw,
-            mul_pw_two,
-            mul_two_pw,
-            fold_left,
-            comm,
-            scaled,
+            mul_pw_one, pw, mul_pw_two, mul_two_pw, fold_left, comm, scaled,
         ],
     )
 }
@@ -1236,10 +1224,7 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
         // same `Rat.mk` after normalisation.
         let fold = d.lemma(p.of_rat_add, &[c_prev, b_here]);
         let refl_rhs = d.lemma(p.equiv_refl, &[rhs]);
-        d.lemma(
-            p.le_congr,
-            &[lhs, next_c, rhs, rhs, fold, refl_rhs, grown],
-        )
+        d.lemma(p.le_congr, &[lhs, next_c, rhs, rhs, fold, refl_rhs, grown])
     };
 
     // `sumRange f 1` IS `add zero (f 0)`, and `Rat.add Rat.zero (natDivSucc 1
