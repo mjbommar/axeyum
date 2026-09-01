@@ -753,13 +753,19 @@ mod tests {
 
     #[test]
     fn verify_rejects_a_critical_point_forged_exactly_at_the_left_endpoint() {
-        // Adversarial: take the clean certificate above and forge in the
-        // excluded boundary root as if it were a genuine interior candidate,
-        // claiming it as the argmax with the (wrong) value p(0) = 0. Only
-        // `is_strictly_inside` (step 3) -- and, independently, the
-        // completeness recount (step 5) -- can catch this; there is no
-        // incidental unrelated guard doing it by accident here.
-        let p = poly_from(&[0, 0, 1]);
+        // Adversarial: take a certificate and forge in the excluded boundary
+        // root as if it were a genuine interior candidate, claiming it as
+        // the argmax. Deliberately p = -x^2 (not x^2): the boundary root at
+        // x=0=a is then the GENUINE max value too (p(0)=0 > p(2)=-4), so the
+        // forged certificate passes step 6's maximality/self-consistency
+        // check trivially -- isolating `is_strictly_inside` (step 3) and,
+        // independently, the completeness recount (step 5) as the only two
+        // things that can still reject it. Verified in a snapshot
+        // (never the shared tree): with BOTH removed this is wrongly
+        // ACCEPTED (Some(true)); with either alone restored it is correctly
+        // rejected -- genuine, non-vacuous defense in depth, not one guard
+        // resting on the other by accident.
+        let p = poly_from(&[0, 0, -1]);
         let mut cert = polynomial_extremum(&p, Rational::integer(0), Rational::integer(2))
             .expect("must not decline");
         let boundary_root = crate::algebraic::real_roots(&poly_from(&[0, 1]))
@@ -793,7 +799,9 @@ mod tests {
 
     #[test]
     fn verify_rejects_a_critical_point_forged_exactly_at_the_right_endpoint() {
-        let p = poly_from(&[0, 0, 1]);
+        // Mirror of the left-endpoint fixture above: p = -x^2 on [-2, 0]
+        // makes the boundary root at x=0=b the genuine max too.
+        let p = poly_from(&[0, 0, -1]);
         let mut cert = polynomial_extremum(&p, Rational::integer(-2), Rational::integer(0))
             .expect("must not decline");
         let boundary_root = crate::algebraic::real_roots(&poly_from(&[0, 1]))
