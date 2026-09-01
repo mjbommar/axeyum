@@ -5024,6 +5024,98 @@ SUITES["prelude-inventory-ownership"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# `header-settled-fact-statements` rewrites the `formal.statement` of SETTLED
+# facts -- the field `check-settled-fact-statements.py` exists to keep from
+# moving quietly. What makes that safe is not the rewrite; it is the four
+# refusals, each declining a case the tool cannot prove is a pure prefix. So the
+# mutations below delete refusals, not the happy path: a suite exercising only
+# the fix would let every refusal be removed while staying green, and the tool
+# would then head a statement it had no authority to head.
+#
+# Note why each refusal test asserts the REASON. Deleting the ABSENT guard alone
+# leaves the same fact refused as DIVERGENT (an empty candidate set contains no
+# statement), so a test checking only "the statement did not change" cannot tell
+# the two guards apart and one deletion would kill zero tests.
+# --------------------------------------------------------------------------
+
+SUITES["header-settled-fact-statements"] = (
+    "scripts/header-settled-fact-statements.py",
+    Unittest("scripts.tests.test_header_settled_fact_statements"),
+    [
+        # A name absent from the projection is a proof-isolated import with no
+        # persistent declaration. Heading it fabricates a rendering.
+        (
+            "a declaration absent from the projection is refused",
+            '        if not found:\n            refused.append((data["id"], name, "ABSENT"))\n'
+            "            continue",
+            '        if not found:\n            found = {("theorem", statement)}',
+        ),
+        # The byte-identity against `canonical_type` is the ENTIRE argument that
+        # the prefix preserves the proposition. Without it the tool heads a
+        # hand-written paraphrase as though it were the kernel's own rendering.
+        (
+            "a statement that is not the declaration's rendering is refused",
+            '        if statement not in canonicals:\n'
+            '            refused.append((data["id"], name, "DIVERGENT"))\n            continue',
+            "        if False:\n            pass",
+        ),
+        # Two renderings of one name means the tool cannot know which
+        # proposition the fact is about.
+        (
+            "one name rendering to two types is refused",
+            "        if len(canonicals) > 1:\n"
+            '            refused.append((data["id"], name, "AMBIGUOUS"))\n            continue',
+            "        if False:\n            pass",
+        ),
+        # `theorem` is not a safe default: a definition headed `theorem` claims
+        # a proof exists where there is only a body.
+        (
+            "a kind with no header keyword is refused",
+            "        if len(keywords) != 1:\n"
+            '            refused.append((data["id"], name, "UNKNOWN-KIND"))\n            continue',
+            '        if len(keywords) != 1:\n            keywords = {"theorem"}',
+        ),
+        # The keyword must track the kind, or every `def` lands headed
+        # `theorem` and the ledger reads as carrying proofs it does not.
+        (
+            "the header keyword follows the declaration kind",
+            "        keyword = keywords.pop()",
+            '        keyword = "theorem"',
+        ),
+        # `--check`'s exit status must depend on the finding. This repository
+        # has shipped checkers that exit 0 on completion alone.
+        (
+            "--check exits nonzero on a finding",
+            "    if fixable:\n        print(",
+            "    if False:\n        print(",
+        ),
+        # An amendment is what `check-settled-fact-statements.py` requires
+        # before a changed pin may be rewritten. Without one the next `--write`
+        # refuses -- or, if the refusal were ever relaxed, launders the change.
+        (
+            "an applied fix records an amendment",
+            "        amendments.append(",
+            "        [].append(",
+        ),
+        # Re-running must not record one act twice. The ledger's amendment list
+        # is a history, and a duplicated row misreports how often a claim moved.
+        (
+            "a re-run does not duplicate an amendment",
+            '        if row["fact_id"] in already:\n            continue',
+            "        if False:\n            continue",
+        ),
+        # A tool whose authority is empty must error, not report PASS. An empty
+        # projection would otherwise make every fact read as ABSENT and the run
+        # as clean.
+        (
+            "an empty projection is an error, not a quiet pass",
+            "    if not decls:\n        raise HeaderError(",
+            "    if False:\n        raise HeaderError(",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
