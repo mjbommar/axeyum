@@ -178,6 +178,7 @@ mod euler;
 mod even_add_family;
 mod even_div;
 mod factorization;
+mod factorization_lcm;
 mod factorization_root;
 mod fermat;
 mod fermat_number;
@@ -343,6 +344,7 @@ use euler::declare_mod_eq_cancel;
 use even_add_family::declare_even_add_family_all;
 use even_div::declare_even_div;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
+use factorization_lcm::declare_factorization_lcm;
 use factorization_root::declare_factorization_root_all;
 use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
@@ -4814,6 +4816,21 @@ pub struct NatPrelude {
     /// with every factor of `base` divided out. Construction only, ADR-0653;
     /// opens `Mathlib.Data.Nat.MaxPowDiv` for the autogenesis screen.
     pub div_max_pow: NameId,
+    /// `Nat.coprimePartAux (fuel n k : Nat) : Nat` — repeatedly divide `n` by
+    /// `gcd n k` until the gcd is `1`, fuel-bounded. Strips every prime `k`
+    /// shares with `n`, however many copies `n` holds, not merely `k`'s own
+    /// exponent (`factorization_lcm.rs`'s module doc).
+    pub coprime_part_aux: NameId,
+    /// `Nat.factorizationLCMLeft (a b : Nat) : Nat` — `1` if `a = 0` or
+    /// `b = 0`; otherwise `a` stripped of every prime where `b`'s exponent
+    /// strictly exceeds `a`'s, i.e. `coprimePartAux a a (div b (gcd a b))`.
+    /// Construction only, ADR-0653; opens
+    /// `Mathlib.Data.Nat.Factorization.LCM` for the autogenesis screen.
+    pub factorization_lcm_left: NameId,
+    /// `Nat.factorizationLCMRight (a b : Nat) : Nat` — `1` if `a = 0` or
+    /// `b = 0`; otherwise `lcm a b / factorizationLCMLeft a b`. Construction
+    /// only, ADR-0653.
+    pub factorization_lcm_right: NameId,
     /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
     /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
     /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s
@@ -6301,6 +6318,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count: kernel.name_str(nat, "count"),
             div_max_pow_aux: kernel.name_str(nat, "divMaxPowAux"),
             div_max_pow: kernel.name_str(nat, "divMaxPow"),
+            coprime_part_aux: kernel.name_str(nat, "coprimePartAux"),
+            factorization_lcm_left: kernel.name_str(nat, "factorizationLCMLeft"),
+            factorization_lcm_right: kernel.name_str(nat, "factorizationLCMRight"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             nth_root_aux: kernel.name_str(nat, "nthRootAux"),
@@ -6627,6 +6647,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.divMaxPowAux` needs `div`/`mod`/`beq`/`ble`, all far above.
         // Definitions only -- ADR-0653.
         declare_count_and_div_max_pow(&mut d, &p)?;
+        // `factorization_lcm.rs` (ADR-1450 unblock): `Nat.coprimePartAux`
+        // needs `gcd`/`div`/`ble`, and `Nat.factorizationLCMLeft`/`Right`
+        // need `gcd`/`div`/`beq` plus `Nat.lcm` (`declare_lcm`, far above).
+        // Definitions only -- ADR-0653.
+        declare_factorization_lcm(&mut d, &p)?;
 
         declare_perfect_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;

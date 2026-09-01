@@ -532,6 +532,12 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.count,
         p.div_max_pow_aux,
         p.div_max_pow,
+        // `factorization-lcm-unblock` lane (ADR-1450's re-derived unblock).
+        // Definitions only, ADR-0653 -- `Nat.factorizationLCMLeft`/`Right`
+        // open `Mathlib.Data.Nat.Factorization.LCM`.
+        p.coprime_part_aux,
+        p.factorization_lcm_left,
+        p.factorization_lcm_right,
         // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
         p.dist,
         p.nth_aux,
@@ -10328,6 +10334,142 @@ fn div_max_pow_evaluates_correctly() {
     );
 
     for name in [p.div_max_pow_aux, p.div_max_pow] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `Nat.factorizationLCMLeft`/`Right` (`factorization_lcm.rs`). Expected
+/// values were produced by an independent per-prime Python reference
+/// (explicit trial-division factorization, not the `coprimePartAux`
+/// construction) and checked against this construction over every pair in
+/// `[0, 60]^2` -- 3,721 pairs, zero mismatches -- including the algebraic
+/// invariants `Left*Right = lcm a b`, `Left ∣ a`, `Right ∣ b`,
+/// `gcd Left Right = 1` at every nonzero pair, before any of this was
+/// written.
+#[test]
+fn factorization_lcm_left_right_evaluate_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let seven = f.num(7);
+    let eight = f.num(8);
+    let nine = f.num(9);
+    let twelve = f.num(12);
+    let eighteen = f.num(18);
+
+    // 12 = 2^2*3, 18 = 2*3^2, lcm = 36 = 2^2*3^2.
+    // p=2: exp_b(1) <= exp_a(2) -> Left takes 2^2=4. p=3: exp_b(2) <=
+    // exp_a(1)? no -> Left takes 1. Left = 4. Right = 36/4 = 9.
+    let l12_18 = f.const_app(p.factorization_lcm_left, &[twelve, eighteen]);
+    let r12_18 = f.const_app(p.factorization_lcm_right, &[twelve, eighteen]);
+    assert!(
+        f.k.def_eq(l12_18, four),
+        "factorizationLCMLeft 12 18 must be 4"
+    );
+    assert!(
+        f.k.def_eq(r12_18, nine),
+        "factorizationLCMRight 12 18 must be 9"
+    );
+    let left_times_right = f.mul(l12_18, r12_18);
+    let lcm12_18 = f.const_app(p.lcm, &[twelve, eighteen]);
+    assert!(
+        f.k.def_eq(left_times_right, lcm12_18),
+        "Left * Right must equal lcm 12 18 -- Mathlib's own \
+         factorizationLCMLeft_mul_factorizationLCMRight row"
+    );
+
+    // Transposed argument pair: NOT the same values, and NOT def_eq to the
+    // untransposed pair -- the standing control for an asymmetric operator.
+    let l18_12 = f.const_app(p.factorization_lcm_left, &[eighteen, twelve]);
+    let r18_12 = f.const_app(p.factorization_lcm_right, &[eighteen, twelve]);
+    assert!(
+        f.k.def_eq(l18_12, nine),
+        "factorizationLCMLeft 18 12 must be 9"
+    );
+    assert!(
+        f.k.def_eq(r18_12, four),
+        "factorizationLCMRight 18 12 must be 4"
+    );
+    assert!(
+        !f.k.def_eq(l12_18, l18_12),
+        "negative control: transposed arguments must NOT agree, or nothing \
+         here detects a swapped (a, b)"
+    );
+
+    // 4 = 2^2, 8 = 2^3. exp_b(3) <= exp_a(2)? no -> Left takes 1 (the only
+    // prime present goes entirely to Right). Right = lcm(4,8)/1 = 8.
+    let l4_8 = f.const_app(p.factorization_lcm_left, &[four, eight]);
+    let r4_8 = f.const_app(p.factorization_lcm_right, &[four, eight]);
+    assert!(f.k.def_eq(l4_8, one), "factorizationLCMLeft 4 8 must be 1");
+    assert!(
+        f.k.def_eq(r4_8, eight),
+        "factorizationLCMRight 4 8 must be 8"
+    );
+
+    // 2 = 2^1, 6 = 2*3. gcd = 2, so a/gcd = 1 -- the case that refutes the
+    // naive symmetric formula for Right (`coprimePartAux b b (a/gcd)` would
+    // return b = 6 unstripped, since gcd(n, 1) = 1 always). The equal
+    // exponent at p=2 must still route to Left (Mathlib's `<=`), stripping
+    // p=2 fully from Right.
+    let l2_6 = f.const_app(p.factorization_lcm_left, &[two, six]);
+    let r2_6 = f.const_app(p.factorization_lcm_right, &[two, six]);
+    assert!(f.k.def_eq(l2_6, two), "factorizationLCMLeft 2 6 must be 2");
+    assert!(
+        f.k.def_eq(r2_6, three),
+        "factorizationLCMRight 2 6 must be 3 -- NOT 6, which is what the \
+         naive a/gcd stripping key for Right would give"
+    );
+
+    // Coprime pair: nothing is stripped from either side.
+    let l4_9 = f.const_app(p.factorization_lcm_left, &[four, nine]);
+    let r4_9 = f.const_app(p.factorization_lcm_right, &[four, nine]);
+    assert!(f.k.def_eq(l4_9, four), "factorizationLCMLeft 4 9 must be 4");
+    assert!(
+        f.k.def_eq(r4_9, nine),
+        "factorizationLCMRight 4 9 must be 9"
+    );
+
+    // Equal nonzero arguments: the whole value goes to Left (ties), Right = 1.
+    let l7_7 = f.const_app(p.factorization_lcm_left, &[seven, seven]);
+    let r7_7 = f.const_app(p.factorization_lcm_right, &[seven, seven]);
+    assert!(
+        f.k.def_eq(l7_7, seven),
+        "factorizationLCMLeft 7 7 must be 7"
+    );
+    assert!(f.k.def_eq(r7_7, one), "factorizationLCMRight 7 7 must be 1");
+
+    // Zero boundary rows: both sides are 1, NOT 0 -- Mathlib's empty-support
+    // convention (`Nat.factorization 0` is the zero function), and NOT the
+    // fuel recursion's natural fallback at n = 0.
+    let l0_5 = f.const_app(p.factorization_lcm_left, &[zero, five]);
+    let r0_5 = f.const_app(p.factorization_lcm_right, &[zero, five]);
+    assert!(f.k.def_eq(l0_5, one), "factorizationLCMLeft 0 5 must be 1");
+    assert!(f.k.def_eq(r0_5, one), "factorizationLCMRight 0 5 must be 1");
+    let l5_0 = f.const_app(p.factorization_lcm_left, &[five, zero]);
+    let r5_0 = f.const_app(p.factorization_lcm_right, &[five, zero]);
+    assert!(f.k.def_eq(l5_0, one), "factorizationLCMLeft 5 0 must be 1");
+    assert!(f.k.def_eq(r5_0, one), "factorizationLCMRight 5 0 must be 1");
+    let l0_0 = f.const_app(p.factorization_lcm_left, &[zero, zero]);
+    let r0_0 = f.const_app(p.factorization_lcm_right, &[zero, zero]);
+    assert!(f.k.def_eq(l0_0, one), "factorizationLCMLeft 0 0 must be 1");
+    assert!(f.k.def_eq(r0_0, one), "factorizationLCMRight 0 0 must be 1");
+
+    for name in [
+        p.coprime_part_aux,
+        p.factorization_lcm_left,
+        p.factorization_lcm_right,
+    ] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{} must rest on zero axioms",
