@@ -1,7 +1,7 @@
 //! `int-prime-dvd` lane: three `ml430` mirrors about a `Nat`-prime dividing
 //! an `Int` product.
 //!
-//! - [`declare_prime_dvd_mul_prime`]: `Int.Prime.dvd_mul'`
+//! - [`declare_prime_dvd_mul_prime`][]: `Int.Prime.dvd_mul'`
 //!   (`F:ml430-int-prime-dvd-mul-23b73e69`) — `↑p ∣ m*n → ↑p ∣ m ∨ ↑p ∣ n`,
 //!   built by applying `gcd::declare_euclid_lemma`'s `Int.euclid_lemma`
 //!   directly at `pr := ofNat p`. `Int.euclid_lemma`'s primality hypothesis
@@ -9,12 +9,12 @@
 //!   (`nat_abs.rs`'s own doc comment: `Int.natAbs (ofNat n) ≡ n`), so the
 //!   `Nat.Prime p` hypothesis this mirror states is *definitionally* the one
 //!   `euclid_lemma` consumes — no transport needed, a bare application.
-//! - [`declare_prime_dvd_mul`]: `Int.Prime.dvd_mul`
+//! - [`declare_prime_dvd_mul`][]: `Int.Prime.dvd_mul`
 //!   (`F:ml430-int-prime-dvd-mul-90351ba0`) — the same statement with each
 //!   disjunct dropped from `Int.dvd` to `Nat.dvd` via `natAbs`, using
 //!   `gcd::declare_nat_abs_dvd_nat_abs_of_dvd` (`a ∣ b → natAbs a ∣ natAbs
 //!   b`) on each branch of the `Or` `euclid_lemma` returns.
-//! - [`declare_not_prime_of_int_mul`]: `Int.not_prime_of_int_mul`
+//! - [`declare_not_prime_of_int_mul`][]: `Int.not_prime_of_int_mul`
 //!   (`F:ml430-int-not-prime-of-int-mul-e3060f5d`) — if neither factor's
 //!   magnitude is `1`, the product (cast to `Int` from a `Nat` `c`) is not
 //!   prime. Reduces to a `Nat` fact about `x := natAbs a`, `y := natAbs b`:
