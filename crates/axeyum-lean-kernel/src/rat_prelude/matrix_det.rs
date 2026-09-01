@@ -184,7 +184,7 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
 
 /// `Nat → Nat → Rat`, the matrix type (a local copy of `matrix_n`'s private
 /// `mat_ty`).
-fn mat_ty(d: &mut IntDev<'_>) -> ExprId {
+pub(super) fn mat_ty(d: &mut IntDev<'_>) -> ExprId {
     let nat = d.nat_ty();
     let carrier = rat_ty(d);
     let row = d.arrow(nat, carrier);
@@ -220,14 +220,14 @@ fn ralt_sign(d: &mut IntDev<'_>, p: RatPrelude, j: ExprId) -> ExprId {
 }
 
 /// `Rat.det A n`.
-fn rdet(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, n: ExprId) -> ExprId {
+pub(super) fn rdet(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, n: ExprId) -> ExprId {
     d.const_app(p.det, &[a, n])
 }
 
 /// `Eq Rat (Rat.mul Rat.one x) x` — this prelude has no `one_mul`, so it is
 /// `mul_comm` followed by `mul_one` every time (`super::RatPrelude`'s own
 /// note at `mul_one` says the same).
-fn one_mul_pf(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+pub(super) fn one_mul_pf(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
     let one = rone(d, p);
     let one_x = rmul(d, one, x);
     let x_one = rmul(d, x, one);
@@ -1111,7 +1111,7 @@ fn declare_det_eval_example4(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 
 /// `Rat.matId`, a bare constant (a local copy of `matrix_n`'s private
 /// `rmat_id`; the identity matrix carries no dimension argument).
-fn rmat_id(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
+pub(super) fn rmat_id(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId {
     d.kernel().const_(p.mat_id, vec![])
 }
 
@@ -1674,7 +1674,7 @@ fn skip_comm_body(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, b: ExprId) -> Ex
 }
 
 /// `Eq Bool (Nat.ble a b) true`, [`declare_mat_skip_comm`]'s hypothesis.
-fn ble_true_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
+pub(super) fn ble_true_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId) -> ExprId {
     let lhs = d.ble(a, b);
     let true_ = d.bool_true();
     d.bool_eq(lhs, true_)
@@ -5891,7 +5891,7 @@ fn nat_succ_pred_of_beq_zero_false(d: &mut IntDev<'_>, x: ExprId, h: ExprId) -> 
 
 /// `Eq Bool (Nat.beq i j) false`, the distinctness hypothesis
 /// [`declare_det_alternating`] carries.
-fn alt_hyp_ne(d: &mut IntDev<'_>, i: ExprId, j: ExprId) -> ExprId {
+pub(super) fn alt_hyp_ne(d: &mut IntDev<'_>, i: ExprId, j: ExprId) -> ExprId {
     let b = d.beq(i, j);
     let f_ = d.bool_false();
     d.bool_eq(b, f_)
@@ -7435,7 +7435,13 @@ fn bridge_swap_to_b(
 }
 
 /// `∀ c, B i c = A j c` — the swap's row-`i` hypothesis.
-fn swap_row_i_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+pub(super) fn swap_row_i_ty(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b_mat: ExprId,
+    i: ExprId,
+    j: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let c_fv = d.fresh_fvar();
     let c = d.kernel().fvar(c_fv);
@@ -7446,7 +7452,13 @@ fn swap_row_i_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: Exp
 }
 
 /// `∀ c, B j c = A i c` — the swap's row-`j` hypothesis.
-fn swap_row_j_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+pub(super) fn swap_row_j_ty(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b_mat: ExprId,
+    i: ExprId,
+    j: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let c_fv = d.fresh_fvar();
     let c = d.kernel().fvar(c_fv);
@@ -7458,7 +7470,13 @@ fn swap_row_j_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: Exp
 
 /// `∀ r, Nat.beq r i = false → Nat.beq r j = false → ∀ c, B r c = A r c` —
 /// every OTHER row of `B` is unchanged.
-fn swap_other_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+pub(super) fn swap_other_ty(
+    d: &mut IntDev<'_>,
+    a: ExprId,
+    b_mat: ExprId,
+    i: ExprId,
+    j: ExprId,
+) -> ExprId {
     let nat = d.nat_ty();
     let r_fv = d.fresh_fvar();
     let r = d.kernel().fvar(r_fv);
