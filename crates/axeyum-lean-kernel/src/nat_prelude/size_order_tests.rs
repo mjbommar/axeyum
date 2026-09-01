@@ -62,14 +62,8 @@ fn size_le_size_applies_at_a_concrete_pair_and_symbolically() {
     // vacuously equal, or a swapped-direction bug would pass unnoticed.
     let size3_val = f.num(2);
     let size6_val = f.num(3);
-    assert!(
-        f.k.def_eq(size3, size3_val),
-        "size 3 must compute to 2"
-    );
-    assert!(
-        f.k.def_eq(size6, size6_val),
-        "size 6 must compute to 3"
-    );
+    assert!(f.k.def_eq(size3, size3_val), "size 3 must compute to 2");
+    assert!(f.k.def_eq(size6, size6_val), "size 6 must compute to 3");
 
     // Negative control: the reversed inequality is a different statement
     // (and false here, since size 6 = 3 > 2 = size 3).
@@ -129,12 +123,9 @@ fn size_bit_applies_at_a_concrete_discriminating_instance() {
     let ne_bit_0 = f.lemma(p.bit_ne_zero, &[true_, two, ne_2_0]); // Ne (bit true 2) 0
 
     let applied = f.const_app(p.size_bit, &[true_, two, ne_bit_0]);
-    let inferred = f.k.infer(applied).unwrap_or_else(|e| {
-        panic!(
-            "size_bit must type-check at (true, 2): {}",
-            f.explain(&e)
-        )
-    });
+    let inferred =
+        f.k.infer(applied)
+            .unwrap_or_else(|e| panic!("size_bit must type-check at (true, 2): {}", f.explain(&e)));
 
     let bit_val = f.const_app(bit, &[true_, two]);
     let size_bit_val = f.const_app(p.size, &[bit_val]);
@@ -149,10 +140,7 @@ fn size_bit_applies_at_a_concrete_discriminating_instance() {
     // Both sides compute to a concrete numeral: size (bit true 2) = size 5 =
     // 3, and succ (size 2) = succ 2 = 3 -- a real, non-vacuous instance.
     let five = f.num(5);
-    assert!(
-        f.k.def_eq(bit_val, five),
-        "bit true 2 must compute to 5"
-    );
+    assert!(f.k.def_eq(bit_val, five), "bit true 2 must compute to 5");
     let three = f.num(3);
     assert!(
         f.k.def_eq(size_bit_val, three),

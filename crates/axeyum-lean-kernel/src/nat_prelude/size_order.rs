@@ -168,8 +168,10 @@ fn declare_size_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
             d.const_app(p.size_aux, &[fuel2, x])
         });
         let any_fuel = d.lemma(p.size_aux_zero_any_fuel, &[fuel2]);
-        let (_, right_is_zero) =
-            d.chain(right_term, &[(right_at_zero, right_congr), (zero, any_fuel)]);
+        let (_, right_is_zero) = d.chain(
+            right_term,
+            &[(right_at_zero, right_congr), (zero, any_fuel)],
+        );
         let right_is_zero_rev = d.symm(right_term, zero, right_is_zero);
 
         let body = d.trans(left_term, zero, right_term, left_is_zero, right_is_zero_rev);
@@ -233,7 +235,8 @@ fn declare_size_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
                 let succ_f2p = d.succ(f2p);
                 let h2_motive = d.eq_motive(fuel2, &|d, x| d.le(succ_pred, x));
                 let h2_at_succ_f2p = d.transport(fuel2, h2_motive, h2, succ_f2p, succ_pred_fuel2);
-                let half_le_f2p = half_le_predecessor_of_succ(d, &p, predecessor, f2p, h2_at_succ_f2p);
+                let half_le_f2p =
+                    half_le_predecessor_of_succ(d, &p, predecessor, f2p, h2_at_succ_f2p);
 
                 let ih_at_half = d.apply(ih, &[half, f2p]);
                 let ih_at_half = d.apply(ih_at_half, &[half_le_k, half_le_f2p]);
@@ -243,9 +246,10 @@ fn declare_size_aux_agree_of_fuel(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
                 let recursive_at_f2p = d.const_app(p.size_aux, &[f2p, half]);
                 let succ_general = d.succ(recursive_general);
                 let succ_at_f2p = d.succ(recursive_at_f2p);
-                let succ_congr = d.congr(recursive_general, recursive_at_f2p, ih_at_half, &|d, x| {
-                    d.succ(x)
-                });
+                let succ_congr =
+                    d.congr(recursive_general, recursive_at_f2p, ih_at_half, &|d, x| {
+                        d.succ(x)
+                    });
                 // succ_congr : Eq (succ recursive_general) (succ recursive_at_f2p)
                 // -- defeq Eq (sizeAux sk succ_pred) (succ recursive_at_f2p),
                 // since `sk`/`succ_pred` are both literal-succ-shaped.
@@ -624,7 +628,10 @@ fn declare_size_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
 }
 
 /// Everything this module declares, in dependency order.
-pub(super) fn declare_size_order_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+pub(super) fn declare_size_order_all(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
     declare_size_aux_zero_any_fuel(d, p)?;
     declare_size_aux_agree_of_fuel(d, p)?;
     declare_size_aux_eq_size_of_le(d, p)?;

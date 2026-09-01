@@ -5775,8 +5775,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_lt_min_fac: kernel.name_str(nat, "coprime_of_lt_min_fac"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
-            prime_coprime_factorial_of_lt: kernel
-                .name_str(nat, "prime_coprime_factorial_of_lt"),
+            prime_coprime_factorial_of_lt: kernel.name_str(nat, "prime_coprime_factorial_of_lt"),
             prime_coprime_desc_factorial_of_lt_of_le: kernel
                 .name_str(nat, "prime_coprime_descFactorial_of_lt_of_le"),
             prime_dvd_factorial_iff_le: kernel.name_str(nat, "prime_dvd_factorial_iff_le"),

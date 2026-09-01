@@ -128,8 +128,10 @@ pub(super) fn declare_prime_coprime_factorial_of_lt(
                 let cop_p_sj = d.lemma(p.coprime_symmetric, &[sj, p_var, cop_sj_p]); // Eq (gcd p_var sj) one
 
                 let fact_j = d.factorial(j);
-                let combined =
-                    d.lemma(p.coprime_mul_of_coprime, &[p_var, fact_j, sj, ih_j, cop_p_sj]); // Eq (gcd p_var (mul fact_j sj)) one
+                let combined = d.lemma(
+                    p.coprime_mul_of_coprime,
+                    &[p_var, fact_j, sj, ih_j, cop_p_sj],
+                ); // Eq (gcd p_var (mul fact_j sj)) one
 
                 let fact_sj = d.factorial(sj);
                 let mul_factj_sj = d.mul(fact_j, sj);
@@ -224,16 +226,22 @@ pub(super) fn declare_prime_coprime_desc_factorial_of_lt_of_le(
                 let sub_nj = d.sub(n_var, j);
                 let pos_sub = sub_pos_of_lt(d, &p, j, n_var, h); // Lt zero sub_nj
                 let sub_le_proof = d.lemma(p.sub_le, &[n_var, j]); // Le sub_nj n_var
-                let ub_sub =
-                    d.lemma(p.lt_of_le_of_lt, &[sub_nj, n_var, p_var, sub_le_proof, n_lt_p_hyp]); // Lt sub_nj p_var
+                let ub_sub = d.lemma(
+                    p.lt_of_le_of_lt,
+                    &[sub_nj, n_var, p_var, sub_le_proof, n_lt_p_hyp],
+                ); // Lt sub_nj p_var
 
-                let cop_subnj_p =
-                    d.lemma(p.coprime_of_lt_prime, &[p_var, sub_nj, prime_hyp, pos_sub, ub_sub]); // Eq (gcd sub_nj p_var) one
+                let cop_subnj_p = d.lemma(
+                    p.coprime_of_lt_prime,
+                    &[p_var, sub_nj, prime_hyp, pos_sub, ub_sub],
+                ); // Eq (gcd sub_nj p_var) one
                 let cop_p_subnj = d.lemma(p.coprime_symmetric, &[sub_nj, p_var, cop_subnj_p]); // Eq (gcd p_var sub_nj) one
 
                 let df_nj = d.const_app(p.desc_factorial, &[n_var, j]);
-                let combined =
-                    d.lemma(p.coprime_mul_of_coprime, &[p_var, sub_nj, df_nj, cop_p_subnj, ih_j]); // Eq (gcd p_var (mul sub_nj df_nj)) one
+                let combined = d.lemma(
+                    p.coprime_mul_of_coprime,
+                    &[p_var, sub_nj, df_nj, cop_p_subnj, ih_j],
+                ); // Eq (gcd p_var (mul sub_nj df_nj)) one
 
                 let df_nsj = d.const_app(p.desc_factorial, &[n_var, sj]);
                 let mul_subnj_dfnj = d.mul(sub_nj, df_nj);
@@ -308,7 +316,10 @@ pub(super) fn declare_prime_dvd_factorial_iff_le(
             let on_lt = {
                 let hl_fv = d.fresh_fvar();
                 let hl = d.kernel().fvar(hl_fv);
-                let cop = d.lemma(p.prime_coprime_factorial_of_lt, &[p_var, n_var, prime_hyp, hl]); // Eq (gcd p_var fact_n) one
+                let cop = d.lemma(
+                    p.prime_coprime_factorial_of_lt,
+                    &[p_var, n_var, prime_hyp, hl],
+                ); // Eq (gcd p_var fact_n) one
                 let dvd_p_p = d.lemma(p.dvd_refl, &[p_var]);
                 let dvd_p_gcd = d.lemma(p.dvd_gcd, &[p_var, p_var, fact_n, dvd_p_p, h]); // dvd p_var (gcd p_var fact_n)
                 let gcd_p_fn = d.gcd(p_var, fact_n);
