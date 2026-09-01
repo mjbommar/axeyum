@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-inverse-quintic-degree-five-witness",
+  "title": "Inverse function theorem for p(x)=x^5+x on [0,2]: axeyum-cas names p^-1(3) exactly as a degree-5 algebraic number",
+  "statement": "For the polynomial p(x) = x^5 + x with rational coefficients on the closed interval [0, 2], the classical inverse function theorem's hypothesis is DECIDED rather than assumed: p'(x) = 5x^4 + 1 is nonzero at both endpoints and a Sturm count establishes it has no real root in (0, 2], hence no zero anywhere on [0, 2], hence p is strictly monotone and injective there. Since p(0) = 0 and p(2) = 34, the value y = 3 is strictly interior to the range, so there is a UNIQUE x in (0, 2) with p(x) = 3. axeyum-cas's inverse::polynomial_inverse route does not merely assert this: it names that x exactly, as a genuine AlgebraicReal of algebraic degree 5 (minimal polynomial x^5 + x - 3, which has no rational root -- the only candidates are +-1 and +-3 -- and is therefore not expressible by radicals in general). inverse::verify_inverse_certificate then re-derives every step from poly/a/b/y alone: it recomputes p' and q = p - y with checker-local implementations sharing no code with the producer's axeyum_ir::poly routines, re-runs the Sturm monotonicity count, re-checks that y is strictly interior to the range, confirms the named root's minimal polynomial divides q exactly, re-counts the root's own isolating bracket, and confirms p(x) = 3 by exact evaluation at the algebraic value. It accepts: Some(true).",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(define-poly p (+ (^ x 5) x))\n(assert (and\n  ; hypothesis, DECIDED by a Sturm count on p' rather than assumed\n  (forall ((t Real)) (=> (and (<= 0 t) (<= t 2)) (not (= (deriv p t) 0))))\n  ; conclusion: a unique preimage, named exactly\n  (exists ((c Real))\n    (and (< 0 c) (< c 2) (= (poly-eval p c) 3)\n         (forall ((d Real)) (=> (and (< 0 d) (< d 2) (= (poly-eval p d) 3)) (= d c)))))))\n; the certificate additionally names c as an AlgebraicReal of degree 5 with\n; minimal polynomial x^5 + x - 3, not merely asserting existence.",
+    "fragment": "real-algebraic-inverse",
+    "free_symbols": ["x", "c", "d", "t"]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form",
+    "cas.sturm-sequence-real-root-isolation-and-counting",
+    "cas.reuses-polynomial-ivt-as-a-black-box-for-existence",
+    "cas.inverse-certificate-not-kernel-reconstructed"
+  ],
+  "evidence": [
+    {
+      "id": "cas-internal-inverse-quintic-degree-five-witness",
+      "kind": "witness-replay",
+      "supports": "the inverse-function certificate (the recomputed derivative, its recorded single sign, the Sturm monotonicity count, the shifted polynomial q = p - y, the named degree-5 witness and its isolating bracket, and the conclusion p(x) = y) is independently re-derived and accepted by a checker (verify_inverse_certificate) that never calls the producer and recomputes the derivative and the shift with checker-local implementations sharing no code with axeyum_ir::poly",
+      "check_status": "checked",
+      "checkers": [
+        "inverse::polynomial_inverse (untrusted producer: decides the nonvanishing-derivative hypothesis by a Sturm count on p' over (a, b] plus exact endpoint evaluations, then names the unique preimage by handing q = p - y to crate::real_algebraic::polynomial_ivt as a black box, mirroring how crate::mvt reuses crate::extremum::polynomial_extremum)",
+        "inverse::verify_inverse_certificate (independent checker: never calls polynomial_inverse; recomputes p' and q = p - y with checker-local checker_derivative/checker_shift_by, re-runs the Sturm count on p' over (a, b], re-checks the strict range interiority of y, confirms the root's minimal polynomial divides q by exact division, re-counts the root's own isolating bracket instead of trusting its bookkeeping, and re-derives the conclusion p(x) = y by exact evaluation at the algebraic value)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib inverse::tests::quintic_inverse_beyond_radicals -- --exact 2>/dev/null | grep -cE '^test inverse::tests::quintic_inverse_beyond_radicals \\.\\.\\. ok$'",
+      "checker_seconds": 2,
+      "artifact": "crates/axeyum-cas/src/inverse.rs",
+      "notes": "THIS EVIDENCE IS cas-internal, NOT kernel-reconstructed (ADR-0601 SS2): the checker_command only ever names the axeyum-cas package (never axeyum-lean-kernel), so scripts/validate-facts.py's classify_cas_certificate_checker classifies this fact's evidence as cas-internal. No Kernel::add_declaration term exists for this claim and none is claimed here. The checker's own falsifiability was MEASURED by guard deletion in a lane snapshot rather than asserted: of 15 checks, 12 survived deletion with every test still green, which refuted this module's first-draft claim of nine independently-falsifiable guards. One check that could never fail on its own was deleted outright, one adversarial fixture was rebuilt so that the monotonicity guard is killed by exactly one test, and the module doc now carries a measured table of which check backs up which. Current state: 4 of 14 checks are killed by exactly one test; the remaining ten are mutually backing, and the backup relation was itself measured by deleting a survivor together with its hypothesised backup. The adversarial fixture worth naming is verify_rejects_a_nonmonotone_bracket_that_every_other_check_accepts -- p = x^3 - 3x on [-3/2, 3/2] with y = 0, where p' is positive at BOTH endpoints (so the sign guard cannot reject), y is strictly interior to the range, and q has exactly one root in the bracket (so the uniqueness recount cannot reject either) -- yet p is not injective there, so the certificate is wrong and only the Sturm monotonicity count sees it."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-cas inverse::polynomial_inverse / inverse::verify_inverse_certificate (crates/axeyum-cas/src/inverse.rs, landed as ADR-0603 row 3 for Spivak ch. 12)",
+    "source": "classical inverse function theorem, specialized to an exact rational polynomial whose inverse value is a degree-5 algebraic number; the concrete instance (p = x^5 + x, interval [0, 2], y = 3) is the unit test inverse::tests::quintic_inverse_beyond_radicals, read directly from crates/axeyum-cas/src/inverse.rs rather than hand-transcribed.",
+    "prior_art": [
+      {
+        "who": "classical real analysis",
+        "what": "the inverse function theorem in one variable: a continuously differentiable function with nonvanishing derivative on an interval is invertible there, with a differentiable inverse",
+        "year": 1900,
+        "where": "standard textbook material (Spivak, Calculus, ch. 12); this instance is a routine application to a quintic",
+        "attribution": "standard textbook attribution; this lane did not consult a primary source"
+      },
+      {
+        "who": "Sturm",
+        "what": "Sturm's theorem: the number of distinct real roots of a squarefree polynomial in (a, b] equals the difference of sign variations of its Sturm chain at the endpoints",
+        "year": 1829,
+        "where": "the decision procedure this row's monotonicity hypothesis rests on",
+        "attribution": "standard attribution; the implementation is crates/axeyum-cas/src/sturm.rs, which predates this fact"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-0601 SS2 and ADR-0603. This is the row 3 of the Spivak ch. 12 graded family, whose rows 1 and 2 were already landed on the kernel side: row 1 is CReal.inverse_lipschitz_of_pos_deriv (the inverse is CONTINUOUS -- it bounds the domain gap from the codomain gap in both directions from Apart alone -- but never produces a domain point), and row 2 is the refutation in crates/axeyum-lean-kernel/src/creal/ivt.rs, whose two kernel-computed counterexamples show the exact-root construction an inverse FUNCTION would need is not merely unbuilt but unavailable. Row 4 (labeled classical import) is not attempted and has no target: AxReal axiomatizes an ordered commutative ring with no completeness axiom, so there is nothing for a classical inverse-function import to attach to -- the same situation the MVT and LUB families record. What this row contributes that no sibling row 3 does is UNIQUENESS: crate::real_algebraic::polynomial_ivt names A root of a sign-changing polynomial and says nothing about how many there are, which is exactly what an inverse cannot tolerate; the well-definedness of p^-1(y) is decided here by a Sturm count on the derivative. Separately measured and recorded in the module, about code this fact does not own: AlgebraicReal::refine collapses its bracket to a single point when bisection lands exactly on a rational root, so (1, 1] is a legitimate representation of the value 1 and a half-open Sturm count over it is 0 rather than 1 -- verify_ivt_certificate and verify_mvt_certificate both require lower < upper and therefore REFUSE a correct certificate of that shape. That is a fail-closed false negative, not an unsoundness, and it is pinned by inverse::tests::a_point_bracket_is_a_real_shape_and_the_sibling_checkers_refuse_it so that fixing real_algebraic.rs makes a test go red rather than passing silently."
+}
