@@ -129,6 +129,8 @@ now. Nothing was deleted.
 | 2026-09-01 | `de1a36083` | `bundled_structure_probe` + `inductive_universe_probe`: a 17-field `Field` bundle admits and a derived theorem quantified over it is accepted axiom-free; the universe control does NOT fire, exposing the `Type : Type` retraction. |
 | 2026-09-01 | `c72fd281b` | Kernel guard: `KernelError::ConstructorFieldUniverseTooBig`, Lean's `check_constructor` universe constraint with `Prop` exempt. Repairs the two fixtures that asserted Lean-illegal inductives admit (grammar `type` families to `Sort 2`, pin and digest unchanged; seam-fuzz data fields clamped for bare-parameter universes). New test with two positive controls. |
 | 2026-09-01 | `f933965ad` | `module_over_field_probe`: a bundle carrying another bundle, `smul` through two nested projections, derived theorem admitted — "a vector space over a field" is stateable and provable here. |
+| 2026-09-01 | `1e33d51ee` | Split ADR-1495's bundled universe-guard test into seven named controls so each admission control is observed in the configuration whose answer it gives; added the polymorphic refusal, the bundled-structure and Nat-like admissions, and the `Prop`-exemption soundness control. `--lib inductive` 49 -> 55 passed. |
+| 2026-09-01 | `d9b9249d9` | Ordering control (the positivity pre-pass masks the universe error, refuting the assumption this lane started with); registered `inductive-universe-guard` in `scripts/tests/mutation_controls.py` (baseline green 56 tests, both mutations killed, disjoint kill sets); ADR-1500. |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
@@ -44657,6 +44659,77 @@ python3 scripts/gen-lean-axiom-ledger.py --check # total=30 axreal=30, rest 0
 python3 scripts/gen-adr-index.py --check         # 707 rows, duplicates unchanged (0166/0167 grandfathered)
 ./scripts/check-links.sh                         # green
 ```
+
+**DONE, pin-the-universe-guard, 2026-09-01.** ADR-1495 closed a `Type : Type`
+hole in `Kernel::add_inductive` (Lean's `check_constructor` universe
+constraint, `KernelError::ConstructorFieldUniverseTooBig`). The question here
+was whether anything detects its removal. Full reasoning in
+[ADR-1500](docs/research/09-decisions/adr-1500-a-soundness-fix-is-not-pinned-until-a-control-dies-without-it.md).
+
+**Reproduced the surviving mutant, and found the measurement was aimed at the
+wrong suites.** In an isolated snapshot with the guard's first conjunct
+replaced by `false`, all three suites the coordinator ran survive —
+`kernel_seam_fuzz`, `mutual_inductive_group_grammar` and
+`nested_inductive_grammar` each report **1 passed, exit 0**. But
+`cargo test -p axeyum-lean-kernel --lib inductive` **does** die: ADR-1495 had
+landed `reject_ctor_field_universe_above_result_universe`, which the
+three-suite sweep did not include. So the guard was pinned by exactly one test
+and nobody had shown it. The generators survive because ADR-1495's own fixture
+change moved their `Type` families from `Sort 1` to `Sort 2`, so they now emit
+only Lean-legal shapes.
+
+**The one pinning test measured less than it looked.** It carried the rejection
+and both admission controls in a single `#[test]`, so it dies on its first
+assertion and the admission controls are unreachable in the only configuration
+where their answer matters. Split into eight, each reported with AND without
+the guard:
+
+| control | with | without |
+| --- | --- | --- |
+| `reject_ctor_field_universe_above_result_universe` | pass | **FAIL** |
+| `reject_ctor_field_universe_above_result_universe_polymorphic` (new) | pass | **FAIL** |
+| `admit_sort1_field_under_sort2_family` | pass | pass |
+| `admit_bundled_sort2_structure_with_sort1_carrier` (new) | pass | pass |
+| `admit_nat_like_family_baseline` (new) | pass | pass |
+| `admit_prop_family_with_sort1_field` | pass | pass |
+| `prop_exemption_is_sound_because_large_elimination_is_denied` (new) | pass | pass |
+| `positivity_prepass_precedes_the_universe_check` (new) | pass | pass |
+
+`--lib inductive` baseline: **56 passed, 0 failed** (was 49).
+
+**Nothing checked that `Prop`'s exemption is sound rather than present.** It is
+sound because a *separate* mechanism — `allows_large_elimination`'s
+`exposes_non_prop_fields` arm — denies large elimination to a `Prop` family
+carrying a non-proof field, so the second half of the Girard construction is
+unavailable. No test connected the two. It does now, with a fieldless
+`True`-like `Prop` singleton (which DOES get large elimination) as the
+non-vacuity control. This is mutation testing's documented blind spot exactly:
+the connection between two correct mechanisms is not a guard, so there was
+nothing to delete.
+
+**The check order is the reverse of what the tree says.** A test asserting the
+universe check precedes positivity was written and the kernel refuted it:
+`check_group_constructor_positivity` is a whole separate pre-pass over every
+constructor, so it masks the universe error even when the universe-illegal
+field comes FIRST (`field_index: 1`, the non-positive one, for a constructor
+whose field 0 is universe-illegal). Recorded as an ordering control.
+
+**Registered in `scripts/tests/mutation_controls.py` as
+`inductive-universe-guard`** — the harness does cover Rust, via its `Cargo`
+runner through `scripts/cargo-serialized.sh`. Two mutations failing in opposite
+directions: guard made dead kills 2 tests, `Prop` exemption dropped kills 6.
+Re-run the whole measurement with
+`python3 scripts/tests/mutation_controls.py inductive-universe-guard`.
+
+**Deferred, with a design: restoring illegal coverage to the grammar
+generators.** They once emitted 360 Lean-illegal cases asserting ADMIT and now
+emit none; neither is right. Not done here because
+`mutual_inductive_group_grammar` pins a byte-exact fnv1a64 digest over all 360
+descriptors — regenerating it in the commit that changes it is the
+"editing a file that pins its own digest" failure — and because the positivity
+pre-pass makes the sort axis and the positivity axis non-independent, so
+`expected_error` becomes order-dependent. ADR-1500 §Decision 3 carries the
+design.
 
 **Prototype landed and green** (`WIP`, prelude-spike, 2026-08-27). Built the
 level-1 phase-order fix and the level-2 topological-order validation from
