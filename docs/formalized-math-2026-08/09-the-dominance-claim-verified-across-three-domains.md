@@ -1,17 +1,26 @@
 # The dominance claim, verified across three domains
 
-Status: verification (2026-08-31), lane `three-domain-dominance-verification`
+Status: verification (2026-08-31), lane `three-domain-dominance-verification`.
+**Re-verified 2026-09-01, lane `dominance-doc-reverify`** — every number below
+was re-run against a tree one day newer; corrections are marked in place and
+collected in §7 and §9.
 
 This document exists so a referee can check the project's central claim in one
 sitting. That claim is spread across a dozen ADRs and three curriculum notes,
 and no single artifact stated it end to end. Everything below was **re-measured
 in this lane**, on this tree; nothing is quoted from an ADR as a number.
 
-**It is a verification, not an advocacy document.** Five things it found do not
-hold up, and they are in the body rather than in a footnote. The most useful is
-§7.4: a producer/verifier layer for number theory now exists in code and
-**no fact names it**, which is precisely the failure ADR-0875 diagnosed for EVT,
-recurring in a different domain with nobody watching.
+**It is a verification, not an advocacy document.** Several things it found do
+not hold up, and they are in the body rather than in a footnote.
+**§7.4's headline finding — a producer/verifier layer for number theory
+existed in code with no fact naming it — is now FIXED**, and the 2026-09-01
+re-verification found it fixed already (four facts, landed 2026-08-31 under
+ADR-1055, independently re-run below). What replaces it as the most useful
+finding is narrower and harder to close: a wider CAS audit landed the same
+day (ADR-1400) found **eleven certificates that cannot express a distinction
+their own producer makes** — the shape that let a forged refutation pass in
+`nra_monomial_bound_cert` months ago, now measured across the whole crate.
+See §8.
 
 **There is no score in this document, deliberately.** A weighted number would
 hide exactly the per-statement detail this document exists to expose.
@@ -49,16 +58,39 @@ the `PATH`.
 
 ## 1. The environment, measured
 
-`kernel_declaration_projection --include-constructed`, release, this worktree:
+`kernel_declaration_projection --include-constructed`, release, this worktree
+(built fresh in this worktree, not a prebuilt binary — a stale one has
+previously reported a real declaration as absent):
 
 ```
-rows=12049   distinct_names=2558
-theorem 2100 | definition 349 | constructor 31 | axiom 30 | recursor 24 | inductive 24
+rows=14297   distinct_names=2820
+theorem 2290 | definition 388 | constructor 56 | axiom 30 | recursor 28 | inductive 28
 ```
+
+**Re-measured 2026-09-01, one day after §0's `f7adaf7c3`.** Growth over the
+2026-08-31 figures (`rows=12049 distinct_names=2558`, breakdown
+`theorem 2100 | definition 349 | constructor 31 | axiom 30 | recursor 24 |
+inductive 24`) is +2,248 rows, +262 distinct names, +190 theorems,
++39 definitions, +25 constructors, +4 recursors, +4 inductives — one day of
+ordinary flywheel output, and the axiom count is unchanged at 30. The tool
+prints one row per `(prelude, declaration)` pair with no summary line; both the
+2026-08-31 and this figure are computed by counting rows and by taking the
+kind of each **distinct name** (which is what the per-kind breakdown sums to,
+not the row count — the two counting methods diverge because most names are
+re-declared into every downstream prelude, e.g. `Nat.le_total` appears in all
+eight of `nat, integer, characterization, rat, creal, complex, cpoint, ipc`).
+
+One new prelude key appears that the 2026-08-31 measurement did not have:
+**`ipc`** (intuitionistic propositional calculus — soundness of a sequent
+calculus against a residuated-lattice model, 1,079 rows). It reads axiom
+footprint **0** throughout, same as every prelude but `axreal`.
 
 Every one of the 30 axiom-bearing names is in `axreal`, the legacy
-*axiomatized* ordered-field package. `logic`, `nat`, `integer`, `rat`,
-`characterization`, `string`, `creal`, `complex` and `cpoint` all read **0**.
+*axiomatized* ordered-field package — confirmed directly from this run's
+per-row axiom-footprint column, not inferred: all 30 `axiom`-kind rows have
+`prelude=axreal` and no other prelude contributes one. `logic`, `nat`,
+`integer`, `rat`, `characterization`, `string`, `creal`, `complex`, `cpoint`
+and now `ipc` all read **0**.
 
 Two names differ by one letter and disagree about the headline metric, so:
 `CReal` is the **constructed** reals, trusted surface 0, and it is what every
@@ -563,6 +595,22 @@ says a "fresh two-axis pass is needed", explicitly deferring the call. §3.3
 above makes it: **concede it.** Measurement: the two rendered types in §3.2,
 read from the projection.
 
+**Re-checked 2026-09-01: the SUPERSEDED banner and the "fresh two-axis pass is
+needed" sentence are both still literally present in that document's §4** —
+verified by grep, still there. What has changed is that the *document's own
+preamble*, written the same day as this correction, now states a definite
+verdict ahead of that stale §4 ("IVT is defensibly Pareto-positioned. EVT is
+not — but the reason is now a bookkeeping one… all four rows are populated,
+with evidence, and none of the bookkeeping gaps this document has tracked
+remain open. The one real gap left is structural… no positive constructive
+substitute for an attaining EVT maximiser."), reaching the identical
+conclusion §3.3 above reaches independently. So this correction is not new
+information to that document — it already agreed with itself by the time it
+was written — but §4's own stale banner is still there for a reader who reads
+top-to-bottom and stops at the first table, which is exactly the retrieval
+hazard this repository's CLAUDE.md names repeatedly. Not fixed; still worth
+flagging at the source.
+
 ### 7.2 The LUB row-2 absence assessment is closed
 
 `docs/curriculum/graded-statement-families.md` was amended on `main` the same
@@ -573,6 +621,11 @@ produces a confident, wrong absence verdict**, which is exactly the failure mode
 the row-2 discipline exists to prevent, arriving through the door marked
 "I checked".
 
+**Re-checked 2026-09-01: still correct.** `CReal.lub_decides_em` and its three
+re-declarations into `complex`/`cpoint` all read footprint 0 in this run's
+`kernel_declaration_projection` dump; `docs/curriculum/graded-statement-families.md`
+still carries the "CLOSED 2026-08-31" language for this row, unchanged.
+
 ### 7.3 Number theory's row 2 is built, in a document that says it is not
 
 `graded-statement-families-number-theory-and-linear-algebra.md:366` reads
@@ -581,7 +634,18 @@ still lists it as a next target. Measurement: `Nat.lnp_unrestricted_implies_em`
 and `Nat.em_implies_lnp`, both `nat`, both theorems, both footprint 0, in the
 projection. Landed in `b81277a5c`; ADR-0725 documents it. Corrected in place.
 
-### 7.4 Number theory's row 3 exists in code and no fact names it
+**Re-checked 2026-09-01: still correct.** Both declarations, plus their
+re-declarations into `integer`, `characterization`, `rat`, `creal`, `complex`,
+`cpoint` and `ipc`, all read footprint 0 in this run;
+`graded-statement-families-number-theory-and-linear-algebra.md:391` still
+carries the "LANDED — corrected 2026-08-31" language, unchanged.
+
+### 7.4 Number theory's row 3 — was uncited, now landed. Re-verified 2026-09-01, FIXED
+
+**Status as of this correction: fixed.** The finding below is kept as written
+2026-08-31 (struck through in spirit, not in fact — see the update after it)
+because the document's own standard is that a failure belongs in the body, and
+so does its repair, with the date it happened.
 
 Two documents state that `axeyum-cas` has **19** `verify_*`/`check_*` functions
 and that **not one is number-theoretic**, concluding that "the classical
@@ -616,37 +680,214 @@ for. Three of that list's four items (primality, factorization, CRT) are closed.
 The fourth is not: `legendre` matches **0** times in that file, against a
 17-match `Pratt` positive control in the same command.
 
-**And here is the part that matters more than the correction.** Facts naming any
-of those three checkers:
+**As written 2026-08-31, the part that mattered more than the correction was
+that no fact named any of it.** That is what changed.
+
+#### What changed, and when
+
+Landed the same day this document was first written, in commit `79238b1ca`
+(`feat(facts): four cas-internal row-3 facts for number-theory certificates
+(ADR-1055)`), by lane `row3-citability`. Four facts now name
+`ntheory_certify` directly, and all four are `epistemic_status: proved`,
+re-confirmed on this tree 2026-09-01:
 
 ```
-count: 0
-positive control (facts naming verify_extremum_certificate): 3
-positive control (facts total): 2366
+F:cas-ntheory-pratt-primality-mersenne89
+F:cas-ntheory-factorization-certificate
+F:cas-ntheory-crt-certificate
+F:cas-ntheory-compositeness-certificate
 ```
 
-**Zero.** This is precisely the defect ADR-0875 diagnosed for EVT — *the content
-exists and the bookkeeping that would let anyone verify it does not* — recurring
-in a different domain, four weeks later, with no gate noticing. The row-3 claim
-for number theory is currently unciteable for the same reason EVT's row 1 was.
-That is the finding I would most want a referee to check, because it says the
-failure is structural and not a one-off.
+Each `checker_command` is the discriminating shape this document's own
+`§5` insists on — `cargo test … -- --exact 2>/dev/null | grep -cE '^test
+<path> \.\.\. ok$'` — never a bare `cargo test` whose exit status merely
+tracks whether the filter matched anything. Re-run directly in this
+worktree rather than inherited from the fact file (a fresh build, ~29 s):
 
-I have not repaired it: this is a verification lane and the ledger is out of
-scope. It is written down here so the next lane does not have to rediscover it.
+```
+cargo test -p axeyum-cas --lib \
+  ntheory_certify::ntheory_certify_tests::certifies_composites_and_declines_primes \
+  -- --exact
+-> test ntheory_certify::ntheory_certify_tests::certifies_composites_and_declines_primes ... ok
+   test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 916 filtered out
+```
 
-## 8. The weakest part of the claim as it now stands
+So the specific gap this section reported — "zero facts name
+`check_primality_certificate` / `check_factorization_certificate` /
+`check_crt_certificate`" — is closed, and has been for as long as this
+document has existed; the 2026-08-31 draft simply predates the commit by a
+few hours and nobody re-ran the grep before publishing.
 
-**Row 3 is where the dominance argument is supposed to be strongest for the
-decidable subjects, and it is the row with the least bookkeeping behind it.**
-The argument for number theory and linear algebra is "one statement, one trust
-anchor, three artifacts" — the theorem, an executable that settles any concrete
-instance, and a certificate a third party re-derives. The first artifact is
-solid and measured. The third now exists in code for primality, factorization
-and CRT, and **no fact names it**, so a referee following the repository's own
-instructions to look in the ledger will conclude it is absent — as two ADRs and
-a curriculum note already did. Meanwhile the analysis families' row 3 is
-`cas-internal`, which means it is not under the trust anchor the argument
-invokes. So on the axis the decidable-subject dominance claim rests on, the
-evidence a referee can actually check is thinner than the claim, in all three
-domains, for two different reasons.
+#### The wider picture, from a follow-up audit the same lane triggered
+
+A same-day, independent CAS-wide audit
+([`2026-09-01-cas-certificate-reconstruction-audit.md`](../research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md),
+ADR-1400) went back to the two upstream string-query numbers this section's
+2026-08-31 draft quoted (`40 of 53` certificate-carrying modules, `19` facts
+citing them) and found **both wrong, in opposite directions** — the same
+lesson this document's own §5 and CLAUDE.md's "unmasked survey grep" entry
+already state, landing on the document that most needed to have listened to
+it:
+
+- The `40 of 53` numerator counted doc-comment prose (two modules, `series.rs`
+  and `orthopoly.rs`, discuss certificates at length specifically to say they
+  emit none). Masking comments and strings, and cross-checking against a
+  second, differently-shaped query, gives **27 of 55** modules with a genuine
+  certificate-carrying surface — verified independently on this tree,
+  matching the audit's own number.
+- The `19` denominator counted the `F-cas-*` **filename** convention, not the
+  ledger's `proof_route` field. `scripts/validate-facts.py`, re-run on this
+  tree: `routes: cas-certificate=54(kernel-reconstructed=14,cas-internal=40)`
+  — confirmed independently by reading `proof_route` off all 2,529 fact files
+  directly rather than trusting the validator's own summary line: **54**, not
+  19, not the "56" a since-superseded draft of this correction briefly
+  claimed (see below).
+
+Joining the masked certificate-surface query against every fact's evidence
+strings, the audit's real finding: **13 certificate-carrying modules had no
+naming fact** (not 34, and not 40-vs-19's implied gap of 21) —
+`boolean_circuit`, `geometry_json`, `gf2_artifact`, `gf2_independent`,
+`gf2_search`, `gf2_shard`, `gf2_tensor`, `gosper`, `groebner_cert`, `lib`,
+`ratint`, `sos`, `telescoping_json`. The same audit then closed six of them
+same-day (`sos`, `ratint`, `gf2_independent`, one of the `gf2` cluster,
+`normalforms` — which had a certificate surface but hadn't been counted —
+and one more), taking `cas-certificate` from 48 to 54. **Its own closing
+section lists ten modules still uncovered** — `boolean_circuit`,
+`geometry_json`, `gf2_artifact`, `gf2_search`, `gf2_shard`, `gf2_tensor`,
+`gosper`, `groebner_cert`, `lib`, `telescoping_json` — against a headline
+sentence in the same document claiming "the thirteen-module gap is now
+seven." **That sentence and its own list disagree** (ten named modules, not
+seven); I have not resolved which is right, because it is not this
+document's finding to adjudicate, and I am not going to quote the "seven"
+without the list it contradicts sitting next to it. Use the enumerated ten.
+
+**One thing I was told to verify and could not confirm: two more facts
+landed today**, `F:cas-boolean-circuit-nand-only-full-adder` and
+`F:cas-gf2-tensor-karatsuba-degree-2-rank-three`, said to take the
+`cas-certificate` route to 56. **Neither exists in this tree.**
+`ls artifacts/facts/ | grep -i boolean` and `| grep -i "gf2-tensor\|karatsuba"`
+both return empty, against a positive control of 25 `^F-cas-` filenames still
+present, and `validate-facts.py`'s own count independently confirms
+**54**, not 56. If those two facts exist somewhere, it is on a branch that
+has not reached this tree; report 54 until they do.
+
+## 8. The weakest part of the claim as it now stands (re-assessed 2026-09-01)
+
+**The 2026-08-31 answer to this question — "row 3 exists in code for
+primality, factorization and CRT, and no fact names it" — no longer holds.**
+§7.4 traces the fix to a same-day commit the original draft simply predated.
+Re-assessing rather than deleting, because the underlying axis (row 3's
+bookkeeping) is still where the argument is thinnest — the specific finding
+just moved.
+
+**What is weakest now: certificates that cannot express a distinction their
+own producer makes, measured at eleven instances across the CAS crate
+(ADR-1400, §"7.4" above).** This is a sharper and more consequential finding
+than the naming gap it replaces, for a reason CLAUDE.md already states in the
+abstract and this audit demonstrates concretely: a naming gap is fixed by
+writing one fact; a certificate that structurally cannot record what its
+producer knows is fixed only by changing the certificate's *type*, and no
+amount of ledger bookkeeping repairs it. Two instances carry the same shape
+as the `nra_monomial_bound_cert` incident this repository already treats as
+its canonical soundness lesson (a strict/non-strict distinction collapsed to
+one field):
+
+- `sturm.rs`'s half-open `(lower, upper]` convention lives only in prose; a
+  consumer reading it as closed and a producer meaning half-open disagree at
+  `p(x) = x − 2`, and nothing in the returned `(Rational, Rational)` pair
+  adjudicates. `real_algebraic::verify_ivt_certificate` — the bridge this very
+  document's §2.2 IVT row cites as "ours" — consumes this on trust.
+- `gosper.rs`'s three acceptance modes return an indistinguishable `CasExpr`;
+  mode C fires *because* the full exact zero-test failed to certify, and nothing
+  in the return value says so, so a caller cannot tell "certified" from
+  "downgraded to a weaker check because certification failed."
+
+Neither of these is hypothetical or paper-only: `sturm.rs` sits directly
+under a row this document counts (IVT, §2.2), and the audit that found it
+also found **no test exercises the failure mode** — mutation testing cannot,
+because the guard that would catch it was never written (the same lesson
+CLAUDE.md already states about `nra_monomial_bound_cert`, now confirmed to
+recur rather than being a one-off).
+
+**Second, and still real: seven to ten certificate-carrying CAS modules have
+no fact naming them at all** (§7.4's enumerated list — `boolean_circuit`,
+`geometry_json`, `gf2_artifact`, `gf2_search`, `gf2_shard`, `gf2_tensor`,
+`gosper`, `groebner_cert`, `lib`, `telescoping_json`), which is the same
+naming-gap shape as the original §7.4 finding, just smaller (13, now that
+audit's own list, minus what it fixed same-day) and in different modules.
+`boolean_circuit` and `gf2_tensor` are named by the audit as the cheapest
+closes — both already have exhaustive replay checkers that name a
+counterexample on failure.
+
+**Third, unchanged from 2026-08-31: the analysis families' row 3 is
+`cas-internal`**, which means it is not under the trust anchor the argument
+invokes at all — no naming fact would fix this one, because the substantive
+half of the reconstruction (root containment, the Sturm uniqueness count,
+non-degeneracy) simply does not reach the kernel. The 2026-09-01 audit's own
+per-module table (§7.4) makes this precise for the first time: of the ~55
+CAS modules, 9 reconstruct today (all *partially* — every bridge re-checks a
+strictly weaker claim than the certificate makes, with the gap named per
+module), 8 more could reconstruct with a specifically identified missing
+piece (mostly a multivariate polynomial-arithmetic development this kernel's
+`rat_prelude/polynomial.rs` does not have), and the remainder is `cas-internal`
+for a stated, module-specific reason — no `GF(2)[x]`, no transcendental atom,
+no `Nat` modular-exponentiation development, or (for several) no certificate
+object exists to reconstruct in the first place.
+
+So the honest ranking of what a referee should distrust most, in order: (1)
+the eleven distinction-incomplete certificates, because they are silent
+failures a mutation suite cannot find and at least one sits under a row this
+document scores; (2) the ten still-unnamed certificate-carrying modules,
+because they are a bookkeeping gap of exactly the kind this document's own
+method exists to catch, just not yet caught; (3) the `cas-internal` half of
+the analysis families' row 3, unchanged and structural, now catalogued
+module-by-module rather than asserted in the aggregate.
+
+## 9. What else moved, and what I did not re-check
+
+**The fact ledger grew in the ordinary way overnight, and none of §5's
+headline gate verdicts changed sign.** `validate-facts.py`, re-run on this
+tree (2026-09-01):
+
+```
+2529 facts checked, 0 errors  (computed=2 conjectured=3 open=221 proved=2299 refuted=4)
+2301 facts settled, 20 restate a sibling's proposition -- 2281 DISTINCT PROPOSITIONS ESTABLISHED
+routes: cas-certificate=54(kernel-reconstructed=14,cas-internal=40) imported-kernel-lean=7
+        kernel-lean=2205 search-certificate=12 smt-clausal=10 smt-term-level=17
+```
+
+Against §5.1's 2026-08-31 figures (2366 facts, 2182 settled, 2162 distinct
+propositions): +163 facts, +119 settled, +119 distinct propositions in one
+day — consistent with the flywheel operating normally, not with anything this
+document should flag. `cas-certificate=54` matches §7.4/§8 above exactly,
+computed two independent ways (reading `proof_route` off all 2,529 fact files
+directly, and reading the validator's own summary line) — the double-check
+this document's own method requires before quoting a number that will be
+requoted.
+
+**I did not re-run the rest of §5.1's per-column census**
+(`check-semantic-control-fixtures.py`, `gen-safety-matrix.py --check`,
+`check-trust-closure.py`, `tests/test-trust-closure.sh`) — each needs a
+release kernel build plus its own multi-minute run, and re-deriving all four
+was out of scope for a document-correction pass whose job was §1 and §7-8.
+**Marked "did not run"; the 2026-08-31 figures for `semantic_falsification`,
+`load_bearing`, `mutation_control`, `circularity` and `independent_replay`
+should be treated as a day stale, not as re-confirmed.** Given the ledger grew
+by 163 facts in the same window, the specific number most likely to have
+moved is `load_bearing=8` — new facts can add to it but nothing here checked
+whether they did.
+
+**I did not attempt to adjudicate the audit's own "thirteen-module gap is now
+seven" versus its own ten-item list** (§7.4) — that is a defect in a document
+this lane does not own, reported rather than repaired, in keeping with this
+document's own precedent at §7.4's parent finding (record it, let the owning
+lane fix it).
+
+**Nothing measured here makes the claim weaker than the 2026-08-31 draft
+believed**, with one exception worth stating plainly because this document's
+own standard demands it: the 2026-08-31 draft's own §7.4 headline finding was,
+unknown to its author, **already fixed by the time it was published** —
+the commit landed hours before the document did. That is not a new weakness
+in the underlying system; it is a reminder that a "verified this sitting"
+document is stale from the moment the sitting ends, which is why this
+document now carries a re-verification date and will need another one.
