@@ -1484,6 +1484,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_not_perfect,
         p.abundant_iff_not_perfect_and_not_deficient,
         p.deficient_iff_not_abundant_and_not_perfect,
+        // `divisor_sum_scale.rs` (`divisor-sum-monotonicity` lane).
+        p.sum_divisors_scale_le,
+        p.abundant_mul_left,
+        p.abundant_of_dvd,
     ]
 }
 

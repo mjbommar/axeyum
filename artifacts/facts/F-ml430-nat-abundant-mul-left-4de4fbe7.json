@@ -6,16 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n m : ℕ}, n.Abundant → m ≠ 0 → (m * n).Abundant",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.abundant_mul_left"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-mul-lt-mul-left-af33301e", "F:nat-lt-of-lt-of-le", "F:nat-mul-assoc", "F:nat-mul-comm", "F:nat-zero-lt-of-ne-zero"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.abundant_mul_left",
+      "kind": "kernel-term",
+      "supports": "Abundant n -> Not (Eq m zero) -> Abundant (mul m n)",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- abundant_mul_left 2>/dev/null | grep -Ec '^Nat\\.abundant_mul_left[[:space:]]')\" -ge 1",
+      "notes": "A direct instance of `Nat.sum_divisors_scale_le` (`divisor_sum_scale.rs`) at scale factor `q := m`: `m * sumDivisors n <= sumDivisors (m*n)`. Multiplies the `Abundant n` hypothesis through by `m` (`Nat.mul_lt_mul_left`'s `mpr` direction) to get `Lt (mul m (mul 2 n)) (sumDivisors (mul m n))`, then reassociates `mul m (mul 2 n)` to `mul 2 (mul m n)` via `mul_comm`/`mul_assoc`."
+    },
+    {
+      "id": "footprint-Nat.abundant_mul_left",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "nat_axiom_inventory --require-axiom-free nat enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.Abundant.mul_left` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-09-01",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane divisor-sum-monotonicity",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here through Kernel::add_declaration",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "abundant_deficient_lemmas.rs closed seven ml430 mirrors and left this one open for missing divisor-sum-monotonicity infrastructure (not a divergence question -- Mathlib's `Abundant` and this kernel's `Lt (mul 2 n) (sumDivisors n)` are the same characterization, per that module's revised verdict). Closed here by `Nat.sum_divisors_scale_le` (`divisor_sum_scale.rs`): scaling every divisor of `n` by a positive `m` injects into the divisors of `m*n`, built as a `sumRange` reindexing induction over the same index range `mul_sumRange` (`algebra.rs`) exposes.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
