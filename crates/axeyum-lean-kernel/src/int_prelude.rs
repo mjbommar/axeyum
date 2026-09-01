@@ -126,8 +126,8 @@ mod sign;
 mod sign_product;
 mod statements;
 mod sub;
-mod sum;
 mod sub_nat_nat;
+mod sum;
 mod two_sided_induction;
 mod wilson;
 
