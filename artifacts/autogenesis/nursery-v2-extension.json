@@ -13,10 +13,10 @@
     "per_family": 10,
     "screen_rejections": {
       "already-catalogued": 164,
-      "divergence-registry": 97,
+      "divergence-registry": 103,
       "held-out-construction": 14,
       "hygienic-or-generated": 1169,
-      "not-statable-here": 2432
+      "not-statable-here": 2426
     },
     "unattested_cohort_ceiling": 409,
     "unattested_cohort_entries": 265,
@@ -14751,7 +14751,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "930b097133d6620f21ae1baa13e75c1831be8769944286aea83e8914a5c13fbf",
+  "extension_sha256": "6a5823df86007f202ca2b7631ae23b0e2f958f2893a44494e90380c47d519ee4",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
