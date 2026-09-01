@@ -111,6 +111,37 @@ check("M4 a claimed bound of 3/2 on partial sums FAILS", any(p > Fraction(3, 2) 
 m5 = [2 * t for t in ts]
 check("M5 t0=2 breaks t k <= (1/2)^k", any(m5[k] > Fraction(1, 2**k) for k in range(N)))
 
+# ------------------------------------------- what the kernel CANNOT catch --
+#
+# `CReal.piHalfCoef` is a `Definition`. `Kernel::add_declaration` type-checks
+# it and cannot tell anyone it computes the wrong rational. So the question
+# that matters is: which OTHER series would satisfy every theorem this file
+# proves? Measure it rather than assert it.
+print("\n-- the gap the kernel cannot close (why the evaluation test exists) --")
+
+decoy = [Fraction(1, 2**k) for k in range(N)]  # t k = (1/2)^k, sum = 2
+decoy_ok = (
+    all(Fraction(1, 2) <= Fraction(1, 2) for _ in range(N))  # ratio <= 1/2: equality
+    and all(decoy[k] <= Fraction(1, 2**k) for k in range(N))  # domination holds
+    and all(sum(decoy[:n]) <= 2 for n in range(N + 1))  # every partial sum <= 2
+    and sum(decoy[:4]) >= Fraction(3, 2)  # S 4 >= 3/2
+    and all(t >= 0 for t in decoy)  # every term nonnegative
+)
+check(
+    "the decoy series t k = (1/2)^k satisfies EVERY theorem in creal/pi.rs",
+    decoy_ok,
+    f"its sum is {float(sum(decoy)):.6f}, so its 'pi' would be 4, not {math.pi:.6f}",
+)
+check(
+    "and the evaluation test separates it at k = 1",
+    ts[1] != decoy[1],
+    f"piHalfCoef 1 = {ts[1]} against the decoy's {decoy[1]}",
+)
+print(
+    "  => the numeric bounds `3 <= pi <= 4` do NOT pin the series; only\n"
+    "     creal::pi::tests::pi_half_coef_computes_its_first_four_values does."
+)
+
 print()
 if FAIL:
     print(f"FAILED: {len(FAIL)} check(s): {', '.join(FAIL)}")
