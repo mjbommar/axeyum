@@ -805,3 +805,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1275](adr-1275-int-sumrange-lands-and-two-of-prods-lemmas-do-not-transport.md) | `Int.sumRange` lands, and two of `prodRange`'s properties do not transport | Accepted |
 | [1290](adr-1290-the-floor-family-emits-because-the-relational-divmod-already-does.md) | The floor-counting family EMITS, because the relational `divMod` already does | Accepted |
 | [1295](adr-1295-the-header-exemption-budget-goes-to-zero.md) | the header-exemption budget goes to zero, so a fact with no persistent declaration must not be given a header | Accepted |
+| [1305](adr-1305-pi-is-a-series-not-a-root-and-the-series-is-chosen-by-arithmetic-size.md) | π is a series, not a root — and which series is decided by unary-numeral arithmetic, not by convergence speed | Accepted |
