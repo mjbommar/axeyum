@@ -95,6 +95,7 @@ pub mod orthopoly;
 pub mod partial_fractions;
 pub mod permutation;
 mod ratint;
+pub mod rationality;
 pub mod real_algebraic;
 mod series;
 pub mod sets;
