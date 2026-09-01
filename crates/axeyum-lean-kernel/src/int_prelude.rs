@@ -1234,6 +1234,22 @@ pub struct IntPrelude {
     /// via `Nat.beq`'s soundness/completeness — turn `Not (And q1 q2)` into
     /// `Or (Not q1) (Not q2)`. See `int_prelude::prime_dvd_mul_mirrors`.
     pub gcd_ne_one_iff_gcd_mul_right_ne_one: NameId,
+    /// `succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul : ∀ (p : Nat), (2 ≤ p ∧ ∀ d,
+    /// d ∣ p → d = 1 ∨ d = p) → ∀ (m n : Int) (k l : Nat), ofNat (pow p k) ∣
+    /// m → ofNat (pow p l) ∣ n → ofNat (pow p (k+l+1)) ∣ m*n → ofNat (pow p
+    /// (k+1)) ∣ m ∨ ofNat (pow p (l+1)) ∣ n` — `ml430` mirror
+    /// `Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul`
+    /// (`F:ml430-int-succ-dvd-or-succ-dvd-of-succ-sum-dvd-mul-435a4948`).
+    /// Bridged to a `Nat`-level core (`X := natAbs m`, `Y := natAbs n`) via
+    /// `nat_abs_dvd_nat_abs_of_dvd`/`dvd_of_nat_abs_dvd`/`nat_abs_mul`: write
+    /// `X = p^k·x'`, `Y = p^l·y'` (`Nat.dvd` elimination), regroup `X·Y =
+    /// p^(k+l)·(x'·y')` (`Nat.pow_add`, `Nat.mul_assoc`/`mul_comm`), cancel
+    /// the positive factor `p^(k+l)` from `p^(k+l+1) ∣ X·Y` (`Nat.pow_pos`,
+    /// `Nat.mul_left_cancel_of_pos`) to get `p ∣ x'·y'`, then
+    /// `Nat.euclid_lemma` gives `p ∣ x'` or `p ∣ y'`, each of which regroups
+    /// back to `p^(k+1) ∣ X` or `p^(l+1) ∣ Y`. See
+    /// `int_prelude::prime_dvd_mul_mirrors`.
+    pub succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul: NameId,
 
     // --- the Chinese Remainder Theorem ----------------------------------------
     /// `crt_exists : ∀ m n a b, 0 < m → 0 < n → Coprime m n →
@@ -2066,6 +2082,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prime_dvd_mul: child(kernel, "prime_dvd_mul"),
         not_prime_of_int_mul: child(kernel, "not_prime_of_int_mul"),
         gcd_ne_one_iff_gcd_mul_right_ne_one: child(kernel, "gcd_ne_one_iff_gcd_mul_right_ne_one"),
+        succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul: child(
+            kernel,
+            "succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul",
+        ),
         crt_exists: child(kernel, "crt_exists"),
         crt_unique: child(kernel, "crt_unique"),
         rat,
@@ -2541,6 +2561,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prime_dvd_mul_mirrors::declare_prime_dvd_mul(&mut d)?;
         prime_dvd_mul_mirrors::declare_not_prime_of_int_mul(&mut d)?;
         prime_dvd_mul_mirrors::declare_gcd_ne_one_iff_gcd_mul_right_ne_one(&mut d)?;
+        prime_dvd_mul_mirrors::declare_succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul(&mut d)?;
         Ok(prelude)
     })();
     match built {
