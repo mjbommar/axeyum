@@ -444,6 +444,52 @@ class SeedContractHoldoutIsolationTests(unittest.TestCase):
                 "evaluation population.",
             )
 
+    def test_synthetic_v2_style_manifest_is_detected(self) -> None:
+        """The mutation control for THIS class's own detection logic, not
+        for `held_out_fact_ids` (that guard has its own direct test above,
+        `test_held_out_ids_are_read_from_every_nursery_manifest`).
+
+        Put a freshly-invented held-out id in a SECOND manifest -- named and
+        shaped like `nursery-v2-extension.json`, sitting beside an untouched
+        `nursery-v1.json` -- and confirm `test_seed_contracts_match_no_
+        unrecorded_held_out_fact` above would actually SEE it: a real
+        contract's shape, matched against the synthetic held-out set, must
+        surface the synthetic id. If this class ever regressed to reading
+        only `nursery-v1.json` (the exact 2026-09-01 defect), this id -- only
+        ever present in the "v2" file -- would silently vanish from the
+        matched set and this test would fail.
+        """
+        facts = contracts_module.load_facts()
+        _path, contract = next(
+            (p, c)
+            for p, c in contracts_module.load_contracts()
+            if c["id"] == "producer-contract-nat-coprime-family-v1"
+        )
+        already_held_out = contracts_module.held_out_fact_ids()
+        candidate = next(
+            fact_id
+            for fact_id, fact in facts.items()
+            if fact_id not in already_held_out
+            and contracts_module.shape_matches(contract["shape"], fact)
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            directory = pathlib.Path(tmp)
+            (directory / "nursery-v1.json").write_text(json.dumps({"entries": []}))
+            (directory / "nursery-v2-extension.json").write_text(
+                json.dumps(
+                    {"entries": [{"fact_id": candidate, "partition": "held-out"}]}
+                )
+            )
+            synthetic_held_out = contracts_module.held_out_fact_ids(directory)
+        self.assertIn(candidate, synthetic_held_out)
+        matched_held_out = sorted(
+            fact_id
+            for fact_id, fact in facts.items()
+            if fact_id in synthetic_held_out
+            and contracts_module.shape_matches(contract["shape"], fact)
+        )
+        self.assertIn(candidate, matched_held_out)
+
     def test_the_v1_only_reader_is_the_one_that_misses_it(self) -> None:
         # The control for the entry above: confirm the overlap is invisible to
         # a `nursery-v1.json`-only reader and visible to the glob reader. If

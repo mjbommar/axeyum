@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import pathlib
+import tempfile
 import unittest
 
 
@@ -582,6 +584,128 @@ class RealDeclineFeedbackLoopTests(unittest.TestCase):
         # Selection must still land on SOME fact -- the loop moves on, it
         # does not just refuse.
         self.assertIsNotNone(built["selection"]["selected_fact_id"])
+
+
+class HeldOutFactIdsMultiManifestTests(unittest.TestCase):
+    """Guard: `held_out_fact_ids()` must read EVERY `nursery*.json` manifest
+    under a directory, never one file by name.
+
+    Measured 2026-09-01
+    (docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md):
+    this function used to read `nursery-v1.json` literally, so every held-out
+    row in `nursery-v2-extension.json` (190 of them, preregistered
+    2026-08-29) was invisible to it -- and `--json` selected one as
+    `outcome: selected`. This test dies the moment the glob read is narrowed
+    back to a single manifest name, in either direction: it fails if a real
+    manifest goes missing from the union, and it fails if the union stops
+    growing when a new manifest lands.
+    """
+
+    def test_the_real_union_equals_v1_plus_v2_extension_held_out_rows(self) -> None:
+        v1 = json.loads(
+            (ROOT / "artifacts/autogenesis/nursery-v1.json").read_text()
+        )
+        v2 = json.loads(
+            (ROOT / "artifacts/autogenesis/nursery-v2-extension.json").read_text()
+        )
+        v1_held_out = {
+            e["fact_id"] for e in v1["entries"] if e.get("partition") == "held-out"
+        }
+        v2_held_out = {
+            e["fact_id"] for e in v2["entries"] if e.get("partition") == "held-out"
+        }
+        # Non-vacuity: if either manifest stopped carrying held-out rows the
+        # union check below would pass trivially.
+        self.assertGreater(len(v1_held_out), 0)
+        self.assertGreater(len(v2_held_out), 0)
+        self.assertEqual(v1_held_out & v2_held_out, set())
+        self.assertEqual(
+            frontier.held_out_fact_ids(), frozenset(v1_held_out | v2_held_out)
+        )
+
+
+class JsonPathHeldOutScreenTests(unittest.TestCase):
+    """Guard: `build_machine_frontier` -- the `--json` selection path -- must
+    exclude a held-out fact from `admissible_fact_ids` however capable its
+    route/producer/gate signals read.
+
+    Measured 2026-09-01: `held_out_fact_ids()` used to be called from exactly
+    ONE site, the human-rendered queue line. `--json`, `--output`, `--verify`
+    (`selection`, `admissible_fact_ids`, `diagnostics` -- what every
+    downstream reader and every brief consumes) applied no held-out screen
+    at all, and reported a held-out fact as `admissible_via_contract` /
+    `outcome: selected`.
+    """
+
+    TARGET = "F:no-integer-square-is-minus-one"
+
+    def setUp(self) -> None:
+        # A REAL fact id, reset to `open`: `validate_registry` resolves
+        # `applicability.fact_ids` against the real committed ledger, not a
+        # caller's synthetic `facts` dict (see `load_operation_registry`'s
+        # callers elsewhere in this file), so a fabricated id like
+        # "F:target" cannot be used here. Same technique as
+        # `test_only_exact_authoritative_operation_can_license_selection`
+        # above.
+        self.facts = frontier.load()
+        target = copy.deepcopy(self.facts[self.TARGET])
+        target["epistemic_status"] = "open"
+        target["evidence"] = []
+        target.pop("proof_route", None)
+        target.pop("axiom_footprint", None)
+        self.facts[self.TARGET] = target
+
+        real_registry = frontier.load_operation_registry()
+        authoritative = copy.deepcopy(next(
+            op for op in real_registry["operations"] if op["scope"] == "authoritative"
+        ))
+        authoritative["applicability"] = {
+            "fact_ids": [self.TARGET],
+            "formal_languages": [target["formal"]["language"]],
+            "fragments": [target["formal"]["fragment"]],
+        }
+        authoritative.pop("reviewed_gate_mentions", None)
+        self.registry = {**real_registry, "operations": [authoritative]}
+
+    def test_a_held_out_fact_is_never_admissible_even_with_a_registered_operation(
+        self,
+    ) -> None:
+        # Without the screen (an explicit empty held-out set): TARGET is
+        # open, dependency-ready, has exactly ONE registered operation, a
+        # supported route, and no gate mentions -- it WOULD be selected. This
+        # establishes the fixture actually reaches admission on every OTHER
+        # axis, so the held-out exclusion below is not vacuous.
+        without_screen = frontier.build_machine_frontier(
+            self.facts, registry=self.registry, held_out=frozenset()
+        )
+        self.assertIn(self.TARGET, without_screen["selection"]["admissible_fact_ids"])
+        self.assertEqual(
+            without_screen["selection"]["selected_fact_id"], self.TARGET
+        )
+
+        # With the screen naming TARGET held-out: it must be excluded from
+        # admissible_fact_ids/selected_fact_id, named (not silently dropped)
+        # in both `rationale` and `selection.held_out_ready_fact_ids`, and
+        # counted in `diagnostics.held_out_ready_count`.
+        with_screen = frontier.build_machine_frontier(
+            self.facts, registry=self.registry, held_out=frozenset({self.TARGET})
+        )
+        self.assertNotIn(self.TARGET, with_screen["selection"]["admissible_fact_ids"])
+        self.assertIsNone(with_screen["selection"]["selected_fact_id"])
+        self.assertEqual(
+            with_screen["selection"]["outcome"], "refused-no-admissible-candidate"
+        )
+        rationale = {
+            row["fact_id"]: row["rejected_by"]
+            for row in with_screen["selection"]["rationale"]
+        }
+        self.assertIn(
+            "held-out-blind-evaluation-population", rationale[self.TARGET]
+        )
+        self.assertIn(
+            self.TARGET, with_screen["selection"]["held_out_ready_fact_ids"]
+        )
+        self.assertEqual(with_screen["diagnostics"]["held_out_ready_count"], 1)
 
 
 if __name__ == "__main__":

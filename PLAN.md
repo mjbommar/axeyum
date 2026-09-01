@@ -136,6 +136,8 @@ now. Nothing was deleted.
 | 2026-09-01 | `208104bd5` | Slice A: `scripts/creal-declare-deps.py` re-derives `creal.rs`'s dependency graph from source and checks the `STEPS` table against it. 0 order violations, but 977 of 4,831 `requires` edges unnamed and two false `provides` disarming the preflight over a 48-step window. `--self-check` permutes a step before its provider and requires the scan to fire; `--strict` exits 2 on a table/code disagreement. |
 | 2026-09-01 | `b3b449dfc` | Slice B: `plan_step_order` computes the build order (Kahn, array-index tie-break) instead of validating a hand-written one; the two false `provides` deleted; duplicate providers rejected. Projection byte-identical (same SHA-256, 14,673 rows); build time unchanged. Inversion demo: level 1 exit 101, level 2 exit 0 with identical output. Six new tests, each a distinct failure mode. clippy `--all-targets -D warnings` exit 0. |
 | 2026-09-01 | `3096c587c` | Slice C: ADR-1512 (per-module registries behind the `CRealPrelude` facade) plus the first migration, `ivt_boundary`. 606 → 599 fields; 15 self-contained modules identified as the migratable population. Analyzer extended to follow the facade, with a mutation-verified guard (every struct field provided by exactly one step). Projection byte-identical. clippy exit 0. |
+| 2026-09-01 | `5db923e75` | status(frontier-holdout-screen): open the lane stub |
+| 2026-09-01 | `f4df69696` | fix(frontier): screen held-out facts out of the JSON selection path, read every nursery manifest |
 | 2026-09-01 | kernel-rustdoc-links | Fixed all 23 broken rustdoc intra-doc-links in `crates/axeyum-lean-kernel/src/{nat_prelude,ipc_heyting,ipc_provable,rat_prelude}.rs`; `cargo doc -p axeyum-lean-kernel --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 24 error lines). Workspace-wide doc build still red: 8 errors in `axeyum-cas` (out of scope, reported not fixed). |
 | 2026-09-01 | `1e33d51ee` | Split ADR-1495's bundled universe-guard test into seven named controls so each admission control is observed in the configuration whose answer it gives; added the polymorphic refusal, the bundled-structure and Nat-like admissions, and the `Prop`-exemption soundness control. `--lib inductive` 49 -> 55 passed. |
 | 2026-09-01 | `d9b9249d9` | Ordering control (the positivity pre-pass masks the universe error, refuting the assumption this lane started with); registered `inductive-universe-guard` in `scripts/tests/mutation_controls.py` (baseline green 56 tests, both mutations killed, disjoint kill sets); ADR-1500. |
@@ -39761,6 +39763,65 @@ any Lean or `lean4export` invocation; the producer dispatch itself.
 | `fce483215` | lane stub |
 | `307e5d2e6` | ADR-1510's two guards + the contract sizing/retirement and 26 resolution backfills |
 | `71cd59d04` | mutation-control registration for the six new guards + the ambiguous-anchor fix |
+
+**DONE, frontier-holdout-screen, 2026-09-01.** Fixed the defect in
+[2026-09-01-the-selector-selected-a-held-out-fact.md](docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md):
+`scripts/fact-frontier.py`'s `held_out_fact_ids()` read `nursery-v1.json`
+literally and missed `nursery-v2-extension.json`'s 190 held-out rows, and its
+one call site was the human-rendered queue line only -- the `--json` path
+(`selection`/`admissible_fact_ids`/`diagnostics`) applied no held-out screen
+at all.
+
+Delegated `fact-frontier.py`'s `held_out_fact_ids()` to
+`validate-producer-contracts.py`'s already-fixed glob reader (landed
+2026-09-01, commit `45d605c4d`) instead of re-reading one manifest name, so
+the two readers cannot drift apart again. Confirmed the union is 206 today
+(v1's 16 + v2-extension's 190, no overlap). Added a `held_out` parameter to
+`build_machine_frontier` that defaults to the real disk partition (same
+asymmetry as `registry`, never the `contracts`/`declines` None-means-empty
+side, since the screen must never be silently disabled by omission), folded
+it into the admissibility loop with a named
+`held-out-blind-evaluation-population` rejection reason, and surfaced
+`diagnostics.held_out_fact_id_count`, `diagnostics.held_out_ready_count`, and
+`selection.held_out_ready_fact_ids`. Confirmed via `--json`: the target fact
+(`F:ml430-nat-coprime-factorizationlcmleft-factorizationlcmright-e7db70ce`)
+now carries `held-out-blind-evaluation-population` in its `rejected_by`,
+independently of the coincidental `gate-coupling-review-required` it also
+still carries; `outcome` stays `refused-no-admissible-candidate`.
+
+`SeedContractHoldoutIsolationTests` (`scripts/tests/test_validate_producer_contracts.py`)
+already reads the glob (fixed same-day by `flywheel-restart`, commit
+`45d605c4d` before this lane started); added
+`test_synthetic_v2_style_manifest_is_detected`, a synthetic-manifest control
+for that class's own detection logic.
+
+Mutation-verified both new `fact-frontier.py` guards in an isolated snapshot
+(`scripts/lane-snapshot.sh`, never the shared worktree):
+
+| guard | mutation | baseline (78 tests) | mutant | killed |
+| --- | --- | --- | --- | --- |
+| multi-manifest read | `held_out_fact_ids()` reverted to reading `nursery-v1.json` only | 10 fail/error (pre-existing, see below) | 11 fail/error | exactly 1: `HeldOutFactIdsMultiManifestTests.test_the_real_union_equals_v1_plus_v2_extension_held_out_rows` |
+| JSON-path screen | `is_admissible`/`reasons` no longer consult `held_out` | 10 fail/error | 11 fail/error | exactly 1: `JsonPathHeldOutScreenTests.test_a_held_out_fact_is_never_admissible_even_with_a_registered_operation` |
+
+**Found, not fixed (out of scope): 10 pre-existing failures in
+`scripts/tests/test_fact_frontier.py`, unrelated to this lane.** Confirmed
+present against the pre-fix `fact-frontier.py` (commit `45d605c4d`) too, so
+this lane did not cause them. Two separate real-ledger drifts: (1) the
+`contract()` fixture helper is missing the `sizing` key ADR-1510 made
+required on producer contracts, so every `ProducerContractAdmissibilityTests`/
+`ProducerContractDeclineTests` case using it errors; (2)
+`F:ml430-int-add-modeq-right-e58108ee` (used as `ProducerContractDeclineTests.TARGET`)
+and `F:ml430-int-add-modeq-left-ee732b5b` (used in `RealDeclineFeedbackLoopTests`)
+have since been proved, so tests asserting they are still open/admissible now
+fail. `check-control-registration.sh` (exit 0, 316 python controls, 0
+orphans) does not catch this because the suite runs and fails loudly, it is
+not silently skipped -- but nothing gates on `python3 -m unittest
+scripts.tests.test_fact_frontier` passing, so this went unnoticed. Worth a
+follow-up lane.
+
+`python3 scripts/validate-facts.py`: exit 0, 2576 facts checked, 0 errors.
+`scripts/check-control-registration.sh`: exit clean, `orphans=0`,
+`py_orphans=0`.
 
 **Verification throughput was the binding constraint, and the cause was
 scheduling rather than any gate** (`landed`, gate-throughput, 2026-08-27). The
