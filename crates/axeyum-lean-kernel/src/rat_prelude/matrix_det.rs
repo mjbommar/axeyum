@@ -97,7 +97,7 @@ use super::RatPrelude;
 use super::matrix::{det2_zero_of_ad_eq_bc, rdet2, rdet3};
 use super::ops::{
     nat_eq_to_rat, nat_rewrite_prop, radd, rat_theorem, rat_ty, rchain, rcongr, req, rmul, rneg,
-    rone, rrefl, rsum_range, rtrans, rzero,
+    rone, rrefl, rsum_range, rsymm, rtrans, rzero,
 };
 use super::probability::{bool_select_rat, select_rat_false, select_rat_true};
 use crate::KernelError;
@@ -171,7 +171,8 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_det_col_expansion(d, p)?;
     declare_mat_minor_transpose(d, p)?;
     declare_det_transpose(d, p)?;
-    declare_det_alternating(d, p)
+    declare_det_alternating(d, p)?;
+    declare_det_row_swap(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -6654,4 +6655,1059 @@ fn declare_det_alternating(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Kern
     let ty = d.pi_fv(m_fv, nat, stmt);
     let value = d.lam_fv(m_fv, nat, proof);
     d.declare_theorem(p.det_alternating, ty, value)
+}
+
+// --- sign under a row swap (`matrix_det`, ADR-1310 step 3) -----------------
+//
+// `Rat.det_row_swap : det B (succ m) = neg (det A (succ m))`, where `B` is
+// `A` with distinct rows `i`,`j` exchanged, stated EXTENSIONALLY (three
+// pointwise hypotheses relating `B` to `A`) rather than via a named
+// `matSwapRows` definition — the file's own rule, from its module doc: no
+// statement here is an `Eq` between two `Nat → Nat → Rat` values, because
+// `funext` is absent, so a matrix relationship is always a hypothesis, never
+// a defined function related back through `det_congr`.
+//
+// The proof is the standard `det(A + swap) = 0` argument: build `C`, the
+// matrix with BOTH rows `i` and `j` set to `A i + A j` (same function in both
+// slots); `Rat.det_alternating` gives `det C = 0` directly (the two rows are
+// literally equal). Expand `C` bilinearly in rows `i` and `j` via
+// [`row_add_split`] (below) — additivity in a single row, built from THREE
+// applications of `Rat.det_row_expansion` (the cofactor sum is linear in the
+// row it expands along, since a minor never depends on the value of the row
+// it deletes) plus `Rat.sumRange_add`/`Rat.sumRange_congr` and
+// distributivity — giving four terms: both-rows-`A i`, both-rows-`A j`
+// (each `0` by `det_alternating` again), row `i`=`A i`/row `j`=`A j` (which
+// is `A` itself, pointwise), and row `i`=`A j`/row `j`=`A i` (the swap).
+// `0 = 0 + det A + det B + 0` rearranges to `det B = neg (det A)` via
+// `Rat.neg_eq_of_add_eq_zero` and `Rat.neg_neg`.
+//
+// **Contrary to ADR-1310's expectation, no NEW induction is needed here**:
+// every fact this proof combines (`det_row_expansion`, `det_alternating`,
+// `sumRange_add`, `sumRange_congr`, distributivity) is already
+// dimension-general, so the whole argument is a straight-line term at a
+// SYMBOLIC `m` — no case split on `i`/`j` beyond what `Nat.beq i j = false`
+// already supplies directly. Row-multilinearity (`row_add_split`) did NOT
+// exist and had to be built; `Rat.det_congr` WAS needed, twice (bridging the
+// two "unmoved" terms of the four back to `A` and to the caller's `B`).
+
+/// `rset_row(base, target, h) r c := if Nat.beq r target then h c else base
+/// r c` — `base` with row `target` replaced by the function `h`. A pure
+/// Rust-level term builder, never a registered kernel `Definition`: every
+/// statement in this section is extensional (see the section doc above), so
+/// nothing downstream needs this to have a name.
+fn rset_row(d: &mut IntDev<'_>, base: ExprId, target: ExprId, h: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let cond = d.beq(r, target);
+    let on_true = d.apply(h, &[c]);
+    let base_rc = d.apply(base, &[r, c]);
+    let body = bool_select_rat(d, cond, on_true, base_rc);
+    let inner = d.lam_fv(c_fv, nat, body);
+    d.lam_fv(r_fv, nat, inner)
+}
+
+/// `∀ c, rset_row(base,target,h) r c = h c`, given `hcond : Nat.beq r target
+/// = true` (for ANY `r`, not necessarily syntactically `target` — the
+/// hypothesis carries the identification).
+fn rset_row_eval_true(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    target: ExprId,
+    h: ExprId,
+    r: ExprId,
+    hcond: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let cond = d.beq(r, target);
+    let on_true = d.apply(h, &[c]);
+    let base_rc = d.apply(base, &[r, c]);
+    let sel = select_rat_true(d, cond, on_true, base_rc, hcond);
+    d.lam_fv(c_fv, nat, sel)
+}
+
+/// `∀ c, rset_row(base,target,h) r c = base r c`, given `hcond : Nat.beq r
+/// target = false`.
+fn rset_row_eval_false(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    target: ExprId,
+    h: ExprId,
+    r: ExprId,
+    hcond: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let cond = d.beq(r, target);
+    let on_true = d.apply(h, &[c]);
+    let base_rc = d.apply(base, &[r, c]);
+    let sel = select_rat_false(d, cond, on_true, base_rc, hcond);
+    d.lam_fv(c_fv, nat, sel)
+}
+
+/// `∀ c, rset_row(base,target,h) target c = h c` — [`rset_row_eval_true`] at
+/// the DIAGONAL, driven by `Nat.beq_refl` (needed because `target` is a
+/// symbolic `Nat`, so `Nat.beq target target` does not iota-reduce).
+fn rset_row_self(d: &mut IntDev<'_>, base: ExprId, target: ExprId, h: ExprId) -> ExprId {
+    let np = d.prelude();
+    let hcond = d.lemma(np.beq_refl, &[target]);
+    rset_row_eval_true(d, base, target, h, target, hcond)
+}
+
+/// `rset_row(base,t,h)`, optionally wrapped by ONE further `rset_row` on a
+/// DIFFERENT row (`outer = Some((outer_t, outer_v, _))`) — the shape every
+/// matrix in this section takes: row `i` set, then row `j` set on top (or
+/// vice versa), never more than two layers.
+fn wrapped_matrix(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    t: ExprId,
+    h: ExprId,
+    outer: Option<(ExprId, ExprId, ExprId)>,
+) -> ExprId {
+    let inner = rset_row(d, base, t, h);
+    match outer {
+        None => inner,
+        Some((ot, ov, _)) => rset_row(d, inner, ot, ov),
+    }
+}
+
+/// `∀ c, wrapped_matrix(base,t,h,outer) t c = h c`.
+fn row_entry_eq(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    t: ExprId,
+    h: ExprId,
+    outer: Option<(ExprId, ExprId, ExprId)>,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let self_eq = rset_row_self(d, base, t, h);
+    match outer {
+        None => self_eq,
+        Some((ot, ov, h_ne)) => {
+            let inner = rset_row(d, base, t, h);
+            let other_eq = rset_row_eval_false(d, inner, ot, ov, t, h_ne);
+            let wrapped = rset_row(d, inner, ot, ov);
+            let c_fv = d.fresh_fvar();
+            let c = d.kernel().fvar(c_fv);
+            let a_val = d.apply(wrapped, &[t, c]);
+            let b_val = d.apply(inner, &[t, c]);
+            let c_val = d.apply(h, &[c]);
+            let step1 = d.apply(other_eq, &[c]);
+            let step2 = d.apply(self_eq, &[c]);
+            let chained = rtrans(d, a_val, b_val, c_val, step1, step2);
+            d.lam_fv(c_fv, nat, chained)
+        }
+    }
+}
+
+/// `∀ r c, matMinor(rset_row(base,target,h)) target q r c = matMinor(base)
+/// target q r c` — deleting row `target` erases any dependence on what row
+/// `target` was set to, via [`RatPrelude::beq_mat_skip_left`] (`matSkip
+/// target r` never equals `target`) and [`select_rat_false`].
+fn minor_indep_of_set_row(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    base: ExprId,
+    target: ExprId,
+    h: ExprId,
+    q: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let skip_r = rmat_skip(d, p, target, r);
+    let skip_c = rmat_skip(d, p, q, c);
+    let cond = d.beq(skip_r, target);
+    let heq = d.lemma(p.beq_mat_skip_left, &[target, r]);
+    let on_true = d.apply(h, &[skip_c]);
+    let base_val = d.apply(base, &[skip_r, skip_c]);
+    let sel = select_rat_false(d, cond, on_true, base_val, heq);
+    let inner = d.lam_fv(c_fv, nat, sel);
+    d.lam_fv(r_fv, nat, inner)
+}
+
+/// `∀ r c, matMinor(wrapped_matrix(base,t,h,Some((outer_t,outer_v,_)))) t q r
+/// c = matMinor(rset_row(base,outer_t,outer_v)) t q r c` — the ONE-LAYER-BURIED
+/// version of [`minor_indep_of_set_row`]: the row-`t` minor still never sees
+/// row `t`'s own value, even wrapped by one further row set on top, because
+/// the inner reduction (`beq_mat_skip_left` again) lifts through the outer
+/// `bool_select_rat`'s `on_false` slot by a single congruence step.
+#[allow(clippy::too_many_arguments)]
+fn minor_indep_of_set_row_wrapped(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    base: ExprId,
+    t: ExprId,
+    h: ExprId,
+    outer_t: ExprId,
+    outer_v: ExprId,
+    q: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let skip_r = rmat_skip(d, p, t, r);
+    let skip_c = rmat_skip(d, p, q, c);
+
+    let inner_matrix = rset_row(d, base, t, h);
+    let x_inner = d.apply(inner_matrix, &[skip_r, skip_c]);
+    let base_val = d.apply(base, &[skip_r, skip_c]);
+
+    let inner_cond = d.beq(skip_r, t);
+    let inner_heq = d.lemma(p.beq_mat_skip_left, &[t, r]);
+    let inner_on_true = d.apply(h, &[skip_c]);
+    let inner_reduces = select_rat_false(d, inner_cond, inner_on_true, base_val, inner_heq);
+
+    let outer_cond = d.beq(skip_r, outer_t);
+    let outer_on_true = d.apply(outer_v, &[skip_c]);
+    let lifted = rcongr(d, x_inner, base_val, inner_reduces, &|d, v| {
+        bool_select_rat(d, outer_cond, outer_on_true, v)
+    });
+
+    let inner_body = d.lam_fv(c_fv, nat, lifted);
+    d.lam_fv(r_fv, nat, inner_body)
+}
+
+/// The minor-independence pointwise fact for [`row_add_split`], dispatched
+/// on `outer`. Returns `(base_for_minor, proof)`: `base_for_minor` is what
+/// the row-`t` minor reduces to (`base` unwrapped, or `base` with the outer
+/// row set, wrapped) — the SAME value regardless of `h`, which is the whole
+/// point.
+fn row_minor_indep(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    base: ExprId,
+    t: ExprId,
+    h: ExprId,
+    outer: Option<(ExprId, ExprId, ExprId)>,
+    q: ExprId,
+) -> (ExprId, ExprId) {
+    match outer {
+        None => {
+            let proof = minor_indep_of_set_row(d, p, base, t, h, q);
+            (base, proof)
+        }
+        Some((ot, ov, _)) => {
+            let wrapped_base = rset_row(d, base, ot, ov);
+            let proof = minor_indep_of_set_row_wrapped(d, p, base, t, h, ot, ov, q);
+            (wrapped_base, proof)
+        }
+    }
+}
+
+/// Row-`t` ADDITIVITY: `det(wrapped_matrix(base,t,λc.f c+g c,outer))(succ m)
+/// = det(wrapped_matrix(base,t,f,outer))(succ m) +
+/// det(wrapped_matrix(base,t,g,outer))(succ m)`, given `ble t m = true`.
+/// Returns `(m_sum, m_f, m_g, proof)`.
+///
+/// The minor at row `t` never depends on what row `t` itself holds
+/// ([`row_minor_indep`]), so all three matrices share every cofactor
+/// determinant TERMWISE — the whole additivity is `Rat.det_row_expansion`
+/// applied three times, plus `Rat.sumRange_add`/`Rat.sumRange_congr` and
+/// distributivity. No new induction: `det_row_expansion` is already
+/// dimension-general.
+#[allow(clippy::too_many_arguments)]
+fn row_add_split(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    base: ExprId,
+    t: ExprId,
+    f: ExprId,
+    g: ExprId,
+    outer: Option<(ExprId, ExprId, ExprId)>,
+    m: ExprId,
+    hble_t: ExprId,
+) -> (ExprId, ExprId, ExprId, ExprId) {
+    let nat = d.nat_ty();
+    let f_plus_g = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let fc = d.apply(f, &[c]);
+        let gc = d.apply(g, &[c]);
+        let body = radd(d, fc, gc);
+        d.lam_fv(c_fv, nat, body)
+    };
+
+    let m_sum = wrapped_matrix(d, base, t, f_plus_g, outer);
+    let m_f = wrapped_matrix(d, base, t, f, outer);
+    let m_g = wrapped_matrix(d, base, t, g, outer);
+
+    let sm = d.succ(m);
+    let exp_sum = {
+        let l = d.lemma(p.det_row_expansion, &[m, m_sum, t]);
+        d.apply(l, &[hble_t])
+    };
+    let exp_f = {
+        let l = d.lemma(p.det_row_expansion, &[m, m_f, t]);
+        d.apply(l, &[hble_t])
+    };
+    let exp_g = {
+        let l = d.lemma(p.det_row_expansion, &[m, m_g, t]);
+        d.apply(l, &[hble_t])
+    };
+
+    let summand_sum_fn = row_expansion_fn(d, p, m_sum, t, m);
+    let summand_f_fn = row_expansion_fn(d, p, m_f, t, m);
+    let summand_g_fn = row_expansion_fn(d, p, m_g, t, m);
+
+    let entry_sum_all = row_entry_eq(d, base, t, f_plus_g, outer);
+    let entry_f_all = row_entry_eq(d, base, t, f, outer);
+    let entry_g_all = row_entry_eq(d, base, t, g, outer);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let entry_sum_q = d.apply(entry_sum_all, &[q]);
+    let entry_f_q = d.apply(entry_f_all, &[q]);
+    let entry_g_q = d.apply(entry_g_all, &[q]);
+
+    let (base_for_minor, minor_sum_pw) = row_minor_indep(d, p, base, t, f_plus_g, outer, q);
+    let (_, minor_f_pw) = row_minor_indep(d, p, base, t, f, outer, q);
+    let (_, minor_g_pw) = row_minor_indep(d, p, base, t, g, outer, q);
+
+    let minor_m_sum = rmat_minor_of(d, p, m_sum, t, q);
+    let minor_m_f = rmat_minor_of(d, p, m_f, t, q);
+    let minor_m_g = rmat_minor_of(d, p, m_g, t, q);
+    let minor_base = rmat_minor_of(d, p, base_for_minor, t, q);
+
+    let det_ms = rdet(d, p, minor_m_sum, m);
+    let det_mf = rdet(d, p, minor_m_f, m);
+    let det_mg = rdet(d, p, minor_m_g, m);
+    let dbase = rdet(d, p, minor_base, m);
+
+    let det_minor_sum_eq = {
+        let l = d.lemma(p.det_congr, &[m, minor_m_sum, minor_base]);
+        d.apply(l, &[minor_sum_pw])
+    };
+    let det_minor_f_eq = {
+        let l = d.lemma(p.det_congr, &[m, minor_m_f, minor_base]);
+        d.apply(l, &[minor_f_pw])
+    };
+    let det_minor_g_eq = {
+        let l = d.lemma(p.det_congr, &[m, minor_m_g, minor_base]);
+        d.apply(l, &[minor_g_pw])
+    };
+
+    let sign = {
+        let idx = d.add(q, t);
+        ralt_sign(d, p, idx)
+    };
+
+    let fq = d.apply(f, &[q]);
+    let gq = d.apply(g, &[q]);
+    let fq_plus_gq = radd(d, fq, gq);
+
+    // LHS chain: `App(summand_sum_fn,q)` (defeq `l0`) down to `l4`.
+    let entry_ms_raw = d.apply(m_sum, &[t, q]);
+    let l0 = {
+        let prod = rmul(d, entry_ms_raw, det_ms);
+        rmul(d, sign, prod)
+    };
+    let l1 = {
+        let prod = rmul(d, fq_plus_gq, det_ms);
+        rmul(d, sign, prod)
+    };
+    let s1 = rcongr(d, entry_ms_raw, fq_plus_gq, entry_sum_q, &|d, v| {
+        let prod = rmul(d, v, det_ms);
+        rmul(d, sign, prod)
+    });
+    let l2 = {
+        let prod = rmul(d, fq_plus_gq, dbase);
+        rmul(d, sign, prod)
+    };
+    let s2 = rcongr(d, det_ms, dbase, det_minor_sum_eq, &|d, v| {
+        let prod = rmul(d, fq_plus_gq, v);
+        rmul(d, sign, prod)
+    });
+    let fq_dbase = rmul(d, fq, dbase);
+    let gq_dbase = rmul(d, gq, dbase);
+    let l3 = radd(d, fq_dbase, gq_dbase);
+    let s3 = {
+        let rd = d.lemma(p.right_distrib, &[fq, gq, dbase]);
+        let fq_plus_gq_dbase = rmul(d, fq_plus_gq, dbase);
+        rcongr(d, fq_plus_gq_dbase, l3, rd, &|d, v| rmul(d, sign, v))
+    };
+    let sign_fq_dbase = rmul(d, sign, fq_dbase);
+    let sign_gq_dbase = rmul(d, sign, gq_dbase);
+    let l4 = radd(d, sign_fq_dbase, sign_gq_dbase);
+    let s4 = d.lemma(p.left_distrib, &[sign, fq_dbase, gq_dbase]);
+    let (_e1, lhs_proof) = rchain(d, l0, &[(l1, s1), (l2, s2), (l3, s3), (l4, s4)]);
+
+    // `f`-side reduction: `App(summand_f_fn,q)` down to `sign_fq_dbase`.
+    let entry_mf_raw = d.apply(m_f, &[t, q]);
+    let rf0 = {
+        let prod = rmul(d, entry_mf_raw, det_mf);
+        rmul(d, sign, prod)
+    };
+    let sf1 = rcongr(d, entry_mf_raw, fq, entry_f_q, &|d, v| {
+        let prod = rmul(d, v, det_mf);
+        rmul(d, sign, prod)
+    });
+    let rf1 = {
+        let prod = rmul(d, fq, det_mf);
+        rmul(d, sign, prod)
+    };
+    let sf2 = rcongr(d, det_mf, dbase, det_minor_f_eq, &|d, v| {
+        let prod = rmul(d, fq, v);
+        rmul(d, sign, prod)
+    });
+    let (_ef, rf_proof) = rchain(d, rf0, &[(rf1, sf1), (sign_fq_dbase, sf2)]);
+
+    // `g`-side reduction: `App(summand_g_fn,q)` down to `sign_gq_dbase`.
+    let entry_mg_raw = d.apply(m_g, &[t, q]);
+    let rg0 = {
+        let prod = rmul(d, entry_mg_raw, det_mg);
+        rmul(d, sign, prod)
+    };
+    let sg1 = rcongr(d, entry_mg_raw, gq, entry_g_q, &|d, v| {
+        let prod = rmul(d, v, det_mg);
+        rmul(d, sign, prod)
+    });
+    let rg1 = {
+        let prod = rmul(d, gq, det_mg);
+        rmul(d, sign, prod)
+    };
+    let sg2 = rcongr(d, det_mg, dbase, det_minor_g_eq, &|d, v| {
+        let prod = rmul(d, gq, v);
+        rmul(d, sign, prod)
+    });
+    let (_eg, rg_proof) = rchain(d, rg0, &[(rg1, sg1), (sign_gq_dbase, sg2)]);
+
+    // Combine: `rf0 + rg0 = l4`.
+    let rhs_start = radd(d, rf0, rg0);
+    let mid = radd(d, sign_fq_dbase, rg0);
+    let step_a = rcongr(d, rf0, sign_fq_dbase, rf_proof, &|d, v| radd(d, v, rg0));
+    let step_b = rcongr(d, rg0, sign_gq_dbase, rg_proof, &|d, v| {
+        radd(d, sign_fq_dbase, v)
+    });
+    let (_e2, combined_proof) = rchain(d, rhs_start, &[(mid, step_a), (l4, step_b)]);
+
+    let rhs_symm = rsymm(d, rhs_start, l4, combined_proof);
+    let pointwise_q = rtrans(d, l0, l4, rhs_start, lhs_proof, rhs_symm);
+    let pointwise = d.lam_fv(q_fv, nat, pointwise_q);
+
+    let combined_fn = {
+        let q2_fv = d.fresh_fvar();
+        let q2 = d.kernel().fvar(q2_fv);
+        let fq2 = d.apply(summand_f_fn, &[q2]);
+        let gq2 = d.apply(summand_g_fn, &[q2]);
+        let body = radd(d, fq2, gq2);
+        d.lam_fv(q2_fv, nat, body)
+    };
+
+    let sum_congr = {
+        let l = d.lemma(p.sum_range_congr, &[summand_sum_fn, combined_fn, sm]);
+        d.apply(l, &[pointwise])
+    };
+    let sum_add = d.lemma(p.sum_range_add, &[summand_f_fn, summand_g_fn, sm]);
+
+    let det_msum = rdet(d, p, m_sum, sm);
+    let sr_sum = rsum_range(d, p, summand_sum_fn, sm);
+    let sr_combined = rsum_range(d, p, combined_fn, sm);
+    let det_mf_val = rdet(d, p, m_f, sm);
+    let det_mg_val = rdet(d, p, m_g, sm);
+    let sr_f = rsum_range(d, p, summand_f_fn, sm);
+    let sr_g = rsum_range(d, p, summand_g_fn, sm);
+    let sr_f_plus_g = radd(d, sr_f, sr_g);
+
+    let step4a = rsymm(d, det_mf_val, sr_f, exp_f);
+    let step4b = rsymm(d, det_mg_val, sr_g, exp_g);
+    let final_target = radd(d, det_mf_val, det_mg_val);
+    let step4 = {
+        let mid4 = radd(d, det_mf_val, sr_g);
+        let sa = rcongr(d, sr_f, det_mf_val, step4a, &|d, v| radd(d, v, sr_g));
+        let sb = rcongr(d, sr_g, det_mg_val, step4b, &|d, v| radd(d, det_mf_val, v));
+        let (_e, chained) = rchain(d, sr_f_plus_g, &[(mid4, sa), (final_target, sb)]);
+        chained
+    };
+
+    let (_e, overall) = rchain(
+        d,
+        det_msum,
+        &[
+            (sr_sum, exp_sum),
+            (sr_combined, sum_congr),
+            (sr_f_plus_g, sum_add),
+            (final_target, step4),
+        ],
+    );
+
+    (m_sum, m_f, m_g, overall)
+}
+
+/// `∀ c, rset_row(rset_row(base,i,h),j,h) i c = rset_row(rset_row(base,i,h),j,h)
+/// j c` — BOTH rows are the SAME function `h`, so `Rat.det_alternating`
+/// applies directly.
+fn double_set_same_row_eq(
+    d: &mut IntDev<'_>,
+    base: ExprId,
+    i: ExprId,
+    j: ExprId,
+    h: ExprId,
+    hne: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let inner = rset_row(d, base, i, h);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let m = rset_row(d, inner, j, h);
+    let mi_c = d.apply(m, &[i, c]);
+    let mj_c = d.apply(m, &[j, c]);
+    let hc = d.apply(h, &[c]);
+    let inner_ic = d.apply(inner, &[i, c]);
+
+    let step_outer = {
+        let ev = rset_row_eval_false(d, inner, j, h, i, hne);
+        d.apply(ev, &[c])
+    };
+    let step_inner = {
+        let ev = rset_row_self(d, base, i, h);
+        d.apply(ev, &[c])
+    };
+    let (_e1, mi_eq_hc) = rchain(d, mi_c, &[(inner_ic, step_outer), (hc, step_inner)]);
+
+    let mj_eq_hc = {
+        let ev = rset_row_self(d, inner, j, h);
+        d.apply(ev, &[c])
+    };
+    let hc_eq_mj = rsymm(d, mj_c, hc, mj_eq_hc);
+
+    let (_e2, chained) = rchain(d, mi_c, &[(hc, mi_eq_hc), (mj_c, hc_eq_mj)]);
+    d.lam_fv(c_fv, nat, chained)
+}
+
+/// `∀ r c, rset_row(rset_row(A,i,λc.A i c),j,λc.A j c) r c = A r c` —
+/// replacing rows `i` and `j` by their OWN current values is a NO-OP,
+/// pointwise, for EVERY `r` (including `r = i` or `r = j`): a `Bool.rec` case
+/// split on `Nat.beq r j`, then (in the `false` branch) `Nat.beq r i`. Each
+/// `true` branch uses `Nat.eq_of_beq_eq_true` to rewrite the row index back
+/// to `r` via [`nat_eq_to_rat`]; the innermost `false` branch is direct.
+fn double_set_own_rows_noop(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    i: ExprId,
+    j: ExprId,
+) -> ExprId {
+    let _ = p;
+    let np = d.prelude();
+    let nat = d.nat_ty();
+    let fi = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = d.apply(a, &[i, c]);
+        d.lam_fv(c_fv, nat, body)
+    };
+    let fj = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = d.apply(a, &[j, c]);
+        d.lam_fv(c_fv, nat, body)
+    };
+    let inner = rset_row(d, a, i, fi);
+    let m = rset_row(d, inner, j, fj);
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let cond_j = d.beq(r, j);
+    let mr_c = d.apply(m, &[r, c]);
+    let ar_c = d.apply(a, &[r, c]);
+    let target_ty = req(d, mr_c, ar_c);
+
+    let at_true = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let l7236_bv = d.bool_true();
+        let hyp_ty = d.bool_eq(cond_j, l7236_bv);
+        let step1 = {
+            let ev = rset_row_eval_true(d, inner, j, fj, r, h);
+            d.apply(ev, &[c])
+        };
+        let aj_c = d.apply(a, &[j, c]);
+        let r_eq_j = {
+            let l = d.lemma(np.eq_of_beq_eq_true, &[r, j]);
+            d.apply(l, &[h])
+        };
+        let ar_eq_aj = nat_eq_to_rat(d, r, j, r_eq_j, &|d, x| d.apply(a, &[x, c]));
+        let aj_eq_ar = rsymm(d, ar_c, aj_c, ar_eq_aj);
+        let (_e, chained) = rchain(d, mr_c, &[(aj_c, step1), (ar_c, aj_eq_ar)]);
+        d.lam_fv(h_fv, hyp_ty, chained)
+    };
+    let at_false = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let l7254_bv = d.bool_false();
+        let hyp_ty = d.bool_eq(cond_j, l7254_bv);
+        let step1 = {
+            let ev = rset_row_eval_false(d, inner, j, fj, r, h);
+            d.apply(ev, &[c])
+        };
+        let inner_rc = d.apply(inner, &[r, c]);
+
+        let cond_i = d.beq(r, i);
+        let inner_target = req(d, inner_rc, ar_c);
+        let at_true2 = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let l7266_bv = d.bool_true();
+            let hyp2_ty = d.bool_eq(cond_i, l7266_bv);
+            let step2 = {
+                let ev = rset_row_eval_true(d, a, i, fi, r, h2);
+                d.apply(ev, &[c])
+            };
+            let ai_c = d.apply(a, &[i, c]);
+            let r_eq_i = {
+                let l = d.lemma(np.eq_of_beq_eq_true, &[r, i]);
+                d.apply(l, &[h2])
+            };
+            let ar_eq_ai = nat_eq_to_rat(d, r, i, r_eq_i, &|d, x| d.apply(a, &[x, c]));
+            let ai_eq_ar = rsymm(d, ar_c, ai_c, ar_eq_ai);
+            let (_e, chained2) = rchain(d, inner_rc, &[(ai_c, step2), (ar_c, ai_eq_ar)]);
+            d.lam_fv(h2_fv, hyp2_ty, chained2)
+        };
+        let at_false2 = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let l7284_bv = d.bool_false();
+            let hyp2_ty = d.bool_eq(cond_i, l7284_bv);
+            let ev = rset_row_eval_false(d, a, i, fi, r, h2);
+            let step2 = d.apply(ev, &[c]);
+            d.lam_fv(h2_fv, hyp2_ty, step2)
+        };
+        let inner_proof = bool_cases_eq(d, cond_i, inner_target, at_true2, at_false2);
+        let chained_final = rtrans(d, mr_c, inner_rc, ar_c, step1, inner_proof);
+        d.lam_fv(h_fv, hyp_ty, chained_final)
+    };
+    let body = bool_cases_eq(d, cond_j, target_ty, at_true, at_false);
+    let inner2 = d.lam_fv(c_fv, nat, body);
+    d.lam_fv(r_fv, nat, inner2)
+}
+
+/// `∀ r c, rset_row(rset_row(A,i,λc.A j c),j,λc.A i c) r c = B r c` — the
+/// swap (row `i` gets `A`'s row `j`, row `j` gets `A`'s row `i`), bridged to
+/// the CALLER's `B` via `h_row_i : ∀c, B i c = A j c`, `h_row_j : ∀c, B j c =
+/// A i c`, and `h_other`. Same case-split shape as
+/// [`double_set_own_rows_noop`], with the `r = i`/`r = j` branches routed
+/// through `h_row_j`/`h_row_i` instead of a direct index rewrite, and the
+/// "neither" branch through `h_other`.
+#[allow(clippy::too_many_arguments)]
+fn bridge_swap_to_b(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    b_mat: ExprId,
+    i: ExprId,
+    j: ExprId,
+    h_row_i: ExprId,
+    h_row_j: ExprId,
+    h_other: ExprId,
+) -> ExprId {
+    let _ = p;
+    let np = d.prelude();
+    let nat = d.nat_ty();
+    let fj = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = d.apply(a, &[j, c]);
+        d.lam_fv(c_fv, nat, body)
+    };
+    let fi = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = d.apply(a, &[i, c]);
+        d.lam_fv(c_fv, nat, body)
+    };
+    let inner = rset_row(d, a, i, fj);
+    let m = rset_row(d, inner, j, fi);
+
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+
+    let cond_j = d.beq(r, j);
+    let mr_c = d.apply(m, &[r, c]);
+    let br_c = d.apply(b_mat, &[r, c]);
+    let target_ty = req(d, mr_c, br_c);
+
+    let at_true = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let l7348_bv = d.bool_true();
+        let hyp_ty = d.bool_eq(cond_j, l7348_bv);
+        let step1 = {
+            let ev = rset_row_eval_true(d, inner, j, fi, r, h);
+            d.apply(ev, &[c])
+        };
+        let ai_c = d.apply(a, &[i, c]);
+        let r_eq_j = {
+            let l = d.lemma(np.eq_of_beq_eq_true, &[r, j]);
+            d.apply(l, &[h])
+        };
+        let br_eq_bj = nat_eq_to_rat(d, r, j, r_eq_j, &|d, x| d.apply(b_mat, &[x, c]));
+        let bj_c = d.apply(b_mat, &[j, c]);
+        let bj_eq_ai = d.apply(h_row_j, &[c]);
+        let (_e, br_eq_ai) = rchain(d, br_c, &[(bj_c, br_eq_bj), (ai_c, bj_eq_ai)]);
+        let ai_eq_br = rsymm(d, br_c, ai_c, br_eq_ai);
+        let (_e2, chained) = rchain(d, mr_c, &[(ai_c, step1), (br_c, ai_eq_br)]);
+        d.lam_fv(h_fv, hyp_ty, chained)
+    };
+    let at_false = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let l7369_bv = d.bool_false();
+        let hyp_ty = d.bool_eq(cond_j, l7369_bv);
+        let step1 = {
+            let ev = rset_row_eval_false(d, inner, j, fi, r, h);
+            d.apply(ev, &[c])
+        };
+        let inner_rc = d.apply(inner, &[r, c]);
+
+        let cond_i = d.beq(r, i);
+        let inner_target = req(d, inner_rc, br_c);
+        let at_true2 = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let l7381_bv = d.bool_true();
+            let hyp2_ty = d.bool_eq(cond_i, l7381_bv);
+            let step2 = {
+                let ev = rset_row_eval_true(d, a, i, fj, r, h2);
+                d.apply(ev, &[c])
+            };
+            let aj_c = d.apply(a, &[j, c]);
+            let r_eq_i = {
+                let l = d.lemma(np.eq_of_beq_eq_true, &[r, i]);
+                d.apply(l, &[h2])
+            };
+            let br_eq_bi = nat_eq_to_rat(d, r, i, r_eq_i, &|d, x| d.apply(b_mat, &[x, c]));
+            let bi_c = d.apply(b_mat, &[i, c]);
+            let bi_eq_aj = d.apply(h_row_i, &[c]);
+            let (_e, br_eq_aj) = rchain(d, br_c, &[(bi_c, br_eq_bi), (aj_c, bi_eq_aj)]);
+            let aj_eq_br = rsymm(d, br_c, aj_c, br_eq_aj);
+            let (_e2, chained2) = rchain(d, inner_rc, &[(aj_c, step2), (br_c, aj_eq_br)]);
+            d.lam_fv(h2_fv, hyp2_ty, chained2)
+        };
+        let at_false2 = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let l7402_bv = d.bool_false();
+            let hyp2_ty = d.bool_eq(cond_i, l7402_bv);
+            let ev = rset_row_eval_false(d, a, i, fj, r, h2);
+            let step2 = d.apply(ev, &[c]);
+            let ar_c = d.apply(a, &[r, c]);
+            let other = {
+                let l = d.apply(h_other, &[r]);
+                let l = d.apply(l, &[h2, h]);
+                d.apply(l, &[c])
+            };
+            let ar_eq_br = rsymm(d, br_c, ar_c, other);
+            let (_e, chained2) = rchain(d, inner_rc, &[(ar_c, step2), (br_c, ar_eq_br)]);
+            d.lam_fv(h2_fv, hyp2_ty, chained2)
+        };
+        let inner_proof = bool_cases_eq(d, cond_i, inner_target, at_true2, at_false2);
+        let chained_final = rtrans(d, mr_c, inner_rc, br_c, step1, inner_proof);
+        d.lam_fv(h_fv, hyp_ty, chained_final)
+    };
+    let body = bool_cases_eq(d, cond_j, target_ty, at_true, at_false);
+    let inner2 = d.lam_fv(c_fv, nat, body);
+    d.lam_fv(r_fv, nat, inner2)
+}
+
+/// `∀ c, B i c = A j c` — the swap's row-`i` hypothesis.
+fn swap_row_i_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let bi = d.apply(b_mat, &[i, c]);
+    let aj = d.apply(a, &[j, c]);
+    let eq = req(d, bi, aj);
+    d.pi_fv(c_fv, nat, eq)
+}
+
+/// `∀ c, B j c = A i c` — the swap's row-`j` hypothesis.
+fn swap_row_j_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let bj = d.apply(b_mat, &[j, c]);
+    let ai = d.apply(a, &[i, c]);
+    let eq = req(d, bj, ai);
+    d.pi_fv(c_fv, nat, eq)
+}
+
+/// `∀ r, Nat.beq r i = false → Nat.beq r j = false → ∀ c, B r c = A r c` —
+/// every OTHER row of `B` is unchanged.
+fn swap_other_ty(d: &mut IntDev<'_>, a: ExprId, b_mat: ExprId, i: ExprId, j: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let h1 = alt_hyp_ne(d, r, i);
+    let h2 = alt_hyp_ne(d, r, j);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let br = d.apply(b_mat, &[r, c]);
+    let ar = d.apply(a, &[r, c]);
+    let eq = req(d, br, ar);
+    let inner = d.pi_fv(c_fv, nat, eq);
+    let arr = d.arrow(h2, inner);
+    let arr = d.arrow(h1, arr);
+    d.pi_fv(r_fv, nat, arr)
+}
+
+/// Admit `Rat.det_row_swap` — see [`RatPrelude::det_row_swap`] for the
+/// statement and the proof outline (the section doc above has the full
+/// argument).
+fn declare_det_row_swap(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b_mat = d.kernel().fvar(b_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let hne_ty = alt_hyp_ne(d, i, j);
+    let hbi_ty = ble_true_ty(d, i, m);
+    let hbj_ty = ble_true_ty(d, j, m);
+    let h_row_i_ty = swap_row_i_ty(d, a, b_mat, i, j);
+    let h_row_j_ty = swap_row_j_ty(d, a, b_mat, i, j);
+    let h_other_ty = swap_other_ty(d, a, b_mat, i, j);
+
+    let sm0 = d.succ(m);
+    let det_b_ty = rdet(d, p, b_mat, sm0);
+    let det_a_ty = rdet(d, p, a, sm0);
+    let neg_det_a_ty = rneg(d, det_a_ty);
+    let concl_ty = req(d, det_b_ty, neg_det_a_ty);
+
+    let arr = d.arrow(h_other_ty, concl_ty);
+    let arr = d.arrow(h_row_j_ty, arr);
+    let arr = d.arrow(h_row_i_ty, arr);
+    let arr = d.arrow(hbj_ty, arr);
+    let arr = d.arrow(hbi_ty, arr);
+    let arr = d.arrow(hne_ty, arr);
+    let over_j = d.pi_fv(j_fv, nat, arr);
+    let over_i = d.pi_fv(i_fv, nat, over_j);
+    let over_b = d.pi_fv(b_fv, mty, over_i);
+    let over_a = d.pi_fv(a_fv, mty, over_b);
+    let ty = d.pi_fv(m_fv, nat, over_a);
+
+    // --- the proof value, mirroring the Pi nesting above ---
+    let hne_fv = d.fresh_fvar();
+    let hne = d.kernel().fvar(hne_fv);
+    let hbi_fv = d.fresh_fvar();
+    let hbi = d.kernel().fvar(hbi_fv);
+    let hbj_fv = d.fresh_fvar();
+    let hbj = d.kernel().fvar(hbj_fv);
+    let h_row_i_fv = d.fresh_fvar();
+    let h_row_i = d.kernel().fvar(h_row_i_fv);
+    let h_row_j_fv = d.fresh_fvar();
+    let h_row_j = d.kernel().fvar(h_row_j_fv);
+    let h_other_fv = d.fresh_fvar();
+    let h_other = d.kernel().fvar(h_other_fv);
+
+    let f_fn = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = d.apply(a, &[i, c]);
+        d.lam_fv(c_fv, nat, body)
+    };
+    let g_fn = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let body = d.apply(a, &[j, c]);
+        d.lam_fv(c_fv, nat, body)
+    };
+    let h_fn = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let ai_c = d.apply(a, &[i, c]);
+        let aj_c = d.apply(a, &[j, c]);
+        let body = radd(d, ai_c, aj_c);
+        d.lam_fv(c_fv, nat, body)
+    };
+
+    let a1 = rset_row(d, a, i, h_fn);
+
+    // Split row `j` on `A1` (row `i` already `H`, row `j` unsplit).
+    let (c_mat, d1, d2, proof_c_eq_d1d2) = row_add_split(d, p, a1, j, f_fn, g_fn, None, m, hbj);
+
+    let hrow_c = double_set_same_row_eq(d, a, i, j, h_fn, hne);
+    let det_c_zero = {
+        let l = d.lemma(p.det_alternating, &[m, c_mat, i, j]);
+        d.apply(l, &[hne, hbi, hbj, hrow_c])
+    };
+
+    let sm = d.succ(m);
+    let zero_r = rzero(d, p);
+    let det_d1 = rdet(d, p, d1, sm);
+    let det_d2 = rdet(d, p, d2, sm);
+    let sum_d1d2 = radd(d, det_d1, det_d2);
+    let det_c = rdet(d, p, c_mat, sm);
+    let sum_eq_c = rsymm(d, det_c, sum_d1d2, proof_c_eq_d1d2);
+    let sum_eq_zero = rtrans(d, sum_d1d2, det_c, zero_r, sum_eq_c, det_c_zero);
+
+    // Split row `i` under the "row `j` = `A i`" wrap (the `D1` shape):
+    // both-rows-`A i` (zero) and the swap.
+    let (_m_sum2, z1, swap1, proof2) =
+        row_add_split(d, p, a, i, f_fn, g_fn, Some((j, f_fn, hne)), m, hbi);
+    let hrow_z1 = double_set_same_row_eq(d, a, i, j, f_fn, hne);
+    let det_z1_zero = {
+        let l = d.lemma(p.det_alternating, &[m, z1, i, j]);
+        d.apply(l, &[hne, hbi, hbj, hrow_z1])
+    };
+
+    // Split row `i` under the "row `j` = `A j`" wrap (the `D2` shape): the
+    // untouched matrix (`A` itself) and both-rows-`A j` (zero).
+    let (_m_sum3, id2, z2, proof3) =
+        row_add_split(d, p, a, i, f_fn, g_fn, Some((j, g_fn, hne)), m, hbi);
+    let hrow_z2 = double_set_same_row_eq(d, a, i, j, g_fn, hne);
+    let det_z2_zero = {
+        let l = d.lemma(p.det_alternating, &[m, z2, i, j]);
+        d.apply(l, &[hne, hbi, hbj, hrow_z2])
+    };
+
+    // `det_d1 = det_z1 + det_swap1 = 0 + det_swap1 = det_swap1`.
+    let det_swap1 = rdet(d, p, swap1, sm);
+    let det_z1 = rdet(d, p, z1, sm);
+    let det_z1_plus_swap1 = radd(d, det_z1, det_swap1);
+    let zero_plus_swap1 = radd(d, zero_r, det_swap1);
+    let s_z1 = rcongr(d, det_z1, zero_r, det_z1_zero, &|d, v| {
+        radd(d, v, det_swap1)
+    });
+    let s_za = d.lemma(p.zero_add, &[det_swap1]);
+    let (_e, d1_collapse) = rchain(
+        d,
+        det_z1_plus_swap1,
+        &[(zero_plus_swap1, s_z1), (det_swap1, s_za)],
+    );
+    let det_d1_eq_swap1 = rtrans(d, det_d1, det_z1_plus_swap1, det_swap1, proof2, d1_collapse);
+
+    // `det_d2 = det_id2 + det_z2 = det_id2 + 0 = det_id2`.
+    let det_id2 = rdet(d, p, id2, sm);
+    let det_z2 = rdet(d, p, z2, sm);
+    let det_id2_plus_z2 = radd(d, det_id2, det_z2);
+    let id2_plus_zero = radd(d, det_id2, zero_r);
+    let s_z2 = rcongr(d, det_z2, zero_r, det_z2_zero, &|d, v| radd(d, det_id2, v));
+    let s_za2 = d.lemma(p.add_zero, &[det_id2]);
+    let (_e, d2_collapse) = rchain(
+        d,
+        det_id2_plus_z2,
+        &[(id2_plus_zero, s_z2), (det_id2, s_za2)],
+    );
+    let det_d2_eq_id2 = rtrans(d, det_d2, det_id2_plus_z2, det_id2, proof3, d2_collapse);
+
+    // `sum_eq_zero : det_d1 + det_d2 = 0` becomes `det_swap1 + det_id2 = 0`.
+    let swap1_plus_d2 = radd(d, det_swap1, det_d2);
+    let swap1_plus_id2 = radd(d, det_swap1, det_id2);
+    let s_sub1 = rcongr(d, det_d1, det_swap1, det_d1_eq_swap1, &|d, v| {
+        radd(d, v, det_d2)
+    });
+    let s_sub2 = rcongr(d, det_d2, det_id2, det_d2_eq_id2, &|d, v| {
+        radd(d, det_swap1, v)
+    });
+    let (_e, rewritten) = rchain(
+        d,
+        sum_d1d2,
+        &[(swap1_plus_d2, s_sub1), (swap1_plus_id2, s_sub2)],
+    );
+    let rewritten_symm = rsymm(d, sum_d1d2, swap1_plus_id2, rewritten);
+    let swap1_id2_eq_zero = rtrans(
+        d,
+        swap1_plus_id2,
+        sum_d1d2,
+        zero_r,
+        rewritten_symm,
+        sum_eq_zero,
+    );
+
+    // `det_swap1 + det_id2 = 0` gives `neg(det_swap1) = det_id2`, hence
+    // `det_swap1 = neg(det_id2)` via `neg_neg`.
+    let neg_swap1_eq_id2 = {
+        let l = d.lemma(p.neg_eq_of_add_eq_zero, &[det_swap1, det_id2]);
+        d.apply(l, &[swap1_id2_eq_zero])
+    };
+    let neg_swap1 = rneg(d, det_swap1);
+    let neg_neg_swap1 = rneg(d, neg_swap1);
+    let neg_det_id2 = rneg(d, det_id2);
+    let neg_swap1_val = rneg(d, det_swap1);
+    let step_nn_congr = rcongr(d, neg_swap1_val, det_id2, neg_swap1_eq_id2, &|d, v| {
+        rneg(d, v)
+    });
+    let nn = d.lemma(p.neg_neg, &[det_swap1]);
+    let nn_symm = rsymm(d, neg_neg_swap1, det_swap1, nn);
+    let swap1_eq_neg_id2 = rtrans(
+        d,
+        det_swap1,
+        neg_neg_swap1,
+        neg_det_id2,
+        nn_symm,
+        step_nn_congr,
+    );
+
+    // Bridge `swap1` to the caller's `B`, and `id2` to `A`.
+    let bridge_swap = bridge_swap_to_b(d, p, a, b_mat, i, j, h_row_i, h_row_j, h_other);
+    let bridge_id2 = double_set_own_rows_noop(d, p, a, i, j);
+    let congr_swap = {
+        let l = d.lemma(p.det_congr, &[sm, swap1, b_mat]);
+        d.apply(l, &[bridge_swap])
+    };
+    let congr_id2 = {
+        let l = d.lemma(p.det_congr, &[sm, id2, a]);
+        d.apply(l, &[bridge_id2])
+    };
+
+    let det_b = rdet(d, p, b_mat, sm);
+    let det_a = rdet(d, p, a, sm);
+    let det_b_eq_swap1 = rsymm(d, det_swap1, det_b, congr_swap);
+    let det_b_eq_neg_id2 = rtrans(
+        d,
+        det_b,
+        det_swap1,
+        neg_det_id2,
+        det_b_eq_swap1,
+        swap1_eq_neg_id2,
+    );
+    let neg_id2_eq_neg_a = rcongr(d, det_id2, det_a, congr_id2, &|d, v| rneg(d, v));
+    let neg_a = rneg(d, det_a);
+    let goal_proof = rtrans(
+        d,
+        det_b,
+        neg_det_id2,
+        neg_a,
+        det_b_eq_neg_id2,
+        neg_id2_eq_neg_a,
+    );
+
+    let body = d.lam_fv(h_other_fv, h_other_ty, goal_proof);
+    let body = d.lam_fv(h_row_j_fv, h_row_j_ty, body);
+    let body = d.lam_fv(h_row_i_fv, h_row_i_ty, body);
+    let body = d.lam_fv(hbj_fv, hbj_ty, body);
+    let body = d.lam_fv(hbi_fv, hbi_ty, body);
+    let body = d.lam_fv(hne_fv, hne_ty, body);
+    let body = d.lam_fv(b_fv, mty, body);
+    let body = d.lam_fv(a_fv, mty, body);
+    let value = d.lam_fv(m_fv, nat, body);
+
+    d.declare_theorem(p.det_row_swap, ty, value)
 }
