@@ -2313,17 +2313,17 @@ fn admit_prop_family_with_sort1_field() {
 /// family, which is a different — and wrong — kernel.
 #[test]
 fn prop_exemption_is_sound_because_large_elimination_is_denied() {
-    let mut k = Kernel::new();
-    let anon = k.anon();
-    let l0 = k.level_zero();
-    let l1 = k.level_succ(l0);
-
     fn rec_uparams_len(k: &Kernel, name: crate::NameId) -> usize {
         match k.environment().get(name).expect("recursor present") {
             Declaration::Recursor { uparams, .. } => uparams.len(),
             other => panic!("not a recursor: {other:?}"),
         }
     }
+
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
 
     // P : Prop with mk : Sort 1 → P — admitted, and SMALL elimination only.
     let pn = k.name_str(anon, "SoundProp");
