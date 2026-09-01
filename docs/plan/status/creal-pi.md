@@ -37,6 +37,25 @@ swing from nothing but the choice of intermediate bound. The first attempt, on
 the exact `S 4 = 32/21` (`Rat.normalize 800 525`), ran past 600 s and 5.9 GB
 RSS and was killed.
 
+**The mutation table, and what it cannot catch.**
+
+| mutation | outcome |
+| --- | --- |
+| `piHalfCoef 2` compared against `1/15` (a numerator typo in the ratio) | **rejected** — `creal::pi::tests::pi_half_coef_computes_its_first_four_values` fails; the mutant is well-typed `Nat → Rat`, so nothing else sees it |
+| `piHalfCoef 3` compared against `piHalfCoef 2` (a step returning its own input) | **rejected** by the same test |
+| `1/17 ≤ 2/35` in place of `1/18 ≤ 2/35` (off by one in the weakened bound) | **statement false** — `35 ≤ 34`, pinned by `the_weakened_term_bounds_are_one_step_from_false` |
+| ratio `(k+1)/(2k+2)` instead of `(k+1)/(2k+3)`, with `ratio_le_half` rewritten to suit | **rejected by the kernel** at build step 210 (`TypeMismatch`). This was aimed at the third column and did not land there: my hand-rewritten `ratio_le_half` was itself wrong, so the experiment says nothing about whether a correctly-proved version would be admitted. Reported as inconclusive rather than as a kernel guarantee. |
+
+**What the controls cannot catch, measured rather than asserted.** The decoy
+series `t k = (1/2)ᵏ` satisfies **every theorem in `creal/pi.rs`** — ratio
+`≤ 1/2` (with equality), `t k ≤ (1/2)ᵏ`, every term nonnegative, every partial
+sum `≤ 2`, and `S 4 = 15/8 ≥ 3/2` — and its sum is `2`, so its "π" would be
+`4`. So `3 ≤ π ≤ 4` does **not** pin the series, and the kernel cannot help:
+`CReal.piHalfCoef` is a `Definition` and a function computing the wrong
+rational still has type `Nat → Rat`. The only guard that separates them is the
+evaluation test at `k = 0..3`. `scripts/check-pi-series-numeric.py` measures
+this explicitly rather than leaving it as a claim.
+
 **Next rung.** `CReal.sin`/`CReal.cos` at a general argument need a bound
 depending on `|x|` — the power-series row, Spivak ch 24 — and after that the
 *identification* of this π with a root of `cos`, which genuinely does need the
