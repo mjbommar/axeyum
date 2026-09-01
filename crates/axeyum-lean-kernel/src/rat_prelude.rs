@@ -66,6 +66,8 @@ pub(crate) mod lattice;
 mod laws;
 mod matrix;
 mod matrix_det;
+#[allow(dead_code)]
+mod matrix_det_selection;
 mod matrix_invertible;
 mod matrix_n;
 mod matrix_transpose;
