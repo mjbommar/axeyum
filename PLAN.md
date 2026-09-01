@@ -136,6 +136,7 @@ now. Nothing was deleted.
 | 2026-09-01 | `208104bd5` | Slice A: `scripts/creal-declare-deps.py` re-derives `creal.rs`'s dependency graph from source and checks the `STEPS` table against it. 0 order violations, but 977 of 4,831 `requires` edges unnamed and two false `provides` disarming the preflight over a 48-step window. `--self-check` permutes a step before its provider and requires the scan to fire; `--strict` exits 2 on a table/code disagreement. |
 | 2026-09-01 | `b3b449dfc` | Slice B: `plan_step_order` computes the build order (Kahn, array-index tie-break) instead of validating a hand-written one; the two false `provides` deleted; duplicate providers rejected. Projection byte-identical (same SHA-256, 14,673 rows); build time unchanged. Inversion demo: level 1 exit 101, level 2 exit 0 with identical output. Six new tests, each a distinct failure mode. clippy `--all-targets -D warnings` exit 0. |
 | 2026-09-01 | `3096c587c` | Slice C: ADR-1512 (per-module registries behind the `CRealPrelude` facade) plus the first migration, `ivt_boundary`. 606 → 599 fields; 15 self-contained modules identified as the migratable population. Analyzer extended to follow the facade, with a mutation-verified guard (every struct field provided by exactly one step). Projection byte-identical. clippy exit 0. |
+| 2026-09-01 | kernel-rustdoc-links | Fixed all 23 broken rustdoc intra-doc-links in `crates/axeyum-lean-kernel/src/{nat_prelude,ipc_heyting,ipc_provable,rat_prelude}.rs`; `cargo doc -p axeyum-lean-kernel --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 24 error lines). Workspace-wide doc build still red: 8 errors in `axeyum-cas` (out of scope, reported not fixed). |
 | 2026-09-01 | `1e33d51ee` | Split ADR-1495's bundled universe-guard test into seven named controls so each admission control is observed in the configuration whose answer it gives; added the polymorphic refusal, the bundled-structure and Nat-like admissions, and the `Prop`-exemption soundness control. `--lib inductive` 49 -> 55 passed. |
 | 2026-09-01 | `d9b9249d9` | Ordering control (the positivity pre-pass masks the universe error, refuting the assumption this lane started with); registered `inductive-universe-guard` in `scripts/tests/mutation_controls.py` (baseline green 56 tests, both mutations killed, disjoint kill sets); ADR-1500. |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
@@ -41441,6 +41442,30 @@ it stays fresh) —
 `multi_target_operations=4` (was 3). `python3 scripts/gen-adr-index.py
 --check` — unchanged (ADR-0602's front matter was not touched, only its
 body).
+
+**Your lane's block (`DONE`, kernel-rustdoc-links, 2026-09-01).** Fixed all 23
+broken intra-doc-links (24 `error:` lines including the summary) that made
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-lean-kernel --no-deps` fail —
+confirmed by reproducing the failure first (exit 101, 24 `error:` lines) and
+re-running the identical command after the edits (exit 0, 0 errors). Every
+fix is doc-comment-only: two real public items (`NatPrelude`, `NatOps`'s
+trait methods, both re-exported at the crate root) got an explicit
+`crate::`-rooted path; every other link named a `pub(super)`/private
+free function, a private submodule (`ops`, `parity`, `matrix_n`,
+`rec_agreement`), or a Lean-level name with no Rust item at all
+(`Formula`, `FormulaList`) — those were demoted to plain code-formatted text
+since fixing them into a real link would need a visibility/code change, out
+of scope for a doc-comment-only fix. Touched files:
+`nat_prelude.rs`, `ipc_heyting.rs`, `ipc_provable.rs`, `rat_prelude.rs` (the
+last two beyond the three files the initial repro named — `rat_prelude.rs`
+carried 2 of the 23 broken links, discovered during reproduction).
+`rustfmt --edition 2024` on all four touched files: no diff, already clean.
+
+Also ran `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+--no-deps` once, report-only, no fix: exit 101, 8 `error:` lines, all in
+`crates/axeyum-cas` (`inverse.rs`, `normalforms.rs`, `rationality.rs`) —
+same defect class (public docs linking to private items), out of this
+lane's scope. Not fixed here.
 
 **Status:** complete — all seven L0 gates wired, each proved able to fail, and
 an enforcement gate added so the wiring cannot silently regress (ADR-1050).
