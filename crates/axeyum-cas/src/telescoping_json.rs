@@ -225,11 +225,12 @@ fn write_options(options: &CheckOptions) -> String {
         })
         .collect();
     format!(
-        "{{\"samples\": {{{}}}, \"window\": [{}, {}], \"min_ratio_samples\": {}}}",
+        "{{\"samples\": {{{}}}, \"window\": [{}, {}], \"min_ratio_samples\": {}, \"min_pointwise_samples\": {}}}",
         samples.join(", "),
         options.window.0,
         options.window.1,
-        options.min_ratio_samples
+        options.min_ratio_samples,
+        options.min_pointwise_samples
     )
 }
 
@@ -441,6 +442,12 @@ fn read_options(value: &Json) -> Result<CheckOptions, String> {
         window: (window[0].narrow()?, window[1].narrow()?),
         min_ratio_samples: usize::try_from(value.field("min_ratio_samples")?.integer()?)
             .map_err(|_| "`check.min_ratio_samples` out of range".to_owned())?,
+        // Required, not defaulted. A missing field would silently give every
+        // pre-existing artifact whatever floor this codec happened to pick,
+        // which is the recorded-distinction defect ADR-1400 is about: the
+        // file would not say what coverage it was admitted under.
+        min_pointwise_samples: usize::try_from(value.field("min_pointwise_samples")?.integer()?)
+            .map_err(|_| "`check.min_pointwise_samples` out of range".to_owned())?,
     })
 }
 

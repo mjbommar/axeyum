@@ -69,6 +69,22 @@ fn verify(name: &str, document: &CertificateDocument) {
         report.recurrence_samples > 0,
         "{name}: no shift-variable sample confirmed the summed recurrence"
     );
+    // The pointwise layer is the one a certificate pole silently skips, and it
+    // is the one that ties `G` to `F`. Before this assertion existed, a file
+    // whose window put every grid point on a pole confirmed the identity ZERO
+    // times and was still `Verified`.
+    assert!(
+        report.pointwise_samples >= document.options.min_pointwise_samples,
+        "{name}: the pointwise telescoping layer was not exercised to the floor \
+         the file itself declares ({} confirmations, {} demanded, {} poles)",
+        report.pointwise_samples,
+        document.options.min_pointwise_samples,
+        report.certificate_poles_in_window
+    );
+    assert!(
+        document.options.min_pointwise_samples > 0,
+        "{name}: a committed certificate must declare a positive pointwise floor"
+    );
 
     if let Some(claim) = &document.closed_form {
         if claim.symbolic {
@@ -219,4 +235,116 @@ fn a_corrupt_file_does_not_parse() {
             "{name}: a {label} file parsed instead of being refused"
         );
     }
+}
+
+/// ADVERSARIAL. The pointwise floor is the ONLY thing separating accept from
+/// reject here: the certificate, the grid, the window and every other demand
+/// are byte-for-byte the committed ones, and the single changed field is the
+/// number of pointwise confirmations required.
+///
+/// That is deliberate. A first attempt narrowed the window instead, and it was
+/// not a valid fixture -- narrowing also starved the ratio layer, so the
+/// rejection came from a different guard and proved nothing about this one.
+///
+/// The fixture certificate is the one with the largest measured pole count
+/// (40 of 300 grid points), so it is the file on which pole-skipping -- the
+/// mechanism that can drive the pointwise count down without any other layer
+/// noticing -- is most active.
+#[test]
+fn a_pointwise_layer_below_its_declared_floor_is_rejected() {
+    let all = documents();
+    let (name, document) = all
+        .iter()
+        .find(|(name, _)| name == "chu-vandermonde-convolution.json")
+        .expect("the fixture certificate must exist");
+
+    let Verdict::Verified(honest) = check_certificate(&document.certificate, &document.options)
+    else {
+        panic!("{name}: the committed certificate must verify");
+    };
+    assert!(
+        honest.certificate_poles_in_window > 0,
+        "{name}: this fixture is chosen for its poles and has none"
+    );
+
+    let mut demanding = document.options.clone();
+    demanding.min_pointwise_samples = honest.pointwise_samples + 1;
+    match check_certificate(&document.certificate, &demanding) {
+        Verdict::Verified(_) => panic!(
+            "{name}: {} pointwise confirmations were accepted against a floor of {}",
+            honest.pointwise_samples, demanding.min_pointwise_samples
+        ),
+        Verdict::Rejected(reasons) => {
+            assert_eq!(
+                reasons.len(),
+                1,
+                "{name}: only the pointwise floor may separate these two runs, got {reasons:?}"
+            );
+            assert!(
+                reasons[0].contains("pointwise telescoping confirmation"),
+                "{name}: rejected for the wrong reason: {reasons:?}"
+            );
+            assert!(
+                reasons[0].contains("skipped as certificate poles"),
+                "{name}: the refusal must say how many points the poles took: {reasons:?}"
+            );
+        }
+    }
+}
+
+/// ADVERSARIAL. Options that demand nothing of the pointwise layer are refused
+/// outright. This is the shape the checker had before the repair -- the layer
+/// carried no demand at all -- so it must not be reachable by configuration.
+#[test]
+fn options_demanding_no_pointwise_confirmation_are_refused() {
+    let all = documents();
+    let (name, document) = all.first().expect("at least one committed certificate");
+
+    assert!(
+        check_certificate(&document.certificate, &document.options).is_verified(),
+        "{name}: control must verify"
+    );
+
+    let mut undemanding = document.options.clone();
+    undemanding.min_pointwise_samples = 0;
+    match check_certificate(&document.certificate, &undemanding) {
+        Verdict::Verified(_) => {
+            panic!("{name}: a verification demanding no pointwise confirmation was accepted")
+        }
+        Verdict::Rejected(reasons) => assert!(
+            reasons
+                .iter()
+                .any(|reason| reason.contains("demand no pointwise")),
+            "{name}: rejected for the wrong reason: {reasons:?}"
+        ),
+    }
+}
+
+/// The `check` block must SAY what coverage the file was admitted under. A
+/// certificate missing `min_pointwise_samples` is refused rather than given a
+/// silent default, because a default would let a file be re-admitted under a
+/// floor it never declared.
+#[test]
+fn a_certificate_without_a_declared_pointwise_floor_does_not_parse() {
+    let (name, document) = documents()
+        .into_iter()
+        .next()
+        .expect("at least one committed certificate");
+    let text = to_json(&document);
+    assert!(
+        text.contains("\"min_pointwise_samples\""),
+        "{name}: the emitted file must declare the pointwise floor"
+    );
+    let stripped = text.replace(
+        &format!(
+            ", \"min_pointwise_samples\": {}",
+            document.options.min_pointwise_samples
+        ),
+        "",
+    );
+    assert_ne!(stripped, text, "the strip must actually remove the field");
+    assert!(
+        from_json(&stripped).is_err(),
+        "{name}: a file with no declared pointwise floor must be refused"
+    );
 }

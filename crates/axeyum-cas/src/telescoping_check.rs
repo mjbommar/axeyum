@@ -77,6 +77,22 @@ pub struct CheckOptions {
     /// Minimum successful ratio comparisons demanded before the ratio layer
     /// counts as confirmed rather than merely un-refuted.
     pub min_ratio_samples: usize,
+    /// Minimum integer `(n, k)` points at which the **pointwise telescoping
+    /// identity** must actually be confirmed.
+    ///
+    /// This is the demand the checker was missing. `confirm_telescoping`
+    /// counts a point where `Q` vanishes as a pole and `continue`s past the
+    /// pointwise comparison, so a window can be arranged in which the identity
+    /// tying `G` to `F` is never once checked -- and the verdict was still
+    /// `Verified`, because only the ratio layer and the summed recurrence
+    /// carried demands. The committed artifacts confirm between 60 and 260
+    /// points against 0 to 40 poles, so this floor is well inside what real
+    /// certificates achieve.
+    ///
+    /// Zero is not "no floor": it is refused outright, because options that
+    /// demand nothing of this layer describe a verification that need not run
+    /// it.
+    pub min_pointwise_samples: usize,
 }
 
 impl CheckOptions {
@@ -90,6 +106,7 @@ impl CheckOptions {
             samples,
             window,
             min_ratio_samples: 8,
+            min_pointwise_samples: 8,
         }
     }
 
@@ -151,6 +168,20 @@ pub fn check_certificate(certificate: &TelescopingCertificate, options: &CheckOp
     if certificate.certificate_denominator.is_zero() {
         reasons.push("the certificate denominator is zero".to_owned());
     }
+    // A zero floor is refused HERE, at the options, rather than by catching its
+    // consequence downstream. The consequence -- zero pointwise confirmations
+    // with every other layer green -- is not reachable in this design, because
+    // the edge-vanishing check forces the window to contain the support and the
+    // ratio layer then confirms over that same window. A guard on an
+    // unreachable state is a guard no fixture can kill, which is the defect
+    // this checker is being repaired for.
+    if options.min_pointwise_samples == 0 {
+        reasons.push(
+            "the options demand no pointwise telescoping confirmation, so the layer \
+             tying G to F would not have to run at all"
+                .to_owned(),
+        );
+    }
     if certificate
         .recurrence
         .iter()
@@ -193,6 +224,15 @@ pub fn check_certificate(certificate: &TelescopingCertificate, options: &CheckOp
             report.recurrence_samples = recurrences;
             if recurrences == 0 {
                 reasons.push("no shift-variable sample confirmed the summed recurrence".to_owned());
+            }
+            // The pointwise layer is the one that ties `G` to `F`, and it is
+            // the one a certificate pole silently skips.
+            if pointwise < options.min_pointwise_samples {
+                reasons.push(format!(
+                    "only {pointwise} pointwise telescoping confirmation(s), {} demanded \
+                     ({poles} point(s) skipped as certificate poles)",
+                    options.min_pointwise_samples
+                ));
             }
         }
         Err(reason) => reasons.push(reason),
