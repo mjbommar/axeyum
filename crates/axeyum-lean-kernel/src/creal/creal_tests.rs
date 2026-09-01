@@ -10264,6 +10264,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "cos_sign::declare_cos_wide_tail_antitone",
     "cos_sign::declare_cos_wide_series_converges",
     "cos_sign::declare_cos_wide_nonpositive",
+    "pi::declare_pi_family",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call
