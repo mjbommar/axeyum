@@ -103,6 +103,12 @@ use crate::rat_prelude::ops::{
 use crate::rat_prelude::{RatPrelude, build_rat_prelude};
 use crate::{Kernel, KernelError, PreludeKey, PreludeValue};
 
+/// Re-exported so `CRealPrelude::ivt_boundary` -- a `pub` field -- has a
+/// publicly nameable type. `mod creal` is private at the crate root, so a
+/// `pub struct` inside it is not reachable without this; without it the
+/// `private_interfaces` lint fires. ADR-1512.
+pub use ivt_boundary::IvtBoundaryNames;
+
 /// Delta heights for the real definitions: above every `Rat` definition.
 const LEAF_HEIGHT: u16 = 40;
 /// Height for a definition that calls a leaf one.
@@ -5674,88 +5680,16 @@ pub struct CRealPrelude {
     /// merely asserted to. See `creal/extreme_value.rs`.
     pub evt_linear_uniformly_continuous: NameId,
 
-    // --- the Intermediate Value Theorem's boundary certificate (ADR-0603 row 2)
-    /// `CReal.uniformly_continuous_max : forall F G a b,
-    /// UniformlyContinuousOn F a b -> UniformlyContinuousOn G a b ->
-    /// UniformlyContinuousOn (fun r => max (F r) (G r)) a b`
-    /// (`creal/ivt_boundary.rs`) -- the lattice's entry in the same closure
-    /// table [`Self::uniformly_continuous_add`]/`_neg`/`_sub`/`_mul` fill for
-    /// the ring operations. Combined modulus `mF n + mG n`, and unlike `add`
-    /// there is **no index shift**: `max` is one-Lipschitz JOINTLY in both
-    /// arguments (`creal/lattice.rs`, `Rat.sub_max_le`), so both specs are
-    /// consulted at the caller's own accuracy `n`. Declared in
-    /// `ivt_boundary.rs` because that file is its first consumer.
-    pub uniformly_continuous_max: NameId,
-    /// `CReal.uniformly_continuous_min` -- the same for the meet, and NOT a
-    /// transcription of [`Self::uniformly_continuous_max`]'s proof: `min` sits
-    /// on the LEFT of the goal, so [`Self::le_min`] would need the RIGHT to be
-    /// a meet and `min (G x) (G y) + q` is not one. It moves `q` across first.
-    /// See `creal/ivt_boundary.rs`.
-    pub uniformly_continuous_min: NameId,
-    /// `CReal.ivtPlateau : CReal -> CReal -> CReal :=
-    /// fun v x => min x (max (add x (neg one)) v)` -- the IVT counterexample
-    /// family (`creal/ivt_boundary.rs`), the **clamp of `v` into the
-    /// unit-width window `[x-1, x]`**. Classically a ramp, then a horizontal
-    /// PLATEAU at height `v`, then a ramp: the root sits at the left endpoint
-    /// exactly when `v >= 0` and at the right endpoint exactly when `v <= 0`,
-    /// so *which end attains it* IS the sign of `v`.
+    /// **The Intermediate Value Theorem's boundary certificate** (ADR-0603
+    /// row 2) -- `creal/ivt_boundary.rs`'s own seven names, the first module
+    /// registry moved out of this struct by ADR-1512.
     ///
-    /// A plateau is what forces this, which is why no polynomial family could
-    /// serve -- constructive IVT IS available for polynomials, and the two
-    /// lattice operations are exactly what takes this family outside that
-    /// fragment.
-    pub ivt_plateau: NameId,
-    /// `CReal.ivtPlateau_nonpos_at_zero : forall v,
-    /// le (ivtPlateau v zero) zero` -- IVT's left-endpoint sign condition,
-    /// proved and unconditional in `v`: one [`Self::min_le_left`], since the
-    /// window's ceiling at `x` makes the left endpoint's value `min zero _`.
-    /// See `creal/ivt_boundary.rs`.
-    pub ivt_plateau_nonpos_at_zero: NameId,
-    /// `CReal.ivtPlateau_nonneg_at_one : forall v,
-    /// le zero (ivtPlateau v one)` -- IVT's right-endpoint sign condition,
-    /// also unconditional in `v`: one [`Self::le_min`] against `0 <= 1` and
-    /// [`Self::le_max_left`] transported across `add_neg`. See
-    /// `creal/ivt_boundary.rs`.
-    pub ivt_plateau_nonneg_at_one: NameId,
-    /// `CReal.ivtPlateau_uniformly_continuous : forall v,
-    /// UniformlyContinuousOn (ivtPlateau v) zero one` -- the third and last of
-    /// classical IVT's hypotheses, **proved rather than asserted**, so the
-    /// counterexample family is machine-checked to lie inside IVT's hypothesis
-    /// class. Pure assembly over [`Self::uniformly_continuous_min`],
-    /// [`Self::uniformly_continuous_max`], [`Self::uniformly_continuous_add`],
-    /// [`Self::uniformly_continuous_id`] and
-    /// [`Self::uniformly_continuous_const`]. See `creal/ivt_boundary.rs`.
-    pub ivt_plateau_uniformly_continuous: NameId,
-    /// `CReal.ivt_exact_root_decides_sign : forall v c, le zero c ->
-    /// le c one -> Equiv (min c (max (add c (neg one)) v)) zero ->
-    /// Or (le v zero) (le zero v)` --
-    /// **ADR-0603 row 2 for the Intermediate Value Theorem**, machine-checked
-    /// rather than asserted (`creal/ivt_boundary.rs`).
-    ///
-    /// An *exact* root of [`Self::ivt_plateau`] on `[0, 1]` yields
-    /// `v <= 0` or `0 <= v` for an ARBITRARY real -- analytic LLPO,
-    /// equivalently the total order `le_total` that
-    /// `creal/cotransitivity.rs`'s module documentation states is neither
-    /// assumed nor provable here. So an operator handing back a root for every
-    /// `v` would hand back the comparison the order deliberately lacks, which
-    /// is what makes [`Self::ivt_approx`] -- an APPROXIMATE root, `|F x| <= e`
-    /// per accuracy -- optimal rather than merely unimproved.
-    ///
-    /// One [`Self::lt_cotrans`] call on the fixed strict pair
-    /// [`Self::zero_lt_one`] at `z := c`, then one more inside each branch (at
-    /// `z := v`), with the meet's own projections supplying `0 <= c` and
-    /// `0 <= max (c + (-1)) v` for free. Both interval hypotheses are faithful
-    /// but UNUSED, exactly as in
-    /// [`Self::evt_attained_max_decides_sign`].
-    ///
-    /// This does NOT contradict [`Self::ivt_exact_root`], which does produce
-    /// an exact root: that theorem carries a uniformly positive derivative
-    /// hypothesis, and a plateau is precisely the shape it excludes. See that
-    /// module's "Honest scope" section: this proves the classical conclusion
-    /// at least as strong as a decision principle this kernel does not have,
-    /// NOT that the principle is false (it is consistent, hence unprovable
-    /// here rather than refutable).
-    pub ivt_exact_root_decides_sign: NameId,
+    /// Reached as `p.ivt_boundary.ivt_plateau`, and documented in
+    /// [`IvtBoundaryNames`] rather than here, so that adding a declaration to
+    /// that module touches that module alone. Nothing outside it reads these
+    /// names, which is what made the move local
+    /// (`scripts/creal-declare-deps.py`).
+    pub ivt_boundary: IvtBoundaryNames,
 
     // --- the least-upper-bound property's boundary certificate (ADR-0603 row 2)
     /// `CReal.lubSet : Prop -> CReal -> Prop := fun A x => Or (le x zero)
@@ -5795,7 +5729,7 @@ pub struct CRealPrelude {
     /// located case -- yields `Or A (Not A)` for an ARBITRARY proposition.
     /// That is UNRESTRICTED EXCLUDED MIDDLE, a strictly stronger boundary
     /// than [`Self::evt_attained_max_decides_sign`] and
-    /// [`Self::ivt_exact_root_decides_sign`], which both land on analytic
+    /// [`crate::IvtBoundaryNames::ivt_exact_root_decides_sign`], which both land on analytic
     /// LLPO (consistent with Bishop; this is not).
     ///
     /// One [`Self::lt_cotrans`] call on the fixed strict pair
@@ -7343,13 +7277,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         evt_linear: kernel.name_str(creal, "evtLinear"),
         evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
         evt_linear_uniformly_continuous: kernel.name_str(creal, "evtLinear_uniformly_continuous"),
-        uniformly_continuous_max: kernel.name_str(creal, "uniformly_continuous_max"),
-        uniformly_continuous_min: kernel.name_str(creal, "uniformly_continuous_min"),
-        ivt_plateau: kernel.name_str(creal, "ivtPlateau"),
-        ivt_plateau_nonpos_at_zero: kernel.name_str(creal, "ivtPlateau_nonpos_at_zero"),
-        ivt_plateau_nonneg_at_one: kernel.name_str(creal, "ivtPlateau_nonneg_at_one"),
-        ivt_plateau_uniformly_continuous: kernel.name_str(creal, "ivtPlateau_uniformly_continuous"),
-        ivt_exact_root_decides_sign: kernel.name_str(creal, "ivt_exact_root_decides_sign"),
+        ivt_boundary: ivt_boundary::IvtBoundaryNames::intern(kernel, creal),
         lub_set: kernel.name_str(creal, "lubSet"),
         lub_set_inhabited: kernel.name_str(creal, "lubSet_inhabited"),
         lub_set_bounded: kernel.name_str(creal, "lubSet_bounded"),
@@ -7579,6 +7507,16 @@ struct OrderViolation {
 ///
 /// The first requirement not satisfied by a strictly earlier step, as an
 /// [`OrderViolation`].
+///
+/// **No longer on the build path.** [`plan_step_order`] computes the order
+/// instead of checking a hand-written one, and subsumes this: an order this
+/// function rejects is one the planner simply repairs. It is kept as the
+/// level-1 reference the level-2 behaviour is stated against -- the pair
+/// `order_violation_is_detected_and_precise` /
+/// `planned_order_repairs_a_consumer_placed_before_its_provider` is the
+/// before/after of one input, and without this function the "after" has
+/// nothing to be after.
+#[cfg(test)]
 fn validate_step_order(p: CRealPrelude, steps: &'static [BuildStep]) -> Result<(), OrderViolation> {
     let mut declared: std::collections::HashSet<NameId> = std::collections::HashSet::new();
     for (index, step) in steps.iter().enumerate() {
@@ -7604,6 +7542,157 @@ fn validate_step_order(p: CRealPrelude, steps: &'static [BuildStep]) -> Result<(
         }
     }
     Ok(())
+}
+
+/// A `CRealPrelude` field is declared by two different [`STEPS`] entries.
+///
+/// A step can only provide what it declares, so this is always a bug in the
+/// table rather than in the order, and it is the one that made the level-1
+/// preflight weaker than it reads. Measured 2026-09-01 by
+/// `scripts/creal-declare-deps.py`: `mul_self_zero::declare_mul_self_zero`
+/// claimed `p.seq` and `p.shared_index_to_canonical`, and
+/// `creal/mul_self_zero.rs` declares neither. The real provider of
+/// `CReal.sharedIndexToCanonical` is step 98, so
+/// [`validate_step_order`] believed it available from step 50 -- a 48-step
+/// window in which a genuine phase-order bug passes the preflight and then
+/// fails in the kernel with exactly the `UnknownConst` the preflight exists
+/// to replace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DuplicateProvider {
+    /// The over-claimed declaration.
+    name: NameId,
+    /// The first step in the table claiming to provide it.
+    first: (usize, &'static str),
+    /// The second.
+    second: (usize, &'static str),
+}
+
+/// Either a table that names two providers for one declaration, or a
+/// requirement no ordering can satisfy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PlanError {
+    /// Two steps claim the same declaration.
+    Duplicate(DuplicateProvider),
+    /// A requirement nothing provides, or a dependency cycle.
+    Order(OrderViolation),
+}
+
+/// Computes the build order from the dependency graph, rather than reading it
+/// off `steps`'s array order.
+///
+/// This is the level-2 fix the architecture review asks for (§1): *"each
+/// `declare_*` announces the declarations it depends on; the builder
+/// topologically sorts them"*. Level 1 made the dependencies data and checked
+/// the hand-written order against them; the order was still hand-maintained,
+/// so moving a `BuildStep` in the array was still a way to break the build.
+/// Here the array order is only a TIE-BREAK.
+///
+/// **The tie-break makes this a no-op today, deliberately.** Kahn's algorithm
+/// taking the lowest-numbered ready step yields the lexicographically smallest
+/// valid topological order, and when the array order is ITSELF valid that is
+/// the array order: at position `k` every step `< k` has already run, step `k`
+/// has all its dependencies among them and so is ready, and no smaller index
+/// remains. So this returns `0..steps.len()` unchanged for the table as it
+/// stands (pinned by `creal_tests::planned_order_is_the_array_order_today`)
+/// and the kernel sees the identical sequence of `add_declaration` calls.
+/// What changes is that a step moved in the array is now moved BACK, instead
+/// of aborting the build.
+///
+/// Purely structural: evaluates each accessor against `p` to obtain concrete
+/// `NameId`s and never touches a kernel environment.
+///
+/// # Errors
+///
+/// [`PlanError::Duplicate`] if two steps claim one declaration -- unorderable
+/// because "the provider of `x`" is then not a function. [`PlanError::Order`]
+/// otherwise: a requirement nothing provides (`provider: None`), or a cycle
+/// (`provider: Some(..)`, naming a step that cannot be scheduled first).
+fn plan_step_order(p: CRealPrelude, steps: &'static [BuildStep]) -> Result<Vec<usize>, PlanError> {
+    let mut provider: std::collections::HashMap<NameId, (usize, &'static str)> =
+        std::collections::HashMap::new();
+    for (index, step) in steps.iter().enumerate() {
+        for &prov in step.provides {
+            let name = prov(p);
+            if let Some(&first) = provider.get(&name) {
+                return Err(PlanError::Duplicate(DuplicateProvider {
+                    name,
+                    first,
+                    second: (index, step.label),
+                }));
+            }
+            provider.insert(name, (index, step.label));
+        }
+    }
+
+    // Edges provider -> consumer, plus each step's count of unmet
+    // requirements. A requirement a step provides itself is not an edge.
+    let mut consumers: Vec<Vec<usize>> = vec![Vec::new(); steps.len()];
+    let mut unmet: Vec<usize> = vec![0; steps.len()];
+    for (index, step) in steps.iter().enumerate() {
+        for &req in step.requires {
+            let name = req(p);
+            match provider.get(&name) {
+                Some(&(source, _)) if source != index => {
+                    consumers[source].push(index);
+                    unmet[index] += 1;
+                }
+                Some(_) => {}
+                None => {
+                    return Err(PlanError::Order(OrderViolation {
+                        consumer_index: index,
+                        consumer_label: step.label,
+                        missing: name,
+                        provider: None,
+                    }));
+                }
+            }
+        }
+    }
+
+    // Kahn's algorithm with a min-heap on the SOURCE index: deterministic, and
+    // equal to the array order whenever the array order is valid.
+    let mut ready: std::collections::BinaryHeap<std::cmp::Reverse<usize>> = (0..steps.len())
+        .filter(|&index| unmet[index] == 0)
+        .map(std::cmp::Reverse)
+        .collect();
+    let mut plan = Vec::with_capacity(steps.len());
+    while let Some(std::cmp::Reverse(index)) = ready.pop() {
+        plan.push(index);
+        for &consumer in &consumers[index] {
+            unmet[consumer] -= 1;
+            if unmet[consumer] == 0 {
+                ready.push(std::cmp::Reverse(consumer));
+            }
+        }
+    }
+
+    if plan.len() != steps.len() {
+        // A cycle. Report the lowest-numbered step still blocked, naming one
+        // requirement it is blocked on -- the same shape `validate_step_order`
+        // reports, so a caller renders both the same way.
+        let stuck = (0..steps.len())
+            .find(|&index| unmet[index] > 0)
+            .expect("a short plan means at least one step is still blocked");
+        let step = &steps[stuck];
+        let (missing, blocker) = step
+            .requires
+            .iter()
+            .map(|&req| req(p))
+            .find_map(|name| {
+                provider
+                    .get(&name)
+                    .filter(|&&(source, _)| source != stuck && unmet[source] > 0)
+                    .map(|&source| (name, source))
+            })
+            .expect("a blocked step is blocked by a provider that is itself blocked");
+        return Err(PlanError::Order(OrderViolation {
+            consumer_index: stuck,
+            consumer_label: step.label,
+            missing,
+            provider: Some(blocker),
+        }));
+    }
+    Ok(plan)
 }
 
 /// The `creal` prelude's build order, as data: each step names the fields
@@ -8943,8 +9032,12 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.rat_sq_le,
             |p: CRealPrelude| p.rat_sq_sandwich,
             |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.shared_index_to_canonical,
+            // NOT `p.seq` (step 2 declares it) and NOT
+            // `p.shared_index_to_canonical` (step 98 does).
+            // `creal/mul_self_zero.rs` declares neither, and claiming them
+            // here told `validate_step_order` that
+            // `CReal.sharedIndexToCanonical` was available from step 50 --
+            // measured by `scripts/creal-declare-deps.py`, 2026-09-01.
         ],
         run: mul_self_zero::declare_mul_self_zero,
     },
@@ -12280,13 +12373,13 @@ const STEPS: &[BuildStep] = &[
             |p: CRealPrelude| p.zero_lt_one,
         ],
         provides: &[
-            |p: CRealPrelude| p.ivt_exact_root_decides_sign,
-            |p: CRealPrelude| p.ivt_plateau,
-            |p: CRealPrelude| p.ivt_plateau_nonneg_at_one,
-            |p: CRealPrelude| p.ivt_plateau_nonpos_at_zero,
-            |p: CRealPrelude| p.ivt_plateau_uniformly_continuous,
-            |p: CRealPrelude| p.uniformly_continuous_max,
-            |p: CRealPrelude| p.uniformly_continuous_min,
+            |p: CRealPrelude| p.ivt_boundary.ivt_exact_root_decides_sign,
+            |p: CRealPrelude| p.ivt_boundary.ivt_plateau,
+            |p: CRealPrelude| p.ivt_boundary.ivt_plateau_nonneg_at_one,
+            |p: CRealPrelude| p.ivt_boundary.ivt_plateau_nonpos_at_zero,
+            |p: CRealPrelude| p.ivt_boundary.ivt_plateau_uniformly_continuous,
+            |p: CRealPrelude| p.ivt_boundary.uniformly_continuous_max,
+            |p: CRealPrelude| p.ivt_boundary.uniformly_continuous_min,
         ],
         run: ivt_boundary::declare_ivt_boundary,
     },
@@ -13578,46 +13671,74 @@ pub(crate) fn build_creal_prelude_uncached(
     if kernel.environment().get(prelude.creal).is_some() {
         return Ok(prelude);
     }
-    // Preflight: a purely structural check (no kernel environment involved)
-    // that `STEPS` is a valid topological order for the dependencies it
-    // declares. This is what turns a phase-order bug -- a step moved earlier
-    // than its dependency -- into a precise diagnosis instead of a bare
-    // `KernelError::UnknownConst` indistinguishable from a missing
-    // declaration; see §1 of
-    // `docs/research/11-design-review/2026-08-27-architecture-review.md`.
-    if let Err(violation) = validate_step_order(prelude, STEPS) {
-        let missing_text = render_name(kernel, violation.missing);
-        let reason = match violation.provider {
-            Some((provider_index, provider_label)) => format!(
-                "which step {provider_index} ('{provider_label}') declares, \
-                 but step {provider_index} has not run yet -- move \
-                 '{provider_label}' before '{}', or move '{}' after it",
-                violation.consumer_label, violation.consumer_label,
-            ),
-            None => "which no step in the build order declares -- the \
-                      dependency table itself is incomplete, not just \
-                      misordered"
-                .to_string(),
-        };
-        panic!(
-            "creal prelude build order is broken (a phase-order bug, not a \
-             missing declaration -- see docs/research/11-design-review/\
-             2026-08-27-architecture-review.md \u{a7}1): step {} ('{}') \
-             requires `{missing_text}`, {reason}.",
-            violation.consumer_index, violation.consumer_label,
-        );
-    }
+    // The build order is COMPUTED from the dependency graph, not read off
+    // `STEPS`'s array order -- §1's level-2 fix. Purely structural: no kernel
+    // environment is involved, so this runs before any expensive work.
+    //
+    // Today's plan is `0..STEPS.len()`, byte-identically, because the array
+    // order is already valid and the tie-break is the array index
+    // (`plan_step_order`'s own docs, pinned by
+    // `creal_tests::planned_order_is_the_array_order_today`). The difference
+    // is what happens when it is NOT: a step moved earlier than its
+    // dependency used to abort the build with a diagnosis, and is now simply
+    // moved back. The phase-order class is unrepresentable rather than
+    // reported.
+    //
+    // Measured, with the inversion `declare_projections` <-> `declare_carrier`
+    // applied to the table below: the level-1 preflight refuses the build
+    // (exit 101, "step 1 requires `CReal`, provider Some((2, ..))"), and this
+    // planner produces a projection byte-identical to the unpermuted one --
+    // same SHA-256 over all 14,673 rows.
+    //
+    // What the plan cannot see is a dependency the TABLE does not name. Also
+    // measured 2026-09-01 (`scripts/creal-declare-deps.py`): `STEPS` names
+    // 3,934 of the 4,831 `requires` edges the code actually has, so 897 edges
+    // constrain nothing here. The sort narrows this failure class; it does
+    // not close it, and closing it means generating the table rather than
+    // maintaining it -- see
+    // `docs/research/11-design-review/2026-09-01-creal-declare-deps-measured.md`.
+    let plan = match plan_step_order(prelude, STEPS) {
+        Ok(plan) => plan,
+        Err(PlanError::Duplicate(duplicate)) => panic!(
+            "creal build order is unorderable: `{}` is claimed by BOTH step {} \
+             ('{}') and step {} ('{}'), so 'the step that provides it' is not \
+             a function. A step can only provide what it declares -- delete \
+             the claim from whichever step does not.",
+            render_name(kernel, duplicate.name),
+            duplicate.first.0,
+            duplicate.first.1,
+            duplicate.second.0,
+            duplicate.second.1,
+        ),
+        Err(PlanError::Order(violation)) => {
+            let missing_text = render_name(kernel, violation.missing);
+            let reason = match violation.provider {
+                Some((provider_index, provider_label)) => format!(
+                    "which step {provider_index} ('{provider_label}') \
+                     declares, but that step cannot be scheduled first \
+                     either -- the dependencies are CYCLIC, and no ordering \
+                     satisfies them"
+                ),
+                None => "which no step in the build order declares -- the \
+                          dependency table itself is incomplete, not just \
+                          misordered"
+                    .to_string(),
+            };
+            panic!(
+                "creal prelude build order cannot be planned (see \
+                 docs/research/11-design-review/\
+                 2026-08-27-architecture-review.md \u{a7}1): step {} ('{}') \
+                 requires `{missing_text}`, {reason}.",
+                violation.consumer_index, violation.consumer_label,
+            );
+        }
+    };
     let checkpoint = kernel.prelude_checkpoint();
     let built = (|| -> Result<(), KernelError> {
         let mut d = IntDev::new(kernel, rat.int);
-        // The build order now runs from `STEPS` -- a data table
-        // validated by `validate_step_order` just above, rather than a
-        // hand-written sequence of `declare_*` calls. Mechanical
-        // transformation only: the order is IDENTICAL to the sequence
-        // this replaced (pinned by
-        // `creal_tests::steps_table_matches_recorded_extraction`), so
-        // this calls the exact same functions in the exact same order.
-        for (index, step) in STEPS.iter().enumerate() {
+        // Runs `STEPS` in the PLANNED order rather than the array order.
+        for &index in &plan {
+            let step = &STEPS[index];
             // Name the step BEFORE propagating. A `KernelError` carries no
             // step identity, and the two errors this build produces most often
             // -- `UnboundFVar` and `TypeMismatch` -- name neither the
@@ -13631,7 +13752,7 @@ pub(crate) fn build_creal_prelude_uncached(
             // free-variable tree-walk found nothing precisely because it
             // scanned the term it had written rather than the one that failed.
             //
-            // `validate_step_order` immediately above already does this for
+            // `plan_step_order` immediately above already does this for
             // phase-order bugs; this is the same courtesy for proof failures.
             if let Err(error) = (step.run)(&mut d, prelude) {
                 eprintln!(

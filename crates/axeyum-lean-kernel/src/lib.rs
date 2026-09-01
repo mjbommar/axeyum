@@ -94,7 +94,7 @@ pub use characterization::{
     build_characterization_with,
 };
 pub use complex::{ComplexPrelude, build_complex_prelude};
-pub use creal::{CRealPrelude, build_creal_prelude};
+pub use creal::{CRealPrelude, IvtBoundaryNames, build_creal_prelude};
 pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use creal_point::{CPointPrelude, build_cpoint_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};

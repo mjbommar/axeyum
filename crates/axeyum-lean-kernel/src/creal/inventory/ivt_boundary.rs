@@ -16,33 +16,33 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
     vec![
         (
             "CReal.uniformly_continuous_max",
-            p.uniformly_continuous_max,
+            p.ivt_boundary.uniformly_continuous_max,
             "theorem",
         ),
         (
             "CReal.uniformly_continuous_min",
-            p.uniformly_continuous_min,
+            p.ivt_boundary.uniformly_continuous_min,
             "theorem",
         ),
-        ("CReal.ivtPlateau", p.ivt_plateau, "def"),
+        ("CReal.ivtPlateau", p.ivt_boundary.ivt_plateau, "def"),
         (
             "CReal.ivtPlateau_nonpos_at_zero",
-            p.ivt_plateau_nonpos_at_zero,
+            p.ivt_boundary.ivt_plateau_nonpos_at_zero,
             "theorem",
         ),
         (
             "CReal.ivtPlateau_nonneg_at_one",
-            p.ivt_plateau_nonneg_at_one,
+            p.ivt_boundary.ivt_plateau_nonneg_at_one,
             "theorem",
         ),
         (
             "CReal.ivtPlateau_uniformly_continuous",
-            p.ivt_plateau_uniformly_continuous,
+            p.ivt_boundary.ivt_plateau_uniformly_continuous,
             "theorem",
         ),
         (
             "CReal.ivt_exact_root_decides_sign",
-            p.ivt_exact_root_decides_sign,
+            p.ivt_boundary.ivt_exact_root_decides_sign,
             "theorem",
         ),
     ]
