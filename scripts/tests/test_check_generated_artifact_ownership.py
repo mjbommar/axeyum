@@ -387,6 +387,54 @@ class CoverDerivation(unittest.TestCase):
         path.write_text("# a comment\n\n  \nreal.json\n")
         self.assertEqual(own.read_candidates(path), {"real.json"})
 
+    def test_a_basename_is_matched_as_a_WHOLE_path_component(self):
+        """A basename that is a SUFFIX of another must not match it.
+
+        Measured 2026-09-01: the substring test `base in text` attributed
+        `artifacts/declaration-spec/schema.json` -- the only file in the tree
+        by that name -- to three producers, because
+        `gen-autogenesis-baseline.py` names `fact.schema.json` and
+        `gen-obstruction-dashboard.py` names `obstruction-graph.schema.json`.
+        COVER then demanded that a fiction be recorded as a known multi-writer
+        candidate, which is worse than not asking: a ratchet whose population
+        contains inventions trains people to record whatever it prints.
+        """
+        text = (
+            'A = "artifacts/ontology/fact.schema.json"\n'
+            'B = "artifacts/ontology/obstruction-graph.schema.json"\n'
+        )
+        self.assertFalse(own.names_artifact("schema.json", text))
+        # POSITIVE CONTROL on the same text: the names that ARE there must be
+        # found, or a matcher that returned False for everything would pass
+        # the assertion above while making COVER blind.
+        self.assertTrue(own.names_artifact("fact.schema.json", text))
+        self.assertTrue(own.names_artifact("obstruction-graph.schema.json", text))
+
+    def test_a_matched_name_may_be_followed_by_a_fragment_or_a_period(self):
+        """The real tree's two spellings of `mirror-divergence-registry.json`:
+        `REGISTRY = AUTOGEN / "mirror-divergence-registry.json"` and
+        `"artifacts/autogenesis/mirror-divergence-registry.json#Nat.testBit"`.
+        A trailing `.` is allowed too, because prose ends sentences."""
+        self.assertTrue(own.names_artifact("a.json", 'x = D / "a.json"'))
+        self.assertTrue(own.names_artifact("a.json", '"dir/a.json#Nat.testBit"'))
+        self.assertTrue(own.names_artifact("a.json", "see dir/a.json."))
+        # ...but a name that CONTINUES is a different file.
+        self.assertFalse(own.names_artifact("a.json", "x = dir/a.jsonl"))
+        self.assertFalse(own.names_artifact("a.json", "x = dir/pre-a.json"))
+
+    def test_schema_json_is_not_in_the_derived_candidate_set(self):
+        """The regression itself, on the real tree rather than a fixture.
+
+        `artifacts/declaration-spec/schema.json` exists and has exactly one
+        producer; a substring matcher reports three and turns COVER red.
+        """
+        self.assertTrue((ROOT / "artifacts/declaration-spec/schema.json").is_file())
+        current = own.multi_writer_candidates()
+        self.assertNotIn("schema.json", current)
+        # POSITIVE CONTROL: a genuine multi-namer, both of whose producers
+        # spell the full path, must still be derived from the same tree.
+        self.assertIn("mirror-divergence-registry.json", current)
+
     def test_an_absent_list_reads_as_None_not_as_empty(self):
         """`None` and `set()` mean different things -- missing file versus a
         list that names nothing -- and only the first is refused by COVER's

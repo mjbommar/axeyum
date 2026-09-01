@@ -168,6 +168,8 @@ autogenesis-producer-contract-declines:
 # Validate and exactly regenerate the frozen leakage-safe population contract.
 autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+    python3 -m unittest scripts.tests.test_nursery_exemption_guards
+    python3 -m unittest scripts.tests.test_rescope_nursery_exemption
     python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
     python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
     python3 scripts/create-autogenesis-mathlib-nursery-split.py --check

@@ -204,7 +204,53 @@ class HoldoutIsolationTests(unittest.TestCase):
         # directly from `artifacts/autogenesis/nursery-v2-extension.json`'s
         # `entries`, partition `held-out`; its own `coverage.partition_counts`
         # agrees: `{"held-out": 130, ...}`).
-        self.assertIn("held_out=146", out)
+        #
+        # 146 -> 186 on 2026-09-01: two RISES, both from draws, which is the
+        # ordinary case -- no FALL occurred, so no ledger amendment is
+        # required and the ledger's 7 amendments are all older than this move.
+        # Reconstructed by composing both manifests at every commit that
+        # touched either one since the 146 pin landed (`git show <sha>:<path>`,
+        # not by reading commit messages):
+        #
+        #   e26076356  draw 15, layout A          146 -> 166  (v1 16 + v2 150)
+        #   6d8f84258  draw 16, layout RP         166 -> 186  (v1 16 + v2 170)
+        #
+        # +20 each: two new held-out families of 10 per draw. `nursery-v1.json`
+        # held 16 held-out rows at every one of those commits and still does,
+        # so no v1 row moved; the whole delta is in the extension, whose own
+        # `coverage.partition_counts` independently reports `"held-out": 170`.
+        #
+        # The number was NOT transcribed off this gate's own output, which
+        # would make the pin a rubber stamp. Measured directly over all 186
+        # rows against `artifacts/facts/*.json` and `operations.json`: 0 with
+        # `epistemic_status` other than `open`, 0 carrying evidence, 0 named by
+        # any of the 29 autogenesis operations -- with a positive control over
+        # the 198 train rows returning 191 / 191 / 37, so those three queries
+        # do find things when there is something to find.
+        #
+        # Draw 16's commit message carries NO gate output, unlike draw 15's
+        # (`held_out 146 -> 166, settled=0, references=0, nothing moved
+        # partition`), so its two families were verified by re-running the
+        # guards rather than by reading its message:
+        # `check-holdout-adjacency.py` -> 18 held-out families, 0 refused,
+        # with `natural-integer-root` and `natural-primitive-recursion` both
+        # `clean ... reviewed` (topic 0, vocab 0/10, disclosure performed);
+        # `check-holdout-closed-evaluation.py` -> `held_out=186 closed_shaped=0
+        # violations=0 PASS`; `check-autogenesis-holdout-contamination.py` ->
+        # `held_out=186 contaminated=0 CLEAN`.
+        self.assertIn(
+            "held_out=186",
+            out,
+            "The held-out population size moved. Do NOT transcribe the new "
+            "number here: that turns a detector into a rubber stamp. A RISE is "
+            "ordinary only if it is a draw adding whole families and no v1 row "
+            "moved; a FALL requires a matching amendment in "
+            "mathlib-nursery-split-policy-v1.json (ADR-0542 -- amendment, never "
+            "deletion). Establish which happened, verify the new rows are "
+            "unspent (open, no evidence, unreferenced by operations.json, with "
+            "a positive control that the same queries find the train rows), and "
+            "extend the audit trail above before editing this pin.",
+        )
 
     # --- guard 1: a held-out fact must not be settled ---------------------
     def test_a_settled_held_out_fact_is_a_violation(self) -> None:

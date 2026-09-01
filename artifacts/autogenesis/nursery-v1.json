@@ -144,6 +144,15 @@
     },
     {
       "component_fact_ids": [
+        "F:ml430-nat-ascfactorial-zero-fd183202",
+        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641"
+      ],
+      "reason": "declared-dependency crossing between train (F:ml430-nat-ascfactorial-zero-fd183202) and development (F:ml430-nat-factorial-dvd-ascfactorial-44a4e641), created by a SINGLE edge added in commit 366f11a91 (2026-08-31): setting formal.kernel_theorem on 28 facts unlocked check-fact-depends-derived.py for them, and its --fix added 196 previously-invisible depends_on edges across 54 facts. Five of those edges are intra-nursery; this one is factorial_dvd_ascFactorial's real proof-term use of Nat.ascFactorial_zero, which this ledger records as TWO facts (the native F:nat-asc-factorial-zero, already declared at the 2026-08-18 freeze, and this ml430 mirror, which was not). The edge is correct and removing it would make check-fact-depends-derived.py red, so this is a partition boundary drawn before the dependency was recorded, exactly as ADR-0850 describes. Partition census {train: 1, development: 1}; zero held-out members (now machine-enforced by validate_exemptions, not merely asserted here); both facts epistemic_status proved. NOTE, and this is where the evidence differs from ADR-0850's three exemptions: F:ml430-nat-ascfactorial-zero-fd183202 IS named by an autogenesis operation (authoritative-mathlib-statement-reflexivity-v1 and authoritative-mathlib-bounded-induction-factorial-family-v1). Both operations are train-only over the nursery -- every one of the 4 fact ids the factorial-family operation names is train -- and the development member of this component is named by no operation at all, so nothing has spent it.",
+      "authority": "docs/research/09-decisions/adr-1455-red-gate-sweep-nursery-exemption-rescope.md",
+      "date": "2026-09-01"
+    },
+    {
+      "component_fact_ids": [
         "F:ml430-nat-choose-le-add-9c463139",
         "F:ml430-nat-choose-le-choose-907b5042",
         "F:ml430-nat-choose-le-succ-62ae968b",
@@ -156,6 +165,7 @@
     },
     {
       "component_fact_ids": [
+        "F:ml430-nat-descfactorial-one-d4856d4a",
         "F:ml430-nat-descfactorial-self-899fc0e0",
         "F:ml430-nat-factorial-dvd-factorial-e9d14845",
         "F:ml430-nat-factorial-le-d0f4a912",
@@ -167,9 +177,9 @@
         "F:nat-mul-one",
         "F:nat-zero-add"
       ],
-      "reason": "declared-dependency crossing spanning train (natural-factorial), development (natural-modular-equivalence) and the longitudinal Autogenesis-1 chain (F:nat-mul-one, F:nat-zero-add), surfaced by the same 2026-08-29 depends_on correction; no held-out member; all 8 evaluation facts already epistemic_status proved via ordinary hand development, zero autogenesis operations reference any of them. Covers both the component-split check and the evaluation-longitudinal-overlap check, since it is the same underlying component",
-      "authority": "docs/research/09-decisions/adr-0850-nursery-split-exemption-mechanism.md",
-      "date": "2026-08-30"
+      "reason": "SUPERSEDES the 10-member ADR-0850 exemption for this component (digest 533d01fc3b24\u2026), which went stale on 2026-08-31 when commit 366f11a91 grew the component to 11 by adding F:ml430-nat-descfactorial-one-d4856d4a -> F:nat-mul-one -- descfactorial_one's real proof-term use of Nat.mul_one. That is ADR-0850's designed self-invalidation working: the digest stopped matching, the gate went red on the ENLARGED component, and this entry is the re-review it demands, not a re-assertion of the old one. Declared-dependency crossing spanning train (natural-factorial), development (F:ml430-nat-mod-lcm-ee6bdd41) and the longitudinal Autogenesis-1 chain (F:nat-mul-one, F:nat-zero-add); covers both the component-split check and the evaluation-longitudinal-overlap check, since it is the same underlying component. Partition census {train: 8, development: 1, longitudinal: 2}; zero held-out members (now machine-enforced by validate_exemptions, not merely asserted here); all 11 facts epistemic_status proved. NOTE, differing from ADR-0850's evidence: the new member F:ml430-nat-descfactorial-one-d4856d4a IS named by an autogenesis operation (authoritative-mathlib-bounded-induction-factorial-family-v1), whose 4 nursery fact ids are ALL train; the single development member F:ml430-nat-mod-lcm-ee6bdd41 is named by no operation, so the development row remains unspent.",
+      "authority": "docs/research/09-decisions/adr-1455-red-gate-sweep-nursery-exemption-rescope.md",
+      "date": "2026-09-01"
     }
   ],
   "entries": [

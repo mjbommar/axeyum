@@ -231,6 +231,45 @@ def describe_leak(
     return "\n".join(lines)
 
 
+def describe_stale_exemptions(
+    unused: list[dict[str, Any]], label: str = ""
+) -> str:
+    """Render recorded exemptions that no longer match any live crossing component.
+
+    An exemption's self-invalidation (ADR-0850) is what makes the mechanism
+    safe, but until 2026-09-01 the invalidation was only ever OBSERVABLE in
+    `--json` output: `main()` printed a bare crossing error and said nothing
+    about the adjudication that had just been voided. Measured that day, the
+    committed 10-member factorial exemption had gone stale when a `depends_on`
+    repair grew its component to 11, and the 258-member cross-population one
+    had gone stale at a live 274 -- and in both cases the operator saw only
+    "component crosses evaluation partitions", with no hint that a recorded,
+    reviewed decision no longer applied to anything.
+
+    A stale exemption is not cosmetic. It is a reviewed claim about a set of
+    facts that no longer exists, sitting in the manifest looking authoritative,
+    and it is the single signal that the component underneath a prior review
+    has changed. So it fails the gate rather than decorating a JSON field: the
+    fix is to re-review the enlarged component and re-scope the entry, or to
+    delete an entry that now suppresses nothing.
+    """
+    lines = [
+        f"recorded {label}component_split_exemption matches no live crossing component "
+        "(the component it was reviewed against has changed shape; re-scope it "
+        "against the live membership, or delete it if it now suppresses nothing)"
+    ]
+    for exemption in unused:
+        component_id = exemption["component_id"]
+        fact_ids = exemption["component_fact_ids"]
+        lines.append(
+            f"  exemption component={component_id[:12]}… members={len(fact_ids)} "
+            f"date={exemption.get('date')} authority={exemption.get('authority')}"
+        )
+        for fact_id in fact_ids:
+            lines.append(f"    {fact_id}")
+    return "\n".join(lines)
+
+
 def validate_exemptions(
     raw: Any, entries_by_id: dict[str, dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -248,6 +287,15 @@ def validate_exemptions(
     amendment MOVES a row between partitions and is irreversible history; an
     exemption changes nothing about any entry and stops applying automatically
     if the fact it covers changes shape.
+
+    An exemption may never name a `held-out` row. That is the entire safety
+    property of the mechanism -- ADR-0850 rests on it, every recorded reason
+    asserts it, and `rescope-nursery-exemption.py` exits 2 rather than write an
+    exemption that would cover one. Until 2026-09-01 none of that was ENFORCED
+    here: the gate would have accepted a hand-written exemption suppressing a
+    train/held-out crossing, with a plausible reason string, and gone green. A
+    property that every producer respects and no checker tests is the shape of
+    guard this repository keeps discovering it did not have.
     """
     if raw is None:
         return []
@@ -275,6 +323,19 @@ def validate_exemptions(
                     f"component_split_exemptions[{index}] names {fact_id}, "
                     "which is not a nursery entry"
                 )
+        held_out_members = sorted(
+            fact_id
+            for fact_id in fact_ids
+            if entries_by_id[fact_id]["partition"] == "held-out"
+        )
+        if held_out_members:
+            raise NurseryError(
+                f"component_split_exemptions[{index}] names held-out row(s) "
+                f"{held_out_members}: an exemption may never cover a held-out fact. "
+                "Held-out blindness, once spent, cannot be un-spent, so a crossing "
+                "that reaches the blind population is a finding for review and an "
+                "ADR-0542 amendment, never a suppression"
+            )
         require_string(item.get("reason"), f"component_split_exemptions[{index}].reason")
         require_string(item.get("authority"), f"component_split_exemptions[{index}].authority")
         require_string(item.get("date"), f"component_split_exemptions[{index}].date")
@@ -385,6 +446,13 @@ def build_report(
         if by_fact[entry["fact_id"]] in longitudinal_overlap_components_exempted
     )
 
+    unused_exemptions = [
+        exemption
+        for exemption in exemptions
+        if exemption["component_id"]
+        not in set(leaks_exempted) | set(longitudinal_overlap_components_exempted)
+    ]
+
     violation_blocks: list[str] = []
     if leaks:
         violation_blocks.append(
@@ -396,6 +464,8 @@ def build_report(
                 by_partition_lookup,
             )
         )
+    if unused_exemptions:
+        violation_blocks.append(describe_stale_exemptions(unused_exemptions))
     if family_leaks:
         violation_blocks.append(
             describe_leak(
@@ -525,12 +595,7 @@ def build_report(
             ],
             "evaluation_longitudinal_component_overlap_exempted": evaluation_longitudinal_overlap_exempted,
             "component_split_exemptions": exemptions,
-            "component_split_exemptions_unused": [
-                exemption
-                for exemption in exemptions
-                if exemption["component_id"]
-                not in set(leaks_exempted) | set(longitudinal_overlap_components_exempted)
-            ],
+            "component_split_exemptions_unused": unused_exemptions,
         },
         "ready": not blockers,
         "blockers": blockers,
@@ -644,6 +709,13 @@ def build_cross_population_report(
         if by_fact[entry["fact_id"]] in longitudinal_overlap_components_exempted
     )
 
+    unused_exemptions = [
+        exemption
+        for exemption in exemptions
+        if exemption["component_id"]
+        not in set(leaks_exempted) | set(longitudinal_overlap_components_exempted)
+    ]
+
     violation_blocks: list[str] = []
     if leaks:
         violation_blocks.append(
@@ -656,6 +728,10 @@ def build_cross_population_report(
                 by_partition_lookup,
                 origin_of=origin_of,
             )
+        )
+    if unused_exemptions:
+        violation_blocks.append(
+            describe_stale_exemptions(unused_exemptions, label="cross-population ")
         )
     if longitudinal_overlap_components:
         violation_blocks.append(
@@ -705,12 +781,7 @@ def build_cross_population_report(
                 evaluation_longitudinal_overlap_exempted
             ),
             "cross_population_component_split_exemptions": exemptions,
-            "cross_population_component_split_exemptions_unused": [
-                exemption
-                for exemption in exemptions
-                if exemption["component_id"]
-                not in set(leaks_exempted) | set(longitudinal_overlap_components_exempted)
-            ],
+            "cross_population_component_split_exemptions_unused": unused_exemptions,
         },
     }
     report["report_sha256"] = digest(report)

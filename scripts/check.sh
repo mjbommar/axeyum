@@ -594,6 +594,8 @@ step fact-derived-numbers python3 scripts/check-fact-derived-numbers.py --quiet
 step autogenesis-chain-catalog-tests python3 -m unittest scripts.tests.test_create_autogenesis_chain_catalog
 step autogenesis-chain-catalog python3 scripts/create-autogenesis-chain-catalog.py --check
 step autogenesis-nursery-tests python3 -m unittest scripts.tests.test_check_autogenesis_nursery
+step autogenesis-nursery-exemption-guards python3 -m unittest scripts.tests.test_nursery_exemption_guards
+step autogenesis-nursery-rescope-tests python3 -m unittest scripts.tests.test_rescope_nursery_exemption
 step autogenesis-mathlib-nursery-split-tests python3 -m unittest scripts.tests.test_create_autogenesis_mathlib_nursery_split
 step autogenesis-nursery-dispatch-baseline-tests python3 -m unittest scripts.tests.test_create_autogenesis_nursery_dispatch_baseline
 step autogenesis-holdout-isolation-tests python3 -m unittest scripts.tests.test_check_autogenesis_holdout_isolation

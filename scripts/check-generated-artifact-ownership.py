@@ -56,6 +56,7 @@ import ast
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -268,6 +269,14 @@ def referencing_scripts(basename: str) -> set[str]:
     Derived from the tree rather than from a list, so a script that starts
     touching a guarded artifact is discovered instead of being invisible --
     the "every X must derive its X from the authority" rule.
+
+    Deliberately a SUBSTRING test, unlike COVER's `artifact_names_in`, and it
+    should stay one. This feeds the KNOWN arm, which DEMANDS that anything
+    naming a guarded artifact be classified, so over-matching costs a
+    classification line and under-matching leaves a real writer unmeasured --
+    the errors are not symmetric here. COVER's population is the opposite
+    shape (a name it over-matches becomes a candidate row for a file nobody
+    writes), which is why only that one was tightened.
     """
     hits: set[str] = set()
     for path in sorted((ROOT / "scripts").rglob("*")):
@@ -577,13 +586,62 @@ CANDIDATES_HEADER = """\
 """
 
 
+_ARTIFACT_NAME = re.compile(r"(?<![A-Za-z0-9_.\-])([A-Za-z0-9_.\-]+\.json)(?![A-Za-z0-9_\-])")
+
+
+def artifact_names_in(text: str) -> set[str]:
+    """Every `*.json` path component `text` names, as whole components.
+
+    Extracted from the TEXT once rather than by testing each of the tree's
+    3,742 basenames against it: the pair-wise form is ~350,000 regex searches
+    over ~94 producer sources and took the gate past a two-minute timeout,
+    where this is one pass per producer.
+
+    A bare `base in text` reads a basename as a substring, which is wrong for
+    any basename that is a SUFFIX of another. Measured 2026-09-01: the only
+    file in the tree literally called `schema.json` is
+    `artifacts/declaration-spec/schema.json`, and the substring test attributed
+    it to three producers -- but `gen-autogenesis-baseline.py` names
+    `artifacts/ontology/fact.schema.json` and `gen-obstruction-dashboard.py`
+    names `artifacts/ontology/obstruction-graph.schema.json`. Two different
+    files, neither of them this one. So COVER demanded that a fiction be
+    recorded as a known multi-writer candidate, which is worse than not asking:
+    a ratchet whose population contains inventions trains people to record
+    whatever it prints.
+
+    Requiring a whole path component fixes exactly that and nothing else.
+    Measured over 3,742 artifact basenames and 94 producers: the candidate set
+    goes 35 -> 34, dropping `schema.json` alone, adding none, and removing none
+    of the 32 already recorded -- so no genuine candidate is lost. It also
+    narrows `obstruction-projection-v1.json` from 7 producers to 3, the other
+    four naming `*-obstruction-projection-v1.json` variants.
+
+    This does NOT narrow the arm from "names" to "writes", and must not. The
+    module docstring's whole point is that the destroying write reached its
+    path through a dict value, so a static write-receiver analysis misses it;
+    over-approximating the writers is the design, and only the ARTIFACT
+    identification is tightened here.
+
+    The trailing guard excludes a continuing name (`.jsonl`, and a component
+    that goes on with `-` or `_`) but deliberately allows a trailing `.`,
+    because prose ends sentences with one.
+    """
+    return set(_ARTIFACT_NAME.findall(text))
+
+
+def names_artifact(base: str, text: str) -> bool:
+    """Convenience wrapper over `artifact_names_in` for a single basename."""
+    return base in artifact_names_in(text)
+
+
 def multi_writer_candidates() -> dict[str, list[str]]:
     """`{artifact basename: [gen-*.py naming it]}` for basenames with >= 2.
 
     `gen-*.py` is the producer naming convention in this tree and is the
     population the audit measured (82 files). A basename rather than a full
     path because that is what `referencing_scripts` matches on, and because a
-    script names an artifact by whichever spelling it happens to use.
+    script names an artifact by whichever spelling it happens to use --
+    matched as a whole path component, see `names_artifact`.
     """
     # The FILESYSTEM, not `git ls-files`. The two agree here (3,889 either
     # way, measured 2026-08-30), and the mutation harness copies the tree
@@ -591,16 +649,21 @@ def multi_writer_candidates() -> dict[str, list[str]]:
     # unmeasurable -- "BASELINE IS NOT GREEN", which is not a result.
     basenames = {p.name for p in (ROOT / "artifacts").rglob("*.json")}
 
-    producers: list[tuple[str, str]] = []
+    # One `artifact_names_in` pass per producer, then set membership. Testing
+    # each of 3,742 basenames against each of 94 sources instead is ~350,000
+    # regex searches and takes 112 s, which put this gate past a two-minute
+    # timeout; this form is 0.05 s and computes the same answer.
+    producers: list[tuple[str, set[str]]] = []
     for path in sorted((ROOT / "scripts").glob("gen-*.py")):
         try:
-            producers.append((path.name, path.read_text(encoding="utf-8", errors="ignore")))
+            text = path.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
+        producers.append((path.name, artifact_names_in(text)))
 
     out: dict[str, list[str]] = {}
     for base in sorted(basenames):
-        naming = sorted(name for name, text in producers if base in text)
+        naming = sorted(name for name, named in producers if base in named)
         if len(naming) >= 2:
             out[base] = naming
     return out

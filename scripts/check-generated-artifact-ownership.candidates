@@ -24,6 +24,7 @@ mathlib-nat-int-fact-catalog-v1.json
 mathlib-statement-constants-v1.json
 mathlib-v4.30.0-v4.32.1-selected-statement-delta-v1.json
 metadata.json
+mirror-divergence-registry.json
 must-decline-mutations-v1.json
 nursery-v1.json
 obstruction-graph-v1.json

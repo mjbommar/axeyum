@@ -1,0 +1,292 @@
+"""Controls for the two nursery split-exemption guards added 2026-09-01.
+
+`check-autogenesis-nursery.py`'s `component_split_exemptions` (ADR-0850) let a
+reviewer record that one declared-dependency component's partition crossing is
+benign. Two properties that every producer already respected were never
+ENFORCED by the gate, and both are the exact shape this repository keeps
+finding it does not have -- a guard nobody wrote, which mutation testing cannot
+report because there is nothing to delete:
+
+* **No exemption may name a `held-out` row.** ADR-0850's whole safety argument
+  is "no held-out member"; every recorded reason asserts it and
+  `rescope-nursery-exemption.py` exits 2 rather than write one. The gate would
+  have accepted a hand-written exemption suppressing a train/held-out crossing
+  with a plausible reason string and gone green. Held-out blindness, once
+  spent, cannot be un-spent: such a crossing is a finding and an ADR-0542
+  amendment, never a suppression.
+
+* **A recorded exemption must match a live crossing component.** The digest
+  pinning is what makes an exemption self-invalidating, but until this change
+  the invalidation was observable only in `--json` output. Measured
+  2026-09-01: the committed 10-member factorial exemption had gone stale at a
+  live 11 and the 258-member cross-population one at a live 274, and in both
+  cases the operator saw only "component crosses evaluation partitions" -- no
+  indication that a reviewed decision no longer applied to anything.
+
+Why these live in their own module rather than beside their siblings in
+`test_check_autogenesis_nursery.py`: `scripts/tests/mutation_controls.py`
+refuses to measure a suite whose BASELINE is not green, and that suite's
+`LiveManifestTests` reads the committed `nursery-v2-extension.json`, whose
+cross-population exemption is stale for a reason outside this lane's remit.
+Registering the whole module for mutation would have reported
+`BASELINE IS NOT GREEN` and measured nothing. This module depends on no
+committed manifest, so each guard here is mutation-verified to kill exactly
+one test.
+
+Every guard case is paired with a POSITIVE CONTROL that must still pass: a
+guard which rejected every exemption, or every population, would satisfy the
+negative case alone and measure nothing.
+"""
+
+from __future__ import annotations
+
+import copy
+import importlib.util
+import json
+from pathlib import Path
+import unittest
+
+
+SCRIPT = Path(__file__).parents[1] / "check-autogenesis-nursery.py"
+SPEC = importlib.util.spec_from_file_location("check_autogenesis_nursery_guards", SCRIPT)
+assert SPEC is not None and SPEC.loader is not None
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+
+def fact(fact_id: str, dependencies: list[str] | None = None) -> dict:
+    return {"id": fact_id, "depends_on": dependencies or []}
+
+
+def entry(fact_id: str, partition: str) -> dict:
+    """A nursery row whose family/proof_shape/source_group are UNIQUE to it.
+
+    Sharing any of the three across partitions trips the family-, shape- and
+    source-group-leak checks as well, which would pollute an exemption test's
+    message with unrelated, unexempted violations.
+    """
+    return {
+        "fact_id": fact_id,
+        "partition": partition,
+        "provenance_class": "project-constructed",
+        "family": f"family-{fact_id}",
+        "proof_shape": f"shape-{fact_id}",
+        "source_group": f"group-{fact_id}",
+        "route_hypotheses": ["kernel"],
+        "mutation_of": None,
+        "answer_access": "withheld-during-episode",
+    }
+
+
+def exemption(fact_ids: list[str], reason: str = "test exemption") -> dict:
+    return {
+        "component_fact_ids": sorted(fact_ids),
+        "reason": reason,
+        "authority": "scripts/tests/test_nursery_exemption_guards.py",
+        "date": "2026-09-01",
+    }
+
+
+class ExemptionGuardTests(unittest.TestCase):
+    """One-file population, no committed manifest, so the baseline is green."""
+
+    def setUp(self) -> None:
+        repository = json.loads(MODULE.NURSERY.read_text())
+        self.nursery = copy.deepcopy(repository)
+        self.nursery["state"] = "foundation-only"
+        self.nursery["entries"] = [
+            row for row in repository["entries"] if row["partition"] == "longitudinal"
+        ]
+        self.nursery["component_split_exemptions"] = []
+        self.result = {"verdict": "autogenesis-1-passed"}
+        self.facts = {
+            "F:nat-zero-add": fact("F:nat-zero-add"),
+            "F:nat-mul-one": fact("F:nat-mul-one", ["F:nat-zero-add"]),
+        }
+
+    def _train_held_crossing(self) -> None:
+        self.facts.update(
+            {"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])}
+        )
+        self.nursery["entries"].extend(
+            [entry("F:train", "train"), entry("F:held", "held-out")]
+        )
+
+    def _train_dev_crossing(self) -> None:
+        self.facts.update(
+            {"F:train": fact("F:train"), "F:dev": fact("F:dev", ["F:train"])}
+        )
+        self.nursery["entries"].extend(
+            [entry("F:train", "train"), entry("F:dev", "development")]
+        )
+
+    # -- guard 1: an exemption may never name a held-out row ----------------
+
+    def test_exemption_naming_a_held_out_row_is_refused(self) -> None:
+        self._train_held_crossing()
+        self.nursery["component_split_exemptions"] = [
+            exemption(
+                ["F:train", "F:held"],
+                "a plausible reason, which must not be enough on its own",
+            )
+        ]
+        with self.assertRaisesRegex(MODULE.NurseryError, "may never cover a held-out fact"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_an_equivalent_exemption_over_train_and_development_is_accepted(self) -> None:
+        # POSITIVE CONTROL for the guard above. The identical mechanism, with
+        # the held-out row replaced by a development one, must still work --
+        # otherwise a guard rejecting every exemption would pass the test
+        # above while destroying ADR-0850's mechanism.
+        self._train_dev_crossing()
+        self.nursery["component_split_exemptions"] = [exemption(["F:train", "F:dev"])]
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        members = sorted(
+            m["fact_id"]
+            for m in report["controls"]["component_split_leaks_exempted"][0]["members"]
+        )
+        self.assertEqual(members, ["F:dev", "F:train"])
+
+    def test_a_held_out_crossing_still_fails_when_nothing_is_exempted(self) -> None:
+        # SECOND POSITIVE CONTROL: the held-out crossing must be reported as a
+        # crossing when no exemption is present, so the test above is measuring
+        # the exemption guard rather than the crossing check it sits behind.
+        self._train_held_crossing()
+        with self.assertRaisesRegex(MODULE.NurseryError, "crosses evaluation partitions"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    # -- guard 2: a recorded exemption must match a live crossing -----------
+
+    def test_stale_exemption_matching_no_live_component_fails_the_gate(self) -> None:
+        # `F:lonely` depends on nothing and nothing depends on it, so it is its
+        # own singleton component and crosses no partition. An exemption naming
+        # it therefore matches no live CROSSING component: a reviewed claim
+        # about a set of facts that is not the set the gate sees.
+        self._train_dev_crossing()
+        self.facts["F:lonely"] = fact("F:lonely")
+        self.nursery["entries"].append(entry("F:lonely", "development"))
+        self.nursery["component_split_exemptions"] = [
+            exemption(["F:train", "F:dev"], "current, must stay silent"),
+            exemption(["F:lonely"], "stale: F:lonely crosses nothing"),
+        ]
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "matches no live crossing component"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_the_same_population_passes_once_the_stale_entry_is_dropped(self) -> None:
+        # POSITIVE CONTROL for the guard above: identical population, only the
+        # stale entry removed. A guard that fired on any exemptions array at
+        # all -- or on any population with a non-crossing fact in it -- would
+        # pass the test above and fail this one.
+        self._train_dev_crossing()
+        self.facts["F:lonely"] = fact("F:lonely")
+        self.nursery["entries"].append(entry("F:lonely", "development"))
+        self.nursery["component_split_exemptions"] = [
+            exemption(["F:train", "F:dev"], "current, must stay silent")
+        ]
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        self.assertEqual(report["controls"]["component_split_exemptions_unused"], [])
+
+    def test_a_grown_component_reports_BOTH_the_crossing_and_the_void_exemption(
+        self,
+    ) -> None:
+        # This is the incident shape, and the reason the stale check is fatal
+        # rather than a JSON field. On 2026-09-01 a `depends_on` repair grew an
+        # exempted component by one member: the digest stopped matching, so the
+        # gate reported the ENLARGED crossing -- correctly -- and said nothing
+        # at all about the reviewed decision that had just been voided. Both
+        # facts have to reach the operator, because the second one is what says
+        # the first is a re-review rather than a new finding.
+        self._train_dev_crossing()
+        self.nursery["component_split_exemptions"] = [exemption(["F:train", "F:dev"])]
+        MODULE.build_report(self.nursery, self.facts, self.result)  # green as-is
+
+        self.facts["F:grown"] = fact("F:grown", ["F:train"])
+        self.nursery["entries"].append(entry("F:grown", "development"))
+        with self.assertRaises(MODULE.NurseryError) as caught:
+            MODULE.build_report(self.nursery, self.facts, self.result)
+        message = str(caught.exception)
+        self.assertIn("crosses evaluation partitions", message)
+        self.assertIn("matches no live crossing component", message)
+
+
+def v2_extension(entries: list[dict], exemptions: list[dict] | None = None) -> dict:
+    extension = {
+        "kind": "axeyum-autogenesis-nursery-extension",
+        "extends": "artifacts/autogenesis/nursery-v1.json",
+        "entries": entries,
+    }
+    if exemptions is not None:
+        extension["cross_population_component_split_exemptions"] = exemptions
+    return extension
+
+
+class CrossPopulationExemptionGuardTests(unittest.TestCase):
+    """The same two guards over the v1-union-v2 report, which validates its
+    exemptions through the same `validate_exemptions` and had the same gap."""
+
+    def setUp(self) -> None:
+        repository = json.loads(MODULE.NURSERY.read_text())
+        self.v1 = copy.deepcopy(repository)
+        self.v1["entries"] = [
+            row for row in repository["entries"] if row["partition"] == "longitudinal"
+        ]
+        self.v1["component_split_exemptions"] = []
+        self.facts = {
+            "F:nat-zero-add": fact("F:nat-zero-add"),
+            "F:nat-mul-one": fact("F:nat-mul-one", ["F:nat-zero-add"]),
+        }
+
+    def test_cross_population_exemption_naming_a_held_out_row_is_refused(self) -> None:
+        self.facts.update(
+            {"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a", ["F:v1-a"])}
+        )
+        self.v1["entries"] = [entry("F:v1-a", "train")]
+        v2 = v2_extension(
+            [entry("F:v2-a", "held-out")], [exemption(["F:v1-a", "F:v2-a"])]
+        )
+        with self.assertRaisesRegex(MODULE.NurseryError, "may never cover a held-out fact"):
+            MODULE.build_cross_population_report(self.v1, v2, self.facts)
+
+    def test_cross_population_exemption_over_train_and_development_is_accepted(self) -> None:
+        # POSITIVE CONTROL: same shape, development instead of held-out.
+        self.facts.update(
+            {"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a", ["F:v1-a"])}
+        )
+        self.v1["entries"] = [entry("F:v1-a", "train")]
+        v2 = v2_extension(
+            [entry("F:v2-a", "development")], [exemption(["F:v1-a", "F:v2-a"])]
+        )
+        report = MODULE.build_cross_population_report(self.v1, v2, self.facts)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+
+    def test_stale_cross_population_exemption_fails_the_gate(self) -> None:
+        # F:v1-a and F:v2-a share no depends_on edge, so the named pair is not
+        # a live component at all -- each is its own singleton.
+        self.facts.update({"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a")})
+        self.v1["entries"] = [entry("F:v1-a", "train")]
+        v2 = v2_extension(
+            [entry("F:v2-a", "development")], [exemption(["F:v1-a", "F:v2-a"])]
+        )
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "matches no live crossing component"
+        ):
+            MODULE.build_cross_population_report(self.v1, v2, self.facts)
+
+    def test_the_same_union_passes_with_no_exemption_recorded(self) -> None:
+        # POSITIVE CONTROL for the guard above.
+        self.facts.update({"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a")})
+        self.v1["entries"] = [entry("F:v1-a", "train")]
+        v2 = v2_extension([entry("F:v2-a", "development")], [])
+        report = MODULE.build_cross_population_report(self.v1, v2, self.facts)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        self.assertEqual(
+            report["controls"]["cross_population_component_split_exemptions_unused"], []
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
