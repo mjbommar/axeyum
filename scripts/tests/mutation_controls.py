@@ -5333,6 +5333,45 @@ SUITES["constant-canonicity"] = (
     ],
 )
 
+
+# --------------------------------------------------------------------------
+# nursery-refill-headroom-screen (ADR-1405, 2026-09-01).
+#
+# Two blind spots found screening Mathlib.Data.Nat.Log for a nursery draw,
+# both in the OVERSTATING direction: propose-nursery-refill.py's
+# used_source_names() never read the fact ledger (a directly-flipped mirror
+# stayed "unused" forever -- 20 of 37 reported Nat.Log survivors), and it
+# never applied the generator's HELD_OUT_CONSTRUCTIONS screen at all (a
+# module whose candidates all mention a held-out-guarding constant could
+# read as ready here while select() would refuse it). The second mutation
+# below is the more important one: it is the guard on Nat.sqrt, the last
+# construction still protecting a v1 held-out family
+# (natural-square-root), and until this suite existed nothing but a
+# comment enforced it.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-refill-headroom-screen"] = (
+    "scripts/propose-nursery-refill.py",
+    Unittest("scripts.tests.test_propose_nursery_refill"),
+    [
+        (
+            "a fact-catalog name (drawn or flipped directly) is not headroom",
+            "    names |= catalogued_source_names()",
+            "    pass  # removed for mutation testing",
+        ),
+        (
+            "Nat.sqrt and Nat.log2 must stay in HELD_OUT_CONSTRUCTIONS -- "
+            "Nat.sqrt guards the only surviving v1 held-out family, and "
+            "Nat.log2 guards an unrelated already-drawn held-out family "
+            "(natural-elementary-bounds) from a measured alphabetical-slice "
+            "displacement, not from its own topic",
+            'HELD_OUT_CONSTRUCTIONS = {"Nat.log2", "Nat.sqrt"}',
+            'HELD_OUT_CONSTRUCTIONS = {"Nat.evil"}',
+            "scripts/gen-autogenesis-nursery-refill.py",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
