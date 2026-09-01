@@ -71,6 +71,37 @@ gate ran. Left unregistered; note this here so whichever lane preregisters
 that module's mirrors adds this row at the same time, rather than
 re-discovering the divergence from scratch.
 
+**UPDATE, same day, lane `nat-mirror-residue`.** The nursery draw ADR-1100
+anticipated has landed: `python3 scripts/check-dispatchable-frontier.py` now
+shows 9 open `ml430` mirrors whose pinned statement mentions `Abundant` or
+`Deficient`
+(`ml430-nat-abundant-iff-not-perfect-and-not-deficient-9763e268`,
+`ml430-nat-abundant-mul-left-4de4fbe7`, `ml430-nat-abundant-of-dvd-686548ce`,
+`ml430-nat-abundant-twelve-24ce1ba6`,
+`ml430-nat-deficient-iff-not-abundant-and-not-perfect-18bbe30a`,
+`ml430-nat-deficient-one-75f44529`, `ml430-nat-prime-deficient-89e0badf`,
+`ml430-nat-prime-deficient-pow-9c5e1fef`,
+`ml430-nat-prime-not-abundant-d2558ed6`), plus one more that mentions only
+`Perfect` (`ml430-nat-prime-not-perfect-15c1235d`, `Nat.Prime.not_perfect`).
+So this is now the case the paragraph above was written to catch. Three rows
+were added to the registry: `Nat.Abundant`, `Nat.Deficient` (both re-reading
+`Mathlib/NumberTheory/FactorisationProperties.lean` at the pinned commit —
+`Abundant`/`Deficient n := n <> ∑ i ∈ n.properDivisors, i`, Finset sums, vs
+ours `Lt (mul 2 n) (sumDivisors n)`/`Lt (sumDivisors n) (mul 2 n)`), and
+`Nat.Perfect` (`nat_prelude/perfect.rs`, independently checked against
+`Mathlib/NumberTheory/Divisors.lean`'s `def Perfect (n : ℕ) : Prop := ∑ i ∈
+properDivisors n, i = n ∧ 0 < n` — the same Finset-sum divergence, one step
+stronger: ours has no positivity conjunct, so `Perfect 0` is actually TRUE
+here (`sumDivisors 0 = 0 = mul 2 0`) against Mathlib's FALSE, an
+extensional as well as constructional difference). All three are `class:
+definitional`, matching the `Nat.multichoose`/`Nat.nth` shape rather than
+`codomain`, since the divergence lives in the body, not something a pinned
+statement can witness via regex. `check-dispatchable-frontier.py`'s G1/G3
+guards pass (each entry matches >=1 open mirror; none of the matched mirrors
+is `proved`). Net effect: DISPATCHABLE 19 -> 10 (fermat-primefactors-one-lt
+plus the 5 `log`/`clog` mirrors this lane closed some of — see this lane's
+status note for the final count), `blocked` 12 -> 22.
+
 **`Nat.lt_xor_cases` (`nat_prelude/xor_order.rs`) and the Stirling numbers
 (`nat_prelude/stirling_lemmas.rs`).** Both module docs use "stays open"
 language, but for the ordinary reason: the statement is expressible and true
