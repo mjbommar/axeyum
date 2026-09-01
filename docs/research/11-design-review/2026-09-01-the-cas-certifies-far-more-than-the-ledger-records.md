@@ -1,5 +1,29 @@
 # The CAS certifies far more than the ledger records
 
+> **CORRECTED 2026-09-01 by the audit this document dispatched
+> (`docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md`,
+> ADR-1400). BOTH headline numbers below were wrong, in opposite directions,
+> and the errors nearly cancelled — so the gap this document reported is
+> roughly twice the real one.**
+>
+> | | this document said | measured | why mine was wrong |
+> | --- | --- | --- | --- |
+> | certificate-carrying modules | 40 of 53 | **27 of 55** | my grep was unmasked, so it matched `certificate` inside Rust comments and string literals. A second, declaration-shaped query gives 23; the union is 30. |
+> | CAS facts in the ledger | 19 | **48** | I counted the `F-cas-*` **filename** convention. The ledger's own notion is `proof_route: cas-certificate`, which `validate-facts.py` prints. The 29 I missed are named for their mathematics — nine telescoping, seventeen geometry, four GF(2). |
+>
+> Joining both sides per module gives the number that actually answers the
+> question: **13 certificate-carrying modules with no naming fact, not 34.**
+>
+> One specific claim below is **false** and is left in place rather than
+> silently edited, because the way it failed is the point: I wrote that
+> Zeilberger creative telescoping has "no fact at all". `telescoping.rs` and
+> `telescoping_check.rs` are each named by **nine settled facts**. `gosper.rs`
+> genuinely has none.
+>
+> I ran an unmasked survey grep and published its output as a measurement,
+> which is a banned idiom in this repository's own notes, in a document whose
+> subject is under-measurement. Verify both numbers before quoting either.
+
 **Measured 2026-09-01, in the shared checkout.**
 
 `crates/axeyum-cas/` is ~77,600 lines, 685 public functions, 53 modules in
