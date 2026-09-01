@@ -938,6 +938,25 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "    if not isinstance(non_examples, list) or not non_examples:",
                 "    if False:",
             ),
+            # ADR-1510 rule 1: a contract is sized by the frontier and retires
+            # when that population empties. A capability claim over an EMPTY
+            # population cannot be falsified by any dispatch -- the same
+            # unfalsifiable object ADR-0602 prevents one arrow upstream.
+            (
+                "a contract may not be SIZED against held-out population",
+                "    if sized_held_out:",
+                "    if False:",
+            ),
+            (
+                "an exhausted contract must be retired",
+                "    if not live and retirement is None:",
+                "    if False:",
+            ),
+            (
+                "retirement may not silence a contract with live work",
+                "    if live and retirement is not None:",
+                "    if False:",
+            ),
         ],
     ),
     # --------------------------------------------------------------------
@@ -990,6 +1009,25 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             (
                 "every required top-level key must be present",
                 "    if missing:",
+                "    if False:",
+            ),
+            # ADR-1510 rule 2: a decline dies with its fact. Measured
+            # 2026-09-01, 26 of 27 live suppressions named facts that were
+            # already proved, and nothing could tell them apart from a decline
+            # suppressing live work.
+            (
+                "a decline against a settled fact must carry a resolution",
+                "    if settled and resolution is None:",
+                "    if False:",
+            ),
+            (
+                "a decline against an OPEN fact may not carry a resolution",
+                "    if not settled and resolution is not None:",
+                "    if False:",
+            ),
+            (
+                "resolution.closed_by must name a real path in this repository",
+                "    if not (ROOT / closed_by).exists():",
                 "    if False:",
             ),
         ],

@@ -211,12 +211,20 @@ def validate_resolution(resolution: Any, label: str) -> None:
     """
     if not isinstance(resolution, dict):
         raise DeclineError(f"{label}: resolution must be an object")
-    missing = RESOLUTION_REQUIRED - set(resolution)
-    if missing:
-        raise DeclineError(f"{label}: resolution missing required key(s) {sorted(missing)}")
-    extra = set(resolution) - RESOLUTION_REQUIRED - RESOLUTION_OPTIONAL
-    if extra:
-        raise DeclineError(f"{label}: resolution has unexpected key(s) {sorted(extra)}")
+    # Deliberately NOT named `missing`/`extra`: the top-level key guard uses
+    # those names, and `scripts/tests/mutation_controls.py` anchors on a line
+    # of source text. A duplicate anchor is reported as AMBIGUOUS ANCHOR and
+    # the mutation stops being a measurement at all.
+    missing_resolution_keys = RESOLUTION_REQUIRED - set(resolution)
+    if missing_resolution_keys:
+        raise DeclineError(
+            f"{label}: resolution missing required key(s) {sorted(missing_resolution_keys)}"
+        )
+    extra_resolution_keys = set(resolution) - RESOLUTION_REQUIRED - RESOLUTION_OPTIONAL
+    if extra_resolution_keys:
+        raise DeclineError(
+            f"{label}: resolution has unexpected key(s) {sorted(extra_resolution_keys)}"
+        )
 
     if not isinstance(resolution["date"], str) or not DATE_RE.match(resolution["date"]):
         raise DeclineError(f"{label}: resolution.date must be an ISO date (YYYY-MM-DD)")
