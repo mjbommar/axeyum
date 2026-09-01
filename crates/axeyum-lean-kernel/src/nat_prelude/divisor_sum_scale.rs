@@ -109,12 +109,12 @@ fn bool_congr_nat(
     f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
 ) -> ExprId {
     let fa = f(d, a);
-    let motive = d.eq_motive(a, &|d, x| {
+    let motive = d.bool_eq_motive(a, &|d, x| {
         let fx = f(d, x);
-        d.bool_eq(fa, fx)
+        d.eq(fa, fx)
     });
-    let refl_case = d.bool_refl(fa);
-    d.transport(a, motive, refl_case, b, h)
+    let refl_case = d.refl(fa);
+    d.bool_transport(a, motive, refl_case, b, h)
 }
 
 /// Reconstruct `divMod dd x (div x dd) (mod x dd)` for ANY `x`, given
@@ -321,6 +321,7 @@ fn sum_range_mono(
 }
 
 /// `ha : Le a1 a2`, `hb : Le b1 b2` ⊢ `Le (add a1 b1) (add a2 b2)`.
+#[allow(clippy::too_many_arguments)]
 fn add_le_add(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -872,7 +873,7 @@ pub(super) fn declare_abundant_of_dvd(
             let comm_mqw = d.lemma(p.mul_comm, &[m, qw]); // Eq(mul m qw)(mul qw m)
             let (_, n_eq_mul_qw_m) = d.chain(n, &[(mul_m_qw, eq_n_mqw), (mul_qw_m, comm_mqw)]);
             // n_eq_mul_qw_m : Eq n (mul qw m)
-            let symm_n = d.symm(mul_qw_m, n, n_eq_mul_qw_m); // Eq (mul qw m) n
+            let symm_n = d.symm(n, mul_qw_m, n_eq_mul_qw_m); // Eq (mul qw m) n
 
             // sumDivisors(mul qw m) -> sumDivisors n
             let sum_n = d.const_app(p.sum_divisors, &[n]);
