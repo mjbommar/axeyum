@@ -1204,6 +1204,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.log_pos,
         p.log_eq_zero_iff,
         p.clog_eq_one,
+        p.log_eq_one_iff_prime,
+        p.log_eq_one_iff,
         p.log2_eq_log_two,
         p.bit_false,
         p.bit_true,
