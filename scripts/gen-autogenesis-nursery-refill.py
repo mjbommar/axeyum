@@ -143,19 +143,58 @@ HYGIENE = re.compile(
 # `natural-square-root` (16). `natural-logarithm` was amended OUT of held-out
 # the same day under ADR-0542 (ordinary hand development in nat_prelude/log.rs
 # and clog.rs spent it), so `Nat.log`/`Nat.clog`/`Nat.log2` no longer guard a
-# blind family. **They are kept here deliberately.** Dropping them is a
-# behaviour change that unlocks `Mathlib.Data.Nat.Log`'s 34 candidates for a
-# development/train family, which is a decision for a draw that wants them and
-# not a side effect of an unrelated draw; keeping them over-excludes, which is
-# the safe direction. `Nat.sqrt` is still live -- `natural-square-root` is now
-# the ONLY surviving v1 held-out family.
+# blind family. THEY WERE KEPT HERE DELIBERATELY AT THE TIME, because
+# dropping them was a decision for a draw that wanted them, not a side
+# effect of an unrelated draw.
 #
-# Note the consequence for anyone reading `propose-nursery-refill.py`'s output:
-# the PROPOSER does not apply this screen and the GENERATOR does, so
-# `Mathlib.Data.Nat.Log` and `Mathlib.Data.Nat.Sqrt` appear in the proposer's
-# "ready families" and yield ZERO candidates here. The ready set is 17 drawable
-# of the 19 reported.
-HELD_OUT_CONSTRUCTIONS = {"Nat.log", "Nat.clog", "Nat.log2", "Nat.sqrt"}
+# UPDATED 2026-09-01 (ADR-1405, lane screen-nat-log-family). Verified
+# directly against nursery-v1.json's entries[].partition (not taken from
+# this comment or from a briefing): every natural-logarithm row is
+# partition development, zero are held-out. `Nat.sqrt` is DIFFERENT and
+# MUST STAY: natural-square-root is the ONLY family in nursery-v1.json with
+# ANY held-out row (every one of its entries is partition held-out), so
+# removing it would unblind the repository's last remaining v1 held-out
+# family.
+#
+# `Nat.log` and `Nat.clog` were dropped -- measured with `select()` itself,
+# not merely reasoned about: swapping the whole four-constant set for
+# `{"Nat.log", "Nat.clog"}` dropped and the other two kept produces ZERO
+# entry-set difference across all 460 already-drawn rows. `Nat.log2` was
+# NOT dropped, despite the natural-logarithm argument applying to it too,
+# because dropping it ALONE is not zero-diff: `Nat.log2_two` (which
+# mentions `Nat.log2`) newly passes every other screen and sorts ahead of
+# `Nat.not_exists_sq` in `natural-elementary-bounds`'s alphabetical
+# pool[:PER_FAMILY] slice, DISPLACING it -- and `natural-elementary-bounds`
+# is an ALREADY-DRAWN HELD-OUT family (verified: all 10 of its
+# nursery-v2-extension.json rows are partition held-out), unrelated to
+# Nat.log/Nat.clog/Nat.log2 by topic. That is exactly the retroactive
+# blind-population alteration ADR-0542's amendment discipline exists to
+# prevent, and it would have happened via silent regeneration, not a
+# reviewed amendment, had this not been measured before landing. So
+# `Nat.log2` stays in this set alongside `Nat.sqrt`, for a DIFFERENT reason
+# than `Nat.sqrt`'s -- not because a blind family's TOPIC still needs it
+# (natural-logarithm does not), but because an UNRELATED blind family's
+# ALPHABETICAL SLICE happens to be adjacent to what dropping it would admit.
+# Confirmed zero-diff for the two-constant set actually landed here
+# ({"Nat.log2", "Nat.sqrt"}) against the original four-constant set, over
+# all 460 rows `select()` currently produces.
+#
+# `HeldOutConstructionsTests` in
+# `scripts/tests/test_gen_autogenesis_nursery_refill.py`
+# and `scripts/tests/test_propose_nursery_refill.py` pin this exact set --
+# registered in `scripts/tests/mutation_controls.py`'s
+# `nursery-refill-headroom-screen` suite, which fails (does not merely warn)
+# if `Nat.sqrt` OR `Nat.log2` is ever dropped.
+#
+# Note the consequence for anyone reading propose-nursery-refill.py's
+# output: THIS USED TO BE A GAP -- the proposer never applied this screen at
+# all (fixed 2026-09-01, same lane), so a module whose candidates all mention
+# a held-out-guarding constant could read as a "ready family" there while
+# this generator's select() would refuse every one of them once actually
+# drawn. Mathlib.Data.Nat.Sqrt is exactly that shape today: it will keep
+# reading as ready in the proposer's raw survivor count and yield ZERO here,
+# because Nat.sqrt remains in this set.
+HELD_OUT_CONSTRUCTIONS = {"Nat.log2", "Nat.sqrt"}
 
 # ---------------------------------------------------------------------------
 # The preregistered split for the refill.

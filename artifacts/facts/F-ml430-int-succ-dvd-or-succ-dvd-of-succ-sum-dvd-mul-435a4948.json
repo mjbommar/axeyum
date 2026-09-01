@@ -6,12 +6,48 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p : ℕ},\n  Nat.Prime p →\n    ∀ {m n : ℤ} {k l : ℕ},\n      ↑(p ^ k) ∣ m → ↑(p ^ l) ∣ n → ↑(p ^ (k + l + 1)) ∣ m * n → ↑(p ^ (k + 1)) ∣ m ∨ ↑(p ^ (l + 1)) ∣ n",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:int-euclid-lemma",
+    "F:nat-pow-add",
+    "F:nat-pow-pos",
+    "F:nat-mul-left-cancel-of-pos",
+    "F:nat-euclid-lemma",
+    "F:int-nat-abs-mul",
+    "F:int-dvd-of-nat-abs-dvd",
+    "F:int-nat-abs-dvd-nat-abs-of-dvd",
+    "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+    "F:nat-le-add-right",
+    "F:nat-le-trans",
+    "F:nat-mul-assoc",
+    "F:nat-mul-comm"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- 'succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul' 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul[[:space:]]')\" -ge 1",
+      "supports": "∀ {p : ℕ}, Nat.Prime p → ∀ {m n : ℤ} {k l : ℕ}, ↑(p ^ k) ∣ m → ↑(p ^ l) ∣ n → ↑(p ^ (k + l + 1)) ∣ m * n → ↑(p ^ (k + 1)) ∣ m ∨ ↑(p ^ (l + 1)) ∣ n",
+      "notes": "The p-adic valuation step, bridged to a Nat-level core via X := natAbs m, Y := natAbs n (nat_abs_dvd_nat_abs_of_dvd/dvd_of_nat_abs_dvd/nat_abs_mul, the same bridging style gcd.rs's own Int.euclid_lemma uses). The Nat-level core: eliminate X = p^k*x', Y = p^l*y' (Nat.dvd elimination, a local dvd_elim/dvd_intro copy of the pattern nat_prelude keeps per-file), regroup X*Y = p^(k+l)*(x'*y') via a four-factor regroup ((a*b)*(c*d) = (a*c)*(b*d), a local copy of nat_prelude/dvd_mul_split.rs's private mul_mul_mul_comm) and the already-proved Nat.pow_add, cancel the positive factor p^(k+l) from p^(k+l+1) ∣ X*Y (Nat.pow_pos for positivity, Nat.mul_left_cancel_of_pos for the cancellation itself, wrapped in a local dvd_cancel_left_of_pos copy of the pattern nat_prelude/dvd_mul_split.rs and lcm_gcd_lemmas.rs keep per-file) to get p ∣ x'*y', then the already-proved Nat.euclid_lemma gives p ∣ x' or p ∣ y', each of which regroups back (via Nat.mul_assoc) to p^(k+1) ∣ X or p^(l+1) ∣ Y. Every exponent-arithmetic step (k+l+1 = succ(k+l), p^(succ n) = p^n*p) is a defeq bridge resolved by the kernel's own reduction, not an explicit rewrite -- Nat.add and Nat.pow are BOTH defined by right-recursion in this kernel, so their successor cases are refl-provable defining equations (the same fact that makes Nat.mul_succ refl-provable; verified by isolating a first attempt's TypeMismatch with a throwaway Kernel::render_lean-based debug probe, which found an unrelated missing Or-wrap rather than any exponent-arithmetic gap). int_theorem_inventory's rendered type for Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul matches this fact's formal.statement exactly. New proof, lane int-prime-dvd (2026-09-01): crates/axeyum-lean-kernel/src/int_prelude/prime_dvd_mul_mirrors.rs. No Nat declaration was added -- pow_add, pow_pos, mul_left_cancel_of_pos, mul_assoc, mul_comm, euclid_lemma, le_add_right, le_trans, dvd (the Exists-based predicate), and the Exists/Or/And recursors are all pre-existing."
+    },
+    {
+      "id": "footprint-Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "notes": "prelude_axiom_inventory --require-axiom-free integer enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer: axiom=0, exit 0; the axreal: axiom=30 row is the separate legacy axiomatized-reals package, unrelated to this declaration -- see CLAUDE.md's AxReal/CReal gotcha). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds this declaration's own footprint by []. int_prelude_tests::every_int_declaration_is_checked_and_axiom_free additionally checks this theorem's own Kernel::axiom_footprint directly via derived_lemmas (it is listed there)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +62,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-prime-dvd (2026-09-01) -- the most involved of the lane's five targets. First admission attempt failed with a TypeMismatch whose cause was NOT exponent arithmetic (the concern going in) but a missing Or.inl/Or.inr wrap around the euclid_lemma-derived branch result, isolated with a throwaway #[cfg(test)] debug_probe module calling build_int_prelude_uncached directly and rendering the mismatch via Kernel::render_lean (removed once fixed, not part of the landed proof). Second attempt admitted cleanly. See the kernel-Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul evidence note for the full route. New proof, lane int-prime-dvd (2026-09-01) -- the most involved of the lane's five targets. First admission attempt failed with a TypeMismatch whose cause was NOT exponent arithmetic (the concern going in) but a missing Or.inl/Or.inr wrap around the euclid_lemma-derived branch result, isolated with a throwaway #[cfg(test)] debug_probe module calling build_int_prelude_uncached directly and rendering the mismatch via Kernel::render_lean (removed once fixed, not part of the landed proof). Second attempt admitted cleanly. See the kernel-Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul evidence note for the full route.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-boolean-circuit-nand-only-full-adder",
+  "title": "A 13-gate NAND-only circuit computes a 1-bit full adder, checked by exhaustive replay of all 8 input rows",
+  "statement": "There is a Boolean circuit built entirely from 13 NAND gates -- three inputs a, b, cin and two outputs sum, cout -- that computes sum = a XOR b XOR cin and cout = (a AND b) OR (cin AND (a XOR b)) for every one of the 2^3 = 8 input rows. The evidence is not a claim that NAND is universal in general; it is a specific, named 13-gate circuit whose truth table is re-simulated gate by gate for all 8 rows and compared row by row against the arithmetic definition of one-bit addition, via axeyum_cas::boolean_circuit::check_boolean_circuit. The circuit is built from the standard 4-NAND XOR gadget applied twice (to (a,b) then to (a XOR b, cin)) for the sum, and from NAND-realized AND/OR gates combined by De Morgan's law for the carry. Cas-internal under ADR-0601 SS2: this kernel has rat_prelude/decidable.rs and rat_prelude/boolean.rs, but no bridge test imports axeyum_cas::boolean_circuit, so no kernel re-check exists.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(boolean-circuit-artifact\n  (inputs a b cin)\n  (gates\n    (n1 nand a b) (n2 nand a n1) (n3 nand b n1) (xor_ab nand n2 n3)\n    (n5 nand xor_ab cin) (n6 nand xor_ab n5) (n7 nand cin n5) (sum nand n6 n7)\n    (ab nand n1 n1) (cin_xor nand n5 n5) (na nand ab ab) (nb nand cin_xor cin_xor)\n    (cout nand na nb))\n  (outputs sum cout)\n  (assert (forall (a b cin) (= sum (xor a (xor b cin)))))\n  (assert (forall (a b cin) (= cout (or (and a b) (and cin (xor a b)))))))",
+    "fragment": "boolean-circuit-exhaustive-replay",
+    "free_symbols": [
+      "a",
+      "b",
+      "cin"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.boolean-circuit-exhaustive-replay-is-self-contained: check_boolean_circuit re-simulates every gate for all 2^n input rows directly from the gate list, gate semantics (BooleanGateOp::apply) and the artifact's own declared truth table -- there is no producer-only claim that is not replayed. On a mismatch BooleanCircuitCheck::Failed names the exact input row and both the expected and observed output values, which nand_only_full_adder_truth_table_mutation_is_rejected exercises directly (row 3, expected 3, observed 1). This is a cleaner instance than most cas-internal facts in this crate: there is no residue left unchecked, because the whole claim IS the truth table and the whole truth table is replayed.",
+    "cas.rust-boolean-arithmetic-not-kernel-terms: the gate-by-gate simulation runs in axeyum-cas's own Rust evaluator (BooleanGateOp::apply over bool), not through crate::Kernel::add_declaration. Nothing here has been type-checked by the trusted kernel.",
+    "cas.no-kernel-boolean-circuit-bridge-exists: crate::Kernel has rat_prelude/decidable.rs and rat_prelude/boolean.rs, which the 2026-09-01 CAS certificate audit (docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md) names as the missing-piece target for a bridge test importing axeyum_cas::boolean_circuit -- and names this module as the cheapest COULD RECONSTRUCT case in the crate. No such bridge was attempted for this fact; the audit's sizing was read from the two crates, not tried, and this fact does not change that."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-boolean-circuit-nand-full-adder-replay",
+      "kind": "witness-replay",
+      "supports": "the named 13-gate NAND-only circuit's truth table matches one-bit binary addition (sum, carry-out) for all 8 input rows",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::boolean_circuit::check_boolean_circuit (exhaustive replay: re-derives every gate's value for every one of the 2^n rows from the gate list, never trusting a producer summary)",
+        "boolean_circuit::tests::nand_only_full_adder_truth_table_mutation_is_rejected (negative control: mutating one truth-table entry must be rejected, naming the exact row and both values, not merely erroring)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib boolean_circuit::tests::nand_only_full_adder_matches_arithmetic_for_every_row -- --exact 2>/dev/null | grep -cE '^test boolean_circuit::tests::nand_only_full_adder_matches_arithmetic_for_every_row \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/boolean_circuit.rs",
+      "notes": "Verified on this host both directions: the real test path gives count=1, exit 0; a deliberately absent test path (this repository's own tested trap -- a bare `cargo test` with a nonmatching filter prints `0 filtered out` and exits 0) gives count=0, exit 1 through this grep -cE shape. gate_counts in the Verified variant is pinned to {Nand: 13} in the test, so the assertion also fixes the gate count and the single gate kind used, not merely that 8 rows passed."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-facts-circuit-tensor lane, landing the two 'one fact away' modules named by docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md's 'What did not get done' section (boolean_circuit and gf2_tensor, both replaying exhaustively and both naming a counterexample). The checker (check_boolean_circuit) pre-existed; the specific 13-gate NAND circuit, its test, and this ledger row are new to this lane, verified correct by an independent Python simulation of the same gate list before being committed as Rust.",
+    "source": "NAND's functional completeness for combinational logic is classical (any Boolean function is expressible using only NAND gates, since NOT, AND and OR each reduce to NAND); the specific 13-gate full-adder realization composes the standard 4-NAND XOR gadget with a De Morgan NAND-OR.",
+    "prior_art": [
+      {
+        "who": "folklore / standard digital logic",
+        "what": "NAND (and dually NOR) is a universal gate; the 4-NAND XOR gadget and the full adder built from two XOR stages plus a carry network are textbook constructions",
+        "year": null,
+        "where": "standard digital logic design texts",
+        "attribution": "no single primary source consulted; this is common knowledge in digital circuit design, and the specific 13-gate wiring and its correctness for all 8 rows were verified independently for this fact rather than copied from a citation"
+      }
+    ]
+  },
+  "notes": "Chosen ahead of the audit's other COULD RECONSTRUCT candidates because check_boolean_circuit leaves no residue: the checker's Verified/Failed distinction is exactly the claim this fact makes (all rows match, or the exact row/expected/observed that does not), so there is no ADR-1400-style gap between what the producer claims and what the checker re-derives -- unlike gosper.rs's three unlabelled acceptance modes or gf2_shard.rs's unwitnessed Exhausted claim. The residue that DOES remain is the one named in axiom_footprint: no kernel bridge exists yet, so this stays cas-internal rather than moving to kernel-reconstructed. Building that bridge (importing axeyum_cas::boolean_circuit, or independently encoding this same 13-gate wiring, into rat_prelude/decidable.rs or boolean.rs and comparing against a kernel-checked full-adder theorem) is the audit's named next step and was not attempted here."
+}

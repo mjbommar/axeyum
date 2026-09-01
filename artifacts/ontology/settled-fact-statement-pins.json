@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2095,
+    "min_identity_bound": 2100,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -785,6 +785,12 @@
       ]
     },
     {
+      "fact_id": "F:cas-boolean-circuit-nand-only-full-adder",
+      "language": "cas-term",
+      "statement_sha256": "9c3a3ae9472b0e55a31446712ee9ea0fd5fa5c600bb03baa57642b11bec306ac",
+      "prose_sha256": "742c6a88584d2e4cfe5c38e172e5306eac4970ce8d024101371029ac9c8ffec1"
+    },
+    {
       "fact_id": "F:cas-difference-of-squares-free-x-kernel-checked",
       "language": "cas-term",
       "statement_sha256": "b65403ba5bb5c479bf66163b71352ac2fdfd0d879d9701039bc5b0a83dbfbeef",
@@ -813,6 +819,12 @@
       "language": "cas-term",
       "statement_sha256": "9c56cf65ca24d2e2a0f3696a02fbac1d288d820f1e94e6fe65f15c96b43d38ae",
       "prose_sha256": "612d26aba3e65c9aecd7a4c7798ccbb3a3ed9a253dbdc5df09f0d27cd9fd2fb2"
+    },
+    {
+      "fact_id": "F:cas-gf2-tensor-karatsuba-degree-2-rank-three",
+      "language": "cas-term",
+      "statement_sha256": "11d1fb8d63763bc8c3408358cb43404bbb98fec7915a131d4ea7800104beff70",
+      "prose_sha256": "725435410b9d97cfd6197e8d8e6dfc8cb2c345328ae0ef321ad53ce4776a54be"
     },
     {
       "fact_id": "F:cas-inverse-quintic-degree-five-witness",
@@ -10370,6 +10382,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-int-gcd-ne-one-iff-gcd-mul-right-ne-one-ae6099bd",
+      "language": "lean4-surface",
+      "statement_sha256": "376500f1e237824221a30f4cbc6dee74d27fda20614c85bfc9f8ccced38675f8",
+      "prose_sha256": "8ddeab79ef79d2d815f102ae609effaa1ca74ab96f28af3f49879f08fa359435",
+      "kernel_theorem": "Int.gcd_ne_one_iff_gcd_mul_right_ne_one"
+    },
+    {
       "fact_id": "F:ml430-int-le-elim-efa70bfa",
       "language": "lean4-surface",
       "statement_sha256": "bc5dd13af294acbee4393bcf2d0d987af712a5e8700b08e6f3568daf1315650f",
@@ -10845,6 +10864,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
+      "language": "lean4-surface",
+      "statement_sha256": "94cddc2bf12985a2daeddcccdfbae8070f7e3f3cf7516f051258d57a8797d5c9",
+      "prose_sha256": "bd18ecee10f41541c62367d52625e448b5f92c609d697bd135338f2cf7b1440a",
+      "kernel_theorem": "Int.not_prime_of_int_mul"
+    },
+    {
       "fact_id": "F:ml430-int-odd-of-mul-left-b580971e",
       "language": "lean4-surface",
       "statement_sha256": "6c3c92693962483fb50b2e60d1a5d42815b2972c0036c15eb853d86d835c2bd5",
@@ -10871,6 +10897,27 @@
           "prose_sha256": "6a20cb34f1a1c9211d68185c52c1528014e9e3a96fde82cc0321bee7e60574f0"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-int-prime-dvd-mul-23b73e69",
+      "language": "lean4-surface",
+      "statement_sha256": "b16a96ddaf79d2c4cc2ad8b031d80be358c0a5210e2e848c2c7d71b32d1d0df5",
+      "prose_sha256": "df52e8643546e220159f17cbec6e08a199d92db8bf20deea691afdde24759819",
+      "kernel_theorem": "Int.prime_dvd_mul'"
+    },
+    {
+      "fact_id": "F:ml430-int-prime-dvd-mul-90351ba0",
+      "language": "lean4-surface",
+      "statement_sha256": "4e54398b1277326982829c63ab0a0e41003bad6edf12a1411c4df2d63858b42b",
+      "prose_sha256": "0db7ff2202f20120b956d8daf52bc249aa66ffb579f62ae11c56c75aa6f0b99c",
+      "kernel_theorem": "Int.prime_dvd_mul"
+    },
+    {
+      "fact_id": "F:ml430-int-succ-dvd-or-succ-dvd-of-succ-sum-dvd-mul-435a4948",
+      "language": "lean4-surface",
+      "statement_sha256": "ba808f1adac6b825c22b6e3dfdb09e8bda54c619aeddf5b7bfc047aa8d941f20",
+      "prose_sha256": "dbae7cbea62402717d4a2053382be07a988c689635ee169aeef92f929a37e0ee",
+      "kernel_theorem": "Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul"
     },
     {
       "fact_id": "F:ml430-nat-add-add-add-comm-74d2c151",

@@ -6,12 +6,44 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a b : ℤ} {c : ℕ}, a.natAbs ≠ 1 → b.natAbs ≠ 1 → a * b = ↑c → ¬Nat.Prime c",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.not_prime_of_int_mul"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:int-nat-abs-mul",
+    "F:nat-zero-mul",
+    "F:nat-mul-one",
+    "F:nat-mul-left-cancel-of-pos",
+    "F:ml430-nat-dvd-mul-right-a87a83c4",
+    "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+    "F:ml430-nat-prime-ne-zero-b4e8b4d5",
+    "F:nat-le-succ-succ",
+    "F:nat-zero-le"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Int.not_prime_of_int_mul",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- 'not_prime_of_int_mul' 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.not_prime_of_int_mul[[:space:]]')\" -ge 1",
+      "supports": "∀ {a b : ℤ} {c : ℕ}, a.natAbs ≠ 1 → b.natAbs ≠ 1 → a * b = ↑c → ¬Nat.Prime c",
+      "notes": "Reduces to a Nat-level fact about x := natAbs a, y := natAbs b: x ≠ 1 → y ≠ 1 → ¬prime_condition(x*y), proved by case-splitting x via the already-proved Nat.zero_or_succ. At x = 0: x*y = 0 (Nat.zero_mul), and the already-proved Nat.prime_ne_zero applied at 0 gives Not (Eq 0 0), contradicted by Eq.refl 0. At x = succ k (so 1 <= x, via the NatOps trait's zero_lt_succ helper transported along x = succ k): x itself is the discriminating divisor for the already-proved Nat.not_prime_of_dvd_of_ne -- x ∣ x*y (Nat.dvd_mul), x ≠ 1 (given), and x ≠ x*y because x = x*y together with x*1 = x (Nat.mul_one) and 1 <= x (Nat.mul_left_cancel_of_pos) would force y = 1, contradicting the other hypothesis. The Nat-level fact is then transported to c along natAbs(a*b) = natAbs(ofNat c) ~ c (via gcd::declare_nat_abs_mul and IntDev::int_eq_rewrite on the hypothesis a*b = ofNat c). int_theorem_inventory's rendered type for Int.not_prime_of_int_mul matches this fact's formal.statement exactly. New proof, lane int-prime-dvd (2026-09-01): crates/axeyum-lean-kernel/src/int_prelude/prime_dvd_mul_mirrors.rs. No Nat declaration was added -- every Nat-level fact used (zero_or_succ, zero_mul, mul_one, mul_left_cancel_of_pos, dvd_mul, prime_ne_zero, not_prime_of_dvd_of_ne) already existed in nat_prelude, per this lane's boundary with the sibling nat-prime-factorial-lcm lane."
+    },
+    {
+      "id": "footprint-Int.not_prime_of_int_mul",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "notes": "prelude_axiom_inventory --require-axiom-free integer enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer: axiom=0, exit 0; the axreal: axiom=30 row is the separate legacy axiomatized-reals package, unrelated to this declaration -- see CLAUDE.md's AxReal/CReal gotcha). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds this declaration's own footprint by []. int_prelude_tests::every_int_declaration_is_checked_and_axiom_free additionally checks this theorem's own Kernel::axiom_footprint directly via derived_lemmas (it is listed there)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +58,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-prime-dvd (2026-09-01), closed on the first admission attempt -- see the kernel-Int.not_prime_of_int_mul evidence note for the route. New proof, lane int-prime-dvd (2026-09-01), closed on the first admission attempt -- see the kernel-Int.not_prime_of_int_mul evidence note for the route.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
