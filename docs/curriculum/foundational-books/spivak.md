@@ -92,15 +92,38 @@ decision-only or incomplete NRA routes, and the Lean horizon.
 
 # The spine, end to end (measured 2026-08-25)
 
-Three routes, not two:
+**FOUR routes, not three. Corrected 2026-08-31 — this legend said "Three
+routes, not two" and omitted the CAS, and that omission produced a wrong
+answer.** Asked how much of Spivak is done, I read this table's route column
+and reported the `X` rows as terminal. They are not: `X` is **row 1's**
+verdict under ADR-0603, and the CAS supplies **row 3** — the exact CLASSICAL
+statement on the decidable fragment. `crates/axeyum-cas` is **72,008 lines,
+363 public functions across 53 modules**, and before this correction the
+string `axeyum-cas` appeared in this file exactly ONCE (the MVT row) against
+28 mentions of `CReal`.
 
 - **S — solver-decidable.** LRA/NRA/SOS with a re-checked certificate. This is
   what the Chapter-1 material above covers.
 - **K — constructive kernel.** Proved in `axeyum-lean-kernel` over `CReal`,
   axiom-free. Most of the analysis lives here.
+- **C — CAS, decidable fragment (ADR-0603 row 3).** The exact classical
+  statement, decided where it is decidable, with a re-checkable certificate.
+  `polynomial_mvt` + `verify_mvt_certificate` (`axeyum-cas/src/mvt.rs`) is the
+  full classical MVT with `c` named as a `RealAlgebraic`; the ledger carries
+  **46 `cas-certificate` facts**. A `C` entry is NOT a weaker consolation for
+  a failed `K` — it decides the classical statement that `K` cannot, on a
+  fragment where the question is decidable, and ADR-0603's whole argument is
+  that row 1 is optimal *because* row 2 refutes the general form while row 3
+  still settles the decidable one.
 - **X — unavailable in this logic.** Not a gap in effort; the classical
   statement is not constructively provable, and the entry names its
-  constructive substitute.
+  constructive substitute. **`X` describes row 1 only.** Read the `C` column
+  and [`graded-statement-families.md`](../graded-statement-families.md) before
+  concluding a chapter is out of reach.
+
+**The route column below is being audited chapter by chapter against the CAS's
+363 public functions; until that lands, a blank `C` means UNAUDITED, not
+absent.**
 
 Counts are `CReal.*` declarations matching the topic, from
 `prelude_theorem_inventory --release --include-constructed`.
