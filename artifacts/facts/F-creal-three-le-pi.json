@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-three-le-pi",
+  "title": "3 <= pi, four terms, and every rational chosen to keep the formed Nats small",
+  "statement": "le three pi, three := ofRat (natDivSucc 3 0). The exact fourth partial sum is 1 + 1/3 + 2/15 + 2/35 = 32/21, and asking the kernel to see that directly is what a first attempt did: it ran past 600 s and 5.9 GB RSS before being killed, because this kernel's numerals are unary, so Rat.normalize 800 525 runs Nat.gcd by repeated unary subtraction and then two Nat.divs of 32 and 21 iterations over 800- and 525-deep Nat.succ towers. So the four terms are WEAKENED FIRST, to 1, 1/3, 1/9 and 1/18 -- both weakenings tight (1*35 <= 18*2 is 35 <= 36) -- whose running sums are 1, 4/3, 13/9 and exactly 3/2. Those are lifted termwise by CReal.add_le_add through CReal.ofRat_add, the partial sums are monotone because every term is nonnegative, CReal.converges_lower_bound_shift at shift 4 gives 3/2 <= piHalf, and scaling by two gives 3 <= pi. MEASURED A/B on this host, creal_prelude_builds in debug: the whole pi family disabled 122.3 s; everything except this theorem 117.9 s; this theorem at the 864-magnitude bounds (1, 1/3, 1/8, 1/24) 359.1 s; at the 243-magnitude bounds (1, 1/3, 1/9, 1/18) 143.3 s. An 11x swing in build cost from four rational constants, with the statement unchanged.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.threeLePi : CReal.le (CReal.ofRat (Rat.natDivSucc (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))) AxNat.zero)) CReal.pi",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.threeLePi"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-pi",
+    "F:creal-add-le-add",
+    "F:creal-converges-lower-bound-shift",
+    "F:creal-equiv-refl",
+    "F:creal-le-congr",
+    "F:creal-le-refl",
+    "F:creal-le-trans",
+    "F:creal-mul-le-mul-of-nonneg-left",
+    "F:creal-ofrat-add",
+    "F:creal-ofrat-le",
+    "F:creal-ofrat-mul",
+    "F:creal-sumrange-mono-outer",
+    "F:nat-add-le-add-right",
+    "F:nat-zero-le",
+    "F:rat-le-of-ble-eq-true"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.threeLePi",
+      "kind": "kernel-term",
+      "supports": "CReal.threeLePi is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- threeLePi 2>/dev/null | grep -cE '^CReal\\.threeLePi[[:space:]]'",
+      "checker_seconds": 12,
+      "notes": "build_creal_prelude admits this theorem through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. ONE NAME PER INVOCATION: this tool silently discards every name argument after the first. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-CReal.threeLePi",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds this declaration",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including this one. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Independently re-measured this session by kernel_declaration_projection, whose footprint-size column reads 0 for all fourteen CReal.pi* declarations."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/pi.rs, declare_pi_family)",
+    "source": "canonical type and axiom-footprint size read from kernel_declaration_projection --release on this tree (the creal-prelude row), not from source text or a doc comment."
+  },
+  "notes": "Together with F:creal-pi-le-four this pins 3 <= pi <= 4, which is what makes CReal.pi a number rather than an opaque object -- and, unlike 2 <= pi <= 4, it is a bracket e does not satisfy. The numeric content was pre-registered before any Rust was written and is re-runnable: python3 scripts/check-pi-series-numeric.py.",
+  "external_status": "proved"
+}

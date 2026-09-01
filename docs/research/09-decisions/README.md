@@ -807,6 +807,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1290](adr-1290-the-floor-family-emits-because-the-relational-divmod-already-does.md) | The floor-counting family EMITS, because the relational `divMod` already does | Accepted |
 | [1295](adr-1295-the-header-exemption-budget-goes-to-zero.md) | the header-exemption budget goes to zero, so a fact with no persistent declaration must not be given a header | Accepted |
 | [1300](adr-1300-a-coverage-table-must-state-a-verdict-for-every-producer.md) | A coverage table must state a verdict for every producer, and a blank cell is a defect | Accepted |
+| [1305](adr-1305-pi-is-a-series-not-a-root-and-the-series-is-chosen-by-arithmetic-size.md) | π is a series, not a root — and which series is decided by unary-numeral arithmetic, not by convergence speed | Accepted |
 | [1310](adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md) | Twelve documents state "this kernel has no `List`/`Finset`/`Prod`, | accepted |
 | [1315](adr-1315-row-3-is-cheap-where-a-decision-procedure-replaces-a-limit.md) | row 3 is cheap exactly where a DECISION PROCEDURE replaces a limit | Accepted |
 | [1320](adr-1320-one-canonical-definition-per-mathematical-object.md) | one canonical definition per mathematical object | Accepted |

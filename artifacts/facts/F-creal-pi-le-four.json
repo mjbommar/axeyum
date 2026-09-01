@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-pi-le-four",
+  "title": "pi <= 4, from the same geometric domination the construction already needed",
+  "statement": "le pi four, four := mul two two. Every partial sum of the series is at most two: termwise piHalfTerm k <= (1/2)^k (CReal.piHalfTermLePowHalf, a short induction on the definitional ratio (k+1)/(2k+3) <= 1/2), summed by CReal.sumRange_le, then CReal.sumRange_pow_half_closed_form reads the geometric partial sum as 2*(1 - (1/2)^n) <= 2. That holds at EVERY index including 0, so CReal.converges_upper_bound applies with no shift, giving CReal.piHalfLeTwo : le piHalf two; pi IS mul two piHalf, so one CReal.mul_le_mul_of_nonneg_left finishes. Looser than the classical 3.15 for the same structural reason CReal.e_le_four is looser than e <= 3: sharpening needs the tail dominated from index 4 rather than from index 0, a re-indexed domination rather than a corollary of what is here.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.piLeFour : CReal.le CReal.pi (CReal.mul (CReal.ofRat (Rat.normalize (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero) (AxNat.le.refl (AxNat.succ AxNat.zero)))) (CReal.ofRat (Rat.normalize (Int.ofNat (AxNat.succ (AxNat.succ AxNat.zero))) (AxNat.succ AxNat.zero) (AxNat.le.refl (AxNat.succ AxNat.zero)))))",
+    "fragment": "CReal",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.piLeFour"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-pi",
+    "F:creal-mul-le-mul-of-nonneg-left",
+    "F:creal-ofrat-le",
+    "F:rat-le-of-ble-eq-true"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.piLeFour",
+      "kind": "kernel-term",
+      "supports": "CReal.piLeFour is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- piLeFour 2>/dev/null | grep -cE '^CReal\\.piLeFour[[:space:]]'",
+      "checker_seconds": 12,
+      "notes": "build_creal_prelude admits this theorem through the trusted Kernel::add_declaration gate. theorem_dependency_inventory exits non-zero for a named filter matching nothing; grep -c (never -q) both consumes the pipe and asserts the exact tab-anchored line is present. ONE NAME PER INVOCATION: this tool silently discards every name argument after the first. --release is MANDATORY."
+    },
+    {
+      "id": "footprint-CReal.piLeFour",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds this declaration",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+      "checker_seconds": 12,
+      "notes": "creal: axiom=0 opaque=0 quotient=0 total_trusted=0, exits 0 printing 'ok: creal trusted surface = 0'. That bounds every declaration in the creal environment, including this one. --require-axiom-free <name> errors for a prelude never built by this run rather than silently passing on zero rows. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Independently re-measured this session by kernel_declaration_projection, whose footprint-size column reads 0 for all fourteen CReal.pi* declarations."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/pi.rs, declare_pi_family)",
+    "source": "canonical type and axiom-footprint size read from kernel_declaration_projection --release on this tree (the creal-prelude row), not from source text or a doc comment."
+  },
+  "notes": "The intermediate CReal.piHalfLeTwo (le piHalf two) is not separately registered; this fact is the statement about pi itself.",
+  "external_status": "proved"
+}

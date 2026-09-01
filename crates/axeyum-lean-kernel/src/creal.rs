@@ -6741,6 +6741,46 @@ pub struct CRealPrelude {
     /// `HasDerivativeOn`, so this applies verbatim to a power series' partial
     /// sums once those carry a per-index derivative witness.
     pub has_derivative_uniform_limit: NameId,
+    // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
+    /// `CReal.piHalfCoef : Nat -> Rat` -- `t 0 = 1/1`,
+    /// `t (k+1) = t k * (k+1)/(2k+3)`. The terms of Euler's transform of
+    /// Leibniz, `pi/2 = sum_k 2^k (k!)^2/(2k+1)!`, defined by the RECURSION
+    /// rather than the closed form so the ratio is definitional.
+    pub pi_half_coef: NameId,
+    /// `CReal.piHalfTerm : Nat -> CReal := fun k => ofRat (piHalfCoef k)`.
+    pub pi_half_term: NameId,
+    /// `CReal.piHalfSeriesPartial : Nat -> CReal := sumRange piHalfTerm`.
+    pub pi_half_series_partial: NameId,
+    /// `CReal.piHalfCoefNonneg : forall k, Rat.le Rat.zero (piHalfCoef k)`.
+    pub pi_half_coef_nonneg: NameId,
+    /// `CReal.piHalfTermNonneg : forall k, le zero (piHalfTerm k)`.
+    pub pi_half_term_nonneg: NameId,
+    /// `CReal.piHalfTermLePowHalf : forall k, le (piHalfTerm k) (pow half k)`
+    /// -- the geometric domination, by induction on the definitional ratio
+    /// `(k+1)/(2k+3) <= 1/2`.
+    pub pi_half_term_le_pow_half: NameId,
+    /// `CReal.piHalfTermAbsLeDominant : forall k,
+    /// le (abs (piHalfTerm k)) (expDominant k)` -- stated against `CReal.e`'s
+    /// OWN dominant series so that its concrete Cauchy witness is reusable
+    /// unchanged.
+    pub pi_half_term_abs_le_dominant: NameId,
+    /// `CReal.piHalf : CReal` -- `pi/2`, by `CReal.mk` on an explicit regular
+    /// sequence. No root, no IVT: `creal/ivt.rs` refutes the exact-root
+    /// construction, and that refutation is about one DEFINITION of pi, not
+    /// about pi.
+    pub pi_half: NameId,
+    /// `CReal.piHalfConverges : Converges piHalfSeriesPartial piHalf`.
+    pub pi_half_converges: NameId,
+    /// `CReal.pi : CReal := mul two piHalf`.
+    pub pi: NameId,
+    /// `CReal.piHalfLeTwo : le piHalf two`.
+    pub pi_half_le_two: NameId,
+    /// `CReal.piLeFour : le pi (mul two two)`.
+    pub pi_le_four: NameId,
+    /// `CReal.twoLePi : le two pi`.
+    pub two_le_pi: NameId,
+    /// `CReal.threeLePi : le (ofRat (Rat.natDivSucc 3 0)) pi`.
+    pub three_le_pi: NameId,
 }
 
 impl CRealPrelude {
@@ -7404,6 +7444,20 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
         has_derivative_uniform_limit: kernel.name_str(creal, "hasDerivative_uniform_limit"),
+        pi_half_coef: kernel.name_str(creal, "piHalfCoef"),
+        pi_half_term: kernel.name_str(creal, "piHalfTerm"),
+        pi_half_series_partial: kernel.name_str(creal, "piHalfSeriesPartial"),
+        pi_half_coef_nonneg: kernel.name_str(creal, "piHalfCoefNonneg"),
+        pi_half_term_nonneg: kernel.name_str(creal, "piHalfTermNonneg"),
+        pi_half_term_le_pow_half: kernel.name_str(creal, "piHalfTermLePowHalf"),
+        pi_half_term_abs_le_dominant: kernel.name_str(creal, "piHalfTermAbsLeDominant"),
+        pi_half: kernel.name_str(creal, "piHalf"),
+        pi_half_converges: kernel.name_str(creal, "piHalfConverges"),
+        pi: kernel.name_str(creal, "pi"),
+        pi_half_le_two: kernel.name_str(creal, "piHalfLeTwo"),
+        pi_le_four: kernel.name_str(creal, "piLeFour"),
+        two_le_pi: kernel.name_str(creal, "twoLePi"),
+        three_le_pi: kernel.name_str(creal, "threeLePi"),
     }
 }
 
@@ -13416,6 +13470,71 @@ const STEPS: &[BuildStep] = &[
         provides: &[|p: CRealPrelude| p.cos_wide_nonpositive],
         run: cos_sign::declare_cos_wide_nonpositive,
     },
+    BuildStep {
+        label: "pi::declare_pi_family",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.abs_le,
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.add_comm,
+            |p: CRealPrelude| p.add_le_add,
+            |p: CRealPrelude| p.add_neg,
+            |p: CRealPrelude| p.add_zero,
+            |p: CRealPrelude| p.converges_lower_bound_shift,
+            |p: CRealPrelude| p.converges_upper_bound,
+            |p: CRealPrelude| p.equiv_of_le_le,
+            |p: CRealPrelude| p.equiv_refl,
+            |p: CRealPrelude| p.equiv_symm,
+            |p: CRealPrelude| p.equiv_trans,
+            |p: CRealPrelude| p.exp_dominant,
+            |p: CRealPrelude| p.geom_cauchy_ordered_half,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_congr,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.le_trans,
+            |p: CRealPrelude| p.mk,
+            |p: CRealPrelude| p.mul,
+            |p: CRealPrelude| p.mul_comm,
+            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
+            |p: CRealPrelude| p.mul_nonneg,
+            |p: CRealPrelude| p.mul_one,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.neg_le_neg,
+            |p: CRealPrelude| p.of_rat,
+            |p: CRealPrelude| p.of_rat_add,
+            |p: CRealPrelude| p.of_rat_le,
+            |p: CRealPrelude| p.of_rat_mul,
+            |p: CRealPrelude| p.one,
+            |p: CRealPrelude| p.pow,
+            |p: CRealPrelude| p.pow_nonneg,
+            |p: CRealPrelude| p.regular_of_scaled_cauchy,
+            |p: CRealPrelude| p.speedup,
+            |p: CRealPrelude| p.speedup_close,
+            |p: CRealPrelude| p.sum_pow_half_closed_form,
+            |p: CRealPrelude| p.sum_range,
+            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
+            |p: CRealPrelude| p.sum_range_le,
+            |p: CRealPrelude| p.sum_range_mono_outer,
+            |p: CRealPrelude| p.zero,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.pi,
+            |p: CRealPrelude| p.pi_half,
+            |p: CRealPrelude| p.pi_half_coef,
+            |p: CRealPrelude| p.pi_half_coef_nonneg,
+            |p: CRealPrelude| p.pi_half_converges,
+            |p: CRealPrelude| p.pi_half_le_two,
+            |p: CRealPrelude| p.pi_half_series_partial,
+            |p: CRealPrelude| p.pi_half_term,
+            |p: CRealPrelude| p.pi_half_term_abs_le_dominant,
+            |p: CRealPrelude| p.pi_half_term_le_pow_half,
+            |p: CRealPrelude| p.pi_half_term_nonneg,
+            |p: CRealPrelude| p.pi_le_four,
+            |p: CRealPrelude| p.three_le_pi,
+            |p: CRealPrelude| p.two_le_pi,
+        ],
+        run: pi::declare_pi_family,
+    },
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -14476,6 +14595,7 @@ mod monotone;
 mod mul_self_zero;
 mod mvt;
 mod order_extra;
+mod pi;
 mod polynomial;
 mod power;
 mod product;
