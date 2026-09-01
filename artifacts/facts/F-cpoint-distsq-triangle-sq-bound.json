@@ -33,7 +33,8 @@
     "F:creal-le-trans",
     "F:creal-left-distrib",
     "F:creal-mul-comm",
-    "F:creal-mul-congr"
+    "F:creal-mul-congr",
+    "F:cauchy-schwarz-over-constructed-plane"
   ],
   "axiom_footprint": [],
   "evidence": [

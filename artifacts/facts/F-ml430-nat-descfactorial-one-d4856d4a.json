@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:nat-mul-one"],
   "epistemic_status": "proved",
   "evidence": [
     {
@@ -38,6 +38,7 @@
   ],
   "external_status": "proved",
   "formal": {
+    "kernel_theorem": "Nat.descFactorial_one",
     "language": "lean4-surface",
     "statement": "∀ (n : ℕ), n.descFactorial 1 = n",
     "fragment": "Nat"

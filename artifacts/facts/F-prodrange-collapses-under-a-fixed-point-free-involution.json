@@ -4,6 +4,7 @@
   "title": "A product over an initial segment collapses to 1 mod p when a fixed-point-free involution pairs each factor with its inverse",
   "statement": "Let p be a positive integer, F : Nat -> Int, and sigma : Nat -> Nat. If sigma is injective on {0..n-1}, maps that set into itself, has NO fixed point there, is an involution there, and pairs factors into inverses (F k * F (sigma k) = 1 mod p for every k < n), then prodRange F n = 1 mod p. PRIMALITY IS NOT REQUIRED AND IS NOT PRESENT. This is a fact about fixed-point-free involutions over any positive modulus; primality enters only downstream, when sigma := Nat.inverseIndex p is supplied and one has to know the pairing exists at all. THE FIXED-POINT-FREE PREMISE IS LOAD-BEARING: without it sigma = id satisfies injectivity, mapsInto and the involution law, and the pairing premise degenerates to F k * F k = 1, from which prodRange F n = 1 does not follow. Equality of indices is Eq on Nat; the conclusion is Int.ModEq. A NOTE ON `AxNat`, because the name is actively misleading: the `Ax` is `axeyum`, not `axiom`. `lean_pp` roots the kernel's COMPUTATIONAL (inductive, constructed) naturals at `AxNat` for one reason only -- so an exported term does not shadow Lean's own `Nat`. It collides badly with `AxReal`, where `Ax` DOES mean axiomatized and the trusted surface is 30. The `nat` prelude measures 0: no Axiom, no Opaque, no Quotient.",
   "formal": {
+    "kernel_theorem": "Int.prod_range_pairing_collapse",
     "language": "lean4",
     "statement": "((x0 : Int) -> ((x1 : Int.lt Int.zero x0) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Int)) -> ((x4 : ((x4 : AxNat) -> AxNat)) -> ((x5 : AxNat.injectiveOn x4 x2) -> ((x6 : AxNat.mapsInto x4 x2) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x2) -> Not (Eq.{1} AxNat (x4 x7) x7)))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x2) -> Eq.{1} AxNat (x4 (x4 x8)) x8))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x2) -> Int.ModEq x0 (Int.mul (x3 x9) (x3 (x4 x9))) Int.one))) -> Int.ModEq x0 (Int.prodRange x3 x2) Int.one))))))))))",
     "fragment": "Int",
@@ -23,7 +24,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:int-modeq-mul", "F:int-modeq-refl", "F:int-mul-assoc", "F:int-mul-one", "F:int-prodrange-swap", "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-ble-eq-true-646f4e10", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-conjugate-injective", "F:nat-conjugate-maps-into", "F:nat-le-total", "F:nat-le-trans", "F:nat-lt-of-le-of-lt", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-eq-of-le", "F:nat-lt-succ-self", "F:nat-not-succ-le-self", "F:nat-zero-le", "F:nat-zero-lt-succ"],
   "axiom_footprint": [],
   "evidence": [
     {

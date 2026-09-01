@@ -4,6 +4,7 @@
   "title": "The probabilistic Cauchy-Schwarz inequality over the constructed rationals: cov(X,Y)^2 <= var(X)*var(Y), in squared form",
   "statement": "For random variables X, Y on a finite outcome space of size n with weights p forming a probability distribution (Rat.IsDistribution p n), the squared covariance is bounded by the product of the variances: covariance(X,Y,p,n)^2 <= variance(X,p,n) * variance(Y,p,n), with <= Rat.le and the arithmetic Rat.mul over the constructed (normalised num/den pair) rationals. THIS IS THE SQUARED FORM AND IT IS NOT A WEAKENING, for the same reason CPoint.cauchy_schwarz records: the familiar |cov(X,Y)| <= sqrt(var(X)*var(Y)) requires a square root, and this kernel's Rat carries no Rat.sqrt (only integer square roots exist elsewhere in the library), so the absolute-value/sqrt form is not statable over this carrier at all, not merely inconvenient. The squared form is what every downstream estimate (Chebyshev, the weak law of large numbers scaffolding in this same prelude) actually uses. covariance is defined as E[XY] - E[X]E[Y] and variance as covariance(X,X); the proof does not go through an abstract inner-product-space Cauchy-Schwarz lemma at all -- it is a direct discriminant argument on Var[tX+Y] >= 0 for every rational t, with a three-way case split on whether variance X and variance Y vanish. Equality throughout is Eq on Rat, a normalised pair, never a setoid relation.",
   "formal": {
+    "kernel_theorem": "Rat.covariance_sq_le_variance_mul",
     "language": "lean4",
     "statement": "((x0 : ((x0 : AxNat) -> Rat)) -> ((x1 : ((x1 : AxNat) -> Rat)) -> ((x2 : ((x2 : AxNat) -> Rat)) -> ((x3 : AxNat) -> ((x4 : Rat.IsDistribution x2 x3) -> Rat.le (Rat.mul (Rat.covariance x0 x1 x2 x3) (Rat.covariance x0 x1 x2 x3)) (Rat.mul (Rat.variance x0 x2 x3) (Rat.variance x1 x2 x3)))))))",
     "fragment": "Rat",
@@ -18,7 +19,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:rat-covariance-comm", "F:rat-covariance-sq-le-variance-mul-of-pos", "F:rat-covariance-sq-le-variance-mul-of-zero-zero", "F:rat-lt-irrefl", "F:rat-lt-of-le-of-lt", "F:rat-lt-trichotomy", "F:rat-mul-comm", "F:rat-variance-nonneg"],
   "axiom_footprint": [],
   "evidence": [
     {

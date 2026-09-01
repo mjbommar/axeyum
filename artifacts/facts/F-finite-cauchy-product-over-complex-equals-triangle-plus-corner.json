@@ -4,6 +4,7 @@
   "title": "The product of two finite complex partial sums equals the diagonal-grouped convolution plus a corner term, which the naive Cauchy identity omits",
   "statement": "For f, g : Nat -> Complex and any n, with F i j := f i * g j: (sum_{i<n} f i) * (sum_{j<n} g j) ~ TRIANGLE(F,n) + CORNER(F,n), where TRIANGLE is the antidiagonal sum sum_{k<n} sum_{i<=k} F i (k-i) and CORNER is sum_{i<n} sum_{j<i} F i ((n-i)+j), the sum over {(i,j) : i<n, j<n, i+j>=n}. Equivalence is Complex.Equiv, a DEFINED Prop relation on a setoid, never Eq. THIS EXISTS BECAUSE THE NAIVE FINITE CAUCHY IDENTITY IS FALSE. The claim (sum a)(sum b) = sum_{k<n} sum_{i<=k} a_i * b_{k-i} was dispatched as a target and REFUTED by hand at n = 2: the left side contains a_1*b_1 and the right, being only the antidiagonal triangle, does not. This theorem is not a weaker replacement -- it names and quantifies the exact defect, and the CORNER at n = 2 is exactly the missing a_1*b_1. A NOTE ON `AxNat`, which appears throughout the formal statement: the `Ax` is `axeyum`, not `axiom`. `lean_pp` roots the kernel's CONSTRUCTED inductive naturals there only so exported terms do not shadow Lean's own `Nat`. It collides badly with `AxReal`, where `Ax` DOES mean axiomatized and the trusted surface is 30. Every prelude involved here -- nat, rat, creal, complex -- measures 0.",
   "formal": {
+    "kernel_theorem": "Complex.sumRange_mul_eq_diag_add_corner",
     "language": "lean4",
     "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : ((x1 : AxNat) -> Complex)) -> ((x2 : AxNat) -> Complex.Equiv (Complex.mul (Complex.sumRange x0 x2) (Complex.sumRange x1 x2)) (Complex.add (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => fun (x6 : AxNat) => Complex.mul (x0 x5) (x1 x6)) x4 (AxNat.sub x3 x4)) (AxNat.succ x3)) x2) (Complex.sumRange (fun (x3 : AxNat) => Complex.sumRange (fun (x4 : AxNat) => (fun (x5 : AxNat) => (fun (x6 : AxNat) => fun (x7 : AxNat) => Complex.mul (x0 x6) (x1 x7)) x3 x5) (AxNat.add (AxNat.sub x2 x3) x4)) x3) x2)))))",
     "fragment": "Complex",
@@ -17,7 +18,10 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:finite-double-sum-rectangle-eq-triangle-plus-corner"
+    "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
+    "F:complex-equiv-trans",
+    "F:complex-sumrange-mul-double",
+    "F:complex-sumrange-rect-eq-diag-add-corner"
   ],
   "axiom_footprint": [],
   "evidence": [

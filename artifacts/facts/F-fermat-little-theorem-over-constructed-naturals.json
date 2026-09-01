@@ -4,6 +4,7 @@
   "title": "Fermat's little theorem over the axiom-free naturals: a^p is congruent to a modulo any prime p",
   "statement": "For every natural number p that is prime -- primality spelled inline as the conjunction of 2 <= p and (for all d, d divides p implies d = 1 or d = p), there being no `Prime` name in this kernel -- and every natural a, a^p is congruent to a modulo p. Congruence is Nat.modEq, defined here as `modEq d a b := exists u v, a + d*u = b + d*v`, an existential over natural witnesses rather than a statement about a remainder operation. The carrier renders as `AxNat`; despite the name it is an INDUCTIVE type, not an assumed one, and the `nat` prelude's trusted surface measures 0 (axiom=0, opaque=0, quotient=0). The proof is constructive throughout: no excluded middle, no propext, no funext, no Quot.sound. This is the unrestricted form a^p = a, NOT the coprime form a^(p-1) = 1, which is not established here and needs cancellation by a modulo p (see notes).",
   "formal": {
+    "kernel_theorem": "Nat.pow_prime_modeq_self",
     "language": "lean4",
     "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 x0) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 x0))))) -> AxNat.modEq x0 (AxNat.pow x1 x0) x1)))",
     "fragment": "Nat",
@@ -16,7 +17,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-add-pow-modeq-prime", "F:nat-le-trans", "F:nat-mod-eq-add-right", "F:nat-mod-eq-refl", "F:nat-mod-eq-trans", "F:nat-one-pow", "F:nat-succ-pred-of-pos"],
   "axiom_footprint": [],
   "evidence": [
     {

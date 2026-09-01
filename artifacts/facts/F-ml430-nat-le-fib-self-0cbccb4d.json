@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-add-comm", "F:nat-add-le-add-left", "F:nat-add-le-add-right", "F:nat-fib-add-two", "F:nat-le-add-right", "F:nat-le-dest", "F:nat-le-trans", "F:nat-lt-add-one", "F:nat-lt-of-lt-of-le", "F:ml430-nat-add-comm-56a2d614"],
+  "depends_on": ["F:nat-add-comm", "F:nat-add-le-add-left", "F:nat-add-le-add-right", "F:nat-fib-add-two", "F:nat-le-add-right", "F:nat-le-dest", "F:nat-le-trans", "F:nat-lt-add-one", "F:nat-lt-of-lt-of-le", "F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-fib-add-two-b86e0c82"],
   "evidence": [
     {
       "id": "kernel-Nat.le_fib_self",

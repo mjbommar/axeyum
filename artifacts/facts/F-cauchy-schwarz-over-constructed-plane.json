@@ -4,6 +4,7 @@
   "title": "The Cauchy-Schwarz inequality over the constructed reals, in squared form, with the dot product a genuine inner product",
   "statement": "For any two points (vectors) U, V of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, (U.V)^2 <= (U.U)(V.V), where U.V is CPoint.dot and <= is CReal.le. THIS IS THE SQUARED FORM AND IT IS NOT A WEAKENING: the familiar |<U,V>| <= ||U||*||V|| requires a square root on CReal, which this kernel does not have -- only CReal.natSqrt, an integer square root -- so the norm form is not expressible here at all, not merely inconvenient. The squared form is equivalent to it modulo sqrt and is what every downstream estimate uses. Alongside it, CPoint.dot satisfies all three inner-product axioms over this carrier: symmetry (CPoint.dot_comm), bilinearity (the dot_add_left/right, dot_sub_left/right, dot_neg_left family), and positive-definiteness (CPoint.dot_self_zero_iff : dot V V ~ 0 <-> V ~ 0). Equality throughout is CReal.Equiv / CPoint.Equiv, DEFINED Prop relations on a setoid, never Eq.",
   "formal": {
+    "kernel_theorem": "CPoint.cauchy_schwarz",
     "language": "lean4",
     "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> CReal.le (CReal.mul (CPoint.dot x0 x1) (CPoint.dot x0 x1)) (CReal.mul (CPoint.dot x0 x0) (CPoint.dot x1 x1))))",
     "fragment": "CPoint",
@@ -15,7 +16,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:creal-add-assoc", "F:creal-add-comm", "F:creal-add-congr", "F:creal-add-le-add", "F:creal-add-neg", "F:creal-add-right-cancel", "F:creal-add-zero", "F:creal-equiv-refl", "F:creal-equiv-symm", "F:creal-equiv-trans", "F:creal-le-of-equiv", "F:creal-le-refl", "F:creal-le-trans", "F:creal-left-distrib", "F:creal-mul-assoc", "F:creal-mul-comm", "F:creal-mul-congr", "F:creal-mul-zero", "F:creal-neg-congr", "F:creal-neg-mul-neg", "F:creal-sq-nonneg"],
   "axiom_footprint": [],
   "evidence": [
     {

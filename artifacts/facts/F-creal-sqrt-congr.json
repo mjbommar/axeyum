@@ -57,7 +57,8 @@
     "F:rat-sub-le-of-le",
     "F:rat-sub-max-le",
     "F:rat-sub-self",
-    "F:rat-zero-le-natdivsucc"
+    "F:rat-zero-le-natdivsucc",
+    "F:natdivsucc-antitone-over-constructed-rationals"
   ],
   "axiom_footprint": [],
   "evidence": [

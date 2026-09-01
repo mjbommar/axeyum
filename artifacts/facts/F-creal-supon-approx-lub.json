@@ -29,7 +29,8 @@
     "F:nat-lt-succ-of-le",
     "F:rat-natdivsucc-add",
     "F:rat-natdivsucc-antitone",
-    "F:rat-natdivsucc-halve"
+    "F:rat-natdivsucc-halve",
+    "F:natdivsucc-antitone-over-constructed-rationals"
   ],
   "axiom_footprint": [],
   "evidence": [

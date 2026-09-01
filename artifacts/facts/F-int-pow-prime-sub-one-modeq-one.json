@@ -29,7 +29,8 @@
     "F:nat-le-trans",
     "F:nat-pow-prime-modeq-self",
     "F:nat-pow-succ",
-    "F:nat-sub-add-cancel"
+    "F:nat-sub-add-cancel",
+    "F:fermat-little-theorem-over-constructed-naturals"
   ],
   "axiom_footprint": [],
   "evidence": [

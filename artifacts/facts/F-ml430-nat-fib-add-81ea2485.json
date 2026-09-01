@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:nat-add-right-comm", "F:nat-fib-add-two", "F:nat-left-distrib", "F:nat-mul-one", "F:nat-mul-zero", "F:nat-zero-add"],
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:nat-add-right-comm", "F:nat-fib-add-two", "F:nat-left-distrib", "F:nat-mul-one", "F:nat-mul-zero", "F:nat-zero-add", "F:ml430-nat-fib-add-two-b86e0c82"],
   "evidence": [
     {
       "artifact": "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs",

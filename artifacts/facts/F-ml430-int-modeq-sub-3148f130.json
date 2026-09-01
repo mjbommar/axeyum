@@ -4,6 +4,7 @@
   "title": "Mathlib v4.30 source proposition Int.modEq_sub",
   "statement": "The proposition declared as `Int.modEq_sub` in the pinned Mathlib v4.30 source.",
   "formal": {
+    "kernel_theorem": "Int.modEq_sub",
     "language": "lean4-surface",
     "statement": "∀ (a b : ℤ), a ≡ b [ZMOD a - b]",
     "fragment": "Int"
@@ -11,7 +12,13 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:ml430-int-modeq-symm-984a6e67"
+    "F:ml430-int-modeq-symm-984a6e67",
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-neg",
+    "F:int-add-zero",
+    "F:int-modeq-add-mul-left",
+    "F:int-mul-one"
   ],
   "evidence": [
     {

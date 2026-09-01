@@ -39,6 +39,7 @@
   ],
   "external_status": "proved",
   "formal": {
+    "kernel_theorem": "Nat.descFactorial_zero",
     "fragment": "Nat",
     "language": "lean4-surface",
     "statement": "\u2200 (n : \u2115), n.descFactorial 0 = 1"

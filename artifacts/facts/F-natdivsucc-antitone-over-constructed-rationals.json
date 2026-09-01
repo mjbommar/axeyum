@@ -4,6 +4,7 @@
   "title": "The rational 1/(j+1) is antitone in j, the lemma two independent constructive-analysis developments had stopped at",
   "statement": "For all naturals j, j' with j <= j', Rat.le (natDivSucc 1 j') (natDivSucc 1 j) -- that is, 1/(j'+1) <= 1/(j+1). Rat here is a NORMALISED num/den pair, not a quotient, so Eq and le are on normalised representatives and Rat.le q r is by definition Int.le (num q * ofNat (den r)) (num r * ofNat (den q)), cross-multiplication. natDivSucc k j is a SINGLE Rat.normalize (Int.ofNat k) (Nat.succ j) call -- the rational k/(j+1) built directly, NOT a product k * (1/(j+1)). WHY THIS PARTICULAR LEMMA IS RECORDED: it is the modulus-comparison step for combining two independently-chosen moduli, and its absence had blocked two separate developments months apart -- CReal.uniformly_continuous_imp_continuous_at (the bridge from uniform continuity to sequential continuity) and CReal.hasDerivative_add (the SUM RULE for the derivative). rat_prelude's own doc on nat_div_succ_scale records that keeping antitonicity off the critical path was DELIBERATE, and nat_div_succ_le_one and nat_div_succ_le_scaled each note in their doc comments that they are still not antitonicity. A NOTE ON AxNat: the Ax is axeyum, not axiom. lean_pp roots the kernel's CONSTRUCTED inductive naturals there so exported terms do not shadow Lean's own Nat. It collides with AxReal, where Ax DOES mean axiomatized and the trusted surface is 30. Both nat and rat measure 0.",
   "formal": {
+    "kernel_theorem": "Rat.natDivSucc_antitone",
     "language": "lean4",
     "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> Rat.le (Rat.natDivSucc (AxNat.succ AxNat.zero) x1) (Rat.natDivSucc (AxNat.succ AxNat.zero) x0))))",
     "fragment": "Rat",
@@ -16,7 +17,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:int-mul-assoc", "F:int-mul-comm", "F:nat-le-succ-succ", "F:nat-one-le-mul", "F:nat-one-mul", "F:nat-succ-le-succ", "F:nat-zero-le", "F:rat-int-le-of-mul-le-mul-right", "F:rat-int-mul-le-mul-right", "F:rat-normalize-cross"],
   "axiom_footprint": [],
   "evidence": [
     {

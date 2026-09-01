@@ -1,6 +1,6 @@
 {
   "axiom_footprint": [],
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-add-comm-56a2d614"],
   "epistemic_status": "proved",
   "evidence": [
     {
@@ -37,6 +37,7 @@
   ],
   "external_status": "proved",
   "formal": {
+    "kernel_theorem": "Nat.fib_add_two",
     "fragment": "Nat",
     "language": "lean4-surface",
     "statement": "\u2200 {n : \u2115}, Nat.fib (n + 2) = Nat.fib n + Nat.fib (n + 1)"

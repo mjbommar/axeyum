@@ -4,6 +4,7 @@
   "title": "Stewart's theorem over the constructed reals, in squared-parametric form: the cevian relation in CPoint",
   "statement": "For any three points A, B, C of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, and any scalar t : CReal, let D = lerp B C t be the point B + t*(C - B) on the cevian line. Then |AD|^2 + t*((1-t)*|BC|^2) = (1-t)*|AB|^2 + t*|AC|^2, where |XY|^2 is CPoint.distSq and equality is CReal.Equiv (a DEFINED Prop relation on the setoid of regular rational sequences, NOT Eq). No non-degeneracy condition is required, and t is unrestricted -- it is not confined to [0,1], so the identity covers points on the whole line BC, not only the segment. THIS IS NOT THE CLASSICAL UNSIGNED-LENGTH STATEMENT BD*DC*BC + AD^2*BC = AB^2*DC + AC^2*BD, and it does not imply it here: that form needs a square root on CReal, which this kernel does not have (only CReal.natSqrt, an integer square root, exists). Dividing the classical identity through by the unsquared factor BC and substituting BD = t*BC, DC = (1-t)*BC yields exactly the statement above; the division is a step this ledger does not have the machinery to take, and is recorded as the gap rather than assumed away.",
   "formal": {
+    "kernel_theorem": "CPoint.stewart",
     "language": "lean4",
     "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CReal) -> CReal.Equiv (CReal.add (CPoint.distSq x0 (CPoint.lerp x1 x2 x3)) (CReal.mul x3 (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x1 x2)))) (CReal.add (CReal.mul (CReal.add CReal.one (CReal.neg x3)) (CPoint.distSq x0 x1)) (CReal.mul x3 (CPoint.distSq x0 x2)))))))",
     "fragment": "CPoint",
@@ -17,7 +18,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:cpoint-distsq-comm", "F:cpoint-dot-congr", "F:cpoint-dot-self-sub", "F:cpoint-lerp-dist-sq", "F:creal-add-assoc", "F:creal-add-comm", "F:creal-add-congr", "F:creal-add-neg", "F:creal-add-right-cancel", "F:creal-add-zero", "F:creal-equiv-refl", "F:creal-equiv-symm", "F:creal-equiv-trans", "F:creal-left-distrib", "F:creal-mul-comm", "F:creal-mul-congr", "F:creal-mul-one", "F:creal-mul-zero", "F:creal-neg-congr"],
   "axiom_footprint": [],
   "evidence": [
     {

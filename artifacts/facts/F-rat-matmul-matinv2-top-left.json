@@ -4,6 +4,7 @@
   "title": "The 2x2 adjugate inverse over the constructed rationals satisfies A * A^-1 = I at every entry -- the direction matrix.rs never proved -- stated through the general matMul/matId encoding",
   "statement": "Continuing F:rat-matinv2-matmul-top-left: before this fact, matrix.rs proved A^-1*A = I (inv2_top_left/etc) and, unscaled, A*adj(A) = det(A)*I (mul_adj2_top_left/etc), but never A*A^-1 = I itself. Rat.matMul_matInv2_top_left, _top_right, _bottom_left, _bottom_right each state matMul A (matInv2 A) 2 i j = matId i j at one concrete (i,j), for any A with det2 (A 0 0) (A 0 1) (A 1 0) (A 1 1) nonzero. Unlike the A^-1*A direction (F:rat-matinv2-matmul-top-left), this needs genuinely new algebra: matInv2 A i j multiplies A's row on the LEFT of the already-scaled adjugate entry rather than the right, so each of the two summands in the entry sum needs invD pulled out from the middle of a product (x*(invD*y) = invD*(x*y), one mul_assoc + one mul_comm each) before Rat.left_distrib (reversed) combines them into EXACTLY matrix.rs's existing unscaled mul_adj2_top_left/top_right/bottom_left/bottom_right statement, which is then scaled by invD via Rat.mul_inv_cancel_of_ne_zero (diagonal entries, needing the det != 0 hypothesis) or Rat.mul_zero (off-diagonal entries, since mul_adj2_top_right/mul_adj2_bottom_left already equal Rat.zero unconditionally -- no determinant needed there at all).\n\nGRADED STATEMENT FAMILY (ADR-0603, ADR-0716, ADR-0825; see ADR-1040). Row 1 is this fact's four theorems. Row 2: none, same argument as the sibling fact (a pure identity conditioned on a disequality, no comparison or unbounded search). Row 3 is Rat.matInv2_example (evidence row below): Rat.matMul_matInv2_top_left itself, applied at the concrete matrix A := [[2,1],[1,1]] (det = 1) and the same D != 0 construction matrix.rs's own cramer2_solves_computes_an_explicit_two_by_two_system test uses, bridged to the plain numeral Rat.one by the kernel's own delta/beta/iota computation -- no separate axeyum-cas producer/verifier pair, per ADR-0825's collapse. Row 4 (labeled import) is not attempted.",
   "formal": {
+    "kernel_theorem": "Rat.matMul_matInv2_top_left",
     "language": "lean4",
     "statement": "theorem Rat.matMul_matInv2_top_left : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : Not (Eq.{1} Rat (Rat.det2 (x0 AxNat.zero AxNat.zero) (x0 AxNat.zero (AxNat.succ AxNat.zero)) (x0 (AxNat.succ AxNat.zero) AxNat.zero) (x0 (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) Rat.zero)) -> Eq.{1} Rat (Rat.matMul x0 (Rat.matInv2 x0) (AxNat.succ (AxNat.succ AxNat.zero)) AxNat.zero AxNat.zero) (Rat.matId AxNat.zero AxNat.zero)))",
     "fragment": "Rat",
@@ -23,7 +24,9 @@
     "F:rat-mul-inv-cancel-of-ne-zero",
     "F:rat-left-distrib",
     "F:rat-zero-add",
-    "F:rat-matinv2-matmul-top-left"
+    "F:rat-matinv2-matmul-top-left",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm"
   ],
   "axiom_footprint": [],
   "evidence": [

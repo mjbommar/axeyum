@@ -4,6 +4,7 @@
   "title": "The rational smart constructor normalises",
   "statement": "Rat.normalize sends 2/4 and 1/2 to the same rational, and distinguishes 1/2 from 1/3. The rationals are built as a normalised structure over the proved integers, with both proof fields discharged by the constructor.",
   "formal": {
+    "kernel_theorem": "Rat.normalize",
     "language": "lean4",
     "statement": "def Rat.normalize : ((x0 : Int) -> ((x1 : AxNat) -> ((x2 : AxNat.le (AxNat.succ AxNat.zero) x1) -> Rat)))",
     "fragment": "Rat",

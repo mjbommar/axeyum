@@ -21,7 +21,8 @@
   "depends_on": [
     "F:nat-pow-prime-modeq-self",
     "F:nat-mod-eq-iff-mod-eq",
-    "F:nat-le-trans"
+    "F:nat-le-trans",
+    "F:fermat-little-theorem-over-constructed-naturals"
   ],
   "axiom_footprint": [],
   "evidence": [

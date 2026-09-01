@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:nat-add-lt-add-left", "F:nat-add-zero", "F:nat-fib-add-two", "F:nat-fib-pos-of-pos", "F:nat-le-of-succ-le-succ", "F:nat-le-succ-succ", "F:nat-le-trans", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-eq-of-le", "F:nat-not-lt-zero", "F:nat-zero-le", "F:ml430-nat-le-of-succ-le-succ-a180a72c"],
+  "depends_on": ["F:nat-add-lt-add-left", "F:nat-add-zero", "F:nat-fib-add-two", "F:nat-fib-pos-of-pos", "F:nat-le-of-succ-le-succ", "F:nat-le-succ-succ", "F:nat-le-trans", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-eq-of-le", "F:nat-not-lt-zero", "F:nat-zero-le", "F:ml430-nat-le-of-succ-le-succ-a180a72c", "F:ml430-nat-fib-add-two-b86e0c82"],
   "evidence": [
     {
       "id": "kernel-Nat.fib_add_two_strictmono",

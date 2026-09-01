@@ -4,6 +4,7 @@
   "title": "Matrix transpose over the constructed rationals is an involution at symbolic dimension, stated pointwise",
   "statement": "For a matrix A over the constructed rationals -- a function Nat -> Nat -> Rat -- and indices i, j, the (i, j) entry of the transpose of the transpose of A equals the (i, j) entry of A. Stated pointwise for the same funext-absence reason F:rat-mattranspose-mul records. Rat.matTranspose A i j is defined as A j i, so applying it twice swaps the two index arguments twice, which is the identity by pure computation (Eq.refl).",
   "formal": {
+    "kernel_theorem": "Rat.matTranspose_transpose",
     "language": "lean4",
     "statement": "theorem Rat.matTranspose_transpose : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Rat (Rat.matTranspose (Rat.matTranspose x0) x1 x2) (x0 x1 x2))))",
     "fragment": "Rat",

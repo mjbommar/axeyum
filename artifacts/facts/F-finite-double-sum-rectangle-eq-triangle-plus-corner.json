@@ -4,6 +4,7 @@
   "title": "A square double sum over the naturals splits exactly into the antidiagonal triangle plus the corner, which is the honest form of the finite Cauchy product",
   "statement": "For any F : Nat -> Nat -> Nat and any n, the RECTANGLE sum over {(i,j) : i<n, j<n} equals the antidiagonal TRIANGLE sum over {(i,j) : i+j<n} plus the CORNER sum over {(i,j) : i<n, j<n, i+j>=n}. Concretely: sumRange (fun i => sumRange (fun j => F i j) n) n = add (sumRange (fun k => sumRange (fun i => F i (sub k i)) (succ k)) n) (sumRange (fun i => sumRange (fun k => F i (add (sub n i) k)) i) n). THIS EXISTS BECAUSE THE NAIVE FINITE CAUCHY IDENTITY IS FALSE. The claim (sum_{i<n} a_i)(sum_{j<n} b_j) = sum_{k<n} sum_{i<=k} a_i * b_{k-i} was dispatched as a target and REFUTED by hand at n = 2: the left side contains a_1*b_1 and the right side, being the antidiagonal triangle, does not. This theorem is not a weaker replacement -- it names and quantifies the exact defect. The triangle here is character-for-character the left-hand side of Nat.sumRange_diagonal, so the two compose: the diagonal lemma converts between antidiagonal and row-major views of the triangle, and this one relates the triangle to the rectangle that a product of partial sums actually is. Equality is Eq on Nat (the naturals are an inductive type here, not a setoid, so Eq is correct -- unlike CReal, where it never is). A NOTE ON `AxNat`, because the name is actively misleading: the `Ax` is `axeyum`, not `axiom`. `lean_pp` roots the kernel's COMPUTATIONAL (inductive, constructed) naturals at `AxNat` for one reason only -- so an exported term does not shadow Lean's own `Nat`. It collides badly with `AxReal`, where `Ax` DOES mean axiomatized and the trusted surface is 30. The `nat` prelude measures 0: no Axiom, no Opaque, no Quotient.",
   "formal": {
+    "kernel_theorem": "Nat.sumRange_rect_eq_diag_add_corner",
     "language": "lean4",
     "statement": "((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> AxNat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x2 x3) x1) x1) (AxNat.add (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => x0 x3 (AxNat.sub x2 x3)) (AxNat.succ x2)) x1) (AxNat.sumRange (fun (x2 : AxNat) => AxNat.sumRange (fun (x3 : AxNat) => (fun (x4 : AxNat) => x0 x2 x4) (AxNat.add (AxNat.sub x1 x2) x3)) x2) x1))))",
     "fragment": "Nat",
@@ -15,7 +16,7 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-le-trans", "F:nat-sub-add-cancel", "F:nat-sumrange-add", "F:nat-sumrange-congr-lt", "F:nat-sumrange-diagonal", "F:nat-sumrange-split"],
   "axiom_footprint": [],
   "evidence": [
     {

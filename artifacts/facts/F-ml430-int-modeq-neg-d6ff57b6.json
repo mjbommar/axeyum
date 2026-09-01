@@ -4,13 +4,14 @@
   "title": "Mathlib v4.30 source proposition Int.modEq_neg",
   "statement": "The proposition declared as `Int.modEq_neg` in the pinned Mathlib v4.30 source.",
   "formal": {
+    "kernel_theorem": "Int.modEq_neg",
     "language": "lean4-surface",
     "statement": "∀ {n a b : ℤ}, a ≡ b [ZMOD -n] ↔ a ≡ b [ZMOD n]",
     "fragment": "Int"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-ediv-add-emod", "F:int-left-distrib", "F:int-modeq-add-mul-left", "F:int-modeq-symm", "F:int-modeq-trans", "F:int-mul-neg", "F:int-neg-one-mul"],
   "evidence": [
     {
       "id": "statement-Int.modEq_neg_modulus-both-halves",

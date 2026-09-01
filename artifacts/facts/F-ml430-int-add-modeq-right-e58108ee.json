@@ -4,13 +4,14 @@
   "title": "Mathlib v4.30 source proposition Int.add_modEq_right",
   "statement": "The proposition declared as `Int.add_modEq_right` in the pinned Mathlib v4.30 source.",
   "formal": {
+    "kernel_theorem": "Int.add_modEq_right",
     "language": "lean4-surface",
     "statement": "∀ {n a : ℤ}, a + n ≡ a [ZMOD n]",
     "fragment": "Int"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-add-comm", "F:int-add-modeq-left"],
   "evidence": [
     {
       "id": "statement-Int.add_modEq_right-pin",

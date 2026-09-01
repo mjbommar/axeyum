@@ -4,6 +4,7 @@
   "title": "Wilson's theorem: for prime p, (p-1)! is congruent to -1 modulo p, proved constructively with an empty axiom footprint",
   "statement": "For every natural p satisfying 2 <= p and (for every d, d divides p implies d = 1 or d = p) -- primality spelled out as a CONJUNCTION, not as a negation of compositeness -- Int.ModEq (ofNat p) (factorial (p-1)) (neg one). That is, (p-1)! = -1 mod p. THE SIGN IS THE CONTENT. The weaker ((p-1)!)^2 = 1 mod p was established early and cheaply; it follows from prodRange_permute, which removes ONE index per step at the SAME domain size, so unwound it reconstructs the product from itself and carries no information about which square root is taken. Wilson's theorem is exactly the statement that the square root is -1 and not +1. PRIMALITY IS ALSO THE CONTENT: the theorem is FALSE for composite moduli -- for n = 4, 3! = 6 = 2 mod 4, not -1 -- so weakening the hypothesis to 0 < p or 2 <= p alone gives a false statement. A NOTE ON AxNat, which appears throughout the formal statement: the Ax is axeyum, not axiom. lean_pp roots the kernel's CONSTRUCTED inductive naturals there so exported terms do not shadow Lean's own Nat. It collides with AxReal, where Ax DOES mean axiomatized and the trusted surface is 30. Both nat and integer measure 0.",
   "formal": {
+    "kernel_theorem": "Int.wilson",
     "language": "lean4",
     "statement": "((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)))",
     "fragment": "Int",
@@ -16,7 +17,27 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:prodrange-collapses-under-a-fixed-point-free-involution"
+    "F:prodrange-collapses-under-a-fixed-point-free-involution",
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-neg",
+    "F:int-add-neg-cancel-right",
+    "F:int-add-zero",
+    "F:int-dvd-refl",
+    "F:int-factorial-interior-modeq-one",
+    "F:int-modeq-iff-dvd",
+    "F:int-modeq-mul",
+    "F:int-modeq-mul-left",
+    "F:int-modeq-refl",
+    "F:int-modeq-symm",
+    "F:int-mul-one",
+    "F:int-one-mul",
+    "F:int-prodrange-shiftfront",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-le-trans",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-sub-add-cancel",
+    "F:nat-succ-injective"
   ],
   "axiom_footprint": [],
   "evidence": [

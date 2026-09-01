@@ -4,6 +4,7 @@
   "title": "Varignon's theorem over the constructed reals: the midpoint quadrilateral is a parallelogram in CPoint",
   "statement": "For any four points A, B, C, D of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, let P, Q, R, S be the midpoints of AB, BC, CD, DA. Then Q - P and R - S are equal as CPoint vectors, under CPoint.Equiv (the pointwise CReal.Equiv, a DEFINED Prop relation, not Eq). No non-degeneracy condition is required. This is a statement about CPoint and nothing else; it is NOT the classical Euclidean-plane Varignon theorem, which is recorded separately as F:geometry-varignon-midpoint-parallelogram and rests on a coordinatisation assumption this one does not need and does not supply.",
   "formal": {
+    "kernel_theorem": "CPoint.varignon_vector_parallel",
     "language": "lean4",
     "statement": "((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> ((x3 : CPoint) -> CPoint.Equiv (CPoint.sub (CPoint.midpoint x1 x2) (CPoint.midpoint x0 x1)) (CPoint.sub (CPoint.midpoint x2 x3) (CPoint.midpoint x3 x0))))))",
     "fragment": "CPoint",
@@ -16,7 +17,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:cpoint-scalar-midpoint-vector-swap"],
   "proof_route": "kernel-lean",
   "axiom_footprint": [],
   "evidence": [

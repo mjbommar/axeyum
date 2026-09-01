@@ -4,13 +4,14 @@
   "title": "Mathlib v4.30 source proposition Int.modulus_modEq_zero",
   "statement": "The proposition declared as `Int.modulus_modEq_zero` in the pinned Mathlib v4.30 source.",
   "formal": {
+    "kernel_theorem": "Int.modulus_modEq_zero",
     "language": "lean4-surface",
     "statement": "∀ {n : ℤ}, n ≡ 0 [ZMOD n]",
     "fragment": "Int"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-add-zero", "F:int-modeq-add-mul-left", "F:int-mul-one"],
   "evidence": [
     {
       "id": "statement-Int.modulus_modEq_zero-pin",

@@ -4,13 +4,14 @@
   "title": "Mathlib v4.30 source proposition Int.modEq_one",
   "statement": "The proposition declared as `Int.modEq_one` in the pinned Mathlib v4.30 source.",
   "formal": {
+    "kernel_theorem": "Int.modEq_one",
     "language": "lean4-surface",
     "statement": "∀ {a b : ℤ}, a ≡ b [ZMOD 1]",
     "fragment": "Int"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:int-modeq-iff-dvd", "F:int-one-mul", "F:int-zero-lt-one"],
   "evidence": [
     {
       "id": "statement-Int.modEq_one",

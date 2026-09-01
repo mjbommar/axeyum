@@ -12,7 +12,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "external_status": "proved",
-  "depends_on": ["F:int-add-assoc", "F:int-add-comm", "F:int-add-neg", "F:int-add-zero", "F:ml430-int-modeq-neg-f649f6c5"],
+  "depends_on": ["F:int-add-assoc", "F:int-add-comm", "F:int-add-neg", "F:int-add-zero", "F:ml430-int-modeq-neg-f649f6c5", "F:ml430-int-modeq-neg-d6ff57b6"],
   "axiom_footprint": [],
   "evidence": [
     {
