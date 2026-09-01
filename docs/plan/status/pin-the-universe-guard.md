@@ -73,6 +73,25 @@ pre-pass makes the sort axis and the positivity axis non-independent, so
 `expected_error` becomes order-dependent. ADR-1500 §Decision 3 carries the
 design.
 
+**Over-refusal, checked against the eleven preludes rather than argued.**
+A guard in `add_inductive` sits in the path of all 98 `add_inductive` call
+sites, so refusing too much would break everything at once:
+
+    cargo test -p axeyum-lean-kernel --lib prelude_builds
+    -> 8 passed, 0 failed, finished in 191.65s
+
+`clippy -p axeyum-lean-kernel --all-targets -- -D warnings` exits 0. Note
+that clippy caught an `items_after_statements` defect in a new test that
+all 56 tests passed over, both before and after — the same class that
+caught a detached `#[test]` attribute earlier this week, and one no test
+count can see.
+
+**DID NOT RUN:** `cargo test -p axeyum-lean-kernel --lib` (the whole
+1,318-test crate sweep). Started, reached `running 1318 tests`, and was
+SIGTERMed at the harness timeout — **exit 143, killed, not a failure**. The
+bounded `prelude_builds` and `inductive` filters above are what ran to
+completion; the full sweep is for the coordinator's pre-merge gate.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-09-01 | `1e33d51ee` | Split ADR-1495's bundled universe-guard test into seven named controls so each admission control is observed in the configuration whose answer it gives; added the polymorphic refusal, the bundled-structure and Nat-like admissions, and the `Prop`-exemption soundness control. `--lib inductive` 49 -> 55 passed. |
