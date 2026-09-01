@@ -545,13 +545,15 @@ fn declare_size_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
     let le_half_succ_pf_pf = half_le_predecessor_of_succ(d, &p, pf, pf, le_refl_succ_pf);
     // le_half_succ_pf_pf : Le (div succ_pf 2) pf
     let motive_m = d.eq_motive(succ_pf, &|d, x| {
-        let dx = d.div(x, d.num(2));
+        let two = d.num(2);
+        let dx = d.div(x, two);
         d.le(dx, pf)
     });
     let rev_m_eq = d.symm(m, succ_pf, eq_succ_pred); // Eq succ_pf m
     let le_div_m_2_pf = d.transport(succ_pf, motive_m, le_half_succ_pf_pf, m, rev_m_eq);
     // le_div_m_2_pf : Le (div m 2) pf
-    let div_m_2 = d.div(m, d.num(2));
+    let two_a = d.num(2);
+    let div_m_2 = d.div(m, two_a);
     let motive_n = d.eq_motive(div_m_2, &|d, x| d.le(x, pf));
     let le_n_pf = d.transport(div_m_2, motive_n, le_div_m_2_pf, n, div_eq_n);
     // le_n_pf : Le n pf
@@ -564,7 +566,8 @@ fn declare_size_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
     let sizeaux_succ_pf_m = d.const_app(p.size_aux, &[succ_pf, m]);
 
     // Unfold sizeAux(succ pf, m) by iota/beta to the un-simplified selector.
-    let half_m = d.div(m, d.num(2));
+    let two_b = d.num(2);
+    let half_m = d.div(m, two_b);
     let recursed = d.const_app(p.size_aux, &[pf, half_m]);
     let succ_recursed = d.succ(recursed);
     let beq_m0 = d.beq(m, zero);
@@ -591,7 +594,6 @@ fn declare_size_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
     let size_n = d.const_app(p.size, &[n]);
     let succ_size_n = d.succ(size_n);
     let succ_fuel_irrelevance = d.congr(sizeaux_pf_n, size_n, fuel_irrelevance, &|d, x| d.succ(x));
-    let _ = succ_sizeaux_pf_n;
 
     let (_, combined) = d.chain(
         sizeaux_m_m,
@@ -600,7 +602,7 @@ fn declare_size_bit(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
             (unfold_mid, refl_unfold),
             (reduced, congr_beq),
             (succ_recursed, refl_final),
-            (d.succ(d.const_app(p.size_aux, &[pf, n])), congr_half),
+            (succ_sizeaux_pf_n, congr_half),
             (succ_size_n, succ_fuel_irrelevance),
         ],
     );

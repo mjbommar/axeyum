@@ -7409,6 +7409,8 @@ mod bit_extra_tests;
 
 #[cfg(test)]
 mod size_extra_tests;
+#[cfg(test)]
+mod size_order_tests;
 
 #[cfg(test)]
 mod fib_extra_tests;
