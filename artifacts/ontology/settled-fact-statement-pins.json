@@ -821,10 +821,28 @@
       "prose_sha256": "612d26aba3e65c9aecd7a4c7798ccbb3a3ed9a253dbdc5df09f0d27cd9fd2fb2"
     },
     {
+      "fact_id": "F:cas-gf2-degree-8-trinomial-exhaustion-rederived",
+      "language": "cas-term",
+      "statement_sha256": "ec5d743be195491cac5d15fc16535dd4453131aacfe494ee754c23e2e85091bc",
+      "prose_sha256": "7d6361dfe13cabdd3f84f54951d1077c38bfd99c253dfff8929f15cf5102f3af"
+    },
+    {
       "fact_id": "F:cas-gf2-tensor-karatsuba-degree-2-rank-three",
       "language": "cas-term",
       "statement_sha256": "11d1fb8d63763bc8c3408358cb43404bbb98fec7915a131d4ea7800104beff70",
       "prose_sha256": "725435410b9d97cfd6197e8d8e6dfc8cb2c345328ae0ef321ad53ce4776a54be"
+    },
+    {
+      "fact_id": "F:cas-gosper-acceptance-mode-distinguishes-geometric-from-telescoping",
+      "language": "cas-term",
+      "statement_sha256": "7297c9a8518a9465a8f93fb77eed2bbccaf027e180c05a8297d728b7212a0d94",
+      "prose_sha256": "dba56c679e323c2182a770f838794939424385154cab379c12bad2db0a5d4940"
+    },
+    {
+      "fact_id": "F:cas-groebner-cofactor-unit-ideal-witness",
+      "language": "cas-term",
+      "statement_sha256": "10716537f341d7702e2e525f6446a8869f93cddfc9e200fa30d42fbdcb3858ec",
+      "prose_sha256": "d9173d90477ae006d4d855d866aa952f1d61d3a914cfc661680aaf6f3a4d4402"
     },
     {
       "fact_id": "F:cas-inverse-quintic-degree-five-witness",
@@ -849,6 +867,12 @@
       "language": "cas-term",
       "statement_sha256": "db366de7459f8bd49a0262866e1852c60171a525b3eb041b7bf2effee142b8df",
       "prose_sha256": "bae4343b407c8f295f4f89086cde62b60a1fabdfc36e06a192f7212bac95f37a"
+    },
+    {
+      "fact_id": "F:cas-lib-integrate-polynomial-certified",
+      "language": "cas-term",
+      "statement_sha256": "30a8abf57d42ace09fe67e757b7eb8b803540f87ff29c46907cd5955e72da3e8",
+      "prose_sha256": "47c1024de0dc5fda28ba596f33165028cee45a422e4353d3c6add9c8dbdff3ac"
     },
     {
       "fact_id": "F:cas-mvt-cubic-witness-sqrt3",
