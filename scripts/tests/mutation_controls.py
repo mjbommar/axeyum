@@ -5458,6 +5458,88 @@ SUITES["nursery-refill-headroom-screen"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# check-autogenesis-nursery.py's split-exemption guards (ADR-1455).
+#
+# The suite is `test_nursery_exemption_guards`, NOT the fuller
+# `test_check_autogenesis_nursery`, and the reason is mechanical rather than
+# stylistic: this harness refuses a suite whose baseline is not green, and that
+# module's `LiveManifestTests` reads the committed `nursery-v2-extension.json`,
+# whose cross-population exemption is stale for a reason belonging to another
+# lane. Pointing the mutation at it would print `BASELINE IS NOT GREEN` and
+# measure nothing at all -- the outcome this harness exists to stop being
+# mistaken for coverage.
+#
+# Each mutation kills tests on BOTH report paths where the guard sits on both,
+# which is the point: `validate_exemptions` is shared by the v1 and the
+# cross-population reports, and a guard that only bit on one of them would be
+# half a guard.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-split-exemption-guards"] = (
+    "scripts/check-autogenesis-nursery.py",
+    Unittest("scripts.tests.test_nursery_exemption_guards"),
+    [
+        (
+            "an exemption naming a held-out row is refused, on both report paths",
+            "        if held_out_members:",
+            "        if False:",
+        ),
+        (
+            "a v1 exemption matching no live crossing component fails the gate",
+            "    if unused_exemptions:\n"
+            "        violation_blocks.append(describe_stale_exemptions(unused_exemptions))",
+            "    if False:\n"
+            "        violation_blocks.append(describe_stale_exemptions(unused_exemptions))",
+        ),
+        (
+            "a cross-population exemption matching no live crossing component "
+            "fails the gate",
+            "    if unused_exemptions:\n"
+            "        violation_blocks.append(\n"
+            '            describe_stale_exemptions(unused_exemptions, label="cross-population ")\n'
+            "        )",
+            "    if False:\n"
+            "        violation_blocks.append(\n"
+            '            describe_stale_exemptions(unused_exemptions, label="cross-population ")\n'
+            "        )",
+        ),
+    ],
+)
+
+# --------------------------------------------------------------------------
+# rescope-nursery-exemption.py's gate-output parser (ADR-1455).
+#
+# The tool had NO tests. Its parser scraped every `F:… -> partition` line out
+# of the gate's combined output with one regex, which -- because the gate
+# validates nursery-v1 first and raises before the cross-population report runs
+# -- returned V1 fact ids and would have written them over the 258-member
+# cross-population exemption. Both guards below are what stop that, and they
+# cover DISJOINT cases: counting components does not catch a v1 error that
+# reports exactly one component, and the header check does not catch two
+# genuine cross-population components. Each mutation must therefore kill its
+# own test and leave the other's alive.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-rescope-parser"] = (
+    "scripts/rescope-nursery-exemption.py",
+    Unittest("scripts.tests.test_rescope_nursery_exemption"),
+    [
+        (
+            "members are attributed only to a CROSS-POPULATION component, "
+            "never to nursery-v1's own crossing",
+            "            current = component.group(1) if in_cross_population else None",
+            "            current = component.group(1)",
+        ),
+        (
+            "two reported components are refused rather than unioned into a "
+            "component that exists nowhere",
+            "    if len(blocks) > 1:",
+            "    if False:",
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

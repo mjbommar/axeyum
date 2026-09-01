@@ -252,12 +252,12 @@ class NurseryTests(unittest.TestCase):
             MODULE.build_report(self.nursery, self.facts, self.result)
 
     def test_duplicate_exemption_is_rejected(self) -> None:
-        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])})
+        self.facts.update({"F:train": fact("F:train"), "F:dev": fact("F:dev", ["F:train"])})
         self.nursery["entries"].extend(
-            [unshared_entry("F:train", "train"), unshared_entry("F:held", "held-out")]
+            [unshared_entry("F:train", "train"), unshared_entry("F:dev", "development")]
         )
         exemption = {
-            "component_fact_ids": ["F:held", "F:train"],
+            "component_fact_ids": ["F:dev", "F:train"],
             "reason": "test",
             "authority": "test",
             "date": "2026-08-30",
@@ -281,13 +281,13 @@ class NurseryTests(unittest.TestCase):
             MODULE.build_report(self.nursery, self.facts, self.result)
 
     def test_exemption_suppresses_exactly_the_named_component(self) -> None:
-        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])})
+        self.facts.update({"F:train": fact("F:train"), "F:dev": fact("F:dev", ["F:train"])})
         self.nursery["entries"].extend(
-            [unshared_entry("F:train", "train"), unshared_entry("F:held", "held-out")]
+            [unshared_entry("F:train", "train"), unshared_entry("F:dev", "development")]
         )
         self.nursery["component_split_exemptions"] = [
             {
-                "component_fact_ids": sorted(["F:train", "F:held"]),
+                "component_fact_ids": sorted(["F:train", "F:dev"]),
                 "reason": "test exemption",
                 "authority": "test",
                 "date": "2026-08-30",
@@ -298,7 +298,7 @@ class NurseryTests(unittest.TestCase):
         exempted = report["controls"]["component_split_leaks_exempted"]
         self.assertEqual(len(exempted), 1)
         member_ids = sorted(m["fact_id"] for m in exempted[0]["members"])
-        self.assertEqual(member_ids, ["F:held", "F:train"])
+        self.assertEqual(member_ids, ["F:dev", "F:train"])
         self.assertEqual(report["controls"]["component_split_exemptions_unused"], [])
 
     def test_exemption_stops_matching_once_the_component_grows(self) -> None:
@@ -308,13 +308,13 @@ class NurseryTests(unittest.TestCase):
         # a member of an exempted component, the component's digest changes
         # and the exemption must stop applying -- the gate must go red again
         # on the now-larger, unreviewed component.
-        self.facts.update({"F:train": fact("F:train"), "F:held": fact("F:held", ["F:train"])})
+        self.facts.update({"F:train": fact("F:train"), "F:dev": fact("F:dev", ["F:train"])})
         self.nursery["entries"].extend(
-            [unshared_entry("F:train", "train"), unshared_entry("F:held", "held-out")]
+            [unshared_entry("F:train", "train"), unshared_entry("F:dev", "development")]
         )
         self.nursery["component_split_exemptions"] = [
             {
-                "component_fact_ids": sorted(["F:train", "F:held"]),
+                "component_fact_ids": sorted(["F:train", "F:dev"]),
                 "reason": "test exemption",
                 "authority": "test",
                 "date": "2026-08-30",
@@ -526,13 +526,18 @@ class CrossPopulationTests(unittest.TestCase):
         claimed = unsigned.pop("report_sha256")
         self.assertEqual(claimed, MODULE.digest(unsigned))
 
-    def test_stale_exemption_matching_no_live_component_is_reported_as_unused(self) -> None:
+    def test_stale_exemption_matching_no_live_component_fails_the_gate(self) -> None:
         # Regression guard: a first cut of this reporting field hardcoded []
         # and NO test in this suite caught it, because every exemption test
         # so far named an exemption that DOES match a live crossing. An
         # exemption whose fact ids no longer form the component it once
         # named (e.g. after an unrelated ledger edit severs the dependency
-        # edge) must show up here, not vanish silently.
+        # edge) must show up, not vanish silently.
+        #
+        # Until 2026-09-01 "show up" meant a `--json`-only control field, and
+        # that was not enough: the committed cross-population exemption went
+        # stale at 258 members against a live 274 and the CLI's default
+        # output said nothing about it. It is a hard error now.
         self.facts.update({"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a")})
         self.v1["entries"] = [unshared_entry("F:v1-a", "train")]
         self.v2["entries"] = [unshared_entry("F:v2-a", "development")]
@@ -547,12 +552,25 @@ class CrossPopulationTests(unittest.TestCase):
                 "date": "2026-08-30",
             }
         ]
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "matches no live crossing component"
+        ):
+            MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
+
+    def test_no_exemption_at_all_leaves_the_union_report_clean(self) -> None:
+        # Positive control for the test above: the same disconnected
+        # population with NO exemption recorded must build a clean report.
+        # Without this, a guard that raised on every exemptions array --
+        # including an empty one -- would pass the stale test.
+        self.facts.update({"F:v1-a": fact("F:v1-a"), "F:v2-a": fact("F:v2-a")})
+        self.v1["entries"] = [unshared_entry("F:v1-a", "train")]
+        self.v2["entries"] = [unshared_entry("F:v2-a", "development")]
+        self.v2["cross_population_component_split_exemptions"] = []
         report = MODULE.build_cross_population_report(self.v1, self.v2, self.facts)
         self.assertEqual(report["controls"]["component_split_leaks"], [])
-        self.assertEqual(report["controls"]["component_split_leaks_exempted"], [])
-        unused = report["controls"]["cross_population_component_split_exemptions_unused"]
-        self.assertEqual(len(unused), 1)
-        self.assertEqual(unused[0]["component_fact_ids"], ["F:v1-a", "F:v2-a"])
+        self.assertEqual(
+            report["controls"]["cross_population_component_split_exemptions_unused"], []
+        )
 
 
 class LiveManifestTests(unittest.TestCase):

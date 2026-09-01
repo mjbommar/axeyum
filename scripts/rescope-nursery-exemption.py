@@ -55,23 +55,90 @@ def load_generator_digest():
     return module.digest
 
 
+class Refused(RuntimeError):
+    """The gate's output cannot be attributed to exactly one cross-population component."""
+
+
 def live_component() -> tuple[list[str], dict[str, int], list[str]]:
-    """Members, partition census, and held-out members, read from the GATE."""
+    """Members, partition census, and held-out members, read from the GATE.
+
+    This parses the gate's output PER COMPONENT and refuses anything it cannot
+    attribute to exactly one cross-population component. The first version
+    scraped every `F:… -> partition` line in combined stdout+stderr with one
+    regex and unioned them, which is wrong in two ways that both destroy data:
+
+    * The gate checks nursery-v1 FIRST and raises before the cross-population
+      report ever runs. Measured 2026-09-01, with the v1 component-split red,
+      that regex returned the 13 members of the two V1 components -- and
+      `main()` would have written them over the 258-member CROSS-POPULATION
+      exemption it targets, replacing a reviewed adjudication with an unrelated
+      fact set. Fail-closed afterwards (the digest would not match), but the
+      record is gone and the reason string with it.
+    * Two crossing components in one report are unioned into one list, which
+      invents a component that does not exist.
+
+    So: require the cross-population header, group members under their own
+    `component=` line, and refuse unless exactly one component is reported.
+    """
     proc = subprocess.run(
         [sys.executable, str(GATE)], capture_output=True, text=True, cwd=ROOT
     )
     text = proc.stdout + proc.stderr
-    rows = re.findall(r"^\s+(F:[^\s]+)\s+->\s+(\S+)", text, re.M)
-    if not rows:
+
+    blocks: dict[str, list[tuple[str, str]]] = {}
+    current: str | None = None
+    in_cross_population = False
+    for line in text.splitlines():
+        if line.startswith("declared dependency component crosses") or line.startswith(
+            "cross-population evaluation union shares"
+        ):
+            in_cross_population = "cross-population" in line
+            current = None
+            continue
+        component = re.match(r"^\s+component=(\S+?)…?\s+partitions=", line)
+        if component:
+            current = component.group(1) if in_cross_population else None
+            if current is not None:
+                blocks.setdefault(current, [])
+            continue
+        member = re.match(r"^\s+(F:[^\s]+)\s+->\s+(\S+)", line)
+        if member and current is not None:
+            blocks[current].append((member.group(1), member.group(2)))
+
+    if not blocks:
+        if re.search(r"^\s+(F:[^\s]+)\s+->\s+(\S+)", text, re.M):
+            print(
+                "RESCOPE|REFUSED|the gate reported a crossing, but none of it is a "
+                "CROSS-POPULATION component -- nursery-v1's own component-split check "
+                "is red and raises first. Fix that before re-scoping the v2 exemption; "
+                "re-scoping now would overwrite it with nursery-v1's fact ids.",
+                file=sys.stderr,
+            )
+            raise Refused
         print("RESCOPE|no crossing component reported -- nothing to re-scope")
         return [], {}, []
+
+    if len(blocks) > 1:
+        print(
+            f"RESCOPE|REFUSED|{len(blocks)} distinct cross-population components are "
+            f"reported ({sorted(blocks)}). This script re-scopes ONE exemption and "
+            "cannot tell which; unioning them would invent a component that does not "
+            "exist. Re-scope by hand, or split the exemptions first.",
+            file=sys.stderr,
+        )
+        raise Refused
+
+    rows = next(iter(blocks.values()))
     census = collections.Counter(partition for _, partition in rows)
     held_out = sorted({fid for fid, partition in rows if partition == "held-out"})
     return sorted({fid for fid, _ in rows}), dict(census), held_out
 
 
 def main() -> int:
-    members, census, held_out = live_component()
+    try:
+        members, census, held_out = live_component()
+    except Refused:
+        return 2
     if not members:
         return 0
 
