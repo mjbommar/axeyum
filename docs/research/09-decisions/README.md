@@ -815,4 +815,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1405](adr-1405-nat-log-is-drawable-and-the-refill-screen-undercounts-closed-facts.md) | `Mathlib.Data.Nat.Log` is drawable; the refill screen had two independent headroom-overstating gaps, both now fixed | Accepted |
 | [1410](adr-1410-a-re-derivation-must-be-budgeted-wired-and-reachable.md) | a re-derivation must be budgeted, wired, and reachable | Accepted |
 | [1415](adr-1415-divergence-registry-swept-against-module-docs.md) | the divergence registry is swept against module docs, not written once | Accepted |
+| [1420](adr-1420-the-refill-draw-is-not-authorable-one-two-row-module-blocks-it.md) | The refill draw is not authorable -- R5 needs two held-out families, and one two-row module gates every candidate | Accepted |
 | [1425](adr-1425-the-dominance-docs-weakest-point-is-distinction-completeness-not-naming.md) | the dominance document's weakest point is distinction-completeness, not the row-3 naming gap | Accepted |
