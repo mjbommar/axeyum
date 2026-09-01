@@ -811,4 +811,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1310](adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md) | Twelve documents state "this kernel has no `List`/`Finset`/`Prod`, | accepted |
 | [1315](adr-1315-row-3-is-cheap-where-a-decision-procedure-replaces-a-limit.md) | row 3 is cheap exactly where a DECISION PROCEDURE replaces a limit | Accepted |
 | [1320](adr-1320-one-canonical-definition-per-mathematical-object.md) | one canonical definition per mathematical object | Accepted |
-| [1405](adr-1405-nat-log-is-drawable-and-the-refill-screen-undercounts-closed-facts.md) | `Mathlib.Data.Nat.Log` is drawable; `propose-nursery-refill.py --names` undercounts already-closed facts | Accepted |
+| [1405](adr-1405-nat-log-is-drawable-and-the-refill-screen-undercounts-closed-facts.md) | `Mathlib.Data.Nat.Log` is drawable; the refill screen had two independent headroom-overstating gaps, both now fixed | Accepted |

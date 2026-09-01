@@ -103,7 +103,7 @@ fi
 # ---- R2: the snapshot was measured against a screen this tree no longer has -
 # One digest per input, because R2 loops and a loop that checked only the first
 # key would pass three of these four.
-for KEY in env_snapshot vocabulary registry used_source_names drawn_modules; do
+for KEY in env_snapshot vocabulary registry used_source_names drawn_modules held_out_constructions; do
   run_with_snapshot "R2-stale-$KEY" 1 R2 \
     "d['input_digests']['$KEY'] = '0' * 64"
 done

@@ -14751,7 +14751,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "27ada4ec26c38a941af3ba004d2e888678a84a6580d190a0bf2e350957d36575",
+  "extension_sha256": "04763344bb0caed41947ed73f85f39c8eabf85b3f08604b20856341d1cde41ea",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
@@ -15223,8 +15223,6 @@
   "screens": {
     "divergence_registry": "artifacts/autogenesis/mirror-divergence-registry.json",
     "held_out_constructions": [
-      "Nat.clog",
-      "Nat.log",
       "Nat.log2",
       "Nat.sqrt"
     ],

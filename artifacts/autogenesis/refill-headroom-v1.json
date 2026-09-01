@@ -2,8 +2,9 @@
  "input_digests": {
   "drawn_modules": "3cc715abd84014f9b0b3a4912d97298d01fe6550ae235143726f95aa4d4935e9",
   "env_snapshot": "359ad4667afebebce1dd3fd6957ed3e716ad3d3c62cb7c63aa90f398914fa54a",
+  "held_out_constructions": "d77cebd31111e594bd4e6d3bbd97789182aa5ed44862d4b2be8c394248445106",
   "registry": "60746c084359f275548dd3e72190c7094cc814ae4f6420771bd517124ef6cfcc",
-  "used_source_names": "72aa47a4e9307ed28ff84196e1c3d270c69f6bf869407834f991f95d8f7208b6",
+  "used_source_names": "3658ed048afe14622be34f22440e52cb262e7bfb1886e5e6ba1638474f7131a1",
   "vocabulary": "d23b12ae079ee775f6973785bfeae4ae6039fe6bb5e03660eab57442710b15e4"
  },
  "inventory_records": 9729,
@@ -12,22 +13,22 @@
  "measured_from": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
  "modules_already_owned_by_a_family": 82,
  "modules_in_inventory": 370,
- "modules_with_survivors": 88,
+ "modules_with_survivors": 85,
  "ready_families": {
-  "Mathlib.Data.Nat.Bitwise": 18,
-  "Mathlib.Data.Nat.Log": 37,
+  "Mathlib.Data.Nat.Log": 17,
   "Mathlib.NumberTheory.FactorisationProperties": 15
  },
- "ready_family_count": 3,
+ "ready_family_count": 2,
  "schema_version": 1,
  "screen_rejections": {
-  "already-drawn": 460,
-  "divergence-registry": 136,
+  "already-drawn": 662,
+  "divergence-registry": 125,
+  "held-out-construction": 14,
   "hygienic-or-generated": 1699,
-  "not-statable-here": 5174
+  "not-statable-here": 5173
  },
  "sole_blocker_note": "A constant that is the ONLY thing blocking a row is where pool growth would come from, and the two routes are NOT symmetric. Measured 2026-08-30, and the first reading of this was wrong in a way worth recording: the bridge CAN still grow, but only a little, and only from one fixed population. check-dispatchable-frontier.py's S2 requires every bridge constant to be witnessed by a SETTLED mirror, and the witnesses come from mathlib-nat-int-fact-catalog-v1.json -- 202 rows, 162 settled, sharing ZERO source names with either nursery manifest. Settling all 40 remaining catalog rows would take the bridge from 70 to 79 constants and the unused-statable pool from 2,354 to 2,526. That is the whole of it; the catalog is not growing. So route 1 (bridge growth) has a hard ceiling of +172 candidates, and route 2 (declaring the constant in the kernel, which refreshes the environment snapshot) is the one with real headroom -- and it is ordinary proof work, which is the point. The exception worth a decision: instSubNat is the sole blocker of 292 rows and is pure ELABORATION, not content. Nat.sub is already in the environment and instAddNat / instMulNat / HSub.hSub / instHSub are already bridged, so it is the missing sibling of four constants the bridge has -- but NO catalog row mentions it, so S2 can never admit it. Same for GT.gt (17), GE.ge (13) and NatCast.natCast (14). Those are not unstatable propositions; they are propositions the screen cannot see are statable. The screen is NOT a hand-written word list and should not be loosened into one: it is the kernel environment plus a derived bridge, and every rejection names a Lean constant this kernel does not declare.",
- "survivors": 2260,
+ "survivors": 2056,
  "top_sole_blockers": {
   "Fact": 6,
   "Function.Injective": 6,

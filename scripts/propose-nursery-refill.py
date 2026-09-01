@@ -23,10 +23,13 @@ and this script does it -- turning the hand-derivation into something with an
 exit status.
 
     pinned Mathlib inventory (9,729 records)
-      - already drawn into a nursery manifest
+      - already drawn into a nursery manifest, OR already catalogued as a
+        fact (drawn or flipped directly -- added 2026-09-01)
       - hygienic / generated names
       - blocked by the divergence registry
       - not statable here (constants outside env | bridge)
+      - names a construction still guarding a blind v1 held-out family
+        (added 2026-09-01, mirroring the generator's HELD_OUT_CONSTRUCTIONS)
       - carrying an elided-proof glyph
       = SURVIVORS, grouped by Mathlib module
       -> a module with >= PER_FAMILY survivors is a READY FAMILY
@@ -76,6 +79,16 @@ EXTENSION = AUTOGENESIS / "nursery-v2-extension.json"
 ENV_SNAPSHOT = AUTOGENESIS / "kernel-environment-snapshot-v1.json"
 VOCABULARY = AUTOGENESIS / "mathlib-statable-vocabulary-v1.json"
 REGISTRY = AUTOGENESIS / "mirror-divergence-registry.json"
+# The generator's own already-catalogued screen reads this file (select()'s
+# catalogued = {row["source_name"] for row in catalog["facts"] if
+# row["kind"] == "external-source"}). Mirrored here, 2026-09-01, because
+# used_source_names() used to read ONLY the nursery draw manifests and this
+# file's names never overlap with those (a name lands here the moment a fact
+# exists for it, drawn OR directly flipped) -- so a directly-flipped mirror,
+# closed with no new proof work, stayed "unused candidate" in this tool
+# forever. Measured on Mathlib.Data.Nat.Log: 20 of 37 reported survivors
+# already had a proved fact this way.
+CATALOG = AUTOGENESIS / "mathlib-nat-int-fact-catalog-v1.json"
 GENERATOR = ROOT / "scripts" / "gen-autogenesis-nursery-refill.py"
 
 # The pinned candidate pool. Both the path and the digest are re-read from the
@@ -188,15 +201,88 @@ def read_pins() -> dict[str, Any]:
     return out
 
 
-def used_source_names() -> set[str]:
-    """Mathlib names already drawn into a nursery manifest.
+def catalogued_source_names() -> set[str]:
+    """Mathlib names that already have a fact-catalog entry.
 
-    NOTE this is deliberately wider than the generator's own `catalogued` screen,
-    which reads only the v1 catalog and does NOT exclude names already drawn into
-    `nursery-v2-extension.json`. That is safe for the generator (it regenerates
-    the manifest whole and the alphabetical slice re-derives identically) and
-    NOT safe here: a module whose ten best candidates are already drawn is not a
-    ready family, and counting them would propose a draw that yields nothing.
+    Mirrors the REAL generator's own `select()` screen exactly (rather than
+    inventing a second matching rule that can drift from it):
+    `catalogued = {row["source_name"] for row in catalog["facts"] if
+    row["kind"] == "external-source"}` (`gen-autogenesis-nursery-refill.py`).
+    No `proved`/`open` filter is applied, on purpose -- `select()` does not
+    apply one either, because a name with ANY fact already (drawn through the
+    nursery, or flipped directly outside it) is not fresh headroom either way.
+
+    Found missing 2026-09-01: `used_source_names()` alone reported 37 "unused"
+    candidates for `Mathlib.Data.Nat.Log`; 20 already had a `proved` fact,
+    closed by direct flip and therefore invisible to a screen that reads only
+    nursery draw manifests. That is the dangerous direction for this tool --
+    it OVERSTATES headroom, so a draw authored from it can fail to clear the
+    frontier floor after the fact.
+    """
+    if not CATALOG.is_file():
+        die(f"no fact catalog at {CATALOG}; used_source_names() needs it to "
+            f"match the real generator's already-catalogued screen")
+    doc = json.loads(CATALOG.read_text())
+    facts = doc.get("facts")
+    if not isinstance(facts, list):
+        die(f"{CATALOG}: no `facts` list")
+    names = {row["source_name"] for row in facts
+             if row.get("kind") == "external-source"
+             and isinstance(row.get("source_name"), str)}
+    if not names:
+        die(f"{CATALOG}: zero external-source names read; the screen would "
+            f"admit every catalogued candidate as fresh headroom")
+    return names
+
+
+def held_out_constructions() -> set[str]:
+    """Mirrors the generator's `HELD_OUT_CONSTRUCTIONS`.
+
+    `select()` screens OUT any candidate whose type mentions one of these
+    constants, regardless of which family it would land in -- the mechanism
+    that keeps a construction's whole Mathlib module out of every family as
+    long as any v1 held-out family still depends on nobody having touched it
+    (currently just `Nat.sqrt`, guarding `natural-square-root`, the only
+    surviving v1 held-out family; verified against `nursery-v1.json`'s
+    entries 2026-09-01 -- every `natural-square-root` row is `partition:
+    held-out` and no other family has any held-out row).
+
+    Found missing 2026-09-01, alongside `catalogued_source_names()`: this
+    proposer never applied this screen at all, so a module whose candidates
+    all mention a held-out-guarding constant (as EVERY `Mathlib.Data.Nat.Log`
+    candidate mentions `Nat.log`/`Nat.clog`) could be reported as a "ready
+    family" here while `select()` would refuse to draw ANY of its
+    candidates once actually added to `FAMILY_MODULES` -- a second,
+    independent way this tool overstated headroom. Read via regex from the
+    generator's own source, exactly like the other pins in `read_pins()`, so
+    an edit to the set there is not a silent drift here.
+    """
+    gen = GENERATOR.read_text()
+    m = re.search(r"^HELD_OUT_CONSTRUCTIONS\s*=\s*\{([^}]*)\}", gen, re.M)
+    if m is None:
+        die(f"cannot read HELD_OUT_CONSTRUCTIONS from {GENERATOR.name}")
+    names = set(re.findall(r'"([^"]+)"', m.group(1)))
+    if not names:
+        die(f"{GENERATOR.name}: HELD_OUT_CONSTRUCTIONS parsed empty; this "
+            f"proposer would stop screening for blind-family leakage, and so "
+            f"would every candidate mentioning a construction that still "
+            f"guards a held-out family")
+    return names
+
+
+def used_source_names() -> set[str]:
+    """Mathlib names already spoken for: drawn, catalogued, or both.
+
+    Union of three sources, because any one alone has already been proven
+    incomplete:
+      - `nursery-v1.json` / `nursery-v2-extension.json` entries -- drawn
+        through an actual nursery draw. Deliberately wider than the
+        generator's own `catalogued` screen in THIS respect: the v1 catalog
+        does not exclude names already drawn into `nursery-v2-extension.json`,
+        which is safe for the generator (it regenerates the manifest whole and
+        the alphabetical slice re-derives identically) and NOT safe here.
+      - `catalogued_source_names()` -- has a fact-catalog entry, drawn or
+        flipped directly. Added 2026-09-01 to close the gap described there.
     """
     names: set[str] = set()
     for path in (NURSERY, EXTENSION):
@@ -210,6 +296,7 @@ def used_source_names() -> set[str]:
             name = entry.get("source_name")
             if isinstance(name, str):
                 names.add(name)
+    names |= catalogued_source_names()
     if not names:
         die("no source names read from either manifest; the screen would admit "
             "every already-drawn candidate")
@@ -244,6 +331,8 @@ def input_digests() -> dict[str, str]:
     digests["used_source_names"] = sha256_text(
         "\n".join(sorted(used_source_names())))
     digests["drawn_modules"] = sha256_text("\n".join(sorted(drawn_modules())))
+    digests["held_out_constructions"] = sha256_text(
+        "\n".join(sorted(held_out_constructions())))
     return digests
 
 
@@ -280,6 +369,7 @@ def remeasure(pins: dict[str, Any]) -> dict[str, Any]:
     used = used_source_names()
     owned = drawn_modules()
     registry = load_registry_forms()
+    held_out = held_out_constructions()
     snapshot = json.loads(ENV_SNAPSHOT.read_text())
     vocabulary = json.loads(VOCABULARY.read_text())
     admissible = set(snapshot["declarations"]) | set(vocabulary["bridge"])
@@ -309,11 +399,21 @@ def remeasure(pins: dict[str, Any]) -> dict[str, Any]:
         if blocked_by_registry(statement, registry):
             reasons["divergence-registry"] += 1
             continue
-        missing = set(CONST_RE.findall(record.get("type_repr", ""))) - admissible
+        constants = set(CONST_RE.findall(record.get("type_repr", "")))
+        missing = constants - admissible
         if missing:
             reasons["not-statable-here"] += 1
             if len(missing) == 1:
                 sole_blockers[next(iter(missing))] += 1
+            continue
+        # Mirrors select()'s `if constants & HELD_OUT_CONSTRUCTIONS: continue`
+        # -- a candidate mentioning a construction that still guards a blind
+        # v1 held-out family is not headroom, whichever family it would land
+        # in. Checked in the same relative order as the generator
+        # (not-statable-here first, this second) so the two tools classify a
+        # record that trips both the same way.
+        if constants & held_out:
+            reasons["held-out-construction"] += 1
             continue
         if GLYPH_RE.search(statement):
             reasons["elided-proof-glyph"] += 1
@@ -531,6 +631,7 @@ def show_names(module: str, pins: dict[str, Any]) -> int:
         die(f"--names needs the pinned inventory at {INVENTORY}")
     used = used_source_names()
     registry = load_registry_forms()
+    held_out = held_out_constructions()
     snapshot = json.loads(ENV_SNAPSHOT.read_text())
     vocabulary = json.loads(VOCABULARY.read_text())
     admissible = set(snapshot["declarations"]) | set(vocabulary["bridge"])
@@ -547,7 +648,13 @@ def show_names(module: str, pins: dict[str, Any]) -> int:
         statement = record.get("type") or ""
         if blocked_by_registry(statement, registry):
             continue
-        if set(CONST_RE.findall(record.get("type_repr", ""))) - admissible:
+        constants = set(CONST_RE.findall(record.get("type_repr", "")))
+        if constants - admissible:
+            continue
+        # Same screen `select()` applies -- a candidate naming a construction
+        # that still guards a blind v1 held-out family is not a name a draw
+        # could actually take, whichever family it lands in.
+        if constants & held_out:
             continue
         if GLYPH_RE.search(statement):
             continue
