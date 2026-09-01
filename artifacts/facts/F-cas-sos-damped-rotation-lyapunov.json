@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-sos-damped-rotation-lyapunov",
+  "title": "A cubic planar field is certified globally exponentially stable with an exactly rational decay rate 1/26",
+  "statement": "For the planar cubic vector field x' = -x + 10y - x(x^2+y^2), y' = -y - y(x^2+y^2), the quadratic V = x^2 + 10xy + 51y^2 satisfies three polynomial inequalities, each certified by an exact-rational sum-of-squares identity: (1/2)|x|^2 <= V, V <= 52|x|^2, and V-dot <= -2|x|^2, where V-dot is re-derived by the checker from the vector field rather than read from the certificate. Together these give V-dot <= -(1/26) V, an exactly rational certified decay rate. The certificate additionally commits the point (1,1) at which the NAIVE candidate |x|^2 fails -- the Lie derivative of |x|^2 there is 8 > 0 -- so the certified V is doing work a quadratic norm cannot. WHAT IS NOT CERTIFIED, and the checker says so in its own output rather than leaving it to be inferred: the passage from those three polynomial inequalities to a bound |x(t)|^2 <= 104|x(0)|^2 exp(-t/26) on SOLUTIONS is Lyapunov's direct method plus a Gronwall comparison, which is analysis and is re-derived by no part of this evidence.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"certificate\":{\"decrease\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[5,1],\"monomial\":[[\"x\",1],[\"y\",1]]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",2]]}]},\"weight\":[2,1]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",1],[\"y\",1]]},{\"coefficient\":[5,1],\"monomial\":[[\"y\",2]]}]},\"weight\":[2,1]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",1],[\"y\",1]]}]},\"weight\":[52,1]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"y\",2]]}]},\"weight\":[52,1]}]},\"lower_gap\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",1]]},{\"coefficient\":[10,1],\"monomial\":[[\"y\",1]]}]},\"weight\":[1,2]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"y\",1]]}]},\"weight\":[1,2]}]},\"upper_gap\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[51,1],\"monomial\":[[\"x\",1]]},{\"coefficient\":[-5,1],\"monomial\":[[\"y\",1]]}]},\"weight\":[1,51]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"y\",1]]}]},\"weight\":[26,51]}]}},\"decay\":[2,1],\"description\":\"Global exponential stability of the cubic planar field x' = -x + 10y - x(x^2+y^2), y' = -y - y(x^2+y^2), with an exactly rational certified decay rate. The naive candidate |x|^2 fails at (1,1).\",\"field\":[{\"terms\":[{\"coefficient\":[-1,1],\"monomial\":[[\"x\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"x\",1],[\"y\",2]]},{\"coefficient\":[-1,1],\"monomial\":[[\"x\",3]]},{\"coefficient\":[10,1],\"monomial\":[[\"y\",1]]}]},{\"terms\":[{\"coefficient\":[-1,1],\"monomial\":[[\"x\",2],[\"y\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"y\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"y\",3]]}]}],\"format\":\"axeyum-sos-certificate\",\"id\":\"damped-rotation-lyapunov\",\"kind\":\"lyapunov\",\"lower\":[1,2],\"naive_failure\":[[\"x\",[1,1]],[\"y\",[1,1]]],\"upper\":[52,1],\"v\":{\"terms\":[{\"coefficient\":[10,1],\"monomial\":[[\"x\",1],[\"y\",1]]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",2]]},{\"coefficient\":[51,1],\"monomial\":[[\"y\",2]]}]},\"variables\":[\"x\",\"y\"],\"version\":1}",
+    "fragment": "sos-lyapunov",
+    "free_symbols": [
+      "x",
+      "y"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form: every obligation is discharged in axeyum-cas's own MvPoly exact-rational arithmetic. Nothing here passes through crate::Kernel::add_declaration, so this is a cas-internal result under ADR-0601 SS2 -- honest, and NOT part of the axiom-free tally.",
+    "cas.sos-decomposition-implies-nonnegativity-over-an-ordered-field: the checker verifies a polynomial IDENTITY (target = sum of weighted squares with positive rational weights). That an identity of that shape implies the target is nonnegative at every point is ordered-field reasoning taken as read here; it is not itself re-derived by this checker."
+  ],
+  "evidence": [
+    {
+      "id": "cas-sos-damped-rotation-lyapunov-artifact-recheck",
+      "kind": "witness-replay",
+      "supports": "the committed Lyapunov certificate re-checks from disk: 8 named obligations discharged in exact rational arithmetic, with the certified decay rate itself pinned at 1/26 by --expect-rate",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::sos::check (crates/axeyum-cas/src/sos/check.rs) -- re-derives every obligation from the certificate's own exact-rational fields; the checker BUILDS |x|^2 (sos::sum_of_variable_squares) and the Lie derivative itself rather than reading them from the file, so a file cannot declare a degenerate norm or a tampered derivative and still check",
+        "crates/axeyum-cas/examples/sos_certify.rs --expect-kind/--expect-id/--expect-checks (pins WHICH certificate and HOW MANY obligations, so a checker that silently began asserting less exits non-zero)",
+        "scripts/check-sos-negative-controls.sh -- 21 committed tampered fixtures under artifacts/instances/sos/negative-controls/ that this checker must REJECT, plus the honest artifacts it must still ACCEPT",
+        "crates/axeyum-cas/tests/sos_certificate_artifacts.rs -- asserts the committed file parses back to exactly the in-crate corpus value, so a hand-edit that still checks is caught"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-cas --example sos_certify -- artifacts/sos-certificates/damped-rotation-lyapunov.json --expect-kind lyapunov --expect-id damped-rotation-lyapunov --expect-checks 8 --expect-rate 1/26",
+      "artifact": "artifacts/sos-certificates/damped-rotation-lyapunov.json",
+      "notes": "WHY THIS COMMAND CANNOT PASS ON A BROKEN RUN. Two independent pins, both verified 2026-09-01 against the UNCHANGED honest artifact: `--expect-checks 7` exits 1 (`expected 7 obligations, discharged 8`) and `--expect-rate 1/25` exits 1 (`expected the certified decay rate 1/25, got 1/26`). The RATE pin is the stronger of the two and is the reason it is here: it fails on a certificate that still discharges all eight obligations but establishes a WEAKER bound, which is precisely the regression an obligation COUNT cannot see. Nine committed tampered fixtures target this certificate -- lyapunov-inflated-decay, lyapunov-loose-upper, lyapunov-zero-decay, lyapunov-negative-decay, lyapunov-negative-weight, lyapunov-tampered-field, lyapunov-tampered-square, lyapunov-naive-witness-moved, float-coefficient -- and scripts/check-sos-negative-controls.sh asserts each is REJECTED and the honest artifact still ACCEPTED. ON THE DISTINCTION QUESTION: the sandwich constants are separate stored fields (`lower`, `upper`, `decay`), so a weaker certificate is a different FILE rather than the same file read two ways, and the four boundary controls above pin exactly those fields. The one distinction this format cannot carry is STRICT versus NON-STRICT: every obligation is stated non-strictly (a sum-of-squares identity gives `>= 0`, never `> 0`), and where positivity is genuinely needed it is obtained from the separately-recorded constants being positive -- the `sandwich-constants-positive` obligation -- rather than from a strictness flag on an inequality. That is sound for this certificate shape, and it means the format cannot express a strict polynomial inequality at all. A future certificate kind needing one must add a margin field, as the sibling barrier certificate does, not reuse this shape."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-ledger-audit lane, auditing crates/axeyum-cas against the fact ledger per docs/research/11-design-review/2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md. The certificate, the checker and the 21 negative controls all pre-existed this fact by weeks; what was missing was the ledger row. scripts/check-sos-negative-controls.sh's own header asserts that 'every fact in the sos family cites this script', and MEASURED 2026-09-01 zero facts did -- the gate was built for facts nobody had written.",
+    "source": "Lyapunov's direct method for global exponential stability, applied to a cubic planar field; searching for V by a semidefinite relaxation is Parrilo/Lasserre-era, though only the CHECKING is claimed here.",
+    "prior_art": [
+      {
+        "who": "Aleksandr Lyapunov",
+        "what": "the direct method: a positive definite V with negative definite derivative certifies stability",
+        "year": 1892,
+        "where": "The General Problem of the Stability of Motion (doctoral dissertation, Kharkov)",
+        "attribution": "standard attribution; not consulted here"
+      },
+      {
+        "who": "Pablo A. Parrilo",
+        "what": "semidefinite relaxations for searching sum-of-squares certificates of polynomial nonnegativity",
+        "year": 2000,
+        "where": "PhD thesis, California Institute of Technology",
+        "attribution": "standard attribution; not consulted here. This certificate is CHECKED in exact rationals; how it was SEARCHED for is not part of the claim and no floating-point step survives into the artifact -- the float-coefficient negative control exists to keep it that way."
+      }
+    ]
+  },
+  "notes": "WHY THIS COMMAND CANNOT PASS ON A BROKEN RUN. Two independent pins, both verified 2026-09-01 against the UNCHANGED honest artifact: `--expect-checks 7` exits 1 (`expected 7 obligations, discharged 8`) and `--expect-rate 1/25` exits 1 (`expected the certified decay rate 1/25, got 1/26`). The RATE pin is the stronger of the two and is the reason it is here: it fails on a certificate that still discharges all eight obligations but establishes a WEAKER bound, which is precisely the regression an obligation COUNT cannot see. Nine committed tampered fixtures target this certificate -- lyapunov-inflated-decay, lyapunov-loose-upper, lyapunov-zero-decay, lyapunov-negative-decay, lyapunov-negative-weight, lyapunov-tampered-field, lyapunov-tampered-square, lyapunov-naive-witness-moved, float-coefficient -- and scripts/check-sos-negative-controls.sh asserts each is REJECTED and the honest artifact still ACCEPTED. ON THE DISTINCTION QUESTION: the sandwich constants are separate stored fields (`lower`, `upper`, `decay`), so a weaker certificate is a different FILE rather than the same file read two ways, and the four boundary controls above pin exactly those fields. The one distinction this format cannot carry is STRICT versus NON-STRICT: every obligation is stated non-strictly (a sum-of-squares identity gives `>= 0`, never `> 0`), and where positivity is genuinely needed it is obtained from the separately-recorded constants being positive -- the `sandwich-constants-positive` obligation -- rather than from a strictness flag on an inequality. That is sound for this certificate shape, and it means the format cannot express a strict polynomial inequality at all. A future certificate kind needing one must add a margin field, as the sibling barrier certificate does, not reuse this shape."
+}
