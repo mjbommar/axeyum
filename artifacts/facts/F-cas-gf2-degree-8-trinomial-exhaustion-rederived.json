@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-gf2-degree-8-trinomial-exhaustion-rederived",
+  "title": "No trinomial x^8+x^k+1 is irreducible over GF(2), established by a shard-manifest Exhausted row whose exhaustion is re-run rather than trusted",
+  "statement": "None of the four trinomials x^8+x+1, x^8+x^2+1, x^8+x^3+1, x^8+x^4+1 is irreducible over GF(2) -- these are exactly the trinomials of degree 8 the deterministic sparse search enumerates under a tail-terms-2 (trinomial-only) policy, in ascending middle-exponent order. The evidence is a shard manifest carrying a single ShardStatus::Exhausted row at degree 8 with candidates_tested = 4, admitted by axeyum_cas::gf2_shard::check_shard_directory_with_policy only after it RE-RUNS axeyum_cas::gf2_search::search_sparse_half_degree under the manifest's own declared policy and confirms both the outcome (Exhausted, not Found) and the exact candidate count. This is not a producer's word taken on trust: ADR-1400 flagged gf2_shard.rs's Exhausted claim as accepted with no re-derivation at the time of the audit; check_shard_directory_with_policy now re-derives it, and the negative control fabricated_exhaustion_is_refused shows a forged Exhausted claim at degree 4 -- where x^4+x+1 IS irreducible -- is rejected with the re-derivation surfacing the counterexample. Cas-internal under ADR-0601 SS2: this kernel has no GF(2)[x], so no bridge exists or is near.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(gf2-shard-exhaustion\n  (degree 8) (policy (max-tail-terms 2) (max-candidates 100))\n  (enumerated-trinomials (+ x^8 x^1 1) (+ x^8 x^2 1) (+ x^8 x^3 1) (+ x^8 x^4 1))\n  (assert (forall f (in f enumerated-trinomials) (not (irreducible f (gf 2)))))\n  (row (status Exhausted) (candidates-tested 4))\n  (assert (= candidates-tested (rederive-via gf2_search::search_sparse_half_degree))))",
+    "fragment": "gf2-shard-manifest-exhaustion",
+    "free_symbols": [],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.gf2-dense-polynomial-arithmetic: candidate construction and irreducibility testing run in axeyum-cas's own Rust GF(2)[x] arithmetic (axeyum_cas::gf2::Gf2Poly / certify_irreducible), not through crate::Kernel::add_declaration.",
+    "cas.rabin-irreducibility-criterion: each candidate's non-irreducibility is decided by the ABSENCE of a Rabin certificate under certify_irreducible's own search, which is the same criterion F:cas-gf2-degree-400-trinomial-irreducible takes as read for the positive case; here every candidate fails to produce one.",
+    "cas.exhaustion-rederivation-shares-the-search-with-the-producer: check_shard_directory_with_policy re-derives the Exhausted verdict by calling the SAME search_sparse_half_degree the producer used (crate::gf2_search), under the manifest's own declared policy (manifest_view). It is an independent RUN of the identical deterministic algorithm, not an independently written second implementation the way gf2_independent is for the degree-400 certificate -- a defect shared between producer and this re-derivation could still evade both. What it rules out is a manifest lying about what its own declared search actually found, which is the specific gap ADR-1400 named.",
+    "cas.gf2-no-kernel-carrier: crate::Kernel has no characteristic-2 polynomial ring. Building one is a new prelude, not a translator."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-gf2-shard-degree-8-genuine-exhaustion",
+      "kind": "witness-replay",
+      "supports": "the shard manifest's Exhausted row at degree 8 (tail-terms<=2, 4 candidates) is admitted only after re-running the sparse search and confirming both the verdict and the exact candidate count",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::gf2_shard::check_shard_directory_with_policy (producer-independent RUN: calls gf2_search::search_sparse_half_degree under the manifest's declared policy)",
+        "gf2_shard::tests::genuine_exhaustion_is_admitted_and_charged (asserts summary.exhausted == 1 and summary.rederived_candidates == 4, so a re-derivation that ran zero candidates would fail this)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib gf2_shard::tests::genuine_exhaustion_is_admitted_and_charged -- --exact 2>/dev/null | grep -cE '^test gf2_shard::tests::genuine_exhaustion_is_admitted_and_charged \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/gf2_shard.rs",
+      "notes": "Verified both directions on this host: the real test path gives count=1, exit=0; the same command against a deliberately wrong test path (…_WRONG) gives count=0, exit=1. `grep -cE` consumes the whole pipe so it cannot SIGPIPE, and the count is what is tested, so a renamed or deleted test is caught the same way a failing one is."
+    },
+    {
+      "id": "cas-gf2-shard-degree-4-fabrication-refused",
+      "kind": "witness-replay",
+      "supports": "a manifest claiming Exhausted at degree 4 -- where x^4+x+1 IS a genuine irreducible trinomial -- is refused: re-derivation finds the certificate the producer would have found and reports the fabricated exhaustion as unmasked",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::gf2_shard::check_shard_directory_with_policy",
+        "gf2_shard::tests::fabricated_exhaustion_is_refused (asserts ShardError::Exhaustion { degree: 4, .. } with the error text naming 'certified an irreducible candidate')"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib gf2_shard::tests::fabricated_exhaustion_is_refused -- --exact 2>/dev/null | grep -cE '^test gf2_shard::tests::fabricated_exhaustion_is_refused \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/gf2_shard.rs",
+      "notes": "This is the row that makes the first row a checker rather than a decoration: before the repair this audit's own predecessor document names, the entire acceptance body for an Exhausted row was `summary.exhausted += 1` and this exact forged manifest would have passed. Every other field of the forged manifest is well-formed (canonical JSON, complete population, no dangling evidence fields), so re-derivation is the ONLY thing standing between it and a PASS."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "lane cas-facts-round-two, following docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md's finding #2 (gf2_shard.rs Exhausted accepted on the producer's word) and confirming the repair it called for had since landed (rederive_exhaustion in gf2_shard.rs, calling gf2_search::search_sparse_half_degree). The re-derivation code and its tests pre-existed this fact; the ledger row did not.",
+    "source": "the search enumeration and irreducibility testing are this repository's own (axeyum_cas::gf2_search, axeyum_cas::gf2); non-existence of a degree-8 irreducible trinomial over GF(2) is also independently known from published tables of irreducible trinomials (e.g. Zierler & Swan), which this lane did not cross-check against.",
+    "prior_art": [
+      {
+        "who": "Michael O. Rabin",
+        "what": "the irreducibility criterion the underlying certificates use (a Frobenius chain plus coprimality witnesses at each prime divisor of the degree)",
+        "year": 1980,
+        "where": "SIAM Journal on Computing 9(2), 273-280",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "Chosen from ADR-1400's ranked list specifically because it names an UNCHECKED NEGATIVE (finding #2, gf2_shard.rs) that has since been repaired, rather than restating an already-covered positive irreducibility result (F:cas-gf2-degree-400-trinomial-irreducible already covers gf2.rs and gf2_independent.rs). This fact also closes the coverage gap for gf2_search.rs: check_shard_directory_with_policy's re-derivation calls gf2_search::search_sparse_half_degree directly (crates/axeyum-cas/src/gf2_shard.rs:12,400), so both modules are exercised by the same evidence. What this fact does NOT claim: that no LARGER-tail-terms irreducible trinomial-adjacent polynomial exists at degree 8 (the search is bounded to tail-terms<=2 by the manifest's own declared policy, and widening it is a different claim -- see gf2_shard.rs's own exhaustion_is_relative_to_the_declared_sparse_policy test), and it does not claim the re-derivation is arithmetically independent of the producer the way the degree-400 fact's dual-checker design is: both runs share the same search implementation, so a defect in that implementation could evade both. What the re-derivation rules out is specifically a manifest that misreports what ITS OWN declared search actually found, which is the gap ADR-1400 named."
+}

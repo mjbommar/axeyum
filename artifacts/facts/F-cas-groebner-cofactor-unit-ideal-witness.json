@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-groebner-cofactor-unit-ideal-witness",
+  "title": "The polynomial system x+y=3, xy=5, x^2+y^2=1 is inconsistent, witnessed by an explicit cofactor identity summing to the constant 1",
+  "statement": "The three polynomials g1 = x+y-3, g2 = xy-5, g3 = x^2+y^2-1 generate the unit ideal in Q[x,y]: there exist cofactor polynomials c1,c2,c3 with c1*g1 + c2*g2 + c3*g3 = 1 identically. This means the system {x+y=3, xy=5, x^2+y^2=1} has NO common solution over any commutative ring extension -- (x+y)^2 = x^2+2xy+y^2 forces x^2+y^2 = 9-10 = -1 whenever the first two equations hold, contradicting the third. axeyum_cas::groebner_cert::unit_ideal_cofactors produces the cofactors by a monomial-order-dependent Groebner walk, but the WITNESS is order-independent: an independent re-derivation using nothing but polynomial addition and multiplication (no Groebner machinery, no monomial order, no S-polynomials) recombines c1*g1+c2*g2+c3*g3 and confirms it equals exactly the constant 1. As a companion, the system {x-1, y-2} -- consistent, with common zero (1,2) -- correctly produces a NONZERO remainder, so the checker is shown capable of the negative answer and not merely always returning 'unit ideal'. Cas-internal under ADR-0601 SS2: the kernel has rat_prelude/matrix.rs and polynomial.rs but no multivariate polynomial ring with exact division, so this identity is not currently bridgeable.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(groebner-cofactor-certificate\n  (generators (- (+ x y) 3) (- (* x y) 5) (- (+ (pow x 2) (pow y 2)) 1))\n  (assert (= (+ (* c1 g1) (* c2 g2) (* c3 g3)) 1))\n  (conclude (unit-ideal generators))\n  (conclude (forall (x y) (not (and (= (+ x y) 3) (= (* x y) 5) (= (+ (pow x 2) (pow y 2)) 1))))))",
+    "fragment": "groebner-cofactor-unit-ideal-refutation",
+    "free_symbols": [
+      "x",
+      "y"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-multivariate-polynomial-arithmetic: MvPoly add/mul/sub run in axeyum-cas's own exact-rational representation, not through crate::Kernel::add_declaration.",
+    "cas.recombination-is-order-independent-of-the-producing-walk: the cofactor SEARCH (unit_ideal_cofactors) is a Buchberger-style Groebner walk under a chosen monomial order (crate::groebner::MonomialOrder), and its correctness as a search is taken as read. What this fact checks is the WITNESS the walk emits, by a `recombine` re-derivation using only MvPoly::add/MvPoly::mul -- no leading-term selection, no monomial order, no S-polynomial reduction -- so a bug in the Groebner walk's search strategy can at worst cause a decline or a wrong non-witness, never manufacture a false 'unit ideal' verdict that survives recombination.",
+    "cas.groebner-cert-no-kernel-carrier: this kernel has no Groebner/multivariate-polynomial development capable of hosting c1*g1+c2*g2+c3*g3=1 as a checked term; rat_prelude/polynomial.rs is univariate."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-groebner-unit-ideal-recombines-to-one",
+      "kind": "witness-replay",
+      "supports": "the cofactor identity c1*g1+c2*g2+c3*g3 = 1 for the three named generators, re-derived independently of the Groebner walk that produced the cofactors",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::groebner_cert::unit_ideal_cofactors (producer, monomial-order-dependent Groebner walk)",
+        "groebner_cert::tests::unit_ideal_certificate_recombines (recombine() independently re-derives Sigma cofactor_i * generator_i + remainder using only MvPoly::add/mul and asserts it equals exactly the constant 1)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib groebner_cert::tests::unit_ideal_certificate_recombines -- --exact 2>/dev/null | grep -cE '^test groebner_cert::tests::unit_ideal_certificate_recombines \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/groebner_cert.rs",
+      "notes": "Verified both directions on this host: the real test path gives count=1, exit=0; the same command against a deliberately wrong test path (…_WRONG) gives count=0, exit=1. `grep -cE` consumes the pipe so it cannot SIGPIPE."
+    },
+    {
+      "id": "cas-groebner-consistent-system-is-not-refuted",
+      "kind": "witness-replay",
+      "supports": "the companion consistent system {x-1, y-2} -- which has the common zero (1,2) -- produces a nonzero remainder rather than a spurious unit-ideal claim, so the checker demonstrably distinguishes the two cases rather than always answering 'unit ideal'",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::groebner_cert::unit_ideal_cofactors",
+        "groebner_cert::tests::a_consistent_system_does_not_contain_the_unit (asserts !remainder.is_zero())"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib groebner_cert::tests::a_consistent_system_does_not_contain_the_unit -- --exact 2>/dev/null | grep -cE '^test groebner_cert::tests::a_consistent_system_does_not_contain_the_unit \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/groebner_cert.rs",
+      "notes": "Verified both directions on this host: count=1 exit=0 for the real test path, count=0 exit=1 for a deliberately wrong test path. Without this row the first row alone would not show the module can report anything other than a unit-ideal verdict."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "lane cas-facts-round-two, following docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md, which listed groebner_cert.rs among the certificate-carrying modules with no naming fact even though its cofactor identity is reachable from the geometry bridge facts through certify_by_linear_elimination. This fact names groebner_cert.rs directly, via its own module tests, independent of the geometry-certificate family.",
+    "source": "Groebner basis theory (Buchberger); the ideal-membership refutation technique -- a cofactor identity summing to a nonzero constant witnesses inconsistency of a polynomial system over any commutative ring -- is standard computational algebra, used throughout this crate's geometry-theorem certification (geometry_certify.rs).",
+    "prior_art": [
+      {
+        "who": "Bruno Buchberger",
+        "what": "Groebner bases and the algorithm for deciding ideal membership that this module's search is built on",
+        "year": 1965,
+        "where": "PhD thesis, University of Innsbruck; see also his 1970 Aequationes Mathematicae paper",
+        "attribution": "standard attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "This fact deliberately picks a self-contained algebraic example (no geometric hypotheses, no non-degeneracy side conditions) so its statement is checkable by hand: (x+y)^2-2xy = x^2+y^2 gives 9-10=-1 != 1 directly. It does not claim anything about geometry_certify.rs's consumption of this module (18 existing geometry facts already exercise unit_ideal_cofactors and reduce_many_with_cofactors indirectly via certify_by_linear_elimination) -- this fact is additive coverage of groebner_cert.rs's OWN interface and its OWN unit tests, not a replacement for those. Declined to claim anything about groebner::ideal_contains's bare-bool route (crate::groebner, a sibling module with no certificate object at all) or about AnsatzOutcome::NotInDegree, both named in the audit's finding #11 as decided negatives with no certificate type anywhere in the crate; neither is exercised by this fact's evidence."
+}
