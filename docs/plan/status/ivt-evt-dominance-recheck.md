@@ -2,7 +2,9 @@
 
 <!-- plan-section: lane-status -->
 
-Status: IN PROGRESS — re-verifying
+Status: LANDED — ADR-1485 written, dominance document updated in place
+(new preamble note, §8.1 re-ranking, §9.1 addendum, pointer at the stale
+`cas-certificate=56` passage). Re-verifying
 [`09-the-dominance-claim-verified-across-three-domains.md`](../../formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md)
 against a tree newer than its 2026-09-01 `dominance-doc-reverify` pass
 (base `f7adaf7c3`). Confirmed ADR-1435 (sturm/IVT bridge repair) and ADR-1460
@@ -56,16 +58,24 @@ document's §7.4/§8/§9, which still read `cas-certificate=54/56` and do not
 mention the round-two closure, ADR-1435, or ADR-1460** — this is the specific
 staleness this lane's edit fixes.
 
-## What is still to do
+## Done
 
-- Write the dominance document's update: §7.4/§8 re-ranked with the sturm.rs
-  fix and the zero-remaining-module-gap; §2.2/§3 given a one-line pointer to
-  ADR-1435/1460 confirming the IVT/EVT rows are unaffected in substance.
-- Write ADR-1485 recording the re-ranking.
-- Report which of ADR-1400's eleven findings remain open (checked against
-  ADR-1410's "not repaired" list: `series.rs` truncation order and
-  `prove_derivative`'s half-angle fallback are explicitly still open; the
-  geometry_certify.rs/geometry_check.rs minimality gap and
-  `gf2_extension.rs`'s `ExtensionTraceHankelMinor` and the "decided
-  negatives have no certificate type" finding were not mentioned as
-  repaired in any commit found by `git log --grep`).
+- Confirmed 5 of ADR-1400's 11 distinction-incompleteness findings fixed
+  (`gosper.rs`, `gf2_shard.rs`, telescoping's pointwise floor, `normalforms.rs`,
+  `sturm.rs`) plus a separately-found and fixed wrong `Certified` (the
+  `ln(x^2)` f64 sign test). `ratint.rs` retired (mischaracterized, not fixed).
+  Weakest open finding re-ranked to `geometry_certify.rs`'s minimality gap.
+- Wrote [ADR-1485](../research/09-decisions/adr-1485-ivt-evt-dominance-recheck-re-ranks-the-distinction-gap-again.md).
+- Updated the dominance document in place (new preamble note, §8.1, §9.1,
+  a pointer at the stale `cas-certificate=54/56` passage).
+- `python3 scripts/gen-adr-index.py` (0 new duplicates) and
+  `scripts/check-merge-hygiene.sh` (PASS) both re-run after the edits.
+
+## Not done / did not run
+
+- §5.1's deeper gate census (`semantic_falsification`, `mutation_control`,
+  `circularity`, `independent_replay`, `check-trust-closure.py`) was not
+  re-run — same scope limit ADR-1425 recorded, now further stale.
+- No full aggregate gate (`just check`/`check.sh`) was run — this lane
+  touched no Rust source, only docs and the three targeted `axeyum-cas --lib`
+  suites named above, each confirmed with a nonzero passing count.
