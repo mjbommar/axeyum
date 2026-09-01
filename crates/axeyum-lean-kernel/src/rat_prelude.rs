@@ -2322,6 +2322,21 @@ pub struct RatPrelude {
     /// summand, then [`Self::sum_range_swap`] — whose binder order is
     /// `(f, INNER bound, OUTER bound)`.
     pub det_row_multilinear: NameId,
+    /// `Rat.det_matMul_2 : ∀ A B, det (matMul A B 2) 2 = det A 2 * det B 2`
+    /// — **determinant multiplicativity at dimension 2**, symbolic in both
+    /// matrices. The symbolic-`n` statement is not proved (ADR-1440).
+    ///
+    /// Cheap for a reason that does NOT generalize: the eight-variable ring
+    /// identity is [`Self::det2_mul`], landed with the fixed-dimension
+    /// `matrix` module long before [`Self::det`] existed, and
+    /// [`Self::det_eq_det2`] already identifies `det A 2` with `det2` on the
+    /// four entries. All that is left is reducing `matMul A B 2 i j` at the
+    /// four index pairs — which works only because `2` is a literal, so
+    /// `Rat.sumRange` iota-reduces; at a symbolic `n` nothing reduces and the
+    /// general case needs [`Self::det_row_multilinear`] and an induction over
+    /// the rows instead. `n = 3` is not done: there is no `det3_mul`, and that
+    /// identity has eighteen variables.
+    pub det_mat_mul_2: NameId,
 }
 
 impl RatPrelude {
@@ -2739,6 +2754,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_row_zero: child(kernel, "det_row_zero"),
         det_row_smul: child(kernel, "det_row_smul"),
         det_row_multilinear: child(kernel, "det_row_multilinear"),
+        det_mat_mul_2: child(kernel, "det_matMul_2"),
     }
 }
 

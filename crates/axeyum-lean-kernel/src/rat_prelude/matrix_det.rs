@@ -176,7 +176,8 @@ pub(super) fn declare_matrix_det(d: &mut IntDev<'_>, p: RatPrelude) -> Result<()
     declare_det_row_replaced(d, p)?;
     declare_det_row_zero(d, p)?;
     declare_det_row_smul(d, p)?;
-    declare_det_row_multilinear(d, p)
+    declare_det_row_multilinear(d, p)?;
+    declare_det_mat_mul_2(d, p)
 }
 
 // --- shared term builders --------------------------------------------------
@@ -8068,7 +8069,19 @@ fn declare_det_row_smul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     };
 
     let hble_ty = ble_true_ty(d, t, m);
-    let hrow_ty = row_value_ty(d, mm, t, h_lam);
+    // Written REDUCED rather than as `row_value_ty(.., h_lam)`, which would
+    // leave a `(fun c => z * A t c) c` beta-redex in the rendered hypothesis
+    // and make every caller stare at it. Defeq to what `det_row_replaced`
+    // wants, so `hrow` passes straight through.
+    let hrow_ty = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let lhs = d.apply(mm, &[t, c]);
+        let atc = d.apply(a, &[t, c]);
+        let rhs = rmul(d, z, atc);
+        let eq = req(d, lhs, rhs);
+        d.pi_fv(c_fv, nat, eq)
+    };
     let hoff_ty = row_other_ty(d, a, mm, t);
 
     let sm = d.succ(m);
@@ -8247,7 +8260,21 @@ fn declare_det_row_multilinear(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), 
     };
 
     let hble_ty = ble_true_ty(d, t, m);
-    let hrow_ty = row_value_ty(d, mm, t, h_lam);
+    // Reduced, for the same reason as [`declare_det_row_smul`]'s.
+    let hrow_ty = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let lhs = d.apply(mm, &[t, c]);
+        let over_k = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let body = d.apply(coef, &[k, c]);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let rhs = rsum_range(d, p, over_k, n);
+        let eq = req(d, lhs, rhs);
+        d.pi_fv(c_fv, nat, eq)
+    };
     let hoff_ty = row_other_ty(d, a, mm, t);
 
     let sm = d.succ(m);
@@ -8442,4 +8469,143 @@ fn declare_det_row_multilinear(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), 
     let value = d.lam_fv(m_fv, nat, body);
 
     d.declare_theorem(p.det_row_multilinear, ty, value)
+}
+
+// --- multiplicativity at a CONCRETE dimension (`matrix_det`, ADR-1440) -----
+//
+// `Rat.det_matMul_2 : ∀ A B, det (matMul A B 2) 2 = det A 2 * det B 2`.
+//
+// The symbolic-`n` statement is NOT proved (see the "what is still missing"
+// account in ADR-1440); this is the `n = 2` instance, and it is cheap for a
+// reason worth recording rather than for a reason that generalizes. The
+// eight-variable ring identity underneath it — `Rat.det2_mul`, landed with the
+// fixed-dimension `matrix` module long before `Rat.det` existed — is already
+// proved, and `Rat.det_eq_det2` already identifies `det A 2` with `det2` on
+// the four entries SYMBOLICALLY in `A`. So all this declaration does is reduce
+// `matMul A B 2 i j` at the four index pairs and line the entries up.
+//
+// That reduction is where the whole `n = 2` shortcut lives: `Rat.sumRange`'s
+// base case is `Rat.zero`, so `matMul A B 2 i j` iota-reduces to
+// `(0 + A i 0 * B 0 j) + A i 1 * B 1 j` — one stray `zero +` per entry, killed
+// by `Rat.zero_add` under a congruence. At symbolic `n` nothing reduces at
+// all (a recursor applied to a bare free variable is stuck), which is exactly
+// why the general case needs `Rat.det_row_multilinear` and an induction over
+// the rows instead.
+//
+// `n = 3` is NOT done and is not cheap the same way: there is no `det3_mul`,
+// and the corresponding identity has eighteen variables.
+
+/// Admit `Rat.det_matMul_2` — see [`RatPrelude::det_mat_mul_2`].
+fn declare_det_mat_mul_2(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let mty = mat_ty(d);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let i0 = d.zero();
+    let i1 = d.num(1);
+    let i2 = d.num(2);
+
+    let a00 = d.apply(a, &[i0, i0]);
+    let a01 = d.apply(a, &[i0, i1]);
+    let a10 = d.apply(a, &[i1, i0]);
+    let a11 = d.apply(a, &[i1, i1]);
+    let b00 = d.apply(b, &[i0, i0]);
+    let b01 = d.apply(b, &[i0, i1]);
+    let b10 = d.apply(b, &[i1, i0]);
+    let b11 = d.apply(b, &[i1, i1]);
+
+    // `C := matMul A B 2`, a `Nat → Nat → Rat` in its own right.
+    let c_mat = d.const_app(p.mat_mul, &[a, b, i2]);
+
+    let det_c = rdet(d, p, c_mat, i2);
+    let det_a = rdet(d, p, a, i2);
+    let det_b = rdet(d, p, b, i2);
+    let rhs = rmul(d, det_a, det_b);
+    let ty = {
+        let stmt = req(d, det_c, rhs);
+        let over_b = d.pi_fv(b_fv, mty, stmt);
+        d.pi_fv(a_fv, mty, over_b)
+    };
+
+    // The four entries of `C`, each in the shape `matMul` iota-reduces to,
+    // and each in the shape `det2_mul` states.
+    let zero_r = rzero(d, p);
+    let entry = |d: &mut IntDev<'_>, x: ExprId, y: ExprId, u: ExprId, v: ExprId| {
+        let xy = rmul(d, x, y);
+        let uv = rmul(d, u, v);
+        let raw = {
+            let head = radd(d, zero_r, xy);
+            radd(d, head, uv)
+        };
+        let tidy = radd(d, xy, uv);
+        // `(0 + xy) + uv = xy + uv`.
+        let head = radd(d, zero_r, xy);
+        let za = d.lemma(p.zero_add, &[xy]);
+        let pf = rcongr(d, head, xy, za, &|d, w| radd(d, w, uv));
+        (raw, tidy, pf)
+    };
+
+    let (c00_raw, c00, p00) = entry(d, a00, b00, a01, b10);
+    let (c01_raw, c01, p01) = entry(d, a00, b01, a01, b11);
+    let (c10_raw, c10, p10) = entry(d, a10, b00, a11, b10);
+    let (c11_raw, c11, p11) = entry(d, a10, b01, a11, b11);
+
+    // `det C 2 = det2 (C 0 0) (C 0 1) (C 1 0) (C 1 1)`, whose right-hand side
+    // is defeq to `det2 c00_raw c01_raw c10_raw c11_raw`.
+    let expand_c = d.lemma(p.det_eq_det2, &[c_mat]);
+    let d_raw = rdet2(d, p, c00_raw, c01_raw, c10_raw, c11_raw);
+
+    let d_1 = rdet2(d, p, c00, c01_raw, c10_raw, c11_raw);
+    let s_1 = rcongr(d, c00_raw, c00, p00, &|d, w| {
+        rdet2(d, p, w, c01_raw, c10_raw, c11_raw)
+    });
+    let d_2 = rdet2(d, p, c00, c01, c10_raw, c11_raw);
+    let s_2 = rcongr(d, c01_raw, c01, p01, &|d, w| {
+        rdet2(d, p, c00, w, c10_raw, c11_raw)
+    });
+    let d_3 = rdet2(d, p, c00, c01, c10, c11_raw);
+    let s_3 = rcongr(d, c10_raw, c10, p10, &|d, w| {
+        rdet2(d, p, c00, c01, w, c11_raw)
+    });
+    let d_4 = rdet2(d, p, c00, c01, c10, c11);
+    let s_4 = rcongr(d, c11_raw, c11, p11, &|d, w| rdet2(d, p, c00, c01, c10, w));
+
+    // `Rat.det2_mul` — the eight-variable identity, already proved.
+    let det2_a = rdet2(d, p, a00, a01, a10, a11);
+    let det2_b = rdet2(d, p, b00, b01, b10, b11);
+    let product = rmul(d, det2_a, det2_b);
+    let s_mul = d.lemma(p.det2_mul, &[a00, a01, a10, a11, b00, b01, b10, b11]);
+
+    // Back to `det A 2` and `det B 2`.
+    let expand_a = d.lemma(p.det_eq_det2, &[a]);
+    let expand_b = d.lemma(p.det_eq_det2, &[b]);
+    let a_back = rsymm(d, det_a, det2_a, expand_a);
+    let b_back = rsymm(d, det_b, det2_b, expand_b);
+    let mid = rmul(d, det_a, det2_b);
+    let s_a = rcongr(d, det2_a, det_a, a_back, &|d, w| rmul(d, w, det2_b));
+    let s_b = rcongr(d, det2_b, det_b, b_back, &|d, w| rmul(d, det_a, w));
+
+    let (_end, proof) = rchain(
+        d,
+        det_c,
+        &[
+            (d_raw, expand_c),
+            (d_1, s_1),
+            (d_2, s_2),
+            (d_3, s_3),
+            (d_4, s_4),
+            (product, s_mul),
+            (mid, s_a),
+            (rhs, s_b),
+        ],
+    );
+
+    let value = {
+        let over_b = d.lam_fv(b_fv, mty, proof);
+        d.lam_fv(a_fv, mty, over_b)
+    };
+    d.declare_theorem(p.det_mat_mul_2, ty, value)
 }

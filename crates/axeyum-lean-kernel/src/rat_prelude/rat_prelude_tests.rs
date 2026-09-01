@@ -212,6 +212,7 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det_row_zero", p.det_row_zero),
         ("det_row_smul", p.det_row_smul),
         ("det_row_multilinear", p.det_row_multilinear),
+        ("det_matMul_2", p.det_mat_mul_2),
     ]
 }
 
@@ -6816,6 +6817,7 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("det_row_zero", p.det_row_zero, true),
         ("det_row_smul", p.det_row_smul, true),
         ("det_row_multilinear", p.det_row_multilinear, true),
+        ("det_matMul_2", p.det_mat_mul_2, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
