@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2079,
+    "min_identity_bound": 2081,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -6820,7 +6820,15 @@
       "fact_id": "F:excluded-middle-not-intuitionistic",
       "language": "lean4",
       "statement_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
-      "prose_sha256": "aca36f63b84e65bbca307bf185cd9ad31465902f71df12521fb5ab2b4bfdc1e8"
+      "prose_sha256": "aca36f63b84e65bbca307bf185cd9ad31465902f71df12521fb5ab2b4bfdc1e8",
+      "kernel_theorem": "ipc_excluded_middle_not_provable",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
+          "prose_sha256": "aca36f63b84e65bbca307bf185cd9ad31465902f71df12521fb5ab2b4bfdc1e8"
+        }
+      ]
     },
     {
       "fact_id": "F:exportation",
@@ -7200,7 +7208,15 @@
       "fact_id": "F:heyting-3-chain-refutes-excluded-middle",
       "language": "lean4",
       "statement_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
-      "prose_sha256": "af25d412ebf5bfbd01f1b0c5e00255eaea678278e327e0e2075ba7086e6685fe"
+      "prose_sha256": "af25d412ebf5bfbd01f1b0c5e00255eaea678278e327e0e2075ba7086e6685fe",
+      "kernel_theorem": "ipc_heyting_join_not_ne_top",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
+          "prose_sha256": "af25d412ebf5bfbd01f1b0c5e00255eaea678278e327e0e2075ba7086e6685fe"
+        }
+      ]
     },
     {
       "fact_id": "F:int-add-assoc",
