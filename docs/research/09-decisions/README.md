@@ -819,3 +819,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1425](adr-1425-the-dominance-docs-weakest-point-is-distinction-completeness-not-naming.md) | the dominance document's weakest point is distinction-completeness, not the row-3 naming gap | Accepted |
 | [1430](adr-1430-two-declarations-make-the-draw-authorable-and-adr-1420s-universe-was-the-wrong-one.md) | Two declarations make the draw authorable, and ADR-1420's exhaustive answer was about the wrong universe | Accepted |
 | [1435](adr-1435-sturm-ivt-bridge-re-derives-the-half-open-upper-bound.md) | the Sturm IVT bridge re-derives the half-open-interval upper bound instead of trusting an unrelated check | Accepted |
+| [1440](adr-1440-multiplicativity-needs-a-selection-lemma-not-a-leibniz-agreement.md) | ADR-1310 named `leibniz`-agrees-with-`det` as the hard theorem | accepted |
