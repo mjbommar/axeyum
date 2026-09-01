@@ -301,6 +301,92 @@ class DrawScopingTests(unittest.TestCase):
             [])
 
 
+class RecordedRefusalTests(unittest.TestCase):
+    """ADR-1450: a `do-not-draw-held-out` row in the review file BINDS.
+
+    Until this landed, nothing read `refused` at all -- `screen_family` looks
+    up `reviews[family]`, so a refusal recorded under a MODULE name was
+    unreachable by any lookup the guard performed. ADR-1100 recorded
+    `Mathlib.Data.Nat.Count` as do-not-draw-held-out; ADR-1430 declared
+    `Nat.count` to open exactly that module for a held-out draw; every screen
+    stayed green.
+    """
+
+    REFUSALS = [{
+        "family": "recorded-elsewhere",
+        "modules": ["Mathlib.Data.Nat.Barred"],
+        "verdict": "do-not-draw-held-out",
+        "authority": "ADR-fixture",
+    }]
+
+    def _draw(self, module):
+        return {"new-held": [row(f"Nat.b{i}", module, "Nat.barred", "Eq")
+                             for i in range(10)]}
+
+    def test_a_held_out_family_drawing_a_barred_module_is_refused(self):
+        pub, part = published()
+        with self.assertRaisesRegex(MODULE.RefusalError,
+                                    r"do-not-draw-held-out"):
+            MODULE.assert_draw_lawful(
+                self._draw("Mathlib.Data.Nat.Barred"), {"new-held": "held-out"},
+                pub, part, env=(), reviews={}, refusals=self.REFUSALS)
+
+    def test_a_barred_module_in_a_DISPATCHABLE_family_is_allowed(self):
+        """False-positive control, and it is the whole point of the row.
+
+        `Mathlib.Data.Nat.Count` is refused as HELD-OUT because our
+        `Nat.countRange` already proves several of its rows under other names.
+        That is an argument about blindness, and blindness is what held-out
+        buys. As development or train the same module is ordinary work, and a
+        check that barred it everywhere would delete a 22-row pool for no
+        reason.
+        """
+        pub, part = published()
+        draw = {"new-dev": self._draw("Mathlib.Data.Nat.Barred")["new-held"]}
+        self.assertEqual(
+            MODULE.assert_draw_lawful(draw, {"new-dev": "development"},
+                                      pub, part, env=(), reviews={},
+                                      refusals=self.REFUSALS),
+            [])
+
+    def test_a_row_that_is_not_a_refusal_verdict_bars_nothing(self):
+        """False-positive control: `refused` may grow other verdicts, and only
+        `do-not-draw-held-out` is a bar. A blanket read of the list would turn
+        any recorded note into a veto."""
+        noted = [dict(self.REFUSALS[0], verdict="reviewed-and-drawn")]
+        pub, part = published()
+        MODULE.assert_draw_lawful(
+            self._draw("Mathlib.Data.Nat.Barred"), {"new-held": "held-out"},
+            pub, part, env=(), reviews={}, refusals=noted)
+
+    def test_an_unrelated_module_is_not_barred(self):
+        """False-positive control: the bar is per MODULE, not a mood."""
+        pub, part = published()
+        MODULE.assert_draw_lawful(
+            self._draw("Mathlib.Data.Nat.Unbarred"), {"new-held": "held-out"},
+            pub, part, env=(), reviews={}, refusals=self.REFUSALS)
+
+    def test_an_unreadable_refused_list_is_not_read_as_nothing_refused(self):
+        """Fail-closed, matching `load_reviews`. A review file whose `refused`
+        key is missing or the wrong shape must not read as a clean slate."""
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = pathlib.Path(tmp) / "review.json"
+            bad.write_text(json.dumps({"reviews": {}}))
+            old = MODULE.REVIEW_FILE
+            MODULE.REVIEW_FILE = bad
+            try:
+                with self.assertRaises(SystemExit):
+                    MODULE.load_refusals()
+            finally:
+                MODULE.REVIEW_FILE = old
+
+    def test_the_committed_review_file_bars_the_count_module(self):
+        """The join, against the real file rather than a fixture: the finding
+        this guard was built for must actually be in force."""
+        barred = MODULE.barred_modules(MODULE.load_refusals())
+        self.assertIn("Mathlib.Data.Nat.Count", barred)
+
+
 class GuardIntegrationTests(unittest.TestCase):
     """R11's CALL SITE in `guard()`, not just the screen it calls.
 
