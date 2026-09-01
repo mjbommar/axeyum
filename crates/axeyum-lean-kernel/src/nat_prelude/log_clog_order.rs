@@ -1123,7 +1123,12 @@ pub(super) fn declare_div_lt_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
 /// `succ`-row term to `zero` regardless of the INNER cut or the recursive
 /// value — unlike the `log_aux_le_clog_aux` false-branch, which needs
 /// `bool_select_nat_same` because there the KNOWN-false cut is the INNER one.
-fn log_aux_zero_value(
+///
+/// `pub(super)` (not private) because [`super::log_clog_mirrors`]'s
+/// `log_div_mul_self` reuses it as the zero-value base case of its own
+/// double-fuel agreement induction over `logAux`, rather than duplicating
+/// this construction a second time.
+pub(super) fn log_aux_zero_value(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     base: ExprId,

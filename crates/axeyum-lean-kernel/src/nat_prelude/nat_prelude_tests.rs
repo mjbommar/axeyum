@@ -1206,6 +1206,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.clog_eq_one,
         p.log_eq_one_iff_prime,
         p.log_eq_one_iff,
+        p.log_div_mul_self,
         p.log2_eq_log_two,
         p.bit_false,
         p.bit_true,

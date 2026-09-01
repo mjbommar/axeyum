@@ -3955,6 +3955,23 @@ pub struct NatPrelude {
     /// `nat_prelude/log_clog_mirrors.rs`, [`Self::log_eq_one_iff_prime`]'s
     /// core repackaged into Mathlib's stronger hypothesis set.
     pub log_eq_one_iff: NameId,
+    /// `Nat.log_div_mul_self : ∀ b n, Eq (log b (mul (div n b) b)) (log b n)`
+    /// (`Mathlib`: `Nat.log_div_mul_self`) — `nat_prelude/log_clog_mirrors.rs`.
+    /// Rounding `n` down to the nearest multiple of `b` never changes the
+    /// floor base-`b` logarithm. `b ≤ 1` closes both sides via
+    /// [`Self::log_of_left_le_one`]; `n < b` makes the rounded value `0`
+    /// (`log_zero_right`) while `n` itself is already `0`
+    /// ([`Self::log_of_lt`]). The remaining case (`1 < b`, `b ≤ n`) unfolds
+    /// `log` at `n` and at the rounded value by ONE recursive step each
+    /// (the same guard-collapse recipe [`Self::log_pos`] uses, built to an
+    /// `Eq` conclusion instead of a `Lt`), and relates the two resulting
+    /// `logAux` calls — same quotient `n / b`, two different but each
+    /// individually SUFFICIENT fuels — via a double-fuel agreement
+    /// induction generalizing `agree_by_double_fuel_induction`'s
+    /// bitwise-family technique to `logAux`'s order-comparison guard
+    /// (`log_aux_zero_value` supplies the zero-value base case that
+    /// technique needs). No induction on `n` itself is required.
+    pub log_div_mul_self: NameId,
     /// `Nat.log2 : Nat → Nat`, `log2 n := log 2 n` (Lean **core**,
     /// `Init/Data/Nat/Log2.lean` — Mathlib imports it unchanged). Lean
     /// core's own `log2` is a fuel-recursive `Nat.rec` with a non-dependent
@@ -6261,6 +6278,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             clog_eq_one: kernel.name_str(nat, "clog_eq_one"),
             log_eq_one_iff_prime: kernel.name_str(nat, "log_eq_one_iff'"),
             log_eq_one_iff: kernel.name_str(nat, "log_eq_one_iff"),
+            log_div_mul_self: kernel.name_str(nat, "log_div_mul_self"),
             log2: kernel.name_str(nat, "log2"),
             log2_eq_log_two: kernel.name_str(nat, "log2_eq_log_two"),
             bit: kernel.name_str(nat, "bit"),
