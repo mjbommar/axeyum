@@ -340,7 +340,7 @@ pub fn check_shard_directory_with_policy(
             }
             ShardStatus::Exhausted => {
                 let tested = rederive_exhaustion(manifest_view(&manifest), row, remaining_budget)?;
-                remaining_budget -= tested;
+                remaining_budget = remaining_budget.saturating_sub(tested);
                 summary.rederived_candidates += tested;
                 summary.exhausted += 1;
             }
@@ -383,17 +383,16 @@ fn rederive_exhaustion(
     row: &ShardRow,
     remaining_budget: u64,
 ) -> Result<u64, ShardError> {
-    // Charge the claim's own cost first, so a row claiming more work than the
-    // budget allows is refused BEFORE any search runs.
-    if row.candidates_tested > remaining_budget {
-        return Err(ShardError::Exhaustion {
-            degree: row.degree,
-            error: format!(
-                "claims {} candidates, above the {remaining_budget} re-derivation budget remaining",
-                row.candidates_tested
-            ),
-        });
-    }
+    // The re-derivation runs under the SMALLER of the manifest's own ceiling and
+    // what is left of this checker's budget.  Both stops are refusals, and the
+    // message says which, but neither is ever an acceptance.
+    //
+    // There is deliberately no separate "the row claims more than the budget"
+    // pre-check.  It looked like a guard and was not: every input it would have
+    // rejected is already rejected here or by the candidate-count binding below,
+    // so no test could kill it.  A guard nothing can kill is the defect this
+    // module is being repaired for, arriving one level up.
+    let stopped_by_budget = remaining_budget < limits.max_candidates;
     let budgeted = SparseSearchLimits {
         max_candidates: remaining_budget.min(limits.max_candidates),
         ..limits
@@ -423,9 +422,20 @@ fn rederive_exhaustion(
             candidates_tested, ..
         }) => Err(ShardError::Exhaustion {
             degree: row.degree,
-            error: format!(
-                "re-derivation stopped at its budget after {candidates_tested} tests without exhausting"
-            ),
+            error: if stopped_by_budget {
+                format!(
+                    "re-derivation stopped at the checker's remaining budget of \
+                     {remaining_budget} after {candidates_tested} tests, so the \
+                     exhaustion is unchecked"
+                )
+            } else {
+                format!(
+                    "re-derivation reached the manifest's own {} candidate ceiling \
+                     after {candidates_tested} tests, which is a candidate-limit \
+                     row and not an exhaustion",
+                    limits.max_candidates
+                )
+            },
         }),
         Err(error) => Err(ShardError::Exhaustion {
             degree: row.degree,
