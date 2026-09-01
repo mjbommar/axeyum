@@ -117,6 +117,7 @@ mod order;
 mod order_add;
 mod order_coercion;
 mod parity;
+mod prime_dvd_mul_mirrors;
 mod prod;
 mod qr_criterion;
 mod rat;
@@ -1193,6 +1194,33 @@ pub struct IntPrelude {
     /// comment on `declare_euclid_infinitude` has the full reasoning).
     pub euclid_infinitude: NameId,
 
+    /// `prime_dvd_mul' : ∀ (m n : Int) (p : Nat), (2 ≤ p ∧ ∀ d, d ∣ p → d = 1
+    /// ∨ d = p) → ofNat p ∣ m*n → ofNat p ∣ m ∨ ofNat p ∣ n` — `ml430` mirror
+    /// `Int.Prime.dvd_mul'` (`F:ml430-int-prime-dvd-mul-23b73e69`). Direct
+    /// application of [`Self::euclid_lemma`] at `pr := ofNat p`: `natAbs
+    /// (ofNat p) ≡ p` by `rfl`, so the stated primality hypothesis is
+    /// definitionally the one `euclid_lemma` needs. See `int_prelude::
+    /// prime_dvd_mul_mirrors`.
+    pub prime_dvd_mul_prime: NameId,
+    /// `prime_dvd_mul : ∀ (m n : Int) (p : Nat), (2 ≤ p ∧ ∀ d, d ∣ p → d = 1
+    /// ∨ d = p) → ofNat p ∣ m*n → p ∣ natAbs m ∨ p ∣ natAbs n` — `ml430`
+    /// mirror `Int.Prime.dvd_mul` (`F:ml430-int-prime-dvd-mul-90351ba0`).
+    /// Same route as [`Self::prime_dvd_mul_prime`], with each disjunct
+    /// dropped to `Nat` via [`Self::nat_abs_dvd_nat_abs_of_dvd`]. See
+    /// `int_prelude::prime_dvd_mul_mirrors`.
+    pub prime_dvd_mul: NameId,
+    /// `not_prime_of_int_mul : ∀ (a b : Int) (c : Nat), natAbs a ≠ 1 →
+    /// natAbs b ≠ 1 → a*b = ofNat c → ¬(2 ≤ c ∧ ∀ d, d ∣ c → d = 1 ∨ d = c)`
+    /// — `ml430` mirror `Int.not_prime_of_int_mul`
+    /// (`F:ml430-int-not-prime-of-int-mul-e3060f5d`). Built at `Nat` from
+    /// `natAbs a`/`natAbs b`: neither magnitude is `1`, so their product is
+    /// composite (a divisor `x := natAbs a` divides the product and, since
+    /// `natAbs b ≠ 1`, is not equal to it — `Nat.mul_left_cancel_of_pos`
+    /// closes that inequality — nor equal to `1`), and the `x = 0` corner
+    /// falls out of `Nat.prime_ne_zero` directly. See
+    /// `int_prelude::prime_dvd_mul_mirrors`.
+    pub not_prime_of_int_mul: NameId,
+
     // --- the Chinese Remainder Theorem ----------------------------------------
     /// `crt_exists : ∀ m n a b, 0 < m → 0 < n → Coprime m n →
     /// ∃ x, ModEq m x a ∧ ModEq n x b`.
@@ -2020,6 +2048,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         gcd_greatest: child(kernel, "gcd_greatest"),
         euclid_lemma: child(kernel, "euclid_lemma"),
         euclid_infinitude: child(kernel, "euclid_infinitude"),
+        prime_dvd_mul_prime: child(kernel, "prime_dvd_mul'"),
+        prime_dvd_mul: child(kernel, "prime_dvd_mul"),
+        not_prime_of_int_mul: child(kernel, "not_prime_of_int_mul"),
         crt_exists: child(kernel, "crt_exists"),
         crt_unique: child(kernel, "crt_unique"),
         rat,
@@ -2486,6 +2517,14 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // last for the same reason as the mirror modules above it.
         exists_gcd_one::declare_exists_gcd_one(&mut d)?;
         exists_gcd_one::declare_exists_gcd_one_prime(&mut d)?;
+        // `int-prime-dvd` lane: three `ml430` mirrors built directly from
+        // `gcd::declare_euclid_lemma` (`prime_dvd_mul'`, `prime_dvd_mul`) and
+        // from `Nat.not_prime_of_dvd_of_ne`/`Nat.prime_ne_zero`
+        // (`not_prime_of_int_mul`). Placed last for the same reason as the
+        // mirror modules above it.
+        prime_dvd_mul_mirrors::declare_prime_dvd_mul_prime(&mut d)?;
+        prime_dvd_mul_mirrors::declare_prime_dvd_mul(&mut d)?;
+        prime_dvd_mul_mirrors::declare_not_prime_of_int_mul(&mut d)?;
         Ok(prelude)
     })();
     match built {
