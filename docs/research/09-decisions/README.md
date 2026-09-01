@@ -831,4 +831,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1485](adr-1485-ivt-evt-dominance-recheck-re-ranks-the-distinction-gap-again.md) | re-checking IVT/EVT dominance finds five of ADR-1400's eleven findings fixed, and the weakest point moves to `geometry_certify.rs` | Accepted |
 | [1495](adr-1495-abstraction-over-structures-is-already-expressible-the-gap-is-surface.md) | `docs/curriculum/foundational-books/axler.md` closes roughly half | accepted |
 | [1500](adr-1500-a-soundness-fix-is-not-pinned-until-a-control-dies-without-it.md) | ADR-1495 closed a `Type : Type` hole in | accepted |
+| [1510](adr-1510-a-contract-is-sized-by-the-frontier-and-a-decline-dies-with-its-fact.md) | a producer contract is sized by the frontier, and a decline dies with its fact | Accepted |
 | [1511](adr-1511-cheap-checks-block-merge-expensive-ones-stay-in-the-full-gate.md) | Cheap ledger `--check`s block a merge directly; the two that need a release kernel build get a cheap cross-consistency ratchet instead | Accepted |
