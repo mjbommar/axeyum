@@ -8,10 +8,56 @@
     "statement": "∀ (b n : ℕ), Nat.log b (n / b * b) = Nat.log b n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-div-mod-mul-le-iff",
+    "F:nat-lt-or-ge",
+    "F:nat-log-of-lt",
+    "F:ml430-nat-add-mul-div-right-44a689e4",
+    "F:nat-div-mod-exec",
+    "F:nat-mul-le-mul-left",
+    "F:nat-one-le-mul",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-div-mod-bounds",
+    "F:nat-le-of-lt-succ",
+    "F:nat-mul-comm",
+    "F:nat-mul-one",
+    "F:nat-le-trans",
+    "F:nat-zero-le",
+    "F:nat-le-succ-succ",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-of-le-of-lt",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:ml430-nat-log-of-lt-89eaf42e",
+    "F:nat-ble-eq-false-of-lt",
+    "F:nat-zero-add",
+    "F:nat-zero-div"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- log_div_mul_self 2>/dev/null | grep -Ec '^Nat\\.log_div_mul_self[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.log_div_mul_self",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.log_div_mul_self` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/log_clog_mirrors.rs`'s `declare_log_div_mul_self`, lane `log-div-mul-self`). Route: split `1 < b` vs `b <= 1` (the second closes both sides at `0` via `log_of_left_le_one`); inside `1 < b`, derive `b = succ bp` via `succ_pred_of_pos` (transported back at the very end rather than by a `cases_zero_succ` refutation, since `b = 0/1` are already excluded by the hypothesis) and split `n < b` (both sides round to `0`: `n/b*b <= n < b` via `div_mod_bounds`'s lower conjunct plus `mul_comm`, closed by `log_of_lt` on each side) from `b <= n`. In the `b <= n` case, `n = succ n'` and `n/b*b = succ scaled'` are each established via `succ_pred_of_pos`, and `log`'s recursive equation is unfolded ONCE on each side (`log_succ_unfold`, `declare_log_pos`'s `at_n_succ` guard-collapse recipe retargeted from `Lt zero _` to an `Eq`), landing on `logAux base n' q` and `logAux base scaled' q` for the SAME quotient `q := n/b` (`mul_div_cancel_left`, `div (mul q b) b = q` via `Nat.add_mul_div_right` at `x := 0` plus `zero_add`/`zero_div`, identifies the two `logAux` calls' quotient arguments). `log_aux_agree_of_fuel` -- a double-fuel agreement induction generalizing `rec_agreement.rs`'s `land_aux_agree_of_fuel`/`agree_by_double_fuel_induction` from `landAux`'s structural `m = 0` guard to `logAux`'s order-comparison guard `ble base value` -- then equates `logAux base n' q` and `logAux base scaled' q` given `q <= n'` and `q <= scaled'` (each from `div_lt_self` + `le_of_lt_succ`); its base case and its step case's `a = 0` sub-branch both close via the PRE-EXISTING `log_clog_order.rs::log_aux_zero_value` (made `pub(super)` for this reuse, no new fuel-agnostic zero-value lemma had to be built), and its `a = succ predecessor` sub-branch needs no guard-truth case split at all, because both fuels being compared reduce `logAux`'s own `Nat.rec` against an IDENTICAL guard term once `c`'s positivity gives it a literal successor shape -- `d.congr` isolates the differing recursive sub-term, closed by the IH. `nat_theorem_inventory`'s rendered type for `Nat.log_div_mul_self` is `(x0:AxNat)->(x1:AxNat)->Eq (log x0 (mul (div x1 x0) x0)) (log x0 x1)`, matching this fact's `formal.statement` verbatim (`x0`=b, `x1`=n). `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against `log_div_mul_selfxxxxx`: `error: no Nat theorem matches ... -- an absent theorem is a failed check, not an empty report`, count 0, exit 1), and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ (b n : ℕ), Nat.log b (n / b * b) = Nat.log b n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.log_div_mul_self",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0, total_trusted=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists `p.log_div_mul_self`); `cargo test -p axeyum-lean-kernel --lib nat_prelude::` reports 325 passed, 0 failed with this declaration in place, including that test and `every_promised_name_is_admitted_with_the_expected_kind`.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +72,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-09-01 in this ledger by lane `log-div-mul-self`: a fresh local construction, not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison and the full route. Two prior lanes had left this as the last open `log`/`clog` mirror in `log_clog_mirrors.rs`, sizing the blocker as needing 'a fuel-generalized induction relating the SAME `logAux` at two DIFFERENT values, not merely two fuels' -- that sizing was inverted: the actual obligation is the SAME value (the shared quotient) at two DIFFERENT fuels, which is exactly the double-fuel-agreement shape `rec_agreement.rs` already carries for `landAux`/`lorAux`/`ldiffAux`, transported here to `logAux`'s order-comparison guard. `log_clog_mirrors.rs`'s module doc, which called this fact OPEN, is updated in the same commit.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
