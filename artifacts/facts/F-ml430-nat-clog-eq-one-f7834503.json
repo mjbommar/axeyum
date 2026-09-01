@@ -6,12 +6,34 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {b n : ℕ}, 2 ≤ n → n ≤ b → Nat.clog b n = 1",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.clog_eq_one"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-add-div-right-4b60b393", "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:ml430-nat-div-lt-of-lt-mul-818dc4c7", "F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-le-trans", "F:nat-mul-one", "F:nat-not-succ-le-zero", "F:nat-succ-add", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- clog_eq_one 2>/dev/null | grep -Ec '^Nat\\.clog_eq_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.clog_eq_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.clog_eq_one` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/log_clog_mirrors.rs`'s `declare_clog_eq_one`, lane `nat-mirror-residue`). Route: `cases_zero_succ` on `n` (`n = 0` refuted by `not_succ_le_zero` against `Le 2 0`); at `n = succ n'`, `Le 2 (succ n') -> Le (succ n') b` gives `Le 2 b` via `le_trans`, both guard cuts (`2 <= b`, `2 <= succ n'`) known true via `ble_eq_true_of_le`. The recursive argument's numerator `(succ n' + b) - 1` is shown equal to `n' + b` via `Nat.succ_add` (congruence) plus the pure-defeq collapse `sub x 1 ~ pred x`; `Nat.add_div_right` then rewrites `(n' + b) / b` to `n' / b + 1`, and `n' / b = 0` because `n' < b` IS `h2 : Le (succ n') b` under `Nat.lt`'s own definition (`div_lt_of_lt_mul` against `n' < b*1`, `le_of_lt_succ`, `le_antisymm` with `zero_le`). So the quotient is exactly `1`. A new fuel-agnostic helper `clog_aux_at_one_eq_zero : Eq (clogAux base fuel 1) 0` (any `fuel`, any `base`) closes the recursive call: `fuel = 0` is the fuel-exhaustion row (`refl`); at `fuel = succ f'` the INNER guard `2 <= 1` compares two LITERALS and iota-collapses to `false` with no lemma, leaving `bool_select_nat (ble 2 base) 0 0`, stuck on the symbolic outer test but equal on both branches -- exactly `bool_select_nat_same`'s shape. Two `bool_transport`s (the same reduced->general recipe `clog_pos`/`log_pos` use, aimed at `Eq (_, 1)` instead of `Lt 0 _`) then lift `Eq (succ (clogAux base n' quotient)) 1` up through both stuck guard tests to `Eq (clog b (succ n')) 1`. `nat_theorem_inventory`'s rendered type for `Nat.clog_eq_one` is `(x0:AxNat)->(x1:AxNat)->(Le (succ (succ zero)) x1)->(Le x1 x0)->Eq (clog x0 x1) (succ zero)`, matching this fact's `formal.statement` verbatim (`x0`=b, `x1`=n). `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against `clog_eq_onexxxxx`: `error: no Nat theorem matches ... -- an absent theorem is a failed check, not an empty report`, count 0), and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed.",
+      "supports": "∀ {b n : ℕ}, 2 ≤ n → n ≤ b → Nat.clog b n = 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.clog_eq_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0, total_trusted=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists `p.clog_eq_one`) and `nat_prelude_tests::the_nat_prelude_declares_no_axioms` confirms zero `Axiom` declarations anywhere in the built environment. Both tests pass (`cargo test -p axeyum-lean-kernel --lib nat_prelude::`, 325 passed 0 failed in this run).",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-09-01 in this ledger by lane `nat-mirror-residue`: a fresh local construction (a `cases_zero_succ` unfold plus a new fuel-agnostic helper `clog_aux_at_one_eq_zero`, neither of which `log_clog_order.rs`/`clog.rs` needed on their own), not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `log_clog_mirrors.rs`'s module doc previously listed `Nat.clog_eq_one` as staying OPEN, pending exactly the lemma this commit builds (`clog_aux_at_one_eq_zero`); that module doc is updated in the same commit.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -6,12 +6,34 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {b n : ℕ}, Nat.log b n = 1 ↔ n < b * b ∧ 1 < b ∧ b ≤ n",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.log_eq_one_iff"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:ml430-nat-div-lt-of-lt-mul-818dc4c7", "F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:ml430-nat-log-of-lt-89eaf42e", "F:nat-ble-eq-false-of-lt", "F:nat-div-mod-exec", "F:nat-div-mod-lt-mul-iff", "F:nat-le-trans", "F:nat-lt-irrefl", "F:nat-lt-or-ge", "F:nat-not-succ-le-zero", "F:nat-succ-injective", "F:nat-succ-ne-zero", "F:nat-zero-le", "F:nat-zero-lt-succ"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- log_eq_one_iff 2>/dev/null | grep -Ec '^Nat\\.log_eq_one_iff[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.log_eq_one_iff",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.log_eq_one_iff` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/log_clog_mirrors.rs`'s `declare_log_eq_one_iff`, lane `nat-mirror-residue`) -- `F:ml430-nat-log-eq-one-iff-63d772fb`'s (`Nat.log_eq_one_iff'`) exact core (`log_eq_one_derive_base_le_n`, `log_eq_one_derive_sq_bound`, `log_eq_one_of_bounds`; see that fact's evidence for the full route), repackaged into Mathlib's STRONGER hypothesis set: `mpr` is given `1 < b` directly (no need for `derive_one_lt_base_from_bounds`) and `mp` additionally derives `1 < b` as an explicit output via `derive_one_lt_base_from_log_eq_one` (if `b <= 1`, `log_of_left_le_one` gives `Eq (log b n) 0` at this `n`, contradicting `Eq (log b n) 1` via `succ_ne_zero`) -- the SAME derivation `Nat.log_eq_one_iff'`'s `mp` needs anyway as an internal tool before it can even call `log_eq_one_derive_sq_bound`, just also surfaced here as part of the conclusion. `nat_theorem_inventory`'s rendered type for `Nat.log_eq_one_iff` is `(x0:AxNat)->(x1:AxNat)->Iff (Eq (log x0 x1) (succ zero)) (And (Lt x1 (mul x0 x0)) (And (Lt (succ zero) x0) (Le x0 x1)))`, matching this fact's `formal.statement` verbatim (`x0`=b, `x1`=n, nested `And` matching the `n < b*b \\u2227 (1 < b \\u2227 b \\u2264 n)` right-associated form). `nat_theorem_inventory` exits non-zero for a name that does not exist (verified against `log_eq_one_iff_xxxx`: `error: no Nat theorem matches ...`, count 0), and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Note the substring hazard: `log_eq_one_iff` is a PREFIX of `log_eq_one_iff'`, so the query argument returns BOTH rows -- the anchored `grep -Ec '^Nat\\.log_eq_one_iff[[:space:]]'` (whitespace after the exact name, not after the prime) is what discriminates the unprimed row from its primed sibling.",
+      "supports": "∀ {b n : ℕ}, Nat.log b n = 1 ↔ n < b * b ∧ 1 < b ∧ b ≤ n"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.log_eq_one_iff",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0, total_trusted=0). `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists `p.log_eq_one_iff`) and `nat_prelude_tests::the_nat_prelude_declares_no_axioms` confirms zero `Axiom` declarations anywhere in the built environment. Full `nat_prelude::` sweep: 325 passed, 0 failed.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-09-01 in this ledger by lane `nat-mirror-residue`, alongside `F:ml430-nat-log-eq-one-iff-63d772fb` (`Nat.log_eq_one_iff'`), sharing the same underlying core -- a fresh local construction, not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `log_clog_mirrors.rs`'s module doc previously listed this mirror as staying OPEN pending the same converse bound `Nat.log_eq_one_iff'` needed; that module doc is updated in the same commit.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
