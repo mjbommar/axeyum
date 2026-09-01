@@ -159,6 +159,7 @@ mod choose_factorial_add;
 mod clog;
 mod coprime_lemmas;
 mod coprime_mul_add_mul_ne_mul;
+mod count_and_div_max_pow;
 mod count_range_permute;
 mod count_range_reversal;
 mod crt;
@@ -314,6 +315,7 @@ use choose_factorial_add::declare_add_choose_mul_factorial_mul_factorial;
 use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use coprime_mul_add_mul_ne_mul::declare_coprime_mul_add_mul_ne_mul;
+use count_and_div_max_pow::declare_count_and_div_max_pow;
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
     declare_count_range_product,
@@ -4796,6 +4798,21 @@ pub struct NatPrelude {
     /// `Nat.dist_triangle_inequality : ∀ n m k, Le (dist n k) (add (dist n m)
     /// (dist m k))` — `F:ml430-nat-dist-triangle-inequality-b35e82d3`.
     pub dist_triangle_inequality: NameId,
+    /// `Nat.count (dec : Nat → Bool) (n : Nat) : Nat := Nat.countRange dec n`
+    /// — construction only, ADR-0653; opens `Mathlib.Data.Nat.Count` (22 rows)
+    /// for the autogenesis screen. DEFINITIONALLY
+    /// [`count_range`](Self::count_range); Mathlib's is a `List.countP` fold
+    /// over a `DecidablePred`, so every `ml430` mirror against `Nat.count`
+    /// stays `open`. See `count_and_div_max_pow.rs`'s module doc, including
+    /// the disclosure a held-out draw of that module owes R11.
+    pub count: NameId,
+    /// `Nat.divMaxPowAux (fuel n base : Nat) : Nat` — fuel-bounded repeated
+    /// division of `n` by `base`, stopping at the first non-multiple. The
+    /// fuel-exhaustion row returns `n` (the pass-through shape), not `0`.
+    pub div_max_pow_aux: NameId,
+    /// `Nat.divMaxPow (n base : Nat) : Nat := divMaxPowAux n n base` — `n`
+    /// with every factor of `base` divided out. Construction only, ADR-0653;
+    /// opens `Mathlib.Data.Nat.MaxPowDiv` for the autogenesis screen.
     /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
     /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
     /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s
@@ -6280,6 +6297,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             dist_pos_of_ne: kernel.name_str(nat, "dist_pos_of_ne"),
             dist_eq_intro: kernel.name_str(nat, "dist_eq_intro"),
             dist_triangle_inequality: kernel.name_str(nat, "dist_triangle_inequality"),
+            count: kernel.name_str(nat, "count"),
+            div_max_pow_aux: kernel.name_str(nat, "divMaxPowAux"),
+            div_max_pow: kernel.name_str(nat, "divMaxPow"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             nth_root_aux: kernel.name_str(nat, "nthRootAux"),
@@ -6601,6 +6621,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // far above, alongside the other `Coprime` characterisations) plus
         // `count_range`/`totient`, just declared above.
         declare_totient_lemmas_all(&mut d, &p)?;
+        // `count_and_div_max_pow.rs`: `Nat.count` is definitionally
+        // `countRange` (`declare_totient_all`, immediately above), and
+        // `Nat.divMaxPowAux` needs `div`/`mod`/`beq`/`ble`, all far above.
+        // Definitions only -- ADR-0653.
+        declare_count_and_div_max_pow(&mut d, &p)?;
+
         declare_perfect_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;
         declare_fin(&mut d, &p)?;
