@@ -2,6 +2,8 @@
 
 Dispatched against
 [`2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md`](2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md).
+The rule the findings in section 3 share is recorded as [ADR-1400](../09-decisions/adr-1400-a-certificate-must-record-every-distinction-its-acceptance-depends-on.md).
+
 Every verdict below cites a file and a function that was read. No verdict rests
 on a module doc — a file that records obstacles accumulates stale ones by
 construction, and its authority is exactly what makes them expensive.
