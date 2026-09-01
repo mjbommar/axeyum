@@ -32,6 +32,40 @@ The two-test sets are facets of one guard, not two guards behind one check: the
 reference guard is exercised at an ordinary and an invented JSON path, and the
 exemption guard is exercised in the fixture layout and in the real one.
 
+Six more guards landed 2026-09-01 with ADR-1480's evaluation-record amendment,
+mutation-verified the same way. **Every one has a test that ONLY it kills**, so
+none can be deleted while the suite is green and none hides behind another:
+
+    recorded-row-must-be-named      -> {a_settled_held_out_fact_is_a_violation,
+                                        a_settled_held_out_fact_NOT_named_by_
+                                          the_record_is_still_a_violation}
+    record-state-must-be-scored     -> {a_record_that_is_not_scored_licenses_nothing}
+    record-must-carry-protocol-commit
+                                    -> {a_record_without_a_protocol_commit_
+                                          licenses_nothing}
+    record-may-not-score-an-unsettled-row
+                                    -> {a_record_may_not_claim_a_row_it_did_
+                                          not_settle}
+    record-may-not-name-a-non-held-out-row
+                                    -> {a_record_may_not_name_a_row_outside_
+                                          the_held_out_population}
+    unreadable-record-is-an-error   -> {an_unreadable_record_is_an_error_not_
+                                          a_silent_skip}
+
+`a_defective_record_does_not_license_the_spend` is killed by three of them and
+that is deliberate rather than a gap: it checks the CONSEQUENCE the three defect
+shapes share -- a record the reader rejects must not still let the fact
+through -- while each shape is pinned separately above. The three narrow tests
+assert only their own complaint precisely so the WIDE mutation does not kill
+them; folding both halves into one test each made all three die under the wide
+mutation and left nothing uniquely pinning them, which is what the first
+measurement showed before they were split.
+
+The guard that matters most in this group is the SECOND one in the list of
+tests, not the first. "A record lets a score through" is the amendment working;
+"every other route is still refused" is the amendment not having quietly become
+"any held-out fact may be proved", which would pass every real run forever.
+
 The discriminating cases matter more than the failing ones. A gate that flags
 every fact id would "catch" the breach and be useless, so `test_a_train_fact_
 reference_is_not_a_violation` is what makes the partition check meaningful, and
@@ -238,8 +272,34 @@ class HoldoutIsolationTests(unittest.TestCase):
         # `check-holdout-closed-evaluation.py` -> `held_out=186 closed_shaped=0
         # violations=0 PASS`; `check-autogenesis-holdout-contamination.py` ->
         # `held_out=186 contaminated=0 CLEAN`.
+        #   0c13e80f8  draw 18, two families      186 -> 206  (v1 16 + v2 190)
+        #
+        # **This pin was RED on `main` and nobody had run it.** Draw 18
+        # (ADR-1465) landed `natural-factorization-lcm` and
+        # `natural-max-power-dividing` and did not move the pin with them, so
+        # the gate that exists to notice a partition moving was itself failing
+        # for exactly that reason. Found 2026-09-01 by the
+        # `score-the-blind-population` lane, which was amending this same guard
+        # and had to establish the failure was NOT its own -- the manifests are
+        # byte-identical at `main` (7e2f859dc) and at that lane's HEAD, both
+        # reporting 206, and that lane's commits touch neither manifest.
+        #
+        # Established before moving it, in the terms this assertion's own
+        # message sets out:
+        #
+        #   * a RISE of exactly +20 with ZERO rows removed;
+        #   * two WHOLE new held-out families of 10, both in the extension
+        #     (`natural-max-power-dividing`, `natural-factorization-lcm`);
+        #   * `nursery-v1.json` id -> partition map IDENTICAL to 3ab26028d's,
+        #     compared entry by entry, so no v1 row moved;
+        #   * all 20 new rows `open` with ZERO evidence -- with a positive
+        #     control over 200 non-held-out rows returning 178 WITH evidence,
+        #     so the query is not vacuously empty.
+        #
+        # Not transcribed from this gate's output: computed from the two
+        # manifest blobs at 3ab26028d and at `main` and diffed.
         self.assertIn(
-            "held_out=186",
+            "held_out=206",
             out,
             "The held-out population size moved. Do NOT transcribe the new "
             "number here: that turns a detector into a rubber stamp. A RISE is "
@@ -265,6 +325,135 @@ class HoldoutIsolationTests(unittest.TestCase):
         code, out, _ = self.run_guard()
         self.assertEqual(code, 0)
         self.assertIn("verdict=PASS", out)
+
+    # --- guard 1b: a RECORDED score is permitted, and only a recorded one ---
+    #
+    # ADR-1480 amended guard 1 so the one deliberate spend the population exists
+    # for can be booked. These controls exist because that amendment widens a
+    # gate, and a widened gate is exactly the shape that quietly stops failing:
+    # the case that matters is not "a record lets a score through" but "every
+    # OTHER route is still refused", which the four negative cases below pin
+    # separately.
+
+    def write_record(self, **overrides: object) -> None:
+        record = {
+            "kind": "axeyum-holdout-evaluation-record",
+            "state": "scored",
+            "protocol_commit": "0123456789abcdef",
+            "outcomes": [{"fact_id": HELD, "outcome": "CLOSED"}],
+        }
+        record.update(overrides)
+        (self.artifacts / "holdout-evaluation-v1.json").write_text(
+            json.dumps(record))
+
+    def test_a_settled_held_out_fact_named_by_a_record_is_permitted(self) -> None:
+        """The whole point of the amendment: a booked spend is not a breach."""
+        self.write_fact(HELD, "proved")
+        self.write_record()
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 0, err)
+        self.assertIn("verdict=PASS", out)
+        self.assertIn("recorded_scores=1", out)
+        # and it is counted as a RECORDED score, not swept into `settled`
+        self.assertIn("settled=0", out)
+
+    def test_a_settled_held_out_fact_NOT_named_by_the_record_is_still_a_violation(self) -> None:
+        """The half that matters. A record for one row must not license another.
+
+        Without this the amendment would degrade to "any held-out fact may be
+        proved once any record exists", which passes every real run forever.
+        """
+        self.write_fact(HELD, "proved")
+        self.write_fact(HELD_V2, "proved")
+        self.write_record()  # names HELD only
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("verdict=FAIL", out)
+        self.assertIn(HELD_V2, err)
+        self.assertIn("no evaluation record scores it", err)
+
+    def test_a_record_that_is_not_scored_licenses_nothing(self) -> None:
+        """A draft record must not pre-authorise a spend.
+
+        Asserts ONLY its own complaint. The "and the spend is still refused"
+        half lives in `test_a_defective_record_does_not_license_the_spend`,
+        deliberately: folding both into one test would make this case die under
+        the WIDE mutation too, and then nothing would uniquely pin the
+        state guard.
+        """
+        self.write_fact(HELD, "proved")
+        self.write_record(state="draft")
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("evaluation-record-not-scored", err)
+
+    def test_a_record_without_a_protocol_commit_licenses_nothing(self) -> None:
+        """The protocol commit is what makes the evaluation blind.
+
+        A record that cannot point at a commit fixing the protocol BEFORE the
+        outcomes is a story told afterwards, and a story is not a measurement.
+        """
+        self.write_fact(HELD, "proved")
+        self.write_record(protocol_commit="")
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("evaluation-record-without-protocol-commit", err)
+
+    def test_a_defective_record_does_not_license_the_spend(self) -> None:
+        """A record the reader rejects must not still let the fact through.
+
+        The three defect shapes are checked in one place because they share
+        this consequence, and each is pinned separately above.
+        """
+        for overrides in ({"state": "draft"},
+                          {"protocol_commit": ""},
+                          {"outcomes": []}):
+            with self.subTest(**overrides):
+                self.write_fact(HELD, "proved")
+                self.write_record(**overrides)
+                code, out, err = self.run_guard()
+                self.assertEqual(code, 1)
+                self.assertIn("settled-held-out-fact", err)
+
+    def test_a_record_may_not_claim_a_row_it_did_not_settle(self) -> None:
+        """Otherwise a record could reserve rows instead of accounting for them.
+
+        A record naming a row that is still `open` is claiming a score that did
+        not happen, which is the direction this whole ledger exists to prevent.
+        """
+        self.write_fact(HELD, "open")
+        self.write_record()
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("evaluation-record-scores-unsettled-row", err)
+
+    def test_a_record_may_not_name_a_row_outside_the_held_out_population(self) -> None:
+        self.write_fact(HELD, "proved")
+        self.write_record(outcomes=[{"fact_id": HELD, "outcome": "CLOSED"},
+                                    {"fact_id": TRAIN, "outcome": "CLOSED"}])
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("evaluation-record-names-non-held-out-row", err)
+
+    def test_an_unreadable_record_is_an_error_not_a_silent_skip(self) -> None:
+        """A record that cannot be parsed must not quietly license its rows."""
+        self.write_fact(HELD, "proved")
+        (self.artifacts / "holdout-evaluation-v1.json").write_text("{ not json")
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 1)
+        self.assertIn("unreadable-evaluation-record", err)
+
+    def test_the_record_itself_may_name_its_own_rows(self) -> None:
+        """It necessarily does, for the reason the population files do.
+
+        The discriminating half: an artifact that is NOT a record still may
+        not, which `test_a_reference_from_any_artifact_is_a_violation` pins.
+        """
+        self.write_fact(HELD, "proved")
+        self.write_record()
+        code, out, err = self.run_guard()
+        self.assertEqual(code, 0, err)
+        self.assertNotIn("held-out-reference", err)
 
     # --- guard 2: nothing outside the population may name a held-out fact --
     def test_a_reference_from_any_artifact_is_a_violation(self) -> None:

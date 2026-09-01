@@ -1,30 +1,59 @@
 {
-  "schema_version": 1,
-  "id": "F:ml430-int-natabs-inj-of-nonpos-of-nonneg-ecdb334a",
-  "title": "Mathlib v4.30 source proposition Int.natAbs_inj_of_nonpos_of_nonneg",
-  "statement": "The proposition declared as `Int.natAbs_inj_of_nonpos_of_nonneg` in the pinned Mathlib v4.30 source.",
-  "formal": {
-    "language": "lean4-surface",
-    "statement": "∀ {a b : ℤ}, a ≤ 0 → 0 ≤ b → (a.natAbs = b.natAbs ↔ -a = b)",
-    "fragment": "Int"
+ "schema_version": 1,
+ "id": "F:ml430-int-natabs-inj-of-nonpos-of-nonneg-ecdb334a",
+ "title": "Mathlib v4.30 source proposition Int.natAbs_inj_of_nonpos_of_nonneg",
+ "statement": "The proposition declared as `Int.natAbs_inj_of_nonpos_of_nonneg` in the pinned Mathlib v4.30 source.",
+ "formal": {
+  "language": "lean4-surface",
+  "statement": "∀ {a b : ℤ}, a ≤ 0 → 0 ≤ b → (a.natAbs = b.natAbs ↔ -a = b)",
+  "fragment": "Int",
+  "kernel_theorem": "Int.nat_abs_inj_of_nonpos_of_nonneg",
+  "kernel_statement": "theorem Int.nat_abs_inj_of_nonpos_of_nonneg : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 Int.zero) -> ((x3 : Int.le Int.zero x1) -> Iff (Eq.{1} AxNat (Int.natAbs x0) (Int.natAbs x1)) (Eq.{1} Int (Int.neg x0) x1)))))"
+ },
+ "epistemic_status": "proved",
+ "external_status": "proved",
+ "depends_on": ["F:ml430-nat-le-antisymm-79dccead", "F:nat-zero-le"],
+ "evidence": [
+  {
+   "id": "kernel-Int.nat_abs_inj_of_nonpos_of_nonneg",
+   "kind": "kernel-term",
+   "supports": "`Int.nat_abs_inj_of_nonpos_of_nonneg` is admitted as a Theorem with EXACTLY the stated shape, pinned verbatim via the kernel's own renderer: `((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 Int.zero) -> ((x3 : Int.le Int.zero x1) -> Iff (Eq.{1} AxNat (Int.natAbs x0) (Int.natAbs x1)) (Eq.{1} Int (Int.neg x0) x1)))))`.",
+   "check_status": "checked",
+   "checkers": [
+    "int_theorem_inventory (renders the kernel type of every Theorem; matched on the exact name/type columns)",
+    "axeyum-lean-kernel::Kernel::add_declaration (re-typechecks the proof term against the stated type on every build)"
+   ],
+   "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | awk -F'\\t' '$1 == \"theorem\" && $2 == \"Int.nat_abs_inj_of_nonpos_of_nonneg\" && $3 == \"\" && $4 == \"((x0 : Int) -> ((x1 : Int) -> ((x2 : Int.le x0 Int.zero) -> ((x3 : Int.le Int.zero x1) -> Iff (Eq.{1} AxNat (Int.natAbs x0) (Int.natAbs x1)) (Eq.{1} Int (Int.neg x0) x1)))))\"' | wc -l)\" -ge 1",
+   "kernel_declaration": "Int.nat_abs_inj_of_nonpos_of_nonneg"
   },
-  "epistemic_status": "open",
-  "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
-  "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Int.natAbs_inj_of_nonpos_of_nonneg` from Mathlib v4.30.0; no proof value was exposed",
-    "prior_art": [
-      {
-        "who": "the Mathlib contributors",
-        "what": "the theorem declaration `Int.natAbs_inj_of_nonpos_of_nonneg`",
-        "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
-        "year": 2026,
-        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
-      }
-    ]
-  },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. Re-elaborated as a proof-free axiom after `import Mathlib` against Mathlib c5ea00351c28 on s5 and ACCEPTED -- the same grade as the 214 nursery-v1 rows. Acceptance is syntax/type evidence about the statement, never proof evidence about the claim. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  {
+   "id": "footprint-Int.nat_abs_inj_of_nonpos_of_nonneg",
+   "kind": "exhaustive-enumeration",
+   "supports": "axiom_footprint: [] for `Int.nat_abs_inj_of_nonpos_of_nonneg`. The `integer` prelude's trusted surface is empty (no Axiom, no Opaque, no Quotient), which bounds every declaration in it, including this one.",
+   "check_status": "checked",
+   "checkers": [
+    "Kernel::axiom_footprint",
+    "nat_axiom_inventory --require-axiom-free (environment-wide trusted-surface enumeration, independent of the per-theorem footprint route)",
+    "int_prelude_tests::every_int_declaration_is_checked_and_axiom_free (coverage derived from kernel.environment(), so an unlisted declaration fails rather than going unchecked)"
+   ],
+   "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer"
+  }
+ ],
+ "provenance": {
+  "date": "2026-08-29",
+  "established_by": "lane score-the-blind-population (2026-09-01), proving the held-out `integer-absolute-value` family under the protocol preregistered at commit 067d675a3; declared in crates/axeyum-lean-kernel/src/int_prelude/nat_abs_mirrors.rs",
+  "source": "statement-only extraction of `Int.natAbs_inj_of_nonpos_of_nonneg` from Mathlib v4.30.0; no proof value was exposed",
+  "prior_art": [
+   {
+    "who": "the Mathlib contributors",
+    "what": "the theorem declaration `Int.natAbs_inj_of_nonpos_of_nonneg`",
+    "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+    "year": 2026,
+    "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+   }
+  ]
+ },
+ "notes": "PROVED in Axeyum, constructively and axiom-free, as row 9 of 10 in the first scored evaluation of the held-out partition (artifacts/autogenesis/holdout-evaluation-v1.json; protocol docs/research/11-design-review/2026-09-01-scoring-protocol-preregistration.md, committed at 067d675a3 BEFORE any statement in the family was read). Mathlib's own proof was not consulted -- its route goes through `abs` and the linear-ordered-ring API, and ours does not, because `Int.le`, `Int.lt` and `Int.mul` are four-case COMPUTING definitions in this construction. formal.statement remains a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type; the kernel declaration `Int.nat_abs_inj_of_nonpos_of_nonneg` is checked against its own rendered type in the evidence above. Scoring this row SPENDS its family for future blind evaluation, which is intended and is recorded in the evaluation record rather than left to be inferred. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority, and this closure did not change it (see scripts/check-drawn-population-zero-diff.py).",
+ "axiom_footprint": [],
+ "proof_route": "kernel-lean"
 }

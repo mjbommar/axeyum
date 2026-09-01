@@ -112,6 +112,7 @@ mod modeq_cancel_div_gcd;
 mod modeq_family;
 mod modinv;
 mod nat_abs;
+mod nat_abs_mirrors;
 pub(crate) mod ops;
 mod order;
 mod order_add;
@@ -1003,6 +1004,41 @@ pub struct IntPrelude {
     /// `nat_abs_pow : ∀ a k, Eq Nat (natAbs (pow a k)) (Nat.pow (natAbs a)
     /// k)` — the magnitude of a power is the power of the magnitude.
     pub nat_abs_pow: NameId,
+
+    // --- `Int.natAbs` order and injectivity mirrors (`nat_abs_mirrors.rs`) ---
+    /// `nat_abs_inj_of_nonneg_of_nonneg : ∀ a b, 0 ≤ a → 0 ≤ b →
+    /// (natAbs a = natAbs b ↔ a = b)`.
+    pub nat_abs_inj_of_nonneg_of_nonneg: NameId,
+    /// `nat_abs_inj_of_nonpos_of_nonpos : ∀ a b, a ≤ 0 → b ≤ 0 →
+    /// (natAbs a = natAbs b ↔ a = b)`.
+    pub nat_abs_inj_of_nonpos_of_nonpos: NameId,
+    /// `nat_abs_inj_of_nonneg_of_nonpos : ∀ a b, 0 ≤ a → b ≤ 0 →
+    /// (natAbs a = natAbs b ↔ a = -b)`.
+    pub nat_abs_inj_of_nonneg_of_nonpos: NameId,
+    /// `nat_abs_inj_of_nonpos_of_nonneg : ∀ a b, a ≤ 0 → 0 ≤ b →
+    /// (natAbs a = natAbs b ↔ -a = b)`.
+    pub nat_abs_inj_of_nonpos_of_nonneg: NameId,
+    /// `Nat.mul_self_le_mul_self_iff : ∀ m n, m ≤ n ↔ m * m ≤ n * n` —
+    /// declared into the `Nat` namespace from here, like `Nat.inverseIndex`.
+    pub nat_mul_self_le_mul_self_iff: NameId,
+    /// `Nat.mul_self_lt_mul_self_iff : ∀ m n, m < n ↔ m * m < n * n`.
+    pub nat_mul_self_lt_mul_self_iff: NameId,
+    /// `Nat.mul_self_eq_mul_self_iff : ∀ m n, m = n ↔ m * m = n * n`.
+    pub nat_mul_self_eq_mul_self_iff: NameId,
+    /// `nat_abs_le_iff_mul_self_le : ∀ a b, natAbs a ≤ natAbs b ↔ a * a ≤ b * b`.
+    pub nat_abs_le_iff_mul_self_le: NameId,
+    /// `nat_abs_lt_iff_mul_self_lt : ∀ a b, natAbs a < natAbs b ↔ a * a < b * b`.
+    pub nat_abs_lt_iff_mul_self_lt: NameId,
+    /// `nat_abs_eq_iff_mul_self_eq : ∀ a b, natAbs a = natAbs b ↔ a * a = b * b`.
+    pub nat_abs_eq_iff_mul_self_eq: NameId,
+    /// `nat_abs_coe_sub_coe_le_of_le : ∀ a b n : ℕ, a ≤ n → b ≤ n →
+    /// natAbs (ofNat a - ofNat b) ≤ n`.
+    pub nat_abs_coe_sub_coe_le_of_le: NameId,
+    /// `nat_abs_coe_sub_coe_lt_of_lt : ∀ a b n : ℕ, a < n → b < n →
+    /// natAbs (ofNat a - ofNat b) < n`.
+    pub nat_abs_coe_sub_coe_lt_of_lt: NameId,
+    /// `nat_abs_emod_two : ∀ i, natAbs i % 2 = natAbs (emod i 2)`.
+    pub nat_abs_emod_two: NameId,
 
     // --- `Int.gcd`, Euclid's Book VII transported from `ℕ` -------------------
     /// `Int.gcd a b := Nat.gcd (natAbs a) (natAbs b)` — a `Nat`-valued gcd, as
@@ -2066,6 +2102,19 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
         nat_abs_neg: child(kernel, "nat_abs_neg"),
         nat_abs_pow: child(kernel, "nat_abs_pow"),
+        nat_abs_inj_of_nonneg_of_nonneg: child(kernel, "nat_abs_inj_of_nonneg_of_nonneg"),
+        nat_abs_inj_of_nonpos_of_nonpos: child(kernel, "nat_abs_inj_of_nonpos_of_nonpos"),
+        nat_abs_inj_of_nonneg_of_nonpos: child(kernel, "nat_abs_inj_of_nonneg_of_nonpos"),
+        nat_abs_inj_of_nonpos_of_nonneg: child(kernel, "nat_abs_inj_of_nonpos_of_nonneg"),
+        nat_mul_self_le_mul_self_iff: kernel.name_str(nat_root, "mul_self_le_mul_self_iff"),
+        nat_mul_self_lt_mul_self_iff: kernel.name_str(nat_root, "mul_self_lt_mul_self_iff"),
+        nat_mul_self_eq_mul_self_iff: kernel.name_str(nat_root, "mul_self_eq_mul_self_iff"),
+        nat_abs_le_iff_mul_self_le: child(kernel, "nat_abs_le_iff_mul_self_le"),
+        nat_abs_lt_iff_mul_self_lt: child(kernel, "nat_abs_lt_iff_mul_self_lt"),
+        nat_abs_eq_iff_mul_self_eq: child(kernel, "nat_abs_eq_iff_mul_self_eq"),
+        nat_abs_coe_sub_coe_le_of_le: child(kernel, "nat_abs_coe_sub_coe_le_of_le"),
+        nat_abs_coe_sub_coe_lt_of_lt: child(kernel, "nat_abs_coe_sub_coe_lt_of_lt"),
+        nat_abs_emod_two: child(kernel, "nat_abs_emod_two"),
         gcd: child(kernel, "gcd"),
         nat_abs_mul: child(kernel, "nat_abs_mul"),
         dvd_of_nat_abs_dvd: child(kernel, "dvd_of_nat_abs_dvd"),
@@ -2424,6 +2473,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
+        nat_abs_mirrors::declare_nat_abs_inj_mirrors(&mut d)?;
         parity::declare_parity_all(&mut d)?;
         parity::declare_emod_two_eq_zero_or_one(&mut d)?;
         parity::declare_emod_two_ne_zero(&mut d)?;
