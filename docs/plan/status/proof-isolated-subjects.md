@@ -138,6 +138,30 @@ names agree, 11 group labels agree**, and
 `every_declaration_a_prelude_introduces_is_checked_and_axiom_free` covers the
 IPC declarations for the first time (8 collision tests green).
 
+**A FOURTH tool had the same blindness, and it is the one lanes are pointed
+at.** `examples/shape_search.rs` — the retrieval tool CLAUDE.md names as the
+answer to "the lemma you need exists and the name search will not find it" —
+also never built the IPC package, so `--name-like ipc_…` returned ABSENT with a
+convincing same-kind positive control beside it, and
+`scripts/check-shape-duplicates.py` (an L0 gate) was blind to those ~50
+declarations. Fixed, and it introduced no new duplicate group: still 15, all
+allowlisted.
+
+Worse, `shape_search`'s hand-written `groups` vector and its hand-written
+`index_kernel` calls were two independent lists with **nothing making them
+agree** — so the `coverage:` line, whose whole job is to stop an empty answer
+from a tool never pointed at your subject reading as a strong negative result,
+could name a group nothing indexed or omit one that was. Both happened here.
+Now asserted: the declared group set must equal the union of the groups the
+indexed entries actually carry. **Mutation-verified** — deleting the
+`index_kernel(&ipc, …)` call while leaving `"ipc"` in the declared list makes
+the binary exit **101** with `declared-only ["ipc"], indexed-only []`; restored,
+exit 0.
+
+Three tools now agree on the same numbers independently: `declarations=2779`
+(projection and shape_search), `theorem=2255` (shape_search census and the
+completeness gate's distinct-name comparison), `11` group labels.
+
 ## Proof the check fires
 
 Against the **real ledger**, not a fixture — `--facts`/`--operations`/
@@ -219,5 +243,6 @@ re-running both, so this is a measurement rather than an inference:
 | 2026-08-31 | | `kernel_declaration_projection` / `prelude_theorem_inventory` / `cross_prelude_collision_tests.rs` — all three build the `ipc` group; 2255 theorem names and 11 labels agree |
 | 2026-08-31 | | `scripts/check-theorem-inventory-completeness.py` — label regex accepts `Group::of("…")` (it had matched zero since the constructor refactor); registered in `check.sh`; +2 controls |
 | 2026-08-31 | | `F:excluded-middle-not-intuitionistic`, `F:heyting-3-chain-refutes-excluded-middle` — `formal.kernel_theorem` set, each verified byte-for-byte against the rendered canonical type; the "2 umbrella facts" were never umbrellas |
+| 2026-08-31 | | `examples/shape_search.rs` — indexes the `ipc` group (a fourth tool blind to it; `check-shape-duplicates.py` covered ~50 more declarations, still 15 allowlisted groups), and now ASSERTS its declared coverage equals what it indexed; mutation-verified, exit 101 |
 | 2026-08-31 | | `scripts/check.sh` — registered `test-annotate-trust-closure-kernel-theorem.sh`, an orphan control since it landed; `check-control-registration.sh` back to `orphans=0` |
 | 2026-08-31 | | [ADR-1285](../../research/09-decisions/adr-1285-a-proof-isolated-subject-is-a-subject-and-the-registry-names-it.md) — a proof-isolated subject is a subject, and the operation registry names it |

@@ -101,8 +101,9 @@ use axeyum_lean_kernel::shape_index::{
 };
 use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude, on_a_deep_stack,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
+    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
+    on_a_deep_stack,
 };
 
 const USAGE: &str = "\
@@ -233,6 +234,7 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         "nat".to_owned(),
         "axreal".to_owned(),
         "integer".to_owned(),
+        "ipc".to_owned(),
         "rat".to_owned(),
         "characterization".to_owned(),
         "string".to_owned(),
@@ -266,6 +268,18 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");
     index_kernel(&rational, "rat", &mut index, index_values);
 
+    // The IPC package. Same reason as `characterization` below, and the same
+    // stakes: an ABSENT verdict from this tool is what a lane acts on, so a
+    // prelude group it never builds produces a confident, wrong "no such
+    // declaration". `build_ipc_soundness_prelude` transitively builds
+    // provable -> heyting -> nat, so one call covers the whole
+    // intuitionistic-logic surface. Added 2026-08-31, alongside the same gap in
+    // `kernel_declaration_projection`, `prelude_theorem_inventory` and
+    // `cross_prelude_collision_tests.rs` -- all four were blind to it.
+    let mut ipc = Kernel::new();
+    let _ = build_ipc_soundness_prelude(&mut ipc).expect("IPC soundness prelude must build");
+    index_kernel(&ipc, "ipc", &mut index, index_values);
+
     // The Nat/Int characterization package: `kernel_declaration_projection`
     // builds it and this index would otherwise report its declarations absent.
     let mut characterization = Kernel::new();
@@ -298,6 +312,31 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
     }
 
     index.finish();
+    // The `groups` vector above is hand-written and the `index_kernel` calls
+    // below it are hand-written, and NOTHING made them agree -- so the
+    // `coverage:` line, whose entire job is to stop an empty answer from a tool
+    // that was never pointed at your subject reading as a strong negative
+    // result, could name a group nothing indexed, or omit one that was. Both
+    // directions occurred: `ipc` was indexed by no call at all until
+    // 2026-08-31, and when it was added the coverage line still listed ten
+    // groups. Derived comparison, so the list cannot drift again.
+    let declared: std::collections::BTreeSet<&str> =
+        index.groups().iter().map(String::as_str).collect();
+    let indexed: std::collections::BTreeSet<&str> = index
+        .entries()
+        .iter()
+        .flat_map(|entry| entry.groups.iter().map(String::as_str))
+        .collect();
+    assert!(
+        declared == indexed,
+        "shape_search coverage disagrees with what was indexed: declared-only \
+         {:?}, indexed-only {:?}. The `coverage:` line would then be a claim \
+         about groups nobody built (or silently omit ones that were), which is \
+         the exact defect that line exists to prevent",
+        declared.difference(&indexed).collect::<Vec<_>>(),
+        indexed.difference(&declared).collect::<Vec<_>>(),
+    );
+
     index
 }
 
