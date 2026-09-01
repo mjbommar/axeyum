@@ -919,7 +919,7 @@ fn nat_valuation_step(
             let dvd_p_yprime = d.dvd(p_var, yprime);
 
             let on_left = &|d: &mut IntDev<'_>, hxpp: ExprId| -> ExprId {
-                dvd_elim_nat(d, p_var, xprime, goal_left, hxpp, &|d, xpp, eq_xpp| {
+                dvd_elim_nat(d, p_var, xprime, goal, hxpp, &|d, xpp, eq_xpp| {
                     // eq_xpp : Eq xprime (mul p_var xpp)
                     let p_var_xpp = d.mul(p_var, xpp);
                     let pk_p_var_xpp = d.mul(pk, p_var_xpp);
@@ -936,11 +936,12 @@ fn nat_valuation_step(
                     // x_eq_final : Eq x (mul (mul pk p_var) xpp), defeq
                     // Eq x (mul (pow p_var (succ k)) xpp)
                     let pow_succ_k_local = d.pow(p_var, succ_k);
-                    dvd_intro_nat(d, pow_succ_k_local, x, xpp, x_eq_final)
+                    let dvd_result = dvd_intro_nat(d, pow_succ_k_local, x, xpp, x_eq_final);
+                    d.or_inl(goal_left, goal_right, dvd_result)
                 })
             };
             let on_right = &|d: &mut IntDev<'_>, hypp: ExprId| -> ExprId {
-                dvd_elim_nat(d, p_var, yprime, goal_right, hypp, &|d, ypp, eq_ypp| {
+                dvd_elim_nat(d, p_var, yprime, goal, hypp, &|d, ypp, eq_ypp| {
                     let p_var_ypp = d.mul(p_var, ypp);
                     let pl_p_var_ypp = d.mul(pl, p_var_ypp);
                     let step_a = d.congr(yprime, p_var_ypp, eq_ypp, &|d, t| d.mul(pl, t));
@@ -954,7 +955,8 @@ fn nat_valuation_step(
                         &[(pl_yprime, eq_y), (pl_p_var_ypp, step_a), (target_y, assoc_rev)],
                     );
                     let pow_succ_l_local = d.pow(p_var, succ_l);
-                    dvd_intro_nat(d, pow_succ_l_local, y, ypp, y_eq_final)
+                    let dvd_result = dvd_intro_nat(d, pow_succ_l_local, y, ypp, y_eq_final);
+                    d.or_inr(goal_left, goal_right, dvd_result)
                 })
             };
             d.or_elim(dvd_p_xprime, dvd_p_yprime, goal, euclid_or, on_left, on_right)
