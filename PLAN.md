@@ -132,6 +132,7 @@ now. Nothing was deleted.
 | 2026-09-01 | `de1a36083` | `bundled_structure_probe` + `inductive_universe_probe`: a 17-field `Field` bundle admits and a derived theorem quantified over it is accepted axiom-free; the universe control does NOT fire, exposing the `Type : Type` retraction. |
 | 2026-09-01 | `c72fd281b` | Kernel guard: `KernelError::ConstructorFieldUniverseTooBig`, Lean's `check_constructor` universe constraint with `Prop` exempt. Repairs the two fixtures that asserted Lean-illegal inductives admit (grammar `type` families to `Sort 2`, pin and digest unchanged; seam-fuzz data fields clamped for bare-parameter universes). New test with two positive controls. |
 | 2026-09-01 | `f933965ad` | `module_over_field_probe`: a bundle carrying another bundle, `smul` through two nested projections, derived theorem admitted — "a vector space over a field" is stateable and provable here. |
+| 2026-09-01 | cas-rustdoc-links | Fixed all 6 broken rustdoc intra-doc-links in `crates/axeyum-cas/src/{inverse,normalforms,rationality}.rs`; `cargo doc -p axeyum-cas --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 8 error lines). Workspace-wide doc build still red: 7 error lines in `axeyum-lean-import` and `axeyum-solver` (out of scope, reported not fixed). |
 | 2026-09-01 | `c56868c75` | Lane opened; status stub and starting measurements recorded. |
 | 2026-09-01 | `208104bd5` | Slice A: `scripts/creal-declare-deps.py` re-derives `creal.rs`'s dependency graph from source and checks the `STEPS` table against it. 0 order violations, but 977 of 4,831 `requires` edges unnamed and two false `provides` disarming the preflight over a 48-step window. `--self-check` permutes a step before its provider and requires the scan to fire; `--strict` exits 2 on a table/code disagreement. |
 | 2026-09-01 | `b3b449dfc` | Slice B: `plan_step_order` computes the build order (Kahn, array-index tie-break) instead of validating a hand-written one; the two false `provides` deleted; duplicate providers rejected. Projection byte-identical (same SHA-256, 14,673 rows); build time unchanged. Inversion demo: level 1 exit 101, level 2 exit 0 with identical output. Six new tests, each a distinct failure mode. clippy `--all-targets -D warnings` exit 0. |
@@ -37415,6 +37416,29 @@ Also open, and a separate decision:
 `axeyum_solver::capabilities::CAPABILITIES`, so it is a *solver* capability
 matrix under a name that promises the whole stack. Nothing in it is wrong; the
 CAS simply cannot appear. Widening the generator's source is the fix.
+
+**Your lane's block (`DONE`, cas-rustdoc-links, 2026-09-01).** Fixed all 8
+`error:` lines (7 broken-link errors + the summary line) that made
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-cas --no-deps` fail —
+confirmed by reproducing the failure first (exit 101, matched the count
+`kernel-rustdoc-links` reported) and re-running the identical command after
+the edits (exit 0, 0 errors). All six broken links name genuinely private
+items with no public re-export (`checker_derivative`, `checker_shift_by` in
+`inverse.rs`; `certifies_hermite_shape`, `certifies_smith_shape` in
+`normalforms.rs`; `rational_root_candidates`, `MAX_ABS_INT_COEFF`,
+`MAX_CANDIDATES` in `rationality.rs`) — every one demoted to plain
+code-formatted text (`` `name` `` instead of `` [`name`] ``), doc-comment-only,
+no visibility or code change. `rustfmt --edition 2024` on all three touched
+files: no diff beyond the intended edits.
+
+Also ran `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+--no-deps` once, report-only, no fix: exit 101, 7 `error:` lines, all in
+`crates/axeyum-lean-import` (`thin_adapter.rs`, unresolved link to
+`NeedsLeanCheck`) and `crates/axeyum-solver` (`proof.rs`,
+private-intra-doc-links to `finish_unsat_proof_outcome_with_check_budget`
+and `qf_bv_cnf_encoding`; `int_reconstruct/diophantine.rs`, unresolved link
+to `Kernel::render_lean_module_compact`) — confirmed `axeyum-cas` itself is
+clean in this run. Out of this lane's scope, not fixed here.
 
 **A bucket MIS-attribution is now loud, not just an unattributed one** (`COMPLETE`, classifier-fail-loud, 2026-08-31). ADR-1215.
 
