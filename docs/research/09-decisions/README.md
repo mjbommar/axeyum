@@ -826,3 +826,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1460](adr-1460-mvt-and-extremum-audited-clean-for-the-open-interval-defect.md) | `mvt.rs` and `extremum.rs` audited clean for ADR-1435's open-interval defect, for a structural reason | Accepted |
 | [1465](adr-1465-draw-18-clears-the-dispatchable-floor.md) | Draw 18 clears the dispatchable floor, and the plan ADR-1450 handed off was refused at R11 before it was authored | Accepted |
 | [1470](adr-1470-the-selection-lemma-needs-mapsinto-and-the-injective-case-is-still-open.md) | ADR-1440 named the selection lemma | accepted |
+| [1480](adr-1480-a-recorded-score-is-not-a-breach-and-the-blind-population-is-cashed.md) | A recorded score is not a breach, and the held-out population is cashed for the first time | Accepted |
