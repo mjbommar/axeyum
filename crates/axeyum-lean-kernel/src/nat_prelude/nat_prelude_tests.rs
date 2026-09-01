@@ -525,6 +525,13 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.pair_snd,
         p.binary_rec_aux,
         p.binary_rec,
+        // `queue-unblock-four-families` lane. Definitions only, ADR-0653 --
+        // `Nat.count` opens `Mathlib.Data.Nat.Count` and `Nat.divMaxPow` opens
+        // `Mathlib.Data.Nat.MaxPowDiv`, and declaring theorems about either
+        // would spend the family it was opening.
+        p.count,
+        p.div_max_pow_aux,
+        p.div_max_pow,
         // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
         p.dist,
         p.nth_aux,

@@ -4813,6 +4813,7 @@ pub struct NatPrelude {
     /// `Nat.divMaxPow (n base : Nat) : Nat := divMaxPowAux n n base` — `n`
     /// with every factor of `base` divided out. Construction only, ADR-0653;
     /// opens `Mathlib.Data.Nat.MaxPowDiv` for the autogenesis screen.
+    pub div_max_pow: NameId,
     /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
     /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
     /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s

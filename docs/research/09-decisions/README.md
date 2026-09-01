@@ -817,3 +817,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1415](adr-1415-divergence-registry-swept-against-module-docs.md) | the divergence registry is swept against module docs, not written once | Accepted |
 | [1420](adr-1420-the-refill-draw-is-not-authorable-one-two-row-module-blocks-it.md) | The refill draw is not authorable -- R5 needs two held-out families, and one two-row module gates every candidate | Accepted |
 | [1425](adr-1425-the-dominance-docs-weakest-point-is-distinction-completeness-not-naming.md) | the dominance document's weakest point is distinction-completeness, not the row-3 naming gap | Accepted |
+| [1430](adr-1430-two-declarations-make-the-draw-authorable-and-adr-1420s-universe-was-the-wrong-one.md) | Two declarations make the draw authorable, and ADR-1420's exhaustive answer was about the wrong universe | Accepted |
