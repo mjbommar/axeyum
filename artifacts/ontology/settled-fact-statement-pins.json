@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2115,
+    "min_identity_bound": 2118,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -11843,6 +11843,13 @@
       "kernel_theorem": "Nat.clog_antitone_left"
     },
     {
+      "fact_id": "F:ml430-nat-clog-eq-one-f7834503",
+      "language": "lean4-surface",
+      "statement_sha256": "98f6983c27a08060f74f48c8b30fa3cdcc1a060e8014a5ac05fc69504202302c",
+      "prose_sha256": "b7e1e3965f145b9d93ae9cc9e75bdfe91eb7ca5da45a34cd8921ae2fd907cc1f",
+      "kernel_theorem": "Nat.clog_eq_one"
+    },
+    {
       "fact_id": "F:ml430-nat-clog-mono-74b44081",
       "language": "lean4-surface",
       "statement_sha256": "9b7968a1d7addc5038f72e18d11ba016cbadb337c01d78dc18f1369faf69ce02",
@@ -13590,6 +13597,20 @@
       "statement_sha256": "ae6d33557300447315fc66bc19a4df6800aefdecaf2af095e44593a3f719adb2",
       "prose_sha256": "6cc914781ce13c481c0f812ed38fe72fd95fb739c55c7ed83d9bfd7f176ef276",
       "kernel_theorem": "Nat.log_antitone_left"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "language": "lean4-surface",
+      "statement_sha256": "3aade1e1d79f9c9b48ef2d4a6c86b88b4ed22515ab9ea81a320a7b5708390bb1",
+      "prose_sha256": "86c5b34b55b0b063261acb50342af52786afc5a44bdb67e3554940c4f722a694",
+      "kernel_theorem": "Nat.log_eq_one_iff'"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-eq-one-iff-a89f8bab",
+      "language": "lean4-surface",
+      "statement_sha256": "4db463973ccc6934c8f7a93ae26caac855971041ee515bd0ec097e11d2b52ea4",
+      "prose_sha256": "c4cdc0c09de6fc01d062409ea97e347244038ba28221b2adaae064f10e23d15a",
+      "kernel_theorem": "Nat.log_eq_one_iff"
     },
     {
       "fact_id": "F:ml430-nat-log-eq-zero-iff-819cea74",
