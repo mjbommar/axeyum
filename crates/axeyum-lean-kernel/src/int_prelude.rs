@@ -112,6 +112,7 @@ mod modeq_cancel_div_gcd;
 mod modeq_family;
 mod modinv;
 mod nat_abs;
+mod nat_abs_mirrors;
 pub(crate) mod ops;
 mod order;
 mod order_add;
@@ -1003,6 +1004,20 @@ pub struct IntPrelude {
     /// `nat_abs_pow : ∀ a k, Eq Nat (natAbs (pow a k)) (Nat.pow (natAbs a)
     /// k)` — the magnitude of a power is the power of the magnitude.
     pub nat_abs_pow: NameId,
+
+    // --- `Int.natAbs` order and injectivity mirrors (`nat_abs_mirrors.rs`) ---
+    /// `nat_abs_inj_of_nonneg_of_nonneg : ∀ a b, 0 ≤ a → 0 ≤ b →
+    /// (natAbs a = natAbs b ↔ a = b)`.
+    pub nat_abs_inj_of_nonneg_of_nonneg: NameId,
+    /// `nat_abs_inj_of_nonpos_of_nonpos : ∀ a b, a ≤ 0 → b ≤ 0 →
+    /// (natAbs a = natAbs b ↔ a = b)`.
+    pub nat_abs_inj_of_nonpos_of_nonpos: NameId,
+    /// `nat_abs_inj_of_nonneg_of_nonpos : ∀ a b, 0 ≤ a → b ≤ 0 →
+    /// (natAbs a = natAbs b ↔ a = -b)`.
+    pub nat_abs_inj_of_nonneg_of_nonpos: NameId,
+    /// `nat_abs_inj_of_nonpos_of_nonneg : ∀ a b, a ≤ 0 → 0 ≤ b →
+    /// (natAbs a = natAbs b ↔ -a = b)`.
+    pub nat_abs_inj_of_nonpos_of_nonneg: NameId,
 
     // --- `Int.gcd`, Euclid's Book VII transported from `ℕ` -------------------
     /// `Int.gcd a b := Nat.gcd (natAbs a) (natAbs b)` — a `Nat`-valued gcd, as
@@ -2066,6 +2081,10 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs_neg_of_nat: child(kernel, "nat_abs_neg_of_nat"),
         nat_abs_neg: child(kernel, "nat_abs_neg"),
         nat_abs_pow: child(kernel, "nat_abs_pow"),
+        nat_abs_inj_of_nonneg_of_nonneg: child(kernel, "nat_abs_inj_of_nonneg_of_nonneg"),
+        nat_abs_inj_of_nonpos_of_nonpos: child(kernel, "nat_abs_inj_of_nonpos_of_nonpos"),
+        nat_abs_inj_of_nonneg_of_nonpos: child(kernel, "nat_abs_inj_of_nonneg_of_nonpos"),
+        nat_abs_inj_of_nonpos_of_nonneg: child(kernel, "nat_abs_inj_of_nonpos_of_nonneg"),
         gcd: child(kernel, "gcd"),
         nat_abs_mul: child(kernel, "nat_abs_mul"),
         dvd_of_nat_abs_dvd: child(kernel, "dvd_of_nat_abs_dvd"),
@@ -2424,6 +2443,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         nat_abs::declare_nat_abs_lemmas(&mut d)?;
         nat_abs::declare_nat_abs_neg_of_nat(&mut d)?;
         nat_abs::declare_nat_abs_neg(&mut d)?;
+        nat_abs_mirrors::declare_nat_abs_inj_mirrors(&mut d)?;
         parity::declare_parity_all(&mut d)?;
         parity::declare_emod_two_eq_zero_or_one(&mut d)?;
         parity::declare_emod_two_ne_zero(&mut d)?;
