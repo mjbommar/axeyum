@@ -1671,6 +1671,24 @@ pub struct IntPrelude {
     /// `fib_two_mul`, one index up (`fib_add (n+1) (n+1)` plus `fib_rec`);
     /// see `fibonacci.rs`'s `declare_fib_two_mul_add_two` doc.
     pub fib_two_mul_add_two: NameId,
+    /// `odd_two_mul_add_one : ∀ n, Odd (add (mul two n) one)` — `2*n+1` is
+    /// always odd, in either direction of `ℤ`. Mathlib's own
+    /// `Int.odd_two_mul_add_one` (`Mathlib/Data/Int/Parity.lean`, generic
+    /// over any semiring); here specialised to `ℤ` because it feeds
+    /// [`Self::fib_two_mul_add_one_eq_natfib_natabs`] directly, mirroring
+    /// Mathlib's own proof of that theorem
+    /// (`fib_of_odd <| odd_two_mul_add_one n`,
+    /// `Mathlib/Data/Int/Fib/Basic.lean:45`). See `fibonacci.rs`'s
+    /// `declare_odd_two_mul_add_one` doc.
+    pub odd_two_mul_add_one: NameId,
+    /// `fib_two_mul_add_one_eq_natfib_natabs : ∀ n, Eq Int (fib (add (mul
+    /// two n) one)) (ofNat (Nat.fib (natAbs (add (mul two n) one))))` —
+    /// Mathlib's `Int.fib_two_mul_add_one_eq_natFib_natAbs`
+    /// (`Mathlib/Data/Int/Fib/Basic.lean:45`), `F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b`.
+    /// One application of [`Self::fib_of_odd`] at index `2*n+1`, fed
+    /// [`Self::odd_two_mul_add_one`] — see `fibonacci.rs`'s
+    /// `declare_fib_two_mul_add_one_eq_natfib_natabs` doc.
+    pub fib_two_mul_add_one_eq_natfib_natabs: NameId,
     /// `fib_zero : Eq Int (fib 0) 0` — base case, reduces by definition.
     pub fib_zero: NameId,
     /// `fib_one : Eq Int (fib 1) 1` — base case, reduces by definition.
@@ -2180,6 +2198,8 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         fib_add: child(kernel, "fib_add"),
         fib_two_mul: child(kernel, "fib_two_mul"),
         fib_two_mul_add_two: child(kernel, "fib_two_mul_add_two"),
+        odd_two_mul_add_one: child(kernel, "odd_two_mul_add_one"),
+        fib_two_mul_add_one_eq_natfib_natabs: child(kernel, "fib_two_mul_add_one_eq_natfib_natabs"),
         fib_zero: child(kernel, "fib_zero"),
         fib_one: child(kernel, "fib_one"),
         fib_two: child(kernel, "fib_two"),
@@ -2519,6 +2539,8 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         fibonacci::declare_fib_add(&mut d)?;
         fibonacci::declare_fib_two_mul(&mut d)?;
         fibonacci::declare_fib_two_mul_add_two(&mut d)?;
+        fibonacci::declare_odd_two_mul_add_one(&mut d)?;
+        fibonacci::declare_fib_two_mul_add_one_eq_natfib_natabs(&mut d)?;
         fibonacci::declare_fib_zero(&mut d)?;
         fibonacci::declare_fib_one(&mut d)?;
         fibonacci::declare_fib_two(&mut d)?;

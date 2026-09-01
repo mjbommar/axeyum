@@ -68,6 +68,7 @@
 
 use super::IntPrelude;
 use super::ops::{IntDev, Shape, case_split, exists_elim};
+use super::second_supplementary::{odd_predicate, two_mul_eq_add_self};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
@@ -2740,6 +2741,142 @@ pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), Kern
         let final_proof = d.itrans(f_idx, f_n1n1, mul_bp1_final, idx_fib_back, h8);
 
         (stmt, final_proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// `Int.odd_two_mul_add_one` / `Int.fib_two_mul_add_one_eq_natFib_natAbs` —
+// Mathlib's own proof of the latter is one line,
+// `fib_of_odd <| odd_two_mul_add_one n` (`Mathlib/Data/Int/Fib/Basic.lean:45`),
+// and both pieces are already in reach: [`declare_fib_of_odd`] above, and
+// `second_supplementary.rs`'s `odd_predicate`/`two_mul_eq_add_self` (a
+// `Nat`-level `Exists`-witness predicate and `Eq (mul 2 m) (add m m)`,
+// built for an unrelated quadratic-reciprocity modulus but exactly the
+// shape this needs too).
+// ============================================================================
+
+/// `Nat.Odd (succ (mul 2 m))` at witness `m` — `two_mul_eq_add_self` lifted
+/// through `succ` and handed to `Exists.intro`. Byte-for-byte the same
+/// construction as `second_supplementary.rs`'s `two_coprime_to_odd_modulus`'s
+/// local `odd_pp`, extracted here because [`declare_odd_two_mul_add_one`]
+/// needs exactly this fact at BOTH branches of its case split (see there):
+/// the `ofNat a` branch needs it at `m := a`, the `negSucc j` branch at
+/// `m := j`, since `2*n+1`'s magnitude reduces to `succ (mul 2 a)` in the
+/// first case and `2*n+1` itself reduces to `negSucc (mul 2 j)` — whose
+/// OWN magnitude is `succ (mul 2 j)` — in the second, i.e. the SAME closed
+/// form either way.
+fn nat_odd_of_succ_two_mul(d: &mut IntDev<'_>, m: ExprId) -> ExprId {
+    let np = d.prelude();
+    let nat = d.nat_ty();
+    let uone = d.level_one();
+    let two = d.num(2);
+    let mul2m = d.mul(two, m);
+    let pp = d.succ(mul2m);
+    let mm = d.add(m, m);
+    let base = two_mul_eq_add_self(d, m); // Eq Nat (mul 2 m) (add m m)
+    let witness_eq = d.congr(mul2m, mm, base, &|d, x| d.succ(x)); // Eq Nat pp (succ mm)
+    let pred = odd_predicate(d, pp);
+    let intro = d.kernel().const_(np.logic.exists_intro, vec![uone]);
+    d.apply(intro, &[nat, pred, m, witness_eq])
+}
+
+/// `Int.odd_two_mul_add_one : ∀ n, Odd (add (mul two n) one)` — `2*n+1` is
+/// always odd, in either direction of `ℤ`. `Odd`/`Even` are defined via
+/// `natAbs` (`parity.rs`'s module doc), so once `case_split` reduces
+/// `2*n+1` down to its `ofNat`/`negSucc` closed form, both branches land on
+/// the identical `Nat.Odd (succ (mul 2 _))` shape [`nat_odd_of_succ_two_mul`]
+/// closes directly, with no `Int`-level parity lemma:
+///
+/// - `ofNat a` branch: `2*n+1` reduces PURELY to `ofNat (add (mul 2 a) 1)`
+///   (`Int.mul`/`Int.add` on `ofNat`/`ofNat`, structural — `defs.rs`'s
+///   reduction table), and `natAbs (ofNat E)` reduces to `E`; `add (mul 2 a)
+///   1` is itself defeq to `succ (mul 2 a)` (`Nat.add` recurses on its
+///   RIGHT argument, and `1 = succ zero`), so `nat_odd_of_succ_two_mul(a)`
+///   closes it.
+/// - `negSucc j` branch: `2*n+1` reduces PURELY to `negSucc (mul 2 j)`
+///   ([`declare_fib_two_mul_add_one_pos`]'s own `negSucc` branch already
+///   establishes this reduction, reused unchanged here), and `natAbs
+///   (negSucc x)` reduces to `succ x`, landing on `succ (mul 2 j)` —
+///   `nat_odd_of_succ_two_mul(j)` closes it too.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's rejection if the constructed term does not check.
+pub(super) fn declare_odd_two_mul_add_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| -> ExprId {
+        let n = args[0];
+        let two_nat = d.num(2);
+        let two_i = d.of_nat(two_nat);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let doubled = d.imul(two_i, n);
+        let index = d.iadd(doubled, one_i);
+        d.const_app(p.odd, &[index])
+    };
+
+    d.int_theorem(p.odd_two_mul_add_one, 1, &|d, v| {
+        let n = v[0];
+        let stmt = statement(d, v);
+        // Both branches land on the identical `Nat.Odd (succ (mul 2 _))`
+        // shape (see the doc above), so the `Shape` itself is irrelevant --
+        // only the bound `Nat` field of whichever constructor `n` took is
+        // needed.
+        let proof = case_split(d, &[n], &statement, &|d, b| {
+            let m = b[0].1;
+            nat_odd_of_succ_two_mul(d, m)
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.fib_two_mul_add_one_eq_natFib_natAbs : ∀ n, Eq Int (fib (add (mul
+/// two n) one)) (ofNat (Nat.fib (natAbs (add (mul two n) one))))` —
+/// `F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b`. Exactly
+/// Mathlib's own one-line proof: [`declare_fib_of_odd`]'s `fib_of_odd`
+/// applied at index `2*n+1`, fed [`declare_odd_two_mul_add_one`]'s
+/// `odd_two_mul_add_one n`. No case split of its own.
+///
+/// # Errors
+///
+/// Returns the trusted kernel gate's rejection if the constructed term does not check.
+pub(super) fn declare_fib_two_mul_add_one_eq_natfib_natabs(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+
+    let statement = |d: &mut IntDev<'_>, args: &[ExprId]| -> ExprId {
+        let n = args[0];
+        let two_nat = d.num(2);
+        let two_i = d.of_nat(two_nat);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let doubled = d.imul(two_i, n);
+        let index = d.iadd(doubled, one_i);
+        let fib_index = d.const_app(p.fib, &[index]);
+        let mag = nat_abs(d, index);
+        let fib_mag = d.const_app(p.nat.fib, &[mag]);
+        let rhs = d.of_nat(fib_mag);
+        d.ieq(fib_index, rhs)
+    };
+
+    d.int_theorem(p.fib_two_mul_add_one_eq_natfib_natabs, 1, &|d, v| {
+        let n = v[0];
+        let stmt = statement(d, v);
+
+        let two_nat = d.num(2);
+        let two_i = d.of_nat(two_nat);
+        let one_nat = d.num(1);
+        let one_i = d.of_nat(one_nat);
+        let doubled = d.imul(two_i, n);
+        let index = d.iadd(doubled, one_i);
+
+        let odd_index = d.lemma(p.odd_two_mul_add_one, &[n]);
+        let proof = d.lemma(p.fib_of_odd, &[index, odd_index]);
+        (stmt, proof)
     })?;
     Ok(())
 }

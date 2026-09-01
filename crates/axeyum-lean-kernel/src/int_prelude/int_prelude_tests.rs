@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 261] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 263] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -217,6 +217,8 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 261] {
         p.fib_add,
         p.fib_two_mul,
         p.fib_two_mul_add_two,
+        p.odd_two_mul_add_one,
+        p.fib_two_mul_add_one_eq_natfib_natabs,
         p.is_quadratic_residue_one,
         p.is_quadratic_residue_mul,
         p.euler_criterion_pm_one,
@@ -4244,6 +4246,72 @@ fn fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign() {
     assert!(
         d.kernel().axiom_footprint(p.fib_of_odd).is_empty(),
         "Int.fib_of_odd must rest on zero axioms"
+    );
+}
+
+/// `Int.fib_two_mul_add_one_eq_natfib_natabs` (`F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b`)
+/// instantiated at `n := 1` (`2*1+1 = 3`) and `n := negSucc 1` (`2*(-2)+1 =
+/// -3 = negSucc 2`) — the SAME two closed values
+/// [`fib_of_odd_applies_at_a_concrete_odd_index_of_each_sign`] checks
+/// (`fib 3 = fib (-3) = 2`), reached this time through the composite theorem
+/// itself (`odd_two_mul_add_one` then `fib_of_odd`) rather than a
+/// hand-built `Nat.Odd` witness, so this exercises the wiring between the
+/// two new declarations end to end, not just each in isolation.
+#[test]
+fn fib_two_mul_add_one_eq_natfib_natabs_applies_at_a_concrete_index_of_each_sign() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = super::ops::IntDev::new(&mut k, p);
+
+    let two_nat = d.num(2);
+    let one_nat = d.num(1);
+
+    // n := ofNat 1  =>  index = 2*1+1 = 3.
+    let n_pos = d.of_nat(one_nat);
+    let instance_pos = d.lemma(p.fib_two_mul_add_one_eq_natfib_natabs, &[n_pos]);
+    let instance_pos_ty = d.kernel().infer(instance_pos).unwrap_or_else(|e| {
+        panic!("fib_two_mul_add_one_eq_natfib_natabs (ofNat 1) should type-check: {e:?}")
+    });
+    let expected_pos_ty = {
+        let three = d.num(3);
+        let ofnat3 = d.of_nat(three);
+        let fib3 = d.const_app(p.fib, &[ofnat3]);
+        let two = d.num(2);
+        let rhs = d.of_nat(two);
+        d.ieq(fib3, rhs)
+    };
+    assert!(
+        d.kernel().def_eq(instance_pos_ty, expected_pos_ty),
+        "fib_two_mul_add_one_eq_natfib_natabs (ofNat 1) must land on Eq Int (fib 3) (ofNat 2)"
+    );
+
+    // n := negSucc 1  =>  n = -2, index = 2*(-2)+1 = -3 = negSucc 2.
+    let n_neg = d.neg_succ(one_nat);
+    let instance_neg = d.lemma(p.fib_two_mul_add_one_eq_natfib_natabs, &[n_neg]);
+    let instance_neg_ty = d.kernel().infer(instance_neg).unwrap_or_else(|e| {
+        panic!("fib_two_mul_add_one_eq_natfib_natabs (negSucc 1) should type-check: {e:?}")
+    });
+    let expected_neg_ty = {
+        let neg_succ_2 = d.neg_succ(two_nat);
+        let fib_neg3 = d.const_app(p.fib, &[neg_succ_2]);
+        let two = d.num(2);
+        let rhs = d.of_nat(two);
+        d.ieq(fib_neg3, rhs)
+    };
+    assert!(
+        d.kernel().def_eq(instance_neg_ty, expected_neg_ty),
+        "fib_two_mul_add_one_eq_natfib_natabs (negSucc 1) must land on Eq Int (fib (-3)) (ofNat 2)"
+    );
+
+    assert!(
+        d.kernel()
+            .axiom_footprint(p.fib_two_mul_add_one_eq_natfib_natabs)
+            .is_empty(),
+        "Int.fib_two_mul_add_one_eq_natfib_natabs must rest on zero axioms"
+    );
+    assert!(
+        d.kernel().axiom_footprint(p.odd_two_mul_add_one).is_empty(),
+        "Int.odd_two_mul_add_one must rest on zero axioms"
     );
 }
 
