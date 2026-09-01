@@ -198,6 +198,7 @@ now. Nothing was deleted.
 | 2026-08-31 | | `kernel_declaration_projection` / `prelude_theorem_inventory` / `cross_prelude_collision_tests.rs` — all three build the `ipc` group; 2255 theorem names and 11 labels agree |
 | 2026-08-31 | | `scripts/check-theorem-inventory-completeness.py` — label regex accepts `Group::of("…")` (it had matched zero since the constructor refactor); registered in `check.sh`; +2 controls |
 | 2026-08-31 | | `F:excluded-middle-not-intuitionistic`, `F:heyting-3-chain-refutes-excluded-middle` — `formal.kernel_theorem` set, each verified byte-for-byte against the rendered canonical type; the "2 umbrella facts" were never umbrellas |
+| 2026-08-31 | | `scripts/check.sh` — registered `test-annotate-trust-closure-kernel-theorem.sh`, an orphan control since it landed; `check-control-registration.sh` back to `orphans=0` |
 | 2026-08-31 | | [ADR-1285](docs/research/09-decisions/adr-1285-a-proof-isolated-subject-is-a-subject-and-the-registry-names-it.md) — a proof-isolated subject is a subject, and the operation registry names it |
 | 2026-08-31 | | `scripts/annotate-trust-closure-kernel-theorem.py` (`--check`/`--apply`) — recovers `formal.kernel_theorem` for trust-closure facts whose declaration is spelled unambiguously in `title`/evidence `id`/exact type; annotated 28 facts, `unresolved` 90 -> 62, ratio 0.9586 -> 0.9714 (floor 0.9579 unchanged) |
 | 2026-08-31 | | `scripts/tests/test-annotate-trust-closure-kernel-theorem.sh` — 11 cases, 1 mutation, kills exactly one |
@@ -43588,8 +43589,15 @@ as a standing gate it ratchets nothing the trust-closure population floor does
 not already ratchet, and it runs a full `--release` projection build to say so.
 Its value is as a RECOVERY tool when a batch lands under-annotated — run it
 then. If it is ever wired, it should be `--check` beside `trust-closure`,
-sharing that step's projection rather than building a second one. Its own
-controls pass (11 cases, 1 mutation killing exactly one).
+sharing that step's projection rather than building a second one.
+
+**Its CONTROLS are a different question, and they are now registered.**
+`scripts/tests/test-annotate-trust-closure-kernel-theorem.sh` was invoked by
+nothing, which `scripts/check-control-registration.sh` reports as an orphan
+(exit 1 on `main` before this lane) on the rule that a control nobody invokes
+cannot fail. It is fixture-only, needs no cargo, and passes 11 cases with 1
+mutation killing exactly one — so it is a `check.sh` step now, and control
+registration is back to `orphans=0` across 51 control scripts.
 
 ## What the brief got wrong, and what I got wrong
 

@@ -461,6 +461,12 @@ step trust-closure python3 scripts/check-trust-closure.py --quiet
 # kill EXACTLY ONE. A mutation killing two would mean the cases do not separate
 # what they claim to; killing none would mean the guard is unreachable.
 step trust-closure-controls bash scripts/tests/test-trust-closure.sh
+# The controls for `annotate-trust-closure-kernel-theorem.py`. The TOOL is
+# deliberately not a gate (ADR-1285: it reports 0 unapplied candidates and would
+# ratchet nothing the trust-closure population floor does not, at the cost of a
+# second --release projection build) -- but its controls are, because a control
+# nobody invokes cannot fail. Fixture-only, no cargo: 11 cases, 1 mutation.
+step annotate-trust-closure-controls bash scripts/tests/test-annotate-trust-closure-kernel-theorem.sh
 # Three tools build the constructed preludes in three separate `build_groups`
 # implementations, and a group present in two and missing from the third is
 # invisible: the short tool answers confidently about a subject it never built.
