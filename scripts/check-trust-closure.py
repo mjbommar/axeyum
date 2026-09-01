@@ -17,11 +17,11 @@ This computes the closure from the environment the kernel actually admitted —
 `Kernel::declaration_dependencies` — and never from a fact's authored
 `depends_on`, a doc comment, or a head-symbol match.
 
-# The four guards, and why they are four
+# The five guards, and why they are five
 
 The phase exit requires that target injection, indirect target injection, axiom
-insertion, and checker-population deletion each fail through a **different**
-guard. That wording is not pedantry: six of seven guards in one suite in this
+insertion, checker-population deletion, and an unaudited proof-isolated subject
+each fail through a **different** guard. That wording is not pedantry: six of seven guards in one suite in this
 repository were once removable with everything still green, because they all
 rejected through one shared check. So the guards below are deliberately
 disjoint in what they look at, and `scripts/tests/test-trust-closure.sh`
@@ -43,6 +43,10 @@ deletes each one and requires that exactly one fixture dies.
   all. This is the one that exists because the other three cannot fail when
   there is nothing to check: a checker that cannot fail is worse than no
   checker, and deleting the subjects is the cheapest way to get a green run.
+- `guard_isolated_subject` — the facts checked in an EPHEMERAL kernel, which
+  the three closure guards structurally cannot reach. Looks at the operation
+  registry and at absence from this environment; walks no closure. See "The
+  fourth case" below for why these facts exist and why isolation is correct.
 
 # Why the carrier asymmetry is safe here
 
@@ -67,6 +71,10 @@ whose kernel declaration can be identified. The identification, in order:
 3. the dotted-name regex over the fact's own `checker_command`s, reusing
    `scripts/check-fact-depends-derived.py`'s.
 
+4. the registered autogenesis operation, when the fact rides a PROOF-ISOLATED
+   import driver. Such a fact has a subject and it is not in this environment;
+   see the next section.
+
 Step 2 is new here and it is not cosmetic. That regex deliberately excludes an
 apostrophe (a primed Lean name would otherwise absorb a checker command's
 closing quote), and its own comment records that "0 of the 312 theorems this
@@ -76,6 +84,48 @@ handle quoting rather than widening the class back." One has appeared:
 `Nat.bitwise_bit`, which no declaration bears. Reading `kernel_declaration`
 resolves it exactly, with no widening of the regex.
 
+# The fourth case: a subject that is NOT in this environment, by design
+
+Steps 1-3 all answer "which declaration of the ADMITTED environment is this
+fact about". For 40 settled `kernel-lean` facts, measured 2026-08-31, the
+honest answer is *none of them*, and that is not a data-entry gap.
+
+Those facts are checked by an `axeyum-lean-import/*` executor driver, which
+runs `axeyum_lean_import::import_statement_ndjson` to build a **fresh
+`Kernel`**, admits the candidate proof into it with `Kernel::add_declaration`,
+audits it, and discards the whole environment. Nothing is merged into the
+persistent preludes. ADR-0480 says why, and the reason is soundness rather than
+tidiness: the boundary rejects a stream containing any axiom, theorem, opaque
+declaration, or quotient primitive, precisely so an imported *statement* cannot
+become its own answer. Merging the Mathlib-spelled statement declarations into
+the shared environment is the thing that design exists to prevent -- and it
+would also put them into every inventory and every axiom-freedom sweep, which
+ADR-0601 forbids for import scaffolding.
+
+Before this section existed, such a fact counted toward `kernel_facts`, was not
+a SUBJECT, and therefore **three of the four guards never examined it** -- with
+nothing anywhere recording that the omission was deliberate. Marking it
+`formal.kernel_theorem: null` would have been worse than the gap: that field
+means "not about exactly one kernel theorem" and these facts ARE about exactly
+one. So `Subjects` carries a third bucket:
+
+- `isolated` -- the fact rides a proof-isolated driver and the registry names
+  its subject. The name is read from `artifacts/autogenesis/operations.json`
+  (`executor.targets[].target_definition` for the multi-target drivers, else
+  `executor.target_theorem` / `executor.target_definition`), so it is DERIVED
+  from the operation that does the checking and cannot be wished into a fact.
+  `guard_isolated_subject` is what examines these; the three closure guards
+  cannot, because there is no persistent closure to walk.
+- `dual` -- the fact resolves to a persistent declaration AND rides a
+  proof-isolated driver. Four facts, measured 2026-08-31. These are counted as
+  ordinary subjects (their persistent declaration is real and its closure is
+  worth auditing) and reported separately, because the declaration the guards
+  walk is a NATIVE proof of the proposition while the fact's evidence is the
+  isolated import's. Both are true; only saying both is honest.
+
+`resolved` is untouched by all of this, so `min_subjects` and `min_ratio` mean
+exactly what they meant before and no floor moved to accommodate the change.
+
 # Usage
 
 ```sh
@@ -83,6 +133,9 @@ python3 scripts/check-trust-closure.py            # gate form
 python3 scripts/check-trust-closure.py --update    # regenerate the pinned artifacts
 python3 scripts/check-trust-closure.py --json      # one machine-readable line
 ```
+
+`--operations FILE` reads a different autogenesis operation registry; the
+proof-isolated population is derived from it and from nothing else.
 
 `--projection FILE` reads a pre-captured
 `kernel_declaration_projection` TSV instead of running the example; the control
@@ -108,6 +161,12 @@ DEFAULT_FACTS = ROOT / "artifacts/facts"
 DEFAULT_POPULATION = ARTIFACTS / "population.json"
 DEFAULT_IDENTITY_MAP = ARTIFACTS / "identity-map.tsv"
 DEFAULT_EQUIVALENT_PAIRS = ARTIFACTS / "equivalent-pairs.tsv"
+DEFAULT_OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
+
+# An executor driver under this namespace runs the fact's check inside an
+# EPHEMERAL kernel built by `axeyum_lean_import::import_statement_ndjson`, and
+# throws it away. See `PROOF_ISOLATED` below.
+PROOF_ISOLATED_DRIVER_PREFIX = "axeyum-lean-import/"
 
 KERNEL_ROUTES = {"kernel-lean"}
 SETTLED = {"proved", "computed"}
@@ -141,6 +200,87 @@ def _load_depends_derived_module() -> Any:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@dataclass(frozen=True)
+class IsolatedSubject:
+    """What the operation registry says about a proof-isolated fact.
+
+    Every field is READ from `artifacts/autogenesis/operations.json`, never
+    from the fact. A fact cannot declare itself proof-isolated; the operation
+    that checks it decides, and the operation is what the executor actually
+    runs.
+    """
+
+    operation_ids: tuple[str, ...]
+    drivers: tuple[str, ...]
+    name: str | None
+    footprint_policy: str | None
+
+
+def isolated_operations(path: pathlib.Path | None) -> dict[str, IsolatedSubject]:
+    """`fact id -> IsolatedSubject` for every fact a proof-isolated import
+    driver claims.
+
+    The per-fact subject name comes from three registry shapes, in this order,
+    and the order matters: a multi-target driver's `executor.targets[]` is
+    keyed BY FACT, while `executor.target_theorem` is the whole operation's
+    single target. Reading the operation-level field first would give every
+    member of a family the same name.
+
+    A fact claimed by two import operations that disagree on the name gets
+    `name=None` rather than an arbitrary pick, which `guard_isolated_subject`
+    then rejects. Two operations that agree are not a conflict.
+    """
+    if path is None or not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    rows: dict[str, list[tuple[str, str, str | None, str | None]]] = {}
+    for op in data.get("operations") or []:
+        executor = op.get("executor") or {}
+        driver = executor.get("driver")
+        if not isinstance(driver, str) or not driver.startswith(
+            PROOF_ISOLATED_DRIVER_PREFIX
+        ):
+            continue
+        policy = (op.get("admission") or {}).get("axiom_footprint_policy")
+        by_fact = {
+            t.get("fact_id"): t.get("target_definition")
+            for t in executor.get("targets") or []
+            if isinstance(t, dict)
+        }
+        fallback = executor.get("target_theorem") or executor.get("target_definition")
+        for ident in (op.get("applicability") or {}).get("fact_ids") or []:
+            name = by_fact.get(ident) or fallback
+            rows.setdefault(ident, []).append(
+                (
+                    str(op.get("id", "")),
+                    driver,
+                    name if isinstance(name, str) and name else None,
+                    policy if isinstance(policy, str) else None,
+                )
+            )
+    out: dict[str, IsolatedSubject] = {}
+    for ident, claims in rows.items():
+        names = {name for _, _, name, _ in claims if name}
+        policies = {policy for _, _, _, policy in claims}
+        out[ident] = IsolatedSubject(
+            operation_ids=tuple(sorted(op_id for op_id, _, _, _ in claims)),
+            drivers=tuple(sorted({driver for _, driver, _, _ in claims})),
+            name=next(iter(names)) if len(names) == 1 else None,
+            # A single disagreeing policy must not be averaged away: if any
+            # claiming operation fails to require an empty footprint, this
+            # reports that one, and the guard rejects.
+            footprint_policy=(
+                next(iter(policies))
+                if len(policies) == 1
+                else next(
+                    (p for p in sorted(policies, key=str) if p != "must-be-empty"),
+                    None,
+                )
+            ),
+        )
+    return out
 
 
 @dataclass
@@ -314,16 +454,30 @@ class Subjects:
     unresolved: list[str]              # kernel-route facts naming nothing
     absent: list[tuple[str, str]]      # named a declaration the environment lacks
     kernel_facts: int
+    # Subjects that live in an ephemeral kernel, never this environment.
+    isolated: dict[str, IsolatedSubject] = field(default_factory=dict)
+    # Resolved persistently AND checked through a proof-isolated import.
+    dual: dict[str, IsolatedSubject] = field(default_factory=dict)
 
 
 def collect_subjects(
     facts: dict[str, dict[str, Any]],
     decls: dict[str, Declaration],
     depends_derived: Any,
+    isolated: dict[str, IsolatedSubject] | None = None,
 ) -> Subjects:
+    """`isolated=None` reads the real operation registry, so every caller
+    (this gate, `annotate-trust-closure-kernel-theorem.py`,
+    `check-proposition-duplication.py`) agrees about which facts are
+    proof-isolated. Pass `{}` for a fixture that deliberately has none.
+    """
+    if isolated is None:
+        isolated = isolated_operations(DEFAULT_OPERATIONS)
     resolved: dict[str, str] = {}
     unresolved: list[str] = []
     absent: list[tuple[str, str]] = []
+    isolated_here: dict[str, IsolatedSubject] = {}
+    dual: dict[str, IsolatedSubject] = {}
     kernel_facts = 0
     for ident, data in sorted(facts.items()):
         if data.get("proof_route") not in KERNEL_ROUTES:
@@ -333,12 +487,22 @@ def collect_subjects(
         kernel_facts += 1
         name = subject_of(data, depends_derived)
         if name is None:
-            unresolved.append(ident)
+            # Only now: a fact whose OWN fields name a declaration is that
+            # declaration's, whatever else checks it. The registry answers the
+            # question the fact left open, never overrides an answer it gave.
+            if ident in isolated:
+                isolated_here[ident] = isolated[ident]
+            else:
+                unresolved.append(ident)
         elif name not in decls:
             absent.append((ident, name))
         else:
             resolved[ident] = name
-    return Subjects(resolved, unresolved, absent, kernel_facts)
+            if ident in isolated:
+                dual[ident] = isolated[ident]
+    return Subjects(
+        resolved, unresolved, absent, kernel_facts, isolated_here, dual
+    )
 
 
 # --------------------------------------------------------------------------
@@ -543,6 +707,79 @@ def guard_population(subjects: Subjects, pinned: dict[str, Any]) -> GuardResult:
     return GuardResult("population", subjects.kernel_facts, len(failures), failures)
 
 
+def guard_isolated_subject(
+    subjects: Subjects,
+    decls: dict[str, Declaration],
+    facts: dict[str, dict[str, Any]],
+    pinned: dict[str, Any],
+) -> GuardResult:
+    """G5 — the proof-isolated population, which the other four cannot reach.
+
+    G1/G2/G3 all walk a closure in THIS environment; a proof-isolated subject
+    has none here, so all three are silently vacuous on those facts and were
+    counting them in `kernel_facts` regardless. This is the guard that makes
+    the omission stateable, and it rejects four ways, each looking at a
+    different thing:
+
+    - the registry names no subject for a fact it claims (or two operations
+      name different ones). "Proof-isolated" must not become a bucket a fact
+      falls into to escape being audited; it has to name what it is about.
+    - the named subject IS present in this environment. That is the ADR-0480
+      quarantine broken -- an imported statement declaration merged into the
+      shared preludes -- and it would put a Mathlib-spelled name into every
+      inventory and every axiom-freedom sweep at once (ADR-0601 §3). It is
+      also the one case where the fact should stop being isolated and become
+      an ordinary subject, so a silent pass here would hide a real change.
+    - the claiming operation does not require an empty axiom footprint, while
+      the fact rides `kernel-lean` -- the route whose whole meaning is that an
+      empty footprint was measured.
+    - the population itself, floored and ratcheting, so deleting the isolated
+      facts (or the operations that claim them) cannot make this guard green
+      by leaving it nothing to examine.
+    """
+    failures: list[str] = []
+    for ident, iso in sorted(subjects.isolated.items()):
+        if iso.name is None:
+            failures.append(
+                f"ISOLATED-SUBJECT-UNNAMED {ident}: claimed by proof-isolated "
+                f"operation(s) {', '.join(iso.operation_ids)} which name no single "
+                f"subject for it. A proof-isolated fact is still about exactly one "
+                f"declaration; the registry has to say which"
+            )
+            continue
+        if iso.name in decls:
+            failures.append(
+                f"ISOLATED-SUBJECT-LEAKED {ident}: `{iso.name}` is checked in an "
+                f"ephemeral kernel by {', '.join(iso.drivers)} AND is present in the "
+                f"admitted environment. Either the ADR-0480 statement quarantine "
+                f"broke, or this fact now has a persistent subject and must be "
+                f"resolved as one instead of exempted from the closure guards"
+            )
+        if iso.footprint_policy != "must-be-empty":
+            failures.append(
+                f"ISOLATED-FOOTPRINT-UNPOLICED {ident}: operation(s) "
+                f"{', '.join(iso.operation_ids)} admit a `kernel-lean` fact under "
+                f"axiom_footprint_policy={iso.footprint_policy!r}, so nothing "
+                f"requires the isolated kernel's footprint to be empty"
+            )
+        elif facts.get(ident, {}).get("axiom_footprint"):
+            failures.append(
+                f"ISOLATED-FOOTPRINT-DISAGREES {ident}: the operation requires an "
+                f"empty footprint and the fact declares "
+                f"{facts[ident]['axiom_footprint']!r}"
+            )
+    scanned = len(subjects.isolated) + len(subjects.dual)
+    floor = int(pinned.get("min_isolated", 0))
+    if scanned < floor:
+        failures.append(
+            f"ISOLATED-POPULATION-BELOW-FLOOR: {scanned} proof-isolated subjects "
+            f"against a recorded floor of {floor}. Facts or the operations that "
+            f"claim them were removed from the enforced set; re-run with --update "
+            f"only if the removal is intended"
+        )
+    return GuardResult("isolated_subject", scanned, len(failures), failures)
+
+
 # --------------------------------------------------------------------------
 
 
@@ -595,7 +832,23 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--equivalent-pairs", type=pathlib.Path, default=DEFAULT_EQUIVALENT_PAIRS
     )
+    parser.add_argument(
+        "--operations", type=pathlib.Path, default=DEFAULT_OPERATIONS,
+        help="autogenesis operation registry; the proof-isolated population is "
+             "derived from it and from nothing else",
+    )
     parser.add_argument("--update", action="store_true")
+    parser.add_argument(
+        "--update-ratio", action="store_true",
+        help="with --update, also raise min_ratio to the observed coverage. OFF "
+             "by default and deliberately: `min_ratio`'s denominator is every "
+             "kernel-route settled fact, so a routine --update ratchets it to the "
+             "current value and leaves ZERO headroom -- the next fact that lands "
+             "without naming its declaration then reds an L0 gate with a message "
+             "about a population floor. population.json's own note says the "
+             "absolute floors are the ones that mean something; this keeps the "
+             "ratio a deliberate act rather than a side effect.",
+    )
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args(argv)
@@ -612,7 +865,9 @@ def main(argv: list[str]) -> int:
     reach = closures(decls)
     classes = identity_classes(decls)
     facts = load_facts(args.facts)
-    subjects = collect_subjects(facts, decls, depends_derived)
+    subjects = collect_subjects(
+        facts, decls, depends_derived, isolated_operations(args.operations)
+    )
 
     pinned: dict[str, Any] = {}
     if args.population.exists():
@@ -644,10 +899,30 @@ def main(argv: list[str]) -> int:
                     # so the very next run fails against a floor nothing ever
                     # reached. Measured here the first time this was written.
                     "min_ratio": math.floor(
-                        max(float(pinned.get("min_ratio", 0.0)), ratio) * 10000
+                        (
+                            max(float(pinned.get("min_ratio", 0.0)), ratio)
+                            if args.update_ratio
+                            else float(pinned.get("min_ratio", 0.0))
+                        )
+                        * 10000
                     ) / 10000,
                     "min_declarations": max(
                         int(pinned.get("min_declarations", 0)), len(decls)
+                    ),
+                    "min_isolated": max(
+                        int(pinned.get("min_isolated", 0)),
+                        len(subjects.isolated) + len(subjects.dual),
+                    ),
+                    # Carried forward, not regenerated. `ratio_floor_note`
+                    # records WHY `min_ratio` sits where it does -- including
+                    # the one downward correction this file is allowed -- and
+                    # an --update that silently dropped it would delete the
+                    # argument while keeping the number it justifies. Measured:
+                    # the first --update run in this lane did exactly that.
+                    **(
+                        {"ratio_floor_note": pinned["ratio_floor_note"]}
+                        if isinstance(pinned.get("ratio_floor_note"), str)
+                        else {}
                     ),
                 },
                 indent=2,
@@ -657,6 +932,7 @@ def main(argv: list[str]) -> int:
         )
         print(
             f"TRUST_CLOSURE_UPDATE|subjects={len(subjects.resolved)}|"
+            f"isolated={len(subjects.isolated)}|dual={len(subjects.dual)}|"
             f"declarations={len(decls)}|identity_classes={len(classes)}|"
             f"equivalent_pairs="
             f"{len(observed_equivalent_pairs(subjects, reach, classes))}"
@@ -681,6 +957,7 @@ def main(argv: list[str]) -> int:
         guard_self_occurrence(subjects, decls, reach),
         guard_alias_occurrence(subjects, decls, reach, classes, disclosed),
         guard_forbidden_trust(subjects, decls, reach),
+        guard_isolated_subject(subjects, decls, facts, pinned),
     ]
     failures = [f for r in results for f in r.failures]
     if disclosure_failure is not None:
@@ -729,6 +1006,8 @@ def main(argv: list[str]) -> int:
         "kernel_facts": subjects.kernel_facts,
         "subjects": len(subjects.resolved),
         "unresolved": len(subjects.unresolved),
+        "isolated": len(subjects.isolated),
+        "dual": len(subjects.dual),
         "absent": len(subjects.absent),
         "disclosed_equivalent_pairs": len(disclosed),
         "guards": {r.name: {"scanned": r.scanned, "hits": r.hits} for r in results},
@@ -745,7 +1024,8 @@ def main(argv: list[str]) -> int:
         print(
             "TRUST_CLOSURE|declarations={declarations}|identity_classes="
             "{identity_classes}|kernel_facts={kernel_facts}|subjects={subjects}|"
-            "unresolved={unresolved}|absent={absent}|"
+            "unresolved={unresolved}|isolated={isolated}|dual={dual}|"
+            "absent={absent}|"
             "disclosed_equivalent_pairs={disclosed_equivalent_pairs}|"
             "failures={failures}".format(**summary)
         )

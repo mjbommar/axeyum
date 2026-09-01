@@ -76,6 +76,39 @@ write_baseline_projection() {
     > "$1"
 }
 
+# Two proof-isolated facts, because ONE cannot separate "the population shrank"
+# from "the population is gone": with a single member, deleting it makes
+# `guard_isolated_subject` scan nothing and the generic zero-executed-cases
+# meta-guard rejects instead of the floor, so the floor's own mutation would
+# kill no case at all.
+#
+# `T.imported` is deliberately ABSENT from the projection above. That is what a
+# proof-isolated subject IS: admitted into an ephemeral kernel and never merged
+# here, so this environment cannot contain it.
+write_baseline_operations() {
+  cat > "$1" <<'JSON'
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-operations",
+  "operations": [
+    {
+      "id": "fixture-isolated-v1",
+      "applicability": { "fact_ids": ["F:isolated", "F:isolated-two"] },
+      "producer": { "input_kind": "axeyum-proof-isolated-kernel-goal" },
+      "executor": {
+        "driver": "axeyum-lean-import/bounded-induction-multi-target-v1",
+        "targets": [
+          { "fact_id": "F:isolated", "target_definition": "T.imported" },
+          { "fact_id": "F:isolated-two", "target_definition": "T.imported.two" }
+        ]
+      },
+      "admission": { "axiom_footprint_policy": "must-be-empty" }
+    }
+  ]
+}
+JSON
+}
+
 write_baseline_facts() {
   mkdir -p "$1"
   cat > "$1/F-target.json" <<'JSON'
@@ -98,6 +131,26 @@ JSON
   "evidence": [{ "id": "e", "check_status": "checked", "checker_command": "true" }]
 }
 JSON
+  cat > "$1/F-isolated.json" <<'JSON'
+{
+  "id": "F:isolated",
+  "proof_route": "kernel-lean",
+  "epistemic_status": "proved",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "evidence": [{ "id": "e", "check_status": "checked", "checker_command": "true" }]
+}
+JSON
+  cat > "$1/F-isolated-two.json" <<'JSON'
+{
+  "id": "F:isolated-two",
+  "proof_route": "kernel-lean",
+  "epistemic_status": "proved",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "evidence": [{ "id": "e", "check_status": "checked", "checker_command": "true" }]
+}
+JSON
 }
 
 # `new_case <dir>` lays down the clean fixture and generates the pinned
@@ -107,13 +160,15 @@ new_case() {
   mkdir -p "$dir/artifacts"
   write_baseline_projection "$dir/projection.tsv"
   write_baseline_facts "$dir/facts"
+  write_baseline_operations "$dir/operations.json"
   python3 "$SCRIPT" \
     --projection "$dir/projection.tsv" \
     --facts "$dir/facts" \
+    --operations "$dir/operations.json" \
     --population "$dir/artifacts/population.json" \
     --identity-map "$dir/artifacts/identity-map.tsv" \
     --equivalent-pairs "$dir/artifacts/equivalent-pairs.tsv" \
-    --update > /dev/null
+    --update --update-ratio > /dev/null
   local status=$?
   if [ "$status" -ne 0 ]; then
     note "  fixture --update failed with status $status"
@@ -127,6 +182,7 @@ run_case() {
   python3 "$SCRIPT" \
     --projection "$dir/projection.tsv" \
     --facts "$dir/facts" \
+    --operations "$dir/operations.json" \
     --population "$dir/artifacts/population.json" \
     --identity-map "$dir/artifacts/identity-map.tsv" \
     --equivalent-pairs "$dir/artifacts/equivalent-pairs.tsv" \
@@ -349,6 +405,58 @@ case_identity_map_missing() {  # M5b -- an absent map is unenforced, not satisfi
   run_case "$dir"; expect_tag identity-map-missing "$dir" "IDENTITY-MAP-MISSING"
 }
 
+# --- G5, the proof-isolated population -------------------------------------
+#
+# These five are the cases the other four guards CANNOT cover, because a
+# proof-isolated subject has no closure in this environment to walk. Each one
+# mutates the OPERATION REGISTRY (or the fact's own declared footprint), never
+# a hand-authored "this fact is isolated" marker -- there is no such marker,
+# and there must not be: the operation that runs the check is what decides.
+
+case_isolated_unnamed() {  # G5a -- claimed but nameless
+  local dir="$WORK/$1/isolated-unnamed"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  # The registry claims the fact and names no subject for it. "Proof-isolated"
+  # must not become a bucket a fact falls into to escape being audited.
+  sed -i 's|{ "fact_id": "F:isolated", "target_definition": "T.imported" },||' \
+    "$dir/operations.json"
+  run_case "$dir"; expect_tag isolated-unnamed "$dir" "ISOLATED-SUBJECT-UNNAMED"
+}
+
+case_isolated_leaked() {  # G5b -- the quarantine broke
+  local dir="$WORK/$1/isolated-leaked"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  # The named isolated subject is now a declaration of THIS environment. Either
+  # an imported statement was merged into the shared preludes (ADR-0480's
+  # boundary defeated, and every inventory silently gains a Mathlib-spelled
+  # name), or the fact has a persistent subject and must be audited as one.
+  sed -i 's|"target_definition": "T.imported"|"target_definition": "T.base"|' \
+    "$dir/operations.json"
+  run_case "$dir"; expect_tag isolated-leaked "$dir" "ISOLATED-SUBJECT-LEAKED"
+}
+
+case_isolated_footprint_unpoliced() {  # G5c -- nothing requires an empty footprint
+  local dir="$WORK/$1/isolated-unpoliced"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  sed -i 's|"axiom_footprint_policy": "must-be-empty"|"axiom_footprint_policy": "any"|' \
+    "$dir/operations.json"
+  run_case "$dir"; expect_tag isolated-unpoliced "$dir" "ISOLATED-FOOTPRINT-UNPOLICED"
+}
+
+case_isolated_footprint_disagrees() {  # G5d -- the fact contradicts its operation
+  local dir="$WORK/$1/isolated-disagrees"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  sed -i 's|"axiom_footprint": \[\]|"axiom_footprint": ["T.assumed"]|' \
+    "$dir/facts/F-isolated.json"
+  run_case "$dir"; expect_tag isolated-disagrees "$dir" "ISOLATED-FOOTPRINT-DISAGREES"
+}
+
+case_isolated_population_floor() {  # G5e -- the population shrank
+  local dir="$WORK/$1/isolated-floor"; new_case "$dir" || { fixture_failed "${FUNCNAME[0]}"; return 1; }
+  # Drop ONE of the two claimed facts, so the guard still scans and cannot be
+  # rejected by the zero-executed-cases meta-guard instead. `resolved` and
+  # `kernel_facts` are both unchanged, so no count or ratio floor can see it.
+  sed -i 's|"fact_ids": \["F:isolated", "F:isolated-two"\]|"fact_ids": ["F:isolated"]|' \
+    "$dir/operations.json"
+  run_case "$dir"; expect_tag isolated-floor "$dir" "ISOLATED-POPULATION-BELOW-FLOOR"
+}
+
 CASES=(
   case_baseline
   case_target_injection
@@ -367,6 +475,11 @@ CASES=(
   case_coverage_floor
   case_identity_map_missing
   case_carrier_asymmetry
+  case_isolated_unnamed
+  case_isolated_leaked
+  case_isolated_footprint_unpoliced
+  case_isolated_footprint_disagrees
+  case_isolated_population_floor
 )
 
 # Case name -> the mutation expected to kill it, and the anchor that mutation
@@ -390,6 +503,11 @@ MUTATION_NAMES=(
   empty_projection
   coverage_floor
   identity_map_missing
+  isolated_unnamed
+  isolated_leaked
+  isolated_unpoliced
+  isolated_disagrees
+  isolated_floor
 )
 MUTATION_ANCHORS=(
   "        if name in reach.get(name, frozenset()):"
@@ -407,6 +525,11 @@ MUTATION_ANCHORS=(
   "    if not decls:"
   "    if ratio < ratio_floor - 1e-9:"
   "    if not identity_map_present:"
+  "        if iso.name is None:"
+  "        if iso.name in decls:"
+  "        if iso.footprint_policy != \"must-be-empty\":"
+  "        elif facts.get(ident, {}).get(\"axiom_footprint\"):"
+  "    if scanned < floor:"
 )
 MUTATION_REPLACEMENTS=(
   "        if False:"
@@ -423,6 +546,11 @@ MUTATION_REPLACEMENTS=(
   "    if False:"
   "    if False:"
   "    if False:"
+  "    if False:"
+  "        if False:"
+  "        if False:"
+  "        if False:"
+  "        elif False:"
   "    if False:"
 )
 
