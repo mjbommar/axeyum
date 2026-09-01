@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {a : ℤ} {m n : ℕ}, a.gcd (↑m * ↑n) ≠ 1 ↔ a.gcd ↑m ≠ 1 ∨ a.gcd ↑n ≠ 1",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.gcd_ne_one_iff_gcd_mul_right_ne_one"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:int-nat-abs-mul",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:nat-beq-eq-true-of-eq"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Int.gcd_ne_one_iff_gcd_mul_right_ne_one",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- 'gcd_ne_one_iff_gcd_mul_right_ne_one' 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.gcd_ne_one_iff_gcd_mul_right_ne_one[[:space:]]')\" -ge 1",
+      "supports": "∀ {a : ℤ} {m n : ℕ}, a.gcd (↑m * ↑n) ≠ 1 ↔ a.gcd ↑m ≠ 1 ∨ a.gcd ↑n ≠ 1",
+      "notes": "Built at Nat from x := natAbs a (Int.gcd a b reduces to Nat.gcd (natAbs a) (natAbs b) by rfl, and natAbs (ofNat m * ofNat n) reduces to mul m n by rfl): the already-proved Nat.coprime_mul_iff gives Iff (Eq (gcd x (m*n)) one) (And (Eq (gcd x m) one) (Eq (gcd x n) one)). Two purely intuitionistic Not/Iff transports (no decidability: P <-> Q gives Not P <-> Not Q for free) handle everything except one classical step, isolated to exactly where it is needed -- deciding Eq Nat (gcd x m) one via Nat.beq's already-proved soundness (Nat.eq_of_beq_eq_true) and completeness (Nat.beq_eq_true_of_eq), the SAME construction int_prelude::decide builds privately to derive Int.eq_em (this file keeps its own local copy, per this crate's per-file convention), never assumed as an axiom -- to turn Not (And q1 q2) into Or (Not q1) (Not q2). int_theorem_inventory's rendered type for Int.gcd_ne_one_iff_gcd_mul_right_ne_one matches this fact's formal.statement exactly. New proof, lane int-prime-dvd (2026-09-01): crates/axeyum-lean-kernel/src/int_prelude/prime_dvd_mul_mirrors.rs. No Nat declaration was added -- only the pre-existing Nat.coprime_mul_iff, Nat.eq_of_beq_eq_true, Nat.beq_eq_true_of_eq were consumed."
+    },
+    {
+      "id": "footprint-Int.gcd_ne_one_iff_gcd_mul_right_ne_one",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "notes": "prelude_axiom_inventory --require-axiom-free integer enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer: axiom=0, exit 0; the axreal: axiom=30 row is the separate legacy axiomatized-reals package, unrelated to this declaration -- see CLAUDE.md's AxReal/CReal gotcha). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds this declaration's own footprint by []. int_prelude_tests::every_int_declaration_is_checked_and_axiom_free additionally checks this theorem's own Kernel::axiom_footprint directly via derived_lemmas (it is listed there)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-prime-dvd (2026-09-01), closed on the first admission attempt -- see the kernel-Int.gcd_ne_one_iff_gcd_mul_right_ne_one evidence note for the route, including the one classical step (a per-pair Nat.beq-derived decision, not propositional excluded middle). New proof, lane int-prime-dvd (2026-09-01), closed on the first admission attempt -- see the kernel-Int.gcd_ne_one_iff_gcd_mul_right_ne_one evidence note for the route, including the one classical step (a per-pair Nat.beq-derived decision, not propositional excluded middle).",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -6,12 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℤ} {p : ℕ}, Nat.Prime p → ↑p ∣ m * n → p ∣ m.natAbs ∨ p ∣ n.natAbs",
-    "fragment": "Int"
+    "fragment": "Int",
+    "kernel_theorem": "Int.prime_dvd_mul"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:int-euclid-lemma",
+    "F:int-nat-abs-dvd-nat-abs-of-dvd",
+    "F:int-dvd-of-nat-abs-dvd"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Int.prime_dvd_mul",
+      "kind": "kernel-term",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- 'prime_dvd_mul' 2>/dev/null | /usr/bin/grep -cE '^theorem[[:space:]]+Int\\.prime_dvd_mul[[:space:]]')\" -ge 1",
+      "supports": "∀ {m n : ℤ} {p : ℕ}, Nat.Prime p → ↑p ∣ m * n → p ∣ m.natAbs ∨ p ∣ n.natAbs",
+      "notes": "Same route as F:ml430-int-prime-dvd-mul-23b73e69 (Int.prime_dvd_mul'): apply gcd.rs's Int.euclid_lemma at pr := ofNat p to get Or (ofNat p ∣ m) (ofNat p ∣ n), then case-split (Or.rec) and drop each disjunct from Int.dvd to Nat.dvd via the already-proved gcd::declare_nat_abs_dvd_nat_abs_of_dvd (a ∣ b → natAbs a ∣ natAbs b), relying on natAbs (ofNat p) reducing to p by rfl for the final Nat.dvd p (natAbs m)/(natAbs n) shape. int_theorem_inventory's rendered type for Int.prime_dvd_mul matches this fact's formal.statement exactly. New proof, lane int-prime-dvd (2026-09-01): crates/axeyum-lean-kernel/src/int_prelude/prime_dvd_mul_mirrors.rs. No Nat declaration added."
+    },
+    {
+      "id": "footprint-Int.prime_dvd_mul",
+      "kind": "exhaustive-enumeration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example prelude_axiom_inventory -- --require-axiom-free integer",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "supports": "axiom_footprint: [] -- the Int prelude's trusted surface is empty",
+      "notes": "prelude_axiom_inventory --require-axiom-free integer enumerates the built Int environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: integer: axiom=0, exit 0; the axreal: axiom=30 row is the separate legacy axiomatized-reals package, unrelated to this declaration -- see CLAUDE.md's AxReal/CReal gotcha). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds this declaration's own footprint by []. int_prelude_tests::every_int_declaration_is_checked_and_axiom_free additionally checks this theorem's own Kernel::axiom_footprint directly via derived_lemmas (it is listed there)."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +52,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. New proof, lane int-prime-dvd (2026-09-01), closed on the first admission attempt -- see the kernel-Int.prime_dvd_mul evidence note for the route. This is a DIFFERENT proposition from F:ml430-int-prime-dvd-mul-23b73e69 despite the similar Mathlib name (this one's conclusion is Nat divisibility of natAbs m/natAbs n; the other's is Int divisibility of m/n directly). New proof, lane int-prime-dvd (2026-09-01), closed on the first admission attempt -- see the kernel-Int.prime_dvd_mul evidence note for the route. This is a DIFFERENT proposition from F:ml430-int-prime-dvd-mul-23b73e69 despite the similar Mathlib name (this one's conclusion is Nat divisibility of natAbs m/natAbs n; the other's is Int divisibility of m/n directly).",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
