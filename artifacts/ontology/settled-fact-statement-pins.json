@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2101,
+    "min_identity_bound": 2102,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -10274,6 +10274,13 @@
       "statement_sha256": "5f6a115af0216c55082cb8f61fd9a0ebde40256a61e2fecabb47c094d6d8b81e",
       "prose_sha256": "c02fcf1339bcb92ac74eae6fe903595926352c6fe09e2e85d997a26dfad08614",
       "kernel_theorem": "Int.fib_two_mul"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
+      "language": "lean4-surface",
+      "statement_sha256": "7f31453ad2cefe452db3b8d282608d52b4f94ef9c17af05d0af430a8a0bc1301",
+      "prose_sha256": "d46f94a9871528e7b29311bb2e53b70b0f8cd6eef5a8192f7f4268f6d2b584b3",
+      "kernel_theorem": "Int.fib_two_mul_add_one_eq_natfib_natabs"
     },
     {
       "fact_id": "F:ml430-int-fib-two-mul-add-one-pos-8977f65f",
