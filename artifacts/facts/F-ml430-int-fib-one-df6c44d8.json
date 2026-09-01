@@ -21,7 +21,7 @@
         "producing-build (Kernel::add_declaration)",
         "int_theorem_inventory re-list"
       ],
-      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | grep -cE '^theorem[[:space:]]Int.fib_one[[:space:]]'",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory 2>/dev/null | grep -c '^theorem[[:space:]]Int\\.fib_one[[:space:]]')\" -eq 1",
       "checker_seconds": 10,
       "notes": "int_theorem_inventory lists every Declaration::Theorem in the integer prelude with its canonical type; the grep asserts the exact tab-anchored name. --release is MANDATORY: this binary also builds creal/complex/cpoint, which overflow the default debug thread stack."
     },
