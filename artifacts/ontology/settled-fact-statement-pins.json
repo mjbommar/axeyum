@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2048,
+    "min_identity_bound": 2076,
     "max_header_exempt": 67
   },
   "amendments": [
@@ -256,7 +256,15 @@
       "fact_id": "F:cauchy-schwarz-over-constructed-plane",
       "language": "lean4",
       "statement_sha256": "321f805e953a45de42f1af1fc6b09e01b22c79a2a033e6f33254d1e7d0f32a72",
-      "prose_sha256": "52ca55a6f1a2e6ffa9716c4464437c55239a96a7bcc7cf3624950f5e23ad409b"
+      "prose_sha256": "52ca55a6f1a2e6ffa9716c4464437c55239a96a7bcc7cf3624950f5e23ad409b",
+      "kernel_theorem": "CPoint.cauchy_schwarz",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "321f805e953a45de42f1af1fc6b09e01b22c79a2a033e6f33254d1e7d0f32a72",
+          "prose_sha256": "52ca55a6f1a2e6ffa9716c4464437c55239a96a7bcc7cf3624950f5e23ad409b"
+        }
+      ]
     },
     {
       "fact_id": "F:chu-vandermonde-convolution",
@@ -1364,7 +1372,15 @@
       "fact_id": "F:covariance-sq-le-variance-mul-over-constructed-rationals",
       "language": "lean4",
       "statement_sha256": "9280ae909f188f9953b7bf00788069893a157fb8ae291237d84b69413236bd3a",
-      "prose_sha256": "e0458b57ab4120a177ef8dcff168e7988aeee6b8540b8d0c2f066b9023d32e67"
+      "prose_sha256": "e0458b57ab4120a177ef8dcff168e7988aeee6b8540b8d0c2f066b9023d32e67",
+      "kernel_theorem": "Rat.covariance_sq_le_variance_mul",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "9280ae909f188f9953b7bf00788069893a157fb8ae291237d84b69413236bd3a",
+          "prose_sha256": "e0458b57ab4120a177ef8dcff168e7988aeee6b8540b8d0c2f066b9023d32e67"
+        }
+      ]
     },
     {
       "fact_id": "F:cpoint-apollonius-from-stewart",
@@ -2182,7 +2198,15 @@
       "fact_id": "F:cramer-rule-forward-direction-over-constructed-rationals",
       "language": "lean4",
       "statement_sha256": "508e1c97d15ffa76c6a348a1abd228da08d290b4043f2670777db0dab28e5d18",
-      "prose_sha256": "7fbbd7545e330450c3a535f67d94a3c732cd48a59f1cca459ba0abb2a40a3f66"
+      "prose_sha256": "7fbbd7545e330450c3a535f67d94a3c732cd48a59f1cca459ba0abb2a40a3f66",
+      "kernel_theorem": "Rat.cramer_two_unique_x",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "508e1c97d15ffa76c6a348a1abd228da08d290b4043f2670777db0dab28e5d18",
+          "prose_sha256": "7fbbd7545e330450c3a535f67d94a3c732cd48a59f1cca459ba0abb2a40a3f66"
+        }
+      ]
     },
     {
       "fact_id": "F:creal-abs-add-le",
@@ -5938,19 +5962,43 @@
       "fact_id": "F:fermat-little-theorem-over-constructed-naturals",
       "language": "lean4",
       "statement_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
-      "prose_sha256": "68473bbe61786e4fb7163f0d43e0c48ea7f6ce341eb5ed58c666412f203bbfb5"
+      "prose_sha256": "68473bbe61786e4fb7163f0d43e0c48ea7f6ce341eb5ed58c666412f203bbfb5",
+      "kernel_theorem": "Nat.pow_prime_modeq_self",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
+          "prose_sha256": "68473bbe61786e4fb7163f0d43e0c48ea7f6ce341eb5ed58c666412f203bbfb5"
+        }
+      ]
     },
     {
       "fact_id": "F:finite-cauchy-product-over-complex-equals-triangle-plus-corner",
       "language": "lean4",
       "statement_sha256": "11865c055a6f373f1ad61585e35d8f6c6bbe82e6c7579746b197a4c45831b930",
-      "prose_sha256": "422d3f9fa94663275189b042b217898dc257abc407bda50811ea1cbfd343f250"
+      "prose_sha256": "422d3f9fa94663275189b042b217898dc257abc407bda50811ea1cbfd343f250",
+      "kernel_theorem": "Complex.sumRange_mul_eq_diag_add_corner",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "11865c055a6f373f1ad61585e35d8f6c6bbe82e6c7579746b197a4c45831b930",
+          "prose_sha256": "422d3f9fa94663275189b042b217898dc257abc407bda50811ea1cbfd343f250"
+        }
+      ]
     },
     {
       "fact_id": "F:finite-double-sum-rectangle-eq-triangle-plus-corner",
       "language": "lean4",
       "statement_sha256": "c56c1af1063cbb3119612670b8e1777395a5a8b0d00c8f82499de1ed8b2579e3",
-      "prose_sha256": "07ede82e18030de51a20651ce9974ba55a5f76aedd6b0726f03e94dde9d8a0cf"
+      "prose_sha256": "07ede82e18030de51a20651ce9974ba55a5f76aedd6b0726f03e94dde9d8a0cf",
+      "kernel_theorem": "Nat.sumRange_rect_eq_diag_add_corner",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "c56c1af1063cbb3119612670b8e1777395a5a8b0d00c8f82499de1ed8b2579e3",
+          "prose_sha256": "07ede82e18030de51a20651ce9974ba55a5f76aedd6b0726f03e94dde9d8a0cf"
+        }
+      ]
     },
     {
       "fact_id": "F:fp16-add-monotone-rne",
@@ -6154,7 +6202,15 @@
       "fact_id": "F:geometry-stewart-over-constructed-reals",
       "language": "lean4",
       "statement_sha256": "f1502205ecb6460bb2198bb682feddd13a035773fee491be71630239f4fa6d82",
-      "prose_sha256": "d58a0b901050e7430704df1d7f3022ac3b6cc061f3618178fb686f7188256330"
+      "prose_sha256": "d58a0b901050e7430704df1d7f3022ac3b6cc061f3618178fb686f7188256330",
+      "kernel_theorem": "CPoint.stewart",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "f1502205ecb6460bb2198bb682feddd13a035773fee491be71630239f4fa6d82",
+          "prose_sha256": "d58a0b901050e7430704df1d7f3022ac3b6cc061f3618178fb686f7188256330"
+        }
+      ]
     },
     {
       "fact_id": "F:geometry-thales-cofactor-identity-kernel-checked",
@@ -6191,10 +6247,16 @@
       "language": "lean4",
       "statement_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589",
       "prose_sha256": "77fcffc4f3db1b81753a9b192cb5475c48c25d0b4d1e0d71c03cf8df7556f903",
+      "kernel_theorem": "CPoint.varignon_vector_parallel",
       "history": [
         {
           "language": "lean4",
           "statement_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "589ea2f08c77f6541b35d5400f44af4935ad9b188f7368fc7f45c947d5855589",
+          "prose_sha256": "77fcffc4f3db1b81753a9b192cb5475c48c25d0b4d1e0d71c03cf8df7556f903"
         }
       ]
     },
@@ -8410,7 +8472,15 @@
       "fact_id": "F:menelaus-and-ceva-over-constructed-plane",
       "language": "lean4",
       "statement_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
-      "prose_sha256": "8027c25eff5e40b8306577e2867777e94fff68e5c584eda0cda8d7f3019071f1"
+      "prose_sha256": "8027c25eff5e40b8306577e2867777e94fff68e5c584eda0cda8d7f3019071f1",
+      "kernel_theorem": "CPoint.menelaus_collinear_of_ratio_product",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
+          "prose_sha256": "8027c25eff5e40b8306577e2867777e94fff68e5c584eda0cda8d7f3019071f1"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-add-assoc-749cb0ff",
@@ -8598,13 +8668,29 @@
       "fact_id": "F:ml430-int-add-modeq-left-ee732b5b",
       "language": "lean4-surface",
       "statement_sha256": "69d674134bec57c21509b34c81271e6b111f072e8f36de9a081155f103fa77f0",
-      "prose_sha256": "6fe48f5db3070e2edec45c50aa157fc15a7163e8657e52011e21dbb4b700d533"
+      "prose_sha256": "6fe48f5db3070e2edec45c50aa157fc15a7163e8657e52011e21dbb4b700d533",
+      "kernel_theorem": "Int.add_modEq_left",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "69d674134bec57c21509b34c81271e6b111f072e8f36de9a081155f103fa77f0",
+          "prose_sha256": "6fe48f5db3070e2edec45c50aa157fc15a7163e8657e52011e21dbb4b700d533"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-add-modeq-right-e58108ee",
       "language": "lean4-surface",
       "statement_sha256": "392fcb17c2eed5a78243d07bb49bddc67072c4b229537946b432654829367bc9",
-      "prose_sha256": "5542436b8a9cf1652011bfdd6a48fee47c0f36c8819018e0526c5dcab56bc8fd"
+      "prose_sha256": "5542436b8a9cf1652011bfdd6a48fee47c0f36c8819018e0526c5dcab56bc8fd",
+      "kernel_theorem": "Int.add_modEq_right",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "392fcb17c2eed5a78243d07bb49bddc67072c4b229537946b432654829367bc9",
+          "prose_sha256": "5542436b8a9cf1652011bfdd6a48fee47c0f36c8819018e0526c5dcab56bc8fd"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-add-mul-66aa025b",
@@ -9248,7 +9334,15 @@
       "fact_id": "F:ml430-int-mod-modeq-6bec7847",
       "language": "lean4-surface",
       "statement_sha256": "3e112f9d713853b072c9af7ec839479878e5db8afbd041d347d61f86d113040e",
-      "prose_sha256": "eebeef6da3d7466a78066d11aad9cda2666a451aae78850f90c1d71d9aa0bb28"
+      "prose_sha256": "eebeef6da3d7466a78066d11aad9cda2666a451aae78850f90c1d71d9aa0bb28",
+      "kernel_theorem": "Int.mod_modEq",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "3e112f9d713853b072c9af7ec839479878e5db8afbd041d347d61f86d113040e",
+          "prose_sha256": "eebeef6da3d7466a78066d11aad9cda2666a451aae78850f90c1d71d9aa0bb28"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-modeq-add-b805125a",
@@ -9448,7 +9542,15 @@
       "fact_id": "F:ml430-int-modeq-neg-d6ff57b6",
       "language": "lean4-surface",
       "statement_sha256": "d8348122b631186900748b407a7217807e7786018d939185b63c30d054990808",
-      "prose_sha256": "55ffaa5d0d25fbfb6aeef60c53f97969b39188e582b6a93ef4a36796fd20b6f3"
+      "prose_sha256": "55ffaa5d0d25fbfb6aeef60c53f97969b39188e582b6a93ef4a36796fd20b6f3",
+      "kernel_theorem": "Int.modEq_neg",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "d8348122b631186900748b407a7217807e7786018d939185b63c30d054990808",
+          "prose_sha256": "55ffaa5d0d25fbfb6aeef60c53f97969b39188e582b6a93ef4a36796fd20b6f3"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-modeq-neg-f649f6c5",
@@ -9510,7 +9612,15 @@
       "fact_id": "F:ml430-int-modeq-one-01d9de39",
       "language": "lean4-surface",
       "statement_sha256": "43bc62305ffe1a2138075adfd2f8c43348ffea86f69882cf4751821fcac7d728",
-      "prose_sha256": "9d7c0127f8113683e2caa7394b7a94463084da7eeaf95964a54993f71de485ec"
+      "prose_sha256": "9d7c0127f8113683e2caa7394b7a94463084da7eeaf95964a54993f71de485ec",
+      "kernel_theorem": "Int.modEq_one",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "43bc62305ffe1a2138075adfd2f8c43348ffea86f69882cf4751821fcac7d728",
+          "prose_sha256": "9d7c0127f8113683e2caa7394b7a94463084da7eeaf95964a54993f71de485ec"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-modeq-refl-30e15520",
@@ -9528,7 +9638,15 @@
       "fact_id": "F:ml430-int-modeq-sub-3148f130",
       "language": "lean4-surface",
       "statement_sha256": "deb1606e1cbca18acd867681b6536774f4be916a7a5b7b0588aee56d222685a4",
-      "prose_sha256": "3e4baa5255d9401c4beed80e14bcba10411a14df8f05fcfe438835e7698acded"
+      "prose_sha256": "3e4baa5255d9401c4beed80e14bcba10411a14df8f05fcfe438835e7698acded",
+      "kernel_theorem": "Int.modEq_sub",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "deb1606e1cbca18acd867681b6536774f4be916a7a5b7b0588aee56d222685a4",
+          "prose_sha256": "3e4baa5255d9401c4beed80e14bcba10411a14df8f05fcfe438835e7698acded"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-modeq-symm-984a6e67",
@@ -9558,7 +9676,15 @@
       "fact_id": "F:ml430-int-modulus-modeq-zero-5b57a898",
       "language": "lean4-surface",
       "statement_sha256": "84e4bbddfdfd837c8de78c5605a26d94f5ebfc8f193c01737268f04b60f1a59b",
-      "prose_sha256": "f90b42ac023b6a9ba3900583d52c722466a660bff1c98da36fd1ec09faaf9695"
+      "prose_sha256": "f90b42ac023b6a9ba3900583d52c722466a660bff1c98da36fd1ec09faaf9695",
+      "kernel_theorem": "Int.modulus_modEq_zero",
+      "history": [
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "84e4bbddfdfd837c8de78c5605a26d94f5ebfc8f193c01737268f04b60f1a59b",
+          "prose_sha256": "f90b42ac023b6a9ba3900583d52c722466a660bff1c98da36fd1ec09faaf9695"
+        }
+      ]
     },
     {
       "fact_id": "F:ml430-int-mul-neg-iff-79c18955",
@@ -10209,10 +10335,16 @@
       "language": "lean4-surface",
       "statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7",
       "prose_sha256": "8e740c6cda3e9fbe1364cc959374e84bfc8a047c6fd5b49cb0e0218eb5aca08c",
+      "kernel_theorem": "Nat.ascFactorial_zero",
       "history": [
         {
           "language": "lean4-surface",
           "statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7"
+        },
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "2482f23d163bb946b92ac456667645047254faa3f575809e45609154b98b5dd7",
+          "prose_sha256": "8e740c6cda3e9fbe1364cc959374e84bfc8a047c6fd5b49cb0e0218eb5aca08c"
         }
       ]
     },
@@ -11018,10 +11150,16 @@
       "language": "lean4-surface",
       "statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519",
       "prose_sha256": "a5328adc6aabadba4a175a406c32fb895005d3b48932c3d6ae3bcce1707ca29a",
+      "kernel_theorem": "Nat.descFactorial_one",
       "history": [
         {
           "language": "lean4-surface",
           "statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519"
+        },
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "90324b256e9e14905a4386da129c20ebec1d1a4c86a7c9e8638c2752829f1519",
+          "prose_sha256": "a5328adc6aabadba4a175a406c32fb895005d3b48932c3d6ae3bcce1707ca29a"
         }
       ]
     },
@@ -11044,10 +11182,16 @@
       "language": "lean4-surface",
       "statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f",
       "prose_sha256": "6ebf664fdfa0a4bf5c7de61a7d53aaf72a19a9ff40ee93d4d8aba45ba6409125",
+      "kernel_theorem": "Nat.descFactorial_zero",
       "history": [
         {
           "language": "lean4-surface",
           "statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f"
+        },
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "f87b91ee7d953a7188b5ca71e37c370d67a0c26ffba643bdcc6ae2a8c255983f",
+          "prose_sha256": "6ebf664fdfa0a4bf5c7de61a7d53aaf72a19a9ff40ee93d4d8aba45ba6409125"
         }
       ]
     },
@@ -11810,10 +11954,16 @@
       "language": "lean4-surface",
       "statement_sha256": "d02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab",
       "prose_sha256": "3fc7c1ab36f9998736807727ae9218629701c9662e4f5ca17178253e2ee7d269",
+      "kernel_theorem": "Nat.fib_add_two",
       "history": [
         {
           "language": "lean4-surface",
           "statement_sha256": "d02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab"
+        },
+        {
+          "language": "lean4-surface",
+          "statement_sha256": "d02d345e47fd89371e0929cde30b602d0105750679d230d9675546e468d6a1ab",
+          "prose_sha256": "3fc7c1ab36f9998736807727ae9218629701c9662e4f5ca17178253e2ee7d269"
         }
       ]
     },
@@ -17503,7 +17653,15 @@
       "fact_id": "F:natdivsucc-antitone-over-constructed-rationals",
       "language": "lean4",
       "statement_sha256": "0dd3b8c10c6d2cfa016fd1a1e7239d3bb50b05715324d6f957b01d8b252d1c9a",
-      "prose_sha256": "b12ecfb2081e702c3db5f8c8a672905c80970b5af2a0af1a17d50c22adc4ab5b"
+      "prose_sha256": "b12ecfb2081e702c3db5f8c8a672905c80970b5af2a0af1a17d50c22adc4ab5b",
+      "kernel_theorem": "Rat.natDivSucc_antitone",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "0dd3b8c10c6d2cfa016fd1a1e7239d3bb50b05715324d6f957b01d8b252d1c9a",
+          "prose_sha256": "b12ecfb2081e702c3db5f8c8a672905c80970b5af2a0af1a17d50c22adc4ab5b"
+        }
+      ]
     },
     {
       "fact_id": "F:no-integer-square-is-minus-one",
@@ -17626,7 +17784,15 @@
       "fact_id": "F:prodrange-collapses-under-a-fixed-point-free-involution",
       "language": "lean4",
       "statement_sha256": "89bdc4d1186415e5318251298b521954eac939729b7c5b0bf1a36a7c23f78a2e",
-      "prose_sha256": "d4d2c010981c4a8411b96694323626c77f41c16b5c58a7cdd3d8c8dcf7c0dff5"
+      "prose_sha256": "d4d2c010981c4a8411b96694323626c77f41c16b5c58a7cdd3d8c8dcf7c0dff5",
+      "kernel_theorem": "Int.prod_range_pairing_collapse",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "89bdc4d1186415e5318251298b521954eac939729b7c5b0bf1a36a7c23f78a2e",
+          "prose_sha256": "d4d2c010981c4a8411b96694323626c77f41c16b5c58a7cdd3d8c8dcf7c0dff5"
+        }
+      ]
     },
     {
       "fact_id": "F:prop-excluded-middle-classical",
@@ -19006,7 +19172,15 @@
       "fact_id": "F:rat-matinv2-matmul-top-left",
       "language": "lean4",
       "statement_sha256": "7118f264718caeb9e84e8b5e07292026d0f14a943fdf748c4e4ca1fd6b1590cc",
-      "prose_sha256": "0e9de7748a07a830a1e59fc101c15d3e18f220aee32cd8eb560069e990890071"
+      "prose_sha256": "0e9de7748a07a830a1e59fc101c15d3e18f220aee32cd8eb560069e990890071",
+      "kernel_theorem": "Rat.matInv2_matMul_top_left",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "7118f264718caeb9e84e8b5e07292026d0f14a943fdf748c4e4ca1fd6b1590cc",
+          "prose_sha256": "0e9de7748a07a830a1e59fc101c15d3e18f220aee32cd8eb560069e990890071"
+        }
+      ]
     },
     {
       "fact_id": "F:rat-matmul-assoc",
@@ -19054,19 +19228,43 @@
       "fact_id": "F:rat-matmul-matinv2-top-left",
       "language": "lean4",
       "statement_sha256": "244932d7e46e42f6de3de5140ec2fc0637eb2392afe687255e929c3ad3907f46",
-      "prose_sha256": "a98c851e61d6b533dedaa737b2c3e54516e295bc9f6e0380bba2e29a696d5fe4"
+      "prose_sha256": "a98c851e61d6b533dedaa737b2c3e54516e295bc9f6e0380bba2e29a696d5fe4",
+      "kernel_theorem": "Rat.matMul_matInv2_top_left",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "244932d7e46e42f6de3de5140ec2fc0637eb2392afe687255e929c3ad3907f46",
+          "prose_sha256": "a98c851e61d6b533dedaa737b2c3e54516e295bc9f6e0380bba2e29a696d5fe4"
+        }
+      ]
     },
     {
       "fact_id": "F:rat-mattranspose-mul",
       "language": "lean4",
       "statement_sha256": "4a0cf8da7839eaadf9e9be3cf2fda23fa08d8df6768039f851c545803e69e493",
-      "prose_sha256": "093bfc3257e6efb070810eda90c22822496173acacd6a05add4e755dac74c951"
+      "prose_sha256": "093bfc3257e6efb070810eda90c22822496173acacd6a05add4e755dac74c951",
+      "kernel_theorem": "Rat.matTranspose_mul",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "4a0cf8da7839eaadf9e9be3cf2fda23fa08d8df6768039f851c545803e69e493",
+          "prose_sha256": "093bfc3257e6efb070810eda90c22822496173acacd6a05add4e755dac74c951"
+        }
+      ]
     },
     {
       "fact_id": "F:rat-mattranspose-transpose",
       "language": "lean4",
       "statement_sha256": "8ed008099a6ee8a621f062b0ba2deecb4f706f4b90e0c1a8981ca55cb82fe2bc",
-      "prose_sha256": "b05b2e1a94c37e97892b98974c913b6899ea8a193d1ed9b0aec05812d248623a"
+      "prose_sha256": "b05b2e1a94c37e97892b98974c913b6899ea8a193d1ed9b0aec05812d248623a",
+      "kernel_theorem": "Rat.matTranspose_transpose",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "8ed008099a6ee8a621f062b0ba2deecb4f706f4b90e0c1a8981ca55cb82fe2bc",
+          "prose_sha256": "b05b2e1a94c37e97892b98974c913b6899ea8a193d1ed9b0aec05812d248623a"
+        }
+      ]
     },
     {
       "fact_id": "F:rat-max-cases",
@@ -19799,10 +19997,16 @@
       "language": "lean4",
       "statement_sha256": "94e8daed018fb79825f33d483e79733513bca30dad2d49d6219dfbeb08ea6d9a",
       "prose_sha256": "82e576be16051a35f4fd66440109198d36fa0e2e90ccb2e7bfbdb37b6e6118a1",
+      "kernel_theorem": "Rat.normalize",
       "history": [
         {
           "language": "lean4",
           "statement_sha256": "94e8daed018fb79825f33d483e79733513bca30dad2d49d6219dfbeb08ea6d9a"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "94e8daed018fb79825f33d483e79733513bca30dad2d49d6219dfbeb08ea6d9a",
+          "prose_sha256": "82e576be16051a35f4fd66440109198d36fa0e2e90ccb2e7bfbdb37b6e6118a1"
         }
       ]
     },
@@ -21132,7 +21336,15 @@
       "fact_id": "F:wilson-theorem-over-constructed-integers",
       "language": "lean4",
       "statement_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
-      "prose_sha256": "a50d06378565e636236ae2516b7a02bfd8a1cacd1904fedb50c2c6240a36fdaa"
+      "prose_sha256": "a50d06378565e636236ae2516b7a02bfd8a1cacd1904fedb50c2c6240a36fdaa",
+      "kernel_theorem": "Int.wilson",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
+          "prose_sha256": "a50d06378565e636236ae2516b7a02bfd8a1cacd1904fedb50c2c6240a36fdaa"
+        }
+      ]
     },
     {
       "fact_id": "F:xor-associative",
