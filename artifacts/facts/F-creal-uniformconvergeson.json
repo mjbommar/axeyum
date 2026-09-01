@@ -5,7 +5,7 @@
   "statement": "CReal.UniformConvergesOn (F : Nat -> CReal -> CReal) (G : CReal -> CReal) (a b : CReal) is a one-constructor inductive family in Sort 1 (a Type, not a Prop): its single constructor packages a rate : Nat and a proof that for every eps, taking n >= rate puts F n within 1/(eps+1) of G uniformly on [a,b]. Deliberately Type-valued rather than Exists-wrapped Prop, because the theorem this definition exists to support (uniform_limit_uniformly_continuous) must CONSTRUCT a UniformlyContinuousOn value whose modulus field needs the convergence rate as literal Nat-building data, and Exists.rec is Prop-only -- it cannot eliminate a Prop-wrapped witness into a Type-valued construction. There is no pointwise-not-uniform counterexample checked in this kernel; the guarantee instead rests on a type-level argument: rate is a single Nat (not a function CReal -> Nat), so point-dependence of the convergence rate is syntactically impossible for any UniformConvergesOn witness, by construction of the type.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> ((x1 : CReal) -> CReal))) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> Sort (1)))))",
+    "statement": "inductive CReal.UniformConvergesOn : ((x0 : ((x0 : AxNat) -> ((x1 : CReal) -> CReal))) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> Sort (1)))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

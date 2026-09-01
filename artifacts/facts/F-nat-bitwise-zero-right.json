@@ -44,7 +44,7 @@
     "kernel_theorem": "Nat.bitwise_zero_right",
     "free_symbols": [],
     "language": "lean4",
-    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise x0 x1 AxNat.zero) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) AxNat.zero x1 (x0 Bool.true Bool.false))))"
+    "statement": "theorem Nat.bitwise_zero_right : ((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise x0 x1 AxNat.zero) (Bool.rec.{1} (fun (x2 : Bool) => AxNat) AxNat.zero x1 (x0 Bool.true Bool.false))))"
   },
   "id": "F:nat-bitwise-zero-right",
   "notes": "formal.statement is `Kernel::render_lean` of the admitted type, taken verbatim from `nat_theorem_inventory`, not transcribed by hand. `AxNat` is the kernel's CONSTRUCTED inductive `Nat` (the `Ax` is *axeyum*, not *axiomatized*) -- the `nat` prelude's trusted surface measures zero.\n\nSee `F:nat-bitwise-zero-left`'s notes for `Nat.bitwise`'s design and why it was built now (the general form two earlier lanes declined). This is the harder of the two f-general boundary lemmas: unlike `bitwise_zero_left`, the base case is not a bare restatement of the fuel-exhaustion row and needed one small extra lemma (`bool_select_same : forall v x, bool_select_nat x v v = v`, a two-case `Bool` split) that `land`/`lor`/`ldiff`'s own zero-right theorems never required, because their base cases were already syntactically identical on both sides for a FIXED `f`. See `crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs`'s module doc for the full derivation.\n\nDoes not flip any `F:ml430-nat-bitwise-*` fact -- those are a separate, held-out mirror population and untouched by this lane.",

@@ -5,7 +5,7 @@
   "statement": "For every natural n, m, i: if testBit(n, i) = 0, testBit(m, i) = 1, and testBit(n, j) = testBit(m, j) for every j > i, then n < m.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.testBit x0 x2) AxNat.zero) -> ((x4 : Eq.{1} AxNat (AxNat.testBit x1 x2) (AxNat.succ AxNat.zero)) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.lt x2 x5) -> Eq.{1} AxNat (AxNat.testBit x0 x5) (AxNat.testBit x1 x5)))) -> AxNat.lt x0 x1))))))",
+    "statement": "theorem Nat.lt_of_testBit : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} AxNat (AxNat.testBit x0 x2) AxNat.zero) -> ((x4 : Eq.{1} AxNat (AxNat.testBit x1 x2) (AxNat.succ AxNat.zero)) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.lt x2 x5) -> Eq.{1} AxNat (AxNat.testBit x0 x5) (AxNat.testBit x1 x5)))) -> AxNat.lt x0 x1))))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.lt_of_testBit",
     "free_symbols": []

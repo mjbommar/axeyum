@@ -5,7 +5,7 @@
   "statement": "For any coefficient function c, root candidate a, and n : Nat: polyDegreeLt (factorQuotient c a n) n -- the computed synthetic-division quotient satisfies the degree bound the factor theorem needs. The proof rebuilds factorQuotient's own Nat.rec shape (motive/base/step) so the ascribed Equiv is defeq to 'Equiv (factorQuotient c a n k) zero' for k >= n, transported through the forced-zero base case discussed in F:complex-factorquotient's own notes.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> Complex.polyDegreeLt (Complex.factorQuotient x0 x1 x2) x2)))",
+    "statement": "theorem Complex.factorQuotient_degreeLt : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> Complex.polyDegreeLt (Complex.factorQuotient x0 x1 x2) x2)))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

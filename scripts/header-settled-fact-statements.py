@@ -209,9 +209,21 @@ def apply(fixable: list[dict], pins_path: pathlib.Path, date: str) -> None:
     already = {row.get("fact_id") for row in amendments if isinstance(row, dict)}
 
     for row in fixable:
-        data = json.loads(row["path"].read_text(encoding="utf-8"))
-        data["formal"]["statement"] = row["new"]
-        row["path"].write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        # Rewrite the ONE encoded string in place rather than re-dumping the
+        # fact. A `json.dumps(..., indent=2)` round-trip reformats every
+        # compact array another tool wrote (`check-fact-depends-derived.py`
+        # keeps `depends_on` on one line), turning a one-line change into a
+        # fifteen-line diff and burying the edit this tool is accountable for.
+        text = row["path"].read_text(encoding="utf-8")
+        old_encoded = json.dumps(row["old"])
+        new_encoded = json.dumps(row["new"])
+        if text.count(old_encoded) != 1:
+            raise HeaderError(
+                f"{row['fact_id']}: the statement is not uniquely locatable in "
+                f"{row['path'].name} ({text.count(old_encoded)} occurrences) — "
+                "refusing to guess which one to head"
+            )
+        row["path"].write_text(text.replace(old_encoded, new_encoded), encoding="utf-8")
         if row["fact_id"] in already:
             continue
         amendments.append(

@@ -6,7 +6,7 @@
   "formal": {
     "kernel_theorem": "Int.prod_range_pairing_collapse",
     "language": "lean4",
-    "statement": "((x0 : Int) -> ((x1 : Int.lt Int.zero x0) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Int)) -> ((x4 : ((x4 : AxNat) -> AxNat)) -> ((x5 : AxNat.injectiveOn x4 x2) -> ((x6 : AxNat.mapsInto x4 x2) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x2) -> Not (Eq.{1} AxNat (x4 x7) x7)))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x2) -> Eq.{1} AxNat (x4 (x4 x8)) x8))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x2) -> Int.ModEq x0 (Int.mul (x3 x9) (x3 (x4 x9))) Int.one))) -> Int.ModEq x0 (Int.prodRange x3 x2) Int.one))))))))))",
+    "statement": "theorem Int.prod_range_pairing_collapse : ((x0 : Int) -> ((x1 : Int.lt Int.zero x0) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Int)) -> ((x4 : ((x4 : AxNat) -> AxNat)) -> ((x5 : AxNat.injectiveOn x4 x2) -> ((x6 : AxNat.mapsInto x4 x2) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x2) -> Not (Eq.{1} AxNat (x4 x7) x7)))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x2) -> Eq.{1} AxNat (x4 (x4 x8)) x8))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x2) -> Int.ModEq x0 (Int.mul (x3 x9) (x3 (x4 x9))) Int.one))) -> Int.ModEq x0 (Int.prodRange x3 x2) Int.one))))))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",

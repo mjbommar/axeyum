@@ -5,7 +5,7 @@
   "statement": "CReal.Equiv (polyEval (polyAdd c g) n x) (polyEval c n x + polyEval g n x) -- polyEval distributes over polyAdd, for every coefficient functions c, g, degree bound n, and point x.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal) -> CReal.Equiv (CReal.polyEval (CReal.polyAdd x0 x1) x2 x3) (CReal.add (CReal.polyEval x0 x2 x3) (CReal.polyEval x1 x2 x3))))))",
+    "statement": "theorem CReal.polyEval_polyAdd : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal) -> CReal.Equiv (CReal.polyEval (CReal.polyAdd x0 x1) x2 x3) (CReal.add (CReal.polyEval x0 x2 x3) (CReal.polyEval x1 x2 x3))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

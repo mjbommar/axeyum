@@ -5,7 +5,7 @@
   "statement": "For every Bool -> Bool -> Bool function f and every natural m, n: bitwise(fun a b => f(b, a), m, n) = bitwise(f, n, m).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x3 : Bool) => fun (x4 : Bool) => x0 x4 x3) x1 x2) (AxNat.bitwise x0 x2 x1))))",
+    "statement": "theorem Nat.bitwise_swap : ((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.bitwise (fun (x3 : Bool) => fun (x4 : Bool) => x0 x4 x3) x1 x2) (AxNat.bitwise x0 x2 x1))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.bitwise_swap",
     "free_symbols": []

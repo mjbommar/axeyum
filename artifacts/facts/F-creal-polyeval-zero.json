@@ -5,7 +5,7 @@
   "statement": "CReal.polyEval c 0 x is Equiv-equal (in fact Eq) to CReal.zero for any coefficient function c and point x -- the base equation of polyEval's own recursive unfolding.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : CReal) -> Eq.{1} CReal (CReal.polyEval x0 AxNat.zero x1) CReal.zero))",
+    "statement": "theorem CReal.polyEval_zero : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : CReal) -> Eq.{1} CReal (CReal.polyEval x0 AxNat.zero x1) CReal.zero))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

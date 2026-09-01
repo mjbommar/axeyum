@@ -5,7 +5,7 @@
   "statement": "CReal.UniformConvergesOn (fun n x => mul x (pow (ofRat 1/2) n)) (fun _ => zero) zero one -- the sequence F n x := x*(1/2)^n converges uniformly to the zero function on [0,1]. A fully CONCRETE instance (a := zero, b := one are baked into the statement, unlike uniform_converges_id's arbitrary a, b), and a SECOND entry point admitting CReal.UniformConvergesOn's constructor, dispatched separately from declare_uniform_converges_id because the two witnesses are genuinely different constructions, not the same proof instantiated at different arguments.",
   "formal": {
     "language": "lean4",
-    "statement": "CReal.UniformConvergesOn (fun (x0 : AxNat) => fun (x1 : CReal) => CReal.mul x1 (CReal.pow (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) x0)) (fun (x0 : CReal) => CReal.zero) CReal.zero CReal.one",
+    "statement": "theorem CReal.uniform_converges_geom_half : CReal.UniformConvergesOn (fun (x0 : AxNat) => fun (x1 : CReal) => CReal.mul x1 (CReal.pow (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) (AxNat.succ AxNat.zero))) x0)) (fun (x0 : CReal) => CReal.zero) CReal.zero CReal.one",
     "fragment": "CReal",
     "free_symbols": [],
     "kernel_theorem": "CReal.uniform_converges_geom_half"

@@ -5,7 +5,7 @@
   "statement": "For every Bool -> Bool -> Bool function f, every Bool a, b and natural m, n: if m = 0 implies a = true, and n = 0 implies b = true, then bitwise(f, bit(a, m), bit(b, n)) = bit(f(a, b), bitwise(f, m, n)).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : Bool) -> ((x2 : AxNat) -> ((x3 : Bool) -> ((x4 : AxNat) -> ((x5 : ((x5 : Eq.{1} AxNat x2 AxNat.zero) -> Eq.{1} Bool x1 Bool.true)) -> ((x6 : ((x6 : Eq.{1} AxNat x4 AxNat.zero) -> Eq.{1} Bool x3 Bool.true)) -> Eq.{1} AxNat (AxNat.bitwise x0 (AxNat.bit x1 x2) (AxNat.bit x3 x4)) (AxNat.bit (x0 x1 x3) (AxNat.bitwise x0 x2 x4)))))))))",
+    "statement": "theorem Nat.bitwise_bit' : ((x0 : ((x0 : Bool) -> ((x1 : Bool) -> Bool))) -> ((x1 : Bool) -> ((x2 : AxNat) -> ((x3 : Bool) -> ((x4 : AxNat) -> ((x5 : ((x5 : Eq.{1} AxNat x2 AxNat.zero) -> Eq.{1} Bool x1 Bool.true)) -> ((x6 : ((x6 : Eq.{1} AxNat x4 AxNat.zero) -> Eq.{1} Bool x3 Bool.true)) -> Eq.{1} AxNat (AxNat.bitwise x0 (AxNat.bit x1 x2) (AxNat.bit x3 x4)) (AxNat.bit (x0 x1 x3) (AxNat.bitwise x0 x2 x4)))))))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.bitwise_bit'",
     "free_symbols": []

@@ -5,7 +5,7 @@
   "statement": "CReal.polyAdd c g := fun k => c(k) + g(k) -- the coefficientwise (pointwise) sum of two coefficient functions. A total, axiom-free definition.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> CReal)))",
+    "statement": "def CReal.polyAdd : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> CReal)))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

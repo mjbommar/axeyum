@@ -5,7 +5,7 @@
   "statement": "For any a, b : CReal, CReal.UniformConvergesOn (fun n x => x) (fun x => x) a b -- the constant sequence of identity functions converges uniformly (trivially, with rate independent of both n and the point) to the identity function on the interval [a,b]. The first concrete instance of CReal.UniformConvergesOn, dispatched via its own entry point separately from uniform_converges_geom_half.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : CReal) -> ((x1 : CReal) -> CReal.UniformConvergesOn (fun (x2 : AxNat) => fun (x3 : CReal) => x3) (fun (x2 : CReal) => x2) x0 x1))",
+    "statement": "theorem CReal.uniform_converges_id : ((x0 : CReal) -> ((x1 : CReal) -> CReal.UniformConvergesOn (fun (x2 : AxNat) => fun (x3 : CReal) => x3) (fun (x2 : CReal) => x2) x0 x1))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

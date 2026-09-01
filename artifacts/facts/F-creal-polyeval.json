@@ -5,7 +5,7 @@
   "statement": "CReal.polyEval c n x := sumRange (fun i => c i * x^i) n -- evaluate the polynomial with coefficient function c at point x, truncated to degree < n. A total, axiom-free definition over the constructed reals; not a computed degree (see F:creal-polydegreelt's own notes for why no coefficient of a CReal-valued polynomial can be tested for zero).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> ((x2 : CReal) -> CReal)))",
+    "statement": "def CReal.polyEval : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> ((x2 : CReal) -> CReal)))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

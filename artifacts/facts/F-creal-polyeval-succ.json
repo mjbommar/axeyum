@@ -5,7 +5,7 @@
   "statement": "CReal.polyEval c (n+1) x = CReal.polyEval c n x + c(n)*x^n -- the recursive (Eq, not just Equiv) unfolding equation for polyEval, the other half of its own defining recursion alongside polyEval_zero.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> ((x2 : CReal) -> Eq.{1} CReal (CReal.polyEval x0 (AxNat.succ x1) x2) (CReal.add (CReal.polyEval x0 x1 x2) (CReal.mul (x0 x1) (CReal.pow x2 x1))))))",
+    "statement": "theorem CReal.polyEval_succ : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> ((x2 : CReal) -> Eq.{1} CReal (CReal.polyEval x0 (AxNat.succ x1) x2) (CReal.add (CReal.polyEval x0 x1 x2) (CReal.mul (x0 x1) (CReal.pow x2 x1))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

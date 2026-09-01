@@ -5,7 +5,7 @@
   "statement": "For every k : Nat, CReal.Equiv (CReal.pow (CReal.neg CReal.one) (k+k)) CReal.one. The parity fact underneath the Ch.22-23 alternating-series bracket theorems. Proved by plain induction on k using Nat.succ_add to relate pow(-1)^(succ k + succ k) to pow(-1)^(k+k) times (neg one)*(neg one), never by a decidable-parity case split on an arbitrary Nat (which this kernel does not have machinery for).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> CReal.Equiv (CReal.pow (CReal.neg CReal.one) (AxNat.add x0 x0)) CReal.one)",
+    "statement": "theorem CReal.negOnePowDouble : ((x0 : AxNat) -> CReal.Equiv (CReal.pow (CReal.neg CReal.one) (AxNat.add x0 x0)) CReal.one)",
     "fragment": "CReal",
     "free_symbols": [
       "x0"

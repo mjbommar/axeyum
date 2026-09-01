@@ -5,7 +5,7 @@
   "statement": "Complex.hornerFromTop c a (m+1) 0 = c(m+1) -- the second of hornerFromTop's three defining equations, the base case of the inner Nat.rec at each outer step.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> Eq.{1} Complex (Complex.hornerFromTop x0 x1 (AxNat.succ x2) AxNat.zero) (x0 (AxNat.succ x2)))))",
+    "statement": "theorem Complex.hornerFromTop_succ_zero : ((x0 : ((x0 : AxNat) -> Complex)) -> ((x1 : Complex) -> ((x2 : AxNat) -> Eq.{1} Complex (Complex.hornerFromTop x0 x1 (AxNat.succ x2) AxNat.zero) (x0 (AxNat.succ x2)))))",
     "fragment": "Complex",
     "free_symbols": [
       "x0",

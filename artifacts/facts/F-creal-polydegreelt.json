@@ -5,7 +5,7 @@
   "statement": "CReal.polyDegreeLt c n := forall k, n <= k -> Equiv (c k) zero -- c has degree less than n, stated as a proposition quantifying over all sufficiently large indices, NOT as a computed integer degree. Over CReal this is the only option: both CReal.Equiv and CReal.le are undecidable, so no coefficient can be tested for zero to compute an actual degree. A total, axiom-free definition.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> Prop))",
+    "statement": "def CReal.polyDegreeLt : ((x0 : ((x0 : AxNat) -> CReal)) -> ((x1 : AxNat) -> Prop))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

@@ -5,7 +5,7 @@
   "statement": "For a <= b : CReal and m, n2, n3 : Nat with the stated Archimedean side condition on n3 relative to bound(b-a), m and n2: (m+1) * ((b-a) * 1/(n3+1)) <= 1/(n2+1). A scaled generalization of CReal's existing mesh_le_of_ge that CReal.crossing.rs's crossingClose needs, letting the mesh spacing be scaled by an extra factor (m+1) before comparing against the target accuracy 1/(n2+1).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : CReal.le x0 x1) -> ((x6 : AxNat.le (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x1 (CReal.neg x0)))) (AxNat.add (AxNat.mul (AxNat.succ x4) x2) x4)) (CReal.bound (CReal.add x1 (CReal.neg x0)))) x3) -> CReal.le (CReal.mul (CReal.ofNat (AxNat.succ x4)) (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2)))))))))",
+    "statement": "theorem CReal.meshScaledLeOfGe : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : CReal.le x0 x1) -> ((x6 : AxNat.le (AxNat.add (AxNat.mul (AxNat.succ (CReal.bound (CReal.add x1 (CReal.neg x0)))) (AxNat.add (AxNat.mul (AxNat.succ x4) x2) x4)) (CReal.bound (CReal.add x1 (CReal.neg x0)))) x3) -> CReal.le (CReal.mul (CReal.ofNat (AxNat.succ x4)) (CReal.mul (CReal.add x1 (CReal.neg x0)) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)))) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x2)))))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

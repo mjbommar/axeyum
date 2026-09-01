@@ -5,7 +5,7 @@
   "statement": "For every natural m, n, i: testBit(lor(m, n), i) = max(testBit(m, i), testBit(n, i)), where max is computed as bool_select_nat(ble(x, y), y, x).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.testBit (AxNat.lor x0 x1) x2) (Bool.rec.{1} (fun (x3 : Bool) => AxNat) (AxNat.testBit x0 x2) (AxNat.testBit x1 x2) (AxNat.ble (AxNat.testBit x0 x2) (AxNat.testBit x1 x2))))))",
+    "statement": "theorem Nat.testBit_lor : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.testBit (AxNat.lor x0 x1) x2) (Bool.rec.{1} (fun (x3 : Bool) => AxNat) (AxNat.testBit x0 x2) (AxNat.testBit x1 x2) (AxNat.ble (AxNat.testBit x0 x2) (AxNat.testBit x1 x2))))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.testBit_lor",
     "free_symbols": []

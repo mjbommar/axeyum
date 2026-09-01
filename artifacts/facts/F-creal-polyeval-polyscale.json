@@ -5,7 +5,7 @@
   "statement": "CReal.Equiv (polyEval (polyScale s c) n x) (s * polyEval c n x) -- polyEval commutes with scalar multiplication, for every scalar s, coefficient function c, degree bound n, and point x.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal) -> CReal.Equiv (CReal.polyEval (CReal.polyScale x0 x1) x2 x3) (CReal.mul x0 (CReal.polyEval x1 x2 x3))))))",
+    "statement": "theorem CReal.polyEval_polyScale : ((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> ((x3 : CReal) -> CReal.Equiv (CReal.polyEval (CReal.polyScale x0 x1) x2 x3) (CReal.mul x0 (CReal.polyEval x1 x2 x3))))))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

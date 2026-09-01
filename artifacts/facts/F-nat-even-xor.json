@@ -5,7 +5,7 @@
   "statement": "For every natural m, n: Even(xor(m, n)) holds iff Even(m) holds iff Even(n) holds.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.Even (AxNat.xor x0 x1)) (Iff (AxNat.Even x0) (AxNat.Even x1))))",
+    "statement": "theorem Nat.even_xor : ((x0 : AxNat) -> ((x1 : AxNat) -> Iff (AxNat.Even (AxNat.xor x0 x1)) (Iff (AxNat.Even x0) (AxNat.Even x1))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.even_xor",
     "free_symbols": []

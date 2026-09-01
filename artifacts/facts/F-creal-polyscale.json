@@ -5,7 +5,7 @@
   "statement": "CReal.polyScale s c := fun k => s * c(k) -- scale every coefficient of c by the constant s. A total, axiom-free definition.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> CReal)))",
+    "statement": "def CReal.polyScale : ((x0 : CReal) -> ((x1 : ((x1 : AxNat) -> CReal)) -> ((x2 : AxNat) -> CReal)))",
     "fragment": "CReal",
     "free_symbols": [
       "x0",

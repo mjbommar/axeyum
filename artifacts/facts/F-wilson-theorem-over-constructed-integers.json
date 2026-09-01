@@ -6,7 +6,7 @@
   "formal": {
     "kernel_theorem": "Int.wilson",
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)))",
+    "statement": "theorem Int.wilson : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 x0) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 x0))))) -> Int.ModEq (Int.ofNat x0) (Int.factorial (AxNat.sub x0 (AxNat.succ AxNat.zero))) (Int.neg Int.one)))",
     "fragment": "Int",
     "free_symbols": [
       "x0",
