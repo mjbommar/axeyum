@@ -7342,6 +7342,9 @@ mod stirling_tests;
 mod stirling_lemmas_tests;
 
 #[cfg(test)]
+mod floor_count_tests;
+
+#[cfg(test)]
 mod minmax_tests;
 
 #[cfg(test)]
