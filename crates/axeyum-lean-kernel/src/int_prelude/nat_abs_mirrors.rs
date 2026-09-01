@@ -1240,6 +1240,179 @@ pub(super) fn declare_nat_abs_coe_sub_coe_lt_of_lt(d: &mut IntDev<'_>) -> Result
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// `natAbs_emod_two`
+// ---------------------------------------------------------------------------
+
+/// `nat_abs_emod_two : ∀ (i : ℤ), natAbs i % 2 = natAbs (i % 2)`.
+///
+/// Mirrors `Int.natAbs_emod_two` (Lean core, `Init.Data.Dyadic.Basic`). Our
+/// `Int.emod` is Lean core's Euclidean remainder branch for branch
+/// (`super::division`), so the mirror is our statement:
+///
+///     emod (ofNat m)   (ofNat n) ≡ ofNat (m % n)
+///     emod (negSucc m) (ofNat n) ≡ subNatNat n (succ (m % n))
+///
+/// The non-negative branch is therefore **`Eq.refl`**: both sides reduce to
+/// `m % 2` with nothing to prove.
+///
+/// The `negSucc` branch does not reduce, because `m % 2` is stuck for symbolic
+/// `m` and so `subNatNat 2 (succ (m % 2))` is stuck with it. Splitting on
+/// `Nat.mod_two_eq_zero_or_one` unsticks it, and at each of the two literals the
+/// whole right-hand side computes -- `subNatNat 2 1 = ofNat 1` and
+/// `subNatNat 2 2 = ofNat 0`, both at magnitudes small enough that the unary
+/// numerals cost nothing.
+///
+/// What is left is the parity step, and the two cases take **different** routes
+/// through the prelude rather than one lemma and its mirror:
+///
+/// * `m % 2 = 0` -> `Nat.even_iff_mod_two_eq_zero` -> `Nat.even_iff_odd_succ`
+///   -> `Nat.odd_iff_mod_two_eq_one`, giving `succ m % 2 = 1`.
+/// * `m % 2 = 1` -> `Nat.odd_iff_mod_two_eq_one` -> `Nat.odd_not_even` ->
+///   `Nat.even_add_one` -> `Nat.even_iff_mod_two_eq_zero`, giving
+///   `succ m % 2 = 0`. There is no `Nat.odd_iff_even_succ` to mirror
+///   `even_iff_odd_succ` with, and the negated form is the way through.
+///   `Nat.add m 1` is `succ m` by reduction (`Nat.add` recurses on its RIGHT
+///   argument), so `even_add_one`'s `m + 1` needs no transport.
+///
+/// The goal is moved by transporting only the RIGHT-hand side along the
+/// residue equation. Rewriting the left as well would need `Nat.mod_succ`'s
+/// `Bool.rec` form spelled out as a term; the parity lemmas above reach the
+/// same place without ever naming it.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_nat_abs_emod_two(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.nat_abs_emod_two, 1, &|d, v| {
+        let statement = |d: &mut IntDev<'_>, args: &[ExprId]| {
+            let i = args[0];
+            let two_nat = d.num(2);
+            let two_int = d.of_nat(two_nat);
+            let left = {
+                let magnitude = d.nat_abs(i);
+                NatOps::modulo(d, magnitude, two_nat)
+            };
+            let right = {
+                let residue = d.iemod(i, two_int);
+                d.nat_abs(residue)
+            };
+            d.eq(left, right)
+        };
+        let stmt = statement(d, v);
+        let proof = case_split(d, v, &statement, &|d, br: &[Branch]| {
+            let m = br[0].1;
+            let two_nat = d.num(2);
+            match br[0].0 {
+                // Both sides reduce to `m % 2`.
+                Shape::OfNat => {
+                    let residue = NatOps::modulo(d, m, two_nat);
+                    d.refl(residue)
+                }
+                Shape::NegSucc => {
+                    let residue = NatOps::modulo(d, m, two_nat);
+                    let succ_m = d.succ(m);
+                    let split = {
+                        let name = d.int().nat.mod_two_eq_zero_or_one;
+                        d.const_app(name, &[m])
+                    };
+                    let zero_nat = d.zero();
+                    let one_nat = d.num(1);
+                    let even_case = d.eq(residue, zero_nat);
+                    let odd_case = d.eq(residue, one_nat);
+                    // The goal, with `natAbs (negSucc m)` and `emod` already
+                    // reduced: `succ m % 2 = natAbs (subNatNat 2 (succ (m % 2)))`.
+                    let goal = |d: &mut IntDev<'_>, x: ExprId| {
+                        let lhs = NatOps::modulo(d, succ_m, two_nat);
+                        let rhs = {
+                            let bumped = d.succ(x);
+                            let borrowed = d.sub_nat_nat(two_nat, bumped);
+                            d.nat_abs(borrowed)
+                        };
+                        d.eq(lhs, rhs)
+                    };
+                    let target = goal(d, residue);
+                    d.or_elim(
+                        even_case,
+                        odd_case,
+                        target,
+                        split,
+                        &|d, h| {
+                            // `m` even => `succ m` odd => `succ m % 2 = 1`,
+                            // and the right-hand side computes to `1`.
+                            let nat = d.int().nat;
+                            let even_m = {
+                                let equiv = d.const_app(nat.even_iff_mod_two_eq_zero, &[m]);
+                                let l = d.const_app(nat.even, &[m]);
+                                let r = d.eq(residue, zero_nat);
+                                let mpr = d.int().logic.iff_mpr;
+                                d.const_app(mpr, &[l, r, equiv, h])
+                            };
+                            let odd_succ = {
+                                let equiv = d.const_app(nat.even_iff_odd_succ, &[m]);
+                                let l = d.const_app(nat.even, &[m]);
+                                let r = d.const_app(nat.odd, &[succ_m]);
+                                let mp = d.int().logic.iff_mp;
+                                d.const_app(mp, &[l, r, equiv, even_m])
+                            };
+                            let at_one = {
+                                let equiv = d.const_app(nat.odd_iff_mod_two_eq_one, &[succ_m]);
+                                let l = d.const_app(nat.odd, &[succ_m]);
+                                let r = {
+                                    let lhs = NatOps::modulo(d, succ_m, two_nat);
+                                    d.eq(lhs, one_nat)
+                                };
+                                let mp = d.int().logic.iff_mp;
+                                d.const_app(mp, &[l, r, equiv, odd_succ])
+                            };
+                            // Move from the literal residue back to `m % 2`.
+                            let back = d.symm(residue, zero_nat, h);
+                            d.nat_rewrite(zero_nat, residue, back, at_one, &|d, x| goal(d, x))
+                        },
+                        &|d, h| {
+                            // `m` odd => `m + 1` even => `succ m % 2 = 0`,
+                            // and the right-hand side computes to `0`.
+                            let nat = d.int().nat;
+                            let odd_m = {
+                                let equiv = d.const_app(nat.odd_iff_mod_two_eq_one, &[m]);
+                                let l = d.const_app(nat.odd, &[m]);
+                                let r = d.eq(residue, one_nat);
+                                let mpr = d.int().logic.iff_mpr;
+                                d.const_app(mpr, &[l, r, equiv, h])
+                            };
+                            let not_even_m = d.const_app(nat.odd_not_even, &[m, odd_m]);
+                            let even_succ = {
+                                let equiv = d.const_app(nat.even_add_one, &[m]);
+                                let bumped = NatOps::add(d, m, one_nat);
+                                let l = d.const_app(nat.even, &[bumped]);
+                                let inner = d.const_app(nat.even, &[m]);
+                                let r = d.not(inner);
+                                let mpr = d.int().logic.iff_mpr;
+                                d.const_app(mpr, &[l, r, equiv, not_even_m])
+                            };
+                            let at_zero = {
+                                let equiv = d.const_app(nat.even_iff_mod_two_eq_zero, &[succ_m]);
+                                let l = d.const_app(nat.even, &[succ_m]);
+                                let r = {
+                                    let lhs = NatOps::modulo(d, succ_m, two_nat);
+                                    d.eq(lhs, zero_nat)
+                                };
+                                let mp = d.int().logic.iff_mp;
+                                d.const_app(mp, &[l, r, equiv, even_succ])
+                            };
+                            let back = d.symm(residue, one_nat, h);
+                            d.nat_rewrite(one_nat, residue, back, at_zero, &|d, x| goal(d, x))
+                        },
+                    )
+                }
+            }
+        });
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare the four `natAbs_inj_of_*` mirrors.
 ///
 /// # Errors
@@ -1258,5 +1431,6 @@ pub(super) fn declare_nat_abs_inj_mirrors(d: &mut IntDev<'_>) -> Result<(), Kern
     declare_nat_abs_eq_iff_mul_self_eq(d)?;
     declare_nat_abs_coe_sub_coe_le_of_le(d)?;
     declare_nat_abs_coe_sub_coe_lt_of_lt(d)?;
+    declare_nat_abs_emod_two(d)?;
     Ok(())
 }

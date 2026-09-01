@@ -1037,6 +1037,8 @@ pub struct IntPrelude {
     /// `nat_abs_coe_sub_coe_lt_of_lt : ∀ a b n : ℕ, a < n → b < n →
     /// natAbs (ofNat a - ofNat b) < n`.
     pub nat_abs_coe_sub_coe_lt_of_lt: NameId,
+    /// `nat_abs_emod_two : ∀ i, natAbs i % 2 = natAbs (emod i 2)`.
+    pub nat_abs_emod_two: NameId,
 
     // --- `Int.gcd`, Euclid's Book VII transported from `ℕ` -------------------
     /// `Int.gcd a b := Nat.gcd (natAbs a) (natAbs b)` — a `Nat`-valued gcd, as
@@ -2112,6 +2114,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         nat_abs_eq_iff_mul_self_eq: child(kernel, "nat_abs_eq_iff_mul_self_eq"),
         nat_abs_coe_sub_coe_le_of_le: child(kernel, "nat_abs_coe_sub_coe_le_of_le"),
         nat_abs_coe_sub_coe_lt_of_lt: child(kernel, "nat_abs_coe_sub_coe_lt_of_lt"),
+        nat_abs_emod_two: child(kernel, "nat_abs_emod_two"),
         gcd: child(kernel, "gcd"),
         nat_abs_mul: child(kernel, "nat_abs_mul"),
         dvd_of_nat_abs_dvd: child(kernel, "dvd_of_nat_abs_dvd"),
