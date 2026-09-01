@@ -812,3 +812,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1315](adr-1315-row-3-is-cheap-where-a-decision-procedure-replaces-a-limit.md) | row 3 is cheap exactly where a DECISION PROCEDURE replaces a limit | Accepted |
 | [1320](adr-1320-one-canonical-definition-per-mathematical-object.md) | one canonical definition per mathematical object | Accepted |
 | [1400](adr-1400-a-certificate-must-record-every-distinction-its-acceptance-depends-on.md) | a certificate must record every distinction its acceptance depends on — or re-derive it | Accepted |
+| [1425](adr-1425-the-dominance-docs-weakest-point-is-distinction-completeness-not-naming.md) | the dominance document's weakest point is distinction-completeness, not the row-3 naming gap | Accepted |
