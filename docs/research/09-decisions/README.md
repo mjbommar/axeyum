@@ -829,3 +829,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1475](adr-1475-the-refill-ceiling-is-admission-not-supply.md) | The refill ceiling is admission, not supply — 1,443 dispatchable rows are already screened and structurally unreachable | Proposed |
 | [1480](adr-1480-a-recorded-score-is-not-a-breach-and-the-blind-population-is-cashed.md) | A recorded score is not a breach, and the held-out population is cashed for the first time | Accepted |
 | [1485](adr-1485-ivt-evt-dominance-recheck-re-ranks-the-distinction-gap-again.md) | re-checking IVT/EVT dominance finds five of ADR-1400's eleven findings fixed, and the weakest point moves to `geometry_certify.rs` | Accepted |
+| [1510](adr-1510-a-contract-is-sized-by-the-frontier-and-a-decline-dies-with-its-fact.md) | a producer contract is sized by the frontier, and a decline dies with its fact | Accepted |
