@@ -525,6 +525,13 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.pair_snd,
         p.binary_rec_aux,
         p.binary_rec,
+        // `queue-unblock-four-families` lane. Definitions only, ADR-0653 --
+        // `Nat.count` opens `Mathlib.Data.Nat.Count` and `Nat.divMaxPow` opens
+        // `Mathlib.Data.Nat.MaxPowDiv`, and declaring theorems about either
+        // would spend the family it was opening.
+        p.count,
+        p.div_max_pow_aux,
+        p.div_max_pow,
         // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
         p.dist,
         p.nth_aux,
@@ -10118,6 +10125,209 @@ fn dist_draw9_additions_apply_at_concrete_discriminating_instances() {
         p.dist_mul_left,
         p.dist_mul_right,
     ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
+}
+
+/// `Nat.count` counts the `dec`-satisfying arguments strictly BELOW its bound.
+///
+/// The trusted gate cannot tell a `Definition` is wrong -- it has no proof body
+/// and a function returning the wrong value still has the right type -- so this
+/// is the only check that can. Every expected value is computed independently
+/// (`.lane-scratch/simulate.py` in the opening lane, re-derivable by hand):
+/// `count (>= 3) 6 = |{3,4,5}| = 3`, `count (== 2) 6 = 1`, `count (>= 3) 3 = 0`.
+///
+/// Three controls, each confirmed to SEPARATE the two sides rather than being
+/// inherited from a neighbour:
+///   * `3 /= 6` kills a "count every argument" body;
+///   * `count (>= 3) 6 = 3` against `count (<= 3) 6 = 4` kills a transposed
+///     comparison, which no single count could detect;
+///   * `count (== 5) 5 = 0` against `count (== 5) 6 = 1` kills an off-by-one
+///     in the bound, the one defect an inclusive/exclusive slip produces.
+#[test]
+fn count_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+
+    let ge_three = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.ble(three, k); // true iff k >= 3
+        f.lam_fv(k_fv, nat, body)
+    };
+    let le_three = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.ble(k, three); // true iff k <= 3
+        f.lam_fv(k_fv, nat, body)
+    };
+    let eq_two = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let two = f.num(2);
+        let body = f.beq(k, two);
+        f.lam_fv(k_fv, nat, body)
+    };
+    let eq_five = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.beq(k, five);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    let ge3_of_6 = f.const_app(p.count, &[ge_three, six]);
+    assert!(
+        f.k.def_eq(ge3_of_6, three),
+        "count (>= 3) 6 must be 3 -- the arguments 3, 4, 5"
+    );
+    let eq2_of_6 = f.const_app(p.count, &[eq_two, six]);
+    assert!(
+        f.k.def_eq(eq2_of_6, one),
+        "count (== 2) 6 must be 1 -- the single argument 2"
+    );
+    let ge3_of_3 = f.const_app(p.count, &[ge_three, three]);
+    assert!(
+        f.k.def_eq(ge3_of_3, zero),
+        "count (>= 3) 3 must be 0 -- the bound is EXCLUSIVE, so 3 is not counted"
+    );
+
+    assert!(
+        !f.k.def_eq(ge3_of_6, six),
+        "negative control: a body that counts every argument below the bound \
+         would give 6 here"
+    );
+    let le3_of_6 = f.const_app(p.count, &[le_three, six]);
+    assert!(
+        f.k.def_eq(le3_of_6, four),
+        "count (<= 3) 6 must be 4 -- the arguments 0, 1, 2, 3"
+    );
+    assert!(
+        !f.k.def_eq(ge3_of_6, le3_of_6),
+        "negative control: the two comparisons must NOT agree at this bound, \
+         or neither value discriminates a transposed test"
+    );
+    let eq5_of_5 = f.const_app(p.count, &[eq_five, five]);
+    let eq5_of_6 = f.const_app(p.count, &[eq_five, six]);
+    assert!(
+        f.k.def_eq(eq5_of_5, zero) && f.k.def_eq(eq5_of_6, one),
+        "count (== 5) must be 0 at bound 5 and 1 at bound 6 -- an inclusive \
+         bound would give 1 at both"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.count).is_empty(),
+        "Nat.count must rest on zero axioms"
+    );
+}
+
+/// `Nat.divMaxPow n base` divides every factor of `base` out of `n`.
+///
+/// Expected values were produced by a Python reference (repeated division)
+/// checked against the fuel recursion over all `n < 60`, `base < 8` -- 480
+/// pairs, zero mismatches -- before this construction was written:
+/// `divMaxPow 12 2 = 3`, `divMaxPow 12 3 = 4`, `divMaxPow 8 2 = 1`,
+/// `divMaxPow 7 2 = 7`.
+///
+/// `divMaxPow` is ASYMMETRIC, which hands the strongest control free:
+/// `divMaxPow 12 2 = 3` against `divMaxPow 2 12 = 2`, asserted NOT `def_eq`,
+/// so a transposed argument pair fails loudly instead of passing. Two more:
+/// `3 /= 12` kills a body that never divides, and `3 /= 6` kills one that
+/// divides exactly once.
+///
+/// The four boundary conventions are the ones Mathlib's own `MaxPowDiv` rows
+/// assert, and all four are reachable only through the `base <= 1` and
+/// `n = 0` guards: `divMaxPow 6 1 = 6`, `divMaxPow 6 0 = 6`,
+/// `divMaxPow 0 5 = 0`, `divMaxPow 1 5 = 1`.
+#[test]
+fn div_max_pow_evaluates_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let seven = f.num(7);
+    let eight = f.num(8);
+    let twelve = f.num(12);
+
+    let d12_2 = f.const_app(p.div_max_pow, &[twelve, two]);
+    assert!(
+        f.k.def_eq(d12_2, three),
+        "divMaxPow 12 2 must be 3 -- 12 = 2^2 * 3"
+    );
+    let d12_3 = f.const_app(p.div_max_pow, &[twelve, three]);
+    assert!(
+        f.k.def_eq(d12_3, four),
+        "divMaxPow 12 3 must be 4 -- 12 = 3 * 4"
+    );
+    let d8_2 = f.const_app(p.div_max_pow, &[eight, two]);
+    assert!(
+        f.k.def_eq(d8_2, one),
+        "divMaxPow 8 2 must be 1 -- 8 is a pure power of 2"
+    );
+    let d7_2 = f.const_app(p.div_max_pow, &[seven, two]);
+    assert!(
+        f.k.def_eq(d7_2, seven),
+        "divMaxPow 7 2 must be 7 -- 2 does not divide 7 at all"
+    );
+
+    let d2_12 = f.const_app(p.div_max_pow, &[two, twelve]);
+    assert!(
+        f.k.def_eq(d2_12, two),
+        "divMaxPow 2 12 must be 2 -- 12 does not divide 2"
+    );
+    assert!(
+        !f.k.def_eq(d12_2, d2_12),
+        "negative control: the transposed argument pair must NOT agree, or \
+         nothing here detects a swapped (n, base)"
+    );
+    assert!(
+        !f.k.def_eq(d12_2, twelve),
+        "negative control: a body that never divides would give 12"
+    );
+    assert!(
+        !f.k.def_eq(d12_2, six),
+        "negative control: a body that divides exactly once would give 6"
+    );
+
+    let d6_1 = f.const_app(p.div_max_pow, &[six, one]);
+    assert!(
+        f.k.def_eq(d6_1, six),
+        "divMaxPow 6 1 must be 6 -- base 1 is the `base <= 1` convention, and \
+         a body without that guard would not terminate"
+    );
+    let d6_0 = f.const_app(p.div_max_pow, &[six, zero]);
+    assert!(
+        f.k.def_eq(d6_0, six),
+        "divMaxPow 6 0 must be 6 -- base 0 is the same convention"
+    );
+    let d0_5 = f.const_app(p.div_max_pow, &[zero, five]);
+    assert!(f.k.def_eq(d0_5, zero), "divMaxPow 0 5 must be 0");
+    let d1_5 = f.const_app(p.div_max_pow, &[one, five]);
+    assert!(f.k.def_eq(d1_5, one), "divMaxPow 1 5 must be 1");
+    let d5_5 = f.const_app(p.div_max_pow, &[five, five]);
+    assert!(
+        f.k.def_eq(d5_5, one),
+        "divMaxPow 5 5 must be 1 -- the `p /= 0 -> divMaxPow p p = 1` row"
+    );
+
+    for name in [p.div_max_pow_aux, p.div_max_pow] {
         assert!(
             f.k.axiom_footprint(name).is_empty(),
             "{} must rest on zero axioms",
