@@ -2217,6 +2217,28 @@ pub struct RatPrelude {
     /// [`Self::det_congr`] turns each minor into a transpose the induction
     /// hypothesis can consume, and [`Self::det_col_expansion`] closes it.
     pub det_transpose: NameId,
+
+    // --- alternating property (`matrix_det`, ADR-1310 step 2) --------------
+    /// `Rat.det_alternating : ∀ m A i j, Nat.beq i j = false →
+    /// Nat.ble i m = true → Nat.ble j m = true → (∀ c, A i c = A j c) →
+    /// det A (succ m) = 0` — the ALTERNATING property: the determinant
+    /// vanishes whenever two distinct rows agree pointwise, at a
+    /// **symbolic** dimension. The second of the three theorems ADR-1310
+    /// names as remaining toward multiplicativity, after
+    /// [`Self::det_row_expansion`].
+    ///
+    /// Induction on `m`, case-splitting `i` and `j` against `0` in the step:
+    /// when both are nonzero, expand along row `0`; when one is `0`, expand
+    /// along row `1` or `2` (chosen to miss both). Every shift this needs —
+    /// [`Self::mat_skip_zero`]'s branch and the OTHER `Nat.ble`-guarded
+    /// branch of the same `bool_select_nat` — reduces by pure iota once the
+    /// case split has put a `succ` at the right spot, so no extra `matSkip`
+    /// lemma is needed beyond what is already declared. The `n=2` corner
+    /// (`i=0,j=1`, no third row available) closes directly via
+    /// [`Self::det_eq_det2`] and ordinary `Rat` algebra. Every branch that
+    /// expands consumes the induction hypothesis directly at the minor —
+    /// unlike ADR-1310's expectation, this did not need [`Self::det_congr`].
+    pub det_alternating: NameId,
 }
 
 impl RatPrelude {
@@ -2628,6 +2650,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_col_expansion: child(kernel, "det_col_expansion"),
         mat_minor_transpose: child(kernel, "matMinor_transpose"),
         det_transpose: child(kernel, "det_transpose"),
+        det_alternating: child(kernel, "det_alternating"),
     }
 }
 
