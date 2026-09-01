@@ -245,6 +245,7 @@ mod size_extra;
 mod sqrt;
 mod squarefree;
 mod stirling;
+mod floor_count;
 mod stirling_lemmas;
 mod subset_product;
 mod testbit_bitwise;
@@ -442,6 +443,7 @@ use size_extra::declare_size_extra_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
+use floor_count::declare_floor_count_all;
 use stirling_lemmas::declare_stirling_lemmas_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
 use testbit_bitwise::declare_testbit_bitwise_all;
@@ -5276,6 +5278,33 @@ pub struct NatPrelude {
     /// `Nat.stirlingSecond_one_right : ∀ n,
     /// Eq (stirlingSecond (succ n) 1) 1`.
     pub stirling_second_one_right: NameId,
+
+    // -- `eisenstein-floors` lane: `floor_count.rs` --
+    // ADR-1260's residue 1: naming the rectangle partition's row counts as
+    // floors. Stated RELATIONALLY against `divMod` so `Nat.div` never has to
+    // reduce; see `floor_count.rs`'s module doc.
+    /// `Nat.countRange_succ_le_eq_min : ∀ c n,
+    /// Eq (countRange (fun y => ble (succ y) c) n) (Min.min n c)` — the
+    /// counting core, with no division in the statement at all
+    /// (`floor_count.rs`). Structural induction on `n`; the `min` is what
+    /// records that the count saturates at `c`, without `Nat.sub`'s
+    /// truncation.
+    pub count_range_succ_le_eq_min: NameId,
+    /// `Nat.countRange_mul_succ_le_eq_min : ∀ a B q r n, divMod a B q r →
+    /// Eq (countRange (fun j => ble (mul a (succ j)) B) n) (Min.min n q)` —
+    /// the floor-counting lemma with the quotient EMITTED as a bound variable
+    /// by the relational Euclidean specification rather than named by
+    /// [`div`](Self::div) (`floor_count.rs`). One
+    /// [`count_range_congr`](Self::count_range_congr) over a pointwise `Bool`
+    /// equation, itself one [`div_mod_mul_le_iff`](Self::div_mod_mul_le_iff).
+    pub count_range_mul_succ_le_eq_min: NameId,
+    /// `Nat.countRange_mul_succ_le_eq_floor : ∀ ap B n,
+    /// Eq (countRange (fun j => ble (mul (succ ap) (succ j)) B) n)
+    ///    (Min.min n (div B (succ ap)))` — the executable corollary
+    /// (`floor_count.rs`), by [`div_mod_exec`](Self::div_mod_exec). Positivity
+    /// of the divisor is the constructive `succ ap`, so no `Lt zero a`
+    /// hypothesis is formed.
+    pub count_range_mul_succ_le_eq_floor: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6313,6 +6342,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             stirling_first_one_right: kernel.name_str(nat, "stirlingFirst_one_right"),
             stirling_second_eq_zero_of_lt: kernel.name_str(nat, "stirlingSecond_eq_zero_of_lt"),
             stirling_second_one_right: kernel.name_str(nat, "stirlingSecond_one_right"),
+            count_range_succ_le_eq_min: kernel.name_str(nat, "countRange_succ_le_eq_min"),
+            count_range_mul_succ_le_eq_min: kernel.name_str(nat, "countRange_mul_succ_le_eq_min"),
+            count_range_mul_succ_le_eq_floor: kernel
+                .name_str(nat, "countRange_mul_succ_le_eq_floor"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -7254,6 +7287,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // successor inversions, all far above. Nothing needs it, so it goes
         // last.
         declare_stirling_lemmas_all(&mut d, &p)?;
+        // The floor-counting family (`floor_count.rs`): ADR-1260's residue 1.
+        // Needs `Min.min` and `min_eq_left`/`min_eq_right` (the two
+        // `declare_minmax_*` calls immediately above — this is the ONE
+        // dependency that forces a late position), plus `Nat.countRange` and
+        // `countRange_congr` (`totient.rs`), the relational
+        // `div_mod_mul_le_iff`/`div_mod_exec` (`division.rs`) and the
+        // `ble`/order bridges, all far above. Nothing needs it yet, so it goes
+        // last.
+        declare_floor_count_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -7298,6 +7340,9 @@ mod stirling_tests;
 
 #[cfg(test)]
 mod stirling_lemmas_tests;
+
+#[cfg(test)]
+mod floor_count_tests;
 
 #[cfg(test)]
 mod minmax_tests;

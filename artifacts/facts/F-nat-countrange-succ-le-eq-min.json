@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrange-succ-le-eq-min",
+  "title": "Counting the indices below a threshold saturates at the minimum",
+  "statement": "`countRange (fun y => ble (succ y) c) n = Min.min n c` -- the number of `y` in `[0,n)` with `y < c` is `min n c`. WHY IT IS THE POINT: this is the division-free core of ADR-1260's residue 1, the step that names the rectangle partition's row counts as floors. It carries no `Nat.div` and no `Nat.mod` at all, so nothing in it can be stuck at a symbolic argument; the quotient enters only one lemma later, and even there as a bound variable. HOW IT IS PROVED: structural induction on `n` with `c` an outer parameter. `countRange_zero`/`countRange_succ` are both `Eq.refl`, so the step's left-hand side is definitionally `add (countRange f j) (bool_select_nat (ble (succ j) c) 1 0)` and the entire proof is deciding that one boolean by `Nat.lt_or_ge j c`. Both `bool_select_nat` applications iota-reduce at the literal boolean, and `add t 1 = succ t` / `add t 0 = t` hold definitionally because `Nat.add` recurses on its RIGHT argument, so neither branch forms a numeral or needs an arithmetic lemma. `Min.min` rather than `Nat.sub` because the count saturates and truncated subtraction is what ADR-0970/ADR-0985 had to route around. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRange_succ_le_eq_min : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.countRange (fun (x2 : AxNat) => AxNat.ble (AxNat.succ x2) x0) x1) (Min.min x1 x0)))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Nat.countRange_succ_le_eq_min"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:nat-ble-eq-false-of-lt", "F:nat-countrange-zero", "F:nat-le-succ-succ", "F:nat-le-trans", "F:nat-lt-or-ge", "F:nat-zero-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.countRange_succ_le_eq_min",
+      "kind": "kernel-term",
+      "supports": "Nat.countRange_succ_le_eq_min is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.countRange_succ_le_eq_min 2>/dev/null | grep -cE '^Nat\\.countRange_succ_le_eq_min[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.countRange_succ_le_eq_min",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.countRange_succ_le_eq_min",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.countRange_succ_le_eq_min.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    },
+    {
+      "id": "numeric-floor-count",
+      "kind": "exhaustive-enumeration",
+      "supports": "C1 of the ADR-1290 check script verifies the identity at all 1,681 (c, n) pairs with c, n <= 40, and controls M1/M2 refute the max form and the off-by-one predicate.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1290-floor-count-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1290-floor-count-checks.py",
+      "checker_seconds": 2,
+      "notes": "Exit status depends on the finding: any control behaving other than as recorded exits 1. Two controls are recorded as SURVIVORS and asserted to survive -- M7 (min c n, which no numeric or evaluation check can distinguish from min n c, since Min.min is commutative in value) and M8 (the min dropped from the assembled lattice identity, true because the floor never exceeds n under the prime hypotheses). The surviving-M7 case is exactly why the declared type is pinned character for character by the_family_states_the_intended_types."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type, pinned in floor_count_tests::the_family_states_the_intended_types). depends_on is the direct-theorem column intersected with this ledger's registered facts, supplied by scripts/check-fact-depends-derived.py --fix. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-floors)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs`. ADR-1290. Nearly rebuilt: `Nat.gaussCountBleClosedFormDisj` (`gauss_lemma.rs`, ADR-0985) is this lemma at `a := 2`, stated about the COMPLEMENT predicate in a disjunctive `Nat.sub`-avoiding shape; the two coexist because that one is consumed by `gaussNegCountTwoClosedForm`. Declaration kind: theorem.",
+  "external_status": "proved"
+}

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrange-mul-succ-le-eq-min",
+  "title": "The floor-counting lemma, with the quotient emitted rather than projected",
+  "statement": "`divMod a B q r -> countRange (fun j => ble (mul a (succ j)) B) n = Min.min n q` -- the number of `j` in `[0,n)` with `a*(j+1) <= B` is `min n (B/a)`, stated so that `Nat.div` never appears. WHY IT IS THE POINT: this is ADR-1260's residue 1 in general form, and it settles the sizing question that lane left open. `Nat.div`/`Nat.mod` are stuck at symbolic arguments, so a floor-counting lemma looked like the worst case for this prelude's standing rule that a lemma which EMITS a shape beats a hypothesis about a residue. It is not, because the emitter already existed: `Nat.divMod d n q r := n = d*q + r AND r < d` is a RELATION whose quotient is an ordinary bound variable, and `Nat.div_mod_mul_le_iff` states the floor adjunction against it. HOW IT IS PROVED: one pointwise `Bool` equation, `ble (mul a (succ j)) B = ble (succ j) q`, obtained from `div_mod_mul_le_iff` at `s := succ j` and turned from an `Iff` of `Prop`s into a `Bool` equation by two `Nat.lt_or_ge` splits -- so no negated `Prop` and no `Not` elimination is ever formed. `Nat.countRange_congr` (the UNCONDITIONAL pointwise congruence) moves it under the count, and `Nat.countRange_succ_le_eq_min` finishes. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRange_mul_succ_le_eq_min : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.divMod x0 x1 x2 x3) -> Eq.{1} AxNat (AxNat.countRange (fun (x6 : AxNat) => AxNat.ble (AxNat.mul x0 (AxNat.succ x6)) x1) x4) (Min.min x4 x2)))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ],
+    "kernel_theorem": "Nat.countRange_mul_succ_le_eq_min"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-countrange-succ-le-eq-min", "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:nat-ble-eq-false-of-lt", "F:nat-countrange-congr", "F:nat-div-mod-mul-le-iff", "F:nat-lt-irrefl", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-ge"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.countRange_mul_succ_le_eq_min",
+      "kind": "kernel-term",
+      "supports": "Nat.countRange_mul_succ_le_eq_min is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.countRange_mul_succ_le_eq_min 2>/dev/null | grep -cE '^Nat\\.countRange_mul_succ_le_eq_min[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.countRange_mul_succ_le_eq_min",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.countRange_mul_succ_le_eq_min",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.countRange_mul_succ_le_eq_min.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it."
+    },
+    {
+      "id": "numeric-adjunction",
+      "kind": "exhaustive-enumeration",
+      "supports": "C2 of the ADR-1290 check script verifies the adjunction `a*s <= B <-> s <= B/a` at 37,820 (a, B, s) triples and C3 verifies the composed count at 37,820 (a, B, n) triples; M3 refutes taking the quotient as (B-1)/a and M4 refutes dropping the min.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1290-floor-count-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1290-floor-count-checks.py",
+      "checker_seconds": 2,
+      "notes": "Exit status depends on the finding: any control behaving other than as recorded exits 1. What this cannot catch, stated plainly in ADR-1290: the evaluation probes in floor_count_tests.rs have NO unique kill on this declaration -- they pin the counting convention the statement is written in, never the statement itself, because countRange_zero/countRange_succ are both Eq.refl and every proof mutation is caught by the trusted gate first."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type, pinned in floor_count_tests::the_family_states_the_intended_types). depends_on is the direct-theorem column intersected with this ledger's registered facts, supplied by scripts/check-fact-depends-derived.py --fix. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-floors)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs`. ADR-1290. The right-hand side is `Min.min x4 x2` -- a BOUND VARIABLE -- and the type mentions `AxNat.div` nowhere; the type pin asserts both, with the executable corollary as the positive control for the absence query. Declaration kind: theorem.",
+  "external_status": "proved"
+}

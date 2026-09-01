@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2076,
+    "min_identity_bound": 2079,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -15299,6 +15299,20 @@
       "kernel_theorem": "Nat.countRange_le_of_subset"
     },
     {
+      "fact_id": "F:nat-countrange-mul-succ-le-eq-floor",
+      "language": "lean4",
+      "statement_sha256": "0d3b567ed872a4ae29e746df0f575839892e9d20bcb68786945e8fccf40defc3",
+      "prose_sha256": "f76f3c533320fb38700f1fe86c73a70bf58aec95ede0e3d325cbe96fb37912fa",
+      "kernel_theorem": "Nat.countRange_mul_succ_le_eq_floor"
+    },
+    {
+      "fact_id": "F:nat-countrange-mul-succ-le-eq-min",
+      "language": "lean4",
+      "statement_sha256": "cee24d7caa0003f4e819043daf523cc9d47db16998fa7d811e12e9cc939590b9",
+      "prose_sha256": "31d8416b1a40a7ee872b6c398595cc3a54f5b7fbdb827ffebdc71c4775026332",
+      "kernel_theorem": "Nat.countRange_mul_succ_le_eq_min"
+    },
+    {
       "fact_id": "F:nat-countrange-split",
       "language": "lean4",
       "statement_sha256": "e9f231d3d345f86ba9ef99234da16862bff9e9a885d67a260fb2334fb5c0f1cb",
@@ -15311,6 +15325,13 @@
       "statement_sha256": "2187306c09f9a66dd9ce2225753620c5ac64596c205f3fac9c040ba19e2727da",
       "prose_sha256": "78eb7ad75023208febe8383796b7c1c582006d3a17b515c6612451f5f2e0c9e1",
       "kernel_theorem": "Nat.countRange_succ"
+    },
+    {
+      "fact_id": "F:nat-countrange-succ-le-eq-min",
+      "language": "lean4",
+      "statement_sha256": "a21006b296973b11574b56cde76fe9c9e457672e4d037b77da6fc533e67df1e9",
+      "prose_sha256": "5b313ebc88db25cf19eed550fc39dfe19363fadc404f09cc219ebad2bf1aa0f3",
+      "kernel_theorem": "Nat.countRange_succ_le_eq_min"
     },
     {
       "fact_id": "F:nat-countrange-union-add-inter",

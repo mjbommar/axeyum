@@ -1432,6 +1432,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.stirling_first_one_right,
         p.stirling_second_eq_zero_of_lt,
         p.stirling_second_one_right,
+        // `floor_count.rs` (`eisenstein-floors` lane).
+        p.count_range_succ_le_eq_min,
+        p.count_range_mul_succ_le_eq_min,
+        p.count_range_mul_succ_le_eq_floor,
     ]
 }
 
