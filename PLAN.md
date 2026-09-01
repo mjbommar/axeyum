@@ -145,6 +145,7 @@ now. Nothing was deleted.
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
+| 2026-09-01 | solver-rustdoc-links | Fixed the last 7 broken rustdoc intra-doc-links in `crates/axeyum-lean-import/src/thin_adapter.rs` and `crates/axeyum-solver/src/{proof,int_reconstruct/diophantine}.rs`; `cargo doc --workspace --all-features --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 workspace-wide (was exit 101, 7 error lines — the last two crates left red by `kernel-rustdoc-links` and `cas-rustdoc-links`). |
 | 2026-08-31 | quadratic-residue-two | `Int.euler_criterion_residue_imp_one` + `Int.euler_criterion_neg_one_imp_not_residue` land axiom-free in new `int_prelude/qr_criterion.rs`, extending Euler's criterion toward the second supplementary law (ADR-0960); the law itself stays open, sized for the next lane. |
 | 2026-08-31 | `0a19a8faa` | wip: `nat_prelude/bit_extra.rs` (untested, compiles) |
 | 2026-08-31 | `e0dbe1481` | fix: bit_extra build-order + `lt_succ_self` argument bugs; 240 nat_prelude:: tests pass |
@@ -46593,6 +46594,35 @@ composes with `Int.euler_criterion_neg_one_imp_not_residue` to give "2 is not a
 residue mod `p` for `p ≡ 3, 5 (mod 8)`" — one application, left to a caller. The
 `≡ 1` half needs the converse of Euler's criterion; `qr_criterion.rs`'s recorded
 gap is unchanged.
+
+**Your lane's block (`DONE`, solver-rustdoc-links, 2026-09-01).** Fixed all 7
+`error:` lines that `kernel-rustdoc-links` and `cas-rustdoc-links` reported
+out of scope, closing out the workspace rustdoc gate they left red —
+confirmed by reproducing the failure first (exit 101, 7 `error:` lines,
+matching their reports exactly) and re-running the identical command after
+the edits (exit 0, 0 errors). One link named a real public item and got a
+qualified path: `[`NeedsLeanCheck`]` in `thin_adapter.rs` is the enum variant
+`PreLeanStage::NeedsLeanCheck`, and `[`Kernel::render_lean_module_compact`]`
+in `diophantine.rs` needed the fully-qualified
+`axeyum_lean_kernel::Kernel::render_lean_module_compact` (the file only
+imports `BinderInfo`/`ExprId` from that crate, and other files in this same
+crate already use this exact qualified-path pattern). The other two links in
+`proof.rs` (`finish_unsat_proof_outcome_with_check_budget`,
+`qf_bv_cnf_encoding`) name genuinely private free functions with no public
+re-export, so both were demoted to plain code-formatted text, same as the
+prior two lanes' fixes. Every fix is doc-comment-only: no lint disable, no
+`allow`, no visibility change, no deleted doc comment. Touched files:
+`crates/axeyum-lean-import/src/thin_adapter.rs`,
+`crates/axeyum-solver/src/proof.rs`,
+`crates/axeyum-solver/src/int_reconstruct/diophantine.rs`. `rustfmt
+--edition 2024` on all three: only the intended-edit lines changed, no other
+diff.
+
+Re-ran the full command: `RUSTDOCFLAGS="-D warnings"
+scripts/cargo-serialized.sh doc --workspace --all-features --no-deps` — exit
+0, 0 `error:` lines (was exit 101, 7 error lines). `--all-features` built
+cleanly, including the `z3` feature, so no C-toolchain fallback was needed.
+The workspace rustdoc gate is now green end to end.
 
 **Done (`statement-headers`, 2026-08-31).** `check-settled-fact-statements.py`
 was failing at `header_exempt=79` against `floor_header_exempt=67` and blocking
