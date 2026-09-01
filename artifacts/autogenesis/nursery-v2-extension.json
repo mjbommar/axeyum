@@ -13,7 +13,7 @@
     "per_family": 10,
     "screen_rejections": {
       "already-catalogued": 164,
-      "divergence-registry": 42,
+      "divergence-registry": 97,
       "held-out-construction": 14,
       "hygienic-or-generated": 1169,
       "not-statable-here": 2432
@@ -14751,7 +14751,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "04763344bb0caed41947ed73f85f39c8eabf85b3f08604b20856341d1cde41ea",
+  "extension_sha256": "930b097133d6620f21ae1baa13e75c1831be8769944286aea83e8914a5c13fbf",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
@@ -14975,6 +14975,335 @@
     "natural-stirling-numbers": "train",
     "natural-totient": "development",
     "range-induction": "held-out"
+  },
+  "historical_draw_screen_drift": {
+    "by_family": {
+      "natural-factorial-choose-and-squarefree": 1,
+      "natural-find-greatest": 10,
+      "natural-integer-root": 10,
+      "natural-nth-selector": 10
+    },
+    "by_partition": {
+      "held-out": 30,
+      "train": 1
+    },
+    "by_reason": {
+      "divergence-registry": 31
+    },
+    "entries": [
+      {
+        "blocked_by": [
+          "Squarefree"
+        ],
+        "fact_id": "F:ml430-nat-squarefree-ext-iff-7218327d",
+        "family": "natural-factorial-choose-and-squarefree",
+        "partition": "train",
+        "reason": "divergence-registry",
+        "source_name": "Nat.Squarefree.ext_iff"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-eq-87c06f0f",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_eq"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-eq-iff-426770ce",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_eq_iff"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-eq-zero-iff-3498d512",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_eq_zero_iff"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-is-greatest-27ee7d92",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_is_greatest"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-le-8e41e6aa",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_le"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-mono-2566201e",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_mono"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-mono-left-065903af",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_mono_left"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-mono-right-8d67c0d3",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_mono_right"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-of-ne-zero-04670c87",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_of_ne_zero"
+      },
+      {
+        "blocked_by": [
+          "Nat.findGreatest"
+        ],
+        "fact_id": "F:ml430-nat-findgreatest-of-not-0229e05d",
+        "family": "natural-find-greatest",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.findGreatest_of_not"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-eq-zero-a9d23c47",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_eq_zero"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-ne-zero-11a86167",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_ne_zero"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-one-left-fffb7237",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_one_left"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-one-right-e08e200c",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_one_right"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-pow-self-19e66788",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_pow_self"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-zero-left-c1253d24",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_zero_left"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-ceilroot-zero-right-697fdf9e",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.ceilRoot_zero_right"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-dvd-ceilroot-pow-80ce502a",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.dvd_ceilRoot_pow"
+      },
+      {
+        "blocked_by": [
+          "Nat.ceilRoot"
+        ],
+        "fact_id": "F:ml430-nat-dvd-pow-iff-ceilroot-dvd-f00c5188",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.dvd_pow_iff_ceilRoot_dvd"
+      },
+      {
+        "blocked_by": [
+          "Nat.floorRoot"
+        ],
+        "fact_id": "F:ml430-nat-floorroot-eq-zero-a3be4438",
+        "family": "natural-integer-root",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.floorRoot_eq_zero"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-le-nth-of-lt-nth-succ-6d69133f",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.le_nth_of_lt_nth_succ"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-add-a9dfaba9",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_add"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-add-one-3fc46c88",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_add_one"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-eq-zero-mono-2dbbfdd5",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_eq_zero_mono"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-false-969b255e",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_false"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-mem-anti-db30d674",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_mem_anti"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-mem-of-ne-zero-c1d86fab",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_mem_of_ne_zero"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-ne-zero-anti-aab2a2dc",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_ne_zero_anti"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-of-forall-eef6b587",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_of_forall"
+      },
+      {
+        "blocked_by": [
+          "Nat.nth"
+        ],
+        "fact_id": "F:ml430-nat-nth-true-8ba7e1e1",
+        "family": "natural-nth-selector",
+        "partition": "held-out",
+        "reason": "divergence-registry",
+        "source_name": "Nat.nth_true"
+      }
+    ],
+    "rows": 31,
+    "rule": "ADR-1445: a family an earlier draw preregistered is frozen in membership as well as in partition, so a screen registered AFTER a draw does not retroactively delete rows from it. These are the drawn rows today's screens would reject. They remain in the population and remain undispatchable -- check-dispatchable-frontier.py's classify() consults the same divergence registry -- and are listed here so the thinning is countable rather than silent. Repairing one is an ADR-0542 amendment, never a regeneration."
   },
   "kind": "axeyum-autogenesis-nursery-extension",
   "limitations": [
@@ -15226,7 +15555,7 @@
       "Nat.log2",
       "Nat.sqrt"
     ],
-    "note": "Every candidate passed BOTH screens plus the held-out construction exclusion before entering this manifest. A generator that emits unclosable rows inflates the open count without adding work, which is how the v1 population came to be 72% closed with an empty dispatchable set.",
+    "note": "Every candidate passed BOTH screens plus the held-out construction exclusion before entering this manifest. A generator that emits unclosable rows inflates the open count without adding work, which is how the v1 population came to be 72% closed with an empty dispatchable set. ADR-1445: that is a statement about the moment each row was DRAWN. The screens keep moving -- the divergence registry only grows -- and a drawn family is not re-screened, so rows a later screen would now reject are listed in historical_draw_screen_drift rather than deleted.",
     "statable_here": "artifacts/autogenesis/mathlib-statable-vocabulary-v1.json"
   },
   "source": {
