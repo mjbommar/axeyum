@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2108,
+    "min_identity_bound": 2115,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -10951,6 +10951,20 @@
       "kernel_theorem": "Int.succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul"
     },
     {
+      "fact_id": "F:ml430-nat-abundant-iff-not-perfect-and-not-deficient-9763e268",
+      "language": "lean4-surface",
+      "statement_sha256": "eeb5c62cfa781afb1719b8b65bf3e51e715d7a0d532b7c04334071e21fa675ac",
+      "prose_sha256": "47e31349541bdb77195cfe74fecec5c2b8a2d1a1d3fb7370b18cad44363bae6f",
+      "kernel_theorem": "Nat.abundant_iff_not_perfect_and_not_deficient"
+    },
+    {
+      "fact_id": "F:ml430-nat-abundant-twelve-24ce1ba6",
+      "language": "lean4-surface",
+      "statement_sha256": "f5caf058305152ff459fd5319bd3165137518510f4243c28177e3790f78648cc",
+      "prose_sha256": "7c03d974bcba836a35c8df52f1804d9205729400f083ddb40b875cdf56fc26a0",
+      "kernel_theorem": "Nat.abundant_twelve"
+    },
+    {
       "fact_id": "F:ml430-nat-add-add-add-comm-74d2c151",
       "language": "lean4-surface",
       "statement_sha256": "3259cb825f2b5044d4304ee46822b88129c8dc8c9251b89260b8ead5d3816ec8",
@@ -12317,6 +12331,20 @@
           "prose_sha256": "0e4573eb80e1e25fd0c3d840b6f91d59d3b968e5f1bf28ac060c96ecbe1ef008"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-deficient-iff-not-abundant-and-not-perfect-18bbe30a",
+      "language": "lean4-surface",
+      "statement_sha256": "732564538e67988cc317b49a5ec6008626353680d44048e42a3bea8dd539d87a",
+      "prose_sha256": "2bee07fffa9fb7c8f21cb3e9b893542cba5c742405439776d744c601a4cacbc3",
+      "kernel_theorem": "Nat.deficient_iff_not_abundant_and_not_perfect"
+    },
+    {
+      "fact_id": "F:ml430-nat-deficient-one-75f44529",
+      "language": "lean4-surface",
+      "statement_sha256": "2d9bb46b1a8ad51f46e10f8f414d4391846abb22eb31d2469aa193783a592687",
+      "prose_sha256": "8b4720fe3a57fcac33006261c8112e858624e4d20951c15f0d1df17efea96c68",
+      "kernel_theorem": "Nat.deficient_one"
     },
     {
       "fact_id": "F:ml430-nat-descfactorial-le-2b8cc09a",
@@ -14139,6 +14167,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-prime-deficient-89e0badf",
+      "language": "lean4-surface",
+      "statement_sha256": "c05e4f520f1410570e3d6e8c619831569c49e0e0f6cabadb28687c2fd08a247e",
+      "prose_sha256": "bca749b93f16cacef8a39144421cf253712e2ff32922b33e3f65022aaa5de2b6",
+      "kernel_theorem": "Nat.prime_deficient"
+    },
+    {
       "fact_id": "F:ml430-nat-prime-dvd-factorial-5ace903f",
       "language": "lean4-surface",
       "statement_sha256": "ffd159309a056461125528f0cb94b77d9ff1fcde5f8278e460282551d8740437",
@@ -14377,6 +14412,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-prime-not-abundant-d2558ed6",
+      "language": "lean4-surface",
+      "statement_sha256": "10b5a3ac0867234ccaa68415d87787d749f08307e513a6e6141b762eae3b2f2b",
+      "prose_sha256": "39ebbefc6cd0f3bd23224a336571c3ba00faa6a2aa9eeb63c723c5e36ee0c091",
+      "kernel_theorem": "Nat.prime_not_abundant"
+    },
+    {
       "fact_id": "F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca",
       "language": "lean4-surface",
       "statement_sha256": "ca25ee4b0e8db9506f8c90cd5d435c1a28037c88f1f737c63e1180251b8a732a",
@@ -14417,6 +14459,13 @@
           "prose_sha256": "bcf00eb6f7d89b73fe7fdaa8688c64912ccdac1358216f38ca4c4b00aeb9d0d0"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-not-perfect-15c1235d",
+      "language": "lean4-surface",
+      "statement_sha256": "a471f6b97d9e6afcb9df6b9bb465a2e831d87e746958b21942cdbde351ff1443",
+      "prose_sha256": "39c0e8a6a1c65a86501518f5629e477cd17d2aa9c04d86706671638910688451",
+      "kernel_theorem": "Nat.prime_not_perfect"
     },
     {
       "fact_id": "F:ml430-nat-prime-not-prime-pow-5f14afc6",
