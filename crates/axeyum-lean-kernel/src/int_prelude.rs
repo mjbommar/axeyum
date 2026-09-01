@@ -1613,6 +1613,16 @@ pub struct IntPrelude {
     /// `fib_two_mul`, one index up (`fib_add (n+1) (n+1)` plus `fib_rec`);
     /// see `fibonacci.rs`'s `declare_fib_two_mul_add_two` doc.
     pub fib_two_mul_add_two: NameId,
+    /// `fib_zero : Eq Int (fib 0) 0` — base case, reduces by definition.
+    pub fib_zero: NameId,
+    /// `fib_one : Eq Int (fib 1) 1` — base case, reduces by definition.
+    pub fib_one: NameId,
+    /// `fib_two : Eq Int (fib 2) 1` — base case, reduces by definition.
+    pub fib_two: NameId,
+    /// `fib_neg_one : Eq Int (fib (-1)) 1` — base case, reduces by definition.
+    pub fib_neg_one: NameId,
+    /// `fib_neg_two : Eq Int (fib (-2)) (-1)` — base case, reduces by definition.
+    pub fib_neg_two: NameId,
 
     // -- `int-dvd-mirrors` lane: `ml430` divisibility/gcd/`ModEq` mirrors
     // `gcd.rs`/`dvd.rs`/`modeq.rs`/`modeq_family.rs` did not already close
@@ -2104,6 +2114,11 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         fib_add: child(kernel, "fib_add"),
         fib_two_mul: child(kernel, "fib_two_mul"),
         fib_two_mul_add_two: child(kernel, "fib_two_mul_add_two"),
+        fib_zero: child(kernel, "fib_zero"),
+        fib_one: child(kernel, "fib_one"),
+        fib_two: child(kernel, "fib_two"),
+        fib_neg_one: child(kernel, "fib_neg_one"),
+        fib_neg_two: child(kernel, "fib_neg_two"),
 
         // `int-dvd-mirrors` lane -- see the matching struct-field block above.
         dvd_gcd_nat: child(kernel, "dvd_gcd_nat"),
@@ -2438,6 +2453,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         fibonacci::declare_fib_add(&mut d)?;
         fibonacci::declare_fib_two_mul(&mut d)?;
         fibonacci::declare_fib_two_mul_add_two(&mut d)?;
+        fibonacci::declare_fib_zero(&mut d)?;
+        fibonacci::declare_fib_one(&mut d)?;
+        fibonacci::declare_fib_two(&mut d)?;
+        fibonacci::declare_fib_neg_one(&mut d)?;
+        fibonacci::declare_fib_neg_two(&mut d)?;
         rat::declare_rat(&mut d)?;
         rat::declare_normalize(&mut d)?;
         rat::declare_arithmetic(&mut d)?;

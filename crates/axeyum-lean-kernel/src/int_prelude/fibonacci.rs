@@ -2743,3 +2743,90 @@ pub(super) fn declare_fib_two_mul_add_two(d: &mut IntDev<'_>) -> Result<(), Kern
     })?;
     Ok(())
 }
+
+// ============================================================================
+// Base case theorems: `fib 0 = 0`, `fib 1 = 1`, `fib 2 = 1`,
+// `fib (-1) = 1`, `fib (-2) = -1`.
+//
+// These reduce by definition: `Int.fib` for `ofNat n` returns `ofNat
+// (Nat.fib n)`, and for `negSucc m` returns `pow (neg one) m * ofNat
+// (Nat.fib (succ m))`. The `Nat.fib` base cases reduce (Nat.fib 0 = 0,
+// Nat.fib 1 = 1, Nat.fib 2 = 1), and `pow (neg one) 0 = 1` reduces. So
+// all five goals reduce PURELY to closed-term arithmetic on numerals.
+// ============================================================================
+
+/// `Int.fib_zero : Eq Int (fib 0) 0` — `fib 0` reduces to
+/// `ofNat (Nat.fib 0) = ofNat 0 = 0` by definition.
+pub(super) fn declare_fib_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let zero = d.izero();
+    let fib_zero = d.const_app(p.fib, &[zero]);
+    d.int_theorem(p.fib_zero, 0, &|d, _v| {
+        let stmt = d.ieq(fib_zero, zero);
+        let proof = d.irefl(fib_zero);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.fib_one : Eq Int (fib 1) 1` — `fib 1` reduces to
+/// `ofNat (Nat.fib 1) = ofNat 1 = 1` by definition.
+pub(super) fn declare_fib_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let one_nat = d.num(1);
+    let one_i = d.of_nat(one_nat);
+    let fib_one = d.const_app(p.fib, &[one_i]);
+    d.int_theorem(p.fib_one, 0, &|d, _v| {
+        let stmt = d.ieq(fib_one, one_i);
+        let proof = d.irefl(fib_one);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.fib_two : Eq Int (fib 2) 1` — `fib 2` reduces to
+/// `ofNat (Nat.fib 2) = ofNat 1 = 1` by definition.
+pub(super) fn declare_fib_two(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let two_nat = d.num(2);
+    let two_i = d.of_nat(two_nat);
+    let one_nat = d.num(1);
+    let one_i = d.of_nat(one_nat);
+    let fib_two = d.const_app(p.fib, &[two_i]);
+    d.int_theorem(p.fib_two, 0, &|d, _v| {
+        let stmt = d.ieq(fib_two, one_i);
+        let proof = d.irefl(fib_two);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.fib_neg_one : Eq Int (fib (-1)) 1` — `fib (-1)` reduces to
+/// `pow (neg one) 0 * ofNat (Nat.fib 1) = 1 * 1 = 1` by definition.
+pub(super) fn declare_fib_neg_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let neg_one = d.ineg(d.of_nat(d.num(1)));
+    let fib_neg_one = d.const_app(p.fib, &[neg_one]);
+    let one_i = d.of_nat(d.num(1));
+    d.int_theorem(p.fib_neg_one, 0, &|d, _v| {
+        let stmt = d.ieq(fib_neg_one, one_i);
+        let proof = d.irefl(fib_neg_one);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.fib_neg_two : Eq Int (fib (-2)) (-1)` — `fib (-2)` reduces to
+/// `pow (neg one) 1 * ofNat (Nat.fib 2) = (-1) * 1 = -1` by definition.
+pub(super) fn declare_fib_neg_two(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let neg_two = d.ineg(d.of_nat(d.num(2)));
+    let fib_neg_two = d.const_app(p.fib, &[neg_two]);
+    let neg_one = d.ineg(d.of_nat(d.num(1)));
+    d.int_theorem(p.fib_neg_two, 0, &|d, _v| {
+        let stmt = d.ieq(fib_neg_two, neg_one);
+        let proof = d.irefl(fib_neg_two);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
