@@ -408,3 +408,293 @@ pub(super) fn declare_not_prime_of_int_mul(d: &mut IntDev<'_>) -> Result<(), Ker
     d.declare_theorem(name, stmt, value)?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// `Int.gcd_ne_one_iff_gcd_mul_right_ne_one` — needs one classical step
+// (deciding `Eq Nat _ _`), derived from `Nat.beq`'s soundness/completeness,
+// never assumed. Local copies of `bool_true_or_false`/`nat_decidable_equality`
+// (the same construction `int_prelude::decide` builds privately for
+// `Int.eq_em`) and of the `iff_trans`/`Not`-transport combinators every
+// `Iff`-shaped module in this crate keeps its own copy of, per this
+// repository's documented "local copy" convention
+// (`nat_prelude/dvd_add_iff_left.rs`, `gcd_dvd_mirrors.rs`,
+// `gcd_mul_right_mirrors.rs`).
+// ---------------------------------------------------------------------------
+
+/// `Or (Eq Bool c Bool.true) (Eq Bool c Bool.false)` for any Bool-valued `c`.
+fn bool_true_or_false(d: &mut IntDev<'_>, c: ExprId) -> ExprId {
+    let p = d.int();
+    let bool_ty = d.bool_ty();
+    let true_ = d.bool_true();
+    let false_ = d.bool_false();
+    let motive = {
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let is_true = d.bool_eq(x, true_);
+        let is_false = d.bool_eq(x, false_);
+        let body = d.or(is_true, is_false);
+        d.lam_fv(x_fv, bool_ty, body)
+    };
+    let case_true = {
+        let is_true = d.bool_eq(true_, true_);
+        let is_false = d.bool_eq(true_, false_);
+        let refl_true = d.bool_refl(true_);
+        d.or_inl(is_true, is_false, refl_true)
+    };
+    let case_false = {
+        let is_true = d.bool_eq(false_, true_);
+        let is_false = d.bool_eq(false_, false_);
+        let refl_false = d.bool_refl(false_);
+        d.or_inr(is_true, is_false, refl_false)
+    };
+    let level_zero = d.kernel().level_zero();
+    let bool_rec = d.kernel().const_(p.logic.bool_rec, vec![level_zero]);
+    d.apply(bool_rec, &[motive, case_false, case_true, c])
+}
+
+/// `Or (Eq Nat m n) (Not (Eq Nat m n))` — decidable `Nat` equality, from
+/// `Nat.beq`'s already-proved soundness and completeness. This is *not*
+/// propositional excluded middle: it is derived per-pair from `Nat.beq`
+/// exactly as `int_prelude::decide::declare_decidable_equality` derives
+/// `Int.eq_em`, never assumed.
+fn nat_decidable_equality(d: &mut IntDev<'_>, m: ExprId, n: ExprId) -> ExprId {
+    let scrutinee = d.beq(m, n);
+    let true_value = d.bool_true();
+    let false_value = d.bool_false();
+    let is_true = d.bool_eq(scrutinee, true_value);
+    let is_false = d.bool_eq(scrutinee, false_value);
+    let equal = d.eq(m, n);
+    let distinct = d.not(equal);
+    let goal = d.or(equal, distinct);
+    let decision = bool_true_or_false(d, scrutinee);
+
+    d.or_elim(
+        is_true,
+        is_false,
+        goal,
+        decision,
+        &|d, holds| {
+            let sound = d.int().nat.eq_of_beq_eq_true;
+            let witness = d.const_app(sound, &[m, n, holds]);
+            d.or_inl(equal, distinct, witness)
+        },
+        &|d, fails| {
+            let fv = d.fresh_fvar();
+            let assumed = d.kernel().fvar(fv);
+            let complete = d.int().nat.beq_eq_true_of_eq;
+            let forced = d.const_app(complete, &[m, n, assumed]);
+            let reversed = d.bool_symm(scrutinee, false_value, fails);
+            let clash = d.bool_trans(false_value, scrutinee, true_value, reversed, forced);
+            let false_ty = d.false_ty();
+            let contradiction = d.false_true_elim(false_ty, clash);
+            let refutation = d.lam_fv(fv, equal, contradiction);
+            d.or_inr(equal, distinct, refutation)
+        },
+    )
+}
+
+/// `h : Iff a b ⊢ Iff (Not a) (Not b)` — purely intuitionistic, no
+/// decidability needed.
+fn not_iff(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let logic = d.int().logic;
+    let not_a = d.not(a);
+    let not_b = d.not(b);
+    let mp = {
+        let na_fv = d.fresh_fvar();
+        let na = d.kernel().fvar(na_fv);
+        let b_fv = d.fresh_fvar();
+        let bv = d.kernel().fvar(b_fv);
+        let mpr_ab = d.const_app(logic.iff_mpr, &[a, b, h]);
+        let a_from_b = d.apply(mpr_ab, &[bv]);
+        let false_ = d.apply(na, &[a_from_b]);
+        let inner = d.lam_fv(b_fv, b, false_);
+        d.lam_fv(na_fv, not_a, inner)
+    };
+    let mpr = {
+        let nb_fv = d.fresh_fvar();
+        let nb = d.kernel().fvar(nb_fv);
+        let a_fv = d.fresh_fvar();
+        let av = d.kernel().fvar(a_fv);
+        let mp_ab = d.const_app(logic.iff_mp, &[a, b, h]);
+        let b_from_a = d.apply(mp_ab, &[av]);
+        let false_ = d.apply(nb, &[b_from_a]);
+        let inner = d.lam_fv(a_fv, a, false_);
+        d.lam_fv(nb_fv, not_b, inner)
+    };
+    d.const_app(logic.iff_intro, &[not_a, not_b, mp, mpr])
+}
+
+/// `h1 : Iff a b, h2 : Iff b c ⊢ Iff a c`.
+fn iff_trans(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId {
+    let logic = d.int().logic;
+    let mp = {
+        let a_fv = d.fresh_fvar();
+        let av = d.kernel().fvar(a_fv);
+        let h1_mp = d.const_app(logic.iff_mp, &[a, b, h1]);
+        let b_from_a = d.apply(h1_mp, &[av]);
+        let h2_mp = d.const_app(logic.iff_mp, &[b, c, h2]);
+        let c_from_b = d.apply(h2_mp, &[b_from_a]);
+        d.lam_fv(a_fv, a, c_from_b)
+    };
+    let mpr = {
+        let c_fv = d.fresh_fvar();
+        let cv = d.kernel().fvar(c_fv);
+        let h2_mpr = d.const_app(logic.iff_mpr, &[b, c, h2]);
+        let b_from_c = d.apply(h2_mpr, &[cv]);
+        let h1_mpr = d.const_app(logic.iff_mpr, &[a, b, h1]);
+        let a_from_b = d.apply(h1_mpr, &[b_from_c]);
+        d.lam_fv(c_fv, c, a_from_b)
+    };
+    d.const_app(logic.iff_intro, &[a, c, mp, mpr])
+}
+
+/// `Iff (Not (And q1 q2)) (Or (Not q1) (Not q2))`, given `decision : Or q1
+/// (Not q1)`.
+///
+/// `mpr` (`Or (Not q1) (Not q2) → Not (And q1 q2)`) is purely intuitionistic;
+/// `mp` needs `decision` — the one classical step this whole theorem uses.
+fn not_and_iff_or_not(d: &mut IntDev<'_>, q1: ExprId, q2: ExprId, decision: ExprId) -> ExprId {
+    let logic = d.int().logic;
+    let and_ty = d.and(q1, q2);
+    let not_and_ty = d.not(and_ty);
+    let not_q1 = d.not(q1);
+    let not_q2 = d.not(q2);
+    let or_ty = d.or(not_q1, not_q2);
+
+    let mp = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = {
+            let on_left = &|d: &mut IntDev<'_>, hq1: ExprId| -> ExprId {
+                let and_intro = d.int().logic.and_intro;
+                let nq2 = {
+                    let q2_fv = d.fresh_fvar();
+                    let q2v = d.kernel().fvar(q2_fv);
+                    let and_proof = d.const_app(and_intro, &[q1, q2, hq1, q2v]);
+                    let false_ = d.apply(h, &[and_proof]);
+                    d.lam_fv(q2_fv, q2, false_)
+                };
+                d.or_inr(not_q1, not_q2, nq2)
+            };
+            let on_right = &|d: &mut IntDev<'_>, hnq1: ExprId| -> ExprId {
+                d.or_inl(not_q1, not_q2, hnq1)
+            };
+            d.or_elim(q1, not_q1, or_ty, decision, on_left, on_right)
+        };
+        d.lam_fv(h_fv, not_and_ty, body)
+    };
+    let mpr = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = {
+            let hand_fv = d.fresh_fvar();
+            let hand = d.kernel().fvar(hand_fv);
+            let inner = {
+                let on_left = &|d: &mut IntDev<'_>, nq1: ExprId| -> ExprId {
+                    let q1_proof = d.and_left(q1, q2, hand);
+                    d.apply(nq1, &[q1_proof])
+                };
+                let on_right = &|d: &mut IntDev<'_>, nq2: ExprId| -> ExprId {
+                    let q2_proof = d.and_right(q1, q2, hand);
+                    d.apply(nq2, &[q2_proof])
+                };
+                let false_ty = d.false_ty();
+                d.or_elim(not_q1, not_q2, false_ty, h, on_left, on_right)
+            };
+            d.lam_fv(hand_fv, and_ty, inner)
+        };
+        d.lam_fv(h_fv, or_ty, body)
+    };
+    d.const_app(logic.iff_intro, &[not_and_ty, or_ty, mp, mpr])
+}
+
+/// `Int.gcd_ne_one_iff_gcd_mul_right_ne_one : ∀ (a : Int) (m n : Nat), Iff
+/// (Not (Eq (gcd a (ofNat m * ofNat n)) one)) (Or (Not (Eq (gcd a (ofNat m))
+/// one)) (Not (Eq (gcd a (ofNat n)) one)))`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not check.
+pub(super) fn declare_gcd_ne_one_iff_gcd_mul_right_ne_one(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+    let name = p.gcd_ne_one_iff_gcd_mul_right_ne_one;
+    let int_ty = d.int_ty();
+    let nat = d.nat_ty();
+    let one = d.num(1);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let of_m = d.of_nat(m);
+    let of_n = d.of_nat(n);
+    let mn_int = d.imul(of_m, of_n);
+
+    let gcd_a_mn = d.const_app(p.gcd, &[a, mn_int]);
+    let gcd_a_m = d.const_app(p.gcd, &[a, of_m]);
+    let gcd_a_n = d.const_app(p.gcd, &[a, of_n]);
+
+    let lhs_ty = {
+        let e = d.eq(gcd_a_mn, one);
+        d.not(e)
+    };
+    let rhs1 = {
+        let e = d.eq(gcd_a_m, one);
+        d.not(e)
+    };
+    let rhs2 = {
+        let e = d.eq(gcd_a_n, one);
+        d.not(e)
+    };
+    let rhs_ty = d.or(rhs1, rhs2);
+
+    let stmt_body = d.const_app(p.logic.iff, &[lhs_ty, rhs_ty]);
+    let stmt = {
+        let s1 = d.pi_fv(n_fv, nat, stmt_body);
+        let s2 = d.pi_fv(m_fv, nat, s1);
+        d.pi_fv(a_fv, int_ty, s2)
+    };
+
+    // Proof, built at Nat from `x := natAbs a`; the whole thing typechecks
+    // against the `Int.gcd`-stated `stmt` above by `rfl` (`Int.gcd a b`
+    // unfolds to `Nat.gcd (natAbs a) (natAbs b)`, and `natAbs (ofNat k)`
+    // unfolds to `k`).
+    let x = nat_abs(d, a);
+    let mul_mn = d.mul(m, n);
+    let gcd_x_mn = d.gcd(x, mul_mn);
+    let p_ty = d.eq(gcd_x_mn, one);
+    let gcd_x_m = d.gcd(x, m);
+    let gcd_x_n = d.gcd(x, n);
+    let q1 = d.eq(gcd_x_m, one);
+    let q2 = d.eq(gcd_x_n, one);
+    let q_ty = d.and(q1, q2);
+
+    let base_iff = d.lemma(p.nat.coprime_mul_iff, &[x, m, n]);
+    let not_p_iff_not_q = not_iff(d, p_ty, q_ty, base_iff);
+
+    let decision = nat_decidable_equality(d, gcd_x_m, one);
+    let not_q_iff_or = not_and_iff_or_not(d, q1, q2, decision);
+
+    let not_p_ty = d.not(p_ty);
+    let not_q_ty = d.not(q_ty);
+    let not_q1 = d.not(q1);
+    let not_q2 = d.not(q2);
+    let or_not_ty = d.or(not_q1, not_q2);
+
+    let final_iff = iff_trans(d, not_p_ty, not_q_ty, or_not_ty, not_p_iff_not_q, not_q_iff_or);
+
+    let value_body = final_iff;
+    let value = {
+        let v1 = d.lam_fv(n_fv, nat, value_body);
+        let v2 = d.lam_fv(m_fv, nat, v1);
+        d.lam_fv(a_fv, int_ty, v2)
+    };
+
+    d.declare_theorem(name, stmt, value)?;
+    Ok(())
+}

@@ -471,7 +471,7 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 261] {
 /// working parts of five of the laws above, and a footprint that leaked into one
 /// of them would leak into the law. They are checked to exactly the same
 /// standard.
-fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 31] {
+fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 32] {
     [
         p.sub_nat_nat_succ_succ,
         p.sub_nat_nat_add_add,
@@ -511,6 +511,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 31] {
         p.prime_dvd_mul_prime,
         p.prime_dvd_mul,
         p.not_prime_of_int_mul,
+        p.gcd_ne_one_iff_gcd_mul_right_ne_one,
     ]
 }
 

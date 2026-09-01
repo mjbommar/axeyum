@@ -1220,6 +1220,20 @@ pub struct IntPrelude {
     /// falls out of `Nat.prime_ne_zero` directly. See
     /// `int_prelude::prime_dvd_mul_mirrors`.
     pub not_prime_of_int_mul: NameId,
+    /// `gcd_ne_one_iff_gcd_mul_right_ne_one : ∀ (a : Int) (m n : Nat), Iff
+    /// (Not (Eq (gcd a (ofNat m * ofNat n)) one)) (Or (Not (Eq (gcd a (ofNat
+    /// m)) one)) (Not (Eq (gcd a (ofNat n)) one)))` — `ml430` mirror
+    /// `Int.gcd_ne_one_iff_gcd_mul_right_ne_one`
+    /// (`F:ml430-int-gcd-ne-one-iff-gcd-mul-right-ne-one-ae6099bd`). Built at
+    /// `Nat` from `x := natAbs a` (`Int.gcd a b` reduces to `Nat.gcd (natAbs
+    /// a) (natAbs b)` by `rfl`, and `natAbs (ofNat m * ofNat n)` reduces to
+    /// `mul m n`): the already-proved `Nat.coprime_mul_iff` gives `Iff (Eq
+    /// (gcd x (m*n)) one) (And (Eq (gcd x m) one) (Eq (gcd x n) one))`, then
+    /// two purely-intuitionistic `Iff` transports (`Not`/`Not`, no
+    /// decidability) and one classical step — deciding `Eq (gcd x m) one`
+    /// via `Nat.beq`'s soundness/completeness — turn `Not (And q1 q2)` into
+    /// `Or (Not q1) (Not q2)`. See `int_prelude::prime_dvd_mul_mirrors`.
+    pub gcd_ne_one_iff_gcd_mul_right_ne_one: NameId,
 
     // --- the Chinese Remainder Theorem ----------------------------------------
     /// `crt_exists : ∀ m n a b, 0 < m → 0 < n → Coprime m n →
@@ -2051,6 +2065,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prime_dvd_mul_prime: child(kernel, "prime_dvd_mul'"),
         prime_dvd_mul: child(kernel, "prime_dvd_mul"),
         not_prime_of_int_mul: child(kernel, "not_prime_of_int_mul"),
+        gcd_ne_one_iff_gcd_mul_right_ne_one: child(kernel, "gcd_ne_one_iff_gcd_mul_right_ne_one"),
         crt_exists: child(kernel, "crt_exists"),
         crt_unique: child(kernel, "crt_unique"),
         rat,
@@ -2525,6 +2540,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prime_dvd_mul_mirrors::declare_prime_dvd_mul_prime(&mut d)?;
         prime_dvd_mul_mirrors::declare_prime_dvd_mul(&mut d)?;
         prime_dvd_mul_mirrors::declare_not_prime_of_int_mul(&mut d)?;
+        prime_dvd_mul_mirrors::declare_gcd_ne_one_iff_gcd_mul_right_ne_one(&mut d)?;
         Ok(prelude)
     })();
     match built {
