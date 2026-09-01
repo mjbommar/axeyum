@@ -4468,6 +4468,23 @@ SUITES["artifact-ownership"] = (
             "    for base in sorted(set(current) - recorded - guarded):",
             "    for base in sorted(set()):",
         ),
+        # -- COVER's ARTIFACT IDENTIFICATION, distinct from its writer
+        # over-approximation. Matching a basename as a bare substring made
+        # `schema.json` a three-producer artifact out of two mentions of
+        # `fact.schema.json` and `obstruction-graph.schema.json`, and COVER
+        # demanded the fiction be recorded. Restoring the substring semantics
+        # must kill the tests that name it.
+        (
+            "COVER takes the WHOLE dotted component, so a name that is a "
+            "suffix of another is not attributed to it",
+            r"(?<![A-Za-z0-9_.\-])([A-Za-z0-9_.\-]+\.json)(?![A-Za-z0-9_\-])",
+            r"(?<![A-Za-z0-9_.\-])([A-Za-z0-9_\-]+\.json)(?![A-Za-z0-9_\-])",
+        ),
+        (
+            "COVER refuses a name that CONTINUES past `.json`",
+            r"([A-Za-z0-9_.\-]+\.json)(?![A-Za-z0-9_\-])",
+            r"([A-Za-z0-9_.\-]+\.json)",
+        ),
         (
             "COVER a stale candidate row is named",
             "    for base in sorted(recorded - set(current) - guarded):",
