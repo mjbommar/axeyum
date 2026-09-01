@@ -89,7 +89,7 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{
-    nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rle, rmul, rsymm, rtrans, rzero,
+    nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rle, rmul, rzero,
 };
 
 /// Height for the `pi` family's thin definitional wrappers, mirroring
@@ -517,11 +517,20 @@ fn declare_pi_half_term_le_pow_half(
         cle(d, p, term, pw)
     };
     let base = |d: &mut IntDev<'_>| -> ExprId {
-        let zero_nat = d.num(0);
-        let rat_le = d.lemma(p.rat_index_ratio_le_one, &[zero_nat]);
-        let unit = div_succ(d, p, 1, zero_nat);
-        let one_r = d.kernel().const_(rp.one, vec![]);
-        d.lemma(p.of_rat_le, &[unit, one_r, rat_le])
+        // `piHalfTerm 0` is `ofRat (natDivSucc 1 0)` and `pow half 0` is
+        // `CReal.one = ofRat Rat.one` (both by delta/iota), and
+        // `Rat.normalize 1 1` reduces to `Rat.one`'s own `Rat.mk` -- so
+        // `le_refl` at `one` type-checks against the goal directly, the same
+        // defeq `exponential.rs::declare_two_le_e` leans on for
+        // `expSeriesPartial 2 = two`.
+        //
+        // NOT `rat_index_ratio_le_one` at index 0: that lemma is
+        // `Rat.le (natDivSucc a a) (natDivSucc 1 0)`, so `a := 0` gives
+        // `0 <= 1`, not `1 <= 1`. (`trig.rs::half_le_one_proof`'s doc comment
+        // states it as `natDivSucc 1 j <= Rat.one`, which is wrong about the
+        // numerator and happens not to matter at `a = 1`.)
+        let one_cc = one_c(d, p);
+        d.lemma(p.le_refl, &[one_cc])
     };
     let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
         let coef = d.const_app(p.pi_half_coef, &[j]);
@@ -1134,7 +1143,6 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
         ],
     );
     let ty = cle(d, p, three_c, pi_c);
-    let _ = (rsymm, rtrans);
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.three_le_pi,
         uparams: vec![],

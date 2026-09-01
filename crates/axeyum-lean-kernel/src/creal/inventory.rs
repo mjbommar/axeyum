@@ -66,6 +66,7 @@ mod monotone;
 mod mul_self_zero;
 mod mvt;
 mod order_extra;
+mod pi;
 mod polynomial;
 mod power;
 mod product;
@@ -119,6 +120,7 @@ pub(crate) fn all_entries(
     all.extend(mul_self_zero::entries(p));
     all.extend(mvt::entries(p));
     all.extend(order_extra::entries(p));
+    all.extend(pi::entries(p));
     all.extend(polynomial::entries(p));
     all.extend(power::entries(p));
     all.extend(product::entries(p));
