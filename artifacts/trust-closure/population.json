@@ -1,7 +1,8 @@
 {
   "generated_by": "scripts/check-trust-closure.py --update",
-  "min_subjects": 2004,
+  "min_subjects": 2123,
   "min_ratio": 0.9579,
-  "min_declarations": 2548,
+  "min_declarations": 2779,
+  "min_isolated": 44,
   "ratio_floor_note": "CORRECTED DOWNWARD 0.9583 -> 0.9579 on 2026-08-31, and this is the only downward move this file should ever record without a fresh argument. Two things happened at once and only one of them is a loss. ADR-1005 bound 660 fact subjects that had been resolved by TEXT EXTRACTION rather than an explicit field, and found `F:farkas-refutation-over-constructed-reals` had been counted as resolved against `CReal.Equiv` -- a Definition, not its subject. Removing one wrong resolution is a gain in truth and a loss of 0.0004 in this ratio. Meanwhile the ABSOLUTE count rose 1956 -> 2004 and declarations 2482 -> 2548. A ratio floor falls when the denominator grows faster than resolution, so it punishes exactly the growth this project wants; the absolute floors are the ones that mean something and they both ratchet up here. Do not lower this ratio again to accommodate growth -- raise the absolute floors instead, or argue the case as this note does."
 }

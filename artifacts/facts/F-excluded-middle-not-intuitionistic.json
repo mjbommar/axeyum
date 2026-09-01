@@ -6,6 +6,7 @@
   "formal": {
     "language": "lean4",
     "statement": "Not (Provable FormulaList.nil (Formula.or_ (Formula.var AxNat.zero) (Formula.imp (Formula.var AxNat.zero) Formula.bot)))",
+    "kernel_theorem": "ipc_excluded_middle_not_provable",
     "fragment": "Nat",
     "free_symbols": []
   },

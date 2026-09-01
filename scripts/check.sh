@@ -456,16 +456,35 @@ step falsification-screen-mutation-verify ./scripts/tests/test-falsification-scr
 # and checks every kernel-route settled fact against its own transitive
 # `Kernel::declaration_dependencies` closure -- 1,953 subjects, against the S0
 # census's measured `circularity 38 / 2117`. Four guards, deliberately looking
-# at four different things so the four contamination shapes cannot all reject
+# at five different things so the contamination shapes cannot all reject
 # through one path: the subject in its own closure; a byte-identically-typed
-# sibling in its closure; an Axiom/Opaque/Quotient in its closure; and the
-# enforced population itself, which is the guard that exists because the other
-# three cannot fail when there is nothing left to check.
+# sibling in its closure; an Axiom/Opaque/Quotient in its closure; the
+# enforced population itself, which is the guard that exists because the others
+# cannot fail when there is nothing left to check; and the proof-isolated
+# population, whose subjects are admitted into an ephemeral kernel and are
+# therefore unreachable by any of the three closure guards.
 step trust-closure python3 scripts/check-trust-closure.py --quiet
-# ...and the controls for it: 17 cases, then 15 guard deletions each required to
+# ...and the controls for it: 22 cases, then 20 guard deletions each required to
 # kill EXACTLY ONE. A mutation killing two would mean the cases do not separate
 # what they claim to; killing none would mean the guard is unreachable.
 step trust-closure-controls bash scripts/tests/test-trust-closure.sh
+# The controls for `annotate-trust-closure-kernel-theorem.py`. The TOOL is
+# deliberately not a gate (ADR-1285: it reports 0 unapplied candidates and would
+# ratchet nothing the trust-closure population floor does not, at the cost of a
+# second --release projection build) -- but its controls are, because a control
+# nobody invokes cannot fail. Fixture-only, no cargo: 11 cases, 1 mutation.
+step annotate-trust-closure-controls bash scripts/tests/test-annotate-trust-closure-kernel-theorem.sh
+# Three tools build the constructed preludes in three separate `build_groups`
+# implementations, and a group present in two and missing from the third is
+# invisible: the short tool answers confidently about a subject it never built.
+# Registered here 2026-08-31. It was registered in NO aggregate gate before,
+# and had been hard red since `cross_prelude_collision_tests.rs` moved from a
+# `Group { label: "..." }` literal to a `Group::of("...", &k)` constructor --
+# its label regex matched zero occurrences and it refused, correctly, to
+# compare against an empty set. Nobody saw it, because nothing ran it. It then
+# found a real gap the moment it worked: the whole `ipc` group.
+step theorem-inventory-completeness python3 scripts/check-theorem-inventory-completeness.py
+step theorem-inventory-completeness-tests python3 -m unittest scripts.tests.test_theorem_inventory_completeness
 # S6 of the same roadmap (ADR-0785): a fault-injectable two-phase-commit
 # transaction over a fixture ledger (facts/pins/graph/dashboards/receipts).
 # The gate runs a crash-boundary sweep -- one full transaction is executed to

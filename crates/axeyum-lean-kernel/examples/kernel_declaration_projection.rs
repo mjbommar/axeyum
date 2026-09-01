@@ -48,8 +48,8 @@ use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_logic_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
+    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -244,6 +244,27 @@ fn run() -> ExitCode {
         emit("cpoint", &cpoint);
     }
 
+    // The IPC package, and it is the reason this example is not "every prelude"
+    // by accident. `build_ipc_soundness_prelude` transitively builds
+    // `provable` -> `heyting` -> `nat`, so one label covers the whole
+    // intuitionistic-logic surface: `ipc_excluded_middle_not_provable`,
+    // `ipc_soundness`, `ipc_eval`, `ipc_ctx_meet`, and the 3-element Heyting
+    // chain's `meet3`/`join3`/`himp3`/`not3`.
+    //
+    // It was ABSENT until 2026-08-31, and the omission had a measured cost:
+    // `scripts/check-trust-closure.py` read two settled `kernel-lean` facts
+    // (`F:excluded-middle-not-intuitionistic`,
+    // `F:heyting-3-chain-refutes-excluded-middle`) as having no identifiable
+    // subject, and an earlier census wrote them down as "umbrella facts" --
+    // about several theorems at once. They are about exactly one each. The
+    // tool was blind to the prelude, which is indistinguishable from the
+    // declaration not existing.
+    let mut ipc = Kernel::new();
+    let _ = build_ipc_soundness_prelude(&mut ipc).expect("IPC soundness prelude must build");
+    if unfiltered {
+        emit("ipc", &ipc);
+    }
+
     let Some(target) = require_declaration else {
         return ExitCode::SUCCESS;
     };
@@ -266,6 +287,7 @@ fn run() -> ExitCode {
         ("creal", &creal),
         ("complex", &complex),
         ("cpoint", &cpoint),
+        ("ipc", &ipc),
     ]
     .into_iter()
     .filter_map(|(label, kernel)| check_declaration(label, kernel, &target))

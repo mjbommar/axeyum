@@ -81,11 +81,18 @@ KERNEL_THEOREM_RE = re.compile(
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )
 
-# Logic prelude declarations that are not namespaced (bare names from build_logic_prelude).
-# These are the ONLY undotted names permitted in formal.kernel_theorem to avoid
-# weakening the typo guard on dotted names. Verified from kernel.environment() 2026-08-27.
+# Undotted kernel declarations: the bare names from `build_logic_prelude` and
+# from the IPC package (`build_ipc_soundness_prelude`, which transitively builds
+# provable -> heyting -> nat). These are the ONLY undotted names permitted in
+# formal.kernel_theorem to avoid weakening the typo guard on dotted names.
+# Verified from kernel.environment() 2026-08-27; the two `ipc_*` rows added
+# 2026-08-31 and verified against `kernel_declaration_projection`'s `ipc` label,
+# both `theorem` kind, each with a canonical type BYTE-IDENTICAL to its fact's
+# `formal.statement`.
 LOGIC_UNDOTTED = {
     'congrFun\'',
+    'ipc_excluded_middle_not_provable',
+    'ipc_heyting_join_not_ne_top',
     'demorgan_not_or',
     'demorgan_not_or_converse',
     'demorgan_or_not_and',
