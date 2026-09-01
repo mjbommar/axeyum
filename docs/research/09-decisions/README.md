@@ -824,3 +824,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1450](adr-1450-the-count-family-is-not-blind-and-draw-17-is-refused.md) | The counting-predicate family is not blind, draw 17 is refused, and the refusal that was already on record bound nothing | Accepted |
 | [1455](adr-1455-nursery-exemption-guards-and-rescope.md) | Re-scopes the two nursery-v1 split exemptions a `depends_on` | accepted |
 | [1460](adr-1460-mvt-and-extremum-audited-clean-for-the-open-interval-defect.md) | `mvt.rs` and `extremum.rs` audited clean for ADR-1435's open-interval defect, for a structural reason | Accepted |
+| [1470](adr-1470-the-selection-lemma-needs-mapsinto-and-the-injective-case-is-still-open.md) | ADR-1440 named the selection lemma | accepted |
