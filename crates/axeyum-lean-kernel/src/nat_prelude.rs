@@ -129,6 +129,7 @@ use crate::build_logic_prelude;
 use crate::name::NameId;
 
 mod abundant_deficient;
+mod abundant_deficient_lemmas;
 mod add_basics;
 mod add_choose_div;
 mod add_desc_factorial_asc_factorial;
@@ -273,6 +274,7 @@ mod xor_trichotomy;
 pub use ops::{NatDev, NatOps, NatState};
 
 use abundant_deficient::declare_abundant_deficient_all;
+use abundant_deficient_lemmas::declare_abundant_deficient_lemmas_all;
 use add_basics::declare_add_basics;
 use add_choose_div::declare_add_choose;
 use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
@@ -5225,6 +5227,37 @@ pub struct NatPrelude {
     /// `Nat.Deficient (n : Nat) : Prop := Lt (sumDivisors n) (mul 2 n)` --
     /// the mirror of [`Self::abundant`], same convention.
     pub deficient: NameId,
+
+    // -- `nat-abundant-deficient-mirrors` lane: `abundant_deficient_lemmas.rs` --
+    // ADR-1100/1415's "provably equivalent, not definitionally identical,
+    // therefore stays open" verdict is REVISED here: Mathlib itself proves
+    // `abundant_iff_sum_divisors : Abundant n ↔ 2 * n < ∑ i ∈ n.divisors, i`
+    // (`FactorisationProperties.lean:180`) and
+    // `perfect_iff_sum_divisors_eq_two_mul` (`Divisors.lean:404`), each via
+    // the one-line `sum_divisors_eq_sum_properDivisors_add_self`. So `Lt (mul
+    // 2 n) (sumDivisors n)` is not an externally-inferred equivalent of
+    // Mathlib's `Abundant` -- it is Mathlib's OWN endorsed alternate
+    // characterization, exactly the min/max precedent ("same function; only
+    // the delivery differs, which is elaboration, not content") rather than
+    // the `multichoose` one (ours defines what Mathlib proves about an
+    // independent, hard-to-relate recursion). See `abundant_deficient.rs`'s
+    // module doc for the correction and per-statement verdicts.
+    /// `Nat.deficient_one : Deficient (succ zero)`.
+    pub deficient_one: NameId,
+    /// `Nat.abundant_twelve : Abundant 12`.
+    pub abundant_twelve: NameId,
+    /// `Nat.Prime.deficient : ∀ n, Prime n → Deficient n`.
+    pub prime_deficient: NameId,
+    /// `Nat.Prime.not_abundant : ∀ n, Prime n → Not (Abundant n)`.
+    pub prime_not_abundant: NameId,
+    /// `Nat.Prime.not_perfect : ∀ p, Prime p → Not (Perfect p)`.
+    pub prime_not_perfect: NameId,
+    /// `Nat.abundant_iff_not_perfect_and_not_deficient : ∀ n, Not (Eq zero n)
+    /// → Iff (Abundant n) (And (Not (Perfect n)) (Not (Deficient n)))`.
+    pub abundant_iff_not_perfect_and_not_deficient: NameId,
+    /// `Nat.deficient_iff_not_abundant_and_not_perfect : ∀ n, Not (Eq n zero)
+    /// → Iff (Deficient n) (And (Not (Abundant n)) (Not (Perfect n)))`.
+    pub deficient_iff_not_abundant_and_not_perfect: NameId,
     /// `Nat.stirlingFirst (n k : Nat) : Nat` -- the unsigned Stirling
     /// numbers of the first kind, Mathlib's own recurrence
     /// `c(n+1,k+1) = n * c(n,k+1) + c(n,k)`. Same two-argument recursor
@@ -6411,6 +6444,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ceil_root: kernel.name_str(nat, "ceilRoot"),
             abundant: kernel.name_str(nat, "Abundant"),
             deficient: kernel.name_str(nat, "Deficient"),
+            deficient_one: kernel.name_str(nat, "deficient_one"),
+            abundant_twelve: kernel.name_str(nat, "abundant_twelve"),
+            prime_deficient: kernel.name_str(nat, "prime_deficient"),
+            prime_not_abundant: kernel.name_str(nat, "prime_not_abundant"),
+            prime_not_perfect: kernel.name_str(nat, "prime_not_perfect"),
+            abundant_iff_not_perfect_and_not_deficient: kernel
+                .name_str(nat, "abundant_iff_not_perfect_and_not_deficient"),
+            deficient_iff_not_abundant_and_not_perfect: kernel
+                .name_str(nat, "deficient_iff_not_abundant_and_not_perfect"),
             stirling_first: kernel.name_str(nat, "stirlingFirst"),
             stirling_second: kernel.name_str(nat, "stirlingSecond"),
             max_max: {
@@ -7385,6 +7427,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // for the autogenesis screen (ADR-1095/ADR-1100). Nothing needs
         // it, so it goes last.
         declare_abundant_deficient_all(&mut d, &p)?;
+        // Seven theorems about `Nat.Abundant`/`Nat.Deficient`
+        // (`abundant_deficient_lemmas.rs`, `nat-abundant-deficient-mirrors`
+        // lane): the divergence verdict above is per-statement, not a
+        // blanket "stays open" -- see that file's module doc.
+        declare_abundant_deficient_lemmas_all(&mut d, &p)?;
         // `Nat.stirlingFirst`/`Nat.stirlingSecond` (`stirling.rs`): needs
         // only `Nat.rec`, `Nat.add` and `Nat.mul`, all far above. Opens
         // `Mathlib.Combinatorics.Enumerative.Stirling` for the autogenesis

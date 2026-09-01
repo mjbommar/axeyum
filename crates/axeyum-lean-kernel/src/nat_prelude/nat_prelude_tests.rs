@@ -1462,6 +1462,16 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.prime_dvd_factorial_iff_le,
         p.prime_dvd_lcm_iff,
         p.prime_dvd_or_dvd_of_dvd_lcm,
+        // `abundant_deficient_lemmas.rs` (`nat-abundant-deficient-mirrors`
+        // lane): seven theorems, closed after revisiting ADR-1100/1415's
+        // "stays open" verdict per statement.
+        p.deficient_one,
+        p.abundant_twelve,
+        p.prime_deficient,
+        p.prime_not_abundant,
+        p.prime_not_perfect,
+        p.abundant_iff_not_perfect_and_not_deficient,
+        p.deficient_iff_not_abundant_and_not_perfect,
     ]
 }
 
