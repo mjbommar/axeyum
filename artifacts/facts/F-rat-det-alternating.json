@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-alternating",
+  "title": "Rat.det_alternating: the determinant vanishes when two distinct rows agree, at symbolic dimension",
+  "statement": "Rat.det A n is the general-n determinant (a function Nat -> Nat -> Rat plus an explicit bound, by cofactor expansion along the first row). This fact is the ALTERNATING property: for any m, any matrix A, and any two DISTINCT row indices i, j both within bound m, if row i and row j of A agree pointwise (A i c = A j c for every column c), then det A (succ m) = 0. Distinctness is stated as Nat.beq i j = Bool.false, the Bool form this development uses throughout, and the bounds are Nat.ble i m = true / Nat.ble j m = true (matching det_row_expansion's own bound convention). This is the second of the three theorems ADR-1310 named as remaining toward determinant multiplicativity, after Rat.det_row_expansion (general-row cofactor expansion, already landed) and before sign-under-a-row-swap. The proof is a single induction on the dimension m. The base case (m = 0) is vacuous: the two bound hypotheses force i = j = 0, contradicting distinctness. The step case-splits the row indices i and j against 0 (not against each other), giving four shapes: (1) both rows nonzero -- expand along row 0, where Rat.matSkip's unconditional matSkip 0 x = succ x branch means the minor's shifted rows are exactly the original i, j by pure computation, and the outer hypotheses transfer to the induction hypothesis by defeq with no rebuilding; (2) one row is 0 and the other is at least 2 -- expand along row 1, which is always a valid expansion row regardless of the matrix's remaining size; (3) the rows are exactly {0, 1} and the matrix has no third row (dimension 2) -- closes directly from Rat.det_eq_det2 and ordinary Rat algebra (A00 = A10, A01 = A11 give A00*A11 = A01*A10 by commutativity), with no cofactor expansion; (4) the rows are exactly {0, 1} but a third row DOES exist -- expand along row 2, whose validity as an expansion row is derived from the matrix having at least 3 rows. Contrary to ADR-1310's expectation that this step would need Rat.det_congr (to relate a minor to a separately-named matrix), no branch of this proof uses det_congr: every branch applies the induction hypothesis directly to the literal minor term, because every row-index shift needed resolves by pure iota reduction once the case split has fixed the relevant index to a concrete shape (0, 1, or a successor of a bound variable).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_alternating : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} Bool (AxNat.beq x2 x3) Bool.false) -> ((x5 : Eq.{1} Bool (AxNat.ble x2 x0) Bool.true) -> ((x6 : Eq.{1} Bool (AxNat.ble x3 x0) Bool.true) -> ((x7 : ((x7 : AxNat) -> Eq.{1} Rat (x1 x2 x7) (x1 x3 x7))) -> Eq.{1} Rat (Rat.det x1 (AxNat.succ x0)) Rat.zero))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Rat.det_alternating"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:rat-det-row-expansion", "F:rat-det-general-n-eq-det2", "F:rat-sumrange-eq-zero-of-lt", "F:rat-mul-zero", "F:rat-mul-comm", "F:rat-add-neg"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_alternating",
+      "kind": "kernel-term",
+      "supports": "Rat.det_alternating is admitted by the trusted kernel gate with the type recorded in formal.statement, accepted on the first attempt against the full rat_prelude:: test suite (156 tests, 0 failures after registering the new declaration in the prelude's own coverage inventory).",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Rat.det_alternating 2>/dev/null | grep -cE '^Rat\\.det_alternating[[:space:]]'",
+      "checker_seconds": 15,
+      "kernel_declaration": "Rat.det_alternating",
+      "notes": "grep -c rather than grep -q (which would SIGPIPE the producer under pipefail). Pass ONE name per invocation: theorem_dependency_inventory silently consumes only its FIRST name argument. --release is MANDATORY; in debug the example SIGABRTs on a stack overflow, which reads like an absent declaration."
+    },
+    {
+      "id": "footprint-Rat.det_alternating",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the rat prelude's trusted surface is empty, which bounds Rat.det_alternating.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free rat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty."
+    },
+    {
+      "id": "suite-rat-prelude-full-sweep",
+      "kind": "kernel-term",
+      "supports": "The whole rat_prelude:: unit suite passes with Rat.det_alternating declared, including every_rat_declaration_is_checked_and_axiom_free, which fails closed if a live Rat.* declaration is absent from the prelude's own name/kind/axiom-footprint inventory (an environment-derived check, not a hand-maintained list read from source text).",
+      "check_status": "checked",
+      "checkers": [
+        "rat_prelude_tests (full module)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib rat_prelude:: 2>&1 | grep -cE '^test result: ok\\. 156 passed'",
+      "checker_seconds": 320,
+      "notes": "The pinned count (156) is what makes this discriminating rather than a bare exit-0: it fails if a test silently stops compiling or the suite shrinks. One real failure was caught and fixed by this lane before this count held -- Rat.det_alternating was accepted by the kernel but absent from every_rat_declaration_is_checked_and_axiom_free's inventory list, which the assertion refused to pass silently."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs)",
+    "source": "Lane det-alternating, closing ADR-1310's step 2 of the determinant-multiplicativity dependency chain. Status note: docs/plan/status/det-alternating.md."
+  },
+  "notes": "Distinctness is carried as Nat.beq i j = Bool.false throughout rather than as a Prop-level negation, matching this file's existing convention (Rat.beq_matSkip and siblings). No Rat.det_congr anywhere in the proof, contrary to ADR-1310's sizing note that this step 'will need det_congr wherever it relates a minor to a matrix named elsewhere' -- every branch applies the induction hypothesis directly to the literal minor term. Sign under a row swap (ADR-1310's step 3) was not attempted in this lane."
+}
