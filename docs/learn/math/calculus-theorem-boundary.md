@@ -3,6 +3,35 @@
 This page separates Axeyum's finite calculus resources from general
 derivative, integral, multivariable, and manifold-calculus theorem claims.
 
+> **2026-08-31 — read the out-of-scope list below as PACK scope, not as
+> reachability.** Lane `cas-coverage-audit`. Every "out of scope" and
+> "lean-horizon" line on this page is correct **about the example packs it
+> names**, and was written by someone scoping those packs honestly. But the
+> page carries no third column, so a reader asking "what does axeyum do about
+> Taylor's theorem?" lands here, reads
+> *"Taylor theorem hypotheses, Lagrange/integral/Peano/asymptotic remainder
+> formulas … out of scope"* and
+> *"Differentiability from limits, MVT, integration, and FTC remain theorem
+> work"*, and concludes the answer is nothing.
+>
+> It is not. **`crates/axeyum-cas` decides several of these exactly on the
+> polynomial fragment**, with a re-checkable certificate — ADR-0603 **row 3**:
+>
+> - `taylor::polynomial_taylor` + `verify_taylor_certificate` — Taylor's
+>   theorem **with the Lagrange remainder**, exact;
+> - `mvt::polynomial_mvt` + `verify_mvt_certificate` — the full classical MVT,
+>   with `c` named as a `RealAlgebraic`;
+> - `lib.rs::integrate` returns an antiderivative that **certifies itself** by
+>   differentiate-and-zero-test, and `definite_integrate` is the FTC applied to
+>   it;
+> - `real_algebraic::polynomial_ivt` and `extremum::polynomial_extremum` — exact
+>   IVT and EVT.
+>
+> The audited chapter-by-chapter map, including the rows where the CAS
+> genuinely reaches nothing, is
+> [`spivak.md`](../../curriculum/foundational-books/spivak.md)'s `C` column.
+> Nothing on this page is retracted — the packs are what they say they are.
+
 Primary packs:
 
 - [calculus-algebraic-shadow-v0](../../../artifacts/examples/math/calculus-algebraic-shadow-v0/)

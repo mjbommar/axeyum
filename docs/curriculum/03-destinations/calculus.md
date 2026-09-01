@@ -2,6 +2,23 @@
 
 > Layer 3 · destinations · decidability: `bounded` · axeyum theory: NRA · status: `lean-horizon`
 
+> **2026-08-31 — `status: lean-horizon` is about the SCENARIO family, and a
+> third route is not represented here at all.** Lane `cas-coverage-audit`.
+> ADR-1075 already separates "carries no self-checking scenario family" from
+> "the kernel node is small", and this node is the largest kernel node after
+> `naturals`. There is a third axis neither of those measures:
+> `crates/axeyum-cas` decides much of classical calculus **exactly** on the
+> polynomial and rational fragment — ADR-0603 row 3 — including Taylor with
+> Lagrange remainder (`taylor.rs`), the classical MVT (`mvt.rs`), IVT and EVT
+> (`real_algebraic.rs`, `extremum.rs`), self-certifying integration
+> (`lib.rs::integrate`), elementary integration by partial fractions and
+> Horowitz–Ostrogradsky (`partial_fractions.rs`, `ratint.rs`), and exact limits
+> of rational functions (`lib.rs::limit`).
+>
+> Nothing above is retracted — `lean-horizon` is accurate about what it
+> measures. The audited chapter-by-chapter map is
+> [`spivak.md`](../foundational-books/spivak.md)'s `C` column.
+
 ## What it is
 
 The mathematics of change and accumulation: **limits**, **continuity**,

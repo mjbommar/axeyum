@@ -803,3 +803,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1260](adr-1260-eisenstein-routes-around-the-missing-aggregate-wall.md) | **Quadratic reciprocity is NOT proved here.** What is settled is | accepted |
 | [1265](adr-1265-canonicity-follows-the-proof-not-the-date.md) | canonicity follows the proof, not the date | Accepted |
 | [1275](adr-1275-int-sumrange-lands-and-two-of-prods-lemmas-do-not-transport.md) | `Int.sumRange` lands, and two of `prodRange`'s properties do not transport | Accepted |
+| [1300](adr-1300-a-coverage-table-must-state-a-verdict-for-every-producer.md) | A coverage table must state a verdict for every producer, and a blank cell is a defect | Accepted |

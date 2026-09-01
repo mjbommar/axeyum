@@ -355,6 +355,11 @@ facts:
     # of the form `poly_expr(X) = 1 * poly_expr(X)`, because the classifier
     # read a PACKAGE NAME out of a checker_command. This derives what the
     # kernel was actually asked to check, from the certificate itself.
+    # ADR-1300: a blank `C` (CAS, ADR-0603 row 3) cell in the Spivak spine
+    # table is a failure, not a claim -- chapter 20 read "open" while
+    # `taylor.rs` shipped Taylor's theorem with the Lagrange remainder.
+    python3 scripts/check-spivak-cas-column.py
+    python3 -m unittest scripts.tests.test_check_spivak_cas_column
     python3 scripts/check-cas-substance.py
     python3 -m unittest scripts.tests.test_check_cas_substance
     python3 -m unittest scripts.tests.test_settled_fact_statements
