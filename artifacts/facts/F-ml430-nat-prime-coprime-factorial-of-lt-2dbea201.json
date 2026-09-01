@@ -6,12 +6,44 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {p n : ℕ}, Nat.Prime p → n < p → p.Coprime n.factorial",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prime_coprime_factorial_of_lt"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-coprime-of-lt-prime",
+    "F:ml430-nat-coprime-symmetric-9b5cfa12",
+    "F:ml430-nat-coprime-of-lt-prime-1978a919",
+    "F:nat-eq-one-of-dvd-one",
+    "F:nat-factorial-succ",
+    "F:nat-gcd-dvd-right",
+    "F:nat-le-succ-succ",
+    "F:nat-le-trans",
+    "F:nat-zero-le"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_coprime_factorial_of_lt 2>/dev/null | grep -Ec '^Nat\\.prime_coprime_factorial_of_lt[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.prime_coprime_factorial_of_lt",
+      "kind": "kernel-term",
+      "notes": "`declare_prime_coprime_factorial_of_lt` (`nat_prelude/prime_dvd_factorial_lcm.rs`) admits `Nat.prime_coprime_factorial_of_lt` through the trusted `Kernel::add_declaration` gate. `Coprime` has no separate name over `Nat` in this prelude (matching `coprime_of_lt_prime`'s own convention); it is spelled `gcd p n! = 1` directly. Induction on `n`, `p` and the primality hypothesis held fixed: at `n = 0`, `factorial 0 == 1` (defeq), and `gcd p 1 = 1` unconditionally (`gcd_dvd_right` + `eq_one_of_dvd_one`); at `n = succ k`, the induction hypothesis is weakened from `succ k < p` to `k < p` (`le_succ` + `le_trans`), `coprime_of_lt_prime` (flipped by `coprime_symmetric`) gives `gcd p (succ k) = 1` directly from `succ k < p`, `coprime_mul_of_coprime` combines the two coprimality facts, and `factorial_succ` (`n! == n_prev! * succ n_prev`, defeq) identifies the product with `factorial (succ k)`.",
+      "supports": "∀ {p n : ℕ}, Nat.Prime p → n < p → p.Coprime n.factorial"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.prime_coprime_factorial_of_lt",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +58,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Proved in Axeyum via `declare_prime_coprime_factorial_of_lt` (`nat_prelude/prime_dvd_factorial_lcm.rs`). formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type; the admitted kernel declaration's rendered type (`nat_theorem_inventory`) matches it verbatim, modulo `Coprime a b` being spelled `gcd a b = 1` (this prelude has no separate `Coprime` name) and primality being spelled inline rather than through a `Prime` predicate. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. depends_on projects only direct upstream theorem uses whose endpoints both survived review; those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "axiom_footprint": [],
+  "proof_route": "kernel-lean"
 }
