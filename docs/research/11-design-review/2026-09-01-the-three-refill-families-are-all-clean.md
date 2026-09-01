@@ -1,5 +1,39 @@
 # All three refill candidate families screened clean — the draw is authorable
 
+> **CORRECTED 2026-09-01, same day, by the tooling fix this document's own
+> closing section called for.** The contamination screen below is right and
+> unchanged. The AVAILABILITY table is wrong: once `propose-nursery-refill.py`
+> applies both missing screens, **`Mathlib.Data.Nat.Bitwise` falls below the
+> ten-survivor threshold and drops out of the ready list entirely.**
+>
+> | family | this note said | measured with both screens |
+> | --- | --- | --- |
+> | `Mathlib.Data.Nat.Log` | 17 | **17** |
+> | `Mathlib.Data.Nat.Bitwise` | 18 | **below threshold — not ready** |
+> | `Mathlib.NumberTheory.FactorisationProperties` | 15 | **15** |
+>
+> Re-run, both fixes applied: `already-drawn` screened out rises 380 -> 662, a
+> new `held-out-construction` category appears at 14, survivors fall 2260 ->
+> 2056, and **READY FAMILIES is 2, not 3.**
+>
+> **A draw needs two families and exactly two remain, yielding exactly 10
+> against a floor of 10.** `dispatchable_yield(n) = 10·(n − ⌈n/3⌉)`, so one
+> family yields **zero** — `Nat.Log` could never have cleared the floor alone,
+> before or after the correction. There is no slack: anything that reduces
+> either family below ten blocks the draw.
+>
+> `Mathlib.NumberTheory.FactorisationProperties` is still **unscreened for R9
+> contamination and R11 adjacency**, which is the screen that has historically
+> rejected most candidates (draw 10 was DECLINED against a shortlist of this
+> kind, ADR-0900). Treat "two families available" as a shortlist, not a draw.
+>
+> One further correction to the section below: it states that dropping the
+> three `log` constants from `HELD_OUT_CONSTRUCTIONS` is sound. **Dropping
+> `Nat.log2` is NOT** — it displaces `Nat.not_exists_sq` from the already-drawn
+> held-out family `natural-elementary-bounds`, a retroactive alteration of a
+> blind population. Only `Nat.log` and `Nat.clog` were dropped, verified by a
+> zero-diff over all 460 already-drawn rows.
+
 Follow-on to
 [`2026-09-01-the-ml430-queue-empties-this-round.md`](2026-09-01-the-ml430-queue-empties-this-round.md),
 which recorded that two of the three candidates were **contamination-exposed**
