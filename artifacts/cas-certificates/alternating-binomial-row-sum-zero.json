@@ -9,5 +9,5 @@
   "recurrence": [{"terms": [{"monomial": [["n", 1]], "coefficient": [1, 1]}]}],
   "certificate_numerator": {"terms": [{"monomial": [["k", 1]], "coefficient": [-1, 1]}]},
   "certificate_denominator": {"terms": [{"monomial": [], "coefficient": [1, 1]}]},
-  "check": {"samples": {"n": [1, 2, 3, 4, 5, 6, 7]}, "window": [-2, 14], "min_ratio_samples": 8}
+  "check": {"samples": {"n": [1, 2, 3, 4, 5, 6, 7]}, "window": [-2, 14], "min_ratio_samples": 8, "min_pointwise_samples": 8}
 }

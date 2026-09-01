@@ -83,7 +83,110 @@ const MAX_SOLVE_DEGREE: usize = 64;
 /// telescoping certificate still gates soundness), never return a wrong sum.
 const MAX_DISPERSION_SHIFT: i128 = 64;
 
-/// The indefinite hypergeometric sum `S(var)` of a Gosper-summable term, i.e. an
+/// Which certificate admitted a Gosper antidifference.
+///
+/// [`gosper_sum`] has three acceptance modes and used to return a bare
+/// `CasExpr` that recorded which one fired nowhere. They are not
+/// interchangeable: two of them are the full exact zero-test deciding
+/// `S(k+1) − S(k) ≡ term`, and the third fires *because* that zero-test did
+/// not decide. Per ADR-1400 a certificate must record every distinction its
+/// acceptance depends on, so the mode is now part of the result.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GosperEvidence {
+    /// The term normalizes to zero, so the antidifference is the zero function.
+    IdenticallyZero,
+    /// The full exact zero-test certified `S(k+1) − S(k) ≡ term` on the
+    /// simplified reconstruction. Strongest.
+    TelescopingSimplified,
+    /// The full exact zero-test certified telescoping on the raw quotient
+    /// reconstruction, which the simplified one did not settle.
+    TelescopingRaw,
+    /// The full zero-test could not decide either reconstruction; the reduced
+    /// polynomial Gosper identity `q(k)·x(k+1) − r(k−1)·x(k) ≡ p(k)` certified
+    /// it instead.
+    ///
+    /// This is **strictly weaker** than telescoping. The identity is equivalent
+    /// to telescoping given a correctly normalized exact consecutive ratio, and
+    /// it exists because expanding a large concrete Γ tower overflows exact
+    /// arithmetic where the small reduced equation does not. A consumer that
+    /// needs the full zero-test must read this field rather than assume it.
+    ReducedGosperIdentity,
+    /// A geometric × polynomial term, certified by the decidable identity
+    /// `c·X(k+1) − X(k) ≡ p(k)` over the polynomial part.
+    GeometricIdentity,
+}
+
+impl GosperEvidence {
+    /// Whether the full exact zero-test decided the telescoping identity itself.
+    ///
+    /// `false` for [`GosperEvidence::ReducedGosperIdentity`], which is admitted
+    /// on the reduced polynomial equation *because* the full test declined.
+    #[must_use]
+    pub const fn is_full_telescoping(self) -> bool {
+        matches!(
+            self,
+            Self::IdenticallyZero | Self::TelescopingSimplified | Self::TelescopingRaw
+        )
+    }
+}
+
+/// A Gosper antidifference together with the certificate that admitted it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CertifiedGosperSum {
+    /// The antidifference `S` with `S(var+1) − S(var) = term`.
+    pub antidifference: CasExpr,
+    /// Which of [`gosper_sum`]'s acceptance modes admitted it.
+    pub evidence: GosperEvidence,
+}
+
+/// What the full exact zero-test said about a candidate antidifference.
+///
+/// The three outcomes were previously collapsed into a `bool`, which conflated
+/// "I cannot decide" with "this is decidably FALSE". Those must not be
+/// conflated: an `Unknown` leaves the weaker reduced-identity route open,
+/// while a `Refuted` says the reconstruction in hand is wrong and no weaker
+/// certificate may admit it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum TelescopingCheck {
+    /// `S(k+1) − S(k) ≡ term` was decided true.
+    Certified,
+    /// `S(k+1) − S(k) ≡ term` was decided FALSE.
+    Refuted,
+    /// The zero-test declined.
+    Unknown,
+}
+
+/// Decide which acceptance mode, if any, may admit one candidate reconstruction.
+///
+/// Split out from [`rational_gosper_with_ratio`] so the policy is a total
+/// function of the three inputs and can be checked exhaustively; the table is
+/// in `admission_policy_is_exhaustive_and_refutation_blocks_the_weak_mode`.
+///
+/// The rule that changed: a `Refuted` on EITHER reconstruction blocks the
+/// reduced-identity mode. `simplified` blocks it because that is the expression
+/// the reduced mode returns; `raw` blocks it because a refutation there says
+/// the reconstruction itself is wrong, and admitting it on a weaker certificate
+/// would be preferring the certificate that cannot see the problem.
+const fn admissible_mode(
+    simplified: TelescopingCheck,
+    raw: TelescopingCheck,
+    reduced_certifies: bool,
+) -> Option<GosperEvidence> {
+    match (simplified, raw) {
+        (TelescopingCheck::Certified, _) => Some(GosperEvidence::TelescopingSimplified),
+        (_, TelescopingCheck::Certified) => Some(GosperEvidence::TelescopingRaw),
+        (TelescopingCheck::Refuted, _) | (_, TelescopingCheck::Refuted) => None,
+        (TelescopingCheck::Unknown, TelescopingCheck::Unknown) => {
+            if reduced_certifies {
+                Some(GosperEvidence::ReducedGosperIdentity)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// The indefinite hypergeometric sum `S(var)` of a Gosper-summable term, i.e. an/// The indefinite hypergeometric sum `S(var)` of a Gosper-summable term, i.e. an
 /// antidifference with `S(var+1) − S(var) = term`, or `None` when the term is not
 /// Gosper-summable in this certifiable fragment.
 ///
@@ -103,11 +206,29 @@ const MAX_DISPERSION_SHIFT: i128 = 64;
 /// polynomial solution to the Gosper equation exists (e.g. `∑ 1/k`, which has no
 /// hypergeometric closed form), or on exact-arithmetic overflow.
 pub fn gosper_sum(term: &CasExpr, var: &str) -> Option<CasExpr> {
+    gosper_sum_certified(term, var).map(|certified| certified.antidifference)
+}
+
+/// [`gosper_sum`], with the acceptance mode that admitted the result.
+///
+/// Prefer this entry point when the strength of the certificate matters: see
+/// [`GosperEvidence`], and in particular
+/// [`GosperEvidence::is_full_telescoping`], which is `false` exactly when the
+/// full exact zero-test did not decide the telescoping identity.
+///
+/// # Errors
+///
+/// Returns `None` on the same inputs as [`gosper_sum`].
+#[must_use]
+pub fn gosper_sum_certified(term: &CasExpr, var: &str) -> Option<CertifiedGosperSum> {
     // A term that vanishes identically sums to the zero function.
     if let Some(poly) = normalize(term)
         && poly.is_zero()
     {
-        return Some(CasExpr::zero());
+        return Some(CertifiedGosperSum {
+            antidifference: CasExpr::zero(),
+            evidence: GosperEvidence::IdenticallyZero,
+        });
     }
     // Geometric × polynomial terms `p(k)·c^k` first: these produce a clean,
     // pole-free antidifference `X(k)·c^k`. The rational path *would* also accept them
@@ -116,7 +237,10 @@ pub fn gosper_sum(term: &CasExpr, var: &str) -> Option<CasExpr> {
     // makes a definite sum's boundary substitution hit `0/0`. Trying the geometric
     // path first avoids that; it declines for non-geometric terms.
     if let Some(sum) = geometric_gosper(term, var) {
-        return Some(sum);
+        return Some(CertifiedGosperSum {
+            antidifference: sum,
+            evidence: GosperEvidence::GeometricIdentity,
+        });
     }
     // Primary path for rational-function (and, via the `Γ` lowering, hypergeometric
     // factorial) terms, certified by the full identity or its equivalent reduced
@@ -142,7 +266,7 @@ pub fn geometric_power(base: Rational, var: &str) -> CasExpr {
 /// Gosper's algorithm on a **rational-function** term, certified by the exact
 /// zero-test. Returns `None` if `term` is not a univariate rational function of
 /// `var`, if the Gosper equation has no polynomial solution, or on overflow.
-fn rational_gosper(term: &CasExpr, var: &str) -> Option<CasExpr> {
+fn rational_gosper(term: &CasExpr, var: &str) -> Option<CertifiedGosperSum> {
     let (ratio_num, ratio_den) = consecutive_ratio(term, var)?;
     rational_gosper_with_ratio(term, var, &ratio_num, &ratio_den)
 }
@@ -155,7 +279,7 @@ fn rational_gosper_with_ratio(
     var: &str,
     ratio_num: &[Rational],
     ratio_den: &[Rational],
-) -> Option<CasExpr> {
+) -> Option<CertifiedGosperSum> {
     let (p_poly, q_poly, r_poly) = gosper_petkovsek(ratio_num, ratio_den)?;
     let r_shift = shift_poly(&r_poly, Rational::integer(-1))?; // r(k−1)
 
@@ -181,18 +305,35 @@ fn rational_gosper_with_ratio(
         // is value-preserving, so certifying the simplified form is sound; the
         // returned expression is always the exact one the certificate accepted.
         let simplified = crate::simplify(&sum);
-        if certifies_telescoping(&simplified, term, var) {
-            return Some(simplified);
-        }
-        if certifies_telescoping(&sum, term, var) {
-            return Some(sum);
-        }
+        let simplified_check = check_telescoping(&simplified, term, var);
+        // The raw check is only consulted when the simplified one did not
+        // settle it, so the common path still runs one zero-test.
+        let raw_check = if simplified_check == TelescopingCheck::Certified {
+            TelescopingCheck::Unknown
+        } else {
+            check_telescoping(&sum, term, var)
+        };
         // For large concrete Γ towers the full-expression zero-test can overflow
         // even though the small reduced equation is exact. The Gosper derivation
         // makes this polynomial identity equivalent to telescoping once the exact
-        // consecutive ratio above has been normalized.
-        if reduced_certifies {
-            return Some(simplified);
+        // consecutive ratio above has been normalized -- but a candidate the
+        // zero-test positively REFUTED is not a candidate the reduced identity
+        // may rescue, and before this it silently was.
+        match admissible_mode(simplified_check, raw_check, reduced_certifies) {
+            Some(evidence @ GosperEvidence::TelescopingRaw) => {
+                return Some(CertifiedGosperSum {
+                    antidifference: sum,
+                    evidence,
+                });
+            }
+            Some(evidence) => {
+                return Some(CertifiedGosperSum {
+                    antidifference: simplified,
+                    evidence,
+                });
+            }
+            // Nothing at this degree bound; the next one may still work.
+            None => {}
         }
     }
     None
@@ -365,13 +506,21 @@ fn geometric_gosper(term: &CasExpr, var: &str) -> Option<CasExpr> {
     Some(CasExpr::Mul(vec![x_expr, geometric_power(base, var)]))
 }
 
-/// Whether `sum` is a certified antidifference of `term`: the exact zero-test
-/// decides `sum(var+1) − sum(var) − term ≡ 0` as [`ZeroTest::Certified`] with
-/// `equal == true`.
-fn certifies_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> bool {
+/// What the exact zero-test says about `sum(var+1) − sum(var) ≡ term`.
+///
+/// This used to return `bool`, which mapped `ZeroTest::Unknown` and
+/// `ZeroTest::Certified { equal: false }` onto the same `false`. One is the
+/// checker declining and the other is the checker *refuting*, and the caller's
+/// next move differs: a decline leaves the weaker reduced-identity route open,
+/// a refutation must close it.
+fn check_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> TelescopingCheck {
     let shifted = sum.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
     let delta = shifted - sum.clone();
-    matches!(equal(&delta, term), ZeroTest::Certified { equal: true, .. })
+    match equal(&delta, term) {
+        ZeroTest::Certified { equal: true, .. } => TelescopingCheck::Certified,
+        ZeroTest::Certified { equal: false, .. } => TelescopingCheck::Refuted,
+        ZeroTest::Unknown => TelescopingCheck::Unknown,
+    }
 }
 
 /// Multiply two reduced rational-polynomial fractions and reduce the result.
@@ -1016,6 +1165,167 @@ fn ratvec_to_expr(var: &str, coeffs: &[Rational]) -> Option<CasExpr> {
 mod tests {
     use super::*;
     use std::collections::BTreeMap;
+
+    /// ADVERSARIAL, and it is the fixture the old certificate had nowhere to
+    /// put. `admissible_mode` is a total function of the three acceptance
+    /// signals, so the whole policy is checked here rather than sampled.
+    ///
+    /// The row that changed behaviour is `(Refuted, Unknown, true)` and its
+    /// mirror `(Unknown, Refuted, true)`: the full zero-test decided the
+    /// reconstruction is WRONG, and the reduced polynomial identity said it is
+    /// fine. Before this repair those two disagreed silently and the weaker
+    /// certificate won, because `certifies_telescoping` returned `false` both
+    /// for "I cannot decide" and for "this is false".
+    ///
+    /// The `(Unknown, Unknown, true)` rows are the control: they are the reason
+    /// the reduced mode exists, and they must still be admitted, or the repair
+    /// would just be deleting the mode.
+    #[test]
+    fn admission_policy_is_exhaustive_and_refutation_blocks_the_weak_mode() {
+        use TelescopingCheck::{Certified, Refuted, Unknown};
+        let all = [Certified, Refuted, Unknown];
+        let mut admitted_reduced = 0;
+        let mut blocked_by_refutation = 0;
+        for simplified in all {
+            for raw in all {
+                for reduced in [false, true] {
+                    let expected = if simplified == Certified {
+                        Some(GosperEvidence::TelescopingSimplified)
+                    } else if raw == Certified {
+                        Some(GosperEvidence::TelescopingRaw)
+                    } else if simplified == Refuted || raw == Refuted {
+                        None
+                    } else if reduced {
+                        Some(GosperEvidence::ReducedGosperIdentity)
+                    } else {
+                        None
+                    };
+                    assert_eq!(
+                        admissible_mode(simplified, raw, reduced),
+                        expected,
+                        "({simplified:?}, {raw:?}, reduced={reduced})"
+                    );
+                    if expected == Some(GosperEvidence::ReducedGosperIdentity) {
+                        admitted_reduced += 1;
+                    }
+                    if reduced && expected.is_none() && (simplified == Refuted || raw == Refuted) {
+                        blocked_by_refutation += 1;
+                    }
+                }
+            }
+        }
+        // Neither counter may be zero, or one half of the table is decorative.
+        assert_eq!(
+            admitted_reduced, 1,
+            "the reduced mode must still admit exactly the both-declined case"
+        );
+        // (Refuted, Refuted), (Refuted, Unknown) and (Unknown, Refuted). The
+        // fourth refutation row, (Refuted, Certified), is admitted as
+        // `TelescopingRaw`: the raw reconstruction was decided TRUE and only
+        // the simplified one false, which is what a removable singularity
+        // introduced by `simplify` looks like.
+        assert_eq!(
+            blocked_by_refutation, 3,
+            "a refutation on either side must block the reduced mode"
+        );
+    }
+
+    /// ADVERSARIAL. `check_telescoping` must separate a refutation from a
+    /// decline. `S(k) = k` is decidably NOT an antidifference of `term = k`
+    /// (its difference is the constant 1), and both sides are polynomials, so
+    /// the zero-test decides it rather than declining -- which is what makes
+    /// this fixture discriminating rather than merely negative.
+    ///
+    /// The `Unknown` control uses an opaque head the zero-test cannot place; if
+    /// it ever became decidable this assertion says so instead of quietly
+    /// making the `Refuted` case the only one exercised.
+    #[test]
+    fn a_refutation_is_not_a_decline() {
+        let k = CasExpr::var("k");
+
+        assert_eq!(
+            check_telescoping(&k, &k, "k"),
+            TelescopingCheck::Refuted,
+            "delta(k) = 1, which is decidably not k"
+        );
+
+        // The honest antidifference of `k` is `k(k-1)/2`.
+        let honest = CasExpr::Div(
+            Box::new(CasExpr::Mul(vec![k.clone(), k.clone() - CasExpr::int(1)])),
+            Box::new(CasExpr::int(2)),
+        );
+        assert_eq!(
+            check_telescoping(&honest, &k, "k"),
+            TelescopingCheck::Certified
+        );
+
+        // The `Unknown` arm must be reachable, or `check_telescoping` is a
+        // two-valued function wearing a three-valued type and the whole
+        // distinction is decorative.
+        //
+        // An opaque head is NOT a decline, which is the surprise here and the
+        // reason this does not simply assert one: `equal_core` treats an
+        // unknown head as an independent atom, so `Gamma(k+1) - Gamma(k) = k`
+        // and every other head tried (Si, Ci, Ai, erf, LambertW, BesselJ, sin)
+        // comes back decidably FALSE. Reachability is established through the
+        // shipped path instead: `admissible_mode` admits
+        // `ReducedGosperIdentity` on exactly one row of its table, the one
+        // where BOTH checks are `Unknown`. So the weighted Vandermonde WZ term
+        // reporting that mode IS a witness that the arm is reached.
+        let binom = |n| crate::binomial_coefficient(&CasExpr::int(n), &k);
+        let rhs = |n| {
+            CasExpr::int(n) * crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n))
+                / CasExpr::int(2)
+        };
+        let f5 = crate::simplify(&(k.clone() * binom(5).pow(2) / rhs(5)));
+        let f6 = crate::simplify(&(k.clone() * binom(6).pow(2) / rhs(6)));
+        let overflowing = crate::simplify(&(f6 - f5));
+        let certified =
+            gosper_sum_certified(&overflowing, "k").expect("the WZ term is Gosper-summable");
+        assert_eq!(
+            certified.evidence,
+            GosperEvidence::ReducedGosperIdentity,
+            "this term's expanded telescoping residual exhausts i128, so both \
+             zero-tests must decline and only the reduced identity may admit it"
+        );
+        assert!(!certified.evidence.is_full_telescoping());
+    }
+
+    /// The mode is recorded, and the two modes are distinguished on REAL
+    /// inputs rather than only in the policy table above.
+    ///
+    /// `sum_of_k` is settled by the full zero-test. The weighted Vandermonde WZ
+    /// term is the input the reduced-identity mode exists for -- its Γ tower
+    /// overflows the full-expression zero-test -- and its sibling test
+    /// `weighted_vandermonde_wz_term_uses_reduced_certificate` is named for
+    /// that. Before this repair nothing in either result said which was which.
+    #[test]
+    fn the_acceptance_mode_is_recorded_on_the_result() {
+        let k = CasExpr::var("k");
+        let certified = gosper_sum_certified(&k, "k").expect("sum k is Gosper-summable");
+        assert!(
+            certified.evidence.is_full_telescoping(),
+            "got {:?}",
+            certified.evidence
+        );
+
+        let zero = gosper_sum_certified(&CasExpr::zero(), "k").expect("the zero term sums");
+        assert_eq!(zero.evidence, GosperEvidence::IdenticallyZero);
+        assert!(zero.evidence.is_full_telescoping());
+
+        // The geometric fragment has its own decidable identity and is not the
+        // full telescoping zero-test either; it must not be reported as one.
+        let geometric = CasExpr::Mul(vec![k.clone(), geometric_power(Rational::integer(2), "k")]);
+        let geometric = gosper_sum_certified(&geometric, "k").expect("k*2^k is Gosper-summable");
+        assert_eq!(geometric.evidence, GosperEvidence::GeometricIdentity);
+        assert!(!geometric.evidence.is_full_telescoping());
+
+        // `gosper_sum` keeps its shape: same antidifference, evidence dropped.
+        assert_eq!(
+            gosper_sum(&k, "k").as_ref(),
+            Some(&certified.antidifference)
+        );
+    }
 
     /// Assert `gosper_sum` returns a closed form whose telescoping identity the
     /// exact zero-test certifies, and return that closed form.

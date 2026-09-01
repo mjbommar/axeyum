@@ -9,6 +9,6 @@
   "recurrence": [{"terms": [{"monomial": [["m", 1]], "coefficient": [1, 1]}, {"monomial": [["n", 1]], "coefficient": [1, 1]}, {"monomial": [["p", 1]], "coefficient": [-1, 1]}]}, {"terms": [{"monomial": [], "coefficient": [-1, 1]}, {"monomial": [["p", 1]], "coefficient": [-1, 1]}]}],
   "certificate_numerator": {"terms": [{"monomial": [["k", 1], ["n", 1]], "coefficient": [1, 1]}, {"monomial": [["k", 1], ["p", 1]], "coefficient": [-1, 1]}, {"monomial": [["k", 2]], "coefficient": [1, 1]}]},
   "certificate_denominator": {"terms": [{"monomial": [], "coefficient": [1, 1]}, {"monomial": [["k", 1]], "coefficient": [-1, 1]}, {"monomial": [["p", 1]], "coefficient": [1, 1]}]},
-  "check": {"samples": {"m": [3, 5], "n": [4, 6], "p": [0, 1, 2, 3, 4]}, "window": [-2, 12], "min_ratio_samples": 8},
+  "check": {"samples": {"m": [3, 5], "n": [4, 6], "p": [0, 1, 2, 3, 4]}, "window": [-2, 12], "min_ratio_samples": 8, "min_pointwise_samples": 8},
   "closed_form": {"base": 0, "symbolic": true, "term": {"factors": [{"kind": "gamma", "form": {"vars": [["m", 1], ["n", 1]], "constant": 1}, "exponent": 1}, {"kind": "gamma", "form": {"vars": [["p", 1]], "constant": 1}, "exponent": -1}, {"kind": "gamma", "form": {"vars": [["m", 1], ["n", 1], ["p", -1]], "constant": 1}, "exponent": -1}]}}
 }

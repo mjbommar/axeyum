@@ -435,6 +435,172 @@ fn is_unimodular(matrix: &Matrix) -> bool {
     is_one || is_neg_one
 }
 
+/// The exact integer value of one matrix entry, or `None` if it is not an
+/// integer-valued constant.
+fn int_entry(matrix: &Matrix, row: usize, col: usize) -> Option<i128> {
+    match matrix.get(row, col)? {
+        CasExpr::Const(value) if value.denominator() == 1 => Some(value.numerator()),
+        _ => None,
+    }
+}
+
+/// Certify that `hermite` is in **Hermite normal form**, from the matrix alone.
+///
+/// This was missing, and its absence is not cosmetic: `hermite_normal_form`
+/// certified `U * A = H` and `det(U) = +/-1` and nothing else, so the pair
+/// `(I, A)` satisfied every check the function ran, for ANY `A`. The
+/// factorization was verified and the normal form never was.
+///
+/// The shape is re-derived here rather than recorded, per ADR-1400. What it
+/// requires, matching the constructive invariants of [`hermite_grids`]:
+///
+/// - row echelon: pivot columns strictly increase, and no nonzero row follows a
+///   zero row;
+/// - every pivot is strictly positive;
+/// - every entry ABOVE a pivot lies in `0..pivot`, which is what makes the form
+///   canonical rather than merely triangular.
+fn certifies_hermite_shape(hermite: &Matrix) -> bool {
+    let mut previous_pivot_col: Option<usize> = None;
+    let mut seen_zero_row = false;
+    for row in 0..hermite.rows() {
+        let mut pivot: Option<(usize, i128)> = None;
+        for col in 0..hermite.cols() {
+            let Some(value) = int_entry(hermite, row, col) else {
+                return false;
+            };
+            if value != 0 {
+                pivot = Some((col, value));
+                break;
+            }
+        }
+        let Some((pivot_col, pivot_value)) = pivot else {
+            seen_zero_row = true;
+            continue;
+        };
+        if seen_zero_row {
+            return false; // a nonzero row below a zero row is not echelon
+        }
+        if pivot_value <= 0 {
+            return false;
+        }
+        if previous_pivot_col.is_some_and(|previous| pivot_col <= previous) {
+            return false;
+        }
+        for above in 0..row {
+            let Some(entry) = int_entry(hermite, above, pivot_col) else {
+                return false;
+            };
+            if entry < 0 || entry >= pivot_value {
+                return false;
+            }
+        }
+        previous_pivot_col = Some(pivot_col);
+    }
+    true
+}
+
+/// Certify that `diagonal` is in **Smith normal form**, from the matrix alone.
+///
+/// The invariant-factor divisibility chain `d_1 | d_2 | ... | d_r` is the whole
+/// content of the Smith form -- it is what makes the form canonical and what
+/// determines the module structure -- and before this it was checked in exactly
+/// one place: a unit-test assertion on one example. `smith_normal_form` itself
+/// would have returned `(I, A, I)` for a matrix `A` that is not diagonal at all,
+/// because `U * A * V = D` and `det(U) = det(V) = +/-1` are both satisfied by it.
+///
+/// Requires, matching the constructive invariants of [`smith_grids`]:
+///
+/// - every off-diagonal entry is zero;
+/// - every diagonal entry is non-negative;
+/// - the nonzero invariant factors come first, with trailing zeros after;
+/// - each nonzero invariant factor divides the next.
+fn certifies_smith_shape(diagonal: &Matrix) -> bool {
+    for row in 0..diagonal.rows() {
+        for col in 0..diagonal.cols() {
+            let Some(value) = int_entry(diagonal, row, col) else {
+                return false;
+            };
+            if row != col && value != 0 {
+                return false;
+            }
+        }
+    }
+    let limit = diagonal.rows().min(diagonal.cols());
+    let mut factors = Vec::with_capacity(limit);
+    for index in 0..limit {
+        let Some(value) = int_entry(diagonal, index, index) else {
+            return false;
+        };
+        if value < 0 {
+            return false;
+        }
+        factors.push(value);
+    }
+    for window in factors.windows(2) {
+        let (current, next) = (window[0], window[1]);
+        if current == 0 {
+            // Trailing zeros only: a nonzero factor after a zero one breaks the
+            // ordering the chain is stated over.
+            if next != 0 {
+                return false;
+            }
+        } else if next % current != 0 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Admit a claimed Hermite factorization `U * A = H` only if ALL THREE parts of
+/// the certificate hold: the product, the unimodularity, and `H` being in
+/// Hermite form.
+///
+/// This exists as a named gate rather than three inline `if`s so a fixture can
+/// hand it a forged pair. Testing `certifies_hermite_shape` on its own does not
+/// show that anything CALLS it -- verified: mutating the shape check out of the
+/// entry point killed no test until this gate was extracted and exercised.
+fn admit_hermite(
+    source: &Matrix,
+    unimodular: &Matrix,
+    hermite: &Matrix,
+) -> Option<(Matrix, Matrix)> {
+    let product = unimodular.mul(source)?;
+    if !certify_product_equals(&product, hermite) {
+        return None;
+    }
+    if !is_unimodular(unimodular) {
+        return None;
+    }
+    // The factorization being right says nothing about `H` being a NORMAL FORM.
+    if !certifies_hermite_shape(hermite) {
+        return None;
+    }
+    Some((unimodular.clone(), hermite.clone()))
+}
+
+/// Admit a claimed Smith factorization `U * A * V = D` only if all three parts
+/// of the certificate hold. See [`admit_hermite`] for why this is a named gate.
+fn admit_smith(
+    source: &Matrix,
+    left: &Matrix,
+    diagonal: &Matrix,
+    right: &Matrix,
+) -> Option<(Matrix, Matrix, Matrix)> {
+    let product = left.mul(source)?.mul(right)?;
+    if !certify_product_equals(&product, diagonal) {
+        return None;
+    }
+    if !is_unimodular(left) || !is_unimodular(right) {
+        return None;
+    }
+    // `U * A * V = D` with both factors unimodular is satisfied by `(I, A, I)`.
+    // The invariant-factor chain is the claim being made.
+    if !certifies_smith_shape(diagonal) {
+        return None;
+    }
+    Some((left.clone(), diagonal.clone(), right.clone()))
+}
+
 /// The Hermite normal form of an integer matrix.
 ///
 /// Returns `(U, H)` such that `U * A = H`, where `H` is upper-triangular with
@@ -444,8 +610,10 @@ fn is_unimodular(matrix: &Matrix) -> bool {
 ///
 /// Returns `None` if any entry of `matrix` is not an integer-valued
 /// [`CasExpr::Const`], if the exact `i128` reduction overflows, or if the
-/// independent certificate (`U * A = H` entrywise and `det(U) = +/-1`) fails to
-/// hold.
+/// independent certificate fails to hold. That certificate has three parts and
+/// needs all three: `U * A = H` entrywise, `det(U) = +/-1`, and `H` actually
+/// being in Hermite form ([`certifies_hermite_shape`]). The first two alone are
+/// satisfied by `(I, A)` for any `A` at all.
 #[must_use]
 pub fn hermite_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
     let rows = matrix.rows();
@@ -454,14 +622,7 @@ pub fn hermite_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
     let (left_grid, hermite_grid) = hermite_grids(&grid, rows, cols)?;
     let unimodular = grid_to_matrix(&left_grid, rows, rows)?;
     let hermite = grid_to_matrix(&hermite_grid, rows, cols)?;
-    let product = unimodular.mul(matrix)?;
-    if !certify_product_equals(&product, &hermite) {
-        return None;
-    }
-    if !is_unimodular(&unimodular) {
-        return None;
-    }
-    Some((unimodular, hermite))
+    admit_hermite(matrix, &unimodular, &hermite)
 }
 
 /// The Smith normal form of an integer matrix.
@@ -473,8 +634,11 @@ pub fn hermite_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
 ///
 /// Returns `None` if any entry of `matrix` is not an integer-valued
 /// [`CasExpr::Const`], if the exact `i128` reduction overflows or exceeds the
-/// iteration cap, or if the independent certificate (`U * A * V = D` entrywise
-/// and `det(U) = det(V) = +/-1`) fails to hold.
+/// iteration cap, or if the independent certificate fails to hold. That
+/// certificate has three parts: `U * A * V = D` entrywise,
+/// `det(U) = det(V) = +/-1`, and `D` actually carrying the invariant-factor
+/// chain ([`certifies_smith_shape`]). The first two alone are satisfied by
+/// `(I, A, I)`.
 #[must_use]
 pub fn smith_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix, Matrix)> {
     let rows = matrix.rows();
@@ -484,20 +648,163 @@ pub fn smith_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix, Matrix)> {
     let left = grid_to_matrix(&left_grid, rows, rows)?;
     let diagonal = grid_to_matrix(&diagonal_grid, rows, cols)?;
     let right = grid_to_matrix(&right_grid, cols, cols)?;
-    let product = left.mul(matrix)?.mul(&right)?;
-    if !certify_product_equals(&product, &diagonal) {
-        return None;
-    }
-    if !is_unimodular(&left) || !is_unimodular(&right) {
-        return None;
-    }
-    Some((left, diagonal, right))
+    admit_smith(matrix, &left, &diagonal, &right)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{hermite_normal_form, smith_normal_form};
+    use super::{
+        admit_hermite, admit_smith, certifies_hermite_shape, certifies_smith_shape,
+        hermite_normal_form, is_unimodular, smith_normal_form,
+    };
     use crate::{CasExpr, Matrix, ZeroTest, equal};
+
+    /// ADVERSARIAL. `(I, A)` satisfies EVERY guard `hermite_normal_form` ran
+    /// before this repair -- `I * A = A` entrywise, and `det(I) = 1` -- for an
+    /// `A` that is not in Hermite form at all. The shape check is the only
+    /// thing that separates accept from reject here, which is exactly the
+    /// construction ADR-1400 asks for.
+    ///
+    /// `A` is lower-triangular, so its second row's pivot column does not
+    /// strictly exceed its first row's, and its above-pivot entry is not
+    /// reduced into `0..pivot`. Both are violated, and each sub-case below
+    /// isolates one.
+    #[test]
+    fn a_factorization_certificate_does_not_certify_a_hermite_form() {
+        let a = matrix_of(&[&[2, 0], &[1, 3]]);
+        let identity = matrix_of(&[&[1, 0], &[0, 1]]);
+        let product = identity.mul(&a).expect("square product");
+
+        // Every OTHER guard passes on this pair: the product is right and the
+        // claimed transform is unimodular.
+        assert!(super::certify_product_equals(&product, &a));
+        assert!(is_unimodular(&identity));
+        // The shape check refuses it, and -- the part a predicate test cannot
+        // show -- so does the admission gate the entry point actually runs.
+        assert!(
+            !certifies_hermite_shape(&a),
+            "a lower-triangular matrix is not in Hermite form"
+        );
+        assert!(
+            admit_hermite(&a, &identity, &a).is_none(),
+            "(I, A) was admitted as a Hermite factorization of A"
+        );
+        // POSITIVE CONTROL for the gate itself: the genuine pair IS admitted,
+        // so the gate is not simply refusing everything.
+        let (genuine_u, genuine_h) = hermite_normal_form(&a).expect("A has a Hermite form");
+        assert!(admit_hermite(&a, &genuine_u, &genuine_h).is_some());
+
+        // Pivot columns must strictly increase.
+        assert!(!certifies_hermite_shape(&matrix_of(&[&[0, 1], &[0, 2]])));
+        // Pivots must be strictly positive.
+        assert!(!certifies_hermite_shape(&matrix_of(&[&[-1, 0], &[0, 1]])));
+        // Above-pivot entries must be reduced into `0..pivot`; `5 >= 3`.
+        assert!(!certifies_hermite_shape(&matrix_of(&[&[1, 5], &[0, 3]])));
+        assert!(!certifies_hermite_shape(&matrix_of(&[&[1, -1], &[0, 3]])));
+        // A nonzero row must not follow a zero row.
+        assert!(!certifies_hermite_shape(&matrix_of(&[&[0, 0], &[0, 1]])));
+
+        // POSITIVE CONTROL, one edit away from each refusal above, or the whole
+        // block could be satisfied by a check that always says no.
+        assert!(certifies_hermite_shape(&matrix_of(&[&[1, 2], &[0, 3]])));
+        assert!(certifies_hermite_shape(&matrix_of(&[&[1, 0], &[0, 1]])));
+        assert!(certifies_hermite_shape(&matrix_of(&[&[2, 1], &[0, 0]])));
+    }
+
+    /// ADVERSARIAL. The invariant-factor divisibility chain is the entire point
+    /// of the Smith normal form, and `(I, D, I)` satisfies `U * A * V = D` and
+    /// `det(U) = det(V) = +/-1` for a `D` that has no chain at all.
+    ///
+    /// `diag(2, 3)` is the discriminating witness and it is derived from this
+    /// subject rather than borrowed: `2` does not divide `3`, every entry is
+    /// positive, the matrix IS diagonal, and the determinant is right. Only the
+    /// chain separates it from `diag(2, 6)`, which is a genuine Smith form of
+    /// the same determinant class.
+    #[test]
+    fn a_factorization_certificate_does_not_certify_an_invariant_factor_chain() {
+        let broken_chain = matrix_of(&[&[2, 0], &[0, 3]]);
+        let identity = matrix_of(&[&[1, 0], &[0, 1]]);
+        let product = identity
+            .mul(&broken_chain)
+            .and_then(|left| left.mul(&identity))
+            .expect("square product");
+
+        assert!(super::certify_product_equals(&product, &broken_chain));
+        assert!(is_unimodular(&identity));
+        assert!(
+            !certifies_smith_shape(&broken_chain),
+            "2 does not divide 3, so diag(2, 3) carries no invariant-factor chain"
+        );
+        assert!(
+            admit_smith(&broken_chain, &identity, &broken_chain, &identity).is_none(),
+            "(I, D, I) was admitted as a Smith factorization of D"
+        );
+        let (u, d, v) = smith_normal_form(&broken_chain).expect("diag(2,3) has a Smith form");
+        assert!(admit_smith(&broken_chain, &u, &d, &v).is_some());
+
+        // Off-diagonal entries must vanish.
+        assert!(!certifies_smith_shape(&matrix_of(&[&[2, 1], &[0, 4]])));
+        // Invariant factors must be non-negative.
+        assert!(!certifies_smith_shape(&matrix_of(&[&[-2, 0], &[0, 4]])));
+        // Trailing zeros only: a nonzero factor may not follow a zero one.
+        assert!(!certifies_smith_shape(&matrix_of(&[&[0, 0], &[0, 3]])));
+
+        // POSITIVE CONTROL: the same shape with the chain intact.
+        assert!(certifies_smith_shape(&matrix_of(&[&[2, 0], &[0, 6]])));
+        assert!(certifies_smith_shape(&matrix_of(&[&[1, 0], &[0, 1]])));
+        assert!(certifies_smith_shape(&matrix_of(&[&[3, 0], &[0, 0]])));
+    }
+
+    /// POSITIVE CONTROL over the real producers, and it is what stops the two
+    /// checks above from being satisfied by refusing everything: every output
+    /// of `hermite_normal_form` and `smith_normal_form` over a sweep of shapes,
+    /// signs, ranks and rectangles must pass its own shape check.
+    #[test]
+    fn every_produced_normal_form_passes_its_own_shape_check() {
+        let inputs: Vec<Vec<Vec<i128>>> = vec![
+            vec![vec![2, 4, 4], vec![-6, 6, 12], vec![10, -4, -16]],
+            vec![vec![0, 0], vec![0, 0]],
+            vec![vec![1]],
+            vec![vec![0]],
+            vec![vec![-7]],
+            vec![vec![9, 6], vec![6, 4]],
+            vec![vec![1, 2, 3], vec![4, 5, 6]],
+            vec![vec![1, 2], vec![3, 4], vec![5, 6]],
+            vec![vec![2, 0], vec![0, 3]],
+            vec![vec![-1, -2], vec![-3, -4]],
+            vec![vec![12, 0, 0], vec![0, 18, 0], vec![0, 0, 30]],
+            vec![vec![0, 1, 0], vec![0, 0, 1], vec![0, 0, 0]],
+        ];
+        let mut hermite_forms = 0usize;
+        let mut smith_forms = 0usize;
+        for rows in &inputs {
+            let refs: Vec<&[i128]> = rows.iter().map(Vec::as_slice).collect();
+            let matrix = matrix_of(&refs);
+            if let Some((unimodular, hermite)) = hermite_normal_form(&matrix) {
+                assert!(
+                    certifies_hermite_shape(&hermite),
+                    "produced a non-Hermite form for {rows:?}"
+                );
+                assert!(is_unimodular(&unimodular));
+                hermite_forms += 1;
+            }
+            if let Some((left, diagonal, right)) = smith_normal_form(&matrix) {
+                assert!(
+                    certifies_smith_shape(&diagonal),
+                    "produced a non-Smith form for {rows:?}"
+                );
+                assert!(is_unimodular(&left) && is_unimodular(&right));
+                smith_forms += 1;
+            }
+        }
+        // A sweep that produced nothing would pass every assertion above.
+        assert_eq!(
+            hermite_forms,
+            inputs.len(),
+            "some Hermite form was declined"
+        );
+        assert_eq!(smith_forms, inputs.len(), "some Smith form was declined");
+    }
 
     /// Build an integer matrix from `i128` rows.
     fn matrix_of(rows: &[&[i128]]) -> Matrix {

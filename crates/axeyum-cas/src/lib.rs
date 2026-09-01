@@ -114,7 +114,9 @@ pub use assumptions::{Assumptions, Sign};
 pub use boolean::BoolExpr;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use geometry::{Circle, Line, Point};
-pub use gosper::{geometric_power, gosper_sum};
+pub use gosper::{
+    CertifiedGosperSum, GosperEvidence, geometric_power, gosper_sum, gosper_sum_certified,
+};
 pub use groebner::{MonomialOrder, groebner_basis, ideal_contains, reduce};
 pub use groebner_cert::{
     CofactorOutcome, DeclineReason, Limits as CofactorLimits, reduce_many_with_cofactors,
@@ -2199,6 +2201,48 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     }
 }
 
+/// Decide **exactly** whether a closed expression is strictly positive, or
+/// decline.
+///
+/// This is a sufficient structural condition, never a numeric estimate: it
+/// returns `true` only when positivity follows from the shape and from exact
+/// rational signs, and `false` whenever it cannot tell. Declining costs
+/// completeness — `equal` falls back to `ZeroTest::Unknown`, which is a
+/// first-class result — while guessing costs soundness.
+///
+/// The predicate this replaced was `evalf(e, &[]).is_some_and(|v| v > 0.0)`.
+/// An `f64` sign test cannot separate a value that is exactly zero from one
+/// that is `4.44e-16` away from zero, and the `ln` distribution laws below are
+/// valid on exactly one side of that line.
+fn is_certainly_positive(expr: &CasExpr) -> bool {
+    match expr {
+        // A rational carries its own exact sign.
+        CasExpr::Const(c) => c.numerator() > 0,
+        // `exp` is strictly positive over the reals for every real argument,
+        // including arguments this predicate cannot otherwise evaluate.
+        CasExpr::Unary(UnaryFunc::Exp, _) => true,
+        // A real root of a positive quantity is positive; a root of anything
+        // this predicate cannot place is declined rather than assumed.
+        CasExpr::Unary(UnaryFunc::Sqrt | UnaryFunc::NthRoot(_), radicand) => {
+            is_certainly_positive(radicand)
+        }
+        // `b^n` for `b > 0` is positive at every `u32` exponent, `n = 0`
+        // included. A `b` that cannot be placed is declined: `b^2` is positive
+        // for nonzero `b`, but nothing here establishes nonzero.
+        CasExpr::Pow(base, _) => is_certainly_positive(base),
+        CasExpr::Mul(factors) => !factors.is_empty() && factors.iter().all(is_certainly_positive),
+        CasExpr::Add(terms) => !terms.is_empty() && terms.iter().all(is_certainly_positive),
+        CasExpr::Div(numerator, denominator) => {
+            is_certainly_positive(numerator) && is_certainly_positive(denominator)
+        }
+        // A negation, a free variable, and every remaining head are declines.
+        // In particular `Neg` is NOT "positive iff the body is negative": this
+        // predicate has no negativity test, and inventing one by symmetry is
+        // how the `f64` version got its sign wrong in the first place.
+        _ => false,
+    }
+}
+
 /// Rewrite `ln(p/q)` for a positive rational `p/q` into its **prime basis**
 /// `Σ eᵢ·ln(pᵢ) − Σ fⱼ·ln(qⱼ)` (from the prime factorizations of numerator and
 /// denominator). Canonicalizes log-arithmetic so `ln(4/3)` and `2·ln2 − ln3` share
@@ -2233,9 +2277,17 @@ fn expand_log_over_primes(expr: &CasExpr) -> CasExpr {
             }
             // Distribute `ln` over products/quotients/powers/roots of **positive**
             // constants (sound only for positives): `ln(½·√2) = ln½ + ½·ln2`.
-            // `evalf` with no bindings succeeds only for a closed constant, so this
-            // also rejects any free variable.
-            let positive = |e: &CasExpr| evalf(e, &[]).is_some_and(|v| v > 0.0);
+            //
+            // The positivity test is EXACT and structural. It used to be
+            // `evalf(e, &[]).is_some_and(|v| v > 0.0)`, and that made a
+            // `ZeroTest::Certified { equal: true }` rest on an `f64` comparison:
+            // for `x = (√2·√2 − 2) − 10⁻¹⁶`, whose exact value is `−10⁻¹⁶`,
+            // `evalf` returns `+3.44e-16` because `√2·√2` evaluates to
+            // `2.0000000000000004`. `equal` then certified
+            // `ln(x²) = 2·ln(x)` — an identity that is false for negative `x`,
+            // where the left side is a real number and the right side is not.
+            // See `certified_equality_does_not_rest_on_a_floating_point_sign`.
+            let positive = is_certainly_positive;
             let relog = |e: CasExpr| expand_log_over_primes(&e.ln());
             match &inner {
                 CasExpr::Unary(UnaryFunc::Sqrt, radicand) if positive(radicand) => {
@@ -29336,5 +29388,118 @@ mod tests {
             ZeroTest::Unknown => {}
             ZeroTest::Certified { .. } => panic!("expected Unknown on overflow"),
         }
+    }
+}
+
+#[cfg(test)]
+mod exact_positivity_tests {
+    use super::*;
+
+    /// `x = (√2·√2 − 2) − 10⁻¹⁶`.
+    ///
+    /// Its exact value is `−10⁻¹⁶`, strictly negative. `simplify_radicals` does
+    /// not collapse `√2·√2`, so the CAS never sees a cancelled `0` — the term
+    /// survives symbolically all the way into the `ln` distribution laws.
+    fn f64_sign_trap() -> CasExpr {
+        let root_two = CasExpr::int(2).sqrt();
+        CasExpr::Mul(vec![root_two.clone(), root_two])
+            - CasExpr::int(2)
+            - CasExpr::Const(Rational::new(1, 10_000_000_000_000_000))
+    }
+
+    /// The fixture is ADVERSARIAL only if the old test really did get it wrong.
+    /// Measured, not asserted from memory: `√2·√2` evaluates to
+    /// `2.0000000000000004` in `f64`, so the whole expression evaluates to
+    /// `+3.44e-16` while its exact value is `−10⁻¹⁶`.
+    ///
+    /// If this ever stops holding, the soundness fixture below goes vacuous and
+    /// this assertion is what says so.
+    #[test]
+    fn the_floating_point_sign_test_is_wrong_on_this_fixture() {
+        let value = evalf(&f64_sign_trap(), &[]).expect("a closed constant evaluates");
+        assert!(
+            value > 0.0,
+            "the fixture must fool an f64 sign test, got {value}"
+        );
+        assert!(value < 1e-12, "and only just, got {value}");
+    }
+
+    /// ADVERSARIAL. `ln(x²) = 2·ln(x)` is false for negative `x`: the left side
+    /// is `ln(10⁻³²)`, a real number, and the right side is not real at all.
+    ///
+    /// With the positivity test done in `f64` this returned
+    /// `ZeroTest::Certified { equal: true }` — a certified equality resting
+    /// entirely on a `4.44e-16` rounding error. `is_certainly_positive` declines
+    /// on `x`, the `Pow` distribution does not fire, and the two sides stay
+    /// distinct atoms.
+    #[test]
+    fn certified_equality_does_not_rest_on_a_floating_point_sign() {
+        let x = f64_sign_trap();
+        assert!(
+            !is_certainly_positive(&x),
+            "an exactly-negative value must not be certified positive"
+        );
+
+        let left = CasExpr::Pow(Box::new(x.clone()), 2).ln();
+        let right = CasExpr::Mul(vec![CasExpr::int(2), x.clone().ln()]);
+        assert!(
+            !matches!(
+                equal(&left, &right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "ln(x^2) = 2*ln(x) must not be certified for a negative x"
+        );
+
+        // The same law reached through the product rule: `ln(3·x) = ln3 + ln x`
+        // is equally invalid for negative `x`.
+        let product = CasExpr::Mul(vec![CasExpr::int(3), x.clone()]).ln();
+        let split = CasExpr::int(3).ln() + x.ln();
+        assert!(
+            !matches!(
+                equal(&product, &split),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "ln(3*x) = ln3 + ln x must not be certified for a negative x"
+        );
+    }
+
+    /// POSITIVE CONTROL, and it is not optional: a predicate that answered
+    /// `false` everywhere would pass every assertion above while silently
+    /// deleting the `ln` distribution laws. These are the module doc's own
+    /// example and the cases the laws exist for, and each must still fire.
+    #[test]
+    fn the_distribution_laws_still_fire_on_genuinely_positive_arguments() {
+        assert!(is_certainly_positive(&CasExpr::int(2)));
+        assert!(is_certainly_positive(&CasExpr::int(2).sqrt()));
+        assert!(is_certainly_positive(&CasExpr::Mul(vec![
+            CasExpr::Const(Rational::new(1, 2)),
+            CasExpr::int(2).sqrt(),
+        ])));
+        assert!(is_certainly_positive(&CasExpr::Pow(
+            Box::new(CasExpr::int(3)),
+            4
+        )));
+        // `exp` is positive for every real argument, including a free variable.
+        assert!(is_certainly_positive(&CasExpr::var("t").exp()));
+
+        assert!(!is_certainly_positive(&CasExpr::int(-2)));
+        assert!(!is_certainly_positive(&CasExpr::var("t")));
+        assert!(!is_certainly_positive(&CasExpr::Neg(Box::new(
+            CasExpr::int(2).sqrt()
+        ))));
+
+        // `ln(½·√2) = ln½ + ½·ln2` is the documented case; it must still expand
+        // into the prime basis rather than stay an opaque `ln`.
+        let expanded = expand_log_over_primes(
+            &CasExpr::Mul(vec![
+                CasExpr::Const(Rational::new(1, 2)),
+                CasExpr::int(2).sqrt(),
+            ])
+            .ln(),
+        );
+        assert!(
+            matches!(expanded, CasExpr::Add(_)),
+            "the positive case must still distribute, got {expanded}"
+        );
     }
 }
