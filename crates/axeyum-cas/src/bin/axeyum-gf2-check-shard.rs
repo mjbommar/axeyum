@@ -1,4 +1,10 @@
 //! Standalone admission checker for deterministic sparse-search shards.
+//!
+//! Every `exhausted` row is re-derived by re-running the producer's own
+//! enumeration under the manifest's own declared policy; a fabricated
+//! exhaustion is refused by the default invocation, with no opt-in flag.
+//! `rederived_candidates` in the PASS line is how much of that work actually
+//! ran, so a run that re-derived nothing cannot be mistaken for one that did.
 
 use std::path::PathBuf;
 
@@ -33,8 +39,12 @@ fn run() -> Result<(), String> {
         ));
     }
     println!(
-        "GF2_SHARD_CHECK|status=PASS|rows={}|found={}|exhausted={}|candidate_limit={}|require_all_found={require_all_found}",
-        summary.rows, summary.found, summary.exhausted, summary.candidate_limit
+        "GF2_SHARD_CHECK|status=PASS|rows={}|found={}|exhausted={}|candidate_limit={}|rederived_candidates={}|require_all_found={require_all_found}",
+        summary.rows,
+        summary.found,
+        summary.exhausted,
+        summary.candidate_limit,
+        summary.rederived_candidates
     );
     Ok(())
 }
