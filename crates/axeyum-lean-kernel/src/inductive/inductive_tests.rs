@@ -2106,64 +2106,259 @@ fn indexed_enum_two_ctors() {
 /// paradox. Lean's `check_constructor` rejects it and so does this kernel
 /// (ADR-1495).
 ///
-/// The two positive controls are what make this a measurement rather than a
-/// blanket refusal: the same shape ONE universe up (`W : Sort 2` with
-/// `mk : Sort 1 → W`) is Lean-legal and must be ACCEPTED, and a `Prop`-valued
-/// family storing a `Sort 1` field must also be accepted because `Prop` is
-/// impredicative — that is exactly `Exists`/`Acc`, which this prelude
-/// declares.
+/// This test is what dies when the guard at `inductive.rs`'s
+/// `ConstructorFieldUniverseTooBig` is removed. It was deliberately split out
+/// of a larger test that also carried the admission controls: those now live
+/// in their own `#[test]`s below, because a control bundled behind a failing
+/// assertion is never observed in the configuration it is meant to measure
+/// (ADR-1500).
 #[test]
 fn reject_ctor_field_universe_above_result_universe() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let l0 = k.level_zero();
     let l1 = k.level_succ(l0);
-    let l2 = k.level_succ(l1);
 
     // U : Sort 1 with mk : Sort 1 → U  ⇒ REFUSED.
-    {
-        let un = k.name_str(anon, "SelfU");
-        let mk = k.name_str(un, "mk");
+    let un = k.name_str(anon, "SelfU");
+    let mk = k.name_str(un, "mk");
+    let sort1 = k.sort(l1);
+    let u_const = k.const_(un, vec![]);
+    let ctor = k.pi(anon, sort1, u_const, BinderInfo::Default);
+    let sort1b = k.sort(l1);
+    let err = k
+        .add_inductive(un, &[], 0, sort1b, &[(mk, ctor)])
+        .unwrap_err();
+    assert!(
+        matches!(err, KernelError::ConstructorFieldUniverseTooBig { .. }),
+        "got {err:?}"
+    );
+    assert!(!k.environment().contains(un));
+    assert!(!k.environment().contains(mk));
+}
+
+/// The same refusal at a universe **parameter** rather than a literal.
+/// `Box.{u} : Sort u` with `mk : Sort u → Box.{u}` has a field whose type
+/// `Sort u` inhabits `Sort (u+1)`, which is not `≤ u` for any `u`. This
+/// exercises `level_leq` on a non-literal level, which the literal case above
+/// cannot reach: a guard comparing only numerals would pass that test and
+/// admit this one.
+#[test]
+fn reject_ctor_field_universe_above_result_universe_polymorphic() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let u = k.name_str(anon, "u");
+    let u_lvl = k.level_param(u);
+
+    let boxn = k.name_str(anon, "SelfBox");
+    let mk = k.name_str(boxn, "mk");
+    let sort_u = k.sort(u_lvl);
+    let box_const = k.const_(boxn, vec![u_lvl]);
+    let ctor = k.pi(anon, sort_u, box_const, BinderInfo::Default);
+    let sort_u_res = k.sort(u_lvl);
+    let err = k
+        .add_inductive(boxn, &[u], 0, sort_u_res, &[(mk, ctor)])
+        .unwrap_err();
+    assert!(
+        matches!(err, KernelError::ConstructorFieldUniverseTooBig { .. }),
+        "got {err:?}"
+    );
+    assert!(!k.environment().contains(boxn));
+}
+
+/// ADMIT: `W : Sort 2` with `mk : Sort 1 → W` — the same shape one universe
+/// up, which is Lean-legal. A guard that refused this would break every
+/// bundled structure in the tree (`AbsProbe.Field`, ADR-1495). Must pass WITH
+/// and WITHOUT the universe guard; it is the direction-of-refusal control,
+/// not a pin.
+#[test]
+fn admit_sort1_field_under_sort2_family() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let l2 = k.level_succ(l1);
+
+    let wn = k.name_str(anon, "OkW");
+    let mk = k.name_str(wn, "mk");
+    let sort1 = k.sort(l1);
+    let w_const = k.const_(wn, vec![]);
+    let ctor = k.pi(anon, sort1, w_const, BinderInfo::Default);
+    let sort2 = k.sort(l2);
+    k.add_inductive(wn, &[], 0, sort2, &[(mk, ctor)])
+        .expect("a Sort 1 field under a Sort 2 family is Lean-legal");
+    assert!(k.environment().contains(wn));
+    assert!(k.environment().contains(mk));
+}
+
+/// ADMIT: `AbsProbe.Field` in miniature — a one-constructor `Sort 2` family
+/// whose FIRST field is a `Sort 1` carrier and whose later fields are typed
+/// **through** that carrier (`op : α → α → α`, `e : α`). This is the shape
+/// ADR-1495 exists to keep legal, and it reaches a code path the flat `OkW`
+/// case does not: fields whose domain mentions an earlier field's fvar.
+/// Must pass WITH and WITHOUT the guard.
+#[test]
+fn admit_bundled_sort2_structure_with_sort1_carrier() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let l2 = k.level_succ(l1);
+
+    let bn = k.name_str(anon, "OkBundle");
+    let mk = k.name_str(bn, "mk");
+    let b_const = k.const_(bn, vec![]);
+
+    // mk : Π (α : Sort 1) (op : α → α → α) (e : α), OkBundle — built
+    // inside-out, so each α is the de Bruijn index at ITS OWN depth.
+    let mk_ty = {
+        // Under binders (α, op): `e`'s domain is α = BVar 1.
+        let a_for_e = k.bvar(1);
+        let e_name = k.name_str(anon, "e");
+        let inner = k.pi(e_name, a_for_e, b_const, BinderInfo::Default);
+        // Under binder (α) only: op : α → α → α, with α at BVar 0 / 1 / 2 as
+        // the arrows nest.
+        let a0 = k.bvar(0);
+        let a1 = k.bvar(1);
+        let a2 = k.bvar(2);
+        let arrow_inner = k.pi(anon, a1, a2, BinderInfo::Default);
+        let op_ty = k.pi(anon, a0, arrow_inner, BinderInfo::Default);
+        let op_name = k.name_str(anon, "op");
+        let inner = k.pi(op_name, op_ty, inner, BinderInfo::Default);
         let sort1 = k.sort(l1);
-        let u_const = k.const_(un, vec![]);
-        let ctor = k.pi(anon, sort1, u_const, BinderInfo::Default);
-        let sort1b = k.sort(l1);
-        let err = k
-            .add_inductive(un, &[], 0, sort1b, &[(mk, ctor)])
-            .unwrap_err();
-        assert!(
-            matches!(err, KernelError::ConstructorFieldUniverseTooBig { .. }),
-            "got {err:?}"
-        );
-        assert!(!k.environment().contains(un));
-        assert!(!k.environment().contains(mk));
+        let alpha = k.name_str(anon, "α");
+        k.pi(alpha, sort1, inner, BinderInfo::Default)
+    };
+    let sort2 = k.sort(l2);
+    k.add_inductive(bn, &[], 0, sort2, &[(mk, mk_ty)])
+        .expect("a Sort 2 bundle carrying a Sort 1 carrier is Lean-legal");
+    assert!(k.environment().contains(bn));
+    let rec_name = k.name_str(bn, "rec");
+    assert!(
+        k.environment().contains(rec_name),
+        "the bundle must get a recursor, which is how selectors are derived"
+    );
+}
+
+/// ADMIT: an ordinary `Nat`-like family — `N : Sort 1`, `zero : N`,
+/// `succ : N → N`. The recursive field's domain `N` inhabits `Sort 1`, which
+/// is exactly the family's own result universe, so `level_leq` must hold at
+/// EQUALITY and not merely at strict `<`. A guard written with `<` instead of
+/// `≤` would refuse every recursive family in the eleven preludes; this is the
+/// baseline that catches it. Must pass WITH and WITHOUT the guard.
+#[test]
+fn admit_nat_like_family_baseline() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+
+    let nn = k.name_str(anon, "OkN");
+    let zero = k.name_str(nn, "zero");
+    let succ = k.name_str(nn, "succ");
+    let n_const = k.const_(nn, vec![]);
+    let succ_ty = k.pi(anon, n_const, n_const, BinderInfo::Default);
+    let sort1 = k.sort(l1);
+    k.add_inductive(nn, &[], 0, sort1, &[(zero, n_const), (succ, succ_ty)])
+        .expect("a Nat-like family stores its own type at its own universe");
+    assert!(k.environment().contains(nn));
+    let rec_name = k.name_str(nn, "rec");
+    assert!(k.environment().contains(rec_name));
+}
+
+/// ADMIT: `P : Prop` with `mk : Sort 1 → P`. `Prop` is impredicative, so the
+/// universe constraint does not apply to it — that is what the guard's
+/// `!self.level_is_zero(group.result_level)` first conjunct buys, and it is
+/// what keeps `Exists` and `Acc` (both `Prop` families carrying `Sort u`
+/// fields) declarable. Must pass WITH and WITHOUT the guard.
+///
+/// Presence of the exemption is NOT the same as its soundness; that is
+/// [`prop_exemption_is_sound_because_large_elimination_is_denied`].
+#[test]
+fn admit_prop_family_with_sort1_field() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+
+    let pn = k.name_str(anon, "OkProp");
+    let mk = k.name_str(pn, "mk");
+    let sort1 = k.sort(l1);
+    let p_const = k.const_(pn, vec![]);
+    let ctor = k.pi(anon, sort1, p_const, BinderInfo::Default);
+    let prop = k.sort(l0);
+    k.add_inductive(pn, &[], 0, prop, &[(mk, ctor)])
+        .expect("Prop is impredicative, so a Sort 1 field is legal");
+    assert!(k.environment().contains(pn));
+}
+
+/// **Why the `Prop` exemption is sound, not merely present.**
+///
+/// The guard exempts `Prop` because it is impredicative. That exemption would
+/// be a hole rather than a correctness argument if such a family could still
+/// *eliminate* into `Type`: `P : Prop` with `mk : Sort 1 → P` stores a `Sort 1`
+/// exactly the way the refused `SelfU` does, and large elimination is the
+/// second half of the Girard construction. What blocks it is a SEPARATE
+/// mechanism — `allows_large_elimination` in `inductive.rs` requires a `Prop`
+/// family's single constructor to expose no non-proof fields — and until this
+/// test nothing in the workspace connected the two.
+///
+/// So: the `Sort 1`-carrying `Prop` family must be admitted AND denied large
+/// elimination (its recursor carries no extra elimination universe parameter,
+/// so its motive is `Prop`-valued and no `Sort 1` can be recovered).
+///
+/// The `True`-like family in the same test is the non-vacuity control: it is
+/// also a `Prop` singleton, and it DOES get large elimination. Without it this
+/// test would pass on a kernel that denied large elimination to every `Prop`
+/// family, which is a different — and wrong — kernel.
+#[test]
+fn prop_exemption_is_sound_because_large_elimination_is_denied() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+
+    fn rec_uparams_len(k: &Kernel, name: crate::NameId) -> usize {
+        match k.environment().get(name).expect("recursor present") {
+            Declaration::Recursor { uparams, .. } => uparams.len(),
+            other => panic!("not a recursor: {other:?}"),
+        }
     }
 
-    // W : Sort 2 with mk : Sort 1 → W  ⇒ ACCEPTED (Lean-legal).
-    {
-        let wn = k.name_str(anon, "OkW");
-        let mk = k.name_str(wn, "mk");
-        let sort1 = k.sort(l1);
-        let w_const = k.const_(wn, vec![]);
-        let ctor = k.pi(anon, sort1, w_const, BinderInfo::Default);
-        let sort2 = k.sort(l2);
-        k.add_inductive(wn, &[], 0, sort2, &[(mk, ctor)])
-            .expect("a Sort 1 field under a Sort 2 family is Lean-legal");
-        assert!(k.environment().contains(wn));
-    }
+    // P : Prop with mk : Sort 1 → P — admitted, and SMALL elimination only.
+    let pn = k.name_str(anon, "SoundProp");
+    let mk = k.name_str(pn, "mk");
+    let sort1 = k.sort(l1);
+    let p_const = k.const_(pn, vec![]);
+    let ctor = k.pi(anon, sort1, p_const, BinderInfo::Default);
+    let prop = k.sort(l0);
+    k.add_inductive(pn, &[], 0, prop, &[(mk, ctor)])
+        .expect("Prop is impredicative, so a Sort 1 field is legal");
+    let p_rec = k.name_str(pn, "rec");
+    assert_eq!(
+        rec_uparams_len(&k, p_rec),
+        0,
+        "a Prop family exposing a Sort 1 field must NOT get large elimination — \
+         with it, the Prop exemption reopens the Girard route the universe \
+         guard closes for Sort 1 families"
+    );
 
-    // P : Prop with mk : Sort 1 → P  ⇒ ACCEPTED (Prop is impredicative).
-    {
-        let pn = k.name_str(anon, "OkProp");
-        let mk = k.name_str(pn, "mk");
-        let sort1 = k.sort(l1);
-        let p_const = k.const_(pn, vec![]);
-        let ctor = k.pi(anon, sort1, p_const, BinderInfo::Default);
-        let prop = k.sort(l0);
-        k.add_inductive(pn, &[], 0, prop, &[(mk, ctor)])
-            .expect("Prop is impredicative, so a Sort 1 field is legal");
-        assert!(k.environment().contains(pn));
-    }
+    // NON-VACUITY: a True-like Prop singleton with no fields DOES get large
+    // elimination, so the assertion above measures this family rather than a
+    // blanket property of every Prop inductive.
+    let tn = k.name_str(anon, "SoundTrue");
+    let tmk = k.name_str(tn, "intro");
+    let t_const = k.const_(tn, vec![]);
+    let prop2 = k.sort(l0);
+    k.add_inductive(tn, &[], 0, prop2, &[(tmk, t_const)])
+        .expect("a True-like Prop singleton admits");
+    let t_rec = k.name_str(tn, "rec");
+    assert_eq!(
+        rec_uparams_len(&k, t_rec),
+        1,
+        "a fieldless Prop singleton IS large-eliminating (the control that \
+         keeps the assertion above non-vacuous)"
+    );
 }
 
 /// Reject: a constructor whose result is the inductive applied to the **wrong**
