@@ -36,6 +36,39 @@ one mutation (`scripts/tests/mutation_controls.py producer-contracts`):
     two fields alone are a fragment-wide claim, and this project already found
     that "the fragment is Nat" is not a shape, it is almost the whole ledger.
 
+ADR-1510 ADDS A LIFECYCLE. A capability claim over an EMPTY population cannot
+be falsified by any dispatch, which puts it in the same class as an operation
+registry entry with no proof behind it -- the object ADR-0602 exists to
+prevent one arrow upstream. Measured 2026-09-01, both seed contracts had been
+written against families that another route (hand-authored kernel
+declarations) finished within days: `int-modeq-family-v1` matches ZERO open
+facts today, and `nat-coprime-family-v1` matches two, one of which is blind
+held-out evaluation population that must never be closed. So a contract now
+carries a `sizing` block recording the population it was measured against, and
+three further guards, each expected to die under exactly one mutation:
+
+  * no fact id in `sizing.matched_open_ready_fact_ids` may be a HELD-OUT
+    nursery row. A contract sized against blind evaluation population is
+    claiming capability over facts it is forbidden to discharge, and the
+    partition is read from EVERY `nursery*.json` manifest, never from one --
+    `nursery-v2-extension.json` exists and two other readers in this
+    repository hardcode `nursery-v1.json` and are blind to it;
+  * a contract whose LIVE population is empty must carry a `retirement`
+    block. Live means: open, dependency-ready, not held-out, and not an
+    outcome-blind mutation fixture -- a contract kept alive by a fact nobody
+    may ever prove is exactly the unfalsifiable claim this guard is for;
+  * a contract that DOES carry `retirement` must not still match live work.
+    The inverse direction, so retirement cannot be used to silence the guard
+    above while real targets remain.
+
+`sizing.ledger_sha256` is PROVENANCE, not a live check: it is
+`ledger_digest(facts)`, the sha256 over the canonical JSON of the sorted
+`[[fact_id, epistemic_status], ...]` list, and it pins which ledger snapshot
+the recorded count was taken over so the count can be re-derived. It is
+deliberately NOT compared against the current ledger -- that would turn every
+unrelated fact edit into a red gate. The LIVE check is the re-execution of the
+shape predicate in `live_population`.
+
 Usage::
 
     python3 scripts/validate-producer-contracts.py
@@ -52,6 +85,7 @@ from typing import Any
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 FACTS = ROOT / "artifacts" / "facts"
+AUTOGENESIS = ROOT / "artifacts" / "autogenesis"
 CONTRACTS_DIR = ROOT / "artifacts" / "autogenesis" / "producer-contracts"
 SCHEMA = ROOT / "artifacts" / "ontology" / "producer-contract.schema.json"
 
@@ -66,10 +100,30 @@ ROUTES = {"kernel-lane", "cas-bridge", "import"}
 # thing here as it does to the tool that will actually dispatch against it.
 OPEN_STATUSES = {"open", "conjectured", "empirical"}
 
-TOP_LEVEL_REQUIRED = {"schema_version", "id", "title", "route", "recipe", "shape", "non_examples"}
-TOP_LEVEL_OPTIONAL = {"notes"}
+TOP_LEVEL_REQUIRED = {
+    "schema_version",
+    "id",
+    "title",
+    "route",
+    "recipe",
+    "shape",
+    "non_examples",
+    "sizing",
+}
+TOP_LEVEL_OPTIONAL = {"notes", "retirement"}
 RECIPE_REQUIRED = {"description"}
 RECIPE_OPTIONAL = {"reference"}
+SIZING_REQUIRED = {"date", "ledger_sha256", "matched_open_ready_count"}
+SIZING_OPTIONAL = {"matched_open_ready_fact_ids", "frontier_query", "note"}
+RETIREMENT_REQUIRED = {"date", "reason"}
+RETIREMENT_OPTIONAL = {"superseded_by", "note"}
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+# Every nursery manifest, not one. `nursery-v2-extension.json` preregisters a
+# further 500 rows (190 held-out) and two other readers in this repository --
+# `fact-frontier.py`'s `held_out_fact_ids` and this validator's own sibling
+# test -- name `nursery-v1.json` literally and are blind to all of them.
+NURSERY_GLOB = "nursery*.json"
 SHAPE_REQUIRED = {"formal_language", "fragments"}
 SHAPE_OPTIONAL = {"title_prefix", "statement_contains", "id_prefix"}
 # At least one of these must be present, or the shape is narrowed only by
@@ -136,6 +190,146 @@ def shape_matches(shape: dict[str, Any], fact: dict[str, Any]) -> bool:
     return True
 
 
+def ledger_digest(facts: dict[str, dict]) -> str:
+    """The provenance digest a `sizing` block pins its count to.
+
+    sha256 over the canonical JSON of the sorted
+    `[[fact_id, epistemic_status], ...]` list. Re-derivable from any checkout
+    in one line, which is the point: a recorded count nobody can re-take is
+    not a measurement.
+    """
+    return digest(
+        sorted([fid, fact.get("epistemic_status")] for fid, fact in facts.items())
+    )
+
+
+def held_out_fact_ids(directory: pathlib.Path = AUTOGENESIS) -> frozenset[str]:
+    """Fact ids in a blind HELD-OUT nursery partition, read from EVERY
+    `nursery*.json` manifest in `directory`.
+
+    The split key is `<family>:<statement-shape>`, so a proof route for one
+    member is evidence about its siblings and closing ONE spends the whole
+    family (ADR-0542). Reading a single manifest is how this goes wrong:
+    measured 2026-09-01, `fact-frontier.py` selected
+    `F:ml430-nat-coprime-factorizationlcmleft-factorizationlcmright-e7db70ce`
+    as `admissible_via_contract` with `outcome: selected` while that fact is
+    `partition: held-out` in `nursery-v2-extension.json` -- a manifest that
+    did not exist when the single-file reader was written.
+
+    Degrades to whatever it could read: a manifest that is missing or
+    unparseable contributes nothing rather than crashing the gate. That is
+    fail-OPEN for this one input, which is why it is not the only guard --
+    but a held-out row that IS readable can never be silently admitted.
+    """
+    ids: set[str] = set()
+    if not directory.is_dir():
+        return frozenset()
+    for path in sorted(directory.glob(NURSERY_GLOB)):
+        try:
+            raw = json.loads(path.read_text())
+        except (OSError, ValueError):
+            continue
+        for entry in raw.get("entries", []) if isinstance(raw, dict) else []:
+            if isinstance(entry, dict) and entry.get("partition") == "held-out":
+                fact_id = entry.get("fact_id")
+                if isinstance(fact_id, str):
+                    ids.add(fact_id)
+    return frozenset(ids)
+
+
+def is_mutation_fixture(fact_id: str) -> bool:
+    """An outcome-blind mutation negative control, never a target.
+
+    Mirrors `fact-frontier.py`'s own `mutation_kind`: `F:ml430-mutation-*`
+    rows are deliberate perturbations of pinned propositions and several are
+    FALSE. A contract whose only remaining matches are mutation fixtures has
+    no live population, however many rows the raw predicate returns.
+    """
+    return "-mutation-" in fact_id
+
+
+def live_population(
+    shape: dict[str, Any],
+    facts: dict[str, dict],
+    held_out: frozenset[str] | None = None,
+) -> list[str]:
+    """Fact ids this shape could actually be dispatched at, today.
+
+    Open AND dependency-ready AND not held-out AND not a mutation fixture.
+    Each exclusion is a fact the contract may not be dispatched at for a
+    reason that is permanent, so counting them would keep an exhausted
+    contract alive on work nobody may ever do.
+    """
+    if held_out is None:
+        held_out = held_out_fact_ids()
+    live: list[str] = []
+    for fact_id, fact in facts.items():
+        if fact.get("epistemic_status") not in OPEN_STATUSES:
+            continue
+        if fact_id in held_out or is_mutation_fixture(fact_id):
+            continue
+        if not shape_matches(shape, fact):
+            continue
+        depends = fact.get("depends_on") or []
+        if any(
+            dep not in facts or facts[dep].get("epistemic_status") in OPEN_STATUSES
+            for dep in depends
+        ):
+            continue
+        live.append(fact_id)
+    return sorted(live)
+
+
+def validate_sizing(sizing: Any, label: str) -> None:
+    """Structural validation of the ADR-1510 `sizing` block.
+
+    The population semantics are checked in `validate_contract`; this only
+    establishes that the record is well formed enough to be read.
+    """
+    exact_keys(sizing, SIZING_REQUIRED, SIZING_OPTIONAL, label)
+    if not isinstance(sizing["date"], str) or not DATE_RE.match(sizing["date"]):
+        raise ContractError(f"{label}.date: must be an ISO date (YYYY-MM-DD)")
+    if not isinstance(sizing["ledger_sha256"], str) or not SHA256_RE.match(
+        sizing["ledger_sha256"]
+    ):
+        raise ContractError(
+            f"{label}.ledger_sha256: must be a 64-character lowercase sha256 digest -- "
+            "the ledger snapshot the recorded count was taken over, so the count "
+            "can be re-derived rather than believed."
+        )
+    count = sizing["matched_open_ready_count"]
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        raise ContractError(f"{label}.matched_open_ready_count: must be a non-negative integer")
+    ids = sizing.get("matched_open_ready_fact_ids")
+    if ids is not None:
+        if not isinstance(ids, list) or not all(
+            isinstance(i, str) and FACT_ID_RE.match(i) for i in ids
+        ):
+            raise ContractError(
+                f"{label}.matched_open_ready_fact_ids: must be a list of well-formed fact ids"
+            )
+        if len(ids) != count:
+            raise ContractError(
+                f"{label}: matched_open_ready_count is {count} but "
+                f"matched_open_ready_fact_ids lists {len(ids)} -- the count and the "
+                "population it names must agree, or neither is a measurement."
+            )
+    for key in ("frontier_query", "note"):
+        if key in sizing and (not isinstance(sizing[key], str) or not sizing[key]):
+            raise ContractError(f"{label}.{key}: must be a non-empty string")
+
+
+def validate_retirement(retirement: Any, label: str) -> None:
+    exact_keys(retirement, RETIREMENT_REQUIRED, RETIREMENT_OPTIONAL, label)
+    if not isinstance(retirement["date"], str) or not DATE_RE.match(retirement["date"]):
+        raise ContractError(f"{label}.date: must be an ISO date (YYYY-MM-DD)")
+    for key in ("reason", "superseded_by", "note"):
+        if key in retirement and (
+            not isinstance(retirement[key], str) or not retirement[key]
+        ):
+            raise ContractError(f"{label}.{key}: must be a non-empty string")
+
+
 def validate_shape(shape: Any, label: str) -> None:
     exact_keys(shape, SHAPE_REQUIRED, SHAPE_OPTIONAL, label)
     for key in ("formal_language", "fragments"):
@@ -158,7 +352,10 @@ def validate_shape(shape: Any, label: str) -> None:
 
 
 def validate_contract(
-    contract: Any, facts: dict[str, dict], path: pathlib.Path | None = None
+    contract: Any,
+    facts: dict[str, dict],
+    path: pathlib.Path | None = None,
+    held_out: frozenset[str] | None = None,
 ) -> None:
     label = str(path) if path is not None else contract.get("id", "<contract>")
     if not isinstance(contract, dict):
@@ -188,6 +385,11 @@ def validate_contract(
 
     shape = contract["shape"]
     validate_shape(shape, f"{contract_id}.shape")
+
+    validate_sizing(contract["sizing"], f"{contract_id}.sizing")
+    retirement = contract.get("retirement")
+    if retirement is not None:
+        validate_retirement(retirement, f"{contract_id}.retirement")
 
     non_examples = contract["non_examples"]
     if not isinstance(non_examples, list) or not non_examples:
@@ -232,6 +434,49 @@ def validate_contract(
             "that can never fail to admit an open fact makes no capability claim at all."
         )
 
+    # ------------------------------------------------------------------
+    # ADR-1510 rule 1: a contract is sized by the frontier and retires when
+    # that population empties. Three guards, each able to fail on its own.
+    # ------------------------------------------------------------------
+    if held_out is None:
+        held_out = held_out_fact_ids()
+
+    # (a) A contract may not be SIZED against blind evaluation population.
+    sized_held_out = sorted(
+        set(contract["sizing"].get("matched_open_ready_fact_ids") or []) & set(held_out)
+    )
+    if sized_held_out:
+        raise ContractError(
+            f"{contract_id}: sizing.matched_open_ready_fact_ids names HELD-OUT "
+            f"fact(s) {sized_held_out} -- blind evaluation population (ADR-0542), "
+            "which this contract is forbidden to discharge. A capability claim "
+            "counted against facts nobody may close cannot be falsified by any "
+            "dispatch. Partition read from every artifacts/autogenesis/nursery*.json."
+        )
+
+    live = live_population(shape, facts, held_out)
+
+    # (b) An exhausted contract must be retired.
+    if not live and retirement is None:
+        raise ContractError(
+            f"{contract_id}: shape predicate matches ZERO live facts (open, "
+            "dependency-ready, not held-out, not a mutation fixture) but the "
+            "contract is not retired -- ADR-1510 rule 1. A capability claim over "
+            "an empty population cannot be falsified by any dispatch, which is the "
+            "same unfalsifiable object ADR-0602 exists to prevent one arrow "
+            "upstream. Add a `retirement` block, or supersede this contract with a "
+            "-vN whose shape covers live work."
+        )
+
+    # (c) ...and the inverse: retirement may not silence a live contract.
+    if live and retirement is not None:
+        raise ContractError(
+            f"{contract_id}: marked retired but its shape still matches "
+            f"{len(live)} live fact(s) {live[:5]} -- retirement records that a "
+            "population emptied, so using it while real targets remain removes the "
+            "claim without removing the work."
+        )
+
 
 def load_contracts(
     directory: pathlib.Path = CONTRACTS_DIR,
@@ -252,8 +497,9 @@ def validate_contracts_dir(
     loaded = load_contracts(directory)
     contracts: list[dict[str, Any]] = []
     seen_ids: dict[str, pathlib.Path] = {}
+    held_out = held_out_fact_ids()
     for path, contract in loaded:
-        validate_contract(contract, facts, path)
+        validate_contract(contract, facts, path, held_out)
         contract_id = contract["id"]
         if contract_id in seen_ids:
             raise ContractError(
@@ -268,10 +514,14 @@ def main() -> int:
     try:
         facts = load_facts()
         contracts = validate_contracts_dir(facts=facts)
-        ledger_digest = digest(
+        registry_digest = digest(
             [{"id": c["id"], "sha256": digest(c)} for c in sorted(contracts, key=lambda c: c["id"])]
         )
-        print(f"PRODUCER_CONTRACTS_OK|contracts={len(contracts)}|registry={ledger_digest}")
+        retired = sum(1 for c in contracts if c.get("retirement") is not None)
+        print(
+            f"PRODUCER_CONTRACTS_OK|contracts={len(contracts)}|retired={retired}"
+            f"|registry={registry_digest}"
+        )
         return 0
     except (OSError, json.JSONDecodeError, ContractError) as error:
         print(f"PRODUCER_CONTRACTS_ERROR|{error}", file=sys.stderr)
