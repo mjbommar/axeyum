@@ -128,6 +128,7 @@ mod statements;
 mod sub;
 mod sub_nat_nat;
 mod sum;
+mod sum_maps;
 mod two_sided_induction;
 mod wilson;
 
@@ -466,6 +467,38 @@ pub struct IntPrelude {
     /// — the ℕ→ℤ bridge that lets a lattice-point count enter a signed
     /// identity.
     pub sum_range_of_nat: NameId,
+    /// `sumRange_mul_right : ∀ f z n,
+    /// Eq Int (sumRange (fun k => mul (f k) z) n) (mul (sumRange f n) z)`
+    /// — pull a constant right factor out of a finite sum (`sum_maps.rs`).
+    pub sum_range_mul_right: NameId,
+    /// `sumRange_mul_left : ∀ z f n,
+    /// Eq Int (sumRange (fun k => mul z (f k)) n) (mul z (sumRange f n))`
+    /// — pull a constant left factor out of a finite sum (`sum_maps.rs`).
+    pub sum_range_mul_left: NameId,
+    /// `sumMaps : Nat → Nat → ((Nat → Nat) → Int) → Int` — a finite sum
+    /// indexed by the **function space** `[0,m) → [0,n)`, folded by structural
+    /// recursion on `m` with a higher-order motive. See `sum_maps.rs`: this is
+    /// the construction that shows ADR-1135's "the index set of the outer sum
+    /// is a function space, not a `Nat` range" is not an obstruction.
+    pub sum_maps: NameId,
+    /// `sumMaps_zero : ∀ n F, Eq Int (sumMaps 0 n F) (F (fun _ => 0))`.
+    pub sum_maps_zero: NameId,
+    /// `sumMaps_succ : ∀ m n F, Eq Int (sumMaps (succ m) n F)
+    /// (sumRange (fun k => sumMaps m n (fun g => F (cons k g))) n)`.
+    pub sum_maps_succ: NameId,
+    /// `sumMaps_congr : ∀ n m F G, (∀ g, Eq Int (F g) (G g))
+    /// → Eq Int (sumMaps m n F) (sumMaps m n G)`.
+    pub sum_maps_congr: NameId,
+    /// `sumMaps_mul_left : ∀ n z m H,
+    /// Eq Int (sumMaps m n (fun g => mul z (H g))) (mul z (sumMaps m n H))`.
+    pub sum_maps_mul_left: NameId,
+    /// `prodRange_sumRange_expand : ∀ n m (c : Nat → Nat → Int),
+    /// Eq Int (prodRange (fun i => sumRange (c i) n) m)
+    /// (sumMaps m n (fun g => prodRange (fun i => c i (g i)) m))`
+    /// — the **generalized distributive law**: a product of `m` sums of `n`
+    /// terms expands into a sum over all `n^m` maps `[0,m) → [0,n)`. This is
+    /// the Cauchy–Binet expansion step ADR-1135 recorded as inexpressible.
+    pub prod_range_sum_range_expand: NameId,
     /// `neg_add : ∀ a b, Eq Int (neg (add a b)) (add (neg a) (neg b))`.
     /// The proof already existed as `modeq.rs`'s private helper; this is the
     /// first time it is stated as a theorem.
@@ -1843,6 +1876,14 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         sum_range_neg: child(kernel, "sumRange_neg"),
         sum_range_sub: child(kernel, "sumRange_sub"),
         sum_range_of_nat: child(kernel, "sumRange_ofNat"),
+        sum_range_mul_right: child(kernel, "sumRange_mul_right"),
+        sum_range_mul_left: child(kernel, "sumRange_mul_left"),
+        sum_maps: child(kernel, "sumMaps"),
+        sum_maps_zero: child(kernel, "sumMaps_zero"),
+        sum_maps_succ: child(kernel, "sumMaps_succ"),
+        sum_maps_congr: child(kernel, "sumMaps_congr"),
+        sum_maps_mul_left: child(kernel, "sumMaps_mul_left"),
+        prod_range_sum_range_expand: child(kernel, "prodRange_sumRange_expand"),
         mod_eq_sum_range: child(kernel, "modEq_sumRange"),
         neg_add: child(kernel, "neg_add"),
         prod_range: child(kernel, "prodRange"),
@@ -2245,6 +2286,17 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sum::declare_sum_range_sub(&mut d)?;
         sum::declare_sum_range_of_nat(&mut d)?;
         sum::declare_modeq_sum_range(&mut d)?;
+        // The function-space-indexed sum and the generalized distributive law
+        // (ADR-1310). Needs `Int.sumRange` + its `congr` (immediately above),
+        // `Int.prodRange_shiftFront` (above), and the ring lemmas `add_mul`,
+        // `left_distrib`, `mul_zero`, `mul_comm` (`algebra`, far above).
+        sum_maps::declare_sum_range_mul_right(&mut d)?;
+        sum_maps::declare_sum_range_mul_left(&mut d)?;
+        sum_maps::declare_sum_maps(&mut d)?;
+        sum_maps::declare_sum_maps_equations(&mut d)?;
+        sum_maps::declare_sum_maps_congr(&mut d)?;
+        sum_maps::declare_sum_maps_mul_left(&mut d)?;
+        sum_maps::declare_prod_range_sum_range_expand(&mut d)?;
         wilson::declare_factorial(&mut d)?;
         wilson::declare_factorial_equations(&mut d)?;
         gauss_factorial_product::declare_prod_range_scaled_index_eq_pow_mul_factorial(&mut d)?;
@@ -2454,3 +2506,6 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
 
 #[cfg(test)]
 mod int_prelude_tests;
+
+#[cfg(test)]
+mod sum_maps_tests;

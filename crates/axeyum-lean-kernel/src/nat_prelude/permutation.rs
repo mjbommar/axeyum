@@ -19,6 +19,19 @@
 //!      the brief as unreachable in one slice, and this file does not attempt
 //!      it.
 //!
+//! **Note, 2026-08-31 (ADR-1310).** Option (b) is recorded above as out of
+//! scope for one slice, which is right, and it is worth saying that it was
+//! never the only alternative to (a). A sum or product over a set of
+//! permutations does not need permutations to be DATA; it needs a **fold**
+//! over them, and a fold is a function. `Int.sumMaps` (`int_prelude/
+//! sum_maps.rs`) folds over every map `[0,m) -> [0,n)` with no aggregate type,
+//! by `Nat.rec` with a higher-order motive; the permutations are the injective
+//! ones, and injectivity on a bounded range is `Nat.beq`-decidable. That does
+//! not give a symmetric-group CARRIER — which is what `IsGroupOnFn` needed and
+//! what this file solved a different way — but it does mean "there is no
+//! encoding of a permutation" should not be read as "no statement quantifying
+//! over permutations can be written".
+//!
 //! **(a) is what this file does relative to `group.rs`'s own machinery**:
 //! `Nat.comp` (`relation.rs`) is already the right operation, `Nat.id`
 //! (declared below) is the right identity, and `Nat.BijectiveOn`

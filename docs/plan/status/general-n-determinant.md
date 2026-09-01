@@ -54,6 +54,15 @@ structure across dimensions. A closed Leibniz form is not merely unproved but
 **not expressible** here — it quantifies over permutations of `[0,n)` and this
 kernel has no type in which to write that sum. See ADR-1120.
 
+**CORRECTED 2026-08-31 (ADR-1310).** "Not expressible" is wrong. A sum does not
+need its index set to exist as a type — it needs a **fold**, and a fold is a
+function. `Int.sumMaps` folds over an entire function space by `Nat.rec` with a
+higher-order motive (the same device `Rat.det` itself uses), and
+`Int.prodRange_sumRange_expand` — the Cauchy–Binet expansion step — is admitted
+axiom-free. So a Leibniz-shaped sum is a writable term; what remains unproved is
+that it agrees with `Rat.det`, plus general-row expansion, the alternating
+property and the sign under a row swap. Three theorems, not a missing type.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-08-31 | `matrix_det.rs` | `Rat.det`, the determinant at GENERAL `n` by cofactor expansion along row 0 — 15 axiom-free declarations. A matrix stays a function plus a bound (no `List`/`Finset`/`Prod` in this kernel) and the minor is an index reindex; the `Nat.rec` motive is the FUNCTION type `(Nat -> Nat -> Rat) -> Rat`, because the recursive call is at the minor rather than the same matrix. Correctness rests on `det_eq_det2`/`det_eq_det3` — agreement with the independently written fixed-arity determinants, SYMBOLICALLY in a universally quantified matrix — plus four discriminating evaluations. Mutation-verified: swapping `matSkip`'s branches is caught by `det_eq_det2`; a wrong stated numeral is caught by the evaluation. `rat_prelude::` 149 passed, 0 failed. ADR-1120. |

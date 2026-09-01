@@ -192,6 +192,43 @@ A caution, since this ADR is the kind of document that gets read as a sizing:
 "not blocked by a missing type" is a statement about the obstruction below,
 not a claim that either law is cheap. Neither was tried.
 
+> **CORRECTION, 2026-08-31 ([ADR-1310](adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md)): the paragraph below is wrong about its
+> middle bullet, and the wrongness is load-bearing.** It reads:
+>
+> > The Cauchy-Binet / multilinearity route expands `det (A*B)` as a sum over
+> > *functions* `[0,n) -> [0,n)`, then kills the non-injective ones by
+> > alternation. Same missing type, one level up: the index set of the outer
+> > sum is a function space, not a `Nat` range, so `Rat.sumRange` cannot
+> > express it.
+>
+> A finite sum does not need its index set to exist as a type. It needs a
+> **fold** over the index set, and a fold is a function.
+> `Int.sumMaps m n F` folds `Int.add` over `F g` for every `g : [0,m) -> [0,n)`
+> by `Nat.rec` with a higher-order motive -- the same trick `Rat.det` itself
+> uses two sections above -- and
+> **`Int.prodRange_sumRange_expand` is admitted axiom-free**:
+>
+> ```text
+> forall n m c, prodRange (fun i => sumRange (c i) n) m
+>                 = sumMaps m n (fun g => prodRange (fun i => c i (g i)) m)
+> ```
+>
+> That IS the expansion step this bullet calls impossible.
+>
+> The other two bullets are wrong in the same way and are corrected in
+> ADR-1310 as arguments rather than as landed work: the Leibniz sum is a
+> well-formed term (`sumMaps n n` plus a `Nat.beq`-decidable injectivity
+> indicator), and a factorization LENGTH is a `Nat`, so the
+> elementary-operations route carries it the same way every other finite
+> family here is carried.
+>
+> What ADR-1310 does **not** claim is that multiplicativity is cheap. The
+> remaining blockers are ADR-1135's own law 3 (general-row expansion), the
+> alternating property, and the sign under a row swap -- three substantial
+> cofactor inductions, none of them an aggregate question. The correct
+> sentence is "three theorems away", not "needs a type this kernel does not
+> have".
+
 **Multiplicativity is NOT reachable on this route, and the obstruction is
 specific rather than a matter of effort.** The classical proofs all leave the
 world this kernel can express:
