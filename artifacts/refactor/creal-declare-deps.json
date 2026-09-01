@@ -254,14 +254,16 @@
     "ivt_bisect_hi": "CReal.ivt_bisect_hi",
     "ivt_bisect_invariant": "CReal.ivt_bisect_invariant",
     "ivt_bisect_lo": "CReal.ivt_bisect_lo",
+    "ivt_boundary.ivt_exact_root_decides_sign": "CReal.ivt_exact_root_decides_sign",
+    "ivt_boundary.ivt_plateau": "CReal.ivtPlateau",
+    "ivt_boundary.ivt_plateau_nonneg_at_one": "CReal.ivtPlateau_nonneg_at_one",
+    "ivt_boundary.ivt_plateau_nonpos_at_zero": "CReal.ivtPlateau_nonpos_at_zero",
+    "ivt_boundary.ivt_plateau_uniformly_continuous": "CReal.ivtPlateau_uniformly_continuous",
+    "ivt_boundary.uniformly_continuous_max": "CReal.uniformly_continuous_max",
+    "ivt_boundary.uniformly_continuous_min": "CReal.uniformly_continuous_min",
     "ivt_exact_root": "CReal.ivt_exact_root",
     "ivt_exact_root_at": "CReal.ivt_exact_root_at",
-    "ivt_exact_root_decides_sign": "CReal.ivt_exact_root_decides_sign",
     "ivt_iter": "CReal.ivt_iter",
-    "ivt_plateau": "CReal.ivtPlateau",
-    "ivt_plateau_nonneg_at_one": "CReal.ivtPlateau_nonneg_at_one",
-    "ivt_plateau_nonpos_at_zero": "CReal.ivtPlateau_nonpos_at_zero",
-    "ivt_plateau_uniformly_continuous": "CReal.ivtPlateau_uniformly_continuous",
     "ivt_step": "CReal.ivt_step",
     "k_regular_pred": "CReal.KRegular",
     "le": "CReal.le",
@@ -592,8 +594,6 @@
     "uniformly_continuous_add": "CReal.uniformly_continuous_add",
     "uniformly_continuous_const": "CReal.uniformly_continuous_const",
     "uniformly_continuous_id": "CReal.uniformly_continuous_id",
-    "uniformly_continuous_max": "CReal.uniformly_continuous_max",
-    "uniformly_continuous_min": "CReal.uniformly_continuous_min",
     "uniformly_continuous_mul": "CReal.uniformly_continuous_mul",
     "uniformly_continuous_neg": "CReal.uniformly_continuous_neg",
     "uniformly_continuous_on": "CReal.UniformlyContinuousOn",
@@ -657,6 +657,7 @@
       "uniform_continuity": 9,
       "uniform_convergence": 9
     },
+    "fields_never_provided_by_any_step": [],
     "fields_provided_by_more_than_one_step": {},
     "linear_order_is_topological": true,
     "modules_with_multiple_dispatch_entries": {
@@ -3516,8 +3517,12 @@
   "schema": "creal-declare-deps/v1",
   "source": {
     "creal_prelude_fields": 606,
-    "creal_rs_lines": 17244,
-    "functions_indexed": 1915,
+    "creal_rs_lines": 17172,
+    "fields_in_module_registries": 7,
+    "functions_indexed": 1916,
+    "module_registries": {
+      "ivt_boundary": "IvtBoundaryNames"
+    },
     "modules_indexed": 48,
     "steps": 211
   },
@@ -13579,13 +13584,13 @@
     },
     {
       "declared_provides": [
-        "ivt_exact_root_decides_sign",
-        "ivt_plateau",
-        "ivt_plateau_nonneg_at_one",
-        "ivt_plateau_nonpos_at_zero",
-        "ivt_plateau_uniformly_continuous",
-        "uniformly_continuous_max",
-        "uniformly_continuous_min"
+        "ivt_boundary.ivt_exact_root_decides_sign",
+        "ivt_boundary.ivt_plateau",
+        "ivt_boundary.ivt_plateau_nonneg_at_one",
+        "ivt_boundary.ivt_plateau_nonpos_at_zero",
+        "ivt_boundary.ivt_plateau_uniformly_continuous",
+        "ivt_boundary.uniformly_continuous_max",
+        "ivt_boundary.uniformly_continuous_min"
       ],
       "declared_requires": [
         "abs",
@@ -13637,13 +13642,13 @@
       "index": 160,
       "label": "ivt_boundary::declare_ivt_boundary",
       "measured_provides": [
-        "ivt_exact_root_decides_sign",
-        "ivt_plateau",
-        "ivt_plateau_nonneg_at_one",
-        "ivt_plateau_nonpos_at_zero",
-        "ivt_plateau_uniformly_continuous",
-        "uniformly_continuous_max",
-        "uniformly_continuous_min"
+        "ivt_boundary.ivt_exact_root_decides_sign",
+        "ivt_boundary.ivt_plateau",
+        "ivt_boundary.ivt_plateau_nonneg_at_one",
+        "ivt_boundary.ivt_plateau_nonpos_at_zero",
+        "ivt_boundary.ivt_plateau_uniformly_continuous",
+        "ivt_boundary.uniformly_continuous_max",
+        "ivt_boundary.uniformly_continuous_min"
       ],
       "measured_requires": [
         "abs",

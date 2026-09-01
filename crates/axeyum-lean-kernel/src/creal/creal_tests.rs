@@ -11156,7 +11156,7 @@ fn ivt_plateau_endpoint_values_reduce_and_the_root_endpoint_flips_with_the_sign_
     let neg_three = d.const_app(p.neg, &[three]);
 
     let sample_at = |d: &mut IntDev<'_>, v: ExprId, x: ExprId| -> ExprId {
-        let at = d.const_app(p.ivt_plateau, &[v, x]);
+        let at = d.const_app(p.ivt_boundary.ivt_plateau, &[v, x]);
         d.const_app(p.seq, &[at, idx0])
     };
 
@@ -11223,7 +11223,7 @@ fn ivt_plateau_is_the_clamp_the_row_two_theorem_uses() {
     let three_nat = d.num(3);
     let three = d.const_app(p.of_nat, &[three_nat]);
 
-    let folded = d.const_app(p.ivt_plateau, &[three, one_c]);
+    let folded = d.const_app(p.ivt_boundary.ivt_plateau, &[three, one_c]);
     let raw = {
         let neg_one = d.const_app(p.neg, &[one_c]);
         let floor = d.const_app(p.add, &[one_c, neg_one]);
@@ -11292,7 +11292,7 @@ fn ivt_row_two_derives_a_principle_absent_from_the_environment() {
     // And the theorem itself is a checked `Theorem` resting on nothing.
     let declaration = kernel
         .environment()
-        .get(p.ivt_exact_root_decides_sign)
+        .get(p.ivt_boundary.ivt_exact_root_decides_sign)
         .expect("CReal.ivt_exact_root_decides_sign must be declared");
     assert!(
         matches!(declaration, Declaration::Theorem { .. }),
@@ -11300,7 +11300,7 @@ fn ivt_row_two_derives_a_principle_absent_from_the_environment() {
     );
     assert!(
         kernel
-            .axiom_footprint(p.ivt_exact_root_decides_sign)
+            .axiom_footprint(p.ivt_boundary.ivt_exact_root_decides_sign)
             .is_empty(),
         "row 2 must be axiom-free"
     );

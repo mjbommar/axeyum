@@ -32,6 +32,13 @@ WHAT IT MEASURES, per top-level `declare_*` reachable from a `STEPS` entry:
   requires  the `CRealPrelude` fields it READS -- every other `p.foo` in that
             same transitive closure.
 
+Since ADR-1512 a module's names may live in its own registry
+(`p.ivt_boundary.ivt_plateau`), and such a field keeps the composite id
+`ivt_boundary.ivt_plateau` here. Following that is not optional: a scan that
+stops at `p.<one segment>` reads every migrated name as required-by-many and
+provided-by-none, which is a clean report and a false one. `--report` prints
+the registry count so a run that silently stopped following them is visible.
+
 The one subtlety that a naive `p\\.(\\w+)` scan gets WRONG, and which the
 `creal-steps` extraction called out as the generalization it had to make by
 hand: a helper that declares under a `name: NameId` PARAMETER
@@ -207,19 +214,69 @@ def blank_test_modules(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 FIELD_DECL = re.compile(r"^\s*pub ([a-z_][a-z_0-9]*): NameId,", re.M)
+# ADR-1512: a field whose type is a per-module registry, e.g.
+# `pub ivt_boundary: IvtBoundaryNames,`.
+REGISTRY_DECL = re.compile(r"^\s*pub ([a-z_][a-z_0-9]*): ([A-Z][A-Za-z0-9]*Names),", re.M)
 
 
-def struct_fields(clean: str) -> list[str]:
-    """Every `NameId` field of `CRealPrelude`.
+def registry_fields(sources: dict[str, str], registry: str) -> list[str]:
+    """The `NameId` fields of a per-module registry struct, wherever it lives."""
+    for text in sources.values():
+        marker = f"pub struct {registry} {{"
+        if marker not in text:
+            continue
+        start = text.index(marker)
+        end = match_brace(text, text.index("{", start))
+        return FIELD_DECL.findall(text[start:end])
+    return []
 
-    `pub rat: RatPrelude` is deliberately NOT one: it is a whole sub-prelude
-    built by `build_rat_prelude` before `creal` starts, so it is a dependency
-    of the module rather than of any step, and counting it makes all 211 steps
-    require something no step provides.
+
+def struct_fields(clean: str, sources: dict[str, str]) -> tuple[list[str], dict[str, str]]:
+    """Every field this graph is keyed on, and the registries among them.
+
+    Returns `(field_ids, registry_of_facade_field)`. A field moved into a
+    per-module registry by ADR-1512 keeps a stable id of the form
+    `ivt_boundary.ivt_plateau`, matching how the code now spells it
+    (`p.ivt_boundary.ivt_plateau`) -- so the graph follows the refactor
+    instead of quietly losing the module that moved. Without this the seven
+    migrated names would read as "required by steps, provided by none", which
+    is a clean report and a false one.
+
+    `pub rat: RatPrelude` is deliberately NOT a field: it is a whole
+    sub-prelude built by `build_rat_prelude` before `creal` starts, so it is a
+    dependency of the module rather than of any step, and counting it makes
+    every step require something no step provides.
     """
     start = clean.index("pub struct CRealPrelude {")
     end = match_brace(clean, clean.index("{", start))
-    return FIELD_DECL.findall(clean[start:end])
+    body = clean[start:end]
+    fields = list(FIELD_DECL.findall(body))
+    registries = {facade: registry for facade, registry in REGISTRY_DECL.findall(body)}
+    for facade, registry in registries.items():
+        leaves = registry_fields(sources, registry)
+        if not leaves:
+            sys.exit(f"creal-declare-deps: registry {registry} has no NameId fields")
+        fields.extend(f"{facade}.{leaf}" for leaf in leaves)
+    return fields, registries
+
+
+def registry_names(sources: dict[str, str], facade: str, registry: str) -> dict[str, str]:
+    """`facade.leaf -> dotted kernel name`, read from the registry's `intern`."""
+    out: dict[str, str] = {}
+    for text in sources.values():
+        marker = f"impl {registry} {{"
+        if marker not in text:
+            continue
+        start = text.index(marker)
+        end = match_brace(text, text.index("{", start))
+        for m in re.finditer(
+            r"([a-z_][a-z_0-9]*):\s*kernel\s*\.\s*name_str\(\s*creal\s*,\s*"
+            r"\"([^\"]+)\"\s*\)",
+            text[start:end],
+        ):
+            out[f"{facade}.{m.group(1)}"] = f"CReal.{m.group(2)}"
+        break
+    return out
 
 
 def field_names(clean: str) -> dict[str, str]:
@@ -265,10 +322,27 @@ STEP_ENTRY = re.compile(
     r"run:\s*([A-Za-z_0-9:]+)\s*,",
     re.S,
 )
-ACCESSOR = re.compile(r"p\.([a-z_][a-z_0-9]*)")
+# `p.foo`, or `p.ivt_boundary.foo` once ADR-1512 has moved a module's names
+# into its own registry. `resolve` turns a match into the field id the graph
+# is keyed on -- WITHOUT it, a migrated module reads as "required by steps and
+# provided by none", which is a clean report and a false one.
+ACCESSOR = re.compile(r"p\.([a-z_][a-z_0-9]*)(?:\.([a-z_][a-z_0-9]*))?")
 
 
-def steps_table(clean: str) -> list[dict]:
+def resolve(match: "re.Match[str]", registries: dict[str, str]) -> str:
+    """The field id a `p....` match names."""
+    head, leaf = match.group(1), match.group(2)
+    if leaf and head in registries:
+        return f"{head}.{leaf}"
+    return head
+
+
+def accessor_ids(text: str, registries: dict[str, str]) -> list[str]:
+    """Every field id `text` reads through a `p....` accessor."""
+    return [resolve(m, registries) for m in ACCESSOR.finditer(text)]
+
+
+def steps_table(clean: str, registries: dict[str, str]) -> list[dict]:
     start = clean.index("const STEPS: &[BuildStep] = &[")
     end = match_brace(clean, clean.index("[", clean.index("=", start)), "[", "]")
     body = clean[start:end]
@@ -279,8 +353,8 @@ def steps_table(clean: str) -> list[dict]:
             {
                 "label": label,
                 "run": run,
-                "declared_requires": sorted(set(ACCESSOR.findall(requires))),
-                "declared_provides": sorted(set(ACCESSOR.findall(provides))),
+                "declared_requires": sorted(set(accessor_ids(requires, registries))),
+                "declared_provides": sorted(set(accessor_ids(provides, registries))),
             }
         )
     return out
@@ -441,7 +515,9 @@ ADD_INDUCTIVE = re.compile(r"\badd_inductive\s*\(")
 EXTERNAL_SINK = re.compile(r"\.\s*(?:theorem|try_theorem|declare_theorem)\s*\(")
 
 
-def direct_writes(item: Item, fields: set[str]) -> tuple[set[str], set[int], list[str]]:
+def direct_writes(
+    item: Item, fields: set[str], registries: dict[str, str]
+) -> tuple[set[str], set[int], list[str]]:
     """Fields this item declares under a literal, and the parameter positions
     it declares under.
 
@@ -476,7 +552,7 @@ def direct_writes(item: Item, fields: set[str]) -> tuple[set[str], set[int], lis
                     elif char == ";" and depth == 0:
                         cut = index
                         break
-                for field in ACCESSOR.findall(tail[:cut]):
+                for field in accessor_ids(tail[:cut], registries):
                     if field in fields:
                         writes.add(field)
 
@@ -532,13 +608,27 @@ def main() -> int:
     # they are read from a comments-only strip. See `strip_noise`.
     tables = strip_noise(blanked, keep_strings=True)
 
-    fields = struct_fields(clean)
+    # Index every non-test creal source. Done BEFORE the field parse: a
+    # per-module registry (ADR-1512) lives in its own module's file, so
+    # `struct_fields` has to be able to look there.
+    sources = {"creal": clean}
+    source_tables = {"creal": tables}
+    for path in sorted(CREAL_DIR.glob("*.rs")):
+        if SKIP.search(path.name):
+            continue
+        blanked_module = blank_test_modules(path.read_text())
+        sources[path.stem] = strip_noise(blanked_module)
+        source_tables[path.stem] = strip_noise(blanked_module, keep_strings=True)
+
+    fields, registries = struct_fields(clean, sources)
     field_set = set(fields)
     dotted = field_names(tables)
-    steps = steps_table(tables)
+    for facade, registry in registries.items():
+        dotted.update(registry_names(source_tables, facade, registry))
+    steps = steps_table(tables, registries)
 
-    # Positive controls: each of the three parses below has a failure mode
-    # that produces a clean, entirely wrong report rather than an error.
+    # Positive controls: each of the parses below has a failure mode that
+    # produces a clean, entirely wrong report rather than an error.
     if not fields:
         sys.exit("creal-declare-deps: parsed 0 CRealPrelude fields")
     if not dotted:
@@ -548,13 +638,6 @@ def main() -> int:
     unnamed = sorted(set(fields) - set(dotted) - {"rat"})
     if unnamed:
         sys.exit(f"creal-declare-deps: {len(unnamed)} field(s) unmapped: {unnamed[:5]}")
-
-    # Index every non-test creal source.
-    sources = {"creal": clean}
-    for path in sorted(CREAL_DIR.glob("*.rs")):
-        if SKIP.search(path.name):
-            continue
-        sources[path.stem] = strip_noise(blank_test_modules(path.read_text()))
 
     items: dict[tuple[str, str], Item] = {}
     imports: dict[str, dict[str, tuple[str, str]]] = {}
@@ -576,7 +659,7 @@ def main() -> int:
 
     local_write_spans: dict[tuple[str, str], set[tuple[int, int]]] = {}
     for key, item in items.items():
-        writes, at, inductives = direct_writes(item, field_set)
+        writes, at, inductives = direct_writes(item, field_set, registries)
         item.writes |= writes
         item.declares_at |= at
         note_inductives(item, inductives)
@@ -587,7 +670,7 @@ def main() -> int:
         # field it passes there is a write by this function, not a read.
         spans: set[tuple[int, int]] = set()
         for closure in index_closures(item.module, item.body):
-            c_writes, c_at, c_inductives = direct_writes(closure, field_set)
+            c_writes, c_at, c_inductives = direct_writes(closure, field_set, registries)
             item.writes |= c_writes
             note_inductives(item, c_inductives)
             if not c_at:
@@ -653,11 +736,12 @@ def main() -> int:
     for key, item in items.items():
         spans = write_spans[key]
         for m in ACCESSOR.finditer(item.body):
-            if m.group(1) not in field_set:
+            field = resolve(m, registries)
+            if field not in field_set:
                 continue
             if any(lo <= m.start() < hi for lo, hi in spans):
                 continue
-            item.reads.add(m.group(1))
+            item.reads.add(field)
 
     # Transitive closure per step.
     def closure(start: Item) -> set[tuple[str, str]]:
@@ -776,6 +860,15 @@ def main() -> int:
                 }
             )
 
+    # Every field the STRUCT declares must be provided by exactly one step.
+    # Derived from `CRealPrelude` itself rather than from a list, so it
+    # measures the code and not this script's memory -- and it is the guard
+    # that fires when the accessor scan stops following a per-module registry:
+    # every migrated name then vanishes from the graph at once. Verified by
+    # mutation (delete the registry branch of `resolve`): 0 -> 2 unprovided,
+    # and `--strict` then exits 2.
+    never_provided = sorted(set(fields) - set(provider_of))
+
     consumed: set[str] = set()
     for step in measured:
         consumed |= set(step.get("measured_requires", []))
@@ -800,6 +893,8 @@ def main() -> int:
         "source": {
             "creal_rs_lines": creal_raw.count("\n") + 1,
             "creal_prelude_fields": len(fields),
+            "module_registries": dict(sorted(registries.items())),
+            "fields_in_module_registries": sum(1 for f in fields if "." in f),
             "steps": len(steps),
             "modules_indexed": len(sources),
             "functions_indexed": len(items),
@@ -810,6 +905,7 @@ def main() -> int:
             "linear_order_is_topological": not order_violations,
             "order_violations": order_violations,
             "table_gaps": table_gaps,
+            "fields_never_provided_by_any_step": never_provided,
             "steps_with_no_dependents": leaves,
             "dispatch_entries_per_module": {m: len(v) for m, v in sorted(per_module.items())},
             "modules_with_multiple_dispatch_entries": multi_entry,
@@ -827,15 +923,22 @@ def main() -> int:
         ARTIFACT.write_text(text)
 
     f = document["findings"]
-    print(f"CREAL_DECLARE_DEPS|steps={len(steps)}|fields={len(fields)}|fns={len(items)}")
+    print(
+        f"CREAL_DECLARE_DEPS|steps={len(steps)}|fields={len(fields)}|fns={len(items)}"
+        f"|registries={len(registries)}"
+        f"|fields_in_registries={sum(1 for f in fields if '.' in f)}"
+    )
     print(f"  linear order is a valid topological order: {f['linear_order_is_topological']}")
     print(f"  order violations (measured graph):         {len(f['order_violations'])}")
     print(f"  steps whose table disagrees with the code: {len(f['table_gaps'])}")
+    print(f"  fields no step provides:                   {len(f['fields_never_provided_by_any_step'])}")
     print(f"  steps with no dependents (leaves):         {len(f['steps_with_no_dependents'])}")
     print(f"  modules with >1 dispatch entry:            {len(f['modules_with_multiple_dispatch_entries'])}")
     print(f"  fields provided by >1 step:                {len(f['fields_provided_by_more_than_one_step'])}")
 
-    if args.strict and (f["order_violations"] or f["table_gaps"]):
+    if args.strict and (
+        f["order_violations"] or f["table_gaps"] or f["fields_never_provided_by_any_step"]
+    ):
         print(
             "CREAL_DECLARE_DEPS|DEFECT|the STEPS table does not match the code",
             file=sys.stderr,

@@ -161,6 +161,24 @@ outside what the plan constrains. Closing that means generating
 `requires`/`provides` rather than maintaining them by hand — the same remedy
 `PLAN.md` and the ADR index already needed, for the same reason.
 
+## Addendum: Slice C landed one module
+
+[ADR-1512](../09-decisions/adr-1512-per-module-name-registries-behind-the-crealprelude-facade.md)
+records the facade design and the migration order this graph implies —
+**15 modules are fully self-contained** (no field read outside the module),
+76 fields between them, and they can migrate independently in any order.
+`ivt_boundary` moved first: 7 fields, `CRealPrelude` 606 → 599, projection
+byte-identical.
+
+The analyzer follows the facade, which was not optional. A `p.<one segment>`
+scan reads every migrated name as required-by-many and provided-by-none —
+clean output, false content. Migrated fields keep the composite id
+`ivt_boundary.ivt_plateau`, and a new finding (*every field the struct
+declares is provided by exactly one step*, derived from `CRealPrelude` rather
+than a list) fails `--strict` if that stops holding. Mutation-verified:
+deleting the registry branch of `resolve` moves it 0 → 2 and `--strict` to
+exit 2.
+
 **"Second dispatch entry point" patches: none found.** The review predicted
 duplicate declarations added elsewhere to work around order. There are zero:
 every one of the 606 fields is declared by exactly one step. The 23 modules

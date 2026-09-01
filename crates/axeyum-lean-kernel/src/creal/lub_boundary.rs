@@ -14,7 +14,7 @@
 //! An asserted unavailability cannot fail, so it is not evidence — the same
 //! defect [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
 //! (`creal/extreme_value.rs`) exists to remove for EVT, and
-//! [`CReal.ivt_exact_root_decides_sign`](super::CRealPrelude::ivt_exact_root_decides_sign)
+//! [`CReal.ivt_exact_root_decides_sign`](crate::IvtBoundaryNames::ivt_exact_root_decides_sign)
 //! (`creal/ivt_boundary.rs`) for IVT. This file makes LUB's assertion a
 //! theorem.
 //!
