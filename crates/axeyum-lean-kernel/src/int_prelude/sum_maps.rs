@@ -888,7 +888,9 @@ pub(super) fn declare_prod_range_sum_range_expand(d: &mut IntDev<'_>) -> Result<
             let tail_maps = sum_maps(d, j, n, tail_picks);
             let t2 = d.imul(head_sum, tail_maps);
             let ih_at_tail = d.apply(ih, &[tc]);
-            let h2 = d.icongr(tail_prod, tail_maps, ih_at_tail, &|d, t| d.imul(head_sum, t));
+            let h2 = d.icongr(tail_prod, tail_maps, ih_at_tail, &|d, t| {
+                d.imul(head_sum, t)
+            });
 
             // The other end: RHS ≡ sumRange (fun k => sumMaps j n (fun g =>
             //   picks c (succ j) (cons k g))) n, and each inner body peels to
@@ -970,8 +972,14 @@ pub(super) fn declare_prod_range_sum_range_expand(d: &mut IntDev<'_>) -> Result<
             let rhs_full = d.const_app(p.sum_range, &[rhs_summand, n]);
             let mid_full = d.const_app(p.sum_range, &[mid_summand, n]);
             let pulled_full = d.const_app(p.sum_range, &[pulled_summand, n]);
-            let s1 = d.lemma(p.sum_range_congr, &[rhs_summand, mid_summand, n, per_k_congr]);
-            let s2 = d.lemma(p.sum_range_congr, &[mid_summand, pulled_summand, n, per_k_pull]);
+            let s1 = d.lemma(
+                p.sum_range_congr,
+                &[rhs_summand, mid_summand, n, per_k_congr],
+            );
+            let s2 = d.lemma(
+                p.sum_range_congr,
+                &[mid_summand, pulled_summand, n, per_k_pull],
+            );
             // pulled_full = mul (sumRange (c 0) n) tail_maps = t2
             let s3 = d.lemma(p.sum_range_mul_right, &[c0, tail_maps, n]);
             let (_, rhs_to_t2) = d.ichain(rhs_full, &[(mid_full, s1), (pulled_full, s2), (t2, s3)]);

@@ -2506,3 +2506,6 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
 
 #[cfg(test)]
 mod int_prelude_tests;
+
+#[cfg(test)]
+mod sum_maps_tests;

@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 254] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 261] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -454,6 +454,15 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 254] {
         p.sum_range_of_nat,
         p.mod_eq_sum_range,
         p.neg_add,
+        // `aggregates` lane: the function-space-indexed sum
+        // (`int_prelude/sum_maps.rs`), ADR-1315.
+        p.sum_range_mul_right,
+        p.sum_range_mul_left,
+        p.sum_maps_zero,
+        p.sum_maps_succ,
+        p.sum_maps_congr,
+        p.sum_maps_mul_left,
+        p.prod_range_sum_range_expand,
     ]
 }
 
@@ -506,7 +515,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 29] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 30] {
     [
         p.fib,
         p.even,
@@ -537,6 +546,7 @@ fn definition_names(p: &IntPrelude) -> [crate::NameId; 29] {
         p.is_quadratic_residue,
         p.gcd_a,
         p.gcd_b,
+        p.sum_maps,
     ]
 }
 
