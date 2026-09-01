@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ratint-horowitz-x-over-x-minus-one-squared",
+  "title": "The Horowitz-Ostrogradsky split of x/(x-1)^2 has rational part -1/(x-1), verified by an exact polynomial identity plus a divisibility guard neither of which suffices alone",
+  "statement": "For the rational integrand A/D = x/(x-1)^2, the Horowitz-Ostrogradsky decomposition int A/D = B/D2 + int C/D1 is computed with D2 = gcd(D, D') = x-1 and D1 = D/D2 = x-1, so that int x/(x-1)^2 dx = B/(x-1) + int C/(x-1) dx. SCOPE, stated because it is exactly the kind of over-claim this audit exists to catch: the cited tests pin deg D2 = 1 and the five verification guards, and they do NOT pin the numerators. The values B = -1 and C = 1 -- i.e. int x/(x-1)^2 dx = -1/(x-1) + ln|x-1| -- follow from the classical uniqueness of the Horowitz split and were derived BY HAND for this fact; treat them as context, not as checked content. What IS checked is everything after this sentence. What is verified, and by what: axeyum_cas::ratint::verify_horowitz re-derives five conditions from the returned tuple alone -- D non-constant; the properness bounds deg B < deg D2 and deg C < deg D1; the factorization D2*D1 = D; the exact divisibility D2 | D'; and the core polynomial identity A = B'*D1 - B*H + C*D2 where H = D'/D2 - D1'. The audit finding this fact exists to record is that NO ONE of those guards implies the others, and the module carries a surgical fixture for each: a certificate with D2 not equal to gcd(D,D') satisfies the core identity exactly and is a genuinely WRONG antiderivative, caught only by the divisibility guard; and B perturbed by a whole copy of D2 leaves the core identity untouched and is caught only by the properness bound. Cas-internal under ADR-0601 SS2.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(horowitz-ostrogradsky\n  (integrand (/ x (^ (- x 1) 2)))\n  (d2 (- x 1)) (d1 (- x 1))\n  (rational-part (/ -1 (- x 1)))\n  (log-part (/ 1 (- x 1)))\n  (assert (= (* d2 d1) d))\n  (assert (divides d2 (deriv d)))\n  (assert (< (degree b) (degree d2)))\n  (assert (< (degree c) (degree d1)))\n  (assert (= a (- (+ (* (deriv b) d1) (* c d2)) (* b (- (/ (deriv d) d2) (deriv d1)))))))",
+    "fragment": "rational-integration-horowitz",
+    "free_symbols": [
+      "x"
+    ],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form: every guard is discharged in axeyum_ir::poly exact-Rational arithmetic, not through crate::Kernel::add_declaration.",
+    "cas.horowitz-ostrogradsky-criterion: that a tuple satisfying these five conditions IS the Horowitz-Ostrogradsky split -- and in particular that the rational part is then unique -- is the classical theorem, taken as read. The checker re-derives the conditions; it does not re-derive the theorem.",
+    "cas.ratint-checkers-are-not-on-the-production-path: AUDITED 2026-09-01 and disclosed here rather than left implicit. ratint::verify_horowitz and ratint::verify_log_terms both carry #[cfg_attr(not(test), expect(dead_code, ...))] (ratint.rs:378 and :479) and are called from NOWHERE outside this module. lib.rs::integrate_rational (lib.rs:18371) calls ratint::horowitz and never calls verify_horowitz; lib.rs::integrate_log_part (lib.rs:18423) calls ratint::log_terms and never calls verify_log_terms. So this fact's evidence is real and the guards are real, and the SHIPPED integration path does not run them -- it is checked only by lib.rs::prove_derivative, which shares normalize_rational with the producer. Wiring the two verifiers into the production path is bounded, named work and would strengthen every rational-integration result the crate returns."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-ratint-horowitz-properness-guard-is-load-bearing",
+      "kind": "witness-replay",
+      "supports": "the properness bound deg B < deg D2 is independently load-bearing: B perturbed by a whole copy of D2 satisfies the core identity exactly and is rejected only by that bound",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::ratint::horowitz (producer, untrusted)",
+        "axeyum_cas::ratint::verify_horowitz (five guards re-derived from the returned tuple alone, in exact Rational arithmetic, sharing no solve path with the producer)",
+        "the fixture itself, which asserts the core identity is UNTOUCHED by the perturbation before asserting the verifier rejects -- so the test cannot pass by the mutation happening to break something else"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ratint::tests::wrong_degree_b_is_vacuous_without_the_properness_guard -- --exact 2>/dev/null | grep -cE '^test ratint::tests::wrong_degree_b_is_vacuous_without_the_properness_guard \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/ratint.rs",
+      "notes": "This is the adversarial-fixture discipline applied correctly: a mutant over an instance where EVERY OTHER GUARD PASSES. The fixture recomputes the core identity by hand for the perturbed B and asserts it still holds, so the test is measuring the properness guard and nothing else. The `grep -cE` on the test's own `... ok` line makes the command fail if the test is renamed away as well as if it fails."
+    },
+    {
+      "id": "cas-ratint-horowitz-divisibility-guard-is-load-bearing",
+      "kind": "witness-replay",
+      "supports": "the exact-divisibility guard D2 | D' is independently load-bearing: a split with D2*D1 = D but D2 != gcd(D,D') solves the core identity and yields a genuinely wrong antiderivative, rejected only by that guard",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::ratint::verify_horowitz (must return Some(false), not None -- a decline would not distinguish a forgery from an overflow)",
+        "the fixture's own independent evaluation, which confirms the forged certificate is NOT a rational-function identity by evaluating both sides at x = 3 (-1/4 + 1 = 3/4 against A/D = 3/2) before asserting rejection"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib ratint::tests::non_dividing_d2_slips_past_without_the_divisibility_guard -- --exact 2>/dev/null | grep -cE '^test ratint::tests::non_dividing_d2_slips_past_without_the_divisibility_guard \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/ratint.rs",
+      "notes": "The sharper of the two fixtures, and the one that answers the audit's central question for this module. It is a genuinely wrong certificate -- not merely a non-canonical one -- and a divisibility-blind implementation would compute the same wrong H and accept it. The fixture establishes the wrongness NUMERICALLY at an independent point rather than asserting it, which is the difference between a negative control and a decorative one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-ledger-audit lane, auditing crates/axeyum-cas against the fact ledger per docs/research/11-design-review/2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md and its follow-up 2026-09-01-cas-certificate-reconstruction-audit.md. The certificate and its checkers pre-existed this fact; the ledger row did not.",
+    "source": "Horowitz's 1971 algorithm for the rational part of an integral of a rational function, itself a rediscovery of Ostrogradsky's 1845 method; the split into a rational part and a squarefree-denominator logarithmic part is what makes the remaining integral amenable to a residue argument.",
+    "prior_art": [
+      {
+        "who": "Mikhail Ostrogradsky",
+        "what": "separating the rational part of the integral of a rational function without factoring the denominator",
+        "year": 1845,
+        "where": "Bulletin de la classe physico-mathematique de l'Academie Imperiale des Sciences de Saint-Petersbourg 4, 145-167",
+        "attribution": "standard attribution; not consulted here"
+      },
+      {
+        "who": "Ellis Horowitz",
+        "what": "the algorithm as it is implemented today, via gcd(D, D') and a linear solve for the two numerators",
+        "year": 1971,
+        "where": "Proceedings of SYMSAC '71, 441-457",
+        "attribution": "standard attribution; not consulted here"
+      }
+    ]
+  },
+  "notes": "AUDIT NOTE. On the question of whether the certificate records every distinction its producer makes, ratint is the clearest NEGATIVE in the crate and the reason is structural: there IS no certificate object. ratint::horowitz returns a bare four-tuple (B, D2, C, D1) with no field names, no serialization, and no record of the (numer, denom) it was derived from. So three producer distinctions are simply unrecoverable from the returned value. (1) The producer COMPUTES D2 = gcd(D, D'), which makes D1 squarefree by construction; verify_horowitz can only check D2*D1 = D and D2 | D', never that D2 is the maximal repeated part -- 'this is the canonical split' is not expressible. (2) The caller reduces by gcd(numer, denom) BEFORE calling (lib.rs:18366-18370) and the reduced pair is discarded, so a consumer cannot tell whether the split describes the original integrand or a cancelled one. (3) log_terms' rational-root scan can return a PARTIAL residue list when some residues are irrational, producing a wrong antiderivative; the list carries no 'these are all the roots' flag, and verify_log_terms has to re-derive completeness independently via prod v_i == monic(q_bar) -- which, being dead code in production, never runs on the shipped path."
+}

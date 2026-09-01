@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-sos-motzkin-psd-not-sos",
+  "title": "The Motzkin form is nonnegative and is not a sum of squares, certified both ways in exact rationals",
+  "statement": "For the Motzkin form M(x,y,z) = x^4 y^2 + x^2 y^4 + z^6 - 3 x^2 y^2 z^2: (a) M >= 0 at every point of every ordered field, certified by an exact-rational identity exhibiting (x^2+y^2+z^2) * M as a sum of 5 weighted squares of polynomials, with nonnegativity at the origin coming from homogeneity; and (b) M is NOT a sum of squares of polynomials, certified by an exact-rational linear functional on degree-6 forms whose 10-by-10 moment matrix over the checker-built basis of the 10 degree-3 monomials is positive semidefinite by exact rational LDL^T (7 positive pivots, 3 zero) and which takes the value -1 on M. Both halves are re-derived from the committed certificate by axeyum-cas's own checker; NEITHER half passes through crate::Kernel::add_declaration, so this is cas-internal in the sense of ADR-0601 SS2, and that is the honest label rather than an absence.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"certificate\":{\"dual\":[[[[\"x\",2],[\"y\",2],[\"z\",2]],[9,1]],[[[\"x\",2],[\"y\",4]],[9,1]],[[[\"x\",2],[\"z\",4]],[18,1]],[[[\"x\",4],[\"y\",2]],[9,1]],[[[\"x\",4],[\"z\",2]],[72,1]],[[[\"x\",6]],[450,1]],[[[\"y\",2],[\"z\",4]],[18,1]],[[[\"y\",4],[\"z\",2]],[72,1]],[[[\"y\",6]],[450,1]],[[[\"z\",6]],[8,1]]],\"multiplied\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",2],[\"y\",1],[\"z\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"y\",1],[\"z\",3]]}]},\"weight\":[1,1]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",1],[\"y\",2],[\"z\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"x\",1],[\"z\",3]]}]},\"weight\":[1,1]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",2],[\"y\",2]]},{\"coefficient\":[-1,1],\"monomial\":[[\"z\",4]]}]},\"weight\":[1,1]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",1],[\"y\",3]]},{\"coefficient\":[-1,1],\"monomial\":[[\"x\",3],[\"y\",1]]}]},\"weight\":[1,4]},{\"square\":{\"terms\":[{\"coefficient\":[-2,1],\"monomial\":[[\"x\",1],[\"y\",1],[\"z\",2]]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",1],[\"y\",3]]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",3],[\"y\",1]]}]},\"weight\":[3,4]}]}},\"description\":\"The Motzkin form x^4y^2 + x^2y^4 + z^6 - 3x^2y^2z^2 is nonnegative on the reals but is not a sum of squares of polynomials. Certified both ways: an SOS decomposition of |x|^2 times the form, and a PSD moment functional that is negative on it.\",\"form\":{\"terms\":[{\"coefficient\":[-3,1],\"monomial\":[[\"x\",2],[\"y\",2],[\"z\",2]]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",2],[\"y\",4]]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",4],[\"y\",2]]},{\"coefficient\":[1,1],\"monomial\":[[\"z\",6]]}]},\"format\":\"axeyum-sos-certificate\",\"half_degree\":3,\"id\":\"motzkin-psd-not-sos\",\"kind\":\"psd-not-sos\",\"multiplier\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",2]]},{\"coefficient\":[1,1],\"monomial\":[[\"y\",2]]},{\"coefficient\":[1,1],\"monomial\":[[\"z\",2]]}]},\"variables\":[\"x\",\"y\",\"z\"],\"version\":1}",
+    "fragment": "sos-psd-not-sos",
+    "free_symbols": [
+      "x",
+      "y",
+      "z"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form: every obligation is discharged in axeyum-cas's own MvPoly exact-rational arithmetic. Nothing here passes through crate::Kernel::add_declaration, so this is a cas-internal result under ADR-0601 SS2 -- honest, and NOT part of the axiom-free tally.",
+    "cas.sos-decomposition-implies-nonnegativity-over-an-ordered-field: the checker verifies a polynomial IDENTITY (target = sum of weighted squares with positive rational weights). That an identity of that shape implies the target is nonnegative at every point is ordered-field reasoning taken as read here; it is not itself re-derived by this checker."
+  ],
+  "evidence": [
+    {
+      "id": "cas-sos-motzkin-psd-not-sos-artifact-recheck",
+      "kind": "witness-replay",
+      "supports": "the committed Motzkin certificate re-checks from disk: 5 named obligations discharged in exact rational arithmetic, the certificate identified by id and kind, and the obligation count pinned so a checker asserting less exits non-zero",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::sos::check (crates/axeyum-cas/src/sos/check.rs) -- re-derives every obligation from the certificate's own exact-rational fields; the checker BUILDS |x|^2 (sos::sum_of_variable_squares) and the Lie derivative itself rather than reading them from the file, so a file cannot declare a degenerate norm or a tampered derivative and still check",
+        "crates/axeyum-cas/examples/sos_certify.rs --expect-kind/--expect-id/--expect-checks (pins WHICH certificate and HOW MANY obligations, so a checker that silently began asserting less exits non-zero)",
+        "scripts/check-sos-negative-controls.sh -- 21 committed tampered fixtures under artifacts/instances/sos/negative-controls/ that this checker must REJECT, plus the honest artifacts it must still ACCEPT",
+        "crates/axeyum-cas/tests/sos_certificate_artifacts.rs -- asserts the committed file parses back to exactly the in-crate corpus value, so a hand-edit that still checks is caught"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-cas --example sos_certify -- artifacts/sos-certificates/motzkin-psd-not-sos.json --expect-kind psd-not-sos --expect-id motzkin-psd-not-sos --expect-checks 5",
+      "artifact": "artifacts/sos-certificates/motzkin-psd-not-sos.json",
+      "notes": "WHY THIS COMMAND CANNOT PASS ON A BROKEN RUN. The exit status depends on what the run found, not on the build succeeding, and both directions were verified 2026-09-01 on this host: (i) `--expect-checks 4` against the UNCHANGED honest artifact exits 1 with `expected 4 obligations, discharged 5`, so a checker that stopped discharging an obligation fails here; (ii) artifacts/instances/sos/negative-controls/motzkin-tampered-square.json exits 1 with `the squares expand to a polynomial differing from the target in 6 monomial(s)`, so a false certificate is refused. A TRAP for anyone extending this: `sos_certify --show` prints SIX lines for this certificate, because `dual-support` (crates/axeyum-cas/examples/sos_certify.rs:189) is a display-only line printed OUTSIDE the obligation loop and is not an obligation. Counting --show lines is not a substitute for --expect-checks. ON THE DISTINCTION QUESTION -- whether the certificate records every distinction its producer makes: the claim `M is not a sum of squares` is DEGREE-RELATIVE, and the certificate does record the degree it is relative to. `half_degree: 3` is a stored field, the checker builds the degree-3 monomial basis FROM it rather than inferring it from the dual functional's support, and artifacts/instances/sos/negative-controls/motzkin-dual-off-degree.json is the committed control for exactly that distinction. Two further controls, motzkin-dual-not-psd.json and motzkin-dual-nonneg-on-form.json, cover the two halves of the moment argument separately, so neither can be dropped without a test dying. This certificate shape therefore does NOT have the failure documented for nra_monomial_bound_cert, where the producer distinguished a strict from a non-strict bound and the certificate stored only the constant."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-ledger-audit lane, auditing crates/axeyum-cas against the fact ledger per docs/research/11-design-review/2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md. The certificate, the checker and the 21 negative controls all pre-existed this fact by weeks; what was missing was the ledger row. scripts/check-sos-negative-controls.sh's own header asserts that 'every fact in the sos family cites this script', and MEASURED 2026-09-01 zero facts did -- the gate was built for facts nobody had written.",
+    "source": "Motzkin's 1967 example, the first explicit nonnegative real polynomial that is not a sum of squares; Hilbert's 1888 theorem had shown such forms exist without exhibiting one. The `not a sum of squares` half is the standard dual/moment argument.",
+    "prior_art": [
+      {
+        "who": "Theodore S. Motzkin",
+        "what": "the form x^4y^2 + x^2y^4 + z^6 - 3x^2y^2z^2, nonnegative on the reals but not a sum of squares of polynomials",
+        "year": 1967,
+        "where": "Inequalities (ed. O. Shisha), Academic Press, pp. 205-224",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source. The certificate, its checker and its 21 negative controls are this repository's; the mathematical statement is classical."
+      },
+      {
+        "who": "David Hilbert",
+        "what": "nonnegative real forms that are not sums of squares exist, for every (n,d) outside three families",
+        "year": 1888,
+        "where": "Mathematische Annalen 32, 342-350",
+        "attribution": "standard attribution; not consulted here"
+      }
+    ]
+  },
+  "notes": "WHY THIS COMMAND CANNOT PASS ON A BROKEN RUN. The exit status depends on what the run found, not on the build succeeding, and both directions were verified 2026-09-01 on this host: (i) `--expect-checks 4` against the UNCHANGED honest artifact exits 1 with `expected 4 obligations, discharged 5`, so a checker that stopped discharging an obligation fails here; (ii) artifacts/instances/sos/negative-controls/motzkin-tampered-square.json exits 1 with `the squares expand to a polynomial differing from the target in 6 monomial(s)`, so a false certificate is refused. A TRAP for anyone extending this: `sos_certify --show` prints SIX lines for this certificate, because `dual-support` (crates/axeyum-cas/examples/sos_certify.rs:189) is a display-only line printed OUTSIDE the obligation loop and is not an obligation. Counting --show lines is not a substitute for --expect-checks. ON THE DISTINCTION QUESTION -- whether the certificate records every distinction its producer makes: the claim `M is not a sum of squares` is DEGREE-RELATIVE, and the certificate does record the degree it is relative to. `half_degree: 3` is a stored field, the checker builds the degree-3 monomial basis FROM it rather than inferring it from the dual functional's support, and artifacts/instances/sos/negative-controls/motzkin-dual-off-degree.json is the committed control for exactly that distinction. Two further controls, motzkin-dual-not-psd.json and motzkin-dual-nonneg-on-form.json, cover the two halves of the moment argument separately, so neither can be dropped without a test dying. This certificate shape therefore does NOT have the failure documented for nra_monomial_bound_cert, where the producer distinguished a strict from a non-strict bound and the certificate stored only the constant."
+}

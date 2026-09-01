@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-sos-energy-barrier-unreachability",
+  "title": "An unbounded-horizon unreachability result for a cubic planar system, from one barrier and two Positivstellensatz multipliers",
+  "statement": "For the planar system x' = y, y' = -x - y^3, no solution starting in the set {4y - x^2 - y^2 - 3 >= 0} ever reaches the set {10x - x^2 - y^2 - 24 >= 0}, at ANY time -- an unbounded horizon, not a bounded-time reachability check. The certificate is one barrier function B = (x^2+y^2)/2 - 6 together with sum-of-squares Positivstellensatz multipliers for the initial and unsafe generators, discharging six obligations in exact rational arithmetic: B <= -1 on the whole initial set, B >= 1 on the whole unsafe set, and -B-dot is a sum of squares (so B never increases along any solution), with B-dot re-derived by the checker from the vector field rather than read from the certificate. The certificate also commits a point in each set, so the separation cannot be vacuously true through an empty set. Cas-internal: nothing here passes through crate::Kernel::add_declaration.",
+  "formal": {
+    "language": "certificate-spec",
+    "statement": "{\"barrier\":{\"terms\":[{\"coefficient\":[-6,1],\"monomial\":[]},{\"coefficient\":[1,2],\"monomial\":[[\"x\",2]]},{\"coefficient\":[1,2],\"monomial\":[[\"y\",2]]}]},\"certificate\":{\"decrease\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"y\",2]]}]},\"weight\":[1,1]}]},\"initial_gap\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"x\",1]]}]},\"weight\":[1,2]},{\"square\":{\"terms\":[{\"coefficient\":[-4,1],\"monomial\":[]},{\"coefficient\":[1,1],\"monomial\":[[\"y\",1]]}]},\"weight\":[1,2]}]},\"initial_margin\":[1,1],\"initial_multipliers\":[{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[]}]},\"weight\":[1,1]}]}],\"unsafe_gap\":{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[-10,3],\"monomial\":[]},{\"coefficient\":[1,1],\"monomial\":[[\"x\",1]]}]},\"weight\":[3,2]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"y\",1]]}]},\"weight\":[3,2]},{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[]}]},\"weight\":[1,3]}]},\"unsafe_margin\":[1,1],\"unsafe_multipliers\":[{\"squares\":[{\"square\":{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[]}]},\"weight\":[1,1]}]}]},\"description\":\"No solution of x' = y, y' = -x - y^3 started in the unit disc at (0,2) ever reaches the unit disc at (5,0), at any time. Unbounded horizon, decided by one barrier function and two Positivstellensatz multipliers.\",\"field\":[{\"terms\":[{\"coefficient\":[1,1],\"monomial\":[[\"y\",1]]}]},{\"terms\":[{\"coefficient\":[-1,1],\"monomial\":[[\"x\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"y\",3]]}]}],\"format\":\"axeyum-sos-certificate\",\"id\":\"energy-barrier-reachability\",\"initial\":[{\"terms\":[{\"coefficient\":[-3,1],\"monomial\":[]},{\"coefficient\":[-1,1],\"monomial\":[[\"x\",2]]},{\"coefficient\":[4,1],\"monomial\":[[\"y\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"y\",2]]}]}],\"initial_witness\":[[\"x\",[0,1]],[\"y\",[2,1]]],\"kind\":\"barrier\",\"unsafe\":[{\"terms\":[{\"coefficient\":[-24,1],\"monomial\":[]},{\"coefficient\":[10,1],\"monomial\":[[\"x\",1]]},{\"coefficient\":[-1,1],\"monomial\":[[\"x\",2]]},{\"coefficient\":[-1,1],\"monomial\":[[\"y\",2]]}]}],\"unsafe_witness\":[[\"x\",[5,1]],[\"y\",[0,1]]],\"variables\":[\"x\",\"y\"],\"version\":1}",
+    "fragment": "sos-barrier",
+    "free_symbols": [
+      "x",
+      "y"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.exact-rational-polynomial-normal-form: every obligation is discharged in axeyum-cas's own MvPoly exact-rational arithmetic. Nothing here passes through crate::Kernel::add_declaration, so this is a cas-internal result under ADR-0601 SS2 -- honest, and NOT part of the axiom-free tally.",
+    "cas.sos-decomposition-implies-nonnegativity-over-an-ordered-field: the checker verifies a polynomial IDENTITY (target = sum of weighted squares with positive rational weights). That an identity of that shape implies the target is nonnegative at every point is ordered-field reasoning taken as read here; it is not itself re-derived by this checker."
+  ],
+  "evidence": [
+    {
+      "id": "cas-sos-energy-barrier-unreachability-artifact-recheck",
+      "kind": "witness-replay",
+      "supports": "the committed barrier certificate re-checks from disk: 6 named obligations discharged in exact rational arithmetic, including the non-emptiness of both sets and the orientation of the separation",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::sos::check (crates/axeyum-cas/src/sos/check.rs) -- re-derives every obligation from the certificate's own exact-rational fields; the checker BUILDS |x|^2 (sos::sum_of_variable_squares) and the Lie derivative itself rather than reading them from the file, so a file cannot declare a degenerate norm or a tampered derivative and still check",
+        "crates/axeyum-cas/examples/sos_certify.rs --expect-kind/--expect-id/--expect-checks (pins WHICH certificate and HOW MANY obligations, so a checker that silently began asserting less exits non-zero)",
+        "scripts/check-sos-negative-controls.sh -- 21 committed tampered fixtures under artifacts/instances/sos/negative-controls/ that this checker must REJECT, plus the honest artifacts it must still ACCEPT",
+        "crates/axeyum-cas/tests/sos_certificate_artifacts.rs -- asserts the committed file parses back to exactly the in-crate corpus value, so a hand-edit that still checks is caught"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-cas --example sos_certify -- artifacts/sos-certificates/energy-barrier-reachability.json --expect-kind barrier --expect-id energy-barrier-reachability --expect-checks 6",
+      "artifact": "artifacts/sos-certificates/energy-barrier-reachability.json",
+      "notes": "WHY THIS COMMAND CANNOT PASS ON A BROKEN RUN. The `--expect-checks 6` pin makes the exit status depend on what the run found rather than on the build succeeding; the shape was verified on the sibling Motzkin certificate the same day (a wrong count against an UNCHANGED honest artifact exits 1 with `expected N obligations, discharged M`), and the tampered-fixture direction was verified there too. Six committed tampered fixtures target this certificate specifically -- barrier-dropped-multiplier, barrier-tampered-barrier, barrier-tampered-field, barrier-zero-margin, barrier-initial-witness-outside, barrier-unsafe-witness-outside -- and scripts/check-sos-negative-controls.sh asserts every one is REJECTED and the honest artifact still ACCEPTED. ON THE DISTINCTION QUESTION, and this is the interesting one for this certificate kind: barrier-zero-margin.json is the control for the distinction that would otherwise be lost. The obligations are stated with an explicit numeric MARGIN of 1 (B <= -1 on the initial set, B >= 1 on the unsafe set) rather than as B < 0 and B > 0. That is how this format expresses strictness at all -- it has no strictness flag, as the sibling Lyapunov fact records. A zero-margin certificate is therefore a different FILE, rejected, rather than the same file read two ways. The design is right; it is worth stating explicitly because the failure this repository has shipped before is exactly a certificate that could not record a strict versus non-strict distinction its producer made, and here the distinction is carried as data."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-ledger-audit lane, auditing crates/axeyum-cas against the fact ledger per docs/research/11-design-review/2026-09-01-the-cas-certifies-far-more-than-the-ledger-records.md. The certificate, the checker and the 21 negative controls all pre-existed this fact by weeks; what was missing was the ledger row. scripts/check-sos-negative-controls.sh's own header asserts that 'every fact in the sos family cites this script', and MEASURED 2026-09-01 zero facts did -- the gate was built for facts nobody had written.",
+    "source": "Barrier certificates for safety verification of continuous and hybrid systems; the Positivstellensatz-multiplier formulation makes the set-constrained inequalities polynomial and hence checkable by exact sum-of-squares identities.",
+    "prior_art": [
+      {
+        "who": "Stephen Prajna and Ali Jadbabaie",
+        "what": "barrier certificates for safety verification of hybrid systems",
+        "year": 2004,
+        "where": "Hybrid Systems: Computation and Control, LNCS 2993, pp. 477-492",
+        "attribution": "standard attribution; not consulted here"
+      }
+    ]
+  },
+  "notes": "WHY THIS COMMAND CANNOT PASS ON A BROKEN RUN. The `--expect-checks 6` pin makes the exit status depend on what the run found rather than on the build succeeding; the shape was verified on the sibling Motzkin certificate the same day (a wrong count against an UNCHANGED honest artifact exits 1 with `expected N obligations, discharged M`), and the tampered-fixture direction was verified there too. Six committed tampered fixtures target this certificate specifically -- barrier-dropped-multiplier, barrier-tampered-barrier, barrier-tampered-field, barrier-zero-margin, barrier-initial-witness-outside, barrier-unsafe-witness-outside -- and scripts/check-sos-negative-controls.sh asserts every one is REJECTED and the honest artifact still ACCEPTED. ON THE DISTINCTION QUESTION, and this is the interesting one for this certificate kind: barrier-zero-margin.json is the control for the distinction that would otherwise be lost. The obligations are stated with an explicit numeric MARGIN of 1 (B <= -1 on the initial set, B >= 1 on the unsafe set) rather than as B < 0 and B > 0. That is how this format expresses strictness at all -- it has no strictness flag, as the sibling Lyapunov fact records. A zero-margin certificate is therefore a different FILE, rejected, rather than the same file read two ways. The design is right; it is worth stating explicitly because the failure this repository has shipped before is exactly a certificate that could not record a strict versus non-strict distinction its producer made, and here the distinction is carried as data."
+}
