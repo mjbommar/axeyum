@@ -6,12 +6,48 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {b : Bool} {n : ℕ}, Nat.bit b n ≠ 0 → (Nat.bit b n).size = n.size.succ",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.size_bit"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": [
+    "F:nat-add-lt-add-left",
+    "F:nat-add-zero",
+    "F:nat-beq-eq-false-of-ne",
+    "F:nat-div-mod-exec",
+    "F:nat-div-mod-lt-mul-iff",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-le-succ-succ",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-one-mul",
+    "F:nat-succ-mul",
+    "F:nat-succ-pred-of-pos",
+    "F:nat-zero-le",
+    "F:nat-zero-lt-of-ne-zero"
+  ],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- size_bit 2>/dev/null | grep -Ec '^Nat\\.size_bit[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.size_bit",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.size_bit` through the trusted `Kernel::add_declaration` gate, declared in the new module `nat_prelude/size_order.rs` (kept separate from `binary.rs`'s dense `Nat.size` definition-plus-boundary set and from `size_extra.rs`'s existing pair, per this project's merge-hazard convention). `nat_theorem_inventory`'s rendered type is `((x0 : Bool) -> ((x1 : AxNat) -> ((x2 : ((x2 : Eq.{1} AxNat (AxNat.bit x0 x1) AxNat.zero) -> False)) -> Eq.{1} AxNat (AxNat.size (AxNat.bit x0 x1)) (AxNat.succ (AxNat.size x1)))))`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1`; grepping a made-up name (`Nat.size_bit_bogus`) greps to `0`.",
+      "supports": "∀ {b : Bool} {n : ℕ}, Nat.bit b n ≠ 0 → (Nat.bit b n).size = n.size.succ"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds this theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names` (this declaration's `p.size_bit` entry was added there in the same session that landed it), and `size_order_tests::size_bit_applies_at_a_concrete_discriminating_instance` independently checks `axiom_footprint(p.size_bit).is_empty()` and exercises the theorem at a concrete instance (`b := true, n := 2`: `bit true 2 = 5`, `size 5 = 3 = succ (size 2) = succ 2`), plus a negative control (the statement must not also equal `Eq (size (bit true 2)) (size 2)`, i.e. the \"no increment\" bug).",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.size_bit"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +62,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Established 2026-09-01 in this ledger by the `nat-size-squarefree` lane: a fresh local construction (`nat_prelude/size_order.rs`), not a transcription of Mathlib's proof. `binary.rs`'s own `declare_size_aux_lt_pow` doc comment states `Nat.size`'s development had no lemma relating `size n` to `size (n/2)` -- this fact and `F:ml430-nat-size-le-size-c4b98f53` are the first two, sharing new fuel-irrelevance machinery (`Nat.size_aux_agree_of_fuel`, `Nat.size_aux_eq_size_of_le`) since `sizeAux` is single-value fuel recursion (unlike `landAux`/`lorAux`/`bitwiseAux`'s two value slots), reusing `ops.rs`'s `agree_by_fuel_induction` directly rather than needing a new combinator. The key step avoiding any case split on `b` or `n`: `half_le_predecessor_of_succ` (`rec_agreement.rs`) at its own `predecessor := pf, k := pf` (`pf := pred (bit b n)`) fed the trivial `le_refl (succ pf)` gives `Le (div (succ pf) 2) pf`, a fact about `pf` alone; transporting along `bit_div_two` and `bit b n = succ pf` turns this directly into the `Le n pf` the fuel-irrelevance corollary needs. Concrete-instance coverage lives in `nat_prelude/size_order_tests.rs`.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

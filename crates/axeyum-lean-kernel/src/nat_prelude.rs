@@ -244,6 +244,7 @@ mod rel_prime;
 mod relation;
 mod restrict_pair;
 mod size_extra;
+mod size_order;
 mod sqrt;
 mod squarefree;
 mod stirling;
@@ -443,6 +444,7 @@ use restrict_pair::{
     declare_restrict_pair_injective, declare_restrict_pair_maps_into, declare_setwise_fixed,
 };
 use size_extra::declare_size_extra_all;
+use size_order::declare_size_order_all;
 use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
@@ -2790,6 +2792,37 @@ pub struct NatPrelude {
     /// `Nat.size_eq_zero : ∀ n, Iff (Eq (size n) 0) (Eq n 0)`. See
     /// `nat_prelude::size_extra`.
     pub size_eq_zero: NameId,
+    /// `Nat.size_aux_zero_any_fuel : ∀ fuel, Eq (sizeAux fuel 0) 0` — holds
+    /// at ANY fuel, sufficient or not (mirrors
+    /// `Nat.land_aux_zero_left_any_fuel`'s shape). See
+    /// `nat_prelude::size_order`.
+    pub size_aux_zero_any_fuel: NameId,
+    /// `Nat.size_aux_agree_of_fuel : ∀ fuel1 n fuel2, Le n fuel1 → Le n
+    /// fuel2 → Eq (sizeAux fuel1 n) (sizeAux fuel2 n)` — fuel-irrelevance:
+    /// any two sufficient fuels give the same answer. `sizeAux` only has
+    /// ONE value slot (unlike `landAux`'s two), so this reuses
+    /// `agree_by_fuel_induction` directly at `a := n`, `b := fuel2` rather
+    /// than needing a new combinator. See `nat_prelude::size_order`.
+    pub size_aux_agree_of_fuel: NameId,
+    /// `Nat.size_aux_eq_size_of_le : ∀ fuel n, Le n fuel → Eq (sizeAux fuel
+    /// n) (size n)` — the `fuel2 := n` instance of
+    /// [`Self::size_aux_agree_of_fuel`] via `le_refl`, mirroring
+    /// `Nat.land_aux_eq_land_of_le`. See `nat_prelude::size_order`.
+    pub size_aux_eq_size_of_le: NameId,
+    /// `Nat.size_aux_mono_value : ∀ fuel a b, Le a b → Le b fuel → Le
+    /// (sizeAux fuel a) (sizeAux fuel b)` — `sizeAux` is monotone in its
+    /// VALUE argument at any shared, sufficient fuel. See
+    /// `nat_prelude::size_order`.
+    pub size_aux_mono_value: NameId,
+    /// `Nat.size_le_size : ∀ m n, Le m n → Le (size m) (size n)` —
+    /// `F:ml430-nat-size-le-size-c4b98f53`. The `fuel := n` instance of
+    /// [`Self::size_aux_mono_value`] composed with
+    /// [`Self::size_aux_eq_size_of_le`]. See `nat_prelude::size_order`.
+    pub size_le_size: NameId,
+    /// `Nat.size_bit : ∀ {b n}, Ne (bit b n) 0 → Eq (size (bit b n)) (succ
+    /// (size n))` — `F:ml430-nat-size-bit-c601dbf0`. See
+    /// `nat_prelude::size_order`.
+    pub size_bit: NameId,
     /// `Nat.mod_eq_self_of_lt : ∀ n m, Lt n m → mod n m = n` — a general
     /// division fact (not specific to binary representation), needed as glue
     /// for [`Self::sum_test_bit_eq`]. Proved by comparing the executable
@@ -5901,6 +5934,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lt_pow_size: kernel.name_str(nat, "lt_pow_size"),
             size_one: kernel.name_str(nat, "size_one"),
             size_eq_zero: kernel.name_str(nat, "size_eq_zero"),
+            size_aux_zero_any_fuel: kernel.name_str(nat, "size_aux_zero_any_fuel"),
+            size_aux_agree_of_fuel: kernel.name_str(nat, "size_aux_agree_of_fuel"),
+            size_aux_eq_size_of_le: kernel.name_str(nat, "size_aux_eq_size_of_le"),
+            size_aux_mono_value: kernel.name_str(nat, "size_aux_mono_value"),
+            size_le_size: kernel.name_str(nat, "size_le_size"),
+            size_bit: kernel.name_str(nat, "size_bit"),
             mod_eq_self_of_lt: kernel.name_str(nat, "mod_eq_self_of_lt"),
             sum_test_bit_eq: kernel.name_str(nat, "sum_testBit_eq"),
             sum_range_const_zero: kernel.name_str(nat, "sumRange_const_zero"),
@@ -7046,6 +7085,21 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // this builder needs it, which is why it was last until now).
         // Nothing needs these order mirrors, so they go last.
         declare_log_clog_order_all(&mut d, &p)?;
+        // `F:ml430-nat-size-bit-c601dbf0`/`F:ml430-nat-size-le-size-c4b98f53`:
+        // needs `Nat.bit`/`Nat.bit_div_two` (`declare_bit_all`/
+        // `declare_bit_decode_all`, far above), `Nat.div_le_div_right`
+        // (`declare_log_clog_order_all`, just above), `Nat.succ_le_succ`/
+        // `Nat.le_of_succ_le_succ`/`Nat.zero_lt_of_ne_zero`/
+        // `Nat.succ_pred_of_pos`/`Nat.beq_eq_false_of_ne`/`Nat.zero_le`/
+        // `Nat.le_antisymm`/`Nat.le_refl`/`Nat.le_trans`/`Nat.lt_of_lt_of_le`
+        // (all far above), `half_le_predecessor_of_succ`
+        // (`rec_agreement.rs`, a Rust fn, no ordering constraint of its own
+        // beyond the kernel names IT calls, all far above), and
+        // `Nat.size`/`Nat.size_aux`/`Nat.add_lt_add_left`/`Nat.add_zero`/
+        // `Nat.succ_mul`/`Nat.one_mul`/`Nat.le_add_right` (`declare_size_all`/
+        // `declare_arithmetic`, far above). Nothing needs it, so it goes
+        // last.
+        declare_size_order_all(&mut d, &p)?;
         // Needs `Nat.gcd_zero_left`/`Nat.gcd_succ` (`declare_executable_gcd`,
         // far above), `Nat.div_mod_exec`/`Nat.div_mod_unique`/`Nat.mod_lt`/
         // `Nat.succ_pred_of_pos` (`declare_divisibility`/
@@ -7401,6 +7455,8 @@ mod bit_extra_tests;
 
 #[cfg(test)]
 mod size_extra_tests;
+#[cfg(test)]
+mod size_order_tests;
 
 #[cfg(test)]
 mod fib_extra_tests;

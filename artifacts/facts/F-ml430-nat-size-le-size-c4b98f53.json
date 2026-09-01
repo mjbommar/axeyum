@@ -6,12 +6,34 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {m n : ℕ}, m ≤ n → m.size ≤ n.size",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.size_le_size"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- size_le_size 2>/dev/null | grep -Ec '^Nat\\.size_le_size[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.size_le_size",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.size_le_size` through the trusted `Kernel::add_declaration` gate, declared in the new module `nat_prelude/size_order.rs`. `nat_theorem_inventory`'s rendered type is `((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.le x0 x1) -> AxNat.le (AxNat.size x0) (AxNat.size x1))))`, matching this fact's `formal.statement`. `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed. Verified both ways: the real name greps to a count `-ge 1`; grepping a made-up name (`Nat.size_le_size_bogus`) greps to `0`.",
+      "supports": "∀ {m n : ℕ}, m ≤ n → m.size ≤ n.size"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds this theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly via `theorem_names` (this declaration's `p.size_le_size` entry was added there in the same session that landed it), and `size_order_tests::size_le_size_applies_at_a_concrete_pair_and_symbolically` independently checks `axiom_footprint(p.size_le_size).is_empty()`, exercises the theorem at a concrete instance (`m := 3, n := 6`: `size 3 = 2`, `size 6 = 3`, `2 <= 3`) and at a fully symbolic (no numerals at all) instance, plus a negative control (the statement must not also equal the reversed inequality `Le (size 6) (size 3)`).",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "id": "footprint-Nat.size_le_size"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration. Established 2026-09-01 in this ledger by the `nat-size-squarefree` lane: a fresh local construction (`nat_prelude/size_order.rs`), not a transcription of Mathlib's proof. Proved via `Nat.size_aux_mono_value` (`sizeAux` is monotone in its VALUE argument at any shared, sufficient fuel -- new machinery, since `binary.rs`'s own doc comment states `Nat.size`'s development had no lemma relating `size n` to `size (n/2)`) instantiated at the shared fuel `n`, composed with the fuel-irrelevance corollary `Nat.size_aux_eq_size_of_le` (also new, shared with `F:ml430-nat-size-bit-c601dbf0`) to rewrite `sizeAux n m` back to `size m`. Concrete-instance coverage lives in `nat_prelude/size_order_tests.rs`.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
