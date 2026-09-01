@@ -2271,6 +2271,57 @@ pub struct RatPrelude {
     /// [`Self::det_alternating`]'s experience, unlike ADR-1310's original
     /// expectation for THAT theorem.
     pub det_row_swap: NameId,
+
+    // --- row multilinearity (`matrix_det`, ADR-1440) -----------------------
+    /// `Rat.det_row_replaced : ∀ m A M h t, Nat.ble t m = true →
+    /// (∀ c, M t c = h c) →
+    /// (∀ r, Nat.beq r t = false → ∀ c, M r c = A r c) →
+    /// det M (succ m) = sumRange (fun q => altSign (q + t) *
+    ///   (h q * det (matMinor A t q) m)) (succ m)` — **the row-`t` workhorse**:
+    /// expanding along row `t` sees the rest of the matrix ONLY through `A`'s
+    /// minors, so a matrix agreeing with `A` off row `t` has its determinant
+    /// fixed by that row's own values.
+    ///
+    /// [`Self::det_row_expansion`] plus the observation that a row-`t` minor
+    /// never mentions row `t` — [`Self::beq_mat_skip_left`] says
+    /// `matSkip t r` is never `t`, so `hoff` discharges every index the minor
+    /// reaches. Straight-line at a symbolic `m`; no new induction.
+    /// [`Self::det_congr`] IS needed here, and every other theorem in this
+    /// group reaches it through this one.
+    pub det_row_replaced: NameId,
+    /// `Rat.det_row_zero : ∀ m M t, Nat.ble t m = true →
+    /// (∀ c, M t c = 0) → det M (succ m) = 0` — a zero row kills the
+    /// determinant. [`Self::det_row_expansion`] plus
+    /// [`Self::sum_range_eq_zero_of_lt`]; this prelude has `mul_zero` but no
+    /// `zero_mul`, so `0 * X` goes through [`Self::mul_comm`] first.
+    pub det_row_zero: NameId,
+    /// `Rat.det_row_smul : ∀ m A M z t, Nat.ble t m = true →
+    /// (∀ c, M t c = z * A t c) →
+    /// (∀ r, Nat.beq r t = false → ∀ c, M r c = A r c) →
+    /// det M (succ m) = z * det A (succ m)` — scaling one row scales the
+    /// determinant. [`Self::det_row_replaced`] at `h := fun c => z * A t c`,
+    /// [`Self::mul_sum_range`] to pull `z` back out, and one four-factor
+    /// rearrangement per summand.
+    pub det_row_smul: NameId,
+    /// `Rat.det_row_multilinear : ∀ m A M coef t n, Nat.ble t m = true →
+    /// (∀ c, M t c = sumRange (fun k => coef k c) n) →
+    /// (∀ r, Nat.beq r t = false → ∀ c, M r c = A r c) →
+    /// det M (succ m) = sumRange (fun k => sumRange (fun q =>
+    ///   altSign (q + t) * (coef k q * det (matMinor A t q) m)) (succ m)) n`
+    /// — **linearity in one row over a finite sum**, the Cauchy–Binet
+    /// expansion step ADR-1310 names as step 4's first prerequisite and which
+    /// nothing in this prelude supplied.
+    ///
+    /// A row of `A·B` is exactly a `Rat.sumRange` of rows of `B`, so this is
+    /// what turns `det (A·B)` into a sum over index choices; applying it `n`
+    /// times is the remaining work (see the "what is still missing" section of
+    /// `rat_prelude/matrix_det.rs`).
+    ///
+    /// [`Self::det_row_replaced`], then two [`Self::mul_sum_range`]s around
+    /// one [`Self::mul_comm`] to move the sum out of the middle of the
+    /// summand, then [`Self::sum_range_swap`] — whose binder order is
+    /// `(f, INNER bound, OUTER bound)`.
+    pub det_row_multilinear: NameId,
 }
 
 impl RatPrelude {
@@ -2684,6 +2735,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_transpose: child(kernel, "det_transpose"),
         det_alternating: child(kernel, "det_alternating"),
         det_row_swap: child(kernel, "det_row_swap"),
+        det_row_replaced: child(kernel, "det_row_replaced"),
+        det_row_zero: child(kernel, "det_row_zero"),
+        det_row_smul: child(kernel, "det_row_smul"),
+        det_row_multilinear: child(kernel, "det_row_multilinear"),
     }
 }
 
