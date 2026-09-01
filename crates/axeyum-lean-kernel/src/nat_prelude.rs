@@ -210,6 +210,7 @@ mod ldiff;
 mod least_number;
 mod log;
 mod log2;
+mod log_clog_mirrors;
 mod log_clog_order;
 mod lor;
 mod min_fac;
@@ -380,6 +381,7 @@ use lcm_gcd_lemmas::declare_lcm_gcd_lemmas;
 use ldiff::declare_ldiff_all;
 use least_number::declare_least_number_all;
 use log::declare_log_all;
+use log_clog_mirrors::declare_log_clog_mirrors_all;
 use log_clog_order::declare_log_clog_order_all;
 use log2::declare_log2_all;
 use lor::declare_lor_all;
@@ -3891,6 +3893,52 @@ pub struct NatPrelude {
     /// [`clog_aux_antitone_base`](Self::clog_aux_antitone_base)'s diagonal
     /// `f := n`.
     pub clog_antitone_left: NameId,
+    /// `Nat.log_anti_left : ∀ {b c n}, Lt 1 c → Le c b → Le (log b n) (log c
+    /// n)` (`Mathlib`: `Nat.log_anti_left`) — `nat_prelude/log_clog_mirrors.rs`,
+    /// [`Self::log_antitone_left`]'s diagonal at a DERIVED `Lt 1 b`
+    /// (`lt_of_lt_of_le` from `Lt 1 c ≤ b`), matching Mathlib's weaker
+    /// hypothesis set (`log_antitone_left` takes `1 < b` as an extra
+    /// explicit hypothesis; here it is derived).
+    pub log_anti_left: NameId,
+    /// `Nat.clog_anti_left : ∀ {b c n}, Lt 1 c → Le c b → Le (clog b n)
+    /// (clog c n)` (`Mathlib`: `Nat.clog_anti_left`) —
+    /// [`Self::log_anti_left`]'s exact counterpart over
+    /// [`Self::clog_antitone_left`].
+    pub clog_anti_left: NameId,
+    /// `Nat.clog_mono : ∀ {b c m n}, Lt 1 c → Le c b → Le m n → Le (clog b
+    /// m) (clog c n)` (`Mathlib`: `Nat.clog_mono`) — `clog b m ≤ clog c m`
+    /// ([`Self::clog_antitone_left`] at the shared value `m`) chained
+    /// through `clog c m ≤ clog c n` ([`Self::clog_mono_right`] at the
+    /// shared base `c`) via `le_trans`.
+    pub clog_mono: NameId,
+    /// `Nat.clog_of_left_le_one : ∀ {b}, Le b 1 → ∀ n, Eq (clog b n) 0`
+    /// (`Mathlib`: `Nat.clog_of_left_le_one`) — `Le b 1` splits into `b = 0
+    /// ∨ b = 1` via [`super::ops::cases_lt_bound`]; each branch is
+    /// [`Self::clog_zero_left`]/[`Self::clog_one_left`] used directly at
+    /// their full `∀ n, …` type.
+    pub clog_of_left_le_one: NameId,
+    /// `Nat.clog_of_right_le_one : ∀ {n}, Le n 1 → ∀ b, Eq (clog b n) 0`
+    /// (`Mathlib`: `Nat.clog_of_right_le_one`) — the same split, on `n`, via
+    /// [`Self::clog_zero_right`]/[`Self::clog_one_right`].
+    pub clog_of_right_le_one: NameId,
+    /// `Nat.log_of_left_le_one : ∀ {b}, Le b 1 → ∀ n, Eq (log b n) 0` — not
+    /// an `ml430` mirror target on its own; [`Self::clog_of_left_le_one`]'s
+    /// recipe over [`Self::log_zero_left`]/[`Self::log_one_left`], needed by
+    /// [`Self::log_eq_zero_iff`]'s `mpr`.
+    pub log_of_left_le_one: NameId,
+    /// `Nat.log_pos : ∀ b n, Lt 1 b → Le b n → Lt 0 (log b n)` (`Mathlib`:
+    /// `Nat.log_pos`) — [`Self::clog_pos`]'s exact recipe with the two guard
+    /// cuts' roles swapped (`log`'s outer cut `b ≤ n` varies with the case
+    /// split; `clog`'s outer cut `2 ≤ b` is fixed).
+    pub log_pos: NameId,
+    /// `Nat.log_eq_zero_iff : ∀ {b n}, Iff (Eq (log b n) 0) (Or (Lt n b) (Le
+    /// b 1))` (`Mathlib`: `Nat.log_eq_zero_iff`) — `mpr` case-splits the
+    /// disjunction (`log_of_lt` / [`Self::log_of_left_le_one`]); `mp`
+    /// case-splits `Nat.lt_or_ge n b` then, on the `Le b n` side,
+    /// `Nat.lt_or_ge 1 b`, refuting `Lt 1 b` by transporting
+    /// [`Self::log_pos`]'s `Lt 0 (log b n)` along the hypothesis to `Lt 0
+    /// 0`, absurd via `lt_irrefl`.
+    pub log_eq_zero_iff: NameId,
     /// `Nat.log2 : Nat → Nat`, `log2 n := log 2 n` (Lean **core**,
     /// `Init/Data/Nat/Log2.lean` — Mathlib imports it unchanged). Lean
     /// core's own `log2` is a fuel-recursive `Nat.rec` with a non-dependent
@@ -6155,6 +6203,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             log_antitone_left: kernel.name_str(nat, "log_antitone_left"),
             clog_aux_antitone_base: kernel.name_str(nat, "clog_aux_antitone_base"),
             clog_antitone_left: kernel.name_str(nat, "clog_antitone_left"),
+            log_anti_left: kernel.name_str(nat, "log_anti_left"),
+            clog_anti_left: kernel.name_str(nat, "clog_anti_left"),
+            clog_mono: kernel.name_str(nat, "clog_mono"),
+            clog_of_left_le_one: kernel.name_str(nat, "clog_of_left_le_one"),
+            clog_of_right_le_one: kernel.name_str(nat, "clog_of_right_le_one"),
+            log_of_left_le_one: kernel.name_str(nat, "log_of_left_le_one"),
+            log_pos: kernel.name_str(nat, "log_pos"),
+            log_eq_zero_iff: kernel.name_str(nat, "log_eq_zero_iff"),
             log2: kernel.name_str(nat, "log2"),
             log2_eq_log_two: kernel.name_str(nat, "log2_eq_log_two"),
             bit: kernel.name_str(nat, "bit"),
@@ -7136,6 +7192,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // this builder needs it, which is why it was last until now).
         // Nothing needs these order mirrors, so they go last.
         declare_log_clog_order_all(&mut d, &p)?;
+        // `F:ml430-nat-log-anti-left-b72490ec`/`F:ml430-nat-clog-anti-left-d72bd6cd`/
+        // `F:ml430-nat-clog-mono-74b44081`/`F:ml430-nat-clog-of-left-le-one-a6640cee`/
+        // `F:ml430-nat-clog-of-right-le-one-8f11b62f`/
+        // `F:ml430-nat-log-eq-zero-iff-819cea74`: needs
+        // `Nat.log_antitone_left`/`Nat.clog_antitone_left`/
+        // `Nat.clog_mono_right`/`Nat.log_of_lt` (`declare_log_clog_order_all`,
+        // just above, and `declare_log_all`/`declare_clog_all`, far above)
+        // plus `Nat.lt_of_lt_of_le`/`Nat.le_trans`/`Nat.le_succ_succ`/
+        // `Nat.lt_or_ge`/`Nat.lt_irrefl`/`Nat.not_succ_le_zero`/
+        // `Nat.zero_lt_succ`/`Nat.ble_eq_true_of_le` from order/algebra
+        // machinery declared far above.
+        declare_log_clog_mirrors_all(&mut d, &p)?;
         // `F:ml430-nat-size-bit-c601dbf0`/`F:ml430-nat-size-le-size-c4b98f53`:
         // needs `Nat.bit`/`Nat.bit_div_two` (`declare_bit_all`/
         // `declare_bit_decode_all`, far above), `Nat.div_le_div_right`
