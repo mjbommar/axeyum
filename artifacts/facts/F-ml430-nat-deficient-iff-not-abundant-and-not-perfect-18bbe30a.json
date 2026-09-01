@@ -6,16 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, n ≠ 0 → (n.Deficient ↔ ¬n.Abundant ∧ ¬n.Perfect)",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.deficient_iff_not_abundant_and_not_perfect"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-le-trans", "F:nat-lt-irrefl", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-eq-of-le", "F:nat-lt-or-ge"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.deficient_iff_not_abundant_and_not_perfect",
+      "kind": "kernel-term",
+      "supports": "n != 0 -> (Deficient n <-> Not (Abundant n) /\\ Not (Perfect n))",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- deficient_iff_not_abundant_and_not_perfect 2>/dev/null | grep -Ec '^Nat\\.deficient_iff_not_abundant_and_not_perfect[[:space:]]')\" -ge 1",
+      "notes": "The mirror image of `abundant_iff_not_perfect_and_not_deficient`: with `x := mul 2 n`, `y := sumDivisors n`, `Lt y x <-> Not (Lt x y) /\\ Not (Eq y x)`. Same technique, conjunct order and `Eq` direction swapped to match this fact's statement, exactly as Mathlib's own two lemmas differ."
+    },
+    {
+      "id": "footprint-Nat.deficient_iff_not_abundant_and_not_perfect",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "nat_axiom_inventory --require-axiom-free nat enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.deficient_iff_not_abundant_and_not_perfect` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-09-01",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-abundant-deficient-mirrors",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here through Kernel::add_declaration",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "ADR-1100/1415 argued Nat.Abundant/Nat.Deficient's bodies are 'provably equivalent, not definitionally identical' to Mathlib's proper-divisor-sum phrasing and every ml430 mirror against them 'stays open'. Revisited here: Mathlib itself proves the exact equivalence these forms use, by name -- `abundant_iff_sum_divisors : Abundant n ↔ 2 * n < ∑ i ∈ n.divisors, i` (FactorisationProperties.lean:180) and `perfect_iff_sum_divisors_eq_two_mul` (Divisors.lean:404, `0 < n`), both derived from the one-line `sum_divisors_eq_sum_properDivisors_add_self`. So this kernel's `Lt (mul 2 n) (sumDivisors n)` is Mathlib's OWN endorsed alternate characterization of `Abundant`, the min/max precedent (same function, different delivery) rather than the `multichoose` one (defines what Mathlib proves about an independent recursion) -- see `nat_prelude/abundant_deficient_lemmas.rs`'s module doc for the full account. One real residual divergence exists at `n = 0` in `Perfect` (Mathlib's carries an explicit `0 < n` conjunct, ours does not); none of this fact's instantiations touch it.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
