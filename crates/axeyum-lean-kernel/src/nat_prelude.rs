@@ -172,6 +172,7 @@ mod dist_more2;
 mod div_mod_lemmas;
 mod divisibility;
 mod division;
+mod divisor_sum_scale;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
@@ -277,6 +278,7 @@ pub use ops::{NatDev, NatOps, NatState};
 use abundant_deficient::declare_abundant_deficient_all;
 use abundant_deficient_lemmas::declare_abundant_deficient_lemmas_all;
 use add_basics::declare_add_basics;
+use divisor_sum_scale::declare_divisor_sum_scale_all;
 use add_choose_div::declare_add_choose;
 use add_desc_factorial_asc_factorial::declare_add_desc_factorial_eq_asc_factorial;
 use add_factorial_le::{
@@ -5320,6 +5322,24 @@ pub struct NatPrelude {
     /// `Nat.deficient_iff_not_abundant_and_not_perfect : ∀ n, Not (Eq n zero)
     /// → Iff (Deficient n) (And (Not (Abundant n)) (Not (Perfect n)))`.
     pub deficient_iff_not_abundant_and_not_perfect: NameId,
+
+    // -- `divisor-sum-monotonicity` lane: `divisor_sum_scale.rs` --
+    // Closes two of the three mirrors `abundant_deficient_lemmas.rs` left
+    // open (`abundant_of_dvd`, `abundant_mul_left`); the third
+    // (`prime_deficient_pow`) needs a different, unbuilt piece (a
+    // prime-power divisor characterization) and is not attempted here.
+    /// `Nat.sum_divisors_scale_le : ∀ q m, Lt zero q → Le (mul q
+    /// (sumDivisors m)) (sumDivisors (mul q m))` -- scaling every divisor of
+    /// `m` by a positive `q` injects into the divisors of `q*m`, so the
+    /// divisor sum can only grow.
+    pub sum_divisors_scale_le: NameId,
+    /// `Nat.abundant_mul_left : ∀ n m, Abundant n → Not (Eq m zero) →
+    /// Abundant (mul m n)`.
+    pub abundant_mul_left: NameId,
+    /// `Nat.abundant_of_dvd : ∀ m n, Abundant m → dvd m n → Not (Eq n zero)
+    /// → Abundant n`.
+    pub abundant_of_dvd: NameId,
+
     /// `Nat.stirlingFirst (n k : Nat) : Nat` -- the unsigned Stirling
     /// numbers of the first kind, Mathlib's own recurrence
     /// `c(n+1,k+1) = n * c(n,k+1) + c(n,k)`. Same two-argument recursor
@@ -6526,6 +6546,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "abundant_iff_not_perfect_and_not_deficient"),
             deficient_iff_not_abundant_and_not_perfect: kernel
                 .name_str(nat, "deficient_iff_not_abundant_and_not_perfect"),
+            sum_divisors_scale_le: kernel.name_str(nat, "sum_divisors_scale_le"),
+            abundant_mul_left: kernel.name_str(nat, "abundant_mul_left"),
+            abundant_of_dvd: kernel.name_str(nat, "abundant_of_dvd"),
             stirling_first: kernel.name_str(nat, "stirlingFirst"),
             stirling_second: kernel.name_str(nat, "stirlingSecond"),
             max_max: {
@@ -7517,6 +7540,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // lane): the divergence verdict above is per-statement, not a
         // blanket "stays open" -- see that file's module doc.
         declare_abundant_deficient_lemmas_all(&mut d, &p)?;
+        // `Nat.sum_divisors_scale_le`/`Nat.abundant_mul_left`/
+        // `Nat.abundant_of_dvd` (`divisor_sum_scale.rs`,
+        // `divisor-sum-monotonicity` lane): closes two of the three mirrors
+        // left open above. Needs `Nat.Abundant`/`Nat.sumDivisors`/`Nat.dvd`,
+        // all far above.
+        declare_divisor_sum_scale_all(&mut d, &p)?;
         // `Nat.stirlingFirst`/`Nat.stirlingSecond` (`stirling.rs`): needs
         // only `Nat.rec`, `Nat.add` and `Nat.mul`, all far above. Opens
         // `Mathlib.Combinatorics.Enumerative.Stirling` for the autogenesis
