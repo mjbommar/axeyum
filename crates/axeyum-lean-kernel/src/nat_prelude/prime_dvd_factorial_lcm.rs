@@ -87,7 +87,8 @@ pub(super) fn declare_prime_coprime_factorial_of_lt(
         let claim = |d: &mut NatDev<'_>, x: ExprId| {
             let hyp = d.lt(x, p_var);
             let fact_x = d.factorial(x);
-            let concl = d.eq(d.gcd(p_var, fact_x), one);
+            let g = d.gcd(p_var, fact_x);
+            let concl = d.eq(g, one);
             d.arrow(hyp, concl)
         };
         let stmt = {
@@ -102,7 +103,6 @@ pub(super) fn declare_prime_coprime_factorial_of_lt(
             &claim,
             &|d| {
                 let h_fv = d.fresh_fvar();
-                let h = d.kernel().fvar(h_fv);
                 let zero = d.zero();
                 let hyp_ty = d.lt(zero, p_var);
                 let gcd_p1 = d.gcd(p_var, one);
@@ -186,7 +186,8 @@ pub(super) fn declare_prime_coprime_desc_factorial_of_lt_of_le(
         let claim = |d: &mut NatDev<'_>, x: ExprId| {
             let hyp = d.le(x, n_var);
             let df_x = d.const_app(p.desc_factorial, &[n_var, x]);
-            let concl = d.eq(d.gcd(p_var, df_x), one);
+            let g = d.gcd(p_var, df_x);
+            let concl = d.eq(g, one);
             d.arrow(hyp, concl)
         };
         let stmt = {
@@ -204,7 +205,6 @@ pub(super) fn declare_prime_coprime_desc_factorial_of_lt_of_le(
             &claim,
             &|d| {
                 let h_fv = d.fresh_fvar();
-                let h = d.kernel().fvar(h_fv);
                 let zero = d.zero();
                 let hyp_ty = d.le(zero, n_var);
                 let gcd_p1 = d.gcd(p_var, one);

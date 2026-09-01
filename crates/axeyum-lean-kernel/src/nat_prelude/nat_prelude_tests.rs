@@ -1436,6 +1436,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_floor,
+        // `prime_dvd_factorial_lcm.rs`: five `ml430` mirrors over
+        // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`.
+        p.prime_coprime_factorial_of_lt,
+        p.prime_coprime_desc_factorial_of_lt_of_le,
+        p.prime_dvd_factorial_iff_le,
+        p.prime_dvd_lcm_iff,
+        p.prime_dvd_or_dvd_of_dvd_lcm,
     ]
 }
 
