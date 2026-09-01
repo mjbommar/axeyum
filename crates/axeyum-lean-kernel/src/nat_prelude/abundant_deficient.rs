@@ -51,11 +51,30 @@
 //! Per `CLAUDE.md`'s mirror-flip criterion this is the `Nat.minFac`/`Nat.nth`
 //! case rather than the `Nat.descFactorial_of_lt` case: our definitional BODY
 //! is provably equivalent to, and not definitionally identical with,
-//! Mathlib's. Any `ml430` mirror stated against Mathlib's `Nat.Abundant`
-//! therefore stays `open`, and a theorem about THIS predicate would need its
-//! own `F:nat-*` fact.
+//! Mathlib's.
 //!
-//! ## No theorems
+//! **CORRECTION (`nat-abundant-deficient-mirrors` lane, ADR-1100/1415
+//! superseded per-statement):** "provably equivalent, not definitionally
+//! identical" does not, on its own, decide the flip question — the min/max
+//! precedent (ADR-1415) already established that "same function, different
+//! delivery" flips honestly, and Mathlib turns out to hand us exactly that
+//! for these predicates, checked by name rather than inferred. Mathlib
+//! proves `abundant_iff_sum_divisors : Abundant n ↔ 2 * n < ∑ i ∈
+//! n.divisors, i` (`FactorisationProperties.lean:180`) and
+//! `perfect_iff_sum_divisors_eq_two_mul` (`Divisors.lean:404`, `0 < n`) — the
+//! ONE-LINE divisor-partition identity this doc's own paragraph above already
+//! derives independently, but proved and named by Mathlib itself rather than
+//! externally inferred. So `Lt (mul 2 n) (sumDivisors n)` is Mathlib's OWN
+//! endorsed alternate characterization of `Abundant`, not our private
+//! equivalent of it — the honest side of the line, not the `multichoose`
+//! side. Seven `ml430` mirrors closed on this basis; see
+//! `abundant_deficient_lemmas.rs`'s module doc for the full account,
+//! including the residual `n = 0` divergence in `Perfect` (Mathlib's carries
+//! an explicit `0 < n` conjunct ours does not) and the three left open for
+//! an unrelated reason (missing divisor-sum-monotonicity/prime-power
+//! infrastructure, not a divergence).
+//!
+//! ## No theorems (here)
 //!
 //! ADR-0653: an unblocking lane declares the construction and its evaluation
 //! test and NOTHING else. A lane told to unblock `Nat.dist` also declared

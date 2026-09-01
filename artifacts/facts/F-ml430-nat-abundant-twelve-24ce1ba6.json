@@ -6,16 +6,38 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "Nat.Abundant 12",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.abundant_twelve"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:nat-le-add-right"],
+  "evidence": [
+    {
+      "id": "kernel-Nat.abundant_twelve",
+      "kind": "kernel-term",
+      "supports": "Abundant 12",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- abundant_twelve 2>/dev/null | grep -Ec '^Nat\\.abundant_twelve[[:space:]]')\" -ge 1",
+      "notes": "`Abundant 12` unfolds to `Lt (mul 2 12) (sumDivisors 12)`, defeq `Lt 24 28` (`sumDivisors 12 = 28` -- 1+2+3+4+6+12), defeq `Le 25 28`, which is `Le 25 (add 25 3)` -- `le_add_right 25 3` directly. Largest magnitude formed is 28, far below where this kernel's unary Nat literals get expensive (the `13125`-class superlinear-cost regime)."
+    },
+    {
+      "id": "footprint-Nat.abundant_twelve",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "nat_axiom_inventory --require-axiom-free nat enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration. A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []."
+    }
+  ],
   "provenance": {
-    "date": "2026-08-29",
-    "established_by": "not established in this ledger",
-    "source": "statement-only extraction of `Nat.abundant_twelve` from Mathlib v4.30.0; no proof value was exposed",
+    "date": "2026-09-01",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane nat-abundant-deficient-mirrors",
+    "source": "statement-only extraction of the Mathlib proposition from Mathlib v4.30.0 (see prior_art), independently proved here through Kernel::add_declaration",
     "prior_art": [
       {
         "who": "the Mathlib contributors",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "ADR-1100/1415 argued Nat.Abundant/Nat.Deficient's bodies are 'provably equivalent, not definitionally identical' to Mathlib's proper-divisor-sum phrasing and every ml430 mirror against them 'stays open'. Revisited here: Mathlib itself proves the exact equivalence these forms use, by name -- `abundant_iff_sum_divisors : Abundant n ↔ 2 * n < ∑ i ∈ n.divisors, i` (FactorisationProperties.lean:180) and `perfect_iff_sum_divisors_eq_two_mul` (Divisors.lean:404, `0 < n`), both derived from the one-line `sum_divisors_eq_sum_properDivisors_add_self`. So this kernel's `Lt (mul 2 n) (sumDivisors n)` is Mathlib's OWN endorsed alternate characterization of `Abundant`, the min/max precedent (same function, different delivery) rather than the `multichoose` one (defines what Mathlib proves about an independent recursion) -- see `nat_prelude/abundant_deficient_lemmas.rs`'s module doc for the full account. One real residual divergence exists at `n = 0` in `Perfect` (Mathlib's carries an explicit `0 < n` conjunct, ours does not); none of this fact's instantiations touch it.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
