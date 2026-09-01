@@ -1,4 +1,4 @@
-#![allow(clippy::many_single_char_names)]
+#![allow(clippy::many_single_char_names, clippy::too_many_lines)]
 
 //! **Follow-up probe for ADR-1495: is the constructor-argument universe
 //! constraint enforced?**
@@ -6,7 +6,7 @@
 //! `bundled_structure_probe.rs`'s universe CONTROL did not fire: the same
 //! seventeen-field bundle carrying a `Sort 1` carrier was accepted at result
 //! universe `Sort 1` as well as at `Sort 2`. Lean's kernel rejects that
-//! (`inductive.cpp`, `check_constructor`: "universe level of type_of(arg) is
+//! (`inductive.cpp`, `check_constructor`: "universe level of the field's type is
 //! too big for the corresponding inductive datatype"). This probe isolates the
 //! question to the smallest possible shape and asks what the acceptance buys.
 //!
@@ -30,12 +30,6 @@
 //! constraint, and says exactly that.
 
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, Kernel, ReducibilityHint};
-
-fn pi_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
-    let b = k.abstract_fvars(body, &[fv]);
-    let anon = k.anon();
-    k.pi(anon, ty, b, BinderInfo::Default)
-}
 
 fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
     let b = k.abstract_fvars(body, &[fv]);

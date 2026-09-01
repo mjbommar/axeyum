@@ -1,5 +1,9 @@
 // Single-character bindings mirror the kernel's own de Bruijn-ish naming.
-#![allow(clippy::many_single_char_names, clippy::too_many_lines)]
+#![allow(
+    clippy::many_single_char_names,
+    clippy::too_many_lines,
+    clippy::similar_names
+)]
 
 //! **Probe for ADR-1495 — can a statement quantify over a *structure*?**
 //!
@@ -473,15 +477,12 @@ fn main() {
             std::process::exit(1);
         }
     }
-    match k.environment().get(field_rec) {
-        Some(d) => {
-            let rendered = k.render_lean_decl(d);
-            println!("  recursor generated ({} chars)", rendered.len());
-        }
-        None => {
-            println!("  recursor generated: FAIL -- AbsProbe.Field.rec absent");
-            std::process::exit(1);
-        }
+    if let Some(d) = k.environment().get(field_rec) {
+        let rendered = k.render_lean_decl(d);
+        println!("  recursor generated ({} chars)", rendered.len());
+    } else {
+        println!("  recursor generated: FAIL -- AbsProbe.Field.rec absent");
+        std::process::exit(1);
     }
 
     // === Stage 2: selectors by large elimination ============================
@@ -704,24 +705,23 @@ fn main() {
     let sc2 = 8_401_u64;
 
     // ∀ (a b c : A), add a b = add a c → (b = c | a = c for the control)
-    let stmt_over =
-        |k2: &mut Kernel, a_ty: ExprId, add: ExprId, swap_conclusion: bool| -> ExprId {
-            let va = k2.fvar(a_fv);
-            let vb = k2.fvar(b_fv);
-            let vc = k2.fvar(c_fv);
-            let lhs = app2(k2, add, va, vb);
-            let rhs = app2(k2, add, va, vc);
-            let hyp = eq_of(k2, &lg, l1, a_ty, lhs, rhs);
-            let concl = if swap_conclusion {
-                eq_of(k2, &lg, l1, a_ty, va, vc)
-            } else {
-                eq_of(k2, &lg, l1, a_ty, vb, vc)
-            };
-            let body = arrow(k2, hyp, concl);
-            let t = pi_over(k2, c_fv, a_ty, body);
-            let t = pi_over(k2, b_fv, a_ty, t);
-            pi_over(k2, a_fv, a_ty, t)
+    let stmt_over = |k2: &mut Kernel, a_ty: ExprId, add: ExprId, swap_conclusion: bool| -> ExprId {
+        let va = k2.fvar(a_fv);
+        let vb = k2.fvar(b_fv);
+        let vc = k2.fvar(c_fv);
+        let lhs = app2(k2, add, va, vb);
+        let rhs = app2(k2, add, va, vc);
+        let hyp = eq_of(k2, &lg, l1, a_ty, lhs, rhs);
+        let concl = if swap_conclusion {
+            eq_of(k2, &lg, l1, a_ty, va, vc)
+        } else {
+            eq_of(k2, &lg, l1, a_ty, vb, vc)
         };
+        let body = arrow(k2, hyp, concl);
+        let t = pi_over(k2, c_fv, a_ty, body);
+        let t = pi_over(k2, b_fv, a_ty, t);
+        pi_over(k2, a_fv, a_ty, t)
+    };
 
     let field_ty = k.const_(field_ind, vec![]);
     let goal_ty = {
@@ -828,7 +828,7 @@ fn main() {
     };
 
     // Wrap by the recursor.
-    let mut build_wrapped = |k2: &mut Kernel, swap: bool| -> ExprId {
+    let build_wrapped = |k2: &mut Kernel, swap: bool| -> ExprId {
         let s = k2.fvar(S_FV);
         let a_ty = carrier_of(k2, s);
         let add = add_of(k2, s);
