@@ -965,7 +965,7 @@ fn cross_scaled(
 }
 
 /// `det2 a b c d = 0`, given `ad_eq_bc : a·d = b·c`.
-fn det2_zero_of_ad_eq_bc(
+pub(super) fn det2_zero_of_ad_eq_bc(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     a: ExprId,
