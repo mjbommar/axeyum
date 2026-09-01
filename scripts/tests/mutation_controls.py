@@ -5540,6 +5540,34 @@ SUITES["nursery-rescope-parser"] = (
     ],
 )
 
+# --------------------------------------------------------------------------
+# check-autogenesis-holdout-isolation.py's pinned population size.
+#
+# The pin (`held_out=186` in `test_the_committed_repository_passes`) exists to
+# make a change in the blind population's size impossible to land silently.
+# What it is worth depends entirely on the assertion reading the gate's LIVE
+# output rather than a constant that happens to agree with it, and nothing
+# proved that: the pin has been stale five times (116, 136, 156, 146, 186) and
+# each repair transcribed a new number.
+#
+# So mutate the SUBJECT -- perturb the count the gate reports -- and require
+# the pin to die. A pin that survives a wrong count is a rubber stamp, which
+# is exactly what the repair procedure risks turning it into.
+# --------------------------------------------------------------------------
+
+SUITES["holdout-isolation-population-pin"] = (
+    "scripts/check-autogenesis-holdout-isolation.py",
+    Unittest("scripts.tests.test_check_autogenesis_holdout_isolation"),
+    [
+        (
+            "the pinned population size is read from the gate's live output, "
+            "not asserted against a constant that merely agrees with it",
+            '        f"AUTOGENESIS_HOLDOUT_ISOLATION|held_out={len(held)}|"',
+            '        f"AUTOGENESIS_HOLDOUT_ISOLATION|held_out={len(held) + 1}|"',
+        ),
+    ],
+)
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
