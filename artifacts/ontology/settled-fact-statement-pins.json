@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2079,
+    "min_identity_bound": 2082,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8790,6 +8790,13 @@
       "kernel_theorem": "Int.prod_range_pairing_collapse"
     },
     {
+      "fact_id": "F:int-prod-range-sum-range-expand",
+      "language": "lean4",
+      "statement_sha256": "7b14d404d1eac99570480071f090a4d656e855a797aa4cd99ce6f15a330a5d93",
+      "prose_sha256": "21b8a8c1bf3abcc979076ad3375a7420a4a07048c8a422ed82133f5b947a3898",
+      "kernel_theorem": "Int.prodRange_sumRange_expand"
+    },
+    {
       "fact_id": "F:int-prodrange-congr",
       "language": "lean4",
       "statement_sha256": "12f493fe30b1c2dec45069c0e4740d4994d4897fa15bf66bd422284d10df989e",
@@ -9073,6 +9080,20 @@
       "statement_sha256": "827ed3159eb954f8b73177e371e42d74f9b0d6ff004e6ffdddfa65174f85bdfd",
       "prose_sha256": "61d45debb078d03f5c8f132a556b470d4cc43bcc340edb265f0ccacb89e56ac8",
       "kernel_theorem": "Int.subNatNat_zero"
+    },
+    {
+      "fact_id": "F:int-sum-maps",
+      "language": "lean4",
+      "statement_sha256": "63aec751d866f49e5784488de244b3b2f3cf1e5c4e70cbf4dbefe34750cea3f6",
+      "prose_sha256": "2a6c6ffbaef58f3ecb24d8769b577cabd440bca5fa1121818ad240e21a3b32b4",
+      "kernel_theorem": "Int.sumMaps"
+    },
+    {
+      "fact_id": "F:int-sum-maps-succ",
+      "language": "lean4",
+      "statement_sha256": "1b6527cff668605c69e73df30a8b944b694a9815a59a27d2bc551b906431cd53",
+      "prose_sha256": "8a858d391ace1d4ffbf1c7cd691cd0699383d826219c04cdb416274f43528c19",
+      "kernel_theorem": "Int.sumMaps_succ"
     },
     {
       "fact_id": "F:int-sumrange-add",

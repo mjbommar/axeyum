@@ -189,7 +189,22 @@ complete inductive census is `True/False/And/Or/Iff/Eq/Exists/Acc/Bool/Nat/
 Decidable/Nat.le/Nat.Fin/Nat.Pair/Char` (24 inductives in the dump).
 
 **The obstruction is not a missing decision — it is that the classical
-statement cannot be written.** Calling that row 2 would let an expressiveness
+statement cannot be written.**
+
+> **Scoped, 2026-08-31
+> ([ADR-1310](../research/09-decisions/adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md)):
+> correct for MULTISET EQUALITY, and it must not be generalised.** The census
+> above is an inventory — `Nat.Primrec` joined it 2026-08-31, and an inductive
+> contributes **zero** rows to `Kernel::axiom_footprint` — so nothing
+> structural forbids a `List`; §3 of this same file already says "the gap is
+> **not** a missing type", and that reading is the right one.
+>
+> The sharper statement ADR-1310 lands: a finite family needs a **fold**, not a
+> type, and a fold is a function. `Int.sumMaps` folds over every map
+> `[0,m) -> [0,n)` with no function-space type, and
+> `Int.prodRange_sumRange_expand` is an admitted axiom-free theorem over that
+> index set. What no fold reaches is a comparison of two *unordered*
+> collections — which is exactly, and only, what this row is about. Calling that row 2 would let an expressiveness
 gap masquerade as a constructive-strength result, which is the same category
 error Amendment 4 corrects from the other direction. It deserves its own row,
 proposed here and adopted in
@@ -342,7 +357,7 @@ reliable; its report of what REMAINS is a hypothesis, and re-verifying a
 | Row | Status |
 |---|---|
 | **1** | **Existence landed:** `Nat.exists_prime_factorization` (theorem, 0 axioms), via `prodRange f k`. `Nat.euclid_lemma` (`Prime p → p ∣ ab → p ∣ a ∨ p ∣ b`, 0 axioms) is the uniqueness half's engine and is landed. |
-| **2′** | **Expressiveness, not decision.** No `List`/`Finset`/`Prod`/quotient — see §1.2(b). The multiset statement is unwritable; the multiplicity-agreement statement is writable today with `countRange_permute`. |
+| **2′** | **Expressiveness, not decision.** No `List`/`Finset`/`Prod`/quotient — see §1.2(b), and its 2026-08-31 scoping note: the absence is an inventory, and the unwritable thing is *multiset equality* specifically, not finite families (ADR-1310). The multiset statement is unwritable; the multiplicity-agreement statement is writable today with `countRange_permute`. |
 | **2** | **None** in the decision sense: nothing here needs an undecidable comparison. |
 | **3** | `Nat.minFac`/`minFacAuxMinimal` give the kernel side; `axeyum-cas`'s `factorize` (`ntheory.rs:459`) itself has no certificate. But as of 2026-08-31 (ADR-1055) a certified factorization route exists and is cited: `ntheory_certify::certify_factorization`/`check_factorization_certificate` — product identity plus per-factor Pratt primality, independently re-derived — `F:cas-ntheory-factorization-certificate`, `cas-internal` (§2.8). |
 | **4** | Not attempted. |

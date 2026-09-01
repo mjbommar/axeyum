@@ -106,6 +106,28 @@ structural rather than a matter of effort:
   characteristic polynomial's root multiset — is not merely unproved but
   unstatable in that form, and its expressible reformulation is a different
   rung.
+
+  > **CORRECTION, 2026-08-31
+  > ([ADR-1310](../research/09-decisions/adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md)):
+  > "structural rather than a matter of effort" is wrong for this first
+  > constraint.** The census is an INVENTORY: `Nat.Pair` landed 2026-08-29 and
+  > `Nat.Primrec` 2026-08-31, `Kernel::add_inductive` is an ordinary gate, and
+  > an inductive contributes **zero** rows to `Kernel::axiom_footprint`
+  > (`Inductive`/`Constructor`/`Recursor` are filtered out). Nothing structural
+  > forbids a `List`; the reason not to add one is that `Nat.Fin` already
+  > exists with **zero non-test consumers**, so the development has already
+  > declined an indexed finite type once.
+  >
+  > A finite family also does not need a type — it needs a **fold**, and a
+  > fold is a function. `Int.sumMaps` sums over every map `[0,m) -> [0,n)`
+  > with no function-space type, and `Int.prodRange_sumRange_expand` is an
+  > admitted axiom-free theorem over that index set.
+  >
+  > **What survives, narrowed:** a statement comparing two *unordered*
+  > collections — multiset equality, hence uniqueness of prime factorization
+  > and the root multiset — genuinely quantifies over an aggregate rather than
+  > folding over one, and no fold reaches it. That much is unstatable. It is a
+  > claim about multiset equality, not about finite families.
 - **`funext` is absent** (positive control: `congrFun'`, the other direction,
   is present). A conclusion that is an equation **between functions** —
   `(AB)C = A(BC)` as matrices, `A·A⁻¹ = I` — cannot be an `Eq`. It must be

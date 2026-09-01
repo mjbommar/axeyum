@@ -54,6 +54,22 @@ Two kernel facts decide the whole shape:
    + `Nat.le` + `Nat.Fin` + `Char` + `Nat.Pair`. A finite family is a
    function plus a bound, which is already how `Rat.matMul` and
    `Rat.dotN` work.
+
+   > **CORRECTION, 2026-08-31 (ADR-1310): the census is right, "forced" is
+   > not.** `Nat.Pair` was declared 2026-08-29 and `Nat.Primrec` on
+   > 2026-08-31; `Kernel::add_inductive` is an ordinary gate, and an
+   > inductive contributes **zero** rows to `Kernel::axiom_footprint`
+   > (`Inductive`/`Constructor`/`Recursor` are filtered out;
+   > `TRUSTED_KINDS` is `{axiom, opaque, quotient}`). So this is an
+   > INVENTORY, not a law.
+   >
+   > The encoding is still the right one, for a reason this item does not
+   > give: `Nat.Fin` **already exists** (`nat_prelude/finite.rs`, 2026-08-23)
+   > and has **zero non-test consumers** — the pigeonhole apparatus built
+   > around it in the same file is stated over plain `Nat -> Nat` with
+   > bounded quantifiers. The development already declined an indexed finite
+   > type once. Choose function-plus-bound because it is adopted, not because
+   > nothing else is available.
 2. **`funext` is absent** (positive control of the same kind, present:
    `congrFun'`). A matrix equation must be stated pointwise.
 
@@ -162,6 +178,26 @@ A **closed Leibniz form** (`det A n = sum over permutations of ...`) is not
 merely unproved but not expressible here: it quantifies over permutations of
 `[0,n)`, and this kernel has no type in which to write that sum. The
 function-plus-bound idiom reaches the cofactor recursion and stops there.
+
+> **CORRECTION, 2026-08-31
+> ([ADR-1310](adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md)):
+> the paragraph immediately above is wrong, and it was quoted forward into
+> ADR-1135 and into two curriculum pages before anyone tested it.**
+>
+> A sum does not need its index set to exist as a type; it needs a **fold**
+> over the index set, and a fold is a function. `Int.sumMaps m n F` folds over
+> every `g : [0,m) -> [0,n)` by `Nat.rec` with a higher-order motive — which is
+> the very device `Rat.det` uses for its own recursion — and
+> `Int.prodRange_sumRange_expand` is an admitted, axiom-free theorem summing
+> over exactly such a function space.
+>
+> Applied to Leibniz: the permutations of `[0,n)` are the injective maps, and
+> injectivity on a bounded range is `Nat.beq`-decidable, so
+> `sumMaps n n (fun g => sgnOrZero g n * prodRange (fun i => A i (g i)) n)` is
+> a well-formed term in this kernel. **That construction is argued in
+> ADR-1310, not built** — no `sgnOrZero` exists, and proving it agrees with
+> `Rat.det` is a separate hard theorem. What is settled is only that the
+> statement is writable, so "not expressible" is the wrong word.
 
 ## Consequences
 

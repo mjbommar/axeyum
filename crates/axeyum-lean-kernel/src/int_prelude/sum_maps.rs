@@ -67,7 +67,7 @@
 //! summation schedule*; it does not give you a permutation type, an injectivity
 //! predicate over that schedule, or a sign. The Cauchy–Binet proof needs those
 //! next, and they are real work — see the "what actually blocks
-//! multiplicativity" section of ADR-1315. The claim this file establishes is
+//! multiplicativity" section of ADR-1310. The claim this file establishes is
 //! narrower and precise: **the index set being a function space is not the
 //! obstruction.**
 //!

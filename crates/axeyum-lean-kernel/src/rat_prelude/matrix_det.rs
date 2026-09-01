@@ -12,6 +12,19 @@
 //! A matrix is a function `Nat → Nat → Rat` plus an explicit bound, exactly as
 //! in [`super::matrix_n`] — this kernel has no `List`, `Finset`, `Prod` or
 //! vector type, so a finite family is a function plus a bound and nothing else.
+//!
+//! **Scoped, 2026-08-31 (ADR-1310).** The clause after the dash reads as a law
+//! and is an inventory: `Nat.Pair` (2026-08-29) and `Nat.Primrec` (2026-08-31)
+//! were both added by ordinary `Kernel::add_inductive` calls, and an inductive
+//! contributes **zero** rows to `Kernel::axiom_footprint`. The encoding here is
+//! still the right one — `Nat.Fin` already exists and has zero non-test
+//! consumers, so the development has declined an indexed finite type once
+//! already — but "and nothing else" overstates it. In particular a finite
+//! family does not need a type at all: it needs a FOLD, and `Int.sumMaps`
+//! (`int_prelude/sum_maps.rs`) folds over an entire FUNCTION SPACE by `Nat.rec`
+//! with a higher-order motive, which is the same device `Rat.det` uses below.
+//! See the "what actually blocks multiplicativity" section of ADR-1310 before
+//! quoting either this paragraph or ADR-1135's three-route wall.
 //! The determinant is then
 //!
 //! ```text

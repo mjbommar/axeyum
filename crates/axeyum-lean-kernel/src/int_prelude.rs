@@ -2287,7 +2287,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         sum::declare_sum_range_of_nat(&mut d)?;
         sum::declare_modeq_sum_range(&mut d)?;
         // The function-space-indexed sum and the generalized distributive law
-        // (ADR-1315). Needs `Int.sumRange` + its `congr` (immediately above),
+        // (ADR-1310). Needs `Int.sumRange` + its `congr` (immediately above),
         // `Int.prodRange_shiftFront` (above), and the ring lemmas `add_mul`,
         // `left_distrib`, `mul_zero`, `mul_comm` (`algebra`, far above).
         sum_maps::declare_sum_range_mul_right(&mut d)?;

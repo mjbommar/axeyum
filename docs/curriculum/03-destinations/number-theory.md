@@ -77,7 +77,19 @@ Read these from the kernel, not from this table — it is a snapshot:
   so the *decidable fragment* is cheap regardless.
 - **Uniqueness of prime factorization** — blocked by the kernel's *type theory*,
   not by decidability: there is no `List`, `Finset`, product type or quotient by
-  permutation in which to state multiset equality. The expressible reformulation
+  permutation in which to state multiset equality.
+
+  > **Scoped, 2026-08-31
+  > ([ADR-1310](../../research/09-decisions/adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md)):
+  > this claim is CORRECT and it is narrower than the sentence it usually gets
+  > quoted alongside.** Multiset equality compares two *unordered* collections,
+  > so it genuinely quantifies over an aggregate and no fold reaches it. But
+  > "there is no `List`/`Finset`/`Prod`" is an inventory rather than a law
+  > (`Nat.Pair` and `Nat.Primrec` both landed this week; an inductive costs
+  > zero axioms), and a finite *family* needs only a fold, which is a function
+  > — `Int.sumMaps` sums over a whole function space with no aggregate type at
+  > all. Do not carry this bullet forward as evidence that finite families in
+  > general are blocked. The expressible reformulation
   (multiplicity agreement at each prime, via `Nat.countRange_permute`) is
   reachable today. See ADR-0716's **row 2′**.
 - Analytic number theory (prime counting, Dirichlet, Chebyshev) is out of scope
