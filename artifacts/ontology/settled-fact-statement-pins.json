@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2088,
+    "min_identity_bound": 2095,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -809,6 +809,12 @@
       "prose_sha256": "62dbad3d235a885c5c93b8d5bb48d14cad1637a02e863b75c145ea0afe39eb82"
     },
     {
+      "fact_id": "F:cas-gf2-degree-400-trinomial-irreducible",
+      "language": "cas-term",
+      "statement_sha256": "9c56cf65ca24d2e2a0f3696a02fbac1d288d820f1e94e6fe65f15c96b43d38ae",
+      "prose_sha256": "612d26aba3e65c9aecd7a4c7798ccbb3a3ed9a253dbdc5df09f0d27cd9fd2fb2"
+    },
+    {
       "fact_id": "F:cas-inverse-quintic-degree-five-witness",
       "language": "cas-term",
       "statement_sha256": "a926b62996074fd5c6e2ad2ed135cd175a1b7abeb543e4efcf54a3f5cf19ff21",
@@ -885,6 +891,36 @@
       "language": "cas-term",
       "statement_sha256": "9cba3a701e28ba33b3cc0abf88fce2bf54813196d643941f343d85fcadca5caf",
       "prose_sha256": "1255a13ff594ef45b11f9c8a28ff65b2b1825ee76f0bf1b5b2d049af98dedb75"
+    },
+    {
+      "fact_id": "F:cas-ratint-horowitz-x-over-x-minus-one-squared",
+      "language": "cas-term",
+      "statement_sha256": "2a9db9c4bf6e854cbe70419ffcac0560e46b1d82dd9c8155f7d952d48c01fa77",
+      "prose_sha256": "c11fe41476b0e163836bdff94be5082ccbc777dd6ecd92f375160ea195549394"
+    },
+    {
+      "fact_id": "F:cas-smith-normal-form-two-six-twelve",
+      "language": "cas-term",
+      "statement_sha256": "2527a3bac3d5e5a1d9574963f5d349abfe4b7fdfe8c94605e74cb2e80bb4f825",
+      "prose_sha256": "fd00b945e764aa13e7fbf3e1e9143dd5a1b89432d4fcda1a4ab6107f444f0412"
+    },
+    {
+      "fact_id": "F:cas-sos-damped-rotation-lyapunov",
+      "language": "certificate-spec",
+      "statement_sha256": "8cdbc7ebb94011db7591e6a7b0c604d5a6bbcd3557cfcdf2dd3f59c3f6fec8a0",
+      "prose_sha256": "2dff423f8f077bcbaf74284a8915b2c3575c1b10556226a0e941306da6c1b8ce"
+    },
+    {
+      "fact_id": "F:cas-sos-energy-barrier-unreachability",
+      "language": "certificate-spec",
+      "statement_sha256": "c9320ba95c05da3cedbf233680a5686beff032eacd62ae45f63f982b2ab1b4bb",
+      "prose_sha256": "21f4cb509c7d14cb354b90de1e20fb415c0487ca545946f314e999fdc199f432"
+    },
+    {
+      "fact_id": "F:cas-sos-motzkin-psd-not-sos",
+      "language": "certificate-spec",
+      "statement_sha256": "bc866e92a216b410f33c37a76562cd38fcf9eba6020680e08f5ea52d580d71ea",
+      "prose_sha256": "65f6bb1c268ad11b8f26e63f74f83b282d84f9771c61fb17d761a437c58a4cd4"
     },
     {
       "fact_id": "F:cas-taylor-quartic-lagrange-witness",
@@ -10154,6 +10190,18 @@
       ]
     },
     {
+      "fact_id": "F:ml430-int-fib-neg-one-107bdfc6",
+      "language": "lean4-surface",
+      "statement_sha256": "6faf761029f120faf53367a3e96daefa5b34770d78272581238541b8c0bb5524",
+      "prose_sha256": "80462ca3e1877d9a55f46c0861a0c3f26069beb817b1b3a12b7c158ac0bb77d3"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-neg-two-379ecfa0",
+      "language": "lean4-surface",
+      "statement_sha256": "c9ed4df020549b085463628700b95c994d749363aab797a3271328aa16ffe37f",
+      "prose_sha256": "51b3d83f47a62f0b2e3a84158476f5dff9594e2c147f3f75ee916adb7b5a8ddd"
+    },
+    {
       "fact_id": "F:ml430-int-fib-of-nonneg-438018c5",
       "language": "lean4-surface",
       "statement_sha256": "98d93e536206aa25bf2260c876c5fd7ad9b3fcb7c767b7ebf9bd59efda336d45",
@@ -10171,6 +10219,18 @@
       "statement_sha256": "5ec7dcf61f82bdbd52661d9371ec1a95c274341598a133bcae4d522ebe4c1166",
       "prose_sha256": "26cb2955faa8ac751c0ed234540e2aa12902971af5ac02a0dfc08297dedb7b88",
       "kernel_theorem": "Int.fib_of_odd"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-one-df6c44d8",
+      "language": "lean4-surface",
+      "statement_sha256": "00ea8d6a333f8f15c604df1b3a5530feb814176d03a64436336293b9ab79ac7e",
+      "prose_sha256": "8cf6bfb8750ddc8c68769ceff66dd7c13a4841af51fdab6b475ac8e8e1178dfc"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-two-33d76423",
+      "language": "lean4-surface",
+      "statement_sha256": "0b1e8c5245b650ca204300ffdcf2bbfaddf281f49e62f305fc286dc9d11eef6b",
+      "prose_sha256": "962a4516de37aa46c18d55762ec29307100072a2889947b74f312c08dc1e5323"
     },
     {
       "fact_id": "F:ml430-int-fib-two-mul-0e70f3dd",
@@ -10199,6 +10259,12 @@
       "statement_sha256": "7bd168b1cdc168ec7428dc66a6972e2b428820a41ed3802be4933f47893c779b",
       "prose_sha256": "952d2bf8ffa229023304f60291dec50ca6920674dd7e3803faa86a1d0139e587",
       "kernel_theorem": "Int.fib_two_mul_add_two"
+    },
+    {
+      "fact_id": "F:ml430-int-fib-zero-439bfeee",
+      "language": "lean4-surface",
+      "statement_sha256": "def73206b0f1662b63475af07e59ade2d6b8195eac96bff93bb94ae2d11647f4",
+      "prose_sha256": "3a357a7762da303e30912418a7863d448845232990b95102e3a1e68d03589f5b"
     },
     {
       "fact_id": "F:ml430-int-gcd-div-5e01872f",
@@ -13911,6 +13977,20 @@
       "kernel_theorem": "Nat.pow_of_pow_add_prime"
     },
     {
+      "fact_id": "F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3",
+      "language": "lean4-surface",
+      "statement_sha256": "bd670138a54b58e23dca08c8d7af9d8be814c73c588747afe4595a4c46fba5c0",
+      "prose_sha256": "6eee2a7cff31969c827f347cfc54172b84ff1be1e6f69169bfba0f7bfc9f8d7f",
+      "kernel_theorem": "Nat.prime_coprime_descFactorial_of_lt_of_le"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
+      "language": "lean4-surface",
+      "statement_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
+      "prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
+      "kernel_theorem": "Nat.prime_coprime_factorial_of_lt"
+    },
+    {
       "fact_id": "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
       "language": "lean4-surface",
       "statement_sha256": "9629bf1b3333dec6b6132e605f4c7588bd9d4cdd3217fe9d5d495d3815579be6",
@@ -13939,6 +14019,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-prime-dvd-factorial-5ace903f",
+      "language": "lean4-surface",
+      "statement_sha256": "ffd159309a056461125528f0cb94b77d9ff1fcde5f8278e460282551d8740437",
+      "prose_sha256": "041fd42f121013ddca836810903f24c87b76e31bcecb93afa41f8c28cc6a1a7d",
+      "kernel_theorem": "Nat.prime_dvd_factorial_iff_le"
+    },
+    {
       "fact_id": "F:ml430-nat-prime-dvd-iff-eq-b7446896",
       "language": "lean4-surface",
       "statement_sha256": "7ab5f679d74198d66c036ca0f7191dd1e0a8c3235787f4dd2a2e235b07324df5",
@@ -13958,6 +14045,13 @@
       "statement_sha256": "433812cec7c9eea97fd167557abcc38feb5a5193aa98ca8ae8a88e27418dea0f",
       "prose_sha256": "319c65d39e0ee766c51767df5a8b79d92f157e6430438c9236c283027227c4f0",
       "kernel_theorem": "Nat.prime_dvd_iff_not_coprime"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-dvd-lcm-237d267c",
+      "language": "lean4-surface",
+      "statement_sha256": "e5cd0144e3bba81aca2f6f37c8b6a690756d9a116efdc16f685033303bbb5a66",
+      "prose_sha256": "57c5d7944fdb17288a9d883d15bf333ab103846fa3bdf4436ea60f8502525eb6",
+      "kernel_theorem": "Nat.prime_dvd_lcm_iff"
     },
     {
       "fact_id": "F:ml430-nat-prime-dvd-mul-59446847",
@@ -14014,6 +14108,13 @@
           "prose_sha256": "51dc733e6af33875b61795378d3cdc4b539695daee19716181c4d370efe32437"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-dvd-or-dvd-of-dvd-lcm-58280948",
+      "language": "lean4-surface",
+      "statement_sha256": "bb023a2e9297cf5c375dd2cc13bd09764c74dd852fbf024d00436a5324a20cd9",
+      "prose_sha256": "bae961b50d9a86b17a4aef589f6fb94f712ce1be8a5f5f7c5b32da84d0770aea",
+      "kernel_theorem": "Nat.prime_dvd_or_dvd_of_dvd_lcm"
     },
     {
       "fact_id": "F:ml430-nat-prime-eq-one-of-pow-846d2949",
@@ -14310,6 +14411,13 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-size-bit-c601dbf0",
+      "language": "lean4-surface",
+      "statement_sha256": "2fa054800aff3196535e6ed01644461f4bafd8537754a56e1ffd0f68171b69fa",
+      "prose_sha256": "1923c171b5cbce33ed106692b3b9b8ef91243ed3d138fc472d4f42ca895bd823",
+      "kernel_theorem": "Nat.size_bit"
+    },
+    {
       "fact_id": "F:ml430-nat-size-eq-zero-020ad98c",
       "language": "lean4-surface",
       "statement_sha256": "ebc8a02dbfc7676111d659273c5a983db80cf714dcb965b1e728d77f295ff36e",
@@ -14322,6 +14430,13 @@
           "prose_sha256": "fcc156e31b6ecf707b4b737f71a1f3e6bf24633344901b957a8449677c36d6a4"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-size-le-size-c4b98f53",
+      "language": "lean4-surface",
+      "statement_sha256": "2231574b00b83e0c4d1be04ad85519daa43fdb2d8c3c3525adb6a8d09611e739",
+      "prose_sha256": "7316e8fa032948bf06913a316e9a095fcecd7a5521a563eb9412bfd7ec0483d3",
+      "kernel_theorem": "Nat.size_le_size"
     },
     {
       "fact_id": "F:ml430-nat-size-one-e23e5f71",
