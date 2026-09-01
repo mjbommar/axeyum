@@ -88,27 +88,54 @@
 //! **This row is `cas-internal` (ADR-0601): nothing here is reconstructed in
 //! the Lean kernel, and it must not be counted as a kernel theorem.**
 //!
-//! ## Guard classification (measured, see the tests)
+//! ## Guard classification — MEASURED by deleting each check, not asserted
 //!
-//! Not every check below is independently falsifiable, and the module says so
-//! rather than letting a reader assume otherwise. The checks split in two:
+//! The first version of this section claimed nine independently-falsifiable
+//! guards. **That claim was false**, and deleting the checks one at a time in a
+//! scratch snapshot is what showed it: of fifteen checks, **twelve survived
+//! deletion with all 25 tests still green**, because every fixture corrupted a
+//! certificate in a way that several checks reject and whichever one remained
+//! caught it. Every fixture was a real test of the checker; none of them was a
+//! test of *one* check. That is the exact shape this repository calls a
+//! checker that cannot fail, arriving one level down.
 //!
-//! - **Independent guards** — each is killed by a distinct fixture in this
-//!   module's test suite: `a < b`; the recomputed `p'` matching `deriv`; the
-//!   endpoint non-vanishing of `p'`; the recorded `deriv_sign`; the Sturm
-//!   count of `p'` on `(a, b]` being zero; `y` strictly between `p(a)` and
-//!   `p(b)`; the recomputed `q` matching `shifted`; the root's minimal
-//!   polynomial dividing `q`; and the root's own bracket isolating exactly one
-//!   root of that minimal polynomial inside `[a, b]`.
-//! - **Deliberately redundant conclusion re-derivations** — `p(x) = y`
-//!   evaluated exactly at the algebraic `x`, the uniqueness recount of `q` on
-//!   `(a, b]`, and strict interiority `a < x < b`. Each of these is
-//!   *mathematically implied* by the independent guards above (monotonicity on
-//!   `[a, b]` plus `y` interior to the range gives existence, uniqueness and
-//!   interiority at once), so **no corruption this suite can express kills one
-//!   of them alone.** They are kept because they are the statement itself, and
-//!   because they cross-check the Sturm/`AlgebraicReal` layer against the
-//!   evaluation layer; they are not counted as guards.
+//! What the measurement produced, in order:
+//!
+//! 1. One check was deleted outright. An explicit "`p` is not constant" test
+//!    could never fail on its own — a constant `p` has `p' = []`, and
+//!    `eval_rat_poly([], a) = 0` makes the endpoint guard reject it anyway.
+//! 2. One fixture was rebuilt to isolate the monotonicity guard, which is the
+//!    one check that carries this row's actual mathematical content. The
+//!    original fixture (`p = x^3 - 3x` on `[1/2, 2]`) did not isolate it:
+//!    `p'` has *opposite* signs at those endpoints, so the `deriv_sign` guard
+//!    rejects first. The replacement is `[-3/2, 3/2]`, where `p'` is positive
+//!    at both ends and vanishes twice strictly inside, `y = 0` is interior to
+//!    the range, and `q` genuinely has exactly one root in the bracket
+//!    (`+-sqrt 3` fall outside it) — so every other check and every conclusion
+//!    re-derivation passes, and deleting the monotonicity count kills that
+//!    test and nothing else.
+//!
+//! Current measured state — **4 of 14 checks are killed by exactly one test**:
+//! `deriv` matches the recomputation, `deriv_sign`, the monotonicity Sturm
+//! count, and `shifted` matches the recomputation.
+//!
+//! The other ten are **mutually backing**, and the backup relation was measured
+//! too (delete a survivor together with its hypothesised backup and see a test
+//! die):
+//!
+//! | check | backed by | evidence |
+//! |---|---|---|
+//! | endpoint `p'` nonzero | `deriv_sign` | `signum(0) = 0` never matches a recorded `+-1` |
+//! | `y` strictly in range | the `shifted` match, then `minpoly \| q` | a moved `y` makes `q` disagree, then makes the root a non-root |
+//! | `minpoly \| q` | the conclusion `p(x) = y` | a root of another polynomial evaluates to the wrong value |
+//! | bracket containment | strict interiority | a bracket outside `[a,b]` puts `x` outside `(a,b)` |
+//! | `a < b` | seven others together | a swapped interval breaks nearly everything |
+//! | bracket recount, point-bracket eval | not reachable | `AlgebraicReal`'s fields are private and every constructor maintains the isolating invariant, so a bad bracket cannot be built through the public API |
+//! | uniqueness recount, strict interiority, `p(x) = y` | the guards they back up | each is implied when the others hold |
+//!
+//! Overlapping checks in a certificate checker are defence in depth and are
+//! worth keeping. What is not worth keeping is the *claim* that each one is
+//! independently necessary, and that claim is now replaced by the table above.
 //!
 //! No floating point is used for any decision. (`polynomial_ivt`, reused
 //! below, uses an `f64` approximation to *select* which isolated root to name,
@@ -245,11 +272,12 @@ pub fn verify_inverse_certificate(cert: &InverseCertificate) -> Option<bool> {
 
     // G2. `deriv` is really `p'`, recomputed by a checker-local
     // differentiation that shares no code with the producer's.
+    // (There is deliberately no separate "`p` is not constant" guard here.
+    // A constant `p` has `p' = []`, `eval_rat_poly([], a) = 0`, and G3 below
+    // rejects it — so an explicit emptiness check could never fail on its own,
+    // which is exactly the shape this repository treats as worse than no
+    // check. Measured: deleting it killed zero tests.)
     let recomputed_deriv = checker_derivative(poly)?;
-    if recomputed_deriv.is_empty() {
-        // `p` constant: no injectivity possible.
-        return Some(false);
-    }
     if recomputed_deriv != checker_trim(deriv.clone()) {
         return Some(false);
     }
@@ -648,14 +676,18 @@ mod tests {
 
     #[test]
     fn verify_rejects_a_nonmonotone_bracket() {
-        // G5, and this is the fixture that shows the monotonicity guard is
-        // not decoration. p = x^3 - 3x, y = 0 on [1/2, 2]. The root sqrt(3)
-        // named below is a genuine root of p - 0, it is strictly interior,
-        // its bracket isolates it correctly, and it is even the UNIQUE root
-        // of p in (1/2, 2] -- so every other guard, and every conclusion
-        // re-derivation, passes. But p'(x) = 3x^2 - 3 vanishes at x = 1,
-        // inside the bracket, so p is not monotone there and "the inverse"
-        // is not well defined as a function on this interval. Only G5 sees it.
+        // A non-monotone bracket with an otherwise-honest witness: p = x^3 - 3x,
+        // y = 0 on [1/2, 2], witness sqrt(3). The root is genuine, strictly
+        // interior, correctly bracketed, and the UNIQUE root of p in (1/2, 2].
+        //
+        // CORRECTION, measured by guard deletion: this fixture does NOT isolate
+        // G5, and the comment here used to claim it did. `p'(1/2) = -9/4` and
+        // `p'(2) = 9` have OPPOSITE signs, so G4 rejects the certificate first
+        // and deleting G5 leaves this test green. The isolating fixture is
+        // `verify_rejects_a_nonmonotone_bracket_that_every_other_check_accepts`
+        // below, on `[-3/2, 3/2]`. This case is kept because a sign-flipping
+        // bracket is a distinct and realistic corruption, but it is a test of
+        // the checker, not of one check.
         let p = poly_from(&[0, -3, 0, 1]);
         // Build the honest root by the IVT route directly.
         let ivt = crate::real_algebraic::polynomial_ivt(&p, Rational::new(1, 2), int(2))
@@ -672,6 +704,78 @@ mod tests {
             root: ivt.root,
         };
         assert_eq!(verify_inverse_certificate(&cert), Some(false));
+    }
+
+    #[test]
+    fn verify_rejects_a_nonmonotone_bracket_that_every_other_check_accepts() {
+        // G5, ISOLATED. This is the adversarial fixture the guard-deletion run
+        // demanded: a certificate over a genuinely satisfiable instance in
+        // which every single other check -- and every conclusion
+        // re-derivation -- passes, so that deleting G5 makes this test die and
+        // nothing else does.
+        //
+        // `p = x^3 - 3x` on `[-3/2, 3/2]`, `y = 0`.
+        //   - `p' = 3x^2 - 3` is POSITIVE at both endpoints (3(9/4) - 3 = 15/4)
+        //     so the recorded sign is consistent -- G4 passes -- while `p'`
+        //     vanishes at BOTH `x = -1` and `x = 1`, strictly inside. `p` runs
+        //     up to `p(-1) = 2`, back down to `p(1) = -2`, then up again: not
+        //     injective, so `p^-1` is not a function on this interval at all.
+        //   - `y = 0` still lies strictly between `p(-3/2) = 9/8` and
+        //     `p(3/2) = -9/8`, so G6 passes.
+        //   - `x^3 - 3x = 0` has roots `0` and `+-sqrt 3`, and `sqrt 3 ~ 1.732`
+        //     is OUTSIDE `[-3/2, 3/2]`. So `q` has exactly ONE root in the
+        //     bracket and the uniqueness recount R1 passes too -- the point
+        //     statement "`p(0) = 0`" is perfectly true. What is false is the
+        //     claim the certificate makes: that this names the value of an
+        //     inverse.
+        //
+        // My earlier fixture (`[1/2, 2]`, witness `sqrt 3`) does NOT isolate
+        // G5: `p'` has opposite signs at those endpoints, so G4 rejects it
+        // first and deleting G5 changed nothing. Measured, not assumed.
+        let p = poly_from(&[0, -3, 0, 1]);
+        let lo = Rational::new(-3, 2);
+        let hi = Rational::new(3, 2);
+
+        // The producer refuses outright -- it runs the same Sturm count.
+        assert_eq!(polynomial_inverse(&p, lo, hi, int(0)), None);
+
+        let ivt = crate::real_algebraic::polynomial_ivt(&p, lo, hi)
+            .expect("q changes sign across [-3/2, 3/2]");
+        assert_eq!(ivt.root.rational_value(), Some(int(0)));
+        let deriv = poly::rat_derivative(&p).expect("differentiates");
+        let cert = InverseCertificate {
+            poly: p.clone(),
+            a: lo,
+            b: hi,
+            y: int(0),
+            deriv,
+            deriv_sign: 1,
+            shifted: p,
+            root: ivt.root,
+        };
+        assert_eq!(verify_inverse_certificate(&cert), Some(false));
+
+        // Non-vacuity of the fixture's own premises, so a future edit that
+        // makes some OTHER guard reject it silently cannot go unnoticed: the
+        // instance really does have a single preimage and a consistent
+        // derivative sign, and the derivative really does vanish inside.
+        assert_eq!(
+            sturm::count_real_roots_in(&cert.shifted, lo, hi),
+            Some(1),
+            "exactly one preimage of y = 0 in the bracket: R1 must pass"
+        );
+        assert_eq!(
+            sturm::count_real_roots_in(&cert.deriv, lo, hi),
+            Some(2),
+            "and p' vanishes twice inside it: only G5 can see that"
+        );
+        assert_eq!(
+            poly::eval_rat_poly(&cert.deriv, lo)
+                .map(|v| v.numerator().signum())
+                .zip(poly::eval_rat_poly(&cert.deriv, hi).map(|v| v.numerator().signum())),
+            Some((1, 1)),
+            "p' has the SAME sign at both endpoints, so G4 cannot reject"
+        );
     }
 
     #[test]
@@ -749,13 +853,16 @@ mod tests {
 
     #[test]
     fn the_conclusion_rederivations_are_implied_and_this_says_so() {
-        // The module doc claims R1 (uniqueness recount), R2 (strict
-        // interiority) and R3 (`p(x) = y`) are mathematically implied by
-        // G1-G9 and therefore cannot be killed alone. This test PINS that
-        // claim in the direction that matters: a certificate passing G1-G9
-        // passes all three. It is not a guard test and must not be read as
-        // one -- it is the record of a measurement, so that a later reader
-        // does not mistake three unkillable checks for three guards.
+        // R1 (uniqueness recount), R2 (strict interiority) and R3
+        // (`p(x) = y`) are each implied when the guards above them hold, and
+        // guard-deletion confirms none of the three is killed on its own.
+        // What deletion ALSO showed, and what the module doc's table now
+        // records, is that the implication runs both ways: deleting
+        // `minpoly | q` leaves R3 to reject, and deleting bracket containment
+        // leaves R2 to reject. So these are not passengers -- they are the
+        // other half of a mutually-backing set. This test pins the direction
+        // that matters here: a certificate passing every guard passes all
+        // three.
         let cert = good_cert();
         assert_eq!(verify_inverse_certificate(&cert), Some(true));
 
