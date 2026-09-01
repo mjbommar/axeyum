@@ -10,7 +10,9 @@
   "constructions": [
     {
       "mathlib_constant": "Nat.testBit",
-      "surface_forms": ["testBit"],
+      "surface_forms": [
+        "testBit"
+      ],
       "class": "codomain",
       "mathlib_codomain": "Bool",
       "axeyum_codomain": "Nat",
@@ -25,7 +27,9 @@
     },
     {
       "mathlib_constant": "Nat.multichoose",
-      "surface_forms": ["multichoose"],
+      "surface_forms": [
+        "multichoose"
+      ],
       "class": "definitional",
       "why": "Mathlib's `multichoose` is a three-case double recursion (`multichoose n (k+1) + multichoose (n+1) k`) and `multichoose_eq : multichoose n k = (n + k - 1).choose k` is a proved THEOREM about it. Ours DEFINES that closed form as the body. We define what Mathlib proves, about a different function, so the mirrors are different propositions. Showing the two agree needs an induction relating two independently-built Nat.rec instances.",
       "mathlib_source": {
@@ -36,7 +40,9 @@
     },
     {
       "mathlib_constant": "Nat.minFac",
-      "surface_forms": ["minFac"],
+      "surface_forms": [
+        "minFac"
+      ],
       "class": "algorithmic",
       "why": "Ours is a fuel-structural linear search; Mathlib's is well-founded on `sqrt n` skipping evens. Same values, different construction, so the pinned statement is about a different function. The local analogue F:nat-coprime-of-lt-minfac is proved.",
       "mathlib_source": {
@@ -47,7 +53,10 @@
     },
     {
       "mathlib_constant": "Nat.fastFib",
-      "surface_forms": ["fastFib", "binaryRec"],
+      "surface_forms": [
+        "fastFib",
+        "binaryRec"
+      ],
       "class": "recursion-principle",
       "why": "Mathlib's `binaryRec` is `WellFounded.fix` with a DEPENDENT motive. A fuel encoding's non-dependence is forced -- the exhaustion row must return a value for arbitrary `n` with only `motive 0` in hand -- so no amount of infrastructure reaches it. The keystone (F:nat-binary-rec-succ, F:nat-binary-rec-fuel-irrelevance) was built anyway and the mirror still cannot flip.",
       "mathlib_source": {
@@ -55,6 +64,75 @@
         "note": "the divergence is in the recursion principle, not the statement; not re-derivable by this gate"
       },
       "recorded_in": "docs/research/11-design-review/2026-08-29-the-mirror-population-is-consumed.md"
+    },
+    {
+      "mathlib_constant": "Squarefree",
+      "surface_forms": [
+        "Squarefree"
+      ],
+      "class": "codomain",
+      "mathlib_codomain": "Prop",
+      "axeyum_codomain": "Bool",
+      "axeyum_declaration": "Squarefree",
+      "codomain_witness_regex": "Squarefree\\s+\\S+\\s*\u2192",
+      "why": "Mathlib's `Squarefree [Monoid R] (r : R) : Prop := \u2200 x, x * x \u2223 r \u2192 IsUnit x` is Prop-valued and lives at the bare root namespace. This kernel declares only the executable decision procedure `Squarefree (n : Nat) : Bool` (nat_prelude/squarefree.rs) -- a Prop-valued predicate admits no evaluation test, so no bridge theorem is built (ADR-0653: an unblocking lane declares the construction and its evaluation test, nothing else). Closing a Prop-typed pinned statement with a Bool-valued proof manufactures a flip.",
+      "mathlib_source": {
+        "path": "Mathlib/Algebra/Squarefree/Basic.lean",
+        "note": "codomain is re-derived by this gate from the pinned statements themselves (a `Squarefree <arg> \u2192` implication-antecedent occurrence, the mirror image of testBit's `= true/false`), not taken on trust from this row"
+      },
+      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
+    },
+    {
+      "mathlib_constant": "Nat.nth",
+      "surface_forms": [
+        "Nat.nth "
+      ],
+      "class": "definitional",
+      "why": "Mathlib's `noncomputable def nth (p : \u2115 \u2192 Prop) (n : \u2115) : \u2115` case-splits on `Set.Finite (setOf p)` via `Classical.propDecidable` and, in the infinite branch, appeals to `Nat.Subtype.orderIsoOfNat` -- neither structural nor well-founded recursion over a decreasing Nat measure, and this kernel has no Set/Finset/Classical.choice. Ours (nat_prelude/nth.rs) is `Nat.nth (dec : Nat -> Bool) (bound n : Nat) : Nat`, a fuel-bounded search: an extra explicit `bound` argument replaces the classical finiteness split, and the predicate is Bool-decidable-by-construction rather than an arbitrary Prop. The TYPES differ (arity 3 vs 2, Bool vs Prop domain), so the mirror is a different proposition per the mirror-flip criterion's own 'different types' clause. Surface form carries a trailing space: `Nat.nth` is a literal substring of the unrelated, already-honest `Nat.nthRoot` family.",
+      "mathlib_source": {
+        "path": "Mathlib/Data/Nat/Nth.lean",
+        "note": "the divergence is in the definition/recursion principle, not the pinned statement; not re-derivable by this gate"
+      },
+      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
+    },
+    {
+      "mathlib_constant": "Nat.findGreatest",
+      "surface_forms": [
+        "findGreatest"
+      ],
+      "class": "definitional",
+      "why": "Mathlib's `def Nat.findGreatest (P : \u2115 \u2192 Prop) [DecidablePred P] : \u2115 \u2192 \u2115` elaborates the DecidablePred witness as an instance implicit, giving type `(\u2115 \u2192 Prop) \u2192 \u2115 \u2192 \u2115`. Ours (nat_prelude/find_greatest.rs) is the same structural recursion, but this kernel has no instance implicits, so the DecidablePred witness is an EXPLICIT argument -- type `\u03a0 (P : Nat \u2192 Prop), DecidablePred Nat P \u2192 Nat \u2192 Nat` -- and the branch is `Decidable.byCases` rather than `ite`. The definitional bodies agree extensionally but the TYPES differ, so every mirror stated against Mathlib's findGreatest is a different proposition.",
+      "mathlib_source": {
+        "path": "Mathlib/Order/Basic.lean",
+        "note": "re-exported through Mathlib.Data.Nat.Find; the divergence is in the definition's type (explicit vs instance-implicit DecidablePred), not the pinned statement; not re-derivable by this gate"
+      },
+      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
+    },
+    {
+      "mathlib_constant": "Nat.floorRoot",
+      "surface_forms": [
+        "floorRoot"
+      ],
+      "class": "definitional",
+      "why": "Mathlib's `def Nat.floorRoot (n a : \u2115) : \u2115 := if n = 0 \u2228 a = 0 then 0 else a.factorization.prod fun p k \u21a6 p ^ (k / n)` is a product over `a.factorization : Finsupp`. This kernel has no Finsupp/Finset, so that body cannot be written at all. Ours (nat_prelude/factorization_root.rs) is an extensionally-equal bounded downward Nat.rec search over candidate `b`, verified against Mathlib's closed form by simulation over 400 (n, a) pairs before any Rust was written. Same Nat.multichoose shape: a search standing in for a product Mathlib defines and this kernel cannot express.",
+      "mathlib_source": {
+        "path": "Mathlib/Data/Nat/Factorization/Root.lean",
+        "note": "the divergence is in the definition's body (Finsupp product vs bounded search), not the pinned statement; not re-derivable by this gate"
+      },
+      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
+    },
+    {
+      "mathlib_constant": "Nat.ceilRoot",
+      "surface_forms": [
+        "ceilRoot"
+      ],
+      "class": "definitional",
+      "why": "Mathlib's `def Nat.ceilRoot (n a : \u2115) : \u2115 := if n = 0 \u2228 a = 0 then 0 else a.factorization.prod fun p k \u21a6 p ^ ((k + n - 1) / n)` is a product over `a.factorization : Finsupp`, the divisibility-lattice adjoint of floorRoot. This kernel has no Finsupp/Finset. Ours (nat_prelude/factorization_root.rs) is an extensionally-equal bounded upward search with fuel `a`, verified against Mathlib's closed form by simulation over 400 (n, a) pairs before any Rust was written.",
+      "mathlib_source": {
+        "path": "Mathlib/Data/Nat/Factorization/Root.lean",
+        "note": "the divergence is in the definition's body (Finsupp product vs bounded search), not the pinned statement; not re-derivable by this gate"
+      },
+      "recorded_in": "docs/research/11-design-review/2026-09-01-divergence-registry-gaps-closed.md"
     }
   ]
 }
