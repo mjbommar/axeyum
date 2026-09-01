@@ -414,6 +414,49 @@ def load_reviews() -> dict[str, dict[str, Any]]:
     return reviews
 
 
+def load_refusals() -> list[dict[str, Any]]:
+    """The recorded `do-not-draw-held-out` verdicts. Absent file means none.
+
+    `reviews` is a LICENCE to draw a family blind; `refused` is its opposite,
+    and until 2026-09-01 (ADR-1450) nothing read `refused` at all.
+    `screen_family` looks up `reviews[family]`, so a refusal recorded under a
+    MODULE name rather than a family name could not be found by any lookup the
+    guard performed -- and the refusals are recorded that way precisely because
+    the family did not exist yet when they were written.
+
+    Measured: ADR-1100/ADR-1115 recorded `Mathlib.Data.Nat.Count` as
+    `do-not-draw-held-out`, stating that our `Nat.countRange` already proves
+    several of its rows under other names. ADR-1430 then declared `Nat.count`
+    to open exactly that module for a held-out draw, and every screen in
+    `guard()` stayed green: R9 compares NAMES and the names differ, and R11's
+    vocabulary map contains only nursery family subjects, never kernel
+    development. A verdict on record that nothing enforces is the
+    checker-that-cannot-fail defect with a paper trail, which is the one shape
+    this repository treats as worse than no checker at all.
+    """
+    if not REVIEW_FILE.is_file():
+        return []
+    data = json.loads(REVIEW_FILE.read_text())
+    refused = data.get("refused")
+    if not isinstance(refused, list):
+        raise SystemExit(
+            f"check-holdout-adjacency: {REVIEW_FILE.name} has no `refused` "
+            "list; refusing to treat an unreadable review file as 'nothing "
+            "has been refused'")
+    return refused
+
+
+def barred_modules(refusals: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Module -> the `do-not-draw-held-out` row that bars it."""
+    barred: dict[str, dict[str, Any]] = {}
+    for entry in refusals:
+        if entry.get("verdict") != "do-not-draw-held-out":
+            continue
+        for module in entry.get("modules") or ():
+            barred.setdefault(module, entry)
+    return barred
+
+
 def screen_family(family: str, rows: list[Row],
                   published_rows: dict[str, list[Row]],
                   published_partition: dict[str, str],
@@ -552,7 +595,34 @@ def assert_draw_lawful(new_families: dict[str, list[Row]],
                        existing_rows: dict[str, list[Row]],
                        existing_partition: dict[str, str],
                        env: Iterable[str] | None = None,
-                       reviews: dict[str, dict[str, Any]] | None = None) -> list[Finding]:
+                       reviews: dict[str, dict[str, Any]] | None = None,
+                       refusals: list[dict[str, Any]] | None = None) -> list[Finding]:
+    # ADR-1450. A recorded `do-not-draw-held-out` verdict binds, and until this
+    # existed it bound nothing -- see `load_refusals`. Scoped to DRAW time and
+    # to HELD-OUT families, exactly like the disclosure demand: a family an
+    # earlier draw already preregistered is history (ADR-1445), and refusing
+    # one retroactively would red the gate on `main` for a decision nobody is
+    # making now.
+    barred = barred_modules(load_refusals() if refusals is None else refusals)
+    held_out_families = [f for f in sorted(new_families)
+                         if new_partition.get(f) == "held-out"]
+    blocked = []
+    for fam in held_out_families:
+        for r in new_families[fam]:
+            entry = barred.get(r.module)
+            if entry is not None:
+                blocked.append(
+                    f"{fam}: draws {r.module}, recorded do-not-draw-held-out "
+                    f"as {entry.get('family')!r} "
+                    f"({entry.get('authority', 'authority unrecorded')})")
+                break
+    if blocked:
+        raise RefusalError(
+            f"R11 {len(blocked)} new held-out family/families draw a module "
+            f"already recorded do-not-draw-held-out in {REVIEW_FILE.name}; "
+            f"overturning one needs an ADR that removes the row, not a draw "
+            f"that ignores it: {'; '.join(blocked)}")
+
     findings = screen_draw(new_families, new_partition, existing_rows,
                            existing_partition, env=env,
                            reviews=reviews if reviews is not None else load_reviews(),

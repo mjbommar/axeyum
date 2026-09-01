@@ -4794,6 +4794,38 @@ SUITES["holdout-adjacency"] = (
             '        if new_partition.get(fam) != "held-out":\n',
             "        if False:\n",
         ),
+        # ADR-1450. A `do-not-draw-held-out` row in the review file BINDS, and
+        # until this landed nothing read `refused` at all: `screen_family`
+        # looks up `reviews[family]`, so a refusal recorded under a MODULE name
+        # was unreachable by every lookup the guard performed. Measured --
+        # ADR-1100/ADR-1115 recorded `Mathlib.Data.Nat.Count` as
+        # do-not-draw-held-out because our `Nat.countRange` already proves
+        # several of its rows under other names; ADR-1430 then declared
+        # `Nat.count` to open exactly that module for a held-out draw, and
+        # every screen stayed green. Two of the four below aim at the OPPOSITE
+        # failure, which is the live risk once a bar exists: a bar that applies
+        # to development/train families would delete a 22-row dispatchable pool
+        # for an argument that is only about blindness.
+        (
+            "a recorded do-not-draw-held-out verdict bars the draw",
+            "    if blocked:\n        raise RefusalError(\n",
+            "    if False:\n        raise RefusalError(\n",
+        ),
+        (
+            "the recorded-refusal bar is scoped to held-out families",
+            '                         if new_partition.get(f) == "held-out"]\n',
+            "                         if True]\n",
+        ),
+        (
+            "only a do-not-draw-held-out verdict bars, not any recorded note",
+            '        if entry.get("verdict") != "do-not-draw-held-out":\n',
+            "        if False:\n",
+        ),
+        (
+            "an unreadable `refused` list is not 'nothing has been refused'",
+            "    if not isinstance(refused, list):\n",
+            "    if False:\n",
+        ),
     ],
 )
 

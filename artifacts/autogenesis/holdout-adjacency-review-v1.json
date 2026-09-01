@@ -195,6 +195,32 @@
       "verdict": "do-not-draw-held-out",
       "finding": "NOT reviewed by this lane and NOT screened clean by anything -- recorded here so the screen's clean reading is not mistaken for evidence. ADR-1100 measured it held-out-viable (22 rows, R9 0/10, R12 0/10, R11 clean once Nat.count and DecidablePred exist). It is not viable: Nat.countRange is already in this kernel with countRange_zero, countRange_succ, countRange_le, countRange_const_true and countRange_monotone from the totient work, and Nat.count p n IS that function -- so count_zero, count_succ, count_le, count_true and count_monotone are already proved here under other names. That is R11's documented shape-2 blindness (a differently-named theorem), which no name-based screen can see. Carried forward from ADR-1100 unverified by this lane; the point of recording it is that the screen PASSING this module is a known blind spot, not a result.",
       "authority": "ADR-1100, restated by ADR-1115"
+    },
+    {
+      "family": "natural-counting-predicate",
+      "modules": [
+        "Mathlib.Data.Nat.Count"
+      ],
+      "swept": [
+        [
+          "count",
+          "CReal.le_meshLevelCount",
+          46
+        ],
+        [
+          "decidable",
+          "Decidable",
+          20
+        ],
+        [
+          "decidablepred",
+          "DecidablePred",
+          1
+        ]
+      ],
+      "verdict": "do-not-draw-held-out",
+      "finding": "REVIEWED FOR DRAW 17 AND REFUSED, so this is a `refused` row and not a `reviews` licence -- this file's own how_to_add_a_row says \"if you found a mirror, do not write a row\", and this review found four. R11's three HARD signals are CLEAN and that is not the problem: topic 0, vocabulary 0 of 10, R9 0 of 10, R12 clean, pool 22 against a floor of 10. WHAT REFUSES IT IS THE ENVIRONMENT SWEEP THIS DISCLOSURE EXISTS TO FORCE. `Nat.count dec n := Nat.countRange dec n` (nat_prelude/count_and_div_max_pow.rs, ADR-1430) is a DEFINITIONAL ALIAS, and the kernel carries 22 `countRange` lemmas -- re-counted from kernel-environment-snapshot-v1.json's declaration list, not from the module doc, which says 19. Row by row against the drawn ten, with kernel types read from `nat_theorem_inventory` rather than from names: (1) Nat.count_add, `count p (a+b) = count p a + count (fun k => p (a+k)) b`, IS `Nat.countRange_split` term for term, including the shifted predicate. (2) Nat.count_le, `count p n <= n`, IS `Nat.countRange_le`. (3) Nat.count_mono_left, `(forall k<n, p k -> q k) -> count p n <= count q n`, IS `Nat.countRange_le_of_subset`, whose hypothesis `Nat.Subset p q n` is DEFINED in finite_set.rs as `forall k, k < n -> p k = true -> q k = true` -- the same hypothesis verbatim. (4) Nat.count_monotone, `Monotone (count p)`, IS `Nat.countRange_le_of_le` unbundled. (5) Nat.count_lt_count_succ_iff is ENTAILED by the strictly stronger declared equation `Nat.countRange_succ` (`countRange p (succ n) = countRange p n + (if p n then 1 else 0)`), which decides the `<` in both directions by one Bool.rec on `p n`. Three more are half-declared: count_iff_forall's easy direction is countRange_congr_lt composed with countRange_const_true, and count_ne_iff_exists / count_iff_forall_not are the counting-witness argument countRange_succ_of_true and countRange_ge_two_of_two_witnesses already run. Only Nat.count_injective is genuinely untouched; count_add' is countRange_split's mirror. R9 REPORTS 0 OF 10 AND THAT IS R9 WORKING AS DESIGNED: it compares the drawn MATHLIB NAME against the environment, and the names differ (`count` vs `countRange`). R11's vocabulary screen reports 0 of 10 for the same reason one remove out -- `Nat.countRange` is kernel development, not the subject constant of any nursery development/train FAMILY, so nothing in the vocabulary map can reach it. The stem sweep (`count`, 46) is the ONLY signal in the entire guard that sees this, which is exactly the case ADR-0768 built the disclosure for. SECOND AND INDEPENDENT REASON, AND IT IS WORSE: Mathlib's `Nat.count : (Nat -> Prop) -> [DecidablePred p] -> Nat -> Nat` against ours `(Nat -> Bool) -> Nat -> Nat`. That is the SAME type divergence mirror-divergence-registry.json records for `Nat.nth` (\"Bool vs Prop domain ... the mirror is a different proposition per the mirror-flip criterion's own 'different types' clause\") and a LARGER one than `Nat.findGreatest`'s, which is registered on explicit-versus-instance-implicit DecidablePred alone. By the registry's own standard applied consistently, every Mathlib.Data.Nat.Count mirror is unclosable here -- and unclosable rows in held-out are the dead weight ADR-1445 measured at 31 rows across four families, not blind population. Either reason disqualifies the family alone; they are different reasons and do not cancel. TWO CORRECTIONS TO count_and_div_max_pow.rs's module doc, both measured: it says the kernel has \"no List and no DecidablePred\" -- `List` is genuinely absent from the environment snapshot, but `DecidablePred.{u}` IS declared (prelude.rs:356) and is in the snapshot as a real declaration, not a bridge alias; and it says 19 countRange lemmas where the snapshot has 22. WHAT WOULD MAKE THIS FAMILY DRAWABLE: nothing about the family. It is drawable as `development` or `train` the moment some held-out-safe family's primary module sorts lexicographically before Mathlib.Data.Nat.Count -- measured exhaustively for draw 17, 902 subsets of the 10 such unowned modules reach the ten-row floor and ZERO are viable, so that needs a construction lane (ADR-1420 Route 1). Held-out it can never be while Nat.count remains a countRange alias.",
+      "authority": "docs/research/09-decisions/adr-1450-the-count-family-is-not-blind-and-draw-17-is-refused.md"
     }
   ]
 }
