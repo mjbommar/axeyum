@@ -3,7 +3,7 @@
 //! supporting lemmas (`log_pos`, `log_of_left_le_one`) neither of those
 //! files needed on their own.
 //!
-//! Six facts land here:
+//! Seven facts land here:
 //!
 //! - `Nat.log_anti_left`/`Nat.clog_anti_left` — Mathlib states these with
 //!   only `1 < c` and `c ≤ b`; `log_antitone_left`/`clog_antitone_left`
@@ -39,12 +39,24 @@
 //!   `log_pos`'s `Lt 0 (log b n)` along the hypothesis `Eq (log b n) 0` to
 //!   `Lt 0 0`, absurd via `lt_irrefl`.
 //!
-//! `Nat.clog_eq_one`, `Nat.log_eq_one_iff`/`Nat.log_eq_one_iff'`, and
-//! `Nat.log_div_mul_self` stay OPEN — each needs a genuinely new numeric
-//! fact this session did not build (a "ceiling quotient in `[b, 2b)` is `1`"
-//! lemma for `clog_eq_one`; a "`log b n < 2 → n < b*b`" converse bound for
-//! both `log_eq_one_iff` forms, which is the hard direction `log_eq_zero_iff`
-//! did not need; and a fuel-generalized "exact division doesn't change the
+//! - `Nat.clog_eq_one` — [`declare_clog_pos`](super::log_clog_order)'s
+//!   unfolding recipe (`cases_zero_succ` on `n`, both guard cuts known true,
+//!   two `bool_transport`s reduced→general), aimed at `Eq (_, 1)` instead of
+//!   `Lt 0 _`. The recursive argument's numerator `(n + b) - 1` is, via
+//!   `Nat.succ_add` and `sub x 1 ≡ pred x` (pure defeq), EQUAL to `n' + b`
+//!   (`n = succ n'`); `Nat.add_div_right` rewrites `(n' + b) / b` to
+//!   `n' / b + 1`, and `n' / b = 0` because `n' < b` is exactly the
+//!   hypothesis `Le n b` restated at `n = succ n'` (`Lt n' b ≡ Le (succ n')
+//!   b` by `Nat.lt`'s own definition — no derivation needed). So the
+//!   quotient is `1`, and [`clog_aux_at_one_eq_zero`] (a fuel-agnostic `Eq
+//!   (clogAux base fuel 1) 0`, via [`super::ops::bool_select_nat_same`] once
+//!   the LITERAL inner cut `2 ≤ 1` iota-collapses) closes the rest.
+//!
+//! `Nat.log_eq_one_iff`/`Nat.log_eq_one_iff'` and `Nat.log_div_mul_self`
+//! stay OPEN — each needs a genuinely new numeric fact this session did not
+//! build (a "`log b n < 2 → n < b*b`" converse bound for both
+//! `log_eq_one_iff` forms, which is the hard direction `log_eq_zero_iff` did
+//! not need; and a fuel-generalized "exact division doesn't change the
 //! quotient chain" induction for `log_div_mul_self`) — see each fact's notes
 //! for the precise gap.
 
@@ -64,6 +76,19 @@ fn log_aux(
     value: ExprId,
 ) -> ExprId {
     d.const_app(p.log_aux, &[base, fuel, value])
+}
+
+/// `Nat.clogAux base fuel value` (mirrors `clog.rs`'s/`log_clog_order.rs`'s
+/// private helper of the same name and shape; not exported from either
+/// file).
+fn clog_aux(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    base: ExprId,
+    fuel: ExprId,
+    value: ExprId,
+) -> ExprId {
+    d.const_app(p.clog_aux, &[base, fuel, value])
 }
 
 /// `Nat.log base value`.
@@ -559,6 +584,229 @@ pub(super) fn declare_log_eq_zero_iff(
     Ok(())
 }
 
+/// `Eq (clogAux base fuel 1) 0`, for ANY `fuel`, `base` — the fuel-exhaustion
+/// row is the constant `0` (so `fuel = 0` is `d.refl`), and at `fuel = succ
+/// f'` the INNER cut `2 ≤ 1` is a comparison between two LITERALS (`1 =
+/// d.num(1)`), so it iota-reduces to `false` with no lemma, collapsing the
+/// inner `bool_select_nat` to `0` regardless of what the taken branch would
+/// have been. What remains, `bool_select_nat (ble 2 base) 0 0`, is stuck on
+/// the OUTER (symbolic-`base`) test but has the SAME value (`0`) on both
+/// branches, which is exactly [`super::ops::bool_select_nat_same`]'s shape.
+fn clog_aux_at_one_eq_zero(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    base: ExprId,
+    fuel: ExprId,
+) -> ExprId {
+    let p = *p;
+    let one = d.num(1);
+    let motive = move |d: &mut NatDev<'_>, f: ExprId| -> ExprId {
+        let zero = d.zero();
+        let ca = clog_aux(d, &p, base, f, one);
+        d.eq(ca, zero)
+    };
+    super::ops::cases_zero_succ(
+        d,
+        fuel,
+        &motive,
+        &|d| {
+            let zero = d.zero();
+            d.refl(zero)
+        },
+        &move |d, _f_prime| {
+            let zero = d.zero();
+            let two = d.num(2);
+            let base_exceeds_one = d.ble(two, base);
+            super::ops::bool_select_nat_same(d, &p, base_exceeds_one, zero)
+        },
+    )
+}
+
+/// `Nat.clog_eq_one : ∀ {b n}, Le 2 n → Le n b → Eq (clog b n) 1` (`Mathlib`:
+/// `Nat.clog_eq_one`) — [`declare_clog_pos`](super::log_clog_order)'s exact
+/// unfolding recipe (`cases_zero_succ` on `n`, both guard cuts known true,
+/// two `bool_transport`s reduced→general), aimed at `Eq (_, 1)` instead of
+/// `Lt 0 _`, plus the arithmetic that pins the recursive argument at `1`:
+///
+/// at `n = succ n'`, the recursive call's numerator `(n + b) - 1` is,
+/// via [`super::NatPrelude::succ_add`] and `sub x 1 ≡ pred x` (pure
+/// defeq, `clog.rs`'s own module doc), EQUAL to `n' + b`; `Nat.add_div_right`
+/// then rewrites `(n' + b) / b` to `n' / b + 1`, and `n' / b = 0` because
+/// `n' < b` is exactly the hypothesis `Le n b` restated at `n = succ n'`
+/// (`Lt n' b ≡ Le (succ n') b` by `Nat.lt`'s own definition — no derivation
+/// needed). So the quotient is `1`, and
+/// [`clog_aux_at_one_eq_zero`] closes the rest.
+pub(super) fn declare_clog_eq_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    d.theorem(p.clog_eq_one, 2, &|d, values| {
+        let (base, n) = (values[0], values[1]);
+        let two = d.num(2);
+
+        let motive_at = move |d: &mut NatDev<'_>, nc: ExprId| -> ExprId {
+            let h1_ty = d.le(two, nc);
+            let h2_ty = d.le(nc, base);
+            let cl = clog(d, &p, base, nc);
+            let one = d.num(1);
+            let concl = d.eq(cl, one);
+            let inner = d.arrow(h2_ty, concl);
+            d.arrow(h1_ty, inner)
+        };
+
+        let at_n_zero = move |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let h1_ty = d.le(two, zero);
+            let h2_ty = d.le(zero, base);
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+            let one = d.num(1);
+            let absurd = d.lemma(p.not_succ_le_zero, &[one, h1]);
+            let cl = clog(d, &p, base, zero);
+            let target = d.eq(cl, one);
+            let elim = false_elim(d, &p, target, absurd);
+            let h2_fv = d.fresh_fvar();
+            let inner = d.lam_fv(h2_fv, h2_ty, elim);
+            d.lam_fv(h1_fv, h1_ty, inner)
+        };
+
+        let at_n_succ = move |d: &mut NatDev<'_>, n_prime: ExprId| -> ExprId {
+            let succ_np = d.succ(n_prime);
+            let h1_ty = d.le(two, succ_np);
+            let h2_ty = d.le(succ_np, base);
+            let h1_fv = d.fresh_fvar();
+            let h1 = d.kernel().fvar(h1_fv);
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+
+            let h_two_le_base = d.lemma(p.le_trans, &[two, succ_np, base, h1, h2]);
+            let base_exceeds_one = d.ble(two, base);
+            let value_exceeds_one = d.ble(two, succ_np);
+            let proof_b_true = d.lemma(p.ble_eq_true_of_le, &[two, base, h_two_le_base]);
+            let proof_n_true = d.lemma(p.ble_eq_true_of_le, &[two, succ_np, h1]);
+
+            // numerator := sub (add succ_np base) 1 ≡[via succ_add] add n_prime base
+            let succ_add_h = d.lemma(p.succ_add, &[n_prime, base]); // Eq (add succ_np base) (succ (add n_prime base))
+            let sum_arg = d.add(succ_np, base);
+            let one_c = d.num(1);
+            let np_plus_base = d.add(n_prime, base);
+            let succ_np_plus_base = d.succ(np_plus_base);
+            let numerator_eq = d.congr(sum_arg, succ_np_plus_base, succ_add_h, &|d, x| {
+                d.sub(x, one_c)
+            });
+            let numerator = d.sub(sum_arg, one_c);
+            let quotient = d.div(numerator, base);
+            let quotient_eq = d.congr(numerator, np_plus_base, numerator_eq, &|d, x| {
+                d.div(x, base)
+            });
+
+            // Lt n_prime base ≡ h2 (Le (succ n_prime) base) directly.
+            let mul_one_h = d.lemma(p.mul_one, &[base]);
+            let base_mul_one = d.mul(base, one_c);
+            let mul_one_symm = d.symm(base_mul_one, base, mul_one_h);
+            let motive_x = d.eq_motive(base, &move |d, x| d.lt(n_prime, x));
+            let h_lt_mul = d.transport(base, motive_x, h2, base_mul_one, mul_one_symm);
+            let div_lt_1 = d.lemma(p.div_lt_of_lt_mul, &[n_prime, base, one_c, h_lt_mul]);
+            let zero = d.zero();
+            let div_n_prime_base = d.div(n_prime, base);
+            let div_le_0 = d.lemma(p.le_of_lt_succ, &[div_n_prime_base, zero, div_lt_1]);
+            let zero_le_div = d.lemma(p.zero_le, &[div_n_prime_base]);
+            let div_eq_0 = d.lemma(
+                p.le_antisymm,
+                &[div_n_prime_base, zero, div_le_0, zero_le_div],
+            );
+
+            let h_base_pos = {
+                let le_succ_1 = d.lemma(p.le_succ, &[one_c]); // Le 1 (succ 1) = Le 1 2
+                d.lemma(p.le_trans, &[one_c, two, base, le_succ_1, h_two_le_base])
+            };
+            let add_div_right_h = d.lemma(p.add_div_right, &[n_prime, base, h_base_pos]);
+            // Eq (div np_plus_base base) (add (div n_prime base) 1)
+            let add_div_right_at_zero = d.congr(div_n_prime_base, zero, div_eq_0, &move |d, x| {
+                let one_c = d.num(1);
+                d.add(x, one_c)
+            });
+            // Eq (add (div n_prime base) 1) 1  (RHS `add zero one_c` defeq `one_c`)
+
+            let quot_div_base = d.div(np_plus_base, base);
+            let div_n_prime_base_plus_one = d.add(div_n_prime_base, one_c);
+            let step1 = d.trans(
+                quotient,
+                quot_div_base,
+                div_n_prime_base_plus_one,
+                quotient_eq,
+                add_div_right_h,
+            );
+            let quotient_eq_one = d.trans(
+                quotient,
+                div_n_prime_base_plus_one,
+                one_c,
+                step1,
+                add_div_right_at_zero,
+            );
+
+            let helper_at_one = clog_aux_at_one_eq_zero(d, &p, base, n_prime);
+            let motive_r = d.eq_motive(one_c, &move |d, x| {
+                let zero = d.zero();
+                let ca = clog_aux(d, &p, base, n_prime, x);
+                d.eq(ca, zero)
+            });
+            let quotient_eq_one_symm = d.symm(quotient, one_c, quotient_eq_one);
+            let recursive = clog_aux(d, &p, base, n_prime, quotient);
+            let recursive_eq_zero = d.transport(
+                one_c,
+                motive_r,
+                helper_at_one,
+                quotient,
+                quotient_eq_one_symm,
+            );
+
+            let stepped = d.succ(recursive);
+            let stepped_eq_one = d.congr(recursive, zero, recursive_eq_zero, &|d, x| d.succ(x));
+
+            let inner_term = d.bool_select_nat(value_exceeds_one, stepped, zero);
+            let true_ = d.bool_true();
+            let motive_inner = d.bool_eq_motive(true_, &move |d, x| {
+                let zero = d.zero();
+                let one_c = d.num(1);
+                let selected = d.bool_select_nat(x, stepped, zero);
+                d.eq(selected, one_c)
+            });
+            let reversed_n = d.bool_symm(value_exceeds_one, true_, proof_n_true);
+            let stepped_eq_one_inner = d.bool_transport(
+                true_,
+                motive_inner,
+                stepped_eq_one,
+                value_exceeds_one,
+                reversed_n,
+            );
+
+            let motive_outer = d.bool_eq_motive(true_, &move |d, x| {
+                let zero = d.zero();
+                let one_c = d.num(1);
+                let selected = d.bool_select_nat(x, inner_term, zero);
+                d.eq(selected, one_c)
+            });
+            let reversed_b = d.bool_symm(base_exceeds_one, true_, proof_b_true);
+            let final_eq = d.bool_transport(
+                true_,
+                motive_outer,
+                stepped_eq_one_inner,
+                base_exceeds_one,
+                reversed_b,
+            );
+
+            let inner = d.lam_fv(h2_fv, h2_ty, final_eq);
+            d.lam_fv(h1_fv, h1_ty, inner)
+        };
+
+        let body = super::ops::cases_zero_succ(d, n, &motive_at, &at_n_zero, &at_n_succ);
+        let final_concl = motive_at(d, n);
+        let stmt = final_concl;
+        let proof = body;
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare every mirror this file carries.
 ///
 /// # Errors
@@ -576,5 +824,6 @@ pub(super) fn declare_log_clog_mirrors_all(
     declare_log_of_left_le_one(d, p)?;
     declare_log_pos(d, p)?;
     declare_log_eq_zero_iff(d, p)?;
+    declare_clog_eq_one(d, p)?;
     Ok(())
 }

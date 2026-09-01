@@ -3939,6 +3939,12 @@ pub struct NatPrelude {
     /// [`Self::log_pos`]'s `Lt 0 (log b n)` along the hypothesis to `Lt 0
     /// 0`, absurd via `lt_irrefl`.
     pub log_eq_zero_iff: NameId,
+    /// `Nat.clog_eq_one : ∀ {b n}, Le 2 n → Le n b → Eq (clog b n) 1`
+    /// (`Mathlib`: `Nat.clog_eq_one`) — `nat_prelude/log_clog_mirrors.rs`,
+    /// [`Self::clog_pos`]'s unfolding recipe aimed at `Eq (_, 1)`, with the
+    /// recursive quotient pinned at `1` via `Nat.succ_add` +
+    /// `Nat.add_div_right` + `div_lt_of_lt_mul`.
+    pub clog_eq_one: NameId,
     /// `Nat.log2 : Nat → Nat`, `log2 n := log 2 n` (Lean **core**,
     /// `Init/Data/Nat/Log2.lean` — Mathlib imports it unchanged). Lean
     /// core's own `log2` is a fuel-recursive `Nat.rec` with a non-dependent
@@ -6211,6 +6217,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             log_of_left_le_one: kernel.name_str(nat, "log_of_left_le_one"),
             log_pos: kernel.name_str(nat, "log_pos"),
             log_eq_zero_iff: kernel.name_str(nat, "log_eq_zero_iff"),
+            clog_eq_one: kernel.name_str(nat, "clog_eq_one"),
             log2: kernel.name_str(nat, "log2"),
             log2_eq_log_two: kernel.name_str(nat, "log2_eq_log_two"),
             bit: kernel.name_str(nat, "bit"),
