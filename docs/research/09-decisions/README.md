@@ -802,3 +802,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1255](adr-1255-draw-16-is-authored-and-both-disclosure-sweeps-found-something.md) | ADR-1240 and ADR-1245 filled cycle indices 0 and 3 with | accepted |
 | [1260](adr-1260-eisenstein-routes-around-the-missing-aggregate-wall.md) | **Quadratic reciprocity is NOT proved here.** What is settled is | accepted |
 | [1265](adr-1265-canonicity-follows-the-proof-not-the-date.md) | canonicity follows the proof, not the date | Accepted |
+| [1275](adr-1275-int-sumrange-lands-and-two-of-prods-lemmas-do-not-transport.md) | `Int.sumRange` lands, and two of `prodRange`'s properties do not transport | Accepted |

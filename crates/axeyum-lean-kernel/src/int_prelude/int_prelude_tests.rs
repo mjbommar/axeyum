@@ -185,7 +185,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 245] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 254] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -443,6 +443,17 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 245] {
         p.dvd_gcd_mul_gcd_iff_dvd_mul,
         p.mod_eq_cancel_left_div_gcd,
         p.mod_eq_cancel_right_div_gcd,
+        // `int-sumrange` lane: the signed finite sum (`int_prelude/sum.rs`),
+        // ADR-1260's named obstruction for Eisenstein's lemma.
+        p.sum_range_zero,
+        p.sum_range_succ,
+        p.sum_range_congr,
+        p.sum_range_add,
+        p.sum_range_neg,
+        p.sum_range_sub,
+        p.sum_range_of_nat,
+        p.mod_eq_sum_range,
+        p.neg_add,
     ]
 }
 
@@ -495,7 +506,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 28] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 28] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 29] {
     [
         p.fib,
         p.even,
@@ -512,6 +523,7 @@ fn definition_names(p: &IntPrelude) -> [crate::NameId; 28] {
         p.lt,
         p.pow,
         p.prod_range,
+        p.sum_range,
         p.prod_range_if,
         p.ediv,
         p.emod,
@@ -6065,5 +6077,216 @@ fn prod_range_split_cuts_at_the_offset_and_not_merely_somewhere() {
         d.kernel().def_eq(inferred, expected),
         "the split's symbolic statement must be \
          prodRange f (a+b) = prodRange f a * prodRange (fun k => f (a+k)) b"
+    );
+}
+
+/// `Int.sumRange` **computes**, over genuinely SIGNED terms, and the trusted
+/// gate refuses a near-miss.
+///
+/// `Int.sumRange` is a `Definition`, so `add_declaration` admitting it means
+/// *well-formed*, never *correct* — a fold that returned the wrong value would
+/// have exactly the same type. `f k = k − 2` is chosen so the partial sums
+/// cross zero (`−2, −3, −3, −2`), which a constant or non-negative family would
+/// not exercise, and the magnitudes stay in single digits because every numeral
+/// here is unary.
+///
+/// The bound is **exclusive**: `sumRange f 4 = −2` and `f 4 = 2`, so an
+/// inclusive reading of the same expression would give `0`. That is asserted in
+/// both directions, which is the only thing in this file that pins the
+/// convention numerically.
+///
+/// What this test **cannot** see, deliberately recorded: `Int.add` is
+/// commutative, so folding the fresh term onto the LEFT
+/// (`add (f n) (sumRange f n)`) computes the identical value at every argument.
+/// No evaluation test can distinguish the two conventions;
+/// [`the_sum_range_family_states_the_intended_types`] is what does.
+#[test]
+fn sum_range_computes_over_signed_terms_and_rejects_a_near_miss() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let anon = k.anon();
+    let nat_ty = k.const_(p.nat.nat, vec![]);
+
+    // f := fun (j : Nat) => Int.sub (Int.ofNat j) 2, so
+    // sumRange f 4 = (0−2) + (1−2) + (2−2) + (3−2) = −2.
+    let f = {
+        let j = k.bvar(0);
+        let of_nat = k.const_(p.of_nat, vec![]);
+        let coe = k.app(of_nat, j);
+        let two = numeral(&mut k, &p, 2);
+        let sub = k.const_(p.sub, vec![]);
+        let partial = k.app(sub, coe);
+        let body = k.app(partial, two);
+        k.lam(anon, nat_ty, body, BinderInfo::Default)
+    };
+
+    let sum_range = k.const_(p.sum_range, vec![]);
+    let applied = k.app(sum_range, f);
+
+    let four = numeral_nat(&mut k, &p, 4);
+    let lhs = k.app(applied, four);
+    let minus_two = numeral(&mut k, &p, -2);
+    assert!(
+        k.def_eq(lhs, minus_two),
+        "sumRange (fun j => j − 2) 4 should compute to −2"
+    );
+
+    // Exclusive bound, asserted in both directions: `f 4 = 2`, so an inclusive
+    // reading of the very same expression would give 0.
+    let zero_i = k.const_(p.zero, vec![]);
+    assert!(
+        !k.def_eq(lhs, zero_i),
+        "the bound must be EXCLUSIVE — an inclusive fold would add f 4 = 2 and give 0"
+    );
+    let five = numeral_nat(&mut k, &p, 5);
+    let lhs_five = k.app(applied, five);
+    assert!(
+        k.def_eq(lhs_five, zero_i),
+        "sumRange (fun j => j − 2) 5 should compute to 0, one term further"
+    );
+
+    // Negative control through the trusted gate itself: the same `Theorem`
+    // declaration route every real lemma in `sum.rs` takes must REFUSE
+    // `sumRange f 4 = −1`.
+    let level_one = {
+        let z = k.level_zero();
+        k.level_succ(z)
+    };
+    let minus_one = numeral(&mut k, &p, -1);
+    let int_ty = k.const_(p.z, vec![]);
+    let eq = k.const_(p.logic.eq, vec![level_one]);
+    let false_stmt = {
+        let e = k.app(eq, int_ty);
+        let e = k.app(e, lhs);
+        k.app(e, minus_one)
+    };
+    let refl = k.const_(p.logic.eq_refl, vec![level_one]);
+    let false_proof = {
+        let r = k.app(refl, int_ty);
+        k.app(r, minus_two)
+    };
+    let scratch_name = k.name_str(anon, "sum_range_false_claim_scratch");
+    let result = k.add_declaration(Declaration::Theorem {
+        name: scratch_name,
+        uparams: vec![],
+        ty: false_stmt,
+        value: false_proof,
+    });
+    assert!(
+        result.is_err(),
+        "the trusted gate accepted a false claim that sumRange (fun j => j − 2) 4 = −1"
+    );
+}
+
+/// The `Int.sumRange` family states the types it is supposed to state, pinned
+/// character for character against `render_lean`.
+///
+/// This is the probe for the third mutation outcome — *admitted, true, and not
+/// your theorem*. Two mutations in this family land there and **no evaluation
+/// test can see either one**:
+///
+/// * Folding the fresh term onto the LEFT of the prior sum. `Int.add` is
+///   commutative, so every concrete value is unchanged; only
+///   `Int.sumRange_succ`'s stated `Int.add (Int.sumRange x0 x1) (x0 x1)`
+///   distinguishes it, and it is the convention `Nat.sumRange` and
+///   `Int.prodRange` both use.
+/// * Adding a `0 < n` premise to `Int.modEq_sumRange`. That statement is true
+///   and provable, but strictly weaker; every consumer would then have to
+///   discharge `0 < 2`. Note what is deliberately absent from its row below:
+///   any `Int.lt Int.zero` hypothesis. `Int.modEq_prodRange` carries one
+///   because `Int.ModEq.mul` needs it; `Int.ModEq.add_right`/`add_left` do not.
+#[test]
+fn the_sum_range_family_states_the_intended_types() {
+    use crate::env::Declaration;
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+
+    let rendered = |k: &Kernel, name: crate::NameId| -> String {
+        match k
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", k.display_name(name)))
+        {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => {
+                k.render_lean(*ty)
+            }
+            other => panic!("{other:?} is not a theorem or definition"),
+        }
+    };
+
+    for (name, expected) in [
+        (
+            p.sum_range,
+            "((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : AxNat) -> Int))",
+        ),
+        (
+            p.sum_range_zero,
+            "((x0 : ((x0 : AxNat) -> Int)) -> Eq.{1} Int (Int.sumRange x0 AxNat.zero) Int.zero)",
+        ),
+        (
+            p.sum_range_succ,
+            "((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : AxNat) -> Eq.{1} Int (Int.sumRange x0 \
+             (AxNat.succ x1)) (Int.add (Int.sumRange x0 x1) (x0 x1))))",
+        ),
+        (
+            p.sum_range_congr,
+            "((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : ((x1 : AxNat) -> Int)) -> ((x2 : AxNat) -> \
+             ((x3 : ((x3 : AxNat) -> Eq.{1} Int (x0 x3) (x1 x3))) -> Eq.{1} Int (Int.sumRange x0 \
+             x2) (Int.sumRange x1 x2)))))",
+        ),
+        (
+            p.sum_range_add,
+            "((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : ((x1 : AxNat) -> Int)) -> ((x2 : AxNat) -> \
+             Eq.{1} Int (Int.sumRange (fun (x3 : AxNat) => Int.add (x0 x3) (x1 x3)) x2) (Int.add \
+             (Int.sumRange x0 x2) (Int.sumRange x1 x2)))))",
+        ),
+        (
+            p.sum_range_neg,
+            "((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : AxNat) -> Eq.{1} Int (Int.sumRange (fun (x2 \
+             : AxNat) => Int.neg (x0 x2)) x1) (Int.neg (Int.sumRange x0 x1))))",
+        ),
+        (
+            p.sum_range_sub,
+            "((x0 : ((x0 : AxNat) -> Int)) -> ((x1 : ((x1 : AxNat) -> Int)) -> ((x2 : AxNat) -> \
+             Eq.{1} Int (Int.sumRange (fun (x3 : AxNat) => Int.sub (x0 x3) (x1 x3)) x2) (Int.sub \
+             (Int.sumRange x0 x2) (Int.sumRange x1 x2)))))",
+        ),
+        (
+            p.sum_range_of_nat,
+            "((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> Eq.{1} Int (Int.sumRange (fun \
+             (x2 : AxNat) => Int.ofNat (x0 x2)) x1) (Int.ofNat (AxNat.sumRange x0 x1))))",
+        ),
+        (
+            p.mod_eq_sum_range,
+            "((x0 : Int) -> ((x1 : ((x1 : AxNat) -> Int)) -> ((x2 : ((x2 : AxNat) -> Int)) -> \
+             ((x3 : AxNat) -> ((x4 : ((x4 : AxNat) -> Int.ModEq x0 (x1 x4) (x2 x4))) -> \
+             Int.ModEq x0 (Int.sumRange x1 x3) (Int.sumRange x2 x3))))))",
+        ),
+        (
+            p.neg_add,
+            "((x0 : Int) -> ((x1 : Int) -> Eq.{1} Int (Int.neg (Int.add x0 x1)) (Int.add \
+             (Int.neg x0) (Int.neg x1))))",
+        ),
+    ] {
+        let got = rendered(&k, name);
+        assert!(
+            got == expected,
+            "{} is stated as\n  {got}\nbut must be\n  {expected}",
+            k.display_name(name)
+        );
+    }
+
+    // `Int.modEq_prodRange` DOES carry the positivity premise, so the absence
+    // above is a measured difference between the two aggregates rather than an
+    // artefact of how this test reads types.
+    let prod_row = rendered(&k, p.mod_eq_prod_range);
+    assert!(
+        prod_row.contains("Int.lt Int.zero"),
+        "control failed: modEq_prodRange should carry `0 < n`, but reads {prod_row}"
+    );
+    let sum_row = rendered(&k, p.mod_eq_sum_range);
+    assert!(
+        !sum_row.contains("Int.lt Int.zero"),
+        "modEq_sumRange must NOT carry a positivity premise: {sum_row}"
     );
 }

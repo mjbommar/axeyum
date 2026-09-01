@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:int-modeq-sumrange",
+  "title": "A signed finite sum reduces modulo n term by term, with no positivity hypothesis",
+  "statement": "`(forall k, f k = g k [MOD n]) -> Int.sumRange f m = Int.sumRange g m [MOD n]`. WHAT IS DELIBERATELY ABSENT: any `0 < n` premise. `Int.modEq_prodRange`, the product analogue, carries one, and transporting it here would have been wrong rather than merely cautious -- the product's step goes through `Int.ModEq.mul`, whose statement in this prelude is positivity-scoped, while the sum's step goes through `Int.ModEq.add_right` and `Int.ModEq.add_left`, both proved UNCONDITIONALLY in the modulus. With the hypothesis every consumer of the mod-2 reader Eisenstein's lemma needs would have had to discharge `0 < 2`. A test asserts the difference in BOTH directions, so the absence is measured rather than an artefact of how the check reads types. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.modEq_sumRange : ((x0 : Int) -> ((x1 : ((x1 : AxNat) -> Int)) -> ((x2 : ((x2 : AxNat) -> Int)) -> ((x3 : AxNat) -> ((x4 : ((x4 : AxNat) -> Int.ModEq x0 (x1 x4) (x2 x4))) -> Int.ModEq x0 (Int.sumRange x1 x3) (Int.sumRange x2 x3))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Int.modEq_sumRange"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:int-modeq-add-left", "F:int-modeq-add-right", "F:int-modeq-refl", "F:int-modeq-trans"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.modEq_sumRange",
+      "kind": "kernel-term",
+      "supports": "Int.modEq_sumRange is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.modEq_sumRange 2>/dev/null | grep -cE '^Int\\.modEq_sumRange[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.modEq_sumRange",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Int.modEq_sumRange",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.modEq_sumRange.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/sum.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, whose TSV rows are (prelude, kind, display name, axiom-footprint size, direct type declarations, direct declarations, direct theorems, Kernel::render_lean(declaration.ty())). depends_on is the direct-theorem column intersected with this ledger's registered facts, supplied by scripts/check-fact-depends-derived.py --fix. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane int-sumrange)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/int_prelude/sum.rs`. Direct theorem dependencies as measured: Int.modEq_add_left, Int.modEq_add_right, Int.modEq_refl, Int.modEq_trans. Two probes cover this family: `sum_range_computes_over_signed_terms_and_rejects_a_near_miss` (evaluation over signed terms, exclusive bound asserted both ways, a false claim pushed through add_declaration) and `the_sum_range_family_states_the_intended_types` (all ten rendered types pinned character for character, which is the only thing that can see an admitted-true-but-wrong statement). Declaration kind: theorem.",
+  "external_status": "proved"
+}
