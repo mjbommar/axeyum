@@ -65,7 +65,13 @@ class MergeHygieneControls(unittest.TestCase):
         self.git("init", "-q")
         self.git("config", "user.email", "t@example.com")
         self.git("config", "user.name", "t")
-        for name, tag in (("gen-adr-index", "ADR_INDEX ok"), ("gen-plan", "plan ok")):
+        for name, tag in (
+            ("gen-adr-index", "ADR_INDEX ok"),
+            ("gen-plan", "plan ok"),
+            # ADR-1511: the two cheap ledger checks the gate now runs for real.
+            ("gen-import-backlog", "IMPORT_BACKLOG ok"),
+            ("gen-production-provenance-ledger", "PRODUCTION_PROVENANCE ok"),
+        ):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
         self.write("README.md", "clean\n")
@@ -154,6 +160,23 @@ class MergeHygieneControls(unittest.TestCase):
         self.write("scratch.txt", _marker("<", " ours") + "\n", track=False)
         done = self.run_gate()
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+
+    # -- guard 5/6 (ADR-1511): the cheap ledger checks block ----------------
+
+    def test_import_backlog_check_failure_fails_the_gate(self) -> None:
+        """Deleting the `gen-import-backlog.py --check` guard must kill exactly
+        this test. Measured 2026-09-01: the generator was red on main for a day
+        (147 -> 164 rows) and nothing at merge time said so."""
+        done = self.run_gate(gen_import_backlog=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: gen-import-backlog.py --check", done.stdout)
+
+    def test_production_provenance_check_failure_fails_the_gate(self) -> None:
+        """Same shape for the provenance ledger, which `--check` reported stale
+        (2,054 published vs 2,343 live) while every merge went through."""
+        done = self.run_gate(gen_production_provenance_ledger=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: gen-production-provenance-ledger.py --check", done.stdout)
 
     # -- guard 2: duplicate ADR numbers -------------------------------------
 
