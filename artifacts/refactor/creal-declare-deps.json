@@ -1133,2391 +1133,13 @@
         "module": "pi"
       }
     ],
-    "table_gaps": [
-      {
-        "index": 20,
-        "label": "order_extra::declare_order_extra",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 21,
-        "label": "product::declare_product",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 22,
-        "label": "field::declare_field",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "lt",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 23,
-        "label": "inverse::declare_inverse",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 24,
-        "label": "cancellation::declare_cancellation",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 25,
-        "label": "lattice::declare_lattice",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "le",
-          "seq"
-        ]
-      },
-      {
-        "index": 26,
-        "label": "product::declare_mul_self_abs",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "seq"
-        ]
-      },
-      {
-        "index": 27,
-        "label": "order_extra::declare_order_extra_abs",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 28,
-        "label": "lattice::declare_lattice_extra",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_assoc",
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 29,
-        "label": "uniform_convergence::declare_uniform_converges_on",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 30,
-        "label": "archimedean_squeeze::declare_archimedean_squeeze",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 31,
-        "label": "archimedean::declare_archimedean",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "le",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 32,
-        "label": "density::declare_density",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "le",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 33,
-        "label": "cotransitivity::declare_cotransitivity",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "le_refl",
-          "lt",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 34,
-        "label": "completeness::declare_completeness",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 35,
-        "label": "convergence::declare_convergence",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "mul",
-          "mul_shift",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 36,
-        "label": "uniform_continuity::declare_abs_add_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 37,
-        "label": "uniform_continuity::declare_uniform_continuity",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "rat_approx_lower",
-          "rat_approx_upper",
-          "seq"
-        ]
-      },
-      {
-        "index": 38,
-        "label": "uniform_continuity::declare_uniformly_continuous_on_restrict",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 39,
-        "label": "crossing::declare_crossing",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 40,
-        "label": "convergence::declare_converges_comp_eventually",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 41,
-        "label": "derivative::declare_derivative",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le",
-          "creal"
-        ]
-      },
-      {
-        "index": 42,
-        "label": "deriv_unique::declare_deriv_unique",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le",
-          "add",
-          "creal",
-          "le",
-          "lt"
-        ]
-      },
-      {
-        "index": 43,
-        "label": "fermat::declare_fermat",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "of_rat_neg"
-        ]
-      },
-      {
-        "index": 44,
-        "label": "rolle::declare_rolle",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_assoc",
-          "add_congr"
-        ]
-      },
-      {
-        "index": 46,
-        "label": "uniform_continuity::declare_uniform_continuity_products",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le",
-          "creal"
-        ]
-      },
-      {
-        "index": 47,
-        "label": "uniform_continuity::declare_bucket_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "mul_one",
-          "seq"
-        ]
-      },
-      {
-        "index": 48,
-        "label": "uniform_continuity::declare_abs_bound_of_self",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 49,
-        "label": "uniform_continuity::declare_bounded_of_uniformly_continuous",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le",
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 50,
-        "label": "mul_self_zero::declare_mul_self_zero",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "mul",
-          "mul_shift",
-          "regular",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 51,
-        "label": "crossing::declare_crossing_sample",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 52,
-        "label": "crossing::declare_crossing_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 53,
-        "label": "crossing::declare_crossing_close_clamped",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 54,
-        "label": "crossing::declare_crossing_sample_pairing_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 55,
-        "label": "sqrt::declare_sqrt",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 56,
-        "label": "speedup::declare_speedup",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "within"
-        ]
-      },
-      {
-        "index": 57,
-        "label": "sqrt::declare_sqrt_approx_kregular",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 58,
-        "label": "sqrt::declare_sqrt_ctor",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 59,
-        "label": "sqrt::declare_sqrt_congr",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 60,
-        "label": "sqrt::declare_sqrt_le_sqrt",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 61,
-        "label": "sqrt::declare_sqrt_one",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "equiv",
-          "seq"
-        ]
-      },
-      {
-        "index": 62,
-        "label": "sqrt::declare_sqrt_zero",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "equiv",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 63,
-        "label": "sqrt::declare_sqrt_sq",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "mul",
-          "mul_shift",
-          "regular",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 64,
-        "label": "sqrt::declare_sqrt_nonneg",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 65,
-        "label": "sqrt::declare_mul_self_sqrt",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "mul",
-          "mul_shift",
-          "regular",
-          "seq"
-        ]
-      },
-      {
-        "index": 66,
-        "label": "sqrt::declare_sqrt_mul",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "mul"
-        ]
-      },
-      {
-        "index": 67,
-        "label": "sqrt::declare_le_of_sq_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "mul"
-        ]
-      },
-      {
-        "index": 68,
-        "label": "convergence::declare_cauchy_convergence",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 69,
-        "label": "series::declare_series",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le",
-          "converges",
-          "creal",
-          "equiv",
-          "lt_of_lt_of_le",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 71,
-        "label": "monotone::declare_monotone",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le"
-        ]
-      },
-      {
-        "index": 72,
-        "label": "integral::declare_integral",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "left_distrib",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 73,
-        "label": "integral::declare_sum_range_double",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 74,
-        "label": "integral::declare_sum_range_reblock",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 75,
-        "label": "integral::declare_within_of_two_sided_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 76,
-        "label": "integral::declare_le_add_of_abs_sub_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 77,
-        "label": "integral::declare_two_sided_of_abs_sub_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 78,
-        "label": "uniform_convergence::declare_uniform_convergence_continuity",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 79,
-        "label": "uniform_convergence::declare_uniform_converges_add",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "equiv_symm",
-          "equiv_trans"
-        ]
-      },
-      {
-        "index": 80,
-        "label": "uniform_convergence::declare_close_within_of_within",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 81,
-        "label": "integral::declare_close_within_of_within_indexed",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 82,
-        "label": "uniform_convergence::declare_weierstrass_m_test",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 83,
-        "label": "integral::declare_of_nat_hom",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "equiv",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 84,
-        "label": "monotone::declare_monotone_of_nonneg_deriv_all",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "lt",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 86,
-        "label": "derivative::declare_lipschitz_of_deriv_bound",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le"
-        ]
-      },
-      {
-        "index": 88,
-        "label": "uniform_convergence::declare_has_derivative_uniform_limit",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_neg",
-          "mul_zero"
-        ]
-      },
-      {
-        "index": 89,
-        "label": "integral::declare_fine_sample_in_bounds",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "left_distrib",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 90,
-        "label": "integral::declare_fine_sample_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 91,
-        "label": "integral::declare_fine_block_sum_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "left_distrib",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 92,
-        "label": "integral::declare_mesh_reciprocal_mul",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add"
-        ]
-      },
-      {
-        "index": 93,
-        "label": "integral::declare_equiv_abs_diff_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 94,
-        "label": "integral::declare_sample_point_reblock",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "left_distrib",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 95,
-        "label": "integral::declare_reblock_block_eq_fine_block_sum",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "left_distrib",
-          "lt_of_lt_of_le",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 96,
-        "label": "integral::declare_riemann_sum_reblock_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "lt_of_lt_of_le",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 97,
-        "label": "integral::declare_riemann_sum_cauchy",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 98,
-        "label": "integral::declare_shared_index_to_canonical",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 99,
-        "label": "integral::declare_riemann_sum_shared_accuracy_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 100,
-        "label": "integral::declare_riemann_sum_shared_accuracy_close_at",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "neg",
-          "seq",
-          "shared_index_to_canonical",
-          "within"
-        ]
-      },
-      {
-        "index": 101,
-        "label": "integral::declare_riemann_sum_total_eps_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "of_rat",
-          "seq"
-        ]
-      },
-      {
-        "index": 102,
-        "label": "integral::declare_riemann_sum_deep_cauchy",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 103,
-        "label": "integral::declare_riemann_sum_deep_cauchy_folded",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 104,
-        "label": "integral::declare_riemann_sum_deep_cauchy_cross",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 105,
-        "label": "integral::declare_riemann_sum_deep_cauchy_cross_folded",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 106,
-        "label": "integral::declare_riemann_sum_add_cauchy_cross",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "mul_assoc",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 107,
-        "label": "integral::declare_creal_integral",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 108,
-        "label": "integral::declare_integral_converges",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "converges",
-          "creal",
-          "seq"
-        ]
-      },
-      {
-        "index": 109,
-        "label": "integral::declare_integral_const",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "seq"
-        ]
-      },
-      {
-        "index": 110,
-        "label": "integral::declare_integral_witness_independent",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "seq"
-        ]
-      },
-      {
-        "index": 111,
-        "label": "integral::declare_integral_add",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "seq"
-        ]
-      },
-      {
-        "index": 112,
-        "label": "integral::declare_integral_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 113,
-        "label": "integral::declare_integral_scale",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "equiv",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 114,
-        "label": "integral::declare_riemann_sum_integral_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "mul_comm",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 115,
-        "label": "integral::declare_riemann_sum_split_exact",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "left_distrib",
-          "mul_comm",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 116,
-        "label": "integral::declare_riemann_sum_split_scale_invariant",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 117,
-        "label": "integral::declare_congr_of_uniformly_continuous",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 118,
-        "label": "integral::declare_riemann_sum_split_exact_of_uc",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "left_distrib",
-          "lt_of_lt_of_le",
-          "mul_comm",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 119,
-        "label": "integral::declare_integral_split",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "equiv",
-          "le_trans",
-          "lt_of_lt_of_le",
-          "mul_comm",
-          "mul_congr",
-          "neg_congr",
-          "of_rat",
-          "seq",
-          "sum_range",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 120,
-        "label": "integral::declare_split_point_approx",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_comm",
-          "add_zero",
-          "creal",
-          "equiv",
-          "equiv_of_pointwise",
-          "left_distrib",
-          "mul_zero",
-          "one",
-          "seq"
-        ]
-      },
-      {
-        "index": 121,
-        "label": "integral::declare_integral_endpoint_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_add_le",
-          "abs_sum_range_le",
-          "bound",
-          "bound_within",
-          "bounded_on_unfold",
-          "converges_of_close",
-          "creal",
-          "equiv",
-          "equiv_of_pointwise",
-          "left_distrib",
-          "mesh_count_width",
-          "mul_zero",
-          "neg_congr",
-          "neg_le_neg",
-          "of_nat",
-          "of_nat_le",
-          "of_rat_mul",
-          "one",
-          "rat_unit_eq_one",
-          "riemann_sum_deep_cauchy_folded",
-          "riemann_sum_total_eps_le",
-          "seq",
-          "sum_range",
-          "sum_range_add",
-          "sum_range_congr",
-          "sum_range_const",
-          "sum_range_le",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 122,
-        "label": "integral::declare_integral_split_arbitrary",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs_congr",
-          "add_assoc",
-          "add_comm",
-          "add_neg",
-          "add_zero",
-          "bound_within",
-          "creal",
-          "equiv",
-          "equiv_of_pointwise",
-          "le_abs_self",
-          "mul_nonneg",
-          "neg_le_abs",
-          "of_nat",
-          "seq",
-          "zero"
-        ]
-      },
-      {
-        "index": 123,
-        "label": "integral::declare_integral_abs_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 124,
-        "label": "integral::declare_ftc_estimates",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_assoc",
-          "creal",
-          "equiv",
-          "equiv_of_pointwise",
-          "le_max_right",
-          "seq"
-        ]
-      },
-      {
-        "index": 125,
-        "label": "integral::declare_integral_eq_antideriv_diff",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "le_max_left",
-          "max",
-          "max_le",
-          "min",
-          "min_le_right"
-        ]
-      },
-      {
-        "index": 126,
-        "label": "integral::declare_integral_by_parts",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "zero"
-        ]
-      },
-      {
-        "index": 127,
-        "label": "derivative::declare_has_derivative_integral_const",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 128,
-        "label": "inverse_fn::declare_order_reflect_of_pos_deriv",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "le",
-          "lt",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 129,
-        "label": "monotone::declare_inverse_lipschitz_of_pos_deriv",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "lt",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 130,
-        "label": "power::declare_power",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "lt"
-        ]
-      },
-      {
-        "index": 131,
-        "label": "power::declare_power_series_term",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 132,
-        "label": "power::declare_power_series_term_congr",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 133,
-        "label": "derivative::declare_has_derivative_pow_two",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 134,
-        "label": "derivative::declare_has_derivative_pow",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "left_distrib"
-        ]
-      },
-      {
-        "index": 135,
-        "label": "geometric::declare_geometric",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 136,
-        "label": "power::declare_power_series_term_abs_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 137,
-        "label": "uniform_convergence::declare_power_series_uniform_converges",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 138,
-        "label": "uniform_convergence::declare_converges_of_abs_diff_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 139,
-        "label": "uniform_convergence::declare_uniform_converges_geom",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 140,
-        "label": "geometric::declare_geom_cauchy_of_lt_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 141,
-        "label": "exponential::declare_exponential",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "le_refl",
-          "of_rat",
-          "pow_pos"
-        ]
-      },
-      {
-        "index": 142,
-        "label": "exponential::declare_geom_cauchy_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "equiv",
-          "le_trans",
-          "mul_one",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 143,
-        "label": "exponential::declare_exp_convergence",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "converges",
-          "creal",
-          "equiv",
-          "le_refl",
-          "of_rat",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 144,
-        "label": "ratio_test::declare_geom_scaled_cauchy_of_lt",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "converges",
-          "creal",
-          "lt"
-        ]
-      },
-      {
-        "index": 145,
-        "label": "ratio_test::declare_sum_range_ratio_test",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "lt"
-        ]
-      },
-      {
-        "index": 146,
-        "label": "exponential::declare_e_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "converges",
-          "creal",
-          "equiv",
-          "mul_shift",
-          "of_rat",
-          "regular",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 147,
-        "label": "trig::declare_trig",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "converges",
-          "creal",
-          "mul_shift",
-          "of_rat",
-          "regular",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 148,
-        "label": "trig::declare_sin_trig",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "converges",
-          "creal",
-          "mul_shift",
-          "of_rat",
-          "regular",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 149,
-        "label": "cos_sign::declare_converges_upper_bound_shift",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_assoc"
-        ]
-      },
-      {
-        "index": 150,
-        "label": "alternating::declare_alternating",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv_refl",
-          "equiv_symm",
-          "equiv_trans",
-          "le",
-          "mul",
-          "neg",
-          "one",
-          "pow"
-        ]
-      },
-      {
-        "index": 154,
-        "label": "ivt::declare_ivt",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv_zero_of_small",
-          "le",
-          "left_distrib",
-          "lt",
-          "seq",
-          "shared_index_to_canonical"
-        ]
-      },
-      {
-        "index": 155,
-        "label": "inverse_fn::declare_ivt_exact_root_at",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "creal",
-          "equiv",
-          "le",
-          "le_refl",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 156,
-        "label": "polynomial::declare_polynomial",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "left_distrib",
-          "mul_comm"
-        ]
-      },
-      {
-        "index": 157,
-        "label": "congruence::declare_congruence_extras",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv"
-        ]
-      },
-      {
-        "index": 158,
-        "label": "uniform_continuity::declare_bounded_on_id_zero_one",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 162,
-        "label": "trig_fn::declare_cos_fn_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "bound",
-          "bound_within",
-          "creal",
-          "geom_cauchy_ordered_half",
-          "le",
-          "mul",
-          "mul_shift",
-          "mul_sum_range",
-          "neg",
-          "of_rat",
-          "one",
-          "pow",
-          "regular",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 163,
-        "label": "trig_fn::declare_cos_fn_equiv_cos_one",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "le_of_lt",
-          "mul",
-          "one",
-          "pow",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 164,
-        "label": "trig_fn::declare_cos_fn_wide_progress",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs",
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "bound",
-          "bound_within",
-          "creal",
-          "equiv",
-          "le",
-          "le_of_lt",
-          "le_refl",
-          "mul",
-          "mul_shift",
-          "neg",
-          "of_rat",
-          "of_rat_add",
-          "of_rat_le",
-          "one",
-          "pow",
-          "rat_unit_eq_one",
-          "regular",
-          "seq",
-          "within",
-          "zero",
-          "zero_lt_one"
-        ]
-      },
-      {
-        "index": 165,
-        "label": "trig_fn::declare_cos_fn_wide",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "bound",
-          "bound_within",
-          "creal",
-          "geom_cauchy_ordered_16_over_25",
-          "le",
-          "le_refl",
-          "mul",
-          "mul_shift",
-          "mul_sum_range",
-          "neg",
-          "of_rat",
-          "of_rat_add",
-          "one",
-          "pow",
-          "rat_unit_eq_one",
-          "regular",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 166,
-        "label": "trig_fn::declare_cos_fn_wide_uniformly_continuous",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "of_rat",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 167,
-        "label": "trig_fn::declare_cos_fn_wide_at_one",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "le_refl",
-          "mul",
-          "pow",
-          "seq",
-          "within"
-        ]
-      },
-      {
-        "index": 168,
-        "label": "trig_fn::declare_has_derivative_on_restrict",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 169,
-        "label": "trig_fn::declare_sin_fn_term_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs",
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "creal",
-          "equiv",
-          "equiv_symm",
-          "equiv_trans",
-          "le",
-          "le_of_lt",
-          "le_refl",
-          "mul",
-          "neg",
-          "one",
-          "pow",
-          "zero",
-          "zero_lt_one"
-        ]
-      },
-      {
-        "index": 170,
-        "label": "trig_fn::declare_sin_fn_dominant",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "bound",
-          "bound_within",
-          "creal",
-          "equiv",
-          "le_congr",
-          "le_refl",
-          "mul",
-          "mul_shift",
-          "neg",
-          "of_rat",
-          "of_rat_add",
-          "of_rat_le",
-          "one",
-          "pow",
-          "rat_unit_eq_one",
-          "regular",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 171,
-        "label": "trig_fn::declare_sin_fn",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "bound",
-          "bound_within",
-          "creal",
-          "equiv",
-          "geom_cauchy_ordered_16_over_25",
-          "le",
-          "le_refl",
-          "mul",
-          "mul_comm",
-          "mul_one",
-          "mul_shift",
-          "mul_sum_range",
-          "neg",
-          "of_rat",
-          "of_rat_add",
-          "one",
-          "pow",
-          "rat_unit_eq_one",
-          "regular",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 172,
-        "label": "trig_fn::declare_sin_fn_uniformly_continuous",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "of_rat",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 173,
-        "label": "trig_fn::declare_cos_fn_derivative",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "creal",
-          "equiv",
-          "equiv_symm",
-          "le",
-          "left_distrib",
-          "mul",
-          "mul_comm",
-          "mul_zero",
-          "neg",
-          "of_rat",
-          "of_rat_le",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 174,
-        "label": "trig_fn::declare_cos_fn_wide_derivative",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_assoc",
-          "add_comm",
-          "add_congr",
-          "add_neg",
-          "add_zero",
-          "creal",
-          "equiv_refl",
-          "equiv_symm",
-          "equiv_trans",
-          "le",
-          "mul_one",
-          "neg",
-          "of_rat",
-          "zero"
-        ]
-      },
-      {
-        "index": 175,
-        "label": "trig_fn::declare_sin_fn_lower_bound",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs",
-          "add",
-          "add_comm",
-          "bound",
-          "bound_within",
-          "creal",
-          "equiv",
-          "le",
-          "left_distrib",
-          "mul",
-          "mul_shift",
-          "mul_zero",
-          "neg",
-          "of_rat",
-          "one",
-          "pow",
-          "rat_unit_eq_one",
-          "regular",
-          "seq",
-          "sum_range_congr",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 176,
-        "label": "exp_fn::declare_exp_fn_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "bound",
-          "bound_within",
-          "creal",
-          "geom_cauchy_ordered_half",
-          "le",
-          "mul",
-          "mul_shift",
-          "mul_sum_range",
-          "neg",
-          "of_rat",
-          "one",
-          "pow",
-          "regular",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 177,
-        "label": "exp_fn::declare_exp_fn_equiv_e",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "le_of_lt",
-          "mul",
-          "one",
-          "pow",
-          "seq",
-          "within",
-          "zero"
-        ]
-      },
-      {
-        "index": 179,
-        "label": "supremum::declare_max_range_transport",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "equiv",
-          "le"
-        ]
-      },
-      {
-        "index": 181,
-        "label": "supremum::declare_mesh_level_count_pow",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "mul_one",
-          "pow",
-          "pow_succ",
-          "pow_zero"
-        ]
-      },
-      {
-        "index": 182,
-        "label": "supremum::declare_mesh_level_count_ge_of_size",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "le_refl",
-          "le_trans",
-          "mul_comm",
-          "pow",
-          "pow_add"
-        ]
-      },
-      {
-        "index": 183,
-        "label": "supremum::declare_mesh_max",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal"
-        ]
-      },
-      {
-        "index": 184,
-        "label": "supremum::declare_mesh_max_step_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "le_trans",
-          "mul",
-          "mul_comm",
-          "neg",
-          "of_nat",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 185,
-        "label": "supremum::declare_mesh_max_mono",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "le",
-          "uniformly_continuous_on"
-        ]
-      },
-      {
-        "index": 188,
-        "label": "supremum::declare_true_exp_of_modulus_step_le",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "exp_of_modulus"
-        ]
-      },
-      {
-        "index": 190,
-        "label": "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_comm",
-          "le_refl"
-        ]
-      },
-      {
-        "index": 191,
-        "label": "supremum::declare_mesh_point_near_coarse",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "mul",
-          "neg",
-          "of_rat",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 192,
-        "label": "supremum::declare_max_range_le_add_of_exists",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le"
-        ]
-      },
-      {
-        "index": 193,
-        "label": "supremum::declare_mesh_max_le_add_of_step_close",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "mul",
-          "neg",
-          "of_nat",
-          "of_rat",
-          "zero"
-        ]
-      },
-      {
-        "index": 194,
-        "label": "supremum::declare_mesh_max_le_add_of_modulus",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "mul",
-          "neg",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 195,
-        "label": "supremum::declare_sup_seq",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "neg",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 196,
-        "label": "supremum::declare_sup_seq_cauchy",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "neg",
-          "of_rat",
-          "pow"
-        ]
-      },
-      {
-        "index": 197,
-        "label": "supremum::declare_sup_on",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "creal",
-          "le"
-        ]
-      },
-      {
-        "index": 198,
-        "label": "sup_laws::declare_max_range_attained_approx",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv_refl",
-          "le",
-          "lt",
-          "of_rat",
-          "zero"
-        ]
-      },
-      {
-        "index": 199,
-        "label": "sup_laws::declare_sup_seq_le_shift",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 200,
-        "label": "sup_laws::declare_sup_on_approx_lub",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "equiv",
-          "le",
-          "mul",
-          "neg",
-          "of_nat",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 201,
-        "label": "sup_laws::declare_sup_on_ub_at_sup_seq_point",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_comm",
-          "creal",
-          "le",
-          "mul",
-          "neg",
-          "of_nat",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 202,
-        "label": "sup_laws::declare_step_family_locate",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "zero"
-        ]
-      },
-      {
-        "index": 203,
-        "label": "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "mul",
-          "neg",
-          "of_nat",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 204,
-        "label": "sup_laws::declare_sup_on_ub",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_comm",
-          "add_zero",
-          "creal",
-          "equiv",
-          "equiv_refl",
-          "equiv_symm",
-          "equiv_trans",
-          "le",
-          "le_refl",
-          "left_distrib",
-          "mul",
-          "mul_comm",
-          "neg",
-          "of_rat",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 205,
-        "label": "evt_row1::declare_evt_approx_max",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "creal",
-          "le",
-          "of_rat"
-        ]
-      },
-      {
-        "index": 207,
-        "label": "cos_sign::declare_cos_wide_tail_antitone",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add_comm",
-          "equiv_refl",
-          "equiv_symm",
-          "equiv_trans",
-          "le",
-          "mul",
-          "mul_one",
-          "one"
-        ]
-      },
-      {
-        "index": 208,
-        "label": "cos_sign::declare_cos_wide_series_converges",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "abs",
-          "add",
-          "creal",
-          "equiv_refl",
-          "mul",
-          "neg",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 209,
-        "label": "cos_sign::declare_cos_wide_nonpositive",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "add",
-          "add_comm",
-          "add_zero",
-          "equiv_refl",
-          "equiv_symm",
-          "equiv_trans",
-          "le",
-          "mul",
-          "mul_comm",
-          "mul_le_mul_of_nonneg_left",
-          "neg",
-          "one",
-          "zero"
-        ]
-      },
-      {
-        "index": 210,
-        "label": "pi::declare_pi_family",
-        "provides_in_table_not_measured": [],
-        "provides_missing_from_table": [],
-        "requires_missing_from_table": [
-          "bound",
-          "bound_within",
-          "converges",
-          "creal",
-          "mul_shift",
-          "mul_sum_range",
-          "regular",
-          "seq",
-          "within"
-        ]
-      }
-    ]
+    "table_gaps": []
   },
   "produced_by": "scripts/creal-declare-deps.py",
   "schema": "creal-declare-deps/v1",
   "source": {
     "creal_prelude_fields": 606,
-    "creal_rs_lines": 17172,
+    "creal_rs_lines": 12004,
     "fields_in_module_registries": 7,
     "functions_indexed": 1916,
     "module_registries": {
@@ -4107,6 +1729,8 @@
         "add",
         "add_le_add",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "le",
@@ -4168,6 +1792,8 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_of_pointwise",
         "equiv_refl",
         "equiv_symm",
@@ -4178,8 +1804,11 @@
         "mk",
         "neg",
         "not_zero_one",
+        "of_rat",
         "one",
         "regular",
+        "seq",
+        "within",
         "zero"
       ],
       "index": 21,
@@ -4251,14 +1880,19 @@
         "pos_of_pos_bound"
       ],
       "declared_requires": [
+        "add",
         "add_comm",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "le",
         "le_congr",
         "le_of_equiv",
         "le_trans",
+        "lt",
         "lt_congr",
         "lt_irrefl",
         "lt_of_lt_of_le",
@@ -4267,6 +1901,7 @@
         "mul_le_mul_of_nonneg_left",
         "mul_zero",
         "not_zero_one",
+        "of_rat",
         "of_rat_mul",
         "one",
         "zero",
@@ -4330,6 +1965,8 @@
         "mul_inv_cancel"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_of_bounded",
         "equiv_refl",
         "equiv_symm",
@@ -4343,7 +1980,9 @@
         "mul_shift",
         "one",
         "pos_bound",
-        "regular"
+        "regular",
+        "seq",
+        "within"
       ],
       "index": 23,
       "label": "inverse::declare_inverse",
@@ -4384,6 +2023,7 @@
         "le_of_mul_le_mul_left"
       ],
       "declared_requires": [
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -4400,6 +2040,7 @@
         "mul_one",
         "one",
         "pos_bound",
+        "seq",
         "zero"
       ],
       "index": 24,
@@ -4460,8 +2101,11 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_trans",
+        "le",
         "le_congr",
         "le_refl",
         "mk",
@@ -4470,6 +2114,7 @@
         "not_le_one_zero",
         "one",
         "regular",
+        "seq",
         "zero"
       ],
       "index": 25,
@@ -4527,9 +2172,12 @@
       "declared_requires": [
         "abs",
         "bound",
+        "creal",
+        "equiv",
         "equiv_of_pointwise",
         "mul",
-        "mul_shift"
+        "mul_shift",
+        "seq"
       ],
       "index": 26,
       "label": "product::declare_mul_self_abs",
@@ -4565,6 +2213,8 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -4620,11 +2270,14 @@
         "abs_le",
         "abs_nonneg",
         "add",
+        "add_assoc",
         "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -4715,6 +2368,7 @@
         "add_comm",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -4780,14 +2434,18 @@
       ],
       "declared_requires": [
         "abs",
+        "add",
         "add_comm",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_of_equiv",
@@ -4795,7 +2453,9 @@
         "le_trans",
         "neg",
         "neg_le_abs",
+        "of_rat",
         "regular",
+        "seq",
         "zero"
       ],
       "index": 30,
@@ -4843,7 +2503,11 @@
       ],
       "declared_requires": [
         "bound",
-        "bound_within"
+        "bound_within",
+        "creal",
+        "le",
+        "of_rat",
+        "seq"
       ],
       "index": 31,
       "label": "archimedean::declare_archimedean",
@@ -4870,7 +2534,11 @@
         "rat_approx_upper"
       ],
       "declared_requires": [
-        "regular"
+        "creal",
+        "le",
+        "of_rat",
+        "regular",
+        "seq"
       ],
       "index": 32,
       "label": "density::declare_density",
@@ -4896,8 +2564,15 @@
         "lt_cotrans"
       ],
       "declared_requires": [
+        "add",
         "apart",
-        "regular"
+        "creal",
+        "le",
+        "le_refl",
+        "lt",
+        "of_rat",
+        "regular",
+        "seq"
       ],
       "index": 33,
       "label": "cotransitivity::declare_cotransitivity",
@@ -4929,9 +2604,12 @@
         "regular_seq"
       ],
       "declared_requires": [
+        "creal",
         "mk",
         "regular",
-        "regular_pred"
+        "regular_pred",
+        "seq",
+        "within"
       ],
       "index": 34,
       "label": "completeness::declare_completeness",
@@ -4991,14 +2669,20 @@
         "add_zero",
         "bound",
         "bound_within",
+        "creal",
+        "equiv",
         "equiv_of_bounded",
         "equiv_refl",
         "equiv_trans",
         "le",
         "le_congr",
         "le_refl",
+        "mul",
+        "mul_shift",
         "neg",
         "regular",
+        "seq",
+        "within",
         "zero"
       ],
       "index": 35,
@@ -5073,6 +2757,7 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -5150,6 +2835,7 @@
         "add_zero",
         "bound",
         "bound_within",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -5166,7 +2852,10 @@
         "of_rat_add",
         "of_rat_le",
         "of_rat_neg",
+        "rat_approx_lower",
+        "rat_approx_upper",
         "regular",
+        "seq",
         "zero"
       ],
       "index": 37,
@@ -5239,6 +2928,7 @@
       "declared_requires": [
         "abs",
         "add",
+        "creal",
         "le",
         "le_trans",
         "neg",
@@ -5290,6 +2980,7 @@
         "bucket_index",
         "bucket_index_floor_lower",
         "bucket_index_floor_upper",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -5311,6 +3002,7 @@
         "of_rat_le",
         "of_rat_mul",
         "one",
+        "seq",
         "zero"
       ],
       "index": 39,
@@ -5374,15 +3066,18 @@
         "converges",
         "converges_lower_bound",
         "converges_upper_bound",
+        "creal",
         "le",
         "le_trans",
         "neg",
         "of_rat",
         "of_rat_le",
         "regular",
+        "seq",
         "uc_modulus",
         "uc_spec",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 40,
       "label": "convergence::declare_converges_comp_eventually",
@@ -5440,6 +3135,7 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_congr",
         "abs_le",
         "abs_nonneg",
@@ -5450,6 +3146,7 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -5570,14 +3267,17 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_congr",
         "abs_le",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv",
         "equiv_of_le_le",
         "equiv_refl",
@@ -5587,14 +3287,15 @@
         "has_derivative_on",
         "hd_modulus",
         "hd_spec",
+        "le",
         "le_abs_self",
         "le_add_of_nonneg",
         "le_congr",
-        "le_of_equiv",
         "le_of_mul_le_mul_left",
         "le_refl",
         "le_trans",
         "left_distrib",
+        "lt",
         "lt_cotrans",
         "mul",
         "mul_comm",
@@ -5686,7 +3387,7 @@
         "add_le_add",
         "add_neg",
         "add_zero",
-        "equiv",
+        "creal",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -5715,6 +3416,7 @@
         "neg_le_neg",
         "of_rat",
         "of_rat_le",
+        "of_rat_neg",
         "of_rat_pos",
         "pos_bound",
         "pos_bound_of_lt",
@@ -5781,11 +3483,12 @@
       ],
       "declared_requires": [
         "add",
+        "add_assoc",
         "add_comm",
+        "add_congr",
         "add_neg",
         "add_zero",
         "creal",
-        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -5848,7 +3551,6 @@
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
-        "equiv_zero_of_small",
         "has_derivative_on",
         "has_derivative_sub",
         "hd_mk",
@@ -5858,7 +3560,6 @@
         "left_distrib",
         "lt",
         "mul",
-        "mul_comm",
         "mul_congr",
         "mul_nonneg",
         "mul_zero",
@@ -5921,6 +3622,7 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_congr",
         "abs_le",
         "abs_mul_le_of_bounds",
@@ -5932,14 +3634,13 @@
         "add_neg",
         "add_zero",
         "bounded_on",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "le",
-        "le_abs_self",
         "le_congr",
-        "le_of_equiv",
         "le_refl",
         "le_trans",
         "left_distrib",
@@ -5950,7 +3651,6 @@
         "mul_zero",
         "neg",
         "neg_congr",
-        "neg_le_abs",
         "neg_le_neg",
         "of_rat",
         "of_rat_add",
@@ -6032,7 +3732,6 @@
       ],
       "declared_requires": [
         "abs",
-        "abs_congr",
         "abs_le",
         "add",
         "add_assoc",
@@ -6046,24 +3745,22 @@
         "bucket_index",
         "bucket_index_floor_lower",
         "bucket_index_floor_upper",
-        "equiv",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "le",
-        "le_abs_self",
         "le_congr",
-        "le_of_equiv",
         "le_refl",
         "le_trans",
+        "mul_one",
         "neg",
-        "neg_le_abs",
-        "neg_le_neg",
         "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_sub",
         "sample_upper_bound",
+        "seq",
         "zero"
       ],
       "index": 47,
@@ -6114,46 +3811,25 @@
       ],
       "declared_requires": [
         "abs",
-        "abs_congr",
         "abs_le",
         "add",
         "add_assoc",
         "add_comm",
         "add_congr",
-        "add_le_add",
         "add_neg",
         "add_zero",
         "bound",
         "bound_within",
-        "bucket_clamp_lower",
-        "bucket_clamp_upper",
-        "bucket_close",
-        "bucket_index",
-        "bucket_index_bound",
-        "bucket_index_floor_lower",
-        "bucket_index_floor_upper",
-        "equiv",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "le",
-        "le_abs_self",
         "le_congr",
-        "le_of_equiv",
-        "le_refl",
-        "le_trans",
         "neg",
-        "neg_le_abs",
         "neg_le_neg",
         "of_rat",
-        "of_rat_add",
-        "of_rat_le",
-        "of_rat_sub",
-        "sample_lower_bound",
-        "sample_upper_bound",
-        "uc_modulus",
-        "uc_spec",
-        "uniformly_continuous_on",
+        "seq",
         "zero"
       ],
       "index": 48,
@@ -6194,6 +3870,7 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_bound_of_self",
         "abs_congr",
         "abs_le",
@@ -6205,15 +3882,11 @@
         "add_neg",
         "add_zero",
         "bound",
-        "bound_within",
         "bounded_on",
-        "bucket_clamp_lower",
-        "bucket_clamp_upper",
         "bucket_close",
         "bucket_index",
         "bucket_index_bound",
-        "bucket_index_floor_lower",
-        "bucket_index_floor_upper",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -6221,18 +3894,15 @@
         "le",
         "le_abs_self",
         "le_congr",
-        "le_of_equiv",
         "le_refl",
         "le_trans",
         "neg",
         "neg_le_abs",
-        "neg_le_neg",
         "of_rat",
         "of_rat_add",
         "of_rat_le",
-        "of_rat_sub",
         "sample_lower_bound",
-        "sample_upper_bound",
+        "seq",
         "uc_modulus",
         "uc_spec",
         "uniformly_continuous_on",
@@ -6296,8 +3966,15 @@
         "rat_unit_eq_one"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_of_bounded",
         "le_of_equiv",
+        "mul",
+        "mul_shift",
+        "regular",
+        "seq",
+        "within",
         "zero"
       ],
       "index": 50,
@@ -6335,6 +4012,7 @@
         "add_assoc",
         "add_congr",
         "bucket_index",
+        "creal",
         "crossing_lower",
         "crossing_upper",
         "equiv",
@@ -6406,6 +4084,7 @@
         "add_neg",
         "add_zero",
         "bucket_index",
+        "creal",
         "crossing_sample_lower",
         "crossing_sample_upper",
         "equiv_refl",
@@ -6478,6 +4157,7 @@
         "add_neg",
         "add_zero",
         "bucket_index",
+        "creal",
         "crossing_sample_ge_a",
         "crossing_sample_lower",
         "crossing_sample_upper",
@@ -6555,6 +4235,7 @@
         "abs",
         "add",
         "bucket_index",
+        "creal",
         "crossing_close_clamped",
         "le",
         "min",
@@ -6598,7 +4279,10 @@
         "sqrt_approx",
         "sqrt_approx_sq_bracket"
       ],
-      "declared_requires": [],
+      "declared_requires": [
+        "creal",
+        "seq"
+      ],
       "index": 55,
       "label": "sqrt::declare_sqrt",
       "measured_provides": [
@@ -6625,7 +4309,8 @@
         "speedup_close"
       ],
       "declared_requires": [
-        "regular_pred"
+        "regular_pred",
+        "within"
       ],
       "index": 56,
       "label": "speedup::declare_speedup",
@@ -6648,11 +4333,14 @@
         "sqrt_approx_kregular"
       ],
       "declared_requires": [
+        "creal",
         "nat_sqrt",
         "rat_sq_le",
         "regular",
+        "seq",
         "sqrt_approx",
-        "sqrt_approx_sq_bracket"
+        "sqrt_approx_sq_bracket",
+        "within"
       ],
       "index": 57,
       "label": "sqrt::declare_sqrt_approx_kregular",
@@ -6678,6 +4366,7 @@
         "sqrt"
       ],
       "declared_requires": [
+        "creal",
         "mk",
         "regular_of_kregular",
         "speedup",
@@ -6706,12 +4395,16 @@
         "sqrt_congr"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_symm",
         "nat_sqrt",
         "rat_sq_le",
+        "seq",
         "sqrt",
         "sqrt_approx",
-        "sqrt_approx_sq_bracket"
+        "sqrt_approx_sq_bracket",
+        "within"
       ],
       "index": 59,
       "label": "sqrt::declare_sqrt_congr",
@@ -6739,9 +4432,11 @@
         "sqrt_le_sqrt"
       ],
       "declared_requires": [
+        "creal",
         "le",
         "nat_sqrt",
         "rat_sq_le",
+        "seq",
         "sqrt",
         "sqrt_approx",
         "sqrt_approx_sq_bracket"
@@ -6770,9 +4465,11 @@
         "sqrt_one"
       ],
       "declared_requires": [
+        "equiv",
         "nat_sqrt",
         "one",
         "rat_sq_le",
+        "seq",
         "sqrt",
         "sqrt_approx_sq_bracket"
       ],
@@ -6799,10 +4496,13 @@
         "sqrt_zero"
       ],
       "declared_requires": [
+        "equiv",
         "nat_sqrt",
         "rat_sq_le",
+        "seq",
         "sqrt",
         "sqrt_approx_sq_bracket",
+        "within",
         "zero"
       ],
       "index": 62,
@@ -6829,12 +4529,19 @@
         "sqrt_sq"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_of_bounded",
         "le",
+        "mul",
+        "mul_shift",
         "nat_sqrt",
         "rat_sq_le",
+        "regular",
+        "seq",
         "sqrt",
         "sqrt_approx_sq_bracket",
+        "within",
         "zero"
       ],
       "index": 63,
@@ -6867,8 +4574,10 @@
         "sqrt_nonneg"
       ],
       "declared_requires": [
+        "creal",
         "le",
         "nat_sqrt",
+        "seq",
         "sqrt",
         "sqrt_approx",
         "zero"
@@ -6898,11 +4607,17 @@
       "declared_requires": [
         "bound",
         "bound_within",
+        "creal",
+        "equiv",
         "equiv_of_bounded",
         "le",
+        "mul",
+        "mul_shift",
         "nat_sqrt",
         "rat_sq_le",
         "rat_unit_eq_one",
+        "regular",
+        "seq",
         "sqrt",
         "sqrt_approx_sq_bracket",
         "zero"
@@ -6939,10 +4654,13 @@
         "sqrt_mul"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "le",
+        "mul",
         "mul_assoc",
         "mul_comm",
         "mul_congr",
@@ -6987,8 +4705,10 @@
         "le_of_sq_le"
       ],
       "declared_requires": [
+        "creal",
         "le",
         "le_congr",
+        "mul",
         "sqrt",
         "sqrt_le_sqrt",
         "sqrt_sq",
@@ -7022,11 +4742,14 @@
       "declared_requires": [
         "cauchy",
         "converges",
+        "creal",
         "mk",
         "regular_of_kregular",
         "regular_pred",
+        "seq",
         "speedup",
-        "speedup_close"
+        "speedup_close",
+        "within"
       ],
       "index": 68,
       "label": "convergence::declare_cauchy_convergence",
@@ -7082,6 +4805,7 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_congr",
         "abs_le",
         "add",
@@ -7092,8 +4816,11 @@
         "add_neg",
         "add_zero",
         "cauchy",
+        "converges",
         "converges_cauchy",
         "converges_of_cauchy",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -7104,12 +4831,15 @@
         "le_refl",
         "le_trans",
         "left_distrib",
+        "lt_of_lt_of_le",
         "mul",
         "mul_zero",
         "neg",
         "neg_le_abs",
         "neg_le_neg",
         "regular",
+        "seq",
+        "within",
         "zero"
       ],
       "index": 69,
@@ -7238,11 +4968,14 @@
         "abs",
         "abs_le",
         "abs_nonneg",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -7250,6 +4983,7 @@
         "has_derivative_on",
         "hd_modulus",
         "hd_spec",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_of_equiv",
@@ -7335,6 +5069,7 @@
         "riemann_sum_le_on"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -7343,6 +5078,8 @@
         "add_zero",
         "bound",
         "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -7350,6 +5087,7 @@
         "le_congr",
         "le_refl",
         "le_trans",
+        "left_distrib",
         "mul",
         "mul_assoc",
         "mul_comm",
@@ -7360,11 +5098,13 @@
         "mul_sum_range",
         "neg",
         "of_nat",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
         "one",
         "rat_unit_eq_one",
+        "seq",
         "sum_range",
         "sum_range_add",
         "sum_range_congr",
@@ -7437,8 +5177,11 @@
         "sum_range_double"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_congr",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_trans",
         "sum_range",
@@ -7469,7 +5212,10 @@
         "sum_range_reblock"
       ],
       "declared_requires": [
+        "add",
         "add_congr",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_trans",
         "sum_range",
@@ -7501,8 +5247,11 @@
         "within_of_two_sided_le"
       ],
       "declared_requires": [
+        "creal",
         "le",
-        "neg"
+        "neg",
+        "seq",
+        "within"
       ],
       "index": 75,
       "label": "integral::declare_within_of_two_sided_le",
@@ -7526,12 +5275,14 @@
       ],
       "declared_requires": [
         "abs",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -7541,6 +5292,7 @@
         "le_refl",
         "le_trans",
         "neg",
+        "of_rat",
         "zero"
       ],
       "index": 76,
@@ -7580,12 +5332,14 @@
       ],
       "declared_requires": [
         "abs",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -7596,6 +5350,7 @@
         "le_trans",
         "neg",
         "neg_le_abs",
+        "of_rat",
         "zero"
       ],
       "index": 77,
@@ -7641,6 +5396,7 @@
         "add_assoc",
         "add_congr",
         "add_le_add",
+        "creal",
         "equiv_refl",
         "equiv_trans",
         "le",
@@ -7704,9 +5460,14 @@
         "abs",
         "abs_le_of_two_sided",
         "add",
+        "add_assoc",
+        "add_comm",
         "add_congr",
         "add_le_add",
+        "creal",
         "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
         "le",
         "le_congr",
         "le_trans",
@@ -7763,6 +5524,7 @@
         "abs_le_of_two_sided",
         "add",
         "add_le_add",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "le",
@@ -7774,7 +5536,9 @@
         "of_rat_add",
         "of_rat_le",
         "sample_lower_bound",
-        "sample_upper_bound"
+        "sample_upper_bound",
+        "seq",
+        "within"
       ],
       "index": 80,
       "label": "uniform_convergence::declare_close_within_of_within",
@@ -7815,6 +5579,7 @@
         "abs_le_of_two_sided",
         "add",
         "add_le_add",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "le",
@@ -7822,10 +5587,13 @@
         "le_refl",
         "le_trans",
         "neg",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "sample_lower_bound",
-        "sample_upper_bound"
+        "sample_upper_bound",
+        "seq",
+        "within"
       ],
       "index": 81,
       "label": "integral::declare_close_within_of_within_indexed",
@@ -7868,6 +5636,7 @@
         "add",
         "add_congr",
         "add_le_add",
+        "creal",
         "equiv",
         "equiv_of_le_le",
         "equiv_refl",
@@ -7894,13 +5663,15 @@
         "regular_of_kregular",
         "sample_lower_bound",
         "sample_upper_bound",
+        "seq",
         "speedup",
         "speedup_close",
         "sum_range",
         "sum_range_cauchy_dominated_ordered_normalized",
         "sum_range_congr",
         "uconv_mk",
-        "uniform_converges_on"
+        "uniform_converges_on",
+        "within"
       ],
       "index": 82,
       "label": "uniform_convergence::declare_weierstrass_m_test",
@@ -7961,9 +5732,12 @@
         "of_nat_mul"
       ],
       "declared_requires": [
+        "add",
+        "equiv",
         "equiv_symm",
         "mul",
         "of_nat",
+        "of_rat",
         "of_rat_add",
         "of_rat_mul"
       ],
@@ -8008,6 +5782,7 @@
         "abs_add_le",
         "abs_congr",
         "abs_le",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -8017,6 +5792,8 @@
         "add_zero",
         "apart",
         "archimedean",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -8026,6 +5803,7 @@
         "has_derivative_on",
         "hd_modulus",
         "hd_spec",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_of_equiv",
@@ -8034,6 +5812,7 @@
         "le_refl",
         "le_trans",
         "left_distrib",
+        "lt",
         "lt_congr",
         "mul",
         "mul_assoc",
@@ -8049,6 +5828,7 @@
         "neg_le_neg",
         "of_nat",
         "of_nat_le",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
@@ -8156,11 +5936,9 @@
         "add_neg",
         "add_zero",
         "creal",
-        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
-        "equiv_zero_of_small",
         "has_derivative_add",
         "has_derivative_on",
         "has_derivative_sub",
@@ -8172,10 +5950,8 @@
         "le_refl",
         "le_trans",
         "left_distrib",
-        "lt",
         "monotone_of_nonneg_deriv",
         "mul",
-        "mul_comm",
         "mul_congr",
         "mul_nonneg",
         "mul_zero",
@@ -8239,6 +6015,7 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_congr",
         "abs_diff_le_of_deriv_bound",
         "abs_le",
@@ -8251,7 +6028,6 @@
         "add_neg",
         "add_zero",
         "creal",
-        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -8269,7 +6045,6 @@
         "mul",
         "mul_le_mul_of_nonneg_left",
         "neg",
-        "neg_congr",
         "neg_le_abs",
         "neg_sub_swap",
         "zero"
@@ -8331,7 +6106,6 @@
         "add_comm",
         "add_congr",
         "creal",
-        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -8392,6 +6166,7 @@
         "add_comm",
         "add_congr",
         "add_le_add",
+        "add_neg",
         "add_zero",
         "creal",
         "equiv",
@@ -8414,6 +6189,7 @@
         "mul_congr",
         "mul_le_mul_of_nonneg_left",
         "mul_one",
+        "mul_zero",
         "neg",
         "neg_congr",
         "neg_sub_swap",
@@ -8491,11 +6267,14 @@
         "fine_sample_in_bounds"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -8503,6 +6282,7 @@
         "le_congr",
         "le_refl",
         "le_trans",
+        "left_distrib",
         "mul",
         "mul_assoc",
         "mul_comm",
@@ -8513,6 +6293,7 @@
         "neg",
         "of_nat",
         "of_nat_le",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
@@ -8574,6 +6355,7 @@
         "abs",
         "abs_congr",
         "abs_le",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -8582,6 +6364,8 @@
         "add_zero",
         "bound",
         "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -8602,11 +6386,13 @@
         "neg_le_neg",
         "of_nat",
         "of_nat_le",
+        "of_rat",
         "of_rat_le",
         "of_rat_mul",
         "one",
         "rat_unit_eq_one",
         "riemann_sample_in_bounds",
+        "seq",
         "uc_modulus",
         "uc_spec",
         "uniformly_continuous_on",
@@ -8673,11 +6459,13 @@
         "fine_block_sum_close"
       ],
       "declared_requires": [
+        "add",
         "add_congr",
         "add_le_add",
         "add_neg",
         "bound",
         "bound_within",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -8685,6 +6473,7 @@
         "le",
         "le_congr",
         "le_refl",
+        "left_distrib",
         "mesh_count_width",
         "mul",
         "mul_assoc",
@@ -8694,7 +6483,9 @@
         "mul_nonneg",
         "neg",
         "of_nat",
+        "of_rat",
         "of_rat_le",
+        "seq",
         "sum_range",
         "sum_range_add",
         "sum_range_const",
@@ -8754,7 +6545,9 @@
       "declared_provides": [
         "mesh_reciprocal_mul"
       ],
-      "declared_requires": [],
+      "declared_requires": [
+        "add"
+      ],
       "index": 92,
       "label": "integral::declare_mesh_reciprocal_mul",
       "measured_provides": [
@@ -8774,12 +6567,15 @@
       "declared_requires": [
         "abs",
         "abs_le",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -8789,6 +6585,7 @@
         "le_refl",
         "le_trans",
         "neg",
+        "of_rat",
         "of_rat_le",
         "zero"
       ],
@@ -8831,11 +6628,15 @@
         "sample_point_reblock"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_congr",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "left_distrib",
         "mesh_count_width",
         "mesh_reciprocal_mul",
         "mul",
@@ -8846,6 +6647,7 @@
         "of_nat",
         "of_nat_add",
         "of_nat_mul",
+        "of_rat",
         "of_rat_mul"
       ],
       "index": 94,
@@ -8885,11 +6687,14 @@
         "reblock_block_eq_fine_block_sum"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_abs_diff_le",
         "equiv_refl",
         "equiv_symm",
@@ -8897,6 +6702,8 @@
         "equiv_zero_of_small",
         "fine_sample_in_bounds",
         "le",
+        "left_distrib",
+        "lt_of_lt_of_le",
         "mesh_count_width",
         "mesh_reciprocal_mul",
         "mul",
@@ -8907,6 +6714,7 @@
         "of_nat",
         "of_nat_add",
         "of_nat_mul",
+        "of_rat",
         "of_rat_mul",
         "riemann_sample_in_bounds",
         "sum_range",
@@ -8966,24 +6774,30 @@
         "riemann_sum_reblock_close"
       ],
       "declared_requires": [
+        "add",
         "add_congr",
         "bound",
         "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "fine_block_sum_close",
         "le",
         "le_congr",
+        "lt_of_lt_of_le",
         "mesh_reciprocal_mul",
         "mul",
         "mul_assoc",
         "mul_congr",
         "neg",
         "of_nat",
+        "of_rat",
         "of_rat_mul",
         "reblock_block_eq_fine_block_sum",
         "riemann_sum",
+        "seq",
         "sum_range",
         "sum_range_add",
         "sum_range_const",
@@ -9041,6 +6855,7 @@
         "riemann_sum_cauchy"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -9049,6 +6864,7 @@
         "add_zero",
         "bound",
         "bound_within",
+        "creal",
         "equiv_of_pointwise",
         "equiv_refl",
         "equiv_symm",
@@ -9059,10 +6875,13 @@
         "mul",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_reblock_close",
+        "seq",
         "uc_modulus",
         "uniformly_continuous_on",
+        "within",
         "within_of_two_sided_le",
         "zero"
       ],
@@ -9111,8 +6930,12 @@
         "shared_index_to_canonical"
       ],
       "declared_requires": [
+        "add",
+        "creal",
         "neg",
-        "regular"
+        "regular",
+        "seq",
+        "within"
       ],
       "index": 98,
       "label": "integral::declare_shared_index_to_canonical",
@@ -9136,17 +6959,25 @@
         "riemann_sum_shared_accuracy_close"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mul",
+        "mul_comm",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_cauchy",
+        "seq",
         "shared_index_to_canonical",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 99,
       "label": "integral::declare_riemann_sum_shared_accuracy_close",
@@ -9183,9 +7014,12 @@
         "riemann_sum_shared_accuracy_close_at"
       ],
       "declared_requires": [
-        "bound",
-        "bound_within",
-        "le"
+        "add",
+        "creal",
+        "neg",
+        "seq",
+        "shared_index_to_canonical",
+        "within"
       ],
       "index": 100,
       "label": "integral::declare_riemann_sum_shared_accuracy_close_at",
@@ -9209,8 +7043,11 @@
         "riemann_sum_total_eps_le"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -9224,10 +7061,12 @@
         "mul_one",
         "neg",
         "of_nat",
+        "of_rat",
         "of_rat_le",
         "of_rat_mul",
         "one",
-        "rat_unit_eq_one"
+        "rat_unit_eq_one",
+        "seq"
       ],
       "index": 101,
       "label": "integral::declare_riemann_sum_total_eps_le",
@@ -9269,18 +7108,26 @@
         "riemann_sum_deep_cauchy"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mul",
+        "mul_comm",
         "neg",
         "of_nat",
+        "of_rat",
         "regular",
         "riemann_sum",
         "riemann_sum_cauchy",
+        "seq",
         "shared_index_to_canonical",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 102,
       "label": "integral::declare_riemann_sum_deep_cauchy",
@@ -9318,17 +7165,22 @@
         "riemann_sum_deep_cauchy_folded"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mul",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_deep_cauchy",
         "riemann_sum_total_eps_le",
+        "seq",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 103,
       "label": "integral::declare_riemann_sum_deep_cauchy_folded",
@@ -9362,18 +7214,26 @@
         "riemann_sum_deep_cauchy_cross"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mul",
+        "mul_comm",
         "neg",
         "of_nat",
+        "of_rat",
         "regular",
         "riemann_sum",
         "riemann_sum_cauchy",
+        "seq",
         "shared_index_to_canonical",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 104,
       "label": "integral::declare_riemann_sum_deep_cauchy_cross",
@@ -9411,17 +7271,22 @@
         "riemann_sum_deep_cauchy_cross_folded"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mul",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_deep_cauchy_cross",
         "riemann_sum_total_eps_le",
+        "seq",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 105,
       "label": "integral::declare_riemann_sum_deep_cauchy_cross_folded",
@@ -9455,20 +7320,29 @@
         "riemann_sum_add_cauchy_cross"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mul",
+        "mul_assoc",
+        "mul_comm",
         "neg",
         "of_nat",
+        "of_rat",
         "regular",
         "riemann_sum",
         "riemann_sum_add",
         "riemann_sum_cauchy",
         "riemann_sum_total_eps_le",
+        "seq",
         "shared_index_to_canonical",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 106,
       "label": "integral::declare_riemann_sum_add_cauchy_cross",
@@ -9509,14 +7383,17 @@
         "integral"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
+        "creal",
         "le",
         "mk",
         "neg",
         "regular_of_scaled_cauchy",
         "riemann_sum",
         "riemann_sum_deep_cauchy_folded",
+        "seq",
         "speedup",
         "uc_modulus",
         "uniformly_continuous_on"
@@ -9551,14 +7428,18 @@
         "integral_converges"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
+        "converges",
         "converges_of_scaled_cauchy",
+        "creal",
         "integral",
         "le",
         "neg",
         "riemann_sum",
         "riemann_sum_deep_cauchy_folded",
+        "seq",
         "uc_modulus",
         "uniformly_continuous_on"
       ],
@@ -9592,10 +7473,13 @@
         "integral_const"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
         "converges_of_equiv",
         "converges_unique",
+        "creal",
+        "equiv",
         "equiv_symm",
         "integral",
         "integral_converges",
@@ -9605,6 +7489,7 @@
         "riemann_sum",
         "riemann_sum_const",
         "riemann_sum_deep_cauchy_folded",
+        "seq",
         "uc_modulus",
         "uniformly_continuous_on"
       ],
@@ -9643,10 +7528,13 @@
         "integral_witness_independent"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
         "converges_of_close",
         "converges_unique",
+        "creal",
+        "equiv",
         "integral",
         "integral_converges",
         "le",
@@ -9654,6 +7542,7 @@
         "riemann_sum",
         "riemann_sum_deep_cauchy_cross_folded",
         "riemann_sum_deep_cauchy_folded",
+        "seq",
         "uc_modulus",
         "uniformly_continuous_on"
       ],
@@ -9690,11 +7579,14 @@
         "integral_add"
       ],
       "declared_requires": [
+        "add",
         "bound",
         "bound_within",
         "converges_add",
         "converges_of_close",
         "converges_unique",
+        "creal",
+        "equiv",
         "integral",
         "integral_converges",
         "le",
@@ -9702,6 +7594,7 @@
         "riemann_sum",
         "riemann_sum_add_cauchy_cross",
         "riemann_sum_deep_cauchy_folded",
+        "seq",
         "uc_modulus",
         "uniformly_continuous_on"
       ],
@@ -9739,24 +7632,32 @@
         "integral_le"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
         "converges_le",
         "converges_of_close",
+        "creal",
         "integral",
         "integral_converges",
         "le",
         "mul",
+        "mul_comm",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_cauchy",
         "riemann_sum_deep_cauchy_folded",
         "riemann_sum_le_on",
         "riemann_sum_total_eps_le",
+        "seq",
         "shared_index_to_canonical",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 112,
       "label": "integral::declare_integral_le",
@@ -9800,26 +7701,35 @@
         "integral_scale"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
         "converges_mul",
         "converges_of_close",
         "converges_of_const",
         "converges_unique",
+        "creal",
+        "equiv",
         "integral",
         "integral_converges",
         "le",
         "mul",
+        "mul_comm",
         "mul_riemann_sum",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_cauchy",
         "riemann_sum_deep_cauchy_folded",
         "riemann_sum_total_eps_le",
+        "seq",
         "shared_index_to_canonical",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 113,
       "label": "integral::declare_integral_scale",
@@ -9866,19 +7776,27 @@
         "riemann_sum_integral_close"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "bound",
         "bound_within",
+        "creal",
         "integral",
         "integral_converges",
         "le",
         "mul",
+        "mul_comm",
         "neg",
         "of_nat",
+        "of_rat",
         "riemann_sum",
         "riemann_sum_deep_cauchy_folded",
         "riemann_sum_shared_accuracy_close",
+        "seq",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within"
       ],
       "index": 114,
       "label": "integral::declare_riemann_sum_integral_close",
@@ -9917,21 +7835,27 @@
         "riemann_sum_split_exact"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "left_distrib",
         "mesh_count_width",
         "mul",
         "mul_assoc",
+        "mul_comm",
         "mul_congr",
         "neg",
         "of_nat",
         "of_nat_add",
+        "of_rat",
         "riemann_sum",
         "sum_range",
         "sum_range_congr",
@@ -9980,7 +7904,10 @@
         "riemann_sum_split_scale_invariant"
       ],
       "declared_requires": [
+        "add",
         "add_congr",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -9993,6 +7920,7 @@
         "neg",
         "of_nat",
         "of_nat_mul",
+        "of_rat",
         "of_rat_mul",
         "one",
         "rat_unit_eq_one"
@@ -10033,11 +7961,14 @@
         "congr_of_uniformly_continuous"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_abs_diff_le",
         "equiv_refl",
         "equiv_symm",
@@ -10085,6 +8016,7 @@
         "riemann_sum_split_exact_of_uc"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -10092,6 +8024,8 @@
         "add_neg",
         "add_zero",
         "congr_of_uniformly_continuous",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10099,14 +8033,18 @@
         "le_congr",
         "le_refl",
         "le_trans",
+        "left_distrib",
+        "lt_of_lt_of_le",
         "mesh_count_width",
         "mul",
         "mul_assoc",
+        "mul_comm",
         "mul_congr",
         "mul_nonneg",
         "neg",
         "of_nat",
         "of_nat_add",
+        "of_rat",
         "of_rat_le",
         "riemann_sample_in_bounds",
         "riemann_sum",
@@ -10168,14 +8106,17 @@
       ],
       "declared_requires": [
         "add",
+        "add_assoc",
+        "add_comm",
         "add_congr",
-        "add_le_add",
         "bound",
         "bound_within",
         "congr_of_uniformly_continuous",
         "converges_add",
         "converges_of_close",
         "converges_unique",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10184,9 +8125,15 @@
         "le",
         "le_congr",
         "le_refl",
+        "le_trans",
+        "lt_of_lt_of_le",
         "mul",
+        "mul_comm",
+        "mul_congr",
         "neg",
+        "neg_congr",
         "of_nat",
+        "of_rat",
         "riemann_sample_in_bounds",
         "riemann_sum",
         "riemann_sum_deep_cauchy_folded",
@@ -10194,8 +8141,12 @@
         "riemann_sum_split_exact_of_uc",
         "riemann_sum_split_scale_invariant",
         "riemann_sum_total_eps_le",
+        "seq",
+        "sum_range",
         "uc_modulus",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within",
+        "zero"
       ],
       "index": 119,
       "label": "integral::declare_integral_split",
@@ -10261,14 +8212,19 @@
         "abs_mul_le_of_bounds",
         "add",
         "add_assoc",
+        "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
+        "add_zero",
         "bucket_clamp_lower",
         "bucket_clamp_upper",
         "bucket_index",
         "bucket_index_floor_lower",
         "bucket_index_floor_upper",
+        "creal",
+        "equiv",
+        "equiv_of_pointwise",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10278,6 +8234,7 @@
         "le_congr",
         "le_refl",
         "le_trans",
+        "left_distrib",
         "mul",
         "mul_assoc",
         "mul_comm",
@@ -10286,6 +8243,7 @@
         "mul_le_mul_of_nonneg_left",
         "mul_nonneg",
         "mul_one",
+        "mul_zero",
         "neg",
         "neg_congr",
         "of_nat",
@@ -10293,8 +8251,10 @@
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
+        "one",
         "pos_bound",
         "rat_unit_eq_one",
+        "seq",
         "zero"
       ],
       "index": 120,
@@ -10364,9 +8324,11 @@
       ],
       "declared_requires": [
         "abs",
+        "abs_add_le",
         "abs_congr",
         "abs_le",
         "abs_mul_le_of_bounds",
+        "abs_sum_range_le",
         "add",
         "add_assoc",
         "add_comm",
@@ -10374,10 +8336,17 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "bound",
+        "bound_within",
         "bounded_on",
+        "bounded_on_unfold",
         "converges_add",
         "converges_le",
+        "converges_of_close",
         "converges_of_const",
+        "creal",
+        "equiv",
+        "equiv_of_pointwise",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10388,24 +8357,43 @@
         "le_congr",
         "le_refl",
         "le_trans",
+        "left_distrib",
+        "mesh_count_width",
         "mul",
         "mul_assoc",
         "mul_comm",
         "mul_congr",
         "mul_one",
+        "mul_zero",
         "neg",
+        "neg_congr",
         "neg_le_abs",
+        "neg_le_neg",
         "neg_sub_swap",
+        "of_nat",
+        "of_nat_le",
         "of_rat",
-        "of_rat_add",
         "of_rat_le",
+        "of_rat_mul",
         "of_rat_neg",
+        "one",
+        "rat_unit_eq_one",
         "riemann_sample_in_bounds",
         "riemann_sum",
+        "riemann_sum_deep_cauchy_folded",
         "riemann_sum_shared_accuracy_close",
+        "riemann_sum_total_eps_le",
+        "seq",
+        "sum_range",
+        "sum_range_add",
+        "sum_range_congr",
+        "sum_range_const",
+        "sum_range_le",
         "uc_modulus",
         "uc_spec",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "within",
+        "zero"
       ],
       "index": 121,
       "label": "integral::declare_integral_endpoint_close",
@@ -10496,14 +8484,23 @@
       "declared_requires": [
         "abs",
         "abs_add_le",
+        "abs_congr",
         "abs_le",
         "abs_nonneg",
         "add",
+        "add_assoc",
+        "add_comm",
         "add_congr",
         "add_le_add",
+        "add_neg",
+        "add_zero",
         "bound",
+        "bound_within",
         "bounded_on",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
+        "equiv_of_pointwise",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10512,6 +8509,7 @@
         "integral_endpoint_close",
         "integral_split",
         "le",
+        "le_abs_self",
         "le_congr",
         "le_of_equiv",
         "le_refl",
@@ -10520,19 +8518,24 @@
         "mul_comm",
         "mul_congr",
         "mul_le_mul_of_nonneg_left",
+        "mul_nonneg",
         "neg",
+        "neg_le_abs",
         "neg_le_neg",
         "neg_sub_swap",
+        "of_nat",
         "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
         "pos_bound",
         "riemann_sample_in_bounds",
+        "seq",
         "split_point_approx",
         "uc_modulus",
         "uniformly_continuous_on",
-        "uniformly_continuous_on_restrict"
+        "uniformly_continuous_on_restrict",
+        "zero"
       ],
       "index": 122,
       "label": "integral::declare_integral_split_arbitrary",
@@ -10614,6 +8617,7 @@
         "add_zero",
         "bounded_on",
         "bounded_on_unfold",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10698,6 +8702,7 @@
         "abs_congr",
         "abs_le",
         "add",
+        "add_assoc",
         "add_comm",
         "add_congr",
         "add_le_add",
@@ -10707,7 +8712,10 @@
         "bounded_on_unfold",
         "clamp_id",
         "clamp_mono",
+        "creal",
+        "equiv",
         "equiv_of_le_le",
+        "equiv_of_pointwise",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10723,6 +8731,7 @@
         "le_abs_self",
         "le_congr",
         "le_max_left",
+        "le_max_right",
         "le_min",
         "le_of_equiv",
         "le_of_lt",
@@ -10741,7 +8750,6 @@
         "mul_comm",
         "mul_congr",
         "mul_le_mul_of_nonneg_left",
-        "mul_one",
         "mul_zero",
         "neg",
         "neg_congr",
@@ -10755,6 +8763,7 @@
         "of_rat_pos",
         "pos_bound",
         "pos_bound_of_lt",
+        "seq",
         "uc_modulus",
         "uc_spec",
         "uniformly_continuous_const",
@@ -10871,7 +8880,9 @@
         "bounded_on_unfold",
         "clamp_id",
         "constant_of_zero_deriv",
+        "creal",
         "eq_zero_of_mul_self_zero",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -10884,8 +8895,13 @@
         "integral_split_anywhere",
         "le",
         "le_congr",
+        "le_max_left",
         "le_refl",
         "le_trans",
+        "max",
+        "max_le",
+        "min",
+        "min_le_right",
         "mul",
         "mul_congr",
         "mul_self_abs",
@@ -10960,12 +8976,12 @@
       "declared_requires": [
         "add",
         "add_assoc",
-        "add_comm",
         "add_congr",
         "add_neg",
         "add_zero",
         "bounded_of_uniformly_continuous",
-        "bounded_on",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -10979,7 +8995,8 @@
         "neg",
         "uniformly_continuous_add",
         "uniformly_continuous_mul",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "zero"
       ],
       "index": 126,
       "label": "integral::declare_integral_by_parts",
@@ -11026,6 +9043,7 @@
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -11111,9 +9129,13 @@
       ],
       "declared_requires": [
         "apart",
+        "creal",
         "has_derivative_on",
+        "le",
+        "lt",
         "lt_irrefl",
         "lt_trans",
+        "of_rat",
         "strict_mono_of_pos_deriv"
       ],
       "index": 128,
@@ -11143,6 +9165,7 @@
       "declared_requires": [
         "abs",
         "abs_le",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -11150,21 +9173,26 @@
         "add_neg",
         "add_zero",
         "apart",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "has_derivative_on",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_of_lt",
         "le_refl",
         "le_trans",
+        "lt",
         "mul",
         "mul_le_mul_of_nonneg_left",
         "neg",
         "neg_le_abs",
         "of_nat",
         "of_nat_le",
+        "of_rat",
         "of_rat_add",
         "scale_cancel_le",
         "strict_mono_magnitude",
@@ -11245,6 +9273,8 @@
         "add_neg",
         "add_zero",
         "apart",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -11255,6 +9285,7 @@
         "le_refl",
         "le_trans",
         "left_distrib",
+        "lt",
         "lt_congr",
         "lt_irrefl",
         "lt_of_le_of_lt",
@@ -11352,6 +9383,7 @@
         "power_series_term"
       ],
       "declared_requires": [
+        "creal",
         "mul",
         "pow"
       ],
@@ -11374,6 +9406,8 @@
         "power_series_term_congr"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_refl",
         "mul_congr",
         "pow",
@@ -11404,6 +9438,7 @@
       ],
       "declared_requires": [
         "add",
+        "creal",
         "equiv_refl",
         "equiv_trans",
         "has_derivative_congr",
@@ -11451,6 +9486,7 @@
         "add",
         "add_comm",
         "add_congr",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -11460,6 +9496,7 @@
         "has_derivative_mul",
         "has_derivative_on",
         "le",
+        "left_distrib",
         "mul",
         "mul_assoc",
         "mul_comm",
@@ -11535,6 +9572,8 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -11560,6 +9599,7 @@
         "neg",
         "neg_le_neg",
         "of_nat",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
@@ -11572,8 +9612,10 @@
         "pow_nonneg",
         "rat_unit_eq_one",
         "regular",
+        "seq",
         "sum_range",
         "sum_range_split",
+        "within",
         "zero"
       ],
       "index": 135,
@@ -11663,6 +9705,7 @@
         "add_comm",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -11717,14 +9760,17 @@
       ],
       "declared_requires": [
         "abs",
+        "creal",
         "le",
         "mul",
         "pow",
         "power_series_term",
         "power_series_term_abs_le",
         "power_series_term_congr",
+        "seq",
         "sum_range",
         "weierstrass_m_test",
+        "within",
         "zero"
       ],
       "index": 137,
@@ -11759,6 +9805,7 @@
         "abs",
         "add",
         "converges",
+        "creal",
         "le",
         "le_abs_self",
         "le_trans",
@@ -11808,6 +9855,7 @@
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -11890,6 +9938,8 @@
         "add_neg",
         "add_zero",
         "cauchy",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -11903,6 +9953,7 @@
         "lt",
         "mul",
         "neg",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "one",
@@ -11910,7 +9961,9 @@
         "pow",
         "pow_le_nat_div_succ_of_gap",
         "rat_unit_eq_one",
+        "seq",
         "sum_range",
+        "within",
         "zero"
       ],
       "index": 140,
@@ -11984,11 +10037,14 @@
         "add_congr",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "le",
         "le_congr",
+        "le_refl",
         "le_trans",
         "mul",
         "mul_assoc",
@@ -11999,6 +10055,7 @@
         "mul_sub_one_geom",
         "neg",
         "neg_le_neg",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
@@ -12007,6 +10064,7 @@
         "one",
         "pow",
         "pow_nonneg",
+        "pow_pos",
         "sum_range",
         "zero"
       ],
@@ -12081,6 +10139,7 @@
         "add_neg",
         "add_zero",
         "cauchy",
+        "equiv",
         "equiv_of_le_le",
         "equiv_refl",
         "equiv_symm",
@@ -12092,12 +10151,15 @@
         "le_of_equiv",
         "le_of_mul_le_mul_left",
         "le_refl",
+        "le_trans",
         "mul",
         "mul_comm",
         "mul_congr",
         "mul_inv_cancel",
         "mul_le_mul_of_nonneg_left",
+        "mul_one",
         "neg",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
@@ -12105,7 +10167,9 @@
         "pow",
         "pow_half_le_nat_div_succ",
         "rat_unit_eq_one",
+        "seq",
         "sum_range",
+        "within",
         "zero"
       ],
       "index": 142,
@@ -12168,20 +10232,27 @@
       ],
       "declared_requires": [
         "cauchy",
+        "converges",
         "converges_cauchy",
         "converges_mul",
         "converges_of_cauchy",
         "converges_of_const",
+        "creal",
+        "equiv",
         "exp_dominant",
         "exp_series_partial",
         "exp_term",
         "exp_term_abs_le_dominant",
         "geom_cauchy",
+        "le_refl",
         "mul",
         "mul_sum_range",
+        "of_rat",
         "pow",
+        "seq",
         "sum_range",
-        "sum_range_converges_of_dominated"
+        "sum_range_converges_of_dominated",
+        "within"
       ],
       "index": 143,
       "label": "exponential::declare_exp_convergence",
@@ -12226,12 +10297,15 @@
         "add",
         "cauchy",
         "cauchy_of_pointwise_equiv",
+        "converges",
         "converges_cauchy",
         "converges_mul",
         "converges_of_cauchy",
         "converges_of_const",
+        "creal",
         "geom_cauchy_of_lt",
         "le",
+        "lt",
         "mul",
         "mul_sum_range",
         "neg",
@@ -12280,8 +10354,10 @@
         "abs",
         "add",
         "cauchy",
+        "creal",
         "geom_scaled_cauchy_of_lt",
         "le",
+        "lt",
         "mul",
         "neg",
         "one",
@@ -12336,8 +10412,11 @@
         "add_zero",
         "bound",
         "bound_within",
+        "converges",
         "converges_lower_bound_shift",
         "converges_upper_bound",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -12362,16 +10441,20 @@
         "mul_le_mul_of_nonneg_left",
         "mul_nonneg",
         "mul_one",
+        "mul_shift",
         "mul_sum_range",
         "neg",
         "neg_le_neg",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
         "one",
         "pow",
         "pow_nonneg",
+        "regular",
         "regular_of_scaled_cauchy",
+        "seq",
         "speedup",
         "speedup_close",
         "sum_pow_half_closed_form",
@@ -12379,6 +10462,7 @@
         "sum_range_cauchy_dominated_ordered_normalized",
         "sum_range_le",
         "sum_range_mono_outer",
+        "within",
         "zero",
         "zero_lt_one"
       ],
@@ -12485,8 +10569,10 @@
         "add_zero",
         "bound",
         "bound_within",
+        "converges",
         "converges_lower_bound",
         "converges_upper_bound",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -12508,10 +10594,12 @@
         "mul_le_mul_of_nonneg_left",
         "mul_nonneg",
         "mul_one",
+        "mul_shift",
         "mul_sum_range",
         "neg",
         "neg_le_abs",
         "neg_le_neg",
+        "of_rat",
         "of_rat_le",
         "one",
         "pow",
@@ -12519,13 +10607,16 @@
         "pow_le_one",
         "pow_nonneg",
         "rat_index_ratio_le_one",
+        "regular",
         "regular_of_scaled_cauchy",
+        "seq",
         "speedup",
         "speedup_close",
         "sum_pow_half_closed_form",
         "sum_range",
         "sum_range_cauchy_dominated_ordered_normalized",
         "sum_range_le",
+        "within",
         "zero",
         "zero_lt_one"
       ],
@@ -12632,6 +10723,8 @@
         "add_zero",
         "bound",
         "bound_within",
+        "converges",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -12649,9 +10742,11 @@
         "mul_comm",
         "mul_le_mul_of_nonneg_left",
         "mul_one",
+        "mul_shift",
         "mul_sum_range",
         "neg",
         "neg_le_neg",
+        "of_rat",
         "of_rat_le",
         "one",
         "pow",
@@ -12660,11 +10755,14 @@
         "pow_le_pow_of_le_one",
         "pow_nonneg",
         "rat_index_ratio_le_one",
+        "regular",
         "regular_of_scaled_cauchy",
+        "seq",
         "speedup",
         "speedup_close",
         "sum_range",
         "sum_range_cauchy_dominated_ordered_normalized",
+        "within",
         "zero",
         "zero_lt_one"
       ],
@@ -12742,6 +10840,7 @@
       ],
       "declared_requires": [
         "add",
+        "add_assoc",
         "add_comm",
         "add_congr",
         "add_neg",
@@ -12750,7 +10849,6 @@
         "converges_lower_bound_shift",
         "converges_neg",
         "creal",
-        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -12799,6 +10897,7 @@
         "neg_one_pow_double"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -12808,17 +10907,26 @@
         "converges",
         "converges_lower_bound_shift",
         "converges_neg",
+        "creal",
         "equiv",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
         "le_congr",
         "le_refl",
         "le_trans",
         "left_distrib",
+        "mul",
         "mul_comm",
         "mul_congr",
         "mul_one",
         "mul_zero",
+        "neg",
         "neg_le_neg",
         "neg_mul_neg",
+        "one",
+        "pow",
         "sum_range",
         "zero"
       ],
@@ -13099,6 +11207,7 @@
         "abs_congr",
         "abs_le",
         "abs_nonneg",
+        "add",
         "add_assoc",
         "add_comm",
         "add_congr",
@@ -13114,18 +11223,23 @@
         "converges_lower_bound",
         "converges_of_cauchy",
         "converges_upper_bound",
+        "creal",
         "diff_le_of_strict_mono_magnitude",
         "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "equiv_zero_of_small",
         "has_derivative_on",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_of_forall_le_add_small",
         "le_of_lt",
         "le_refl",
         "le_trans",
+        "left_distrib",
+        "lt",
         "lt_congr",
         "lt_cotrans",
         "lt_trans",
@@ -13154,6 +11268,8 @@
         "rat_approx_lower",
         "rat_approx_upper",
         "rat_unit_eq_one",
+        "seq",
+        "shared_index_to_canonical",
         "uc_modulus",
         "uc_spec",
         "uniformly_continuous_on",
@@ -13267,10 +11383,15 @@
         "ivt_exact_root_at"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -13278,8 +11399,11 @@
         "has_derivative_on",
         "has_derivative_sub",
         "ivt_exact_root",
+        "le",
         "le_congr",
+        "le_refl",
         "neg",
+        "of_rat",
         "uniformly_continuous_const",
         "uniformly_continuous_on",
         "uniformly_continuous_sub",
@@ -13338,12 +11462,15 @@
         "add",
         "add_congr",
         "add_zero",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "left_distrib",
         "mul",
         "mul_assoc",
+        "mul_comm",
         "mul_congr",
         "mul_sum_range",
         "mul_zero",
@@ -13402,6 +11529,8 @@
         "abs_congr",
         "add",
         "add_congr",
+        "creal",
+        "equiv",
         "equiv_refl",
         "max",
         "max_congr",
@@ -13449,6 +11578,7 @@
       "declared_requires": [
         "abs",
         "bounded_on_id_unit",
+        "creal",
         "equiv",
         "equiv_refl",
         "le",
@@ -13487,7 +11617,6 @@
         "evt_linear_uniformly_continuous"
       ],
       "declared_requires": [
-        "abs",
         "abs_bound_of_self",
         "add",
         "add_assoc",
@@ -13500,7 +11629,6 @@
         "bound",
         "bounded_on_id_zero_one",
         "creal",
-        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -13519,7 +11647,6 @@
         "mul_one",
         "mul_zero",
         "neg",
-        "of_rat",
         "one",
         "pos_bound",
         "pos_bound_of_lt",
@@ -13762,28 +11889,45 @@
         "abs",
         "abs_le",
         "abs_mul_le_of_bounds",
+        "add",
         "add_comm",
         "add_neg",
         "add_zero",
+        "bound",
+        "bound_within",
         "cos_term",
         "cos_term_abs_le_dominant",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "exp_dominant",
+        "geom_cauchy_ordered_half",
+        "le",
         "le_congr",
         "le_of_lt",
         "le_refl",
         "le_trans",
+        "mul",
         "mul_one",
         "mul_pow_congr",
+        "mul_shift",
+        "mul_sum_range",
+        "neg",
         "neg_le_neg",
+        "of_rat",
+        "one",
+        "pow",
         "pow_le_one",
         "pow_nonneg",
+        "regular",
+        "seq",
         "sum_range",
         "uniform_converges_on",
         "weierstrass_m_test",
+        "within",
+        "zero",
         "zero_lt_one"
       ],
       "index": 162,
@@ -13861,8 +12005,6 @@
         "add_le_add",
         "add_neg",
         "add_zero",
-        "close_within_of_within",
-        "cos_fn",
         "cos_fn_term",
         "cos_fn_uniform_converges",
         "cos_one",
@@ -13877,8 +12019,10 @@
         "le",
         "le_abs_self",
         "le_congr",
+        "le_of_lt",
         "le_refl",
         "le_trans",
+        "mul",
         "mul_congr",
         "mul_one",
         "neg",
@@ -13887,11 +12031,16 @@
         "of_rat",
         "of_rat_add",
         "of_rat_le",
+        "one",
+        "pow",
         "sample_lower_bound",
         "sample_upper_bound",
+        "seq",
         "sum_range_congr",
         "uconv_rate",
         "uconv_spec",
+        "within",
+        "zero",
         "zero_lt_one"
       ],
       "index": 163,
@@ -13962,10 +12111,21 @@
         "pow_mul_distrib"
       ],
       "declared_requires": [
+        "abs",
         "abs_le",
         "abs_mul_le_of_bounds",
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
+        "bound",
+        "bound_within",
         "cos_fn_term",
         "cos_term",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -13973,17 +12133,34 @@
         "exp_term",
         "exp_term_abs_le_dominant",
         "geom_cauchy_ordered_16_over_25",
+        "le",
         "le_congr",
+        "le_of_lt",
+        "le_refl",
         "le_trans",
+        "mul",
         "mul_assoc",
         "mul_comm",
         "mul_congr",
         "mul_one",
+        "mul_shift",
         "mul_sum_range",
+        "neg",
         "neg_le_neg",
+        "of_rat",
+        "of_rat_add",
+        "of_rat_le",
+        "one",
+        "pow",
         "pow_le_pow_of_base_le",
         "pow_nonneg",
-        "sum_range"
+        "rat_unit_eq_one",
+        "regular",
+        "seq",
+        "sum_range",
+        "within",
+        "zero",
+        "zero_lt_one"
       ],
       "index": 164,
       "label": "trig_fn::declare_cos_fn_wide_progress",
@@ -14056,27 +12233,51 @@
       ],
       "declared_requires": [
         "abs",
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
+        "bound",
+        "bound_within",
         "cos_dominant_16_over_25",
-        "cos_dominant_16_over_25_cauchy_body",
         "cos_fn_term",
         "cos_fn_term_abs_le_wide",
         "cos_fn_term_congr",
+        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "exp_dominant",
+        "geom_cauchy_ordered_16_over_25",
+        "le",
         "le_congr",
+        "le_refl",
+        "mul",
         "mul_assoc",
         "mul_congr",
+        "mul_shift",
+        "mul_sum_range",
+        "neg",
+        "of_rat",
+        "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
+        "one",
+        "pow",
         "pow_add",
         "pow_congr",
         "pow_mul_distrib",
+        "rat_unit_eq_one",
+        "regular",
+        "seq",
         "sum_range",
         "uniform_converges_on",
-        "weierstrass_m_test"
+        "weierstrass_m_test",
+        "within",
+        "zero"
       ],
       "index": 165,
       "label": "trig_fn::declare_cos_fn_wide",
@@ -14146,7 +12347,10 @@
         "cos_fn_wide",
         "cos_fn_wide_uniform_converges",
         "cos_term",
+        "creal",
+        "of_rat",
         "of_rat_le",
+        "one",
         "pow",
         "sum_range",
         "uniform_limit_uniformly_continuous",
@@ -14154,7 +12358,8 @@
         "uniformly_continuous_const",
         "uniformly_continuous_id",
         "uniformly_continuous_mul",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "zero"
       ],
       "index": 166,
       "label": "trig_fn::declare_cos_fn_wide_uniformly_continuous",
@@ -14203,7 +12408,6 @@
         "add_le_add",
         "add_neg",
         "add_zero",
-        "close_within_of_within",
         "cos_fn_term",
         "cos_fn_wide",
         "cos_fn_wide_uniform_converges",
@@ -14221,7 +12425,9 @@
         "le_abs_self",
         "le_congr",
         "le_of_lt",
+        "le_refl",
         "le_trans",
+        "mul",
         "mul_congr",
         "mul_one",
         "neg",
@@ -14231,11 +12437,14 @@
         "of_rat_add",
         "of_rat_le",
         "one",
+        "pow",
         "sample_lower_bound",
         "sample_upper_bound",
+        "seq",
         "sum_range_congr",
         "uconv_rate",
         "uconv_spec",
+        "within",
         "zero",
         "zero_lt_one"
       ],
@@ -14309,6 +12518,7 @@
       "declared_requires": [
         "abs",
         "add",
+        "creal",
         "has_derivative_on",
         "hd_mk",
         "hd_modulus",
@@ -14347,21 +12557,41 @@
         "sin_fn_term_congr"
       ],
       "declared_requires": [
+        "abs",
         "abs_le",
         "abs_mul_le_of_bounds",
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
         "exp_dominant",
         "exp_term",
         "exp_term_abs_le_dominant",
+        "le",
         "le_congr",
+        "le_of_lt",
+        "le_refl",
         "le_trans",
+        "mul",
         "mul_comm",
         "mul_one",
         "mul_pow_congr",
+        "neg",
         "neg_le_neg",
+        "one",
+        "pow",
         "pow_le_pow_of_base_le",
         "pow_nonneg",
-        "sin_term"
+        "sin_term",
+        "zero",
+        "zero_lt_one"
       ],
       "index": 169,
       "label": "trig_fn::declare_sin_fn_term_family",
@@ -14417,14 +12647,37 @@
         "sin_dominant_16_over_25_cauchy_body"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
+        "bound",
+        "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "geom_cauchy_ordered_16_over_25",
-        "mul_congr",
+        "le_congr",
+        "le_refl",
+        "mul",
+        "mul_shift",
         "mul_sum_range",
-        "of_rat_mul",
-        "sum_range"
+        "neg",
+        "of_rat",
+        "of_rat_add",
+        "of_rat_le",
+        "one",
+        "pow",
+        "rat_unit_eq_one",
+        "regular",
+        "seq",
+        "sum_range",
+        "within",
+        "zero"
       ],
       "index": 170,
       "label": "trig_fn::declare_sin_fn_dominant",
@@ -14476,26 +12729,53 @@
       ],
       "declared_requires": [
         "abs",
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
+        "bound",
+        "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "exp_dominant",
+        "geom_cauchy_ordered_16_over_25",
+        "le",
         "le_congr",
+        "le_refl",
+        "mul",
         "mul_assoc",
+        "mul_comm",
         "mul_congr",
+        "mul_one",
+        "mul_shift",
+        "mul_sum_range",
+        "neg",
+        "of_rat",
+        "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
+        "one",
+        "pow",
         "pow_add",
         "pow_congr",
         "pow_mul_distrib",
+        "rat_unit_eq_one",
+        "regular",
+        "seq",
         "sin_dominant_16_over_25",
-        "sin_dominant_16_over_25_cauchy_body",
         "sin_fn_term",
         "sin_fn_term_abs_le_wide",
         "sin_fn_term_congr",
         "sum_range",
         "uniform_converges_on",
-        "weierstrass_m_test"
+        "weierstrass_m_test",
+        "within",
+        "zero"
       ],
       "index": 171,
       "label": "trig_fn::declare_sin_fn",
@@ -14563,7 +12843,10 @@
       ],
       "declared_requires": [
         "bounded_of_uniformly_continuous",
+        "creal",
+        "of_rat",
         "of_rat_le",
+        "one",
         "pow",
         "sin_fn",
         "sin_fn_term",
@@ -14575,7 +12858,8 @@
         "uniformly_continuous_const",
         "uniformly_continuous_id",
         "uniformly_continuous_mul",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "zero"
       ],
       "index": 172,
       "label": "trig_fn::declare_sin_fn_uniformly_continuous",
@@ -14614,11 +12898,20 @@
         "exp_term_succ_scale"
       ],
       "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
         "bounded_of_uniformly_continuous",
         "bounded_on_unfold",
         "cos_fn_term",
         "cos_term",
+        "creal",
+        "equiv",
         "equiv_refl",
+        "equiv_symm",
         "equiv_trans",
         "exp_term",
         "has_derivative_add",
@@ -14627,13 +12920,22 @@
         "has_derivative_on",
         "has_derivative_pow",
         "has_derivative_smul",
+        "le",
         "le_refl",
+        "left_distrib",
+        "mul",
         "mul_assoc",
+        "mul_comm",
         "mul_congr",
         "mul_one",
+        "mul_zero",
+        "neg",
         "neg_congr",
         "of_nat",
+        "of_rat",
+        "of_rat_le",
         "of_rat_mul",
+        "one",
         "pow",
         "sin_fn_term",
         "sin_term",
@@ -14641,7 +12943,8 @@
         "uniformly_continuous_const",
         "uniformly_continuous_id",
         "uniformly_continuous_mul",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "zero"
       ],
       "index": 173,
       "label": "trig_fn::declare_cos_fn_derivative",
@@ -14715,16 +13018,30 @@
         "abs",
         "abs_congr",
         "abs_le",
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_neg",
+        "add_zero",
         "cos_fn_partial_has_derivative",
         "cos_fn_term",
         "cos_fn_wide",
         "cos_fn_wide_uniform_converges",
+        "creal",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
         "has_derivative_on",
         "has_derivative_uniform_limit",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_trans",
+        "mul_one",
+        "neg",
         "neg_le_abs",
+        "of_rat",
         "of_rat_le",
         "sin_fn",
         "sin_fn_term",
@@ -14733,7 +13050,8 @@
         "uconv_mk",
         "uconv_rate",
         "uconv_spec",
-        "uniform_converges_on"
+        "uniform_converges_on",
+        "zero"
       ],
       "index": 174,
       "label": "trig_fn::declare_cos_fn_wide_derivative",
@@ -14791,17 +13109,23 @@
         "sin_fn_lower_bound_one_to_r"
       ],
       "declared_requires": [
+        "abs",
         "abs_add_le",
         "abs_congr",
         "abs_le",
         "abs_le_of_two_sided",
+        "add",
         "add_assoc",
+        "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
         "alternating_lower_bound",
-        "close_within_of_within",
+        "bound",
+        "bound_within",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -14812,43 +13136,58 @@
         "exp_term_one_eq_one",
         "exp_term_succ_scale",
         "geom_cauchy_ordered_16_over_25",
+        "le",
         "le_abs_self",
         "le_congr",
         "le_of_lt",
         "le_refl",
         "le_trans",
+        "left_distrib",
+        "mul",
         "mul_assoc",
         "mul_comm",
         "mul_congr",
         "mul_le_mul_of_nonneg_left",
         "mul_nonneg",
         "mul_one",
+        "mul_shift",
         "mul_sum_range",
+        "mul_zero",
+        "neg",
         "neg_congr",
         "neg_le_abs",
         "neg_sub_swap",
         "of_nat",
         "of_nat_le",
         "of_nat_mul",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
+        "one",
+        "pow",
         "pow_add",
         "pow_congr",
         "pow_le_pow_of_base_le",
         "pow_mul_distrib",
         "pow_nonneg",
+        "rat_unit_eq_one",
+        "regular",
         "sample_lower_bound",
         "sample_upper_bound",
+        "seq",
         "sin_dominant_16_over_25",
         "sin_fn",
         "sin_fn_term",
         "sin_fn_term_abs_le_wide",
         "sin_fn_uniform_converges",
         "sum_range",
+        "sum_range_congr",
         "sum_range_converges_of_dominated",
         "uconv_rate",
         "uconv_spec",
+        "within",
+        "zero",
         "zero_lt_one"
       ],
       "index": 175,
@@ -14952,29 +13291,45 @@
         "abs",
         "abs_le",
         "abs_mul_le_of_bounds",
+        "add",
         "add_comm",
         "add_neg",
         "add_zero",
-        "equiv",
+        "bound",
+        "bound_within",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
         "exp_dominant",
         "exp_term",
         "exp_term_abs_le_dominant",
+        "geom_cauchy_ordered_half",
+        "le",
         "le_congr",
         "le_of_lt",
         "le_refl",
         "le_trans",
+        "mul",
         "mul_one",
+        "mul_shift",
+        "mul_sum_range",
+        "neg",
         "neg_le_neg",
+        "of_rat",
+        "one",
+        "pow",
         "pow_le_one",
         "pow_nonneg",
         "power_series_term",
         "power_series_term_congr",
+        "regular",
+        "seq",
         "sum_range",
         "uniform_converges_on",
         "weierstrass_m_test",
+        "within",
+        "zero",
         "zero_lt_one"
       ],
       "index": 176,
@@ -15050,7 +13405,6 @@
         "add_le_add",
         "add_neg",
         "add_zero",
-        "close_within_of_within",
         "e",
         "e_converges",
         "equiv",
@@ -15058,15 +13412,16 @@
         "equiv_symm",
         "equiv_trans",
         "equiv_zero_of_rate",
-        "exp_fn",
         "exp_fn_uniform_converges",
         "exp_series_partial",
         "exp_term",
         "le",
         "le_abs_self",
         "le_congr",
+        "le_of_lt",
         "le_refl",
         "le_trans",
+        "mul",
         "mul_congr",
         "mul_one",
         "neg",
@@ -15075,12 +13430,17 @@
         "of_rat",
         "of_rat_add",
         "of_rat_le",
+        "one",
+        "pow",
         "power_series_term",
         "sample_lower_bound",
         "sample_upper_bound",
+        "seq",
         "sum_range_congr",
         "uconv_rate",
         "uconv_spec",
+        "within",
+        "zero",
         "zero_lt_one"
       ],
       "index": 177,
@@ -15191,8 +13551,11 @@
         "max_range_transport"
       ],
       "declared_requires": [
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
+        "le",
         "le_congr",
         "max_le",
         "max_range",
@@ -15244,7 +13607,11 @@
       "declared_requires": [
         "mesh_level_count",
         "mesh_level_count_succ",
-        "mesh_level_count_zero"
+        "mesh_level_count_zero",
+        "mul_one",
+        "pow",
+        "pow_succ",
+        "pow_zero"
       ],
       "index": 181,
       "label": "supremum::declare_mesh_level_count_pow",
@@ -15269,8 +13636,13 @@
         "mesh_level_count_ge_of_size"
       ],
       "declared_requires": [
+        "le_refl",
+        "le_trans",
         "mesh_level_count",
-        "mesh_level_count_pow"
+        "mesh_level_count_pow",
+        "mul_comm",
+        "pow",
+        "pow_add"
       ],
       "index": 182,
       "label": "supremum::declare_mesh_level_count_ge_of_size",
@@ -15296,6 +13668,7 @@
       ],
       "declared_requires": [
         "add",
+        "creal",
         "max_range",
         "mesh_level_count",
         "mul",
@@ -15327,17 +13700,27 @@
         "mesh_max_step_le"
       ],
       "declared_requires": [
+        "add",
         "add_congr",
         "congr_of_uniformly_continuous",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "le",
+        "le_trans",
         "left_distrib",
         "max_range_transport",
         "mesh_level_count",
         "mesh_max",
+        "mul",
+        "mul_comm",
         "mul_congr",
+        "neg",
+        "of_nat",
         "of_nat_add",
+        "of_rat",
         "of_rat_add",
         "riemann_sample_in_bounds",
         "uniformly_continuous_on"
@@ -15382,9 +13765,12 @@
         "mesh_max_mono"
       ],
       "declared_requires": [
+        "creal",
+        "le",
         "mesh_max",
         "mesh_max_step_le",
-        "mono_of_le_succ"
+        "mono_of_le_succ",
+        "uniformly_continuous_on"
       ],
       "index": 185,
       "label": "supremum::declare_mesh_max_mono",
@@ -15450,8 +13836,8 @@
         "true_exp_of_modulus_step_le"
       ],
       "declared_requires": [
-        "true_exp_of_modulus",
-        "true_exp_of_modulus_succ"
+        "exp_of_modulus",
+        "true_exp_of_modulus"
       ],
       "index": 188,
       "label": "supremum::declare_true_exp_of_modulus_step_le",
@@ -15492,10 +13878,10 @@
         "exp_of_modulus_le_true_exp_of_modulus"
       ],
       "declared_requires": [
+        "add_comm",
         "exp_of_modulus",
-        "true_exp_of_modulus",
-        "true_exp_of_modulus_succ",
-        "true_exp_of_modulus_zero"
+        "le_refl",
+        "true_exp_of_modulus"
       ],
       "index": 190,
       "label": "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
@@ -15517,29 +13903,38 @@
         "mesh_point_near_coarse"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_congr",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
+        "le",
         "le_congr",
         "le_of_equiv",
         "le_refl",
         "le_trans",
         "left_distrib",
         "mesh_level_count",
+        "mul",
         "mul_comm",
         "mul_congr",
         "mul_nonneg",
         "mul_one",
+        "neg",
         "of_nat",
         "of_nat_add",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
-        "rat_unit_eq_one"
+        "one",
+        "rat_unit_eq_one",
+        "zero"
       ],
       "index": 191,
       "label": "supremum::declare_mesh_point_near_coarse",
@@ -15589,7 +13984,10 @@
         "max_range_le_add_of_exists"
       ],
       "declared_requires": [
+        "add",
         "add_le_add",
+        "creal",
+        "le",
         "le_refl",
         "le_trans",
         "max_le",
@@ -15621,10 +14019,13 @@
         "mesh_max_le_add_of_step_close"
       ],
       "declared_requires": [
+        "add",
         "add_le_add",
         "add_neg",
         "add_zero",
+        "creal",
         "equiv_refl",
+        "le",
         "le_congr",
         "le_refl",
         "le_trans",
@@ -15632,9 +14033,14 @@
         "mesh_level_count",
         "mesh_max",
         "mesh_point_near_coarse",
+        "mul",
         "mul_nonneg",
+        "neg",
+        "of_nat",
+        "of_rat",
         "of_rat_le",
-        "riemann_sample_in_bounds"
+        "riemann_sample_in_bounds",
+        "zero"
       ],
       "index": 193,
       "label": "supremum::declare_mesh_max_le_add_of_step_close",
@@ -15675,8 +14081,11 @@
       ],
       "declared_requires": [
         "abs_le_of_two_sided",
+        "add",
         "add_le_add",
         "bound",
+        "creal",
+        "le",
         "le_add_of_abs_sub_le",
         "le_add_of_nonneg",
         "le_refl",
@@ -15686,6 +14095,9 @@
         "mesh_level_count_ge_of_size",
         "mesh_max",
         "mesh_max_le_add_of_step_close",
+        "mul",
+        "neg",
+        "of_rat",
         "uc_modulus",
         "uc_spec",
         "uniformly_continuous_on"
@@ -15731,13 +14143,18 @@
         "sup_seq_mono"
       ],
       "declared_requires": [
+        "add",
         "bound",
+        "creal",
         "exp_of_modulus",
         "exp_of_modulus_le_true_exp_of_modulus",
+        "le",
         "mesh_level_count",
         "mesh_max",
         "mesh_max_le_add_of_modulus",
         "mesh_max_mono",
+        "neg",
+        "of_rat",
         "true_exp_of_modulus",
         "true_exp_of_modulus_mono",
         "uc_modulus",
@@ -15783,15 +14200,21 @@
       "declared_requires": [
         "abs",
         "abs_le_of_two_sided",
+        "add",
         "add_le_add",
         "cauchy",
         "cauchy_of_abs_diff_le",
+        "creal",
+        "le",
         "le_add_of_nonneg",
         "le_refl",
         "le_trans",
         "mesh_level_count",
         "mesh_level_count_pow",
+        "neg",
+        "of_rat",
         "of_rat_le",
+        "pow",
         "sup_seq",
         "sup_seq_le_add",
         "sup_seq_mono",
@@ -15839,6 +14262,8 @@
       "declared_requires": [
         "converges",
         "converges_of_scaled_cauchy",
+        "creal",
+        "le",
         "mk",
         "regular_of_scaled_cauchy",
         "scaled_cauchy_of_abs_diff_le",
@@ -15877,17 +14302,24 @@
         "max_range_attained_approx"
       ],
       "declared_requires": [
+        "add",
         "add_lt_add_of_le_of_lt",
         "add_zero",
+        "creal",
+        "equiv_refl",
+        "le",
         "le_add_of_nonneg",
         "le_of_lt",
         "le_refl",
         "le_trans",
+        "lt",
         "lt_congr",
         "lt_cotrans",
         "max_le",
         "max_range",
-        "pos_of_pos_bound"
+        "of_rat",
+        "pos_of_pos_bound",
+        "zero"
       ],
       "index": 198,
       "label": "sup_laws::declare_max_range_attained_approx",
@@ -15923,9 +14355,13 @@
         "sup_seq_le_shift"
       ],
       "declared_requires": [
+        "add",
+        "creal",
+        "le",
         "le_add_of_nonneg",
         "le_trans",
         "mesh_level_count",
+        "of_rat",
         "sup_seq",
         "sup_seq_le_add",
         "sup_seq_mono",
@@ -15958,12 +14394,16 @@
         "sup_on_approx_lub"
       ],
       "declared_requires": [
+        "add",
         "add_assoc",
         "add_congr",
         "add_le_add",
         "converges_upper_bound",
+        "creal",
+        "equiv",
         "equiv_refl",
         "equiv_trans",
+        "le",
         "le_congr",
         "le_mesh_level_count",
         "le_refl",
@@ -15971,6 +14411,10 @@
         "max_range",
         "max_range_attained_approx",
         "mesh_level_count",
+        "mul",
+        "neg",
+        "of_nat",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "riemann_sample_in_bounds",
@@ -16028,10 +14472,18 @@
         "sup_seq_le_sup_on"
       ],
       "declared_requires": [
+        "add",
+        "add_comm",
         "converges_lower_bound_shift",
+        "creal",
+        "le",
         "le_trans",
         "max_range_ub",
         "mesh_level_count",
+        "mul",
+        "neg",
+        "of_nat",
+        "of_rat",
         "sup_level",
         "sup_on",
         "sup_seq",
@@ -16074,17 +14526,21 @@
         "step_family_locate"
       ],
       "declared_requires": [
+        "add",
         "add_le_add",
         "add_lt_add_of_le_of_lt",
         "add_zero",
+        "creal",
         "equiv_refl",
+        "le",
         "le_congr",
         "le_of_lt",
         "le_refl",
         "le_trans",
         "lt",
         "lt_congr",
-        "lt_cotrans"
+        "lt_cotrans",
+        "zero"
       ],
       "index": 202,
       "label": "sup_laws::declare_step_family_locate",
@@ -16118,16 +14574,23 @@
         "sup_on_ub_at_fine_mesh_point"
       ],
       "declared_requires": [
+        "add",
         "add_le_add",
         "bound",
+        "creal",
         "exp_of_modulus",
         "exp_of_modulus_le_true_exp_of_modulus",
+        "le",
         "le_refl",
         "le_trans",
         "max_range_ub",
         "mesh_level_count",
         "mesh_max",
         "mesh_max_le_add_of_modulus",
+        "mul",
+        "neg",
+        "of_nat",
+        "of_rat",
         "sup_level",
         "sup_on",
         "sup_seq",
@@ -16178,29 +14641,45 @@
       ],
       "declared_requires": [
         "abs_le_of_two_sided",
+        "add",
         "add_assoc",
+        "add_comm",
         "add_congr",
         "add_le_add",
         "add_neg",
+        "add_zero",
         "bound",
+        "creal",
+        "equiv",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
         "le_add_of_abs_sub_le",
         "le_congr",
         "le_mesh_level_count",
         "le_of_forall_le_add_rate",
         "le_of_lt",
+        "le_refl",
         "le_trans",
+        "left_distrib",
         "mesh_count_width",
         "mesh_le_of_ge",
         "mesh_level_count",
         "mesh_level_count_ge_of_size",
+        "mul",
+        "mul_comm",
         "mul_congr",
         "mul_nonneg",
         "mul_one",
         "mul_zero",
+        "neg",
         "of_nat",
+        "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_pos",
+        "one",
         "rat_unit_eq_one",
         "riemann_sample_in_bounds",
         "step_family_locate",
@@ -16209,7 +14688,8 @@
         "sup_on_ub_at_fine_mesh_point",
         "uc_modulus",
         "uc_spec",
-        "uniformly_continuous_on"
+        "uniformly_continuous_on",
+        "zero"
       ],
       "index": 204,
       "label": "sup_laws::declare_sup_on_ub",
@@ -16277,7 +14757,11 @@
         "evt_approx_max"
       ],
       "declared_requires": [
+        "add",
+        "creal",
+        "le",
         "le_trans",
+        "of_rat",
         "sup_on",
         "sup_on_approx_lub",
         "sup_on_ub",
@@ -16339,21 +14823,29 @@
         "cos_wide_tail_antitone"
       ],
       "declared_requires": [
+        "add_comm",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
         "exp_term",
         "exp_term_nonneg",
         "exp_term_succ_scale",
+        "le",
         "le_congr",
         "le_trans",
+        "mul",
         "mul_assoc",
         "mul_comm",
         "mul_congr",
         "mul_le_mul_of_nonneg_left",
+        "mul_one",
         "of_nat",
         "of_nat_le",
         "of_nat_mul",
         "of_rat",
         "of_rat_le",
         "of_rat_mul",
+        "one",
         "pow",
         "pow_add",
         "pow_nonneg"
@@ -16400,23 +14892,31 @@
         "cos_wide_series_converges"
       ],
       "declared_requires": [
+        "abs",
         "abs_congr",
+        "add",
         "add_congr",
         "converges_of_abs_diff_le",
         "cos_fn_term",
         "cos_fn_wide",
         "cos_fn_wide_uniform_converges",
+        "creal",
+        "equiv_refl",
         "exp_term",
         "le_congr",
         "le_refl",
+        "mul",
         "mul_assoc",
+        "neg",
         "of_rat",
         "of_rat_le",
+        "one",
         "pow",
         "sum_range",
         "sum_range_congr",
         "uconv_rate",
-        "uconv_spec"
+        "uconv_spec",
+        "zero"
       ],
       "index": 208,
       "label": "cos_sign::declare_cos_wide_series_converges",
@@ -16459,27 +14959,40 @@
         "cos_wide_nonpositive"
       ],
       "declared_requires": [
+        "add",
+        "add_comm",
         "add_congr",
         "add_le_add",
+        "add_zero",
         "alternating_upper_bound_tail",
         "cos_fn_wide",
         "cos_wide_series_converges",
         "cos_wide_tail_antitone",
         "cos_wide_tail_nonneg",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
         "exp_term",
+        "le",
         "le_congr",
         "le_refl",
         "le_trans",
+        "mul",
         "mul_assoc",
+        "mul_comm",
         "mul_congr",
+        "mul_le_mul_of_nonneg_left",
         "mul_one",
+        "neg",
         "neg_one_pow_double",
         "of_rat",
         "of_rat_add",
         "of_rat_le",
         "of_rat_mul",
+        "one",
         "pow",
-        "sum_range"
+        "sum_range",
+        "zero"
       ],
       "index": 209,
       "label": "cos_sign::declare_cos_wide_nonpositive",
@@ -16551,9 +15064,12 @@
         "add_le_add",
         "add_neg",
         "add_zero",
+        "bound",
+        "bound_within",
+        "converges",
         "converges_lower_bound_shift",
         "converges_upper_bound",
-        "equiv_of_le_le",
+        "creal",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -16569,6 +15085,8 @@
         "mul_le_mul_of_nonneg_left",
         "mul_nonneg",
         "mul_one",
+        "mul_shift",
+        "mul_sum_range",
         "neg",
         "neg_le_neg",
         "of_rat",
@@ -16578,7 +15096,9 @@
         "one",
         "pow",
         "pow_nonneg",
+        "regular",
         "regular_of_scaled_cauchy",
+        "seq",
         "speedup",
         "speedup_close",
         "sum_pow_half_closed_form",
@@ -16586,6 +15106,7 @@
         "sum_range_cauchy_dominated_ordered_normalized",
         "sum_range_le",
         "sum_range_mono_outer",
+        "within",
         "zero"
       ],
       "index": 210,

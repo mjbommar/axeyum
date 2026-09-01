@@ -4604,6 +4604,12 @@ SUITES["merge-hygiene"] = (
             "if ! plan_out=$(python3 scripts/gen-plan.py --check 2>&1); then",
             "if false; then",
         ),
+        (
+            "M7 a stale creal STEPS table fails the gate",
+            "if ! creal_out=$(python3 scripts/creal-declare-deps.py "
+            "--check --strict --self-check 2>&1); then",
+            "if false; then",
+        ),
     ],
 )
 

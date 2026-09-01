@@ -1524,6 +1524,11 @@ generated-trackers:
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index
     python3 scripts/gen-adr-index.py --check
+    # `creal`'s STEPS table is generated from a measurement of its own source
+    # (crates/axeyum-lean-kernel/src/creal/steps_generated.rs). --check: stale;
+    # --strict: the measured graph contradicts it; --self-check: the positive
+    # control. Pure Python, ~1.1s.
+    python3 scripts/creal-declare-deps.py --check --strict --self-check
     # ADR-0601 SS3: the import backlog as a produced artifact, not a bare
     # count. docs/autogenesis/289-import-backlog-artifact.md.
     python3 -m unittest scripts.tests.test_gen_import_backlog

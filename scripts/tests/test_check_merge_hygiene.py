@@ -71,6 +71,9 @@ class MergeHygieneControls(unittest.TestCase):
             # ADR-1511: the two cheap ledger checks the gate now runs for real.
             ("gen-import-backlog", "IMPORT_BACKLOG ok"),
             ("gen-production-provenance-ledger", "PRODUCTION_PROVENANCE ok"),
+            # The creal STEPS table is a GENERATED SOURCE FILE, checked here
+            # for the same reason PLAN.md is (lane `creal-split-2`).
+            ("creal-declare-deps", "CREAL_DECLARE_DEPS ok"),
         ):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
@@ -199,6 +202,18 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertIn("FAIL: gen-plan.py --check", done.stdout)
         self.assertIn("commit PLAN.md", done.stdout)
+
+    def test_stale_creal_steps_table_fails_the_gate(self) -> None:
+        """`crates/.../creal/steps_generated.rs` is the `STEPS` array the creal
+        prelude builds against and it is generated from a measurement of
+        `creal.rs`. A stale one silently under-constrains the build order --
+        which is the defect the generator replaced -- and `creal.rs` has the
+        highest edit rate in the repository, so it is the generated file most
+        likely to be merged stale."""
+        done = self.run_gate(creal_declare_deps=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: creal-declare-deps.py --check", done.stdout)
+        self.assertIn("steps_generated.rs", done.stdout)
 
     # -- the aggregate ------------------------------------------------------
 

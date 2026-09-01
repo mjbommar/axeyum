@@ -10367,6 +10367,105 @@ fn order_violation_reports_missing_provider_as_table_bug() {
     );
 }
 
+/// `STEPS` with `consumer` lifted to `provider`'s position, addressed by LABEL.
+///
+/// By label and never by index: an index is right until someone adds a step
+/// above it, and then the test silently permutes a different pair and keeps
+/// passing.
+///
+/// A MOVE, not a swap, and the difference is the whole point. Swapping the two
+/// also displaces every step between them relative to the provider, so the
+/// resulting violation can be some third step's -- and here it is: the sibling
+/// `integral::declare_riemann_sum_shared_accuracy_close` sits between them and
+/// reads the same declaration through an edge the hand-written table DID name.
+/// A swap therefore fires for a reason that has nothing to do with the omitted
+/// edge, which is a control that looks rigorous and measures the wrong thing.
+fn steps_with_consumer_lifted(consumer: &str, provider: &str) -> &'static [super::BuildStep] {
+    let position = |label: &str| {
+        super::STEPS
+            .iter()
+            .position(|s| s.label == label)
+            .unwrap_or_else(|| panic!("no STEPS entry labelled '{label}'"))
+    };
+    let (from, to) = (position(consumer), position(provider));
+    assert!(
+        to < from,
+        "the provider must currently precede the consumer, or there is nothing \
+         to invert"
+    );
+    let mut permuted: Vec<super::BuildStep> = super::STEPS
+        .iter()
+        .map(|s| super::BuildStep {
+            label: s.label,
+            requires: s.requires,
+            provides: s.provides,
+            run: s.run,
+        })
+        .collect();
+    let moved = permuted.remove(from);
+    permuted.insert(to, moved);
+    Box::leak(permuted.into_boxed_slice())
+}
+
+/// An inversion on an edge the HAND-WRITTEN table never named is refused.
+///
+/// This is the finding the generated table exists to close, pinned as a test
+/// rather than as a paragraph. `integral::declare_riemann_sum_shared_accuracy_close_at`
+/// reads `CReal.sharedIndexToCanonical`, declared two steps earlier by
+/// `integral::declare_shared_index_to_canonical`. The hand-written table did
+/// not name that edge -- it is one of the 977 it omitted -- so lifting the
+/// consumer above its provider produced **zero** violations from
+/// `validate_step_order` and then a bare `UnknownConst` from the kernel.
+///
+/// Reproducing the "before" half from history, since the old table is gone:
+///
+/// ```text
+/// git show a503a9241:artifacts/refactor/creal-declare-deps.json
+/// ```
+///
+/// carries each step's `declared_requires` (the hand-written table) beside its
+/// `measured_requires`; replaying the same MOVE against the first gives 0
+/// violations and against the second gives 1, naming
+/// `CReal.sharedIndexToCanonical`. Measured 2026-09-01.
+///
+/// Note what this does NOT assert: that the build fails. It does not, because
+/// `plan_step_order` now moves the step back -- which is the level-2 behaviour
+/// and is checked by `planned_order_repairs_a_consumer_placed_before_its_provider`.
+/// What changed here is that the edge is *visible* at all; without it in the
+/// table the planner has nothing to repair.
+#[test]
+fn an_edge_the_hand_written_table_never_named_is_now_enforced() {
+    let (kernel, prelude) = built();
+    let permuted = steps_with_consumer_lifted(
+        "integral::declare_riemann_sum_shared_accuracy_close_at",
+        "integral::declare_shared_index_to_canonical",
+    );
+    let violation = super::validate_step_order(prelude, permuted)
+        .expect_err("the level-1 preflight must reject this inversion");
+    let missing = super::render_name(&kernel, violation.missing);
+    assert_eq!(
+        violation.consumer_label, "integral::declare_riemann_sum_shared_accuracy_close_at",
+        "the violation must name the consumer, found {violation:?}"
+    );
+    assert_eq!(
+        missing, "CReal.sharedIndexToCanonical",
+        "the violation must name the edge the hand-written table omitted"
+    );
+    assert!(
+        violation.provider.is_some(),
+        "the edge has a provider in the table -- it is misordered, not absent: {violation:?}"
+    );
+
+    // The control, in the same test so it cannot rot separately: the
+    // UNPERMUTED table is clean. Without it, a `validate_step_order` that
+    // rejected everything would pass the assertions above.
+    assert!(
+        super::validate_step_order(prelude, super::STEPS).is_ok(),
+        "control: the unpermuted table must validate, or the rejection above \
+         says nothing about the swap"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // `plan_step_order`: the build order is COMPUTED (level 2 of the phase-order
 // fix, architecture review §1)

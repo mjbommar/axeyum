@@ -49,14 +49,33 @@ depend on its own output. This script resolves those positionally: a function
 (or a `let f = |name: NameId, ..|` closure) that declares under parameter `k`
 turns every call site's `k`-th argument into a write attributed to the CALLER.
 
+IT NOW WRITES THE TABLE RATHER THAN ONLY GRADING IT (lane `creal-split-2`).
+The first version of this script measured the graph and reported the 977
+missing edges; the table stayed hand-written, so the report was a standing
+finding nobody could close. `creal.rs` now keeps only `STEP_DISPATCH` -- the
+order and the dispatch, one line per step -- and this script generates
+`crates/axeyum-lean-kernel/src/creal/steps_generated.rs`, the `STEPS` table
+the kernel builds against, with `requires`/`provides` taken from the
+measurement. The edges are no longer maintainable by hand, so they can no
+longer be forgotten.
+
+That does not make `table_gaps` vacuous: it is computed against the COMMITTED
+generated file, so it is now the finding "the committed table is stale", which
+fires the moment a declaration is added without re-running the generator. See
+`generated_table`.
+
 Usage:
-    python3 scripts/creal-declare-deps.py            # rewrite the artifact + report
-    python3 scripts/creal-declare-deps.py --check    # gate: fail if stale
+    python3 scripts/creal-declare-deps.py            # rewrite both outputs + report
+    python3 scripts/creal-declare-deps.py --check    # gate: fail if either is stale
     python3 scripts/creal-declare-deps.py --report   # report only, no write
 
+Outputs:
+    artifacts/refactor/creal-declare-deps.json          the measurement
+    crates/.../src/creal/steps_generated.rs             the `STEPS` table
+
 Exit status:
-    0  artifact written (or, with --check, up to date) and no finding
-    1  --check and the artifact is stale
+    0  outputs written (or, with --check, up to date) and no finding
+    1  --check and an output is stale
     2  a measured DEFECT in the STEPS table (see --strict)
 
 `--strict` is what makes the exit status depend on the finding rather than on
@@ -70,6 +89,7 @@ import argparse
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -77,10 +97,13 @@ SRC = ROOT / "crates" / "axeyum-lean-kernel" / "src"
 CREAL = SRC / "creal.rs"
 CREAL_DIR = SRC / "creal"
 ARTIFACT = ROOT / "artifacts" / "refactor" / "creal-declare-deps.json"
+GENERATED = SRC / "creal" / "steps_generated.rs"
 
 # Files that declare nothing the build order runs: the sharded inventory
-# mirror and the per-module test modules.
-SKIP = re.compile(r"(_tests\.rs$)|(^inventory\.rs$)")
+# mirror, the per-module test modules, and this script's own output (which
+# holds no `fn`, but must never be read as a source of dependencies -- it IS
+# the dependencies, and indexing it would make the measurement circular).
+SKIP = re.compile(r"(_tests\.rs$)|(^inventory\.rs$)|(^steps_generated\.rs$)")
 
 
 # ---------------------------------------------------------------------------
@@ -342,22 +365,135 @@ def accessor_ids(text: str, registries: dict[str, str]) -> list[str]:
     return [resolve(m, registries) for m in ACCESSOR.finditer(text)]
 
 
-def steps_table(clean: str, registries: dict[str, str]) -> list[dict]:
-    start = clean.index("const STEPS: &[BuildStep] = &[")
-    end = match_brace(clean, clean.index("[", clean.index("=", start)), "[", "]")
-    body = clean[start:end]
-    out = []
+DISPATCH_ENTRY = re.compile(r"\(\s*\"([^\"]+)\"\s*,\s*([A-Za-z_0-9:]+)\s*,?\s*\)")
+
+
+def dispatch_table(tables: str) -> list[tuple[str, str]]:
+    """`(label, run)` per step, in build order, from `creal.rs`'s hand-written
+    `STEP_DISPATCH`.
+
+    This is the only hand-maintained half of the build table now: the order and
+    the dispatch. `requires`/`provides` come from `generated_table` below, and
+    that file is written by this script.
+    """
+    start = tables.index("const STEP_DISPATCH: &[StepDispatch] = &[")
+    end = match_brace(tables, tables.index("[", tables.index("=", start)), "[", "]")
+    return [(m.group(1), m.group(2)) for m in DISPATCH_ENTRY.finditer(tables[start:end])]
+
+
+def generated_table(registries: dict[str, str]) -> dict[str, dict]:
+    """`label -> {declared_requires, declared_provides}` as the COMMITTED
+    generated file states them.
+
+    Read back rather than assumed. `table_gaps` compares this against the fresh
+    measurement, so after the generator has run it is exactly the finding
+    "the committed file is stale" -- which can still fail, and does the moment
+    anyone adds a declaration without regenerating. Generating a table does not
+    make the check vacuous; it moves what the check is about from "did a human
+    remember an edge" to "was the generator re-run".
+    """
+    if not GENERATED.exists():
+        return {}
+    body = strip_noise(GENERATED.read_text(), keep_strings=True)
+    out: dict[str, dict] = {}
     for m in STEP_ENTRY.finditer(body):
-        label, requires, provides, run = m.groups()
+        label, requires, provides, _run = m.groups()
+        out[label] = {
+            "declared_requires": sorted(set(accessor_ids(requires, registries))),
+            "declared_provides": sorted(set(accessor_ids(provides, registries))),
+        }
+    return out
+
+
+def steps_table(clean: str, registries: dict[str, str]) -> list[dict]:
+    """One entry per build step: order and dispatch from `STEP_DISPATCH`,
+    declared dependencies from the committed generated file."""
+    generated = generated_table(registries)
+    out = []
+    for label, run in dispatch_table(clean):
+        declared = generated.get(label, {})
         out.append(
             {
                 "label": label,
                 "run": run,
-                "declared_requires": sorted(set(accessor_ids(requires, registries))),
-                "declared_provides": sorted(set(accessor_ids(provides, registries))),
+                "declared_requires": declared.get("declared_requires", []),
+                "declared_provides": declared.get("declared_provides", []),
             }
         )
     return out
+
+
+GENERATED_HEADER = '''\
+//! `STEPS`: the `creal` prelude's build order together with the dependency
+//! edges each step actually has.
+//!
+//! **@generated by `scripts/creal-declare-deps.py` -- DO NOT EDIT.** Run
+//! `python3 scripts/creal-declare-deps.py` to rewrite it; its `--check` fails
+//! when this file is stale.
+//!
+//! WHY THIS FILE IS GENERATED. `requires`/`provides` used to be written by
+//! hand inside `creal.rs`'s `STEPS`, and the preflight
+//! ([`super::validate_step_order`]) and the planner
+//! ([`super::plan_step_order`]) can only constrain the edges the table names.
+//! Measured 2026-09-01, the hand-written table named **3,934 of the 4,831**
+//! `requires` edges the code has: 977 edges across 175 of the 211 steps
+//! constrained nothing at all, so an inversion on any of them passed the
+//! preflight and then failed in the kernel as a bare `UnknownConst` -- the
+//! shape of gate CLAUDE.md calls worse than no gate. The demonstration, on the
+//! commit before this file existed: swapping steps 98 and 100
+//! (`integral::declare_shared_index_to_canonical` and its consumer) drew
+//! **zero** violations from the hand-written table and one, naming
+//! `CReal.sharedIndexToCanonical`, from the measured graph.
+//!
+//! The order and the dispatch stay hand-written, in `creal.rs`'s
+//! `STEP_DISPATCH`; only the edges are measured. Every entry below is in
+//! `STEP_DISPATCH` order and carries its `label` verbatim, so a step added
+//! there and not regenerated here is caught by `--check` rather than by a
+//! silent gap in the graph.
+
+use super::{BuildStep, CRealPrelude};
+
+'''
+
+
+def render_generated(measured: list[dict]) -> str:
+    """The generated Rust table, rustfmt'd.
+
+    Piped through `rustfmt` rather than hand-formatted: `cargo fmt --all
+    --check` covers generated files too, and predicting where rustfmt breaks a
+    5,000-element array is not something worth encoding here.
+    """
+    parts = [GENERATED_HEADER, "pub(super) const STEPS: &[BuildStep] = &[\n"]
+    for step in measured:
+        requires = ", ".join(
+            f"|p: CRealPrelude| p.{field}" for field in step.get("measured_requires", [])
+        )
+        provides = ", ".join(
+            f"|p: CRealPrelude| p.{field}" for field in step.get("measured_provides", [])
+        )
+        parts.append("    BuildStep {\n")
+        parts.append(f'        label: "{step["label"]}",\n')
+        parts.append(f"        requires: &[{requires}],\n")
+        parts.append(f"        provides: &[{provides}],\n")
+        parts.append(f'        run: super::{step["run"]},\n')
+        parts.append("    },\n")
+    parts.append("];\n")
+    raw = "".join(parts)
+    try:
+        done = subprocess.run(
+            ["rustfmt", "--edition", "2024", "--emit", "stdout"],
+            input=raw,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        sys.exit(
+            f"creal-declare-deps: rustfmt is not on PATH and is required to emit {GENERATED}"
+        )
+    if done.returncode != 0:
+        sys.exit(f"creal-declare-deps: rustfmt rejected the generated table:\n{done.stderr}")
+    return done.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -587,7 +723,11 @@ def direct_writes(
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--check", action="store_true", help="fail if the artifact is stale")
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="fail if the JSON measurement or the generated STEPS table is stale",
+    )
     ap.add_argument("--report", action="store_true", help="print the report, write nothing")
     ap.add_argument(
         "--strict",
@@ -779,6 +919,29 @@ def main() -> int:
             }
         )
 
+    # A `STEP_DISPATCH` entry naming a function this scan cannot find is fatal,
+    # not a finding: `render_generated` would emit that step with no edges at
+    # all, which is the silent-gap failure the generator exists to remove.
+    unresolved = [s["label"] for s in measured if "error" in s]
+    if unresolved:
+        sys.exit(
+            "creal-declare-deps: STEP_DISPATCH names "
+            f"{len(unresolved)} function(s) this scan cannot resolve, so the "
+            f"generated table would have no edges for them: {unresolved[:5]}"
+        )
+
+    # Under `--check`/`--report` the `declared_*` above are read from the
+    # COMMITTED generated file, so `table_gaps` is the finding "the committed
+    # table is stale". A WRITE replaces that file with this measurement, so the
+    # document recorded here must describe the tree as it will be AFTER the
+    # write -- otherwise the JSON records the pre-write disagreement, a second
+    # invocation is needed to converge, and `--check` flaps between them.
+    writing = not (args.check or args.report)
+    if writing:
+        for step in measured:
+            step["declared_requires"] = step["measured_requires"]
+            step["declared_provides"] = step["measured_provides"]
+
     # ---- findings ----------------------------------------------------------
     provider_of: dict[str, list[int]] = {}
     for step in measured:
@@ -914,13 +1077,31 @@ def main() -> int:
     }
     text = json.dumps(document, indent=2, sort_keys=True) + "\n"
 
+    # The generated Rust table is the deliverable; the JSON is the report about
+    # it. Both are rewritten together and both are checked together -- a stale
+    # `steps_generated.rs` is the failure that matters, because it is the one
+    # the kernel actually builds against.
+    generated_text = render_generated(measured)
+
     if args.check:
+        stale = []
         if not ARTIFACT.exists() or ARTIFACT.read_text() != text:
-            print(f"CREAL_DECLARE_DEPS|stale|{ARTIFACT.relative_to(ROOT)}", file=sys.stderr)
+            stale.append(ARTIFACT)
+        if not GENERATED.exists() or GENERATED.read_text() != generated_text:
+            stale.append(GENERATED)
+        if stale:
+            for path in stale:
+                print(f"CREAL_DECLARE_DEPS|stale|{path.relative_to(ROOT)}", file=sys.stderr)
+            print(
+                "CREAL_DECLARE_DEPS|remedy|run `python3 scripts/creal-declare-deps.py` "
+                "and commit both files",
+                file=sys.stderr,
+            )
             return 1
     elif not args.report:
         ARTIFACT.parent.mkdir(parents=True, exist_ok=True)
         ARTIFACT.write_text(text)
+        GENERATED.write_text(generated_text)
 
     f = document["findings"]
     print(
