@@ -2820,15 +2820,13 @@ pub(super) fn declare_odd_two_mul_add_one(d: &mut IntDev<'_>) -> Result<(), Kern
     d.int_theorem(p.odd_two_mul_add_one, 1, &|d, v| {
         let n = v[0];
         let stmt = statement(d, v);
-        let proof = case_split(d, &[n], &statement, &|d, b| match b[0].0 {
-            Shape::OfNat => {
-                let a = b[0].1;
-                nat_odd_of_succ_two_mul(d, a)
-            }
-            Shape::NegSucc => {
-                let j = b[0].1;
-                nat_odd_of_succ_two_mul(d, j)
-            }
+        // Both branches land on the identical `Nat.Odd (succ (mul 2 _))`
+        // shape (see the doc above), so the `Shape` itself is irrelevant --
+        // only the bound `Nat` field of whichever constructor `n` took is
+        // needed.
+        let proof = case_split(d, &[n], &statement, &|d, b| {
+            let m = b[0].1;
+            nat_odd_of_succ_two_mul(d, m)
         });
         (stmt, proof)
     })?;
