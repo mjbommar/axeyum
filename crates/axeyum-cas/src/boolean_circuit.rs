@@ -366,4 +366,79 @@ mod tests {
             Err(BooleanCircuitError::UndefinedWire { .. })
         ));
     }
+
+    /// A purely-NAND (13-gate) 1-bit full adder: `sum = a xor b xor cin`,
+    /// `cout = (a and b) or (cin and (a xor b))`.  This is a concrete witness
+    /// to NAND's functional completeness for binary addition, not merely an
+    /// assertion of it -- `nand_only_full_adder_matches_arithmetic_for_every_row`
+    /// replays all eight rows against the two-output truth table.
+    ///
+    /// The first four gates (`n1..xor_ab`) are the standard 4-NAND XOR gadget
+    /// applied to `(a, b)`; the next four (`n5..sum`) apply the same gadget to
+    /// `(xor_ab, cin)` to get `sum`.  `cout` is built by De Morgan's law from
+    /// two ANDs recovered from NAND by self-NANDing (`ab`, `cin_xor`) and an OR
+    /// realised as NAND of the two complements (`na`, `nb`, `cout`).
+    fn nand_only_full_adder_artifact() -> BooleanCircuitArtifact {
+        fn nand(output: &str, inputs: [&str; 2]) -> BooleanGate {
+            BooleanGate {
+                output: output.to_owned(),
+                op: BooleanGateOp::Nand,
+                inputs: inputs.iter().map(|wire| (*wire).to_owned()).collect(),
+            }
+        }
+        BooleanCircuitArtifact {
+            schema: BOOLEAN_CIRCUIT_SCHEMA.to_owned(),
+            inputs: vec!["a".to_owned(), "b".to_owned(), "cin".to_owned()],
+            gates: vec![
+                nand("n1", ["a", "b"]),
+                nand("n2", ["a", "n1"]),
+                nand("n3", ["b", "n1"]),
+                nand("xor_ab", ["n2", "n3"]),
+                nand("n5", ["xor_ab", "cin"]),
+                nand("n6", ["xor_ab", "n5"]),
+                nand("n7", ["cin", "n5"]),
+                nand("sum", ["n6", "n7"]),
+                nand("ab", ["n1", "n1"]),
+                nand("cin_xor", ["n5", "n5"]),
+                nand("na", ["ab", "ab"]),
+                nand("nb", ["cin_xor", "cin_xor"]),
+                nand("cout", ["na", "nb"]),
+            ],
+            outputs: vec!["sum".to_owned(), "cout".to_owned()],
+            // row = (a<<2)|(b<<1)|cin, value = (sum<<1)|cout, independently
+            // computed from the arithmetic definition, not from this circuit.
+            truth_table: vec![0, 2, 2, 1, 2, 1, 1, 3],
+        }
+    }
+
+    #[test]
+    fn nand_only_full_adder_matches_arithmetic_for_every_row() {
+        assert_eq!(
+            check_boolean_circuit(
+                &nand_only_full_adder_artifact(),
+                BooleanCircuitLimits::default(),
+            ),
+            Ok(BooleanCircuitCheck::Verified {
+                rows_checked: 8,
+                gate_counts: BTreeMap::from([(BooleanGateOp::Nand, 13)]),
+            })
+        );
+    }
+
+    /// Negative control: mutate one truth-table entry (row 3: `a=0,b=1,cin=1`,
+    /// correctly `sum=0,cout=1` i.e. value 1) and confirm the checker names the
+    /// exact row and both values rather than merely returning an error.
+    #[test]
+    fn nand_only_full_adder_truth_table_mutation_is_rejected() {
+        let mut artifact = nand_only_full_adder_artifact();
+        artifact.truth_table[3] = 3;
+        assert_eq!(
+            check_boolean_circuit(&artifact, BooleanCircuitLimits::default()),
+            Ok(BooleanCircuitCheck::Failed {
+                input: 3,
+                expected: 3,
+                observed: 1,
+            })
+        );
+    }
 }

@@ -480,6 +480,76 @@ mod tests {
         );
     }
 
+    /// Karatsuba's rank-3 decomposition of the degree-2 (`n=2`) full
+    /// multiplication tensor over `GF(2)`: with `m0 = a0*b0`,
+    /// `m1 = (a0+a1)*(b0+b1)`, `m2 = a1*b1`, the product coefficients are
+    /// `c0 = m0`, `c1 = m0+m1+m2`, `c2 = m2` -- three bilinear multiplications
+    /// where `schoolbook(2)` above uses four (`n^2` for `n=2`).  Each rank-one
+    /// term below is one `m_i`: its `c` support is exactly the set of output
+    /// coefficients that XOR in that multiplication's value.
+    fn karatsuba_degree_2_decomposition() -> Gf2TensorDecomposition {
+        Gf2TensorDecomposition {
+            schema: GF2_TENSOR_DECOMPOSITION_SCHEMA.to_owned(),
+            dimensions: [2, 2, 3],
+            terms: vec![
+                Gf2RankOneTerm {
+                    a: vec![0],
+                    b: vec![0],
+                    c: vec![0, 1],
+                },
+                Gf2RankOneTerm {
+                    a: vec![0, 1],
+                    b: vec![0, 1],
+                    c: vec![1],
+                },
+                Gf2RankOneTerm {
+                    a: vec![1],
+                    b: vec![1],
+                    c: vec![1, 2],
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn karatsuba_degree_2_replays_at_rank_three() {
+        let target = Gf2Tensor::full_polynomial_multiplication(2).unwrap();
+        assert_eq!(
+            check_gf2_tensor_decomposition(
+                &target,
+                &karatsuba_degree_2_decomposition(),
+                Gf2TensorCheckLimits::default(),
+            ),
+            Ok(Gf2TensorCheck::Verified {
+                rank: 3,
+                coefficients_checked: 12,
+            })
+        );
+    }
+
+    /// Negative control: drop the cross term `m1`, leaving only `m0` and
+    /// `m2`. The remaining pair no longer reconstructs `c1 = m0+m1+m2`, and
+    /// the checker must name the exact coordinate and both values rather than
+    /// merely declining.
+    #[test]
+    fn karatsuba_degree_2_dropped_cross_term_is_rejected() {
+        let target = Gf2Tensor::full_polynomial_multiplication(2).unwrap();
+        let mut decomposition = karatsuba_degree_2_decomposition();
+        decomposition.terms.remove(1);
+        assert_eq!(
+            check_gf2_tensor_decomposition(
+                &target,
+                &decomposition,
+                Gf2TensorCheckLimits::default(),
+            ),
+            Ok(Gf2TensorCheck::Failed {
+                coordinate: [0, 0, 1],
+                expected: false,
+                observed: true,
+            })
+        );
+    }
+
     #[test]
     fn matrix_multiplication_uses_row_major_basis_indices() {
         let target = Gf2Tensor::matrix_multiplication(2, 3, 4).unwrap();

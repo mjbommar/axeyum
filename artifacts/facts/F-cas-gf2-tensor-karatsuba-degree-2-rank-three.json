@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-gf2-tensor-karatsuba-degree-2-rank-three",
+  "title": "Karatsuba's 3-multiplication algorithm for degree-2 GF(2) polynomial products replays exactly against all 12 target coefficients",
+  "statement": "The bilinear tensor for full multiplication of two degree-below-2 polynomials over GF(2) (dimensions [2,2,3]: 2 coefficients per input, 3 in the length-3 product) has a rank-3 decomposition into rank-one terms, one fewer than the schoolbook decomposition's rank 4 (= n^2 for n=2). The three terms are Karatsuba's classical multiplications m0 = a0*b0, m1 = (a0+a1)*(b0+b1), m2 = a1*b1, with product coefficients recovered as c0 = m0, c1 = m0 XOR m1 XOR m2, c2 = m2 (addition over GF(2) is XOR). The evidence is exact coefficient-by-coefficient replay of the full 2*2*3 = 12-coefficient dense tensor via axeyum_cas::gf2_tensor::check_gf2_tensor_decomposition, not a claim about the decomposition's minimality: this fact asserts a correct rank-3 decomposition exists and replays, not that rank 3 is optimal (no lower-bound argument is checked here). Cas-internal under ADR-0601 SS2: this kernel has no GF(2)[x] and no tensor-rank machinery.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(gf2-tensor-decomposition\n  (target (full-polynomial-multiplication-tensor 2))\n  (dimensions 2 2 3)\n  (terms\n    (m0 (a 0) (b 0) (c 0 1))\n    (m1 (a 0 1) (b 0 1) (c 1))\n    (m2 (a 1) (b 1) (c 1 2)))\n  (assert (= rank 3))\n  (assert (forall (coordinate) (= (target coordinate) (xor-sum-of-terms-at coordinate)))))",
+    "fragment": "gf2-tensor-rank-decomposition-replay",
+    "free_symbols": [],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "cas.gf2-tensor-exhaustive-replay-is-self-contained: check_gf2_tensor_decomposition builds the target's dense coefficient array independently (expected_coefficients, from Gf2Tensor::full_polynomial_multiplication(2), unrelated to the hand-chosen decomposition terms), XOR-accumulates the decomposition's own rank-one terms into a second dense array, and compares every one of the 12 coefficients -- the rank reported in Gf2TensorCheck::Verified is decomposition.terms.len(), directly counted from the decomposition's own term list, not a producer-asserted field that could be forged. karatsuba_degree_2_dropped_cross_term_is_rejected confirms Gf2TensorCheck::Failed names the exact coordinate and both values when a term is dropped.",
+    "cas.no-minimality-claim: this fact asserts only that a correct rank-3 decomposition EXISTS and replays, not that rank 3 is minimal for this tensor. Whether a rank-2 (or lower) bilinear algorithm could compute the same product is a separate question (a tensor-rank lower bound) that this checker cannot decide and this fact does not claim -- the ADR-1400 discipline of separating checked content from hand-derived context, following F:cas-ratint-horowitz-x-over-x-minus-one-squared's precedent.",
+    "cas.rust-gf2-arithmetic-not-kernel-terms: both the target-tensor construction and the coefficient replay run in axeyum-cas's own Rust arithmetic over bool/usize, not through crate::Kernel::add_declaration.",
+    "cas.no-kernel-gf2-carrier: the 2026-09-01 CAS certificate audit (docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md) records that this kernel has no GF(2)[x] anywhere; building one is a new prelude, not a translator, so unlike boolean_circuit there is no bounded piece of work that would move this to kernel-reconstructed."
+  ],
+  "cas_substance": null,
+  "evidence": [
+    {
+      "id": "cas-gf2-tensor-karatsuba-degree-2-replay",
+      "kind": "witness-replay",
+      "supports": "the named 3-term rank-one decomposition XOR-reconstructs all 12 coefficients of the degree-2 GF(2) polynomial-multiplication tensor, exactly, at rank 3",
+      "check_status": "checked",
+      "checkers": [
+        "axeyum_cas::gf2_tensor::check_gf2_tensor_decomposition (exact coefficient-by-coefficient replay against an independently constructed target tensor; the reported rank is counted from the decomposition's own term list, not read from a separate field)",
+        "gf2_tensor::tests::karatsuba_degree_2_dropped_cross_term_is_rejected (negative control: dropping the cross term m1 must be rejected, naming the exact coordinate and both values, not merely erroring)"
+      ],
+      "checker_command": "cargo test -p axeyum-cas --lib gf2_tensor::tests::karatsuba_degree_2_replays_at_rank_three -- --exact 2>/dev/null | grep -cE '^test gf2_tensor::tests::karatsuba_degree_2_replays_at_rank_three \\.\\.\\. ok$'",
+      "artifact": "crates/axeyum-cas/src/gf2_tensor.rs",
+      "notes": "Verified on this host both directions: the real test path gives count=1, exit 0; a deliberately absent test path gives count=0, exit 1 through this grep -cE shape (the same repository-documented trap this shape exists to close -- a bare `cargo test` filter matching nothing prints `0 filtered out` and exits 0). The assertion pins BOTH rank (3, exactly decomposition.terms.len()) and coefficients_checked (12, the full dense volume), so a decomposition that under- or over-counts either fails here, not merely one that gets a coefficient wrong."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-01",
+    "established_by": "cas-facts-circuit-tensor lane, landing the two 'one fact away' modules named by docs/research/11-design-review/2026-09-01-cas-certificate-reconstruction-audit.md's 'What did not get done' section (boolean_circuit and gf2_tensor, both replaying exhaustively and both naming a counterexample). The checker (check_gf2_tensor_decomposition) and the schoolbook-rank-4 test pre-existed; the rank-3 Karatsuba decomposition, its test, and this ledger row are new to this lane, verified correct by an independent Python simulation of the XOR accumulation before being committed as Rust.",
+    "source": "Karatsuba's 1962 algorithm: multiplying two 2-term polynomials (or 2-digit numbers, or 2x2 matrices via the analogous Strassen-style trick) needs 3 multiplications rather than the schoolbook's 4, by computing the cross term as (a0+a1)*(b0+b1) - a0*b0 - a1*b1 -- over GF(2), subtraction is XOR, so the recovery is c1 = m0 XOR m1 XOR m2.",
+    "prior_art": [
+      {
+        "who": "Anatoly Karatsuba",
+        "what": "the first sub-schoolbook multiplication algorithm, reducing an n-digit (or n-term) product from O(n^2) to O(n^log2(3)) multiplications via the 3-multiplication trick for the degree-2 base case used here",
+        "year": 1962,
+        "where": "reported by Andrey Kolmogorov; Karatsuba, A.; Ofman, Y. (1962), Doklady Akademii Nauk SSSR",
+        "attribution": "standard attribution; this lane did not consult the primary source. The GF(2) rank-one tensor encoding of the three multiplications and its checker replay are this repository's."
+      }
+    ]
+  },
+  "notes": "AUDIT-CONSISTENT NOTE. Chosen over the audit's other named gap modules (gf2_shard, gf2_artifact, gf2_search, gosper, groebner_cert, lib, telescoping_json) because check_gf2_tensor_decomposition, like check_boolean_circuit, leaves no ADR-1400-style residue: the reported rank is counted directly from the decomposition's own term list rather than trusted from a producer field, and the coefficient array it compares against is built from an independently constructed target (Gf2Tensor::full_polynomial_multiplication), not from anything the decomposition supplies. The one place this fact is deliberately narrower than it could sound is minimality, called out explicitly in axiom_footprint: the checker establishes that THIS 3-term decomposition is correct, not that no 2-term decomposition exists. That second claim is true (Karatsuba's algorithm is classically known to be rank-optimal for this case) but is not what gets checked here, so it is not asserted as checked content."
+}
