@@ -4,6 +4,20 @@ Status: verification (2026-08-31), lane `three-domain-dominance-verification`.
 **Re-verified 2026-09-01, lane `dominance-doc-reverify`** — every number below
 was re-run against a tree one day newer; corrections are marked in place and
 collected in §7 and §9.
+**Re-verified again 2026-09-01 (later the same day), lane
+`ivt-evt-dominance-recheck`, specifically for the IVT/EVT rows.** Confirmed
+`CReal.ivt_approx`, `CReal.evt_approx_max` and their row-2 boundary siblings
+unchanged at footprint 0 (fresh `kernel_declaration_projection`, rows
+14297 → 14539). The IVT row's §2.2 citation, `real_algebraic.rs`'s CAS-internal
+Sturm bridge, had a real distinction-completeness defect (ADR-1400 finding #5)
+that is now repaired and adversarially tested (ADR-1435, 24/24
+`real_algebraic::` tests including 3 new forged-certificate fixtures); §3's two
+EVT self-criticisms are unchanged and were independently audited clean of the
+same defect class (ADR-1460, `mvt::`/`extremum::` 19/19 and 24/24-plus-1-ignored,
+matching ADR-1460's own counts exactly). §8's ranking is updated below —
+`cas-certificate` is **60**, not the 54/56 this document previously reported,
+and the ten-module naming gap it tracked is now genuinely zero. Full account in
+§7.4/§8/§9.
 
 This document exists so a referee can check the project's central claim in one
 sitting. That claim is spread across a dozen ADRs and three curriculum notes,
@@ -801,6 +815,13 @@ commit cannot be told apart from a wrong one. Report **56, at `0a6f305aa` or
 later**; treat 54 as correct only when paired with `14674bb2c` or an
 ancestor of it.
 
+**It moved again the same day, and this is now the fourth reading, not the
+third: `cas-certificate=60` at `7e2f859dc` (`python3 scripts/validate-facts.py`,
+re-run in the `ivt-evt-dominance-recheck` worktree, §8.1).** The general lesson
+stands unchanged — cite the commit, not the number — and it is worth
+restating rather than just updating, since this document has now demonstrated
+the growing-number hazard on itself twice.
+
 ## 8. The weakest part of the claim as it now stands (re-assessed 2026-09-01)
 
 **The 2026-08-31 answer to this question — "row 3 exists in code for
@@ -873,6 +894,112 @@ method exists to catch, just not yet caught; (3) the `cas-internal` half of
 the analysis families' row 3, unchanged and structural, now catalogued
 module-by-module rather than asserted in the aggregate.
 
+### 8.1 Re-ranked, 2026-09-01 (lane `ivt-evt-dominance-recheck`): both items above have moved, and the naming gap is now zero
+
+**Both rankings above are stale, and both moved in the direction of
+improvement.** Neither should be requoted.
+
+**(1) is now five of eleven, not zero of eleven, including the specific
+instance this document named as sitting under a row it scores.**
+`sturm.rs`'s half-open-interval defect — the one called out above because
+`real_algebraic::verify_ivt_certificate` "consumes it on trust" under this
+document's own §2.2 IVT row — is fixed (ADR-1435): an explicit re-derivation
+was added, and an adversarial fixture (a certificate forged with the root
+exactly at the claimed open upper bound) is confirmed in a snapshot to be
+wrongly *accepted* with the guard removed and correctly rejected with it
+restored — the standard this document's own §"mutation testing has a blind
+spot" lesson requires. Re-run directly in this worktree:
+`cargo test -p axeyum-cas --lib real_algebraic::` → **24 passed, 0 failed**,
+including that fixture and its two companions. `mvt.rs`/`extremum.rs` — the
+EVT-adjacent siblings using the same `count_real_roots_in` idiom — were
+separately audited and found clean **for a structural reason**, not by luck
+(ADR-1460): neither compares its own half-open isolation bracket against the
+caller's `a`/`b` at all; the boundary decision goes through
+`RealAlgebraic::compare_rational`, an exact bignum comparison with no
+half-open-vs-open shape to exploit. Re-run: `cargo test -p axeyum-cas --lib
+mvt::` → **19 passed**, `cargo test -p axeyum-cas --lib extremum::` → **24
+passed, 1 ignored** — both matching ADR-1460's own counts exactly. Also fixed,
+found incidentally while verifying an unrelated item in the same lane: `equal`
+could return `Certified { equal: true }` for `ln(x²) = 2·ln(x)` at an
+exactly-negative `x`, because the positivity side-condition inside its
+canonicalization path was an `f64` sign test (`sqrt(2)*sqrt(2)` evaluates to
+`2.0000000000000004`, which hid a cancelled zero). This is a genuinely
+different class from the sturm.rs finding — not a missing distinction but a
+**wrong certified verdict that actually shipped** — repaired with an exact
+structural predicate (`is_certainly_positive`) that declines rather than
+guesses. Re-run: `cargo test -p axeyum-cas --lib exact_positivity_tests::` →
+**3 passed**, including
+`certified_equality_does_not_rest_on_a_floating_point_sign`. Together with the
+two remaining ADR-1410 repairs (`gosper.rs`'s acceptance-mode field,
+`gf2_shard.rs`'s exhaustion re-derivation, and `telescoping_check.rs`'s
+pointwise-sample floor — three separate findings, four repairs total), **the
+five highest-ranked findings in the original eleven are now all fixed.**
+
+The current highest-ranked **open** finding is **`geometry_certify.rs` /
+`geometry_check.rs`'s degenerate-witness minimality gap** (originally ranked
+#6). Read directly from `geometry_check.rs`'s negative-control loop today: it
+confirms a forged witness satisfies every hypothesis, satisfies the *named*
+saturation condition, and breaks some conclusion — but never confirms the
+witness leaves every *other* named condition non-degenerate, so one witness
+that happens to break two conditions at once can be filed as evidence for
+either. `DegenerateWitness` still has no field for the distinction, and
+minimality (the producer's smallest-subset-first claim) is still pinned only
+by an out-of-tree test rather than checked. No commit fixing this was found
+by `git log --grep` over `geometry_certify`/`geometry_check`/`minimality`.
+This sits under the CAS-certificate route the document already counts —
+seventeen of the sixty `cas-certificate` facts (§7.4) are geometry facts.
+
+Ranked after it, all confirmed still open by reading current source: **(2)
+`series.rs`** returns a bare `CasExpr` with the truncation order un-recorded
+(`series.rs:194`; ADR-1410 confirms this explicitly, "not repaired"); **(3)**
+`lib.rs`'s `prove_derivative` half-angle-fallback witness, which an
+independent re-checker cannot reproduce (ADR-1410 marks this "did not
+run" — the f64 sign test living in the same paragraph of the original finding
+was split out and fixed, this half was not); **(4) `gf2_extension.rs`**'s
+`ExtensionTraceHankelMinor` still carries no `traces` field — only
+`first_power`, `tested_maximum_recurrence_order` and `determinant` — so a
+holder cannot re-derive the witness from the object itself; **(5)** the
+decided-negative outcomes with no certificate type at all
+(`AnsatzOutcome::NotInDegree`, `groebner::ideal_contains == Some(false)`,
+`ProofOutcome::NotInSaturatedIdeal`) are unchanged, structural, and still open.
+One finding is downgraded rather than fixed: **`ratint.rs`'s "dead code"
+framing was wrong** (ADR-1410) — there is no `#[expect(dead_code)]` anywhere
+in the crate, and the shipped rational-integration path is independently
+certified downstream by `prove_derivative`, which shares only
+`normalize_rational` with the producer. So this is defense-in-depth the crate
+chose not to wire in, not an uncertified path; it drops out of the ranking
+rather than moving up it.
+
+**(2)'s ranking has moved further than (1)'s, and further than this document
+had noticed.** `python3 scripts/validate-facts.py`, re-run in this worktree:
+`routes: cas-certificate=60(kernel-reconstructed=14,cas-internal=46)` — not
+the 54 or 56 this document's §7.4/§9 report. A same-day follow-up lane
+(`cas-facts-round-two`, cited in the audit document's own "Round two" section)
+found the "thirteen-module gap is now seven" sentence this document already
+flagged as self-contradictory (§7.4) was itself measuring the wrong thing: a
+module counts as named only by checking what a fact's `checker_command`
+*actually imports and exercises*, not by string-matching the module's
+basename against fact prose — and by that measure the real gap **before**
+that lane's own additions was five modules (`gf2_search`, `gf2_shard`,
+`gosper`, `groebner_cert`, `lib`), not seven or ten; three others
+(`gf2_artifact`, `geometry_json`, `telescoping_json`) were already covered by
+existing facts whose checkers import them under a test-file name that never
+appears in the fact's own prose. Four new facts closed the remaining five
+(`gf2_search`/`gf2_shard` share one). **The ten-module naming gap this
+document's §7 and §8 both still quote is now zero.**
+
+So the honest ranking of what a referee should distrust most, re-stated: (1)
+five certificates still cannot express a distinction their producer makes —
+`geometry_certify.rs`'s minimality gap, `series.rs`'s discarded truncation
+order, `lib.rs`'s unverified half-angle fallback, `gf2_extension.rs`'s
+missing trace field, and the decided-negatives-have-no-type gap (down from
+eleven: five fixed outright, one — `ratint.rs` — retired as a mischaracterized
+non-issue rather than fixed), headed by `geometry_certify.rs`'s minimality gap
+rather than `sturm.rs`'s, which is fixed; (2) the naming-gap item is retired —
+it is zero, not ten, and should not be quoted as an open item at all; (3) the
+`cas-internal` half of the analysis families' row 3 is unchanged and
+structural, as before.
+
 ## 9. What else moved, and what I did not re-check
 
 **The fact ledger grew in the ordinary way overnight, and none of §5's
@@ -943,3 +1070,34 @@ the commit landed hours before the document did. That is not a new weakness
 in the underlying system; it is a reminder that a "verified this sitting"
 document is stale from the moment the sitting ends, which is why this
 document now carries a re-verification date and will need another one.
+
+### 9.1 Third re-verification, 2026-09-01 (lane `ivt-evt-dominance-recheck`)
+
+Scoped to the IVT/EVT rows specifically, since that is where the tree moved
+again after §9's own re-verification. Full account in the new preamble note
+and §8.1. Summary: the IVT row (§2.2, `CReal.ivt_approx`) is unchanged and
+still footprint 0; the CAS-internal bridge its citation names
+(`real_algebraic::verify_ivt_certificate`) had a real, now-repaired
+distinction-completeness defect (ADR-1435) that never affected the kernel-side
+row-1 claim, because row 3 for the analysis families was already conceded
+`cas-internal` (§6) — outside the trust anchor the row-1 dominance argument
+actually leans on. EVT's two self-criticisms (§3.1, §3.2) are unchanged; the
+sibling files sharing the same idiom (`mvt.rs`, `extremum.rs`) were
+independently audited clean for a structural reason, not fixed because nothing
+was found wrong (ADR-1460). §8's ranking is stale and superseded by §8.1: the
+naming gap it and §7.4 both still quote (ten modules, `cas-certificate=54/56`)
+is now zero and 60 respectively, and four of the five findings §8 ranked
+below `sturm.rs` are also now fixed, moving the weakest point to
+`geometry_certify.rs`'s minimality gap.
+
+**Did not run**, same reasons as §9's own list, now a day-and-some staler:
+`check-semantic-control-fixtures.py`, `gen-safety-matrix.py --check`,
+`check-trust-closure.py`, `tests/test-trust-closure.sh`. §5.1's per-column
+census should be treated as roughly two days stale, not re-confirmed.
+`geometry_certify.rs`/`geometry_check.rs`'s minimality gap, `series.rs`'s
+truncation order, `gf2_extension.rs`'s missing field, the decided-negatives
+gap, and `lib.rs`'s half-angle fallback were confirmed still open by reading
+current source and by `git log --grep` finding no repair commit for any of
+them — not by re-running a checker, since none of the eleven findings has one
+(ADR-1400 §"Consequences" states this is deliberate: a mechanical check could
+not have found any of them either).
