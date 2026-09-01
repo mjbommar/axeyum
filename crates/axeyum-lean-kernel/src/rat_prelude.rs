@@ -2239,6 +2239,38 @@ pub struct RatPrelude {
     /// expands consumes the induction hypothesis directly at the minor —
     /// unlike ADR-1310's expectation, this did not need [`Self::det_congr`].
     pub det_alternating: NameId,
+
+    // --- sign under a row swap (`matrix_det`, ADR-1310 step 3) -------------
+    /// `Rat.det_row_swap : ∀ m A B i j, Nat.beq i j = false →
+    /// Nat.ble i m = true → Nat.ble j m = true →
+    /// (∀ c, B i c = A j c) → (∀ c, B j c = A i c) →
+    /// (∀ r c, Nat.beq r i = false → Nat.beq r j = false → B r c = A r c) →
+    /// det B (succ m) = Rat.neg (det A (succ m))` — the SIGN under a row
+    /// swap, stated EXTENSIONALLY (three pointwise hypotheses relating `B`
+    /// to `A`, no `matSwapRows` definition): the third of the three theorems
+    /// ADR-1310 named toward multiplicativity, after
+    /// [`Self::det_row_expansion`] and [`Self::det_alternating`].
+    ///
+    /// The classical `det(A + swap) = 0` argument: the matrix `C` with BOTH
+    /// rows `i`,`j` set to `A i + A j` has `det C = 0` by
+    /// [`Self::det_alternating`] directly. Expanding `C` bilinearly in rows
+    /// `i` and `j` — row-ADDITIVITY, built from three applications of
+    /// [`Self::det_row_expansion`] plus [`Self::sum_range_add`]/
+    /// [`Self::sum_range_congr`] and distributivity, since a minor never
+    /// depends on the row it deletes — gives four terms: both-rows-`A i`,
+    /// both-rows-`A j` (each `0` again), row `i`=`A i`/row `j`=`A j` (`A`
+    /// itself, pointwise), and row `i`=`A j`/row `j`=`A i` (the swap,
+    /// bridged to `B`). `0 = 0 + det A + det B + 0` rearranges to
+    /// `det B = neg (det A)` via [`Self::neg_eq_of_add_eq_zero`] and
+    /// [`Self::neg_neg`].
+    ///
+    /// **No new induction**: every fact this combines is already
+    /// dimension-general, so the whole argument is straight-line at a
+    /// symbolic `m`. Row-multilinearity did NOT exist and had to be built;
+    /// [`Self::det_congr`] WAS needed, twice — contrary to
+    /// [`Self::det_alternating`]'s experience, unlike ADR-1310's original
+    /// expectation for THAT theorem.
+    pub det_row_swap: NameId,
 }
 
 impl RatPrelude {
@@ -2651,6 +2683,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         mat_minor_transpose: child(kernel, "matMinor_transpose"),
         det_transpose: child(kernel, "det_transpose"),
         det_alternating: child(kernel, "det_alternating"),
+        det_row_swap: child(kernel, "det_row_swap"),
     }
 }
 
