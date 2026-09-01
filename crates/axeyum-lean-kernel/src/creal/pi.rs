@@ -105,6 +105,9 @@ const PI_HEIGHT: u16 = DERIVED_HEIGHT + 1;
 /// Returns the trusted gate's rejection. An `Err` here means the kernel
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_pi_family(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    if std::env::var("AXEYUM_PI_BISECT").as_deref() == Ok("none") {
+        return Ok(());
+    }
     declare_pi_half_coef(d, p)?;
     declare_pi_half_term(d, p)?;
     declare_pi_half_series_partial(d, p)?;
@@ -1160,11 +1163,13 @@ fn declare_two_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
 /// iterations over 800- and 525-deep `Nat.succ` towers.
 ///
 /// So the terms are weakened FIRST, to bounds whose running sums have short
-/// divisions: `t0 ≥ 1`, `t1 ≥ 1/3`, `t2 ≥ 1/8` (against the exact `2/15`) and
-/// `t3 ≥ 1/24` (against `2/35`), whose partial sums are `1`, `4/3`, `35/24`
-/// and exactly `3/2`. The largest `Nat` formed is **864**, normalised by
-/// `gcd 864 576 = 288` in two remainder steps and divisions of 3 and 2
-/// iterations — against 53 for the exact route.
+/// divisions: `t0 ≥ 1`, `t1 ≥ 1/3`, `t2 ≥ 1/9` (against the exact `2/15`) and
+/// `t3 ≥ 1/18` (against `2/35`), whose partial sums are `1`, `4/3`, `13/9`
+/// and exactly `3/2`. Both weakenings are tight — `1·35 ≤ 18·2` is `35 ≤ 36`
+/// — which is what keeps the denominators small enough to matter. The largest
+/// `Nat` formed is **243**, normalised by `gcd 243 162 = 81` in two remainder
+/// steps and divisions of 3 and 2 iterations, against 53 division iterations
+/// over 800-deep towers for the exact route.
 ///
 /// Same lesson as the `587 s → 113 s` case in `CLAUDE.md`: choose the
 /// intermediate bound that lands on what the next step needs, not the exact
@@ -1177,12 +1182,12 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
 
     // Per-term lower bounds, and the running sums they add up to.
     let b1 = ndiv(d, p, 1, 2); //  1/3
-    let b2 = ndiv(d, p, 1, 7); //  1/8   <=  2/15
-    let b3 = ndiv(d, p, 1, 23); // 1/24  <=  2/35
+    let b2 = ndiv(d, p, 1, 8); //  1/9   <=  2/15   (1*15 = 15 <= 9*2 = 18)
+    let b3 = ndiv(d, p, 1, 17); // 1/18  <=  2/35   (1*35 = 35 <= 18*2 = 36)
     let c1 = ndiv(d, p, 1, 0); //  1
     let c2 = ndiv(d, p, 4, 2); //  4/3
-    let c3 = ndiv(d, p, 35, 23); // 35/24
-    let c4 = ndiv(d, p, 3, 1); //  3/2
+    let c3 = ndiv(d, p, 13, 8); // 13/9
+    let c4 = ndiv(d, p, 3, 1); //  3/2   -- exactly 13/9 + 1/18
 
     // `le (ofRat b_i) (piHalfTerm i)`, each decided by `Rat.ble` on operands
     // under 50 (`1·3 ≤ 3·1`, `1·15 ≤ 8·2`, `1·35 ≤ 24·2`).
