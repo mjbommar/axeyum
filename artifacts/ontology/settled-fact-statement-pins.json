@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2118,
+    "min_identity_bound": 2130,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -10867,6 +10867,76 @@
       "kernel_theorem": "Int.mul_pos_iff"
     },
     {
+      "fact_id": "F:ml430-int-natabs-coe-sub-coe-le-of-le-d2800d86",
+      "language": "lean4-surface",
+      "statement_sha256": "93be742670bb8941bf380de06aa791ea4198ef3adbfd43b109de66461faf5caa",
+      "prose_sha256": "c638f00d1731de9293427a4bd383e37d1c649c54d9c336098bb899523af4ddbf",
+      "kernel_theorem": "Int.nat_abs_coe_sub_coe_le_of_le"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-coe-sub-coe-lt-of-lt-e0566dd0",
+      "language": "lean4-surface",
+      "statement_sha256": "b36ef8e5bc198f094f286408b906c7ff09da688b6fe13552b68986ee83763bc7",
+      "prose_sha256": "ac1501f225621138c441659200e3f2bc640a12aa18e685f3d0647f8f912672ee",
+      "kernel_theorem": "Int.nat_abs_coe_sub_coe_lt_of_lt"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-emod-two-18514063",
+      "language": "lean4-surface",
+      "statement_sha256": "e0279df89114b61c522e5902f58268ae3bd19bb15670fd419c77538df73186cd",
+      "prose_sha256": "9dcc6485d80b8df1dc2e51251df79659e1153f50ae60825105f3d57ca2a799db",
+      "kernel_theorem": "Int.nat_abs_emod_two"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-eq-iff-mul-self-eq-f1c49fdf",
+      "language": "lean4-surface",
+      "statement_sha256": "91b9439b5d6c6553301a3c6c569d3f9a00f09a4510bbfcd93ba082790a6ef615",
+      "prose_sha256": "64c6132c3f9ccc3fe8b87132c020ebdd07b2575d9311c2a21a162c6aa3062f57",
+      "kernel_theorem": "Int.nat_abs_eq_iff_mul_self_eq"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-inj-of-nonneg-of-nonneg-db3f2d3d",
+      "language": "lean4-surface",
+      "statement_sha256": "0ea046de7d6c3ce76a185d969756fd05fc648083a44f56362f9ae15e9040d2a6",
+      "prose_sha256": "e4fdcdef1ba314f372de0cf0dfb0dd08c0292cbf138e4bd6fe73e20d63e7e16e",
+      "kernel_theorem": "Int.nat_abs_inj_of_nonneg_of_nonneg"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-inj-of-nonneg-of-nonpos-b5d96f53",
+      "language": "lean4-surface",
+      "statement_sha256": "6b1d3f307e6652ba0861c25b94b3797c978401e6856a84eb12f55184d153baef",
+      "prose_sha256": "1441cd625901ef962de1b5ab015cf5a093e4ee9e25a9eec5eb353bb71532876b",
+      "kernel_theorem": "Int.nat_abs_inj_of_nonneg_of_nonpos"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-inj-of-nonpos-of-nonneg-ecdb334a",
+      "language": "lean4-surface",
+      "statement_sha256": "58978127db314b2805f2da6b63cacf1d0cff304a1769af63c0e3396c69bca76e",
+      "prose_sha256": "a05cde56da434c6e66a1624a25aeea0d31ca40ed3be37ab1a68163660dc78e26",
+      "kernel_theorem": "Int.nat_abs_inj_of_nonpos_of_nonneg"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-inj-of-nonpos-of-nonpos-87475bd8",
+      "language": "lean4-surface",
+      "statement_sha256": "0b26f3bbe99527f548730ddab453189d77e0d17a745cbf5f86c11d5440d9294c",
+      "prose_sha256": "52cd6866cbc8a683084101ea7142198296075dd375c415308e659467510cc23d",
+      "kernel_theorem": "Int.nat_abs_inj_of_nonpos_of_nonpos"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-le-iff-mul-self-le-20242c1d",
+      "language": "lean4-surface",
+      "statement_sha256": "f58b94b7260ba5996fec63caa506b36b7e25d82dbfa5f0a402fbc70a242fe299",
+      "prose_sha256": "c4f4127f0a81816bee2e7f2ff2d1e2384684117d1804a2a14a20a82fab45c0af",
+      "kernel_theorem": "Int.nat_abs_le_iff_mul_self_le"
+    },
+    {
+      "fact_id": "F:ml430-int-natabs-lt-iff-mul-self-lt-5f19cd1f",
+      "language": "lean4-surface",
+      "statement_sha256": "7b6bd1f5972fde7d1c2708287e2435bb561aad0225839c34998580e00eeb1de6",
+      "prose_sha256": "b383d10fc868a7832c36040b46f8cc8576ad647cc28a4ea3821fa13eaee5d05a",
+      "kernel_theorem": "Int.nat_abs_lt_iff_mul_self_lt"
+    },
+    {
       "fact_id": "F:ml430-int-ne-zero-of-gcd-f71f00df",
       "language": "lean4-surface",
       "statement_sha256": "e5c31d5f3d886c92d98d9b67ed23ba3d16783476b41a7406d7c957bf52383c1b",
@@ -10956,6 +11026,20 @@
       "statement_sha256": "eeb5c62cfa781afb1719b8b65bf3e51e715d7a0d532b7c04334071e21fa675ac",
       "prose_sha256": "47e31349541bdb77195cfe74fecec5c2b8a2d1a1d3fb7370b18cad44363bae6f",
       "kernel_theorem": "Nat.abundant_iff_not_perfect_and_not_deficient"
+    },
+    {
+      "fact_id": "F:ml430-nat-abundant-mul-left-4de4fbe7",
+      "language": "lean4-surface",
+      "statement_sha256": "f59917cd0241b2992403884393752af0a1d6f61e960834c67c80a68e5eefc407",
+      "prose_sha256": "563163a4faa38a01d2a631c1da0409576d45eb937d8fdc2e136fa8bdabab41f3",
+      "kernel_theorem": "Nat.abundant_mul_left"
+    },
+    {
+      "fact_id": "F:ml430-nat-abundant-of-dvd-686548ce",
+      "language": "lean4-surface",
+      "statement_sha256": "cbcca87cd164ec02964edd92571916e7f315d9a87812c62fdc7b3acb527d6e61",
+      "prose_sha256": "c02fe7ffe28d99f144694666dede1a5f9eafd4bec9e6f5453179bd41595cc6d5",
+      "kernel_theorem": "Nat.abundant_of_dvd"
     },
     {
       "fact_id": "F:ml430-nat-abundant-twelve-24ce1ba6",
@@ -13597,6 +13681,12 @@
       "statement_sha256": "ae6d33557300447315fc66bc19a4df6800aefdecaf2af095e44593a3f719adb2",
       "prose_sha256": "6cc914781ce13c481c0f812ed38fe72fd95fb739c55c7ed83d9bfd7f176ef276",
       "kernel_theorem": "Nat.log_antitone_left"
+    },
+    {
+      "fact_id": "F:ml430-nat-log-div-mul-self-04282351",
+      "language": "lean4-surface",
+      "statement_sha256": "c42d150b7db829a6a1e3b3a64b4ad43432a86d3fcb3a3f99eaf8f412ba556609",
+      "prose_sha256": "cb8378428186539e8e91990ee0510a585a123aaa220dfd7416cf3ff7a482c06b"
     },
     {
       "fact_id": "F:ml430-nat-log-eq-one-iff-63d772fb",
