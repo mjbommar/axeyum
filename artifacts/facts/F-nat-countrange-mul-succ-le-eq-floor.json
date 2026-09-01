@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrange-mul-succ-le-eq-floor",
+  "title": "The floor-counting lemma in executable form",
+  "statement": "`countRange (fun j => ble (mul (succ ap) (succ j)) B) n = Min.min n (div B (succ ap))` -- the same count as `F:nat-countrange-mul-succ-le-eq-min`, with the quotient now named by the executable `Nat.div`. WHY IT IS THE POINT: it is the one place in the family where a division is written down, and it is a single instantiation rather than anything the proof reasons about. HOW IT IS PROVED: `Nat.div_mod_exec ap B : divMod (succ ap) B (div B (succ ap)) (mod B (succ ap))` supplies the relational witness, and `Nat.countRange_mul_succ_le_eq_min` is applied to it. Positivity of the divisor arrives constructively as `succ ap`, matching `div_mod_exec`'s own shape, so no `Lt zero a` hypothesis is formed and no consumer has to discharge one. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRange_mul_succ_le_eq_floor : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.countRange (fun (x3 : AxNat) => AxNat.ble (AxNat.mul (AxNat.succ x0) (AxNat.succ x3)) x1) x2) (Min.min x2 (AxNat.div x1 (AxNat.succ x0))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.countRange_mul_succ_le_eq_floor"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-countrange-mul-succ-le-eq-min"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.countRange_mul_succ_le_eq_floor",
+      "kind": "kernel-term",
+      "supports": "Nat.countRange_mul_succ_le_eq_floor is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.countRange_mul_succ_le_eq_floor 2>/dev/null | grep -cE '^Nat\\.countRange_mul_succ_le_eq_floor[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.countRange_mul_succ_le_eq_floor",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. Pass ONE name per invocation."
+    },
+    {
+      "id": "footprint-Nat.countRange_mul_succ_le_eq_floor",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.countRange_mul_succ_le_eq_floor.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built."
+    },
+    {
+      "id": "numeric-floor-corollary",
+      "kind": "exhaustive-enumeration",
+      "supports": "C3 of the ADR-1290 check script verifies the executable form at 37,820 (a, B, n) triples, and C4 checks that Eisenstein's row count is exactly this lemma over 240 ordered prime pairs.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1290-floor-count-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1290-floor-count-checks.py",
+      "checker_seconds": 2,
+      "notes": "Exit status depends on the finding: any control behaving other than as recorded exits 1. M8 is recorded as a SURVIVOR and asserted to survive -- dropping the min from the assembled lattice identity is true under the prime hypotheses, because the floor never exceeds n there. That is a fact about primes rather than about counting, so it belongs to the consumer and the lemma stays unconditional."
+    }
+  ],
+  "provenance": {
+    "date": "2026-08-31",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type, pinned in floor_count_tests::the_family_states_the_intended_types). depends_on is the direct-theorem column intersected with this ledger's registered facts, supplied by scripts/check-fact-depends-derived.py --fix. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-floors)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs`. ADR-1290. Declaration kind: theorem.",
+  "external_status": "proved"
+}
