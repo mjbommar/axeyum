@@ -311,13 +311,12 @@ pub(super) fn declare_count_range_succ_le_eq_min(
                         let ble_true = d.lemma(p.ble_eq_true_of_le, &[sj, c, hlt]);
                         let scrutinee = d.ble(sj, c);
                         let true_v = d.bool_true();
-                        let bumped =
-                            bool_congr_nat(d, scrutinee, true_v, ble_true, &|d, x| {
-                                let one = d.num(1);
-                                let zero = d.zero();
-                                let sel = d.bool_select_nat(x, one, zero);
-                                d.add(cj, sel)
-                            });
+                        let bumped = bool_congr_nat(d, scrutinee, true_v, ble_true, &|d, x| {
+                            let one = d.num(1);
+                            let zero = d.zero();
+                            let sel = d.bool_select_nat(x, one, zero);
+                            d.add(cj, sel)
+                        });
                         // `Le j c` for the inductive hypothesis's `Min.min j c`.
                         let j_le_sj = d.lemma(p.le_succ, &[j]);
                         let j_le_c = d.lemma(p.le_trans, &[j, sj, c, j_le_sj, hlt]);
@@ -329,10 +328,8 @@ pub(super) fn declare_count_range_succ_le_eq_min(
                         let min_sjc = min_of(d, &p, sj, c);
                         let min_sjc_eq = d.lemma(p.min_eq_left, &[sj, c, hlt]);
                         let flipped = d.symm(min_sjc, sj, min_sjc_eq);
-                        let (_end, chained) = d.chain(
-                            start,
-                            &[(succ_cj, bumped), (sj, bump), (min_sjc, flipped)],
-                        );
+                        let (_end, chained) =
+                            d.chain(start, &[(succ_cj, bumped), (sj, bump), (min_sjc, flipped)]);
                         chained
                     },
                     // `Le c j`: the predicate is already false at `j`.
@@ -341,13 +338,12 @@ pub(super) fn declare_count_range_succ_le_eq_min(
                         let ble_false = d.lemma(p.ble_eq_false_of_lt, &[sj, c, c_lt_sj]);
                         let scrutinee = d.ble(sj, c);
                         let false_v = d.bool_false();
-                        let dropped =
-                            bool_congr_nat(d, scrutinee, false_v, ble_false, &|d, x| {
-                                let one = d.num(1);
-                                let zero = d.zero();
-                                let sel = d.bool_select_nat(x, one, zero);
-                                d.add(cj, sel)
-                            });
+                        let dropped = bool_congr_nat(d, scrutinee, false_v, ble_false, &|d, x| {
+                            let one = d.num(1);
+                            let zero = d.zero();
+                            let sel = d.bool_select_nat(x, one, zero);
+                            d.add(cj, sel)
+                        });
                         let min_jc = min_of(d, &p, j, c);
                         let min_jc_eq_c = d.lemma(p.min_eq_right, &[j, c, hle]);
                         let cj_eq_c = d.trans(cj, min_jc, c, ih, min_jc_eq_c);

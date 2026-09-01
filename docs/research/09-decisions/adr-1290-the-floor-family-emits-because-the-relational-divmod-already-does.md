@@ -147,7 +147,38 @@ not your theorem.** Each mutant was applied in this lane's own worktree and
 reverted with `git checkout` immediately after; none was ever on disk in the
 shared checkout.
 
-MUTATION-TABLE-PLACEHOLDER
+Each row is `cargo test -p axeyum-lean-kernel --lib nat_prelude::`, **320 passed
+/ 0 failed** on the unmutated tree. The driver was a scratch script: apply the
+substitutions, run that command, `git checkout --` the file, next mutant. It
+asserts the expected occurrence COUNT of every pattern before substituting and
+exits 2 if a pattern does not match, so a mutation that silently did nothing
+cannot be reported as a survivor.
+
+| # | mutation | outcome | what caught it |
+| --- | --- | --- | --- |
+| M1 | `Min.min`'s arguments transposed CONSISTENTLY across all three declarations, with `min_eq_left`/`min_eq_right` swapped to match (12 sites) | **ADMITTED, TRUE, NOT THE THEOREM** | `the_family_states_the_intended_types` **ONLY** — 319 passed, 1 failed. Both evaluation probes pass, and no numeric check can see it either (control M7) |
+| M2 | the saturating branch takes `min_eq_left` where `min_eq_right` is meant | **REJECTED** | trusted gate — 3 passed, 317 failed |
+| M3 | the counted predicate drops the `succ` shift (`ble y c`, i.e. `y ≤ c`) | **REJECTED** (statement also false — control M2 of the numeric script) | trusted gate, 317 of 320 fail |
+| M4 | `ble_eq_of_iff`'s impossible branch transports the `Iff` FORWARD instead of backward | **REJECTED** | trusted gate, 317 of 320 fail |
+| M5 | the executable corollary hands `div_mod_exec`'s quotient and remainder to the bridge in swapped slots | **REJECTED** | trusted gate, 317 of 320 fail |
+| M6 | the adjunction instantiated at `j` rather than `succ j`, so the pointwise `Bool` equation is about the wrong index | **REJECTED** | trusted gate, 317 of 320 fail |
+
+**M1 is the case the whole exercise exists for, and it is the only one of the six
+that any probe was needed for.** `Min.min` is commutative in value, so
+`Min.min c n` computes the same number everywhere `Min.min n c` does; the kernel
+admits the transposed family, the statement is true, and both evaluation probes
+pass. It is not the theorem because `Min.min n c` reads "the count is bounded by
+the RANGE" — the order a consumer discharging the bound with
+`min_eq_right n c (h : Le c n)` wants — and because the three declarations must
+agree with each other for the second to be provable from the first at all.
+
+**The other five are all caught by the trusted gate, and that is a finding, not
+a formality.** `countRange_zero` and `countRange_succ` are both `Eq.refl`, so the
+recursion is pinned exactly and every proof-level mistake in this family fails to
+type-check. One bad declaration poisons the whole prelude build, so the
+`317 failed` figure says nothing about how many things are broken — it is one
+declaration in every case, and all four `floor_count_tests` are among the
+casualties.
 
 ## What these controls cannot catch
 

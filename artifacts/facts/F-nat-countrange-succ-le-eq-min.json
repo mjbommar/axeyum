@@ -16,7 +16,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:nat-ble-eq-false-of-lt", "F:nat-countrange-zero", "F:nat-le-succ-succ", "F:nat-le-trans", "F:nat-lt-or-ge", "F:nat-zero-le"],
   "axiom_footprint": [],
   "evidence": [
     {

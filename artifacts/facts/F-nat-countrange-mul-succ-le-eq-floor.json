@@ -17,7 +17,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:nat-countrange-mul-succ-le-eq-min"],
+  "depends_on": ["F:nat-countrange-mul-succ-le-eq-min", "F:nat-div-mod-exec"],
   "axiom_footprint": [],
   "evidence": [
     {

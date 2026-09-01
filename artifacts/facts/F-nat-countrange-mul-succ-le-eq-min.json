@@ -20,7 +20,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": ["F:nat-countrange-succ-le-eq-min"],
+  "depends_on": ["F:nat-countrange-succ-le-eq-min", "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:nat-ble-eq-false-of-lt", "F:nat-countrange-congr", "F:nat-div-mod-mul-le-iff", "F:nat-lt-irrefl", "F:nat-lt-of-lt-of-le", "F:nat-lt-or-ge"],
   "axiom_footprint": [],
   "evidence": [
     {
