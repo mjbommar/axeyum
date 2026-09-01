@@ -7031,11 +7031,12 @@ fn row_add_split(
     });
     let fq_dbase = rmul(d, fq, dbase);
     let gq_dbase = rmul(d, gq, dbase);
-    let l3 = radd(d, fq_dbase, gq_dbase);
+    let raw_sum = radd(d, fq_dbase, gq_dbase);
+    let l3 = rmul(d, sign, raw_sum);
     let s3 = {
         let rd = d.lemma(p.right_distrib, &[fq, gq, dbase]);
         let fq_plus_gq_dbase = rmul(d, fq_plus_gq, dbase);
-        rcongr(d, fq_plus_gq_dbase, l3, rd, &|d, v| rmul(d, sign, v))
+        rcongr(d, fq_plus_gq_dbase, raw_sum, rd, &|d, v| rmul(d, sign, v))
     };
     let sign_fq_dbase = rmul(d, sign, fq_dbase);
     let sign_gq_dbase = rmul(d, sign, gq_dbase);
@@ -7666,6 +7667,7 @@ fn declare_det_row_swap(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     );
 
     // Bridge `swap1` to the caller's `B`, and `id2` to `A`.
+
     let bridge_swap = bridge_swap_to_b(d, p, a, b_mat, i, j, h_row_i, h_row_j, h_other);
     let bridge_id2 = double_set_own_rows_noop(d, p, a, i, j);
     let congr_swap = {
@@ -7690,6 +7692,7 @@ fn declare_det_row_swap(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     );
     let neg_id2_eq_neg_a = rcongr(d, det_id2, det_a, congr_id2, &|d, v| rneg(d, v));
     let neg_a = rneg(d, det_a);
+
     let goal_proof = rtrans(
         d,
         det_b,
@@ -7705,6 +7708,8 @@ fn declare_det_row_swap(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelE
     let body = d.lam_fv(hbj_fv, hbj_ty, body);
     let body = d.lam_fv(hbi_fv, hbi_ty, body);
     let body = d.lam_fv(hne_fv, hne_ty, body);
+    let body = d.lam_fv(j_fv, nat, body);
+    let body = d.lam_fv(i_fv, nat, body);
     let body = d.lam_fv(b_fv, mty, body);
     let body = d.lam_fv(a_fv, mty, body);
     let value = d.lam_fv(m_fv, nat, body);
