@@ -2099,10 +2099,85 @@ fn indexed_enum_two_ctors() {
     assert_eq!(k.whnf(app_odd), m_odd, "Parity.rec … ff odd ι→ m_odd");
 }
 
+/// Reject: a constructor field whose type lives strictly above the family's
+/// own result universe. `U : Sort 1` with `mk : Sort 1 → U` stores its own
+/// universe; with large elimination that makes `Sort 1` a retract of an
+/// inhabitant of `Sort 1`, the `Type : Type` precondition for Girard's
+/// paradox. Lean's `check_constructor` rejects it and so does this kernel
+/// (ADR-1495).
+///
+/// The two positive controls are what make this a measurement rather than a
+/// blanket refusal: the same shape ONE universe up (`W : Sort 2` with
+/// `mk : Sort 1 → W`) is Lean-legal and must be ACCEPTED, and a `Prop`-valued
+/// family storing a `Sort 1` field must also be accepted because `Prop` is
+/// impredicative — that is exactly `Exists`/`Acc`, which this prelude
+/// declares.
+#[test]
+fn reject_ctor_field_universe_above_result_universe() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let l2 = k.level_succ(l1);
+
+    // U : Sort 1 with mk : Sort 1 → U  ⇒ REFUSED.
+    {
+        let un = k.name_str(anon, "SelfU");
+        let mk = k.name_str(un, "mk");
+        let sort1 = k.sort(l1);
+        let u_const = k.const_(un, vec![]);
+        let ctor = k.pi(anon, sort1, u_const, BinderInfo::Default);
+        let sort1b = k.sort(l1);
+        let err = k
+            .add_inductive(un, &[], 0, sort1b, &[(mk, ctor)])
+            .unwrap_err();
+        assert!(
+            matches!(err, KernelError::ConstructorFieldUniverseTooBig { .. }),
+            "got {err:?}"
+        );
+        assert!(!k.environment().contains(un));
+        assert!(!k.environment().contains(mk));
+    }
+
+    // W : Sort 2 with mk : Sort 1 → W  ⇒ ACCEPTED (Lean-legal).
+    {
+        let wn = k.name_str(anon, "OkW");
+        let mk = k.name_str(wn, "mk");
+        let sort1 = k.sort(l1);
+        let w_const = k.const_(wn, vec![]);
+        let ctor = k.pi(anon, sort1, w_const, BinderInfo::Default);
+        let sort2 = k.sort(l2);
+        k.add_inductive(wn, &[], 0, sort2, &[(mk, ctor)])
+            .expect("a Sort 1 field under a Sort 2 family is Lean-legal");
+        assert!(k.environment().contains(wn));
+    }
+
+    // P : Prop with mk : Sort 1 → P  ⇒ ACCEPTED (Prop is impredicative).
+    {
+        let pn = k.name_str(anon, "OkProp");
+        let mk = k.name_str(pn, "mk");
+        let sort1 = k.sort(l1);
+        let p_const = k.const_(pn, vec![]);
+        let ctor = k.pi(anon, sort1, p_const, BinderInfo::Default);
+        let prop = k.sort(l0);
+        k.add_inductive(pn, &[], 0, prop, &[(mk, ctor)])
+            .expect("Prop is impredicative, so a Sort 1 field is legal");
+        assert!(k.environment().contains(pn));
+    }
+}
+
 /// Reject: a constructor whose result is the inductive applied to the **wrong**
-/// parameter. For `Box.{u} (α : Sort u)` with `mk : Π (α : Sort u) (β : Sort u),
-/// Box β` (the result uses the *second* bound `β`, not the parameter `α`), the
-/// result is not `Box α` ⇒ `ConstructorResultMismatch` (the wrong-args path).
+/// parameter. For `Box.{u} (α : Sort u) : Sort (u+1)` with
+/// `mk : Π (α : Sort u) (β : Sort u), Box β` (the result uses the *second*
+/// bound `β`, not the parameter `α`), the result is not `Box α` ⇒
+/// `ConstructorResultMismatch` (the wrong-args path).
+///
+/// The family's result universe is `u+1`, one above the parameter's, so that
+/// the `β : Sort u` field satisfies
+/// [`KernelError::ConstructorFieldUniverseTooBig`]'s constraint and this test
+/// exercises the wrong-args path rather than the universe path — the two
+/// checks run in Lean's order (universe per field, result at the end), so a
+/// `Sort u`-valued family would trip the universe check first.
 #[test]
 fn reject_ctor_wrong_param() {
     let mut k = Kernel::new();
@@ -2110,10 +2185,12 @@ fn reject_ctor_wrong_param() {
     let u = k.name_str(anon, "u");
     let u_lvl = k.level_param(u);
     let sort_u = k.sort(u_lvl);
+    let u_succ = k.level_succ(u_lvl);
+    let sort_u_succ = k.sort(u_succ);
     let boxn = k.name_str(anon, "Box");
     let box_const = k.const_(boxn, vec![u_lvl]);
     let alpha_name = k.name_str(anon, "α");
-    let ty = k.pi(alpha_name, sort_u, sort_u, BinderInfo::Default);
+    let ty = k.pi(alpha_name, sort_u, sort_u_succ, BinderInfo::Default);
 
     // mk : Π (α : Sort u) (β : Sort u), Box β  — result applies Box to BVar 0
     // (β), but the single parameter is α (BVar 1). The check opens ONE param (α)
