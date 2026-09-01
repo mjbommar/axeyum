@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "F:ml430-nat-factorizationlcmright-zero-right-3f1474ee",
+  "title": "Mathlib v4.30 source proposition Nat.factorizationLCMRight_zero_right",
+  "statement": "The proposition declared as `Nat.factorizationLCMRight_zero_right` in the pinned Mathlib v4.30 source.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "∀ (a : ℕ), a.factorizationLCMRight 0 = 1",
+    "fragment": "Nat"
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-08-29",
+    "established_by": "not established in this ledger",
+    "source": "statement-only extraction of `Nat.factorizationLCMRight_zero_right` from Mathlib v4.30.0; no proof value was exposed",
+    "prior_art": [
+      {
+        "who": "the Mathlib contributors",
+        "what": "the theorem declaration `Nat.factorizationLCMRight_zero_right`",
+        "where": "mathlib4 commit c5ea00351c28e24afc9f0f84379aa41082b1188f (v4.30.0)",
+        "year": 2026,
+        "attribution": "the proposition was read from the pinned statement-only inventory; the proof term and tactic trace were not consulted"
+      }
+    ]
+  },
+  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+}

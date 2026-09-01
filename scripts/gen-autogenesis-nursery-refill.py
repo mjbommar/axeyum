@@ -845,6 +845,74 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
         "Mathlib.Data.Nat.Prime.Factorial", "Mathlib.Data.Nat.Prime.Int",
         "Mathlib.RingTheory.Int.Basic"),
     "natural-integer-root": ("Mathlib.Data.Nat.Factorization.Root",),
+    # --- draw 18, 2026-09-01 (ADR-1465) ---------------------------------------
+    # ADR-1450 (draw 17, refused) named the unblock: declare a construction
+    # opening a module sorting lexicographically before
+    # Mathlib.Data.Nat.MaxPowDiv, topic- and vocabulary-clean, leaving room
+    # for two more families between it and Mathlib.Data.Nat.Factorization.LCM
+    # (already open, declared by a prior lane this session,
+    # Nat.factorizationLCMLeft/Right, commit 36f85826f -- its own R11
+    # disclosure review already recorded).
+    #
+    # Re-derived the LCM->MaxPowDiv window here rather than inheriting it:
+    # unowned modules sorting strictly between the two, with a nonzero
+    # screened pool, are Mathlib.Data.Nat.Factorization.PrimePow (2) and
+    # Mathlib.Data.Nat.Factors (2) -- Mathlib.Data.Nat.Log (17) also sorts in
+    # the window and is large enough alone.
+    #
+    # THE ORIGINAL PLAN (PrimePow + Factors + Factorization.Basic (5) +
+    # Factorization.Induction (1) = 10, matching this session's earlier
+    # commit-message note) IS REFUSED AT R11: every one of those three
+    # Factorization.* modules shares the topic segment "Factorization" with
+    # `natural-factorization-lcm` itself (also under
+    # Mathlib.Data.Nat.Factorization.*), so publishing it development in the
+    # SAME draw as LCM held-out is exactly the shape-1 topical-overlap R11
+    # exists to catch -- measured with
+    # docs/research/09-decisions/adr-1465-draw-18-screen.py against the real
+    # screen_family(), not inherited or asserted.
+    #
+    # The repair: Mathlib.Data.Nat.Factors (2 rows, topic "Factors" -- a
+    # DIFFERENT word from "Factorization", no collision, sorts inside the
+    # window) bundled with Mathlib.NumberTheory.FactorisationProperties (15
+    # rows, topic "FactorisationProperties" -- again a different word, no
+    # collision; ADR-1115's do-not-draw-held-out bar on this module is
+    # HELD-OUT-scoped only, verified via assert_draw_lawful's own held-out
+    # filter, and does not reach a development/train use). Reaches 17 rows,
+    # topically coherent (both are about the factors/factorisation-theoretic
+    # properties of a natural number), zero topic collision with either held-
+    # out family in this draw.
+    #
+    # Mathlib.Data.Nat.MaxPowDiv alone yields 7 rows, short of PER_FAMILY=10
+    # (reproducing the number this session's earlier lane recorded in its own
+    # status doc, not ADR-1450's table, which omitted it): bundled with
+    # Mathlib.NumberTheory.Bertrand (4 rows -- the postulate itself plus its
+    # induction step) it reaches 11. Bertrand's own topic ("Bertrand") does
+    # not collide with anything published.
+    #
+    # Screened against the REAL select()/assign_partitions()/screen_draw()/
+    # screen_family()/is_closed_evaluation (docs/research/09-decisions/
+    # adr-1465-draw-18-screen.py, re-run after this edit to confirm it
+    # reproduces): cycle assigns LCM held-out (index 0, unchanged from the
+    # prior lane), Factors+FactorisationProperties development (index 1), Log
+    # train (index 2), MaxPowDiv+Bertrand held-out (index 3) -- purely from
+    # each family's primary module's lexicographic path, no target outcome
+    # consulted. R9 clean (neither held-out family's drawn names are already
+    # in-env). R11 topic/vocabulary clean for both held-out families against
+    # every published development/train family, existing and new. R12: no new
+    # held-out row is a closed evaluation. Churn: zero existing family's drawn
+    # ten moves. Both held-out families' R11 disclosure reviews are recorded
+    # in holdout-adjacency-review-v1.json (natural-factorization-lcm: prior
+    # lane; natural-max-power-dividing: this draw, live sweep
+    # [prime/Int.Coprime/111, max/CReal.evt_approx_max/44,
+    # divmaxpow/Nat.divMaxPow/2], all three stems ordinary/unrelated noise,
+    # no Bertrand-shaped statement anywhere in the tree).
+    "natural-factorization-lcm": ("Mathlib.Data.Nat.Factorization.LCM",),
+    "natural-factors-and-factorisation-properties": (
+        "Mathlib.Data.Nat.Factors",
+        "Mathlib.NumberTheory.FactorisationProperties"),
+    "natural-logarithm-base": ("Mathlib.Data.Nat.Log",),
+    "natural-max-power-dividing": (
+        "Mathlib.Data.Nat.MaxPowDiv", "Mathlib.NumberTheory.Bertrand"),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -941,6 +1009,23 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
         "divisibility-library-application", "kernel-library-application"),
     "natural-integer-root": (
         "divisibility-library-application", "kernel-induction"),
+    # --- draw 18, 2026-09-01 (ADR-1465) ---------------------------------------
+    # `Nat.factorizationLCMLeft`/`Right` are library-application arithmetic
+    # over `lcm`/`gcd`/`Coprime`, no recursion of their own. `Abundant`/
+    # `Deficient`/`Perfect` are library-application divisibility-sum
+    # predicates. `Nat.log`/`clog` are bounded-search recursions, so
+    # induction plus the recursive route. `Nat.divMaxPow` is fuel recursion
+    # (induction plus recursive route); Bertrand's postulate is imported
+    # library application over the prime-counting argument this kernel does
+    # not reconstruct from scratch.
+    "natural-factorization-lcm": (
+        "divisibility-library-application", "kernel-library-application"),
+    "natural-factors-and-factorisation-properties": (
+        "divisibility-library-application", "kernel-library-application"),
+    "natural-logarithm-base": (
+        "kernel-induction", "recursive-function-reconstruction"),
+    "natural-max-power-dividing": (
+        "divisibility-library-application", "recursive-function-reconstruction"),
 }
 
 PER_FAMILY = 10
