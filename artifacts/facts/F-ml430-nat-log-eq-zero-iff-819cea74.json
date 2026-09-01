@@ -6,12 +6,34 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {b n : ℕ}, Nat.log b n = 0 ↔ n < b ∨ b ≤ 1",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.log_eq_zero_iff"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-log-of-lt-89eaf42e", "F:nat-lt-irrefl", "F:nat-lt-or-ge"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- log_eq_zero_iff 2>/dev/null | grep -Ec '^Nat\\.log_eq_zero_iff[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.log_eq_zero_iff",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.log_eq_zero_iff` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/log_clog_mirrors.rs`'s `declare_log_eq_zero_iff`). Route, `mpr` (`Or (Lt n b) (Le b 1) -> Eq (log b n) 0`): case-split the disjunction -- `Lt n b` closes by `log.rs`'s already-proved `Nat.log_of_lt`, `Le b 1` closes by this file's new `Nat.log_of_left_le_one` applied at `n` (the same boundary-split recipe as `Nat.clog_of_left_le_one`, over `Nat.log_zero_left`/`Nat.log_one_left`). Route, `mp` (`Eq (log b n) 0 -> Or (Lt n b) (Le b 1)`): case-split `Nat.lt_or_ge n b`; the `Lt n b` side is `Or.inl` directly; the `Le b n` side splits AGAIN on `Nat.lt_or_ge 1 b` -- `Le b 1` is `Or.inr` directly, `Lt 1 b` is refuted by this file's new `Nat.log_pos` (the same recipe as `Nat.clog_pos` with the two guard cuts' roles swapped), which gives `Lt 0 (log b n)`; transporting that along the hypothesis `Eq (log b n) 0` gives `Lt 0 0`, absurd via `Nat.lt_irrefl`, closing the goal by `False.elim`. `nat_theorem_inventory`'s rendered type for `Nat.log_eq_zero_iff` is `(x0:AxNat)->(x1:AxNat)->Iff (Eq (log x0 x1) zero) (Or (Lt x1 x0) (Le x0 (succ zero)))`, matching this fact's `formal.statement` verbatim (`x0`=b, `x1`=n). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed; verified against a deliberately misspelled name (`log_eq_zero_iffxxxxx`) that this same pipeline reports `0`.",
+      "supports": "∀ {b n : ℕ}, Nat.log b n = 0 ↔ n < b ∨ b ≤ 1"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.log_eq_zero_iff",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it) and `nat_prelude_tests::the_nat_prelude_declares_no_axioms` confirms zero `Axiom` declarations anywhere in the built environment. `theorem_axiom_footprint log_eq_zero_iff` measured 0 directly.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-09-01 in this ledger: a fresh local construction (an `Iff` built from two nested `Or`-case-splits, both directions composing already-proved order/boundary lemmas plus two new supporting lemmas, `Nat.log_pos` and `Nat.log_of_left_le_one`, that neither `log.rs` nor `log_clog_order.rs` needed on their own), not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `depends_on` (auto-derived by `scripts/check-fact-depends-derived.py --fix` from the actual proof term) names `Nat.log_of_lt` (`F:ml430-nat-log-of-lt-89eaf42e`), `Nat.lt_irrefl`, and `Nat.lt_or_ge`. `Nat.log_pos` and `Nat.log_of_left_le_one` are new local lemmas this same commit adds, not separately-tracked facts, so they do not appear as edges.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

@@ -6,12 +6,34 @@
   "formal": {
     "language": "lean4-surface",
     "statement": "∀ {n : ℕ}, n ≤ 1 → ∀ (b : ℕ), Nat.clog b n = 0",
-    "fragment": "Nat"
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.clog_of_right_le_one"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": [],
-  "evidence": [],
+  "depends_on": ["F:ml430-nat-clog-one-right-1ce3d52f", "F:ml430-nat-clog-zero-right-d42d47b1", "F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-le-succ-succ", "F:nat-lt-or-eq-of-le", "F:nat-zero-le"],
+  "evidence": [
+    {
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- clog_of_right_le_one 2>/dev/null | grep -Ec '^Nat\\.clog_of_right_le_one[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.clog_of_right_le_one",
+      "kind": "kernel-term",
+      "notes": "`build_nat_prelude` admits `Nat.clog_of_right_le_one` through the trusted `Kernel::add_declaration` gate (declared in `nat_prelude/log_clog_mirrors.rs`'s `declare_clog_of_right_le_one`). Route: [`declare_clog_of_left_le_one`]'s exact recipe, split on `n` instead of `b`, via `clog.rs`'s already-proved `Nat.clog_zero_right`/`Nat.clog_one_right` used directly at their full `∀ b, clog b _ = 0` type. `nat_theorem_inventory`'s rendered type for `Nat.clog_of_right_le_one` is `(x0:AxNat)->(x1:Le x0 (succ zero))->(x2:AxNat)->Eq (clog x2 x0) zero`, matching this fact's `formal.statement` verbatim (`x0`=n, `x2`=b). `nat_theorem_inventory` exits non-zero for a name that does not exist, and the `grep -c` count (tested `-ge 1`, not piped into `grep -q`) requires the admitted declaration to actually be printed; verified against a deliberately misspelled name (`clog_of_right_le_onexxxxx`) that this same pipeline reports `0`.",
+      "supports": "∀ {n : ℕ}, n ≤ 1 → ∀ (b : ℕ), Nat.clog b n = 0"
+    },
+    {
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "id": "footprint-Nat.clog_of_right_le_one",
+      "kind": "exhaustive-enumeration",
+      "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by []. `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` additionally checks this theorem's own `Kernel::axiom_footprint` directly (via `theorem_names`, which now lists it) and `nat_prelude_tests::the_nat_prelude_declares_no_axioms` confirms zero `Axiom` declarations anywhere in the built environment. `theorem_axiom_footprint clog_of_right_le_one` measured 0 directly.",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +48,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "Established 2026-09-01 in this ledger: a fresh local construction (a two-way boundary case split composing two already-proved equations), not a transcription of Mathlib's proof (`the proof term and tactic trace were not consulted`, per provenance). The declared statement matches this fact's `formal.statement`; see the kernel-term evidence row for the exact rendered type comparison. `depends_on` (auto-derived by `scripts/check-fact-depends-derived.py --fix` from the actual proof term) names `Nat.clog_zero_right`, `Nat.clog_one_right`, and the order/arithmetic lemmas `cases_lt_bound` composes internally (`le_antisymm`, `le_of_lt_succ`, `le_succ_succ`, `lt_or_eq_of_le`, `zero_le`).",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }
