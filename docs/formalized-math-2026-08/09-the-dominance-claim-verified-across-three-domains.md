@@ -740,8 +740,9 @@ it:
   tree: `routes: cas-certificate=54(kernel-reconstructed=14,cas-internal=40)`
   — confirmed independently by reading `proof_route` off all 2,529 fact files
   directly rather than trusting the validator's own summary line: **54**, not
-  19, not the "56" a since-superseded draft of this correction briefly
-  claimed (see below).
+  19. (This was the count at this worktree's original base, `14674bb2c`; it
+  is 56 two commits later, `0a6f305aa` — see the commit-dependent correction
+  below, which is the more important number to read carefully.)
 
 Joining the masked certificate-surface query against every fact's evidence
 strings, the audit's real finding: **13 certificate-carrying modules had no
@@ -761,15 +762,44 @@ seven); I have not resolved which is right, because it is not this
 document's finding to adjudicate, and I am not going to quote the "seven"
 without the list it contradicts sitting next to it. Use the enumerated ten.
 
-**One thing I was told to verify and could not confirm: two more facts
-landed today**, `F:cas-boolean-circuit-nand-only-full-adder` and
+**One thing I was told to verify and, at first, could not confirm: two more
+facts landed today**, `F:cas-boolean-circuit-nand-only-full-adder` and
 `F:cas-gf2-tensor-karatsuba-degree-2-rank-three`, said to take the
-`cas-certificate` route to 56. **Neither exists in this tree.**
-`ls artifacts/facts/ | grep -i boolean` and `| grep -i "gf2-tensor\|karatsuba"`
-both return empty, against a positive control of 25 `^F-cas-` filenames still
-present, and `validate-facts.py`'s own count independently confirms
-**54**, not 56. If those two facts exist somewhere, it is on a branch that
-has not reached this tree; report 54 until they do.
+`cas-certificate` route to 56. Against this lane's worktree base
+(`14674bb2c`), **neither existed**: `ls artifacts/facts/ | grep -i boolean`
+and `| grep -i "gf2-tensor\|karatsuba"` both returned empty, against a
+positive control of 25 `^F-cas-` filenames still present, and
+`validate-facts.py`'s own count independently confirmed **54**, not 56.
+
+**Both measurements were correct, about different commits, and that is
+itself the finding worth keeping.** The two facts were merged into `main` at
+`0a9d8e7d1`, after this worktree's base — the coordinator had cited work
+this worktree could not see, the same failure mode §0 above already warns a
+*referee* about ("a referee who pulls a stale `origin/main` will reproduce a
+*different and wrong* answer"), now demonstrated from the *authoring* side
+instead. Merging current `main` (`0a6f305aa`) into this worktree and
+re-running both checks:
+
+```
+ls artifacts/facts/ | grep -i "boolean-circuit-nand"   -> F-cas-boolean-circuit-nand-only-full-adder.json
+ls artifacts/facts/ | grep -i "gf2-tensor-karatsuba"    -> F-cas-gf2-tensor-karatsuba-degree-2-rank-three.json
+proof_route census, all 2,531 fact files, this commit (bbb30227e, main=0a6f305aa):
+  cas-certificate 56   imported-kernel-lean 7   kernel-lean 2210
+  search-certificate 12   smt-clausal 10   smt-term-level 17
+```
+
+**So the honest statement of this number has a commit attached, not just a
+value: `cas-certificate` was 54 at `14674bb2c` and is 56 at `0a6f305aa`, and
+quoting either without the commit is not a measurement.** Both counts above
+were produced by the same method (direct `proof_route` read over every fact
+file, cross-checked against a filename grep) and both are correct readings
+of their own tree. The number is currently growing day to day as the CAS
+audit closes modules (§7.4 above traces 48 → 54 → 56 across three commits in
+two days), which is the ordinary and expected shape for an active ledger —
+the hazard is not that it changed, it is that a number quoted without its
+commit cannot be told apart from a wrong one. Report **56, at `0a6f305aa` or
+later**; treat 54 as correct only when paired with `14674bb2c` or an
+ancestor of it.
 
 ## 8. The weakest part of the claim as it now stands (re-assessed 2026-09-01)
 
@@ -859,11 +889,33 @@ routes: cas-certificate=54(kernel-reconstructed=14,cas-internal=40) imported-ker
 Against §5.1's 2026-08-31 figures (2366 facts, 2182 settled, 2162 distinct
 propositions): +163 facts, +119 settled, +119 distinct propositions in one
 day — consistent with the flywheel operating normally, not with anything this
-document should flag. `cas-certificate=54` matches §7.4/§8 above exactly,
-computed two independent ways (reading `proof_route` off all 2,529 fact files
-directly, and reading the validator's own summary line) — the double-check
-this document's own method requires before quoting a number that will be
-requoted.
+document should flag. `cas-certificate=54` matches §7.4/§8 above exactly **at
+this worktree's original base (`14674bb2c`)**, computed two independent ways
+(reading `proof_route` off all 2,529 fact files directly, and reading the
+validator's own summary line) — the double-check this document's own method
+requires before quoting a number that will be requoted.
+
+**That number moved again within the hour, and the cause is worth recording
+plainly because it happened to this document, not to a subject it was
+measuring.** The coordinator's brief for this correction cited two facts
+merged into `main` at `0a9d8e7d1` — after this worktree's base — so this
+lane's first-pass "neither exists" verdict was a correct reading of a
+commit that genuinely did not contain them, and the coordinator's "they
+exist" was simultaneously a correct reading of `main`. Merging current
+`main` (`0a6f305aa`) into this worktree and re-running the same census:
+
+```
+2531 fact files, proof_route sums to 2312: cas-certificate=56 imported-kernel-lean=7
+  kernel-lean=2210 search-certificate=12 smt-clausal=10 smt-term-level=17
+```
+
+`cas-certificate` is **56** as of `0a6f305aa`, not 54 — the number this
+document should be read as reporting going forward. §7.4 carries the full
+account, with both commits and both counts named side by side, because §0's
+own warning ("a stale `origin/main` reproduces a different and wrong
+answer") just produced a fresh, first-hand instance of itself, on the
+authoring side rather than the reading side, inside the twenty minutes it
+took to write this correction.
 
 **I did not re-run the rest of §5.1's per-column census**
 (`check-semantic-control-fixtures.py`, `gen-safety-matrix.py --check`,
