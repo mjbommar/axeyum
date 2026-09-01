@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2100,
+    "min_identity_bound": 2101,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -19745,6 +19745,13 @@
           "prose_sha256": "6f34e5622df27a86fe854ac60cfba07e618dbe24384a48985f22b2f5f81cbc8b"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-det-alternating",
+      "language": "lean4",
+      "statement_sha256": "63ed56d3012e9dd9cde3135b07aabe2f4cdb6453b4055ff31de1b7e0cf554884",
+      "prose_sha256": "9061c7faf388f4d36c350d5daa7ea7bc7c17324dffebb80f4e4dab9abe8b6450",
+      "kernel_theorem": "Rat.det_alternating"
     },
     {
       "fact_id": "F:rat-det-col-expansion",
