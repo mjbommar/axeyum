@@ -70,6 +70,7 @@ use super::finite::{select_nat_false, select_nat_true};
 use super::multiset::{ms_count, ms_prod, prod_range};
 use super::ops::{NatDev, NatOps, bool_true_or_false, cases_lt_or_ge, cases_zero_succ};
 use super::primes::prime_condition;
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -104,28 +105,6 @@ fn from_false(d: &mut NatDev<'_>, p: &NatPrelude, false_proof: ExprId, target: E
     let zero = d.kernel().level_zero();
     let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
     d.apply(rec, &[motive, false_proof])
-}
-
-/// `Or.rec` at a `Prop` goal.
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// The carrier constant `Nat.Multiset`.
@@ -871,16 +850,7 @@ fn declare_factorization_prime(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
                 };
 
                 let split = bool_true_or_false(d, &p, guard_x);
-                let body = or_cases(
-                    d,
-                    &p,
-                    left_ty,
-                    right_ty,
-                    prime,
-                    left_minor,
-                    right_minor,
-                    split,
-                );
+                let body = or_cases(d, left_ty, right_ty, prime, left_minor, right_minor, split);
                 d.lam_fv(h_fv, present, body)
             };
             let false_val = d.bool_false();

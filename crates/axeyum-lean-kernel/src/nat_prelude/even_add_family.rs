@@ -44,6 +44,7 @@ use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
 use super::parity::odd_predicate;
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -69,17 +70,6 @@ fn or_elim(
         or_rec,
         &[left_ty, right_ty, motive, left_case, right_case, or_proof],
     )
-}
-
-/// `False.rec` into `goal` (private per-file copy).
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let p = *p;
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 /// `fun (h_0 : tys[0]) … => body(h_0, …)` -- module-private copy of the
@@ -129,11 +119,11 @@ fn mk_iff_both_false(
     let p = *p;
     let mp = with_hyps(d, &[pa], &|d, h| {
         let f = d.apply(not_pa, &[h[0]]);
-        absurd(d, &p, pb, f)
+        absurd(d, pb, f)
     });
     let mpr = with_hyps(d, &[pb], &|d, h| {
         let f = d.apply(not_pb, &[h[0]]);
-        absurd(d, &p, pa, f)
+        absurd(d, pa, f)
     });
     d.const_app(p.logic.iff_intro, &[pa, pb, mp, mpr])
 }

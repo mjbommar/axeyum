@@ -44,6 +44,7 @@
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps, cases_zero_succ};
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -74,17 +75,6 @@ fn div_mod_reconstructed(
     });
     let eq_rev = d.symm(dd, succ_pred_dd, dd_eq_succ_pred); // succ_pred_dd = dd
     d.transport(succ_pred_dd, motive, exec, dd, eq_rev)
-}
-
-/// `False.rec` into `goal` from a proof of `False`. Per-file local copy of
-/// the `absurd` convention used elsewhere in `nat_prelude`.
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 /// `Nat.base_induction`. See the module doc for the route.
@@ -252,7 +242,7 @@ pub(super) fn declare_base_induction(
                 let b_lt_b = d.lemma(p.lt_of_le_of_lt, &[b_var, v_var, b_var, ge_var, v_lt_b]);
                 let irrefl = d.lemma(p.lt_irrefl, &[b_var]);
                 let false_val = d.apply(irrefl, &[b_lt_b]);
-                let body = absurd(d, &p, concl_v, false_val);
+                let body = absurd(d, concl_v, false_val);
                 let hyp_ty = d.eq(v_var, zero_rv);
                 d.lam_fv(e_fv, hyp_ty, body)
             };

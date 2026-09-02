@@ -260,6 +260,9 @@ mod size_extra;
 mod size_order;
 mod sqrt;
 mod squarefree;
+/// Shared inline proof steps. `pub(crate)` because `int_prelude` builds the
+/// same `Nat`-carrier steps and used to carry its own copies of them.
+pub(crate) mod steps;
 mod stirling;
 mod stirling_lemmas;
 mod subset_product;

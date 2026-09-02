@@ -108,6 +108,7 @@ use super::NatPrelude;
 use super::finite::{pos_implies_succ_pred, zero_lt_via_c};
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps, cases_lt_bound, cases_lt_or_ge};
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -1262,17 +1263,6 @@ fn or_elim(
     )
 }
 
-/// `False.rec` into `goal` from a proof of `False` (private copy, see
-/// [`or_elim`]'s doc comment for why).
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
-}
-
 /// `Nat.fib_lt_fib : ∀ m n, Le 2 m → Iff (Lt (fib m) (fib n)) (Lt m n)` —
 /// Mathlib's `fib_lt_fib_iff`. See the field doc comment in `nat_prelude.rs`
 /// for the proof route.
@@ -1311,7 +1301,7 @@ fn declare_fib_lt_fib(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
                 let contra = d.lemma(p.lt_of_lt_of_le, &[fib_m, fib_n, fib_m, h, mono]); // Lt fib_m fib_m
                 let irrefl = d.lemma(p.lt_irrefl, &[fib_m]); // Not (Lt fib_m fib_m)
                 let false_proof = d.apply(irrefl, &[contra]);
-                let result = absurd(d, &p, lt_mn_ty, false_proof);
+                let result = absurd(d, lt_mn_ty, false_proof);
                 d.lam_fv(h2_fv, ge_ty, result)
             };
 

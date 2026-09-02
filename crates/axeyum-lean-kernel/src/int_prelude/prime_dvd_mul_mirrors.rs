@@ -39,10 +39,11 @@
 
 use super::dvd::idvd;
 use super::ops::IntDev;
-use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
+use crate::nat_prelude::steps::dvd_elim;
+use crate::nat_prelude::steps::dvd_intro;
 
 /// `Int.natAbs a`, local per-module convention (matches every other
 /// `int_prelude` module rather than importing a shared helper).
@@ -744,51 +745,6 @@ pub(super) fn declare_gcd_ne_one_iff_gcd_mul_right_ne_one(
 // convention, built from pre-existing `Nat` theorems only.
 // ---------------------------------------------------------------------------
 
-fn dvd_elim_nat(
-    d: &mut IntDev<'_>,
-    divisor: ExprId,
-    dividend: ExprId,
-    goal: ExprId,
-    dvd_hyp: ExprId,
-    continuation: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
-    let predicate = d.dvd_predicate(divisor, dividend);
-    let dvd_ty = d.dvd(divisor, dividend);
-    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
-    let minor = {
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
-        let divisor_q = d.mul(divisor, q);
-        let eq_ty = d.eq(dividend, divisor_q);
-        let eq_fv = d.fresh_fvar();
-        let eq_proof = d.kernel().fvar(eq_fv);
-        let body = continuation(d, q, eq_proof);
-        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
-        d.lam_fv(q_fv, nat, with_eq)
-    };
-    let exists_rec_name = d.prelude().logic.exists_rec;
-    let rec = d.kernel().const_(exists_rec_name, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
-}
-
-fn dvd_intro_nat(
-    d: &mut IntDev<'_>,
-    a: ExprId,
-    n: ExprId,
-    witness: ExprId,
-    eq_proof: ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let predicate = d.dvd_predicate(a, n);
-    let intro_name = d.prelude().logic.exists_intro;
-    let intro = d.kernel().const_(intro_name, vec![one]);
-    d.apply(intro, &[nat, predicate, witness, eq_proof])
-}
-
 /// `Eq (mul a (mul b c)) (mul b (mul a c))`.
 fn mul_left_comm_nat(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId) -> ExprId {
     let p = d.int();
@@ -855,7 +811,7 @@ fn dvd_cancel_left_of_pos_nat(
     let ka = d.mul(k, a);
     let kb = d.mul(k, b);
     let goal = d.dvd(a, b);
-    dvd_elim_nat(d, ka, kb, goal, dvd_hyp, &|d, q, eq_proof| {
+    dvd_elim(d, ka, kb, goal, dvd_hyp, &|d, q, eq_proof| {
         // eq_proof : Eq kb (mul ka q)
         let ka_q = d.mul(ka, q);
         let aq = d.mul(a, q);
@@ -863,7 +819,7 @@ fn dvd_cancel_left_of_pos_nat(
         let assoc = d.lemma(p.nat.mul_assoc, &[k, a, q]); // Eq ka_q k_aq
         let (_, kb_eq_k_aq) = d.chain(kb, &[(ka_q, eq_proof), (k_aq, assoc)]);
         let cancelled = d.lemma(p.nat.mul_left_cancel_of_pos, &[k, b, aq, k_pos, kb_eq_k_aq]); // Eq b aq
-        dvd_intro_nat(d, a, b, q, cancelled)
+        dvd_intro(d, a, b, q, cancelled)
     })
 }
 
@@ -909,8 +865,8 @@ fn nat_valuation_step(
     // `1 <= p_var^(k+l)`, from `Nat.pow_pos` (`Lt zero b` is defeq `Le one b`).
     let pkl_pos = d.lemma(p.nat.pow_pos, &[p_var, kl, one_le_p]);
 
-    dvd_elim_nat(d, pk, x, goal, h_x, &|d, xprime, eq_x| {
-        dvd_elim_nat(d, pl, y, goal, h_y, &|d, yprime, eq_y| {
+    dvd_elim(d, pk, x, goal, h_x, &|d, xprime, eq_x| {
+        dvd_elim(d, pl, y, goal, h_y, &|d, yprime, eq_y| {
             let start = d.mul(x, y);
             let pk_xprime = d.mul(pk, xprime);
             let pl_yprime = d.mul(pl, yprime);
@@ -960,7 +916,7 @@ fn nat_valuation_step(
             let dvd_p_yprime = d.dvd(p_var, yprime);
 
             let on_left = &|d: &mut IntDev<'_>, hxpp: ExprId| -> ExprId {
-                dvd_elim_nat(d, p_var, xprime, goal, hxpp, &|d, xpp, eq_xpp| {
+                dvd_elim(d, p_var, xprime, goal, hxpp, &|d, xpp, eq_xpp| {
                     // eq_xpp : Eq xprime (mul p_var xpp)
                     let p_var_xpp = d.mul(p_var, xpp);
                     let pk_p_var_xpp = d.mul(pk, p_var_xpp);
@@ -981,12 +937,12 @@ fn nat_valuation_step(
                     // x_eq_final : Eq x (mul (mul pk p_var) xpp), defeq
                     // Eq x (mul (pow p_var (succ k)) xpp)
                     let pow_succ_k_local = d.pow(p_var, succ_k);
-                    let dvd_result = dvd_intro_nat(d, pow_succ_k_local, x, xpp, x_eq_final);
+                    let dvd_result = dvd_intro(d, pow_succ_k_local, x, xpp, x_eq_final);
                     d.or_inl(goal_left, goal_right, dvd_result)
                 })
             };
             let on_right = &|d: &mut IntDev<'_>, hypp: ExprId| -> ExprId {
-                dvd_elim_nat(d, p_var, yprime, goal, hypp, &|d, ypp, eq_ypp| {
+                dvd_elim(d, p_var, yprime, goal, hypp, &|d, ypp, eq_ypp| {
                     let p_var_ypp = d.mul(p_var, ypp);
                     let pl_p_var_ypp = d.mul(pl, p_var_ypp);
                     let step_a = d.congr(yprime, p_var_ypp, eq_ypp, &|d, t| d.mul(pl, t));
@@ -1004,7 +960,7 @@ fn nat_valuation_step(
                         ],
                     );
                     let pow_succ_l_local = d.pow(p_var, succ_l);
-                    let dvd_result = dvd_intro_nat(d, pow_succ_l_local, y, ypp, y_eq_final);
+                    let dvd_result = dvd_intro(d, pow_succ_l_local, y, ypp, y_eq_final);
                     d.or_inr(goal_left, goal_right, dvd_result)
                 })
             };
