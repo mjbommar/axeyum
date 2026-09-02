@@ -1923,7 +1923,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (438 names,
+/// The `RatPrelude` field table (456 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2407,6 +2407,27 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 p.count_range_nonzero_row_b_zero,
             ),
             ("rank_zero_cols", p.rank_zero_cols),
+            ("pivot_col_search_aux", p.pivot_col_search_aux),
+            ("is_pivot_col_b", p.is_pivot_col_b),
+            ("is_pivot_col_b_eq_search", p.is_pivot_col_b_eq_search),
+            ("is_pivot_col_b_zero_rows", p.is_pivot_col_b_zero_rows),
+            ("rank_cols", p.rank_cols),
+            ("rank_cols_eq_count_range", p.rank_cols_eq_count_range),
+            ("nullity", p.nullity),
+            ("nullity_eq_count_range", p.nullity_eq_count_range),
+            ("rank_nullity", p.rank_nullity),
+            ("rank_cols_le_cols", p.rank_cols_le_cols),
+            ("nullity_le_cols", p.nullity_le_cols),
+            ("rank_cols_zero_cols", p.rank_cols_zero_cols),
+            ("nullity_zero_cols", p.nullity_zero_cols),
+            (
+                "count_range_is_pivot_col_b_zero_rows",
+                p.count_range_is_pivot_col_b_zero_rows,
+            ),
+            ("rank_cols_zero_rows", p.rank_cols_zero_rows),
+            ("nullity_zero_rows", p.nullity_zero_rows),
+            ("pivot_search_aux_le_rows", p.pivot_search_aux_le_rows),
+            ("pivot_search_le_rows", p.pivot_search_le_rows),
         ],
         lists: Vec::new(),
     }

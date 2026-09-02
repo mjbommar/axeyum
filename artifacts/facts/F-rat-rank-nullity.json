@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-nullity",
+  "title": "Rank-nullity over the rationals, in column form",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every pair of dimensions rows, cols, Nat.add (Rat.rankCols M rows cols) (Rat.nullity M rows cols) = cols. Rat.rankCols M rows cols is Nat.countRange (Rat.isPivotColB (Rat.rowEchelon M rows cols) rows cols) cols -- the number of columns j < cols such that some row r < rows of the row-echelon form has Rat.leadingIndex equal to j. Rat.nullity is the same count at Nat.setCompl of that predicate: the FREE columns. The theorem is one application of Nat.countRange_compl and is symbolic in all three arguments; nothing in its proof uses any property of Rat.rowEchelon, and it would hold verbatim if the elimination were the identity. That is deliberate: nullity is NOT defined as cols - rank, because the subtraction form inherits rank <= cols, which is open in this tree (ADR-1555) since it asserts the echelon form has at most one pivot per column -- ADR-1554 obligation 4. The column form relocates the whole obligation into the single bridge rank = rankCols, which is NOT proved here.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_nullity : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (Rat.rankCols x0 x1 x2) (Rat.nullity x0 x1 x2)) x2)))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rank_nullity"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-rank-le-rows",
+    "F:nat-countrange-compl"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-nullity-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rank_nullity` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all four preludes carrying the rationals, AND its admitted type renders with the conclusion `AxNat.add (Rat.rankCols x0 x1 x2) (Rat.nullity x0 x1 x2) = x2`. The checker greps the RENDERED TYPE and not only the name, so it fails not just on a deletion or a rename but on the statement changing while the name survives -- for instance a version bounding the sum by `x1` (the row count) instead of `x2`, which would be a different and false theorem.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rank_nullity[[:space:]]+0[[:space:]].*AxNat\\.add \\(Rat\\.rankCols x0 x1 x2\\) \\(Rat\\.nullity x0 x1 x2\\)\\) x2\\)\\)\\)$' 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^4$')\" = 1",
+      "notes": "Run 2026-09-02: the projection lists exactly four rows (rat, creal, complex, cpoint) matching name, kind `theorem`, axiom count `0` and the full rendered conclusion; the checker requires the count to be exactly 4 and exits 1 otherwise. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written. The anchor is the rendered CONCLUSION rather than the whole type because the binder prefix is shared by every three-argument matrix theorem in the family and would not discriminate."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/nullity.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form. Row 2 (a boundary refutation) is EMPTY BY PROOF for this family, as for ADR-1554's and ADR-1555's: the order on the constructed rationals is decidable and `Rat.isPivotColB` is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 (the decidable-fragment exact form) is the six-matrix evaluation table in `rat_prelude/nullity_tests.rs`, one of which is RECTANGULAR (2x3) and is the only case that could catch a rows/cols confusion. Row 4: no import; nothing here was taken from Mathlib. WHAT THIS DOES NOT SAY: it does not say `Rat.rank M rows cols = Rat.rankCols M rows cols`. That bridge is OPEN, and it is where ADR-1554 obligation 4 (`rowEchelon_isEchelon`) is genuinely required. Measured 2026-09-02: at symbolic arguments both sides reduce to a `Nat.rec` stuck on a free variable -- `rows` on the row-form side, `cols` on the column-form side -- so no reduction can bring them together, and every one of the 23 `Nat.countRange_*` lemmas in the tree keeps the SAME bound on both sides. The bridge therefore needs a cross-bound counting law that does not exist here, in addition to obligation 4. It does not say `Rat.rank <= cols`, which remains open. It does not say `Rat.rowEchelon` computes a correct echelon form: the partition holds for ANY predicate, so it would still hold if the elimination were wrong."
+}

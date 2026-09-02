@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-nullity-zero-rows",
+  "title": "A rational matrix with no rows has every column free",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every column count cols, Rat.nullity M 0 cols = cols. With no rows there is no pivot column, so every column is free and the nullity is the full width. The proof reads Rat.rank_nullity backwards through Rat.rankCols_zero_rows: rankCols M 0 cols + nullity M 0 cols = cols and rankCols M 0 cols = 0 give Nat.add 0 (nullity M 0 cols) = cols, and Nat.add recurses on its RIGHT argument, so Nat.zero_add is genuinely needed to strip the leading zero -- add 0 x is not x by reduction in this kernel. This is the DISCRIMINATING degenerate control for the pair: a Rat.nullity that returned 0 identically satisfies Rat.rankCols_zero_rows and Rat.nullity_zero_cols and fails this.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.nullity_zero_rows : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (Rat.nullity x0 AxNat.zero x1) x1))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.nullity_zero_rows"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-rank-nullity",
+    "F:nat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-nullity-zero-rows-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.nullity_zero_rows` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all four preludes, and its rendered type shows the row count instantiated at `AxNat.zero` with the answer being `x1` -- the column count itself, NOT zero. That distinction is the entire discriminating content: a `Rat.nullity` that returned `0` identically would still be admitted with the right type at every other degenerate lemma in the family, and would fail exactly here.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.nullity_zero_rows[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.nullity x0 AxNat\\.zero x1\\) x1\\)\\)$' 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^4$')\" = 1",
+      "notes": "Run 2026-09-02: exactly four rows match name, kind, axiom count `0` and the rendered conclusion `Eq.{1} AxNat (Rat.nullity x0 AxNat.zero x1) x1`; the checker requires exactly 4. `scripts/new-fact.py` verified the pattern fails on mutated output. The anchor includes the literal `AxNat.zero` in argument position, so a version stated at a symbolic row count -- which would be FALSE -- does not match."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/nullity.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form (it is universally quantified over the matrix and the column count). Row 2 empty by proof (see F:rat-rank-nullity). Row 3 is `with_no_rows_every_column_is_free` in `rat_prelude/nullity_tests.rs`, which reduces both `rankCols` and `nullity` at a concrete 2x3 matrix with the row count set to 0 and carries the `nullity != 0` control. Row 4: no import. WHAT THIS DOES NOT SAY: it says nothing about a matrix with rows. The dual statement at zero COLUMNS (`Rat.nullity M rows 0 = 0`) is a separate declaration and holds by `Eq.refl`; it is NOT discriminating, because a constantly-zero `nullity` satisfies it."
+}

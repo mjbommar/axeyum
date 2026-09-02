@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2178,
+    "min_identity_bound": 2182,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -22016,6 +22016,13 @@
       "kernel_theorem": "Rat.not_zero_le_neg_of_nat"
     },
     {
+      "fact_id": "F:rat-nullity-zero-rows",
+      "language": "lean4",
+      "statement_sha256": "cf7262f5ac4beb9f5c223f887cba6a093c2a0e91b872cc36d592f02cd18b7ad8",
+      "prose_sha256": "e2b8c7fe27ae65531ae44d2afa6051ae38a3a5fcfc084557d1d5481cba9b82c5",
+      "kernel_theorem": "Rat.nullity_zero_rows"
+    },
+    {
       "fact_id": "F:rat-of-nat-inj",
       "language": "lean4",
       "statement_sha256": "73fdcadb431a5e80bbd6898e90dd4ba6a7c185a79a7b00cecfc7c16092c46646",
@@ -22070,6 +22077,13 @@
       "statement_sha256": "3278173ca69f2455177b3accf2750e26737b20bb7da1c4668e8ed3ca0ba34ff8",
       "prose_sha256": "c44b7a1e79d9b645fb16b711b4352e94f70319882c26be6c2d509cea3fa00e68",
       "kernel_theorem": "Rat.one_ne_zero"
+    },
+    {
+      "fact_id": "F:rat-pivot-search-le-rows",
+      "language": "lean4",
+      "statement_sha256": "6dbe6e3106b9711f6f21e836f4670b3f17c3efbc78b6b355cfd395aac65d3582",
+      "prose_sha256": "da67286a785930beca5854b5a50a9afda1a02e835efa826e9e37743ded0bea02",
+      "kernel_theorem": "Rat.pivotSearch_le_rows"
     },
     {
       "fact_id": "F:rat-polyeval-add",
@@ -22177,11 +22191,25 @@
       "kernel_theorem": "Rat.prob_le_one"
     },
     {
+      "fact_id": "F:rat-rank-cols-le-cols",
+      "language": "lean4",
+      "statement_sha256": "c881f1245fb62f48286f4dc03f501bf1ed2a7686e46d0486fb8ed9188a445f00",
+      "prose_sha256": "3bae486f957702c794e606d353c8a2f4ce25a9de0aa24c6a6d7efbc7c8c49f7b",
+      "kernel_theorem": "Rat.rankCols_le_cols"
+    },
+    {
       "fact_id": "F:rat-rank-le-rows",
       "language": "lean4",
       "statement_sha256": "b9e55674bfe835822182cbed9407aa82996186e8cd613d2e19d8743f84f726ab",
       "prose_sha256": "908a816be6ff2d2e16264560c38bf56cdaa10d394c083e1ac87a5f42f044617d",
       "kernel_theorem": "Rat.rank_le_rows"
+    },
+    {
+      "fact_id": "F:rat-rank-nullity",
+      "language": "lean4",
+      "statement_sha256": "c8ed3da8d8ba0f74e13e5d388a38229a515d1dffd32d1da14b11c1501f680bb1",
+      "prose_sha256": "af5e424c0f40332ee45ca8a0f58848b428a5ccf99e2a1bbe44bfddd4d6af88bf",
+      "kernel_theorem": "Rat.rank_nullity"
     },
     {
       "fact_id": "F:rat-rank-zero-cols",
