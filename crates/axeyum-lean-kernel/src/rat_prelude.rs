@@ -79,6 +79,7 @@ mod polynomial;
 mod pow_bridge;
 mod probability;
 mod product;
+mod rank;
 mod scaling;
 mod statements;
 mod sum;
@@ -2651,6 +2652,55 @@ pub struct RatPrelude {
     /// `Rat.isEchelon : Mat → Nat → Nat → Bool` — decidable row-echelon test:
     /// leading entries strictly move right, and zero rows sit at the bottom.
     pub is_echelon: NameId,
+
+    // --- rank (`rat_prelude::rank`, ADR-1555) -------------------------------
+    /// `Rat.nonzeroRowB : Mat → Nat → Nat → Bool`,
+    /// `nonzeroRowB E cols r := Nat.ble (succ (leadingIndex E r cols)) cols` —
+    /// "row `r` of `E` is nonzero", decided. A zero row's
+    /// [`Self::leading_index`] is `cols`, so the strict comparison against
+    /// `cols` is exactly the nonzero test. The row index comes LAST so that
+    /// `nonzeroRowB E cols` is already the `Nat → Bool` predicate
+    /// [`NatPrelude::count_range`](crate::NatPrelude::count_range) consumes.
+    pub nonzero_row_b: NameId,
+    /// `Rat.nonzeroRowB_eq_ble : ∀ E cols r, nonzeroRowB E cols r =
+    /// Nat.ble (succ (leadingIndex E r cols)) cols` — the defining equation,
+    /// `Eq.refl`.
+    pub nonzero_row_b_eq_ble: NameId,
+    /// `Rat.nonzeroRowB_zero_cols : ∀ E r, nonzeroRowB E 0 r = false` — with
+    /// no columns every row is zero. `Eq.refl` at a SYMBOLIC matrix, because
+    /// `Nat.ble (succ _) zero` ι-reduces to `false` without evaluating the
+    /// leading index at all.
+    pub nonzero_row_b_zero_cols: NameId,
+    /// `Rat.rank : Mat → Nat → Nat → Nat`, `rank M rows cols :=
+    /// Nat.countRange (nonzeroRowB (rowEchelon M rows cols) cols) rows` — the
+    /// number of nonzero rows of the row-echelon form, **computed**.
+    ///
+    /// The count is deliberately NOT capped at `cols`: a cap would make
+    /// `rank ≤ cols` hold by truncation rather than by a theorem, and would
+    /// hide a broken elimination from the evaluation tests (ADR-1555).
+    pub rank: NameId,
+    /// `Rat.rank_eq_countRange : ∀ M rows cols, rank M rows cols =
+    /// Nat.countRange (nonzeroRowB (rowEchelon M rows cols) cols) rows` —
+    /// `Eq.refl`, and the only route every `Nat.countRange` law has to `rank`.
+    pub rank_eq_count_range: NameId,
+    /// `Rat.rank_le_rows : ∀ M rows cols, Le (rank M rows cols) rows` — one
+    /// application of `Nat.countRange_le`. Uses no property of `rowEchelon`,
+    /// which is why this half of the dimension bound is free and `rank ≤ cols`
+    /// is not (it needs `rowEchelon_isEchelon`, ADR-1554 obligation 4).
+    pub rank_le_rows: NameId,
+    /// `Rat.rank_zero_rows : ∀ M cols, rank M 0 cols = 0` — `Eq.refl`.
+    pub rank_zero_rows: NameId,
+    /// `Rat.countRange_nonzeroRowB_zero : ∀ E n,
+    /// Nat.countRange (nonzeroRowB E 0) n = 0` — the generalisation over the
+    /// matrix that [`Self::rank_zero_cols`] needs: in `rank M rows 0` the
+    /// matrix is `rowEchelon M rows 0`, which itself depends on the induction
+    /// variable.
+    pub count_range_nonzero_row_b_zero: NameId,
+    /// `Rat.rank_zero_cols : ∀ M rows, rank M rows 0 = 0` — `rank ≤ cols` is
+    /// open in general, but at `cols = 0` it holds as an EQUALITY, which is a
+    /// control a definition counting rows regardless of the leading index
+    /// would fail.
+    pub rank_zero_cols: NameId,
 }
 
 impl RatPrelude {
@@ -3126,6 +3176,15 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         echelon_step_ok: child(kernel, "echelonStepOk"),
         is_echelon_aux: child(kernel, "isEchelonAux"),
         is_echelon: child(kernel, "isEchelon"),
+        nonzero_row_b: child(kernel, "nonzeroRowB"),
+        nonzero_row_b_eq_ble: child(kernel, "nonzeroRowB_eq_ble"),
+        nonzero_row_b_zero_cols: child(kernel, "nonzeroRowB_zero_cols"),
+        rank: child(kernel, "rank"),
+        rank_eq_count_range: child(kernel, "rank_eq_countRange"),
+        rank_le_rows: child(kernel, "rank_le_rows"),
+        rank_zero_rows: child(kernel, "rank_zero_rows"),
+        count_range_nonzero_row_b_zero: child(kernel, "countRange_nonzeroRowB_zero"),
+        rank_zero_cols: child(kernel, "rank_zero_cols"),
     }
 }
 
@@ -3187,6 +3246,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_det_mul::declare_matrix_det_mul(&mut d, prelude)?;
         det_mul::declare_det_mul(&mut d, prelude)?;
         echelon::declare_echelon(&mut d, prelude)?;
+        rank::declare_rank(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3213,6 +3273,9 @@ mod det_mul_tests;
 
 #[cfg(test)]
 mod echelon_tests;
+
+#[cfg(test)]
+mod rank_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;
