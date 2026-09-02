@@ -50,7 +50,7 @@ impl NatOps for Fixture {
 /// pp)` — re-implemented from the definitions, not from a doc comment.
 fn gauss_neg_count(pp: u32, a: u32, m: u32) -> u32 {
     (0..m)
-        .filter(|j| (a * (j + 1)) % pp >= pp / 2 + 1)
+        .filter(|j| (a * (j + 1)) % pp > pp / 2)
         .count()
         .try_into()
         .expect("the count fits")
@@ -135,7 +135,11 @@ fn the_reciprocity_identity_holds_at_seven_prime_pairs() {
             "gaussCount_sum_even must hold at ({p}, {q})"
         );
         // And that it is the classical sign: `-1` exactly when both are 3 mod 4.
-        let sign = if (n_p + n_q) % 2 == 0 { 1i32 } else { -1 };
+        let sign = if (n_p + n_q).is_multiple_of(2) {
+            1i32
+        } else {
+            -1
+        };
         let classical = if p % 4 == 3 && q % 4 == 3 { -1 } else { 1i32 };
         assert_eq!(sign, classical, "the Legendre product at ({p}, {q})");
     }

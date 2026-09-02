@@ -121,6 +121,7 @@ mod parity;
 mod prime_dvd_mul_mirrors;
 mod prod;
 mod qr_criterion;
+mod quadratic_reciprocity;
 mod rat;
 mod ring;
 mod second_supplementary;
@@ -727,6 +728,40 @@ pub struct IntPrelude {
     /// avoids the converse and for the single `prodRange` split it still
     /// lacks.
     pub first_supplementary_law_not_residue: NameId,
+    // -- `quadratic-reciprocity-2` lane: `quadratic_reciprocity.rs` --
+    /// `Int.legendreSym : Nat -> Nat -> Int :=`
+    /// `  fun m a => pow (neg one) (Nat.gaussNegCount (succ (mul 2 m)) a m)`
+    /// (`quadratic_reciprocity.rs`) — the Legendre symbol of `a` modulo the
+    /// odd number `succ (2*m)`, DEFINED by Gauss's counting exponent rather
+    /// than by the residue indicator, because the converse of Euler's
+    /// criterion is not statable in this kernel (`qr_criterion.rs`). The name
+    /// is justified by
+    /// [`legendre_sym_mod_eq_pow`](Self::legendre_sym_mod_eq_pow), not by the
+    /// definition. **`legendreSym m a = 1` is NOT proved equivalent to
+    /// [`is_quadratic_residue`](Self::is_quadratic_residue)** in either
+    /// direction; see that module's doc.
+    pub legendre_sym: NameId,
+    /// `Int.legendreSym_modEq_pow : ∀ m a, Nat.PrimeCond (succ (mul 2 m)) →`
+    /// `  Eq (Nat.gcd a (succ (mul 2 m))) 1 →`
+    /// `  ModEq (ofNat (succ (mul 2 m))) (pow (ofNat a) m) (legendreSym m a)`
+    /// (`quadratic_reciprocity.rs`) — Euler's criterion for
+    /// [`legendre_sym`](Self::legendre_sym).
+    /// [`gauss_lemma_sign_count`](Self::gauss_lemma_sign_count) read through
+    /// the definition; the two conclusions differ only by delta.
+    pub legendre_sym_mod_eq_pow: NameId,
+    /// `Int.quadraticReciprocity : ∀ m n,`
+    /// `  Eq (Nat.gcd (succ (mul 2 n)) (succ (mul 2 m))) 1 →`
+    /// `  Eq Int (mul (legendreSym m (succ (mul 2 n)))`
+    /// `              (legendreSym n (succ (mul 2 m))))`
+    /// `         (pow (neg one) (mul n m))`
+    /// (`quadratic_reciprocity.rs`) — **the law of quadratic reciprocity**.
+    /// At `p = 2m+1`, `q = 2n+1` this is `(q|p)·(p|q) = (-1)^((p-1)/2 ·
+    /// (q-1)/2)`. All the mathematics is `Nat.gaussCount_sum_even`; this is
+    /// `Int.pow_add` plus the observation that `(-1)^(n*m)` is its own
+    /// inverse, which is what removes the parity case split. **Only
+    /// coprimality is assumed, never primality** — strictly stronger than the
+    /// textbook statement.
+    pub quadratic_reciprocity: NameId,
 
     // --- discreteness and decision laws --------------------------------------
     /// `no_int_between : ∀ (x : Int), Not (And (lt zero x) (lt x one))`.
@@ -2040,6 +2075,9 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         wilson_half_split: child(kernel, "wilsonHalfSplit"),
         first_supplementary_law_residue: child(kernel, "firstSupplementaryLawResidue"),
         first_supplementary_law_not_residue: child(kernel, "firstSupplementaryLawNotResidue"),
+        legendre_sym: child(kernel, "legendreSym"),
+        legendre_sym_mod_eq_pow: child(kernel, "legendreSym_modEq_pow"),
+        quadratic_reciprocity: child(kernel, "quadraticReciprocity"),
         no_int_between: child(kernel, "no_int_between"),
         le_total: child(kernel, "le_total"),
         lt_of_le_of_ne: child(kernel, "lt_of_le_of_ne"),
@@ -2578,6 +2616,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // The RESIDUE half (ADR-1235): needs `Int.wilson`, `prodRange_split`,
         // `prodRange_permute` at the reflection, and `Nat.sub_sub_self`.
         first_supplementary_residue::declare_first_supplementary_residue_all(&mut d)?;
+        // **The law of quadratic reciprocity** (`quadratic_reciprocity.rs`):
+        // needs `gaussLemmaSignCount` (for the symbol's Euler-criterion
+        // spec), `Nat.gaussCount_sum_even` (the whole mathematical content),
+        // `Int.pow_add`, `Int.pow_neg_one_of_even` and the three ring lemmas
+        // `mul_assoc`/`mul_one`/`one_mul`.
+        quadratic_reciprocity::declare_quadratic_reciprocity_all(&mut d)?;
         crt::declare_crt_exists(&mut d)?;
         crt::declare_crt_unique(&mut d)?;
         two_sided_induction::declare_induction_on(&mut d)?;
@@ -2677,3 +2721,6 @@ mod int_prelude_tests;
 
 #[cfg(test)]
 mod sum_maps_tests;
+
+#[cfg(test)]
+mod quadratic_reciprocity_tests;

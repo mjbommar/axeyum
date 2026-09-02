@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1055 names,
+/// The `NatPrelude` field table (1057 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1340,6 +1340,8 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "eisenstein_floor_sum_min_free",
                 p.eisenstein_floor_sum_min_free,
             ),
+            ("gauss_count_sum_even", p.gauss_count_sum_even),
+            ("gauss_count_sum_mod_eq", p.gauss_count_sum_mod_eq),
             ("multiset", p.multiset),
             ("multiset_mk", p.multiset_mk),
             ("multiset_rec", p.multiset_rec),
@@ -1425,7 +1427,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (366 names,
+/// The `IntPrelude` field table (369 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1600,6 +1602,9 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
                 "first_supplementary_law_not_residue",
                 p.first_supplementary_law_not_residue,
             ),
+            ("legendre_sym", p.legendre_sym),
+            ("legendre_sym_mod_eq_pow", p.legendre_sym_mod_eq_pow),
+            ("quadratic_reciprocity", p.quadratic_reciprocity),
             ("no_int_between", p.no_int_between),
             ("le_total", p.le_total),
             ("lt_of_le_of_ne", p.lt_of_le_of_ne),

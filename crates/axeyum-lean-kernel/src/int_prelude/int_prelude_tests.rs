@@ -187,7 +187,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 263] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 265] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -281,6 +281,11 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 263] {
         // the parity-general Wilson split that supplies its witness.
         p.wilson_half_split,
         p.first_supplementary_law_residue,
+        // `quadratic-reciprocity-2` lane (ADR-1557): the law itself, plus the
+        // Legendre symbol it is stated over and that symbol's Euler-criterion
+        // specification.
+        p.legendre_sym_mod_eq_pow,
+        p.quadratic_reciprocity,
         p.mod_eq_prod_range_lt,
         p.emod_neg,
         p.mod_eq_of_neg_modulus,
@@ -546,8 +551,10 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 48] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 30] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 31] {
     [
+        // `quadratic-reciprocity-2` lane (ADR-1557).
+        p.legendre_sym,
         p.fib,
         p.even,
         p.odd,
