@@ -620,6 +620,12 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `nat-factorization` lane: `min_fac_dvd.rs`.
+        p.min_fac_aux_two_le,
+        p.min_fac_aux_dvd,
+        p.min_fac_two_le,
+        p.min_fac_dvd,
+        p.min_fac_prime,
         // `nat-factorization` lane: `multiset_prod.rs`.
         p.prod_range_congr,
         p.prod_range_mul,

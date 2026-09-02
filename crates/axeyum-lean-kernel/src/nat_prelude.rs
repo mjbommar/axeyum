@@ -218,6 +218,7 @@ mod log_clog_mirrors;
 mod log_clog_order;
 mod lor;
 mod min_fac;
+mod min_fac_dvd;
 mod minmax;
 mod minmax_lemmas;
 mod mod_mul_lemmas;
@@ -397,6 +398,7 @@ use log_clog_order::declare_log_clog_order_all;
 use log2::declare_log2_all;
 use lor::declare_lor_all;
 use min_fac::{declare_min_fac_all, declare_min_fac_minimal_all};
+use min_fac_dvd::declare_min_fac_dvd_all;
 use minmax::declare_minmax_all;
 use minmax_lemmas::declare_minmax_lemmas_all;
 use mod_mul_lemmas::declare_mod_mul_family;
@@ -5773,6 +5775,31 @@ pub struct NatPrelude {
     /// handed off, and the one law the COMPUTED prime factorization needs
     /// (`multiset_prod.rs`).
     pub multiset_prod_add: NameId,
+
+    // --- `Nat.minFac` divides, is `>= 2`, and is prime (`min_fac_dvd.rs`) ----
+    /// `Nat.minFacAuxTwoLe : ∀ fuel n cp, Le 2 (succ cp) →
+    /// Le 2 (minFacAux fuel n (succ cp))`. The candidate is stated as a
+    /// SUCCESSOR so that [`div_mod_exec`](Self::div_mod_exec) applies without an
+    /// unfold (`min_fac_dvd.rs`).
+    pub min_fac_aux_two_le: NameId,
+    /// `Nat.minFacAuxDvd : ∀ fuel n cp, Eq (add (succ cp) fuel) n →
+    /// dvd (minFacAux fuel n (succ cp)) n`. The `add candidate fuel = n` premise
+    /// is what makes the fuel-exhaustion row correct — without it the statement
+    /// is FALSE (`minFacAux 0 6 4 = 4`, and `4` does not divide `6`)
+    /// (`min_fac_dvd.rs`).
+    pub min_fac_aux_dvd: NameId,
+    /// `Nat.min_fac_two_le : ∀ n, Le 2 n → Le 2 (minFac n)` (`min_fac_dvd.rs`).
+    pub min_fac_two_le: NameId,
+    /// `Nat.min_fac_dvd : ∀ n, Le 2 n → dvd (minFac n) n` — the fact
+    /// [`min_fac_minimal_of_two_le`](Self::min_fac_minimal_of_two_le) does NOT
+    /// give: minimality is satisfied vacuously by a `minFac` returning a
+    /// non-divisor (`min_fac_dvd.rs`).
+    pub min_fac_dvd: NameId,
+    /// `Nat.min_fac_prime : ∀ n, Le 2 n → prime_condition (minFac n)` — no new
+    /// induction, just [`min_fac_dvd`](Self::min_fac_dvd) plus
+    /// [`min_fac_minimal_of_two_le`](Self::min_fac_minimal_of_two_le) and
+    /// [`le_of_dvd`](Self::le_of_dvd) (`min_fac_dvd.rs`).
+    pub min_fac_prime: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6675,6 +6702,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_range_mul: kernel.name_str(nat, "prodRange_mul"),
             prod_range_add_of_one_above: kernel.name_str(nat, "prodRange_add_of_one_above"),
             multiset_prod_add: kernel.name_str(multiset, "prod_add"),
+            min_fac_aux_two_le: kernel.name_str(nat, "minFacAuxTwoLe"),
+            min_fac_aux_dvd: kernel.name_str(nat, "minFacAuxDvd"),
+            min_fac_two_le: kernel.name_str(nat, "min_fac_two_le"),
+            min_fac_dvd: kernel.name_str(nat, "min_fac_dvd"),
+            min_fac_prime: kernel.name_str(nat, "min_fac_prime"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7948,6 +7980,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.pow_add`/`pow_zero`, `Nat.mul_assoc`/`mul_comm`/`mul_one`,
         // `Nat.add_comm` and `Nat.le_add_right`, all far above.
         declare_multiset_prod_all(&mut d, &p)?;
+        // `Nat.minFac` divides, is at least `2`, and is prime
+        // (`min_fac_dvd.rs`). Needs `declare_min_fac_minimal_all` (far above)
+        // for `min_fac_minimal_of_two_le`, plus `Nat.div_mod_exec`,
+        // `Nat.div_mod_remainder_eq_zero_iff_dvd`, `Nat.le_of_dvd` and
+        // `Nat.dvd_trans`. Nothing above it needs these, so they go last.
+        declare_min_fac_dvd_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -8039,3 +8077,6 @@ mod multiset_tests;
 
 #[cfg(test)]
 mod multiset_prod_tests;
+
+#[cfg(test)]
+mod min_fac_dvd_tests;
