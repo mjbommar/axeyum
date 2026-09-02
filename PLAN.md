@@ -125,6 +125,7 @@ now. Nothing was deleted.
 | 2026-09-01 | `53a0065d2` | 4 of 10: the `natAbs_inj_of_*` mirrors, first attempt each. Three of four branches close on the sign hypothesis alone, because `Int.le Int.zero (negSucc n)` IS `False`. |
 | 2026-09-01 | `ce3a4cbac` | 5 more: the `mul_self` cluster (3 new `Nat` squaring lemmas carry all its content) and the `coe_sub_coe` pair (`subNatNat_elim` after the `ofNat_add_negOfNat` bridge — the two stuck terms are NOT defeq). Plus the `Nat.`-namespace axiom-freedom gap, 13 declarations. |
 | 2026-09-01 | `32e338978` | Row 1, `natAbs_emod_two`: the family scores **10 of 10**. Its two parity cases take different routes — there is no `Nat.odd_iff_even_succ` to mirror `even_iff_odd_succ` with. |
+| 2026-09-01 | shell-antipatterns-red | fix `grep -q` in pipeline under pipefail in 5 mutation-control scripts, check-shell-antipatterns.sh red -> green |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
@@ -35584,6 +35585,64 @@ was already leaking. An amendment excluding scored rows was written and
 unexercised widening of a blindness guard is the failure this repository cares
 most about, arriving in the direction nobody watches. ADR-1480 hands the
 decision to whoever has a crossing whose verdict depends on it.
+
+**Your lane's block (`DONE`, shell-antipatterns-red, 2026-09-01).**
+`scripts/check-shell-antipatterns.sh` was red on `main`: `bash
+scripts/check-shell-antipatterns.sh` exited 1 with 5 `SHELL_ANTIPATTERN_ERROR`
+lines, one per file, all "NEW file using `grep -q` in a pipeline under
+pipefail" (the baseline only pins known files/counts; these 5 files were
+absent from it entirely). All 5 landed 2026-08-30, after the checker's own
+last edit that day (09:55) — the checker existed when each landed, nothing
+ran it against them before merge.
+
+Flagged sites (file:line, count, git-log date/sha):
+
+| file | line(s) | count | landed |
+| --- | --- | --- | --- |
+| `scripts/tests/test-checked-interchange-mutations.sh` | 88, 93 | 2 | 2026-08-30 `46fabf264` |
+| `scripts/tests/test-credit-transaction-ledger-mutations.sh` | 78 | 1 | 2026-08-30 `917b3456b` |
+| `scripts/tests/test-credit-transaction-mutations.sh` | 78 | 1 | 2026-08-30 `2d5ee83e1` |
+| `scripts/tests/test-lean-adapter-mutations.sh` | 92, 97 | 2 | 2026-08-30 `e862dc294` |
+| `scripts/tests/test-structural-index-mutations.sh` | 110, 115, 155, 160, 166 | 5 | 2026-08-30 `fb82f8bfc` |
+
+Every site was `echo "$x" | grep -q[xE] PATTERN || { … exit 1 }` under
+`set -euo pipefail`; each was rewritten to
+`[ "$(echo "$x" | grep -c[xE] PATTERN)" -gt 0 ] || { … exit 1 }`, which
+consumes the whole pipe and cannot SIGPIPE the producer — meaning preserved
+exactly (count-of-matches-`>`-0 is equivalent to first-match-found for these
+single/multi-line greps).
+
+Post-fix, each affected mutation-control script was re-run directly (each is
+Python-based and copies the checker under test into its own `mktemp -d`
+scratch dir before mutating — never the shared worktree, per its own header
+comment; none needed a cargo build):
+
+- `test-checked-interchange-mutations.sh` — exit 0, `MUTATION KILL TABLE
+  PASSED -- 7 guards, each kills exactly its own fixture`
+- `test-credit-transaction-mutations.sh` — exit 0, `MUTATION TABLE: all 9
+  guards each killed exactly their own canary`
+- `test-credit-transaction-ledger-mutations.sh` — exit 0, `MUTATION TABLE:
+  all 9 guards each killed exactly their own canary`
+- `test-lean-adapter-mutations.sh` — exit 0, `MUTATION KILL TABLE PASSED --
+  7 guards, each kills exactly its own fixture`
+- `test-structural-index-mutations.sh` — exit 0, `all 6 guards killed 1:1`
+
+`scripts/check-shell-antipatterns.sh`: before `exit 1` (5
+`SHELL_ANTIPATTERN_ERROR` lines); after `exit 0`,
+`SHELL_ANTIPATTERNS|scanned=141|files=7|grep_q_in_pipeline=14|pipeline_status_reads=0`
+(the remaining 7 files/14 occurrences are the pre-existing baseline, unchanged
+and not risen).
+
+Control suites, both green:
+- `python3 -m unittest scripts.tests.test_check_shell_antipatterns_scope` —
+  `Ran 9 tests in 0.648s, OK`
+- `scripts/tests/test-check-shell-antipatterns.sh` (the detector's own
+  positive/negative controls, bonus check) —
+  `SHELL_ANTIPATTERN_CONTROLS|cases=12|positive=4|negative=6|PASS`
+
+Did not run: `just check`, `check.sh`, or any cargo-based gate — not touched
+by this diff (only 5 shell scripts and this status doc changed) and out of
+scope per the brief. Nothing was pushed.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
