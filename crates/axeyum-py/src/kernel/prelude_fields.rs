@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (981 names,
+/// The `NatPrelude` field table (986 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -666,12 +666,17 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "injective_on_imp_surjective_on",
                 p.injective_on_imp_surjective_on,
             ),
+            ("injective_on_or_duplicate", p.injective_on_or_duplicate),
             ("restrict_injective", p.restrict_injective),
             ("restrict_maps_into", p.restrict_maps_into),
             ("transposition", p.transposition),
             ("transposition_involutive", p.transposition_involutive),
             ("transposition_injective", p.transposition_injective),
             ("transposition_maps_into", p.transposition_maps_into),
+            ("transposition_at_i", p.transposition_at_i),
+            ("transposition_at_j", p.transposition_at_j),
+            ("transposition_gt_j", p.transposition_gt_j),
+            ("transposition_eq_of_ne", p.transposition_eq_of_ne),
             ("conjugate_injective", p.conjugate_injective),
             ("conjugate_maps_into", p.conjugate_maps_into),
             ("setwise_fixed", p.setwise_fixed),
@@ -1813,7 +1818,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (373 names,
+/// The `RatPrelude` field table (378 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2229,6 +2234,11 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 "det_row_selection_of_duplicate",
                 p.det_row_selection_of_duplicate,
             ),
+            ("det_congr_lt", p.det_congr_lt),
+            ("mat_skip_lt_succ", p.mat_skip_lt_succ),
+            ("det_congr_entry_lt", p.det_congr_entry_lt),
+            ("det_row_selection_injective", p.det_row_selection_injective),
+            ("det_row_selection", p.det_row_selection),
         ],
         lists: Vec::new(),
     }
