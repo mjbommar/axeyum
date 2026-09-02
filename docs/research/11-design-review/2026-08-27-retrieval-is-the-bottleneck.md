@@ -398,12 +398,17 @@ what should be quoted, not the seventeen.
 |---|---|---|---|---|---|---|
 | 2026-08-25..27 | [§1 above](#1-the-audit-of-thirteen) | 1,032 / — | 65 | 17 | 3 | 3 (in-session) |
 | 2026-09-01 | [2026-09-02-retrieval-audit-for-2026-09-01.md](2026-09-02-retrieval-audit-for-2026-09-01.md) | 240 / 69 | 17 | 4 | 1 | 1 (`b4fb008d8`) |
+| 2026-09-02 | [2026-09-03-retrieval-audit-for-2026-09-02.md](2026-09-03-retrieval-audit-for-2026-09-02.md) | 81 / 28 | 7 | 0 | 0 | 0 |
 
 **Running total: 21 audited instances, 4 of them landed as real duplicates.**
+2026-09-02 added 7 candidates and 0 confirmed instances — the first clean day
+in the ledger. The L0 duplicate gate also gained a no-cargo `--prebuilt` route
+into `check-merge-hygiene.sh` that day (`63f887b89`), a direct structural
+response to the 2026-09-01 audit's 25-hour red-gate finding.
 
-Do not add the two rows' *candidate* counts and read a rate off them: the
-windows differ in length, the second window's classifier is wider (it adds
-`turns out`, `promote`, `hoist`, `unexpose`, `dedup`, `was already` and six
-more), and the second is scoped to `crates/axeyum-lean-kernel` where the first
-was not. What is comparable is the confirmed-per-audited-day figure, and only
-once there are enough days to have one.
+Do not add the rows' *candidate* counts and read a rate off them: the windows
+differ in length, the classifier widened between the first and second rows (it
+adds `turns out`, `promote`, `hoist`, `unexpose`, `dedup`, `was already` and six
+more), and only the first row is unscoped to `crates/axeyum-lean-kernel`. What
+is comparable is the confirmed-per-audited-day figure, and only once there are
+enough days to have one.
