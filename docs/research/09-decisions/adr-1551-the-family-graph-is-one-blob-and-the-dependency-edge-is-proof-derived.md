@@ -147,7 +147,17 @@ Remove both pins and **42 families / 508 rows remain in one component.**
 Assigning it one partition empties `train` or `development`, and
 `check-autogenesis-nursery.py` reports that as `empty-partition:` against
 `required_evaluation_partitions: [train, development, held-out]` — the very
-gate option 1 exists to turn green. So option 1's literal form is not merely
+gate option 1 exists to turn green.
+
+That check is scoped to `nursery-v1` alone (`build_report`, line 543), which
+does not weaken it: **every v1 train family and every v1 development family is
+in the blob.** v1's train side is `integer-fibonacci`, `integer-gcd`,
+`integer-modular-equivalence`, `natural-factorial`, `natural-fibonacci`; its
+development side is `natural-binomial`, `natural-bitwise`, `natural-gcd`,
+`natural-logarithm`, `natural-modular-equivalence`, `natural-primes`. All
+eleven are blob members, and v1's only family outside it is the held-out
+`natural-square-root`. So whichever partition the blob takes, the OTHER one is
+empty in v1 and the blocker fires. So option 1's literal form is not merely
 unbalanced; it is refused by the gate it is meant to satisfy.
 
 The rule above therefore cuts the residual, and the cost of cutting it is the

@@ -102,7 +102,7 @@ mutants, eleven single kills.
 `gen-autogenesis-nursery-refill.py --check` 0/0 ·
 `check-dispatchable-frontier.py` 1/1 (2 against a floor of 10) ·
 `check-partition-edges.py --baseline` 0/0 (`crossing=198 violations=0`) ·
-`validate-facts.py` 0/0. **Not run:** `cargo` in any form, `just check`,
+`validate-facts.py` 0/0 · `check-generated-artifact-ownership.py` **0** (`guarded=4 producers_run=17 fails=0`, including the OWNER arm's byte-for-byte restore of the census from a perturbed copy) · `check-merge-hygiene.sh` 0 · `check-aggregate-scope.sh` 1 (17 pre-existing one-sided steps, none of them this lane's — the two new steps went into both files). **Not run:** `cargo` in any form, `just check`,
 `scripts/check.sh` end to end. No `.rs` file was touched.
 
 <!-- plan-section: landed-changes -->
