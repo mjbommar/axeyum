@@ -2303,7 +2303,7 @@ pub(super) fn declare_weierstrass_m_test(
 // cannot supply a `Cauchy`-`Prop`-wrapped fact and have this declaration
 // eliminate the existential internally -- `Exists.rec`'s target must not
 // mention the witness, and here it would (through `G`). A caller obtains
-// `(k, …)` from [`CRealPrelude::geom_scaled_cauchy_of_lt`] plus their own
+// `(k, …)` from [`RatioTestNames::geom_scaled_cauchy_of_lt`] plus their own
 // `Exists`-elimination, same as any other consumer of a `Cauchy` fact.
 //
 // `r < 1` is deliberately not a hypothesis: nothing in this construction

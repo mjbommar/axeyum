@@ -94,6 +94,15 @@ Consequences that follow from the shape, not from taste:
 
 ### Migration order, measured rather than chosen
 
+> **CORRECTED 2026-09-01 by [ADR-1530](adr-1530-the-creal-build-table-is-generated-not-maintained.md).**
+> The table below was measured over `creal.rs` plus `creal/*.rs` and nothing
+> else, so it could not see a reader elsewhere in the crate. **`sqrt` is not a
+> local move**: `src/complex.rs` reads `creal.sqrt` and five of its siblings at
+> 19 sites. Thirteen of the remaining modules did move (62 fields); read
+> ADR-1530's correction, or run
+> `python3 scripts/creal-migrate-registry.py --list`, which answers this from
+> the tree rather than from a table that ages.
+
 A module can move only if nothing outside it reads its names — otherwise the
 move is a cross-module rename with no local benefit.
 `scripts/creal-declare-deps.py` answers that from the graph. **Fifteen modules

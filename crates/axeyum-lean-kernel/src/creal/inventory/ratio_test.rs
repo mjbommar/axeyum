@@ -30,9 +30,13 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
     vec![
         (
             "CReal.geomScaledCauchyOfLt",
-            p.geom_scaled_cauchy_of_lt,
+            p.ratio_test.geom_scaled_cauchy_of_lt,
             "theorem",
         ),
-        ("CReal.sumRangeRatioTest", p.sum_range_ratio_test, "theorem"),
+        (
+            "CReal.sumRangeRatioTest",
+            p.ratio_test.sum_range_ratio_test,
+            "theorem",
+        ),
     ]
 }

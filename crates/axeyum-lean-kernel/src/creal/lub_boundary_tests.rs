@@ -58,7 +58,7 @@ fn lub_supremum_hypotheses_are_satisfiable_at_a_decidable_proposition_body() {
     let and_intro = p.rat.int.logic.and_intro;
 
     // hub : ∀ x, lubSet True x → le x one — `lubSet_bounded` at `A := True`.
-    let hub = d.lemma(p.lub_set_bounded, &[true_p]);
+    let hub = d.lemma(p.lub_boundary.lub_set_bounded, &[true_p]);
 
     // `1 ∈ lubSet True`, through the right disjunct.
     let one_is_member = {
@@ -81,13 +81,13 @@ fn lub_supremum_hypotheses_are_satisfiable_at_a_decidable_proposition_body() {
         let predicate = {
             let x_fv = d.fresh_fvar();
             let x = d.kernel().fvar(x_fv);
-            let member = d.const_app(p.lub_set, &[true_p, x]);
+            let member = d.const_app(p.lub_boundary.lub_set, &[true_p, x]);
             let strict = d.const_app(p.lt, &[t, x]);
             let body = d.and(member, strict);
             d.lam_fv(x_fv, carrier, body)
         };
 
-        let member_ty = d.const_app(p.lub_set, &[true_p, one_c]);
+        let member_ty = d.const_app(p.lub_boundary.lub_set, &[true_p, one_c]);
         let strict_ty = d.const_app(p.lt, &[t, one_c]);
         let pair = d.const_app(and_intro, &[member_ty, strict_ty, one_is_member, ht]);
         let witness = exists_intro(&mut d, p, carrier, predicate, one_c, pair);
@@ -96,7 +96,10 @@ fn lub_supremum_hypotheses_are_satisfiable_at_a_decidable_proposition_body() {
         d.lam_fv(t_fv, carrier, with_ht)
     };
 
-    let instance = d.lemma(p.lub_decides_em, &[true_p, one_c, hub, happrox]);
+    let instance = d.lemma(
+        p.lub_boundary.lub_decides_em,
+        &[true_p, one_c, hub, happrox],
+    );
     let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
         panic!(
             "lub_decides_em refused a DISCHARGED pair of supremum hypotheses \
@@ -179,10 +182,22 @@ fn lub_boundary_declarations_are_derived_and_axiom_free() {
 fn lub_boundary_declarations_are_derived_and_axiom_free_body() {
     let (kernel, p) = built();
     let expected: [(&str, crate::NameId, &str); 4] = [
-        ("CReal.lubSet", p.lub_set, "def"),
-        ("CReal.lubSet_inhabited", p.lub_set_inhabited, "theorem"),
-        ("CReal.lubSet_bounded", p.lub_set_bounded, "theorem"),
-        ("CReal.lub_decides_em", p.lub_decides_em, "theorem"),
+        ("CReal.lubSet", p.lub_boundary.lub_set, "def"),
+        (
+            "CReal.lubSet_inhabited",
+            p.lub_boundary.lub_set_inhabited,
+            "theorem",
+        ),
+        (
+            "CReal.lubSet_bounded",
+            p.lub_boundary.lub_set_bounded,
+            "theorem",
+        ),
+        (
+            "CReal.lub_decides_em",
+            p.lub_boundary.lub_decides_em,
+            "theorem",
+        ),
     ];
     for (label, name, kind) in expected {
         let declaration = kernel
@@ -229,7 +244,7 @@ fn lub_decides_em_states_excluded_middle_over_the_counterexample_family_body() {
     let (kernel, p) = built();
     let declaration = kernel
         .environment()
-        .get(p.lub_decides_em)
+        .get(p.lub_boundary.lub_decides_em)
         .expect("CReal.lub_decides_em must be declared");
     let ty = match declaration {
         Declaration::Theorem { ty, .. } => *ty,

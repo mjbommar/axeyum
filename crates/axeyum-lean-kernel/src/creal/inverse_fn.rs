@@ -58,10 +58,12 @@
 
 use super::monotone::{cneg, czero, echain, equiv_of_sub_equiv_zero, erefl, esymm, neg_zero_equiv};
 use super::{CRealPrelude, and_intro, cadd, cle, clt, creal_ty, div_succ, embed, equiv};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 /// `CReal.order_reflect_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a b →
@@ -208,7 +210,7 @@ pub(super) fn declare_order_reflect_of_pos_deriv(
         d.pi_fv(f_fv, func_ty, over_fp)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.order_reflect_of_pos_deriv,
+        name: p.inverse_fn.order_reflect_of_pos_deriv,
         uparams: vec![],
         ty,
         value,
@@ -583,9 +585,77 @@ pub(super) fn declare_ivt_exact_root_at(
         d.pi_fv(f_fv, func_ty, over_fp)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.ivt_exact_root_at,
+        name: p.inverse_fn.ivt_exact_root_at,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/inverse_fn.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct InverseFnNames {
+    /// `CReal.order_reflect_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a
+    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∀ x y, le a x → le x b → le a y → le y b → Apart x y → lt (F x) (F y)
+    /// → lt x y` (`creal/inverse_fn.rs`) — the CONVERSE half of
+    /// [`super::CRealPrelude::strict_mono_of_pos_deriv`], and the reason it is stated with
+    /// `Apart x y` as a HYPOTHESIS rather than derived: producing `lt x y`
+    /// from nothing but a codomain inequality would require deciding which
+    /// of `lt x y`/`lt y x` holds, and `CReal.lt` is not decidable. Given
+    /// `Apart x y` as DATA (not derived via excluded middle), the proof
+    /// cases on it: the `lt x y` branch is the goal already; the `lt y x`
+    /// branch applies [`super::CRealPrelude::strict_mono_of_pos_deriv`] to get
+    /// `lt (F y) (F x)`, which together with the hypothesis `lt (F x) (F y)`
+    /// gives `lt (F x) (F x)` via `lt_trans`, refuted by `lt_irrefl`.
+    ///
+    /// Unconditional order-reflection (no `Apart x y` hypothesis) is NOT
+    /// proved here and is not reachable with this development's current
+    /// machinery: it is exactly as hard as finding an exact preimage
+    /// (`creal/ivt.rs`'s `ivt_approx`, still open), since both require
+    /// turning a codomain inequality into domain POSITION information, which
+    /// needs some form of bisection/localisation this file does not have in
+    /// exact form.
+    pub order_reflect_of_pos_deriv: NameId,
+    /// `CReal.ivt_exact_root_at : ∀ F F' a b, HasDerivativeOn F F' a b →
+    /// UniformlyContinuousOn F a b → le a b → ∀ y, le (F a) y → le y (F b) →
+    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
+    /// ∃ c, le a c ∧ (le c b ∧ Equiv (F c) y)` (`creal/inverse_fn.rs`) —
+    /// Chapter 12's EXISTENCE half: `F` has a genuine preimage for every
+    /// target `y` between `F a` and `F b`, not just for `y = zero`.
+    ///
+    /// Not a re-derivation of [`super::CRealPrelude::ivt_exact_root`] — a wrapper applying
+    /// it to the SHIFTED function `G := fun z => add (F z) (neg y)`, whose
+    /// root is `F`'s `y`-preimage. `G`'s derivative and continuity come from
+    /// [`super::CRealPrelude::has_derivative_sub`]/[`super::CRealPrelude::uniformly_continuous_sub`]
+    /// composed with [`super::CRealPrelude::has_derivative_const`]/
+    /// [`super::CRealPrelude::uniformly_continuous_const`] at `y` — a constant shift changes
+    /// neither — and the derivative-bound hypothesis on `F'` transports to
+    /// `G'` through the ring identity `F' z ~ F' z − 0`
+    /// ([`super::CRealPrelude::add_zero`] plus `monotone.rs`'s private `neg_zero_equiv`,
+    /// via [`super::CRealPrelude::le_congr`]). `G a ≤ 0 ≤ G b` is
+    /// [`super::CRealPrelude::add_le_add`]/[`super::CRealPrelude::add_neg`] applied to `F a ≤ y ≤ F b`,
+    /// the same shift at the other two endpoints. `ivt_exact_root`'s result
+    /// `Equiv (G c) zero` reads back as `Equiv (F c) y` via `monotone.rs`'s
+    /// `equiv_of_sub_equiv_zero`, built there for an unrelated purpose and
+    /// reused here unchanged.
+    pub ivt_exact_root_at: NameId,
+}
+
+impl InverseFnNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
+            ivt_exact_root_at: kernel.name_str(creal, "ivt_exact_root_at"),
+        }
+    }
 }

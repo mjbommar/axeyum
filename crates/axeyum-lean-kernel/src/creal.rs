@@ -103,11 +103,30 @@ use crate::rat_prelude::ops::{
 use crate::rat_prelude::{RatPrelude, build_rat_prelude};
 use crate::{Kernel, KernelError, PreludeKey, PreludeValue};
 
+pub use completeness::CompletenessNames;
+pub use cos_sign::CosSignNames;
+pub use crossing::CrossingNames;
+pub use deriv_unique::DerivUniqueNames;
+pub use evt_row1::EvtRow1Names;
+pub use exp_fn::ExpFnNames;
+pub use extreme_value::ExtremeValueNames;
+pub use inverse_fn::InverseFnNames;
 /// Re-exported so `CRealPrelude::ivt_boundary` -- a `pub` field -- has a
 /// publicly nameable type. `mod creal` is private at the crate root, so a
 /// `pub struct` inside it is not reachable without this; without it the
 /// `private_interfaces` lint fires. ADR-1512.
 pub use ivt_boundary::IvtBoundaryNames;
+pub use lub_boundary::LubBoundaryNames;
+pub use mvt::MvtNames;
+pub use pi::PiNames;
+pub use polynomial::PolynomialNames;
+pub use ratio_test::RatioTestNames;
+
+/// The build table the prelude actually runs: `STEP_DISPATCH`'s order and
+/// dispatch, plus the `requires`/`provides` edges
+/// `scripts/creal-declare-deps.py` measures from this module's source. See
+/// [`steps_generated`] for why it is generated rather than written.
+use steps_generated::STEPS;
 
 /// Delta heights for the real definitions: above every `Rat` definition.
 const LEAF_HEIGHT: u16 = 40;
@@ -810,63 +829,15 @@ pub struct CRealPrelude {
     pub apart_cotrans: NameId,
 
     // --- Bishop completeness (ADR-0512 phase R8) ------------------------------
-    /// `CReal.RegularSeq : (Nat → CReal) → Prop` —
-    /// `RegularSeq X := ∀ m n, Within (seq (X m) m − seq (X n) n) (1/(m+1)+1/(n+1))`.
+    /// `creal/completeness.rs`'s own 5 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// **The canonical-sample formulation, not the arbitrary-index one.** The
-    /// textbook statement compares `X m` and `X n` as reals at an arbitrary
-    /// shared representative index (`CReal.le`/`CReal.add`-shaped, the way
-    /// [`Self::le`] itself is stated), which routes every consumer through
-    /// `CReal.add`'s index shift before it can be unfolded at all. This
-    /// definition instead compares the sample **each real already offers at
-    /// its own index** — `seq (X m) m`, exactly the quantity
-    /// [`Self::rat_approx_upper`]/[`Self::rat_approx_lower`] already prove is
-    /// within `1/(m+1)` of the real `X m` — so it is equivalent up to a
-    /// constant factor to the textbook condition, never mentions `CReal.add`,
-    /// and is what [`Self::limit`] below is built from directly.
-    pub regular_seq: NameId,
-    /// `CReal.limitSeq : (Nat → CReal) → Nat → Rat` —
-    /// `limitSeq X n := seq (X (2n+1)) (2n+1)`.
-    ///
-    /// The **diagonal**, sampled at Bishop's shift `2n+1` rather than at `n`
-    /// itself: [`Self::limit_seq_regular`]'s estimate needs the two halves of
-    /// each pairwise bound to fuse via
-    /// [`Rat.natDivSucc_halve`](crate::RatPrelude::nat_div_succ_halve) into
-    /// exactly `1/(n+1)`, which only happens at this shift — sampling at `n`
-    /// leaves a bound twice the size [`Self::regular_pred`] asks for, with no
-    /// rearrangement able to close the gap.
-    pub limit_seq: NameId,
-    /// `CReal.limitSeq_regular : ∀ X, RegularSeq X → Regular (limitSeq X)`.
-    ///
-    /// **Obligation 1: the diagonal is a `CReal` at all.** The proof needs no
-    /// arbitrary third index and no Archimedean closing step — unlike
-    /// `Equiv.trans`/`le_trans` — because [`Self::regular_seq`]'s hypothesis
-    /// is already stated at the two *fixed* diagonal indices `shift m` and
-    /// `shift n`; from there it is one instantiation of `RegularSeq` plus
-    /// `weaken` against the rational fact `modulus (shift m) (shift n) ≤
-    /// modulus m n`.
-    pub limit_seq_regular: NameId,
-    /// `CReal.limit : (X : Nat → CReal) → RegularSeq X → CReal := fun X h =>
-    /// CReal.mk (limitSeq X) (limitSeq_regular X h)`.
-    ///
-    /// **Bishop completeness, the construction half.** Every `RegularSeq`
-    /// sequence of reals has a limit, produced rather than merely asserted to
-    /// exist.
-    pub limit: NameId,
-    /// `CReal.limit_dist : ∀ X (h : RegularSeq X) n k, Within (seq (X n) k −
-    /// seq (limit X h) k) (2/(k+1) + 2/(n+1))`.
-    ///
-    /// **Bishop completeness, the convergence half**, at the rate `X`'s own
-    /// regularity carries (`O(1/n)`, uniformly in the sampling index `k`) —
-    /// not merely `∀ n, Equiv (X n) (limit ...)`, which is false in general
-    /// (a converging sequence is generally not equal to its limit at any
-    /// finite `n`). The estimate chains `X n`'s own regularity between `(k,
-    /// n)` with one [`Self::regular_seq`] instance at `(n, shift k)`, folds
-    /// the two `seq (X n) n` occurrences via `Rat.sub_add_sub`, and widens
-    /// `1/(shift k + 1)` up to `1/(k+1)` — no arbitrary third index or
-    /// Archimedean lemma needed, for the same reason as
-    /// [`Self::limit_seq_regular`].
-    pub limit_dist: NameId,
+    /// Reached as `p.completeness.regular_seq` and documented in
+    /// [`CompletenessNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub completeness: CompletenessNames,
 
     // --- convergence of sequences of `CReal` (ADR-0512 phase R9) -------------
     /// `CReal.Converges (f : Nat → CReal) (L : CReal) : Prop :=
@@ -931,7 +902,7 @@ pub struct CRealPrelude {
     /// Regular (speedup (fun n => seq (f n) n) K)`.
     ///
     /// The `Cauchy → Converges` bridge's reusable half. A `K`-scaled Cauchy
-    /// witness is not itself a [`Self::regular_seq`] instance: `RegularSeq`'s
+    /// witness is not itself a [`CompletenessNames::regular_seq`] instance: `RegularSeq`'s
     /// fixed modulus has no room for the extra factor `K`. But the **diagonal**
     /// `fun n => seq (f n) n` (a bare `Nat → Rat`, not a `Nat → CReal`) is
     /// exactly [`Self::k_regular_pred`]'s shape at `c := K` — the Cauchy
@@ -941,7 +912,7 @@ pub struct CRealPrelude {
     /// [`Self::regular_of_kregular`] applies unchanged and needs no new
     /// estimate. This is **not** the `RegularSeq (X : Nat → CReal)` shape a
     /// first reading of the goal suggests: routing a `Nat → CReal` sequence
-    /// through [`Self::regular_seq`]/[`Self::limit`] forces a
+    /// through [`CompletenessNames::regular_seq`]/[`CompletenessNames::limit`] forces a
     /// [`Self::regular`] bridge at the *shallow* outer index on top of the
     /// Cauchy estimate, which costs a whole extra `1/(m+1)` per side and
     /// overshoots `RegularSeq`'s fixed modulus by a factor of two — see
@@ -1046,71 +1017,15 @@ pub struct CRealPrelude {
     /// Converges f L → le L b`. The mirror of
     /// [`Self::converges_lower_bound`].
     pub converges_upper_bound: NameId,
-    /// `CReal.converges_upper_bound_shift : ∀ s f L b, (∀ n, le (f
-    /// (Nat.add n s)) b) → Converges f L → le L b`.
+    /// `creal/cos_sign.rs`'s own 6 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// The EVENTUAL form of [`Self::converges_upper_bound`], and the mirror
-    /// of [`Self::converges_lower_bound_shift`]: a bound that only holds
-    /// past some index still bounds the limit. `creal/alternating.rs`'s own
-    /// `declare_alternating_upper_bound` records in its doc comment that
-    /// "this development has no `converges_upper_bound_shift`" and then runs
-    /// the negation route INLINE on its own concrete sequence — this is that
-    /// route as a named, general theorem, so the next caller composes rather
-    /// than rebuilds. See `creal/cos_sign.rs`.
-    pub converges_upper_bound_shift: NameId,
-    /// `CReal.alternatingUpperBoundTail : ∀ a, (∀ k, le zero (a k)) →
-    /// (∀ k, le (a (succ (succ k))) (a (succ k))) → ∀ L,
-    /// Converges (sumRange t) L → le L (sumRange t 3)`, `t j := mul (pow (neg
-    /// one) j) (a j)`.
-    ///
-    /// The Leibniz upper bound requiring antitonicity only **from index 1**.
-    /// [`Self::alternating_upper_bound`]'s `hdec` premise is the GLOBAL `∀ k,
-    /// a (succ k) ≤ a k`, which cosine's magnitude sequence at `8/5`
-    /// (`a k = (8/5)^{2k}/(2k)!`) fails at `k = 0`: `a 0 = 1 < a 1 = 32/25`.
-    /// The tail from `k = 1` is antitone, and that is all this needs.
-    ///
-    /// Proved by CLAMPING rather than shifting: `â k := a (succ (pred k))` is
-    /// globally antitone, so [`Self::alternating_bracket_upper`] applies to it
-    /// unchanged, and `â`'s partial sums differ from `a`'s by the single
-    /// constant `a 1 − a 0` at every index `≥ 1` — which cancels off both
-    /// sides, leaving a statement about `a`'s own partial sums, closed by
-    /// [`Self::converges_upper_bound_shift`] at shift `2`. See
-    /// `creal/cos_sign.rs`.
-    pub alternating_upper_bound_tail: NameId,
-    /// `CReal.cosWideTailNonneg : ∀ k, le zero (mul (expTerm (add k k)) (pow
-    /// R (add k k)))`, `R := ofRat (natDivSucc 8 4) = 8/5` -- π rung 2's
-    /// `hnn` premise for [`Self::alternating_upper_bound_tail`] instantiated
-    /// at cosine's magnitude sequence at `R`. See `creal/cos_sign.rs`.
-    pub cos_wide_tail_nonneg: NameId,
-    /// `CReal.cosWideTailAntitone : ∀ k, le (mul (expTerm (add (succ (succ
-    /// k)) (succ (succ k)))) (pow R (add (succ (succ k)) (succ (succ k)))))
-    /// (mul (expTerm (add (succ k) (succ k))) (pow R (add (succ k) (succ
-    /// k))))`, `R := 8/5` -- π rung 2's `htail` premise (the sized blocker
-    /// `docs/plan/status/174-pi-rung2.md` names). Reduces to `R² <=
-    /// (m+1)(m+2)` at `m := add (succ k) (succ k) >= 2`, via two
-    /// [`Self::exp_term_succ_scale`] applications and `R² <= 3` (`Rat.ble`
-    /// computation on `8/5 * 8/5` vs `3/1`). See `creal/cos_sign.rs`.
-    pub cos_wide_tail_antitone: NameId,
-    /// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide
-    /// R)`, `t j := mul (pow (neg one) j) (mul (expTerm (add j j)) (pow R
-    /// (add j j)))`, `R := 8/5` -- pi rung 2 item 3, the `Converges` witness
-    /// [`Self::alternating_upper_bound_tail`] needs at cosine. Composes
-    /// [`Self::converges_of_abs_diff_le`] with `cosFnWideUniformConverges`'s
-    /// own `.spec` at the fixed point `R`, bridged per index from
-    /// `cosFnTerm`'s shape to `t`'s by one `mul_assoc`
-    /// ([`Self::sum_range_congr`]). See `creal/cos_sign.rs`.
-    pub cos_wide_series_converges: NameId,
-    /// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- pi
-    /// rung 2's target. [`Self::alternating_upper_bound_tail`] (at
-    /// [`Self::cos_wide_tail_nonneg`]/[`Self::cos_wide_tail_antitone`]/
-    /// [`Self::cos_wide_series_converges`]) gives `le (cosFnWide R)
-    /// (sumRange t 3)`; the numeric leaf `sumRange t 3 = -13/1875 <= 0` is
-    /// closed by a BOUND (`512/1875 <= 7/25`, then `add_le_add`) rather than
-    /// by evaluating the sum, because the sum's own `Rat.add` needs a
-    /// `Nat.gcd` and two `Nat.div`s at 46,875 on unary numerals and two
-    /// reverted attempts measured that at 616 s and 415 s against a
-    /// 94-123 s band. See `creal/cos_sign.rs`.
-    pub cos_wide_nonpositive: NameId,
+    /// Reached as `p.cos_sign.converges_upper_bound_shift` and documented in
+    /// [`CosSignNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub cos_sign: CosSignNames,
     /// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
     /// (∀ n, le (f n) (g n)) → le L M`.
     ///
@@ -1492,178 +1407,15 @@ pub struct CRealPrelude {
     /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
     /// `k+1`. See `creal/uniform_continuity.rs`.
     pub bucket_index_bound: NameId,
-    /// `CReal.crossingIndex : CReal → CReal → Rat → Nat` — the Archimedean
-    /// **crossing index**: given a base `a`, a target `c` and a positive
-    /// rational step `Δ`, the computed count of `Δ`-steps from `a` at which
-    /// `c` is reached, within a small fixed slack. `crossingIndex a c delta
-    /// := bucketIndex (mul (ofRat (Rat.inv delta)) (add c (neg a))) 0` —
-    /// rescale `c − a` by `Δ⁻¹` and read [`Self::bucket_index`] at the FIXED
-    /// grid `k := 0` (step `1`), reducing an arbitrary step to the one
-    /// `bucketIndex` already handles. Computed, never `Exists`-derived. See
-    /// `creal/crossing.rs`.
-    pub crossing_index: NameId,
-    /// `CReal.crossingUpper : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le c (CReal.add a (CReal.mul (CReal.ofRat delta) (CReal.ofRat
-    /// (Rat.add (Rat.natDivSucc (Nat.succ (CReal.crossingIndex a c delta)) 0)
-    /// (Rat.natDivSucc 2 j)))))`, `j` the closed term `bucketIndex` samples
-    /// at when `k = 0` (`(succ 0)*(succ 0)`, definitionally `1`).
+    /// `creal/crossing.rs`'s own 9 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all.** Both
-    /// `bucketIndexFloorUpper` and `bucketClampUpper` are unconditional, and
-    /// scaling a `CReal.le` fact by a positive rational preserves it
-    /// regardless of `c − a`'s sign. See `creal/crossing.rs`.
-    pub crossing_upper: NameId,
-    /// `CReal.crossingLower : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le a c → CReal.le (CReal.add a (CReal.mul (CReal.ofRat delta)
-    /// (CReal.ofRat (Rat.sub (Rat.natDivSucc (CReal.crossingIndex a c delta)
-    /// 0) (Rat.natDivSucc 3 j))))) c`.
-    ///
-    /// **Genuinely needs `a ≤ c`** (unlike [`Self::crossing_upper`]):
-    /// `bucketClampLower`'s hypothesis is `0 ≤` the value being bucketed —
-    /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
-    /// the two nonnegative factors. See `creal/crossing.rs`.
-    pub crossing_lower: NameId,
-    /// `CReal.crossingSampleGeA : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le a (CReal.add a (CReal.mul (CReal.ofNat (CReal.crossingIndex a
-    /// c delta)) (CReal.ofRat delta)))` — `samplePt` (the SAME closed term
-    /// [`Self::crossing_sample_upper`]/[`Self::crossing_sample_lower`] use)
-    /// never falls BELOW its own base point `a`.
-    ///
-    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all**, unlike
-    /// [`Self::crossing_lower`]: `crossingIndex` embeds as a nonnegative
-    /// `Nat` regardless of `c`'s position, and `Δ > 0` makes the product
-    /// nonnegative too, via [`Self::mul_nonneg`] — the same shape
-    /// `integral.rs`'s `riemannSum_sample_in_bounds` already proves for an
-    /// ordinary mesh sample. This is HALF of `crossingClose`'s domain
-    /// membership hypothesis pair; the other half, `samplePt ≤ b`, is
-    /// discharged nowhere in this prelude — see `creal/integral.rs`'s
-    /// 2026-08-27 module doc entries (the fifth: it is not a `+3`-slack
-    /// artifact of [`Self::bucket_index_bound`] and cannot be fixed by
-    /// tightening that bound, however far). See `creal/crossing.rs`.
-    pub crossing_sample_ge_a: NameId,
-    /// `CReal.crossingSampleUpper : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le c (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
-    /// (CReal.crossingIndex a c delta)) delta)) (CReal.add delta (CReal.mul
-    /// delta (CReal.ofRat (Rat.natDivSucc 2 j)))))` — [`Self::crossing_upper`]
-    /// restated against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
-    /// (`integral.rs`'s own `sample_point` shape) rather than the raw
-    /// rational bound `crossingUpper` computes internally: `c` is within a
-    /// fixed slack (unreduced here, but equal to `2Δ`) ABOVE the coarse
-    /// mesh's `crossingIndex`-th sample point. See `creal/crossing.rs`.
-    pub crossing_sample_upper: NameId,
-    /// `CReal.crossingSampleLower : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le a c → CReal.le (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
-    /// (CReal.crossingIndex a c delta)) delta)) (CReal.mul delta (CReal.ofRat
-    /// (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
-    /// [`Self::crossing_sample_upper`]: `c` is no more than a fixed slack
-    /// (`1.5Δ`, left as `Δ·(negative rational)` rather than rewritten to
-    /// `neg(Δ·positive)`) BELOW the same sample point. See
-    /// `creal/crossing.rs`.
-    pub crossing_sample_lower: NameId,
-    /// `CReal.crossingClose : ∀ F a b c delta e (u : UniformlyContinuousOn F
-    /// a b), Rat.lt Rat.zero delta → CReal.le a c → CReal.le c b → CReal.le a
-    /// samplePt → CReal.le samplePt b → CReal.le slackUpper (CReal.ofRat
-    /// (Rat.natDivSucc 1 (UniformlyContinuousOn.modulus F a b u e))) →
-    /// CReal.le (CReal.neg slackLower) (CReal.ofRat (Rat.natDivSucc 1
-    /// (UniformlyContinuousOn.modulus F a b u e))) → CReal.le (CReal.abs
-    /// (CReal.add (F c) (CReal.neg (F samplePt)))) (CReal.ofRat
-    /// (Rat.natDivSucc 1 e))`, `samplePt`/`slackUpper`/`slackLower` the SAME
-    /// closed terms [`Self::crossing_sample_upper`]/
-    /// [`Self::crossing_sample_lower`] place `c` within.
-    ///
-    /// The analytic half of the cross-width Riemann comparison's single
-    /// block: `F(c)` is close to `F` at the coarse mesh's crossing-index
-    /// sample point, PROVIDED the two crossing slacks (`≈2Δ`, `≈1.5Δ`) are
-    /// already within `UniformlyContinuousOn`'s modulus at accuracy `e`.
-    /// Does **not** derive that Archimedean smallness from a mesh count, nor
-    /// `samplePt`'s own domain membership — both are explicit hypotheses
-    /// here. The first is now DISCHARGEABLE in general via
-    /// [`Self::mesh_scaled_le_of_ge`] (not yet wired into this theorem's own
-    /// statement). The second remains open, and is NOT merely unattempted —
-    /// `integral.rs`'s third 2026-08-27 module doc entry works through the
-    /// natural reading of "a mesh count `m`" for this theorem's `Rat`-typed
-    /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
-    /// alone without also bounding the interval's own Archimedean constant,
-    /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
-    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all five —
-    /// the fourth tests and REFUTES, with an exact worked bound, the
-    /// hypothesis that fixing `[a,b]` (so `magnitude` is a known constant)
-    /// rescues this via `bucket_index_bound`'s `+4` slack; the fifth then
-    /// builds the tighter, purpose-built `crossingIndex` bound the fourth
-    /// called for — a genuine, ZERO-excess replacement — and shows it STILL
-    /// does not rescue `samplePt ≤ b`, because the real obstruction is
-    /// `CReal.bound`'s own non-tight over-estimate of `b − a`
-    /// (`magnitude`), independent of `crossingIndex`'s tightness, plus
-    /// `crossingLower`'s own already-fixed `1.5Δ` closeness slack). Still
-    /// open, and not reachable by any further `crossingIndex`-side
-    /// tightening — [`Self::crossing_sample_ge_a`] discharges the OTHER half
-    /// of this pair (`a ≤ samplePt`, unconditionally on `0 < Δ`).
-    pub crossing_close: NameId,
-    /// `CReal.crossingCloseClamped : ...` -- `crossingClose` with `samplePt`
-    /// replaced by `clampedPt := CReal.min samplePt b`.
-    ///
-    /// Both domain-membership hypotheses `crossingClose` needs (`a <=
-    /// samplePt`, `samplePt <= b`) are GONE from this statement, discharged
-    /// by construction rather than assumed: `clampedPt <= b` is
-    /// `min_le_right`, unconditional; `a <= clampedPt` is `le_min` applied
-    /// to `crossingSampleGeA` (`a <= samplePt`) and `a <= b` (`le_trans` on
-    /// the two hypotheses this theorem already carries). `samplePt <= b` is
-    /// not itself provable (per `integral.rs`'s 2026-08-27 module doc
-    /// entries), but the theorem never needed `samplePt` un-clamped --
-    /// clamping into range costs nothing (`min` is fully constructive, no
-    /// comparison decided) and the closeness bound survives the
-    /// substitution via the SAME `le_min` move applied to `c - bound_embed`:
-    /// `c - bound_embed <= samplePt` (from `crossingSampleUpper` widened by
-    /// the `h_upper` hypothesis) and `c - bound_embed <= b` (from `hcb`
-    /// widened by `le_add_of_nonneg`) give, by `le_min`, `c - bound_embed <=
-    /// clampedPt`, and adding `bound_embed` back gives the upper half
-    /// `abs_le` needs. The lower half needs no `le_min` at all: `clampedPt
-    /// <= samplePt` (`min_le_left`) transfers `crossingSampleLower`'s
-    /// existing bound on `c - samplePt` up to `c - clampedPt` by plain
-    /// transitivity, no case split anywhere. See `creal/crossing.rs`.
-    pub crossing_close_clamped: NameId,
-    /// `CReal.riemannSampleCrossingClose : ∀ F a b (u : UniformlyContinuousOn
-    /// F a b) stepAb i deltaAc e, Rat.lt Rat.zero deltaAc → CReal.le a ptI →
-    /// CReal.le ptI b → CReal.le slackUpper bound → CReal.le (CReal.neg
-    /// slackLower) bound → CReal.le (CReal.abs (CReal.add (F ptI) (CReal.neg
-    /// (F clampedPt)))) (CReal.ofRat (Rat.natDivSucc 1 e))`, where `ptI := a +
-    /// (ofNat i)·stepAb` is an ORDINARY Riemann-sum sample point (`stepAb` an
-    /// arbitrary `CReal`, not necessarily `riemannSum`'s own mesh step) and
-    /// `clampedPt`/`slackUpper`/`slackLower` are [`Self::crossing_close_clamped`]'s
-    /// own terms at `c := ptI`, `delta := deltaAc`.
-    ///
-    /// `integral.rs`'s SEVENTH 2026-08-27 module doc entry's proposed
-    /// term-pairing lemma — literally [`Self::crossing_close_clamped`]
-    /// specialized at `c := ptI` — **restricted to the one case that
-    /// type-checks against this file's existing machinery**: `crossingIndex`
-    /// (hence `crossingCloseClamped`) takes its step as a `Rat`, not a
-    /// `CReal` (`declare_crossing_index`'s `delta` parameter is `rat_ty_`
-    /// itself, not `creal_ty`). The natural cross-mesh step for an ARBITRARY
-    /// split point `c`, `deltaAc := (c−a)·ofRat(natDivSucc 1 m_ac)`, is
-    /// `CReal`-valued whenever `c−a` is not itself rational — the same "not a
-    /// computable rational multiple" fact `integral.rs`'s module doc already
-    /// names, sharpened here to the exact type-level obstruction: this
-    /// theorem is only USABLE when the caller already has a **rational**
-    /// `deltaAc` in hand (e.g. `c := a + ofRat q` for some `Rat q`, giving
-    /// `deltaAc := q·natDivSucc(1,m_ac)`, itself `Rat`), not for a fully
-    /// general `CReal c`.
-    ///
-    /// The only `CReal`-level inverse in this prelude,
-    /// [`Self::inv`] `(x : CReal) (k : Nat) (h : PosBound x k) : CReal`,
-    /// could in principle build `(c−a)⁻¹` given an explicit positivity
-    /// witness, but none of `crossing.rs`'s internal recipe (`build_scaled`,
-    /// `scale_cancels`, the four `bucketIndex` closeness lemmas'
-    /// composition) is stated against it — it is hard-wired to `Rat.inv`.
-    /// Pre-rescaling `ptI` by `(c−a)⁻¹` before calling `crossingIndex` (so
-    /// `crossingIndex` itself only ever sees a plain `Rat` delta) is possible
-    /// in principle, but translating the resulting NORMALIZED-coordinate
-    /// closeness bound back into a bound on `|ptI − ptAc(j(i))|` in ORIGINAL
-    /// units needs multiplying back through by the `CReal` factor `(c−a)`,
-    /// which is a REAL (not `Nat`, unlike [`Self::mesh_scaled_le_of_ge`])
-    /// scaling step with no existing lemma covering it — a second gap on top
-    /// of `crossingCloseClamped`'s own already-flagged ones. See
-    /// `creal/crossing.rs`.
-    pub crossing_sample_pairing_close: NameId,
+    /// Reached as `p.crossing.crossing_index` and documented in
+    /// [`CrossingNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub crossing: CrossingNames,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -2856,53 +2608,15 @@ pub struct CRealPrelude {
     /// (a function of `bigK`, never simplified to a literal) in place of that
     /// theorem's fixed `K := 7`.
     pub geom_cauchy_of_lt: NameId,
-    /// `CReal.geomScaledCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h :
-    /// PosBound (add one (neg x)) k) (w : CReal), Cauchy (sumRange (fun n =>
-    /// mul w (pow x n)))` — a CONSTANT
-    /// times a geometric series stays Cauchy, at a GENERAL ratio `0 ≤ x < 1`
-    /// and a general scale `w`. This is `creal/ratio_test.rs`'s "scaled
-    /// geometric bridge", the piece Chapter 22–23's ratio test needs and
-    /// [`Self::geom_cauchy_of_lt`] alone does not supply: `sumRange (fun n =>
-    /// mul w (pow x n))` is only `Equiv` to `mul w (sumRange (pow x ·) n)`
-    /// (`CReal.mul_sumRange`, `series.rs`, already landed), not literally
-    /// equal — `CReal.mul`'s own representative resamples its factors at a
-    /// shifted index (`product.rs`), so the two sides are not the same
-    /// rational at any index.
+    /// `creal/ratio_test.rs`'s own 2 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Mirrors `exponential.rs::declare_exp_dominant_cauchy`'s own route
-    /// verbatim, generalized from the fixed pair `(two, half)` to `(w, x)`
-    /// and from [`Self::geom_cauchy`] to [`Self::geom_cauchy_of_lt`]:
-    /// [`Self::geom_cauchy_of_lt`] gives `Cauchy (sumRange (pow x ·))`;
-    /// [`Self::converges_of_cauchy`] lifts it to `Converges (sumRange (pow x
-    /// ·)) L` for some `L` (eliminated immediately into the Prop goal, never
-    /// into data); [`Self::converges_of_const`]/[`Self::converges_mul`] give
-    /// `Converges (fun n => mul w (sumRange (pow x ·) n)) (mul w L)`;
-    /// [`Self::converges_cauchy`] turns that into `Cauchy (fun n => mul w
-    /// (sumRange (pow x ·) n))`; and [`Self::cauchy_of_pointwise_equiv`]
-    /// transports it across `CReal.mul_sumRange`'s `Equiv` onto the stated
-    /// conclusion. See `creal/ratio_test.rs::declare_geom_scaled_cauchy_of_lt`.
-    pub geom_scaled_cauchy_of_lt: NameId,
-    /// `CReal.sumRangeRatioTest : ∀ f r, le zero r → lt r one → ∀ k (h :
-    /// PosBound (add one (neg r)) k) (hdec : ∀ n, le (abs (f (Nat.succ n)))
-    /// (mul r (abs (f n)))), Cauchy (sumRange f)` — Spivak Chapter 22–23's
-    /// ratio test: a sequence whose consecutive
-    /// absolute terms shrink by a factor `r < 1` has a Cauchy (hence
-    /// convergent) partial-sum sequence, even when `f` changes sign.
-    ///
-    /// Composes three already-landed general theorems, none of them redone
-    /// here: [`Self::ratio_decay_bound`] applied to `g := fun n => abs (f
-    /// n)` gives `∀ n, le (abs (f n)) (mul (abs (f 0)) (pow r n))`;
-    /// [`Self::geom_scaled_cauchy_of_lt`] at `w := abs (f 0)` gives `Cauchy
-    /// (sumRange (fun n => mul (abs (f 0)) (pow r n)))`; and
-    /// `series.rs::sumRange_cauchy_of_dominated` combines the two directly
-    /// into `Cauchy (sumRange f)` — its domination hypothesis is stated on
-    /// `abs (f k)`, so no separate "absolute convergence ⟹ convergence"
-    /// bridge (`sumRange_cauchy_of_abs_cauchy`) is needed: that bridge is for
-    /// a hypothesis already phrased as `Cauchy (sumRange (fun k => abs (f
-    /// k)))`, and the ratio hypothesis here is a termwise BOUND, not a
-    /// pre-existing Cauchy fact about the absolute series. See
-    /// `creal/ratio_test.rs::declare_sum_range_ratio_test`.
-    pub sum_range_ratio_test: NameId,
+    /// Reached as `p.ratio_test.geom_scaled_cauchy_of_lt` and documented in
+    /// [`RatioTestNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub ratio_test: RatioTestNames,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -3837,28 +3551,15 @@ pub struct CRealPrelude {
     /// says so.
     pub strict_injective_of_pos_deriv: NameId,
 
-    /// `CReal.order_reflect_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a
-    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
-    /// ∀ x y, le a x → le x b → le a y → le y b → Apart x y → lt (F x) (F y)
-    /// → lt x y` (`creal/inverse_fn.rs`) — the CONVERSE half of
-    /// [`Self::strict_mono_of_pos_deriv`], and the reason it is stated with
-    /// `Apart x y` as a HYPOTHESIS rather than derived: producing `lt x y`
-    /// from nothing but a codomain inequality would require deciding which
-    /// of `lt x y`/`lt y x` holds, and `CReal.lt` is not decidable. Given
-    /// `Apart x y` as DATA (not derived via excluded middle), the proof
-    /// cases on it: the `lt x y` branch is the goal already; the `lt y x`
-    /// branch applies [`Self::strict_mono_of_pos_deriv`] to get
-    /// `lt (F y) (F x)`, which together with the hypothesis `lt (F x) (F y)`
-    /// gives `lt (F x) (F x)` via `lt_trans`, refuted by `lt_irrefl`.
+    /// `creal/inverse_fn.rs`'s own 2 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Unconditional order-reflection (no `Apart x y` hypothesis) is NOT
-    /// proved here and is not reachable with this development's current
-    /// machinery: it is exactly as hard as finding an exact preimage
-    /// (`creal/ivt.rs`'s `ivt_approx`, still open), since both require
-    /// turning a codomain inequality into domain POSITION information, which
-    /// needs some form of bisection/localisation this file does not have in
-    /// exact form.
-    pub order_reflect_of_pos_deriv: NameId,
+    /// Reached as `p.inverse_fn.order_reflect_of_pos_deriv` and documented in
+    /// [`InverseFnNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub inverse_fn: InverseFnNames,
 
     /// `CReal.inverse_lipschitz_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
     /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
@@ -3890,36 +3591,12 @@ pub struct CRealPrelude {
     /// the sign facts (`x−y ≤ 0 ≤ (2k+2)·(F hi−F lo)` in the branch where
     /// `x < y`, and its mirror).
     ///
-    /// Unlike [`Self::order_reflect_of_pos_deriv`], this does NOT need the
+    /// Unlike [`InverseFnNames::order_reflect_of_pos_deriv`], this does NOT need the
     /// codomain hypothesis `lt (F x) (F y)` at all — it bounds the gap in
     /// BOTH directions from `Apart x y` alone, which is what makes it a
     /// genuine continuity-of-the-inverse statement rather than a restatement
     /// of order-reflection.
     pub inverse_lipschitz_of_pos_deriv: NameId,
-
-    /// `CReal.ivt_exact_root_at : ∀ F F' a b, HasDerivativeOn F F' a b →
-    /// UniformlyContinuousOn F a b → le a b → ∀ y, le (F a) y → le y (F b) →
-    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
-    /// ∃ c, le a c ∧ (le c b ∧ Equiv (F c) y)` (`creal/inverse_fn.rs`) —
-    /// Chapter 12's EXISTENCE half: `F` has a genuine preimage for every
-    /// target `y` between `F a` and `F b`, not just for `y = zero`.
-    ///
-    /// Not a re-derivation of [`Self::ivt_exact_root`] — a wrapper applying
-    /// it to the SHIFTED function `G := fun z => add (F z) (neg y)`, whose
-    /// root is `F`'s `y`-preimage. `G`'s derivative and continuity come from
-    /// [`Self::has_derivative_sub`]/[`Self::uniformly_continuous_sub`]
-    /// composed with [`Self::has_derivative_const`]/
-    /// [`Self::uniformly_continuous_const`] at `y` — a constant shift changes
-    /// neither — and the derivative-bound hypothesis on `F'` transports to
-    /// `G'` through the ring identity `F' z ~ F' z − 0`
-    /// ([`Self::add_zero`] plus `monotone.rs`'s private `neg_zero_equiv`,
-    /// via [`Self::le_congr`]). `G a ≤ 0 ≤ G b` is
-    /// [`Self::add_le_add`]/[`Self::add_neg`] applied to `F a ≤ y ≤ F b`,
-    /// the same shift at the other two endpoints. `ivt_exact_root`'s result
-    /// `Equiv (G c) zero` reads back as `Equiv (F c) y` via `monotone.rs`'s
-    /// `equiv_of_sub_equiv_zero`, built there for an unrelated purpose and
-    /// reused here unchanged.
-    pub ivt_exact_root_at: NameId,
 
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
@@ -4369,16 +4046,15 @@ pub struct CRealPrelude {
     /// only ever blocked `Type`-valued elimination, and the bisection being
     /// DATA is what keeps the sequence itself out of that case.
     pub ivt_exact_root: NameId,
-    /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
-    /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
-    /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
-    /// function on `[a,b]` is unique, GIVEN the interval is genuinely
-    /// nondegenerate (`lt a b`, not merely `le a b`). The naive statement
-    /// without that hypothesis is refuted at a degenerate interval `a = b`
-    /// (`id`'s derivative is simultaneously `const zero` and `const one`
-    /// there); see that module's own documentation for the refutation and
-    /// the `lt_cotrans`-based nearby-point construction that replaces it.
-    pub has_derivative_unique: NameId,
+    /// `creal/deriv_unique.rs`'s own name, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.deriv_unique.has_derivative_unique` and documented in
+    /// [`DerivUniqueNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub deriv_unique: DerivUniqueNames,
     /// `CReal.fermat_interior_extremum : ∀ F F' lo hi, HasDerivativeOn F F'
     /// lo hi → ∀ c, lt lo c → lt c hi → (∀ x, le lo x → le x hi →
     /// le (F x) (F c)) → Equiv (F' c) zero` (`creal/fermat.rs`) — Fermat's
@@ -4415,24 +4091,15 @@ pub struct CRealPrelude {
     /// the full accounting, including why the UNRESTRICTED (existential)
     /// form is NOT landed here.
     pub rolle_interior_extremum: NameId,
-    /// `CReal.mvt_interiorExtremum : ∀ F F' lo hi, HasDerivativeOn F F' lo
-    /// hi → ∀ m, Equiv (F hi) (add (F lo) (mul m (add hi (neg lo)))) → ∀ c,
-    /// lt lo c → lt c hi → (Or (∀ x, le lo x → le x hi → le (g x) (g c)) (∀
-    /// x, le lo x → le x hi → le (g c) (g x))) → Equiv (F' c) m`, where `g :=
-    /// fun r => add (F r) (neg (mul m r))` (`creal/mvt.rs`) — the Mean Value
-    /// Theorem (Spivak ch. 11, Thm 3), a thin wrapper over
-    /// [`Self::rolle_interior_extremum`] applied to `g`: the secant-slope
-    /// hypothesis makes `Equiv (g lo) (g hi)` provable UNCONDITIONALLY (pure
-    /// algebra, no extra hypothesis), `g`'s derivative is `fun x => add (F'
-    /// x) (neg m)` via [`Self::has_derivative_sub`] composed with a
-    /// from-scratch (not [`Self::has_derivative_smul`], which would need an
-    /// extra magnitude bound on `m`) derivative witness for `r ↦ m·r`, and
-    /// the `Or` case-split hypothesis is Rolle's own, passed through
-    /// verbatim with no case analysis performed in this theorem at all. See
-    /// `creal/mvt.rs`'s module documentation for the full graded-family
-    /// accounting (row 2 unassessed, row 3 already the existing CAS
-    /// certificate).
-    pub mvt_interior_extremum: NameId,
+    /// `creal/mvt.rs`'s own name, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.mvt.mvt_interior_extremum` and documented in
+    /// [`MvtNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub mvt: MvtNames,
     /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
     /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
     /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
@@ -4911,7 +4578,7 @@ pub struct CRealPrelude {
     /// `t := (c−a)/(b−a)`, and [`Self::inv`] takes the positivity witness as
     /// an explicit argument, which `le a b` does not supply.
     ///
-    /// The route bypasses [`Self::crossing_index`], [`Self::bound`] and
+    /// The route bypasses [`CrossingNames::crossing_index`], [`Self::bound`] and
     /// [`Self::bucket_index_bound`] entirely — the three things five earlier
     /// lanes measured as blocking this. `t` lives in `[0,1]`, so
     /// [`Self::bucket_index`] can be read at grid `succ g` directly: the
@@ -5401,44 +5068,15 @@ pub struct CRealPrelude {
     pub uniform_limit_uniformly_continuous: NameId,
 
     // --- polynomials over `CReal` (creal/polynomial.rs) ----------------------
-    /// `CReal.polyEval : (Nat → CReal) → Nat → CReal → CReal` — `polyEval c n
-    /// x := sumRange (fun i => mul (c i) (pow x i)) n`, sum of monomials, not
-    /// Horner. See `creal/polynomial.rs`'s module doc for why.
-    pub poly_eval: NameId,
-    /// `CReal.polyEval_zero : ∀ c x, Eq CReal (polyEval c Nat.zero x) zero`.
-    /// Closes by `Eq.refl` alone.
-    pub poly_eval_zero: NameId,
-    /// `CReal.polyEval_succ : ∀ c n x, Eq CReal (polyEval c (Nat.succ n) x)
-    /// (add (polyEval c n x) (mul (c n) (pow x n)))`. Closes by `Eq.refl`
-    /// alone.
-    pub poly_eval_succ: NameId,
-    /// `CReal.polyAdd : (Nat → CReal) → (Nat → CReal) → (Nat → CReal) := fun
-    /// c g i => add (c i) (g i)` — pointwise coefficient addition.
-    pub poly_add: NameId,
-    /// `CReal.polyEval_polyAdd : ∀ c g n x, Equiv (polyEval (polyAdd c g) n
-    /// x) (add (polyEval c n x) (polyEval g n x))` — evaluation is a
-    /// homomorphism from `(polyAdd, polyEval)` to `(add, ·)`, at one shared
-    /// bound `n` for both operands.
-    pub poly_eval_poly_add: NameId,
-    /// `CReal.polyScale : CReal → (Nat → CReal) → (Nat → CReal) := fun a c i
-    /// => mul a (c i)` — scaling every coefficient by a constant.
-    pub poly_scale: NameId,
-    /// `CReal.polyEval_polyScale : ∀ a c n x, Equiv (polyEval (polyScale a c)
-    /// n x) (mul a (polyEval c n x))` — evaluation is a homomorphism from
-    /// `(polyScale, polyEval)` to `(mul, ·)`.
-    pub poly_eval_poly_scale: NameId,
-    /// `CReal.polyDegreeLt : (Nat → CReal) → Nat → Prop := fun c n => ∀ i,
-    /// Nat.le n i → Equiv (c i) zero` — the honest stand-in for a *computed*
-    /// degree bound, ruled out by `CReal.Equiv`'s undecidability: a
-    /// **hypothesis** a caller supplies, never derived from `c`/`n` alone.
-    pub poly_degree_lt: NameId,
-    /// `CReal.polyDegreeLt_polyAdd : ∀ c g n, polyDegreeLt c n →
-    /// polyDegreeLt g n → polyDegreeLt (polyAdd c g) n` — preserved at the
-    /// same bound (no `Nat.max` is used or available in this kernel).
-    pub poly_degree_lt_poly_add: NameId,
-    /// `CReal.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
-    /// polyDegreeLt (polyScale a c) n`.
-    pub poly_degree_lt_poly_scale: NameId,
+    /// `creal/polynomial.rs`'s own 10 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.polynomial.poly_eval` and documented in
+    /// [`PolynomialNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub polynomial: PolynomialNames,
     /// `CReal.uniform_converges_add : ∀ F H G K a b, UniformConvergesOn F G a
     /// b → UniformConvergesOn H K a b → UniformConvergesOn (fun n x => add (F
     /// n x) (H n x)) (fun x => add (G x) (K x)) a b`
@@ -5533,7 +5171,7 @@ pub struct CRealPrelude {
     /// rather than taken as parameters. The raw Cauchy modulus `(k, …)` for
     /// the DOMINATING geometric series `M·rʲ` is still a parameter, exactly
     /// as `weierstrassMTest` itself takes one — a caller obtains it from
-    /// [`Self::geom_scaled_cauchy_of_lt`] plus an `Exists`-elimination of
+    /// [`RatioTestNames::geom_scaled_cauchy_of_lt`] plus an `Exists`-elimination of
     /// their own, which this declaration cannot perform internally: the
     /// M-test's own limit `G` is built FROM `k`, so a target that must not
     /// mention the witness (`Exists.rec`'s own restriction) cannot be `G`
@@ -5628,57 +5266,15 @@ pub struct CRealPrelude {
     pub mul_pow_congr: NameId,
 
     // --- the Extreme Value Theorem's boundary certificate (ADR-0603 row 2) ---
-    /// `CReal.evtLinear : CReal -> CReal -> CReal := fun v t => mul t v` --
-    /// the EVT counterexample family (`creal/extreme_value.rs`). Classical
-    /// supremum `max(0, v)` on `[0, 1]`, attained at `1` when `v >= 0` and at
-    /// `0` when `v <= 0`, so *which endpoint attains it* IS the sign of `v` --
-    /// checked by kernel reduction to exact rationals, both signs, in
-    /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
+    /// `creal/extreme_value.rs`'s own 3 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
-    /// and inside classical EVT's hypothesis class -- **now proved, not
-    /// asserted**: see [`Self::evt_linear_uniformly_continuous`].
-    pub evt_linear: NameId,
-    /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
-    /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
-    /// (mul c v)) -> Or (le v zero) (le zero v)` --
-    /// **ADR-0603 row 2 for the Extreme Value Theorem**, machine-checked
-    /// rather than asserted (`creal/extreme_value.rs`).
-    ///
-    /// An *attained* maximiser for [`Self::evt_linear`] on `[0, 1]` yields
-    /// `v <= 0` or `0 <= v` for an ARBITRARY real -- analytic LLPO,
-    /// equivalently the total order `le_total` that
-    /// `creal/cotransitivity.rs`'s module documentation states is neither
-    /// assumed nor provable here. So an operator handing back a maximiser for
-    /// every `v` would hand back the comparison the order deliberately lacks,
-    /// which is what makes [`Self::bounded_of_uniformly_continuous`] -- a
-    /// COMPUTED bound, no attaining point -- optimal rather than merely
-    /// unimproved.
-    ///
-    /// One [`Self::lt_cotrans`] call on the fixed strict pair
-    /// [`Self::zero_lt_one`] at `z := c`, then
-    /// [`Self::le_of_mul_le_mul_left`] against the modulus
-    /// [`Self::pos_bound_of_lt`] supplies -- at `c` in the `0 < c` branch and
-    /// at `1 + (-c)` in the `c < 1` branch. See that module's own
-    /// documentation, including its "Honest scope" section: this proves the
-    /// classical conclusion at least as strong as a decision principle this
-    /// kernel does not have, NOT that the principle is false (it is
-    /// consistent, hence unprovable here rather than refutable).
-    pub evt_attained_max_decides_sign: NameId,
-    /// `CReal.evtLinear_uniformly_continuous : forall v,
-    /// UniformlyContinuousOn (evtLinear v) zero one` -- the bridge sentence
-    /// [`Self::evt_linear`]'s own doc comment used to call asserted, now
-    /// proved: `evtLinear v` is `fun t => mul t v`, so this is
-    /// [`Self::uniformly_continuous_mul`] applied at `F := id`
-    /// ([`Self::uniformly_continuous_id`]) and `G := fun _ => v`
-    /// ([`Self::uniformly_continuous_const`]), with `F`'s `BoundedOn`
-    /// argument discharged by [`Self::bounded_on_id_zero_one`] and `G`'s by
-    /// [`Self::abs_bound_of_self`] applied at `v` directly (a constant
-    /// function's `BoundedOn` obligation, once the two range hypotheses are
-    /// dropped, IS that lemma). With this, the EVT counterexample family is
-    /// machine-checked to lie inside classical EVT's hypothesis class, not
-    /// merely asserted to. See `creal/extreme_value.rs`.
-    pub evt_linear_uniformly_continuous: NameId,
+    /// Reached as `p.extreme_value.evt_linear` and documented in
+    /// [`ExtremeValueNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub extreme_value: ExtremeValueNames,
 
     /// **The Intermediate Value Theorem's boundary certificate** (ADR-0603
     /// row 2) -- `creal/ivt_boundary.rs`'s own seven names, the first module
@@ -5692,54 +5288,15 @@ pub struct CRealPrelude {
     pub ivt_boundary: IvtBoundaryNames,
 
     // --- the least-upper-bound property's boundary certificate (ADR-0603 row 2)
-    /// `CReal.lubSet : Prop -> CReal -> Prop := fun A x => Or (le x zero)
-    /// (And A (le x one))` -- the LUB counterexample family
-    /// (`creal/lub_boundary.rs`), the set `(-inf, 0] union ((-inf, 1] if A)`.
-    /// Classical supremum `1` when `A` holds and `0` when it does not, so
-    /// *where the supremum sits* IS the truth value of `A`.
+    /// `creal/lub_boundary.rs`'s own 4 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Spivak ch. 8's P13 quantifies over an ARBITRARY inhabited bounded-above
-    /// set, so a set carved out by an arbitrary `Prop` is faithful to the
-    /// classical statement rather than a strawman -- and it is exactly the
-    /// generalisation [`Self::sup_on`] (a uniformly continuous function on a
-    /// compact interval, whose modulus supplies the locatedness) stops short
-    /// of.
-    pub lub_set: NameId,
-    /// `CReal.lubSet_inhabited : forall (A : Prop), lubSet A zero` -- classical
-    /// LUB's first hypothesis, **proved rather than asserted**, and at an
-    /// EXHIBITED witness rather than as an `Exists`. One [`Self::le_refl`]
-    /// under `Or.inl`. See `creal/lub_boundary.rs`.
-    pub lub_set_inhabited: NameId,
-    /// `CReal.lubSet_bounded : forall (A : Prop) (x : CReal), lubSet A x ->
-    /// le x one` -- classical LUB's second hypothesis, **proved rather than
-    /// asserted**, and at an EXPLICIT bound rather than as an `Exists`. The
-    /// `x <= 0` disjunct reaches `1` through [`Self::le_trans`] against
-    /// `0 <= 1`, the other by projection. See `creal/lub_boundary.rs`.
-    pub lub_set_bounded: NameId,
-    /// `CReal.lub_decides_em : forall (A : Prop) (s : CReal),
-    /// (forall x, lubSet A x -> le x s) ->
-    /// (forall t, lt t s -> Exists CReal (fun x => And (lubSet A x) (lt t x)))
-    /// -> Or A (Not A)` --
-    /// **ADR-0603 row 2 for the least upper bound property**, machine-checked
-    /// rather than asserted (`creal/lub_boundary.rs`).
-    ///
-    /// A supremum for [`Self::lub_set`] -- in **Bishop's** sense, an upper
-    /// bound plus the approximation property, which is the constructive
-    /// definition and the one [`Self::sup_on_approx_lub`] proves for the
-    /// located case -- yields `Or A (Not A)` for an ARBITRARY proposition.
-    /// That is UNRESTRICTED EXCLUDED MIDDLE, a strictly stronger boundary
-    /// than [`Self::evt_attained_max_decides_sign`] and
-    /// [`crate::IvtBoundaryNames::ivt_exact_root_decides_sign`], which both land on analytic
-    /// LLPO (consistent with Bishop; this is not).
-    ///
-    /// One [`Self::lt_cotrans`] call on the fixed strict pair
-    /// [`Self::zero_lt_one`] at `z := s`: the `0 < s` branch reads `A` off the
-    /// approximation witness at `t := 0`, and the `s < 1` branch refutes `A`
-    /// because `A` would put `1` in the set. See that module's own
-    /// documentation, including its "Honest scope" section: this proves the
-    /// classical conclusion at least as strong as a decision principle this
-    /// kernel does not have, NOT that the principle is false.
-    pub lub_decides_em: NameId,
+    /// Reached as `p.lub_boundary.lub_set` and documented in
+    /// [`LubBoundaryNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub lub_boundary: LubBoundaryNames,
 
     // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
@@ -6087,49 +5644,15 @@ pub struct CRealPrelude {
     pub cos_fn_wide_has_derivative: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
-    /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
-    /// (powerSeriesTerm expTerm k x)) (expDominant k)` — the domination bound
-    /// [`Self::weierstrass_m_test`] needs. Unlike
-    /// [`Self::cos_fn_term_abs_le`], NO new per-file term/congruence pair is
-    /// needed here: `expTerm`'s coefficients cover EVERY `Nat` index (cosine's
-    /// support only even exponents), so [`Self::power_series_term`] /
-    /// [`Self::power_series_term_congr`] (already generic, `creal/power.rs`)
-    /// apply directly at `c := expTerm`. `0 ≤ x ≤ 1` gives `pow x k ≤ one`
-    /// ([`Self::pow_le_one`]), `abs_mul_le_of_bounds` folds that against
-    /// `le_refl (abs (expTerm k))` to `abs (powerSeriesTerm expTerm k x) ≤ abs
-    /// (expTerm k)` (up to `mul_one`), and [`Self::exp_term_abs_le_dominant`]
-    /// closes the rest by `le_trans`. See `creal/exp_fn.rs`.
-    pub exp_fn_term_abs_le: NameId,
-    /// `CReal.expFn : CReal → CReal` — general exponential on the bounded
-    /// domain `[0, 1]`, the `G` [`Self::weierstrass_m_test`]'s own proof
-    /// builds when applied at `f := powerSeriesTerm expTerm`, `mseq :=
-    /// expDominant`, `a := zero`, `b := one`, extracted from that
-    /// application's INFERRED type (never hand-reconstructed) so it is the
-    /// identical closed term [`Self::exp_fn_uniform_converges`]'s own `G`
-    /// slot names. See `creal/exp_fn.rs`.
-    pub exp_fn: NameId,
-    /// `CReal.expFnUniformConverges : UniformConvergesOn (fun n x => sumRange
-    /// (fun k => powerSeriesTerm expTerm k x) n) expFn zero one` — the M-test
-    /// applied at the exponential power series, ascribed against the NAMED
-    /// `expFn` (rather than the raw extracted `G`) so a caller sees the
-    /// constant, not its unfolding. `expDominantCauchy`'s own concrete
-    /// witness (`exp_dominant_cauchy_body_concrete`, reused unchanged from
-    /// `CReal.e`'s and `cosOne`'s own constructions) supplies the M-test's
-    /// `(k, hcauchy)` pair DIRECTLY — no bridge needed. See
-    /// `creal/exp_fn.rs`.
-    pub exp_fn_uniform_converges: NameId,
-    /// `CReal.expFn_one_equiv_e : Equiv (expFn one) e` — the bridge between
-    /// the general power-series `expFn` (bounded to `[0, 1]`) and the
-    /// concrete `CReal.e` construction, at the shared endpoint `x := 1`.
-    /// Eliminates `CReal.e_converges`'s `Exists` witness into a per-`n`
-    /// `Within` fact, bridges it to `close_within` via
-    /// `CReal.close_within_of_within`'s own per-index construction (leg 1),
-    /// transports `expFnUniformConverges`'s `.spec` at `x := one` from
-    /// `powerSeriesTerm expTerm j one` to `expTerm j` via
-    /// `CReal.sumRange_congr` (leg 2), combines both legs by the triangle
-    /// inequality, and closes with `CReal.equiv_zero_of_rate`. See
-    /// `creal/exp_fn.rs`.
-    pub exp_fn_one_equiv_e: NameId,
+    /// `creal/exp_fn.rs`'s own 4 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.exp_fn.exp_fn.exp_fn_term_abs_le` and documented in
+    /// [`ExpFnNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub exp_fn: ExpFnNames,
     /// `CReal.maxRange : (Nat → CReal) → Nat → CReal` — the `max`-lattice
     /// analogue of [`Self::sum_range`]: `maxRange f 0 := f 0`, `maxRange f
     /// (succ n) := max (maxRange f n) (f (succ n))`, so `maxRange f n` is
@@ -6351,7 +5874,7 @@ pub struct CRealPrelude {
     ///
     /// **A VALUE, never an argmax.** Each term is a finite maximum over a
     /// mesh, so it is a height; nothing here names a point attaining it, and
-    /// [`Self::evt_attained_max_decides_sign`] says no construction can.
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`] says no construction can.
     /// See `creal/supremum.rs`.
     pub sup_seq: NameId,
     /// `CReal.supSeq_mono : ∀ F a b u, le a b → ∀ k k', Nat.le k k' →
@@ -6402,7 +5925,7 @@ pub struct CRealPrelude {
     /// interval, produced rather than asserted to exist.**
     ///
     /// EVT's row 1 under ADR-0603's grading. Row 2,
-    /// [`Self::evt_attained_max_decides_sign`], proves a MAXIMISER cannot be
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`], proves a MAXIMISER cannot be
     /// constructed; this is the maximum's VALUE, which can. Nothing here names
     /// a point attaining it, and nothing should.
     ///
@@ -6459,7 +5982,7 @@ pub struct CRealPrelude {
     /// `supOn` is approached by values of `F` on `[a, b]` to any requested
     /// accuracy, at a point the proof exhibits. It is NOT attained, and the
     /// exact form is REFUTED rather than unproved —
-    /// [`Self::evt_attained_max_decides_sign`] shows an attaining maximiser
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`] shows an attaining maximiser
     /// would decide the sign of an arbitrary real. That is why this statement
     /// is approximate and must stay so. See `creal/sup_laws.rs`.
     pub sup_on_approx_lub: NameId,
@@ -6533,7 +6056,7 @@ pub struct CRealPrelude {
     /// With [`Self::sup_on_approx_lub`] this is the pair that characterizes
     /// `supOn`: it dominates every value of `F` on `[a, b]`, and it is
     /// approached by them to any requested accuracy. Neither produces an
-    /// argmax and neither may — [`Self::evt_attained_max_decides_sign`] proves
+    /// argmax and neither may — [`ExtremeValueNames::evt_attained_max_decides_sign`] proves
     /// an attaining maximiser would decide the sign of an arbitrary real.
     ///
     /// [`Self::step_family_locate`] places `x` within one mesh cell plus an
@@ -6544,18 +6067,15 @@ pub struct CRealPrelude {
     /// [`Self::sup_on_ub_at_fine_mesh_point`] bounds the sampled value. See
     /// `creal/sup_laws.rs`.
     pub sup_on_ub: NameId,
-    /// `CReal.evt_approx_max : ∀ F a b (hab : le a b) (u :
-    /// UniformlyContinuousOn F a b) (n : Nat), ∃ x, le a x ∧ (le x b ∧
-    /// ∀ y, le a y → le y b → le (F y) (add (F x) (ofRat (natDivSucc 1
-    /// n))))` — the Extreme Value Theorem's honest row 1: an APPROXIMATE
-    /// maximum, exact structural mirror of [`Self::ivt_approx`].
+    /// `creal/evt_row1.rs`'s own name, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Pure composition of [`Self::sup_on_approx_lub`] (the witness `x`) and
-    /// [`Self::sup_on_ub`] (bounds every `F y`) through [`Self::le_trans`].
-    /// Adds nothing to the supremum machinery and does not narrow
-    /// [`Self::evt_attained_max_decides_sign`] at all — `x` moves with `n`
-    /// and is never claimed to converge. See `creal/evt_row1.rs`.
-    pub evt_approx_max: NameId,
+    /// Reached as `p.evt_row1.evt_approx_max` and documented in
+    /// [`EvtRow1Names`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub evt_row1: EvtRow1Names,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -6676,45 +6196,15 @@ pub struct CRealPrelude {
     /// sums once those carry a per-index derivative witness.
     pub has_derivative_uniform_limit: NameId,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
-    /// `CReal.piHalfCoef : Nat -> Rat` -- `t 0 = 1/1`,
-    /// `t (k+1) = t k * (k+1)/(2k+3)`. The terms of Euler's transform of
-    /// Leibniz, `pi/2 = sum_k 2^k (k!)^2/(2k+1)!`, defined by the RECURSION
-    /// rather than the closed form so the ratio is definitional.
-    pub pi_half_coef: NameId,
-    /// `CReal.piHalfTerm : Nat -> CReal := fun k => ofRat (piHalfCoef k)`.
-    pub pi_half_term: NameId,
-    /// `CReal.piHalfSeriesPartial : Nat -> CReal := sumRange piHalfTerm`.
-    pub pi_half_series_partial: NameId,
-    /// `CReal.piHalfCoefNonneg : forall k, Rat.le Rat.zero (piHalfCoef k)`.
-    pub pi_half_coef_nonneg: NameId,
-    /// `CReal.piHalfTermNonneg : forall k, le zero (piHalfTerm k)`.
-    pub pi_half_term_nonneg: NameId,
-    /// `CReal.piHalfTermLePowHalf : forall k, le (piHalfTerm k) (pow half k)`
-    /// -- the geometric domination, by induction on the definitional ratio
-    /// `(k+1)/(2k+3) <= 1/2`.
-    pub pi_half_term_le_pow_half: NameId,
-    /// `CReal.piHalfTermAbsLeDominant : forall k,
-    /// le (abs (piHalfTerm k)) (expDominant k)` -- stated against `CReal.e`'s
-    /// OWN dominant series so that its concrete Cauchy witness is reusable
-    /// unchanged.
-    pub pi_half_term_abs_le_dominant: NameId,
-    /// `CReal.piHalf : CReal` -- `pi/2`, by `CReal.mk` on an explicit regular
-    /// sequence. No root, no IVT: `creal/ivt.rs` refutes the exact-root
-    /// construction, and that refutation is about one DEFINITION of pi, not
-    /// about pi.
-    pub pi_half: NameId,
-    /// `CReal.piHalfConverges : Converges piHalfSeriesPartial piHalf`.
-    pub pi_half_converges: NameId,
-    /// `CReal.pi : CReal := mul two piHalf`.
-    pub pi: NameId,
-    /// `CReal.piHalfLeTwo : le piHalf two`.
-    pub pi_half_le_two: NameId,
-    /// `CReal.piLeFour : le pi (mul two two)`.
-    pub pi_le_four: NameId,
-    /// `CReal.twoLePi : le two pi`.
-    pub two_le_pi: NameId,
-    /// `CReal.threeLePi : le (ofRat (Rat.natDivSucc 3 0)) pi`.
-    pub three_le_pi: NameId,
+    /// `creal/pi.rs`'s own 14 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.pi.pi.pi_half_coef` and documented in
+    /// [`PiNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub pi: PiNames,
 }
 
 impl CRealPrelude {
@@ -6887,11 +6377,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         density: kernel.name_str(creal, "density"),
         lt_cotrans: kernel.name_str(creal, "lt_cotrans"),
         apart_cotrans: kernel.name_str(creal, "apart_cotrans"),
-        regular_seq: kernel.name_str(creal, "RegularSeq"),
-        limit_seq: kernel.name_str(creal, "limitSeq"),
-        limit_seq_regular: kernel.name_str(creal, "limitSeq_regular"),
-        limit: kernel.name_str(creal, "limit"),
-        limit_dist: kernel.name_str(creal, "limit_dist"),
+        completeness: completeness::CompletenessNames::intern(kernel, creal),
         converges: kernel.name_str(creal, "Converges"),
         converges_unique: kernel.name_str(creal, "converges_unique"),
         converges_of_close: kernel.name_str(creal, "converges_of_close"),
@@ -6906,12 +6392,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
         converges_lower_bound_shift: kernel.name_str(creal, "converges_lower_bound_shift"),
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
-        converges_upper_bound_shift: kernel.name_str(creal, "converges_upper_bound_shift"),
-        alternating_upper_bound_tail: kernel.name_str(creal, "alternatingUpperBoundTail"),
-        cos_wide_tail_nonneg: kernel.name_str(creal, "cosWideTailNonneg"),
-        cos_wide_tail_antitone: kernel.name_str(creal, "cosWideTailAntitone"),
-        cos_wide_series_converges: kernel.name_str(creal, "cosWideSeriesConverges"),
-        cos_wide_nonpositive: kernel.name_str(creal, "cosWideNonpositive"),
+        cos_sign: cos_sign::CosSignNames::intern(kernel, creal),
         converges_le: kernel.name_str(creal, "converges_le"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -6947,15 +6428,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
-        crossing_index: kernel.name_str(creal, "crossingIndex"),
-        crossing_upper: kernel.name_str(creal, "crossingUpper"),
-        crossing_lower: kernel.name_str(creal, "crossingLower"),
-        crossing_sample_ge_a: kernel.name_str(creal, "crossingSampleGeA"),
-        crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
-        crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
-        crossing_close: kernel.name_str(creal, "crossingClose"),
-        crossing_close_clamped: kernel.name_str(creal, "crossingCloseClamped"),
-        crossing_sample_pairing_close: kernel.name_str(creal, "riemannSampleCrossingClose"),
+        crossing: crossing::CrossingNames::intern(kernel, creal),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bucket_close: kernel.name_str(creal, "bucketClose"),
@@ -7061,8 +6534,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy_body_of_gap: kernel.name_str(creal, "geomCauchyBodyOfGap"),
         geom_cauchy_body_16_over_25: kernel.name_str(creal, "geomCauchyBody16Over25"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
-        geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
-        sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
+        ratio_test: ratio_test::RatioTestNames::intern(kernel, creal),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -7156,9 +6628,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         diff_le_of_strict_mono_magnitude: kernel
             .name_str(creal, "diff_le_of_strict_mono_magnitude"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
-        order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
+        inverse_fn: inverse_fn::InverseFnNames::intern(kernel, creal),
         inverse_lipschitz_of_pos_deriv: kernel.name_str(creal, "inverse_lipschitz_of_pos_deriv"),
-        ivt_exact_root_at: kernel.name_str(creal, "ivt_exact_root_at"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
@@ -7181,10 +6652,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_of_abs_diff_le: kernel.name_str(creal, "converges_of_abs_diff_le"),
         ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
         ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
-        has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
+        deriv_unique: deriv_unique::DerivUniqueNames::intern(kernel, creal),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
-        mvt_interior_extremum: kernel.name_str(creal, "mvt_interiorExtremum"),
+        mvt: mvt::MvtNames::intern(kernel, creal),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         mesh_scaled_le_of_ge: kernel.name_str(creal, "meshScaledLeOfGe"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
@@ -7244,16 +6715,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniform_converges_geom_half: kernel.name_str(creal, "uniform_converges_geom_half"),
         uniform_limit_uniformly_continuous: kernel
             .name_str(creal, "uniform_limit_uniformly_continuous"),
-        poly_eval: kernel.name_str(creal, "polyEval"),
-        poly_eval_zero: kernel.name_str(creal, "polyEval_zero"),
-        poly_eval_succ: kernel.name_str(creal, "polyEval_succ"),
-        poly_add: kernel.name_str(creal, "polyAdd"),
-        poly_eval_poly_add: kernel.name_str(creal, "polyEval_polyAdd"),
-        poly_scale: kernel.name_str(creal, "polyScale"),
-        poly_eval_poly_scale: kernel.name_str(creal, "polyEval_polyScale"),
-        poly_degree_lt: kernel.name_str(creal, "polyDegreeLt"),
-        poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
-        poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
+        polynomial: polynomial::PolynomialNames::intern(kernel, creal),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
         close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
         close_within_of_within_indexed: kernel.name_str(creal, "close_within_of_within_indexed"),
@@ -7274,14 +6736,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_term_zero_eq_one: kernel.name_str(creal, "expTerm_zero_eq_one"),
         exp_term_one_eq_one: kernel.name_str(creal, "expTerm_one_eq_one"),
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
-        evt_linear: kernel.name_str(creal, "evtLinear"),
-        evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
-        evt_linear_uniformly_continuous: kernel.name_str(creal, "evtLinear_uniformly_continuous"),
+        extreme_value: extreme_value::ExtremeValueNames::intern(kernel, creal),
         ivt_boundary: ivt_boundary::IvtBoundaryNames::intern(kernel, creal),
-        lub_set: kernel.name_str(creal, "lubSet"),
-        lub_set_inhabited: kernel.name_str(creal, "lubSet_inhabited"),
-        lub_set_bounded: kernel.name_str(creal, "lubSet_bounded"),
-        lub_decides_em: kernel.name_str(creal, "lub_decides_em"),
+        lub_boundary: lub_boundary::LubBoundaryNames::intern(kernel, creal),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
@@ -7317,10 +6774,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniform_converges_shift: kernel.name_str(creal, "uniformConvergesShift"),
         uniform_converges_neg: kernel.name_str(creal, "uniformConvergesNeg"),
         cos_fn_wide_has_derivative: kernel.name_str(creal, "cosFnWideHasDerivative"),
-        exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
-        exp_fn: kernel.name_str(creal, "expFn"),
-        exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
-        exp_fn_one_equiv_e: kernel.name_str(creal, "expFn_one_equiv_e"),
+        exp_fn: exp_fn::ExpFnNames::intern(kernel, creal),
         max_range: kernel.name_str(creal, "maxRange"),
         max_range_zero: kernel.name_str(creal, "maxRange_zero"),
         max_range_succ: kernel.name_str(creal, "maxRange_succ"),
@@ -7367,25 +6821,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
         sup_on_ub_at_fine_mesh_point: kernel.name_str(creal, "supOn_ub_at_fine_mesh_point"),
         sup_on_ub: kernel.name_str(creal, "supOn_ub"),
-        evt_approx_max: kernel.name_str(creal, "evt_approx_max"),
+        evt_row1: evt_row1::EvtRow1Names::intern(kernel, creal),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
         has_derivative_uniform_limit: kernel.name_str(creal, "hasDerivative_uniform_limit"),
-        pi_half_coef: kernel.name_str(creal, "piHalfCoef"),
-        pi_half_term: kernel.name_str(creal, "piHalfTerm"),
-        pi_half_series_partial: kernel.name_str(creal, "piHalfSeriesPartial"),
-        pi_half_coef_nonneg: kernel.name_str(creal, "piHalfCoefNonneg"),
-        pi_half_term_nonneg: kernel.name_str(creal, "piHalfTermNonneg"),
-        pi_half_term_le_pow_half: kernel.name_str(creal, "piHalfTermLePowHalf"),
-        pi_half_term_abs_le_dominant: kernel.name_str(creal, "piHalfTermAbsLeDominant"),
-        pi_half: kernel.name_str(creal, "piHalf"),
-        pi_half_converges: kernel.name_str(creal, "piHalfConverges"),
-        pi: kernel.name_str(creal, "pi"),
-        pi_half_le_two: kernel.name_str(creal, "piHalfLeTwo"),
-        pi_le_four: kernel.name_str(creal, "piLeFour"),
-        two_le_pi: kernel.name_str(creal, "twoLePi"),
-        three_le_pi: kernel.name_str(creal, "threeLePi"),
+        pi: pi::PiNames::intern(kernel, creal),
     }
 }
 
@@ -7717,5917 +7158,708 @@ fn plan_step_order(p: CRealPrelude, steps: &'static [BuildStep]) -> Result<Vec<u
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md` for the
 /// extraction method this reuses. Validated: the existing order already
 /// satisfies every one of the 2,264 requirement edges below.
-const STEPS: &[BuildStep] = &[
-    BuildStep {
-        label: "declare_predicates",
-        requires: &[],
-        provides: &[|p: CRealPrelude| p.regular_pred, |p: CRealPrelude| p.within],
-        run: declare_predicates,
-    },
-    BuildStep {
-        label: "declare_carrier",
-        requires: &[|p: CRealPrelude| p.regular_pred],
-        provides: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.rec,
-        ],
-        run: declare_carrier,
-    },
-    BuildStep {
-        label: "declare_projections",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.rec,
-            |p: CRealPrelude| p.regular_pred,
-        ],
-        provides: &[|p: CRealPrelude| p.regular, |p: CRealPrelude| p.seq],
-        run: declare_projections,
-    },
-    BuildStep {
-        label: "declare_equiv",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.within,
-        ],
-        provides: &[|p: CRealPrelude| p.equiv],
-        run: declare_equiv,
-    },
-    BuildStep {
-        label: "declare_reflexivity",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.seq,
-        ],
-        provides: &[|p: CRealPrelude| p.equiv_refl],
-        run: declare_reflexivity,
-    },
-    BuildStep {
-        label: "declare_symmetry",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.within,
-        ],
-        provides: &[|p: CRealPrelude| p.equiv_symm],
-        run: declare_symmetry,
-    },
-    BuildStep {
-        label: "declare_transitivity",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.within,
-        ],
-        provides: &[|p: CRealPrelude| p.equiv_trans],
-        run: declare_transitivity,
-    },
-    BuildStep {
-        label: "declare_of_rat",
-        requires: &[|p: CRealPrelude| p.creal, |p: CRealPrelude| p.mk],
-        provides: &[|p: CRealPrelude| p.of_rat],
-        run: declare_of_rat,
-    },
-    BuildStep {
-        label: "declare_discrimination",
-        requires: &[
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.seq,
-        ],
-        provides: &[|p: CRealPrelude| p.not_zero_one],
-        run: declare_discrimination,
-    },
-    BuildStep {
-        label: "declare_constants",
-        requires: &[|p: CRealPrelude| p.creal, |p: CRealPrelude| p.of_rat],
-        provides: &[|p: CRealPrelude| p.one, |p: CRealPrelude| p.zero],
-        run: declare_constants,
-    },
-    BuildStep {
-        label: "declare_pointwise",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.seq,
-        ],
-        provides: &[|p: CRealPrelude| p.equiv_of_pointwise],
-        run: declare_pointwise,
-    },
-    BuildStep {
-        label: "declare_negation",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.within,
-        ],
-        provides: &[|p: CRealPrelude| p.neg, |p: CRealPrelude| p.neg_congr],
-        run: declare_negation,
-    },
-    BuildStep {
-        label: "declare_addition",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.within,
-        ],
-        provides: &[|p: CRealPrelude| p.add, |p: CRealPrelude| p.add_congr],
-        run: declare_addition,
-    },
-    BuildStep {
-        label: "declare_additive_laws",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.within,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-        ],
-        run: declare_additive_laws,
-    },
-    BuildStep {
-        label: "declare_of_rat_add",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.of_rat,
-        ],
-        provides: &[|p: CRealPrelude| p.of_rat_add],
-        run: declare_of_rat_add,
-    },
-    BuildStep {
-        label: "declare_of_rat_neg",
-        requires: &[
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-        ],
-        provides: &[|p: CRealPrelude| p.of_rat_neg],
-        run: declare_of_rat_neg,
-    },
-    BuildStep {
-        label: "declare_of_rat_sub",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-        ],
-        provides: &[|p: CRealPrelude| p.of_rat_sub],
-        run: declare_of_rat_sub,
-    },
-    BuildStep {
-        label: "declare_order",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.not_le_one_zero,
-        ],
-        run: declare_order,
-    },
-    BuildStep {
-        label: "declare_neg_le_neg",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.seq,
-        ],
-        provides: &[|p: CRealPrelude| p.neg_le_neg],
-        run: declare_neg_le_neg,
-    },
-    BuildStep {
-        label: "declare_strict_order",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_irrefl,
-            |p: CRealPrelude| p.lt_of_le_of_lt,
-            |p: CRealPrelude| p.lt_of_lt_of_le,
-            |p: CRealPrelude| p.lt_trans,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        run: declare_strict_order,
-    },
-    BuildStep {
-        label: "order_extra::declare_order_extra",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.eq_zero_of_add_eq_zero_of_nonneg],
-        run: order_extra::declare_order_extra,
-    },
-    BuildStep {
-        label: "product::declare_product",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.not_zero_one,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_of_bounded,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_shift,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg_mul_neg,
-            |p: CRealPrelude| p.not_equiv_mul_one_one_zero,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.sq_nonneg,
-        ],
-        run: product::declare_product,
-    },
-    BuildStep {
-        label: "field::declare_field",
-        requires: &[
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_irrefl,
-            |p: CRealPrelude| p.lt_of_lt_of_le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.not_zero_one,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.apart,
-            |p: CRealPrelude| p.apart_congr,
-            |p: CRealPrelude| p.apart_irrefl,
-            |p: CRealPrelude| p.apart_symm,
-            |p: CRealPrelude| p.apart_zero_one,
-            |p: CRealPrelude| p.mul_pos,
-            |p: CRealPrelude| p.no_total_inverse,
-            |p: CRealPrelude| p.not_equiv_of_apart,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pos_bound_of_lt,
-            |p: CRealPrelude| p.pos_of_pos_bound,
-        ],
-        run: field::declare_field,
-    },
-    BuildStep {
-        label: "inverse::declare_inverse",
-        requires: &[
-            |p: CRealPrelude| p.equiv_of_bounded,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_shift,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.regular,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.inv,
-            |p: CRealPrelude| p.inv_congr,
-            |p: CRealPrelude| p.inv_index_irrelevant,
-            |p: CRealPrelude| p.inv_shift,
-            |p: CRealPrelude| p.mul_inv_cancel,
-        ],
-        run: inverse::declare_inverse,
-    },
-    BuildStep {
-        label: "cancellation::declare_cancellation",
-        requires: &[
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.inv,
-            |p: CRealPrelude| p.inv_shift,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_inv_cancel,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.inv_nonneg,
-            |p: CRealPrelude| p.le_of_mul_le_mul_left,
-        ],
-        run: cancellation::declare_cancellation,
-    },
-    BuildStep {
-        label: "lattice::declare_lattice",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.not_le_one_zero,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_max_right,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_congr,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_congr,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.not_equiv_abs_neg_one,
-            |p: CRealPrelude| p.not_le_zero_neg_one,
-        ],
-        run: lattice::declare_lattice,
-    },
-    BuildStep {
-        label: "product::declare_mul_self_abs",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_shift,
-        ],
-        provides: &[|p: CRealPrelude| p.mul_self_abs],
-        run: product::declare_mul_self_abs,
-    },
-    BuildStep {
-        label: "order_extra::declare_order_extra_abs",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.neg_sub_swap,
-        ],
-        run: order_extra::declare_order_extra_abs,
-    },
-    BuildStep {
-        label: "lattice::declare_lattice_extra",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_max_right,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_congr,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.clamp_id,
-            |p: CRealPrelude| p.clamp_mono,
-            |p: CRealPrelude| p.max_mono_right,
-            |p: CRealPrelude| p.max_sub_min,
-            |p: CRealPrelude| p.min_mono_left,
-        ],
-        run: lattice::declare_lattice_extra,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_uniform_converges_on",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_congr,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.uconv_mk,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_rec,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.uniform_converges_id,
-            |p: CRealPrelude| p.uniform_converges_on,
-        ],
-        run: uniform_convergence::declare_uniform_converges_on,
-    },
-    BuildStep {
-        label: "archimedean_squeeze::declare_archimedean_squeeze",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.equiv_zero_of_rate,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.le_of_forall_le_add_rate,
-            |p: CRealPrelude| p.le_of_forall_le_add_small,
-        ],
-        run: archimedean_squeeze::declare_archimedean_squeeze,
-    },
-    BuildStep {
-        label: "archimedean::declare_archimedean",
-        requires: &[|p: CRealPrelude| p.bound, |p: CRealPrelude| p.bound_within],
-        provides: &[|p: CRealPrelude| p.archimedean, |p: CRealPrelude| p.of_nat],
-        run: archimedean::declare_archimedean,
-    },
-    BuildStep {
-        label: "density::declare_density",
-        requires: &[|p: CRealPrelude| p.regular],
-        provides: &[
-            |p: CRealPrelude| p.density,
-            |p: CRealPrelude| p.rat_approx_lower,
-            |p: CRealPrelude| p.rat_approx_upper,
-        ],
-        run: density::declare_density,
-    },
-    BuildStep {
-        label: "cotransitivity::declare_cotransitivity",
-        requires: &[|p: CRealPrelude| p.apart, |p: CRealPrelude| p.regular],
-        provides: &[
-            |p: CRealPrelude| p.apart_cotrans,
-            |p: CRealPrelude| p.lt_cotrans,
-        ],
-        run: cotransitivity::declare_cotransitivity,
-    },
-    BuildStep {
-        label: "completeness::declare_completeness",
-        requires: &[
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.regular_pred,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.limit,
-            |p: CRealPrelude| p.limit_dist,
-            |p: CRealPrelude| p.limit_seq,
-            |p: CRealPrelude| p.limit_seq_regular,
-            |p: CRealPrelude| p.regular_seq,
-        ],
-        run: completeness::declare_completeness,
-    },
-    BuildStep {
-        label: "convergence::declare_convergence",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_of_bounded,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.bounded,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.continuous_add,
-            |p: CRealPrelude| p.continuous_at,
-            |p: CRealPrelude| p.continuous_comp,
-            |p: CRealPrelude| p.continuous_const,
-            |p: CRealPrelude| p.continuous_id,
-            |p: CRealPrelude| p.continuous_mul,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_add,
-            |p: CRealPrelude| p.converges_bounded,
-            |p: CRealPrelude| p.converges_cauchy,
-            |p: CRealPrelude| p.converges_le,
-            |p: CRealPrelude| p.converges_lower_bound,
-            |p: CRealPrelude| p.converges_lower_bound_shift,
-            |p: CRealPrelude| p.converges_mul,
-            |p: CRealPrelude| p.converges_neg,
-            |p: CRealPrelude| p.converges_of_close,
-            |p: CRealPrelude| p.converges_of_const,
-            |p: CRealPrelude| p.converges_of_equiv,
-            |p: CRealPrelude| p.converges_squeeze,
-            |p: CRealPrelude| p.converges_sub,
-            |p: CRealPrelude| p.converges_unique,
-            |p: CRealPrelude| p.converges_upper_bound,
-        ],
-        run: convergence::declare_convergence,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_abs_add_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.abs_add_le],
-        run: uniform_continuity::declare_abs_add_le,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_uniform_continuity",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_neg,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.bucket_clamp_lower,
-            |p: CRealPrelude| p.bucket_clamp_upper,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.bucket_index_bound,
-            |p: CRealPrelude| p.bucket_index_floor_lower,
-            |p: CRealPrelude| p.bucket_index_floor_upper,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.uc_mk,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_rec,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_add,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_neg,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.uniformly_continuous_sub,
-        ],
-        run: uniform_continuity::declare_uniform_continuity,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_uniformly_continuous_on_restrict",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.uc_mk,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.uniformly_continuous_on_restrict],
-        run: uniform_continuity::declare_uniformly_continuous_on_restrict,
-    },
-    BuildStep {
-        label: "crossing::declare_crossing",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bucket_clamp_lower,
-            |p: CRealPrelude| p.bucket_clamp_upper,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.bucket_index_floor_lower,
-            |p: CRealPrelude| p.bucket_index_floor_upper,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.crossing_index,
-            |p: CRealPrelude| p.crossing_lower,
-            |p: CRealPrelude| p.crossing_sample_ge_a,
-            |p: CRealPrelude| p.crossing_upper,
-        ],
-        run: crossing::declare_crossing,
-    },
-    BuildStep {
-        label: "convergence::declare_converges_comp_eventually",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_lower_bound,
-            |p: CRealPrelude| p.converges_upper_bound,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.converges_comp_eventually],
-        run: convergence::declare_converges_comp_eventually,
-    },
-    BuildStep {
-        label: "derivative::declare_derivative",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.sq_nonneg,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.bounded_on_add,
-            |p: CRealPrelude| p.bounded_on_mul,
-            |p: CRealPrelude| p.bounded_on_unfold,
-            |p: CRealPrelude| p.has_derivative_add,
-            |p: CRealPrelude| p.has_derivative_chain,
-            |p: CRealPrelude| p.has_derivative_chain_id_sq,
-            |p: CRealPrelude| p.has_derivative_congr,
-            |p: CRealPrelude| p.has_derivative_const,
-            |p: CRealPrelude| p.has_derivative_cube,
-            |p: CRealPrelude| p.has_derivative_id,
-            |p: CRealPrelude| p.has_derivative_mul,
-            |p: CRealPrelude| p.has_derivative_neg,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_smul,
-            |p: CRealPrelude| p.has_derivative_sq,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.hd_mk,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_rec,
-            |p: CRealPrelude| p.hd_spec,
-        ],
-        run: derivative::declare_derivative,
-    },
-    BuildStep {
-        label: "deriv_unique::declare_deriv_unique",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_spec,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_of_mul_le_mul_left,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_neg,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pos_bound_of_lt,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.has_derivative_unique],
-        run: deriv_unique::declare_deriv_unique,
-    },
-    BuildStep {
-        label: "fermat::declare_fermat",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_spec,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_of_mul_le_mul_left,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pos_bound_of_lt,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.fermat_interior_extremum],
-        run: fermat::declare_fermat,
-    },
-    BuildStep {
-        label: "rolle::declare_rolle",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.fermat_interior_extremum,
-            |p: CRealPrelude| p.has_derivative_neg,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.rolle_interior_extremum],
-        run: rolle::declare_rolle,
-    },
-    BuildStep {
-        label: "mvt::declare_mvt",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.hd_mk,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.rolle_interior_extremum,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.mvt_interior_extremum],
-        run: mvt::declare_mvt,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_uniform_continuity_products",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.of_rat_neg,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.uc_mk,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_add,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.bounded_on_id_unit,
-            |p: CRealPrelude| p.uniformly_continuous_mul,
-            |p: CRealPrelude| p.uniformly_continuous_poly_example,
-            |p: CRealPrelude| p.uniformly_continuous_sq,
-        ],
-        run: uniform_continuity::declare_uniform_continuity_products,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_bucket_close",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bucket_clamp_lower,
-            |p: CRealPrelude| p.bucket_clamp_upper,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.bucket_index_floor_lower,
-            |p: CRealPrelude| p.bucket_index_floor_upper,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_sub,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.bucket_close],
-        run: uniform_continuity::declare_bucket_close,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_abs_bound_of_self",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.bucket_clamp_lower,
-            |p: CRealPrelude| p.bucket_clamp_upper,
-            |p: CRealPrelude| p.bucket_close,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.bucket_index_bound,
-            |p: CRealPrelude| p.bucket_index_floor_lower,
-            |p: CRealPrelude| p.bucket_index_floor_upper,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_sub,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.abs_bound_of_self],
-        run: uniform_continuity::declare_abs_bound_of_self,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_bounded_of_uniformly_continuous",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_bound_of_self,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.bucket_clamp_lower,
-            |p: CRealPrelude| p.bucket_clamp_upper,
-            |p: CRealPrelude| p.bucket_close,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.bucket_index_bound,
-            |p: CRealPrelude| p.bucket_index_floor_lower,
-            |p: CRealPrelude| p.bucket_index_floor_upper,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_sub,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.bounded_of_uniformly_continuous],
-        run: uniform_continuity::declare_bounded_of_uniformly_continuous,
-    },
-    BuildStep {
-        label: "mul_self_zero::declare_mul_self_zero",
-        requires: &[
-            |p: CRealPrelude| p.equiv_of_bounded,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.eq_zero_of_mul_self_zero,
-            |p: CRealPrelude| p.rat_index_ratio_le_one,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.rat_sq_sandwich,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            // NOT `p.seq` (step 2 declares it) and NOT
-            // `p.shared_index_to_canonical` (step 98 does).
-            // `creal/mul_self_zero.rs` declares neither, and claiming them
-            // here told `validate_step_order` that
-            // `CReal.sharedIndexToCanonical` was available from step 50 --
-            // measured by `scripts/creal-declare-deps.py`, 2026-09-01.
-        ],
-        run: mul_self_zero::declare_mul_self_zero,
-    },
-    BuildStep {
-        label: "crossing::declare_crossing_sample",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.crossing_lower,
-            |p: CRealPrelude| p.crossing_upper,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.crossing_sample_lower,
-            |p: CRealPrelude| p.crossing_sample_upper,
-        ],
-        run: crossing::declare_crossing_sample,
-    },
-    BuildStep {
-        label: "crossing::declare_crossing_close",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.crossing_sample_lower,
-            |p: CRealPrelude| p.crossing_sample_upper,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.crossing_close],
-        run: crossing::declare_crossing_close,
-    },
-    BuildStep {
-        label: "crossing::declare_crossing_close_clamped",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.crossing_sample_ge_a,
-            |p: CRealPrelude| p.crossing_sample_lower,
-            |p: CRealPrelude| p.crossing_sample_upper,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.crossing_close_clamped],
-        run: crossing::declare_crossing_close_clamped,
-    },
-    BuildStep {
-        label: "crossing::declare_crossing_sample_pairing_close",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.crossing_close_clamped,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.crossing_sample_pairing_close],
-        run: crossing::declare_crossing_sample_pairing_close,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt",
-        requires: &[],
-        provides: &[
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.nat_sqrt_le,
-            |p: CRealPrelude| p.nat_sqrt_lt,
-            |p: CRealPrelude| p.nat_sqrt_spec,
-            |p: CRealPrelude| p.sqrt_approx,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-        ],
-        run: sqrt::declare_sqrt,
-    },
-    BuildStep {
-        label: "speedup::declare_speedup",
-        requires: &[|p: CRealPrelude| p.regular_pred],
-        provides: &[
-            |p: CRealPrelude| p.k_regular_pred,
-            |p: CRealPrelude| p.regular_of_kregular,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-        ],
-        run: speedup::declare_speedup,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_approx_kregular",
-        requires: &[
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.sqrt_approx,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_approx_kregular],
-        run: sqrt::declare_sqrt_approx_kregular,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_ctor",
-        requires: &[
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.regular_of_kregular,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.sqrt_approx,
-            |p: CRealPrelude| p.sqrt_approx_kregular,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt],
-        run: sqrt::declare_sqrt_ctor,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_congr",
-        requires: &[
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_congr],
-        run: sqrt::declare_sqrt_congr,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_le_sqrt",
-        requires: &[
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_le_sqrt],
-        run: sqrt::declare_sqrt_le_sqrt,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_one",
-        requires: &[
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_one],
-        run: sqrt::declare_sqrt_one,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_zero",
-        requires: &[
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_zero],
-        run: sqrt::declare_sqrt_zero,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_sq",
-        requires: &[
-            |p: CRealPrelude| p.equiv_of_bounded,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_sq],
-        run: sqrt::declare_sqrt_sq,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_nonneg",
-        requires: &[
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_nonneg],
-        run: sqrt::declare_sqrt_nonneg,
-    },
-    BuildStep {
-        label: "sqrt::declare_mul_self_sqrt",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_of_bounded,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.nat_sqrt,
-            |p: CRealPrelude| p.rat_sq_le,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_approx_sq_bracket,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.mul_self_sqrt],
-        run: sqrt::declare_mul_self_sqrt,
-    },
-    BuildStep {
-        label: "sqrt::declare_sqrt_mul",
-        requires: &[
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_self_sqrt,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_congr,
-            |p: CRealPrelude| p.sqrt_nonneg,
-            |p: CRealPrelude| p.sqrt_sq,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sqrt_mul],
-        run: sqrt::declare_sqrt_mul,
-    },
-    BuildStep {
-        label: "sqrt::declare_le_of_sq_le",
-        requires: &[
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.sqrt,
-            |p: CRealPrelude| p.sqrt_le_sqrt,
-            |p: CRealPrelude| p.sqrt_sq,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.le_of_sq_le],
-        run: sqrt::declare_le_of_sq_le,
-    },
-    BuildStep {
-        label: "convergence::declare_cauchy_convergence",
-        requires: &[
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.regular_of_kregular,
-            |p: CRealPrelude| p.regular_pred,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.converges_of_cauchy,
-            |p: CRealPrelude| p.converges_of_scaled_cauchy,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-        ],
-        run: convergence::declare_cauchy_convergence,
-    },
-    BuildStep {
-        label: "series::declare_series",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.converges_cauchy,
-            |p: CRealPrelude| p.converges_of_cauchy,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.abs_sum_range_le,
-            |p: CRealPrelude| p.mono_of_le_succ,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_add,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
-            |p: CRealPrelude| p.sum_range_cauchy_of_abs_cauchy,
-            |p: CRealPrelude| p.sum_range_cauchy_of_dominated,
-            |p: CRealPrelude| p.sum_range_comparison_test,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.sum_range_converges_of_abs_converges,
-            |p: CRealPrelude| p.sum_range_converges_of_dominated,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.sum_range_mono_outer,
-            |p: CRealPrelude| p.sum_range_seq_succ,
-            |p: CRealPrelude| p.sum_range_seq_zero,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.sum_range_succ,
-            |p: CRealPrelude| p.sum_range_tail_cauchy_within,
-            |p: CRealPrelude| p.sum_range_tail_le,
-            |p: CRealPrelude| p.sum_range_tail_within,
-            |p: CRealPrelude| p.sum_range_tail_within_cauchy,
-            |p: CRealPrelude| p.sum_range_tail_within_le,
-            |p: CRealPrelude| p.sum_range_telescope,
-            |p: CRealPrelude| p.sum_range_zero,
-        ],
-        run: series::declare_series,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_uniform_continuity_sums",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.mag_bound_le_sum_range_of_lt],
-        run: uniform_continuity::declare_uniform_continuity_sums,
-    },
-    BuildStep {
-        label: "monotone::declare_monotone",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_spec,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.sum_range_telescope,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.has_derivative_close_of_equiv,
-            |p: CRealPrelude| p.sum_range_telescope_ge,
-            |p: CRealPrelude| p.sum_range_telescope_le,
-        ],
-        run: monotone::declare_monotone,
-    },
-    BuildStep {
-        label: "integral::declare_integral",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_add,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.mesh_le_of_ge,
-            |p: CRealPrelude| p.mesh_scaled_le_of_ge,
-            |p: CRealPrelude| p.mul_riemann_sum,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_add,
-            |p: CRealPrelude| p.riemann_sum_const,
-            |p: CRealPrelude| p.riemann_sum_le,
-            |p: CRealPrelude| p.riemann_sum_le_on,
-        ],
-        run: integral::declare_integral,
-    },
-    BuildStep {
-        label: "integral::declare_sum_range_double",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sum_range_double],
-        run: integral::declare_sum_range_double,
-    },
-    BuildStep {
-        label: "integral::declare_sum_range_reblock",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sum_range_reblock],
-        run: integral::declare_sum_range_reblock,
-    },
-    BuildStep {
-        label: "integral::declare_within_of_two_sided_le",
-        requires: &[|p: CRealPrelude| p.le, |p: CRealPrelude| p.neg],
-        provides: &[|p: CRealPrelude| p.within_of_two_sided_le],
-        run: integral::declare_within_of_two_sided_le,
-    },
-    BuildStep {
-        label: "integral::declare_le_add_of_abs_sub_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.le_add_of_abs_sub_le],
-        run: integral::declare_le_add_of_abs_sub_le,
-    },
-    BuildStep {
-        label: "integral::declare_two_sided_of_abs_sub_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_add_of_abs_sub_le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.two_sided_of_abs_sub_le],
-        run: integral::declare_two_sided_of_abs_sub_le,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_uniform_convergence_continuity",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.two_sided_of_abs_sub_le,
-            |p: CRealPrelude| p.uc_mk,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.uniform_limit_uniformly_continuous],
-        run: uniform_convergence::declare_uniform_convergence_continuity,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_uniform_converges_add",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.two_sided_of_abs_sub_le,
-            |p: CRealPrelude| p.uconv_mk,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.uniform_converges_on,
-        ],
-        provides: &[|p: CRealPrelude| p.uniform_converges_add],
-        run: uniform_convergence::declare_uniform_converges_add,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_close_within_of_within",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-        ],
-        provides: &[|p: CRealPrelude| p.close_within_of_within],
-        run: uniform_convergence::declare_close_within_of_within,
-    },
-    BuildStep {
-        label: "integral::declare_close_within_of_within_indexed",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-        ],
-        provides: &[|p: CRealPrelude| p.close_within_of_within_indexed],
-        run: integral::declare_close_within_of_within_indexed,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_weierstrass_m_test",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_max_right,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_congr,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.regular_of_kregular,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.uconv_mk,
-            |p: CRealPrelude| p.uniform_converges_on,
-        ],
-        provides: &[|p: CRealPrelude| p.weierstrass_m_test],
-        run: uniform_convergence::declare_weierstrass_m_test,
-    },
-    BuildStep {
-        label: "integral::declare_of_nat_hom",
-        requires: &[
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_mul,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.of_nat_mul,
-        ],
-        run: integral::declare_of_nat_hom,
-    },
-    BuildStep {
-        label: "monotone::declare_monotone_of_nonneg_deriv_all",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.apart,
-            |p: CRealPrelude| p.archimedean,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_close_of_equiv,
-            |p: CRealPrelude| p.has_derivative_neg,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_spec,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_of_forall_le_add_small,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_telescope_ge,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.antitone_of_nonpos_deriv,
-            |p: CRealPrelude| p.constant_of_zero_deriv,
-            |p: CRealPrelude| p.diff_le_of_strict_mono_magnitude,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.monotone_of_nonneg_deriv,
-            |p: CRealPrelude| p.scale_cancel_le,
-            |p: CRealPrelude| p.strict_antitone_of_neg_deriv,
-            |p: CRealPrelude| p.strict_injective_of_pos_deriv,
-            |p: CRealPrelude| p.strict_mono_comp,
-            |p: CRealPrelude| p.strict_mono_magnitude,
-            |p: CRealPrelude| p.strict_mono_of_pos_deriv,
-            |p: CRealPrelude| p.subdivision_point_in_bounds,
-            |p: CRealPrelude| p.sum_range_const,
-        ],
-        run: monotone::declare_monotone_of_nonneg_deriv_all,
-    },
-    BuildStep {
-        label: "derivative::declare_abs_diff_le_of_deriv_bound",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.has_derivative_add,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.hd_mk,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.monotone_of_nonneg_deriv,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.abs_diff_le_of_deriv_bound],
-        run: derivative::declare_abs_diff_le_of_deriv_bound,
-    },
-    BuildStep {
-        label: "derivative::declare_lipschitz_of_deriv_bound",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_diff_le_of_deriv_bound,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.lipschitz_of_deriv_bound],
-        run: derivative::declare_lipschitz_of_deriv_bound,
-    },
-    BuildStep {
-        label: "derivative::declare_abs_diff_sub_le_of_deriv_bound",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.lipschitz_of_deriv_bound,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.abs_diff_sub_le_of_deriv_bound],
-        run: derivative::declare_abs_diff_sub_le_of_deriv_bound,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_has_derivative_uniform_limit",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_diff_sub_le_of_deriv_bound,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.hd_mk,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_spec,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_of_forall_le_add_small,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.two_sided_of_abs_sub_le,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.has_derivative_uniform_limit],
-        run: uniform_convergence::declare_has_derivative_uniform_limit,
-    },
-    BuildStep {
-        label: "integral::declare_fine_sample_in_bounds",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.subdivision_point_in_bounds,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.fine_sample_in_bounds],
-        run: integral::declare_fine_sample_in_bounds,
-    },
-    BuildStep {
-        label: "integral::declare_fine_sample_close",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.fine_sample_in_bounds,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mesh_le_of_ge,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.fine_sample_close],
-        run: integral::declare_fine_sample_close,
-    },
-    BuildStep {
-        label: "integral::declare_fine_block_sum_close",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.fine_sample_close,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_add,
-            |p: CRealPrelude| p.sum_range_const,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.two_sided_of_abs_sub_le,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.fine_block_sum_close],
-        run: integral::declare_fine_block_sum_close,
-    },
-    BuildStep {
-        label: "integral::declare_mesh_reciprocal_mul",
-        requires: &[],
-        provides: &[|p: CRealPrelude| p.mesh_reciprocal_mul],
-        run: integral::declare_mesh_reciprocal_mul,
-    },
-    BuildStep {
-        label: "integral::declare_equiv_abs_diff_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.equiv_abs_diff_le],
-        run: integral::declare_equiv_abs_diff_le,
-    },
-    BuildStep {
-        label: "integral::declare_sample_point_reblock",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mesh_reciprocal_mul,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.of_nat_mul,
-            |p: CRealPrelude| p.of_rat_mul,
-        ],
-        provides: &[|p: CRealPrelude| p.sample_point_reblock],
-        run: integral::declare_sample_point_reblock,
-    },
-    BuildStep {
-        label: "integral::declare_reblock_block_eq_fine_block_sum",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_abs_diff_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.fine_sample_in_bounds,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mesh_reciprocal_mul,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.of_nat_mul,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.reblock_block_eq_fine_block_sum],
-        run: integral::declare_reblock_block_eq_fine_block_sum,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_reblock_close",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.fine_block_sum_close,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.mesh_reciprocal_mul,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.reblock_block_eq_fine_block_sum,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_add,
-            |p: CRealPrelude| p.sum_range_const,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_reblock_close],
-        run: integral::declare_riemann_sum_reblock_close,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_cauchy",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_of_pointwise,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_reblock_close,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.within_of_two_sided_le,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_cauchy],
-        run: integral::declare_riemann_sum_cauchy,
-    },
-    BuildStep {
-        label: "integral::declare_shared_index_to_canonical",
-        requires: &[|p: CRealPrelude| p.neg, |p: CRealPrelude| p.regular],
-        provides: &[|p: CRealPrelude| p.shared_index_to_canonical],
-        run: integral::declare_shared_index_to_canonical,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_shared_accuracy_close",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_cauchy,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_shared_accuracy_close],
-        run: integral::declare_riemann_sum_shared_accuracy_close,
-    },
-    BuildStep {
-        // Generalizes the step above by exposing the shared mid-anchor `l`
-        // as a genuine parameter; lands beside it for the same reason its
-        // doc comment gives. Same requirement set: it is the same wiring.
-        label: "integral::declare_riemann_sum_shared_accuracy_close_at",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_shared_accuracy_close_at],
-        run: integral::declare_riemann_sum_shared_accuracy_close_at,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_total_eps_le",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_total_eps_le],
-        run: integral::declare_riemann_sum_total_eps_le,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_deep_cauchy",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_cauchy,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_deep_cauchy],
-        run: integral::declare_riemann_sum_deep_cauchy,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_deep_cauchy_folded",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy,
-            |p: CRealPrelude| p.riemann_sum_total_eps_le,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_deep_cauchy_folded],
-        run: integral::declare_riemann_sum_deep_cauchy_folded,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_deep_cauchy_cross",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_cauchy,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_deep_cauchy_cross],
-        run: integral::declare_riemann_sum_deep_cauchy_cross,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_deep_cauchy_cross_folded",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_cross,
-            |p: CRealPrelude| p.riemann_sum_total_eps_le,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_deep_cauchy_cross_folded],
-        run: integral::declare_riemann_sum_deep_cauchy_cross_folded,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_add_cauchy_cross",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_add,
-            |p: CRealPrelude| p.riemann_sum_cauchy,
-            |p: CRealPrelude| p.riemann_sum_total_eps_le,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_add_cauchy_cross],
-        run: integral::declare_riemann_sum_add_cauchy_cross,
-    },
-    BuildStep {
-        label: "integral::declare_creal_integral",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral],
-        run: integral::declare_creal_integral,
-    },
-    BuildStep {
-        label: "integral::declare_integral_converges",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_of_scaled_cauchy,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_converges],
-        run: integral::declare_integral_converges,
-    },
-    BuildStep {
-        label: "integral::declare_integral_const",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_of_equiv,
-            |p: CRealPrelude| p.converges_unique,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_const,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_const],
-        run: integral::declare_integral_const,
-    },
-    BuildStep {
-        label: "integral::declare_integral_witness_independent",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_of_close,
-            |p: CRealPrelude| p.converges_unique,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_cross_folded,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_witness_independent],
-        run: integral::declare_integral_witness_independent,
-    },
-    BuildStep {
-        label: "integral::declare_integral_add",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_add,
-            |p: CRealPrelude| p.converges_of_close,
-            |p: CRealPrelude| p.converges_unique,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_add_cauchy_cross,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_add],
-        run: integral::declare_integral_add,
-    },
-    BuildStep {
-        label: "integral::declare_integral_le",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_le,
-            |p: CRealPrelude| p.converges_of_close,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_cauchy,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.riemann_sum_le_on,
-            |p: CRealPrelude| p.riemann_sum_total_eps_le,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_le],
-        run: integral::declare_integral_le,
-    },
-    BuildStep {
-        label: "integral::declare_integral_scale",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_mul,
-            |p: CRealPrelude| p.converges_of_close,
-            |p: CRealPrelude| p.converges_of_const,
-            |p: CRealPrelude| p.converges_unique,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_riemann_sum,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_cauchy,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.riemann_sum_total_eps_le,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_scale],
-        run: integral::declare_integral_scale,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_integral_close",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.riemann_sum_shared_accuracy_close,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_integral_close],
-        run: integral::declare_riemann_sum_integral_close,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_split_exact",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_split_exact],
-        run: integral::declare_riemann_sum_split_exact,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_split_scale_invariant",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.mesh_reciprocal_mul,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_mul,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_split_scale_invariant],
-        run: integral::declare_riemann_sum_split_scale_invariant,
-    },
-    BuildStep {
-        label: "integral::declare_congr_of_uniformly_continuous",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_abs_diff_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.congr_of_uniformly_continuous],
-        run: integral::declare_congr_of_uniformly_continuous,
-    },
-    BuildStep {
-        label: "integral::declare_riemann_sum_split_exact_of_uc",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.congr_of_uniformly_continuous,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.riemann_sum_split_exact_of_uc],
-        run: integral::declare_riemann_sum_split_exact_of_uc,
-    },
-    BuildStep {
-        label: "integral::declare_integral_split",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.congr_of_uniformly_continuous,
-            |p: CRealPrelude| p.converges_add,
-            |p: CRealPrelude| p.converges_of_close,
-            |p: CRealPrelude| p.converges_unique,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_deep_cauchy_folded,
-            |p: CRealPrelude| p.riemann_sum_shared_accuracy_close,
-            |p: CRealPrelude| p.riemann_sum_split_exact_of_uc,
-            |p: CRealPrelude| p.riemann_sum_split_scale_invariant,
-            |p: CRealPrelude| p.riemann_sum_total_eps_le,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_split],
-        run: integral::declare_integral_split,
-    },
-    BuildStep {
-        label: "integral::declare_split_point_approx",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.bucket_clamp_lower,
-            |p: CRealPrelude| p.bucket_clamp_upper,
-            |p: CRealPrelude| p.bucket_index,
-            |p: CRealPrelude| p.bucket_index_floor_lower,
-            |p: CRealPrelude| p.bucket_index_floor_upper,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.inv,
-            |p: CRealPrelude| p.inv_nonneg,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_inv_cancel,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.split_point_approx],
-        run: integral::declare_split_point_approx,
-    },
-    BuildStep {
-        label: "integral::declare_integral_endpoint_close",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.converges_add,
-            |p: CRealPrelude| p.converges_le,
-            |p: CRealPrelude| p.converges_of_const,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_neg,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.riemann_sum,
-            |p: CRealPrelude| p.riemann_sum_shared_accuracy_close,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_endpoint_close],
-        run: integral::declare_integral_endpoint_close,
-    },
-    BuildStep {
-        label: "integral::declare_integral_split_arbitrary",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_endpoint_close,
-            |p: CRealPrelude| p.integral_split,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.split_point_approx,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.uniformly_continuous_on_restrict,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_split_arbitrary],
-        run: integral::declare_integral_split_arbitrary,
-    },
-    BuildStep {
-        label: "integral::declare_integral_abs_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.bounded_on_unfold,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_const,
-            |p: CRealPrelude| p.integral_le,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_abs_le],
-        run: integral::declare_integral_abs_le,
-    },
-    BuildStep {
-        label: "integral::declare_ftc_estimates",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.bounded_on_unfold,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_small,
-            |p: CRealPrelude| p.clamp_id,
-            |p: CRealPrelude| p.clamp_mono,
-            |p: CRealPrelude| p.hd_mk,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.max_sub_min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_add,
-            |p: CRealPrelude| p.integral_const,
-            |p: CRealPrelude| p.integral_le,
-            |p: CRealPrelude| p.integral_split_arbitrary,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pos_bound_of_lt,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.uniformly_continuous_on_restrict,
-            |p: CRealPrelude| p.uniformly_continuous_sub,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.integral_abs_le_of_bound,
-            |p: CRealPrelude| p.integral_sub_linear_le,
-            |p: CRealPrelude| p.antiderivative,
-            |p: CRealPrelude| p.antiderivative_abs_le,
-            |p: CRealPrelude| p.integral_split_anywhere,
-            |p: CRealPrelude| p.has_derivative_antiderivative,
-        ],
-        run: integral::declare_ftc_estimates,
-    },
-    BuildStep {
-        label: "integral::declare_integral_eq_antideriv_diff",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.antiderivative,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.bounded_on_unfold,
-            |p: CRealPrelude| p.clamp_id,
-            |p: CRealPrelude| p.constant_of_zero_deriv,
-            |p: CRealPrelude| p.eq_zero_of_mul_self_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_antiderivative,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_abs_le,
-            |p: CRealPrelude| p.integral_split_anywhere,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_self_abs,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.uniformly_continuous_on_restrict,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_eq_antideriv_diff],
-        run: integral::declare_integral_eq_antideriv_diff,
-    },
-    BuildStep {
-        label: "integral::declare_integral_by_parts",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
-            |p: CRealPrelude| p.bounded_on,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_mul,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_add,
-            |p: CRealPrelude| p.integral_eq_antideriv_diff,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.uniformly_continuous_add,
-            |p: CRealPrelude| p.uniformly_continuous_mul,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.integral_by_parts],
-        run: integral::declare_integral_by_parts,
-    },
-    BuildStep {
-        label: "derivative::declare_has_derivative_integral_const",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_congr,
-            |p: CRealPrelude| p.has_derivative_const,
-            |p: CRealPrelude| p.has_derivative_id,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_smul,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.integral,
-            |p: CRealPrelude| p.integral_const,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_max_right,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_congr,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.has_derivative_integral_const],
-        run: derivative::declare_has_derivative_integral_const,
-    },
-    BuildStep {
-        label: "inverse_fn::declare_order_reflect_of_pos_deriv",
-        requires: &[
-            |p: CRealPrelude| p.apart,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.lt_irrefl,
-            |p: CRealPrelude| p.lt_trans,
-            |p: CRealPrelude| p.strict_mono_of_pos_deriv,
-        ],
-        provides: &[|p: CRealPrelude| p.order_reflect_of_pos_deriv],
-        run: inverse_fn::declare_order_reflect_of_pos_deriv,
-    },
-    BuildStep {
-        label: "monotone::declare_inverse_lipschitz_of_pos_deriv",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.apart,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.scale_cancel_le,
-            |p: CRealPrelude| p.strict_mono_magnitude,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.inverse_lipschitz_of_pos_deriv],
-        run: monotone::declare_inverse_lipschitz_of_pos_deriv,
-    },
-    BuildStep {
-        label: "power::declare_power",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.apart,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_irrefl,
-            |p: CRealPrelude| p.lt_of_le_of_lt,
-            |p: CRealPrelude| p.lt_of_lt_of_le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_pos,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.geom_sum_bounded,
-            |p: CRealPrelude| p.geom_tail_bounded,
-            |p: CRealPrelude| p.mul_sub_one_geom,
-            |p: CRealPrelude| p.mul_sub_one_geom_tail,
-            |p: CRealPrelude| p.not_apart_one_of_pow_succ_eq_one,
-            |p: CRealPrelude| p.one_le_pow_of_one_le,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_congr,
-            |p: CRealPrelude| p.pow_le_one,
-            |p: CRealPrelude| p.pow_le_pow_of_le_one,
-            |p: CRealPrelude| p.pow_le_pow_of_one_le,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.pow_pos,
-            |p: CRealPrelude| p.pow_succ,
-            |p: CRealPrelude| p.pow_succ_gt_one,
-            |p: CRealPrelude| p.pow_succ_lt_one,
-            |p: CRealPrelude| p.pow_zero,
-        ],
-        run: power::declare_power,
-    },
-    BuildStep {
-        label: "power::declare_power_series_term",
-        requires: &[|p: CRealPrelude| p.mul, |p: CRealPrelude| p.pow],
-        provides: &[|p: CRealPrelude| p.power_series_term],
-        run: power::declare_power_series_term,
-    },
-    BuildStep {
-        label: "power::declare_power_series_term_congr",
-        requires: &[
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_congr,
-            |p: CRealPrelude| p.power_series_term,
-        ],
-        provides: &[|p: CRealPrelude| p.power_series_term_congr],
-        run: power::declare_power_series_term_congr,
-    },
-    BuildStep {
-        label: "derivative::declare_has_derivative_pow_two",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_congr,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_sq,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-        ],
-        provides: &[|p: CRealPrelude| p.has_derivative_pow_two],
-        run: derivative::declare_has_derivative_pow_two,
-    },
-    BuildStep {
-        label: "derivative::declare_has_derivative_pow",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_congr,
-            |p: CRealPrelude| p.has_derivative_id,
-            |p: CRealPrelude| p.has_derivative_mul,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-        ],
-        provides: &[|p: CRealPrelude| p.has_derivative_pow],
-        run: derivative::declare_has_derivative_pow,
-    },
-    BuildStep {
-        label: "geometric::declare_geometric",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.geom_tail_bounded,
-            |p: CRealPrelude| p.inv,
-            |p: CRealPrelude| p.inv_nonneg,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_mul_le_mul_left,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.lt_irrefl,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_inv_cancel,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pos_bound_of_lt,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_le_one,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.regular,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_split,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.geom_pair_within,
-            |p: CRealPrelude| p.geom_tail_bounded_div,
-            |p: CRealPrelude| p.geom_tail_within,
-            |p: CRealPrelude| p.geom_tail_within_le,
-            |p: CRealPrelude| p.geom_y_bound,
-            |p: CRealPrelude| p.inv_le_of_pos_bound,
-            |p: CRealPrelude| p.of_rat_pow,
-            |p: CRealPrelude| p.pow_half_le_nat_div_succ,
-            |p: CRealPrelude| p.geom_y_bound_raw,
-            |p: CRealPrelude| p.pow_le_nat_div_succ_of_gap,
-            |p: CRealPrelude| p.pow_le_nat_div_succ_of_lt,
-            |p: CRealPrelude| p.pow_le_pow_of_base_le,
-            |p: CRealPrelude| p.ratio_decay_bound,
-        ],
-        run: geometric::declare_geometric,
-    },
-    BuildStep {
-        label: "power::declare_power_series_term_abs_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_le_pow_of_base_le,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.power_series_term,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.power_series_term_abs_le],
-        run: power::declare_power_series_term_abs_le,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_power_series_uniform_converges",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.power_series_term,
-            |p: CRealPrelude| p.power_series_term_abs_le,
-            |p: CRealPrelude| p.power_series_term_congr,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.weierstrass_m_test,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.power_series_uniform_converges],
-        run: uniform_convergence::declare_power_series_uniform_converges,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_converges_of_abs_diff_le",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.shared_index_to_canonical,
-            |p: CRealPrelude| p.within,
-            |p: CRealPrelude| p.within_of_two_sided_le,
-        ],
-        provides: &[|p: CRealPrelude| p.converges_of_abs_diff_le],
-        run: uniform_convergence::declare_converges_of_abs_diff_le,
-    },
-    BuildStep {
-        label: "uniform_convergence::declare_uniform_converges_geom",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_half_le_nat_div_succ,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.uconv_mk,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.uniform_converges_geom_half],
-        run: uniform_convergence::declare_uniform_converges_geom,
-    },
-    BuildStep {
-        label: "geometric::declare_geom_cauchy_of_lt_family",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.geom_pair_within,
-            |p: CRealPrelude| p.geom_y_bound,
-            |p: CRealPrelude| p.geom_y_bound_raw,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.pow_le_nat_div_succ_of_gap,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.inv,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.geom_cauchy_of_lt,
-            |p: CRealPrelude| p.geom_cauchy_of_lt_ordered,
-            |p: CRealPrelude| p.geom_cauchy_body_16_over_25,
-            |p: CRealPrelude| p.geom_cauchy_body_of_gap,
-            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
-            |p: CRealPrelude| p.geom_cauchy_ordered_of_gap,
-        ],
-        run: geometric::declare_geom_cauchy_of_lt_family,
-    },
-    BuildStep {
-        label: "exponential::declare_exponential",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sub_one_geom,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.of_rat_neg,
-            |p: CRealPrelude| p.of_rat_pow,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_dominant_nonneg,
-            |p: CRealPrelude| p.exp_series_partial,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.exp_term_le_dominant,
-            |p: CRealPrelude| p.exp_term_le_geom,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.sum_pow_half_closed_form,
-        ],
-        run: exponential::declare_exponential,
-    },
-    BuildStep {
-        label: "exponential::declare_geom_cauchy_family",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.geom_pair_within,
-            |p: CRealPrelude| p.inv,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_of_mul_le_mul_left,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_inv_cancel,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_half_le_nat_div_succ,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.geom_cauchy,
-            |p: CRealPrelude| p.geom_cauchy_ordered_half,
-            |p: CRealPrelude| p.geom_half_inv_leaf_bound,
-        ],
-        run: exponential::declare_geom_cauchy_family,
-    },
-    BuildStep {
-        label: "exponential::declare_exp_convergence",
-        requires: &[
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.converges_cauchy,
-            |p: CRealPrelude| p.converges_mul,
-            |p: CRealPrelude| p.converges_of_cauchy,
-            |p: CRealPrelude| p.converges_of_const,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_series_partial,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.geom_cauchy,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_converges_of_dominated,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cauchy_of_pointwise_equiv,
-            |p: CRealPrelude| p.exp_dominant_cauchy,
-            |p: CRealPrelude| p.exp_series_partial_converges,
-        ],
-        run: exponential::declare_exp_convergence,
-    },
-    BuildStep {
-        label: "ratio_test::declare_geom_scaled_cauchy_of_lt",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.cauchy_of_pointwise_equiv,
-            |p: CRealPrelude| p.converges_cauchy,
-            |p: CRealPrelude| p.converges_mul,
-            |p: CRealPrelude| p.converges_of_cauchy,
-            |p: CRealPrelude| p.converges_of_const,
-            |p: CRealPrelude| p.geom_cauchy_of_lt,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.geom_scaled_cauchy_of_lt],
-        run: ratio_test::declare_geom_scaled_cauchy_of_lt,
-    },
-    BuildStep {
-        label: "ratio_test::declare_sum_range_ratio_test",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.geom_scaled_cauchy_of_lt,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.ratio_decay_bound,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_cauchy_of_dominated,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.sum_range_ratio_test],
-        run: ratio_test::declare_sum_range_ratio_test,
-    },
-    BuildStep {
-        label: "exponential::declare_e_family",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_lower_bound_shift,
-            |p: CRealPrelude| p.converges_upper_bound,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_series_partial,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.exp_term_le_dominant,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.geom_cauchy_ordered_half,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-            |p: CRealPrelude| p.sum_pow_half_closed_form,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.sum_range_mono_outer,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.e,
-            |p: CRealPrelude| p.e_converges,
-            |p: CRealPrelude| p.e_le_four,
-            |p: CRealPrelude| p.e_le_three,
-            |p: CRealPrelude| p.two_le_e,
-        ],
-        run: exponential::declare_e_family,
-    },
-    BuildStep {
-        label: "trig::declare_trig",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.abs_sum_range_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.converges_lower_bound,
-            |p: CRealPrelude| p.converges_upper_bound,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.geom_cauchy_ordered_half,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_le_one,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.rat_index_ratio_le_one,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-            |p: CRealPrelude| p.sum_pow_half_closed_form,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cos_one,
-            |p: CRealPrelude| p.cos_one_converges,
-            |p: CRealPrelude| p.cos_one_le_four,
-            |p: CRealPrelude| p.cos_series_partial,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.cos_term_abs_le_dominant,
-            |p: CRealPrelude| p.exp_term_antitone,
-            |p: CRealPrelude| p.exp_term_one_eq_one,
-            |p: CRealPrelude| p.exp_term_zero_eq_one,
-            |p: CRealPrelude| p.neg_four_le_cos_one,
-        ],
-        run: trig::declare_trig,
-    },
-    BuildStep {
-        label: "trig::declare_sin_trig",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.geom_cauchy_ordered_half,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_le_one,
-            |p: CRealPrelude| p.pow_le_pow_of_le_one,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.rat_index_ratio_le_one,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sin_one,
-            |p: CRealPrelude| p.sin_one_converges,
-            |p: CRealPrelude| p.sin_series_partial,
-            |p: CRealPrelude| p.sin_term,
-            |p: CRealPrelude| p.sin_term_abs_le_dominant,
-        ],
-        run: trig::declare_sin_trig,
-    },
-    BuildStep {
-        label: "cos_sign::declare_converges_upper_bound_shift",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_lower_bound_shift,
-            |p: CRealPrelude| p.converges_neg,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.converges_upper_bound_shift],
-        run: cos_sign::declare_converges_upper_bound_shift,
-    },
-    BuildStep {
-        label: "alternating::declare_alternating",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_lower_bound_shift,
-            |p: CRealPrelude| p.converges_neg,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.neg_mul_neg,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.alternating_bracket,
-            |p: CRealPrelude| p.alternating_bracket_upper,
-            |p: CRealPrelude| p.alternating_e_le_o,
-            |p: CRealPrelude| p.alternating_lower_bound,
-            |p: CRealPrelude| p.alternating_upper_bound,
-            |p: CRealPrelude| p.neg_one_pow_double,
-        ],
-        run: alternating::declare_alternating,
-    },
-    BuildStep {
-        label: "cos_sign::declare_alternating_upper_bound_tail",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.alternating_bracket_upper,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_upper_bound_shift,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.alternating_upper_bound_tail],
-        run: cos_sign::declare_alternating_upper_bound_tail,
-    },
-    BuildStep {
-        label: "trig::declare_trig_alternating_bounds",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.alternating_lower_bound,
-            |p: CRealPrelude| p.alternating_upper_bound,
-            |p: CRealPrelude| p.cos_one,
-            |p: CRealPrelude| p.cos_one_converges,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_antitone,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cos_one_alternating_lower,
-            |p: CRealPrelude| p.cos_one_alternating_upper,
-            |p: CRealPrelude| p.cos_one_le_exp_term_zero,
-            |p: CRealPrelude| p.cos_one_nonneg,
-        ],
-        run: trig::declare_trig_alternating_bounds,
-    },
-    BuildStep {
-        label: "trig::declare_sin_trig_alternating_bounds",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.alternating_lower_bound,
-            |p: CRealPrelude| p.alternating_upper_bound,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_antitone,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.sin_one,
-            |p: CRealPrelude| p.sin_one_converges,
-            |p: CRealPrelude| p.sin_term,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sin_one_alternating_lower,
-            |p: CRealPrelude| p.sin_one_alternating_upper,
-            |p: CRealPrelude| p.sin_one_le_exp_term_one,
-            |p: CRealPrelude| p.sin_one_nonneg,
-        ],
-        run: trig::declare_sin_trig_alternating_bounds,
-    },
-    BuildStep {
-        label: "ivt::declare_ivt",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_nonneg,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bound_within,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_comp_eventually,
-            |p: CRealPrelude| p.converges_lower_bound,
-            |p: CRealPrelude| p.converges_of_cauchy,
-            |p: CRealPrelude| p.converges_upper_bound,
-            |p: CRealPrelude| p.diff_le_of_strict_mono_magnitude,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_forall_le_add_small,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.lt_trans,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.of_rat_neg,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_half_le_nat_div_succ,
-            |p: CRealPrelude| p.rat_approx_lower,
-            |p: CRealPrelude| p.rat_approx_upper,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.within,
-            |p: CRealPrelude| p.within_of_two_sided_le,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.abs_diff_le_of_small_image,
-            |p: CRealPrelude| p.cauchy_of_abs_diff_le,
-            |p: CRealPrelude| p.scaled_cauchy_of_abs_diff_le,
-            |p: CRealPrelude| p.ivt_approx,
-            |p: CRealPrelude| p.ivt_bisect,
-            |p: CRealPrelude| p.ivt_bisect_diag,
-            |p: CRealPrelude| p.ivt_bisect_diag_hi,
-            |p: CRealPrelude| p.ivt_bisect_diag_lo,
-            |p: CRealPrelude| p.ivt_bisect_hi,
-            |p: CRealPrelude| p.ivt_exact_root,
-            |p: CRealPrelude| p.ivt_bisect_approx,
-            |p: CRealPrelude| p.ivt_bisect_cauchy,
-            |p: CRealPrelude| p.ivt_bisect_cauchy_bound,
-            |p: CRealPrelude| p.ivt_bisect_invariant,
-            |p: CRealPrelude| p.ivt_bisect_lo,
-            |p: CRealPrelude| p.ivt_iter,
-            |p: CRealPrelude| p.ivt_step,
-        ],
-        run: ivt::declare_ivt,
-    },
-    BuildStep {
-        label: "inverse_fn::declare_ivt_exact_root_at",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.has_derivative_const,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_sub,
-            |p: CRealPrelude| p.ivt_exact_root,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.uniformly_continuous_sub,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.ivt_exact_root_at],
-        run: inverse_fn::declare_ivt_exact_root_at,
-    },
-    BuildStep {
-        label: "polynomial::declare_polynomial",
-        requires: &[
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_add,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.poly_add,
-            |p: CRealPrelude| p.poly_degree_lt,
-            |p: CRealPrelude| p.poly_degree_lt_poly_add,
-            |p: CRealPrelude| p.poly_degree_lt_poly_scale,
-            |p: CRealPrelude| p.poly_eval,
-            |p: CRealPrelude| p.poly_eval_poly_add,
-            |p: CRealPrelude| p.poly_eval_poly_scale,
-            |p: CRealPrelude| p.poly_eval_succ,
-            |p: CRealPrelude| p.poly_eval_zero,
-            |p: CRealPrelude| p.poly_scale,
-        ],
-        run: polynomial::declare_polynomial,
-    },
-    BuildStep {
-        label: "congruence::declare_congruence_extras",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_congr,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_congr,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_congr,
-        ],
-        provides: &[|p: CRealPrelude| p.mul_pow_congr],
-        run: congruence::declare_congruence_extras,
-    },
-    BuildStep {
-        label: "uniform_continuity::declare_bounded_on_id_zero_one",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.bounded_on_id_unit,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[|p: CRealPrelude| p.bounded_on_id_zero_one],
-        run: uniform_continuity::declare_bounded_on_id_zero_one,
-    },
-    BuildStep {
-        label: "extreme_value::declare_extreme_value",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_bound_of_self,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.bounded_on_id_zero_one,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_of_mul_le_mul_left,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pos_bound,
-            |p: CRealPrelude| p.pos_bound_of_lt,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_mul,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.evt_attained_max_decides_sign,
-            |p: CRealPrelude| p.evt_linear,
-            |p: CRealPrelude| p.evt_linear_uniformly_continuous,
-        ],
-        run: extreme_value::declare_extreme_value,
-    },
-    BuildStep {
-        label: "ivt_boundary::declare_ivt_boundary",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_max_right,
-            |p: CRealPrelude| p.le_min,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.min,
-            |p: CRealPrelude| p.min_le_left,
-            |p: CRealPrelude| p.min_le_right,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.two_sided_of_abs_sub_le,
-            |p: CRealPrelude| p.uc_mk,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_add,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.ivt_boundary.ivt_exact_root_decides_sign,
-            |p: CRealPrelude| p.ivt_boundary.ivt_plateau,
-            |p: CRealPrelude| p.ivt_boundary.ivt_plateau_nonneg_at_one,
-            |p: CRealPrelude| p.ivt_boundary.ivt_plateau_nonpos_at_zero,
-            |p: CRealPrelude| p.ivt_boundary.ivt_plateau_uniformly_continuous,
-            |p: CRealPrelude| p.ivt_boundary.uniformly_continuous_max,
-            |p: CRealPrelude| p.ivt_boundary.uniformly_continuous_min,
-        ],
-        run: ivt_boundary::declare_ivt_boundary,
-    },
-    BuildStep {
-        label: "lub_boundary::declare_lub_boundary",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.lt_irrefl,
-            |p: CRealPrelude| p.lt_of_le_of_lt,
-            |p: CRealPrelude| p.lt_of_lt_of_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.lub_decides_em,
-            |p: CRealPrelude| p.lub_set,
-            |p: CRealPrelude| p.lub_set_bounded,
-            |p: CRealPrelude| p.lub_set_inhabited,
-        ],
-        run: lub_boundary::declare_lub_boundary,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_family",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.cos_term_abs_le_dominant,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_pow_congr,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.pow_le_one,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.weierstrass_m_test,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cos_fn,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_term_abs_le,
-            |p: CRealPrelude| p.cos_fn_term_congr,
-            |p: CRealPrelude| p.cos_fn_uniform_converges,
-        ],
-        run: trig_fn::declare_cos_fn_family,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_equiv_cos_one",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.close_within_of_within,
-            |p: CRealPrelude| p.cos_fn,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_uniform_converges,
-            |p: CRealPrelude| p.cos_one,
-            |p: CRealPrelude| p.cos_one_converges,
-            |p: CRealPrelude| p.cos_series_partial,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_rate,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_fn_one_equiv_cos_one],
-        run: trig_fn::declare_cos_fn_equiv_cos_one,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_wide_progress",
-        requires: &[
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.pow_le_pow_of_base_le,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.sum_range,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cos_dominant_16_over_25,
-            |p: CRealPrelude| p.cos_dominant_16_over_25_cauchy_body,
-            |p: CRealPrelude| p.cos_fn_term_abs_le_wide,
-            |p: CRealPrelude| p.pow_mul_distrib,
-        ],
-        run: trig_fn::declare_cos_fn_wide_progress,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_wide",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.cos_dominant_16_over_25,
-            |p: CRealPrelude| p.cos_dominant_16_over_25_cauchy_body,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_term_abs_le_wide,
-            |p: CRealPrelude| p.cos_fn_term_congr,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_congr,
-            |p: CRealPrelude| p.pow_mul_distrib,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.weierstrass_m_test,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
-        ],
-        run: trig_fn::declare_cos_fn_wide,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_wide_uniformly_continuous",
-        requires: &[
-            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniform_limit_uniformly_continuous,
-            |p: CRealPrelude| p.uniformly_continuous_add,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_mul,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_fn_wide_uniformly_continuous],
-        run: trig_fn::declare_cos_fn_wide_uniformly_continuous,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_wide_at_one",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.close_within_of_within,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
-            |p: CRealPrelude| p.cos_one,
-            |p: CRealPrelude| p.cos_one_converges,
-            |p: CRealPrelude| p.cos_one_nonneg,
-            |p: CRealPrelude| p.cos_series_partial,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_rate,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.zero,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.cos_fn_wide_one_equiv_cos_one,
-            |p: CRealPrelude| p.cos_fn_wide_one_nonneg,
-        ],
-        run: trig_fn::declare_cos_fn_wide_at_one,
-    },
-    BuildStep {
-        label: "trig_fn::declare_has_derivative_on_restrict",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.hd_mk,
-            |p: CRealPrelude| p.hd_modulus,
-            |p: CRealPrelude| p.hd_spec,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.of_rat,
-        ],
-        provides: &[|p: CRealPrelude| p.has_derivative_on_restrict],
-        run: trig_fn::declare_has_derivative_on_restrict,
-    },
-    BuildStep {
-        label: "trig_fn::declare_sin_fn_term_family",
-        requires: &[
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_pow_congr,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.pow_le_pow_of_base_le,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.sin_term,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sin_fn_term,
-            |p: CRealPrelude| p.sin_fn_term_congr,
-            |p: CRealPrelude| p.sin_fn_term_abs_le_wide,
-        ],
-        run: trig_fn::declare_sin_fn_term_family,
-    },
-    BuildStep {
-        label: "trig_fn::declare_sin_fn_dominant",
-        requires: &[
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.sum_range,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sin_dominant_16_over_25,
-            |p: CRealPrelude| p.sin_dominant_16_over_25_cauchy_body,
-        ],
-        run: trig_fn::declare_sin_fn_dominant,
-    },
-    BuildStep {
-        label: "trig_fn::declare_sin_fn",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_congr,
-            |p: CRealPrelude| p.pow_mul_distrib,
-            |p: CRealPrelude| p.sin_dominant_16_over_25,
-            |p: CRealPrelude| p.sin_dominant_16_over_25_cauchy_body,
-            |p: CRealPrelude| p.sin_fn_term,
-            |p: CRealPrelude| p.sin_fn_term_abs_le_wide,
-            |p: CRealPrelude| p.sin_fn_term_congr,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.weierstrass_m_test,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sin_fn,
-            |p: CRealPrelude| p.sin_fn_uniform_converges,
-        ],
-        run: trig_fn::declare_sin_fn,
-    },
-    BuildStep {
-        label: "trig_fn::declare_sin_fn_uniformly_continuous",
-        requires: &[
-            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sin_fn,
-            |p: CRealPrelude| p.sin_fn_term,
-            |p: CRealPrelude| p.sin_fn_uniform_converges,
-            |p: CRealPrelude| p.sin_term,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniform_limit_uniformly_continuous,
-            |p: CRealPrelude| p.uniformly_continuous_add,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_mul,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.sin_fn_uniformly_continuous],
-        run: trig_fn::declare_sin_fn_uniformly_continuous,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_derivative",
-        requires: &[
-            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
-            |p: CRealPrelude| p.bounded_on_unfold,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.has_derivative_add,
-            |p: CRealPrelude| p.has_derivative_congr,
-            |p: CRealPrelude| p.has_derivative_const,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_pow,
-            |p: CRealPrelude| p.has_derivative_smul,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sin_fn_term,
-            |p: CRealPrelude| p.sin_term,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniformly_continuous_const,
-            |p: CRealPrelude| p.uniformly_continuous_id,
-            |p: CRealPrelude| p.uniformly_continuous_mul,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.exp_term_succ_scale,
-            |p: CRealPrelude| p.cos_fn_term_deriv_coeff,
-            |p: CRealPrelude| p.cos_fn_term_has_derivative,
-            |p: CRealPrelude| p.cos_fn_partial_has_derivative,
-        ],
-        run: trig_fn::declare_cos_fn_derivative,
-    },
-    BuildStep {
-        label: "trig_fn::declare_cos_fn_wide_derivative",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.cos_fn_partial_has_derivative,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
-            |p: CRealPrelude| p.has_derivative_on,
-            |p: CRealPrelude| p.has_derivative_uniform_limit,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sin_fn,
-            |p: CRealPrelude| p.sin_fn_term,
-            |p: CRealPrelude| p.sin_fn_uniform_converges,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uconv_mk,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.uniform_converges_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.nat_div_succ_step_le,
-            |p: CRealPrelude| p.uniform_converges_shift,
-            |p: CRealPrelude| p.uniform_converges_neg,
-            |p: CRealPrelude| p.cos_fn_wide_has_derivative,
-        ],
-        run: trig_fn::declare_cos_fn_wide_derivative,
-    },
-    BuildStep {
-        label: "trig_fn::declare_sin_fn_lower_bound",
-        requires: &[
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.alternating_lower_bound,
-            |p: CRealPrelude| p.close_within_of_within,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_rate,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.exp_term_one_eq_one,
-            |p: CRealPrelude| p.exp_term_succ_scale,
-            |p: CRealPrelude| p.geom_cauchy_ordered_16_over_25,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_sum_range,
-            |p: CRealPrelude| p.neg_congr,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.of_nat_mul,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_congr,
-            |p: CRealPrelude| p.pow_le_pow_of_base_le,
-            |p: CRealPrelude| p.pow_mul_distrib,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.sin_dominant_16_over_25,
-            |p: CRealPrelude| p.sin_fn,
-            |p: CRealPrelude| p.sin_fn_term,
-            |p: CRealPrelude| p.sin_fn_term_abs_le_wide,
-            |p: CRealPrelude| p.sin_fn_uniform_converges,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_converges_of_dominated,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[|p: CRealPrelude| p.sin_fn_lower_bound_one_to_r],
-        run: trig_fn::declare_sin_fn_lower_bound,
-    },
-    BuildStep {
-        label: "exp_fn::declare_exp_fn_family",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_mul_le_of_bounds,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_abs_le_dominant,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.pow_le_one,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.power_series_term,
-            |p: CRealPrelude| p.power_series_term_congr,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.uniform_converges_on,
-            |p: CRealPrelude| p.weierstrass_m_test,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.exp_fn,
-            |p: CRealPrelude| p.exp_fn_term_abs_le,
-            |p: CRealPrelude| p.exp_fn_uniform_converges,
-        ],
-        run: exp_fn::declare_exp_fn_family,
-    },
-    BuildStep {
-        label: "exp_fn::declare_exp_fn_equiv_e",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_add_le,
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.close_within_of_within,
-            |p: CRealPrelude| p.e,
-            |p: CRealPrelude| p.e_converges,
-            |p: CRealPrelude| p.equiv,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.equiv_zero_of_rate,
-            |p: CRealPrelude| p.exp_fn,
-            |p: CRealPrelude| p.exp_fn_uniform_converges,
-            |p: CRealPrelude| p.exp_series_partial,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_abs_self,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_abs,
-            |p: CRealPrelude| p.neg_sub_swap,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.power_series_term,
-            |p: CRealPrelude| p.sample_lower_bound,
-            |p: CRealPrelude| p.sample_upper_bound,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-            |p: CRealPrelude| p.zero_lt_one,
-        ],
-        provides: &[|p: CRealPrelude| p.exp_fn_one_equiv_e],
-        run: exp_fn::declare_exp_fn_equiv_e,
-    },
-    BuildStep {
-        label: "supremum::declare_max_range",
-        requires: &[
-            |p: CRealPrelude| p.creal,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_max_left,
-            |p: CRealPrelude| p.le_max_right,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max,
-            |p: CRealPrelude| p.mono_of_le_succ,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.max_range,
-            |p: CRealPrelude| p.max_range_mono,
-            |p: CRealPrelude| p.max_range_self_le,
-            |p: CRealPrelude| p.max_range_succ,
-            |p: CRealPrelude| p.max_range_ub,
-            |p: CRealPrelude| p.max_range_zero,
-        ],
-        run: supremum::declare_max_range,
-    },
-    BuildStep {
-        label: "supremum::declare_max_range_transport",
-        requires: &[
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.max_range,
-            |p: CRealPrelude| p.max_range_ub,
-        ],
-        provides: &[|p: CRealPrelude| p.max_range_transport],
-        run: supremum::declare_max_range_transport,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_level_count",
-        requires: &[],
-        provides: &[
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_level_count_succ,
-            |p: CRealPrelude| p.mesh_level_count_zero,
-        ],
-        run: supremum::declare_mesh_level_count,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_level_count_pow",
-        requires: &[
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_level_count_zero,
-            |p: CRealPrelude| p.mesh_level_count_succ,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_level_count_pow],
-        run: supremum::declare_mesh_level_count_pow,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_level_count_ge_of_size",
-        requires: &[
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_level_count_pow,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_level_count_ge_of_size],
-        run: supremum::declare_mesh_level_count_ge_of_size,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_max",
-        requires: &[
-            |p: CRealPrelude| p.max_range,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_max],
-        run: supremum::declare_mesh_max,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_max_step_le",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.congr_of_uniformly_continuous,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.max_range_transport,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_max,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_max_step_le],
-        run: supremum::declare_mesh_max_step_le,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_max_mono",
-        requires: &[
-            |p: CRealPrelude| p.mesh_max,
-            |p: CRealPrelude| p.mesh_max_step_le,
-            |p: CRealPrelude| p.mono_of_le_succ,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_max_mono],
-        run: supremum::declare_mesh_max_mono,
-    },
-    BuildStep {
-        label: "supremum::declare_exp_of_modulus",
-        requires: &[|p: CRealPrelude| p.mesh_level_count],
-        provides: &[|p: CRealPrelude| p.exp_of_modulus],
-        run: supremum::declare_exp_of_modulus,
-    },
-    BuildStep {
-        label: "supremum::declare_true_exp_of_modulus",
-        requires: &[|p: CRealPrelude| p.exp_of_modulus],
-        provides: &[
-            |p: CRealPrelude| p.true_exp_of_modulus,
-            |p: CRealPrelude| p.true_exp_of_modulus_zero,
-            |p: CRealPrelude| p.true_exp_of_modulus_succ,
-        ],
-        run: supremum::declare_true_exp_of_modulus,
-    },
-    BuildStep {
-        label: "supremum::declare_true_exp_of_modulus_step_le",
-        requires: &[
-            |p: CRealPrelude| p.true_exp_of_modulus,
-            |p: CRealPrelude| p.true_exp_of_modulus_succ,
-        ],
-        provides: &[|p: CRealPrelude| p.true_exp_of_modulus_step_le],
-        run: supremum::declare_true_exp_of_modulus_step_le,
-    },
-    BuildStep {
-        label: "supremum::declare_true_exp_of_modulus_mono",
-        requires: &[
-            |p: CRealPrelude| p.true_exp_of_modulus,
-            |p: CRealPrelude| p.true_exp_of_modulus_step_le,
-        ],
-        provides: &[|p: CRealPrelude| p.true_exp_of_modulus_mono],
-        run: supremum::declare_true_exp_of_modulus_mono,
-    },
-    BuildStep {
-        label: "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
-        requires: &[
-            |p: CRealPrelude| p.exp_of_modulus,
-            |p: CRealPrelude| p.true_exp_of_modulus,
-            |p: CRealPrelude| p.true_exp_of_modulus_zero,
-            |p: CRealPrelude| p.true_exp_of_modulus_succ,
-        ],
-        provides: &[|p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus],
-        run: supremum::declare_exp_of_modulus_le_true_exp_of_modulus,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_point_near_coarse",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_equiv,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.left_distrib,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_add,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_point_near_coarse],
-        run: supremum::declare_mesh_point_near_coarse,
-    },
-    BuildStep {
-        label: "supremum::declare_max_range_le_add_of_exists",
-        requires: &[
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.max_range,
-            |p: CRealPrelude| p.max_range_ub,
-        ],
-        provides: &[|p: CRealPrelude| p.max_range_le_add_of_exists],
-        run: supremum::declare_max_range_le_add_of_exists,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_max_le_add_of_step_close",
-        requires: &[
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max_range_le_add_of_exists,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_max,
-            |p: CRealPrelude| p.mesh_point_near_coarse,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_max_le_add_of_step_close],
-        run: supremum::declare_mesh_max_le_add_of_step_close,
-    },
-    BuildStep {
-        label: "supremum::declare_mesh_max_le_add_of_modulus",
-        requires: &[
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.le_add_of_abs_sub_le,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mesh_le_of_ge,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_level_count_ge_of_size,
-            |p: CRealPrelude| p.mesh_max,
-            |p: CRealPrelude| p.mesh_max_le_add_of_step_close,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.mesh_max_le_add_of_modulus],
-        run: supremum::declare_mesh_max_le_add_of_modulus,
-    },
-    BuildStep {
-        label: "supremum::declare_sup_seq",
-        requires: &[
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.exp_of_modulus,
-            |p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_max,
-            |p: CRealPrelude| p.mesh_max_le_add_of_modulus,
-            |p: CRealPrelude| p.mesh_max_mono,
-            |p: CRealPrelude| p.true_exp_of_modulus,
-            |p: CRealPrelude| p.true_exp_of_modulus_mono,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sup_level,
-            |p: CRealPrelude| p.sup_level_mono,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_mono,
-            |p: CRealPrelude| p.sup_seq_le_add,
-        ],
-        run: supremum::declare_sup_seq,
-    },
-    BuildStep {
-        label: "supremum::declare_sup_seq_cauchy",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.cauchy,
-            |p: CRealPrelude| p.cauchy_of_abs_diff_le,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_level_count_pow,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_le_add,
-            |p: CRealPrelude| p.sup_seq_mono,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.le_mesh_level_count,
-            |p: CRealPrelude| p.sup_seq_abs_diff_le,
-            |p: CRealPrelude| p.sup_seq_cauchy,
-        ],
-        run: supremum::declare_sup_seq_cauchy,
-    },
-    BuildStep {
-        label: "supremum::declare_sup_on",
-        requires: &[
-            |p: CRealPrelude| p.converges,
-            |p: CRealPrelude| p.converges_of_scaled_cauchy,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-            |p: CRealPrelude| p.scaled_cauchy_of_abs_diff_le,
-            |p: CRealPrelude| p.seq,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_abs_diff_le,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sup_on,
-            |p: CRealPrelude| p.sup_seq_converges_sup_on,
-        ],
-        run: supremum::declare_sup_on,
-    },
-    BuildStep {
-        label: "sup_laws::declare_max_range_attained_approx",
-        requires: &[
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.max_le,
-            |p: CRealPrelude| p.max_range,
-            |p: CRealPrelude| p.pos_of_pos_bound,
-        ],
-        provides: &[|p: CRealPrelude| p.max_range_attained_approx],
-        run: sup_laws::declare_max_range_attained_approx,
-    },
-    BuildStep {
-        label: "sup_laws::declare_sup_seq_le_shift",
-        requires: &[
-            |p: CRealPrelude| p.le_add_of_nonneg,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_le_add,
-            |p: CRealPrelude| p.sup_seq_mono,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.sup_seq_le_shift],
-        run: sup_laws::declare_sup_seq_le_shift,
-    },
-    BuildStep {
-        label: "sup_laws::declare_sup_on_approx_lub",
-        requires: &[
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.converges_upper_bound,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_mesh_level_count,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max_range,
-            |p: CRealPrelude| p.max_range_attained_approx,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.sup_level,
-            |p: CRealPrelude| p.sup_on,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_converges_sup_on,
-            |p: CRealPrelude| p.sup_seq_le_shift,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.sup_on_approx_lub],
-        run: sup_laws::declare_sup_on_approx_lub,
-    },
-    BuildStep {
-        label: "sup_laws::declare_sup_on_ub_at_sup_seq_point",
-        requires: &[
-            |p: CRealPrelude| p.converges_lower_bound_shift,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max_range_ub,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.sup_level,
-            |p: CRealPrelude| p.sup_on,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_converges_sup_on,
-            |p: CRealPrelude| p.sup_seq_mono,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.sup_seq_le_sup_on,
-            |p: CRealPrelude| p.sup_on_ub_at_sup_seq_point,
-        ],
-        run: sup_laws::declare_sup_on_ub_at_sup_seq_point,
-    },
-    BuildStep {
-        label: "sup_laws::declare_step_family_locate",
-        requires: &[
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_lt_add_of_le_of_lt,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.lt_congr,
-            |p: CRealPrelude| p.lt_cotrans,
-            |p: CRealPrelude| p.lt,
-        ],
-        provides: &[|p: CRealPrelude| p.step_family_locate],
-        run: sup_laws::declare_step_family_locate,
-    },
-    BuildStep {
-        label: "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
-        requires: &[
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.exp_of_modulus,
-            |p: CRealPrelude| p.exp_of_modulus_le_true_exp_of_modulus,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.max_range_ub,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_max,
-            |p: CRealPrelude| p.mesh_max_le_add_of_modulus,
-            |p: CRealPrelude| p.sup_level,
-            |p: CRealPrelude| p.sup_on,
-            |p: CRealPrelude| p.sup_seq,
-            |p: CRealPrelude| p.sup_seq_le_sup_on,
-            |p: CRealPrelude| p.true_exp_of_modulus,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.mesh_max_le_sup_on_add,
-            |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
-        ],
-        run: sup_laws::declare_sup_on_ub_at_fine_mesh_point,
-    },
-    BuildStep {
-        label: "sup_laws::declare_sup_on_ub",
-        requires: &[
-            |p: CRealPrelude| p.abs_le_of_two_sided,
-            |p: CRealPrelude| p.add_assoc,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.bound,
-            |p: CRealPrelude| p.le_add_of_abs_sub_le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_mesh_level_count,
-            |p: CRealPrelude| p.le_of_forall_le_add_rate,
-            |p: CRealPrelude| p.le_of_lt,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mesh_count_width,
-            |p: CRealPrelude| p.mesh_le_of_ge,
-            |p: CRealPrelude| p.mesh_level_count,
-            |p: CRealPrelude| p.mesh_level_count_ge_of_size,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.mul_zero,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_pos,
-            |p: CRealPrelude| p.rat_unit_eq_one,
-            |p: CRealPrelude| p.riemann_sample_in_bounds,
-            |p: CRealPrelude| p.step_family_locate,
-            |p: CRealPrelude| p.sup_level,
-            |p: CRealPrelude| p.sup_on,
-            |p: CRealPrelude| p.sup_on_ub_at_fine_mesh_point,
-            |p: CRealPrelude| p.uc_modulus,
-            |p: CRealPrelude| p.uc_spec,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.sup_on_ub],
-        run: sup_laws::declare_sup_on_ub,
-    },
-    BuildStep {
-        label: "evt_row1::declare_evt_approx_max",
-        requires: &[
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.sup_on,
-            |p: CRealPrelude| p.sup_on_approx_lub,
-            |p: CRealPrelude| p.sup_on_ub,
-            |p: CRealPrelude| p.uniformly_continuous_on,
-        ],
-        provides: &[|p: CRealPrelude| p.evt_approx_max],
-        run: evt_row1::declare_evt_approx_max,
-    },
-    BuildStep {
-        label: "cos_sign::declare_cos_wide_tail_nonneg",
-        requires: &[
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_nonneg,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_wide_tail_nonneg],
-        run: cos_sign::declare_cos_wide_tail_nonneg,
-    },
-    BuildStep {
-        label: "cos_sign::declare_cos_wide_tail_antitone",
-        requires: &[
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.exp_term_nonneg,
-            |p: CRealPrelude| p.exp_term_succ_scale,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.of_nat,
-            |p: CRealPrelude| p.of_nat_le,
-            |p: CRealPrelude| p.of_nat_mul,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_add,
-            |p: CRealPrelude| p.pow_nonneg,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_wide_tail_antitone],
-        run: cos_sign::declare_cos_wide_tail_antitone,
-    },
-    BuildStep {
-        label: "cos_sign::declare_cos_wide_series_converges",
-        requires: &[
-            |p: CRealPrelude| p.abs_congr,
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.cos_fn_term,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_fn_wide_uniform_converges,
-            |p: CRealPrelude| p.converges_of_abs_diff_le,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_congr,
-            |p: CRealPrelude| p.uconv_rate,
-            |p: CRealPrelude| p.uconv_spec,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_wide_series_converges],
-        run: cos_sign::declare_cos_wide_series_converges,
-    },
-    BuildStep {
-        label: "cos_sign::declare_cos_wide_nonpositive",
-        requires: &[
-            |p: CRealPrelude| p.add_congr,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.alternating_upper_bound_tail,
-            |p: CRealPrelude| p.cos_fn_wide,
-            |p: CRealPrelude| p.cos_wide_series_converges,
-            |p: CRealPrelude| p.cos_wide_tail_antitone,
-            |p: CRealPrelude| p.cos_wide_tail_nonneg,
-            |p: CRealPrelude| p.exp_term,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mul_assoc,
-            |p: CRealPrelude| p.mul_congr,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg_one_pow_double,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.sum_range,
-        ],
-        provides: &[|p: CRealPrelude| p.cos_wide_nonpositive],
-        run: cos_sign::declare_cos_wide_nonpositive,
-    },
-    BuildStep {
-        label: "pi::declare_pi_family",
-        requires: &[
-            |p: CRealPrelude| p.abs,
-            |p: CRealPrelude| p.abs_le,
-            |p: CRealPrelude| p.add,
-            |p: CRealPrelude| p.add_comm,
-            |p: CRealPrelude| p.add_le_add,
-            |p: CRealPrelude| p.add_neg,
-            |p: CRealPrelude| p.add_zero,
-            |p: CRealPrelude| p.converges_lower_bound_shift,
-            |p: CRealPrelude| p.converges_upper_bound,
-            |p: CRealPrelude| p.equiv_of_le_le,
-            |p: CRealPrelude| p.equiv_refl,
-            |p: CRealPrelude| p.equiv_symm,
-            |p: CRealPrelude| p.equiv_trans,
-            |p: CRealPrelude| p.exp_dominant,
-            |p: CRealPrelude| p.geom_cauchy_ordered_half,
-            |p: CRealPrelude| p.le,
-            |p: CRealPrelude| p.le_congr,
-            |p: CRealPrelude| p.le_refl,
-            |p: CRealPrelude| p.le_trans,
-            |p: CRealPrelude| p.mk,
-            |p: CRealPrelude| p.mul,
-            |p: CRealPrelude| p.mul_comm,
-            |p: CRealPrelude| p.mul_le_mul_of_nonneg_left,
-            |p: CRealPrelude| p.mul_nonneg,
-            |p: CRealPrelude| p.mul_one,
-            |p: CRealPrelude| p.neg,
-            |p: CRealPrelude| p.neg_le_neg,
-            |p: CRealPrelude| p.of_rat,
-            |p: CRealPrelude| p.of_rat_add,
-            |p: CRealPrelude| p.of_rat_le,
-            |p: CRealPrelude| p.of_rat_mul,
-            |p: CRealPrelude| p.one,
-            |p: CRealPrelude| p.pow,
-            |p: CRealPrelude| p.pow_nonneg,
-            |p: CRealPrelude| p.regular_of_scaled_cauchy,
-            |p: CRealPrelude| p.speedup,
-            |p: CRealPrelude| p.speedup_close,
-            |p: CRealPrelude| p.sum_pow_half_closed_form,
-            |p: CRealPrelude| p.sum_range,
-            |p: CRealPrelude| p.sum_range_cauchy_dominated_ordered_normalized,
-            |p: CRealPrelude| p.sum_range_le,
-            |p: CRealPrelude| p.sum_range_mono_outer,
-            |p: CRealPrelude| p.zero,
-        ],
-        provides: &[
-            |p: CRealPrelude| p.pi,
-            |p: CRealPrelude| p.pi_half,
-            |p: CRealPrelude| p.pi_half_coef,
-            |p: CRealPrelude| p.pi_half_coef_nonneg,
-            |p: CRealPrelude| p.pi_half_converges,
-            |p: CRealPrelude| p.pi_half_le_two,
-            |p: CRealPrelude| p.pi_half_series_partial,
-            |p: CRealPrelude| p.pi_half_term,
-            |p: CRealPrelude| p.pi_half_term_abs_le_dominant,
-            |p: CRealPrelude| p.pi_half_term_le_pow_half,
-            |p: CRealPrelude| p.pi_half_term_nonneg,
-            |p: CRealPrelude| p.pi_le_four,
-            |p: CRealPrelude| p.three_le_pi,
-            |p: CRealPrelude| p.two_le_pi,
-        ],
-        run: pi::declare_pi_family,
-    },
+/// The `creal` prelude's build ORDER and dispatch, hand-maintained: one entry
+/// per top-level call in the `build_creal_prelude_uncached` sequence, naming
+/// the step and the `declare_*` that performs it.
+///
+/// **The dependency data is deliberately not here.** It used to be: each entry
+/// carried hand-written `requires`/`provides` accessor lists, and the level-1
+/// preflight ([`validate_step_order`]) and the level-2 planner
+/// ([`plan_step_order`]) could only constrain the edges those lists named.
+/// Measured 2026-09-01 (`scripts/creal-declare-deps.py`), the lists named
+/// **3,934 of the 4,831** `requires` edges the code actually has, so 977 edges
+/// -- spread over 175 of the 211 steps -- constrained nothing. An inversion on
+/// any of them passed the preflight and then failed in the kernel as a bare
+/// `UnknownConst`, which is the shape of gate CLAUDE.md calls worse than no
+/// gate at all: measured on the parent commit, swapping steps 98 and 100
+/// (`integral::declare_shared_index_to_canonical` and its consumer) produced
+/// **zero** violations from the hand-written table and one from the measured
+/// graph.
+///
+/// So [`STEPS`] is now GENERATED from this table plus a measurement of the
+/// source: `crates/axeyum-lean-kernel/src/creal/steps_generated.rs`, written
+/// by `scripts/creal-declare-deps.py` and gated stale by its `--check`.
+/// Adding a step means adding one line here and re-running the generator; a
+/// dependency edge is never written by hand again.
+type StepDispatch = (
+    &'static str,
+    fn(&mut IntDev<'_>, CRealPrelude) -> Result<(), KernelError>,
+);
+
+const STEP_DISPATCH: &[StepDispatch] = &[
+    ("declare_predicates", declare_predicates),
+    ("declare_carrier", declare_carrier),
+    ("declare_projections", declare_projections),
+    ("declare_equiv", declare_equiv),
+    ("declare_reflexivity", declare_reflexivity),
+    ("declare_symmetry", declare_symmetry),
+    ("declare_transitivity", declare_transitivity),
+    ("declare_of_rat", declare_of_rat),
+    ("declare_discrimination", declare_discrimination),
+    ("declare_constants", declare_constants),
+    ("declare_pointwise", declare_pointwise),
+    ("declare_negation", declare_negation),
+    ("declare_addition", declare_addition),
+    ("declare_additive_laws", declare_additive_laws),
+    ("declare_of_rat_add", declare_of_rat_add),
+    ("declare_of_rat_neg", declare_of_rat_neg),
+    ("declare_of_rat_sub", declare_of_rat_sub),
+    ("declare_order", declare_order),
+    ("declare_neg_le_neg", declare_neg_le_neg),
+    ("declare_strict_order", declare_strict_order),
+    (
+        "order_extra::declare_order_extra",
+        order_extra::declare_order_extra,
+    ),
+    ("product::declare_product", product::declare_product),
+    ("field::declare_field", field::declare_field),
+    ("inverse::declare_inverse", inverse::declare_inverse),
+    (
+        "cancellation::declare_cancellation",
+        cancellation::declare_cancellation,
+    ),
+    ("lattice::declare_lattice", lattice::declare_lattice),
+    (
+        "product::declare_mul_self_abs",
+        product::declare_mul_self_abs,
+    ),
+    (
+        "order_extra::declare_order_extra_abs",
+        order_extra::declare_order_extra_abs,
+    ),
+    (
+        "lattice::declare_lattice_extra",
+        lattice::declare_lattice_extra,
+    ),
+    (
+        "uniform_convergence::declare_uniform_converges_on",
+        uniform_convergence::declare_uniform_converges_on,
+    ),
+    (
+        "archimedean_squeeze::declare_archimedean_squeeze",
+        archimedean_squeeze::declare_archimedean_squeeze,
+    ),
+    (
+        "archimedean::declare_archimedean",
+        archimedean::declare_archimedean,
+    ),
+    ("density::declare_density", density::declare_density),
+    (
+        "cotransitivity::declare_cotransitivity",
+        cotransitivity::declare_cotransitivity,
+    ),
+    (
+        "completeness::declare_completeness",
+        completeness::declare_completeness,
+    ),
+    (
+        "convergence::declare_convergence",
+        convergence::declare_convergence,
+    ),
+    (
+        "uniform_continuity::declare_abs_add_le",
+        uniform_continuity::declare_abs_add_le,
+    ),
+    (
+        "uniform_continuity::declare_uniform_continuity",
+        uniform_continuity::declare_uniform_continuity,
+    ),
+    (
+        "uniform_continuity::declare_uniformly_continuous_on_restrict",
+        uniform_continuity::declare_uniformly_continuous_on_restrict,
+    ),
+    ("crossing::declare_crossing", crossing::declare_crossing),
+    (
+        "convergence::declare_converges_comp_eventually",
+        convergence::declare_converges_comp_eventually,
+    ),
+    (
+        "derivative::declare_derivative",
+        derivative::declare_derivative,
+    ),
+    (
+        "deriv_unique::declare_deriv_unique",
+        deriv_unique::declare_deriv_unique,
+    ),
+    ("fermat::declare_fermat", fermat::declare_fermat),
+    ("rolle::declare_rolle", rolle::declare_rolle),
+    ("mvt::declare_mvt", mvt::declare_mvt),
+    (
+        "uniform_continuity::declare_uniform_continuity_products",
+        uniform_continuity::declare_uniform_continuity_products,
+    ),
+    (
+        "uniform_continuity::declare_bucket_close",
+        uniform_continuity::declare_bucket_close,
+    ),
+    (
+        "uniform_continuity::declare_abs_bound_of_self",
+        uniform_continuity::declare_abs_bound_of_self,
+    ),
+    (
+        "uniform_continuity::declare_bounded_of_uniformly_continuous",
+        uniform_continuity::declare_bounded_of_uniformly_continuous,
+    ),
+    (
+        "mul_self_zero::declare_mul_self_zero",
+        mul_self_zero::declare_mul_self_zero,
+    ),
+    (
+        "crossing::declare_crossing_sample",
+        crossing::declare_crossing_sample,
+    ),
+    (
+        "crossing::declare_crossing_close",
+        crossing::declare_crossing_close,
+    ),
+    (
+        "crossing::declare_crossing_close_clamped",
+        crossing::declare_crossing_close_clamped,
+    ),
+    (
+        "crossing::declare_crossing_sample_pairing_close",
+        crossing::declare_crossing_sample_pairing_close,
+    ),
+    ("sqrt::declare_sqrt", sqrt::declare_sqrt),
+    ("speedup::declare_speedup", speedup::declare_speedup),
+    (
+        "sqrt::declare_sqrt_approx_kregular",
+        sqrt::declare_sqrt_approx_kregular,
+    ),
+    ("sqrt::declare_sqrt_ctor", sqrt::declare_sqrt_ctor),
+    ("sqrt::declare_sqrt_congr", sqrt::declare_sqrt_congr),
+    ("sqrt::declare_sqrt_le_sqrt", sqrt::declare_sqrt_le_sqrt),
+    ("sqrt::declare_sqrt_one", sqrt::declare_sqrt_one),
+    ("sqrt::declare_sqrt_zero", sqrt::declare_sqrt_zero),
+    ("sqrt::declare_sqrt_sq", sqrt::declare_sqrt_sq),
+    ("sqrt::declare_sqrt_nonneg", sqrt::declare_sqrt_nonneg),
+    ("sqrt::declare_mul_self_sqrt", sqrt::declare_mul_self_sqrt),
+    ("sqrt::declare_sqrt_mul", sqrt::declare_sqrt_mul),
+    ("sqrt::declare_le_of_sq_le", sqrt::declare_le_of_sq_le),
+    (
+        "convergence::declare_cauchy_convergence",
+        convergence::declare_cauchy_convergence,
+    ),
+    ("series::declare_series", series::declare_series),
+    (
+        "uniform_continuity::declare_uniform_continuity_sums",
+        uniform_continuity::declare_uniform_continuity_sums,
+    ),
+    ("monotone::declare_monotone", monotone::declare_monotone),
+    ("integral::declare_integral", integral::declare_integral),
+    (
+        "integral::declare_sum_range_double",
+        integral::declare_sum_range_double,
+    ),
+    (
+        "integral::declare_sum_range_reblock",
+        integral::declare_sum_range_reblock,
+    ),
+    (
+        "integral::declare_within_of_two_sided_le",
+        integral::declare_within_of_two_sided_le,
+    ),
+    (
+        "integral::declare_le_add_of_abs_sub_le",
+        integral::declare_le_add_of_abs_sub_le,
+    ),
+    (
+        "integral::declare_two_sided_of_abs_sub_le",
+        integral::declare_two_sided_of_abs_sub_le,
+    ),
+    (
+        "uniform_convergence::declare_uniform_convergence_continuity",
+        uniform_convergence::declare_uniform_convergence_continuity,
+    ),
+    (
+        "uniform_convergence::declare_uniform_converges_add",
+        uniform_convergence::declare_uniform_converges_add,
+    ),
+    (
+        "uniform_convergence::declare_close_within_of_within",
+        uniform_convergence::declare_close_within_of_within,
+    ),
+    (
+        "integral::declare_close_within_of_within_indexed",
+        integral::declare_close_within_of_within_indexed,
+    ),
+    (
+        "uniform_convergence::declare_weierstrass_m_test",
+        uniform_convergence::declare_weierstrass_m_test,
+    ),
+    ("integral::declare_of_nat_hom", integral::declare_of_nat_hom),
+    (
+        "monotone::declare_monotone_of_nonneg_deriv_all",
+        monotone::declare_monotone_of_nonneg_deriv_all,
+    ),
+    (
+        "derivative::declare_abs_diff_le_of_deriv_bound",
+        derivative::declare_abs_diff_le_of_deriv_bound,
+    ),
+    (
+        "derivative::declare_lipschitz_of_deriv_bound",
+        derivative::declare_lipschitz_of_deriv_bound,
+    ),
+    (
+        "derivative::declare_abs_diff_sub_le_of_deriv_bound",
+        derivative::declare_abs_diff_sub_le_of_deriv_bound,
+    ),
+    (
+        "uniform_convergence::declare_has_derivative_uniform_limit",
+        uniform_convergence::declare_has_derivative_uniform_limit,
+    ),
+    (
+        "integral::declare_fine_sample_in_bounds",
+        integral::declare_fine_sample_in_bounds,
+    ),
+    (
+        "integral::declare_fine_sample_close",
+        integral::declare_fine_sample_close,
+    ),
+    (
+        "integral::declare_fine_block_sum_close",
+        integral::declare_fine_block_sum_close,
+    ),
+    (
+        "integral::declare_mesh_reciprocal_mul",
+        integral::declare_mesh_reciprocal_mul,
+    ),
+    (
+        "integral::declare_equiv_abs_diff_le",
+        integral::declare_equiv_abs_diff_le,
+    ),
+    (
+        "integral::declare_sample_point_reblock",
+        integral::declare_sample_point_reblock,
+    ),
+    (
+        "integral::declare_reblock_block_eq_fine_block_sum",
+        integral::declare_reblock_block_eq_fine_block_sum,
+    ),
+    (
+        "integral::declare_riemann_sum_reblock_close",
+        integral::declare_riemann_sum_reblock_close,
+    ),
+    (
+        "integral::declare_riemann_sum_cauchy",
+        integral::declare_riemann_sum_cauchy,
+    ),
+    (
+        "integral::declare_shared_index_to_canonical",
+        integral::declare_shared_index_to_canonical,
+    ),
+    (
+        "integral::declare_riemann_sum_shared_accuracy_close",
+        integral::declare_riemann_sum_shared_accuracy_close,
+    ),
+    // Generalizes the step above by exposing the shared mid-anchor `l`
+    // as a genuine parameter; lands beside it for the same reason its
+    // doc comment gives. Same requirement set: it is the same wiring.
+    (
+        "integral::declare_riemann_sum_shared_accuracy_close_at",
+        integral::declare_riemann_sum_shared_accuracy_close_at,
+    ),
+    (
+        "integral::declare_riemann_sum_total_eps_le",
+        integral::declare_riemann_sum_total_eps_le,
+    ),
+    (
+        "integral::declare_riemann_sum_deep_cauchy",
+        integral::declare_riemann_sum_deep_cauchy,
+    ),
+    (
+        "integral::declare_riemann_sum_deep_cauchy_folded",
+        integral::declare_riemann_sum_deep_cauchy_folded,
+    ),
+    (
+        "integral::declare_riemann_sum_deep_cauchy_cross",
+        integral::declare_riemann_sum_deep_cauchy_cross,
+    ),
+    (
+        "integral::declare_riemann_sum_deep_cauchy_cross_folded",
+        integral::declare_riemann_sum_deep_cauchy_cross_folded,
+    ),
+    (
+        "integral::declare_riemann_sum_add_cauchy_cross",
+        integral::declare_riemann_sum_add_cauchy_cross,
+    ),
+    (
+        "integral::declare_creal_integral",
+        integral::declare_creal_integral,
+    ),
+    (
+        "integral::declare_integral_converges",
+        integral::declare_integral_converges,
+    ),
+    (
+        "integral::declare_integral_const",
+        integral::declare_integral_const,
+    ),
+    (
+        "integral::declare_integral_witness_independent",
+        integral::declare_integral_witness_independent,
+    ),
+    (
+        "integral::declare_integral_add",
+        integral::declare_integral_add,
+    ),
+    (
+        "integral::declare_integral_le",
+        integral::declare_integral_le,
+    ),
+    (
+        "integral::declare_integral_scale",
+        integral::declare_integral_scale,
+    ),
+    (
+        "integral::declare_riemann_sum_integral_close",
+        integral::declare_riemann_sum_integral_close,
+    ),
+    (
+        "integral::declare_riemann_sum_split_exact",
+        integral::declare_riemann_sum_split_exact,
+    ),
+    (
+        "integral::declare_riemann_sum_split_scale_invariant",
+        integral::declare_riemann_sum_split_scale_invariant,
+    ),
+    (
+        "integral::declare_congr_of_uniformly_continuous",
+        integral::declare_congr_of_uniformly_continuous,
+    ),
+    (
+        "integral::declare_riemann_sum_split_exact_of_uc",
+        integral::declare_riemann_sum_split_exact_of_uc,
+    ),
+    (
+        "integral::declare_integral_split",
+        integral::declare_integral_split,
+    ),
+    (
+        "integral::declare_split_point_approx",
+        integral::declare_split_point_approx,
+    ),
+    (
+        "integral::declare_integral_endpoint_close",
+        integral::declare_integral_endpoint_close,
+    ),
+    (
+        "integral::declare_integral_split_arbitrary",
+        integral::declare_integral_split_arbitrary,
+    ),
+    (
+        "integral::declare_integral_abs_le",
+        integral::declare_integral_abs_le,
+    ),
+    (
+        "integral::declare_ftc_estimates",
+        integral::declare_ftc_estimates,
+    ),
+    (
+        "integral::declare_integral_eq_antideriv_diff",
+        integral::declare_integral_eq_antideriv_diff,
+    ),
+    (
+        "integral::declare_integral_by_parts",
+        integral::declare_integral_by_parts,
+    ),
+    (
+        "derivative::declare_has_derivative_integral_const",
+        derivative::declare_has_derivative_integral_const,
+    ),
+    (
+        "inverse_fn::declare_order_reflect_of_pos_deriv",
+        inverse_fn::declare_order_reflect_of_pos_deriv,
+    ),
+    (
+        "monotone::declare_inverse_lipschitz_of_pos_deriv",
+        monotone::declare_inverse_lipschitz_of_pos_deriv,
+    ),
+    ("power::declare_power", power::declare_power),
+    (
+        "power::declare_power_series_term",
+        power::declare_power_series_term,
+    ),
+    (
+        "power::declare_power_series_term_congr",
+        power::declare_power_series_term_congr,
+    ),
+    (
+        "derivative::declare_has_derivative_pow_two",
+        derivative::declare_has_derivative_pow_two,
+    ),
+    (
+        "derivative::declare_has_derivative_pow",
+        derivative::declare_has_derivative_pow,
+    ),
+    ("geometric::declare_geometric", geometric::declare_geometric),
+    (
+        "power::declare_power_series_term_abs_le",
+        power::declare_power_series_term_abs_le,
+    ),
+    (
+        "uniform_convergence::declare_power_series_uniform_converges",
+        uniform_convergence::declare_power_series_uniform_converges,
+    ),
+    (
+        "uniform_convergence::declare_converges_of_abs_diff_le",
+        uniform_convergence::declare_converges_of_abs_diff_le,
+    ),
+    (
+        "uniform_convergence::declare_uniform_converges_geom",
+        uniform_convergence::declare_uniform_converges_geom,
+    ),
+    (
+        "geometric::declare_geom_cauchy_of_lt_family",
+        geometric::declare_geom_cauchy_of_lt_family,
+    ),
+    (
+        "exponential::declare_exponential",
+        exponential::declare_exponential,
+    ),
+    (
+        "exponential::declare_geom_cauchy_family",
+        exponential::declare_geom_cauchy_family,
+    ),
+    (
+        "exponential::declare_exp_convergence",
+        exponential::declare_exp_convergence,
+    ),
+    (
+        "ratio_test::declare_geom_scaled_cauchy_of_lt",
+        ratio_test::declare_geom_scaled_cauchy_of_lt,
+    ),
+    (
+        "ratio_test::declare_sum_range_ratio_test",
+        ratio_test::declare_sum_range_ratio_test,
+    ),
+    (
+        "exponential::declare_e_family",
+        exponential::declare_e_family,
+    ),
+    ("trig::declare_trig", trig::declare_trig),
+    ("trig::declare_sin_trig", trig::declare_sin_trig),
+    (
+        "cos_sign::declare_converges_upper_bound_shift",
+        cos_sign::declare_converges_upper_bound_shift,
+    ),
+    (
+        "alternating::declare_alternating",
+        alternating::declare_alternating,
+    ),
+    (
+        "cos_sign::declare_alternating_upper_bound_tail",
+        cos_sign::declare_alternating_upper_bound_tail,
+    ),
+    (
+        "trig::declare_trig_alternating_bounds",
+        trig::declare_trig_alternating_bounds,
+    ),
+    (
+        "trig::declare_sin_trig_alternating_bounds",
+        trig::declare_sin_trig_alternating_bounds,
+    ),
+    ("ivt::declare_ivt", ivt::declare_ivt),
+    (
+        "inverse_fn::declare_ivt_exact_root_at",
+        inverse_fn::declare_ivt_exact_root_at,
+    ),
+    (
+        "polynomial::declare_polynomial",
+        polynomial::declare_polynomial,
+    ),
+    (
+        "congruence::declare_congruence_extras",
+        congruence::declare_congruence_extras,
+    ),
+    (
+        "uniform_continuity::declare_bounded_on_id_zero_one",
+        uniform_continuity::declare_bounded_on_id_zero_one,
+    ),
+    (
+        "extreme_value::declare_extreme_value",
+        extreme_value::declare_extreme_value,
+    ),
+    (
+        "ivt_boundary::declare_ivt_boundary",
+        ivt_boundary::declare_ivt_boundary,
+    ),
+    (
+        "lub_boundary::declare_lub_boundary",
+        lub_boundary::declare_lub_boundary,
+    ),
+    (
+        "trig_fn::declare_cos_fn_family",
+        trig_fn::declare_cos_fn_family,
+    ),
+    (
+        "trig_fn::declare_cos_fn_equiv_cos_one",
+        trig_fn::declare_cos_fn_equiv_cos_one,
+    ),
+    (
+        "trig_fn::declare_cos_fn_wide_progress",
+        trig_fn::declare_cos_fn_wide_progress,
+    ),
+    ("trig_fn::declare_cos_fn_wide", trig_fn::declare_cos_fn_wide),
+    (
+        "trig_fn::declare_cos_fn_wide_uniformly_continuous",
+        trig_fn::declare_cos_fn_wide_uniformly_continuous,
+    ),
+    (
+        "trig_fn::declare_cos_fn_wide_at_one",
+        trig_fn::declare_cos_fn_wide_at_one,
+    ),
+    (
+        "trig_fn::declare_has_derivative_on_restrict",
+        trig_fn::declare_has_derivative_on_restrict,
+    ),
+    (
+        "trig_fn::declare_sin_fn_term_family",
+        trig_fn::declare_sin_fn_term_family,
+    ),
+    (
+        "trig_fn::declare_sin_fn_dominant",
+        trig_fn::declare_sin_fn_dominant,
+    ),
+    ("trig_fn::declare_sin_fn", trig_fn::declare_sin_fn),
+    (
+        "trig_fn::declare_sin_fn_uniformly_continuous",
+        trig_fn::declare_sin_fn_uniformly_continuous,
+    ),
+    (
+        "trig_fn::declare_cos_fn_derivative",
+        trig_fn::declare_cos_fn_derivative,
+    ),
+    (
+        "trig_fn::declare_cos_fn_wide_derivative",
+        trig_fn::declare_cos_fn_wide_derivative,
+    ),
+    (
+        "trig_fn::declare_sin_fn_lower_bound",
+        trig_fn::declare_sin_fn_lower_bound,
+    ),
+    (
+        "exp_fn::declare_exp_fn_family",
+        exp_fn::declare_exp_fn_family,
+    ),
+    (
+        "exp_fn::declare_exp_fn_equiv_e",
+        exp_fn::declare_exp_fn_equiv_e,
+    ),
+    ("supremum::declare_max_range", supremum::declare_max_range),
+    (
+        "supremum::declare_max_range_transport",
+        supremum::declare_max_range_transport,
+    ),
+    (
+        "supremum::declare_mesh_level_count",
+        supremum::declare_mesh_level_count,
+    ),
+    (
+        "supremum::declare_mesh_level_count_pow",
+        supremum::declare_mesh_level_count_pow,
+    ),
+    (
+        "supremum::declare_mesh_level_count_ge_of_size",
+        supremum::declare_mesh_level_count_ge_of_size,
+    ),
+    ("supremum::declare_mesh_max", supremum::declare_mesh_max),
+    (
+        "supremum::declare_mesh_max_step_le",
+        supremum::declare_mesh_max_step_le,
+    ),
+    (
+        "supremum::declare_mesh_max_mono",
+        supremum::declare_mesh_max_mono,
+    ),
+    (
+        "supremum::declare_exp_of_modulus",
+        supremum::declare_exp_of_modulus,
+    ),
+    (
+        "supremum::declare_true_exp_of_modulus",
+        supremum::declare_true_exp_of_modulus,
+    ),
+    (
+        "supremum::declare_true_exp_of_modulus_step_le",
+        supremum::declare_true_exp_of_modulus_step_le,
+    ),
+    (
+        "supremum::declare_true_exp_of_modulus_mono",
+        supremum::declare_true_exp_of_modulus_mono,
+    ),
+    (
+        "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
+        supremum::declare_exp_of_modulus_le_true_exp_of_modulus,
+    ),
+    (
+        "supremum::declare_mesh_point_near_coarse",
+        supremum::declare_mesh_point_near_coarse,
+    ),
+    (
+        "supremum::declare_max_range_le_add_of_exists",
+        supremum::declare_max_range_le_add_of_exists,
+    ),
+    (
+        "supremum::declare_mesh_max_le_add_of_step_close",
+        supremum::declare_mesh_max_le_add_of_step_close,
+    ),
+    (
+        "supremum::declare_mesh_max_le_add_of_modulus",
+        supremum::declare_mesh_max_le_add_of_modulus,
+    ),
+    ("supremum::declare_sup_seq", supremum::declare_sup_seq),
+    (
+        "supremum::declare_sup_seq_cauchy",
+        supremum::declare_sup_seq_cauchy,
+    ),
+    ("supremum::declare_sup_on", supremum::declare_sup_on),
+    (
+        "sup_laws::declare_max_range_attained_approx",
+        sup_laws::declare_max_range_attained_approx,
+    ),
+    (
+        "sup_laws::declare_sup_seq_le_shift",
+        sup_laws::declare_sup_seq_le_shift,
+    ),
+    (
+        "sup_laws::declare_sup_on_approx_lub",
+        sup_laws::declare_sup_on_approx_lub,
+    ),
+    (
+        "sup_laws::declare_sup_on_ub_at_sup_seq_point",
+        sup_laws::declare_sup_on_ub_at_sup_seq_point,
+    ),
+    (
+        "sup_laws::declare_step_family_locate",
+        sup_laws::declare_step_family_locate,
+    ),
+    (
+        "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
+        sup_laws::declare_sup_on_ub_at_fine_mesh_point,
+    ),
+    ("sup_laws::declare_sup_on_ub", sup_laws::declare_sup_on_ub),
+    (
+        "evt_row1::declare_evt_approx_max",
+        evt_row1::declare_evt_approx_max,
+    ),
+    (
+        "cos_sign::declare_cos_wide_tail_nonneg",
+        cos_sign::declare_cos_wide_tail_nonneg,
+    ),
+    (
+        "cos_sign::declare_cos_wide_tail_antitone",
+        cos_sign::declare_cos_wide_tail_antitone,
+    ),
+    (
+        "cos_sign::declare_cos_wide_series_converges",
+        cos_sign::declare_cos_wide_series_converges,
+    ),
+    (
+        "cos_sign::declare_cos_wide_nonpositive",
+        cos_sign::declare_cos_wide_nonpositive,
+    ),
+    ("pi::declare_pi_family", pi::declare_pi_family),
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -13671,6 +7903,35 @@ pub(crate) fn build_creal_prelude_uncached(
     if kernel.environment().get(prelude.creal).is_some() {
         return Ok(prelude);
     }
+    // `STEPS` is GENERATED from `STEP_DISPATCH` plus a measurement of this
+    // module's source, so the two are the same list written twice and nothing
+    // in the type system says so. A lane that adds a step to `STEP_DISPATCH`
+    // and does not re-run `scripts/creal-declare-deps.py` would otherwise
+    // build a prelude whose dependency graph silently omits it -- which is the
+    // failure the generator exists to remove, arriving one level up. The
+    // script's `--check` catches it too, but that is a gate somebody has to
+    // run; this is the build itself, and 211 pointer comparisons cost nothing
+    // against a prelude build measured in seconds.
+    assert_eq!(
+        STEPS.len(),
+        STEP_DISPATCH.len(),
+        "creal's generated STEPS table has {} entries against STEP_DISPATCH's \
+         {} -- run `python3 scripts/creal-declare-deps.py` and commit \
+         crates/axeyum-lean-kernel/src/creal/steps_generated.rs",
+        STEPS.len(),
+        STEP_DISPATCH.len(),
+    );
+    for (index, (step, &(label, run))) in STEPS.iter().zip(STEP_DISPATCH).enumerate() {
+        assert!(
+            step.label == label && std::ptr::fn_addr_eq(step.run, run),
+            "creal's generated STEPS table disagrees with STEP_DISPATCH at \
+             step {index}: '{}' vs '{label}'. Run `python3 \
+             scripts/creal-declare-deps.py` and commit \
+             crates/axeyum-lean-kernel/src/creal/steps_generated.rs",
+            step.label,
+        );
+    }
+
     // The build order is COMPUTED from the dependency graph, not read off
     // `STEPS`'s array order -- §1's level-2 fix. Purely structural: no kernel
     // environment is involved, so this runs before any expensive work.
@@ -13690,12 +7951,17 @@ pub(crate) fn build_creal_prelude_uncached(
     // planner produces a projection byte-identical to the unpermuted one --
     // same SHA-256 over all 14,673 rows.
     //
-    // What the plan cannot see is a dependency the TABLE does not name. Also
-    // measured 2026-09-01 (`scripts/creal-declare-deps.py`): `STEPS` names
-    // 3,934 of the 4,831 `requires` edges the code actually has, so 897 edges
-    // constrain nothing here. The sort narrows this failure class; it does
-    // not close it, and closing it means generating the table rather than
-    // maintaining it -- see
+    // What the plan cannot see is a dependency the TABLE does not name, and
+    // until 2026-09-01 that was most of them: the hand-written `STEPS` named
+    // 3,934 of the 4,831 `requires` edges the code has, so 977 edges across
+    // 175 of the 211 steps constrained nothing here. That is why the table is
+    // now GENERATED from the source measurement rather than maintained
+    // (`steps_generated`, written by `scripts/creal-declare-deps.py`): every
+    // edge the analysis can see is in the table, so the planner constrains all
+    // of them. What remains outside is what the analysis itself cannot see --
+    // it is a static scan of `p.<field>` accessors through the call graph, so
+    // a name reached other than through a `CRealPrelude` field is invisible to
+    // it. See
     // `docs/research/11-design-review/2026-09-01-creal-declare-deps-measured.md`.
     let plan = match plan_step_order(prelude, STEPS) {
         Ok(plan) => plan,
@@ -14726,6 +8992,7 @@ mod rolle;
 mod series;
 mod speedup;
 mod sqrt;
+mod steps_generated;
 mod sup_laws;
 mod supremum;
 mod trig;

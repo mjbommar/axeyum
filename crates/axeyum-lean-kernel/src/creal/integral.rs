@@ -289,13 +289,13 @@
 //! ## `CReal.integral_split` — checked 2026-08-27 (later the same day), fact
 //! (1) above landed as [`super::crossing::declare_crossing_close`]
 //!
-//! A second lane landed [`super::CRealPrelude::crossing_index`] /
+//! A second lane landed [`super::CrossingNames::crossing_index`] /
 //! `crossingUpper` / `crossingLower` / `crossingSampleUpper` /
 //! `crossingSampleLower` in `creal/crossing.rs` — the Archimedean
 //! crossing-index fact (1) the entry above named as the first prerequisite,
 //! reusable outside this file and mentioning no `riemannSum`. This entry
 //! landed one bounded slice of (2), the cross-width term comparison: **the
-//! single-block bound**, [`super::CRealPrelude::crossing_close`] —
+//! single-block bound**, [`super::CrossingNames::crossing_close`] —
 //! `|F(c) − F(sample_point a Δ (crossingIndex a c Δ))| ≤ 1/(e+1)`, via
 //! `crossingSampleUpper`/`crossingSampleLower` (two one-sided bounds, moved
 //! across the `≤` by two small new local order lemmas,
@@ -352,7 +352,7 @@
 //! the DECIDABLE `Rat.inv`), while `mesh_le_of_ge`/`mesh_scaled_le_of_ge`'s
 //! own mesh step `Δ_m := (b−a)·natDivSucc(1,m)` is a **`CReal`** (`b−a` is an
 //! arbitrary real, not generally rational). "`Δ_ab := (b−a)/(m+1)`" — this
-//! entry's own predecessor's gloss, repeated in [`CRealPrelude::crossing_close`]'s
+//! entry's own predecessor's gloss, repeated in [`CrossingNames::crossing_close`]'s
 //! doc comment — is not literally well-typed as `crossingIndex`'s argument;
 //! at best it names a **rational upper bound** for the true real mesh step
 //! (e.g. `Δ := natDivSucc(magnitude, m)` for `magnitude := bound(b−a)+1`,
@@ -481,7 +481,7 @@
 //! No declaration was added or attempted at the term level — the
 //! arithmetic above rules out the natural construction before any kernel
 //! call, the same discipline the immediately preceding entry followed.
-//! `samplePt`'s domain membership remains open; [`CRealPrelude::crossing_close`]
+//! `samplePt`'s domain membership remains open; [`CrossingNames::crossing_close`]
 //! is UNCHANGED and still takes it as an explicit hypothesis alongside the
 //! Archimedean-smallness one (which IS now dischargeable, via
 //! [`CRealPrelude::mesh_scaled_le_of_ge`], per the entry above — that
@@ -570,7 +570,7 @@
 //! over-estimate by construction).
 //!
 //! Route B (direct, no `bnd`/`magnitude` at all):
-//! [`CRealPrelude::crossing_sample_lower`] already gives, unconditionally on
+//! [`CrossingNames::crossing_sample_lower`] already gives, unconditionally on
 //! any tightening here, `samplePt ≤ c + 1.5Δ` (`crossingLower`'s own `3/(j+1)
 //! = 1.5` slack at `j=1`). With `c ≤ b`, that is `samplePt ≤ b + 1.5Δ` — off
 //! by exactly the CLOSENESS slack the crossing-index module documentation
@@ -598,7 +598,7 @@
 //! either the tighter bound or `samplePt ≤ b`.
 //!
 //! **What WAS landed this entry, because it needs neither of the two
-//! obstructions above:** [`CRealPrelude::crossing_sample_ge_a`]
+//! obstructions above:** [`CrossingNames::crossing_sample_ge_a`]
 //! (`creal/crossing.rs`) — the OTHER half of `crossingClose`'s domain-
 //! membership pair, `a ≤ samplePt`, needing only `0 < Δ`. `crossingIndex`
 //! embeds as a nonnegative `Nat` regardless of `c`'s position and `Δ > 0`
@@ -727,7 +727,7 @@
 //! only, no declaration added or changed).
 //!
 //! ## `CReal.integral_split` — checked 2026-08-27 (an EIGHTH lane), landed
-//! [`CRealPrelude::crossing_sample_pairing_close`] (`crossing.rs`), the
+//! [`CrossingNames::crossing_sample_pairing_close`] (`crossing.rs`), the
 //! term-PAIRING slice this task was sized down to, and hit a WALL one level
 //! deeper than the seventh entry's — the wall is not (only) "no reblock
 //! algebra applies", it is a **type-level mismatch inside `crossing.rs`
@@ -797,7 +797,7 @@
 //! **Recommended next slice**: EITHER (a) restrict `integral_split`'s own
 //! statement to the case `c := a + ofRat q` (`q : Rat`, giving `deltaAc :=
 //! q·natDivSucc(1,m_ac)`, directly usable by
-//! [`CRealPrelude::crossing_sample_pairing_close`] as built) and prove the
+//! [`CrossingNames::crossing_sample_pairing_close`] as built) and prove the
 //! rational-split-point special case of interval additivity first, or (b)
 //! build the real-scaled analogue of `mesh_scaled_le_of_ge` needed to
 //! translate a `CReal.inv`-rescaled closeness bound back to original units,

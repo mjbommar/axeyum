@@ -14,15 +14,15 @@
 /// declaration built by `crates/axeyum-lean-kernel/src/creal/extreme_value.rs`.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![
-        ("CReal.evtLinear", p.evt_linear, "def"),
+        ("CReal.evtLinear", p.extreme_value.evt_linear, "def"),
         (
             "CReal.evt_attained_max_decides_sign",
-            p.evt_attained_max_decides_sign,
+            p.extreme_value.evt_attained_max_decides_sign,
             "theorem",
         ),
         (
             "CReal.evtLinear_uniformly_continuous",
-            p.evt_linear_uniformly_continuous,
+            p.extreme_value.evt_linear_uniformly_continuous,
             "theorem",
         ),
     ]

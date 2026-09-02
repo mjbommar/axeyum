@@ -5498,7 +5498,7 @@ fn order_reflect_of_pos_deriv_applies_to_the_identity_on_0_1() {
     let hcodom = d.lemma(p.zero_lt_one, &[]);
 
     let instance = d.lemma(
-        p.order_reflect_of_pos_deriv,
+        p.inverse_fn.order_reflect_of_pos_deriv,
         &[
             identity, const_one, zero_c, one_c, hf, zero_nat, hderiv, zero_c, one_c, hax, hxb, hay,
             hyb, hap, hcodom,
@@ -6385,7 +6385,7 @@ fn evt_attained_max_hypothesis_is_satisfiable_at_v_one_c_one() {
     };
 
     let instance = d.lemma(
-        p.evt_attained_max_decides_sign,
+        p.extreme_value.evt_attained_max_decides_sign,
         &[one_c, one_c, hc0, hc1, hmax],
     );
     let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
@@ -6465,7 +6465,7 @@ fn evt_attained_max_hypothesis_is_satisfiable_at_v_zero_c_zero() {
     };
 
     let instance = d.lemma(
-        p.evt_attained_max_decides_sign,
+        p.extreme_value.evt_attained_max_decides_sign,
         &[zero_c, zero_c, hc0, hc1, hmax],
     );
     let ty = d.kernel().infer(instance).unwrap_or_else(|error| {
@@ -6531,8 +6531,8 @@ fn evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v() {
     ];
 
     for (label, v, expect_lo, expect_hi) in cases {
-        let at_zero = d.const_app(p.evt_linear, &[v, zero_c]);
-        let at_one = d.const_app(p.evt_linear, &[v, one_c]);
+        let at_zero = d.const_app(p.extreme_value.evt_linear, &[v, zero_c]);
+        let at_one = d.const_app(p.extreme_value.evt_linear, &[v, one_c]);
         let lo = d.const_app(p.seq, &[at_zero, idx0]);
         let hi = d.const_app(p.seq, &[at_one, idx0]);
         assert!(
@@ -6549,7 +6549,7 @@ fn evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v() {
     // right endpoint strictly dominates the left, at v = -3 strictly the
     // reverse. Checked by reduction, not by reading the numbers above.
     let mk = |d: &mut IntDev<'_>, v: ExprId, t: ExprId| -> ExprId {
-        let at = d.const_app(p.evt_linear, &[v, t]);
+        let at = d.const_app(p.extreme_value.evt_linear, &[v, t]);
         d.const_app(p.seq, &[at, idx0])
     };
     let pos_lo = mk(&mut d, three, zero_c);
@@ -7224,7 +7224,7 @@ fn has_derivative_unique_applies_to_the_identity_on_0_1() {
         d.lam_fv(r_fv, carrier, r)
     };
     let instance = d.lemma(
-        p.has_derivative_unique,
+        p.deriv_unique.has_derivative_unique,
         &[
             identity, one_fn, one_fn, zero_c, one_c, hf1, hf2, hab, zero_c, haz, hzb,
         ],
@@ -9027,7 +9027,7 @@ fn crossing_index_at_zero_one_five_halves_reduces_to_two() {
     let c = d.const_app(p.of_rat, &[five_halves]);
     let delta = crate::rat_prelude::ops::rone(&mut d, p.rat);
 
-    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let i0 = d.const_app(p.crossing.crossing_index, &[a, c, delta]);
     let two_nat = d.num(2);
     let i0_eq_two = NatOps::eq(&mut d, i0, two_nat);
     let i0_proof = NatOps::refl(&mut d, i0);
@@ -9064,7 +9064,7 @@ fn crossing_index_at_zero_one_seven_halves_reduces_to_three() {
     let c = d.const_app(p.of_rat, &[seven_halves]);
     let delta = crate::rat_prelude::ops::rone(&mut d, p.rat);
 
-    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let i0 = d.const_app(p.crossing.crossing_index, &[a, c, delta]);
     let three_nat = d.num(3);
     let i0_eq_three = NatOps::eq(&mut d, i0, three_nat);
     let i0_proof = NatOps::refl(&mut d, i0);
@@ -9442,7 +9442,7 @@ fn crossing_sample_upper_and_lower_apply_at_zero_five_halves_one() {
     // rather than forced down to the literal `2` (a SEPARATE test above
     // already pins that reduction); this test's own job is the SHAPE of the
     // sample-point conclusion, not re-proving the index computation.
-    let i0 = d.const_app(p.crossing_index, &[a, c, delta]);
+    let i0 = d.const_app(p.crossing.crossing_index, &[a, c, delta]);
     let delta_embed = d.const_app(p.of_rat, &[delta]);
     let of_nat_i0 = d.const_app(p.of_nat, &[i0]);
     let sample_term = d.const_app(p.mul, &[of_nat_i0, delta_embed]);
@@ -9467,8 +9467,8 @@ fn crossing_sample_upper_and_lower_apply_at_zero_five_halves_one() {
     let target_lower = d.const_app(p.add, &[sample_point, slack_lower]);
     let expected_lower = d.const_app(p.le, &[target_lower, c]);
 
-    let applied_upper = d.const_app(p.crossing_sample_upper, &[a, c, delta, hpos]);
-    let applied_lower = d.const_app(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+    let applied_upper = d.const_app(p.crossing.crossing_sample_upper, &[a, c, delta, hpos]);
+    let applied_lower = d.const_app(p.crossing.crossing_sample_lower, &[a, c, delta, hpos, hac]);
 
     let ty_upper = d.arrow(hpos_ty, expected_upper);
     let value_upper = d.lam_fv(hpos_fv, hpos_ty, applied_upper);
@@ -9551,12 +9551,12 @@ fn poly_eval_poly_add_concrete_instantiation() {
     let x = one_c;
 
     // Equiv (polyEval (polyAdd c g) 2 one) (add (polyEval c 2 one) (polyEval g 2 one)).
-    let proof = d.lemma(p.poly_eval_poly_add, &[c, g, two_n, x]);
+    let proof = d.lemma(p.polynomial.poly_eval_poly_add, &[c, g, two_n, x]);
 
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, two_n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let poly_add_cg = d.const_app(p.polynomial.poly_add, &[c, g]);
+    let lhs_stmt = d.const_app(p.polynomial.poly_eval, &[poly_add_cg, two_n, x]);
+    let eval_c = d.const_app(p.polynomial.poly_eval, &[c, two_n, x]);
+    let eval_g = d.const_app(p.polynomial.poly_eval, &[g, two_n, x]);
     let rhs_stmt = d.const_app(p.add, &[eval_c, eval_g]);
     let ty = super::equiv(&mut d, p, lhs_stmt, rhs_stmt);
 
@@ -9603,11 +9603,11 @@ fn poly_eval_poly_scale_concrete_instantiation() {
     let x = one_c;
 
     // Equiv (polyEval (polyScale two c) 2 one) (mul two (polyEval c 2 one)).
-    let proof = d.lemma(p.poly_eval_poly_scale, &[a, c, two_n, x]);
+    let proof = d.lemma(p.polynomial.poly_eval_poly_scale, &[a, c, two_n, x]);
 
-    let poly_scale_ac = d.const_app(p.poly_scale, &[a, c]);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_scale_ac, two_n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
+    let poly_scale_ac = d.const_app(p.polynomial.poly_scale, &[a, c]);
+    let lhs_stmt = d.const_app(p.polynomial.poly_eval, &[poly_scale_ac, two_n, x]);
+    let eval_c = d.const_app(p.polynomial.poly_eval, &[c, two_n, x]);
     let rhs_stmt = d.const_app(p.mul, &[a, eval_c]);
     let ty = super::equiv(&mut d, p, lhs_stmt, rhs_stmt);
 
@@ -9656,12 +9656,12 @@ fn poly_eval_poly_add_would_reject_mul_instead_of_add() {
     let two_n = d.succ(one_n);
     let x = one_c;
 
-    let proof = d.lemma(p.poly_eval_poly_add, &[c, g, two_n, x]);
+    let proof = d.lemma(p.polynomial.poly_eval_poly_add, &[c, g, two_n, x]);
 
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, two_n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, two_n, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, two_n, x]);
+    let poly_add_cg = d.const_app(p.polynomial.poly_add, &[c, g]);
+    let lhs_stmt = d.const_app(p.polynomial.poly_eval, &[poly_add_cg, two_n, x]);
+    let eval_c = d.const_app(p.polynomial.poly_eval, &[c, two_n, x]);
+    let eval_g = d.const_app(p.polynomial.poly_eval, &[g, two_n, x]);
     let wrong_rhs = d.const_app(p.mul, &[eval_c, eval_g]);
     let wrong_ty = super::equiv(&mut d, p, lhs_stmt, wrong_rhs);
 
@@ -10367,6 +10367,105 @@ fn order_violation_reports_missing_provider_as_table_bug() {
     );
 }
 
+/// `STEPS` with `consumer` lifted to `provider`'s position, addressed by LABEL.
+///
+/// By label and never by index: an index is right until someone adds a step
+/// above it, and then the test silently permutes a different pair and keeps
+/// passing.
+///
+/// A MOVE, not a swap, and the difference is the whole point. Swapping the two
+/// also displaces every step between them relative to the provider, so the
+/// resulting violation can be some third step's -- and here it is: the sibling
+/// `integral::declare_riemann_sum_shared_accuracy_close` sits between them and
+/// reads the same declaration through an edge the hand-written table DID name.
+/// A swap therefore fires for a reason that has nothing to do with the omitted
+/// edge, which is a control that looks rigorous and measures the wrong thing.
+fn steps_with_consumer_lifted(consumer: &str, provider: &str) -> &'static [super::BuildStep] {
+    let position = |label: &str| {
+        super::STEPS
+            .iter()
+            .position(|s| s.label == label)
+            .unwrap_or_else(|| panic!("no STEPS entry labelled '{label}'"))
+    };
+    let (from, to) = (position(consumer), position(provider));
+    assert!(
+        to < from,
+        "the provider must currently precede the consumer, or there is nothing \
+         to invert"
+    );
+    let mut permuted: Vec<super::BuildStep> = super::STEPS
+        .iter()
+        .map(|s| super::BuildStep {
+            label: s.label,
+            requires: s.requires,
+            provides: s.provides,
+            run: s.run,
+        })
+        .collect();
+    let moved = permuted.remove(from);
+    permuted.insert(to, moved);
+    Box::leak(permuted.into_boxed_slice())
+}
+
+/// An inversion on an edge the HAND-WRITTEN table never named is refused.
+///
+/// This is the finding the generated table exists to close, pinned as a test
+/// rather than as a paragraph. `integral::declare_riemann_sum_shared_accuracy_close_at`
+/// reads `CReal.sharedIndexToCanonical`, declared two steps earlier by
+/// `integral::declare_shared_index_to_canonical`. The hand-written table did
+/// not name that edge -- it is one of the 977 it omitted -- so lifting the
+/// consumer above its provider produced **zero** violations from
+/// `validate_step_order` and then a bare `UnknownConst` from the kernel.
+///
+/// Reproducing the "before" half from history, since the old table is gone:
+///
+/// ```text
+/// git show a503a9241:artifacts/refactor/creal-declare-deps.json
+/// ```
+///
+/// carries each step's `declared_requires` (the hand-written table) beside its
+/// `measured_requires`; replaying the same MOVE against the first gives 0
+/// violations and against the second gives 1, naming
+/// `CReal.sharedIndexToCanonical`. Measured 2026-09-01.
+///
+/// Note what this does NOT assert: that the build fails. It does not, because
+/// `plan_step_order` now moves the step back -- which is the level-2 behaviour
+/// and is checked by `planned_order_repairs_a_consumer_placed_before_its_provider`.
+/// What changed here is that the edge is *visible* at all; without it in the
+/// table the planner has nothing to repair.
+#[test]
+fn an_edge_the_hand_written_table_never_named_is_now_enforced() {
+    let (kernel, prelude) = built();
+    let permuted = steps_with_consumer_lifted(
+        "integral::declare_riemann_sum_shared_accuracy_close_at",
+        "integral::declare_shared_index_to_canonical",
+    );
+    let violation = super::validate_step_order(prelude, permuted)
+        .expect_err("the level-1 preflight must reject this inversion");
+    let missing = super::render_name(&kernel, violation.missing);
+    assert_eq!(
+        violation.consumer_label, "integral::declare_riemann_sum_shared_accuracy_close_at",
+        "the violation must name the consumer, found {violation:?}"
+    );
+    assert_eq!(
+        missing, "CReal.sharedIndexToCanonical",
+        "the violation must name the edge the hand-written table omitted"
+    );
+    assert!(
+        violation.provider.is_some(),
+        "the edge has a provider in the table -- it is misordered, not absent: {violation:?}"
+    );
+
+    // The control, in the same test so it cannot rot separately: the
+    // UNPERMUTED table is clean. Without it, a `validate_step_order` that
+    // rejected everything would pass the assertions above.
+    assert!(
+        super::validate_step_order(prelude, super::STEPS).is_ok(),
+        "control: the unpermuted table must validate, or the rejection above \
+         says nothing about the swap"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // `plan_step_order`: the build order is COMPUTED (level 2 of the phase-order
 // fix, architecture review §1)
@@ -10897,7 +10996,9 @@ fn the_eventual_upper_bound_and_the_tail_leibniz_bound_state_what_pi_rung_2_need
     let mut d = IntDev::new(&mut kernel, p.rat.int);
 
     // --- the EVENTUAL upper bound `alternating.rs` says does not exist ------
-    let shift_c = d.kernel().const_(p.converges_upper_bound_shift, vec![]);
+    let shift_c = d
+        .kernel()
+        .const_(p.cos_sign.converges_upper_bound_shift, vec![]);
     let shift_ty = d
         .kernel()
         .infer(shift_c)
@@ -10920,7 +11021,9 @@ fn the_eventual_upper_bound_and_the_tail_leibniz_bound_state_what_pi_rung_2_need
     );
 
     // --- the Leibniz bound needing antitonicity only from index 1 ----------
-    let tail_c = d.kernel().const_(p.alternating_upper_bound_tail, vec![]);
+    let tail_c = d
+        .kernel()
+        .const_(p.cos_sign.alternating_upper_bound_tail, vec![]);
     let tail_ty = d
         .kernel()
         .infer(tail_c)
@@ -11126,7 +11229,7 @@ fn the_close_within_bridge_turns_uniform_convergence_into_converges_at_a_point()
 /// but has nothing to compare it against, so a family that computes something
 /// other than the intended clamp would be admitted, would carry an empty axiom
 /// footprint, and would make
-/// [`CRealPrelude::ivt_exact_root_decides_sign`] a theorem about the wrong
+/// [`IvtBoundaryNames::ivt_exact_root_decides_sign`] a theorem about the wrong
 /// function.
 ///
 /// `ivtPlateau v := fun x => min x (max (x + (−1)) v)`, and `min`/`max`/`neg`
@@ -11366,7 +11469,7 @@ fn evt_row_two_derives_a_principle_absent_from_the_environment() {
     // And the theorem itself is a checked `Theorem` resting on nothing.
     let declaration = kernel
         .environment()
-        .get(p.evt_attained_max_decides_sign)
+        .get(p.extreme_value.evt_attained_max_decides_sign)
         .expect("CReal.evt_attained_max_decides_sign must be declared");
     assert!(
         matches!(declaration, Declaration::Theorem { .. }),
@@ -11374,7 +11477,7 @@ fn evt_row_two_derives_a_principle_absent_from_the_environment() {
     );
     assert!(
         kernel
-            .axiom_footprint(p.evt_attained_max_decides_sign)
+            .axiom_footprint(p.extreme_value.evt_attained_max_decides_sign)
             .is_empty(),
         "row 2 must be axiom-free"
     );

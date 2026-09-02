@@ -29,7 +29,7 @@
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![(
         "CReal.hasDerivative_unique",
-        p.has_derivative_unique,
+        p.deriv_unique.has_derivative_unique,
         "theorem",
     )]
 }
