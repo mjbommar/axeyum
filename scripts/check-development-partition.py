@@ -72,6 +72,60 @@ SETTLED = {"proved", "computed"}
 # which is itself the regression this catches.
 MULTI_TARGET_FLOOR = 5
 
+# GRANDFATHERED OPERATIONS (ADR-1563). An operation named here is excused from
+# the train-coverage rule. It is a CLOSED LIST IN SOURCE, not a data file, so
+# joining it is a reviewed code change with an ADR behind it rather than an
+# artifact edit a producer lane can make to clear its own gate -- which is the
+# whole difference between this and the component exemption ADR-1546 measured
+# growing 228 -> 274 to fit whatever had just failed.
+#
+# WHY A GRANDFATHER AND NOT ADR-1510 RETIREMENT. The obvious repair -- retire
+# the operation the way `gen-obstruction-producers.py` retires a fulfilled
+# contract -- IS NOT AVAILABLE HERE, and the reason is mechanical rather than a
+# matter of taste. `scripts/check-autogenesis-fact-operation.py` pins
+# `operation_sha256 = digest(operation)` INSIDE the evidence of every fact the
+# operation admitted, and requires the fact's id to appear in the live
+# `applicability.fact_ids`. Measured 2026-09-02 for
+# `authoritative-mathlib-nat-modeq-remainder-family-v1`: the live digest is
+# `cc868669…`, exactly what all three facts record, and adding a single
+# `lifecycle` key moves it to `d610b146…`. So the operation can be neither
+# edited nor deleted without breaking three `proved` facts' evidence. An
+# operation is a RECEIPT (ADR-0602) and a receipt is immutable by construction;
+# the lifecycle a contract has, it does not have.
+#
+# THE ENTRY IS NOT TAKEN ON ITS WORD. `grandfather_holds` re-derives two
+# properties per entry, and an entry that fails either is NOT honoured:
+#
+#   1. every development fact the operation references is SETTLED, so a
+#      grandfather can never cover live development work; and
+#   2. every one of those facts pins THIS operation in its own evidence, which
+#      is the property that makes retirement impossible and is therefore the
+#      actual justification rather than a restatement of it.
+#
+# An entry that fires on nothing is itself a violation (`unused grandfather`),
+# so the list self-retires the moment its subject changes shape -- the same
+# discipline `check-autogenesis-nursery.py` applies to a stale component
+# exemption.
+#
+# THIS DOES NOT WEAKEN THE RULE FOR FUTURE PRODUCERS. A new operation
+# referencing development facts and no train fact still fails, because it is
+# not in this dict; property 2 would also be false for it at registration time,
+# when its targets are open and pin nothing.
+GRANDFATHERED_OPERATIONS: dict[str, dict[str, str]] = {
+    "authoritative-mathlib-nat-modeq-remainder-family-v1": {
+        "registered": "9943ae6bd (2026-08-26)",
+        "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-"
+                     "is-not-a-leak-and-the-stale-exemption-is-retired.md",
+        "reason": "Three `natural-modular-equivalence` development targets and "
+                  "no train fact. NOT a pre-rule landing -- this gate shipped "
+                  "2026-08-22 in `50307d833`, four days earlier, and the three "
+                  "facts were already `development` in the manifest at "
+                  "registration; the gate was red and the operation landed "
+                  "anyway. It cannot be repaired now because every one of the "
+                  "three facts pins `operation_sha256` over this exact object.",
+    },
+}
+
 
 class DevelopmentPartitionError(Exception):
     pass
@@ -179,6 +233,58 @@ def fact_statuses() -> dict[str, str]:
     return out
 
 
+def operation_bindings() -> dict[str, set[str]]:
+    """`{fact_id: {operation ids this fact pins in its own evidence}}`.
+
+    Read from the SAME place `check-autogenesis-fact-operation.py` reads it
+    (`evidence[*].checker_operation.id`), because the property being re-derived
+    is that checker's: a fact whose evidence names an operation cannot have
+    that operation edited or deleted without the evidence failing.
+    """
+    if not FACTS.is_dir():
+        raise DevelopmentPartitionError("artifacts/facts is not a directory")
+    out: dict[str, set[str]] = {}
+    for path in sorted(FACTS.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise DevelopmentPartitionError(f"unreadable fact {path.name}: {exc}") from exc
+        pinned: set[str] = set()
+        for row in data.get("evidence") or []:
+            binding = row.get("checker_operation") if isinstance(row, dict) else None
+            if isinstance(binding, dict) and isinstance(binding.get("id"), str):
+                pinned.add(binding["id"])
+        out[data["id"]] = pinned
+    return out
+
+
+def grandfather_holds(
+    op_id: str,
+    touched_dev: set[str],
+    statuses: dict[str, str],
+    bindings: dict[str, set[str]],
+) -> str | None:
+    """Why this grandfather entry does NOT hold, or `None` when it does.
+
+    Both properties are re-derived from the ledger. Neither is read off the
+    entry, which carries prose and provenance only -- an exemption that
+    believes its own reason is the mechanism ADR-1546 measured failing.
+    """
+    if op_id not in GRANDFATHERED_OPERATIONS:
+        return f"{op_id} is not a grandfathered operation"
+    unsettled = sorted(f for f in touched_dev if statuses.get(f) not in SETTLED)
+    if unsettled:
+        return (f"{op_id} is grandfathered but still covers OPEN development "
+                f"fact(s) {unsettled} — a grandfather may not cover live "
+                f"development work")
+    unpinned = sorted(f for f in touched_dev if op_id not in bindings.get(f, set()))
+    if unpinned:
+        return (f"{op_id} is grandfathered on the ground that its targets pin "
+                f"it, but {unpinned} do not name it in their evidence — so it "
+                f"could be retired and must be, not excused")
+    return None
+
+
 def check(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quiet", action="store_true")
@@ -195,8 +301,10 @@ def check(argv: list[str] | None = None) -> int:
     if not development:
         raise DevelopmentPartitionError("development population is empty — the gate has no subject")
 
+    bindings = operation_bindings()
     violations: list[str] = []
     multi_target_facts: set[str] = set()
+    grandfathers_used: set[str] = set()
 
     for operation in registry:
         op_id = operation.get("id", "<unnamed>")
@@ -204,13 +312,45 @@ def check(argv: list[str] | None = None) -> int:
         touched_dev = {f for f in referenced if partitions[f] == "development"} - exempt
         touched_train = {f for f in referenced if partitions[f] == "train"}
         if touched_dev and not touched_train:
-            violations.append(
-                f"{op_id} references development fact(s) {sorted(touched_dev)} "
-                f"and no train fact — a producer authored against the evaluation set"
-            )
+            # ADR-1563. The grandfather is checked, never asserted: a failing
+            # entry falls through to the SAME violation the rule always
+            # produced, and the reason it failed is printed with it.
+            declined = grandfather_holds(op_id, touched_dev, statuses, bindings)
+            if declined is None:
+                grandfathers_used.add(op_id)
+            else:
+                violations.append(
+                    f"{op_id} references development fact(s) {sorted(touched_dev)} "
+                    f"and no train fact — a producer authored against the "
+                    f"evaluation set [{declined}]"
+                )
         fact_ids = operation.get("applicability", {}).get("fact_ids", [])
         if len(fact_ids) > 1:
             multi_target_facts.update(fact_ids)
+
+    # A grandfather that fires on nothing is a violation, not a harmless
+    # leftover: it is the stale-exemption failure this repository has already
+    # paid for, and the only signal that the operation it names has changed
+    # shape underneath the review that granted it.
+    #
+    # SCOPED TO OPERATIONS PRESENT IN THE REGISTRY BEING CHECKED. An entry
+    # naming an operation this registry does not contain says nothing about
+    # this registry -- and the control suite points the gate at synthetic
+    # registries by design, so an unscoped check would report a finding about
+    # a tree the entry was never about. That an entry names a LIVE operation is
+    # a separate property with a separate control
+    # (`LiveGrandfatherTests` in `scripts/tests/test_development_partition.py`,
+    # which derives its subject from the committed registry rather than from a
+    # list somebody kept in step).
+    registry_ids = {operation.get("id") for operation in registry}
+    for stale in sorted((set(GRANDFATHERED_OPERATIONS) & registry_ids)
+                        - grandfathers_used):
+        violations.append(
+            f"grandfathered operation {stale} matched no live violation — it "
+            f"has changed shape or left the registry; delete the entry from "
+            f"GRANDFATHERED_OPERATIONS rather than leaving an exemption that "
+            f"suppresses nothing"
+        )
 
     covered = len(multi_target_facts)
     if covered < MULTI_TARGET_FLOOR:
@@ -232,6 +372,7 @@ def check(argv: list[str] | None = None) -> int:
             f"DEVELOPMENT_PARTITION|operations={len(registry)}"
             f"|multi_target_facts={covered}|floor={MULTI_TARGET_FLOOR}"
             f"|exempt_by_amendment={len(exempt)}"
+            f"|grandfathered_operations={len(grandfathers_used)}"
         )
 
     for violation in violations:
