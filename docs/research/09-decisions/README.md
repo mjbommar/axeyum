@@ -844,3 +844,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1546](adr-1546-draw-19-is-refused-and-the-partition-gate-is-held-green-by-a-growing-exemption.md) | Draw 19 is refused, and the reason is not two bad commits — the v2 partition design cannot hold the property its gate enforces | Accepted |
 | [1550](adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md) | Gate the producer, not the draw — the partition-crossing EDGE is the unit, and its baseline may only shrink | accepted |
 | [1554](adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md) | `Rat.rowEchelon` lands as a `Definition` the kernel REDUCES — | accepted |
+| [1555](adr-1555-rank-is-an-uncapped-count-and-row-operation-invariance-does-not-follow-from-the-inverse-laws.md) | `Rat.rank M rows cols` lands as a `Definition` the kernel | accepted |

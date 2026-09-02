@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-le-rows",
+  "title": "The rank of a rational matrix is at most its row count",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every pair of dimensions rows, cols, Nat.Le (Rat.rank M rows cols) rows. Rat.rank M rows cols is Nat.countRange (Rat.nonzeroRowB (Rat.rowEchelon M rows cols) cols) rows -- the number of rows of the row-echelon form whose Rat.leadingIndex is strictly below cols, i.e. the number of nonzero rows. The bound follows from Nat.countRange_le alone and uses NO property of Rat.rowEchelon, of Rat.leadingIndex, or of the elementary row operations: a count of any predicate over the range [0, rows) cannot exceed rows. That is why this half of the dimension bound is free, and why the other half (rank <= cols) is not -- rank <= cols asserts that the echelon form has at most one pivot per column, which is the unproved rowEchelon_isEchelon (ADR-1554 obligation 4).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_le_rows : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> AxNat.le (Rat.rank x0 x1 x2) x1)))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rank_le_rows"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-countrange-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-le-rows-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rank_le_rows` is a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint` in all four preludes carrying the rationals. The `formal.statement` is the kernel's `render_lean` of the admitted type; reading it confirms the bound is against the FIRST dimension argument `x1` (the row count) and not against `x2`, which is the whole content of the claim -- the same declaration bounding rank by `x2` would be `rank_le_cols`, which is not proved here.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.rank_le_rows --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rank_le_rows[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.rank_le_rows 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank.rs)",
+    "source": "docs/research/09-decisions/adr-1555-rank-is-an-uncapped-count-and-row-operation-invariance-does-not-follow-from-the-inverse-laws.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form. Row 2 (a boundary refutation) is EMPTY BY PROOF for this family, as for ADR-1554's: the order on the constructed rationals is decidable and `Rat.nonzeroRowB` is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 (the decidable-fragment exact form) is the five-matrix evaluation table in `rat_prelude/rank_tests.rs`. Row 4: no import; nothing here was taken from Mathlib. WHAT THIS DOES NOT SAY: it does not say rank <= cols, which is open and needs `rowEchelon_isEchelon` (ADR-1554 obligation 4). It does not say rank is invariant under the elementary row operations -- that is open too, and ADR-1555 records that it does NOT follow from `echelon.rs`'s three inverse laws, because those are POINTWISE and this kernel has no `funext`. It does not say `Rat.rowEchelon` computes a correct echelon form; the bound holds for ANY predicate, so it would still hold if the elimination were wrong."
+}
