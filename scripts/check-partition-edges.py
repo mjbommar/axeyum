@@ -251,16 +251,24 @@ def load_amendments(root: pathlib.Path) -> tuple[set[tuple[str, str]], list[str]
     return amendments, complaints
 
 
-def count_style_exemptions(root: pathlib.Path) -> list[str]:
-    """Report every component/count-shaped exemption, and honour none of them.
+def count_style_exemptions(
+    root: pathlib.Path,
+) -> tuple[list[str], set[tuple[str, str]]]:
+    """Report every component/count-shaped exemption, and the edges it COVERS.
 
-    THIS FUNCTION SUPPRESSES NOTHING. It returns lines for the report. The
-    whole point of ADR-1550 is that a fact-id SET is not a statement about any
-    particular edge, so reading one as an amendment would wave through
-    crossings nobody reviewed -- which is what happened to the component gate
-    it complements.
+    Returns `(report lines, the ordered pairs a component exemption would
+    suppress if this gate honoured it)`. THE SECOND VALUE IS REPORTED AND
+    NEVER SUBTRACTED -- see `main`, where the honoured set is the per-edge
+    amendments and nothing else, on one line so that honouring these is a
+    mutation somebody can write and `mutation_controls.py` can register.
+
+    Computing the pairs rather than hardcoding an empty set is what makes the
+    refusal measurable: the report can say how many live violations a
+    component exemption WOULD have waved through, which is the number
+    ADR-1546 could not state about the gate it audited.
     """
     lines: list[str] = []
+    covered: set[tuple[str, str]] = set()
     for path in sorted(root.glob(MANIFEST_GLOB)):
         document = load_json(path)
         if not isinstance(document, dict):
@@ -278,7 +286,14 @@ def count_style_exemptions(root: pathlib.Path) -> list[str]:
                     f"NOT-AN-AMENDMENT {rel}:{key}[{index}] names a component "
                     f"of {size} fact ids and no edge; unparseable as a "
                     f"per-edge amendment, so it suppresses nothing here")
-    return lines
+                if not isinstance(members, list):
+                    continue
+                inside = [m for m in members if isinstance(m, str)]
+                for source in inside:
+                    for target in inside:
+                        if source != target:
+                            covered.add((source, target))
+    return lines, covered
 
 
 # --------------------------------------------------------------------------
@@ -446,7 +461,7 @@ def main(argv: list[str] | None = None) -> int:
         dependencies = load_dependencies(root)
         edges = crossing_edges(partition_of, dependencies)
         amendments, amendment_complaints = load_amendments(root)
-        not_amendments = count_style_exemptions(root)
+        not_amendments, component_covered = count_style_exemptions(root)
         previous: dict[str, Any] | None = None
         if (root / BASELINE_PATH).is_file():
             candidate = load_json(root / BASELINE_PATH)
@@ -463,11 +478,19 @@ def main(argv: list[str] | None = None) -> int:
         return record(root, edges, manifests, partition_of, dependencies,
                       previous)
 
-    amended = [e for e in edges if edge_key(e) in amendments]
-    baselined = [e for e in edges if edge_key(e) not in amendments
+    # THE HONOURED SET IS THE PER-EDGE AMENDMENTS AND NOTHING ELSE. This one
+    # line is ADR-1550: `component_covered` holds every pair a manifest's
+    # component exemption would suppress, it is REPORTED below, and it is not
+    # unioned in here. `mutation_controls.py` registers the mutant that unions
+    # it, because a refusal nobody can delete is not a decision.
+    honoured = amendments
+    amended = [e for e in edges if edge_key(e) in honoured]
+    baselined = [e for e in edges if edge_key(e) not in honoured
                  and edge_key(e) in baseline]
-    violations = [e for e in edges if edge_key(e) not in amendments
+    violations = [e for e in edges if edge_key(e) not in honoured
                   and edge_key(e) not in baseline]
+    would_be_waved = len([e for e in violations
+                          if edge_key(e) in component_covered])
 
     # The declined component exemptions are listed in full whenever the run
     # has something to say, and summarised as `not_amendments=N` otherwise --
@@ -497,14 +520,15 @@ def main(argv: list[str] | None = None) -> int:
               f"depends_on {edge['to']} [{edge['to_partition']}] "
               f"-- introduced by {blame}")
 
-    unamended_total = len([e for e in edges if edge_key(e) not in amendments])
+    unamended_total = len([e for e in edges if edge_key(e) not in honoured])
     summary = (f"PARTITION-EDGES|manifests={len(manifests)}"
                f"|drawn={len(partition_of)}"
                f"|crossing={len(edges)}"
                f"|amended={len(amended)}"
                f"|baselined={len(baselined)}"
                f"|violations={len(violations)}"
-               f"|not_amendments={len(not_amendments)}")
+               f"|not_amendments={len(not_amendments)}"
+               f"|component_exemptions_would_wave={would_be_waved}")
     if violations:
         print(summary + "|FAILED")
         print(f"  {len(violations)} `depends_on` edge(s) cross an evaluation "

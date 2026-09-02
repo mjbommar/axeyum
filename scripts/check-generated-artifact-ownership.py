@@ -305,6 +305,74 @@ GUARDED: tuple[Artifact, ...] = (
             ),
         ),
     ),
+    Artifact(
+        path="artifacts/autogenesis/partition-edge-baseline-v1.json",
+        owner=Producer(
+            "scripts/check-partition-edges.py",
+            ("--record-baseline",),
+            "ADR-1550. The sole writer, and the only mode of it that writes: "
+            "the default and --baseline modes never touch the file. The "
+            "recorded edge set is what `--baseline` ratchets against, so a "
+            "second writer here is not a stale artifact -- it is a partition "
+            "breach that stops being reported.",
+        ),
+        # The provenance keys are named individually because they are the ones
+        # a reader argues with. `edges` alone would still look like a baseline
+        # after a rewrite that dropped what it was measured against, and a
+        # baseline whose recording date and ledger digest are gone cannot be
+        # checked for having only shrunk -- which is the ADR's whole rule.
+        #
+        # `schema_version` is LAST deliberately: the OWNER arm perturbs the
+        # committed file by popping `required_keys[-1]` and then demands a
+        # byte-identical restore, and the regenerator carries `recorded_date`,
+        # `recorded_at_commit` and `ledger_sha256` forward from the file it
+        # finds. Popping one of THOSE would make the restore honest and the
+        # arm still red, for a reason about this list rather than about
+        # ownership.
+        required_keys=(
+            "authority",
+            "edge_count",
+            "edge_set_sha256",
+            "edges",
+            "kind",
+            "ledger_sha256",
+            "manifests",
+            "produced_by",
+            "recorded_at_commit",
+            "recorded_date",
+            "rule",
+            "schema_version",
+        ),
+        required_nested={},
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason it is listed on the "
+                "two artifacts above: it writes a sandbox and a perturbed "
+                "copy, so it cannot be declared read-only.",
+            ),
+            Producer(
+                "scripts/check-merge-hygiene.sh",
+                (),
+                "Runs `check-partition-edges.py --baseline` as its guard 9 "
+                "and names this artifact in the comment explaining it. A "
+                "bash script cannot be proved write-free by AST, so the "
+                "property is MEASURED here instead of asserted.",
+            ),
+            Producer(
+                "scripts/tests/test_check_partition_edges.py",
+                (),
+                "The gate's own controls. They build throwaway trees and "
+                "write baselines INSIDE them -- including the "
+                "--record-baseline scenarios, which are the only tests in "
+                "the repository that exercise this artifact's writer. That "
+                "the real one is untouched is exactly what this arm "
+                "measures.",
+            ),
+        ),
+        reads=(),
+    ),
 )
 
 # A call is a write if it is any of these. Used only for the READS arm, where

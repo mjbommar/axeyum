@@ -246,6 +246,11 @@ autogenesis-nursery:
     python3 scripts/check-autogenesis-nat-modeq-family.py
     python3 scripts/check-established-facts-bounded-truth.py
     python3 scripts/check-autogenesis-nursery.py
+    # The per-edge half of the same property (ADR-1550): the component gate
+    # above runs only in this ~10-minute gate, the edge gate also runs in
+    # hooks/pre-push and check-merge-hygiene.sh at 0.13s.
+    python3 scripts/check-partition-edges.py --baseline
+    python3 -m unittest scripts.tests.test_check_partition_edges
     python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
     cargo test -p axeyum-lean-import --test statement_adapter
     python3 -m unittest scripts.tests.test_check_autogenesis_statement_adapter
@@ -717,6 +722,9 @@ gate-controls:
     # examples/ and tests/ are never compiled and the hook's
     # "pushed SHA compiles" line is false for half the tree.
     scripts/tests/test-prepush-checks-all-targets.sh
+    # ...and the L0 block must still run the gates it lists, one of which is
+    # the partition-edge ratchet (ADR-1550).
+    scripts/tests/test-prepush-l0-gates.sh
     scripts/tests/test-prepare-prepush-worktree.sh
     scripts/tests/test-check-lean-golden-pins.sh
     # ...and the ratchet that makes the two lines above impossible to forget.

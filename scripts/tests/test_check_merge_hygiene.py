@@ -119,6 +119,11 @@ class MergeHygieneControls(unittest.TestCase):
             # main for ~25 hours in 0 of 240 commit messages because its only
             # route was `cargo run --release`.
             ("check-shape-duplicates", "OK: 10 duplicate group(s) (route: prebuilt)"),
+            # The per-edge partition gate (ADR-1550, lane `partition-edge-gate`).
+            # A merge is where two lanes' `depends_on` edges meet, and a
+            # crossing edge is invisible in `git show --stat` -- the defect is a
+            # relation between two files neither of which looks wrong.
+            ("check-partition-edges", "PARTITION-EDGES|violations=0|PASS"),
         ):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
@@ -361,6 +366,34 @@ class MergeHygieneControls(unittest.TestCase):
         done = self.run_gate(check_shape_duplicates=1)
         self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("AXEYUM_SKIP_SHAPE_DUPLICATES=1", done.stdout)
+
+    # -- guard 9 (ADR-1550): partition-crossing dependency edges ------------
+
+    def test_a_new_partition_crossing_edge_fails_the_gate(self) -> None:
+        """Deleting the partition-edge guard must kill exactly this test.
+
+        A `depends_on` edge between a train fact and a development or held-out
+        one destroys what the split measures, and it is invisible in
+        `git show --stat` because neither file looks wrong on its own. Both
+        crossings of 2026-09-01 (ADR-1546) landed through this gap: the gate
+        that would have caught them ran in `scripts/check.sh` and the justfile
+        and in no pre-push hook, so it fired days later against an exemption
+        that had been enlarged to fit."""
+        done = self.run_gate(check_partition_edges=1)
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("FAIL: check-partition-edges.py --baseline", done.stdout)
+        self.assertIn("partition-edge-amendments-v1.json", done.stdout)
+
+    def test_an_unanswerable_partition_edge_check_does_NOT_fail_the_gate(self) -> None:
+        """Exit 2 is `cannot answer` -- no nursery manifest, no fact ledger, or
+        no recorded baseline. A gate that reports a disagreement when its
+        subject was unavailable is wrong about its own subject, and reading
+        every nonzero status as a crossing would turn a missing file into a
+        partition breach."""
+        done = self.run_gate(check_partition_edges=2)
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("partition_edges=not-answerable", done.stdout)
+        self.assertIn("|PASS", done.stdout)
 
     # -- the aggregate ------------------------------------------------------
 

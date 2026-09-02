@@ -2,7 +2,7 @@
 # Post-merge hygiene: the things that have actually gone wrong when a
 # coordinator merges a lane branch, in one command that takes a few seconds.
 #
-# TEN are listed below and NINE are enforced. The pinned-inventory one is
+# ELEVEN are listed below and TEN are enforced. The pinned-inventory one is
 # written down with the reason it is not gated (there are no live subjects, so
 # a guard for it could not fail), because a header claiming more checks than
 # the body enforces is exactly the kind of gap this file exists to close.
@@ -135,6 +135,23 @@
 #      this gate keys on that marker. Treating every 2 as "skipped" would let a
 #      broken allowlist through silently, which is the checker-that-cannot-fail
 #      defect arriving through the door marked "be lenient about toolchains".
+#
+#  10. A MERGE FUSED TWO EVALUATION PARTITIONS AND NO GATE RAN (ADR-1546,
+#      ADR-1550). A `depends_on` edge between a train fact and a development
+#      fact -- or a held-out one -- destroys what the split measures, and it is
+#      invisible in `git show --stat` because neither file looks wrong on its
+#      own. Both crossings of 2026-09-01 landed exactly this way: the component
+#      gate that would have caught them was registered in `scripts/check.sh`
+#      and the justfile and in NO pre-push hook, so it ran days later, and by
+#      then it had been kept green by an exemption re-scoped 228 -> 230 -> 258
+#      -> 274 to fit whatever it had just failed on.
+#
+#      `scripts/check-partition-edges.py --baseline` is the per-EDGE gate that
+#      replaces that arrangement for producers: ~0.13 s, pure JSON, no cargo,
+#      and it fails only on a crossing edge absent from the recorded baseline,
+#      so the 198 standing crossings do not block a merge while the
+#      re-partition repairs them. Exit 2 is "cannot answer" and is reported,
+#      not failed.
 #
 # Exit 0 only when all ten enforced checks pass. Each failure names its own
 # remedy.
@@ -387,8 +404,44 @@ else
   fi
 fi
 
+# --- 9. partition-crossing dependency edges (ADR-1550) -----------------------
+# A merge is where two lanes' `depends_on` edges meet, and a crossing edge is
+# invisible in `git show --stat` for the same reason a stale generated file is:
+# the defect is a relation between two files neither of which looks wrong.
+# ADR-1546 measured both of the 2026-09-01 crossings landing through exactly
+# this gap, with the component gate registered in `check.sh` and the justfile
+# -- the ~10-minute gate nobody runs per merge -- and in no pre-push hook.
+#
+# `--baseline` is the ratchet form: it fails on a crossing edge that is not in
+# `artifacts/autogenesis/partition-edge-baseline-v1.json`, so the 198 recorded
+# on 2026-09-02 do not block anybody while the re-partition repairs them.
+# ~0.13s, pure JSON, no cargo -- it attributes only the NEW edges, which is why
+# it is not the 27s the full audit costs.
+#
+# THREE outcomes, like guards 4 and 8. Exit 2 is "cannot answer" (no manifest,
+# no fact ledger, no baseline file) and must not be a failure: a gate that
+# reports a disagreement when its subject was unavailable is wrong about its
+# own subject.
+part_edges_out=$(python3 scripts/check-partition-edges.py --baseline 2>&1)
+part_edges_rc=$?
+if [ "$part_edges_rc" -eq 0 ]; then
+  part_edges="ok"
+elif [ "$part_edges_rc" -eq 2 ]; then
+  part_edges="not-answerable"
+  note "check-partition-edges.py --baseline: SKIPPED (cannot answer)"
+  printf '%s\n' "$part_edges_out" | tail -2 | sed 's/^/    /'
+else
+  fail=1
+  echo "FAIL: check-partition-edges.py --baseline"
+  printf '%s\n' "$part_edges_out" | tail -6 | sed 's/^/    /'
+  note "A merged fact's depends_on now crosses an evaluation partition. Repair"
+  note "the edge, or record a PER-EDGE amendment in"
+  note "artifacts/autogenesis/partition-edge-amendments-v1.json naming the edge,"
+  note "a reason and a date. Enlarging a component exemption does nothing here."
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|shape_census=$census|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|shape_duplicates=$shape_dupes_state|PASS"
+  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|shape_census=$census|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|shape_duplicates=$shape_dupes_state|partition_edges=$part_edges|PASS"
   exit 0
 fi
 echo "MERGE_HYGIENE|FAILED"

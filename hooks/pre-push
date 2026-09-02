@@ -116,8 +116,26 @@ export PREPUSH_BASE PREPUSH_TIP
 #   check-settled-fact-statements     0.09s
 #   check-holdout-closed-evaluation   0.06s
 #   check-semantic-control-fixtures   1.09s
+#   check-partition-edges --baseline  0.13s
 #   ------------------------------------------
-#   total                             ~1.2s
+#   total                             ~1.3s
+#
+# `check-partition-edges.py --baseline` joined on 2026-09-02 (ADR-1546 option
+# 2, ADR-1550) and it is the reason this block exists, stated by a measurement
+# rather than a principle. The property "no `depends_on` edge crosses an
+# evaluation partition" was enforced only by `check-autogenesis-nursery.py`,
+# registered in `scripts/check.sh:688` and `justfile:235` and in NO hook -- so
+# a producer closed a fact whose dependency fused train and development and
+# pushed it, twice on 2026-09-01, with the property never evaluated. By the
+# time the ~10-minute gate ran, the finding had been absorbed by an exemption
+# re-scoped 228 -> 230 -> 258 -> 274 in four days.
+#
+# `--baseline` is the RATCHET form, and the distinction matters for cost as
+# much as for policy: the full audit attributes all 198 recorded crossings and
+# costs 27s, while `--baseline` attributes only edges absent from
+# `artifacts/autogenesis/partition-edge-baseline-v1.json` -- normally none --
+# and costs 0.13s. It blocks a NEW crossing from today without holding every
+# push hostage to a re-partition nobody has done yet.
 #
 # The other four L0 gates are deliberately NOT here and run in CI instead:
 # `credit-transaction-ledger` (10.6s), `kernel-differential` (7-27s, and it
@@ -129,12 +147,21 @@ export PREPUSH_BASE PREPUSH_TIP
 #
 # Fail-closed and unconditional: no `|| true`, no skip switch. If one of these
 # exits nonzero the push does not happen.
+#
+# THAT INCLUDES EXIT 2, and for `check-partition-edges.py` that is a decision
+# rather than an oversight. Its three unanswerable causes are "no nursery
+# manifest", "no fact ledger" and "no recorded baseline" -- every one of them a
+# COMMITTED ARTIFACT missing from the tree being pushed, which is a thing to
+# stop for. `scripts/check-merge-hygiene.sh` reports the same exit 2 without
+# failing, because a coordinator mid-merge can legitimately be looking at a
+# tree where one side has not landed yet. Same code, different question.
 echo "pre-push: L0 trusted-library safety gates (always, incl. docs-only pushes)" >&2
 l0_start=$(date +%s)
 for l0_gate in \
   "scripts/check-settled-fact-statements.py" \
   "scripts/check-holdout-closed-evaluation.py" \
-  "scripts/check-semantic-control-fixtures.py --check"
+  "scripts/check-semantic-control-fixtures.py --check" \
+  "scripts/check-partition-edges.py --baseline"
 do
   l0_step_start=$(date +%s)
   # Word-splitting is intended: the entries above carry their own flags.

@@ -709,6 +709,18 @@ step autogenesis-nat-modeq-remainder-operation python3 scripts/check-autogenesis
 step established-fact-bounded-truth python3 scripts/check-established-facts-bounded-truth.py
 step lane-turn-controls ./scripts/tests/test-check-lane-turn.sh
 step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
+# The PER-EDGE half of the same property (ADR-1546 option 2, ADR-1550). The
+# component gate above is right about its subject and runs only here, in the
+# ~10-minute aggregate; the edge gate is 0.13s and also runs in hooks/pre-push
+# and scripts/check-merge-hygiene.sh, which is where a producer meets it.
+# `--baseline` here too, deliberately. The bare form is the AUDIT and it is
+# RED by construction until the re-partition (ADR-1546 option 1) lands: 198
+# recorded crossings, 27s of per-edge attribution. Wiring the audit into the
+# aggregate gate would put a standing red on `main` that everyone learns to
+# scroll past, which is how the exemption this replaces grew. Run the bare
+# form by hand when you want the attribution.
+step autogenesis-partition-edges python3 scripts/check-partition-edges.py --baseline
+step autogenesis-partition-edge-controls python3 -m unittest scripts.tests.test_check_partition_edges
 step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
 step autogenesis-nursery-dispatch-baseline python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
 step autogenesis-statement-adapter-rust cargo test -p axeyum-lean-import --test statement_adapter
@@ -920,6 +932,10 @@ step open-frontier-axiom-freeness-controls ./scripts/tests/test-open-frontier-ax
 # `--all-targets` it builds neither, and on 2026-08-20 a non-compiling
 # workspace reached `main` under the hook's own "pushed SHA compiles" line.
 step prepush-all-targets ./scripts/tests/test-prepush-checks-all-targets.sh
+# ...and the L0 block must still run the gates it lists, one of which is the
+# partition-edge ratchet. ADR-1546 measured two partition-fusing edges pushed
+# while the only gate for that property lived in this file and nowhere else.
+step prepush-l0-gates ./scripts/tests/test-prepush-l0-gates.sh
 step prepush-worktree-controls ./scripts/tests/test-prepare-prepush-worktree.sh
 step lean-golden-pin-controls ./scripts/tests/test-check-lean-golden-pins.sh
 # ...and the ratchet that makes the two lines above impossible to forget. Both
