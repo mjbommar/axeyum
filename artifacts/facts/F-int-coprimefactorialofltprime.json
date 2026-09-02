@@ -18,7 +18,8 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:int-factorialeqofnatfactorial"
+    "F:int-factorialeqofnatfactorial",
+    "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201"
   ],
   "axiom_footprint": [],
   "evidence": [

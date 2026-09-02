@@ -530,10 +530,6 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("coprime_self_add_right", p.coprime_self_add_right),
             ("coprime_symmetric", p.coprime_symmetric),
             (
-                "prime_coprime_factorial_of_lt",
-                p.prime_coprime_factorial_of_lt,
-            ),
-            (
                 "prime_coprime_desc_factorial_of_lt_of_le",
                 p.prime_coprime_desc_factorial_of_lt_of_le,
             ),

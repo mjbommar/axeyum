@@ -1765,11 +1765,6 @@ pub struct NatPrelude {
     /// `gcd_dvd_right` both orderings plus `dvd_gcd`), so `dvd_antisymm`
     /// gives `gcd a b = gcd b a` and the hypothesis transports along it.
     pub coprime_symmetric: NameId,
-    /// `Nat.Prime.coprime_factorial_of_lt : ∀ p n, prime_condition p → Lt n
-    /// p → Eq (gcd p n!) one`. Closes
-    /// `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`. See
-    /// `nat_prelude::prime_dvd_factorial_lcm`.
-    pub prime_coprime_factorial_of_lt: NameId,
     /// `Nat.Prime.coprime_descFactorial_of_lt_of_le : ∀ p n k,
     /// prime_condition p → Lt n p → Le k n → Eq (gcd p (n.descFactorial k))
     /// one`. Closes
@@ -5942,7 +5937,6 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_of_lt_min_fac: kernel.name_str(nat, "coprime_of_lt_min_fac"),
             coprime_self_add_right: kernel.name_str(nat, "coprime_self_add_right"),
             coprime_symmetric: kernel.name_str(nat, "coprime_symmetric"),
-            prime_coprime_factorial_of_lt: kernel.name_str(nat, "prime_coprime_factorial_of_lt"),
             prime_coprime_desc_factorial_of_lt_of_le: kernel
                 .name_str(nat, "prime_coprime_descFactorial_of_lt_of_le"),
             prime_dvd_factorial_iff_le: kernel.name_str(nat, "prime_dvd_factorial_iff_le"),
