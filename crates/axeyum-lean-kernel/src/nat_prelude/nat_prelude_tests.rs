@@ -620,6 +620,14 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `nat-multiset` lane: `multiset.rs`.
+        p.pow_dvd_pow_of_le,
+        p.dvd_prod_range_of_lt,
+        p.prime_pow_dvd_of_dvd_mul_of_not_dvd,
+        p.exponent_unique_of_exact_dvd,
+        p.multiset_count_eq_zero_of_bound_le,
+        p.multiset_count_of_lt_bound,
+        p.multiset_count_add,
         p.count_range_union_add_inter,
         p.coprime_dvd_mul_left,
         p.coprime_dvd_mul_right,

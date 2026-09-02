@@ -5584,6 +5584,40 @@ pub struct NatPrelude {
     /// `Nat.Multiset.beq m1 m2 := eqBelow (count m1) (count m2)
     /// (bound m1 + bound m2)`.
     pub multiset_beq: NameId,
+
+    /// `Nat.pow_dvd_pow_of_le : ∀ a i j, Le i j → dvd (pow a i) (pow a j)`.
+    /// [`le_dest`](Self::le_dest) turns `Le i j` into `i + k = j` and
+    /// [`pow_add`](Self::pow_add) splits the exponent (`multiset.rs`).
+    pub pow_dvd_pow_of_le: NameId,
+    /// `Nat.dvd_prodRange_of_lt : ∀ f i k, Lt i k → dvd (f i) (prodRange f k)` —
+    /// every factor below the bound divides the fold (`multiset.rs`).
+    pub dvd_prod_range_of_lt: NameId,
+    /// `Nat.prime_pow_dvd_of_dvd_mul_of_not_dvd : ∀ p b c, prime_condition p →
+    /// Not (dvd p b) → ∀ a, dvd (pow p c) (mul a b) → dvd (pow p c) a` — a whole
+    /// prime power passes through a factor the prime does not divide. Induction
+    /// on the EXPONENT with `a` quantified inside the motive, using only
+    /// [`euclid_lemma`](Self::euclid_lemma) and left-cancellation: this prelude
+    /// has [`prime_coprime_pow_of_not_dvd`](Self::prime_coprime_pow_of_not_dvd)
+    /// (a prime coprime to a POWER) but nothing giving coprimality of a prime
+    /// POWER, which is what [`coprime_dvd_mul_right`](Self::coprime_dvd_mul_right)
+    /// would need (`multiset.rs`).
+    pub prime_pow_dvd_of_dvd_mul_of_not_dvd: NameId,
+    /// `Nat.exponent_unique_of_exact_dvd : ∀ a n c1 c2, dvd (pow a c1) n →
+    /// Not (dvd (pow a (succ c1)) n) → dvd (pow a c2) n →
+    /// Not (dvd (pow a (succ c2)) n) → Eq c1 c2` — a valuation is unique. No
+    /// primality needed: `c1 < c2` already makes `pow a (succ c1)` divide
+    /// `pow a c2` and hence `n` (`multiset.rs`).
+    pub exponent_unique_of_exact_dvd: NameId,
+    /// `Nat.Multiset.count_eq_zero_of_bound_le : ∀ m x, Le (bound m) x →
+    /// Eq (count m x) 0` — no well-formedness hypothesis, because
+    /// [`multiset_count`](Self::multiset_count) truncates in its own definition.
+    pub multiset_count_eq_zero_of_bound_le: NameId,
+    /// `Nat.Multiset.count_of_lt_bound : ∀ m x, Lt x (bound m) →
+    /// Eq (count m x) (raw m x)`.
+    pub multiset_count_of_lt_bound: NameId,
+    /// `Nat.Multiset.count_add : ∀ m1 m2 x, Eq (count (add m1 m2) x)
+    /// (add (count m1 x) (count m2 x))`.
+    pub multiset_count_add: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6457,6 +6491,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             multiset_card: kernel.name_str(multiset, "card"),
             multiset_eq_below: kernel.name_str(multiset, "eqBelow"),
             multiset_beq: kernel.name_str(multiset, "beq"),
+            pow_dvd_pow_of_le: kernel.name_str(nat, "pow_dvd_pow_of_le"),
+            dvd_prod_range_of_lt: kernel.name_str(nat, "dvd_prodRange_of_lt"),
+            prime_pow_dvd_of_dvd_mul_of_not_dvd: kernel
+                .name_str(nat, "prime_pow_dvd_of_dvd_mul_of_not_dvd"),
+            exponent_unique_of_exact_dvd: kernel.name_str(nat, "exponent_unique_of_exact_dvd"),
+            multiset_count_eq_zero_of_bound_le: kernel
+                .name_str(multiset, "count_eq_zero_of_bound_le"),
+            multiset_count_of_lt_bound: kernel.name_str(multiset, "count_of_lt_bound"),
+            multiset_count_add: kernel.name_str(multiset, "count_add"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
