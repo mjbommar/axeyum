@@ -60,7 +60,23 @@ import sys
 from typing import Any, Iterator
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-NURSERY = ROOT / "artifacts/autogenesis/nursery-v1.json"
+
+# NOT a single `nursery-v1.json` literal. Measured 2026-09-02:
+# `authoritative-mathlib-nat-bit-constructor-family-v1` (ADR-1570) closed four
+# `development` facts -- `F:ml430-nat-bit-false-98b0bf2a`,
+# `F:ml430-nat-bit-false-apply-5962146d`, `F:ml430-nat-bit-true-2456e237`,
+# `F:ml430-nat-bit-true-apply-02338ebc` -- and no train fact. All four live
+# ONLY in `nursery-v2-extension.json`; this gate's old single-file `NURSERY`
+# constant never opened it, so the dev-only rule below never saw them and the
+# gate printed PASS. This is the third reader with the v1-only literal found
+# in one day (`fact-frontier.py` and `SeedContractHoldoutIsolationTests` were
+# the first two, both already fixed the same way): the manifest set is
+# DERIVED, not named, mirroring `check-partition-edges.py`'s `MANIFEST_GLOBS`
+# -- the v1 split plus any `nursery-v*-extension.json` refill, so a future
+# `nursery-v3-extension.json` is found without editing this file again, and an
+# unrelated decoy (`nursery-zzz-notes.json`) is not.
+NURSERY_DIR = ROOT / "artifacts/autogenesis"
+MANIFEST_GLOBS = ("nursery-v1.json", "nursery-v*-extension.json")
 SPLIT_POLICY = ROOT / "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json"
 OPERATIONS = ROOT / "artifacts/autogenesis/operations.json"
 FACTS = ROOT / "artifacts/facts"
@@ -124,6 +140,41 @@ GRANDFATHERED_OPERATIONS: dict[str, dict[str, str]] = {
                   "anyway. It cannot be repaired now because every one of the "
                   "three facts pins `operation_sha256` over this exact object.",
     },
+    "authoritative-mathlib-nat-bit-constructor-family-v1": {
+        "registered": "d11173b9d (2026-09-02)",
+        "authority": "docs/research/09-decisions/adr-1570-one-operation-"
+                     "closed-four-sibling-facts-and-the-other-six-say-what-"
+                     "is-missing.md",
+        "reason": "Four `natural-bit-constructor` development targets and no "
+                  "train fact. This gate could not see the operation at "
+                  "registration (its `NURSERY` constant read `nursery-v1.json` "
+                  "alone and all four targets live only in "
+                  "`nursery-v2-extension.json`), so it was red at the time "
+                  "under the rule this loader fix now makes visible -- ADR-1570 "
+                  "recorded the finding and deliberately left the loader and "
+                  "the operation's disposition to a later lane rather than "
+                  "fixing the gate that would have flagged its own change. "
+                  "The measurement it made still holds: the entire live train "
+                  "population is 17 open rows (5 outcome-blind mutation "
+                  "controls, 2 divergence-blocked, 10 `natural-binomial-"
+                  "bounds`), and no reflexivity-or-bounded-induction chain "
+                  "proves `Nat.choose n k <= 2 ^ n` -- named there as this "
+                  "contract's second non-example, and re-confirmed here "
+                  "2026-09-02: across BOTH manifests (this loader fix's whole "
+                  "point) 218 facts partition `train`, 201 `proved` and "
+                  "exactly 17 `open` -- 5 outcome-blind mutation fixtures, 2 "
+                  "divergence-blocked (`Nat.fastFib`, `Squarefree`), and the "
+                  "10 `natural-binomial-bounds` rows (`Nat.choose_le_two_pow` "
+                  "and siblings), none reachable by the bounded refl/"
+                  "induction chain this producer runs. The producer "
+                  "(`propose_bounded_induction`) was authored in "
+                  "August against `natural-binomial-bounds`/factorial train "
+                  "facts by a different lane and was not touched here -- the "
+                  "property the rule protects (a producer tuned against the "
+                  "evaluation set) does not hold. It cannot be repaired now "
+                  "because every one of the four facts pins "
+                  "`checker_operation.id` over this exact operation.",
+    },
 }
 
 
@@ -157,6 +208,18 @@ def _strings(node: Any) -> Iterator[str]:
         yield node
 
 
+def manifest_paths() -> list[pathlib.Path]:
+    """Every nursery manifest this gate reads, deduplicated and sorted.
+
+    `NURSERY_DIR.glob` per `MANIFEST_GLOBS` pattern, not a single named file --
+    see the comment on `MANIFEST_GLOBS` for the incident this replaced.
+    """
+    if not NURSERY_DIR.is_dir():
+        return []
+    return sorted({path for pattern in MANIFEST_GLOBS
+                   for path in NURSERY_DIR.glob(pattern)})
+
+
 def fact_partitions() -> dict[str, str]:
     """Partition per fact, from BOTH sources, requiring them to agree.
 
@@ -168,36 +231,53 @@ def fact_partitions() -> dict[str, str]:
     Two sources that can drift are a defect waiting to happen, and the drift
     would be silent: whichever file a reader consults would look authoritative.
     So disagreement is an ERROR here rather than a precedence rule -- picking a
-    winner would hide exactly the edit that needs to be seen.
+    winner would hide exactly the edit that needs to be seen. The same rule now
+    applies ACROSS manifests too: two nursery files naming the same fact id
+    with different partitions is reported, never silently overwritten by
+    whichever file happened to sort last.
     """
-    nursery = _load(NURSERY)
+    manifests = manifest_paths()
+    if not manifests:
+        raise DevelopmentPartitionError(
+            f"no nursery manifest matches {MANIFEST_GLOBS} under {NURSERY_DIR} "
+            f"-- there is no drawn population to check"
+        )
     policy = _load(SPLIT_POLICY)
     families = policy.get("family_partitions")
     if not isinstance(families, dict) or not families:
         raise DevelopmentPartitionError("split policy carries no family_partitions")
-    entries = nursery.get("entries")
-    if not isinstance(entries, list) or not entries:
-        raise DevelopmentPartitionError("nursery carries no entries")
 
     out: dict[str, str] = {}
+    declared_in: dict[str, str] = {}
     disagreements: list[str] = []
-    for entry in entries:
-        fact_id = entry.get("fact_id") or entry.get("id")
-        partition = entry.get("partition")
-        family = entry.get("family")
-        if not fact_id or not partition:
-            raise DevelopmentPartitionError(
-                f"nursery entry {fact_id or entry!r} carries no partition"
-            )
-        family_partition = families.get(family)
-        if family_partition is not None and family_partition != partition:
-            disagreements.append(
-                f"{fact_id}: entry says {partition!r}, family {family!r} says {family_partition!r}"
-            )
-        out[fact_id] = partition
+    for path in manifests:
+        nursery = _load(path)
+        entries = nursery.get("entries")
+        if not isinstance(entries, list) or not entries:
+            raise DevelopmentPartitionError(f"{path.name} carries no entries")
+        for entry in entries:
+            fact_id = entry.get("fact_id") or entry.get("id")
+            partition = entry.get("partition")
+            family = entry.get("family")
+            if not fact_id or not partition:
+                raise DevelopmentPartitionError(
+                    f"{path.name} entry {fact_id or entry!r} carries no partition"
+                )
+            family_partition = families.get(family)
+            if family_partition is not None and family_partition != partition:
+                disagreements.append(
+                    f"{fact_id}: entry says {partition!r}, family {family!r} says {family_partition!r}"
+                )
+            if fact_id in out and out[fact_id] != partition:
+                disagreements.append(
+                    f"{fact_id}: {partition!r} in {path.name} disagrees with "
+                    f"{out[fact_id]!r} in {declared_in[fact_id]}"
+                )
+            out[fact_id] = partition
+            declared_in[fact_id] = path.name
     if disagreements:
         raise DevelopmentPartitionError(
-            "nursery and split policy disagree on "
+            "nursery manifests (or the nursery and split policy) disagree on "
             f"{len(disagreements)} fact(s): " + "; ".join(sorted(disagreements)[:5])
         )
     if not out:
@@ -206,15 +286,22 @@ def fact_partitions() -> dict[str, str]:
 
 
 def amended_fact_ids() -> set[str]:
-    """Facts already spent by a recorded breach, and repaired by amendment."""
-    nursery = _load(NURSERY)
+    """Facts already spent by a recorded breach, and repaired by amendment.
+
+    Reads `amendments` from EVERY manifest `manifest_paths()` finds, not just
+    `nursery-v1.json` -- today only the v1 file carries any, but nothing in the
+    schema confines them there, and a reader that assumed so would be the same
+    defect this file just fixed for `entries`.
+    """
     spent: set[str] = set()
-    for amendment in nursery.get("amendments", []) or []:
-        breach = amendment.get("breach")
-        if isinstance(breach, dict):
-            fact_id = breach.get("fact_id")
-            if isinstance(fact_id, str):
-                spent.add(fact_id)
+    for path in manifest_paths():
+        nursery = _load(path)
+        for amendment in nursery.get("amendments", []) or []:
+            breach = amendment.get("breach")
+            if isinstance(breach, dict):
+                fact_id = breach.get("fact_id")
+                if isinstance(fact_id, str):
+                    spent.add(fact_id)
     return spent
 
 

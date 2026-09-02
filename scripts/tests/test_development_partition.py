@@ -39,15 +39,28 @@ class Fixture:
 
     def __init__(self, tmp: pathlib.Path):
         self.tmp = tmp
+        self.nursery_dir = tmp / "nursery"
+        self.nursery_dir.mkdir(exist_ok=True)
         self.facts = tmp / "facts"
         self.facts.mkdir(exist_ok=True)
         self.entries: list[dict] = []
+        # Facts that live ONLY in a `nursery-v2-extension.json`-shaped
+        # manifest -- see `test_development_fact_in_extension_manifest_is_
+        # seen`, which pins the ADR-1570 defect this fixture exists to catch.
+        self.extension_entries: list[dict] = []
         self.families: dict[str, str] = {}
         self.operations: list[dict] = []
         self.amendments: list[dict] = []
 
-    def fact(self, fact_id: str, family: str, partition: str, status: str = "open"):
-        self.entries.append({"fact_id": fact_id, "family": family, "partition": partition})
+    def fact(self, fact_id: str, family: str, partition: str, status: str = "open",
+             manifest: str = "v1"):
+        entry = {"fact_id": fact_id, "family": family, "partition": partition}
+        if manifest == "v1":
+            self.entries.append(entry)
+        elif manifest == "extension":
+            self.extension_entries.append(entry)
+        else:
+            raise ValueError(f"unknown manifest {manifest!r}")
         self.families.setdefault(family, partition)
         (self.facts / f"{fact_id.replace(':', '-')}.json").write_text(
             json.dumps({"id": fact_id, "epistemic_status": status}), encoding="utf-8"
@@ -66,16 +79,20 @@ class Fixture:
         return self
 
     def install(self, module):
-        (self.tmp / "nursery.json").write_text(
+        (self.nursery_dir / "nursery-v1.json").write_text(
             json.dumps({"entries": self.entries, "amendments": self.amendments}), encoding="utf-8"
         )
+        if self.extension_entries:
+            (self.nursery_dir / "nursery-v2-extension.json").write_text(
+                json.dumps({"entries": self.extension_entries}), encoding="utf-8"
+            )
         (self.tmp / "policy.json").write_text(
             json.dumps({"family_partitions": self.families}), encoding="utf-8"
         )
         (self.tmp / "operations.json").write_text(
             json.dumps({"operations": self.operations}), encoding="utf-8"
         )
-        module.NURSERY = self.tmp / "nursery.json"
+        module.NURSERY_DIR = self.nursery_dir
         module.SPLIT_POLICY = self.tmp / "policy.json"
         module.OPERATIONS = self.tmp / "operations.json"
         module.FACTS = self.facts
@@ -135,6 +152,39 @@ class DevelopmentPartitionControls(unittest.TestCase):
         f.amend("F:d2")
         f.install(self.module)
         self.assertEqual(self.module.check(["--quiet"]), 0)
+
+    # --- guard: every nursery manifest is read, not `nursery-v1.json` alone -
+    def test_development_fact_in_extension_manifest_is_seen(self):
+        """THE ADR-1570 DEFECT. `authoritative-mathlib-nat-bit-constructor-
+        family-v1` closed four `development` facts that live only in
+        `nursery-v2-extension.json`, and the gate's old single-file `NURSERY`
+        constant never opened that file -- so `referenced` was empty for the
+        operation and the dev-only rule never fired. Here `F:d3` sits in a
+        `nursery-v2-extension.json`-shaped manifest and nowhere in
+        `nursery-v1.json`; an operation touching only it must still be caught."""
+        f = self.healthy()
+        f.fact("F:d3", "fam-dev-ext", "development", manifest="extension")
+        f.operation("op-dev-only-ext", ["F:d3"])
+        f.install(self.module)
+        self.assertEqual(self.module.check(["--quiet"]), 1)
+
+    def test_unrelated_manifest_shaped_file_is_not_read(self):
+        """A file that does not match `MANIFEST_GLOBS` (neither `nursery-v1.
+        json` nor `nursery-v*-extension.json`) must not be treated as a
+        manifest -- widening to a bare `nursery*.json` glob would make an
+        unrelated committed decoy able to take this gate down. `F:decoy` sits
+        ONLY in such a file and must never appear in the partition map, so an
+        operation naming it is invisible (not a violation, and not a crash)."""
+        f = self.healthy()
+        f.install(self.module)
+        (f.nursery_dir / "nursery-notes-v1.json").write_text(
+            json.dumps({"entries": [{"fact_id": "F:decoy", "family": "fam-decoy",
+                                     "partition": "development"}]}),
+            encoding="utf-8",
+        )
+        self.assertEqual(self.module.check(["--quiet"]), 0)
+        partitions = self.module.fact_partitions()
+        self.assertNotIn("F:decoy", partitions)
 
     # --- guard: the two partition sources must agree ------------------------
     def test_nursery_and_policy_disagreement_is_an_error(self):

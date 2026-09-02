@@ -161,12 +161,16 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
-    # `development-without-train rule` kills FIVE tests and that is structural,
-    # not a suite defect (ADR-1563). Three of the five are the grandfather
+    # `development-without-train rule` kills SIX tests and that is structural,
+    # not a suite defect (ADR-1563). Three of the six are the grandfather
     # controls, and a grandfather has no meaning outside the rule it excuses:
     # delete the rule and there is nothing left for an exemption to be right or
-    # wrong about. The three grandfather mutants below each kill exactly one,
-    # which is the number that says whether the re-derivation works.
+    # wrong about. A fourth is `test_development_fact_in_extension_manifest_
+    # is_seen` (ADR-1570), which is ALSO a dev-only-rule test -- its own
+    # dedicated mutant below (multi-manifest read) still isolates to exactly
+    # that one test, which is the property that matters here. The three
+    # grandfather mutants each kill exactly one, which is the number that says
+    # whether the re-derivation works.
     "development-partition": (
         "scripts/check-development-partition.py",
         "scripts.tests.test_development_partition",
@@ -226,6 +230,19 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "    for stale in sorted((set(GRANDFATHERED_OPERATIONS) & registry_ids)\n"
                 "                        - grandfathers_considered):",
                 "    for stale in []:",
+            ),
+            # ADR-1570. Reverting to the single-file read this gate shipped
+            # with must kill exactly `test_development_fact_in_extension_
+            # manifest_is_seen` -- the test that pins the defect measured
+            # 2026-09-02: `authoritative-mathlib-nat-bit-constructor-family-v1`
+            # closed four development facts visible ONLY in
+            # `nursery-v2-extension.json`, invisible to a `nursery-v1.json`-only
+            # reader. No other test in this suite builds an extension-only
+            # fixture, so nothing else should die.
+            (
+                "every nursery manifest is read, not nursery-v1.json alone",
+                'MANIFEST_GLOBS = ("nursery-v1.json", "nursery-v*-extension.json")',
+                'MANIFEST_GLOBS = ("nursery-v1.json",)',
             ),
         ],
     ),
