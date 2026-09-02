@@ -538,7 +538,11 @@ class PartitionEdgeControls(unittest.TestCase):
         done = self.gate()
         self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("PARTITION-EDGES|UNANSWERABLE", done.stdout)
-        self.assertIn("no nursery manifest", done.stdout)
+        # The DISTINCTIVE tail, not the shared prefix. `load_policy` also says
+        # "no nursery manifest ...", so asserting that alone let the
+        # no-manifest guard be deleted with this test still green -- measured
+        # as `M6 SURVIVED` the first time these two guards sat in one path.
+        self.assertIn("there is no drawn population to check", done.stdout)
 
     def test_a_decoy_nursery_file_does_not_make_this_gate_unanswerable(
         self,

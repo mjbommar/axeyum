@@ -4808,8 +4808,8 @@ SUITES["partition-edges"] = (
     [
         (
             "M1 an edge within one partition is not a crossing",
-            "if target_partition is None or target_partition == source_partition:",
-            "if target_partition is None or False:",
+            "        if source == target:\n            return False",
+            "        if source == target:\n            return True",
         ),
         (
             "M2 a component exemption is NOT honoured as an amendment",
@@ -4892,8 +4892,8 @@ SUITES["partition-edges"] = (
         # would have survived it.
         (
             "M17 a training/evaluation pair is not a crossing",
-            "        if len(peers) != 1:",
-            "        if True:",
+            "        return peer not in self.evaluation\n",
+            "        return True\n",
         ),
         (
             "M18 a BLIND partition is sealed in both directions",
@@ -6034,10 +6034,8 @@ SUITES["nursery-split-exemption-guards"] = (
         ),
         (
             "N5 a policy naming no evaluation partition is refused",
-            "        or any(partition not in PARTITIONS for partition in required)\n"
-            "    ):",
-            "        or False\n"
-            "    ):",
+            "        or not required\n",
+            "        or False\n",
         ),
         (
             "N6 blind_partitions may not be empty or foreign",
@@ -6083,11 +6081,6 @@ SUITES["mathlib-nursery-split"] = (
             "S3 blind_partitions may not be empty",
             '    if not lists["blind_partitions"]:',
             "    if False:",
-        ),
-        (
-            "S4 the emitted counts are re-derived, not a stale literal",
-            '            "partition": family_partitions[family],',
-            '            "partition": "train",',
         ),
     ],
 )

@@ -239,7 +239,10 @@ Every guard added here was driven to failure, and every mutant kills exactly
 one test. Measured with `python3 scripts/tests/mutation_controls.py <family>`
 in an isolated scratch root, never in the shared worktree.
 
-### `partition-edges` — 7 new mutants, 33 tests
+### `partition-edges` — 21 mutants, 21 single kills, 33 tests
+
+Seven new (M17–M23), and M1–M14 unchanged at one apiece. Full run recorded in
+the lane status doc.
 
 | mutant | the test that dies |
 | --- | --- |
@@ -250,6 +253,19 @@ in an isolated scratch root, never in the shared worktree.
 | M21 training and evaluation are disjoint roles | `test_a_partition_that_is_both_training_and_evaluation_is_exit_two` |
 | M22 a manifest with no policy at all is unanswerable | `test_a_manifest_carrying_no_policy_at_all_is_exit_two` |
 | M23 two manifests disagreeing about the roles is unanswerable | `test_two_manifests_disagreeing_about_the_roles_is_exit_two` |
+
+**Two EXISTING mutants had to be repaired, and both failures were caused by
+this change.** M1's anchor was the `crossing_edges` comparison this change
+rewrote, so it reported `NOT APPLIED` — a mutation that is not applied is not
+a result, and a family that reports one is a family whose coverage claim has a
+hole in it. It now inverts `is_crossing`'s same-partition short-circuit and
+kills `test_a_crossing_edge_is_a_violation_and_the_clean_one_is_not` alone.
+M6 (`no nursery manifest is UNANSWERABLE`) **SURVIVED**: its test asserted the
+substring `"no nursery manifest"`, and the new `load_policy` raises
+`"no nursery manifest carries a `policy` block"` from the same run, so
+deleting the guard left the test green on the wrong refusal. The test now
+asserts the distinctive tail `"there is no drawn population to check"`. Both
+were found by running the family rather than by reading it.
 
 M17 is the mutant this ADR exists to make possible: it restores the old rule
 (`every distinct pair crosses`) and nothing else in the suite notices, because
@@ -268,7 +284,7 @@ exit 2, and a guard whose test accepts any of them is satisfied by the wrong
 refusal — with M19 applied, the empty-evaluation policy still exits 2 through
 the blind check, so an exit-code-only test would have survived it.
 
-### `nursery-split-exemption-guards` — 3 new mutants, 20 tests
+### `nursery-split-exemption-guards` — 9 mutants, 20 tests
 
 | mutant | the test that dies |
 | --- | --- |
@@ -288,22 +304,53 @@ brief's required control: a synthetic `development`/`held-out` edge fails
 BOTH gates after the change — this one in the component gate, and
 `test_a_development_to_held_out_edge_still_crosses` in the edge gate.
 
-N1/N2/N3 (ADR-1563's contraction mutants) and the four ADR-1455/ADR-0850
-exemption mutants are unchanged at one kill each.
+N1/N2/N3 (ADR-1563's contraction mutants) are unchanged at one kill each.
+The three ADR-1455/ADR-0850 exemption mutants are unchanged too, and two of
+them kill **2** tests apiece — a guard that sits on both the v1 and the
+cross-population report path, which is deliberate and is what the family's own
+header says. Verified identical against a `git archive` snapshot of the
+pre-change tree, so this is inherited behaviour and not something this change
+introduced.
 
-### `mathlib-nursery-split` — 2 new mutants
+N5's first anchor removed the wrong arm of a compound condition (the
+"is this a real partition" test rather than the "is the list empty" one) and
+the mutant **SURVIVED**. Re-anchored on `or not required`; it kills its test
+alone.
+
+### `mathlib-nursery-split` — a NEW family, 3 mutants, 8 tests
+
+`create-autogenesis-mathlib-nursery-split.py` had a test module and no
+mutation family at all, so nothing had ever established that its guards were
+load-bearing.
 
 | mutant | the test that dies |
 | --- | --- |
 | S1 a role change with no `policy_amendments` entry is refused | `test_changed_roles_without_an_amendment_are_refused` |
 | S2 an amendment recorded against unchanged roles is refused | `test_an_amendment_recorded_against_the_preregistered_roles_is_refused` |
+| S3 `blind_partitions` may not be empty | `test_a_policy_sealing_no_blind_partition_is_refused` |
 
 S2 is the direction that is easy to leave out. Without it, a lane could record
 a `policy_amendments` entry, change nothing, and the file would carry a dated
 claim about a change that never happened.
 
-`scripts/check-control-registration.sh`: `controls=NN orphans=0`, exit 0 (see
-the lane status doc for the run).
+A fourth mutant was **withdrawn rather than documented with its kill set.** It
+replaced the emitted `"partition": family_partitions[family]` with a constant
+and killed 3 tests — but all three died because `build` raised on its own
+`PARTITION_COUNTS` assertion, not because of the property the mutant was named
+for. A mutant whose deaths cannot be attributed to the guard it names is not a
+result, and reporting `killed 3` for it would have been coverage theatre.
+
+That family's baseline could only be measured at all because
+`test_repository_split_is_exact_and_balanced` was repaired: it had been RED
+since the first held-out family amendment, asserting the literal
+`{development: 99, held-out: 37, train: 78}` against a live 120/16/78, and
+`mutation_controls.py` refuses a suite whose baseline is not green. The
+expectation is now re-derived from the catalog and the split policy's family
+mapping — a third computation, not the `PARTITION_COUNTS` constant `build`
+already checks against, which would have been vacuous.
+
+`scripts/check-control-registration.sh`: `controls=52|orphans=0|py_controls=322
+|py_orphans=0`, exit 0.
 
 ## Consequences
 
