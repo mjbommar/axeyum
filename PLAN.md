@@ -48320,9 +48320,9 @@ consumed by the very next commit `fa87f0320`), and one avoided rebuild of a
 pigeonhole search by finding it filed under the least-number principle
 (`94373af8a`: `Nat.lnp_bounded_search`). Details, near-misses and the
 Int/Nat/Rat twin check (deliverable-specific) in
-[2026-09-03-retrieval-audit-for-2026-09-02.md](../research/11-design-review/2026-09-03-retrieval-audit-for-2026-09-02.md);
+[2026-09-03-retrieval-audit-for-2026-09-02.md](docs/research/11-design-review/2026-09-03-retrieval-audit-for-2026-09-02.md);
 ledger row appended to the foot of
-[2026-08-27-retrieval-is-the-bottleneck.md](../research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md)
+[2026-08-27-retrieval-is-the-bottleneck.md](docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md)
 (running total unchanged at 21 audited instances / 4 real duplicates, since
 today added 0).
 
