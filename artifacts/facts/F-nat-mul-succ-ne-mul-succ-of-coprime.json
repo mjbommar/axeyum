@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-mul-succ-ne-mul-succ-of-coprime",
+  "title": "The 1-based side condition the rectangle partition consumes",
+  "statement": "`gcd p q = 1`, `x+1 < p` implies `p*(y+1) != q*(x+1)`. WHY IT IS THE POINT: Eisenstein's rectangle is indexed from 1, so every coordinate the partition's per-point hypothesis mentions is `succ`-shaped. Stating the shifted form separately means the consumer never produces a positivity proof -- `0 < succ x` is discharged here, constructively, by the shape. HOW IT IS PROVED: `Nat.mul_ne_mul_of_coprime_of_lt` at `(p, q, succ x, succ y)`, with `NatOps::zero_lt_succ` supplying the positivity. Nothing else. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.mul_succ_ne_mul_succ_of_coprime : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) -> ((x5 : AxNat.lt (AxNat.succ x2) x0) -> Not (Eq.{1} AxNat (AxNat.mul x0 (AxNat.succ x3)) (AxNat.mul x1 (AxNat.succ x2)))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "Nat.mul_succ_ne_mul_succ_of_coprime"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-le-succ-succ", "F:nat-mul-ne-mul-of-coprime-of-lt", "F:nat-zero-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mul_succ_ne_mul_succ_of_coprime",
+      "kind": "kernel-term",
+      "supports": "Nat.mul_succ_ne_mul_succ_of_coprime is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.mul_succ_ne_mul_succ_of_coprime 2>/dev/null | grep -cE '^Nat\\\\.mul_succ_ne_mul_succ_of_coprime[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.mul_succ_ne_mul_succ_of_coprime",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.mul_succ_ne_mul_succ_of_coprime",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.mul_succ_ne_mul_succ_of_coprime.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in the module's own test file."
+    },
+    {
+      "id": "numeric-side-condition-shifted",
+      "kind": "exhaustive-enumeration",
+      "supports": "C2 of the ADR-1510 check script verifies the shifted implication over the same coprime (p,q) sweep, separately from C1 because the SHIFT is where an off-by-one in the corollary would live; C3 then verifies the consequence the partition actually needs -- that at 40,548 lattice points across every ordered pair of distinct odd primes below 60, exactly one of the two strict half-plane predicates holds.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1510-eisenstein-side-and-sum-permute-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself: 11 of 11 mutations (each claim inverted, each control's named witness moved or neutered, and the recorded survivor made to stop surviving) exit 1. One control, M6, is recorded as a DELIBERATE SURVIVOR and asserted to survive: swapping `a` and `b` throughout sumRange_point_change leaves a true statement, because the equation is symmetric in that swap. No numeric check can separate those two readings, which is why the declared type is pinned character for character in the module's test file."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (nat_theorem_inventory, which is Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the module's the_family_states_the_intended_types test). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-lattice)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs`. ADR-1510. Declaration kind: theorem. GRADED FAMILY (ADR-0603): row 1. Row 2 unassessed as a kernel statement, for the reason recorded on F:nat-mul-ne-mul-of-coprime-of-lt.",
+  "external_status": "proved"
+}

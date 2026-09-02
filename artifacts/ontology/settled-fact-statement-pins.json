@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2130,
+    "min_identity_bound": 2134,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -17828,6 +17828,13 @@
       "kernel_theorem": "Nat.mul_left_cancel_of_pos"
     },
     {
+      "fact_id": "F:nat-mul-ne-mul-of-coprime-of-lt",
+      "language": "lean4",
+      "statement_sha256": "0307bd622b4c3ce86c6f4857e42db40c00a4b36b45ae4e2a6be77b3ab5595dc6",
+      "prose_sha256": "c25d130925c9ab84a0ef35fd844d440ad9aa90785965289c7748acd4878c5b09",
+      "kernel_theorem": "Nat.mul_ne_mul_of_coprime_of_lt"
+    },
+    {
       "fact_id": "F:nat-mul-one",
       "language": "lean4",
       "statement_sha256": "c26e2b321c45729651c7e0027eaef200f22f77bce21959937705d5a862d70fdd",
@@ -17872,6 +17879,13 @@
       "statement_sha256": "1ca72a3bb92434cc44f767a6c1b23162a2a2edab922247cb1d2bfc9f9ffc261d",
       "prose_sha256": "eb7d3ca904007fb2b0c8a5539aa594355716f32fe8f67e68effa310014120daf",
       "kernel_theorem": "Nat.mul_succ_add_lt_of_le_of_lt"
+    },
+    {
+      "fact_id": "F:nat-mul-succ-ne-mul-succ-of-coprime",
+      "language": "lean4",
+      "statement_sha256": "86dc82341043a078033b9754b7e472c5bbe4ffbf077f01c7438d6bfa42a5e4f0",
+      "prose_sha256": "5b5da5ac4002a76502a3d58f85b72ab5188adde3c59fccece0108b2c577508d4",
+      "kernel_theorem": "Nat.mul_succ_ne_mul_succ_of_coprime"
     },
     {
       "fact_id": "F:nat-mul-sumrange",
@@ -18900,6 +18914,20 @@
       "statement_sha256": "4fb6b58b4f0a0ac68f9f497be0bc278b02f89ff3e0a88527ba0e0797c10b54b6",
       "prose_sha256": "98b498576e719e49abd05f8ba0c4a10febc3398de924c300d2d99baf91370245",
       "kernel_theorem": "Nat.sumRange_diagonal"
+    },
+    {
+      "fact_id": "F:nat-sumrange-permute",
+      "language": "lean4",
+      "statement_sha256": "47cc1817da28387f022f1011590eda5e8d76b4c642f997b75de07447e44bfbcb",
+      "prose_sha256": "003c57be1fea580959142ca020293c0a4830f9a8e484315c5e64c82e3d6bbfe6",
+      "kernel_theorem": "Nat.sumRange_permute"
+    },
+    {
+      "fact_id": "F:nat-sumrange-point-change",
+      "language": "lean4",
+      "statement_sha256": "f313bae5d5ae16b0df7723eb516ec7acbbefd4f27b6ba84bbc940c108b5513f4",
+      "prose_sha256": "cf4a710cf52e27adb5f71de019149504a5392944abad34e95ed0650086376566",
+      "kernel_theorem": "Nat.sumRange_point_change"
     },
     {
       "fact_id": "F:nat-sumrange-rect-eq-diag-add-corner",

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-sumrange-point-change",
+  "title": "Two families differing at one index have sums differing by that much",
+  "statement": "If `a` and `b` agree on `[0,n)` except possibly at `i0 < n`, then `sumRange a n + b i0 = sumRange b n + a i0`. WHY IT IS THE POINT: it is what replaces `Int.prodRange_swap`'s adjacent-transposition induction (three drafts, per `wilson.rs`) in the additive permutation argument. `sumRange` accumulates with `Nat.add`, so moving a value from slot `i0` up to slot `n` is one lemma rather than a transposition apparatus. STATED ADDITIVELY, not subtractively: `Nat.sub` is truncated, and the subtractive form would need a side condition this one does not. HOW IT IS PROVED: induction on `n` with the bound and both agreement hypotheses carried in the motive. `n = 0` is vacuous by `not_lt_zero`. At `succ j`, `lt_or_eq_of_le` splits `Le i0 j`: on `Lt i0 j` the induction hypothesis applies at `j` and the top index is off `i0`, so `a j = b j`; on `Eq i0 j` the top index IS `i0`, the two families agree everywhere below it, and `Nat.sumRange_congr_lt` equates the prefix sums. Each branch is four rewrites over one `add_assoc`/`add_comm` device. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.sumRange_point_change : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : ((x1 : AxNat) -> AxNat)) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x2 x3) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.lt x5 x2) -> Eq.{1} AxNat (x0 x5) (x1 x5)))) -> ((x6 : ((x6 : AxNat) -> ((x7 : AxNat.lt x2 x6) -> ((x8 : AxNat.lt x6 x3) -> Eq.{1} AxNat (x0 x6) (x1 x6))))) -> Eq.{1} AxNat (AxNat.add (AxNat.sumRange x0 x3) (x1 x2)) (AxNat.add (AxNat.sumRange x1 x3) (x0 x2)))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8"
+    ],
+    "kernel_theorem": "Nat.sumRange_point_change"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-le-trans", "F:nat-lt-or-eq-of-le", "F:nat-lt-succ-self", "F:nat-not-lt-zero", "F:nat-sumrange-congr-lt"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.sumRange_point_change",
+      "kind": "kernel-term",
+      "supports": "Nat.sumRange_point_change is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.sumRange_point_change 2>/dev/null | grep -cE '^Nat\\\\.sumRange_point_change[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.sumRange_point_change",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.sumRange_point_change",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.sumRange_point_change.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in the module's own test file."
+    },
+    {
+      "id": "numeric-point-change",
+      "kind": "exhaustive-enumeration",
+      "supports": "C4 of the ADR-1510 check script verifies the identity at 144 (n, i0, delta) cases; control M7 refutes the version without the one-index-differs hypothesis (two indices differing gives 25 against 20), and control M6 is recorded as a deliberate SURVIVOR.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1510-eisenstein-side-and-sum-permute-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself: 11 of 11 mutations (each claim inverted, each control's named witness moved or neutered, and the recorded survivor made to stop surviving) exit 1. One control, M6, is recorded as a DELIBERATE SURVIVOR and asserted to survive: swapping `a` and `b` throughout sumRange_point_change leaves a true statement, because the equation is symmetric in that swap. No numeric check can separate those two readings, which is why the declared type is pinned character for character in the module's test file."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (nat_theorem_inventory, which is Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the module's the_family_states_the_intended_types test). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-lattice)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs`. ADR-1510. Declaration kind: theorem. The `Bool`-valued analogue `Nat.countRange_point_change` (`count_range_permute.rs`, ADR of the totient-bijection lane) is this statement's `{0,1}`-valued special case, reached by `Nat.countRange_eq_sumRange`, which is `Eq.refl`; the two coexist because the counting one is already consumed by `Nat.countRange_permute`. GRADED FAMILY (ADR-0603): row 1. Row 2 unassessed as a kernel statement.",
+  "external_status": "proved"
+}
