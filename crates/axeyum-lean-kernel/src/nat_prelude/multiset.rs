@@ -119,7 +119,7 @@
 use super::NatPrelude;
 use super::finite::{select_nat_false, select_nat_true};
 use super::helpers::{transport_dvd_left, transport_dvd_right};
-use super::ops::{NatDev, NatOps, cases_lt_or_ge};
+use super::ops::{NatDev, NatOps, bool_true_or_false, cases_lt_or_ge};
 use super::primes::prime_condition;
 use crate::BinderInfo;
 use crate::KernelError;
@@ -1924,6 +1924,336 @@ fn declare_uniqueness(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// `Nat.Multiset.beq`: reflexivity and symmetry.
+// ---------------------------------------------------------------------------
+
+/// `heq : Eq Bool cond true ⊢ Eq Bool (bool_select_bool cond a b) a` — the
+/// `Bool`-valued twin of `finite.rs`'s [`select_nat_true`].
+fn select_bool_true(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let p = *p;
+    let true_val = d.bool_true();
+    let back = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = bool_select_bool(d, &p, value, a, b);
+        d.bool_eq(sel, a)
+    });
+    let refl_case = d.bool_refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, back)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Bool (bool_select_bool cond a b) b`.
+fn select_bool_false(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let p = *p;
+    let false_val = d.bool_false();
+    let back = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = bool_select_bool(d, &p, value, a, b);
+        d.bool_eq(sel, b)
+    });
+    let refl_case = d.bool_refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, back)
+}
+
+/// `h : Eq Bool a b ⊢ Eq Bool (f a) (f b)` — [`NatOps::congr`] always closes
+/// into `Eq Nat`, and `gauss_lemma.rs`'s `congr_nat_to_bool` transports along a
+/// `Nat` equality; this one transports along a `Bool` one.
+fn congr_bool_to_bool(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.bool_eq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        d.bool_eq(fa, fx)
+    });
+    let refl_case = d.bool_refl(fa);
+    d.bool_transport(a, motive, refl_case, b, h)
+}
+
+/// `Nat.beq_comm`, `Nat.Multiset.eqBelow_self`, `Nat.Multiset.eqBelow_comm`,
+/// `Nat.Multiset.beq_refl` and `Nat.Multiset.beq_comm`.
+fn declare_beq_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let ms = multiset_ty(d, &p);
+
+    // beq_comm : ∀ a b, Eq Bool (beq a b) (beq b a)
+    //
+    // `Nat.beq` is a double recursion, so this is NOT `refl`. Decide `beq a b`
+    // (`bool_true_or_false`, two constructors, no excluded middle): if it is
+    // `true` the arguments are equal and `beq_refl` closes the swap; if it is
+    // `false` then `beq b a` must be `false` too, since `beq b a = true` would
+    // give `b = a` and hence `beq a b = true`.
+    {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let beq_ab = d.beq(a, b);
+        let beq_ba = d.beq(b, a);
+        let stmt = d.bool_eq(beq_ab, beq_ba);
+        let true_val = d.bool_true();
+        let false_val = d.bool_false();
+
+        let split = bool_true_or_false(d, &p, beq_ab);
+        let is_true = d.bool_eq(beq_ab, true_val);
+        let is_false = d.bool_eq(beq_ab, false_val);
+        let left = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let hab = d.lemma(p.eq_of_beq_eq_true, &[a, b, h]);
+            let beq_aa = d.beq(a, a);
+            let refl_a = d.lemma(p.beq_refl, &[a]);
+            let back = d.bool_symm(beq_aa, true_val, refl_a);
+            let at_a = d.bool_trans(beq_ab, true_val, beq_aa, h, back);
+            let motive = d.eq_motive(a, &|d, y| {
+                let lhs = d.beq(a, b);
+                let rhs = d.beq(y, a);
+                d.bool_eq(lhs, rhs)
+            });
+            let moved = d.transport(a, motive, at_a, b, hab);
+            d.lam_fv(h_fv, is_true, moved)
+        };
+        let right = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let inner_split = bool_true_or_false(d, &p, beq_ba);
+            let ba_true = d.bool_eq(beq_ba, true_val);
+            let ba_false = d.bool_eq(beq_ba, false_val);
+            let inner_left = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let hba = d.lemma(p.eq_of_beq_eq_true, &[b, a, h2]);
+                let hab = d.symm(b, a, hba);
+                let ab_true = d.lemma(p.beq_eq_true_of_eq, &[a, b, hab]);
+                let flipped = d.bool_symm(beq_ab, false_val, h);
+                let bad_eq = d.bool_trans(false_val, beq_ab, true_val, flipped, ab_true);
+                let refute = d.kernel().const_(p.logic.bool_false_ne_true, vec![]);
+                let bad = d.apply(refute, &[bad_eq]);
+                let body = from_false(d, &p, bad, stmt);
+                d.lam_fv(h2_fv, ba_true, body)
+            };
+            let inner_right = {
+                let h2_fv = d.fresh_fvar();
+                let h2 = d.kernel().fvar(h2_fv);
+                let back = d.bool_symm(beq_ba, false_val, h2);
+                let body = d.bool_trans(beq_ab, false_val, beq_ba, h, back);
+                d.lam_fv(h2_fv, ba_false, body)
+            };
+            let body = or_cases(
+                d,
+                &p,
+                ba_true,
+                ba_false,
+                stmt,
+                inner_left,
+                inner_right,
+                inner_split,
+            );
+            d.lam_fv(h_fv, is_false, body)
+        };
+        let proof = or_cases(d, &p, is_true, is_false, stmt, left, right, split);
+        declare_forall(d, p.beq_comm, &[(a_fv, nat), (b_fv, nat)], stmt, proof)?;
+    }
+
+    // eqBelow_self : ∀ f k, Eq Bool (eqBelow f f k) Bool.true
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let claim = |d: &mut NatDev<'_>, bound: ExprId| -> ExprId {
+            let loop_ = d.const_app(p.multiset_eq_below, &[f, f, bound]);
+            let true_val = d.bool_true();
+            d.bool_eq(loop_, true_val)
+        };
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let true_val = d.bool_true();
+            d.bool_refl(true_val)
+        };
+        let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            let fj = d.apply(f, &[j]);
+            let cond = d.beq(fj, fj);
+            let inner = d.const_app(p.multiset_eq_below, &[f, f, j]);
+            let false_val = d.bool_false();
+            let cond_true = d.lemma(p.beq_refl, &[fj]);
+            let sel = select_bool_true(d, &p, cond, inner, false_val, cond_true);
+            let selected = bool_select_bool(d, &p, cond, inner, false_val);
+            let true_val = d.bool_true();
+            d.bool_trans(selected, inner, true_val, sel, ih)
+        };
+        let proof = d.induct(&claim, &base, &step, k);
+        let stmt = claim(d, k);
+        declare_forall(
+            d,
+            p.multiset_eq_below_self,
+            &[(f_fv, fn_ty), (k_fv, nat)],
+            stmt,
+            proof,
+        )?;
+    }
+
+    // eqBelow_comm : ∀ f g k, Eq Bool (eqBelow f g k) (eqBelow g f k)
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let claim = |d: &mut NatDev<'_>, bound: ExprId| -> ExprId {
+            let left = d.const_app(p.multiset_eq_below, &[f, g, bound]);
+            let right = d.const_app(p.multiset_eq_below, &[g, f, bound]);
+            d.bool_eq(left, right)
+        };
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let true_val = d.bool_true();
+            d.bool_refl(true_val)
+        };
+        let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            let fj = d.apply(f, &[j]);
+            let gj = d.apply(g, &[j]);
+            let cond1 = d.beq(fj, gj);
+            let cond2 = d.beq(gj, fj);
+            let x1 = d.const_app(p.multiset_eq_below, &[f, g, j]);
+            let x2 = d.const_app(p.multiset_eq_below, &[g, f, j]);
+            let false_val = d.bool_false();
+            let left_sel = bool_select_bool(d, &p, cond1, x1, false_val);
+            let mid_sel = bool_select_bool(d, &p, cond1, x2, false_val);
+            let right_sel = bool_select_bool(d, &p, cond2, x2, false_val);
+            let comm = d.lemma(p.beq_comm, &[fj, gj]);
+            let align = congr_bool_to_bool(d, cond1, cond2, comm, &|d, c| {
+                bool_select_bool(d, &p, c, x2, false_val)
+            });
+            let goal = d.bool_eq(left_sel, right_sel);
+            let split = bool_true_or_false(d, &p, cond1);
+            let true_val = d.bool_true();
+            let is_true = d.bool_eq(cond1, true_val);
+            let is_false = d.bool_eq(cond1, false_val);
+            let branch_true = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let sel1 = select_bool_true(d, &p, cond1, x1, false_val, h);
+                let sel2 = select_bool_true(d, &p, cond1, x2, false_val, h);
+                let sel2_back = d.bool_symm(mid_sel, x2, sel2);
+                let a = d.bool_trans(left_sel, x1, x2, sel1, ih);
+                let b = d.bool_trans(left_sel, x2, mid_sel, a, sel2_back);
+                let body = d.bool_trans(left_sel, mid_sel, right_sel, b, align);
+                d.lam_fv(h_fv, is_true, body)
+            };
+            let branch_false = {
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+                let sel1 = select_bool_false(d, &p, cond1, x1, false_val, h);
+                let sel2 = select_bool_false(d, &p, cond1, x2, false_val, h);
+                let sel2_back = d.bool_symm(mid_sel, false_val, sel2);
+                let a = d.bool_trans(left_sel, false_val, mid_sel, sel1, sel2_back);
+                let body = d.bool_trans(left_sel, mid_sel, right_sel, a, align);
+                d.lam_fv(h_fv, is_false, body)
+            };
+            or_cases(
+                d,
+                &p,
+                is_true,
+                is_false,
+                goal,
+                branch_true,
+                branch_false,
+                split,
+            )
+        };
+        let proof = d.induct(&claim, &base, &step, k);
+        let stmt = claim(d, k);
+        declare_forall(
+            d,
+            p.multiset_eq_below_comm,
+            &[(f_fv, fn_ty), (g_fv, fn_ty), (k_fv, nat)],
+            stmt,
+            proof,
+        )?;
+    }
+
+    // beq_refl : ∀ m, Eq Bool (beq m m) Bool.true
+    {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let g = d.const_app(p.multiset_count, &[m]);
+        let b = ms_bound(d, &p, m);
+        let width = d.add(b, b);
+        let proof = d.lemma(p.multiset_eq_below_self, &[g, width]);
+        let beq_mm = d.const_app(p.multiset_beq, &[m, m]);
+        let true_val = d.bool_true();
+        let stmt = d.bool_eq(beq_mm, true_val);
+        declare_forall(d, p.multiset_beq_refl, &[(m_fv, ms)], stmt, proof)?;
+    }
+
+    // beq_comm : ∀ m1 m2, Eq Bool (beq m1 m2) (beq m2 m1)
+    //
+    // Two steps, because the two sides fold over `b1 + b2` and `b2 + b1`:
+    // `eqBelow_comm` swaps the functions at a FIXED width, and `add_comm`
+    // moves the width.
+    {
+        let m1_fv = d.fresh_fvar();
+        let m1 = d.kernel().fvar(m1_fv);
+        let m2_fv = d.fresh_fvar();
+        let m2 = d.kernel().fvar(m2_fv);
+        let c1 = d.const_app(p.multiset_count, &[m1]);
+        let c2 = d.const_app(p.multiset_count, &[m2]);
+        let b1 = ms_bound(d, &p, m1);
+        let b2 = ms_bound(d, &p, m2);
+        let width = d.add(b1, b2);
+        let swapped_width = d.add(b2, b1);
+        let start = d.const_app(p.multiset_eq_below, &[c1, c2, width]);
+        let middle = d.const_app(p.multiset_eq_below, &[c2, c1, width]);
+        let finish = d.const_app(p.multiset_eq_below, &[c2, c1, swapped_width]);
+        let swap = d.lemma(p.multiset_eq_below_comm, &[c1, c2, width]);
+        let widen = {
+            let motive = d.eq_motive(width, &|d, y| {
+                let lhs = d.const_app(p.multiset_eq_below, &[c2, c1, width]);
+                let rhs = d.const_app(p.multiset_eq_below, &[c2, c1, y]);
+                d.bool_eq(lhs, rhs)
+            });
+            let refl_case = d.bool_refl(middle);
+            let comm = d.lemma(p.add_comm, &[b1, b2]);
+            d.transport(width, motive, refl_case, swapped_width, comm)
+        };
+        let proof = d.bool_trans(start, middle, finish, swap, widen);
+        let left = d.const_app(p.multiset_beq, &[m1, m2]);
+        let right = d.const_app(p.multiset_beq, &[m2, m1]);
+        let stmt = d.bool_eq(left, right);
+        declare_forall(
+            d,
+            p.multiset_beq_comm,
+            &[(m1_fv, ms), (m2_fv, ms)],
+            stmt,
+            proof,
+        )?;
+    }
+
+    let _ = bool_ty;
+    Ok(())
+}
+
 /// Declare the whole `Nat.Multiset` package.
 ///
 /// # Errors
@@ -1936,5 +2266,6 @@ pub(super) fn declare_multiset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     declare_count_laws(d, p)?;
     declare_prod_range_valuation(d, p)?;
     declare_uniqueness(d, p)?;
+    declare_beq_laws(d, p)?;
     Ok(())
 }

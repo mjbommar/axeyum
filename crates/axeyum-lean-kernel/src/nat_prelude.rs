@@ -5643,6 +5643,20 @@ pub struct NatPrelude {
     /// ADR-1520; row 1 (general constructive form) of the graded family
     /// ADR-0603 asks for.
     pub multiset_count_eq_of_prod_eq: NameId,
+    /// `Nat.beq_comm : ∀ a b, Eq Bool (beq a b) (beq b a)`. NOT `refl` --
+    /// [`beq`](Self::beq) is a double recursion -- so this decides `beq a b`
+    /// with a `Bool.rec` and closes each branch (`multiset.rs`).
+    pub beq_comm: NameId,
+    /// `Nat.Multiset.eqBelow_self : ∀ f k, Eq Bool (eqBelow f f k) Bool.true`.
+    pub multiset_eq_below_self: NameId,
+    /// `Nat.Multiset.eqBelow_comm : ∀ f g k, Eq Bool (eqBelow f g k)
+    /// (eqBelow g f k)`.
+    pub multiset_eq_below_comm: NameId,
+    /// `Nat.Multiset.beq_refl : ∀ m, Eq Bool (beq m m) Bool.true`.
+    pub multiset_beq_refl: NameId,
+    /// `Nat.Multiset.beq_comm : ∀ m1 m2, Eq Bool (beq m1 m2) (beq m2 m1)` --
+    /// two steps, because the two sides fold over `b1 + b2` and `b2 + b1`.
+    pub multiset_beq_comm: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6531,6 +6545,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             multiset_not_pow_succ_count_dvd_prod: kernel
                 .name_str(multiset, "not_pow_succ_count_dvd_prod"),
             multiset_count_eq_of_prod_eq: kernel.name_str(multiset, "count_eq_of_prod_eq"),
+            beq_comm: kernel.name_str(nat, "beq_comm"),
+            multiset_eq_below_self: kernel.name_str(multiset, "eqBelow_self"),
+            multiset_eq_below_comm: kernel.name_str(multiset, "eqBelow_comm"),
+            multiset_beq_refl: kernel.name_str(multiset, "beq_refl"),
+            multiset_beq_comm: kernel.name_str(multiset, "beq_comm"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),

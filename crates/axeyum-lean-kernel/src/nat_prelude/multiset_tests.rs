@@ -474,3 +474,42 @@ fn uniqueness_applies_to_two_concrete_multisets() {
         "negative control: the conclusion must NOT be `1 = 2`"
     );
 }
+
+/// `Nat.Multiset.beq_refl` and `beq_comm` INSTANTIATE, and the two sides of
+/// symmetry agree on a pair where the answer is `false`.
+///
+/// The `false` pair is the one worth instantiating: a `beq_comm` proved about
+/// some other loop would still instantiate at an equal pair, where both sides
+/// are `true` for trivial reasons.
+#[test]
+fn beq_reflexivity_and_symmetry_instantiate() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let m23 = f.of(&[2, 3]);
+    let m233 = f.of(&[2, 3, 3]);
+    let true_val = f.bool_true();
+    let false_val = f.bool_false();
+
+    let refl_at = f.const_app(p.multiset_beq_refl, &[m233]);
+    let refl_ty = f.k.infer(refl_at).expect("beq_refl must instantiate");
+    let beq_self = f.const_app(p.multiset_beq, &[m233, m233]);
+    let expected_refl = f.bool_eq(beq_self, true_val);
+    assert!(
+        f.k.def_eq(refl_ty, expected_refl),
+        "beq_refl {{2,3,3}} must state `beq m m = true`"
+    );
+
+    let comm_at = f.const_app(p.multiset_beq_comm, &[m23, m233]);
+    let comm_ty = f.k.infer(comm_at).expect("beq_comm must instantiate");
+    let both_false = f.bool_eq(false_val, false_val);
+    assert!(
+        f.k.def_eq(comm_ty, both_false),
+        "beq_comm ({{2,3}}, {{2,3,3}}) must reduce to `false = false` -- both \
+         orders disagree, and they disagree the same way"
+    );
+    let mismatched = f.bool_eq(false_val, true_val);
+    assert!(
+        !f.k.def_eq(comm_ty, mismatched),
+        "negative control: it must NOT reduce to `false = true`"
+    );
+}
