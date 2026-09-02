@@ -305,6 +305,75 @@ GUARDED: tuple[Artifact, ...] = (
             ),
         ),
     ),
+    Artifact(
+        path="artifacts/refactor/private-helper-census.json",
+        owner=Producer(
+            "scripts/private-helper-census.py",
+            (),
+            "The sole writer. Bare argv is the WRITING invocation; --check "
+            "never writes and so would prove nothing about ownership. This is "
+            "also the THIRD registry entry the COVER note above asked for -- "
+            "with one entry the CTRL arm tested one comparison against one "
+            "file; each further entry exercises the same machinery over a "
+            "different producer set.",
+        ),
+        # Every top-level key the owner emits. `by_body` and `by_name` are the
+        # unrestricted groupings (test fixtures included, which is why they are
+        # dominated by 29 copies of `fn kernel`); `inline_steps_by_*` are the
+        # hiding-place population proper. Both are required, because dropping
+        # the unrestricted pair would leave the narrow one with no denominator
+        # and no way for a reader to see what was filtered out.
+        required_keys=(
+            "schema_version",
+            "kind",
+            "produced_by",
+            "authority",
+            "by_name",
+            "by_body",
+            "inline_steps_by_name",
+            "inline_steps_by_body",
+            "population",
+        ),
+        required_nested={
+            # The counts a reader reasons from. `private_fns` is the
+            # denominator; without it a group of 12 is a number with no scale.
+            # `inline_step_fns` is the narrowed denominator, and
+            # `sites_in_inline_step_body_groups` is the duplication total that
+            # a unification lane is measured against before and after.
+            "population": (
+                "files_scanned",
+                "private_fns",
+                "private_fns_outside_tests",
+                "distinct_names",
+                "distinct_body_digests",
+                "duplicated_name_groups",
+                "duplicated_body_groups",
+                "sites_in_duplicated_body_groups",
+                "inline_step_fns",
+                "inline_step_name_groups",
+                "inline_step_body_groups",
+                "sites_in_inline_step_body_groups",
+            ),
+        },
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason it is listed on the "
+                "artifacts above: it writes a sandbox, a perturbed copy and a "
+                "planted control, so it cannot be declared read-only.",
+            ),
+            Producer(
+                "scripts/tests/test_private_helper_census.py",
+                (),
+                "The census's own controls. They PERTURB and DELETE a copy of "
+                "the artifact inside a throwaway tree to prove `--check` can "
+                "go red; that the tracked one is untouched by that is exactly "
+                "what this arm measures rather than trusts.",
+            ),
+        ),
+        reads=(),
+    ),
 )
 
 # A call is a write if it is any of these. Used only for the READS arm, where
