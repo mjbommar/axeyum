@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2189,
+    "min_identity_bound": 2195,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -20936,6 +20936,13 @@
       "kernel_theorem": "Rat.inv2_top_right"
     },
     {
+      "fact_id": "F:rat-is-pivot-col-b-eq-ble",
+      "language": "lean4",
+      "statement_sha256": "e3f49ca610d32976b8926574c498134f3eb274cc4921c40e44f78fdf4be05260",
+      "prose_sha256": "a20e1e3fe2e7330148301730f7b6707a6f4e4f2dd32f012a39e84d4f29f3d400",
+      "kernel_theorem": "Rat.isPivotColB_eq_ble"
+    },
+    {
       "fact_id": "F:rat-laplace-summand-row-i",
       "language": "lean4",
       "statement_sha256": "f00c1593da3cb3ca313152eb19eba21a780724c13cfcb76ed250da08379fcced",
@@ -21088,6 +21095,13 @@
           "prose_sha256": "7c3c9ca0ed845acd9969c5d2b5f685ccacb6ee90242319248a9a83b3bcc86fbd"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-leading-index-pivot-row-of-col",
+      "language": "lean4",
+      "statement_sha256": "f90296abaffb82282c4cb3bad6823f8f5e01e4d6e45478eb44acbab1e02c7cfb",
+      "prose_sha256": "0fd675815faa76dc2a25db301d6001575712f6deeb37778b3bc90ff12f78351a",
+      "kernel_theorem": "Rat.leadingIndex_pivotRowOfCol"
     },
     {
       "fact_id": "F:rat-left-distrib",
@@ -22128,6 +22142,13 @@
       "kernel_theorem": "Rat.one_ne_zero"
     },
     {
+      "fact_id": "F:rat-pivot-row-of-col-lt-rows",
+      "language": "lean4",
+      "statement_sha256": "d3ef459aff14e732a7a96640ae8882a2a9931f851a4911c204032e6db77ee48e",
+      "prose_sha256": "4346faabee0bf612600e59dedfa6e136eb19c5f8d01d8e4b2af34b9fbf9172e0",
+      "kernel_theorem": "Rat.pivotRowOfCol_lt_rows"
+    },
+    {
       "fact_id": "F:rat-pivot-search-le-rows",
       "language": "lean4",
       "statement_sha256": "6dbe6e3106b9711f6f21e836f4670b3f17c3efbc78b6b355cfd395aac65d3582",
@@ -22247,6 +22268,20 @@
       "kernel_theorem": "Rat.rankCols_le_cols"
     },
     {
+      "fact_id": "F:rat-rank-eq-rank-cols-of-pivot-section",
+      "language": "lean4",
+      "statement_sha256": "f300467874ccbae1e4a53a633258a900495db87bea077058f013ac2407b120b8",
+      "prose_sha256": "37593612d774b9bb4fee9ea3091aa5a85b89e192937d4d4517ffec3d984b0359",
+      "kernel_theorem": "Rat.rank_eq_rankCols_of_pivotSection"
+    },
+    {
+      "fact_id": "F:rat-rank-le-cols-of-pivot-section",
+      "language": "lean4",
+      "statement_sha256": "31e4a9c73798cb9151ce316f6bbd2bc9f88f690970ecf4df0be7e86936d13eaf",
+      "prose_sha256": "50df52608955b53075a8bec644f89ad3e1879261b8f10318c1695da2c4954c46",
+      "kernel_theorem": "Rat.rank_le_cols_of_pivotSection"
+    },
+    {
       "fact_id": "F:rat-rank-le-rows",
       "language": "lean4",
       "statement_sha256": "b9e55674bfe835822182cbed9407aa82996186e8cd613d2e19d8743f84f726ab",
@@ -22259,6 +22294,13 @@
       "statement_sha256": "c8ed3da8d8ba0f74e13e5d388a38229a515d1dffd32d1da14b11c1501f680bb1",
       "prose_sha256": "af5e424c0f40332ee45ca8a0f58848b428a5ccf99e2a1bbe44bfddd4d6af88bf",
       "kernel_theorem": "Rat.rank_nullity"
+    },
+    {
+      "fact_id": "F:rat-rank-nullity-rows-of-pivot-section",
+      "language": "lean4",
+      "statement_sha256": "b2f521180db936ed00d2be19bbcc8c33344fc46933ae214164bf7b5097d21949",
+      "prose_sha256": "1804b60d2b4dd3b22fcbb9e14003d5ee661ef4ab4e431bb0943eaef3685a4226",
+      "kernel_theorem": "Rat.rank_nullity_rows_of_pivotSection"
     },
     {
       "fact_id": "F:rat-rank-zero-cols",

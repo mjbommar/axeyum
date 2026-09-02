@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-is-pivot-col-b-eq-ble",
+  "title": "The decided pivot-column test and the pivot-row search are the same scan",
+  "statement": "For every matrix E : Nat -> Nat -> Rat, all dimensions rows, cols and every column j, Rat.isPivotColB E rows cols j = Nat.ble (succ (Rat.pivotRowOfCol E rows cols j)) rows -- and the same identity between the two fuelled scans Rat.pivotColSearchAux and Rat.pivotRowSearchAux at an arbitrary fuel and start row. In words: ADR-1558's DECIDED pivot-column test answers true exactly when this lane's Nat-valued pivot-row search lands in range. The two scan the same rows in the same order and differ only in what they return, so every isPivotColB fact the bridge needs goes through this identity rather than through a second induction. The route is one induction on the fuel with the row index generalised inside the motive. The base case is NOT Eq.refl: with no fuel the two scans answer false and rows, and they agree only because Nat.ble (succ rows) rows is false, an equation Nat does not carry and which is built here from Nat.lt_irrefl through a two-way split on the Bool itself. The step splits twice and the two splits are not the same shape: the inner one on the leading-index test is a bare Bool.rec at a Prop motive, free because both branch proofs exist without knowing the answer; the outer one on Nat.ble rows r needs its hypothesis, because its false branch is the only place a row index is known to be in range.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.isPivotColB_eq_ble : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} Bool (Rat.isPivotColB x0 x1 x2 x3) (AxNat.ble (AxNat.succ (Rat.pivotRowOfCol x0 x1 x2 x3)) x1))))) ; theorem Rat.pivotColSearchAux_eq_ble : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> Eq.{1} Bool (Rat.pivotColSearchAux x0 x1 x2 x3 x4 x5) (AxNat.ble (AxNat.succ (Rat.pivotRowSearchAux x0 x1 x2 x3 x4 x5)) x1)))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.isPivotColB_eq_ble"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-is-pivot-col-b-eq-ble-1",
+      "kind": "kernel-term",
+      "supports": "Both `Rat.isPivotColB_eq_ble` and the fuelled `Rat.pivotColSearchAux_eq_ble` are checked `Declaration::Theorem`s with EMPTY axiom footprints in all four preludes that build the rationals. The checker counts EIGHT rows -- two declarations across four preludes -- and requires exactly that, so losing either half makes the count differ and the command exits 1. The regex admits both arities deliberately (the wrapper takes four arguments, the fuelled scan six) and pins the bound on the right-hand side to `x1`, which is the ROW-COUNT binder in both signatures: a version comparing against the column count would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.(isPivotColB|pivotColSearchAux)_eq_ble[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.(isPivotColB|pivotColSearchAux) x0 x1 x2 x3( x4 x5)?\\) \\(AxNat\\.ble \\(AxNat\\.succ \\(Rat\\.(pivotRowOfCol|pivotRowSearchAux) x0 x1 x2 x3( x4 x5)?\\)\\) x1\\)\\)+$')\" = 8",
+      "notes": "Run 2026-09-02: the pattern matches the real output at exactly the required count. `scripts/new-fact.py` verified it FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written, so a pattern anchored on the surrounding prose rather than on the finding would have been rejected there."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs)",
+    "source": "docs/research/09-decisions/adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is empty by proof, as for ADR-1554, ADR-1555 and ADR-1558: the order on the constructed rationals is decidable and every predicate here is total and Bool-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/rank_bridge_tests.rs`, which reduces both maps at the six matrices the rank and nullity lanes used (including the rectangular 2x3), and `rank_equals_rank_cols_at_every_concrete_matrix` in `rat_prelude/nullity_tests.rs`, which checks the bridge's conclusion by reduction at the same six. Row 4 is empty: no import, nothing taken from Mathlib. WHAT THIS DOES NOT SAY: it says nothing about echelon form, and nothing about which row the scan found -- only that the Bool answer and the range test on the Nat answer agree. `Rat.leadingIndex_pivotRowOfCol` is the separate statement that the row found actually leads in the column asked for. It is also not vacuous: `the_scan_identity_separates_a_pivot_column_from_a_free_one` in `rat_prelude/rank_bridge_tests.rs` shows both sides true at column 0 and both false at column 1 of the same echelon form, so the identity is not two constants agreeing."
+}
