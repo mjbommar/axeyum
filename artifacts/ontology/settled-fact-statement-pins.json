@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2176,
+    "min_identity_bound": 2178,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -22175,6 +22175,20 @@
       "statement_sha256": "5207d30f6e310e2b8964163922776ba19525d455b1c8210fba278327ed25b4b3",
       "prose_sha256": "51c472b289513dc820df0459fe0321b2b84169d7672d62abdad024d9ce952fbd",
       "kernel_theorem": "Rat.prob_le_one"
+    },
+    {
+      "fact_id": "F:rat-rank-le-rows",
+      "language": "lean4",
+      "statement_sha256": "b9e55674bfe835822182cbed9407aa82996186e8cd613d2e19d8743f84f726ab",
+      "prose_sha256": "908a816be6ff2d2e16264560c38bf56cdaa10d394c083e1ac87a5f42f044617d",
+      "kernel_theorem": "Rat.rank_le_rows"
+    },
+    {
+      "fact_id": "F:rat-rank-zero-cols",
+      "language": "lean4",
+      "statement_sha256": "48c0d7c6e12615b13c00826fdd26432cdcd66a5cab7ec89582b6c7372fca49d6",
+      "prose_sha256": "5f6aede59f1f70d887b9041bcf38533b5b05277a51dc0ab536b165f326308b3b",
+      "kernel_theorem": "Rat.rank_zero_cols"
     },
     {
       "fact_id": "F:rat-rat-isfield",

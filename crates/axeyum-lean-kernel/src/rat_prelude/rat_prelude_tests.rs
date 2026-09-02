@@ -273,6 +273,18 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("echelonStepOk", p.echelon_step_ok),
         ("isEchelonAux", p.is_echelon_aux),
         ("isEchelon", p.is_echelon),
+        ("nonzeroRowB", p.nonzero_row_b),
+        ("nonzeroRowB_eq_ble", p.nonzero_row_b_eq_ble),
+        ("nonzeroRowB_zero_cols", p.nonzero_row_b_zero_cols),
+        ("rank", p.rank),
+        ("rank_eq_countRange", p.rank_eq_count_range),
+        ("rank_le_rows", p.rank_le_rows),
+        ("rank_zero_rows", p.rank_zero_rows),
+        (
+            "countRange_nonzeroRowB_zero",
+            p.count_range_nonzero_row_b_zero,
+        ),
+        ("rank_zero_cols", p.rank_zero_cols),
     ]
 }
 
@@ -6947,6 +6959,19 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("echelonStepOk", p.echelon_step_ok, false),
         ("isEchelonAux", p.is_echelon_aux, false),
         ("isEchelon", p.is_echelon, false),
+        ("nonzeroRowB", p.nonzero_row_b, false),
+        ("nonzeroRowB_eq_ble", p.nonzero_row_b_eq_ble, true),
+        ("nonzeroRowB_zero_cols", p.nonzero_row_b_zero_cols, true),
+        ("rank", p.rank, false),
+        ("rank_eq_countRange", p.rank_eq_count_range, true),
+        ("rank_le_rows", p.rank_le_rows, true),
+        ("rank_zero_rows", p.rank_zero_rows, true),
+        (
+            "countRange_nonzeroRowB_zero",
+            p.count_range_nonzero_row_b_zero,
+            true,
+        ),
+        ("rank_zero_cols", p.rank_zero_cols, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

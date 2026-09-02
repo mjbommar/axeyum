@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-zero-cols",
+  "title": "A rational matrix with no columns has rank zero",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every row count rows, Rat.rank M rows Nat.zero = Nat.zero. With no columns every row is zero, so the count is empty. This is the only case in which rank <= cols is available at all in this tree, and there it holds as an EQUALITY rather than as a bound -- which makes it a control that a definition counting rows without consulting Rat.leadingIndex would fail even though it satisfies Rat.rank_le_rows. The proof runs through Rat.countRange_nonzeroRowB_zero, the same statement generalised over the matrix: in rank M rows 0 the matrix is rowEchelon M rows 0, which itself depends on the induction variable, so an induction on rows done in place would face a different predicate in the step than the one the induction hypothesis is about. With the matrix fixed both cases close by iota-reduction alone, because Nat.ble (Nat.succ x) Nat.zero is false and Nat.add recurses on its right argument.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_zero_cols : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> Eq.{1} AxNat (Rat.rank x0 x1 AxNat.zero) AxNat.zero))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rank_zero_cols"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-countrange-zero",
+    "F:nat-countrange-succ",
+    "F:nat-add-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-zero-cols-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rank_zero_cols` is a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint` in all four preludes carrying the rationals. The `formal.statement` is the kernel's `render_lean` of the admitted type; reading it confirms the zeroed argument is the THIRD (`AxNat.zero` in the `cols` position, with `x1` still a free row count) rather than the row count, which is the separate and much cheaper `Rat.rank_zero_rows`.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.rank_zero_cols --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rank_zero_cols[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.rank_zero_cols 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank.rs)",
+    "source": "docs/research/09-decisions/adr-1555-rank-is-an-uncapped-count-and-row-operation-invariance-does-not-follow-from-the-inverse-laws.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form (symbolic in the matrix AND in the row count). Row 2 is EMPTY BY PROOF, for the same decidability reason as `F:rat-rank-le-rows`. Row 4: no import. WHAT THIS DOES NOT SAY: it says nothing about rank at a POSITIVE column count -- in particular it is not an instance of `rank <= cols`, which is open. It also does not say that a matrix whose entries are all zero has rank 0 at a positive `cols`; that is a different statement and it is not proved here. The `cols = 0` case reduces without evaluating `Rat.leadingIndex` at all, so it exercises none of the elimination."
+}
