@@ -161,14 +161,22 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             ),
         ],
     ),
+    # `development-without-train rule` kills FIVE tests and that is structural,
+    # not a suite defect (ADR-1563). Three of the five are the grandfather
+    # controls, and a grandfather has no meaning outside the rule it excuses:
+    # delete the rule and there is nothing left for an exemption to be right or
+    # wrong about. The three grandfather mutants below each kill exactly one,
+    # which is the number that says whether the re-derivation works.
     "development-partition": (
         "scripts/check-development-partition.py",
         "scripts.tests.test_development_partition",
         [
             (
                 "development-without-train rule",
-                "        if touched_dev and not touched_train:",
-                "        if False:",
+                "        if dev_only:\n"
+                "            # ADR-1563.",
+                "        if False:\n"
+                "            # ADR-1563.",
             ),
             (
                 "generic string walk, not applicability.fact_ids only",
@@ -199,6 +207,25 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "empty-registry fail-closed",
                 "    if not isinstance(registry, list) or not registry:",
                 "    if False:",
+            ),
+            # ADR-1563. The grandfather excuses an operation that CANNOT be
+            # retired, so each of its two re-derived properties has to be
+            # removable and each removal has to be visible in exactly one test.
+            (
+                "a grandfather may not cover live development work",
+                "    unsettled = sorted(f for f in touched_dev if statuses.get(f) not in SETTLED)",
+                "    unsettled = []",
+            ),
+            (
+                "a grandfather holds only while its targets PIN the operation",
+                "    unpinned = sorted(f for f in touched_dev if op_id not in bindings.get(f, set()))",
+                "    unpinned = []",
+            ),
+            (
+                "a grandfather that excuses nothing is itself a violation",
+                "    for stale in sorted((set(GRANDFATHERED_OPERATIONS) & registry_ids)\n"
+                "                        - grandfathers_considered):",
+                "    for stale in []:",
             ),
         ],
     ),
@@ -4835,6 +4862,23 @@ SUITES["partition-edges"] = (
             "        repaired = []",
         ),
         (
+            "M12 an amendment CLASS is re-derived from the live manifests",
+            '        if target_partition != "longitudinal":',
+            "        if False:",
+        ),
+        (
+            "M13 an unrecognised class kills the amendment",
+            "    if declared not in AMENDMENT_CLASSES:",
+            "    if False:",
+        ),
+        (
+            "M14 --record-baseline excludes the honoured amendments",
+            "        return record(root, [e for e in edges if edge_key(e) not in amendments],\n"
+            "                      manifests, partition_of, dependencies, previous)",
+            "        return record(root, edges,\n"
+            "                      manifests, partition_of, dependencies, previous)",
+        ),
+        (
             "M11 a held-out endpoint is redacted before it is written to the "
             "baseline",
             '    frm = (digest_fact_id(edge["from"], salt)\n'
@@ -5899,6 +5943,34 @@ SUITES["nursery-split-exemption-guards"] = (
             "        violation_blocks.append(\n"
             '            describe_stale_exemptions(unused_exemptions, label="cross-population ")\n'
             "        )",
+        ),
+        # ADR-1563. The per-edge amendment contraction. N2 is the one worth
+        # reading twice: it does not DELETE the contraction, it makes it
+        # undirected, which is the mutation that would clear the leaking
+        # `longitudinal -> evaluation` direction along with the benign one and
+        # leave both reports green. A guard whose only mutant is `if False:`
+        # never gets asked whether it is doing the RIGHT contraction.
+        (
+            "N1 an amended edge is contracted out of the component graph",
+            "            if (fact_id, dependency) in amended:\n"
+            "                continue",
+            "            if False:\n"
+            "                continue",
+        ),
+        (
+            "N2 the contraction is DIRECTED, so the leaking direction stays",
+            "            if (fact_id, dependency) in amended:\n"
+            "                continue",
+            "            if ((fact_id, dependency) in amended\n"
+            "                    or (dependency, fact_id) in amended):\n"
+            "                continue",
+        ),
+        (
+            "N3 an unhonoured amendment stops the report, never restores edges",
+            "    if complaints:\n"
+            "        raise NurseryError(",
+            "    if False:\n"
+            "        raise NurseryError(",
         ),
     ],
 )

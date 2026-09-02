@@ -305,13 +305,26 @@ def check(argv: list[str] | None = None) -> int:
     violations: list[str] = []
     multi_target_facts: set[str] = set()
     grandfathers_used: set[str] = set()
+    # Considered, not honoured: an entry whose properties were RE-DERIVED and
+    # found false has been examined and reported, so it is not also stale.
+    # Without this the same entry produces two violations and the stale check's
+    # own control cannot be about the stale check.
+    grandfathers_considered: set[str] = set()
 
     for operation in registry:
         op_id = operation.get("id", "<unnamed>")
         referenced = {s for s in _strings(operation) if s in partitions}
         touched_dev = {f for f in referenced if partitions[f] == "development"} - exempt
         touched_train = {f for f in referenced if partitions[f] == "train"}
-        if touched_dev and not touched_train:
+        # `dev_only` is computed OUTSIDE the branch below on purpose. The
+        # branch is a registered mutation target, and reading "was this entry
+        # considered?" off the branch would make deleting the rule cascade into
+        # every grandfather control -- a mutant that kills four tests says less
+        # about the guard than one that kills the two whose subject it is.
+        dev_only = bool(touched_dev) and not touched_train
+        if dev_only and op_id in GRANDFATHERED_OPERATIONS:
+            grandfathers_considered.add(op_id)
+        if dev_only:
             # ADR-1563. The grandfather is checked, never asserted: a failing
             # entry falls through to the SAME violation the rule always
             # produced, and the reason it failed is printed with it.
@@ -344,7 +357,7 @@ def check(argv: list[str] | None = None) -> int:
     # list somebody kept in step).
     registry_ids = {operation.get("id") for operation in registry}
     for stale in sorted((set(GRANDFATHERED_OPERATIONS) & registry_ids)
-                        - grandfathers_used):
+                        - grandfathers_considered):
         violations.append(
             f"grandfathered operation {stale} matched no live violation — it "
             f"has changed shape or left the registry; delete the entry from "

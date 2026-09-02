@@ -18,6 +18,13 @@ NURSERY_V2 = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
 FACTS = ROOT / "artifacts/facts"
 RESULT = ROOT / "artifacts/autogenesis/autogenesis-1-result.json"
 
+# The DATA tree `amended_edges` reads the per-edge amendments and the drawn
+# population from -- the same role `AXEYUM_PARTITION_EDGES_ROOT` plays for the
+# edge gate, and separate from `ROOT` only so a control can point it at a
+# throwaway tree. The SHIPPED SCRIPT is always loaded from `ROOT`: a control
+# that also substituted the implementation would be measuring a copy.
+PARTITION_EDGE_ROOT = ROOT
+
 PARTITIONS = {"longitudinal", "train", "development", "held-out"}
 EVALUATION_PARTITIONS = {"train", "development", "held-out"}
 PROVENANCE_CLASSES = {
@@ -162,7 +169,7 @@ def validate_entries(
     return entries
 
 
-def amended_edges(entries: list[dict[str, Any]]) -> set[tuple[str, str]]:
+def amended_edges() -> set[tuple[str, str]]:
     """The per-edge amendments `scripts/check-partition-edges.py` honours.
 
     ADR-1563. THE AMENDMENT LIST IS LOADED THROUGH THE OTHER GATE'S OWN LOADER,
@@ -183,19 +190,34 @@ def amended_edges(entries: list[dict[str, Any]]) -> set[tuple[str, str]]:
     red again. A rule hardcoded in this file instead would have made that check
     structurally unable to fail, which is worse than not having it.
 
+    THE PARTITION MAP IS THE LIVE MANIFESTS', NOT THIS REPORT'S ENTRY LIST.
+    `build_report` computes over nursery-v1 alone and the cross-population
+    report over the union, and a control may drive either with a handful of
+    synthetic rows; deriving the class from whichever subset is in hand would
+    make the same amendment valid in one report and refused in the next. The
+    class is a property of the DRAWN POPULATION, so it is read from the same
+    `load_partitions` the edge gate uses.
+
     A failure to load is NOT swallowed: an empty set on a broken amendments
     file would silently restore every edge and read as a stricter run, which is
     the one direction a reader would not question.
     """
     spec = importlib.util.spec_from_file_location(
-        "_axeyum_check_partition_edges", ROOT / "scripts/check-partition-edges.py")
+        "_axeyum_check_partition_edges",
+        ROOT / "scripts/check-partition-edges.py")
     if spec is None or spec.loader is None:
         raise NurseryError("scripts/check-partition-edges.py is not importable; "
                            "the per-edge amendments cannot be read")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    partition_of = {entry["fact_id"]: entry["partition"] for entry in entries}
-    amendments, complaints = module.load_amendments(ROOT, partition_of)
+    try:
+        partition_of, _ = module.load_partitions(PARTITION_EDGE_ROOT)
+    except module.Unanswerable as error:
+        raise NurseryError(
+            f"the drawn population is unreadable, so no per-edge amendment "
+            f"class can be re-derived: {error}") from error
+    amendments, complaints = module.load_amendments(PARTITION_EDGE_ROOT,
+                                                    partition_of)
     if complaints:
         raise NurseryError(
             "per-edge amendment(s) are not honoured, so this report would "
@@ -208,7 +230,7 @@ def components(
     entries: list[dict[str, Any]], facts: dict[str, dict[str, Any]]
 ) -> tuple[dict[str, str], dict[str, list[str]]]:
     selected = {entry["fact_id"] for entry in entries}
-    amended = amended_edges(entries)
+    amended = amended_edges()
     adjacency: dict[str, set[str]] = {fact_id: set() for fact_id in selected}
     for fact_id in selected:
         dependencies = facts[fact_id].get("depends_on") or []

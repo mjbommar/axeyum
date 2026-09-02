@@ -44,6 +44,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -286,6 +287,143 @@ class CrossPopulationExemptionGuardTests(unittest.TestCase):
         self.assertEqual(
             report["controls"]["cross_population_component_split_exemptions_unused"], []
         )
+
+
+class AmendedEdgeContractionTests(unittest.TestCase):
+    """Controls for the per-edge amendment contraction (ADR-1563).
+
+    `components` skips the adjacency of any edge `check-partition-edges.py`
+    honours as an amendment. That is what lets the 45 edges into the two pinned
+    longitudinal bootstrap lemmas stop fusing the regression chain into the
+    evaluation population WITHOUT a hardcoded rule in this file -- a hardcoded
+    rule would have made the longitudinal-overlap check structurally unable to
+    fail, and a check that cannot fail is worse than no check.
+
+    So the pair that matters is `..._is_a_leak_without_the_amendment` and
+    `..._is_contracted_by_the_amendment`: identical populations, differing only
+    in whether one reviewed line exists. The third test drives the DIRECTION
+    argument -- longitudinal DEPENDING ON an evaluation fact is a real leak and
+    the class cannot cover it -- and the fourth is that a refused amendment
+    stops the report rather than silently restoring every edge.
+
+    The DATA root is a throwaway tree; the shipped `check-partition-edges.py`
+    is still the implementation under test, loaded from the real checkout by
+    `amended_edges`.
+    """
+
+    BOOTSTRAP = {"from": "F:dev", "to": "F:nat-zero-add",
+                 "class": "depends-on-longitudinal-bootstrap",
+                 "reason": "the bootstrap lemma is shared by every partition",
+                 "date": "2026-09-02"}
+
+    def setUp(self) -> None:
+        repository = json.loads(MODULE.NURSERY.read_text())
+        self.nursery = copy.deepcopy(repository)
+        self.nursery["state"] = "foundation-only"
+        self.nursery["entries"] = [
+            row for row in repository["entries"] if row["partition"] == "longitudinal"
+        ]
+        self.nursery["component_split_exemptions"] = []
+        self.result = {"verdict": "autogenesis-1-passed"}
+        self.facts = {
+            "F:nat-zero-add": fact("F:nat-zero-add"),
+            "F:nat-mul-one": fact("F:nat-mul-one", ["F:nat-zero-add"]),
+        }
+        scratch = Path("/data0/axeyum/scratch")
+        self._tmp = tempfile.TemporaryDirectory(
+            dir=scratch if scratch.is_dir() else None)
+        self.addCleanup(self._tmp.cleanup)
+        self.data_root = Path(self._tmp.name) / "tree"
+        (self.data_root / "artifacts/autogenesis").mkdir(parents=True)
+        saved = MODULE.PARTITION_EDGE_ROOT
+        MODULE.PARTITION_EDGE_ROOT = self.data_root
+        self.addCleanup(setattr, MODULE, "PARTITION_EDGE_ROOT", saved)
+
+    def install(self, amendments: list[dict]) -> None:
+        """Mirror this fixture's rows into the data root the amendments read."""
+        (self.data_root / "artifacts/autogenesis/nursery-v1.json").write_text(
+            json.dumps({"kind": "axeyum-autogenesis-nursery",
+                        "entries": [{"fact_id": row["fact_id"],
+                                     "partition": row["partition"]}
+                                    for row in self.nursery["entries"]]})
+        )
+        (self.data_root
+         / "artifacts/autogenesis/partition-edge-amendments-v1.json").write_text(
+            json.dumps({"kind": "axeyum-partition-edge-amendments",
+                        "amendments": amendments})
+        )
+        facts_dir = self.data_root / "artifacts/facts"
+        facts_dir.mkdir(parents=True, exist_ok=True)
+        for fact_id, body in self.facts.items():
+            (facts_dir / f"{fact_id.replace(':', '-')}.json").write_text(
+                json.dumps(body))
+
+    def _dev_depends_on_bootstrap(self) -> None:
+        """`F:dev` [development] depends on `F:nat-zero-add` [longitudinal]."""
+        self.facts["F:dev"] = fact("F:dev", ["F:nat-zero-add"])
+        self.nursery["entries"].append(entry("F:dev", "development"))
+
+    def test_an_edge_into_the_bootstrap_lemma_is_a_leak_without_the_amendment(
+        self,
+    ) -> None:
+        # THE NEGATIVE HALF. Without it, the accept case below is satisfied by
+        # a graph in which nothing was ever fused, and the contraction would be
+        # measuring nothing.
+        self._dev_depends_on_bootstrap()
+        self.install([])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "shares a component with Autogenesis-1"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_an_edge_into_the_bootstrap_lemma_is_contracted_by_the_amendment(
+        self,
+    ) -> None:
+        # THE ACCEPT HALF. Identical population, one reviewed amendment.
+        self._dev_depends_on_bootstrap()
+        self.install([self.BOOTSTRAP])
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(
+            report["controls"]["evaluation_longitudinal_component_overlap"], [])
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+
+    def test_the_contraction_is_directed_and_the_reverse_edge_still_leaks(
+        self,
+    ) -> None:
+        # THE DIRECTION ARGUMENT, driven in ONE fixture rather than asserted.
+        # `F:dev` -> `F:nat-zero-add` is amended and contracted. `F:nat-mul-one`
+        # -> `F:dev2` is the REVERSE shape -- the bootstrap lemma depending on a
+        # drawn development fact, which pulls a drawn result into the regression
+        # chain -- and no amendment can cover it, because the class is
+        # re-derived from the TARGET's partition and `F:dev2` is development.
+        # So the gate stays red on the leaking direction while the benign one is
+        # gone. A contraction that ignored direction would clear both, and this
+        # test is the only thing that would notice.
+        #
+        # BOTH DIRECTIONS BETWEEN THE SAME PAIR, deliberately. That is the only
+        # fixture an undirected contraction can be caught by, and it is not a
+        # contrivance: `check-partition-edges.py` treats `a depends_on b` and
+        # `b depends_on a` as two separate things somebody did, so an amendment
+        # for one says nothing whatever about the other.
+        self._dev_depends_on_bootstrap()
+        self.facts["F:nat-zero-add"] = fact("F:nat-zero-add", ["F:dev"])
+        self.install([self.BOOTSTRAP])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "shares a component with Autogenesis-1"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_a_refused_amendment_stops_the_report_rather_than_restoring_edges(
+        self,
+    ) -> None:
+        # A malformed amendment must not read as "no amendments". Swallowing it
+        # would restore every edge and print a STRICTER-looking report, which is
+        # the one direction a reader does not question.
+        self._dev_depends_on_bootstrap()
+        self.install([{"from": "F:dev", "to": "F:nat-zero-add",
+                       "date": "2026-09-02"}])
+        with self.assertRaisesRegex(MODULE.NurseryError, "NOT honoured"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
 
 
 if __name__ == "__main__":

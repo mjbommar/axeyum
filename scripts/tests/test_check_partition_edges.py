@@ -250,6 +250,101 @@ class PartitionEdgeControls(unittest.TestCase):
         self.assertIn("AMENDMENT-REJECTED", done.stdout)
         self.assertIn("missing reason", done.stdout)
 
+    # -- guard 2b: an amendment CLASS is re-derived, never asserted ---------
+    #
+    # ADR-1563. The class exists so 45 edges into the two pinned longitudinal
+    # bootstrap lemmas can leave the baseline with a rule a reader can check,
+    # instead of 45 individual judgements nobody can re-derive. That is only
+    # true while the checker recomputes the rule; a class taken on the author's
+    # word is the component exemption again at a finer unit, so the three tests
+    # below drive the recomputation to failure in the two ways it can fail and
+    # once in the way it must not.
+
+    def longitudinal_and_a_decoy(self) -> None:
+        """A[development] -> Z[longitudinal], and E[development] -> F[train].
+
+        Two crossing edges of DIFFERENT shape in one tree, because the whole
+        subject of this guard is that the class applies to one of them and not
+        the other. A fixture with only the longitudinal edge could not tell a
+        working class check from one that honours every amendment.
+        """
+        self.manifest("v1", {"F:a": "development", "F:z": "longitudinal",
+                             "F:e": "development", "F:f": "train"})
+        self.fact("F:a", ["F:z"])
+        self.fact("F:z")
+        self.fact("F:e", ["F:f"])
+        self.fact("F:f")
+
+    def test_the_bootstrap_class_is_honoured_for_an_edge_into_longitudinal(
+        self,
+    ) -> None:
+        """The accept case. Without it, `the class is refused` below is
+        satisfied by a checker that refuses every class, which would leave the
+        baseline at 198 and the mechanism decorative."""
+        self.longitudinal_and_a_decoy()
+        self.amendments([{"from": "F:a", "to": "F:z",
+                          "class": "depends-on-longitudinal-bootstrap",
+                          "reason": "bootstrap lemma", "date": "2026-09-02"}])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("|amended=1|", done.stdout)
+        self.assertNotIn("AMENDMENT-REJECTED", done.stdout)
+        self.assertIn("F:e [development] depends_on F:f [train]", done.stdout)
+
+    def test_the_bootstrap_class_is_refused_when_the_target_is_not_longitudinal(
+        self,
+    ) -> None:
+        """THE GUARD. The amendment below is well-formed in every field and
+        claims the class for a TRAIN target. Honouring it would mean the class
+        is a label an author writes rather than a property the manifests
+        carry -- and the label would then suppress exactly the train/development
+        crossing the whole gate exists to see."""
+        self.longitudinal_and_a_decoy()
+        self.amendments([{"from": "F:e", "to": "F:f",
+                          "class": "depends-on-longitudinal-bootstrap",
+                          "reason": "claims a class it does not have",
+                          "date": "2026-09-02"}])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("|amended=0|", done.stdout)
+        self.assertIn("AMENDMENT-REJECTED", done.stdout)
+        self.assertIn("not `longitudinal`", done.stdout)
+        self.assertIn("F:e [development] depends_on F:f [train]", done.stdout)
+
+    def test_an_unknown_class_is_refused_rather_than_ignored(self) -> None:
+        """A class name nobody implemented must kill the amendment, not be
+        skipped as an unrecognised extra field. Reading it as absent would mean
+        a typo silently downgrades a class-checked amendment to an unchecked
+        one, which is the failure mode with no symptom."""
+        self.one_crossing_only()
+        self.amendments([{"from": "F:a", "to": "F:b",
+                          "class": "depends-on-something-invented",
+                          "reason": "reviewed", "date": "2026-09-02"}])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("|amended=0|", done.stdout)
+        self.assertIn("is not one of", done.stdout)
+
+    def test_recording_a_baseline_excludes_the_amended_edge(self) -> None:
+        """The amendment must be LOAD-BEARING.
+
+        If `--record-baseline` kept an amended edge, the edge would sit in both
+        lists, deleting the amendment would change nothing, and every class
+        check above would gate nothing observable. The recorded set here holds
+        the unamended edge and not the amended one, which is what makes
+        deleting an amendment turn its edge back into a violation.
+        """
+        self.longitudinal_and_a_decoy()
+        self.amendments([{"from": "F:a", "to": "F:z",
+                          "class": "depends-on-longitudinal-bootstrap",
+                          "reason": "bootstrap lemma", "date": "2026-09-02"}])
+        done = self.gate("--record-baseline")
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("RECORDED|edges=1", done.stdout)
+        recorded = json.loads((self.root / BASELINE).read_text())
+        self.assertEqual([(e["from"], e["to"]) for e in recorded["edges"]],
+                         [("F:e", "F:f")])
+
     # -- guard 3: the baseline ratchet --------------------------------------
 
     def test_an_edge_in_the_baseline_does_not_fail_the_gate(self) -> None:

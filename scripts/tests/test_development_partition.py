@@ -180,5 +180,138 @@ class DevelopmentPartitionControls(unittest.TestCase):
         self.assertEqual(self._main(), 2)
 
 
+class GrandfatherControls(unittest.TestCase):
+    """Controls for `GRANDFATHERED_OPERATIONS` (ADR-1563).
+
+    NOT a subclass of `DevelopmentPartitionControls`. Inheriting would re-run
+    all nine of its tests under a second class name, and every mutant of a
+    guard those tests cover would then kill TWO tests -- which is the mutation
+    report saying less about a guard than a single kill does.
+
+    The entry excuses one operation that cannot be retired, because every fact
+    it admitted pins `operation_sha256` over its exact bytes. An exemption of
+    that shape is one edit away from being the thing CLAUDE.md warns about, so
+    each of the two re-derived properties is driven to failure here, and the
+    NEW-producer case -- the property that must not be weakened -- is driven
+    too.
+
+    Each test installs the grandfather into a synthetic registry rather than
+    reading the committed one: what these measure is the mechanism, and
+    `LiveGrandfatherTests` below measures that the committed list still names
+    something real.
+    """
+
+    OP = "op-grandfathered"
+
+    def setUp(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.tmp = pathlib.Path(self._dir.name)
+        self.module = load_subject()
+
+    def tearDown(self):
+        self._dir.cleanup()
+
+    def healthy(self) -> Fixture:
+        """Train and development populated, one well-formed spanning operation."""
+        f = Fixture(self.tmp)
+        f.fact("F:t1", "fam-train", "train")
+        f.fact("F:t2", "fam-train", "train")
+        f.fact("F:d1", "fam-dev", "development")
+        f.operation("op-spanning", ["F:t1", "F:t2", "F:d1"])
+        return f
+
+    def grandfathered(self, status: str = "proved", pins: bool = True) -> Fixture:
+        """One development-only operation, named in the grandfather dict.
+
+        `status` and `pins` are the two re-derived properties, each togglable
+        on its own so the test that fails can only be the one about it.
+        """
+        f = self.healthy()
+        f.fact("F:g1", "fam-gf", "development", status=status)
+        if pins:
+            path = f.facts / "F-g1.json"
+            body = json.loads(path.read_text(encoding="utf-8"))
+            body["evidence"] = [{"checker_operation": {"id": self.OP}}]
+            path.write_text(json.dumps(body), encoding="utf-8")
+        f.operation(self.OP, ["F:g1"])
+        f.install(self.module)
+        self.module.GRANDFATHERED_OPERATIONS = {
+            self.OP: {"registered": "test", "authority": "test", "reason": "test"}
+        }
+        return f
+
+    def test_a_grandfathered_operation_is_excused(self):
+        """The accept case. Without it every rejection below is satisfied by a
+        dict that excuses nothing, which would leave the gate red and the
+        mechanism inert."""
+        self.grandfathered()
+        self.assertEqual(self.module.check(["--quiet"]), 0)
+
+    def test_a_grandfather_covering_an_open_development_fact_is_refused(self):
+        """A grandfather must never park LIVE development work. Same operation,
+        same dict entry, target still `open`."""
+        self.grandfathered(status="open")
+        self.assertEqual(self.module.check(["--quiet"]), 1)
+
+    def test_a_grandfather_whose_targets_do_not_pin_it_is_refused(self):
+        """The justification is that the operation CANNOT be retired because
+        its targets pin it. An operation nothing pins can be retired, so it
+        must be -- not excused. Same entry, evidence binding removed."""
+        self.grandfathered(pins=False)
+        self.assertEqual(self.module.check(["--quiet"]), 1)
+
+    def test_a_new_development_only_operation_is_still_a_violation(self):
+        """THE PROPERTY THE GRANDFATHER MUST NOT WEAKEN. A second operation,
+        settled and pinning itself exactly like the excused one, but absent
+        from the dict, still fails."""
+        f = self.grandfathered()
+        f.fact("F:g2", "fam-gf2", "development", status="proved")
+        path = f.facts / "F-g2.json"
+        body = json.loads(path.read_text(encoding="utf-8"))
+        body["evidence"] = [{"checker_operation": {"id": "op-new"}}]
+        path.write_text(json.dumps(body), encoding="utf-8")
+        f.operation("op-new", ["F:g2"])
+        f.install(self.module)
+        self.assertEqual(self.module.check(["--quiet"]), 1)
+
+    def test_a_grandfather_that_excuses_nothing_is_a_violation(self):
+        """The stale-exemption discipline. The operation is in the registry and
+        covers a TRAIN fact too, so the rule never fires on it -- the entry
+        suppresses nothing and must say so rather than sit there."""
+        f = self.healthy()
+        f.operation(self.OP, ["F:t1"])
+        f.install(self.module)
+        self.module.GRANDFATHERED_OPERATIONS = {
+            self.OP: {"registered": "test", "authority": "test", "reason": "test"}
+        }
+        self.assertEqual(self.module.check(["--quiet"]), 1)
+
+
+class LiveGrandfatherTests(unittest.TestCase):
+    """The committed grandfather list, measured against the committed registry.
+
+    A closed list in source is only as honest as its subject still being real,
+    and a list that names an operation nobody can find is an exemption pointing
+    at nothing. This derives its subject from the registry rather than from a
+    constant that happens to agree with it.
+    """
+
+    def setUp(self):
+        self.module = load_subject()
+
+    def test_every_grandfathered_operation_is_in_the_live_registry(self):
+        registry = json.loads(
+            self.module.OPERATIONS.read_text(encoding="utf-8"))["operations"]
+        live = {operation["id"] for operation in registry}
+        missing = sorted(set(self.module.GRANDFATHERED_OPERATIONS) - live)
+        self.assertEqual(missing, [], "grandfathered operation(s) left the registry")
+
+    # NO `the committed tree passes` test here, deliberately. Such a test reads
+    # the live ledger and therefore dies under EVERY mutant of every guard,
+    # which turns each single-kill mutation report into a two-kill one and
+    # tells a reader less about each guard than the report already did. The
+    # live tree is exercised by the gate itself in `justfile` and `check.sh`.
+
+
 if __name__ == "__main__":
     unittest.main()
