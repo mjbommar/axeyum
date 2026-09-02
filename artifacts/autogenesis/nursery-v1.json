@@ -162,24 +162,6 @@
       "reason": "declared-dependency crossing between development (natural-binomial) and train (natural-factorial), surfaced by the same 2026-08-29 depends_on correction; no held-out member; all 5 facts already epistemic_status proved via ordinary hand development, zero autogenesis operations reference any of them",
       "authority": "docs/research/09-decisions/adr-0850-nursery-split-exemption-mechanism.md",
       "date": "2026-08-30"
-    },
-    {
-      "component_fact_ids": [
-        "F:ml430-nat-descfactorial-one-d4856d4a",
-        "F:ml430-nat-descfactorial-self-899fc0e0",
-        "F:ml430-nat-factorial-dvd-factorial-e9d14845",
-        "F:ml430-nat-factorial-le-d0f4a912",
-        "F:ml430-nat-factorial-lt-of-lt-d6c2125d",
-        "F:ml430-nat-factorial-ne-zero-5fc0b0a1",
-        "F:ml430-nat-factorial-pos-f1dd2405",
-        "F:ml430-nat-mod-lcm-ee6bdd41",
-        "F:ml430-nat-self-le-factorial-cfdffc69",
-        "F:nat-mul-one",
-        "F:nat-zero-add"
-      ],
-      "reason": "SUPERSEDES the 10-member ADR-0850 exemption for this component (digest 533d01fc3b24\u2026), which went stale on 2026-08-31 when commit 366f11a91 grew the component to 11 by adding F:ml430-nat-descfactorial-one-d4856d4a -> F:nat-mul-one -- descfactorial_one's real proof-term use of Nat.mul_one. That is ADR-0850's designed self-invalidation working: the digest stopped matching, the gate went red on the ENLARGED component, and this entry is the re-review it demands, not a re-assertion of the old one. Declared-dependency crossing spanning train (natural-factorial), development (F:ml430-nat-mod-lcm-ee6bdd41) and the longitudinal Autogenesis-1 chain (F:nat-mul-one, F:nat-zero-add); covers both the component-split check and the evaluation-longitudinal-overlap check, since it is the same underlying component. Partition census {train: 8, development: 1, longitudinal: 2}; zero held-out members (now machine-enforced by validate_exemptions, not merely asserted here); all 11 facts epistemic_status proved. NOTE, differing from ADR-0850's evidence: the new member F:ml430-nat-descfactorial-one-d4856d4a IS named by an autogenesis operation (authoritative-mathlib-bounded-induction-factorial-family-v1), whose 4 nursery fact ids are ALL train; the single development member F:ml430-nat-mod-lcm-ee6bdd41 is named by no operation, so the development row remains unspent.",
-      "authority": "docs/research/09-decisions/adr-1455-red-gate-sweep-nursery-exemption-rescope.md",
-      "date": "2026-09-01"
     }
   ],
   "entries": [
