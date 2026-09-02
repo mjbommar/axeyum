@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-partition-edge-amendments",
+  "authority": "docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md",
+  "read_by": "scripts/check-partition-edges.py",
+  "rule": "An amendment names ONE EDGE and nothing else. Required fields: `from` (the fact whose depends_on carries the edge), `to` (the dependency it names), `reason`, `date`. Optional: `authority`. An element missing any required field is REPORTED AND NOT HONOURED -- a malformed amendment is a committed defect and reading it as absent is how an exemption list stops being reviewable.",
+  "why_not_a_component": "ADR-1546 measured a component-shaped exemption re-scoped 228 -> 230 -> 258 -> 274 members in four days against a live component of 305, because a component grows whenever any member gains an edge. A fact-id SET says nothing about which edge was reviewed, so honouring one suppresses crossings nobody looked at. This gate refuses to read `cross_population_component_split_exemptions` (or `component_split_exemptions`) as an amendment and says so in its report; those entries keep whatever meaning they have for `check-autogenesis-nursery.py`, whose unit IS the component.",
+  "not_the_baseline": "The 198 crossings that already existed on 2026-09-02 are NOT amended. They are recorded in artifacts/autogenesis/partition-edge-baseline-v1.json and are the re-partition's to repair (ADR-1546 option 1). An amendment is for an edge somebody decided to keep; the baseline is for an edge nobody has repaired yet. Do not move a row from one to the other to make a gate green.",
+  "amendments": []
+}
