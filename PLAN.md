@@ -117,6 +117,7 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-02 | `dd5b54b68` | `invokes`, the third artifact-ownership classification: an orchestrator may name a guarded artifact to STAGE it and must regenerate it by calling the owner, checked by inspection. Gate FAIL→PASS with no artifact changed; 25 mutants, exit 0. |
 | 2026-09-02 | `nat_prelude/transposition.rs` | four pointwise transposition facts as kernel THEOREMS. ADR-1470 recorded the `NatDev`/`IntDev` Rust wall as forcing a second, private two-point swap; a `NameId` has no such restriction, so the facts every other prelude needs are declared instead. Only `transposition_eq_of_ne` is new work — the five-region nested-`trichotomy` split, with the two equality regions discharged by `Not` hypotheses instead of transported. ADR-1541. |
 | 2026-09-02 | `nat_prelude/injective_decide.rs` | `Nat.injective_on_or_duplicate` — a self-map of `[0,n)` is either injective there or has an explicit `a < b < n` with `g a = g b`, CONSTRUCTIVELY. Two nested instances of `Nat.lnp_bounded_search`, which ADR-1470 recorded as absent because it grepped for `pigeonhole`/`exists_dup`/`not_injective` and the tool is filed under the least-number principle. Searching strictly below each index is what makes the pair distinct with no negated equality anywhere. ADR-1541. |
 | 2026-09-02 | `rat_prelude/matrix_det_mul.rs` | `Rat.det_row_selection` — **ADR-1440's obligation 2, closed**: the selection lemma with `MapsInto` and no injectivity hypothesis, at symbolic `n`. Its injective half is ADR-1470's cursor induction, with three things that ADR did not predict: the dimension and the matrix stay OUTSIDE the induction and the map goes inside it; the base case needs a ROW-bounded congruence (`Rat.det_congr_lt`, also new) because `g` is the identity only on `[0,n)`; and the two-point swap is `Nat.transposition` itself. Also `Rat.det_congr_entry_lt` + `Rat.matSkip_lt_succ`, the BOTH-bounded congruence obligation 1's final step needs, which the row-bounded one cannot supply because `Rat.matMul_id_right` is bounded in the column. `rat_prelude::` 156 passed / 0 failed; `nat_prelude::` 325 passed / 0 failed. `Rat.det_mul` did NOT land — obligation 1 (a `Rat` analogue of `Int.sumMaps`, 1,003 lines, plus a `Rat.prodRange`) is the whole remainder. ADR-1541. |
@@ -35721,6 +35722,51 @@ Control suites, both green:
 Did not run: `just check`, `check.sh`, or any cargo-based gate — not touched
 by this diff (only 5 shell scripts and this status doc changed) and out of
 scope per the brief. Nothing was pushed.
+
+**Your lane's block (`done`, ownership-invokers, 2026-09-02).**
+`scripts/check-generated-artifact-ownership.py` is green again, and the arm
+that makes it green is new rather than a widened exemption.
+
+It was red because KNOWN demands that every script naming a GUARDED artifact
+be classified, and `scripts/lane-merge-land.sh` names the frontier shape census
+artifact in its `GENERATED` array. Neither category the remedy line offered was
+honest: `runs` would EXECUTE a merge driver inside the ownership sandbox, and
+`reads` is false for a script that redirects and stages (its decision procedure
+is an AST scan that does not apply to bash at all). The script names the
+artifact only to clear a merge conflict on it and stage it, and produces its
+content by calling the OWNER.
+
+`invokes` is that missing category, verified BY INSPECTION like `reads`: every
+line REACHING the artifact's name must be a git staging line, and the owner's
+path must appear in the script. Bindings are followed — the real script binds
+the path into an array and stages the array's elements, so an arm judging only
+the naming LINE would accept an array later used to copy over the file — and a
+binding that itself writes (`P = open(path, "w")`) is judged rather than
+exempted. Two further guards keep it from passing vacuously: a redirection
+whose target is the artifact fails even on a line carrying a staging word, and
+a classification under which no line is ever judged is refused.
+
+Mutation, in an isolated snapshot (`scripts/tests/mutation_controls.py
+artifact-ownership`, 25 mutants, exit 0, no survivors, nothing unmeasured): the
+six guards each kill exactly one test. The seventh mutant — bindings are
+FOLLOWED — kills four, and that is the arm's REACHABILITY rather than a guard:
+every fixture that binds a name depends on it, including the real-tree control
+whose script is the array shape. Removing it makes the arm judge the BINDING
+line and refuse the real script, so the four deaths are over-firing, not a
+shared blind spot.
+
+A second red in the same controls came from the same landing and is fixed here:
+`test_every_guarded_artifact_is_itself_a_candidate` asserted a universal that is
+false for an artifact guarded with ONE writer whose producer is not named
+`gen-*.py` — COVER's producer population structurally cannot see it, and need
+not, since guarding is stronger than being a candidate and
+`--update-candidates` omits guarded artifacts by design. The control now
+asserts what it is for: that the derivation is not silently empty.
+
+Next for whoever picks this up: the arm's staging list (`add`, `checkout`,
+`restore`, `rm`, `stage`, `update-index`) is a closed literal, and a new git
+subcommand that moves a file would be refused rather than misread — the safe
+direction, but someone will have to extend it deliberately.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
