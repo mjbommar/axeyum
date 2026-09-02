@@ -28,7 +28,7 @@
 //! ## What this is NOT, and must not be read as
 //!
 //! This is **not** an attained maximum and does not narrow
-//! [`CRealPrelude::evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)'s
+//! [`ExtremeValueNames::evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)'s
 //! conclusion at all: that theorem proves an EXACT attaining maximiser would
 //! decide the sign of an arbitrary real, and `evt_approx_max`'s witness `x`
 //! moves with `n` and is never claimed to converge to one. Landing this
@@ -56,10 +56,12 @@
 #![allow(clippy::doc_markdown, clippy::too_many_arguments)]
 
 use super::{CRealPrelude, and_intro, cadd, cle, creal_ty, div_succ, embed};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 /// `Exists elem_ty predicate`, eliminated into `target` (which must not
@@ -242,7 +244,7 @@ fn declare_evt_approx_max_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         d.lam_fv(f_fv, func_ty, out)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.evt_approx_max,
+        name: p.evt_row1.evt_approx_max,
         uparams: vec![],
         ty,
         value,
@@ -273,7 +275,7 @@ mod evt_row1_tests {
     /// The exact form (drop the `1/(n+1)` slack: `le (F y) (F x)` for every
     /// `y`) is a strictly different, and false, proposition -- it would say
     /// `x` ATTAINS the maximum, which
-    /// [`CRealPrelude::evt_attained_max_decides_sign`] proves would decide
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`] proves would decide
     /// the sign of an arbitrary real. The control drops one small subterm
     /// (`add _ eps` collapses to the bare `F x`) rather than transposing a
     /// whole subterm, so this stays a cheap, immediate `TypeMismatch` rather
@@ -358,7 +360,7 @@ mod evt_row1_tests {
              slack must change the statement"
         );
 
-        let shipped_value = d.kernel().const_(p.evt_approx_max, vec![]);
+        let shipped_value = d.kernel().const_(p.evt_row1.evt_approx_max, vec![]);
 
         let name_ok = d.kernel().name_str(anon, "__evtApproxMaxShippedIsSlack");
         let res_ok = d.kernel().add_declaration(Declaration::Theorem {
@@ -385,5 +387,39 @@ mod evt_row1_tests {
             "negative control must be REJECTED: the shipped proof term must \
              not also prove the EXACT (attained-maximum) form"
         );
+    }
+}
+
+/// The kernel names `creal/evt_row1.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EvtRow1Names {
+    /// `CReal.evt_approx_max : ∀ F a b (hab : le a b) (u :
+    /// UniformlyContinuousOn F a b) (n : Nat), ∃ x, le a x ∧ (le x b ∧
+    /// ∀ y, le a y → le y b → le (F y) (add (F x) (ofRat (natDivSucc 1
+    /// n))))` — the Extreme Value Theorem's honest row 1: an APPROXIMATE
+    /// maximum, exact structural mirror of [`super::CRealPrelude::ivt_approx`].
+    ///
+    /// Pure composition of [`super::CRealPrelude::sup_on_approx_lub`] (the witness `x`) and
+    /// [`super::CRealPrelude::sup_on_ub`] (bounds every `F y`) through [`super::CRealPrelude::le_trans`].
+    /// Adds nothing to the supremum machinery and does not narrow
+    /// [`super::ExtremeValueNames::evt_attained_max_decides_sign`] at all — `x` moves with `n`
+    /// and is never claimed to converge. See `creal/evt_row1.rs`.
+    pub evt_approx_max: NameId,
+}
+
+impl EvtRow1Names {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            evt_approx_max: kernel.name_str(creal, "evt_approx_max"),
+        }
     }
 }

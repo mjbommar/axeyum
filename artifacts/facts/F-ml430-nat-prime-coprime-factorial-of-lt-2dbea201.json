@@ -7,7 +7,7 @@
     "language": "lean4-surface",
     "statement": "∀ {p n : ℕ}, Nat.Prime p → n < p → p.Coprime n.factorial",
     "fragment": "Nat",
-    "kernel_theorem": "Nat.prime_coprime_factorial_of_lt"
+    "kernel_theorem": "Nat.coprime_factorial_of_lt_prime"
   },
   "epistemic_status": "proved",
   "external_status": "proved",
@@ -25,10 +25,10 @@
   "evidence": [
     {
       "check_status": "checked",
-      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prime_coprime_factorial_of_lt 2>/dev/null | grep -Ec '^Nat\\.prime_coprime_factorial_of_lt[[:space:]]')\" -ge 1",
-      "id": "kernel-Nat.prime_coprime_factorial_of_lt",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- coprime_factorial_of_lt_prime 2>/dev/null | grep -Ec '^Nat\\.coprime_factorial_of_lt_prime[[:space:]]')\" -ge 1",
+      "id": "kernel-Nat.coprime_factorial_of_lt_prime",
       "kind": "kernel-term",
-      "notes": "`declare_prime_coprime_factorial_of_lt` (`nat_prelude/prime_dvd_factorial_lcm.rs`) admits `Nat.prime_coprime_factorial_of_lt` through the trusted `Kernel::add_declaration` gate. `Coprime` has no separate name over `Nat` in this prelude (matching `coprime_of_lt_prime`'s own convention); it is spelled `gcd p n! = 1` directly. Induction on `n`, `p` and the primality hypothesis held fixed: at `n = 0`, `factorial 0 == 1` (defeq), and `gcd p 1 = 1` unconditionally (`gcd_dvd_right` + `eq_one_of_dvd_one`); at `n = succ k`, the induction hypothesis is weakened from `succ k < p` to `k < p` (`le_succ` + `le_trans`), `coprime_of_lt_prime` (flipped by `coprime_symmetric`) gives `gcd p (succ k) = 1` directly from `succ k < p`, `coprime_mul_of_coprime` combines the two coprimality facts, and `factorial_succ` (`n! == n_prev! * succ n_prev`, defeq) identifies the product with `factorial (succ k)`.",
+      "notes": "`declare_coprime_factorial_of_lt_prime` (`nat_prelude/gauss_lemma.rs`) admits `Nat.coprime_factorial_of_lt_prime` through the trusted `Kernel::add_declaration` gate. REPOINTED 2026-09-02 by the daily retrieval audit: this fact previously named `Nat.prime_coprime_factorial_of_lt` (`nat_prelude/prime_dvd_factorial_lcm.rs`), a SECOND declaration of the identical proposition -- `shape_search --include-constructed --duplicates` reported the pair, and the two rendered types are byte-identical in `kernel_declaration_projection`. The later declaration was deleted and this fact repointed at the earlier one (ADR-0608's survivor rule: `gauss_lemma`'s landed first, under ADR-1070, and is already consumed by `int_prelude/gauss_factorial_coprime.rs`). The proposition proved is unchanged. `Coprime` has no separate name over `Nat` in this prelude (matching `coprime_of_lt_prime`'s own convention); it is spelled `gcd p n! = 1` directly. Induction on `n`, `p` and the primality hypothesis held fixed: at `n = 0`, `factorial 0 == 1` (defeq), and `gcd p 1 = 1` unconditionally (`gcd_dvd_right` + `eq_one_of_dvd_one`); at `n = succ k`, the induction hypothesis is weakened from `succ k < p` to `k < p` (`le_succ` + `le_trans`), `coprime_of_lt_prime` (flipped by `gcd_comm`) gives `gcd p (succ k) = 1` directly from `succ k < p`, and `coprime_mul_of_coprime` combines the two coprimality facts, with `factorial (succ k)` defeq `mul (factorial k) (succ k)`.",
       "supports": "∀ {p n : ℕ}, Nat.Prime p → n < p → p.Coprime n.factorial"
     },
     {
@@ -38,7 +38,7 @@
         "Kernel::axiom_footprint",
         "environment-wide trusted-surface enumeration"
       ],
-      "id": "footprint-Nat.prime_coprime_factorial_of_lt",
+      "id": "footprint-Nat.coprime_factorial_of_lt_prime",
       "kind": "exhaustive-enumeration",
       "notes": "`nat_axiom_inventory --require-axiom-free nat` enumerates the built Nat environment and exits non-zero unless it admits no Axiom, Opaque or Quotient declaration (measured: axiom=0 opaque=0 quotient=0). A theorem cannot depend on a trusted declaration the environment does not contain, so an empty trusted surface bounds every individual theorem's footprint by [].",
       "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty"
@@ -58,7 +58,7 @@
       }
     ]
   },
-  "notes": "Proved in Axeyum via `declare_prime_coprime_factorial_of_lt` (`nat_prelude/prime_dvd_factorial_lcm.rs`). formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type; the admitted kernel declaration's rendered type (`nat_theorem_inventory`) matches it verbatim, modulo `Coprime a b` being spelled `gcd a b = 1` (this prelude has no separate `Coprime` name) and primality being spelled inline rather than through a `Prime` predicate. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. depends_on projects only direct upstream theorem uses whose endpoints both survived review; those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
+  "notes": "Proved in Axeyum via `declare_coprime_factorial_of_lt_prime` (`nat_prelude/gauss_lemma.rs`); repointed there on 2026-09-02 from a deleted duplicate declaration of the identical proposition, `Nat.prime_coprime_factorial_of_lt`. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type; the admitted kernel declaration's rendered type (`nat_theorem_inventory`) matches it verbatim, modulo `Coprime a b` being spelled `gcd a b = 1` (this prelude has no separate `Coprime` name) and primality being spelled inline rather than through a `Prime` predicate. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. depends_on projects only direct upstream theorem uses whose endpoints both survived review; those edges are curriculum and leakage metadata and grant no dispatch, proof, or admission authority.",
   "axiom_footprint": [],
   "proof_route": "kernel-lean"
 }

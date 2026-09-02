@@ -1472,9 +1472,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_floor,
-        // `prime_dvd_factorial_lcm.rs`: five `ml430` mirrors over
-        // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`.
-        p.prime_coprime_factorial_of_lt,
+        // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
+        // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
+        // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by
+        // `gauss_lemma.rs`'s `coprime_factorial_of_lt_prime` (listed above)
+        // after the 2026-09-02 retrieval audit deleted the duplicate.
         p.prime_coprime_desc_factorial_of_lt_of_le,
         p.prime_dvd_factorial_iff_le,
         p.prime_dvd_lcm_iff,

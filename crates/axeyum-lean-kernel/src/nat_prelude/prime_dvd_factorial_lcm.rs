@@ -1,26 +1,31 @@
-//! Five `ml430` prime mirrors over `Nat.factorial`/`Nat.descFactorial`/
+//! Four `ml430` prime mirrors over `Nat.factorial`/`Nat.descFactorial`/
 //! `Nat.lcm`, closing `F:ml430-nat-prime-dvd-factorial-5ace903f`,
-//! `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`,
 //! `F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3`,
 //! `F:ml430-nat-prime-dvd-lcm-237d267c`, and
 //! `F:ml430-nat-prime-dvd-or-dvd-of-dvd-lcm-58280948`.
+//!
+//! `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201` is closed from here
+//! too, but by [`Nat.coprime_factorial_of_lt_prime`][super::gauss_lemma],
+//! not by a declaration in this file. This module originally carried its own
+//! `Nat.prime_coprime_factorial_of_lt` with the identical rendered type and
+//! essentially the identical proof; the 2026-09-02 retrieval audit found the
+//! pair through `shape_search --duplicates` and deleted the later of the two
+//! (ADR-0608's survivor rule: `gauss_lemma`'s landed first, under ADR-1070,
+//! and is already consumed by `int_prelude/gauss_factorial_coprime.rs`).
 //!
 //! Nothing here needs a new induction principle. The `lcm` pair
 //! (`prime_dvd_lcm_iff`/`prime_dvd_or_dvd_of_dvd_lcm`) is pure algebra over
 //! already-declared lemmas: `Nat.gcd_mul_lcm` (`lcm.rs`) turns `p ∣ lcm a b`
 //! into `p ∣ a*b`, and `Nat.euclid_lemma` (`bezout.rs`) splits that into
 //! `p ∣ a ∨ p ∣ b`; the converse direction is `dvd_trans` through
-//! `dvd_lcm_left`/`dvd_lcm_right`. `prime_coprime_factorial_of_lt` is a
-//! plain induction on `n` (`p` held fixed) using `Nat.coprime_of_lt_prime`
-//! (`primes.rs`) at each new factor and `Nat.coprime_mul_of_coprime`
-//! (`totient_multiplicative.rs`) to combine it with the inductive
-//! hypothesis. `prime_coprime_desc_factorial_of_lt_of_le` is the same shape
-//! of induction, this time on `k` (with `n` and `p` both held fixed),
-//! against `Nat.descFactorial`'s own recursion.
+//! `dvd_lcm_left`/`dvd_lcm_right`.
+//! `prime_coprime_desc_factorial_of_lt_of_le` is an induction on `k` (with
+//! `n` and `p` both held fixed), against `Nat.descFactorial`'s own
+//! recursion.
 //!
 //! `prime_dvd_factorial_iff_le` (`p ∣ n! ↔ p ≤ n`) is `dvd_factorial_of_le`
 //! forward and, backward, the contrapositive of
-//! `prime_coprime_factorial_of_lt`: split `n < p` from `p ≤ n`
+//! `Nat.coprime_factorial_of_lt_prime`: split `n < p` from `p ≤ n`
 //! (`Nat.lt_or_ge`); in the `n < p` branch, coprimality plus the
 //! divisibility hypothesis forces `p ∣ gcd p n! = 1`, refuted by
 //! `Nat.prime_not_dvd_one`.
@@ -54,104 +59,6 @@ fn sub_pos_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, hlt: 
     let motive = d.eq_motive(b, &|d, x| d.lt(a, x));
     let hlt2 = d.transport(b, motive, hlt, add_a_subba, h_eq_rev); // Lt a (add a sub_ba)
     pos_of_lt_add_left(d, &p, a, sub_ba, hlt2)
-}
-
-// ============================================================================
-// `Nat.Prime.coprime_factorial_of_lt : ∀ p n, prime_condition p → Lt n p →
-// Eq (gcd p n!) one`.
-// ============================================================================
-
-/// Induction on `n`, `p` and the primality hypothesis held fixed outside the
-/// induction. `n = 0`: `factorial 0 ≡ 1` (defeq), and `gcd p 1 = 1`
-/// unconditionally (`gcd_dvd_right` + `eq_one_of_dvd_one`). `n = succ k`:
-/// the induction hypothesis needs only `k < p`, weaker than the `succ k < p`
-/// in hand (`le_succ` + `le_trans`); `coprime_of_lt_prime` (flipped by
-/// `coprime_symmetric`) gives `gcd p (succ k) = 1` directly from
-/// `succ k < p`; `coprime_mul_of_coprime` combines the two, and
-/// `factorial_succ` (`n! ≡ n_prev! * succ n_prev`, defeq) identifies the
-/// product with `factorial (succ k)`.
-///
-/// # Errors
-///
-/// Returns the trusted kernel gate's typed rejection.
-pub(super) fn declare_prime_coprime_factorial_of_lt(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-) -> Result<(), KernelError> {
-    let p = *p;
-    d.theorem(p.prime_coprime_factorial_of_lt, 2, &|d, v| {
-        let (p_var, n_var) = (v[0], v[1]);
-        let one = d.num(1);
-        let prime_ty = prime_condition(d, &p, p_var);
-
-        let claim = |d: &mut NatDev<'_>, x: ExprId| {
-            let hyp = d.lt(x, p_var);
-            let fact_x = d.factorial(x);
-            let g = d.gcd(p_var, fact_x);
-            let concl = d.eq(g, one);
-            d.arrow(hyp, concl)
-        };
-        let stmt = {
-            let inner = claim(d, n_var);
-            d.arrow(prime_ty, inner)
-        };
-
-        let prime_fv = d.fresh_fvar();
-        let prime_hyp = d.kernel().fvar(prime_fv);
-
-        let induction_proof = d.induct(
-            &claim,
-            &|d| {
-                let h_fv = d.fresh_fvar();
-                let zero = d.zero();
-                let hyp_ty = d.lt(zero, p_var);
-                let gcd_p1 = d.gcd(p_var, one);
-                let dvd_gcd_p1_one = d.lemma(p.gcd_dvd_right, &[p_var, one]);
-                let eq_gcd_p1 = d.lemma(p.eq_one_of_dvd_one, &[gcd_p1, dvd_gcd_p1_one]);
-                d.lam_fv(h_fv, hyp_ty, eq_gcd_p1)
-            },
-            &|d, j, ih| {
-                let h_fv = d.fresh_fvar();
-                let h = d.kernel().fvar(h_fv);
-                let sj = d.succ(j);
-                let hyp_ty = d.lt(sj, p_var);
-
-                // j < p, weakened from succ j < p.
-                let ssj = d.succ(sj);
-                let le_sj_ssj = d.lemma(p.le_succ, &[sj]); // Le sj ssj
-                let lt_j_p = d.lemma(p.le_trans, &[sj, ssj, p_var, le_sj_ssj, h]); // Le sj p_var = Lt j p_var
-                let ih_j = d.apply(ih, &[lt_j_p]); // Eq (gcd p_var (factorial j)) one
-
-                // gcd p_var (succ j) = 1, from coprime_of_lt_prime + coprime_symmetric.
-                let pos_sj = d.zero_lt_succ(j); // Lt zero sj
-                let cop_sj_p = d.lemma(p.coprime_of_lt_prime, &[p_var, sj, prime_hyp, pos_sj, h]); // Eq (gcd sj p_var) one
-                let cop_p_sj = d.lemma(p.coprime_symmetric, &[sj, p_var, cop_sj_p]); // Eq (gcd p_var sj) one
-
-                let fact_j = d.factorial(j);
-                let combined = d.lemma(
-                    p.coprime_mul_of_coprime,
-                    &[p_var, fact_j, sj, ih_j, cop_p_sj],
-                ); // Eq (gcd p_var (mul fact_j sj)) one
-
-                let fact_sj = d.factorial(sj);
-                let mul_factj_sj = d.mul(fact_j, sj);
-                let fact_succ_proof = d.lemma(p.factorial_succ, &[j]); // Eq fact_sj mul_factj_sj
-                let eq_rev = d.symm(fact_sj, mul_factj_sj, fact_succ_proof); // Eq mul_factj_sj fact_sj
-                let motive = d.eq_motive(mul_factj_sj, &|d, x| {
-                    let g = d.gcd(p_var, x);
-                    d.eq(g, one)
-                });
-                let result = d.transport(mul_factj_sj, motive, combined, fact_sj, eq_rev);
-
-                d.lam_fv(h_fv, hyp_ty, result)
-            },
-            n_var,
-        );
-
-        let proof = d.lam_fv(prime_fv, prime_ty, induction_proof);
-        (stmt, proof)
-    })?;
-    Ok(())
 }
 
 // ============================================================================
@@ -274,7 +181,7 @@ pub(super) fn declare_prime_coprime_desc_factorial_of_lt_of_le(
 /// hypothesis. `mp`: split `Nat.lt_or_ge n p`; the `Le p n` branch is the
 /// goal directly, and the `Lt n p` branch is refuted — `p ∣ n!` together
 /// with `p ∣ p` (`dvd_refl`) gives `p ∣ gcd p n!` (`dvd_gcd`), transported
-/// along `prime_coprime_factorial_of_lt` (`gcd p n! = 1`) into `p ∣ 1`,
+/// along `Nat.coprime_factorial_of_lt_prime` (`gcd p n! = 1`) into `p ∣ 1`,
 /// contradicting `prime_not_dvd_one`.
 ///
 /// # Errors
@@ -317,7 +224,7 @@ pub(super) fn declare_prime_dvd_factorial_iff_le(
                 let hl_fv = d.fresh_fvar();
                 let hl = d.kernel().fvar(hl_fv);
                 let cop = d.lemma(
-                    p.prime_coprime_factorial_of_lt,
+                    p.coprime_factorial_of_lt_prime,
                     &[p_var, n_var, prime_hyp, hl],
                 ); // Eq (gcd p_var fact_n) one
                 let dvd_p_p = d.lemma(p.dvd_refl, &[p_var]);
@@ -460,10 +367,11 @@ pub(super) fn declare_prime_dvd_or_dvd_of_dvd_lcm(
     Ok(())
 }
 
-/// Declare all five in this file, in the order the proofs above depend on
-/// each other: the factorial coprimality lemma first (the `iff` needs it),
-/// then the descFactorial mirror (independent), then the factorial `iff`,
-/// then the `lcm` `iff` and finally its forward-direction restatement.
+/// Declare all four in this file, in the order the proofs above depend on
+/// each other: the descFactorial mirror (independent), then the factorial
+/// `iff` (which consumes `gauss_lemma`'s
+/// `Nat.coprime_factorial_of_lt_prime`, admitted earlier in the build), then
+/// the `lcm` `iff` and finally its forward-direction restatement.
 ///
 /// # Errors
 ///
@@ -472,7 +380,6 @@ pub(super) fn declare_prime_dvd_factorial_lcm_all(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
 ) -> Result<(), KernelError> {
-    declare_prime_coprime_factorial_of_lt(d, p)?;
     declare_prime_coprime_desc_factorial_of_lt_of_le(d, p)?;
     declare_prime_dvd_factorial_iff_le(d, p)?;
     declare_prime_dvd_lcm_iff(d, p)?;

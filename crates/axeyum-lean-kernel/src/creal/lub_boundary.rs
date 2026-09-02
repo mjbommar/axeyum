@@ -12,9 +12,9 @@
 //! > computable … the unavailability is asserted, not proved.
 //!
 //! An asserted unavailability cannot fail, so it is not evidence — the same
-//! defect [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! defect [`CReal.evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //! (`creal/extreme_value.rs`) exists to remove for EVT, and
-//! [`CReal.ivt_exact_root_decides_sign`](super::CRealPrelude::ivt_exact_root_decides_sign)
+//! [`CReal.ivt_exact_root_decides_sign`](crate::IvtBoundaryNames::ivt_exact_root_decides_sign)
 //! (`creal/ivt_boundary.rs`) for IVT. This file makes LUB's assertion a
 //! theorem.
 //!
@@ -40,12 +40,12 @@
 //! family is machine-checked to lie inside LUB's hypothesis class rather than
 //! asserted to:
 //!
-//! - [`CReal.lubSet_inhabited`](super::CRealPrelude::lub_set_inhabited) —
+//! - [`CReal.lubSet_inhabited`](super::LubBoundaryNames::lub_set_inhabited) —
 //!   `∀ A, lubSet A zero`. Stated at the exhibited witness `0` rather than as
 //!   `∃ x, lubSet A x`, which is strictly stronger and is what a constructive
 //!   reading of "inhabited" demands (a *nonempty* set — one that is merely
 //!   not empty — would be the classical reading and would weaken the result).
-//! - [`CReal.lubSet_bounded`](super::CRealPrelude::lub_set_bounded) —
+//! - [`CReal.lubSet_bounded`](super::LubBoundaryNames::lub_set_bounded) —
 //!   `∀ A x, lubSet A x → le x one`. An explicit upper bound, again not an
 //!   `∃`.
 //!
@@ -159,10 +159,12 @@
 
 use super::convergence::{exists_elim, exists_ty};
 use super::{CRealPrelude, and_intro, cle, clt, creal_ty};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 /// Admit `CReal.lubSet`, its two hypothesis-class lemmas, and
@@ -183,7 +185,7 @@ pub(super) fn declare_lub_boundary(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
 
 /// `CReal.lubSet a x`.
 fn lub_set_at(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, x: ExprId) -> ExprId {
-    d.const_app(p.lub_set, &[a, x])
+    d.const_app(p.lub_boundary.lub_set, &[a, x])
 }
 
 /// The two disjuncts `lubSet a x` unfolds to: `(le x zero, And a (le x one))`.
@@ -245,7 +247,7 @@ fn declare_lub_set(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErro
         d.arrow(prop, inner)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.lub_set,
+        name: p.lub_boundary.lub_set,
         uparams: vec![],
         ty,
         value,
@@ -273,7 +275,7 @@ fn declare_lub_set_inhabited(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
     let value = d.lam_fv(a_fv, prop, member);
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.lub_set_inhabited,
+        name: p.lub_boundary.lub_set_inhabited,
         uparams: vec![],
         ty,
         value,
@@ -331,7 +333,7 @@ fn declare_lub_set_bounded(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ke
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.lub_set_bounded,
+        name: p.lub_boundary.lub_set_bounded,
         uparams: vec![],
         ty,
         value,
@@ -487,9 +489,82 @@ fn declare_lub_decides_em(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.lub_decides_em,
+        name: p.lub_boundary.lub_decides_em,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/lub_boundary.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LubBoundaryNames {
+    /// `CReal.lubSet : Prop -> CReal -> Prop := fun A x => Or (le x zero)
+    /// (And A (le x one))` -- the LUB counterexample family
+    /// (`creal/lub_boundary.rs`), the set `(-inf, 0] union ((-inf, 1] if A)`.
+    /// Classical supremum `1` when `A` holds and `0` when it does not, so
+    /// *where the supremum sits* IS the truth value of `A`.
+    ///
+    /// Spivak ch. 8's P13 quantifies over an ARBITRARY inhabited bounded-above
+    /// set, so a set carved out by an arbitrary `Prop` is faithful to the
+    /// classical statement rather than a strawman -- and it is exactly the
+    /// generalisation [`super::CRealPrelude::sup_on`] (a uniformly continuous function on a
+    /// compact interval, whose modulus supplies the locatedness) stops short
+    /// of.
+    pub lub_set: NameId,
+    /// `CReal.lubSet_inhabited : forall (A : Prop), lubSet A zero` -- classical
+    /// LUB's first hypothesis, **proved rather than asserted**, and at an
+    /// EXHIBITED witness rather than as an `Exists`. One [`super::CRealPrelude::le_refl`]
+    /// under `Or.inl`. See `creal/lub_boundary.rs`.
+    pub lub_set_inhabited: NameId,
+    /// `CReal.lubSet_bounded : forall (A : Prop) (x : CReal), lubSet A x ->
+    /// le x one` -- classical LUB's second hypothesis, **proved rather than
+    /// asserted**, and at an EXPLICIT bound rather than as an `Exists`. The
+    /// `x <= 0` disjunct reaches `1` through [`super::CRealPrelude::le_trans`] against
+    /// `0 <= 1`, the other by projection. See `creal/lub_boundary.rs`.
+    pub lub_set_bounded: NameId,
+    /// `CReal.lub_decides_em : forall (A : Prop) (s : CReal),
+    /// (forall x, lubSet A x -> le x s) ->
+    /// (forall t, lt t s -> Exists CReal (fun x => And (lubSet A x) (lt t x)))
+    /// -> Or A (Not A)` --
+    /// **ADR-0603 row 2 for the least upper bound property**, machine-checked
+    /// rather than asserted (`creal/lub_boundary.rs`).
+    ///
+    /// A supremum for [`super::LubBoundaryNames::lub_set`] -- in **Bishop's** sense, an upper
+    /// bound plus the approximation property, which is the constructive
+    /// definition and the one [`super::CRealPrelude::sup_on_approx_lub`] proves for the
+    /// located case -- yields `Or A (Not A)` for an ARBITRARY proposition.
+    /// That is UNRESTRICTED EXCLUDED MIDDLE, a strictly stronger boundary
+    /// than [`super::ExtremeValueNames::evt_attained_max_decides_sign`] and
+    /// [`crate::IvtBoundaryNames::ivt_exact_root_decides_sign`], which both land on analytic
+    /// LLPO (consistent with Bishop; this is not).
+    ///
+    /// One [`super::CRealPrelude::lt_cotrans`] call on the fixed strict pair
+    /// [`super::CRealPrelude::zero_lt_one`] at `z := s`: the `0 < s` branch reads `A` off the
+    /// approximation witness at `t := 0`, and the `s < 1` branch refutes `A`
+    /// because `A` would put `1` in the set. See that module's own
+    /// documentation, including its "Honest scope" section: this proves the
+    /// classical conclusion at least as strong as a decision principle this
+    /// kernel does not have, NOT that the principle is false.
+    pub lub_decides_em: NameId,
+}
+
+impl LubBoundaryNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            lub_set: kernel.name_str(creal, "lubSet"),
+            lub_set_inhabited: kernel.name_str(creal, "lubSet_inhabited"),
+            lub_set_bounded: kernel.name_str(creal, "lubSet_bounded"),
+            lub_decides_em: kernel.name_str(creal, "lub_decides_em"),
+        }
+    }
 }

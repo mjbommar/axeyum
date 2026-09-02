@@ -746,11 +746,12 @@ def describe(fact: dict, facts: dict[str, dict], show_unlocks: bool,
     return line
 
 
-def held_out_fact_ids() -> frozenset[str]:
-    """Fact ids in the nursery's blind HELD-OUT partition.
+def held_out_fact_ids(directory: Path | None = None) -> frozenset[str]:
+    """Fact ids in the nursery's blind HELD-OUT partition, read from EVERY
+    `nursery*.json` manifest under `directory` (default `AUTOGENESIS`).
 
-    These must never be closed by us. `artifacts/autogenesis/nursery-v1.json`
-    preregisters propositions into train / development / held-out, keyed by
+    These must never be closed by us. Each nursery manifest preregisters
+    propositions into train / development / held-out, keyed by
     `<family>:<statement-shape>` because a proof route for one member is
     evidence about its siblings -- so closing ONE spends the whole family.
     A capsule registered against a single held-out row once cost 19 of 76
@@ -763,18 +764,34 @@ def held_out_fact_ids() -> frozenset[str]:
     Nothing was spent, because each lane independently declined to flip the
     mirrors, but the queue said nothing either way.
 
+    Measured again 2026-09-01: this function used to read
+    `nursery-v1.json` ALONE. `nursery-v2-extension.json` (500 rows, 190
+    held-out) was preregistered 2026-08-29 and was invisible to it -- so
+    `--json` (which never even called this function; see
+    `build_machine_frontier`) reported a v2-extension held-out fact as
+    `admissible_via_contract` / `outcome: selected`
+    (docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md).
+    Delegating to `validate-producer-contracts.py`'s `held_out_fact_ids` --
+    the glob-reading authority `scripts/tests/test_validate_producer_contracts.py`
+    already pins -- means this reader and that one can never drift back
+    apart onto two different manifests.
+
     Degrades to an EMPTY set on any error: this annotates, it must never
     crash `just next`, and a missing warning is recoverable where a crashed
-    queue is not.
+    queue is not. The delegate itself already degrades per-manifest (a
+    missing or unparseable `nursery*.json` contributes nothing rather than
+    raising); this wraps the module load too, so a moved/renamed validator
+    script degrades the same way rather than crashing the queue.
     """
+    if directory is None:
+        # Read `ROOT` (not the `AUTOGENESIS` constant) at call time: a test
+        # that redirects `frontier.ROOT` to simulate a missing nursery must
+        # actually change where this looks, exactly as it always has.
+        directory = ROOT / "artifacts" / "autogenesis"
     try:
-        raw = json.loads((ROOT / "artifacts/autogenesis/nursery-v1.json").read_text())
-        return frozenset(
-            entry["fact_id"]
-            for entry in raw.get("entries", [])
-            if entry.get("partition") == "held-out"
-        )
-    except (OSError, ValueError, KeyError, TypeError):
+        module = contract_validator_module()
+        return module.held_out_fact_ids(directory)
+    except (OSError, ValueError, KeyError, TypeError, FrontierError):
         return frozenset()
 
 
@@ -846,6 +863,7 @@ def build_machine_frontier(
     registry: dict[str, Any] | None = None,
     contracts: list[dict[str, Any]] | None = None,
     declines: list[dict[str, Any]] | None = None,
+    held_out: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Build the content-addressed authoritative queue and selection refusal.
 
@@ -884,12 +902,28 @@ def build_machine_frontier(
     effect must not have a real, unrelated decline silently subtract from its
     `admissible_fact_ids`. `main()` and `verify_machine_frontier` load the
     real set explicitly (`load_decline_artifacts`).
+
+    `held_out=None` means AUTO-LOAD the real held-out partition from disk
+    (`held_out_fact_ids()`), on the SAME side of the asymmetry as `registry`,
+    deliberately -- never the `contracts=None`/`declines=None` side. The held-
+    out screen is a soundness/scope guard, not a capability a test isolates
+    away by omission: a caller that wants to test admission logic against a
+    held-out id must say so explicitly, by passing a `frozenset` that
+    contains it, exactly as `scripts/tests/test_fact_frontier.py` does. A
+    fact in `held_out` is excluded from `selection.admissible_fact_ids`
+    (reason `held-out-blind-evaluation-population`) however its route/
+    producer/gate signals read -- measured 2026-09-01: the JSON selection
+    path previously applied NO held-out screen at all, and reported a held-out
+    fact as `outcome: selected`
+    (docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md).
     """
     if registry is None:
         registry = load_operation_registry()
     else:
         validate_operation_registry(registry)
     operations = registry["operations"]
+    if held_out is None:
+        held_out = held_out_fact_ids()
 
     contract_module = contract_validator_module()
     if contracts is None:
@@ -1046,9 +1080,18 @@ def build_machine_frontier(
         producer_ok = op_ok or contract_ok
         route_ok = entry["route_class"] != "no-route"
         gate_ok = not entry["unreviewed_gate_mentions"] and not entry["stale_reviewed_gate_mentions"]
-        is_admissible = producer_ok and route_ok and gate_ok
+        # The held-out screen overrides every other signal: blind evaluation
+        # population is never admissible, however capable its route or
+        # producer would otherwise be (2026-09-01 finding, see the docstring
+        # above). Checked here, inside the SAME loop that decides admission,
+        # so a future admission arm cannot add a new path around it the way
+        # the JSON selection path silently did before this fix.
+        held_out_ok = entry["fact_id"] not in held_out
+        is_admissible = producer_ok and route_ok and gate_ok and held_out_ok
 
         reasons = []
+        if not held_out_ok:
+            reasons.append("held-out-blind-evaluation-population")
         if not route_ok:
             reasons.append("no-supported-route")
         if not producer_ok:
@@ -1149,6 +1192,14 @@ def build_machine_frontier(
     for _fact_id, contract_id in declined_pairs:
         declined_by_contract[contract_id] += 1
 
+    # 2026-09-01: the population the held-out screen (above) actually
+    # excluded from admission -- READY facts that are blind evaluation
+    # population, named for the same reason `declined_fact_ids` is named
+    # rather than silently dropped.
+    held_out_ready_fact_ids = sorted(
+        entry["fact_id"] for entry in considered if entry["fact_id"] in held_out
+    )
+
     artifact: dict[str, Any] = {
         "schema_version": 1,
         "kind": "axeyum-fact-frontier",
@@ -1217,9 +1268,30 @@ def build_machine_frontier(
             # the same treatment `no_route_ready_fact_ids` already gives
             # facts with no route at all (doc 288's precedent).
             "declined_fact_ids": declined_fact_ids,
+            # 2026-09-01: same treatment for held-out READY facts -- never
+            # silently excluded from `admissible_fact_ids`, always named. See
+            # the held-out screen in the admission loop above.
+            "held_out_ready_fact_ids": held_out_ready_fact_ids,
         },
         "diagnostics": {
             "ready_count": len(considered),
+            # The size of the whole blind-evaluation-population universe (not
+            # just the ready subset), read from EVERY `nursery*.json` manifest
+            # by `held_out_fact_ids()`. 2026-09-01: this used to be invisible
+            # to the JSON path entirely -- reading only `nursery-v1.json`'s 16
+            # rows in the one human-rendered call site that read it at all,
+            # missing `nursery-v2-extension.json`'s further 190. Confirm this
+            # against `python3 scripts/fact-frontier.py --json | jq
+            # '.diagnostics.held_out_fact_id_count'` whenever a new
+            # `nursery*.json` manifest is preregistered.
+            "held_out_fact_id_count": len(held_out),
+            # How many of the READY facts above were excluded from
+            # `admissible_fact_ids` specifically because they are held-out --
+            # i.e. `len(selection.held_out_ready_fact_ids)`, restated here so
+            # a reader scanning `diagnostics` alone (as `admissible_count`'s
+            # neighbours already assume) sees the screen fired without having
+            # to cross-reference `selection`.
+            "held_out_ready_count": len(held_out_ready_fact_ids),
             # Doc 291: `admissible_count` now correctly excludes a fact whose
             # only matching contract has a live decline against it -- before
             # this, it measured shape-match plus route-capability only, which

@@ -1809,7 +1809,7 @@ pub struct RatPrelude {
     /// `Rat.matInv2 : (Nat → Nat → Rat) → Nat → Nat → Rat`,
     /// `matInv2 A i j := invD * (adjugate entry)`, `invD := Rat.inv (det2 (A
     /// 0 0) (A 0 1) (A 1 0) (A 1 1))` — the adjugate-based 2×2 inverse taking
-    /// a GENERAL matrix `A` in [`super::matrix_n`]'s `Nat → Nat → Rat`
+    /// a GENERAL matrix `A` in `matrix_n`'s `Nat → Nat → Rat`
     /// encoding, not four separate scalars the way [`Self::det2`]/
     /// [`Self::inv2_top_left`] do. Bridges the fixed-size `det2`/`inv2`
     /// family into the symbolic-dimension `matMul`/`matId` family.
@@ -1964,7 +1964,7 @@ pub struct RatPrelude {
     /// Stated with the BOOLEAN `Nat.ble a b = true` rather than `Nat.le a b`
     /// so the successor step can invert it by ι-reduction:
     /// `ble (succ a') zero ≡ false`, so `b = 0` is discharged by
-    /// [`NatOps::false_true_elim`], and `ble (succ a') (succ b') ≡ ble a' b'`
+    /// [`NatOps::false_true_elim`](crate::NatOps::false_true_elim), and `ble (succ a') (succ b') ≡ ble a' b'`
     /// hands the induction hypothesis its premise with no bridging lemma.
     pub mat_skip_comm: NameId,
     /// `Rat.matMinor_col_comm : ∀ A i j a b, Nat.ble a b = true → ∀ r c,

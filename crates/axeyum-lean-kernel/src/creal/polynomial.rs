@@ -109,10 +109,12 @@
 
 use super::ring_helpers::right_distrib;
 use super::{CRealPrelude, creal_ty};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 /// Height for `CReal.polyEval`: above [`CRealPrelude::pow`]'s
@@ -244,7 +246,7 @@ fn declare_poly_eval(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
         d.arrow(fn_ty, over_n)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_eval,
+        name: p.polynomial.poly_eval,
         uparams: vec![],
         ty,
         value,
@@ -270,7 +272,7 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
         let x = d.kernel().fvar(x_fv);
 
         let zero_n = d.zero();
-        let lhs = d.const_app(p.poly_eval, &[c, zero_n, x]);
+        let lhs = d.const_app(p.polynomial.poly_eval, &[c, zero_n, x]);
         let zero_c = d.kernel().const_(p.zero, vec![]);
         let stmt_inner = creal_eq(d, p, lhs, zero_c);
         let proof_inner = creal_eq_refl(d, p, zero_c);
@@ -284,7 +286,7 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
             d.lam_fv(c_fv, fn_ty, inner)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.poly_eval_zero,
+            name: p.polynomial.poly_eval_zero,
             uparams: vec![],
             ty,
             value,
@@ -303,8 +305,8 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
         let x = d.kernel().fvar(x_fv);
 
         let sn = d.succ(n);
-        let lhs = d.const_app(p.poly_eval, &[c, sn, x]);
-        let prior = d.const_app(p.poly_eval, &[c, n, x]);
+        let lhs = d.const_app(p.polynomial.poly_eval, &[c, sn, x]);
+        let prior = d.const_app(p.polynomial.poly_eval, &[c, n, x]);
         let cn = d.apply(c, &[n]);
         let xn = d.const_app(p.pow, &[x, n]);
         let term_n = d.const_app(p.mul, &[cn, xn]);
@@ -323,7 +325,7 @@ fn declare_poly_eval_equations(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
             d.lam_fv(c_fv, fn_ty, over_n)
         };
         d.kernel().add_declaration(Declaration::Theorem {
-            name: p.poly_eval_succ,
+            name: p.polynomial.poly_eval_succ,
             uparams: vec![],
             ty,
             value,
@@ -365,7 +367,7 @@ fn declare_poly_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelErr
         d.arrow(fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_add,
+        name: p.polynomial.poly_add,
         uparams: vec![],
         ty,
         value,
@@ -420,7 +422,7 @@ fn declare_poly_eval_poly_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
+    let poly_add_cg = d.const_app(p.polynomial.poly_add, &[c, g]);
     let summand_added = poly_summand(d, p, poly_add_cg, x);
     let summand_c = poly_summand(d, p, c, x);
     let summand_g = poly_summand(d, p, g, x);
@@ -450,9 +452,9 @@ fn declare_poly_eval_poly_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
 
     let (_e, proof) = echain(d, p, start, &[(mid, h1), (final_rhs, h2)]);
 
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_add_cg, n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, n, x]);
-    let eval_g = d.const_app(p.poly_eval, &[g, n, x]);
+    let lhs_stmt = d.const_app(p.polynomial.poly_eval, &[poly_add_cg, n, x]);
+    let eval_c = d.const_app(p.polynomial.poly_eval, &[c, n, x]);
+    let eval_g = d.const_app(p.polynomial.poly_eval, &[g, n, x]);
     let rhs_stmt = d.const_app(p.add, &[eval_c, eval_g]);
     let stmt = equiv(d, p, lhs_stmt, rhs_stmt);
 
@@ -469,7 +471,7 @@ fn declare_poly_eval_poly_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         d.lam_fv(c_fv, fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_eval_poly_add,
+        name: p.polynomial.poly_eval_poly_add,
         uparams: vec![],
         ty,
         value,
@@ -508,7 +510,7 @@ fn declare_poly_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
         d.arrow(carrier, over_c)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_scale,
+        name: p.polynomial.poly_scale,
         uparams: vec![],
         ty,
         value,
@@ -540,7 +542,7 @@ fn declare_poly_eval_poly_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
     let x_fv = d.fresh_fvar();
     let x = d.kernel().fvar(x_fv);
 
-    let poly_scale_ac = d.const_app(p.poly_scale, &[a, c]);
+    let poly_scale_ac = d.const_app(p.polynomial.poly_scale, &[a, c]);
     let summand_scaled = poly_summand(d, p, poly_scale_ac, x);
     let summand_c = poly_summand(d, p, c, x);
     let scaled_summand = scaled_mul(d, p, a, summand_c);
@@ -571,8 +573,8 @@ fn declare_poly_eval_poly_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
 
     let (_e, proof) = echain(d, p, start, &[(mid, h1), (final_rhs, h2_symm)]);
 
-    let lhs_stmt = d.const_app(p.poly_eval, &[poly_scale_ac, n, x]);
-    let eval_c = d.const_app(p.poly_eval, &[c, n, x]);
+    let lhs_stmt = d.const_app(p.polynomial.poly_eval, &[poly_scale_ac, n, x]);
+    let eval_c = d.const_app(p.polynomial.poly_eval, &[c, n, x]);
     let rhs_stmt = d.const_app(p.mul, &[a, eval_c]);
     let stmt = equiv(d, p, lhs_stmt, rhs_stmt);
 
@@ -589,7 +591,7 @@ fn declare_poly_eval_poly_scale(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
         d.lam_fv(a_fv, carrier, over_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_eval_poly_scale,
+        name: p.polynomial.poly_eval_poly_scale,
         uparams: vec![],
         ty,
         value,
@@ -634,7 +636,7 @@ fn declare_poly_degree_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         d.arrow(fn_ty, over_n)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.poly_degree_lt,
+        name: p.polynomial.poly_degree_lt,
         uparams: vec![],
         ty,
         value,
@@ -644,7 +646,7 @@ fn declare_poly_degree_lt(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 
 /// `CReal.polyDegreeLt c n`, applied.
 fn poly_degree_lt_applied(d: &mut IntDev<'_>, p: CRealPrelude, f: ExprId, n: ExprId) -> ExprId {
-    d.const_app(p.poly_degree_lt, &[f, n])
+    d.const_app(p.polynomial.poly_degree_lt, &[f, n])
 }
 
 /// `CReal.polyDegreeLt_polyAdd : ∀ c g n, polyDegreeLt c n → polyDegreeLt g n
@@ -700,7 +702,7 @@ fn declare_poly_degree_lt_poly_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
 
     let degree_lt_c = poly_degree_lt_applied(d, p, c, n);
     let degree_lt_g = poly_degree_lt_applied(d, p, g, n);
-    let poly_add_cg = d.const_app(p.poly_add, &[c, g]);
+    let poly_add_cg = d.const_app(p.polynomial.poly_add, &[c, g]);
     let degree_lt_add = poly_degree_lt_applied(d, p, poly_add_cg, n);
 
     let value = {
@@ -719,7 +721,7 @@ fn declare_poly_degree_lt_poly_add(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
         d.pi_fv(c_fv, fn_ty, over_g)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_degree_lt_poly_add,
+        name: p.polynomial.poly_degree_lt_poly_add,
         uparams: vec![],
         ty,
         value,
@@ -798,9 +800,78 @@ fn declare_poly_degree_lt_poly_scale(
         d.pi_fv(a_fv, carrier, over_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.poly_degree_lt_poly_scale,
+        name: p.polynomial.poly_degree_lt_poly_scale,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/polynomial.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PolynomialNames {
+    /// `CReal.polyEval : (Nat → CReal) → Nat → CReal → CReal` — `polyEval c n
+    /// x := sumRange (fun i => mul (c i) (pow x i)) n`, sum of monomials, not
+    /// Horner. See `creal/polynomial.rs`'s module doc for why.
+    pub poly_eval: NameId,
+    /// `CReal.polyEval_zero : ∀ c x, Eq CReal (polyEval c Nat.zero x) zero`.
+    /// Closes by `Eq.refl` alone.
+    pub poly_eval_zero: NameId,
+    /// `CReal.polyEval_succ : ∀ c n x, Eq CReal (polyEval c (Nat.succ n) x)
+    /// (add (polyEval c n x) (mul (c n) (pow x n)))`. Closes by `Eq.refl`
+    /// alone.
+    pub poly_eval_succ: NameId,
+    /// `CReal.polyAdd : (Nat → CReal) → (Nat → CReal) → (Nat → CReal) := fun
+    /// c g i => add (c i) (g i)` — pointwise coefficient addition.
+    pub poly_add: NameId,
+    /// `CReal.polyEval_polyAdd : ∀ c g n x, Equiv (polyEval (polyAdd c g) n
+    /// x) (add (polyEval c n x) (polyEval g n x))` — evaluation is a
+    /// homomorphism from `(polyAdd, polyEval)` to `(add, ·)`, at one shared
+    /// bound `n` for both operands.
+    pub poly_eval_poly_add: NameId,
+    /// `CReal.polyScale : CReal → (Nat → CReal) → (Nat → CReal) := fun a c i
+    /// => mul a (c i)` — scaling every coefficient by a constant.
+    pub poly_scale: NameId,
+    /// `CReal.polyEval_polyScale : ∀ a c n x, Equiv (polyEval (polyScale a c)
+    /// n x) (mul a (polyEval c n x))` — evaluation is a homomorphism from
+    /// `(polyScale, polyEval)` to `(mul, ·)`.
+    pub poly_eval_poly_scale: NameId,
+    /// `CReal.polyDegreeLt : (Nat → CReal) → Nat → Prop := fun c n => ∀ i,
+    /// Nat.le n i → Equiv (c i) zero` — the honest stand-in for a *computed*
+    /// degree bound, ruled out by `CReal.Equiv`'s undecidability: a
+    /// **hypothesis** a caller supplies, never derived from `c`/`n` alone.
+    pub poly_degree_lt: NameId,
+    /// `CReal.polyDegreeLt_polyAdd : ∀ c g n, polyDegreeLt c n →
+    /// polyDegreeLt g n → polyDegreeLt (polyAdd c g) n` — preserved at the
+    /// same bound (no `Nat.max` is used or available in this kernel).
+    pub poly_degree_lt_poly_add: NameId,
+    /// `CReal.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
+    /// polyDegreeLt (polyScale a c) n`.
+    pub poly_degree_lt_poly_scale: NameId,
+}
+
+impl PolynomialNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            poly_eval: kernel.name_str(creal, "polyEval"),
+            poly_eval_zero: kernel.name_str(creal, "polyEval_zero"),
+            poly_eval_succ: kernel.name_str(creal, "polyEval_succ"),
+            poly_add: kernel.name_str(creal, "polyAdd"),
+            poly_eval_poly_add: kernel.name_str(creal, "polyEval_polyAdd"),
+            poly_scale: kernel.name_str(creal, "polyScale"),
+            poly_eval_poly_scale: kernel.name_str(creal, "polyEval_polyScale"),
+            poly_degree_lt: kernel.name_str(creal, "polyDegreeLt"),
+            poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
+            poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
+        }
+    }
 }

@@ -11,7 +11,8 @@
     "route",
     "recipe",
     "shape",
-    "non_examples"
+    "non_examples",
+    "sizing"
   ],
   "additionalProperties": false,
   "properties": {
@@ -106,6 +107,59 @@
             "description": "Which constraint the fact fails and why -- reviewed prose, not itself checked; the executable check is the predicate re-run against the fact."
           }
         }
+      }
+    },
+
+    "sizing": {
+      "type": "object",
+      "description": "ADR-1510 rule 1: the open population this contract is answerable for. A capability claim over an EMPTY population cannot be falsified by any dispatch, which makes it the same unfalsifiable object as an operation registry entry with no proof behind it -- the thing ADR-0602 exists to prevent one arrow upstream. `scripts/validate-producer-contracts.py` re-executes the shape predicate against the current ledger and rejects a contract whose LIVE population (open AND dependency-ready AND not held-out AND not an outcome-blind mutation fixture) is empty unless it carries `retirement`.",
+      "required": ["date", "ledger_sha256", "matched_open_ready_count"],
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "When the count below was taken."
+        },
+        "ledger_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "PROVENANCE, not a live check: sha256 over the canonical JSON of the sorted `[[fact_id, epistemic_status], ...]` list of the whole ledger (`ledger_digest` in the validator). It pins which ledger snapshot the count was taken over so the count can be re-derived rather than believed. It is deliberately NOT compared against the current ledger -- that would turn every unrelated fact edit into a red gate."
+        },
+        "matched_open_ready_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many live facts the shape matched at `date`. Must equal the length of `matched_open_ready_fact_ids` when that is present."
+        },
+        "matched_open_ready_fact_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^F:[a-z0-9]+(-[a-z0-9]+)*$" },
+          "uniqueItems": true,
+          "description": "The population itself. No entry may be a HELD-OUT nursery row (ADR-0542): a contract sized against blind evaluation population is claiming capability over facts it is forbidden to discharge. The partition is read from EVERY `artifacts/autogenesis/nursery*.json`, never from one file."
+        },
+        "frontier_query": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The command that produced the count, so a referee re-takes the measurement instead of inheriting it."
+        },
+        "note": { "type": "string", "minLength": 1 }
+      }
+    },
+
+    "retirement": {
+      "type": "object",
+      "description": "Present exactly when this contract's live population has emptied (ADR-1510 rule 1). Retirement preserves the record where deletion would destroy it: the contract and its decline artifacts are the honest account of a real experiment. The validator checks BOTH directions -- an exhausted contract without this block is rejected, and a contract carrying this block whose shape still matches live work is rejected too, so retirement cannot be used to silence the guard while real targets remain.",
+      "required": ["date", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "reason": { "type": "string", "minLength": 1 },
+        "superseded_by": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The `-vN` contract id that took over, when one exists."
+        },
+        "note": { "type": "string", "minLength": 1 }
       }
     },
 

@@ -55,5 +55,13 @@
     "target_theorem": "Int.modulus_modEq_zero",
     "artifact": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
     "note": "This decline stays accurate and is preserved unedited above: `crates/axeyum-lean-import/examples/modeq_family_operation.rs` via `axeyum_lean_import::producers::modeq_family::propose_modeq_family` genuinely cannot close this goal, for exactly the reason given (`TerminalNotClosed`: no hypothesis to run a combinator over). The fact was later admitted through a COMPLETELY DIFFERENT route that never invokes that producer or this contract: a new, hand-authored, unconditional kernel theorem. Int.modEq_add_mul_left : forall n a q, ModEq n (add (mul n q) a) a -- proved unconditionally in n by case_split on n's Int.rec shape (n=0 trivial via the emod-at-zero identity already in this development's zero convention; n=ofNat(succ k) via the EXISTING Int.modEq_iff_dvd bridge, which this decline correctly found gated at 0<n, applied at that one concrete positive shape rather than generally; n=negSucc k reduced to the positive case via the already-proved Int.modEq_neg_modulus/Int.emod_neg pair, not via any new magnitude bound). closed as a corollary of Int.modEq_add_mul_left at a := 0, q := 1, rewritten via Int.mul_one/Int.add_zero. No decline guard, contract, or producer was weakened or bypassed to reach this; propose_modeq_family still declines this exact goal identically today. See docs/autogenesis/293-int-modeq-unconditional-shift-family.md for the full account."
+  },
+  "resolution": {
+    "date": "2026-09-01",
+    "route": "kernel-lane",
+    "closed_by": "crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs",
+    "theorem": "Int.modEq_add_mul_left",
+    "diagnosis_status": "attested",
+    "note": "The lane that closed the fact recorded, in this artifact's own `amendment` block (preserved unedited), that the decline stays accurate: the producer genuinely cannot close this goal for the reason given, and the fact was admitted through a completely different route that never invokes the producer, this contract, or the import pipeline."
   }
 }

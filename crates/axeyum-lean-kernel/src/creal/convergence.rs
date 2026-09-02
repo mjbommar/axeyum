@@ -4,8 +4,8 @@
 //! ## What `completeness.rs` already supplies, and why this module does not
 //! reuse its shape verbatim
 //!
-//! [`CReal.RegularSeq`](super::CRealPrelude::regular_seq) and
-//! [`CReal.limit_dist`](super::CRealPrelude::limit_dist) already contain a
+//! [`CReal.RegularSeq`](super::CompletenessNames::regular_seq) and
+//! [`CReal.limit_dist`](super::CompletenessNames::limit_dist) already contain a
 //! notion of "converges": `limit_dist` proves, for `X`'s own Bishop limit,
 //! `Within (seq (X n) k − seq (limit X h) k) (2/(k+1) + 2/(n+1))` — a rate
 //! statement uniform in the *second* sampling index `k`. That shape is
@@ -14,7 +14,7 @@
 //! `X n` is *produced*) and is not a predicate relating an arbitrary
 //! `f : Nat → CReal` to an arbitrary `L : CReal`. This module builds that
 //! general predicate, in the same canonical-sample idiom
-//! [`CReal.RegularSeq`](super::CRealPrelude::regular_seq) already uses (compare
+//! [`CReal.RegularSeq`](super::CompletenessNames::regular_seq) already uses (compare
 //! `f n` against `L` at `f n`'s *own* index `n`, never through an arbitrary
 //! third index), and reduces to `limit_dist`'s shape when `f` and `L` are
 //! `X` and its own limit.
@@ -52,7 +52,7 @@
 //! bounding `f n`'s full representative-independent distance to `L` by
 //! `O(1/n)` are the same condition up to an additive constant that
 //! `equiv_of_bounded`-style reasoning never cares about — exactly the reading
-//! [`CReal.RegularSeq`](super::CRealPrelude::regular_seq)'s own module
+//! [`CReal.RegularSeq`](super::CompletenessNames::regular_seq)'s own module
 //! documentation gives for the identical move.
 //!
 //! ## `CReal.Cauchy`, and the shape [`converges_cauchy`] needs
@@ -64,7 +64,7 @@
 //! ```
 //!
 //! the natural two-index generalisation of
-//! [`CReal.RegularSeq`](super::CRealPrelude::regular_seq) to an unscaled
+//! [`CReal.RegularSeq`](super::CompletenessNames::regular_seq) to an unscaled
 //! modulus. [`converges_cauchy`] combines `Converges f L`'s bound at `m` and
 //! at `n` with `L`'s own regularity between `m` and `n`
 //! ([`CReal.regular`](super::CRealPrelude::regular)) — three quantities, not

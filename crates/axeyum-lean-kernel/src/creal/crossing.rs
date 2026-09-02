@@ -46,7 +46,7 @@
 //! `Exists.rec` is `Prop`-only and cannot produce a term whose type mentions
 //! the extracted witness (`docs/mathematics-2026-08/diary-exact-root-obstruction.md`
 //! is the standing reference), so `i0` cannot come from eliminating a proof
-//! of `∃ i, …`. [`CRealPrelude::crossing_index`] is a `Definition` — one
+//! of `∃ i, …`. [`CrossingNames::crossing_index`] is a `Definition` — one
 //! `CReal.bucketIndex` application on a rescaled argument, built the SAME
 //! way for every `a`, `c`, `Δ` — never a search and never an elimination.
 //!
@@ -88,6 +88,8 @@ use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{radd, rat_eq_rewrite, rmul, rneg, rone, rzero};
 
 use super::{CRealPrelude, creal_ty, sample};
+use crate::Kernel;
+use crate::name::NameId;
 
 // --- small local term builders (mirrors `ring_helpers.rs`'s own convention
 // of small per-module copies rather than reaching across a sibling module
@@ -306,7 +308,7 @@ fn embed_nonneg(d: &mut IntDev<'_>, p: CRealPrelude, r: ExprId, hr: ExprId) -> E
     d.lemma(p.of_rat_le, &[zero_rat, r, hr])
 }
 
-/// Admit [`CRealPrelude::crossing_index`]. See the module documentation for
+/// Admit [`CrossingNames::crossing_index`]. See the module documentation for
 /// the recipe and why it is a `Definition`, never an `Exists`-derived value.
 ///
 /// # Errors
@@ -337,7 +339,7 @@ fn declare_crossing_index(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         d.arrow(carrier, with_c)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.crossing_index,
+        name: p.crossing.crossing_index,
         uparams: vec![],
         ty,
         value,
@@ -345,7 +347,7 @@ fn declare_crossing_index(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
-/// Admit [`CRealPrelude::crossing_upper`]. See the module documentation for
+/// Admit [`CrossingNames::crossing_upper`]. See the module documentation for
 /// why this half needs only `0 < Δ`.
 ///
 /// # Errors
@@ -484,14 +486,14 @@ fn declare_crossing_upper(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         d.lam_fv(a_fv, carrier, with_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_upper,
+        name: p.crossing.crossing_upper,
         uparams: vec![],
         ty,
         value,
     })
 }
 
-/// Admit [`CRealPrelude::crossing_lower`]. See the module documentation for
+/// Admit [`CrossingNames::crossing_lower`]. See the module documentation for
 /// why this half genuinely needs `a ≤ c` (unlike
 /// [`declare_crossing_upper`]).
 ///
@@ -663,7 +665,7 @@ fn declare_crossing_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
         d.lam_fv(a_fv, carrier, with_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_lower,
+        name: p.crossing.crossing_lower,
         uparams: vec![],
         ty,
         value,
@@ -707,7 +709,7 @@ fn shift_le_of_nonneg(
     // : le x (add x w)
 }
 
-/// Admit [`CRealPrelude::crossing_sample_ge_a`]. See that field's own doc
+/// Admit [`CrossingNames::crossing_sample_ge_a`]. See that field's own doc
 /// comment for the statement and scope: `samplePt := a + ofNat(crossingIndex
 /// a c delta)·ofRat(delta)` never falls below its own base point `a`, needing
 /// only `0 < Δ`. The SAME `sample_term`/`sample_point` shape
@@ -761,7 +763,7 @@ fn declare_crossing_sample_ge_a(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
         d.lam_fv(a_fv, carrier, with_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_sample_ge_a,
+        name: p.crossing.crossing_sample_ge_a,
         uparams: vec![],
         ty,
         value,
@@ -876,7 +878,7 @@ fn of_nat_succ_equiv_local(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> Ex
 // order in the inner `mul`) so a future caller relating this file's output
 // to a `riemannSum` term needs no extra commuting step.
 
-/// Admit [`CRealPrelude::crossing_sample_upper`]: `∀ a c Δ, Rat.lt Rat.zero
+/// Admit [`CrossingNames::crossing_sample_upper`]: `∀ a c Δ, Rat.lt Rat.zero
 /// Δ → CReal.le c (add (sample_point a Δ (crossingIndex a c Δ)) (add Δ (mul
 /// Δ (ofRat (Rat.natDivSucc 2 j)))))`, `j` the same closed term
 /// `crossingUpper` itself samples at (`(succ 0)*(succ 0)`, definitionally
@@ -923,7 +925,7 @@ fn declare_crossing_sample_upper(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     let a_rhs_scaled = cadd(d, p, a, rhs_scaled);
 
     // `hu : CReal.le c a_rhs_scaled` — `crossing_upper` cited as a lemma.
-    let hu = d.lemma(p.crossing_upper, &[a, c, delta, hpos]);
+    let hu = d.lemma(p.crossing.crossing_upper, &[a, c, delta, hpos]);
 
     let of_nat_i0 = d.const_app(p.of_nat, &[scaled.i0]);
     let embed_succ_i0 = embed(d, p, succ_i0_over_1);
@@ -1106,14 +1108,14 @@ fn declare_crossing_sample_upper(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
         d.lam_fv(a_fv, carrier, with_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_sample_upper,
+        name: p.crossing.crossing_sample_upper,
         uparams: vec![],
         ty,
         value,
     })
 }
 
-/// Admit [`CRealPrelude::crossing_sample_lower`]: `∀ a c Δ, Rat.lt Rat.zero
+/// Admit [`CrossingNames::crossing_sample_lower`]: `∀ a c Δ, Rat.lt Rat.zero
 /// Δ → CReal.le a c → CReal.le (add (sample_point a Δ (crossingIndex a c Δ))
 /// (mul Δ (ofRat (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
 /// [`declare_crossing_sample_upper`], simpler because `crossingLower`'s own
@@ -1162,7 +1164,7 @@ fn declare_crossing_sample_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     let a_lhs_scaled = cadd(d, p, a, lhs_scaled);
 
     // `hl : CReal.le a_lhs_scaled c` — `crossing_lower` cited as a lemma.
-    let hl = d.lemma(p.crossing_lower, &[a, c, delta, hpos, hac]);
+    let hl = d.lemma(p.crossing.crossing_lower, &[a, c, delta, hpos, hac]);
 
     let of_nat_i0 = d.const_app(p.of_nat, &[scaled.i0]);
     let embed_i0_over_1 = embed(d, p, i0_over_1);
@@ -1264,7 +1266,7 @@ fn declare_crossing_sample_lower(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
         d.lam_fv(a_fv, carrier, with_c)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_sample_lower,
+        name: p.crossing.crossing_sample_lower,
         uparams: vec![],
         ty,
         value,
@@ -1457,7 +1459,7 @@ fn sample_slack(
     }
 }
 
-/// Admit [`CRealPrelude::crossing_close`]. See that field's own doc comment
+/// Admit [`CrossingNames::crossing_close`]. See that field's own doc comment
 /// for the exact statement and for what this does NOT derive (the
 /// Archimedean smallness of the two slacks from a mesh count, and
 /// `samplePt`'s own domain membership) — both are explicit hypotheses here.
@@ -1530,9 +1532,9 @@ pub(super) fn declare_crossing_close(
 
     // --- the proof body -------------------------------------------------
 
-    let hu_sample = d.lemma(p.crossing_sample_upper, &[a, c, delta, hpos]);
+    let hu_sample = d.lemma(p.crossing.crossing_sample_upper, &[a, c, delta, hpos]);
     // hu_sample : le c (add samplePt slackUpper)
-    let hl_sample = d.lemma(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+    let hl_sample = d.lemma(p.crossing.crossing_sample_lower, &[a, c, delta, hpos, hac]);
     // hl_sample : le (add samplePt slackLower) c
 
     let neg_sample_pt = cneg(d, p, slack.sample_pt);
@@ -1603,7 +1605,7 @@ pub(super) fn declare_crossing_close(
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_close,
+        name: p.crossing.crossing_close,
         uparams: vec![],
         ty,
         value,
@@ -1618,7 +1620,7 @@ pub(super) fn declare_crossing_close(
 //
 // `min_le_right` gives `clampedPt ≤ b` unconditionally, no case split. `a ≤
 // clampedPt` follows from `le_min` applied to `a ≤ samplePt`
-// ([`CRealPrelude::crossing_sample_ge_a`]) and `a ≤ b` (`le_trans hac hcb`).
+// ([`CrossingNames::crossing_sample_ge_a`]) and `a ≤ b` (`le_trans hac hcb`).
 // The closeness bound survives the substitution too, via the SAME `le_min`
 // move applied to `c − bound_embed`: showing `c − bound_embed ≤ samplePt`
 // (from `crossingSampleUpper` widened by `h_upper`) and `c − bound_embed ≤
@@ -1728,7 +1730,7 @@ pub(super) fn le_add_of_le_sub_right(
     d.lemma(p.le_congr, &[lhs, x, rhs, rhs, cancel, refl_rhs, step1])
 }
 
-/// Admit [`CRealPrelude::crossing_close_clamped`]. See the module
+/// Admit [`CrossingNames::crossing_close_clamped`]. See the module
 /// documentation section just above and that field's own doc comment for
 /// the statement and for why both domain-membership hypotheses
 /// [`declare_crossing_close`] needs (`a ≤ samplePt`, `samplePt ≤ b`) are
@@ -1797,15 +1799,15 @@ pub(super) fn declare_crossing_close_clamped(
 
     // --- the proof body -------------------------------------------------
 
-    let hu_sample = d.lemma(p.crossing_sample_upper, &[a, c, delta, hpos]);
+    let hu_sample = d.lemma(p.crossing.crossing_sample_upper, &[a, c, delta, hpos]);
     // hu_sample : le c (add samplePt slackUpper)
-    let hl_sample = d.lemma(p.crossing_sample_lower, &[a, c, delta, hpos, hac]);
+    let hl_sample = d.lemma(p.crossing.crossing_sample_lower, &[a, c, delta, hpos, hac]);
     // hl_sample : le (add samplePt slackLower) c
 
     // --- domain membership: `a ≤ clampedPt` and `clampedPt ≤ b`, both
     // unconditional on the mesh, no case split -----------------------------
 
-    let a_le_samplept = d.lemma(p.crossing_sample_ge_a, &[a, c, delta, hpos]);
+    let a_le_samplept = d.lemma(p.crossing.crossing_sample_ge_a, &[a, c, delta, hpos]);
     let a_le_b = d.lemma(p.le_trans, &[a, c, b, hac, hcb]);
     let hap_clamped = d.lemma(p.le_min, &[slack.sample_pt, b, a, a_le_samplept, a_le_b]);
     let hpb_clamped = d.lemma(p.min_le_right, &[slack.sample_pt, b]);
@@ -1963,7 +1965,7 @@ pub(super) fn declare_crossing_close_clamped(
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_close_clamped,
+        name: p.crossing.crossing_close_clamped,
         uparams: vec![],
         ty,
         value,
@@ -1974,11 +1976,11 @@ pub(super) fn declare_crossing_close_clamped(
 // whole-sum bound (`integral.rs`'s SEVENTH 2026-08-27 module doc entry) --
 // [`declare_crossing_close_clamped`] specialized at `c := ptI`, an ordinary
 // Riemann-sum sample point, RESTRICTED to a rational `deltaAc` -- see
-// [`CRealPrelude::crossing_sample_pairing_close`]'s own doc comment for why
+// [`CrossingNames::crossing_sample_pairing_close`]'s own doc comment for why
 // the restriction is load-bearing (`crossingIndex`'s step is `Rat`, not
 // `CReal`) and precisely what would be needed to lift it. -----------------
 
-/// Admit [`CRealPrelude::crossing_sample_pairing_close`]. See that field's
+/// Admit [`CrossingNames::crossing_sample_pairing_close`]. See that field's
 /// own doc comment for the statement and for the general (non-rational
 /// `deltaAc`) case this does NOT attempt.
 ///
@@ -2063,7 +2065,7 @@ pub(super) fn declare_crossing_sample_pairing_close(
     // at `c := pt_i`, `delta := delta_ac` -----------------------------------
 
     let proof_body = d.lemma(
-        p.crossing_close_clamped,
+        p.crossing.crossing_close_clamped,
         &[
             f, a, b, pt_i, delta_ac, e, u, hpos, hai, hib, h_upper, h_lower,
         ],
@@ -2106,9 +2108,211 @@ pub(super) fn declare_crossing_sample_pairing_close(
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.crossing_sample_pairing_close,
+        name: p.crossing.crossing_sample_pairing_close,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/crossing.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CrossingNames {
+    /// `CReal.crossingIndex : CReal → CReal → Rat → Nat` — the Archimedean
+    /// **crossing index**: given a base `a`, a target `c` and a positive
+    /// rational step `Δ`, the computed count of `Δ`-steps from `a` at which
+    /// `c` is reached, within a small fixed slack. `crossingIndex a c delta
+    /// := bucketIndex (mul (ofRat (Rat.inv delta)) (add c (neg a))) 0` —
+    /// rescale `c − a` by `Δ⁻¹` and read [`super::CRealPrelude::bucket_index`] at the FIXED
+    /// grid `k := 0` (step `1`), reducing an arbitrary step to the one
+    /// `bucketIndex` already handles. Computed, never `Exists`-derived. See
+    /// `creal/crossing.rs`.
+    pub crossing_index: NameId,
+    /// `CReal.crossingUpper : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le c (CReal.add a (CReal.mul (CReal.ofRat delta) (CReal.ofRat
+    /// (Rat.add (Rat.natDivSucc (Nat.succ (CReal.crossingIndex a c delta)) 0)
+    /// (Rat.natDivSucc 2 j)))))`, `j` the closed term `bucketIndex` samples
+    /// at when `k = 0` (`(succ 0)*(succ 0)`, definitionally `1`).
+    ///
+    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all.** Both
+    /// `bucketIndexFloorUpper` and `bucketClampUpper` are unconditional, and
+    /// scaling a `CReal.le` fact by a positive rational preserves it
+    /// regardless of `c − a`'s sign. See `creal/crossing.rs`.
+    pub crossing_upper: NameId,
+    /// `CReal.crossingLower : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a c → CReal.le (CReal.add a (CReal.mul (CReal.ofRat delta)
+    /// (CReal.ofRat (Rat.sub (Rat.natDivSucc (CReal.crossingIndex a c delta)
+    /// 0) (Rat.natDivSucc 3 j))))) c`.
+    ///
+    /// **Genuinely needs `a ≤ c`** (unlike [`super::CrossingNames::crossing_upper`]):
+    /// `bucketClampLower`'s hypothesis is `0 ≤` the value being bucketed —
+    /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
+    /// the two nonnegative factors. See `creal/crossing.rs`.
+    pub crossing_lower: NameId,
+    /// `CReal.crossingSampleGeA : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a (CReal.add a (CReal.mul (CReal.ofNat (CReal.crossingIndex a
+    /// c delta)) (CReal.ofRat delta)))` — `samplePt` (the SAME closed term
+    /// [`super::CrossingNames::crossing_sample_upper`]/[`super::CrossingNames::crossing_sample_lower`] use)
+    /// never falls BELOW its own base point `a`.
+    ///
+    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all**, unlike
+    /// [`super::CrossingNames::crossing_lower`]: `crossingIndex` embeds as a nonnegative
+    /// `Nat` regardless of `c`'s position, and `Δ > 0` makes the product
+    /// nonnegative too, via [`super::CRealPrelude::mul_nonneg`] — the same shape
+    /// `integral.rs`'s `riemannSum_sample_in_bounds` already proves for an
+    /// ordinary mesh sample. This is HALF of `crossingClose`'s domain
+    /// membership hypothesis pair; the other half, `samplePt ≤ b`, is
+    /// discharged nowhere in this prelude — see `creal/integral.rs`'s
+    /// 2026-08-27 module doc entries (the fifth: it is not a `+3`-slack
+    /// artifact of [`super::CRealPrelude::bucket_index_bound`] and cannot be fixed by
+    /// tightening that bound, however far). See `creal/crossing.rs`.
+    pub crossing_sample_ge_a: NameId,
+    /// `CReal.crossingSampleUpper : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le c (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
+    /// (CReal.crossingIndex a c delta)) delta)) (CReal.add delta (CReal.mul
+    /// delta (CReal.ofRat (Rat.natDivSucc 2 j)))))` — [`super::CrossingNames::crossing_upper`]
+    /// restated against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
+    /// (`integral.rs`'s own `sample_point` shape) rather than the raw
+    /// rational bound `crossingUpper` computes internally: `c` is within a
+    /// fixed slack (unreduced here, but equal to `2Δ`) ABOVE the coarse
+    /// mesh's `crossingIndex`-th sample point. See `creal/crossing.rs`.
+    pub crossing_sample_upper: NameId,
+    /// `CReal.crossingSampleLower : ∀ a c delta, Rat.lt Rat.zero delta →
+    /// CReal.le a c → CReal.le (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
+    /// (CReal.crossingIndex a c delta)) delta)) (CReal.mul delta (CReal.ofRat
+    /// (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
+    /// [`super::CrossingNames::crossing_sample_upper`]: `c` is no more than a fixed slack
+    /// (`1.5Δ`, left as `Δ·(negative rational)` rather than rewritten to
+    /// `neg(Δ·positive)`) BELOW the same sample point. See
+    /// `creal/crossing.rs`.
+    pub crossing_sample_lower: NameId,
+    /// `CReal.crossingClose : ∀ F a b c delta e (u : UniformlyContinuousOn F
+    /// a b), Rat.lt Rat.zero delta → CReal.le a c → CReal.le c b → CReal.le a
+    /// samplePt → CReal.le samplePt b → CReal.le slackUpper (CReal.ofRat
+    /// (Rat.natDivSucc 1 (UniformlyContinuousOn.modulus F a b u e))) →
+    /// CReal.le (CReal.neg slackLower) (CReal.ofRat (Rat.natDivSucc 1
+    /// (UniformlyContinuousOn.modulus F a b u e))) → CReal.le (CReal.abs
+    /// (CReal.add (F c) (CReal.neg (F samplePt)))) (CReal.ofRat
+    /// (Rat.natDivSucc 1 e))`, `samplePt`/`slackUpper`/`slackLower` the SAME
+    /// closed terms [`super::CrossingNames::crossing_sample_upper`]/
+    /// [`super::CrossingNames::crossing_sample_lower`] place `c` within.
+    ///
+    /// The analytic half of the cross-width Riemann comparison's single
+    /// block: `F(c)` is close to `F` at the coarse mesh's crossing-index
+    /// sample point, PROVIDED the two crossing slacks (`≈2Δ`, `≈1.5Δ`) are
+    /// already within `UniformlyContinuousOn`'s modulus at accuracy `e`.
+    /// Does **not** derive that Archimedean smallness from a mesh count, nor
+    /// `samplePt`'s own domain membership — both are explicit hypotheses
+    /// here. The first is now DISCHARGEABLE in general via
+    /// [`super::CRealPrelude::mesh_scaled_le_of_ge`] (not yet wired into this theorem's own
+    /// statement). The second remains open, and is NOT merely unattempted —
+    /// `integral.rs`'s third 2026-08-27 module doc entry works through the
+    /// natural reading of "a mesh count `m`" for this theorem's `Rat`-typed
+    /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
+    /// alone without also bounding the interval's own Archimedean constant,
+    /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
+    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all five —
+    /// the fourth tests and REFUTES, with an exact worked bound, the
+    /// hypothesis that fixing `[a,b]` (so `magnitude` is a known constant)
+    /// rescues this via `bucket_index_bound`'s `+4` slack; the fifth then
+    /// builds the tighter, purpose-built `crossingIndex` bound the fourth
+    /// called for — a genuine, ZERO-excess replacement — and shows it STILL
+    /// does not rescue `samplePt ≤ b`, because the real obstruction is
+    /// `CReal.bound`'s own non-tight over-estimate of `b − a`
+    /// (`magnitude`), independent of `crossingIndex`'s tightness, plus
+    /// `crossingLower`'s own already-fixed `1.5Δ` closeness slack). Still
+    /// open, and not reachable by any further `crossingIndex`-side
+    /// tightening — [`super::CrossingNames::crossing_sample_ge_a`] discharges the OTHER half
+    /// of this pair (`a ≤ samplePt`, unconditionally on `0 < Δ`).
+    pub crossing_close: NameId,
+    /// `CReal.crossingCloseClamped : ...` -- `crossingClose` with `samplePt`
+    /// replaced by `clampedPt := CReal.min samplePt b`.
+    ///
+    /// Both domain-membership hypotheses `crossingClose` needs (`a <=
+    /// samplePt`, `samplePt <= b`) are GONE from this statement, discharged
+    /// by construction rather than assumed: `clampedPt <= b` is
+    /// `min_le_right`, unconditional; `a <= clampedPt` is `le_min` applied
+    /// to `crossingSampleGeA` (`a <= samplePt`) and `a <= b` (`le_trans` on
+    /// the two hypotheses this theorem already carries). `samplePt <= b` is
+    /// not itself provable (per `integral.rs`'s 2026-08-27 module doc
+    /// entries), but the theorem never needed `samplePt` un-clamped --
+    /// clamping into range costs nothing (`min` is fully constructive, no
+    /// comparison decided) and the closeness bound survives the
+    /// substitution via the SAME `le_min` move applied to `c - bound_embed`:
+    /// `c - bound_embed <= samplePt` (from `crossingSampleUpper` widened by
+    /// the `h_upper` hypothesis) and `c - bound_embed <= b` (from `hcb`
+    /// widened by `le_add_of_nonneg`) give, by `le_min`, `c - bound_embed <=
+    /// clampedPt`, and adding `bound_embed` back gives the upper half
+    /// `abs_le` needs. The lower half needs no `le_min` at all: `clampedPt
+    /// <= samplePt` (`min_le_left`) transfers `crossingSampleLower`'s
+    /// existing bound on `c - samplePt` up to `c - clampedPt` by plain
+    /// transitivity, no case split anywhere. See `creal/crossing.rs`.
+    pub crossing_close_clamped: NameId,
+    /// `CReal.riemannSampleCrossingClose : ∀ F a b (u : UniformlyContinuousOn
+    /// F a b) stepAb i deltaAc e, Rat.lt Rat.zero deltaAc → CReal.le a ptI →
+    /// CReal.le ptI b → CReal.le slackUpper bound → CReal.le (CReal.neg
+    /// slackLower) bound → CReal.le (CReal.abs (CReal.add (F ptI) (CReal.neg
+    /// (F clampedPt)))) (CReal.ofRat (Rat.natDivSucc 1 e))`, where `ptI := a +
+    /// (ofNat i)·stepAb` is an ORDINARY Riemann-sum sample point (`stepAb` an
+    /// arbitrary `CReal`, not necessarily `riemannSum`'s own mesh step) and
+    /// `clampedPt`/`slackUpper`/`slackLower` are [`super::CrossingNames::crossing_close_clamped`]'s
+    /// own terms at `c := ptI`, `delta := deltaAc`.
+    ///
+    /// `integral.rs`'s SEVENTH 2026-08-27 module doc entry's proposed
+    /// term-pairing lemma — literally [`super::CrossingNames::crossing_close_clamped`]
+    /// specialized at `c := ptI` — **restricted to the one case that
+    /// type-checks against this file's existing machinery**: `crossingIndex`
+    /// (hence `crossingCloseClamped`) takes its step as a `Rat`, not a
+    /// `CReal` (`declare_crossing_index`'s `delta` parameter is `rat_ty_`
+    /// itself, not `creal_ty`). The natural cross-mesh step for an ARBITRARY
+    /// split point `c`, `deltaAc := (c−a)·ofRat(natDivSucc 1 m_ac)`, is
+    /// `CReal`-valued whenever `c−a` is not itself rational — the same "not a
+    /// computable rational multiple" fact `integral.rs`'s module doc already
+    /// names, sharpened here to the exact type-level obstruction: this
+    /// theorem is only USABLE when the caller already has a **rational**
+    /// `deltaAc` in hand (e.g. `c := a + ofRat q` for some `Rat q`, giving
+    /// `deltaAc := q·natDivSucc(1,m_ac)`, itself `Rat`), not for a fully
+    /// general `CReal c`.
+    ///
+    /// The only `CReal`-level inverse in this prelude,
+    /// [`super::CRealPrelude::inv`] `(x : CReal) (k : Nat) (h : PosBound x k) : CReal`,
+    /// could in principle build `(c−a)⁻¹` given an explicit positivity
+    /// witness, but none of `crossing.rs`'s internal recipe (`build_scaled`,
+    /// `scale_cancels`, the four `bucketIndex` closeness lemmas'
+    /// composition) is stated against it — it is hard-wired to `Rat.inv`.
+    /// Pre-rescaling `ptI` by `(c−a)⁻¹` before calling `crossingIndex` (so
+    /// `crossingIndex` itself only ever sees a plain `Rat` delta) is possible
+    /// in principle, but translating the resulting NORMALIZED-coordinate
+    /// closeness bound back into a bound on `|ptI − ptAc(j(i))|` in ORIGINAL
+    /// units needs multiplying back through by the `CReal` factor `(c−a)`,
+    /// which is a REAL (not `Nat`, unlike [`super::CRealPrelude::mesh_scaled_le_of_ge`])
+    /// scaling step with no existing lemma covering it — a second gap on top
+    /// of `crossingCloseClamped`'s own already-flagged ones. See
+    /// `creal/crossing.rs`.
+    pub crossing_sample_pairing_close: NameId,
+}
+
+impl CrossingNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            crossing_index: kernel.name_str(creal, "crossingIndex"),
+            crossing_upper: kernel.name_str(creal, "crossingUpper"),
+            crossing_lower: kernel.name_str(creal, "crossingLower"),
+            crossing_sample_ge_a: kernel.name_str(creal, "crossingSampleGeA"),
+            crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
+            crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
+            crossing_close: kernel.name_str(creal, "crossingClose"),
+            crossing_close_clamped: kernel.name_str(creal, "crossingCloseClamped"),
+            crossing_sample_pairing_close: kernel.name_str(creal, "riemannSampleCrossingClose"),
+        }
+    }
 }
