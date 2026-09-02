@@ -507,6 +507,15 @@ use xor_trichotomy::declare_xor_trichotomy_all;
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels. All fields are public so callers can build `Const` terms
 /// (`k.const_(nat.add, vec![])`) directly.
+// The `Debug` derive, not the struct: `#[derive(Debug)]` lowers to
+// `Formatter::debug_struct_fields_finish`, which takes the field values as a
+// `&[&dyn Debug; N]` -- N FAT pointers, 16 bytes each. That array crossed
+// clippy's 16 KiB local-array ceiling when this table passed 1024 fields
+// (measured 2026-09-02: 1021 fields warned nothing, 1040 warns). The struct
+// itself is 4 bytes per field (`NameId` is a `u32`), so the `Copy` this table
+// is passed around by is ~4 KiB, not 16; the 16 KiB frame exists only inside a
+// `{:?}` call, which nothing here does on a hot path.
+#[allow(clippy::large_stack_arrays)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NatPrelude {
     /// The embedded logical prelude (`False`, `Not`, `Eq`, `Exists`, `Nat`, …).

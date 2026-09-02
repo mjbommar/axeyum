@@ -99,6 +99,7 @@ fn from_false(d: &mut NatDev<'_>, p: &NatPrelude, false_proof: ExprId, target: E
 }
 
 /// `Or.rec` at a `Prop` goal.
+#[allow(clippy::too_many_arguments)]
 fn or_cases(
     d: &mut NatDev<'_>,
     p: &NatPrelude,

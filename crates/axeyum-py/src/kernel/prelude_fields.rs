@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1021 names,
+/// The `NatPrelude` field table (1040 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1365,6 +1365,31 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("multiset_eq_below_comm", p.multiset_eq_below_comm),
             ("multiset_beq_refl", p.multiset_beq_refl),
             ("multiset_beq_comm", p.multiset_beq_comm),
+            ("prod_range_congr", p.prod_range_congr),
+            ("prod_range_mul", p.prod_range_mul),
+            ("prod_range_add_of_one_above", p.prod_range_add_of_one_above),
+            ("multiset_prod_add", p.multiset_prod_add),
+            ("min_fac_aux_two_le", p.min_fac_aux_two_le),
+            ("min_fac_aux_dvd", p.min_fac_aux_dvd),
+            ("min_fac_two_le", p.min_fac_two_le),
+            ("min_fac_dvd", p.min_fac_dvd),
+            ("min_fac_prime", p.min_fac_prime),
+            ("prod_range_eq_one_of_below", p.prod_range_eq_one_of_below),
+            (
+                "multiset_count_singleton_self",
+                p.multiset_count_singleton_self,
+            ),
+            (
+                "multiset_count_singleton_of_ne",
+                p.multiset_count_singleton_of_ne,
+            ),
+            ("multiset_prod_singleton", p.multiset_prod_singleton),
+            ("factorization_aux", p.factorization_aux),
+            ("factorization", p.factorization),
+            ("prod_factorization_aux", p.prod_factorization_aux),
+            ("prod_factorization", p.prod_factorization),
+            ("factorization_aux_prime", p.factorization_aux_prime),
+            ("factorization_prime", p.factorization_prime),
         ],
         lists: Vec::new(),
     }
