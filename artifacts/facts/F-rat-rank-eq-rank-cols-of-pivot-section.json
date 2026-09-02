@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-eq-rank-cols-of-pivot-section",
+  "title": "The row rank and the column rank of a rational matrix agree, given one property of the echelon form",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and all dimensions rows, cols, IF the section hypothesis holds for the row-echelon form of M, THEN Rat.rank M rows cols = Rat.rankCols M rows cols -- the number of NONZERO ROWS of the echelon form equals the number of its PIVOT COLUMNS. The SECTION HYPOTHESIS is: for every row r below rows whose leading index in E := Rat.rowEchelon M rows cols is below cols (that is, Rat.nonzeroRowB E cols r = true), Rat.pivotRowOfCol E rows cols (Rat.pivotColOfRow E cols r) = r -- in words, the FIRST row whose leading index equals row r's leading index is r itself. It is the weakest form of ADR-1554 obligation 4 (rowEchelon_isEchelon) that the bridge consumes: it says nothing about zero rows sitting last, only that no earlier nonzero row shares a nonzero row's leading index. This is the bridge ADR-1558 left open, and it closes modulo that single statement. The proof is one application of Nat.countRange_bij (the cross-bound counting law) with the COLUMNS as the left-hand count: p := Rat.isPivotColB E rows cols over [0, cols), q := Rat.nonzeroRowB E cols over [0, rows), sigma := Rat.pivotRowOfCol E rows cols, tau := Rat.pivotColOfRow E cols. That orientation is the finding. It makes the counting law's INJECTIVITY hypothesis free -- apply the leading index to both sides of sigma c1 = sigma c2 and each side is its own column, by Rat.leadingIndex_pivotRowOfCol -- whereas the opposite orientation needs injectivity of the leading index on the nonzero rows, which IS obligation 4. Four and a half of the five hypotheses are then discharged from properties of the two SEARCHES alone, with no property of echelon form used.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_eq_rankCols_of_pivotSection : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x1) -> ((x5 : Eq.{1} Bool (Rat.nonzeroRowB (Rat.rowEchelon x0 x1 x2) x2 x3) Bool.true) -> Eq.{1} AxNat (Rat.pivotRowOfCol (Rat.rowEchelon x0 x1 x2) x1 x2 (Rat.pivotColOfRow (Rat.rowEchelon x0 x1 x2) x2 x3)) x3)))) -> Eq.{1} AxNat (Rat.rank x0 x1 x2) (Rat.rankCols x0 x1 x2)))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rank_eq_rankCols_of_pivotSection"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-countrange-bij",
+    "F:rat-rank-nullity",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:rat-is-pivot-col-b-eq-ble",
+    "F:rat-leading-index-pivot-row-of-col",
+    "F:rat-pivot-row-of-col-lt-rows"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-eq-rank-cols-of-pivot-section-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rank_eq_rankCols_of_pivotSection` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all four preludes that build the rationals, and the pattern pins the WHOLE of both ends of the statement: the hypothesis is the section equation at the echelon form (`Rat.pivotRowOfCol (Rat.rowEchelon x0 x1 x2) x1 x2 (Rat.pivotColOfRow (Rat.rowEchelon x0 x1 x2) x2 x3) = x3`) and the conclusion is `Rat.rank x0 x1 x2 = Rat.rankCols x0 x1 x2` anchored to end of line. A version assuming the FULL echelon predicate `Rat.isEchelon` would not match, and neither would one concluding about `rankCols` alone.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rank_eq_rankCols_of_pivotSection[[:space:]]+0[[:space:]].*Rat\\.pivotRowOfCol \\(Rat\\.rowEchelon x0 x1 x2\\) x1 x2 \\(Rat\\.pivotColOfRow \\(Rat\\.rowEchelon x0 x1 x2\\) x2 x3\\)\\) x3\\)\\)\\)\\) -> Eq\\.\\{1\\} AxNat \\(Rat\\.rank x0 x1 x2\\) \\(Rat\\.rankCols x0 x1 x2\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: the pattern matches the real output at exactly the required count. `scripts/new-fact.py` verified it FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written, so a pattern anchored on the surrounding prose rather than on the finding would have been rejected there."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs)",
+    "source": "docs/research/09-decisions/adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is empty by proof, as for ADR-1554, ADR-1555 and ADR-1558: the order on the constructed rationals is decidable and every predicate here is total and Bool-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/rank_bridge_tests.rs`, which reduces both maps at the six matrices the rank and nullity lanes used (including the rectangular 2x3), and `rank_equals_rank_cols_at_every_concrete_matrix` in `rat_prelude/nullity_tests.rs`, which checks the bridge's conclusion by reduction at the same six. Row 4 is empty: no import, nothing taken from Mathlib. WHAT REMAINS OPEN: `Rat.rowEchelon_isEchelon` (ADR-1554 obligation 4) is NOT proved, so the section hypothesis is not discharged and none of this family is unconditional. Obligation 2's CONTENT half (which of the two disjuncts of `Rat.pivotSearch`'s postcondition holds) and obligation 3 (`Rat.clearBelow`'s postcondition) are likewise untouched by this lane. The hypothesis is a real constraint and not vacuous: `the_section_property_is_a_real_constraint` in `rat_prelude/rank_bridge_tests.rs` exhibits `[[1,0],[1,0]]`, two nonzero rows sharing leading index 0, where the section equation FAILS at row 1 while holding at row 0."
+}

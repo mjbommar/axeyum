@@ -77,11 +77,13 @@ mod model;
 mod nullity;
 pub(crate) mod ops;
 mod pivot_bound;
+mod pivot_content;
 mod polynomial;
 mod pow_bridge;
 mod probability;
 mod product;
 mod rank;
+mod rank_bridge;
 mod scaling;
 mod statements;
 mod sum;
@@ -2792,6 +2794,102 @@ pub struct RatPrelude {
     /// [`Self::pivot_search_aux_le_rows`] at the fuel `pivotSearch` picks. No
     /// bound on `start` is required.
     pub pivot_search_le_rows: NameId,
+
+    // --- the rank/rankCols bridge (`rat_prelude::rank_bridge`, ADR-1562) ----
+    /// `Rat.pivotColOfRow : Mat → Nat → Nat → Nat`,
+    /// `pivotColOfRow E cols r := leadingIndex E r cols` — the pivot COLUMN of
+    /// a row, with the row index LAST so `pivotColOfRow E cols` is already the
+    /// `Nat → Nat` map
+    /// [`NatPrelude::count_range_bij`](crate::NatPrelude::count_range_bij)
+    /// wants. `leadingIndex` takes `r` in the middle, and a lambda at the use
+    /// site is what the counting laws cannot see through.
+    pub pivot_col_of_row: NameId,
+    /// `Rat.pivotColOfRow_eq_leadingIndex : ∀ E cols r,
+    /// pivotColOfRow E cols r = leadingIndex E r cols` — the defining equation,
+    /// `Eq.refl`.
+    pub pivot_col_of_row_eq_leading_index: NameId,
+    /// `Rat.pivotRowSearchAux : Mat → Nat → Nat → Nat → Nat → Nat → Nat`,
+    /// `pivotRowSearchAux E rows cols j fuel r` — the first `r' ≥ r` below
+    /// `rows` whose leading index is `j`, and `rows` for both exhaustion
+    /// answers. [`Self::pivot_col_search_aux`]'s scan with the answer changed
+    /// from `Bool` to the row index.
+    pub pivot_row_search_aux: NameId,
+    /// `Rat.pivotRowOfCol : Mat → Nat → Nat → Nat → Nat`,
+    /// `pivotRowOfCol E rows cols j := pivotRowSearchAux E rows cols j rows 0`
+    /// — the pivot ROW of a column, **computed**. The inverse map `τ` of the
+    /// bridge; the column index comes LAST so `pivotRowOfCol E rows cols` is
+    /// already a `Nat → Nat` map.
+    pub pivot_row_of_col: NameId,
+    /// `Rat.pivotRowOfCol_eq_search : ∀ E rows cols j, pivotRowOfCol E rows
+    /// cols j = pivotRowSearchAux E rows cols j rows 0` — the defining
+    /// equation, `Eq.refl`.
+    pub pivot_row_of_col_eq_search: NameId,
+    /// `Rat.pivotColSearchAux_eq_ble : ∀ E rows cols j fuel r,
+    /// pivotColSearchAux E rows cols j fuel r =
+    /// Nat.ble (succ (pivotRowSearchAux E rows cols j fuel r)) rows` — the
+    /// `Bool` scan answers `true` exactly when the `Nat` scan lands in range.
+    /// One fuel induction; the base case needs `ble (succ rows) rows = false`.
+    pub pivot_col_search_aux_eq_ble: NameId,
+    /// `Rat.isPivotColB_eq_ble : ∀ E rows cols j, isPivotColB E rows cols j =
+    /// Nat.ble (succ (pivotRowOfCol E rows cols j)) rows` — ADR-1558's
+    /// pivot-column TEST and this file's pivot-row MAP are the same scan.
+    pub is_pivot_col_b_eq_ble: NameId,
+    /// `Rat.pivotRowOfCol_lt_rows : ∀ E rows cols j,
+    /// isPivotColB E rows cols j = true → Lt (pivotRowOfCol E rows cols j) rows`
+    /// — a pivot column's row is a real row.
+    pub pivot_row_of_col_lt_rows: NameId,
+    /// `Rat.pivotRowSearchAux_leadingIndex : ∀ E rows cols j fuel r,
+    /// Lt (pivotRowSearchAux E rows cols j fuel r) rows →
+    /// Eq Nat (leadingIndex E (pivotRowSearchAux E rows cols j fuel r) cols) j`
+    /// — if the scan landed in range it landed on a row with leading index `j`.
+    pub pivot_row_search_aux_leading_index: NameId,
+    /// `Rat.leadingIndex_pivotRowOfCol : ∀ E rows cols j,
+    /// isPivotColB E rows cols j = true →
+    /// Eq Nat (leadingIndex E (pivotRowOfCol E rows cols j) cols) j` — **the
+    /// round trip that makes the bridge cheap.** It supplies three of
+    /// [`NatPrelude::count_range_bij`](crate::NatPrelude::count_range_bij)'s
+    /// five hypotheses at once when the COLUMNS are taken as the left-hand
+    /// count: injectivity of `pivotRowOfCol`, the selected half of its
+    /// `MapsInto`, and one round-trip equation verbatim.
+    pub leading_index_pivot_row_of_col: NameId,
+    /// `Rat.rank_eq_rankCols_of_pivotSection : ∀ M rows cols,
+    /// (∀ r, Lt r rows → nonzeroRowB (rowEchelon M rows cols) cols r = true →
+    ///    Eq Nat (pivotRowOfCol E rows cols (pivotColOfRow E cols r)) r) →
+    /// Eq Nat (rank M rows cols) (rankCols M rows cols)` — **the bridge**,
+    /// through `Nat.countRange_bij` with the COLUMNS as the left-hand count.
+    /// The single hypothesis is the weakest form of ADR-1554 obligation 4 the
+    /// bridge consumes: *the first row whose leading index is row `r`'s is `r`
+    /// itself*. Every other hypothesis of the counting law is discharged from
+    /// the two scans alone.
+    pub rank_eq_rank_cols_of_pivot_section: NameId,
+    /// `Rat.rank_le_cols_of_pivotSection : ∀ M rows cols,
+    /// (the section hypothesis) → Le (rank M rows cols) cols` — the bound
+    /// ADR-1555 left open, transported from the free
+    /// [`Self::rank_cols_le_cols`] across the bridge.
+    pub rank_le_cols_of_pivot_section: NameId,
+    /// `Rat.rank_nullity_rows_of_pivotSection : ∀ M rows cols,
+    /// (the section hypothesis) →
+    /// Eq Nat (Nat.add (rank M rows cols) (nullity M rows cols)) cols` —
+    /// **rank-nullity in the ROW form**, `Rat.rank_nullity` with `rankCols`
+    /// rewritten to `rank` across the bridge and nothing else.
+    pub rank_nullity_rows_of_pivot_section: NameId,
+
+    // --- obligation 2's VALUE half (`rat_prelude::pivot_content`, ADR-1562) --
+    /// `Rat.pivotSearchAux_ne_zero : ∀ M c rows fuel r,
+    /// Lt (pivotSearchAux M c rows fuel r) rows →
+    /// Not (Eq Rat (M (pivotSearchAux M c rows fuel r) c) Rat.zero)` — if the
+    /// pivot scan landed in range, the entry it landed on is nonzero.
+    pub pivot_search_aux_ne_zero: NameId,
+    /// `Rat.pivotSearch_ne_zero : ∀ M c start rows,
+    /// Lt (pivotSearch M c start rows) rows →
+    /// Not (Eq Rat (M (pivotSearch M c start rows) c) Rat.zero)` — the **value
+    /// half** of ADR-1554 obligation 2, and the half obligation 3 spends
+    /// through `Rat.mul_inv_cancel_of_ne_zero`. The range half is
+    /// [`Self::pivot_search_le_rows`]; the exhaustion disjunct (the answer is
+    /// `rows` and the column is zero throughout the scanned range) is still
+    /// open, and needs a different induction — one carrying the accumulated
+    /// range in its motive.
+    pub pivot_search_ne_zero: NameId,
 }
 
 impl RatPrelude {
@@ -3294,6 +3392,21 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         nullity_zero_rows: child(kernel, "nullity_zero_rows"),
         pivot_search_aux_le_rows: child(kernel, "pivotSearchAux_le_rows"),
         pivot_search_le_rows: child(kernel, "pivotSearch_le_rows"),
+        pivot_col_of_row: child(kernel, "pivotColOfRow"),
+        pivot_col_of_row_eq_leading_index: child(kernel, "pivotColOfRow_eq_leadingIndex"),
+        pivot_row_search_aux: child(kernel, "pivotRowSearchAux"),
+        pivot_row_of_col: child(kernel, "pivotRowOfCol"),
+        pivot_row_of_col_eq_search: child(kernel, "pivotRowOfCol_eq_search"),
+        pivot_col_search_aux_eq_ble: child(kernel, "pivotColSearchAux_eq_ble"),
+        is_pivot_col_b_eq_ble: child(kernel, "isPivotColB_eq_ble"),
+        pivot_row_of_col_lt_rows: child(kernel, "pivotRowOfCol_lt_rows"),
+        pivot_row_search_aux_leading_index: child(kernel, "pivotRowSearchAux_leadingIndex"),
+        leading_index_pivot_row_of_col: child(kernel, "leadingIndex_pivotRowOfCol"),
+        rank_eq_rank_cols_of_pivot_section: child(kernel, "rank_eq_rankCols_of_pivotSection"),
+        rank_le_cols_of_pivot_section: child(kernel, "rank_le_cols_of_pivotSection"),
+        rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
+        pivot_search_aux_ne_zero: child(kernel, "pivotSearchAux_ne_zero"),
+        pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
     }
 }
 
@@ -3358,6 +3471,8 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         rank::declare_rank(&mut d, prelude)?;
         nullity::declare_nullity(&mut d, prelude)?;
         pivot_bound::declare_pivot_bound(&mut d, prelude)?;
+        rank_bridge::declare_rank_bridge(&mut d, prelude)?;
+        pivot_content::declare_pivot_content(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3390,6 +3505,12 @@ mod rank_tests;
 
 #[cfg(test)]
 mod nullity_tests;
+
+#[cfg(test)]
+mod rank_bridge_tests;
+
+#[cfg(test)]
+mod pivot_content_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

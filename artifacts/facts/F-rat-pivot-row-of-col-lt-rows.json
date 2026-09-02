@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-pivot-row-of-col-lt-rows",
+  "title": "A pivot column of a rational matrix is led by a row that exists",
+  "statement": "For every matrix E : Nat -> Nat -> Rat, all dimensions rows, cols and every column j, IF Rat.isPivotColB E rows cols j = true THEN Nat.Lt (Rat.pivotRowOfCol E rows cols j) rows -- a column the decided test calls a pivot column is led by a row that exists. Immediate from the scan identity (F:rat-is-pivot-col-b-eq-ble) and Nat.le_of_ble_eq_true, because Nat.Lt x rows is Nat.Le (succ x) rows definitionally and that is precisely the shape the ble on the right of the identity has. It is the range half of the pivot-row map's postcondition, and the counting law needs it as the first component of the MapsInto hypothesis.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.pivotRowOfCol_lt_rows : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} Bool (Rat.isPivotColB x0 x1 x2 x3) Bool.true) -> AxNat.lt (Rat.pivotRowOfCol x0 x1 x2 x3) x1)))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.pivotRowOfCol_lt_rows"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-is-pivot-col-b-eq-ble",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-pivot-row-of-col-lt-rows-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.pivotRowOfCol_lt_rows` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all four preludes that build the rationals. The pattern pins the conclusion to `AxNat.lt (Rat.pivotRowOfCol x0 x1 x2 x3) x1` anchored to end of line: `x1` is the ROW-COUNT binder, so a version bounding by the column count `x2` -- which is the wrong bound and would be the easy mistake in a four-index family -- does not match. The bound is STRICT (`AxNat.lt`, not `AxNat.le`), which is what the counting law's MapsInto hypothesis requires and what a non-strict version would fail to give.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.pivotRowOfCol_lt_rows[[:space:]]+0[[:space:]].*-> AxNat\\.lt \\(Rat\\.pivotRowOfCol x0 x1 x2 x3\\) x1\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: the pattern matches the real output at exactly the required count. `scripts/new-fact.py` verified it FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written, so a pattern anchored on the surrounding prose rather than on the finding would have been rejected there."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs)",
+    "source": "docs/research/09-decisions/adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is empty by proof, as for ADR-1554, ADR-1555 and ADR-1558: the order on the constructed rationals is decidable and every predicate here is total and Bool-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/rank_bridge_tests.rs`, which reduces both maps at the six matrices the rank and nullity lanes used (including the rectangular 2x3), and `rank_equals_rank_cols_at_every_concrete_matrix` in `rat_prelude/nullity_tests.rs`, which checks the bridge's conclusion by reduction at the same six. Row 4 is empty: no import, nothing taken from Mathlib. WHAT THIS DOES NOT SAY: nothing about which row, only that it is in range. Without the hypothesis the statement is FALSE by construction -- `Rat.pivotRowOfCol` returns `rows` itself when no row leads in the column asked for, and `rat_prelude/rank_bridge_tests.rs` exhibits that answer at four of the six matrices, so the hypothesis is doing work rather than decorating."
+}

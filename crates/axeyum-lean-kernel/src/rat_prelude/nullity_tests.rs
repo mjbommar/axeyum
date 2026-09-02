@@ -59,7 +59,7 @@ fn built() -> (Kernel, RatPrelude) {
 /// generalises it rather than working around the assertion. Entries outside the
 /// stated shape fall through to the last row / last column, which no test
 /// reads.
-fn rect_matrix(
+pub(super) fn rect_matrix(
     d: &mut IntDev<'_>,
     p: RatPrelude,
     rows: usize,
@@ -167,7 +167,7 @@ fn assert_rank_cols_and_nullity(
 ///
 /// One table, read by every test below, so the evaluation table, the
 /// rank-nullity instantiation and the bridge check cannot drift apart.
-const CASES: &[(usize, usize, &[i64], u32, u32, &str)] = &[
+pub(super) const CASES: &[(usize, usize, &[i64], u32, u32, &str)] = &[
     (2, 2, &[1, 2, 3, 4], 2, 0, "[[1,2],[3,4]]"),
     (2, 2, &[1, 2, 2, 4], 1, 1, "[[1,2],[2,4]]"),
     (2, 2, &[0, 0, 0, 0], 0, 2, "the zero 2x2"),

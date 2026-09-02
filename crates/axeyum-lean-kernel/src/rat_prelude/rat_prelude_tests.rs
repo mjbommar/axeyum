@@ -306,6 +306,39 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("nullity_zero_rows", p.nullity_zero_rows),
         ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows),
         ("pivotSearch_le_rows", p.pivot_search_le_rows),
+        ("pivotColOfRow", p.pivot_col_of_row),
+        (
+            "pivotColOfRow_eq_leadingIndex",
+            p.pivot_col_of_row_eq_leading_index,
+        ),
+        ("pivotRowSearchAux", p.pivot_row_search_aux),
+        ("pivotRowOfCol", p.pivot_row_of_col),
+        ("pivotRowOfCol_eq_search", p.pivot_row_of_col_eq_search),
+        ("pivotColSearchAux_eq_ble", p.pivot_col_search_aux_eq_ble),
+        ("isPivotColB_eq_ble", p.is_pivot_col_b_eq_ble),
+        ("pivotRowOfCol_lt_rows", p.pivot_row_of_col_lt_rows),
+        (
+            "pivotRowSearchAux_leadingIndex",
+            p.pivot_row_search_aux_leading_index,
+        ),
+        (
+            "leadingIndex_pivotRowOfCol",
+            p.leading_index_pivot_row_of_col,
+        ),
+        (
+            "rank_eq_rankCols_of_pivotSection",
+            p.rank_eq_rank_cols_of_pivot_section,
+        ),
+        (
+            "rank_le_cols_of_pivotSection",
+            p.rank_le_cols_of_pivot_section,
+        ),
+        (
+            "rank_nullity_rows_of_pivotSection",
+            p.rank_nullity_rows_of_pivot_section,
+        ),
+        ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero),
+        ("pivotSearch_ne_zero", p.pivot_search_ne_zero),
     ]
 }
 
@@ -7015,6 +7048,53 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("nullity_zero_rows", p.nullity_zero_rows, true),
         ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows, true),
         ("pivotSearch_le_rows", p.pivot_search_le_rows, true),
+        ("pivotColOfRow", p.pivot_col_of_row, false),
+        (
+            "pivotColOfRow_eq_leadingIndex",
+            p.pivot_col_of_row_eq_leading_index,
+            true,
+        ),
+        ("pivotRowSearchAux", p.pivot_row_search_aux, false),
+        ("pivotRowOfCol", p.pivot_row_of_col, false),
+        (
+            "pivotRowOfCol_eq_search",
+            p.pivot_row_of_col_eq_search,
+            true,
+        ),
+        (
+            "pivotColSearchAux_eq_ble",
+            p.pivot_col_search_aux_eq_ble,
+            true,
+        ),
+        ("isPivotColB_eq_ble", p.is_pivot_col_b_eq_ble, true),
+        ("pivotRowOfCol_lt_rows", p.pivot_row_of_col_lt_rows, true),
+        (
+            "pivotRowSearchAux_leadingIndex",
+            p.pivot_row_search_aux_leading_index,
+            true,
+        ),
+        (
+            "leadingIndex_pivotRowOfCol",
+            p.leading_index_pivot_row_of_col,
+            true,
+        ),
+        (
+            "rank_eq_rankCols_of_pivotSection",
+            p.rank_eq_rank_cols_of_pivot_section,
+            true,
+        ),
+        (
+            "rank_le_cols_of_pivotSection",
+            p.rank_le_cols_of_pivot_section,
+            true,
+        ),
+        (
+            "rank_nullity_rows_of_pivotSection",
+            p.rank_nullity_rows_of_pivot_section,
+            true,
+        ),
+        ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero, true),
+        ("pivotSearch_ne_zero", p.pivot_search_ne_zero, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

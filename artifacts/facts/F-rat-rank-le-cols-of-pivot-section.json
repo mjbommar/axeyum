@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-le-cols-of-pivot-section",
+  "title": "The rank of a rational matrix is at most its column count, given one property of the echelon form",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and all dimensions rows, cols, IF the section hypothesis holds for the row-echelon form of M, THEN Nat.Le (Rat.rank M rows cols) cols. The SECTION HYPOTHESIS is: for every row r below rows whose leading index in E := Rat.rowEchelon M rows cols is below cols (that is, Rat.nonzeroRowB E cols r = true), Rat.pivotRowOfCol E rows cols (Rat.pivotColOfRow E cols r) = r -- in words, the FIRST row whose leading index equals row r's leading index is r itself. It is the weakest form of ADR-1554 obligation 4 (rowEchelon_isEchelon) that the bridge consumes: it says nothing about zero rows sitting last, only that no earlier nonzero row shares a nonzero row's leading index. ADR-1555 stated this bound as OPEN and explained why: Rat.rank is a count over [0, rows), so bounding it by cols is a claim that the echelon form has at most one pivot per column. The column-form counterpart Rat.rankCols_le_cols is free -- one Nat.countRange_le, because a count over [0, cols) cannot exceed cols whatever the predicate does -- and this is that free bound transported across the bridge. Nothing is re-proved; the asymmetry ADR-1558 recorded between the row and column forms is exactly the asymmetry the bridge removes.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_le_cols_of_pivotSection : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : <the section hypothesis, as in Rat.rank_eq_rankCols_of_pivotSection>) -> AxNat.le (Rat.rank x0 x1 x2) x2))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rank_le_cols_of_pivotSection"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-rank-eq-rank-cols-of-pivot-section",
+    "F:rat-rank-cols-le-cols"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-le-cols-of-pivot-section-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rank_le_cols_of_pivotSection` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all four preludes, and the pattern pins the CONCLUSION to `AxNat.le (Rat.rank x0 x1 x2) x2` anchored to end of line. `x2` is the COLUMN binder and `x1` the row binder, so the already-free `rank <= rows` (`Rat.rank_le_rows`, bounding by `x1`) does not match this pattern -- which is the distinction the fact is about, and the one a name alone cannot make.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rank_le_cols_of_pivotSection[[:space:]]+0[[:space:]].*-> AxNat\\.le \\(Rat\\.rank x0 x1 x2\\) x2\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: the pattern matches the real output at exactly the required count. `scripts/new-fact.py` verified it FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written, so a pattern anchored on the surrounding prose rather than on the finding would have been rejected there."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs)",
+    "source": "docs/research/09-decisions/adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is empty by proof, as for ADR-1554, ADR-1555 and ADR-1558: the order on the constructed rationals is decidable and every predicate here is total and Bool-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/rank_bridge_tests.rs`, which reduces both maps at the six matrices the rank and nullity lanes used (including the rectangular 2x3), and `rank_equals_rank_cols_at_every_concrete_matrix` in `rat_prelude/nullity_tests.rs`, which checks the bridge's conclusion by reduction at the same six. Row 4 is empty: no import, nothing taken from Mathlib. WHAT REMAINS OPEN: `Rat.rowEchelon_isEchelon` (ADR-1554 obligation 4) is NOT proved, so the section hypothesis is not discharged and none of this family is unconditional. Obligation 2's CONTENT half (which of the two disjuncts of `Rat.pivotSearch`'s postcondition holds) and obligation 3 (`Rat.clearBelow`'s postcondition) are likewise untouched by this lane. The hypothesis is a real constraint and not vacuous: `the_section_property_is_a_real_constraint` in `rat_prelude/rank_bridge_tests.rs` exhibits `[[1,0],[1,0]]`, two nonzero rows sharing leading index 0, where the section equation FAILS at row 1 while holding at row 0."
+}

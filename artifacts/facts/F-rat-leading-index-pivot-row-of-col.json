@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-leading-index-pivot-row-of-col",
+  "title": "A pivot column recovers its own index from the row the search found",
+  "statement": "For every matrix E : Nat -> Nat -> Rat, all dimensions rows, cols and every column j, IF Rat.isPivotColB E rows cols j = true THEN Rat.leadingIndex E (Rat.pivotRowOfCol E rows cols j) cols = j -- the row the search returned for a pivot column really does lead in that column. The underlying statement about the fuelled scan is the same with the hypothesis replaced by its content: if Rat.pivotRowSearchAux E rows cols j fuel r lands strictly below rows, its leading index is j. The in-range hypothesis carries the whole proof: both exhaustion answers are rows itself, which Nat.lt_irrefl refutes, so the two gave-up branches are discharged without knowing anything about the matrix. This is the round trip that makes the bridge's orientation the cheap one -- it supplies THREE of Nat.countRange_bij's five hypotheses at once when the columns are taken as the left-hand count: injectivity of Rat.pivotRowOfCol (apply the leading index to both sides), the selected half of its MapsInto (the leading index of the row found is the column asked for, which is below cols), and one round-trip equation verbatim.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.leadingIndex_pivotRowOfCol : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} Bool (Rat.isPivotColB x0 x1 x2 x3) Bool.true) -> Eq.{1} AxNat (Rat.leadingIndex x0 (Rat.pivotRowOfCol x0 x1 x2 x3) x2) x3))))) ; theorem Rat.pivotRowSearchAux_leadingIndex : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.lt (Rat.pivotRowSearchAux x0 x1 x2 x3 x4 x5) x1) -> Eq.{1} AxNat (Rat.leadingIndex x0 (Rat.pivotRowSearchAux x0 x1 x2 x3 x4 x5) x2) x3)))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.leadingIndex_pivotRowOfCol"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-is-pivot-col-b-eq-ble",
+    "F:rat-pivot-row-of-col-lt-rows"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-leading-index-pivot-row-of-col-1",
+      "kind": "kernel-term",
+      "supports": "Both `Rat.leadingIndex_pivotRowOfCol` and the fuelled `Rat.pivotRowSearchAux_leadingIndex` are checked `Declaration::Theorem`s with EMPTY axiom footprints in all four preludes. The checker counts EIGHT rows -- two declarations across four preludes -- and requires exactly that, so losing either half changes the count and the command exits 1. The regex pins the CONCLUSION to `Rat.leadingIndex x0 (Rat.pivotRow\u2026 \u2026) x2 = x3`, i.e. the leading index taken at the COLUMN COUNT `x2` and equal to the COLUMN ASKED FOR `x3`: a version concluding the leading index equals the row index, or taken at the row count, would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.(leadingIndex_pivotRowOfCol|pivotRowSearchAux_leadingIndex)[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndex x0 \\(Rat\\.(pivotRowOfCol|pivotRowSearchAux) x0 x1 x2 x3( x4 x5)?\\) x2\\) x3\\)+$')\" = 8",
+      "notes": "Run 2026-09-02: the pattern matches the real output at exactly the required count. `scripts/new-fact.py` verified it FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written, so a pattern anchored on the surrounding prose rather than on the finding would have been rejected there."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs)",
+    "source": "docs/research/09-decisions/adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is empty by proof, as for ADR-1554, ADR-1555 and ADR-1558: the order on the constructed rationals is decidable and every predicate here is total and Bool-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/rank_bridge_tests.rs`, which reduces both maps at the six matrices the rank and nullity lanes used (including the rectangular 2x3), and `rank_equals_rank_cols_at_every_concrete_matrix` in `rat_prelude/nullity_tests.rs`, which checks the bridge's conclusion by reduction at the same six. Row 4 is empty: no import, nothing taken from Mathlib. WHAT THIS DOES NOT SAY: it does not say the row found is the ONLY row with that leading index, and it does not say that a row's own leading index recovers that row. That converse is exactly the section hypothesis (F:rat-rank-eq-rank-cols-of-pivot-section), it is what obligation 4 would supply, and it is false at a matrix whose nonzero rows share a leading index."
+}

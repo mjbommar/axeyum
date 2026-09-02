@@ -1938,7 +1938,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (456 names,
+/// The `RatPrelude` field table (471 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2443,6 +2443,39 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("nullity_zero_rows", p.nullity_zero_rows),
             ("pivot_search_aux_le_rows", p.pivot_search_aux_le_rows),
             ("pivot_search_le_rows", p.pivot_search_le_rows),
+            ("pivot_col_of_row", p.pivot_col_of_row),
+            (
+                "pivot_col_of_row_eq_leading_index",
+                p.pivot_col_of_row_eq_leading_index,
+            ),
+            ("pivot_row_search_aux", p.pivot_row_search_aux),
+            ("pivot_row_of_col", p.pivot_row_of_col),
+            ("pivot_row_of_col_eq_search", p.pivot_row_of_col_eq_search),
+            ("pivot_col_search_aux_eq_ble", p.pivot_col_search_aux_eq_ble),
+            ("is_pivot_col_b_eq_ble", p.is_pivot_col_b_eq_ble),
+            ("pivot_row_of_col_lt_rows", p.pivot_row_of_col_lt_rows),
+            (
+                "pivot_row_search_aux_leading_index",
+                p.pivot_row_search_aux_leading_index,
+            ),
+            (
+                "leading_index_pivot_row_of_col",
+                p.leading_index_pivot_row_of_col,
+            ),
+            (
+                "rank_eq_rank_cols_of_pivot_section",
+                p.rank_eq_rank_cols_of_pivot_section,
+            ),
+            (
+                "rank_le_cols_of_pivot_section",
+                p.rank_le_cols_of_pivot_section,
+            ),
+            (
+                "rank_nullity_rows_of_pivot_section",
+                p.rank_nullity_rows_of_pivot_section,
+            ),
+            ("pivot_search_aux_ne_zero", p.pivot_search_aux_ne_zero),
+            ("pivot_search_ne_zero", p.pivot_search_ne_zero),
         ],
         lists: Vec::new(),
     }

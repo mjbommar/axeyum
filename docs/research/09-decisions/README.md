@@ -852,3 +852,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1558](adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md) | `Rat.rank_nullity : ∀ M rows cols, | accepted |
 | [1559](adr-1559-primecounting-and-lcmupto-are-the-construction-that-unblocks-draw-19.md) | `Nat.primeCounting` and `Nat.lcmUpto` are the construction that unblocks draw 19 | accepted |
 | [1561](adr-1561-draw-19-is-authored-and-draw-10s-deferral-was-the-whole-refusal.md) | draw 19 is authored, and draw 10's unenforced deferral was the whole refusal | accepted |
+| [1562](adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md) | `Rat.rank_eq_rankCols_of_pivotSection` closes ADR-1558's open | accepted |
