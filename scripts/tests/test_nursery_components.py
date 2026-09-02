@@ -247,6 +247,24 @@ class NurseryComponentControls(unittest.TestCase):
         self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("UNANSWERABLE", done.stdout, _ctx(done))
 
+    def test_a_decoy_nursery_file_does_not_make_this_tool_unanswerable(
+        self,
+    ) -> None:
+        """`MANIFEST_GLOBS` names `nursery-v1.json` plus
+        `nursery-v*-extension.json` specifically, mirroring the identical fix
+        in `check-partition-edges.py` -- NOT a wide `nursery*.json`, which was
+        measured to turn ANY unrelated file dropped in
+        `artifacts/autogenesis/` matching it into `Unanswerable`, since
+        `Drawn.__init__` raises the moment a matched document lacks a usable
+        `entries` list. A decoy named outside the two real patterns must be
+        invisible to this tool."""
+        self.no_pins_anywhere()
+        self.write("artifacts/autogenesis/nursery-zzz-notes.json",
+                   {"note": "not a manifest"})
+        done = self.run_tool()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("drawn=2", done.stdout, _ctx(done))
+
     def test_check_without_a_recorded_census_is_unanswerable(self) -> None:
         self.blob_with_both_pins()
         done = self.run_tool("--check")

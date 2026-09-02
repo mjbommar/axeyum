@@ -4797,7 +4797,7 @@ SUITES["partition-edges"] = (
         (
             "M4 an edge already in the baseline is not a new violation",
             "    violations = [e for e in edges if edge_key(e) not in honoured\n"
-            "                  and edge_key(e) not in baseline]",
+            "                  and redacted_key(e, baseline_salt) not in baseline]",
             "    violations = [e for e in edges if edge_key(e) not in honoured\n"
             "                  and True]",
         ),
@@ -4830,8 +4830,19 @@ SUITES["partition-edges"] = (
         ),
         (
             "M10 a repaired baseline edge is reported so the gain is locked in",
-            "        repaired = sorted(baseline - {edge_key(e) for e in edges})",
+            "        repaired = sorted(baseline - {redacted_key(e, baseline_salt)\n"
+            "                                      for e in edges})",
             "        repaired = []",
+        ),
+        (
+            "M11 a held-out endpoint is redacted before it is written to the "
+            "baseline",
+            '    frm = (digest_fact_id(edge["from"], salt)\n'
+            '           if salt and edge["from_partition"] == "held-out" else edge["from"])\n'
+            '    to = (digest_fact_id(edge["to"], salt)\n'
+            '          if salt and edge["to_partition"] == "held-out" else edge["to"])',
+            '    frm = edge["from"]\n'
+            '    to = edge["to"]',
         ),
     ],
 )

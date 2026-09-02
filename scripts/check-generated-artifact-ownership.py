@@ -334,6 +334,7 @@ GUARDED: tuple[Artifact, ...] = (
             "edge_count",
             "edge_set_sha256",
             "edges",
+            "held_out_salt",
             "kind",
             "ledger_sha256",
             "manifests",
@@ -344,6 +345,36 @@ GUARDED: tuple[Artifact, ...] = (
             "schema_version",
         ),
         required_nested={},
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason it is listed on the "
+                "two artifacts above: it writes a sandbox and a perturbed "
+                "copy, so it cannot be declared read-only.",
+            ),
+            Producer(
+                "scripts/check-merge-hygiene.sh",
+                (),
+                "Runs `check-partition-edges.py --baseline` as its guard 9 "
+                "and names this artifact in the comment explaining it. A "
+                "bash script cannot be proved write-free by AST, so the "
+                "property is MEASURED here instead of asserted.",
+            ),
+            Producer(
+                "scripts/tests/test_check_partition_edges.py",
+                (),
+                "The gate's own controls. They build throwaway trees and "
+                "write baselines INSIDE them -- including the "
+                "--record-baseline scenarios, which are the only tests in "
+                "the repository that exercise this artifact's writer. That "
+                "the real one is untouched is exactly what this arm "
+                "measures.",
+            ),
+        ),
+        reads=(),
+    ),
+    Artifact(
         path="artifacts/refactor/private-helper-census.json",
         owner=Producer(
             "scripts/private-helper-census.py",
@@ -398,26 +429,6 @@ GUARDED: tuple[Artifact, ...] = (
                 SELF,
                 (),
                 "This gate itself, for the same reason it is listed on the "
-                "two artifacts above: it writes a sandbox and a perturbed "
-                "copy, so it cannot be declared read-only.",
-            ),
-            Producer(
-                "scripts/check-merge-hygiene.sh",
-                (),
-                "Runs `check-partition-edges.py --baseline` as its guard 9 "
-                "and names this artifact in the comment explaining it. A "
-                "bash script cannot be proved write-free by AST, so the "
-                "property is MEASURED here instead of asserted.",
-            ),
-            Producer(
-                "scripts/tests/test_check_partition_edges.py",
-                (),
-                "The gate's own controls. They build throwaway trees and "
-                "write baselines INSIDE them -- including the "
-                "--record-baseline scenarios, which are the only tests in "
-                "the repository that exercise this artifact's writer. That "
-                "the real one is untouched is exactly what this arm "
-                "measures.",
                 "artifacts above: it writes a sandbox, a perturbed copy and a "
                 "planted control, so it cannot be declared read-only.",
             ),

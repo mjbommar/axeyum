@@ -106,7 +106,14 @@ from typing import Any
 # re-implementing it and without dirtying the real checkout.
 DEFAULT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-MANIFEST_GLOB = "artifacts/autogenesis/nursery*.json"
+# NOT a single wide `nursery*.json` glob -- see the identical note in
+# `check-partition-edges.py`, whose `MANIFEST_GLOBS` this mirrors exactly.
+# A committed decoy matching the wide glob (`nursery-zzz-notes.json`) makes
+# `Drawn.__init__` below raise `Unanswerable` the instant it lacks a usable
+# `entries` list, taking this tool down over a file with no relation to its
+# subject. Two explicit patterns name exactly what a manifest here IS.
+MANIFEST_GLOBS = ("artifacts/autogenesis/nursery-v1.json",
+                  "artifacts/autogenesis/nursery-v*-extension.json")
 FACTS_DIR = "artifacts/facts"
 CENSUS_PATH = "artifacts/autogenesis/drawn-population-component-census-v1.json"
 ADR = ("docs/research/09-decisions/"
@@ -167,6 +174,12 @@ def load_json(path: pathlib.Path) -> Any:
         raise Unanswerable(f"{path}: unreadable ({exc})") from exc
 
 
+def manifest_paths(root: pathlib.Path) -> list[pathlib.Path]:
+    """Every path any `MANIFEST_GLOBS` pattern matches, deduplicated and sorted."""
+    return sorted({path for pattern in MANIFEST_GLOBS
+                   for path in root.glob(pattern)})
+
+
 # --------------------------------------------------------------------------
 # The subject
 # --------------------------------------------------------------------------
@@ -175,10 +188,10 @@ class Drawn:
     """The drawn population, keyed the three ways the argument needs."""
 
     def __init__(self, root: pathlib.Path) -> None:
-        manifests = sorted(root.glob(MANIFEST_GLOB))
+        manifests = manifest_paths(root)
         if not manifests:
             raise Unanswerable(
-                f"no nursery manifest matches {MANIFEST_GLOB} under {root} -- "
+                f"no nursery manifest matches {MANIFEST_GLOBS} under {root} -- "
                 f"there is no drawn population to measure, which is not the "
                 f"same as an empty one")
         self.manifest_names: list[str] = []

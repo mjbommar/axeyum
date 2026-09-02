@@ -1,7 +1,7 @@
 {
   "authority": "docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md",
   "edge_count": 198,
-  "edge_set_sha256": "fc29b9f138375c0507471c01cca52325da1085a14274b1ac11279f370839284e",
+  "edge_set_sha256": "0f1fa1c43e77105fea31faed2730e75c613a30548ec8ef9105adf029f603787d",
   "edges": [
     {
       "from": "F:ml430-int-add-assoc-749cb0ff",
@@ -238,38 +238,44 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-int-natabs-coe-sub-coe-le-of-le-d2800d86",
+      "from": "6cbaff955c560e25d56463f31c713b65e4cd2a28e10886954056f62c0ff7c7ed",
       "from_partition": "held-out",
+      "held_out_endpoint": true,
       "to": "F:ml430-nat-add-comm-56a2d614",
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-int-natabs-coe-sub-coe-lt-of-lt-e0566dd0",
+      "from": "1e44941bf15ffbeaef66afaf165d33df1aace0ad442cd44ea49fbbd7d373a221",
       "from_partition": "held-out",
+      "held_out_endpoint": true,
       "to": "F:ml430-nat-add-comm-56a2d614",
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-int-natabs-emod-two-18514063",
+      "from": "9bc7ecfd38d576510912b1d952c8f6aa201b2b1b51fd5eb4c3a0f33c54f5df1d",
       "from_partition": "held-out",
+      "held_out_endpoint": true,
       "to": "F:ml430-nat-even-add-one-15b5cb18",
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-int-natabs-emod-two-18514063",
+      "from": "9bc7ecfd38d576510912b1d952c8f6aa201b2b1b51fd5eb4c3a0f33c54f5df1d",
       "from_partition": "held-out",
+      "held_out_endpoint": true,
       "to": "F:ml430-nat-even-iff-024826e9",
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-int-natabs-inj-of-nonneg-of-nonpos-b5d96f53",
+      "from": "c9af28498ce83a9f75c24144e506b3bc36b8f876d5685078e12b407929250037",
       "from_partition": "held-out",
+      "held_out_endpoint": true,
       "to": "F:ml430-nat-le-antisymm-79dccead",
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-int-natabs-inj-of-nonpos-of-nonneg-ecdb334a",
+      "from": "a2aef1c8d3c5bc757d19f6f144b26d788c45963ab24b9f444b564f17b4d8d68f",
       "from_partition": "held-out",
+      "held_out_endpoint": true,
       "to": "F:ml430-nat-le-antisymm-79dccead",
       "to_partition": "development"
     },
@@ -1192,6 +1198,7 @@
       "to_partition": "longitudinal"
     }
   ],
+  "held_out_salt": "54d4112e7b41d7ce0d03e2f51bb2b12451494b636ea3acedfff0475b65374443",
   "kind": "axeyum-partition-edge-baseline",
   "ledger_sha256": "0826de5188235b121d6c5dbb38e3da4fe8ed859a9e0594e77c1cbac5beaf1805",
   "manifests": [
@@ -1199,8 +1206,8 @@
     "artifacts/autogenesis/nursery-v2-extension.json"
   ],
   "produced_by": "scripts/check-partition-edges.py --record-baseline",
-  "recorded_at_commit": "e042449a3a4472d584dabf38ddd1e0f1dd2441e8",
+  "recorded_at_commit": "cebeec20da5d434da7e8a7066901bc969562bcd1",
   "recorded_date": "2026-09-02",
-  "rule": "This set may only SHRINK. --record-baseline refuses a set that is not a subset of the committed one, so a new crossing cannot be silenced by re-recording; it must be repaired or carry a per-edge amendment.",
+  "rule": "This set may only SHRINK. --record-baseline refuses a set that is not a subset of the committed one, so a new crossing cannot be silenced by re-recording; it must be repaired or carry a per-edge amendment. A held-out endpoint is stored as a salted SHA-256 digest (`held_out_endpoint: true`), never as the fact id -- see `redacted_key` in the script.",
   "schema_version": 1
 }

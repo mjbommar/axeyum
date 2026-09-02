@@ -25,6 +25,7 @@ back in precisely to check that the gate REPORTS that rather than dying.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import subprocess
@@ -254,12 +255,25 @@ class PartitionEdgeControls(unittest.TestCase):
     def test_an_edge_in_the_baseline_does_not_fail_the_gate(self) -> None:
         """The ratchet's whole point: the crossings that already existed are
         the re-partition's to repair, and a gate that blocks every push until
-        they are is a gate people disable."""
-        self.one_crossing_only()
-        self.baseline([("F:a", "F:b")])
+        they are is a gate people disable.
+
+        A held-out crossing rides alongside the plain one, and the baseline
+        is RECORDED rather than hand-written -- `self.baseline()` writes bare
+        pairs with no salt, which would never exercise the digested path at
+        all. Recording it for real is also what proves `--baseline`'s
+        comparison matches a live held-out crossing against its DIGESTED
+        record, not merely a plain one, without a second test asserting the
+        same `violations=0` outcome M4 already owns."""
+        self.manifest("v1", {"F:a": "train", "F:b": "development",
+                             "F:h": "held-out"})
+        self.fact("F:a", ["F:b", "F:h"])
+        self.fact("F:b")
+        self.fact("F:h")
+        record = self.gate("--record-baseline")
+        self.assertEqual(record.returncode, 0, _ctx(record))
         done = self.gate("--baseline")
         self.assertEqual(done.returncode, 0, _ctx(done))
-        self.assertIn("|baselined=1|violations=0|", done.stdout)
+        self.assertIn("|baselined=2|violations=0|", done.stdout)
 
     def test_an_edge_absent_from_the_baseline_fails_the_gate(self) -> None:
         """And the other half: a NEW crossing blocks immediately, even while
@@ -323,6 +337,70 @@ class PartitionEdgeControls(unittest.TestCase):
         self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("REPAIRED F:a -> F:b", done.stdout)
 
+    # -- guard 5: a held-out endpoint is never written in plain text --------
+
+    def held_out_manifest(self, target: str = "F:h") -> None:
+        """A[train] -> `target`[held-out], and nothing else."""
+        self.manifest("v1", {"F:a": "train", target: "held-out"})
+        self.fact("F:a", [target])
+        self.fact(target)
+
+    def test_a_held_out_endpoint_is_recorded_as_a_salted_digest_not_plain_text(
+        self,
+    ) -> None:
+        """ADR-1550's own baseline shipped six held-out fact ids in plain
+        text, which is exactly what `check-autogenesis-holdout-isolation.py`
+        exists to catch. The recorded file must not contain the id at all --
+        not as `from`/`to`, not anywhere in the raw bytes -- only its salted
+        digest, alongside `held_out_endpoint: true`."""
+        self.held_out_manifest()
+        done = self.gate("--record-baseline")
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        raw = (self.root / BASELINE).read_text()
+        self.assertNotIn("F:h", raw)
+        recorded = json.loads(raw)
+        salt = recorded.get("held_out_salt")
+        self.assertTrue(salt, "no held_out_salt was recorded")
+        [row] = recorded["edges"]
+        self.assertEqual(row["from"], "F:a")
+        self.assertIs(row["held_out_endpoint"], True)
+        self.assertNotEqual(row["to"], "F:h")
+        expected = hashlib.sha256(f"{salt}:F:h".encode()).hexdigest()
+        self.assertEqual(row["to"], expected)
+
+    def test_a_different_held_out_id_at_the_same_position_is_a_new_violation(
+        self,
+    ) -> None:
+        """The digest must be a function of the ACTUAL id, not a stand-in for
+        `this endpoint is held-out`. Pointing the same source at a DIFFERENT
+        held-out fact must still be caught as a new, unbaselined crossing --
+        otherwise a digest that ignores its input would pass the test above
+        for the wrong reason."""
+        self.held_out_manifest(target="F:h")
+        record = self.gate("--record-baseline")
+        self.assertEqual(record.returncode, 0, _ctx(record))
+        self.held_out_manifest(target="F:h2")
+        done = self.gate("--baseline")
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("|violations=1|", done.stdout)
+
+    def test_recording_an_unchanged_held_out_edge_twice_is_byte_identical(
+        self,
+    ) -> None:
+        """Salt reuse under `carry_over`: re-recording an UNCHANGED edge set
+        must reproduce byte-identical output, or `check-generated-artifact-
+        ownership.py`'s OWNER arm -- which perturbs a committed copy and
+        demands the owner restore it byte-for-byte -- could never pass while
+        a held-out edge is baselined."""
+        self.held_out_manifest()
+        first = self.gate("--record-baseline")
+        self.assertEqual(first.returncode, 0, _ctx(first))
+        before = (self.root / BASELINE).read_text()
+        second = self.gate("--record-baseline")
+        self.assertEqual(second.returncode, 0, _ctx(second))
+        after = (self.root / BASELINE).read_text()
+        self.assertEqual(before, after)
+
     # -- guard 4: exit 2 is `cannot answer` ---------------------------------
 
     def test_no_manifest_is_exit_two_not_exit_one(self) -> None:
@@ -335,6 +413,23 @@ class PartitionEdgeControls(unittest.TestCase):
         self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("PARTITION-EDGES|UNANSWERABLE", done.stdout)
         self.assertIn("no nursery manifest", done.stdout)
+
+    def test_a_decoy_nursery_file_does_not_make_this_gate_unanswerable(
+        self,
+    ) -> None:
+        """`MANIFEST_GLOBS` is `nursery-v1.json` plus `nursery-v*-extension.json`,
+        NOT a wide `nursery*.json` -- the wide form was measured to turn ANY
+        unrelated file dropped in `artifacts/autogenesis/` matching it into an
+        `Unanswerable`, because `load_partitions` raises the moment a matched
+        document lacks a usable `entries` list. A decoy with a name outside
+        the two real patterns must be invisible to this gate."""
+        self.one_crossing_only()
+        self.write("artifacts/autogenesis/nursery-zzz-notes.json",
+                   {"note": "not a manifest"})
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("|manifests=1|", done.stdout)
+        self.assertIn("F:a [train] depends_on F:b [development]", done.stdout)
 
     def test_an_absent_fact_ledger_is_exit_two(self) -> None:
         """The other unanswerable input. An empty `depends_on` graph and an
@@ -359,9 +454,14 @@ class PartitionEdgeControls(unittest.TestCase):
 
     def test_two_manifests_disagreeing_on_a_partition_is_exit_two(self) -> None:
         """A fact in two partitions makes every edge touching it meaningless.
-        That is a broken input, not a crossing, so it is 2 rather than 1."""
+        That is a broken input, not a crossing, so it is 2 rather than 1.
+
+        `v2-extension`, not `v2`: `MANIFEST_GLOBS` narrowed from a wide
+        `nursery*.json` to `nursery-v1.json` plus `nursery-v*-extension.json`
+        specifically, and a plain `nursery-v2.json` matches neither -- see the
+        decoy-file guard below, which is the other half of that change."""
         self.manifest("v1", {"F:a": "train"})
-        self.manifest("v2", {"F:a": "development"})
+        self.manifest("v2-extension", {"F:a": "development"})
         self.fact("F:a")
         done = self.gate()
         self.assertEqual(done.returncode, 2, _ctx(done))

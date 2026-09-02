@@ -72,6 +72,7 @@ import hashlib
 import json
 import os
 import pathlib
+import secrets
 import subprocess
 import sys
 from typing import Any
@@ -82,7 +83,19 @@ from typing import Any
 # Same device as `AXEYUM_MERGE_HYGIENE_ROOT` and `AXEYUM_KERNEL_SUITES_ROOT`.
 DEFAULT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-MANIFEST_GLOB = "artifacts/autogenesis/nursery*.json"
+# NOT a single wide `nursery*.json` glob. That shape went UNANSWERABLE
+# (`Unanswerable`, exit 2) the moment ANY unrelated file matching it landed in
+# `artifacts/autogenesis/` -- `load_partitions` treats every glob hit as a
+# manifest and raises the instant one lacks a usable `entries` list, so a
+# committed decoy like `nursery-zzz-notes.json` takes this gate down with no
+# relation to a real crossing. Two explicit patterns name exactly what a
+# manifest here IS: the v1 split (`nursery-v1.json`) and a refill extension
+# (`nursery-v*-extension.json`, so a future `nursery-v3-extension.json` is
+# still found without widening this file again). Neither matches a decoy
+# named anything else, which is the property `test_a_decoy_nursery_file_does_
+# not_make_this_gate_unanswerable` in the control suite pins.
+MANIFEST_GLOBS = ("artifacts/autogenesis/nursery-v1.json",
+                  "artifacts/autogenesis/nursery-v*-extension.json")
 FACTS_DIR = "artifacts/facts"
 BASELINE_PATH = "artifacts/autogenesis/partition-edge-baseline-v1.json"
 AMENDMENTS_PATH = "artifacts/autogenesis/partition-edge-amendments-v1.json"
@@ -118,16 +131,28 @@ def load_json(path: pathlib.Path) -> Any:
         raise Unanswerable(f"{path}: unreadable ({exc})") from exc
 
 
+def manifest_paths(root: pathlib.Path) -> list[pathlib.Path]:
+    """Every path any `MANIFEST_GLOBS` pattern matches, deduplicated and sorted.
+
+    A `set` first: `nursery-v1.json` cannot also match the extension pattern
+    today, but nothing enforces that two patterns here stay disjoint forever,
+    and a duplicate manifest counted twice would double its fact ids in
+    `load_partitions`' loop.
+    """
+    return sorted({path for pattern in MANIFEST_GLOBS
+                   for path in root.glob(pattern)})
+
+
 # --------------------------------------------------------------------------
 # The subject
 # --------------------------------------------------------------------------
 
 def load_partitions(root: pathlib.Path) -> tuple[dict[str, str], list[str]]:
     """`{fact_id: partition}` over every nursery manifest, plus their paths."""
-    manifests = sorted(root.glob(MANIFEST_GLOB))
+    manifests = manifest_paths(root)
     if not manifests:
         raise Unanswerable(
-            f"no nursery manifest matches {MANIFEST_GLOB} under {root} -- "
+            f"no nursery manifest matches {MANIFEST_GLOBS} under {root} -- "
             f"there is no drawn population to check, which is not the same "
             f"as a clean one")
     partition_of: dict[str, str] = {}
@@ -214,6 +239,91 @@ def edge_key(edge: dict[str, str]) -> tuple[str, str]:
 
 
 # --------------------------------------------------------------------------
+# Held-out redaction -- the BASELINE ARTIFACT never carries a held-out fact id
+# in plain text.
+#
+# WHY. `partition-edge-baseline-v1.json` is a committed, producer-readable
+# artifact, and `check-autogenesis-holdout-isolation.py` treats a held-out id
+# appearing anywhere in the tree (outside the split manifests themselves) as a
+# breach -- ADR-1550's own baseline was six such breaches, because the first
+# version stored every crossing edge's endpoints as plain fact ids regardless
+# of partition. A held-out id existing in this file at all is not the
+# violation (the manifests that DEFINE the population already name it); the
+# violation is a PRODUCER being able to read it, which is exactly what a
+# committed JSON artifact offers to any script or model that opens it.
+#
+# So an endpoint whose partition is `held-out` is stored as a salted SHA-256
+# digest instead of the fact id, with `held_out_endpoint: true` alongside it.
+# The salt lives in the same file (`held_out_salt`) -- committing the salt
+# next to the digest does not make the digest reversible, and a reader who
+# already has the plain id can still confirm it produced this digest, which is
+# what a re-derivation audit needs. What nobody gets from this file is the id
+# itself, and a `grep` for it finds nothing here.
+#
+# The salt is CARRIED FORWARD whenever the edge set does not change (mirrors
+# `recorded_date`/`recorded_at_commit`/`ledger_sha256` in `render_baseline`):
+# regenerating a byte-identical file from an unperturbed edge set must produce
+# the identical digest, or `check-generated-artifact-ownership.py`'s OWNER arm
+# -- which perturbs a copy and demands the owner restore it byte-for-byte --
+# cannot pass.
+def digest_fact_id(fact_id: str, salt: str) -> str:
+    return hashlib.sha256(f"{salt}:{fact_id}".encode()).hexdigest()
+
+
+def resolve_salt(previous: dict[str, Any] | None) -> str:
+    """Reuse the committed salt, or mint a fresh one when there is none yet.
+
+    A fresh salt only when `previous` has none -- never on every run -- is
+    what keeps an unchanged edge set's digests unchanged (see module note
+    above). `secrets.token_hex`, not `hashlib` over something guessable: this
+    salt is the only thing standing between a digest and a dictionary attack
+    over ~200 known-shape `F:ml430-...` ids, so it must not be derivable from
+    public state.
+    """
+    if previous is not None:
+        salt = previous.get("held_out_salt")
+        if isinstance(salt, str) and salt:
+            return salt
+    return secrets.token_hex(32)
+
+
+def redacted_key(edge: dict[str, str], salt: str | None) -> tuple[str, str]:
+    """The edge's `(from, to)` pair AS IT APPEARS IN THE BASELINE FILE.
+
+    A held-out endpoint (`from_partition`/`to_partition` == `held-out`) is
+    digested; the other endpoint, and every endpoint of a non-held-out edge,
+    stays plain. `salt is None` degrades to the fully-plain pair rather than
+    raising -- a baseline recorded before this change, or a test fixture that
+    never declares a held-out partition, has no salt and no digested endpoint
+    to match, so there is nothing to redact and comparing plain-to-plain is
+    exactly correct.
+
+    THIS is `--baseline`'s half of "digest the live id the same way before
+    comparing": every membership test against a committed baseline's key set
+    must call this, never bare `edge_key`, or a live held-out crossing can
+    never be recognised as already-baselined and the ratchet would fail
+    closed on every push.
+    """
+    frm = (digest_fact_id(edge["from"], salt)
+           if salt and edge["from_partition"] == "held-out" else edge["from"])
+    to = (digest_fact_id(edge["to"], salt)
+          if salt and edge["to_partition"] == "held-out" else edge["to"])
+    return (frm, to)
+
+
+def redacted_row(edge: dict[str, str], salt: str) -> dict[str, Any]:
+    """One row of the committed baseline, with any held-out endpoint digested."""
+    frm, to = redacted_key(edge, salt)
+    row: dict[str, Any] = {
+        "from": frm, "from_partition": edge["from_partition"],
+        "to": to, "to_partition": edge["to_partition"],
+    }
+    if edge["from_partition"] == "held-out" or edge["to_partition"] == "held-out":
+        row["held_out_endpoint"] = True
+    return row
+
+
+# --------------------------------------------------------------------------
 # Amendments -- per edge, or not at all
 # --------------------------------------------------------------------------
 
@@ -269,7 +379,7 @@ def count_style_exemptions(
     """
     lines: list[str] = []
     covered: set[tuple[str, str]] = set()
-    for path in sorted(root.glob(MANIFEST_GLOB)):
+    for path in manifest_paths(root):
         document = load_json(path)
         if not isinstance(document, dict):
             continue
@@ -384,7 +494,7 @@ def ledger_digest(partition_of: dict[str, str],
 
 def render_baseline(root: pathlib.Path, edges: list[dict[str, str]],
                     manifests: list[str], ledger_sha: str,
-                    previous: dict[str, Any] | None) -> str:
+                    previous: dict[str, Any] | None, salt: str) -> str:
     """The committed baseline text.
 
     `recorded_date`, `recorded_at_commit` and `ledger_sha256` are PROVENANCE
@@ -394,11 +504,19 @@ def render_baseline(root: pathlib.Path, edges: list[dict[str, str]],
     stamped with `today` or with a live digest of a ledger that other lanes
     edit hourly would make this artifact impossible to own. A date that moves
     only when the recorded finding moves is also the more honest field.
+
+    `salt` (and therefore every digested endpoint) is provenance of the same
+    kind, and `carry_over` is computed in the REDACTED representation --
+    `redacted_key(e, salt)`, not bare `edge_key(e)` -- because `salt` is
+    already `resolve_salt(previous)`'s choice: reused when unchanged, so an
+    edge set that has not moved must compare equal to what the previous file
+    already recorded in ITS (also redacted) representation, or the file would
+    be rewritten -- and every held-out digest with it -- on every no-op run.
     """
-    rows = [{k: e[k] for k in ("from", "from_partition", "to", "to_partition")}
-            for e in edges]
+    rows = [redacted_row(e, salt) for e in edges]
     carry_over = (previous is not None
-                  and baseline_keys(previous) == {edge_key(e) for e in edges})
+                  and baseline_keys(previous) == {redacted_key(e, salt)
+                                                   for e in edges})
     if carry_over:
         recorded_date = previous.get("recorded_date", "unknown")
         recorded_at_commit = previous.get("recorded_at_commit", "unknown")
@@ -415,11 +533,14 @@ def render_baseline(root: pathlib.Path, edges: list[dict[str, str]],
         "rule": "This set may only SHRINK. --record-baseline refuses a set "
                 "that is not a subset of the committed one, so a new crossing "
                 "cannot be silenced by re-recording; it must be repaired or "
-                "carry a per-edge amendment.",
+                "carry a per-edge amendment. A held-out endpoint is stored as "
+                "a salted SHA-256 digest (`held_out_endpoint: true`), never as "
+                "the fact id -- see `redacted_key` in the script.",
         "manifests": manifests,
         "recorded_date": recorded_date,
         "recorded_at_commit": recorded_at_commit,
         "ledger_sha256": ledger_sha256,
+        "held_out_salt": salt,
         "edge_set_sha256": sha256_of(rows),
         "edge_count": len(rows),
         "edges": rows,
@@ -468,8 +589,13 @@ def main(argv: list[str] | None = None) -> int:
             if isinstance(candidate, dict) and isinstance(candidate.get("edges"), list):
                 previous = candidate
         baseline: set[tuple[str, str]] = set()
+        baseline_salt: str | None = None
         if args.baseline:
-            baseline = baseline_keys(read_baseline(root))
+            baseline_document = read_baseline(root)
+            baseline = baseline_keys(baseline_document)
+            candidate_salt = baseline_document.get("held_out_salt")
+            if isinstance(candidate_salt, str) and candidate_salt:
+                baseline_salt = candidate_salt
     except Unanswerable as exc:
         print(f"PARTITION-EDGES|UNANSWERABLE {exc}")
         return 2
@@ -485,10 +611,14 @@ def main(argv: list[str] | None = None) -> int:
     # it, because a refusal nobody can delete is not a decision.
     honoured = amendments
     amended = [e for e in edges if edge_key(e) in honoured]
+    # `redacted_key(e, baseline_salt)`, not `edge_key(e)`: a live held-out
+    # crossing must be compared against the DIGESTED form the committed
+    # baseline actually stores, or it can never be recognised as already
+    # baselined -- see `redacted_key`'s docstring.
     baselined = [e for e in edges if edge_key(e) not in honoured
-                 and edge_key(e) in baseline]
+                 and redacted_key(e, baseline_salt) in baseline]
     violations = [e for e in edges if edge_key(e) not in honoured
-                  and edge_key(e) not in baseline]
+                  and redacted_key(e, baseline_salt) not in baseline]
     would_be_waved = len([e for e in violations
                           if edge_key(e) in component_covered])
 
@@ -504,7 +634,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"AMENDMENT-REJECTED {line}")
 
     if args.baseline:
-        repaired = sorted(baseline - {edge_key(e) for e in edges})
+        repaired = sorted(baseline - {redacted_key(e, baseline_salt)
+                                      for e in edges})
         for source, target in repaired:
             print(f"REPAIRED {source} -> {target} no longer crosses; "
                   f"re-record the baseline to lock the gain in")
@@ -555,8 +686,16 @@ def record(root: pathlib.Path, edges: list[dict[str, str]],
     the file it reads, so if re-recording could enlarge the set, a lane that
     hit the gate could clear it in one command and the whole scheme would be
     the growing component exemption again under a new name.
+
+    `keys` is computed with `redacted_key`, using `resolve_salt(previous)` --
+    the SAME salt the committed file already uses when one exists -- so a
+    held-out crossing that is already in `previous` compares equal here too.
+    Using bare `edge_key` would compare a fresh plain id against a committed
+    digest and see every held-out crossing as new on every run, which would
+    make the ratchet un-recordable the moment it holds one.
     """
-    keys = {edge_key(e) for e in edges}
+    salt = resolve_salt(previous)
+    keys = {redacted_key(e, salt) for e in edges}
     if previous is not None:
         grew = sorted(keys - baseline_keys(previous))
         if grew:
@@ -569,7 +708,8 @@ def record(root: pathlib.Path, edges: list[dict[str, str]],
                   f"was written.")
             return 1
     text = render_baseline(root, edges, manifests,
-                           ledger_digest(partition_of, dependencies), previous)
+                           ledger_digest(partition_of, dependencies), previous,
+                           salt)
     (root / BASELINE_PATH).write_text(text)
     shrank = 0 if previous is None else len(baseline_keys(previous) - keys)
     print(f"PARTITION-EDGES|RECORDED|edges={len(edges)}|shrank_by={shrank}"

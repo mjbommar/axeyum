@@ -207,6 +207,75 @@ of the ledger directly — but the attribution should not be quoted as
   `nursery-v1.json` and `nursery-v2-extension.json` are byte-identical to
   their state at the start of this lane.
 
+## Amendment 2026-09-02 (lane `baseline-holdout-leak`): the baseline artifact itself leaked the held-out endpoints it recorded
+
+The 198-edge baseline this ADR describes stored every crossing edge's
+endpoints as the plain fact id, with no exception for a held-out one. Six of
+the 198 have a held-out endpoint (the two directions this ADR's own table
+already names, `held-out → development` and `held-out → train`, 4 + 2), so
+`artifacts/autogenesis/partition-edge-baseline-v1.json` put six held-out fact
+ids in plain text into a committed, producer-readable artifact.
+`scripts/check-autogenesis-holdout-isolation.py` treats exactly that as a
+breach — a held-out id appearing anywhere outside the manifests that define
+the population — and went red on `main`: `references=6`. Lane
+`nursery-repartition` verified this on a clean snapshot; lane
+`partition-edge-gate`'s own gate was right about its subject and wrong about
+where it was allowed to write that subject down.
+
+**The fix is the baseline's format, not its content.** The edge set is
+unchanged — still 198, still the same crossings — but an endpoint whose
+partition is `held-out` is now stored as a **salted SHA-256 digest** of the
+fact id, alongside `held_out_endpoint: true`; a non-held-out endpoint stays
+plain. The salt is committed beside the digests, in a new top-level
+`held_out_salt` field: committing the salt does not make the digest
+reversible, and a reader who already holds the plain id can still confirm it
+produced the recorded digest, but a `grep` for the id — or a producer reading
+the file — finds nothing. `--baseline`'s live comparison digests the current
+crossing edge's held-out endpoint with the same committed salt before testing
+membership, so the ratchet still recognises an already-baselined held-out
+crossing; `--record-baseline` reuses the committed salt whenever the edge set
+is unchanged, which is what lets an unperturbed re-record stay byte-identical
+and keeps `check-generated-artifact-ownership.py`'s OWNER arm passing.
+
+`scripts/check-autogenesis-holdout-isolation.py`: `references=6` →
+`references=0`, `verdict=FAIL` → `verdict=PASS`.
+`scripts/check-partition-edges.py --baseline`: unchanged at `crossing=198
+|baselined=198|violations=0|PASS` — the format change is invisible to every
+caller that only reads the gate's own summary line.
+
+Eleven mutants now, ten single kills unchanged plus one new: **M11, "a
+held-out endpoint is redacted before it is written to the baseline"** —
+deleting the digesting in `redacted_key` and writing the plain id instead
+kills exactly `test_a_held_out_endpoint_is_recorded_as_a_salted_digest_not_
+plain_text`, which asserts the recorded file's raw bytes do not contain the
+plain id at all.
+
+**Not this lane's finding, but blocking it, and fixed as a prerequisite:**
+`scripts/check-generated-artifact-ownership.py` did not parse. A prior merge
+on `main` had silently dropped the closing `Artifact(...)`/opening boundary
+between this ADR's baseline entry and the next `GUARDED` entry
+(`artifacts/refactor/private-helper-census.json`), and separately duplicated
+and garbled the private-helper-census entry's own `runs=` block with text
+copied from the baseline entry's — the "two lanes adding entries to one file"
+collision this repository's multi-agent hygiene guide already documents,
+apparently landed by hand rather than through `scripts/lane-merge-additive.py`.
+Reconstructed both entries verbatim from the two originating commits
+(`6af4e162a`, `43b16059f`); `python3 -m py_compile` and a full run of the
+ownership gate both confirm the file is sound again. `held_out_salt` is now
+also in the baseline artifact's `required_keys`, inserted alphabetically so
+`schema_version` stays last (the OWNER-arm perturbation target).
+
+**Second, independent finding from the same lane:** `MANIFEST_GLOB =
+"artifacts/autogenesis/nursery*.json"` in both `check-partition-edges.py` and
+`nursery-components.py` made both tools go `Unanswerable` (exit 2) the moment
+any unrelated file matching that glob landed in `artifacts/autogenesis/` — a
+decoy `nursery-zzz-notes.json` with no `entries` list took both down.
+Narrowed to two explicit patterns each tool actually means:
+`nursery-v1.json` and `nursery-v*-extension.json` (so a future
+`nursery-v3-extension.json` refill is still found without editing either
+file again). A control in each suite drops exactly that decoy file and
+asserts the gate still answers about the real population.
+
 ## Method notes
 
 - Every number above comes from running the shipped script over the real tree
