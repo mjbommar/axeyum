@@ -251,6 +251,10 @@ autogenesis-nursery:
     # hooks/pre-push and check-merge-hygiene.sh at 0.13s.
     python3 scripts/check-partition-edges.py --baseline
     python3 -m unittest scripts.tests.test_check_partition_edges
+    # ADR-1551 refused option 1 and this enforces the five findings the
+    # refusal rests on, so it can expire rather than go stale in a document.
+    python3 scripts/nursery-components.py --check
+    python3 -m unittest scripts.tests.test_nursery_components
     python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
     cargo test -p axeyum-lean-import --test statement_adapter
     python3 -m unittest scripts.tests.test_check_autogenesis_statement_adapter

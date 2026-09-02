@@ -127,6 +127,10 @@ now. Nothing was deleted.
 | 2026-09-02 | partition-edge-gate | 10 mutants over the gate + M15/M16 in merge-hygiene, each killing exactly one test; `test-prepush-l0-gates.sh` pins the L0 list |
 | 2026-09-02 | partition-edge-gate | a plain pickaxe cannot attribute an edge that entered through a merge — 7 of 198 unattributed until `--diff-merges=first-parent` |
 | 2026-09-02 | partition-edge-gate | ADR-1546's `42847d62c` touched no fact file; its two named commits are where the gate flipped, not where the edges were added |
+| 2026-09-02 | nursery-repartition | ADR-1551: option 1 refused on five measurements; the family graph is one 44-family / 520-row blob and `depends_on` is proof-derived |
+| 2026-09-02 | nursery-repartition | `scripts/nursery-components.py` — the component census, `--propose` for the rule's cost, `--check` for the five findings; registered in `check.sh` and the justfile |
+| 2026-09-02 | nursery-repartition | census artifact registered in `check-generated-artifact-ownership.py`; 17 controls, 11 mutants, 11 single kills |
+| 2026-09-02 | nursery-repartition | found: `check-autogenesis-holdout-isolation.py` is red on main from ADR-1550's baseline artifact, and a new `nursery*.json` artifact makes two gates unanswerable |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -35973,6 +35977,95 @@ file was touched and no step this lane added needs a build).
 `check-autogenesis-nursery.py` and `check-development-partition.py` were NOT
 re-run and are expected to remain red — repairing them is option 1's job, and
 this lane deliberately changed nothing they read.
+
+**Your lane's block (`DONE`, nursery-repartition, 2026-09-02).** ADR-1546 left
+three repair options for the nursery's fused evaluation partitions; lane
+`partition-edge-gate` took option 2 (ADR-1550: the crossing EDGE is the unit,
+198 baselined, the baseline may only shrink). This lane took **option 1** —
+re-partition the drawn rows by connected component of the declared-dependency
+graph. The rule is preregistered in **ADR-1551**, implemented in
+`scripts/nursery-components.py`, computed exactly, and **not applied**. Five
+measurements, all from the shipped tool over the live tree.
+
+1. **The unit is the FAMILY, not the fact.** The policy declares
+   `family_leakage` alongside `split_leakage` and `check-autogenesis-nursery.py`
+   enforces both. Contracting families turns 357 fact-level components (352
+   already single-partition) into **20**: nineteen are a single isolated
+   held-out family, and one blob holds **44 families / 520 of the 716 drawn
+   rows** across all four partitions. Option 1's literal form puts 72% of the
+   population in one partition.
+2. **Two families in the blob cannot move, and 51 of the 198 crossings hang
+   off them.** `integer-absolute-value` is held-out (ADR-0542, 6 edges);
+   `nat-bootstrap` is pinned to exactly `{F:nat-mul-one, F:nat-zero-add}` by
+   `check-autogenesis-nursery.py:426` and 45 drawn rows depend on it. No
+   re-partition can touch those 51.
+3. **The residual cannot take one partition either.** Cut both pins and 42
+   families / 508 rows remain in ONE component; assigning it one partition
+   empties one of `required_evaluation_partitions`, which is the gate option 1
+   exists to turn green.
+4. **The rule's best fixed point is 95 crossings, not zero** — 51 pinned plus a
+   44-edge residual cut — and it costs 13 families / **146 rows** changing
+   partition, taking train from 208 to **122** while
+   `check-dispatchable-frontier.py` is already at 2 against a floor of 10.
+5. **The graph is not outcome-blind.** `depends_on` is derived from the
+   admitted proof term (`check-fact-depends-derived.py`,
+   `admission_dependency_authority: proof-derived-kernel-dependency`), so an
+   unproved row has no edges. Over the 508 train/development rows, **396 of the
+   398 rows that declare any dependency are `proved`** and 22 of the 25 open
+   rows are singletons. Partitioning on it makes a row's partition a function
+   of whether we proved it — what `split_freeze: before-target-outcomes`
+   forbids.
+
+**Nothing moved.** No manifest row changed partition, no `amendments` array was
+extended, no exemption was added, enlarged or deleted. `nursery-v1.json` and
+`nursery-v2-extension.json` are byte-identical to their state at lane start,
+and `check-draw7-frozen-families.py` reports `moved=0` with its control firing.
+The seven component exemptions are **not deleted**: deleting them makes the
+component gate redder on more components, and the re-partition that would have
+made deletion safe is the thing that cannot be performed.
+
+The refusal can expire. `scripts/nursery-components.py --check` enforces the
+five findings against the live tree (F1 a family holding two partitions, F2 the
+blob no longer spanning two evaluation partitions, F3 it containing neither
+pin, F4 the 51 pinned crossings gone, F5 the rule reaching zero) and is
+registered in `scripts/check.sh` and the `justfile`. Seventeen controls, eleven
+mutants, eleven single kills.
+
+**Three findings the next lane should act on.**
+
+- **`check-autogenesis-holdout-isolation.py` is RED on `main`, from
+  ADR-1550's own artifact.** `artifacts/autogenesis/partition-edge-baseline-v1.json`
+  records the six held-out crossing edges by fact id, and the isolation gate
+  counts a held-out fact id appearing in a committed file as a reference:
+  `held_out=206 recorded_scores=10 references=6 verdict=FAIL`, all six sourced
+  to `partition-edge-baseline-v1.json.edges[].from`. ADR-1550 reports
+  `check-merge-hygiene.sh` run end to end but not this gate. Nothing this lane
+  wrote contributes — the census artifact names exactly two fact ids, both
+  longitudinal.
+- **A new `artifacts/autogenesis/nursery*.json` file silently makes two gates
+  UNANSWERABLE.** The census was first written as
+  `nursery-component-census-v1.json`; `check-partition-edges.py`'s
+  `MANIFEST_GLOB` read it as a manifest and printed
+  `PARTITION-EDGES|UNANSWERABLE ... entries is not a list`.
+  `check-autogenesis-nursery.py` globs the same prefix. Renaming to
+  `drawn-population-component-census-v1.json` fixed it; narrowing the glob is a
+  change to two gates' subject and was not made here.
+- **The cheapest real shrink of the 198 is option 2's shape, not option 1's.**
+  45 of the 51 pinned crossings are `depends_on F:nat-zero-add` or
+  `F:nat-mul-one` — two settled, published bootstrap lemmas that leak no
+  evaluation answer. One per-edge amendment class would take the recorded
+  baseline from 198 to 153 with nothing relabelled, and ADR-1550's ratchet
+  accepts a shrink.
+
+**Gate table, before and after (identical — this lane changed no subject):**
+`check-autogenesis-nursery.py` 1/1 · `check-development-partition.py` 1/1 ·
+`check-autogenesis-holdout-isolation.py` **1/1 (pre-existing, see above)** ·
+`check-holdout-adjacency.py` 0/0 · `check-draw7-frozen-families.py` 0/0 ·
+`gen-autogenesis-nursery-refill.py --check` 0/0 ·
+`check-dispatchable-frontier.py` 1/1 (2 against a floor of 10) ·
+`check-partition-edges.py --baseline` 0/0 (`crossing=198 violations=0`) ·
+`validate-facts.py` 0/0. **Not run:** `cargo` in any form, `just check`,
+`scripts/check.sh` end to end. No `.rs` file was touched.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
