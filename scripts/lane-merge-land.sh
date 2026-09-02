@@ -17,7 +17,7 @@
 # tree still shows what needs a hand.
 set -u
 BRANCH="${1:?usage: lane-merge-land.sh <branch>}"
-GENERATED=(PLAN.md docs/research/09-decisions/README.md)
+GENERATED=(PLAN.md docs/research/09-decisions/README.md artifacts/autogenesis/frontier-shape-census-v1.json)
 
 # A DIRTY TREE BEFORE THE MERGE GETS SWEPT INTO THE MERGE COMMIT.
 # Line 44 below is `git add -A -- PLAN.md docs/ artifacts/ scripts/ crates/
@@ -66,6 +66,17 @@ python3 scripts/gen-adr-index.py > /tmp/lane-merge-land.adr 2>&1 || {
   echo "LANE_MERGE_LAND|gen-adr-index failed" >&2; exit 1; }
 python3 scripts/gen-plan.py > /tmp/lane-merge-land.plan 2>&1 || {
   echo "LANE_MERGE_LAND|gen-plan failed" >&2; exit 1; }
+# The frontier shape census is a pure function of the fact ledger, so ANY merge
+# that lands or flips a fact stales it while touching neither its script nor
+# its artifact -- the first two merges after its gate landed (2026-09-02) both
+# failed post-merge hygiene on exactly this. Regenerate it here like PLAN.md.
+# Its exit 2 means "frontier unavailable"; the gate reports that as
+# not-answerable rather than failing, so only exit 1 is a stop here.
+python3 scripts/frontier-shape-census.py > /tmp/lane-merge-land.census 2>&1
+census_rc=$?
+if [ "$census_rc" -eq 1 ]; then
+  echo "LANE_MERGE_LAND|frontier-shape-census failed" >&2; exit 1
+fi
 
 git add -A -- PLAN.md docs/ artifacts/ scripts/ crates/ justfile
 
