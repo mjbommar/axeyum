@@ -6918,7 +6918,11 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("isZeroB_zero", p.is_zero_b_zero, true),
         ("eq_zero_of_isZeroB", p.eq_zero_of_is_zero_b, true),
         ("isZeroB_of_eq_zero", p.is_zero_b_of_eq_zero, true),
-        ("ne_zero_of_isZeroB_false", p.ne_zero_of_is_zero_b_false, true),
+        (
+            "ne_zero_of_isZeroB_false",
+            p.ne_zero_of_is_zero_b_false,
+            true,
+        ),
         ("rowSwap", p.row_swap, false),
         ("rowScale", p.row_scale, false),
         ("rowAddMul", p.row_add_mul, false),
