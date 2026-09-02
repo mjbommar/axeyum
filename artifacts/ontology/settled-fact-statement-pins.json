@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2195,
+    "min_identity_bound": 2196,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -22154,6 +22154,13 @@
       "statement_sha256": "6dbe6e3106b9711f6f21e836f4670b3f17c3efbc78b6b355cfd395aac65d3582",
       "prose_sha256": "da67286a785930beca5854b5a50a9afda1a02e835efa826e9e37743ded0bea02",
       "kernel_theorem": "Rat.pivotSearch_le_rows"
+    },
+    {
+      "fact_id": "F:rat-pivot-search-ne-zero",
+      "language": "lean4",
+      "statement_sha256": "27b66fd66a54c0065eafee767035ee8fc1c04c707794c6d31a1eeca17179e62e",
+      "prose_sha256": "50b94baaaaf04e1e701b6bb91f106fea74dbc77a7ea299a76ae09b45780beabe",
+      "kernel_theorem": "Rat.pivotSearch_ne_zero"
     },
     {
       "fact_id": "F:rat-polyeval-add",

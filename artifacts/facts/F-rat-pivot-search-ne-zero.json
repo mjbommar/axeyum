@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-pivot-search-ne-zero",
+  "title": "A pivot found in range by Gaussian elimination is nonzero",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every column c, every start index and every row count rows, IF Nat.Lt (Rat.pivotSearch M c start rows) rows THEN Not (Eq Rat (M (Rat.pivotSearch M c start rows) c) Rat.zero) -- and the same for the fuelled Rat.pivotSearchAux at an arbitrary fuel and start. In words: if the pivot scan landed strictly under the row count, the entry it landed on is nonzero. This is the VALUE HALF of the second disjunct of ADR-1554 obligation 2, the postcondition of Rat.pivotSearch. F:rat-pivot-search-le-rows is the RANGE half (result <= rows), which both disjuncts assert. The value half is the one OBLIGATION 3 spends: Rat.clearBelow's arithmetic core is a + (-(a/b)) * b = 0 given b != 0, and b is exactly this pivot entry, consumed through Rat.mul_inv_cancel_of_ne_zero. The route is a fuel induction whose MOTIVE IS AN IMPLICATION, with the row index generalised inside it: the in-range hypothesis carries everything, because both exhaustion answers are rows itself and Nat.lt_irrefl refutes Lt rows rows, so the two gave-up branches are discharged without knowing anything about the matrix. The only branch that does work is the one where the Bool zero test came back false, through Rat.ne_zero_of_isZeroB_false (ADR-1554 obligation 1).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.pivotSearch_ne_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt (Rat.pivotSearch x0 x1 x2 x3) x3) -> Not (Eq.{1} Rat (x0 (Rat.pivotSearch x0 x1 x2 x3) x1) Rat.zero)))))) ; theorem Rat.pivotSearchAux_ne_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.lt (Rat.pivotSearchAux x0 x1 x2 x3 x4) x2) -> Not (Eq.{1} Rat (x0 (Rat.pivotSearchAux x0 x1 x2 x3 x4) x1) Rat.zero)))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.pivotSearch_ne_zero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-pivot-search-le-rows"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-pivot-search-ne-zero-1",
+      "kind": "kernel-term",
+      "supports": "Both `Rat.pivotSearch_ne_zero` and the fuelled `Rat.pivotSearchAux_ne_zero` are checked `Declaration::Theorem`s with EMPTY axiom footprints in all four preludes that build the rationals. The checker counts EIGHT rows -- two declarations across four preludes -- and requires exactly that, so losing either half changes the count and the command exits 1. The regex pins the CONCLUSION to the entry at the row the search FOUND (`x0 (Rat.pivotSearch\u2026 \u2026) x1`), in the column `x1` it searched. A version concluding about the entry at the START row (`x0 x2 x1`) would be FALSE at `[[0,1],[1,0]]` and would not match; so would one about a different column. The regex admits both arities deliberately (the wrapper takes four arguments, the fuelled scan five).",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.pivotSearch(Aux)?_ne_zero[[:space:]]+0[[:space:]].*-> Not \\(Eq\\.\\{1\\} Rat \\(x0 \\(Rat\\.pivotSearch(Aux)? x0 x1 x2 x3( x4)?\\) x1\\) Rat\\.zero\\)\\)+$')\" = 8",
+      "notes": "Run 2026-09-02: exactly eight rows match. `scripts/new-fact.py` verified the pattern FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/pivot_content.rs)",
+    "source": "docs/research/09-decisions/adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is empty by proof, as for the rest of this family. Row 3 is `the_pivot_search_value_half_is_not_vacuous` in `rat_prelude/pivot_content_tests.rs`, which shows the hypothesis SATISFIABLE and the conclusion OBSERVABLE at `[[0,1],[1,0]]`: the scan from row 0 in column 0 must skip a zero before it finds row 1, `M 1 0` reduces to 1 and NOT to 0, and `M 0 0` reduces to 0 -- so a theorem about the START row rather than the FOUND row would be false there. Row 4: no import. WHAT THIS DOES NOT SAY: it says nothing about the OTHER disjunct of obligation 2 -- that a returned `rows` means column `c` is zero throughout `[start, rows)`. That is a bounded forall over every index the scan PASSED rather than a statement about the one it returned, so it needs a different fuel induction, one carrying the accumulated range in its motive; it is not a stronger form of this. It also says nothing about `Rat.clearBelow` (obligation 3) or the loop invariant (obligation 4). And it says nothing without its hypothesis: at a start already past the row count `pivotSearch` returns `rows` and the conclusion would be FALSE, which the same test checks."
+}

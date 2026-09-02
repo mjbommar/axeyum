@@ -5,8 +5,9 @@ Date: 2026-09-02
 Index-summary: `Rat.rank_eq_rankCols_of_pivotSection` closes ADR-1558's open
 bridge modulo ONE statement, and `Rat.rank_le_cols_of_pivotSection` (ADR-1555's
 stated open bound) and `Rat.rank_nullity_rows_of_pivotSection` (rank-nullity in
-the ROW form) fall out of it. Thirteen axiom-free declarations in
-`rat_prelude/rank_bridge.rs`. Three things are decided. (1) **The orientation
+the ROW form) fall out of it. **Fifteen** axiom-free declarations, in
+`rat_prelude/rank_bridge.rs` and `rat_prelude/pivot_content.rs` (which also
+lands obligation 2's VALUE half: a pivot found in range is nonzero). Three things are decided. (1) **The orientation
 of the counting law is not a presentation choice, it is the whole cost.**
 Applying `Nat.countRange_bij` with the COLUMNS as the left-hand count — σ :=
 `pivotRowOfCol`, τ := `pivotColOfRow` — makes the INJECTIVITY hypothesis free,
@@ -154,9 +155,13 @@ The outer split on `Nat.ble rows r` needs its hypothesis, because its `false`
 branch is the only place a row index is known to be in range. In the sibling
 induction `Rat.pivotRowSearchAux_leadingIndex` BOTH splits need theirs, because
 there the inner `true` branch carries the entire conclusion
-(`Nat.eq_of_beq_eq_true`). Recognising which splits are free is most of what
-makes a fuel induction cheap, and it is not decidable from the shape of the
-definition alone — it depends on what the motive says.
+(`Nat.eq_of_beq_eq_true`), and the same holds a third time in
+`Rat.pivotSearchAux_ne_zero` (§Consequences), where the conclusion arrives
+through `Rat.ne_zero_of_isZeroB_false`. Recognising which splits are free is
+most of what makes a fuel induction cheap, and it is not decidable from the
+shape of the definition alone — it depends on what the motive says. The pattern
+across all three: **a split is free exactly when neither branch's proof mentions
+the tested `Bool`.**
 
 ### 4. `Nat.le_of_ble_eq_false` is wanted by a third consumer, in a STRICTER form
 
@@ -187,9 +192,23 @@ the non-strict form follows and not conversely.
   `Rat.rank = Rat.rankCols` is the section equation, and the cheapest route to
   it is *not* the full `rowEchelon_isEchelon`: it is the loop invariant
   restricted to the nonzero rows' leading indices being distinct.
-- **Obligation 2's content half and obligation 3 remain untouched by this
-  lane**, and they are the prerequisites for that invariant rather than for the
-  bridge. Sizing them as "on the bridge's critical path" would now be wrong.
+- **Obligation 2's VALUE half landed here as well**
+  (`rat_prelude/pivot_content.rs`): *if the pivot scan landed strictly under the
+  row count, the entry it landed on is nonzero*. It is the half obligation 3
+  spends, through `Rat.mul_inv_cancel_of_ne_zero`, and it is the SAME induction
+  shape as `Rat.pivotRowSearchAux_leadingIndex` — a fuel induction whose motive
+  is an implication, where the in-range hypothesis discharges both exhaustion
+  branches through `Nat.lt_irrefl` and only the `isZeroB = false` branch does
+  work. Obligation 2 now stands as: range half landed (ADR-1558), value half
+  landed (here), **exhaustion disjunct open**. That last one — *the answer is
+  `rows` and then the column is zero throughout `[start, rows)`* — is a bounded
+  `∀` over every index the scan PASSED rather than a statement about the one it
+  returned, so it needs a different induction carrying the accumulated range in
+  its motive. It is not a stronger form of the value half.
+- **Obligation 3 remains untouched by this lane**, and it — with obligation 2's
+  exhaustion disjunct — is a prerequisite for the loop invariant rather than for
+  the bridge. Sizing either as "on the bridge's critical path" would now be
+  wrong.
 - ADR-0603 grading for this family: row 1 is the general constructive form (the
   six facts); row 2 is **empty by proof**, as for ADR-1554, ADR-1555 and
   ADR-1558 — the order on the constructed rationals is decidable and every
@@ -199,7 +218,7 @@ the non-strict form follows and not conversely.
   `pivotRowOfCol`'s expected answer FROM the leading indices the sibling test
   verified, so the two tables cannot agree while both being wrong; row 4 is
   empty — no import.
-- The `rat` prelude builds in **1.63–1.64 s** with all thirteen declarations
+- The `rat` prelude builds in **1.63–1.64 s** with the thirteen bridge declarations
   (`prelude_build_timing`, three consecutive runs on the dev box), which is at
   or under the ~1.7 s this family was told to watch. **No before-measurement was
   taken on this host, so this is a level and not a delta** — do not quote it as

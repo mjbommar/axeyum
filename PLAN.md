@@ -181,7 +181,8 @@ now. Nothing was deleted.
 | 2026-09-02 | rank-bridge | `Rat.pivotColOfRow` and `Rat.pivotRowOfCol` as computed `Definition`s, evaluated at the six matrices the rank and nullity lanes used |
 | 2026-09-02 | rank-bridge | `Rat.isPivotColB_eq_ble`: ADR-1558's `Bool` pivot-column test and the `Nat` pivot-row map are the same scan, so nothing here re-derives a search |
 | 2026-09-02 | rank-bridge | `Nat.le_of_ble_eq_false` is wanted by a THIRD consumer and this one needs the STRICT form (`ble a b = false → Lt b a`, via `lt_or_ge`); that is the statement `nat_prelude` is owed |
-| 2026-09-02 | rank-bridge | six facts, all `proved` / `kernel-lean` / footprint `[]`, each checker pinning the rendered type and a row count of 4 or 8 across the preludes that build the rationals |
+| 2026-09-02 | rank-bridge | `Rat.pivotSearch_ne_zero`: ADR-1554 obligation 2's VALUE half, a pivot found in range is nonzero -- the half obligation 3 spends; the exhaustion disjunct stays open and needs a different induction |
+| 2026-09-02 | rank-bridge | seven facts, all `proved` / `kernel-lean` / footprint `[]`, each checker pinning the rendered type and a row count of 4 or 8 across the preludes that build the rationals |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -37462,10 +37463,11 @@ the R5 screen, so it is not the candidate space this lane needed.
 **modulo one statement**, and the two theorems that were waiting behind it fall
 out of it: `Rat.rank_le_cols_of_pivotSection` (the bound ADR-1555 explicitly
 left open) and `Rat.rank_nullity_rows_of_pivotSection` (rank-nullity in the ROW
-form). **Thirteen new declarations, all axiom-free**, in
-`crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs`. `rat_prelude::`
-**207 passed, 0 failed** (203 baseline + 8 new − the 4 already counted). Clippy
-clean on `axeyum-lean-kernel --all-targets`. ADR-1562. Six facts.
+form). **Fifteen new declarations, all axiom-free** — thirteen in
+`crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs`, plus **obligation
+2's VALUE half** in `rat_prelude/pivot_content.rs`. `rat_prelude::` **210
+passed, 0 failed** (203 baseline + 11 new tests). Clippy clean on
+`axeyum-lean-kernel --all-targets`. ADR-1562. Seven facts.
 
 ## The finding: the orientation is the whole cost
 
@@ -37572,13 +37574,26 @@ is owed.
 ## What is NOT done, precisely
 
 **`Rat.rowEchelon_isEchelon` is not proved**, so nothing in this family is
-unconditional. **ADR-1554 obligation 2's CONTENT half and obligation 3
-(`clearBelow`'s postcondition) were not attempted by this lane** — and the
-bridge shows they are prerequisites for the loop invariant, not for the bridge,
-so sizing them as "on the bridge's critical path" would now be wrong. This lane
-deviated from its brief's ordering deliberately: the brief put obligations 2 and
-3 before the invariant, but once the orientation collapsed obligation 4 to one
-equation, neither was on the path to anything this lane could land.
+unconditional.
+
+**Obligation 2's VALUE half landed** (`Rat.pivotSearch_ne_zero`: a pivot found
+strictly under the row count is nonzero) — the half obligation 3 spends through
+`Rat.mul_inv_cancel_of_ne_zero`. Its **exhaustion disjunct did not**: *the
+answer is `rows` and then the column is zero throughout `[start, rows)`* is a
+bounded `∀` over every index the scan PASSED, not a statement about the one it
+returned, so it needs a different induction carrying the accumulated range in
+its motive. It is not a stronger form of the value half.
+
+**Obligation 3 (`clearBelow`'s postcondition) was not attempted**, and neither
+was the loop invariant. The bridge shows both are prerequisites for the
+invariant rather than for the bridge, so sizing them as "on the bridge's
+critical path" would now be wrong. This lane deviated from its brief's ordering
+deliberately: the brief put obligations 2 and 3 before the invariant, and once
+the orientation collapsed obligation 4 to one equation, neither was on the path
+to anything the bridge needed. Obligation 2's value half was then taken because
+it is the same induction shape as `pivotRowSearchAux_leadingIndex` and reuses
+this file's devices verbatim; obligation 3 is genuinely a lane of its own, as
+ADR-1554 said.
 
 `prelude_build_timing`: `rat` at **1.63–1.64 s** over three consecutive runs.
 **No before-measurement was taken on this host**, so that is a level and not a
