@@ -79,4 +79,4 @@ carries the measurement for whoever takes it.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-09-02 | `pending` | ADR-1545 decides the `Nat.testBit` codomain question as (c); `gen-obstruction-producers.py`'s `nat-testbit-bool-codomain` row corrected `new-construction` → `not-removable` with the measured chain and five existing-file evidence citations; the divergence registry's `Nat.testBit` `why` records the whole chain; `test_gen_obstruction_producers.py` (5 tests) + 4 mutation anchors, each killing exactly one test; gated in `justfile` and `check.sh`. |
+| 2026-09-02 | `7a029fab1` | ADR-1545 decides the `Nat.testBit` codomain question as (c); `gen-obstruction-producers.py`'s `nat-testbit-bool-codomain` row corrected `new-construction` → `not-removable` with the measured chain and five existing-file evidence citations; the divergence registry's `Nat.testBit` `why` records the whole chain; `test_gen_obstruction_producers.py` (5 tests) + 4 mutation anchors, each killing exactly one test; gated in `justfile` and `check.sh`. |
