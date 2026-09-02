@@ -1514,6 +1514,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // `sum_range_permute.rs` (`eisenstein-lattice` lane).
         p.sum_range_point_change,
         p.sum_range_permute,
+        // `eisenstein_lattice.rs` (`eisenstein-2` lane): ADR-1260's step 1,
+        // assembled.
+        p.ble_select_add_of_ne,
+        p.eisenstein_floor_sum,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by
