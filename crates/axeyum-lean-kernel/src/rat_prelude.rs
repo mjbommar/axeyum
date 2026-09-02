@@ -59,6 +59,7 @@ mod core;
 mod decidable;
 mod decide;
 mod defs;
+mod det_mul;
 mod diagonal;
 mod field;
 pub(crate) mod group;
@@ -2476,6 +2477,63 @@ pub struct RatPrelude {
     /// sumMaps m n (fun g => H g * z) = sumMaps m n H * z` — what pulls the
     /// whole `det B n` factor out of the Cauchy–Binet sum.
     pub sum_maps_mul_right: NameId,
+
+    // --- determinant multiplicativity (`det_mul`, ADR-1543) ----------------
+    /// `Rat.matSetRow : Nat → (Nat → Rat) → (Nat → Nat → Rat) →
+    /// (Nat → Nat → Rat)`, `matSetRow t h M := fun r c =>
+    /// if Nat.beq r t then h c else M r c` — `M` with row `t` replaced.
+    /// [`Self::det_row_smul`] and [`Self::det_row_replaced`] take the
+    /// reference matrix as an ARGUMENT, so the Cauchy–Binet cursor needs the
+    /// partially-replaced matrix as a term. The `bool_select_rat` encoding is
+    /// [`Self::mat_id`]'s own, chosen over a recursion on `t` because both
+    /// defining equations then cost one rewrite instead of an induction.
+    pub mat_set_row: NameId,
+    /// `Rat.matSetRow_at : ∀ t h M c, matSetRow t h M t c = h c` — one
+    /// `Nat.beq_refl` rewrite.
+    pub mat_set_row_at: NameId,
+    /// `Rat.matSetRow_off : ∀ t h M r, Nat.beq r t = false → ∀ c,
+    /// matSetRow t h M r c = M r c`.
+    pub mat_set_row_off: NameId,
+    /// `Rat.matSubstRows : (Nat → Nat → Rat) → Nat → Nat → (Nat → Nat) →
+    /// (Nat → Nat → Rat) → (Nat → Nat → Rat)` — `matSubstRows B m s g M`
+    /// replaces rows `[s, s+m)` of `M` by row `g i` of `B` at relative index
+    /// `i`, by structural recursion on `m` peeling the OUTERMOST row first:
+    /// `matSubstRows B (m+1) s g M = matSubstRows B m (s+1) (g ∘ succ)
+    /// (matSetRow s (B (g 0)) M)`.
+    ///
+    /// That order is forced. [`Self::sum_maps`]'s `cons` extends a map at the
+    /// FRONT, so `matSubstRows B (succ j) s (cons k g) M` and
+    /// `matSubstRows B j (succ s) g (matSetRow s (B k) M)` are the SAME TERM
+    /// up to ι and η, and no commutation lemma between "set row `s`" and
+    /// "substitute the rows above `s`" is ever needed.
+    pub mat_subst_rows: NameId,
+    /// `Rat.matSubstRows_below : ∀ B m s g M r, Lt r s → ∀ c,
+    /// matSubstRows B m s g M r c = M r c` — rows below the window survive.
+    pub mat_subst_rows_below: NameId,
+    /// `Rat.matSubstRows_at : ∀ B m s g M i, Lt i m → ∀ c,
+    /// matSubstRows B m s g M (add s i) c = B (g i) c` — inside the window the
+    /// row is the one `g` selects. The row is written `Nat.add s i` so that
+    /// `add s 0` ι-reduces to `s` (`Nat.add` recurses on its RIGHT argument);
+    /// the successor leg pays one `Nat.succ_add`.
+    pub mat_subst_rows_at: NameId,
+    /// `Rat.sumMaps_congr_mapsInto : ∀ n m F G,
+    /// (∀ g, MapsInto g n → F g = G g) → sumMaps m n F = sumMaps m n G` —
+    /// [`Self::sum_maps_congr`] with the pointwise hypothesis weakened to maps
+    /// into the range, which is what [`Self::det_row_selection`]'s
+    /// `MapsInto` hypothesis forces. Every map `sumMaps` enumerates IS such a
+    /// map (a `cons` tower over the constant-zero one), and this carries it.
+    pub sum_maps_congr_maps_into: NameId,
+    /// `Rat.det_matMul_expand : ∀ m n A B,
+    /// det (matMul A B n) (succ m) = sumMaps (succ m) n (fun g =>
+    /// prodRange (fun i => A i (g i)) (succ m) * det (B ∘ g) (succ m))` —
+    /// **ADR-1440's obligation 1**, the Cauchy–Binet expansion of a product's
+    /// determinant over the function space of index maps.
+    pub det_mat_mul_expand: NameId,
+    /// `Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n` —
+    /// **determinant multiplicativity at a symbolic dimension**, the last of
+    /// ADR-1120's four laws. [`Self::det_mat_mul_2`] is the fixed-dimension
+    /// special case whose proof does not generalize.
+    pub det_mat_mul: NameId,
 }
 
 impl RatPrelude {
@@ -2913,6 +2971,15 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_maps_congr: child(kernel, "sumMaps_congr"),
         sum_maps_mul_left: child(kernel, "sumMaps_mul_left"),
         sum_maps_mul_right: child(kernel, "sumMaps_mul_right"),
+        mat_set_row: child(kernel, "matSetRow"),
+        mat_set_row_at: child(kernel, "matSetRow_at"),
+        mat_set_row_off: child(kernel, "matSetRow_off"),
+        mat_subst_rows: child(kernel, "matSubstRows"),
+        mat_subst_rows_below: child(kernel, "matSubstRows_below"),
+        mat_subst_rows_at: child(kernel, "matSubstRows_at"),
+        sum_maps_congr_maps_into: child(kernel, "sumMaps_congr_mapsInto"),
+        det_mat_mul_expand: child(kernel, "det_matMul_expand"),
+        det_mat_mul: child(kernel, "det_matMul"),
     }
 }
 
@@ -2972,6 +3039,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_det::declare_matrix_det(&mut d, prelude)?;
         matrix_det_selection::declare_det_row_selection(&mut d, prelude)?;
         matrix_det_mul::declare_matrix_det_mul(&mut d, prelude)?;
+        det_mul::declare_det_mul(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -2992,6 +3060,9 @@ mod matrix_invertible_tests;
 
 #[cfg(test)]
 mod sum_maps_tests;
+
+#[cfg(test)]
+mod det_mul_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

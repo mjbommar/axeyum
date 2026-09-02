@@ -1874,7 +1874,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (391 names,
+/// The `RatPrelude` field table (400 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2308,6 +2308,15 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("sum_maps_congr", p.sum_maps_congr),
             ("sum_maps_mul_left", p.sum_maps_mul_left),
             ("sum_maps_mul_right", p.sum_maps_mul_right),
+            ("mat_set_row", p.mat_set_row),
+            ("mat_set_row_at", p.mat_set_row_at),
+            ("mat_set_row_off", p.mat_set_row_off),
+            ("mat_subst_rows", p.mat_subst_rows),
+            ("mat_subst_rows_below", p.mat_subst_rows_below),
+            ("mat_subst_rows_at", p.mat_subst_rows_at),
+            ("sum_maps_congr_maps_into", p.sum_maps_congr_maps_into),
+            ("det_mat_mul_expand", p.det_mat_mul_expand),
+            ("det_mat_mul", p.det_mat_mul),
         ],
         lists: Vec::new(),
     }

@@ -235,6 +235,12 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("sumMaps_congr", p.sum_maps_congr),
         ("sumMaps_mul_left", p.sum_maps_mul_left),
         ("sumMaps_mul_right", p.sum_maps_mul_right),
+        ("matSetRow", p.mat_set_row),
+        ("matSetRow_at", p.mat_set_row_at),
+        ("matSetRow_off", p.mat_set_row_off),
+        ("matSubstRows", p.mat_subst_rows),
+        ("matSubstRows_below", p.mat_subst_rows_below),
+        ("matSubstRows_at", p.mat_subst_rows_at),
     ]
 }
 
@@ -6867,6 +6873,12 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("sumMaps_congr", p.sum_maps_congr, true),
         ("sumMaps_mul_left", p.sum_maps_mul_left, true),
         ("sumMaps_mul_right", p.sum_maps_mul_right, true),
+        ("matSetRow", p.mat_set_row, false),
+        ("matSetRow_at", p.mat_set_row_at, true),
+        ("matSetRow_off", p.mat_set_row_off, true),
+        ("matSubstRows", p.mat_subst_rows, false),
+        ("matSubstRows_below", p.mat_subst_rows_below, true),
+        ("matSubstRows_at", p.mat_subst_rows_at, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
