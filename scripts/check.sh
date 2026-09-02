@@ -1336,6 +1336,12 @@ step creal-declare-deps python3 scripts/creal-declare-deps.py --check --strict -
 # in scripts/check-merge-hygiene.sh, which is the gate that actually runs per
 # merge.
 step py-prelude-fields python3 scripts/gen-py-prelude-fields.py --check
+# The ADR-1512 migration's workspace-wide consumer scan: which files OUTSIDE
+# crates/axeyum-lean-kernel read a moving field flat. It refuses rather than
+# reports, because the first batch's external consumer was a GENERATED file in
+# another crate and the migration said nothing. Mutation-verified
+# (`mutation_controls.py creal-migrate-consumers`); C7 is the vacuity control.
+step creal-migrate-consumer-controls python3 -m unittest scripts.tests.test_creal_migrate_registry
 # ADR-0601 SS3: the import backlog (external-proved, epistemically-open facts)
 # as a produced, deterministic artifact rather than a bare count in
 # validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.

@@ -4631,6 +4631,66 @@ SUITES["merge-hygiene"] = (
 
 
 # --------------------------------------------------------------------------
+# `creal-migrate-consumers` -- the workspace-wide consumer scan in
+# `scripts/creal-migrate-registry.py`.
+#
+# The scan answers "would this move break something the rewriter cannot see?",
+# and it exists because the answer was YES and nobody asked:
+# `crates/axeyum-py/src/kernel/prelude_fields.rs` is generated, lives outside
+# the kernel crate, names every `CRealPrelude` field, and the first migration
+# batch left it addressing fields that had moved. Main stopped compiling.
+#
+# C1 is the refusal itself and kills four scenarios, because four scenarios
+# reach the exit through one `sys.exit`. The rest are one apiece, and the two
+# that matter most are the NEGATIVE controls (C2, C7): a scan that refused
+# unconditionally would satisfy the refusal test and teach every lane to pass
+# `--allow-external`. Kill sets are reported as measured.
+# --------------------------------------------------------------------------
+
+SUITES["creal-migrate-consumers"] = (
+    "scripts/creal-migrate-registry.py",
+    Unittest("scripts.tests.test_creal_migrate_registry"),
+    [
+        (
+            "C1 an external consumer refuses the migration",
+            "    sys.exit(1)",
+            "    return",
+        ),
+        (
+            "C2 files the rewriter WILL fix are not findings",
+            "        if path in skip or not path.is_file():",
+            "        if not path.is_file():",
+        ),
+        (
+            "C3 an accessor in a COMMENT is not a finding",
+            "        for m in accessor.finditer(cdd.strip_noise(raw)):",
+            "        for m in accessor.finditer(raw):",
+        ),
+        (
+            "C4 a rustdoc `CRealPrelude::<field>` link IS a finding",
+            "        for m in doclink.finditer(raw):",
+            "        for m in doclink.finditer(\"\"):",
+        ),
+        (
+            "C5 --allow-external proceeds instead of refusing",
+            "    if allow:",
+            "    if False:",
+        ),
+        (
+            "C6 a generated consumer is labelled GENERATED",
+            '        kind = "GENERATED" if is_generated(path) else "hand-written"',
+            '        kind = "hand-written"',
+        ),
+        (
+            "C7 a clean tree is NOT refused (the vacuity control)",
+            "    if not findings:",
+            "    if False:",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
 # `shell-antipatterns-scope` -- the SCAN SET of `check-shell-antipatterns.sh`.
 #
 # The 2026-08-30 session audit's fifth survivor. The gate's DETECTOR was

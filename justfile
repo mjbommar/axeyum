@@ -1534,6 +1534,9 @@ generated-trackers:
     # registry split deleted 69 of creal's 606 names from the Python surface
     # and nothing noticed. ~0.3s, pure Python.
     python3 scripts/gen-py-prelude-fields.py --check
+    # The ADR-1512 migration's consumer scan: it refuses a move that would
+    # break a file outside the kernel crate. Mutation-verified.
+    python3 -m unittest scripts.tests.test_creal_migrate_registry
     # ADR-0601 SS3: the import backlog as a produced artifact, not a bare
     # count. docs/autogenesis/289-import-backlog-artifact.md.
     python3 -m unittest scripts.tests.test_gen_import_backlog
