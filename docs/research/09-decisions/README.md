@@ -846,3 +846,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1551](adr-1551-the-family-graph-is-one-blob-and-the-dependency-edge-is-proof-derived.md) | Option 1 is refused — the family graph is ONE blob, and the dependency edge it would partition on is proof-derived | accepted |
 | [1552](adr-1552-eisensteins-lemma-was-blocked-on-a-missing-aggregate-and-nothing-else.md) | **Eisenstein's lemma is now a kernel theorem** | accepted |
 | [1554](adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md) | `Rat.rowEchelon` lands as a `Definition` the kernel REDUCES — | accepted |
+| [1557](adr-1557-quadratic-reciprocity-is-proved-and-the-legendre-symbol-is-defined-by-gausss-count.md) | **The law of quadratic reciprocity is now a kernel theorem** | accepted |

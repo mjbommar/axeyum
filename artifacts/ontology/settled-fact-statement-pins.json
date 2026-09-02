@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2176,
+    "min_identity_bound": 2180,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8231,6 +8231,13 @@
       ]
     },
     {
+      "fact_id": "F:int-legendre-sym-modeq-pow",
+      "language": "lean4",
+      "statement_sha256": "056fdf221f756189822bc78546c05585acbd688b601978178e8012d2a3b7ab01",
+      "prose_sha256": "83aa2d5a6d4b5df32b62dd10a69490c8831f5079a3c4dea5d3a05206c87b7449",
+      "kernel_theorem": "Int.legendreSym_modEq_pow"
+    },
+    {
       "fact_id": "F:int-lt-dest",
       "language": "lean4",
       "statement_sha256": "afeec84932da6c798d415061198e8b1dfda383441d545fc80e36abdb4a673241",
@@ -9095,6 +9102,13 @@
       "statement_sha256": "d6d051ba3230b64c8b621141f6e888842ae28623ecb0a4591e3b38440f6cc143",
       "prose_sha256": "9213f31f5b5088b54ffb5d9c714635284eeb725c75c2c85d189ae48078160c30",
       "kernel_theorem": "Int.prodRangeIf_zero"
+    },
+    {
+      "fact_id": "F:int-quadratic-reciprocity",
+      "language": "lean4",
+      "statement_sha256": "989d53eb4789a7ee9c496f9fa78d32e928e3777197d60243c257032dc5ba8307",
+      "prose_sha256": "9320bff134834b32b5aa9dafa61ce786256f12d485ece222853153582058a778",
+      "kernel_theorem": "Int.quadraticReciprocity"
     },
     {
       "fact_id": "F:int-secondsupplementarylaw",
@@ -16588,6 +16602,20 @@
       "statement_sha256": "91dd89fada6968b065c6cd7c563bd943b8cfcdb3af1ebb7327630e80bc6c4b08",
       "prose_sha256": "14a4a41b95c7e82ba6b20a20cbbf3c94e4b0e7c7d02fd853af41bfcc069569f0",
       "kernel_theorem": "Nat.gauss_lemma"
+    },
+    {
+      "fact_id": "F:nat-gausscount-sum-even",
+      "language": "lean4",
+      "statement_sha256": "decb63f5fd66e33445bf66a506d0c8dc570d75ecb604dd6b6ef87dbb88c8e189",
+      "prose_sha256": "79ceea05d1d850318db092e88b96f9fe51fa9d75272f62e00e89e1f09f434c67",
+      "kernel_theorem": "Nat.gaussCount_sum_even"
+    },
+    {
+      "fact_id": "F:nat-gausscount-sum-modeq",
+      "language": "lean4",
+      "statement_sha256": "2e2fe58d8a27644b952eae31640cbcbb261c6b83d4224ba841244a40a3b0115c",
+      "prose_sha256": "19739c623ec7ae0f94811a928aa37befdda85d669f9576d53550779f93ecbd03",
+      "kernel_theorem": "Nat.gaussCount_sum_modEq"
     },
     {
       "fact_id": "F:nat-gcd-bezout",
