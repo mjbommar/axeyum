@@ -16,28 +16,32 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
     vec![
         (
             "CReal.converges_upper_bound_shift",
-            p.converges_upper_bound_shift,
+            p.cos_sign.converges_upper_bound_shift,
             "theorem",
         ),
         (
             "CReal.alternatingUpperBoundTail",
-            p.alternating_upper_bound_tail,
+            p.cos_sign.alternating_upper_bound_tail,
             "theorem",
         ),
-        ("CReal.cosWideTailNonneg", p.cos_wide_tail_nonneg, "theorem"),
+        (
+            "CReal.cosWideTailNonneg",
+            p.cos_sign.cos_wide_tail_nonneg,
+            "theorem",
+        ),
         (
             "CReal.cosWideTailAntitone",
-            p.cos_wide_tail_antitone,
+            p.cos_sign.cos_wide_tail_antitone,
             "theorem",
         ),
         (
             "CReal.cosWideSeriesConverges",
-            p.cos_wide_series_converges,
+            p.cos_sign.cos_wide_series_converges,
             "theorem",
         ),
         (
             "CReal.cosWideNonpositive",
-            p.cos_wide_nonpositive,
+            p.cos_sign.cos_wide_nonpositive,
             "theorem",
         ),
     ]

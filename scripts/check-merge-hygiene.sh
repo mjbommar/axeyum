@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Post-merge hygiene: the things that have actually gone wrong when a
-# coordinator merges a lane branch, in one command that takes ~2 seconds.
+# coordinator merges a lane branch, in one command that takes a few seconds.
 #
-# FOUR are listed below and THREE are enforced. The fourth is written down with
-# the reason it is not gated (there are no live subjects, so a guard for it
-# could not fail), because a header claiming four while the body enforces three
-# is exactly the kind of gap this file exists to close.
+# EIGHT are listed below and SEVEN are enforced. The pinned-inventory one is
+# written down with the reason it is not gated (there are no live subjects, so
+# a guard for it could not fail), because a header claiming more checks than
+# the body enforces is exactly the kind of gap this file exists to close.
 #
 # Why this exists. Merging lane branches is the coordinator's most frequent
 # operation and the full gate is ~10 minutes, so it is not run per merge. Each
@@ -29,8 +29,45 @@
 #   4. A PINNED-INVENTORY COUNT BROKEN BY A CLEAN MERGE. Two lanes can each
 #      correctly bump a pinned length and git merges both entries without
 #      conflict, leaving the declared size one short. Eight times in one day.
+#   5. THE IMPORT BACKLOG AND PRODUCTION-PROVENANCE LEDGERS WENT STALE AND
+#      STAYED THAT WAY (ADR-1511). Both derive from `artifacts/facts/*.json`
+#      alone -- no cargo, no kernel build -- so their `--check` costs ~0.1s and
+#      there was never a real reason to leave it out of the cheap gate. It was
+#      only ever wired into `scripts/check.sh`/`just check`, the ~10-minute
+#      gate nobody runs per merge, and both drifted for days (147 -> 213 rows,
+#      2,054 -> 2,343 facts) with the red `--check` visible only there.
+#   6. THE THEOREM-COUNTING LEDGERS WENT STALE FOR THE SAME REASON, BUT THEIR
+#      REAL `--check` NEEDS A RELEASE KERNEL BUILD (~40s warm, ~3 minutes cold
+#      -- measured 2026-09-01 building `prelude_theorem_inventory` from
+#      scratch in a fresh worktree) so it cannot live in a ~2-second gate and
+#      was deliberately NOT added here whole. What CAN run here for free is a
+#      cross-consistency check: `theorem-production-ledger.md`'s distinct
+#      count and `ledger-coverage.json`'s `kernel_theorems` count are two
+#      committed artifacts derived from the SAME kernel measurement
+#      (`prelude_theorem_inventory --include-constructed`) and must agree
+#      exactly. They already silently diverged once -- when the kernel grew an
+#      `ipc` prelude group on 2026-08-31, `gen-theorem-production-ledger.py`
+#      caught it (its own coverage guard, ADR-1511) but nothing forced anyone
+#      to notice before merging. This is a NECESSARY, not sufficient,
+#      condition for freshness: two stale artifacts regenerated together still
+#      agree with each other while both disagree with the true kernel state.
+#      The real check remains `gen-theorem-production-ledger.py --check` /
+#      `gen-ledger-coverage.py --check` in `scripts/check.sh` and `just check`
+#      -- run those before trusting an absolute count, not just this ratchet.
 #
-# Exit 0 only when all three enforced checks pass. Each failure names its own
+#   7. A GENERATED SOURCE FILE, not a generated document.
+#      `crates/axeyum-lean-kernel/src/creal/steps_generated.rs` is the `STEPS`
+#      build table the creal prelude runs, with its `requires`/`provides`
+#      measured from `creal.rs` and its 49 modules rather than written by hand
+#      (lane `creal-split-2`). It is here because `creal.rs` has the highest
+#      edit rate in the repository -- so it is the generated file most likely
+#      to be merged stale -- and because a stale one is SILENT: the build
+#      succeeds with a dependency graph missing whatever the merge added,
+#      which is exactly the under-constrained preflight the generator
+#      replaced (the hand-written table it succeeded named 3,934 of 4,831
+#      real edges). ~1.1s, pure Python over the source, no cargo.
+#
+# Exit 0 only when all seven enforced checks pass. Each failure names its own
 # remedy.
 set -u
 # `AXEYUM_MERGE_HYGIENE_ROOT` points the SHIPPED script at a throwaway tree, so
@@ -84,6 +121,24 @@ if ! plan_out=$(python3 scripts/gen-plan.py --check 2>&1); then
   note "lane status doc puts prose BEFORE its first plan-section marker."
 fi
 
+# `crates/axeyum-lean-kernel/src/creal/steps_generated.rs` is a GENERATED
+# SOURCE FILE -- the `STEPS` table the creal prelude builds against, whose
+# `requires`/`provides` are measured from `creal.rs` and its modules rather
+# than written by hand. It is here for the same reason PLAN.md is: `creal.rs`
+# has the highest edit rate in the repository, so it is the generated file most
+# likely to be merged stale, and a stale one silently under-constrains the
+# build order -- the exact defect the generator replaced. ~1.1s, pure Python,
+# no cargo. `--strict` makes the exit depend on the finding and `--self-check`
+# is its positive control.
+if ! creal_out=$(python3 scripts/creal-declare-deps.py --check --strict --self-check 2>&1); then
+  fail=1
+  echo "FAIL: creal-declare-deps.py --check --strict --self-check"
+  printf '%s\n' "$creal_out" | sed 's/^/    /'
+  note "Run scripts/creal-declare-deps.py and commit BOTH"
+  note "crates/axeyum-lean-kernel/src/creal/steps_generated.rs and"
+  note "artifacts/refactor/creal-declare-deps.json."
+fi
+
 # --- 4. pinned inventory counts: DELIBERATELY NOT CHECKED HERE ---------------
 # A clean merge of two correct pin increments leaves the declared size one
 # short, and that happened eight-plus times in one day -- so a guard here looked
@@ -106,8 +161,71 @@ fi
 # than as a failure, and mask comments before grepping for the shape.
 pins="n/a (no live pin sites; see the note above)"
 
+# --- 5. import backlog and production-provenance ledgers -------------------
+# Both derive from `artifacts/facts/*.json` alone -- no cargo, no kernel
+# build -- so `--check` costs ~0.1s each (measured 2026-09-01) and there was
+# no real reason to leave them out of the cheap gate. See point 5 above.
+if ! import_out=$(python3 scripts/gen-import-backlog.py --check 2>&1); then
+  fail=1
+  echo "FAIL: gen-import-backlog.py --check"
+  printf '%s\n' "$import_out" | sed 's/^/    /'
+  note "Run scripts/gen-import-backlog.py and commit artifacts/import-backlog.json."
+fi
+
+if ! provenance_out=$(python3 scripts/gen-production-provenance-ledger.py --check 2>&1); then
+  fail=1
+  echo "FAIL: gen-production-provenance-ledger.py --check"
+  printf '%s\n' "$provenance_out" | sed 's/^/    /'
+  note "Run scripts/gen-production-provenance-ledger.py and commit"
+  note "docs/plan/generated/production-provenance-ledger.md."
+fi
+
+# --- 6. theorem-ledger cross-consistency (a NECESSARY, not sufficient, ------
+#        freshness check -- see point 6 above for why the real --checks stay
+#        in scripts/check.sh / just check rather than living here whole) ----
+# `theorem-production-ledger.md`'s distinct count and `ledger-coverage.json`'s
+# `kernel_theorems` count are two committed artifacts derived from the SAME
+# kernel measurement and must agree exactly. Comparing two committed files
+# costs no cargo and no kernel build. This is the check that would have
+# caught the `ipc` prelude gap (ADR-1511) at merge time rather than only when
+# someone happened to run the full gate.
+theorem_ledger="docs/plan/generated/theorem-production-ledger.md"
+coverage_json="artifacts/ledger-coverage.json"
+if [ -f "$theorem_ledger" ] && [ -f "$coverage_json" ]; then
+  ledger_count=$(/usr/bin/grep -oE '\*\*[0-9]+ distinct theorems\*\*' "$theorem_ledger" \
+    | /usr/bin/grep -oE '[0-9]+' | head -1)
+  coverage_count=$(python3 -c "
+import json
+print(json.load(open('$coverage_json'))['counts']['overall']['kernel_theorems'])
+" 2>/dev/null)
+  if [ -z "$ledger_count" ] || [ -z "$coverage_count" ]; then
+    fail=1
+    echo "FAIL: theorem-ledger cross-consistency (could not read one or both counts)"
+    note "ledger_count=${ledger_count:-<unreadable>} coverage_count=${coverage_count:-<unreadable>}"
+    note "Regenerate both: python3 scripts/gen-theorem-production-ledger.py and"
+    note "python3 scripts/gen-ledger-coverage.py."
+  elif [ "$ledger_count" != "$coverage_count" ]; then
+    fail=1
+    echo "FAIL: theorem-ledger cross-consistency"
+    note "$theorem_ledger says $ledger_count distinct theorems;"
+    note "$coverage_json says kernel_theorems=$coverage_count. They derive from"
+    note "the SAME kernel measurement and must agree -- one of the two was"
+    note "regenerated without the other. Regenerate both and re-commit:"
+    note "  python3 scripts/gen-theorem-production-ledger.py"
+    note "  python3 scripts/gen-ledger-coverage.py"
+    note "This does NOT confirm either number is fresh against the true kernel"
+    note "state -- only that the two committed artifacts agree. The real"
+    note "freshness check is gen-theorem-production-ledger.py --check /"
+    note "gen-ledger-coverage.py --check, in scripts/check.sh and just check"
+    note "(needs a release kernel build: ~40s warm, ~3min cold -- too expensive"
+    note "for this gate)."
+  fi
+else
+  note "theorem-ledger cross-consistency: SKIPPED (one or both artifacts absent)"
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|pinned_inventories=$pins|PASS"
+  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|PASS"
   exit 0
 fi
 echo "MERGE_HYGIENE|FAILED"

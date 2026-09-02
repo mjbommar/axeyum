@@ -65,7 +65,16 @@ class MergeHygieneControls(unittest.TestCase):
         self.git("init", "-q")
         self.git("config", "user.email", "t@example.com")
         self.git("config", "user.name", "t")
-        for name, tag in (("gen-adr-index", "ADR_INDEX ok"), ("gen-plan", "plan ok")):
+        for name, tag in (
+            ("gen-adr-index", "ADR_INDEX ok"),
+            ("gen-plan", "plan ok"),
+            # ADR-1511: the two cheap ledger checks the gate now runs for real.
+            ("gen-import-backlog", "IMPORT_BACKLOG ok"),
+            ("gen-production-provenance-ledger", "PRODUCTION_PROVENANCE ok"),
+            # The creal STEPS table is a GENERATED SOURCE FILE, checked here
+            # for the same reason PLAN.md is (lane `creal-split-2`).
+            ("creal-declare-deps", "CREAL_DECLARE_DEPS ok"),
+        ):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
         self.write("README.md", "clean\n")
@@ -155,6 +164,23 @@ class MergeHygieneControls(unittest.TestCase):
         done = self.run_gate()
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
+    # -- guard 5/6 (ADR-1511): the cheap ledger checks block ----------------
+
+    def test_import_backlog_check_failure_fails_the_gate(self) -> None:
+        """Deleting the `gen-import-backlog.py --check` guard must kill exactly
+        this test. Measured 2026-09-01: the generator was red on main for a day
+        (147 -> 164 rows) and nothing at merge time said so."""
+        done = self.run_gate(gen_import_backlog=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: gen-import-backlog.py --check", done.stdout)
+
+    def test_production_provenance_check_failure_fails_the_gate(self) -> None:
+        """Same shape for the provenance ledger, which `--check` reported stale
+        (2,054 published vs 2,343 live) while every merge went through."""
+        done = self.run_gate(gen_production_provenance_ledger=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: gen-production-provenance-ledger.py --check", done.stdout)
+
     # -- guard 2: duplicate ADR numbers -------------------------------------
 
     def test_adr_index_check_failure_fails_the_gate(self) -> None:
@@ -176,6 +202,18 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertIn("FAIL: gen-plan.py --check", done.stdout)
         self.assertIn("commit PLAN.md", done.stdout)
+
+    def test_stale_creal_steps_table_fails_the_gate(self) -> None:
+        """`crates/.../creal/steps_generated.rs` is the `STEPS` array the creal
+        prelude builds against and it is generated from a measurement of
+        `creal.rs`. A stale one silently under-constrains the build order --
+        which is the defect the generator replaced -- and `creal.rs` has the
+        highest edit rate in the repository, so it is the generated file most
+        likely to be merged stale."""
+        done = self.run_gate(creal_declare_deps=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: creal-declare-deps.py --check", done.stdout)
+        self.assertIn("steps_generated.rs", done.stdout)
 
     # -- the aggregate ------------------------------------------------------
 

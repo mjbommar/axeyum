@@ -103,10 +103,12 @@
 
 use super::series::neg_zero_equiv;
 use super::{CRealPrelude, cadd, cle, clt, creal_ty, div_succ, equiv};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 /// Admit `CReal.mvt_interiorExtremum`. See the module documentation for the
@@ -919,9 +921,49 @@ fn declare_mvt_interior_extremum(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.mvt_interior_extremum,
+        name: p.mvt.mvt_interior_extremum,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/mvt.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MvtNames {
+    /// `CReal.mvt_interiorExtremum : ∀ F F' lo hi, HasDerivativeOn F F' lo
+    /// hi → ∀ m, Equiv (F hi) (add (F lo) (mul m (add hi (neg lo)))) → ∀ c,
+    /// lt lo c → lt c hi → (Or (∀ x, le lo x → le x hi → le (g x) (g c)) (∀
+    /// x, le lo x → le x hi → le (g c) (g x))) → Equiv (F' c) m`, where `g :=
+    /// fun r => add (F r) (neg (mul m r))` (`creal/mvt.rs`) — the Mean Value
+    /// Theorem (Spivak ch. 11, Thm 3), a thin wrapper over
+    /// [`super::CRealPrelude::rolle_interior_extremum`] applied to `g`: the secant-slope
+    /// hypothesis makes `Equiv (g lo) (g hi)` provable UNCONDITIONALLY (pure
+    /// algebra, no extra hypothesis), `g`'s derivative is `fun x => add (F'
+    /// x) (neg m)` via [`super::CRealPrelude::has_derivative_sub`] composed with a
+    /// from-scratch (not [`super::CRealPrelude::has_derivative_smul`], which would need an
+    /// extra magnitude bound on `m`) derivative witness for `r ↦ m·r`, and
+    /// the `Or` case-split hypothesis is Rolle's own, passed through
+    /// verbatim with no case analysis performed in this theorem at all. See
+    /// `creal/mvt.rs`'s module documentation for the full graded-family
+    /// accounting (row 2 unassessed, row 3 already the existing CAS
+    /// certificate).
+    pub mvt_interior_extremum: NameId,
+}
+
+impl MvtNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            mvt_interior_extremum: kernel.name_str(creal, "mvt_interiorExtremum"),
+        }
+    }
 }

@@ -1314,6 +1314,17 @@ step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
 step adr-index      python3 scripts/gen-adr-index.py --check
+# `creal`'s build table. `crates/axeyum-lean-kernel/src/creal/steps_generated.rs`
+# is the `STEPS` array the prelude builds against and it is GENERATED from a
+# measurement of `creal.rs` plus its modules -- `--check` fails when it is stale
+# against the source, `--strict` when the measured graph contradicts it, and
+# `--self-check` is the positive control (permute one step before its provider
+# and require the scan to fire, so a clean run is not also what an empty scan
+# prints). Pure Python over the source, ~1.1s, no cargo. Registered here rather
+# than left to whoever remembers: the hand-written table it replaces named
+# 3,934 of 4,831 real edges for as long as it existed, precisely because
+# nothing re-derived it.
+step creal-declare-deps python3 scripts/creal-declare-deps.py --check --strict --self-check
 # ADR-0601 SS3: the import backlog (external-proved, epistemically-open facts)
 # as a produced, deterministic artifact rather than a bare count in
 # validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.

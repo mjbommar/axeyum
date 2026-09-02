@@ -89,12 +89,12 @@ clear_pycache
 baseline="$(run_all_fixtures)"
 echo "$baseline"
 
-echo "$baseline" | grep -qx 'good=PASS' || {
+[ "$(echo "$baseline" | grep -cx 'good=PASS')" -gt 0 ] || {
   echo "FAIL: the good fixture must pass every guard in the baseline" >&2
   exit 1
 }
 for guard in "${GUARDS[@]}"; do
-  echo "$baseline" | grep -qx "bad_${guard}=FAIL" || {
+  [ "$(echo "$baseline" | grep -cx "bad_${guard}=FAIL")" -gt 0 ] || {
     echo "FAIL: fixture bad_${guard} must FAIL in the baseline (guard intact)" >&2
     exit 1
   }

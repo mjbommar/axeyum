@@ -938,6 +938,25 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "    if not isinstance(non_examples, list) or not non_examples:",
                 "    if False:",
             ),
+            # ADR-1510 rule 1: a contract is sized by the frontier and retires
+            # when that population empties. A capability claim over an EMPTY
+            # population cannot be falsified by any dispatch -- the same
+            # unfalsifiable object ADR-0602 prevents one arrow upstream.
+            (
+                "a contract may not be SIZED against held-out population",
+                "    if sized_held_out:",
+                "    if False:",
+            ),
+            (
+                "an exhausted contract must be retired",
+                "    if not live and retirement is None:",
+                "    if False:",
+            ),
+            (
+                "retirement may not silence a contract with live work",
+                "    if live and retirement is not None:",
+                "    if False:",
+            ),
         ],
     ),
     # --------------------------------------------------------------------
@@ -990,6 +1009,25 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
             (
                 "every required top-level key must be present",
                 "    if missing:",
+                "    if False:",
+            ),
+            # ADR-1510 rule 2: a decline dies with its fact. Measured
+            # 2026-09-01, 26 of 27 live suppressions named facts that were
+            # already proved, and nothing could tell them apart from a decline
+            # suppressing live work.
+            (
+                "a decline against a settled fact must carry a resolution",
+                "    if settled and resolution is None:",
+                "    if False:",
+            ),
+            (
+                "a decline against an OPEN fact may not carry a resolution",
+                "    if not settled and resolution is not None:",
+                "    if False:",
+            ),
+            (
+                "resolution.closed_by must name a real path in this repository",
+                "    if not (ROOT / closed_by).exists():",
                 "    if False:",
             ),
         ],
@@ -4566,6 +4604,12 @@ SUITES["merge-hygiene"] = (
             "if ! plan_out=$(python3 scripts/gen-plan.py --check 2>&1); then",
             "if false; then",
         ),
+        (
+            "M7 a stale creal STEPS table fails the gate",
+            "if ! creal_out=$(python3 scripts/creal-declare-deps.py "
+            "--check --strict --self-check 2>&1); then",
+            "if false; then",
+        ),
     ],
 )
 
@@ -5616,6 +5660,63 @@ SUITES["holdout-isolation-population-pin"] = (
         ),
     ],
 )
+
+# --------------------------------------------------------------------------
+# inductive-universe-guard (ADR-1495, pinned by ADR-1500): Lean's
+# `check_constructor` universe constraint in `Kernel::add_inductive`.
+#
+# Without it, `U : Sort 1` with `mk : Sort 1 -> U` is admitted; large
+# elimination then gives `el : U -> Sort 1` with `el (mk X)` def-eq `X`,
+# making `Sort u` a retract of an inhabitant of `Sort u` -- the `Type : Type`
+# precondition for Girard's paradox, from which `False` is derivable. This is
+# the one trust anchor the whole project's axiom-freedom claim rests on.
+#
+# The guard shipped with its rejection assertion and its two admission
+# controls in ONE `#[test]`, which measured less than it looked: the test dies
+# on its FIRST assertion, so the admission controls were unreachable in the
+# only configuration where their answer matters. They are separate `#[test]`s
+# now, and the three integration suites the fix touched
+# (`kernel_seam_fuzz`, `mutual_inductive_group_grammar`,
+# `nested_inductive_grammar`) SURVIVE the guard's removal -- confirmed
+# independently, 1 passed / exit 0 each -- because the grammar generator was
+# moved to emitting only Lean-legal shapes. So `--lib inductive` is the only
+# thing in the workspace that dies, which is exactly why it is registered here.
+#
+# The two mutations below fail in OPPOSITE directions and are killed by
+# different tests: dropping the guard admits the paradox shape, and dropping
+# the `Prop` exemption refuses `Exists` and `Acc`.
+# --------------------------------------------------------------------------
+
+SUITES["inductive-universe-guard"] = (
+    "crates/axeyum-lean-kernel/src/inductive.rs",
+    Cargo(
+        ("-p", "axeyum-lean-kernel", "--lib", "inductive"),
+        "inductive-universe-guard",
+    ),
+    [
+        # THE GUARD ITSELF. `false &&` makes the whole `if` dead, which is
+        # semantically removal. Killed by
+        # `reject_ctor_field_universe_above_result_universe`,
+        # `..._polymorphic`, and `universe_check_precedes_positivity_check`.
+        (
+            "a constructor field above the family's result universe is refused",
+            "            if !self.level_is_zero(group.result_level)",
+            "            if false && !self.level_is_zero(group.result_level)",
+        ),
+        # THE OTHER DIRECTION: a guard that refuses too much is also a defect,
+        # and this one sits in the path of every inductive the project
+        # declares. Dropping the `Prop` exemption makes the constraint apply
+        # to impredicative families, refusing `Exists` and `Acc`. Killed by
+        # `admit_prop_family_with_sort1_field` and
+        # `prop_exemption_is_sound_because_large_elimination_is_denied`.
+        (
+            "Prop is exempt because it is impredicative",
+            "            if !self.level_is_zero(group.result_level)",
+            "            if true",
+        ),
+    ],
+)
+
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))

@@ -36,8 +36,9 @@
 //! and an environment-identity mismatch are all decided from the response
 //! bytes and the goal alone. Only a syntactically well-formed `accepted`
 //! response whose environment identity matches goes on to
-//! [`NeedsLeanCheck`], the signal that the caller must now actually run the
-//! two independent paths and finish grading with [`decide_after_lean`].
+//! [`PreLeanStage::NeedsLeanCheck`], the signal that the caller must now
+//! actually run the two independent paths and finish grading with
+//! [`decide_after_lean`].
 //!
 //! [`decide_after_lean`] never trusts the sidecar's self-reported success.
 //! It asks exactly the two questions ADR-0915 already answers for C2's

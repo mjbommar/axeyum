@@ -28,26 +28,38 @@
 /// footprint.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![
-        ("CReal.polyEval", p.poly_eval, "def"),
-        ("CReal.polyEval_zero", p.poly_eval_zero, "theorem"),
-        ("CReal.polyEval_succ", p.poly_eval_succ, "theorem"),
-        ("CReal.polyAdd", p.poly_add, "def"),
-        ("CReal.polyEval_polyAdd", p.poly_eval_poly_add, "theorem"),
-        ("CReal.polyScale", p.poly_scale, "def"),
+        ("CReal.polyEval", p.polynomial.poly_eval, "def"),
         (
-            "CReal.polyEval_polyScale",
-            p.poly_eval_poly_scale,
+            "CReal.polyEval_zero",
+            p.polynomial.poly_eval_zero,
             "theorem",
         ),
-        ("CReal.polyDegreeLt", p.poly_degree_lt, "def"),
+        (
+            "CReal.polyEval_succ",
+            p.polynomial.poly_eval_succ,
+            "theorem",
+        ),
+        ("CReal.polyAdd", p.polynomial.poly_add, "def"),
+        (
+            "CReal.polyEval_polyAdd",
+            p.polynomial.poly_eval_poly_add,
+            "theorem",
+        ),
+        ("CReal.polyScale", p.polynomial.poly_scale, "def"),
+        (
+            "CReal.polyEval_polyScale",
+            p.polynomial.poly_eval_poly_scale,
+            "theorem",
+        ),
+        ("CReal.polyDegreeLt", p.polynomial.poly_degree_lt, "def"),
         (
             "CReal.polyDegreeLt_polyAdd",
-            p.poly_degree_lt_poly_add,
+            p.polynomial.poly_degree_lt_poly_add,
             "theorem",
         ),
         (
             "CReal.polyDegreeLt_polyScale",
-            p.poly_degree_lt_poly_scale,
+            p.polynomial.poly_degree_lt_poly_scale,
             "theorem",
         ),
     ]

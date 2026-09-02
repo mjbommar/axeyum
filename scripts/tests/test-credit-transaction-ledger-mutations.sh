@@ -75,7 +75,7 @@ failed_canaries_from_log() {
     line="$(grep -E "^${method} \(" "$log" || true)"
     if [ -z "$line" ]; then
       echo "MISSING:${name}"
-    elif echo "$line" | grep -qE '\.\.\. (FAIL|ERROR)$'; then
+    elif [ "$(echo "$line" | grep -cE '\.\.\. (FAIL|ERROR)$')" -gt 0 ]; then
       echo "$name"
     fi
   done
