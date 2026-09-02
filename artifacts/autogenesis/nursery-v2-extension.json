@@ -22,29 +22,7 @@
     "unattested_cohort_entries": 345,
     "v1_evaluation_entries": 214
   },
-  "cross_population_component_split_exemptions": [
-    {
-      "authority": "ADR-0855",
-      "component_fact_ids": [
-        "F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f",
-        "F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c",
-        "F:ml430-nat-div-mul-cancel-99799a00"
-      ],
-      "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified); every member is either ADR-0850's already-exempted v1 crossing (merged here with v2-internal members via cross-file edges) or a v2-internal crossing. See ADR-0855 and docs/plan/status/nursery-v2-component-coverage.md."
-    },
-    {
-      "authority": "ADR-0855",
-      "component_fact_ids": [
-        "F:ml430-int-modeq-add-left-cancel-062ad5fe",
-        "F:ml430-int-modeq-add-left-cancel-c1adde5a",
-        "F:ml430-int-modeq-add-right-cancel-d7366811",
-        "F:ml430-int-modeq-add-right-cancel-f74acb64"
-      ],
-      "date": "2026-08-30",
-      "reason": "cross-population union of nursery-v1 and nursery-v2-extension: this declared-dependency component crosses train/development via real fact-ledger depends_on edges never visible when either manifest is checked alone; zero held-out members (verified); every member is either ADR-0850's already-exempted v1 crossing (merged here with v2-internal members via cross-file edges) or a v2-internal crossing. See ADR-0855 and docs/plan/status/nursery-v2-component-coverage.md."
-    }
-  ],
+  "cross_population_component_split_exemptions": [],
   "entries": [
     {
       "answer_access": "withheld-during-episode",
@@ -17041,7 +17019,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "3bab61a428d50f40e182eaa6bc06c55d37b716b3e080f05696490f9d148d90fc",
+  "extension_sha256": "995bfe29f4a0b43fe1db51328bf0fa9a80ce6769c17ef9977da16db1ab636211",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",

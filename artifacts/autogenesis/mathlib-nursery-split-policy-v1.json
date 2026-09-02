@@ -123,6 +123,34 @@
       "irreversible": true
     }
   ],
+  "policy_amendments": [
+    {
+      "date": "2026-09-02",
+      "authority": "docs/research/09-decisions/adr-1564-train-is-the-training-partition-not-an-evaluation-partition.md",
+      "change": "required_evaluation_partitions: [train, development, held-out] -> [development, held-out]; train moves to the new training_partitions; blind_partitions records held-out's seal explicitly",
+      "reason": "train is the TRAINING partition. Nothing about held-out blindness, or about development being the tuning set, depends on a development row citing a proved train lemma -- that is what a training set is for. The property the split actually protects is (a) held-out isolation, enforced independently by check-autogenesis-holdout-isolation.py, check-holdout-adjacency.py and check-holdout-closed-evaluation.py, and (b) development not being the population a producer is tuned against, enforced independently by check-development-partition.py. Listing train as an evaluation partition made 147 dev<->train depends_on edges leaks that no repair could remove, because depends_on is derived from the admitted proof term (ADR-1551) and is therefore not a free variable. ADR-1563 refused to amend those 147 edges precisely because they contradicted THIS list; the list is what is wrong, so the list is what changes.",
+      "does_not_change": [
+        "no row moves partition, and no held-out row's outcome is named",
+        "held-out stays sealed in every direction: development->held-out, train->held-out and held-out->anything all remain crossings",
+        "longitudinal->evaluation remains a crossing (ADR-1563's direction argument is untouched)",
+        "the 6 held-out-endpoint crossings stay baselined and structurally un-amendable (ADR-1563)"
+      ],
+      "irreversible": false
+    }
+  ],
+  "partition_roles": {
+    "required_evaluation_partitions": [
+      "development",
+      "held-out"
+    ],
+    "training_partitions": [
+      "train"
+    ],
+    "blind_partitions": [
+      "held-out"
+    ],
+    "crossing_rule": "a declared-dependency edge between a TRAINING partition and a non-blind EVALUATION partition is not a partition crossing, in either direction; every other edge between two distinct partitions is. A blind partition is sealed in both directions -- an edge from or to it is a crossing whatever the other endpoint's role, because blindness once spent cannot be un-spent."
+  },
   "authority": {
     "catalog": "artifacts/autogenesis/mathlib-nat-int-fact-catalog-v1.json",
     "partition_unit": "whole-family-with-source-review-groups-indivisible",

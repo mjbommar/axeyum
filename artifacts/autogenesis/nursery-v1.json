@@ -17,8 +17,13 @@
     "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
     "source_group_leakage": "no-source-review-group-may-cross-evaluation-partitions",
     "required_evaluation_partitions": [
-      "train",
       "development",
+      "held-out"
+    ],
+    "training_partitions": [
+      "train"
+    ],
+    "blind_partitions": [
       "held-out"
     ],
     "split_component_authority": "declared-dependency-weak-component",
@@ -127,41 +132,23 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
-    }
-  ],
-  "component_split_exemptions": [
-    {
-      "component_fact_ids": [
-        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
-        "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
-        "F:ml430-nat-coprime-of-dvd-18fcd09f",
-        "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
-        "F:ml430-nat-coprime-of-dvd-right-a640bd56"
-      ],
-      "reason": "declared-dependency crossing between train (integer-gcd) and development (natural-gcd), surfaced by commit 237c1abdd (2026-08-29, re-derive 1054 missing depends_on edges) adding real kernel proof-term dependencies the 2026-08-18 freeze never saw; no held-out member; all 5 facts already epistemic_status proved via ordinary hand development, zero autogenesis operations reference any of them",
-      "authority": "docs/research/09-decisions/adr-0850-nursery-split-exemption-mechanism.md",
-      "date": "2026-08-30"
     },
     {
-      "component_fact_ids": [
-        "F:ml430-nat-ascfactorial-zero-fd183202",
-        "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641"
-      ],
-      "reason": "declared-dependency crossing between train (F:ml430-nat-ascfactorial-zero-fd183202) and development (F:ml430-nat-factorial-dvd-ascfactorial-44a4e641), created by a SINGLE edge added in commit 366f11a91 (2026-08-31): setting formal.kernel_theorem on 28 facts unlocked check-fact-depends-derived.py for them, and its --fix added 196 previously-invisible depends_on edges across 54 facts. Five of those edges are intra-nursery; this one is factorial_dvd_ascFactorial's real proof-term use of Nat.ascFactorial_zero, which this ledger records as TWO facts (the native F:nat-asc-factorial-zero, already declared at the 2026-08-18 freeze, and this ml430 mirror, which was not). The edge is correct and removing it would make check-fact-depends-derived.py red, so this is a partition boundary drawn before the dependency was recorded, exactly as ADR-0850 describes. Partition census {train: 1, development: 1}; zero held-out members (now machine-enforced by validate_exemptions, not merely asserted here); both facts epistemic_status proved. NOTE, and this is where the evidence differs from ADR-0850's three exemptions: F:ml430-nat-ascfactorial-zero-fd183202 IS named by an autogenesis operation (authoritative-mathlib-statement-reflexivity-v1 and authoritative-mathlib-bounded-induction-factorial-family-v1). Both operations are train-only over the nursery -- every one of the 4 fact ids the factorial-family operation names is train -- and the development member of this component is named by no operation at all, so nothing has spent it.",
-      "authority": "docs/research/09-decisions/adr-1455-red-gate-sweep-nursery-exemption-rescope.md",
-      "date": "2026-09-01"
-    },
-    {
-      "component_fact_ids": [
-        "F:ml430-nat-choose-le-add-9c463139",
-        "F:ml430-nat-choose-le-choose-907b5042",
-        "F:ml430-nat-choose-le-succ-62ae968b",
-        "F:ml430-nat-choose-mono-a1af9c18",
-        "F:ml430-nat-descfactorial-le-2b8cc09a"
-      ],
-      "reason": "declared-dependency crossing between development (natural-binomial) and train (natural-factorial), surfaced by the same 2026-08-29 depends_on correction; no held-out member; all 5 facts already epistemic_status proved via ordinary hand development, zero autogenesis operations reference any of them",
-      "authority": "docs/research/09-decisions/adr-0850-nursery-split-exemption-mechanism.md",
-      "date": "2026-08-30"
+      "date": "2026-08-30",
+      "family": "natural-bit-decode",
+      "from": "held-out",
+      "to": "development",
+      "reason": "two of the ten rows were already decided by reduction, not proved: F:ml430-nat-bit-false-zero-d996adbf (Nat.bit false 0 = 0) closes over Nat.bit, admitted by 2facd789 on 2026-08-28 06:23:04, and F:ml430-nat-size-one-e23e5f71 (Nat.size 1 = 1) closes over Nat.size, admitted by a7ac623d7 on 2026-08-24 15:30:55 -- both confirmed ancestors of draw 11's preregistering commit 882ae1a52 (2026-08-30 23:07:25) by git merge-base --is-ancestor. This is ADR-0695's fermat-numbers defect repeated: the DEFINITION spends a ground equation the instant it is admitted, whatever anyone has or has not proved about it, and the evaluation test that demonstrates the reduction (bit_false_zero_evaluates / size_one_evaluates-shaped assertions) is a witness to the spend, not its cause. scripts/check-holdout-closed-evaluation.py's own classifier, run over the whole held-out population across both manifests (156 rows, snapshot at 2,507 declarations), finds these are the ONLY two closed-shaped rows; the remaining eight (Nat.bit_add, Nat.bit_add', Nat.bit_le, Nat.bit_lt_bit, Nat.bit_ne_zero, Nat.size_bit, Nat.size_eq_zero, Nat.size_le_size) are genuinely quantified and stay usable evaluation targets in development. The family is moved as a whole because partition_unit is whole-family-with-source-review-groups-indivisible, the same unit ADR-0695 applied to fermat-numbers even though only three of its ten rows were spent. No fact is reopened; every row keeps whatever epistemic_status it holds. Held-out shrinks from 156 to 146 rows (v2 extension alone: 100 to 90, 10 to 9 families) and, per ADR-0762, Mathlib.Data.Nat.{Bits,Size} does not return to the drawable held-out pool for a future draw -- that is the price of these two rows not having been blind. ADR-0950's draw-time R12 screen in gen-autogenesis-nursery-refill.py is the corresponding draw-time fix, so a third occurrence of this shape is refused before a manifest is written rather than found in the next audit.",
+      "breach": {
+        "fact_id": "F:ml430-nat-bit-false-zero-d996adbf",
+        "proof_shape": "natural-bit-decode:unconditional-equality",
+        "operation_id": "no-operation-closed-evaluation-decided-by-the-unblocking-definitions",
+        "registered_commit": "2facd789",
+        "registered_date": "2026-08-28",
+        "detected_date": "2026-08-30"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "entries": [
@@ -3190,7 +3177,7 @@
   ],
   "longitudinal_result": "artifacts/autogenesis/autogenesis-1-result.json",
   "split_policy": "artifacts/autogenesis/mathlib-nursery-split-policy-v1.json",
-  "split_policy_sha256": "83433cb4d79ab1ff1b663b02ea2c44c45d85fab4f0ef6de69f4f6ada42878a88",
+  "split_policy_sha256": "b8bae4431b21798166f620c4019b22925ebc11c858d3e1262205897cd3ff68ed",
   "source_catalog_sha256": "d2ebcbd56c70445e3a1be864426ee783021387c5d6c885f182dc2a374855f988",
   "notes": "Autogenesis-1 remains a disjoint longitudinal regression. The 214 Mathlib statements are frozen before target outcomes; source groups, families, family-scoped proof shapes, mutations, and declared dependency components cannot cross evaluation partitions."
 }

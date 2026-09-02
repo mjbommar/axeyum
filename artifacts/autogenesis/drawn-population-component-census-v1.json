@@ -2,9 +2,9 @@
   "authority": "docs/research/09-decisions/adr-1551-the-family-graph-is-one-blob-and-the-dependency-edge-is-proof-derived.md",
   "kind": "axeyum-nursery-component-census",
   "ledger_block": {
-    "crossings_now": 198,
+    "crossings_now": 51,
     "fact_components": {
-      "count": 357,
+      "count": 397,
       "largest_component": 305,
       "multi_partition": [
         {
@@ -229,11 +229,11 @@
           "size": 3
         }
       ],
-      "single_partition": 352,
-      "singleton_components": 334,
+      "single_partition": 392,
+      "singleton_components": 374,
       "size_distribution": [
         {
-          "components": 334,
+          "components": 374,
           "size": 1
         },
         {
@@ -511,6 +511,22 @@
         },
         {
           "families": [
+            "discrete-step-and-counting-bounds"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Algebra.Order.Ring.Int",
+            "Mathlib.NumberTheory.PrimeCounting",
+            "Mathlib.Tactic.IntervalCases"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
             "integer-division"
           ],
           "family_count": 1,
@@ -610,6 +626,37 @@
           ],
           "partitions": {
             "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-binomial-bounds"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Choose.Bounds",
+            "Mathlib.Data.Nat.Choose.Dvd",
+            "Mathlib.Data.Nat.Choose.Sum"
+          ],
+          "partitions": {
+            "train": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-bit-constructor"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.BinaryRec",
+            "Mathlib.Data.Nat.Bitwise"
+          ],
+          "partitions": {
+            "development": 10
           },
           "pinned_families": [],
           "rows": 10
@@ -767,6 +814,23 @@
         },
         {
           "families": [
+            "power-and-square-decompositions"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Factorization.Basic",
+            "Mathlib.NumberTheory.Chebyshev",
+            "Mathlib.NumberTheory.PythagoreanTriples",
+            "Mathlib.NumberTheory.SumTwoSquares"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
             "range-induction"
           ],
           "family_count": 1,
@@ -781,12 +845,12 @@
           "rows": 10
         }
       ],
-      "count": 20,
-      "single_partition": 19
+      "count": 24,
+      "single_partition": 23
     },
     "inter_family_edge_classes": 126,
     "inter_family_edges": 374,
-    "ledger_sha256": "0826de5188235b121d6c5dbb38e3da4fe8ed859a9e0594e77c1cbac5beaf1805",
+    "ledger_sha256": "369356b10e9c194432d0f3cc353a5a01114f04c23a7fb58de1fbb5b266546c05",
     "pinned_incident_edge_count": 51,
     "pinned_incident_edges": {
       "fermat-numbers--nat-bootstrap": 4,
@@ -813,6 +877,7 @@
     "proposal": {
       "assignment": {
         "descent-and-well-ordering": "held-out",
+        "discrete-step-and-counting-bounds": "held-out",
         "fermat-numbers": "development",
         "integer-absolute-value": "held-out",
         "integer-basic-arithmetic": "development",
@@ -834,6 +899,8 @@
         "natural-avg-pair": "held-out",
         "natural-basic-arithmetic": "train",
         "natural-binomial": "development",
+        "natural-binomial-bounds": "train",
+        "natural-bit-constructor": "development",
         "natural-bit-decode": "development",
         "natural-bitwise": "development",
         "natural-bitwise-basics": "development",
@@ -874,106 +941,107 @@
         "natural-square-root": "held-out",
         "natural-stirling-numbers": "development",
         "natural-totient": "development",
+        "power-and-square-decompositions": "held-out",
         "range-induction": "held-out"
       },
       "cost_curve": [
         {
-          "development_rows": 300,
+          "development_rows": 310,
           "moved": null,
           "moves": 0,
           "residual_cut": 147,
-          "train_rows": 208
-        },
-        {
-          "development_rows": 310,
-          "moved": "natural-logarithm-base",
-          "moves": 1,
-          "residual_cut": 124,
-          "train_rows": 198
+          "train_rows": 218
         },
         {
           "development_rows": 320,
+          "moved": "natural-logarithm-base",
+          "moves": 1,
+          "residual_cut": 124,
+          "train_rows": 208
+        },
+        {
+          "development_rows": 330,
           "moved": "natural-gcd-algorithm",
           "moves": 2,
           "residual_cut": 103,
-          "train_rows": 188
+          "train_rows": 198
         },
         {
-          "development_rows": 331,
+          "development_rows": 341,
           "moved": "integer-gcd",
           "moves": 3,
           "residual_cut": 92,
-          "train_rows": 177
-        },
-        {
-          "development_rows": 321,
-          "moved": "natural-parity",
-          "moves": 4,
-          "residual_cut": 84,
           "train_rows": 187
         },
         {
           "development_rows": 331,
+          "moved": "natural-parity",
+          "moves": 4,
+          "residual_cut": 84,
+          "train_rows": 197
+        },
+        {
+          "development_rows": 341,
           "moved": "integer-order-inequalities",
           "moves": 5,
           "residual_cut": 77,
-          "train_rows": 177
+          "train_rows": 187
         },
         {
-          "development_rows": 341,
+          "development_rows": 351,
           "moved": "natural-prime-divisibility",
           "moves": 6,
           "residual_cut": 71,
-          "train_rows": 167
+          "train_rows": 177
         },
         {
-          "development_rows": 351,
+          "development_rows": 361,
           "moved": "natural-prime-characterizations",
           "moves": 7,
           "residual_cut": 58,
-          "train_rows": 157
-        },
-        {
-          "development_rows": 341,
-          "moved": "natural-fibonacci-basic",
-          "moves": 8,
-          "residual_cut": 53,
           "train_rows": 167
         },
         {
           "development_rows": 351,
+          "moved": "natural-fibonacci-basic",
+          "moves": 8,
+          "residual_cut": 53,
+          "train_rows": 177
+        },
+        {
+          "development_rows": 361,
           "moved": "natural-stirling-numbers",
           "moves": 9,
           "residual_cut": 50,
-          "train_rows": 157
+          "train_rows": 167
         },
         {
-          "development_rows": 371,
+          "development_rows": 381,
           "moved": "integer-modular-equivalence",
           "moves": 10,
           "residual_cut": 48,
-          "train_rows": 137
+          "train_rows": 147
         },
         {
-          "development_rows": 386,
+          "development_rows": 396,
           "moved": "natural-factorial",
           "moves": 11,
           "residual_cut": 47,
+          "train_rows": 132
+        },
+        {
+          "development_rows": 406,
+          "moved": "natural-factorial-choose-and-squarefree",
+          "moves": 12,
+          "residual_cut": 45,
           "train_rows": 122
         },
         {
           "development_rows": 396,
-          "moved": "natural-factorial-choose-and-squarefree",
-          "moves": 12,
-          "residual_cut": 45,
-          "train_rows": 112
-        },
-        {
-          "development_rows": 386,
           "moved": "natural-factors-and-factorisation-properties",
           "moves": 13,
           "residual_cut": 44,
-          "train_rows": 122
+          "train_rows": 132
         }
       ],
       "families_moved": [
@@ -992,10 +1060,10 @@
         "natural-stirling-numbers"
       ],
       "partition_counts": {
-        "development": 386,
-        "held-out": 206,
+        "development": 396,
+        "held-out": 226,
         "longitudinal": 2,
-        "train": 122
+        "train": 132
       },
       "pinned_incident_edges": 51,
       "residual_cut_at_fixed_point": 44,
@@ -1005,10 +1073,20 @@
     }
   },
   "manifest_block": {
-    "drawn": 716,
+    "drawn": 756,
+    "evaluation_partitions": [
+      "development",
+      "held-out"
+    ],
     "families": [
       {
         "family": "descent-and-well-ordering",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "discrete-step-and-counting-bounds",
         "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
         "partition": "held-out",
         "rows": 10
@@ -1138,6 +1216,18 @@
         "manifest": "artifacts/autogenesis/nursery-v1.json",
         "partition": "development",
         "rows": 20
+      },
+      {
+        "family": "natural-binomial-bounds",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-bit-constructor",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
       },
       {
         "family": "natural-bit-decode",
@@ -1380,6 +1470,12 @@
         "rows": 10
       },
       {
+        "family": "power-and-square-decompositions",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
         "family": "range-induction",
         "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
         "partition": "held-out",
@@ -1392,10 +1488,10 @@
       "artifacts/autogenesis/nursery-v2-extension.json"
     ],
     "partition_counts": {
-      "development": 300,
-      "held-out": 206,
+      "development": 310,
+      "held-out": 226,
       "longitudinal": 2,
-      "train": 208
+      "train": 218
     },
     "pinned_families": {
       "integer-absolute-value": "held-out; a held-out row never leaves held-out (ADR-0542), so the family cannot be absorbed into a component's partition",
@@ -1403,7 +1499,7 @@
     },
     "row_floor_per_partition": 100
   },
-  "measured_at_commit": "a44a41313de8875677a91256facd942723a8785e",
+  "measured_at_commit": "596cbf0a25bc1dc8b8359d65a52424237969ad8a",
   "measured_date": "2026-09-02",
   "note": "The ledger-derived block is a SNAPSHOT and is carried forward by --record; re-measure it with --record --remeasure. `--check` enforces the findings ADR-1551 rests on against the live tree, never equality with this snapshot -- see the module docstring.",
   "produced_by": "scripts/nursery-components.py --record",
