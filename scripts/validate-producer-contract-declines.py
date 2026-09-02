@@ -34,6 +34,36 @@ in this repository once exited 0 on completion alone):
     re-dispatch key `fact-frontier.py` uses to decide whether a decline is
     still live against the contract's CURRENT content.
 
+ADR-1510 RULE 2: A DECLINE IS A LIFECYCLE OBJECT. Every guard above is about
+the decline being well-formed at the moment it is written; none of them
+notices what happens to its FACT afterwards. Measured 2026-09-01, that gap was
+already 96% of the ledger: `declined_by_contract` summed to 27 live
+suppressions while `declined_count` -- declines suppressing a fact that is
+still ready and open -- was **1**. Twenty-six named facts that had since been
+proved, by hand, through a route that never touched a producer. To every
+checker and to the selector, such a decline is indistinguishable from one
+suppressing live work, which is exactly the "cheap way to make the selector
+shut up about a fact forever" failure mode named above, materialised in its
+benign direction and therefore invisible. Three further guards, each expected
+to die under exactly one mutation:
+
+  * a decline whose fact is SETTLED (`epistemic_status` outside
+    `{open, conjectured, empirical}`) must carry a `resolution` block naming
+    the route, the artifact that closed it, and on what basis the decline's
+    own diagnosis is still believed (`diagnosis_status`, which is a
+    three-valued vocabulary and not a boolean, precisely so "nobody
+    re-checked" cannot be written as "still accurate");
+  * a decline whose fact is still OPEN must NOT carry one -- the inverse
+    direction, so a lane cannot pre-emptively "resolve" a live suppression
+    and silence the guard above while the work is still outstanding;
+  * `resolution.closed_by` must resolve to a real path in this repository.
+    An invented artifact is the same unfalsifiable object as an invented
+    `fact_id`: it makes the record look answerable while answering nothing.
+
+The 5 declines the `int-modeq-kernel` lane wrote voluntarily carry the same
+content as an `amendment` block; that field is preserved unedited as the
+historical record and `resolution` is the machine-checkable form.
+
 A contract-driven decline is identified STRUCTURALLY, not by filename or
 directory: any JSON object under `artifacts/autogenesis/` carrying top-level
 `contract` and `fact_id` keys together with `producer.result == "declined"`.
@@ -76,6 +106,28 @@ DECLINE_TOP_LEVEL_REQUIRED = {
     "producer",
 }
 PRODUCER_REQUIRED = {"tool", "result", "decline_reason", "decline_message"}
+
+# Mirrors `fact-frontier.py`'s `band()` and `validate-producer-contracts.py`'s
+# OPEN_STATUSES: a fact still needing proof in OUR ledger. Anything else is
+# SETTLED, and a decline against a settled fact must be resolved (ADR-1510).
+OPEN_STATUSES = {"open", "conjectured", "empirical"}
+RESOLUTION_REQUIRED = {"date", "route", "closed_by", "diagnosis_status"}
+RESOLUTION_OPTIONAL = {"theorem", "note"}
+RESOLUTION_ROUTES = {"kernel-lane", "cas-bridge", "import"}
+# Whether the decline's OWN typed reason is still a correct description of what
+# the producer cannot do -- and, deliberately, HOW that is known. A boolean
+# cannot say "nobody checked", and 19 of the 26 backfilled resolutions are in
+# exactly that state: the design review re-executed two representatives and the
+# closing lane attested five, leaving the rest argued rather than re-run. An
+# `unknown` wearing a `true` is the checker-that-cannot-fail defect in the data
+# instead of the code, so the vocabulary carries the basis:
+#   reproduced      -- the dispatch was re-run and the same decline came back
+#   attested        -- the lane that closed the fact recorded that the decline
+#                      still describes the producer correctly
+#   not-re-executed -- neither; the decline is preserved unedited and no claim
+#                      is made about re-running it
+DIAGNOSIS_STATUSES = {"reproduced", "attested", "not-re-executed"}
+DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 
 
 class DeclineError(RuntimeError):
@@ -150,6 +202,65 @@ def load_contract(contract_path_str: Any, label: str) -> dict[str, Any]:
     return loaded
 
 
+def validate_resolution(resolution: Any, label: str) -> None:
+    """Structural validation of an ADR-1510 `resolution` block.
+
+    `closed_by` is checked against the filesystem for the same reason
+    `fact_id` and `contract` are: a record naming an artifact that does not
+    exist explains nothing while looking like an explanation.
+    """
+    if not isinstance(resolution, dict):
+        raise DeclineError(f"{label}: resolution must be an object")
+    # Deliberately NOT named `missing`/`extra`: the top-level key guard uses
+    # those names, and `scripts/tests/mutation_controls.py` anchors on a line
+    # of source text. A duplicate anchor is reported as AMBIGUOUS ANCHOR and
+    # the mutation stops being a measurement at all.
+    missing_resolution_keys = RESOLUTION_REQUIRED - set(resolution)
+    if missing_resolution_keys:
+        raise DeclineError(
+            f"{label}: resolution missing required key(s) {sorted(missing_resolution_keys)}"
+        )
+    extra_resolution_keys = set(resolution) - RESOLUTION_REQUIRED - RESOLUTION_OPTIONAL
+    if extra_resolution_keys:
+        raise DeclineError(
+            f"{label}: resolution has unexpected key(s) {sorted(extra_resolution_keys)}"
+        )
+
+    if not isinstance(resolution["date"], str) or not DATE_RE.match(resolution["date"]):
+        raise DeclineError(f"{label}: resolution.date must be an ISO date (YYYY-MM-DD)")
+
+    if resolution["route"] not in RESOLUTION_ROUTES:
+        raise DeclineError(
+            f"{label}: resolution.route must be one of {sorted(RESOLUTION_ROUTES)} "
+            f"(the ADR-0601 SS4 producer routes), got {resolution['route']!r}"
+        )
+
+    if resolution["diagnosis_status"] not in DIAGNOSIS_STATUSES:
+        raise DeclineError(
+            f"{label}: resolution.diagnosis_status must be one of "
+            f"{sorted(DIAGNOSIS_STATUSES)}, got {resolution['diagnosis_status']!r} -- "
+            "the basis on which the decline's own typed reason is still believed "
+            "to describe the producer. A bare boolean here would let "
+            "\"nobody re-checked\" be written as \"still accurate\"."
+        )
+
+    closed_by = resolution["closed_by"]
+    if not isinstance(closed_by, str) or not closed_by:
+        raise DeclineError(f"{label}: resolution.closed_by must be a non-empty path string")
+    if not (ROOT / closed_by).exists():
+        raise DeclineError(
+            f"{label}: resolution.closed_by {closed_by!r} does not resolve to a real "
+            "path in this repository -- an invented artifact explains nothing, which "
+            "is the same defect as an invented fact_id one field over."
+        )
+
+    for key in ("theorem", "note"):
+        if key in resolution and (
+            not isinstance(resolution[key], str) or not resolution[key]
+        ):
+            raise DeclineError(f"{label}: resolution.{key} must be a non-empty string")
+
+
 def validate_decline(
     decline: Any, facts: dict[str, dict], path: pathlib.Path | None = None
 ) -> None:
@@ -218,6 +329,34 @@ def validate_decline(
     if not isinstance(message, str) or not message:
         raise DeclineError(f"{label}: producer.decline_message must be a non-empty string")
 
+    # ------------------------------------------------------------------
+    # ADR-1510 rule 2: a decline dies with its fact.
+    # ------------------------------------------------------------------
+    settled = facts[fact_id].get("epistemic_status") not in OPEN_STATUSES
+    resolution = decline.get("resolution")
+
+    if settled and resolution is None:
+        raise DeclineError(
+            f"{label}: fact {fact_id!r} is settled "
+            f"(epistemic_status {facts[fact_id].get('epistemic_status')!r}) but this "
+            "decline carries no `resolution` block -- ADR-1510 rule 2. A decline "
+            "against a settled fact is indistinguishable, to every checker and to "
+            "fact-frontier.py, from one suppressing live work. Record how the fact "
+            "was actually closed: `route`, `closed_by` (the artifact), "
+            "`diagnosis_still_accurate`, and a dated `note`."
+        )
+
+    if not settled and resolution is not None:
+        raise DeclineError(
+            f"{label}: fact {fact_id!r} is still open but this decline already "
+            "carries a `resolution` block -- a resolution records that the fact was "
+            "closed, so writing one ahead of time silences the settled-fact guard "
+            "while the work is still outstanding."
+        )
+
+    if resolution is not None:
+        validate_resolution(resolution, label)
+
 
 def load_declines(
     directory: pathlib.Path = AUTOGENESIS,
@@ -262,7 +401,11 @@ def main() -> int:
                 for d in sorted(declines, key=lambda d: (d["fact_id"], d["contract"]))
             ]
         )
-        print(f"PRODUCER_CONTRACT_DECLINES_OK|declines={len(declines)}|registry={ledger_digest}")
+        resolved = sum(1 for d in declines if d.get("resolution") is not None)
+        print(
+            f"PRODUCER_CONTRACT_DECLINES_OK|declines={len(declines)}"
+            f"|resolved={resolved}|registry={ledger_digest}"
+        )
         return 0
     except (OSError, json.JSONDecodeError, DeclineError) as error:
         print(f"PRODUCER_CONTRACT_DECLINES_ERROR|{error}", file=sys.stderr)

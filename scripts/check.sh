@@ -1314,6 +1314,34 @@ step gen-plan-tests python3 -m unittest scripts.tests.test_gen_plan
 step gen-plan       python3 scripts/gen-plan.py --check
 step adr-index-tests python3 -m unittest scripts.tests.test_gen_adr_index
 step adr-index      python3 scripts/gen-adr-index.py --check
+# `creal`'s build table. `crates/axeyum-lean-kernel/src/creal/steps_generated.rs`
+# is the `STEPS` array the prelude builds against and it is GENERATED from a
+# measurement of `creal.rs` plus its modules -- `--check` fails when it is stale
+# against the source, `--strict` when the measured graph contradicts it, and
+# `--self-check` is the positive control (permute one step before its provider
+# and require the scan to fire, so a clean run is not also what an empty scan
+# prints). Pure Python over the source, ~1.1s, no cargo. Registered here rather
+# than left to whoever remembers: the hand-written table it replaces named
+# 3,934 of 4,831 real edges for as long as it existed, precisely because
+# nothing re-derived it.
+step creal-declare-deps python3 scripts/creal-declare-deps.py --check --strict --self-check
+# The Python binding's prelude field table,
+# `crates/axeyum-py/src/kernel/prelude_fields.rs`, is generated because Rust has
+# no reflection. It was registered in NO gate until 2026-09-01, and that is
+# exactly how it reached main stale: the ADR-1512 registry split changed
+# `CRealPrelude`'s shape, the generator matched flat `pub <n>: NameId` lines
+# only, and the regeneration that unbroke the build silently deleted 69 of
+# `creal`'s 606 names from the Python surface. A missing field reads as "that
+# theorem does not exist". ~0.3s, pure Python plus one `rustfmt`, no cargo. Also
+# in scripts/check-merge-hygiene.sh, which is the gate that actually runs per
+# merge.
+step py-prelude-fields python3 scripts/gen-py-prelude-fields.py --check
+# The ADR-1512 migration's workspace-wide consumer scan: which files OUTSIDE
+# crates/axeyum-lean-kernel read a moving field flat. It refuses rather than
+# reports, because the first batch's external consumer was a GENERATED file in
+# another crate and the migration said nothing. Mutation-verified
+# (`mutation_controls.py creal-migrate-consumers`); C7 is the vacuity control.
+step creal-migrate-consumer-controls python3 -m unittest scripts.tests.test_creal_migrate_registry
 # ADR-0601 SS3: the import backlog (external-proved, epistemically-open facts)
 # as a produced, deterministic artifact rather than a bare count in
 # validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.

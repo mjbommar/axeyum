@@ -61,7 +61,7 @@ const DIO_LEAN_THEOREM: &str = "axeyum_refutation";
 /// its subject term about four times and the normalization chain nests hundreds
 /// of them.
 ///
-/// [`Kernel::render_lean_module_compact`] is documented as semantically
+/// [`axeyum_lean_kernel::Kernel::render_lean_module_compact`] is documented as semantically
 /// equivalent — it hoists repeated **closed** nodes to top-level definitions and
 /// never hoists anything with loose de Bruijn or free variables — and it is
 /// already what the LRA, string-length, counterexample-cover and quantifier-BV

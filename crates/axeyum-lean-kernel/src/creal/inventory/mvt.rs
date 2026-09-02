@@ -14,7 +14,7 @@
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![(
         "CReal.mvt_interiorExtremum",
-        p.mvt_interior_extremum,
+        p.mvt.mvt_interior_extremum,
         "theorem",
     )]
 }

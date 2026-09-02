@@ -111,10 +111,10 @@ second, distinct kind of `X` shows up here that Spivak's spine never needed:
   function's own doc).
 - **X-TA** — unavailable for a **type-theoretic abstraction** reason: the
   statement quantifies over an arbitrary vector space, field, or linear map as
-  a first-class object, and this kernel has no structure/typeclass mechanism
-  to express that quantification at all — not "not yet proved", but no
-  *statement* exists to prove. This is permanent absent a change to the
-  kernel's term language, not a proof debt.
+  a first-class object, and no such quantified statement has been **built**.
+  This is a **surface** gap — a missing builder layer — not an expressiveness
+  one. See the correction immediately below; the original wording of this
+  bullet, and of the Chapter 1 row, said the opposite.
 - **X-UM** — unavailable because of a missing **algorithm or construction**
   on an otherwise-expressible fragment (e.g. complex root isolation), which is
   an engineering gap rather than a structural one — the same sense `X` carries
@@ -124,6 +124,54 @@ A statement can be **X-TA in general and K-gen or C in its concrete
 specialization** simultaneously — that is the normal case below, not an
 exception, and it is the single most important thing this document has to say
 about the subject.
+
+### Correction, 2026-09-01: `X-TA` is not permanent, and the table has not been re-graded
+
+This document originally defined `X-TA` as "no *statement* exists to prove …
+permanent absent a change to the kernel's term language", and its Chapter 1 row
+still says "there is no polymorphism in this kernel's term language, so 'for
+every vector space' cannot even be *stated*". **That is false.** It was checked
+directly and
+[ADR-1495](../../research/09-decisions/adr-1495-abstraction-over-structures-is-already-expressible-the-gap-is-surface.md)
+records the measurement:
+
+- `crates/axeyum-lean-kernel/examples/bundled_structure_probe.rs` declares a
+  17-field `Field` — a one-constructor inductive in `Sort 2` carrying a
+  `Sort 1` **carrier as a field**, seven operations and ten laws — builds its
+  selectors out of the auto-generated recursor by large elimination, and admits
+  a **derived** cancellation theorem quantified over the structure.
+- `crates/axeyum-lean-kernel/examples/module_over_field_probe.rs` declares a
+  `VecSp` bundle **carrying that `Field` bundle as a field**, with `smul` typed
+  through two nested projections, and admits a derived theorem chaining two of
+  its laws. That is precisely "a vector space `V` over a field `F`".
+- `crates/axeyum-lean-kernel/examples/g4_pilot_generic_assoc_probe.rs`
+  (2026-08-30, [ADR-0865](../../research/09-decisions/adr-0865-two-of-three-g4-pilots-retain-the-graph-ranking-one-category-untested.md))
+  had already settled the *unbundled* `∀ (α : Sort 1) (op : α→α→α), …` form
+  before this document was written.
+
+Every one was admitted on the first attempt with an empty `axiom_footprint`,
+each with a content control that the kernel refused.
+
+So the abstract statements in Chapters 1, 2, 7 and 9 **can be written and
+proved**; nobody has written them. What is genuinely missing is *surface* —
+1,774 probe lines bought one `Field`, one `VecSp`, thirteen selectors and two
+theorems, because there is no `structure` command, no projection sugar, no
+instance resolution, and the dev-helper layer hardcodes a carrier.
+
+**The ten rows below have NOT been re-graded**, deliberately: re-grading each
+route is a separate pass that should be done by whoever next audits this
+subject, and inventing verdicts here would repeat the mistake this correction
+is fixing. Read every `X-TA` in the table as **"unbuilt, and nobody has
+budgeted it"**, never as "impossible". Two caveats that survive the correction
+and are real:
+
+- Chapter 2's bases and dimension also need a finite **aggregate**, which
+  [ADR-1310](../../research/09-decisions/adr-1310-the-aggregate-absence-is-an-inventory-and-a-fold-is-not-a-type.md)
+  declined and this correction does not revisit.
+- A bundled algebraic structure here must carry **its own equality relation**:
+  `CReal.add_comm` is a setoid `Equiv`, not `Eq`, so an `Eq`-stated bundle
+  cannot take `CReal` as an instance, and quotienting the setoid would cost
+  `Quot.sound` and move `creal` off zero axioms.
 
 ## The spine
 
@@ -166,6 +214,16 @@ space" or "an arbitrary field" as first-class objects — no typeclasses, no
 structures, no `funext` even for the concrete instances that do exist. Half of
 Axler's chapter list is, from this kernel's point of view, not a hard theorem
 to prove but a sentence it cannot write down.
+
+> **Superseded 2026-09-01 — the last clause of that paragraph is wrong.** The
+> kernel *can* write the sentence: a bundled `Field`, and a `VecSp` carrying
+> that `Field`, both admit, and derived theorems quantified over them are
+> accepted axiom-free (see the correction under the route legend, and
+> [ADR-1495](../../research/09-decisions/adr-1495-abstraction-over-structures-is-already-expressible-the-gap-is-surface.md)).
+> The rest of this section stands and is the more durable point: Axler's fault
+> line really is a different axis from Spivak's. It is just that the axis is
+> **built versus unbuilt**, not *stateable versus unstateable* — which makes it
+> a budget question rather than a foundational one.
 
 The two boundaries interact in a specific, checkable way and do not just
 coexist: **every chapter's *concrete* specialization inherits the

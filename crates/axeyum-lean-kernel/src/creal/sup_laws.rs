@@ -14,7 +14,7 @@
 //! 1. **`CReal.supOn_approx_lub`** — the APPROXIMATE least-upper-bound law:
 //!    for every accuracy index `e` there is a point `x ∈ [a, b]` with
 //!    `supOn F a b hab u ≤ F x + 1/(e+1)`. It must stay approximate.
-//!    [`CRealPrelude::evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//!    [`ExtremeValueNames::evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //!    (`creal/extreme_value.rs`) proves that an ATTAINING maximiser — the
 //!    exact form, `∃ x, F x = supOn` — would decide the sign of an arbitrary
 //!    real. That is EVT's row 2, a genuine impossibility result rather than an
@@ -465,7 +465,7 @@ fn declare_sup_seq_le_shift_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(
 /// `supOn` is approached by values of `F` on `[a, b]`, to any requested
 /// accuracy, at a point exhibited by the proof. It is NOT attained, and the
 /// exact form is refuted, not merely unproved — see this module's own header
-/// and [`CRealPrelude::evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign).
+/// and [`ExtremeValueNames::evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign).
 ///
 /// The assembly, at `e2 := 2·e + 1` (the halving index
 /// `Rat.natDivSucc_halve`'s own shape asks for):
@@ -1965,7 +1965,7 @@ fn nat_le_succ_two_mul(d: &mut IntDev<'_>, p: CRealPrelude, n: ExprId) -> ExprId
 /// With [`declare_sup_on_approx_lub_thm`] this is the pair that characterizes
 /// `supOn`: it dominates every value of `F` on `[a, b]`, and it is approached
 /// by them to any requested accuracy. Neither says a maximiser exists, and
-/// [`CRealPrelude::evt_attained_max_decides_sign`] says none can be
+/// [`ExtremeValueNames::evt_attained_max_decides_sign`] says none can be
 /// constructed.
 ///
 /// # The four steps, and where the margin comes from
