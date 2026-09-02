@@ -5013,7 +5013,7 @@ pub struct NatPrelude {
     pub is_prime: NameId,
     /// `Nat.primeCounting' (n : Nat) : Nat := count isPrime n` — the primes
     /// strictly below `n`. The trailing `_prime` renders Lean's `'`, as in
-    /// [`IntPrelude::prime_dvd_mul_prime`](crate::int_prelude::IntPrelude).
+    /// [`IntPrelude`](crate::IntPrelude)'s `prime_dvd_mul_prime`.
     /// Construction only, ADR-0653; with
     /// [`prime_counting`](Self::prime_counting) it opens
     /// `Mathlib.NumberTheory.PrimeCounting` for the autogenesis screen.

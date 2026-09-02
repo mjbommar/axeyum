@@ -225,17 +225,91 @@ finding here rather than acting on it: converting it into a bar is a draw-lane
 decision, and the eight definitional-row-free tens mean the draw does not need
 one.
 
+## The measured result
+
+```
+# before, on the refreshed 3014 snapshot
+ADR_1556_DRAW_19_SCREEN|env=3014|unowned_modules=23|unowned_rows=79
+                       |distinct_tens=40668|viable=3|disjoint_pairs=0|failures=0   exit 0
+# after
+ADR_1556_DRAW_19_SCREEN|env=3018|unowned_modules=25|unowned_rows=91
+                       |distinct_tens=64142|viable=196|disjoint_pairs=219|failures=2 exit 1
+```
+
+`modules contributing a row to EVERY viable ten` goes from
+`['Mathlib.Data.Nat.Factorization.Basic', 'Mathlib.NumberTheory.PythagoreanTriples',
+'Mathlib.NumberTheory.SumTwoSquares', 'Mathlib.Tactic.IntervalCases']` to `[]`.
+The chokepoint is what ended, not merely the count.
+
+**`failures=2`, and what each is.** One is the deliverable: the assertion named
+`the refusal still holds` fails with `a disjoint pair EXISTS -- author draw 19`,
+the script's own documented success signal. The other is a finding about the
+screen: its minimal-cover pruning now **undercounts** — 37 viable against the
+exact pass's 196. ADR-1556 predicted that direction ("a superset does not draw
+the same ten, because an added module's names can sort earlier") but asserted
+the two passes agreed, which they did at 3 vs 3 and no longer do on a richer
+pool. The EXACT pass is the authority and is where `disjoint_pairs=219` comes
+from; the control still fires (228 viable / 1,913 pairs with ADR-1450's
+`Nat.Count` bar lifted), so the search is sound and it is the pruning shortcut
+that has expired. The next lane to touch that script should drop the pruned pass
+or weaken its assertion to `pruned <= exact`.
+
+## A second finding: a stale snapshot silently suspends R11
+
+`check-holdout-adjacency.py` reads the COMMITTED environment snapshot. With that
+snapshot 176 declarations behind, refreshing it — which any lane must do for its
+own declarations to be visible to the autogenesis screens — turns the gate red,
+**with none of this lane's declarations present**:
+
+| snapshot | exit | refused |
+| --- | ---: | --- |
+| 2838 (the state on `main`) | 0 | none |
+| 3014 (refreshed, without this lane's four) | **1** | `natural-factorization-lcm`, `natural-max-power-dividing` |
+| 3018 (with them) | **1** | the same two |
+| 3018, after the re-sweep below | **0** | none |
+
+Both are `disclosure` refusals: the recorded sweeps predate six
+`Nat.factorization*` declarations and eight other `prime`-stem ones from other
+lanes. So R11's environment signal had been comparing today's families against
+a two-day-old kernel and reporting `clean`. **A disclosure review is only as
+fresh as the snapshot it is scored against, and nothing was gating that
+freshness.**
+
+Repaired by an actual re-sweep of both reviews rather than a number bump, each
+with a decisive query rather than an argument:
+
+- `natural-factorization-lcm` (`lcm` 20 → 21, `factorization` 3 → 9): the six new
+  `factorization` names are the prime-factorization MULTISET construction and its
+  product, a different function from the per-prime max split
+  `factorizationLCMLeft`/`Right` compute; the one new `lcm` name is this lane's
+  `Nat.lcmUpto`, a fold over a RANGE rather than a statement about a PAIR.
+  `--const Nat.factorizationLCMLeft --kind theorem --expect-absent` and the same
+  for `…Right` are both ABSENT with a live positive control.
+- `natural-max-power-dividing` (`prime` 111 → 122, `max` and `divmaxpow`
+  unchanged at 44 and 2): none of the twelve new `prime`-stem names is a
+  prime-INTERVAL statement, which is the Bertrand shape that family turns on,
+  and the primeCounting pair counts primes below a bound without asserting one
+  exists there. `--const Nat.divMaxPow --kind theorem --expect-absent` is ABSENT.
+  `divmaxpow` staying at 2 is the load-bearing number: those two are the
+  definitions themselves.
+
+Neither verdict changed — only the recorded sweep and the narrative. The
+checker's guard is shown non-vacuous by the sequence itself: it refused twice
+before the re-sweep and refuses nothing after it.
+
 ## Consequences
 
-- `adr-1556-draw-19-screen.py` is expected to exit **1** after this lane — its
-  documented success signal, "a disjoint pair EXISTS, the refusal has expired,
-  author the draw". The exit status is reported in the lane status document
-  before and after.
+- `adr-1556-draw-19-screen.py` exits **1** after this lane — its documented
+  success signal, "a disjoint pair EXISTS, the refusal has expired, author the
+  draw".
 - A draw lane taking `Mathlib.NumberTheory.PrimeCounting` or
   `Mathlib.NumberTheory.Chebyshev` as held-out owes R11 a disclosure review in
   `holdout-adjacency-review-v1.json`: the live environment sweep is non-empty
-  (`prime` 114, `counting` 2, `primecounting` 2, `lcm` 21, `lcmupto` 1 after
-  this lane), which is R11 working rather than R11 complaining.
+  (`prime`, `counting`, `primecounting`, `lcm`, `lcmupto` all hit after this
+  lane), which is R11 working rather than R11 complaining.
+- The environment snapshot should be refreshed as part of any lane that declares
+  into a prelude, not left to accumulate. This lane found it 176 declarations
+  behind; the cost of that drift is not a stale count but a suspended R11.
 - Nothing in this lane touches `FAMILY_MODULES`, `FAMILY_ROUTES`, the manifest,
   any partition, or the fact ledger. No fact is registered for the
   construction's theorems, because there are none.
