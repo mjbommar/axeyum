@@ -16,5 +16,5 @@
 /// `(display name, interned NameId, declaration kind)` for every `CReal`
 /// declaration built by `crates/axeyum-lean-kernel/src/creal/evt_row1.rs`.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
-    vec![("CReal.evt_approx_max", p.evt_approx_max, "theorem")]
+    vec![("CReal.evt_approx_max", p.evt_row1.evt_approx_max, "theorem")]
 }

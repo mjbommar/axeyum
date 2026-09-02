@@ -17,6 +17,29 @@ generator. Run it after any prelude gains or loses a field:
 
 `--check` is what a gate runs; it prints the measured field count per struct so
 a run that parsed nothing cannot pass for a run that found no drift.
+
+## Registry fields (ADR-1512), and the silent shrink they caused
+
+`CRealPrelude` is now a **facade**: a module's names live in a `Copy` registry
+struct owned by `creal/<module>.rs` (`pub pi: PiNames`, `pub completeness:
+CompletenessNames`, …), not as flat fields on the prelude. The first version of
+this script matched `pub <name>: NameId` and nothing else, so on the day the
+split landed (`8dd580a1c`) a regeneration DROPPED every migrated field from the
+Python surface -- 69 of `CRealPrelude`'s 606 names disappeared and no gate said
+a word, because a shrinking generated file is indistinguishable from a prelude
+that lost a theorem.
+
+Two changes close that:
+
+1. A registry field is **flattened with a dotted name**: `PiNames::pi_le_four`
+   reaches Python as `p["pi.pi_le_four"]`. Dotted, not flattened bare, because
+   two modules may legitimately declare the same leaf name and because the
+   dotted form says where the name lives. `__getattr__`, `__getitem__`,
+   `to_dict`, `field_names` and `__contains__` all take it unchanged.
+2. **An unclassified field type is a hard error**, not a skip. That is the
+   actual defect: the parser silently ignored what it did not understand, so
+   the next structural change to a prelude will fail loudly here instead of
+   quietly amputating the binding.
 """
 
 from __future__ import annotations
@@ -44,11 +67,41 @@ PRELUDES = [
 ]
 
 FIELD = re.compile(r"^\s{4}pub ([a-z_][a-z_0-9]*): ([A-Za-z0-9_<>, ]+),\s*$")
+# ADR-1512's per-module registries. The naming rule is
+# `scripts/creal-migrate-registry.py::struct_name`: the module name in
+# CamelCase plus `Names`, so `creal/ivt_boundary.rs` owns `IvtBoundaryNames`.
+REGISTRY = re.compile(r"^[A-Z][A-Za-z0-9]*Names$")
+
+_STRUCT_FILE: dict[str, Path] = {}
 
 
-def struct_fields(struct: str, filename: str) -> list[tuple[str, str]]:
+def struct_file(struct: str) -> Path:
+    """The kernel source file defining `struct`.
+
+    Resolved by scanning rather than from the field name, because the field
+    name is only the module name BY CONVENTION -- and a convention the
+    generator depends on silently is the same failure mode this script exists
+    to prevent. Ambiguity and absence are both hard errors.
+    """
+    if struct in _STRUCT_FILE:
+        return _STRUCT_FILE[struct]
+    needle = f"pub struct {struct} {{"
+    hits = [p for p in sorted(KERNEL_SRC.rglob("*.rs")) if needle in p.read_text(encoding="utf-8")]
+    if not hits:
+        raise SystemExit(
+            f"error: no `{needle}` anywhere under {KERNEL_SRC} -- "
+            "a prelude field names a type this generator cannot resolve"
+        )
+    if len(hits) > 1:
+        where = ", ".join(str(p.relative_to(ROOT)) for p in hits)
+        raise SystemExit(f"error: `{needle}` defined in {len(hits)} files ({where})")
+    _STRUCT_FILE[struct] = hits[0]
+    return hits[0]
+
+
+def struct_fields(struct: str, path: Path) -> list[tuple[str, str]]:
     """The `pub name: Type` fields of `struct`, in declaration order."""
-    text = (KERNEL_SRC / filename).read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
     start = text.index(f"pub struct {struct} {{")
     end = text.index("\n}\n", start)
     fields = []
@@ -61,8 +114,57 @@ def struct_fields(struct: str, filename: str) -> list[tuple[str, str]]:
     return fields
 
 
-def render() -> tuple[str, dict[str, int]]:
+def collect(
+    struct: str, path: Path, prefix: str, expr: str, seen: tuple[str, ...] = ()
+) -> tuple[list[tuple[str, str]], list[tuple[str, str]], list[tuple[str, str]]]:
+    """`(scalars, lists, sub-packages)` for `struct`, registries flattened.
+
+    Each entry is `(python field name, rust accessor expression)`. A registry
+    field contributes its own fields under a dotted name; a `*Prelude` field is
+    a sub-package and is NOT flattened (it is wrapped as its own Python object).
+
+    Every other field type raises: see the module docstring. A registry inside
+    a registry would work, and a cycle is refused rather than recursed.
+    """
+    if struct in seen:
+        raise SystemExit(f"error: registry cycle through `{struct}` ({' -> '.join(seen)})")
+    scalars: list[tuple[str, str]] = []
+    lists: list[tuple[str, str]] = []
+    nested: list[tuple[str, str]] = []
+    for name, ty in struct_fields(struct, path):
+        dotted = f"{prefix}{name}"
+        access = f"{expr}.{name}"
+        if ty == "NameId":
+            scalars.append((dotted, access))
+        elif ty == "Vec<NameId>":
+            lists.append((dotted, access))
+        elif ty.endswith("Prelude"):
+            if prefix:
+                raise SystemExit(
+                    f"error: {struct}.{name} is a `{ty}` sub-package inside a registry; "
+                    "the Python binding wraps sub-packages only at the top level"
+                )
+            nested.append((dotted, ty))
+        elif REGISTRY.match(ty):
+            sub_scalars, sub_lists, sub_nested = collect(
+                ty, struct_file(ty), f"{dotted}.", access, (*seen, struct)
+            )
+            scalars += sub_scalars
+            lists += sub_lists
+            nested += sub_nested
+        else:
+            raise SystemExit(
+                f"error: {struct}.{name} has type `{ty}`, which this generator does not "
+                "classify. Teach it the new shape -- do NOT let it be skipped: a skipped "
+                "field vanishes from the Python surface and reads as a missing theorem "
+                "(ADR-1512, 8dd580a1c)."
+            )
+    return scalars, lists, nested
+
+
+def render() -> tuple[str, dict[str, int], dict[str, tuple[int, int]]]:
     counts: dict[str, int] = {}
+    split: dict[str, tuple[int, int]] = {}
     out: list[str] = [
         "//! Field tables for the nine `*Prelude` packages -- GENERATED, do not edit.",
         "//!",
@@ -88,13 +190,19 @@ def render() -> tuple[str, dict[str, int]]:
         "",
     ]
     for struct, filename, kind in PRELUDES:
-        fields = struct_fields(struct, filename)
-        scalars = [n for n, t in fields if t == "NameId"]
-        lists = [n for n, t in fields if t == "Vec<NameId>"]
-        nested = [(n, t) for n, t in fields if t.endswith("Prelude")]
+        scalars, lists, nested = collect(struct, KERNEL_SRC / filename, "", "p")
+        registry = sum(1 for name, _ in scalars if "." in name)
         counts[kind] = len(scalars)
+        split[kind] = (len(scalars) - registry, registry)
         out.append(f"/// The `{struct}` field table ({len(scalars)} names,")
         out.append(f"/// {len(lists)} name lists, {len(nested)} sub-packages).")
+        if registry:
+            out.append("///")
+            out.append(
+                f"/// {registry} of the names come from ADR-1512 per-module registries and"
+            )
+            out.append("/// carry a dotted field name (`pi.pi_le_four`); the rest are flat")
+            out.append(f"/// fields on `{struct}` itself.")
         out.append("#[must_use]")
         out.append(
             "#[allow(clippy::too_many_lines)] // a generated field table; length is the point."
@@ -102,13 +210,13 @@ def render() -> tuple[str, dict[str, int]]:
         out.append(f"pub(super) fn {kind}(p: &{struct}) -> Fields {{")
         out.append("    Fields {")
         out.append("        names: vec![")
-        for name in scalars:
-            out.append(f'            ("{name}", p.{name}),')
+        for name, access in scalars:
+            out.append(f'            ("{name}", {access}),')
         out.append("        ],")
         if lists:
             out.append("        lists: vec![")
-            for name in lists:
-                out.append(f'            ("{name}", p.{name}.clone()),')
+            for name, access in lists:
+                out.append(f'            ("{name}", {access}.clone()),')
             out.append("        ],")
         else:
             out.append("        lists: Vec::new(),")
@@ -141,7 +249,10 @@ def render() -> tuple[str, dict[str, int]]:
         out.append(f"    {variant}(Box<{struct}>),")
     out.append("}")
     out.append("")
-    return "\n".join(out), counts
+    return "\n".join(out), counts, split
+
+
+RUSTFMT_MISSING = False
 
 
 def rustfmt(text: str) -> str:
@@ -164,6 +275,8 @@ def rustfmt(text: str) -> str:
         )
         return scratch.read_text(encoding="utf-8")
     except FileNotFoundError:
+        global RUSTFMT_MISSING  # noqa: PLW0603 -- one process-wide capability fact
+        RUSTFMT_MISSING = True
         print("PRELUDE-FIELDS|WARN rustfmt not on PATH -- emitting unformatted")
         return text
     finally:
@@ -171,15 +284,36 @@ def rustfmt(text: str) -> str:
 
 
 def main() -> int:
-    text, counts = render()
+    text, counts, split = render()
     text = rustfmt(text)
     total = sum(counts.values())
     summary = ", ".join(f"{k}={v}" for k, v in counts.items())
     print(f"PRELUDE-FIELDS|total={total}|{summary}")
+    # The flat/registry split per package. Printed unconditionally because the
+    # ADR-1512 shrink was invisible in the totals alone: `creal=537` and
+    # `creal=606` are both plausible-looking numbers, and only the second
+    # component says whether the registries were read at all.
+    registry_total = sum(r for _, r in split.values())
+    detail = ", ".join(f"{k}={f}+{r}" for k, (f, r) in split.items() if r)
+    print(f"PRELUDE-FIELDS|registry={registry_total}|{detail or 'none'}")
     if total == 0:
         print("PRELUDE-FIELDS|FAIL parsed zero fields")
         return 1
     if "--check" in sys.argv:
+        if RUSTFMT_MISSING:
+            # UNANSWERABLE, not stale. The committed file is `rustfmt`'s fixed
+            # point, so without `rustfmt` the comparison is against a different
+            # text and every tree reads as drifted. Exit 2 -- the repository's
+            # code for "no subject / cannot answer", as
+            # `recount-pinned-inventory.py` uses it -- so a gate can report the
+            # missing toolchain instead of a red that means nothing. Measured
+            # 2026-08-16, `just` and `lean` existed on one fleet host of five;
+            # a host-capability assumption in a gate is not a safe one.
+            print(
+                "PRELUDE-FIELDS|SKIP rustfmt not on PATH -- cannot compare "
+                "against the formatted fixed point"
+            )
+            return 2
         current = TARGET.read_text(encoding="utf-8") if TARGET.exists() else ""
         if current != text:
             print(f"PRELUDE-FIELDS|FAIL {TARGET} is stale -- rerun without --check")

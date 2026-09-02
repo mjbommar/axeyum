@@ -81,10 +81,12 @@
 
 use super::ring_helpers::{add4_comm, right_distrib};
 use super::{CRealPrelude, cadd, cle, clt, creal_ty, div_succ, embed, gap_elim, gap_halves, shift};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_ty, rchain, rle, rlt};
 
@@ -1921,7 +1923,7 @@ pub(super) fn declare_has_derivative_unique(
         d.pi_fv(f_fv, func_ty, over_f1)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.has_derivative_unique,
+        name: p.deriv_unique.has_derivative_unique,
         uparams: vec![],
         ty,
         value,
@@ -2019,4 +2021,36 @@ fn build_bound_proof(
             )
         },
     )
+}
+
+/// The kernel names `creal/deriv_unique.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DerivUniqueNames {
+    /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
+    /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
+    /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
+    /// function on `[a,b]` is unique, GIVEN the interval is genuinely
+    /// nondegenerate (`lt a b`, not merely `le a b`). The naive statement
+    /// without that hypothesis is refuted at a degenerate interval `a = b`
+    /// (`id`'s derivative is simultaneously `const zero` and `const one`
+    /// there); see that module's own documentation for the refutation and
+    /// the `lt_cotrans`-based nearby-point construction that replaces it.
+    pub has_derivative_unique: NameId,
+}
+
+impl DerivUniqueNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
+        }
+    }
 }

@@ -8,8 +8,12 @@
     "reference": "crates/axeyum-lean-import/examples/modeq_family_operation.rs"
   },
   "shape": {
-    "formal_language": ["lean4-surface"],
-    "fragments": ["Nat"],
+    "formal_language": [
+      "lean4-surface"
+    ],
+    "fragments": [
+      "Nat"
+    ],
     "title_prefix": "Mathlib v4.30 source proposition ",
     "statement_contains": "Coprime"
   },
@@ -23,5 +27,15 @@
       "reason": "The statement (`Nat.Coprime 0 0`) genuinely contains `Coprime` and is `Nat`/`lean4-surface`, but its title is `Outcome-blind mutation of Nat.not_coprime_zero_zero`, not a `Mathlib v4.30 source proposition ...` import -- this is a deliberately outcome-blind polarity-reversal mutation fixture (`nursery-v1.json`'s `mutation_of` field), not a genuine Mathlib target, and the `title_prefix` constraint excludes every mutation fixture structurally rather than by an id denylist."
     }
   ],
-  "notes": "24 facts in the current ledger match this shape by statement content alone (including the mutation fixture above); restricting to the `Mathlib v4.30 source proposition ` title prefix narrows that to 23, of which 22 are open, dependency-ready, and sit in `nursery-v1.json` partition `development` (one, `F:ml430-nat-fib-coprime-fib-succ-162fc738`, is `train` and already `proved`) -- none held-out, checked 2026-08-27. This is the second, independently-shaped seed contract: it shares no fact, no fragment, and no route-availability question with the Int.ModEq contract, so the two together demonstrate the schema covers more than one family rather than being fitted to a single example. As with every producer contract, this asserts dischargeability via `kernel-lane` only -- no instance is claimed attempted or proved, and admission into the operation registry still requires an independently kernel-checked proof (ADR-0602 SS1)."
+  "notes": "24 facts in the current ledger match this shape by statement content alone (including the mutation fixture above); restricting to the `Mathlib v4.30 source proposition ` title prefix narrows that to 23, of which 22 are open, dependency-ready, and sit in `nursery-v1.json` partition `development` (one, `F:ml430-nat-fib-coprime-fib-succ-162fc738`, is `train` and already `proved`) -- none held-out, checked 2026-08-27. This is the second, independently-shaped seed contract: it shares no fact, no fragment, and no route-availability question with the Int.ModEq contract, so the two together demonstrate the schema covers more than one family rather than being fitted to a single example. As with every producer contract, this asserts dischargeability via `kernel-lane` only -- no instance is claimed attempted or proved, and admission into the operation registry still requires an independently kernel-checked proof (ADR-0602 SS1).",
+  "sizing": {
+    "date": "2026-09-01",
+    "ledger_sha256": "670fa8ac1332baf315f749d9a5d3bc80f0c1f9b8fd748606bec119ea19c6b14b",
+    "matched_open_ready_count": 1,
+    "matched_open_ready_fact_ids": [
+      "F:ml430-nat-coprime-of-lt-minfac-0f79bdba"
+    ],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Measured 2026-09-01 by re-executing this contract's own shape predicate over artifacts/facts/, restricted to facts that are open, dependency-ready, NOT in a held-out nursery partition (read from every artifacts/autogenesis/nursery*.json, not just nursery-v1.json) and not an outcome-blind mutation fixture. The AUTHORING-time figure is a different number and is recorded in this contract's own `notes` (2026-08-27); it is not restated here, because a sizing block records the population the contract is answerable for NOW."
+  }
 }

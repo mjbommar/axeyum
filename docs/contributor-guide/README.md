@@ -28,6 +28,26 @@ evidence, executable gates, decision anchors, and the next safe action.
    `just` existed on one host of five and the fleet's Rust nightlies spanned
    109 days.
 
+## Working on the kernel and the proof library
+
+The measured failure modes, moved out of CLAUDE.md so the trigger index there
+stays short. Read the one that matches what you are about to do.
+
+- [Finding Existing Lemmas](finding-existing-lemmas.md) — **start here.** More
+  lane-hours have gone to re-deriving what existed than to proof difficulty.
+  Where lemmas hide, which tools reach them, and the one hiding place no tool can.
+- [Kernel Proof Engineering](kernel-proof-engineering.md) — why
+  `add_declaration` rejected your term, and the failures it cannot detect at all
+  (a `Definition` that computes the wrong value type-checks).
+- [Prelude Build Cost](prelude-build-cost.md) — the same kernel, slow rather than
+  wrong: unary numerals, forced unfolds, stack envelopes, and how to bisect.
+- [Measurement Hazards](measurement-hazards.md) — tools that exit 0 and print
+  something plausible that is wrong. Banned shell idioms, inert gates, inventory
+  tools that discard arguments, stale binaries.
+- [Evidence and Checker Discipline](evidence-and-checker-discipline.md) — a
+  checker that cannot fail is worse than no checker; what mutation testing
+  cannot see; blind evaluation populations.
+
 ## Obligations for new public surface
 
 Before an operator, rewrite, encoding, backend, evidence artifact, or logic

@@ -71,7 +71,7 @@
 //!
 //! [`verify_inverse_certificate`] never calls [`polynomial_inverse`]. It
 //! recomputes `p'` and `q` from `poly`/`y` with **checker-local**
-//! implementations ([`checker_derivative`], [`checker_shift_by`]) that share no
+//! implementations (`checker_derivative`, `checker_shift_by`) that share no
 //! code with the producer's `axeyum_ir::poly` routines, in the spirit of
 //! `crates/axeyum-cas/src/ntheory_certify.rs` (whose checkers were fixed to use
 //! checker-local `gcd`/`lcm` after one was found calling back into its own

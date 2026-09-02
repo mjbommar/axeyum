@@ -1524,6 +1524,19 @@ generated-trackers:
     python3 scripts/gen-plan.py --check
     python3 -m unittest scripts.tests.test_gen_adr_index
     python3 scripts/gen-adr-index.py --check
+    # `creal`'s STEPS table is generated from a measurement of its own source
+    # (crates/axeyum-lean-kernel/src/creal/steps_generated.rs). --check: stale;
+    # --strict: the measured graph contradicts it; --self-check: the positive
+    # control. Pure Python, ~1.1s.
+    python3 scripts/creal-declare-deps.py --check --strict --self-check
+    # The Python binding's generated prelude field table. Registered in no
+    # gate until 2026-09-01, which is how it reached main stale: the ADR-1512
+    # registry split deleted 69 of creal's 606 names from the Python surface
+    # and nothing noticed. ~0.3s, pure Python.
+    python3 scripts/gen-py-prelude-fields.py --check
+    # The ADR-1512 migration's consumer scan: it refuses a move that would
+    # break a file outside the kernel crate. Mutation-verified.
+    python3 -m unittest scripts.tests.test_creal_migrate_registry
     # ADR-0601 SS3: the import backlog as a produced artifact, not a bare
     # count. docs/autogenesis/289-import-backlog-artifact.md.
     python3 -m unittest scripts.tests.test_gen_import_backlog

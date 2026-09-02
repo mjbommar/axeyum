@@ -4,7 +4,7 @@
 //!
 //! π is routinely *defined* as twice the first positive root of `cos`, and
 //! `creal/ivt.rs` refutes the exact-root construction constructively
-//! ([`CRealPrelude::ivt_exact_root_decides_sign`]). That refutation is a
+//! ([`IvtBoundaryNames::ivt_exact_root_decides_sign`]). That refutation is a
 //! statement about **one definition of π**, not about π: the number itself is
 //! the sum of a rational series, and a series needs no root, no intermediate
 //! value theorem, and no case analysis on a sign. This file builds it that
@@ -35,7 +35,7 @@
 //! must be refuted):
 //!
 //! 1. **The terms are defined by a RECURSION, so the ratio is definitional.**
-//!    [`CRealPrelude::pi_half_coef`] is `t 0 = 1/1`, `t (k+1) = t k ·
+//!    [`PiNames::pi_half_coef`] is `t 0 = 1/1`, `t (k+1) = t k ·
 //!    (k+1)/(2k+3)`, a `Nat.rec` into `Rat`. Nothing has to be proved to get
 //!    from `t k` to `t (k+1)`: ι-reduction does it. The closed form
 //!    `2ᵏ(k!)²/(2k+1)!` is never built, so no factorial identity is ever
@@ -82,10 +82,12 @@ use super::trig::{
     promote_ordered_half_to_full, two, two_normalize,
 };
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, div_succ, embed, sample, within};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{BinderInfo, ExprId};
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::group::rsub;
 use crate::rat_prelude::ops::{nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rle, rmul, rzero};
@@ -274,7 +276,7 @@ fn declare_pi_half_coef(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
     let value = d.lam_fv(n_fv, nat, body);
     let ty = d.arrow(nat, rat);
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.pi_half_coef,
+        name: p.pi.pi_half_coef,
         uparams: vec![],
         ty,
         value,
@@ -288,12 +290,12 @@ fn declare_pi_half_term(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
     let nat = d.nat_ty();
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
-    let coef = d.const_app(p.pi_half_coef, &[k]);
+    let coef = d.const_app(p.pi.pi_half_coef, &[k]);
     let body = embed(d, p, coef);
     let value = d.lam_fv(k_fv, nat, body);
     let ty = d.arrow(nat, carrier);
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.pi_half_term,
+        name: p.pi.pi_half_term,
         uparams: vec![],
         ty,
         value,
@@ -305,11 +307,11 @@ fn declare_pi_half_term(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kerne
 fn declare_pi_half_series_partial(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
     let nat = d.nat_ty();
-    let term = d.kernel().const_(p.pi_half_term, vec![]);
+    let term = d.kernel().const_(p.pi.pi_half_term, vec![]);
     let value = d.const_app(p.sum_range, &[term]);
     let ty = d.arrow(nat, carrier);
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.pi_half_series_partial,
+        name: p.pi.pi_half_series_partial,
         uparams: vec![],
         ty,
         value,
@@ -429,7 +431,7 @@ fn declare_pi_half_coef_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
 
     let motive = |d: &mut IntDev<'_>, m: ExprId| -> ExprId {
         let zero_r = rzero(d, rp);
-        let coef = d.const_app(p.pi_half_coef, &[m]);
+        let coef = d.const_app(p.pi.pi_half_coef, &[m]);
         rle(d, rp, zero_r, coef)
     };
     let base = |d: &mut IntDev<'_>| -> ExprId {
@@ -438,7 +440,7 @@ fn declare_pi_half_coef_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
         d.lemma(rp.zero_le_nat_div_succ, &[one_nat, zero_nat])
     };
     let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
-        let coef = d.const_app(p.pi_half_coef, &[j]);
+        let coef = d.const_app(p.pi.pi_half_coef, &[j]);
         let c = ratio_rat(d, p, j);
         let c_nonneg = {
             let sj = d.succ(j);
@@ -457,7 +459,7 @@ fn declare_pi_half_coef_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     let value = d.lam_fv(k_fv, nat, value_at_k);
     let ty = d.pi_fv(k_fv, nat, stmt_at_k);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_half_coef_nonneg,
+        name: p.pi.pi_half_coef_nonneg,
         uparams: vec![],
         ty,
         value,
@@ -475,18 +477,18 @@ fn declare_pi_half_term_nonneg(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<()
     let k = d.kernel().fvar(k_fv);
 
     let zero_r = rzero(d, rp);
-    let coef = d.const_app(p.pi_half_coef, &[k]);
-    let rat_proof = d.const_app(p.pi_half_coef_nonneg, &[k]);
+    let coef = d.const_app(p.pi.pi_half_coef, &[k]);
+    let rat_proof = d.const_app(p.pi.pi_half_coef_nonneg, &[k]);
     let body = d.lemma(p.of_rat_le, &[zero_r, coef, rat_proof]);
 
     let zero_c = czero(d, p);
-    let term = d.const_app(p.pi_half_term, &[k]);
+    let term = d.const_app(p.pi.pi_half_term, &[k]);
     let stmt = cle(d, p, zero_c, term);
 
     let value = d.lam_fv(k_fv, nat, body);
     let ty = d.pi_fv(k_fv, nat, stmt);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_half_term_nonneg,
+        name: p.pi.pi_half_term_nonneg,
         uparams: vec![],
         ty,
         value,
@@ -510,7 +512,7 @@ fn declare_pi_half_term_le_pow_half(
     let nat = d.nat_ty();
 
     let motive = |d: &mut IntDev<'_>, m: ExprId| -> ExprId {
-        let term = d.const_app(p.pi_half_term, &[m]);
+        let term = d.const_app(p.pi.pi_half_term, &[m]);
         let hp = half(d, p);
         let pw = cpow(d, p, hp, m);
         cle(d, p, term, pw)
@@ -532,7 +534,7 @@ fn declare_pi_half_term_le_pow_half(
         d.lemma(p.le_refl, &[one_cc])
     };
     let step = |d: &mut IntDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
-        let coef = d.const_app(p.pi_half_coef, &[j]);
+        let coef = d.const_app(p.pi.pi_half_coef, &[j]);
         let c = ratio_rat(d, p, j);
         let prod_rat = rmul(d, coef, c);
         let lhs = embed(d, p, prod_rat);
@@ -547,7 +549,7 @@ fn declare_pi_half_term_le_pow_half(
         let ratio_bound = ratio_le_half(d, p, j);
         let half_r = half_rat(d, p);
         let c_le_half = d.lemma(p.of_rat_le, &[c, half_r, ratio_bound]);
-        let coef_nonneg_rat = d.const_app(p.pi_half_coef_nonneg, &[j]);
+        let coef_nonneg_rat = d.const_app(p.pi.pi_half_coef_nonneg, &[j]);
         let zero_r = rzero(d, rp);
         let term_nonneg = d.lemma(p.of_rat_le, &[zero_r, coef, coef_nonneg_rat]);
 
@@ -594,7 +596,7 @@ fn declare_pi_half_term_le_pow_half(
     let value = d.lam_fv(k_fv, nat, value_at_k);
     let ty = d.pi_fv(k_fv, nat, stmt_at_k);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_half_term_le_pow_half,
+        name: p.pi.pi_half_term_le_pow_half,
         uparams: vec![],
         ty,
         value,
@@ -649,18 +651,18 @@ fn declare_pi_half_term_abs_le_dominant(
     let k_fv = d.fresh_fvar();
     let k = d.kernel().fvar(k_fv);
 
-    let term = d.const_app(p.pi_half_term, &[k]);
+    let term = d.const_app(p.pi.pi_half_term, &[k]);
     let h = half(d, p);
     let pw = cpow(d, p, h, k);
     let dom = exp_dominant_at(d, p, k);
     let zero_c = czero(d, p);
 
-    let le_pw = d.const_app(p.pi_half_term_le_pow_half, &[k]);
+    let le_pw = d.const_app(p.pi.pi_half_term_le_pow_half, &[k]);
     let pw_le_dom = pow_half_le_dominant(d, p, k);
     let le_dom = d.lemma(p.le_trans, &[term, pw, dom, le_pw, pw_le_dom]);
 
     // `abs_le` wants `le (neg term) dom`, from `0 ≤ term` and `0 ≤ dom`.
-    let nonneg = d.const_app(p.pi_half_term_nonneg, &[k]);
+    let nonneg = d.const_app(p.pi.pi_half_term_nonneg, &[k]);
     let dom_nonneg = {
         let half_nn = half_nonneg_proof(d, p);
         let pw_nonneg = d.lemma(p.pow_nonneg, &[h, half_nn, k]);
@@ -697,7 +699,7 @@ fn declare_pi_half_term_abs_le_dominant(
     let value = d.lam_fv(k_fv, nat, body);
     let ty = d.pi_fv(k_fv, nat, stmt);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_half_term_abs_le_dominant,
+        name: p.pi.pi_half_term_abs_le_dominant,
         uparams: vec![],
         ty,
         value,
@@ -717,10 +719,10 @@ fn declare_pi_half_term_abs_le_dominant(
 fn pi_half_ingredients(d: &mut IntDev<'_>, p: CRealPrelude) -> (ExprId, ExprId, ExprId) {
     let (k_dom, hyp2) = exp_dominant_cauchy_body_concrete(d, p);
 
-    let term_c = d.kernel().const_(p.pi_half_term, vec![]);
+    let term_c = d.kernel().const_(p.pi.pi_half_term, vec![]);
     let dominant_c = d.kernel().const_(p.exp_dominant, vec![]);
-    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
-    let hyp1 = d.lemma(p.pi_half_term_abs_le_dominant, &[]);
+    let partial_c = d.kernel().const_(p.pi.pi_half_series_partial, vec![]);
+    let hyp1 = d.lemma(p.pi.pi_half_term_abs_le_dominant, &[]);
 
     let ordered_half = |d: &mut IntDev<'_>, a: ExprId, b: ExprId, hab: ExprId| -> ExprId {
         d.lemma(
@@ -747,14 +749,14 @@ fn declare_pi_half(
     k_final: ExprId,
     body: ExprId,
 ) -> Result<(), KernelError> {
-    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
+    let partial_c = d.kernel().const_(p.pi.pi_half_series_partial, vec![]);
     let speedup_term = d.const_app(p.speedup, &[raw, k_final]);
     let regularity_proof = d.lemma(p.regular_of_scaled_cauchy, &[partial_c, k_final, body]);
     let constructor = d.kernel().const_(p.mk, vec![]);
     let value = d.apply(constructor, &[speedup_term, regularity_proof]);
     let ty = creal_ty(d, p);
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.pi_half,
+        name: p.pi.pi_half,
         uparams: vec![],
         ty,
         value,
@@ -777,8 +779,8 @@ fn declare_pi_half_converges(
 ) -> Result<(), KernelError> {
     let rat = p.rat;
     let nat = d.nat_ty();
-    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
+    let partial_c = d.kernel().const_(p.pi.pi_half_series_partial, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
 
     let generic = {
         let k_fv = d.fresh_fvar();
@@ -827,7 +829,7 @@ fn declare_pi_half_converges(
     let value = d.apply(generic, &[k_final, body_concrete]);
     let ty = converges_applied(d, p, partial_c, pi_half_c);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_half_converges,
+        name: p.pi.pi_half_converges,
         uparams: vec![],
         ty,
         value,
@@ -842,11 +844,11 @@ fn declare_pi_half_converges(
 /// proof has to be built.
 fn declare_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let two_c = two(d, p);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
     let value = cmul(d, p, two_c, pi_half_c);
     let ty = creal_ty(d, p);
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.pi,
+        name: p.pi.pi,
         uparams: vec![],
         ty,
         value,
@@ -861,7 +863,7 @@ fn declare_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
 /// `CReal.piHalfLeTwo : le piHalf two`.
 ///
 /// Every partial sum is `≤ two`: termwise `piHalfTerm k ≤ pow half k`
-/// ([`CRealPrelude::pi_half_term_le_pow_half`]) through
+/// ([`PiNames::pi_half_term_le_pow_half`]) through
 /// [`CRealPrelude::sum_range_le`], then
 /// [`CRealPrelude::sum_pow_half_closed_form`] reads the geometric partial sum
 /// as `mul two (one − (1/2)ⁿ) ≤ mul two one ~ two`. Holds at every `n`
@@ -869,11 +871,11 @@ fn declare_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
 /// shift.
 fn declare_pi_half_le_two(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let nat = d.nat_ty();
-    let term_c = d.kernel().const_(p.pi_half_term, vec![]);
-    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
-    let le_pow_const = d.kernel().const_(p.pi_half_term_le_pow_half, vec![]);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
-    let converges = d.kernel().const_(p.pi_half_converges, vec![]);
+    let term_c = d.kernel().const_(p.pi.pi_half_term, vec![]);
+    let partial_c = d.kernel().const_(p.pi.pi_half_series_partial, vec![]);
+    let le_pow_const = d.kernel().const_(p.pi.pi_half_term_le_pow_half, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
+    let converges = d.kernel().const_(p.pi.pi_half_converges, vec![]);
 
     let per_n = |d: &mut IntDev<'_>, n: ExprId| -> ExprId {
         let zero_c = czero(d, p);
@@ -989,7 +991,7 @@ fn declare_pi_half_le_two(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     );
     let ty = cle(d, p, pi_half_c, two_c);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_half_le_two,
+        name: p.pi.pi_half_le_two,
         uparams: vec![],
         ty,
         value,
@@ -1002,17 +1004,17 @@ fn declare_pi_half_le_two(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
 fn declare_pi_le_four(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let two_c = two(d, p);
     let two_nn = two_nonneg_proof(d, p);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
-    let bound = d.kernel().const_(p.pi_half_le_two, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
+    let bound = d.kernel().const_(p.pi.pi_half_le_two, vec![]);
     let value = d.lemma(
         p.mul_le_mul_of_nonneg_left,
         &[two_c, pi_half_c, two_c, two_nn, bound],
     );
-    let pi_c = d.kernel().const_(p.pi, vec![]);
+    let pi_c = d.kernel().const_(p.pi.pi, vec![]);
     let four = cmul(d, p, two_c, two_c);
     let ty = cle(d, p, pi_c, four);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.pi_le_four,
+        name: p.pi.pi_le_four,
         uparams: vec![],
         ty,
         value,
@@ -1039,8 +1041,8 @@ fn shifted_lower_bound(
     base: ExprId,
 ) -> ExprId {
     let nat = d.nat_ty();
-    let term_c = d.kernel().const_(p.pi_half_term, vec![]);
-    let nonneg_c = d.kernel().const_(p.pi_half_term_nonneg, vec![]);
+    let term_c = d.kernel().const_(p.pi.pi_half_term, vec![]);
+    let nonneg_c = d.kernel().const_(p.pi.pi_half_term_nonneg, vec![]);
     let zero_nat = d.num(0);
 
     let n_fv = d.fresh_fvar();
@@ -1074,7 +1076,7 @@ fn scale_lower_bound_to_pi(
 ) -> ExprId {
     let two_c = two(d, p);
     let two_nn = two_nonneg_proof(d, p);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
     d.lemma(
         p.mul_le_mul_of_nonneg_left,
         &[two_c, bound, pi_half_c, two_nn, lower],
@@ -1093,9 +1095,9 @@ fn scale_lower_bound_to_pi(
 /// [`CRealPrelude::converges_lower_bound_shift`] at shift `1` gives
 /// `1 ≤ piHalf`, and scaling by `two` gives `2 ≤ pi`.
 fn declare_two_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
-    let converges = d.kernel().const_(p.pi_half_converges, vec![]);
+    let partial_c = d.kernel().const_(p.pi.pi_half_series_partial, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
+    let converges = d.kernel().const_(p.pi.pi_half_converges, vec![]);
 
     let one_nat = d.num(1);
     let one_cc = one_c(d, p);
@@ -1114,7 +1116,7 @@ fn declare_two_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
     let two_c = two(d, p);
     let mul_two_one = cmul(d, p, two_c, one_cc);
     let fold = d.lemma(p.mul_one, &[two_c]); // Equiv (mul two one) two
-    let pi_c = d.kernel().const_(p.pi, vec![]);
+    let pi_c = d.kernel().const_(p.pi.pi, vec![]);
     let refl_pi = d.lemma(p.equiv_refl, &[pi_c]);
     let mul_two_pi_half = cmul(d, p, two_c, pi_half_c);
     let value = d.lemma(
@@ -1131,7 +1133,7 @@ fn declare_two_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
     );
     let ty = cle(d, p, two_c, pi_c);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.two_le_pi,
+        name: p.pi.two_le_pi,
         uparams: vec![],
         ty,
         value,
@@ -1163,10 +1165,10 @@ fn declare_two_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelEr
 /// intermediate bound that lands on what the next step needs, not the exact
 /// quotient.
 fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
-    let partial_c = d.kernel().const_(p.pi_half_series_partial, vec![]);
-    let pi_half_c = d.kernel().const_(p.pi_half, vec![]);
-    let converges = d.kernel().const_(p.pi_half_converges, vec![]);
-    let term_c = d.kernel().const_(p.pi_half_term, vec![]);
+    let partial_c = d.kernel().const_(p.pi.pi_half_series_partial, vec![]);
+    let pi_half_c = d.kernel().const_(p.pi.pi_half, vec![]);
+    let converges = d.kernel().const_(p.pi.pi_half_converges, vec![]);
+    let term_c = d.kernel().const_(p.pi.pi_half_term, vec![]);
 
     // Per-term lower bounds, and the running sums they add up to.
     let b1 = ndiv(d, p, 1, 2); //  1/3
@@ -1181,7 +1183,7 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     // under 50 (`1·3 ≤ 3·1`, `1·15 ≤ 8·2`, `1·35 ≤ 24·2`).
     let term_bound = |d: &mut IntDev<'_>, i: u32, b: ExprId| -> ExprId {
         let idx = d.num(i);
-        let coef = d.const_app(p.pi_half_coef, &[idx]);
+        let coef = d.const_app(p.pi.pi_half_coef, &[idx]);
         let rat_proof = rat_le_by_ble(d, p, b, coef);
         d.lemma(p.of_rat_le, &[b, coef, rat_proof])
     };
@@ -1208,7 +1210,7 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
         let k_nat = d.num(k_prev);
         let idx = d.num(k_prev);
         let sum_prev = d.const_app(p.sum_range, &[term_c, k_nat]);
-        let term_here = d.const_app(p.pi_half_term, &[idx]);
+        let term_here = d.const_app(p.pi.pi_half_term, &[idx]);
 
         let grown = d.lemma(
             p.add_le_add,
@@ -1258,7 +1260,7 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     let three_c = embed(d, p, three_r);
     let split = d.lemma(p.of_rat_mul, &[two_r, c4]);
     let mul_two_c4 = cmul(d, p, two_c, c4_c);
-    let pi_c = d.kernel().const_(p.pi, vec![]);
+    let pi_c = d.kernel().const_(p.pi.pi, vec![]);
     let refl_pi = d.lemma(p.equiv_refl, &[pi_c]);
     let mul_two_pi_half = cmul(d, p, two_c, pi_half_c);
     let value = d.lemma(
@@ -1275,7 +1277,7 @@ fn declare_three_le_pi(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
     );
     let ty = cle(d, p, three_c, pi_c);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.three_le_pi,
+        name: p.pi.three_le_pi,
         uparams: vec![],
         ty,
         value,
@@ -1334,7 +1336,7 @@ mod tests {
 
         for (k_val, num_val, den_val) in [(0u32, 1u32, 1u32), (1, 1, 3), (2, 2, 15), (3, 2, 35)] {
             let k = d.num(k_val);
-            let coef = d.const_app(p.pi_half_coef, &[k]);
+            let coef = d.const_app(p.pi.pi_half_coef, &[k]);
             let expected = rat_literal(&mut d, num_val, den_val);
             assert!(
                 d.kernel().def_eq(coef, expected),
@@ -1343,7 +1345,7 @@ mod tests {
         }
 
         let two = d.num(2);
-        let coef2 = d.const_app(p.pi_half_coef, &[two]);
+        let coef2 = d.const_app(p.pi.pi_half_coef, &[two]);
         let one_fifteenth = rat_literal(&mut d, 1, 15);
         assert!(
             !d.kernel().def_eq(coef2, one_fifteenth),
@@ -1353,7 +1355,7 @@ mod tests {
         );
 
         let three = d.num(3);
-        let coef3 = d.const_app(p.pi_half_coef, &[three]);
+        let coef3 = d.const_app(p.pi.pi_half_coef, &[three]);
         assert!(
             !d.kernel().def_eq(coef3, coef2),
             "piHalfCoef 3 must differ from piHalfCoef 2 -- a step that \
@@ -1386,8 +1388,8 @@ mod tests {
 
         let two_nat = d.num(2);
         let three_nat = d.num(3);
-        let coef2 = d.const_app(p.pi_half_coef, &[two_nat]);
-        let coef3 = d.const_app(p.pi_half_coef, &[three_nat]);
+        let coef2 = d.const_app(p.pi.pi_half_coef, &[two_nat]);
+        let coef3 = d.const_app(p.pi.pi_half_coef, &[three_nat]);
 
         let ninth = rat_literal(&mut d, 1, 9);
         assert!(ble(&mut d, ninth, coef2), "1/9 <= 2/15 (15 <= 18)");
@@ -1412,5 +1414,79 @@ mod tests {
             "1/17 <= 2/35 must be FALSE (35 <= 34) -- one step from the bound \
              the proof uses, which is what makes 3/2 reachable at four terms"
         );
+    }
+}
+
+/// The kernel names `creal/pi.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PiNames {
+    /// `CReal.piHalfCoef : Nat -> Rat` -- `t 0 = 1/1`,
+    /// `t (k+1) = t k * (k+1)/(2k+3)`. The terms of Euler's transform of
+    /// Leibniz, `pi/2 = sum_k 2^k (k!)^2/(2k+1)!`, defined by the RECURSION
+    /// rather than the closed form so the ratio is definitional.
+    pub pi_half_coef: NameId,
+    /// `CReal.piHalfTerm : Nat -> CReal := fun k => ofRat (piHalfCoef k)`.
+    pub pi_half_term: NameId,
+    /// `CReal.piHalfSeriesPartial : Nat -> CReal := sumRange piHalfTerm`.
+    pub pi_half_series_partial: NameId,
+    /// `CReal.piHalfCoefNonneg : forall k, Rat.le Rat.zero (piHalfCoef k)`.
+    pub pi_half_coef_nonneg: NameId,
+    /// `CReal.piHalfTermNonneg : forall k, le zero (piHalfTerm k)`.
+    pub pi_half_term_nonneg: NameId,
+    /// `CReal.piHalfTermLePowHalf : forall k, le (piHalfTerm k) (pow half k)`
+    /// -- the geometric domination, by induction on the definitional ratio
+    /// `(k+1)/(2k+3) <= 1/2`.
+    pub pi_half_term_le_pow_half: NameId,
+    /// `CReal.piHalfTermAbsLeDominant : forall k,
+    /// le (abs (piHalfTerm k)) (expDominant k)` -- stated against `CReal.e`'s
+    /// OWN dominant series so that its concrete Cauchy witness is reusable
+    /// unchanged.
+    pub pi_half_term_abs_le_dominant: NameId,
+    /// `CReal.piHalf : CReal` -- `pi/2`, by `CReal.mk` on an explicit regular
+    /// sequence. No root, no IVT: `creal/ivt.rs` refutes the exact-root
+    /// construction, and that refutation is about one DEFINITION of pi, not
+    /// about pi.
+    pub pi_half: NameId,
+    /// `CReal.piHalfConverges : Converges piHalfSeriesPartial piHalf`.
+    pub pi_half_converges: NameId,
+    /// `CReal.pi : CReal := mul two piHalf`.
+    pub pi: NameId,
+    /// `CReal.piHalfLeTwo : le piHalf two`.
+    pub pi_half_le_two: NameId,
+    /// `CReal.piLeFour : le pi (mul two two)`.
+    pub pi_le_four: NameId,
+    /// `CReal.twoLePi : le two pi`.
+    pub two_le_pi: NameId,
+    /// `CReal.threeLePi : le (ofRat (Rat.natDivSucc 3 0)) pi`.
+    pub three_le_pi: NameId,
+}
+
+impl PiNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            pi_half_coef: kernel.name_str(creal, "piHalfCoef"),
+            pi_half_term: kernel.name_str(creal, "piHalfTerm"),
+            pi_half_series_partial: kernel.name_str(creal, "piHalfSeriesPartial"),
+            pi_half_coef_nonneg: kernel.name_str(creal, "piHalfCoefNonneg"),
+            pi_half_term_nonneg: kernel.name_str(creal, "piHalfTermNonneg"),
+            pi_half_term_le_pow_half: kernel.name_str(creal, "piHalfTermLePowHalf"),
+            pi_half_term_abs_le_dominant: kernel.name_str(creal, "piHalfTermAbsLeDominant"),
+            pi_half: kernel.name_str(creal, "piHalf"),
+            pi_half_converges: kernel.name_str(creal, "piHalfConverges"),
+            pi: kernel.name_str(creal, "pi"),
+            pi_half_le_two: kernel.name_str(creal, "piHalfLeTwo"),
+            pi_le_four: kernel.name_str(creal, "piLeFour"),
+            two_le_pi: kernel.name_str(creal, "twoLePi"),
+            three_le_pi: kernel.name_str(creal, "threeLePi"),
+        }
     }
 }

@@ -91,6 +91,15 @@ if [ -f docs/plan/generated/theorem-production-ledger.md ]; then
     docs/plan/generated/theorem-production-ledger.md | sed 's/^/  /'
   grep -E '^- \*\*[0-9]+ distinct theorems' \
     docs/plan/generated/theorem-production-ledger.md | sed 's/^/  /'
+  # ADR-1511: this file's own `--check` needs a release kernel build (~40s
+  # warm, ~3min cold) so it cannot run here on every view -- print the date
+  # this artifact was last regenerated instead, so a reader can see
+  # staleness rather than trusting a number that may be days old. The
+  # ledger went stale for five days (1,448 -> 2,340 distinct theorems, an
+  # undercount of about a third) with no signal in this view that it had.
+  ledger_date=$(git log -1 --format=%cd --date=short \
+    -- docs/plan/generated/theorem-production-ledger.md 2>/dev/null)
+  echo "  as of: ${ledger_date:-unknown} (git log date of this committed file)"
   echo "  DO NOT SUM the cumulative column; 'Originated here' is the partition."
   echo "  authority: python3 scripts/gen-theorem-production-ledger.py --check"
   echo "  counts theorems, NOT autonomous ones -- the split is below."

@@ -8,8 +8,12 @@
     "reference": "crates/axeyum-lean-import/examples/modeq_family_operation.rs"
   },
   "shape": {
-    "formal_language": ["lean4-surface"],
-    "fragments": ["Int"],
+    "formal_language": [
+      "lean4-surface"
+    ],
+    "fragments": [
+      "Int"
+    ],
     "title_prefix": "Mathlib v4.30 source proposition ",
     "statement_contains": "[ZMOD "
   },
@@ -23,5 +27,18 @@
       "reason": "The SAME lemma shape (`ModEq.add_left`) and the same congruence relation, but over `Nat` rather than `Int`: its statement carries `[MOD n]`, not `[ZMOD n]`, and `formal.fragment` is `Nat`, which this contract's `fragments` list excludes. Demonstrates the predicate discriminates by fragment, not merely by lemma name."
     }
   ],
-  "notes": "Doc docs/autogenesis/288-admission-precedes-registration.md names four of this family's facts (`F:ml430-int-modeq-add-left-6e17c69a`, `-neg-f649f6c5`, `-of-dvd-b9c41fce`, `-sub-3148f130`) as the best next candidate for a genuinely general multi-target operation; this contract's shape covers those four plus every other open Int modular-congruence proposition sharing the recipe (13 open, dependency-ready, all `nursery-v1.json` partition `train` -- none held-out, checked 2026-08-27). This contract asserts only that the shape is dischargeable via `kernel-lane`, never that any instance has been attempted or proved; admission into `artifacts/autogenesis/operations.json` still requires an independently kernel-checked proof, per ADR-0602 SS1."
+  "notes": "Doc docs/autogenesis/288-admission-precedes-registration.md names four of this family's facts (`F:ml430-int-modeq-add-left-6e17c69a`, `-neg-f649f6c5`, `-of-dvd-b9c41fce`, `-sub-3148f130`) as the best next candidate for a genuinely general multi-target operation; this contract's shape covers those four plus every other open Int modular-congruence proposition sharing the recipe (13 open, dependency-ready, all `nursery-v1.json` partition `train` -- none held-out, checked 2026-08-27). This contract asserts only that the shape is dischargeable via `kernel-lane`, never that any instance has been attempted or proved; admission into `artifacts/autogenesis/operations.json` still requires an independently kernel-checked proof, per ADR-0602 SS1.",
+  "sizing": {
+    "date": "2026-09-01",
+    "ledger_sha256": "670fa8ac1332baf315f749d9a5d3bc80f0c1f9b8fd748606bec119ea19c6b14b",
+    "matched_open_ready_count": 0,
+    "matched_open_ready_fact_ids": [],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Measured 2026-09-01 by re-executing this contract's own shape predicate over artifacts/facts/, restricted to facts that are open, dependency-ready, NOT in a held-out nursery partition (read from every artifacts/autogenesis/nursery*.json, not just nursery-v1.json) and not an outcome-blind mutation fixture. The AUTHORING-time figure is a different number and is recorded in this contract's own `notes` (2026-08-27); it is not restated here, because a sizing block records the population the contract is answerable for NOW."
+  },
+  "retirement": {
+    "date": "2026-09-01",
+    "reason": "The family this contract was sized against is finished. All 12 Int modular-congruence facts it dispatched on 2026-08-27 declined honestly (DeclineReason::TerminalNotClosed) and were then closed by a different route -- hand-authored kernel declarations in crates/axeyum-lean-kernel/src/int_prelude/modeq.rs and crates/axeyum-lean-kernel/src/int_prelude/modeq_family.rs that never invoked this producer, this contract, or the import pipeline. Re-executing the shape predicate on 2026-09-01 returns ZERO live facts (open, dependency-ready, not held-out, not a mutation fixture), so the capability claim can no longer be falsified by any dispatch. Retired, not deleted: the contract and its 12 decline artifacts are the honest record of a real experiment (ADR-1510 \"Alternatives considered\").",
+    "note": "Nothing here weakens a guard. The producer still declines these goals identically today; what changed is that the ledger no longer has any open fact for it to be dispatched at."
+  }
 }

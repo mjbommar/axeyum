@@ -612,7 +612,7 @@ fn admit_smith(
 /// [`CasExpr::Const`], if the exact `i128` reduction overflows, or if the
 /// independent certificate fails to hold. That certificate has three parts and
 /// needs all three: `U * A = H` entrywise, `det(U) = +/-1`, and `H` actually
-/// being in Hermite form ([`certifies_hermite_shape`]). The first two alone are
+/// being in Hermite form (`certifies_hermite_shape`). The first two alone are
 /// satisfied by `(I, A)` for any `A` at all.
 #[must_use]
 pub fn hermite_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
@@ -637,7 +637,7 @@ pub fn hermite_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
 /// iteration cap, or if the independent certificate fails to hold. That
 /// certificate has three parts: `U * A * V = D` entrywise,
 /// `det(U) = det(V) = +/-1`, and `D` actually carrying the invariant-factor
-/// chain ([`certifies_smith_shape`]). The first two alone are satisfied by
+/// chain (`certifies_smith_shape`). The first two alone are satisfied by
 /// `(I, A, I)`.
 #[must_use]
 pub fn smith_normal_form(matrix: &Matrix) -> Option<(Matrix, Matrix, Matrix)> {
