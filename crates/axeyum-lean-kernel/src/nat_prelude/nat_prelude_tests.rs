@@ -935,6 +935,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.fin_is_lt,
         p.fin_val_mk,
         p.injective_on_imp_surjective_on,
+        p.injective_on_or_duplicate,
         p.restrict_injective,
         p.restrict_maps_into,
         p.transposition_involutive,

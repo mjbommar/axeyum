@@ -200,6 +200,7 @@ mod gcd_mul_right_mirrors;
 mod group;
 pub(crate) mod half_ceil_parity;
 mod helpers;
+mod injective_decide;
 mod irrational;
 mod land;
 mod land_div_two;
@@ -371,6 +372,7 @@ use gcd_mul_right::declare_gcd_mul_right;
 use gcd_mul_right_mirrors::declare_gcd_mul_right_mirrors;
 use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
+use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
 use land_div_two::declare_land_div_two_all;
@@ -2555,6 +2557,23 @@ pub struct NatPrelude {
     /// `Nat.injective_on_imp_surjective_on : ∀ f n, InjectiveOn f n →
     /// MapsInto f n → SurjectiveOn f n` — the finite pigeonhole principle.
     pub injective_on_imp_surjective_on: NameId,
+    /// `Nat.injective_on_or_duplicate : ∀ g n, Or (InjectiveOn g n)
+    /// (∃ a b, Lt a n ∧ Lt b n ∧ Lt a b ∧ Eq Nat (g a) (g b))` — a self-map of
+    /// `[0,n)` is either injective there or has an EXPLICIT duplicate pair,
+    /// constructively.
+    ///
+    /// Two nested instances of [`Self::lnp_bounded_search`], which is the
+    /// bounded search for a pointwise-decided predicate and is filed under the
+    /// least-number principle rather than anywhere a search for "injective" or
+    /// "pigeonhole" would find it. The inner search looks for a collision
+    /// STRICTLY BELOW each index, which is what makes the found pair
+    /// automatically distinct — the conclusion states `Lt a b`, never
+    /// `Not (Eq a b)`.
+    ///
+    /// This is what joins `Rat.det_row_selection_injective` to
+    /// `Rat.det_row_selection_of_duplicate` into a selection lemma carrying no
+    /// injectivity hypothesis (ADR-1470's "missing decidability piece").
+    pub injective_on_or_duplicate: NameId,
     /// `Nat.restrict_injective : ∀ σ i0 n, InjectiveOn σ (succ n) → Lt i0 n →
     /// InjectiveOn (fun k => point_override σ i0 (σ n) k) n` — restricting an
     /// injective self-map of `{0,…,n}` to `{0,…,n-1}` by overriding the
@@ -6091,6 +6110,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             surjective_on: kernel.name_str(nat, "surjectiveOn"),
             maps_into: kernel.name_str(nat, "mapsInto"),
             injective_on_imp_surjective_on: kernel.name_str(nat, "injective_on_imp_surjective_on"),
+            injective_on_or_duplicate: kernel.name_str(nat, "injective_on_or_duplicate"),
             restrict_injective: kernel.name_str(nat, "restrict_injective"),
             restrict_maps_into: kernel.name_str(nat, "restrict_maps_into"),
             transposition: kernel.name_str(nat, "transposition"),
@@ -7528,6 +7548,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `lt_of_lt_of_le`, `succ_ne_zero`, all far above) and the logic
         // prelude. Nothing needs it, so it goes last.
         declare_least_number_all(&mut d, &p)?;
+        declare_injective_on_or_duplicate(&mut d, &p)?;
         // `Nat.nthRootAux`/`Nat.nthRoot` (`nth_root.rs`): needs only
         // `Nat.pow`/`Nat.ble`/`Nat.beq`/`Nat.succ`/`bool_select_nat`, all far
         // above. Opens `Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas`

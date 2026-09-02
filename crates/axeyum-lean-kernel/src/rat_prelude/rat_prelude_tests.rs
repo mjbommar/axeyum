@@ -219,6 +219,7 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ),
         ("det_congr_lt", p.det_congr_lt),
         ("det_row_selection_injective", p.det_row_selection_injective),
+        ("det_row_selection", p.det_row_selection),
     ]
 }
 
@@ -6835,6 +6836,7 @@ fn the_determinant_toolkit_is_axiom_free() {
             p.det_row_selection_injective,
             true,
         ),
+        ("det_row_selection", p.det_row_selection, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

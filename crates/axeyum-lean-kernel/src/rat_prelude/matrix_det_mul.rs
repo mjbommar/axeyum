@@ -57,6 +57,7 @@ use crate::nat_prelude::NatOps;
 pub(super) fn declare_matrix_det_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_det_congr_lt(d, p)?;
     declare_det_row_selection_injective(d, p)?;
+    declare_det_row_selection_full(d, p)?;
     Ok(())
 }
 
@@ -946,4 +947,192 @@ fn declare_det_row_selection_injective(
         d.lam_fv(m_fv, nat, over_b)
     };
     d.declare_theorem(p.det_row_selection_injective, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// The SELECTION lemma, whole (ADR-1440 obligation 2, closed)
+// ---------------------------------------------------------------------------
+
+/// `Not (Eq Nat a b)` from `h : Lt a b`.
+fn ne_of_lt(d: &mut IntDev<'_>, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+    let eq_ty = d.eq(a, b);
+    let hh_fv = d.fresh_fvar();
+    let hh = d.kernel().fvar(hh_fv);
+    let motive = d.eq_motive(a, &|d, t| d.lt(t, b));
+    let lt_b_b = d.transport(a, motive, h, b, hh);
+    let np = d.prelude();
+    let irr = d.lemma(np.lt_irrefl, &[b]);
+    let contradiction = d.apply(irr, &[lt_b_b]);
+    d.lam_fv(hh_fv, eq_ty, contradiction)
+}
+
+/// `Eq Bool (Nat.ble x m) Bool.true` from `h : Lt x (succ m)`.
+fn ble_of_lt_succ(d: &mut IntDev<'_>, x: ExprId, m: ExprId, h: ExprId) -> ExprId {
+    let np = d.prelude();
+    let le = d.lemma(np.le_of_lt_succ, &[x, m]);
+    let le = d.apply(le, &[h]);
+    d.lemma(np.ble_eq_true_of_le, &[x, m, le])
+}
+
+/// `fun b => And (Lt a n) (And (Lt b n) (And (Lt a b) (Eq Nat (g a) (g b))))`
+/// — `Nat.injective_on_or_duplicate`'s inner `Exists` predicate, rebuilt here
+/// term for term (it is a private helper on the `Nat` side).
+fn dup_inner_pred(d: &mut IntDev<'_>, g: ExprId, n: ExprId, a: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let logic = d.prelude().logic;
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let lt_a_n = d.lt(a, n);
+    let lt_b_n = d.lt(b, n);
+    let lt_a_b = d.lt(a, b);
+    let ga = d.apply(g, &[a]);
+    let gb = d.apply(g, &[b]);
+    let eqn = d.eq(ga, gb);
+    let level3 = d.const_app(logic.and, &[lt_a_b, eqn]);
+    let level2 = d.const_app(logic.and, &[lt_b_n, level3]);
+    let body = d.const_app(logic.and, &[lt_a_n, level2]);
+    d.lam_fv(b_fv, nat, body)
+}
+
+/// `fun a => ∃ b, …` — the same predicate's outer layer.
+fn dup_outer_pred(d: &mut IntDev<'_>, g: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let logic = d.prelude().logic;
+    let one = d.level_one();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let inner = dup_inner_pred(d, g, n, a);
+    let ex = d.kernel().const_(logic.exists_, vec![one]);
+    let body = d.apply(ex, &[nat, inner]);
+    d.lam_fv(a_fv, nat, body)
+}
+
+/// Admit `Rat.det_row_selection : ∀ m B g, MapsInto g (succ m) →
+/// det (B∘g) (succ m) = det (matId∘g) (succ m) * det B (succ m)` — **the
+/// selection lemma, with no injectivity hypothesis**, which is ADR-1440's
+/// obligation 2 in the corrected form ADR-1470 states.
+///
+/// One `Or.elim` over `Nat.injective_on_or_duplicate g (succ m)`: the
+/// injective side is [`declare_det_row_selection_injective`], the duplicate
+/// side is `Rat.det_row_selection_of_duplicate`, and the two boolean
+/// hypotheses that side wants come out of the disjunction's own `Lt a b` and
+/// `Lt _ (succ m)`.
+///
+/// `MapsInto` is load-bearing on the STATEMENT and cannot be dropped:
+/// ADR-1470's counterexample is `n = 1`, `g 0 = 5`, `B 5 0 = 7`, where the
+/// left side is `B 5 0 = 7` and the right side is `matId 5 0 * det B 1 = 0`.
+fn declare_det_row_selection_full(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+    let mty = mat_ty(d);
+    let logic = d.prelude().logic;
+    let one_lvl = d.level_one();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n = d.succ(m);
+    let b_fv = d.fresh_fvar();
+    let b_mat = d.kernel().fvar(b_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let hmaps_ty = {
+        let name = d.prelude().maps_into;
+        d.const_app(name, &[g, n])
+    };
+    let hmaps_fv = d.fresh_fvar();
+    let hmaps = d.kernel().fvar(hmaps_fv);
+
+    let goal = selection_concl(d, p, b_mat, g, n);
+
+    let np = d.prelude();
+    let inj_ty = d.const_app(np.injective_on, &[g, n]);
+    let outer_pred = dup_outer_pred(d, g, n);
+    let dup_ty = {
+        let ex = d.kernel().const_(logic.exists_, vec![one_lvl]);
+        d.apply(ex, &[nat, outer_pred])
+    };
+    let split = d.lemma(np.injective_on_or_duplicate, &[g, n]);
+
+    let on_inj = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = d.lemma(p.det_row_selection_injective, &[m, b_mat, g, h, hmaps]);
+        d.lam_fv(h_fv, inj_ty, body)
+    };
+
+    let on_dup = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let outer_minor = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let inner_pred = dup_inner_pred(d, g, n, a);
+            let inner_ex_ty = {
+                let ex = d.kernel().const_(logic.exists_, vec![one_lvl]);
+                d.apply(ex, &[nat, inner_pred])
+            };
+            let ha_fv = d.fresh_fvar();
+            let ha = d.kernel().fvar(ha_fv);
+
+            let inner_minor = {
+                let bb_fv = d.fresh_fvar();
+                let bb = d.kernel().fvar(bb_fv);
+                let lt_a_n = d.lt(a, n);
+                let lt_b_n = d.lt(bb, n);
+                let lt_a_b = d.lt(a, bb);
+                let ga = d.apply(g, &[a]);
+                let gb = d.apply(g, &[bb]);
+                let eqn = d.eq(ga, gb);
+                let level3 = d.const_app(logic.and, &[lt_a_b, eqn]);
+                let level2 = d.const_app(logic.and, &[lt_b_n, level3]);
+                let hb_ty = d.const_app(logic.and, &[lt_a_n, level2]);
+                let hb_fv = d.fresh_fvar();
+                let hb = d.kernel().fvar(hb_fv);
+
+                let h_lt_a_n = d.const_app(logic.and_left, &[lt_a_n, level2, hb]);
+                let rest2 = d.const_app(logic.and_right, &[lt_a_n, level2, hb]);
+                let h_lt_b_n = d.const_app(logic.and_left, &[lt_b_n, level3, rest2]);
+                let rest3 = d.const_app(logic.and_right, &[lt_b_n, level3, rest2]);
+                let h_lt_a_b = d.const_app(logic.and_left, &[lt_a_b, eqn, rest3]);
+                let h_eq = d.const_app(logic.and_right, &[lt_a_b, eqn, rest3]);
+
+                let not_eq = ne_of_lt(d, a, bb, h_lt_a_b);
+                let np = d.prelude();
+                let hne = d.lemma(np.beq_eq_false_of_ne, &[a, bb, not_eq]);
+                let hba = ble_of_lt_succ(d, a, m, h_lt_a_n);
+                let hbb = ble_of_lt_succ(d, bb, m, h_lt_b_n);
+                let body = d.lemma(
+                    p.det_row_selection_of_duplicate,
+                    &[m, b_mat, g, a, bb, hne, hba, hbb, h_eq],
+                );
+                let with_hb = d.lam_fv(hb_fv, hb_ty, body);
+                d.lam_fv(bb_fv, nat, with_hb)
+            };
+            let body = exists_elim(d, inner_pred, goal, ha, inner_minor);
+            let with_ha = d.lam_fv(ha_fv, inner_ex_ty, body);
+            d.lam_fv(a_fv, nat, with_ha)
+        };
+        let body = exists_elim(d, outer_pred, goal, h, outer_minor);
+        d.lam_fv(h_fv, dup_ty, body)
+    };
+
+    let proof_body = d.const_app(
+        logic.or_elim,
+        &[inj_ty, dup_ty, goal, split, on_inj, on_dup],
+    );
+
+    let ty = {
+        let with_maps = d.arrow(hmaps_ty, goal);
+        let over_g = d.pi_fv(g_fv, fn_ty, with_maps);
+        let over_b = d.pi_fv(b_fv, mty, over_g);
+        d.pi_fv(m_fv, nat, over_b)
+    };
+    let value = {
+        let with_maps = d.lam_fv(hmaps_fv, hmaps_ty, proof_body);
+        let over_g = d.lam_fv(g_fv, fn_ty, with_maps);
+        let over_b = d.lam_fv(b_fv, mty, over_g);
+        d.lam_fv(m_fv, nat, over_b)
+    };
+    d.declare_theorem(p.det_row_selection, ty, value)
 }

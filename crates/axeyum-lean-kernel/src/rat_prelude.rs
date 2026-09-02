@@ -2394,6 +2394,19 @@ pub struct RatPrelude {
     /// [`Self::det_congr_lt`] rather than [`Self::det_congr`], because `g` is
     /// the identity only on `[0,n)`.
     pub det_row_selection_injective: NameId,
+    /// `Rat.det_row_selection : ∀ m B g, MapsInto g (succ m) →
+    /// det (B∘g) (succ m) = det (matId∘g) (succ m) * det B (succ m)` — **the
+    /// SELECTION lemma**, with no injectivity hypothesis: ADR-1440's
+    /// obligation 2 in the corrected form ADR-1470 states, closed.
+    ///
+    /// One `Or.elim` over
+    /// [`crate::nat_prelude::NatPrelude::injective_on_or_duplicate`] joining
+    /// [`Self::det_row_selection_injective`] to
+    /// [`Self::det_row_selection_of_duplicate`].
+    ///
+    /// `MapsInto` cannot be dropped — ADR-1470's counterexample is `n = 1`,
+    /// `g 0 = 5`, `B 5 0 = 7`, where the left side is `7` and the right `0`.
+    pub det_row_selection: NameId,
 }
 
 impl RatPrelude {
@@ -2815,6 +2828,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_row_selection_of_duplicate: child(kernel, "det_row_selection_of_duplicate"),
         det_congr_lt: child(kernel, "det_congr_lt"),
         det_row_selection_injective: child(kernel, "det_row_selection_injective"),
+        det_row_selection: child(kernel, "det_row_selection"),
     }
 }
 
