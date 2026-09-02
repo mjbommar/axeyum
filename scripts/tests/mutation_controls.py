@@ -5850,6 +5850,46 @@ SUITES["inductive-universe-guard"] = (
 )
 
 
+# ADR-1545. The `nat-testbit-bool-codomain` row said `new-construction` and
+# gave as its reason that a Bool-valued testBit view and its bridge theorem
+# were not built. Both WERE built, axiom-free, and had moved no mirror for a
+# week. A stale claim about the tree, sitting in the field a selector reads,
+# next to the generator docstring's own record of the same mistake made about
+# `fastFib`. Prose did not stop the second one, so the corrected row is pinned
+# by tests instead.
+SUITES["obstruction-testbit-classification"] = (
+    "scripts/gen-obstruction-producers.py",
+    "scripts.tests.test_gen_obstruction_producers",
+    [
+        (
+            "the Bool-codomain row is not-removable",
+            '"id": "nat-testbit-bool-codomain",\n'
+            '            "capability_gap": "definitional-non-equivalence",\n'
+            '            "removability": "not-removable",',
+            '"id": "nat-testbit-bool-codomain",\n'
+            '            "capability_gap": "definitional-non-equivalence",\n'
+            '            "removability": "new-construction",',
+        ),
+        (
+            "the row cites the ADR its removability rests on",
+            '                "docs/research/09-decisions/adr-1545-the-testbit-codomain-is-the-"\n'
+            '                "outermost-link-of-a-chain-and-the-bool-view-is-already-built.md",\n',
+            "",
+        ),
+        (
+            "every path-shaped evidence entry names a real file",
+            '"crates/axeyum-lean-kernel/examples/nat_testbit_bool_bridge.rs",',
+            '"crates/axeyum-lean-kernel/examples/nat_testbit_bool_bridge_absent.rs",',
+        ),
+        (
+            "the List-Bool group is split out by what the statements say",
+            '        if "bits" in stmt or "getI" in stmt or "List" in stmt:',
+            "        if False:",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
