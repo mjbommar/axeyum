@@ -222,3 +222,160 @@ ratchet's own failure message says so and names both commands.
   left open above) remains available as follow-up work if a coordinator
   decides the cross-consistency ratchet's necessary-but-not-sufficient
   guarantee is not enough.
+
+## Amendment 2026-09-02 — a third lane: an expensive check with a no-cargo ROUTE, run at merge behind a default-on opt-out
+
+Lane: `shape-dupes-at-merge`
+
+**The subject.** `scripts/check-shape-duplicates.py` reports declarations
+whose admitted types are identical up to binder naming — two proofs of one
+proposition, which is exactly what a lane produces when it cannot find an
+existing lemma. CLAUDE.md names retrieval as the **binding** gate on marginal
+cost per theorem ("more lane-hours went to re-deriving what existed than to
+proof difficulty"), so this is the gate on the most expensive failure mode
+the project measures.
+
+**What lane `retrieval-audit-0901` found.** The gate was **red on `main` for
+about 25 hours** and appears in **0 of the 240 commit messages** of
+2026-09-01. Inside that window `Nat.prime_coprime_factorial_of_lt` landed
+**16 h 29 min** after `Nat.coprime_factorial_of_lt_prime`, rendering
+byte-identically. The gate worked the whole time. It needed
+`cargo run --release … shape_search`, so it lived only in `scripts/check.sh`
+/ `just check` / CI — the ~10-minute gate this ADR already establishes is not
+run per merge. Same structural failure as the four ledgers above, on a gate
+whose subject is more expensive.
+
+**The decision, and how it differs from the two lanes above.** This ADR's
+original split was cheap-real-check *versus* expensive-proxy. This is a third
+lane: **give the expensive check a cheaper ROUTE and run the real thing.**
+`--prebuilt` runs the already-built `target/release/examples/shape_search`
+directly — no cargo, no `cargo-serialized.sh` flock, no build. What it
+answers is the actual question, not a cross-consistency necessary condition.
+It is now point 7 of `scripts/check-merge-hygiene.sh`.
+
+**Measured cost, and it is over the threshold.** Measured 2026-09-02 in this
+lane's worktree, host s4 (16 cores, hybrid), release binary warm and fresh:
+
+| run | route | wall | conditions |
+|---|---|---|---|
+| 1 | `--prebuilt` | **60.9 s** | unpinned, load 11.9 |
+| 2 | `--prebuilt` | **70.0 s** | unpinned, load 17.1 |
+| 3 | bare binary, `taskset -c 0-7` | **41.7 s** | pinned to P-cores, load 11.0 |
+| 4 | cargo route (warm `target/`) | **58.8 s** | unpinned, load 9.7 |
+| — | cold release build of the example | **91.9 s** | fresh worktree `target/` |
+
+Three things this says, and the first two were not what was expected:
+
+1. **The prebuilt route does not save the run, it saves the BUILD.** Warm,
+   the cargo route (58.8 s) and the prebuilt route (60.9-70.0 s) are the same
+   number inside the noise of this box's load — the cost is the `shape_search`
+   index build over ~1,850 declarations, which both routes pay. What
+   `--prebuilt` removes is the 91.9 s cold build and, more importantly, the
+   *unbounded* nature of it: a merge gate that may or may not compile the
+   kernel has no cost a coordinator can plan around, whereas one that reports
+   `skipped(no-binary)` in 0.1 s does.
+2. **It is over the ~30 s the brief allowed, by a factor of 1.4-2.3.** The
+   brief said to say so plainly if it was, and it is. This is a 40-70 s step
+   in a gate whose own baseline is ~2-7 s. So it goes behind
+   `AXEYUM_SKIP_SHAPE_DUPLICATES=1`, **defaulting ON** — the check runs unless
+   a coordinator merging a run of branches deliberately opts out, and the
+   summary line reports `shape_duplicates=skipped (AXEYUM_SKIP_SHAPE_DUPLICATES=1)`
+   when they do, so a run that did not check is distinguishable from a run
+   that checked and found nothing. An escape that is named and reported is
+   the alternative to a gate people reach for `--no-verify` to avoid, which
+   is the reasoning `hooks/pre-push` already gives for excluding
+   `trust-closure` and this ADR's own body gives for the two ledgers.
+3. Pinning to the P-cores (`taskset -c 0-7`) is worth ~30% here, consistent
+   with the frontier ratchet's reference-frame note. Not wired in; recorded
+   so the next measurement is comparable.
+
+**A STALE PREBUILT BINARY MUST NEVER ANSWER**, and for this gate the false
+direction is the dangerous one. A stale `shape_search` indexes the
+declarations it was compiled against, so a duplicate that landed *after* the
+build reads as ABSENT — a false PASS on precisely the question this gate
+exists to answer. (The other direction exists too: an allowlist entry for a
+group since fixed reads as STALE, a false FAIL.) The staleness test is
+`fact-frontier.py`'s `kernel_projection_is_stale`, **imported rather than
+copied** — "is this binary older than any kernel source" is one fact about
+the tree, and two copies drift the moment one learns about a directory the
+other does not.
+
+**EXIT 2 IS NOT UNIFORMLY SKIPPABLE, and this is the correction to the
+`gen-py-prelude-fields.py` precedent.** Point 8 of the hygiene script can
+treat every 2 as "skipped" because that generator has exactly one
+unanswerable state (no `rustfmt`). `check-shape-duplicates.py` has two things
+behind one code: a **malformed allowlist** — a defect in a committed file,
+pinned by its own `test_malformed_allowlist_exits_two`, which must block —
+and an **absent-or-stale binary**, a fact about this host's `target/`, which
+must not. Copying the precedent verbatim would have turned a broken allowlist
+into silence: the checker-that-cannot-fail defect arriving through the door
+marked "be lenient about toolchains". So the script prints, as its first
+stdout line in the unanswerable case only:
+
+    SHAPE-DUPLICATES|UNAVAILABLE <no-binary|stale-binary|tool-failed> -- <reason>
+
+and the gate keys on that marker, not on the exit code alone.
+
+**Evidence.**
+
+- End-to-end discrimination, run in this lane's own worktree (isolated: no
+  other lane compiles from it; `git status --porcelain crates/` confirmed
+  clean after restore). A second declaration of `Nat.add_zero`'s exact
+  proposition was added under a new name in
+  `crates/axeyum-lean-kernel/src/nat_prelude/defs.rs`, `shape_search` rebuilt
+  through `scripts/cargo-serialized.sh` (1 m 25 s), and the gate run:
+
+      FAIL: check-shape-duplicates.py --prebuilt (exit 1)
+        NEW/UNADJUDICATED  Nat -> Eq  Nat.add_zero Nat.add_zero_e2e_probe
+      MERGE_HYGIENE|FAILED          -> gate exit 1
+
+  Probe removed, rebuilt (1 m 29 s), gate re-run: the shape-duplicates check
+  reports `OK: 15 duplicate group(s), all allowlisted with a reason.
+  (route: prebuilt)` and `shape_duplicates=ok`.
+- Controls: four scenarios in `scripts/tests/test_check_merge_hygiene.py`
+  (19 tests green), registered as M10-M13 in `scripts/tests/
+  mutation_controls.py` and mutation-verified in that harness's isolated
+  scratch root:
+
+  | mutant | killed |
+  |---|---|
+  | M10 a reported duplicate group fails the gate | 3 |
+  | M11 an absent/stale index is SKIPPED, not a failure | **1** |
+  | M12 exit 2 WITHOUT the marker still blocks | **1** |
+  | M13 the opt-out is honoured and reported | **1** |
+
+  M11/M12/M13 are split three ways deliberately. One mutant over the whole
+  block would report a kill without saying which *direction* is guarded, and
+  the direction that matters is the one that fails silently. M10 killing 3 is
+  the structure of the gate, not a weak suite: it is the single `elif` all
+  three nonzero-exit scenarios reach, the same shape as M1 and M4.
+
+**A finding about the mutation harness, recorded because it manufactured two
+non-results.** `mutation_controls.py` names dead tests with
+`^(?:FAIL|ERROR): (\S+)` over unittest's output and cross-checks the count
+against `FAILED (failures=N)`. The gate under test prints its own findings as
+`FAIL: <check>` at line start — the convention every check in it follows — so
+a raw `done.stdout` in a failing assertion's message is parsed as a SECOND
+dead test. M11 and M13 first reported `INCONSISTENT — the summary line says 1
+died but 2 were named` for mutants that in fact killed exactly one. **The
+harness was right**: it refuses to report a number it cannot cross-check,
+which is the whole point of it. Nothing had tripped this before because no
+earlier mutant made a test fail while capturing subject output containing a
+leading `FAIL:`. Fixed on the control side (`_ctx()` indents the captured
+output); the parser is untouched. Any future control suite over a script that
+prints `FAIL:` at line start will meet this.
+
+**What this does not change.** The cargo route stays the default, so
+`scripts/check.sh`, `just check`, `scripts/local-ci.sh` and `ci.yml` run
+exactly what they ran before — this ADR adds a route and a caller, it does
+not move the L0 registration (`scripts/check-l0-gate-enforcement.py` is
+unaffected).
+
+**What this does not close.** The gate answers only when a fresh release
+binary happens to exist in the tree being merged. On a coordinator checkout
+that builds regularly that is the common case; on a fresh worktree it reports
+`skipped(no-binary)` and the duplicate still lands. That is strictly better
+than the 25-hour silence it replaces — the summary line now says, at every
+merge, whether the question was asked — but it is a route, not a guarantee.
+Making it a guarantee means building the binary, which is the cost this
+amendment measured and declined.

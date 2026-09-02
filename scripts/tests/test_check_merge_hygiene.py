@@ -39,11 +39,22 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/check-merge-hygiene.sh"
 
 # A generator stub: exits with $STUB_<NAME>_RC and prints a plausible line.
+#
+# `$STUB_<NAME>_OUT` appends a second line. It exists for exactly one guard:
+# `check-shape-duplicates.py` exits 2 for TWO different reasons -- a malformed
+# allowlist (a committed defect, must block) and an absent/stale prebuilt
+# binary (a fact about this host, must not) -- and only the second prints a
+# `SHAPE-DUPLICATES|UNAVAILABLE` marker. Without a way to vary the OUTPUT at a
+# fixed rc there is no control for that split, and the gate could treat every 2
+# as skippable with everything still green.
 STUB = """#!/usr/bin/env python3
 import os, sys
 name = {name!r}
 rc = int(os.environ.get("STUB_" + name + "_RC", "0"))
 print(f"{{name}}: {tag} rc={{rc}}")
+extra = os.environ.get("STUB_" + name + "_OUT", "")
+if extra:
+    print(extra)
 sys.exit(rc)
 """
 
@@ -51,6 +62,29 @@ sys.exit(rc)
 def _marker(char: str, suffix: str = "") -> str:
     """A conflict marker built at runtime -- see the module docstring."""
     return char * 7 + suffix
+
+
+def _ctx(done: subprocess.CompletedProcess) -> str:
+    """The gate's output as an assertion message, INDENTED so no line starts
+    with ``FAIL:``.
+
+    Found 2026-09-02 registering the shape-duplicates guard.
+    ``mutation_controls.py`` names the tests a mutant killed with
+    ``^(?:FAIL|ERROR): (\\S+)`` over unittest's output, and cross-checks that
+    count against ``FAILED (failures=N)``. The gate under test prints its own
+    findings as ``FAIL: <check>`` at line start -- the convention every check
+    in it follows -- so a raw ``done.stdout`` in a failing assertion's message
+    is parsed as a SECOND dead test, and the harness reports ``INCONSISTENT --
+    the summary line says 1 died but 2 were named`` for a mutant that in fact
+    killed exactly one.
+
+    That is the harness behaving correctly: it refuses to report a number it
+    cannot cross-check, which is the whole point of it. Nothing before this
+    tripped it, because no earlier mutant made a test fail while capturing gate
+    output that contained a ``FAIL:`` line. Indenting costs nothing and keeps
+    the full context in the message.
+    """
+    return "\n" + "".join(f"  {line}\n" for line in (done.stdout + done.stderr).splitlines())
 
 
 class MergeHygieneControls(unittest.TestCase):
@@ -80,6 +114,11 @@ class MergeHygieneControls(unittest.TestCase):
             # The census guard (lane `shape-census`): stubbed like the generators so
             # the scenario chooses the exit and the THREE-outcome dispatch is measured.
             ("frontier-shape-census", "SHAPE_CENSUS ok"),
+            # The duplicate-declaration gate, given a no-cargo route so it can
+            # run here at all (ADR-1511 amendment 2026-09-02). It was red on
+            # main for ~25 hours in 0 of 240 commit messages because its only
+            # route was `cargo run --release`.
+            ("check-shape-duplicates", "OK: 10 duplicate group(s) (route: prebuilt)"),
         ):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
@@ -108,11 +147,14 @@ class MergeHygieneControls(unittest.TestCase):
         if track:
             self.git("add", "-A")
 
-    def run_gate(self, **stub_rc: int) -> subprocess.CompletedProcess:
+    def run_gate(self, _stub_out: dict[str, str] | None = None, **stub_rc: int
+                 ) -> subprocess.CompletedProcess:
         env = self._git_env()
         env["AXEYUM_MERGE_HYGIENE_ROOT"] = str(self.root)
         for name, rc in stub_rc.items():
             env[f"STUB_{name.upper()}_RC"] = str(rc)
+        for name, text in (_stub_out or {}).items():
+            env[f"STUB_{name.upper()}_OUT"] = text
         return subprocess.run(
             ["bash", str(SCRIPT)], cwd=ROOT, env=env,
             capture_output=True, text=True, timeout=120,
@@ -261,6 +303,64 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("shape_census=not-answerable", done.stdout)
         self.assertIn("|PASS", done.stdout)
+
+    # -- guard 7 (ADR-1511 amendment): duplicate declarations ---------------
+
+    def test_a_reported_duplicate_group_fails_the_gate(self) -> None:
+        """Deleting the shape-duplicates guard must kill exactly this test.
+
+        This is the check CLAUDE.md calls the binding cost gate: two
+        declarations proving one proposition is what a lane produces when it
+        cannot find an existing lemma. It was red on `main` for ~25 hours and
+        named in 0 of that day's 240 commit messages, and a literal duplicate
+        landed 16 hours after its twin inside the window -- because its only
+        route was a release cargo build, so it lived only in the ~10-minute
+        gate (lane `retrieval-audit-0901`)."""
+        done = self.run_gate(check_shape_duplicates=1)
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("FAIL: check-shape-duplicates.py --prebuilt", done.stdout)
+        self.assertIn("shape-duplicates-allowlist.json", done.stdout)
+
+    def test_an_absent_or_stale_prebuilt_binary_is_skipped_not_failed(self) -> None:
+        """Exit 2 WITH the marker is `cannot answer`, and must not block.
+
+        A prebuilt binary that was never built here, or that predates a kernel
+        source, indexes an OLD environment -- so it would report a duplicate
+        that landed after the build as ABSENT. Answering from it is worse than
+        not answering, and turning a missing `target/` red is noise that
+        teaches a coordinator to ignore the gate."""
+        done = self.run_gate(
+            {"check_shape_duplicates": "SHAPE-DUPLICATES|UNAVAILABLE stale-binary -- older"},
+            check_shape_duplicates=2,
+        )
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("SKIPPED (stale-binary)", done.stdout)
+        self.assertIn("shape_duplicates=skipped(stale-binary)", done.stdout)
+
+    def test_exit_two_WITHOUT_the_marker_still_fails_the_gate(self) -> None:
+        """The other half of the split, and the one that is easy to lose.
+
+        `check-shape-duplicates.py` also exits 2 for a MALFORMED ALLOWLIST --
+        a defect in a committed file, pinned by that script's own
+        `test_malformed_allowlist_exits_two`. A gate that read every 2 as
+        `skipped` would swallow it, which is the checker-that-cannot-fail
+        defect arriving through the door marked `be lenient about toolchains`.
+        The marker, not the exit code, is what separates them."""
+        done = self.run_gate(check_shape_duplicates=2)
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("FAIL: check-shape-duplicates.py --prebuilt (exit 2)", done.stdout)
+
+    def test_the_shape_duplicates_check_can_be_opted_out(self) -> None:
+        """The documented escape, defaulting ON. It must be reported in the
+        summary rather than silently absent, so a run that did not check is
+        distinguishable from one that checked and found nothing."""
+        env_gate = self.run_gate(check_shape_duplicates=1)
+        self.assertEqual(env_gate.returncode, 1, "control: the guard fires without the opt-out")
+        os.environ["AXEYUM_SKIP_SHAPE_DUPLICATES"] = "1"
+        self.addCleanup(os.environ.pop, "AXEYUM_SKIP_SHAPE_DUPLICATES", None)
+        done = self.run_gate(check_shape_duplicates=1)
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("AXEYUM_SKIP_SHAPE_DUPLICATES=1", done.stdout)
 
     # -- the aggregate ------------------------------------------------------
 

@@ -2,7 +2,7 @@
 # Post-merge hygiene: the things that have actually gone wrong when a
 # coordinator merges a lane branch, in one command that takes a few seconds.
 #
-# NINE are listed below and EIGHT are enforced. The pinned-inventory one is
+# TEN are listed below and NINE are enforced. The pinned-inventory one is
 # written down with the reason it is not gated (there are no live subjects, so
 # a guard for it could not fail), because a header claiming more checks than
 # the body enforces is exactly the kind of gap this file exists to close.
@@ -98,8 +98,45 @@
 #      Python plus one `rustfmt`, no cargo. Its exit 2 means "no `rustfmt`, so
 #      the question cannot be answered" and is reported, not failed.
 #
-# Exit 0 only when all eight enforced checks pass. Each failure names its own
-# Exit 0 only when all four enforced checks pass. Each failure names its own
+#   9. THE DUPLICATE-DECLARATION GATE WAS RED ON MAIN FOR 25 HOURS AND NOBODY
+#      RAN IT. `scripts/check-shape-duplicates.py` is the L0 gate that catches
+#      two declarations proving one proposition -- the exact artifact a lane
+#      produces when it cannot find an existing lemma, which CLAUDE.md measures
+#      as the BINDING cost gate ("more lane-hours went to re-deriving what
+#      existed than to proof difficulty"). Measured by lane
+#      `retrieval-audit-0901`: red on `main` for ~25 hours, present in 0 of the
+#      240 commit messages of that day, and a literal duplicate landed 16 hours
+#      after its twin inside that window. The gate WORKS; it needed
+#      `cargo run --release ... shape_search`, so it lived only in
+#      `scripts/check.sh` / `just check` / CI.
+#
+#      ADR-1511's second lane applies exactly: give the expensive check a
+#      no-cargo route rather than a proxy. `--prebuilt` runs the already-built
+#      `target/release/examples/shape_search` directly -- no build, no
+#      `cargo-serialized.sh` flock -- and that is the REAL check, not a
+#      cross-consistency ratchet. 
+#
+#      MEASURED 2026-09-02 ON s4, AND IT IS THE EXPENSIVE STEP IN THIS GATE:
+#      60.9 s / 70.0 s unpinned (load 11.9 / 17.1), 41.7 s pinned to the
+#      P-cores. The cost is `shape_search`'s index build over ~1,850
+#      declarations, which the cargo route pays too (58.8 s warm) -- so
+#      `--prebuilt` does not save the RUN, it saves the BUILD (91.9 s cold)
+#      and makes the cost bounded and predictable. That is an order of
+#      magnitude over this gate's own ~2-7 s baseline, so it carries
+#      `AXEYUM_SKIP_SHAPE_DUPLICATES=1` as a documented escape, DEFAULTING ON,
+#      and the summary REPORTS the skip -- a run that did not ask must be
+#      distinguishable from one that asked and found nothing.
+#
+#      **EXIT 2 IS NOT UNIFORMLY SKIPPABLE HERE**, which is the one place this
+#      differs from point 8. The script exits 2 for a MALFORMED ALLOWLIST (a
+#      defect in a committed file -- must block) as well as for an ABSENT OR
+#      STALE binary (a fact about this host's `target/` -- must not). Only the
+#      second prints a leading `SHAPE-DUPLICATES|UNAVAILABLE <token>` line, and
+#      this gate keys on that marker. Treating every 2 as "skipped" would let a
+#      broken allowlist through silently, which is the checker-that-cannot-fail
+#      defect arriving through the door marked "be lenient about toolchains".
+#
+# Exit 0 only when all ten enforced checks pass. Each failure names its own
 # remedy.
 set -u
 # `AXEYUM_MERGE_HYGIENE_ROOT` points the SHIPPED script at a throwaway tree, so
@@ -309,8 +346,49 @@ else
   note "theorem-ledger cross-consistency: SKIPPED (one or both artifacts absent)"
 fi
 
+# --- 7. duplicate declarations (ADR-1511 amendment, 2026-09-02) -------------
+# The REAL check, not a proxy: `check-shape-duplicates.py --prebuilt` runs the
+# already-built `target/release/examples/shape_search` directly. No cargo, no
+# `cargo-serialized.sh` flock, no build. See header point 9.
+#
+# `AXEYUM_SKIP_SHAPE_DUPLICATES=1` opts out, DEFAULTING ON. It exists because
+# this is the one step here measured in TENS OF SECONDS rather than tenths
+# (2026-09-02, s4: 41.7 s pinned, 60.9-70.0 s unpinned under load) -- so a
+# coordinator merging a run of branches has a documented, REPORTED escape
+# rather than reaching for `--no-verify` on everything.
+shape_dupes_state="ok"
+if [ "${AXEYUM_SKIP_SHAPE_DUPLICATES:-0}" = "1" ]; then
+  shape_dupes_state="skipped (AXEYUM_SKIP_SHAPE_DUPLICATES=1)"
+  note "check-shape-duplicates.py --prebuilt: SKIPPED (AXEYUM_SKIP_SHAPE_DUPLICATES=1)"
+else
+  shape_dupes_out=$(python3 scripts/check-shape-duplicates.py --prebuilt 2>&1)
+  shape_dupes_rc=$?
+  # Exit 2 splits two ways -- see header point 9. The marker is what tells them
+  # apart; the exit code alone cannot, and a caller that assumes it can turns a
+  # malformed allowlist into silence.
+  shape_dupes_marker=$(printf '%s\n' "$shape_dupes_out" \
+    | /usr/bin/grep -oE 'SHAPE-DUPLICATES\|UNAVAILABLE [a-z-]+' | head -1)
+  if [ "$shape_dupes_rc" -eq 2 ] && [ -n "$shape_dupes_marker" ]; then
+    shape_dupes_token=${shape_dupes_marker##* }
+    shape_dupes_state="skipped($shape_dupes_token)"
+    note "check-shape-duplicates.py --prebuilt: SKIPPED ($shape_dupes_token)"
+    note "A stale index answers about an OLD environment: a duplicate that landed"
+    note "after the build reads as ABSENT. Rebuild to make this gate answer:"
+    note "  scripts/cargo-serialized.sh build --release -p axeyum-lean-kernel \\"
+    note "    --example shape_search"
+  elif [ "$shape_dupes_rc" -ne 0 ]; then
+    fail=1
+    echo "FAIL: check-shape-duplicates.py --prebuilt (exit $shape_dupes_rc)"
+    printf '%s\n' "$shape_dupes_out" | sed 's/^/    /'
+    note "Two declarations state one proposition, or an allowlist entry is stale"
+    note "or malformed. Read the statements AND the proof terms -- not just the"
+    note "shape -- then either alias one to the other, or record it in"
+    note "scripts/shape-duplicates-allowlist.json with a reason."
+  fi
+fi
+
 if [ "$fail" -eq 0 ]; then
-  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|shape_census=$census|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|PASS"
+  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|shape_census=$census|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|shape_duplicates=$shape_dupes_state|PASS"
   exit 0
 fi
 echo "MERGE_HYGIENE|FAILED"
