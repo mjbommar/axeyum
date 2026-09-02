@@ -3,6 +3,7 @@
   "buckets": {
     "coarse": [
       {
+        "divergence_blocked_count": 6,
         "fact_ids": [
           "F:ml430-mutation-7afa5ec620720a1501bf349d",
           "F:ml430-mutation-a6dd1759bce60d820292e107",
@@ -24,30 +25,15 @@
           "hypothesis_band": "0"
         },
         "size": 9,
-        "targetable_size": 6
+        "targetable_size": 0
       },
       {
-        "fact_ids": [
-          "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
-        ],
-        "mutation_control_count": 0,
-        "rank": 2,
-        "signature": {
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_head": "Eq",
-          "hypothesis_band": "1"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-nat-fermat-primefactors-one-lt-58343c6f"
         ],
         "mutation_control_count": 0,
-        "rank": 3,
+        "rank": 2,
         "signature": {
           "carriers": [
             "Nat"
@@ -59,11 +45,12 @@
         "targetable_size": 1
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:twin-prime-unbounded"
         ],
         "mutation_control_count": 0,
-        "rank": 4,
+        "rank": 3,
         "signature": {
           "carriers": [
             "Nat"
@@ -75,11 +62,12 @@
         "targetable_size": 1
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:goldbach-strong"
         ],
         "mutation_control_count": 0,
-        "rank": 5,
+        "rank": 4,
         "signature": {
           "carriers": [
             "Nat"
@@ -91,43 +79,12 @@
         "targetable_size": 1
       },
       {
-        "fact_ids": [
-          "F:ml430-nat-squarefree-ext-iff-7218327d"
-        ],
-        "mutation_control_count": 0,
-        "rank": 6,
-        "signature": {
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_head": "Iff",
-          "hypothesis_band": "2+"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
-        "fact_ids": [
-          "F:ml430-nat-lt-of-testbit-72f64ab8"
-        ],
-        "mutation_control_count": 0,
-        "rank": 7,
-        "signature": {
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_head": "lt",
-          "hypothesis_band": "2+"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-nat-prime-deficient-pow-9c5e1fef"
         ],
         "mutation_control_count": 0,
-        "rank": 8,
+        "rank": 5,
         "signature": {
           "carriers": [
             "Nat"
@@ -139,11 +96,12 @@
         "targetable_size": 1
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
         ],
         "mutation_control_count": 1,
-        "rank": 9,
+        "rank": 6,
         "signature": {
           "carriers": [
             "Int"
@@ -155,11 +113,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-aabb80b1f89f0c5847364692"
         ],
         "mutation_control_count": 1,
-        "rank": 10,
+        "rank": 7,
         "signature": {
           "carriers": [
             "Int"
@@ -171,11 +130,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-aca37b68d3cdf06f0127def9"
         ],
         "mutation_control_count": 1,
-        "rank": 11,
+        "rank": 8,
         "signature": {
           "carriers": [
             "Int"
@@ -187,8 +147,60 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+        ],
+        "mutation_control_count": 0,
+        "rank": 9,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Eq",
+          "hypothesis_band": "1"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-1432b2277cf2cc26c1d11cd6"
+        ],
+        "mutation_control_count": 1,
+        "rank": 10,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Iff",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-squarefree-ext-iff-7218327d"
+        ],
+        "mutation_control_count": 0,
+        "rank": 11,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Iff",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 0,
+        "fact_ids": [
+          "F:ml430-mutation-c86940b52af8159ca9b381d6"
         ],
         "mutation_control_count": 1,
         "rank": 12,
@@ -196,22 +208,6 @@
           "carriers": [
             "Nat"
           ],
-          "conclusion_head": "Iff",
-          "hypothesis_band": "0"
-        },
-        "size": 1,
-        "targetable_size": 0
-      },
-      {
-        "fact_ids": [
-          "F:ml430-mutation-c86940b52af8159ca9b381d6"
-        ],
-        "mutation_control_count": 1,
-        "rank": 13,
-        "signature": {
-          "carriers": [
-            "Nat"
-          ],
           "conclusion_head": "ModEq",
           "hypothesis_band": "0"
         },
@@ -219,11 +215,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-e8583599cfae2d40cefae3f0"
         ],
         "mutation_control_count": 1,
-        "rank": 14,
+        "rank": 13,
         "signature": {
           "carriers": [
             "Nat"
@@ -235,11 +232,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-5179f333b8333ecff8adc223"
         ],
         "mutation_control_count": 1,
-        "rank": 15,
+        "rank": 14,
         "signature": {
           "carriers": [
             "Nat"
@@ -251,6 +249,24 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-lt-of-testbit-72f64ab8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 15,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "lt",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
         ],
@@ -267,6 +283,7 @@
     ],
     "fine": [
       {
+        "divergence_blocked_count": 3,
         "fact_ids": [
           "F:ml430-nat-testbit-land-dfef7ca4",
           "F:ml430-nat-testbit-ldiff-16f94162",
@@ -282,6 +299,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Eq",
           "dialect": "lean-surface",
+          "divergence_blocked": true,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -289,14 +307,15 @@
           "provenance": "ml430-mirror"
         },
         "size": 3,
-        "targetable_size": 3
+        "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
-          "F:ml430-nat-fastfib-eq-cde11774",
-          "F:ml430-nat-multichoose-zero-right-6ef827c8"
+          "F:ml430-mutation-7afa5ec620720a1501bf349d",
+          "F:ml430-mutation-edb05acf07d9ef3f9f8232fc"
         ],
-        "mutation_control_count": 0,
+        "mutation_control_count": 2,
         "rank": 2,
         "signature": {
           "bound_variable_count": 1,
@@ -306,30 +325,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Eq",
           "dialect": "lean-surface",
-          "fragment": "Nat",
-          "hypothesis_count": 0,
-          "hypothesis_heads": [],
-          "mutation_control": false,
-          "provenance": "ml430-mirror"
-        },
-        "size": 2,
-        "targetable_size": 2
-      },
-      {
-        "fact_ids": [
-          "F:ml430-mutation-7afa5ec620720a1501bf349d",
-          "F:ml430-mutation-edb05acf07d9ef3f9f8232fc"
-        ],
-        "mutation_control_count": 2,
-        "rank": 3,
-        "signature": {
-          "bound_variable_count": 1,
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_constants_declared": true,
-          "conclusion_head": "Eq",
-          "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -340,8 +336,35 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 2,
         "fact_ids": [
-          "F:ml430-nat-testbit-eq-inth-ffa07392"
+          "F:ml430-nat-fastfib-eq-cde11774",
+          "F:ml430-nat-multichoose-zero-right-6ef827c8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 3,
+        "signature": {
+          "bound_variable_count": 1,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "divergence_blocked": true,
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 2,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 0,
+        "fact_ids": [
+          "F:ml430-nat-fermat-primefactors-one-lt-58343c6f"
         ],
         "mutation_control_count": 0,
         "rank": 4,
@@ -353,29 +376,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Eq",
           "dialect": "lean-surface",
-          "fragment": "Nat",
-          "hypothesis_count": 0,
-          "hypothesis_heads": [],
-          "mutation_control": false,
-          "provenance": "ml430-mirror"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
-        "fact_ids": [
-          "F:ml430-nat-fermat-primefactors-one-lt-58343c6f"
-        ],
-        "mutation_control_count": 0,
-        "rank": 5,
-        "signature": {
-          "bound_variable_count": 2,
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_constants_declared": true,
-          "conclusion_head": "Eq",
-          "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 3,
           "hypothesis_heads": [
@@ -390,11 +391,12 @@
         "targetable_size": 1
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-nat-prime-deficient-pow-9c5e1fef"
         ],
         "mutation_control_count": 0,
-        "rank": 6,
+        "rank": 5,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -403,6 +405,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "other:Deficient",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 1,
           "hypothesis_heads": [
@@ -415,36 +418,12 @@
         "targetable_size": 1
       },
       {
-        "fact_ids": [
-          "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
-        ],
-        "mutation_control_count": 0,
-        "rank": 7,
-        "signature": {
-          "bound_variable_count": 3,
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_constants_declared": true,
-          "conclusion_head": "Eq",
-          "dialect": "lean-surface",
-          "fragment": "Nat",
-          "hypothesis_count": 1,
-          "hypothesis_heads": [
-            "Eq"
-          ],
-          "mutation_control": false,
-          "provenance": "ml430-mirror"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:twin-prime-unbounded"
         ],
         "mutation_control_count": 0,
-        "rank": 8,
+        "rank": 6,
         "signature": {
           "bound_variable_count": 5,
           "carriers": [
@@ -453,6 +432,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Exists",
           "dialect": "kernel-rendered",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -463,38 +443,12 @@
         "targetable_size": 1
       },
       {
-        "fact_ids": [
-          "F:ml430-nat-lt-of-testbit-72f64ab8"
-        ],
-        "mutation_control_count": 0,
-        "rank": 9,
-        "signature": {
-          "bound_variable_count": 5,
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_constants_declared": true,
-          "conclusion_head": "lt",
-          "dialect": "lean-surface",
-          "fragment": "Nat",
-          "hypothesis_count": 3,
-          "hypothesis_heads": [
-            "Eq",
-            "Eq",
-            "Eq"
-          ],
-          "mutation_control": false,
-          "provenance": "ml430-mirror"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:goldbach-strong"
         ],
         "mutation_control_count": 0,
-        "rank": 10,
+        "rank": 7,
         "signature": {
           "bound_variable_count": 7,
           "carriers": [
@@ -503,6 +457,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Exists",
           "dialect": "kernel-rendered",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 2,
           "hypothesis_heads": [
@@ -516,43 +471,19 @@
         "targetable_size": 1
       },
       {
-        "fact_ids": [
-          "F:ml430-nat-squarefree-ext-iff-7218327d"
-        ],
-        "mutation_control_count": 0,
-        "rank": 11,
-        "signature": {
-          "bound_variable_count": 8,
-          "carriers": [
-            "Nat"
-          ],
-          "conclusion_constants_declared": true,
-          "conclusion_head": "Iff",
-          "dialect": "lean-surface",
-          "fragment": "Nat",
-          "hypothesis_count": 2,
-          "hypothesis_heads": [
-            "other:Squarefree",
-            "other:Squarefree"
-          ],
-          "mutation_control": false,
-          "provenance": "ml430-mirror"
-        },
-        "size": 1,
-        "targetable_size": 1
-      },
-      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
         ],
         "mutation_control_count": 1,
-        "rank": 12,
+        "rank": 8,
         "signature": {
           "bound_variable_count": 0,
           "carriers": [],
           "conclusion_constants_declared": true,
           "conclusion_head": "other:Coprime",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -563,11 +494,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-aabb80b1f89f0c5847364692"
         ],
         "mutation_control_count": 1,
-        "rank": 13,
+        "rank": 9,
         "signature": {
           "bound_variable_count": 1,
           "carriers": [
@@ -576,6 +508,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Iff",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Int",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -586,11 +519,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-1432b2277cf2cc26c1d11cd6"
         ],
         "mutation_control_count": 1,
-        "rank": 14,
+        "rank": 10,
         "signature": {
           "bound_variable_count": 1,
           "carriers": [
@@ -599,6 +533,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Iff",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -609,11 +544,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-5179f333b8333ecff8adc223"
         ],
         "mutation_control_count": 1,
-        "rank": 15,
+        "rank": 11,
         "signature": {
           "bound_variable_count": 1,
           "carriers": [
@@ -622,6 +558,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "lt",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 1,
           "hypothesis_heads": [
@@ -634,11 +571,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
         ],
         "mutation_control_count": 1,
-        "rank": 16,
+        "rank": 12,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -647,6 +585,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "And",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Int",
           "hypothesis_count": 1,
           "hypothesis_heads": [
@@ -659,11 +598,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-a6dd1759bce60d820292e107"
         ],
         "mutation_control_count": 1,
-        "rank": 17,
+        "rank": 13,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -672,6 +612,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "Eq",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -682,11 +623,37 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-testbit-eq-inth-ffa07392"
+        ],
+        "mutation_control_count": 0,
+        "rank": 14,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "divergence_blocked": true,
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-e8583599cfae2d40cefae3f0"
         ],
         "mutation_control_count": 1,
-        "rank": 18,
+        "rank": 15,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -695,6 +662,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "lt",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -705,11 +673,12 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-aca37b68d3cdf06f0127def9"
         ],
         "mutation_control_count": 1,
-        "rank": 19,
+        "rank": 16,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -718,6 +687,7 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "ModEq",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Int",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
@@ -728,11 +698,39 @@
         "targetable_size": 0
       },
       {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+        ],
+        "mutation_control_count": 0,
+        "rank": 17,
+        "signature": {
+          "bound_variable_count": 3,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "divergence_blocked": true,
+          "fragment": "Nat",
+          "hypothesis_count": 1,
+          "hypothesis_heads": [
+            "Eq"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 0,
         "fact_ids": [
           "F:ml430-mutation-c86940b52af8159ca9b381d6"
         ],
         "mutation_control_count": 1,
-        "rank": 20,
+        "rank": 18,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -741,10 +739,68 @@
           "conclusion_constants_declared": true,
           "conclusion_head": "ModEq",
           "dialect": "lean-surface",
+          "divergence_blocked": false,
           "fragment": "Nat",
           "hypothesis_count": 0,
           "hypothesis_heads": [],
           "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-lt-of-testbit-72f64ab8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 19,
+        "signature": {
+          "bound_variable_count": 5,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "lt",
+          "dialect": "lean-surface",
+          "divergence_blocked": true,
+          "fragment": "Nat",
+          "hypothesis_count": 3,
+          "hypothesis_heads": [
+            "Eq",
+            "Eq",
+            "Eq"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "divergence_blocked_count": 1,
+        "fact_ids": [
+          "F:ml430-nat-squarefree-ext-iff-7218327d"
+        ],
+        "mutation_control_count": 0,
+        "rank": 20,
+        "signature": {
+          "bound_variable_count": 8,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Iff",
+          "dialect": "lean-surface",
+          "divergence_blocked": true,
+          "fragment": "Nat",
+          "hypothesis_count": 2,
+          "hypothesis_heads": [
+            "other:Squarefree",
+            "other:Squarefree"
+          ],
+          "mutation_control": false,
           "provenance": "ml430-mirror"
         },
         "size": 1,
@@ -806,6 +862,7 @@
         "conclusion_constants_declared": true,
         "conclusion_head": "Eq",
         "dialect": "lean-surface",
+        "divergence_blocked": false,
         "fragment": "none",
         "hypothesis_count": 0,
         "hypothesis_heads": [],
@@ -824,6 +881,7 @@
         "conclusion_constants_declared": null,
         "conclusion_head": "unparsed",
         "dialect": "prose",
+        "divergence_blocked": false,
         "fragment": "none",
         "hypothesis_count": 0,
         "hypothesis_heads": [],
@@ -842,6 +900,7 @@
         "conclusion_constants_declared": null,
         "conclusion_head": "unparsed",
         "dialect": "smtlib",
+        "divergence_blocked": false,
         "fragment": "none",
         "hypothesis_count": 0,
         "hypothesis_heads": [],
@@ -860,6 +919,7 @@
         "conclusion_constants_declared": null,
         "conclusion_head": "unparsed",
         "dialect": "prose",
+        "divergence_blocked": false,
         "fragment": "none",
         "hypothesis_count": 0,
         "hypothesis_heads": [],
@@ -878,6 +938,7 @@
         "conclusion_constants_declared": null,
         "conclusion_head": "unparsed",
         "dialect": "prose",
+        "divergence_blocked": false,
         "fragment": "none",
         "hypothesis_count": 0,
         "hypothesis_heads": [],
@@ -896,6 +957,7 @@
         "conclusion_constants_declared": true,
         "conclusion_head": "other:Let",
         "dialect": "lean-surface",
+        "divergence_blocked": false,
         "fragment": "lean4-kernel-declaration-stream",
         "hypothesis_count": 0,
         "hypothesis_heads": [],
@@ -916,6 +978,9 @@
         "conclusion_constants_declared": true,
         "conclusion_head": "other:Coprime",
         "dialect": "lean-surface",
+        "divergence_blocked": [
+          "Nat.minFac"
+        ],
         "fragment": "Nat",
         "hypothesis_count": 2,
         "hypothesis_heads": [
@@ -940,6 +1005,7 @@
       "proof-route-only": 25
     },
     "censused_count": 31,
+    "divergence_registry_loaded": true,
     "held_out_authority": [
       "artifacts/autogenesis/nursery-v1.json",
       "artifacts/autogenesis/nursery-v2-extension.json"
@@ -953,8 +1019,9 @@
     },
     "other_count": 7,
     "primary_count": 24,
+    "primary_divergence_blocked_count": 9,
     "primary_mutation_control_count": 11,
-    "primary_targetable_count": 13,
+    "primary_targetable_count": 4,
     "ready_count": 217
   },
   "produced_by": "scripts/frontier-shape-census.py",

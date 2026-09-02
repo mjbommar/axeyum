@@ -22,10 +22,20 @@ WHAT A "SHAPE SIGNATURE" IS. Per fact, parsed from `formal.statement`:
     conclusion constants     and whether each is DECLARED in this kernel
     provenance               an `ml430` Mathlib mirror, or native to this ledger
     mutation control         a deliberately-perturbed proposition (NOT a target)
+    divergence-blocked       the mirror names a construction that is not our
+                             construction, so it is a different proposition
 
 Buckets are formed at two granularities -- FINE (the whole signature) and
 COARSE (carrier x conclusion head x hypothesis-count band 0/1/2+) -- and ranked
 by size. A producer is worth building for a bucket, not for a fact.
+
+SIZE IS NOT TARGETABLE SIZE, and on this frontier the gap is the whole story.
+A bucket's `size` counts its members; `targetable_size` subtracts the two
+classes no producer can close however well it works -- mutation controls (false
+by construction) and divergence-blocked mirrors (`Nat.testBit` returns a `Nat`
+here and a `Bool` in Mathlib; no proof bridges that). The largest coarse bucket
+in this census holds NINE facts and ZERO targetable ones. Ranked on raw size it
+is exactly where a producer would have been pointed.
 
 THE PARSER IS NOT A THIRD ONE. `scripts/brief-step0.py` already parses this
 ledger's two `formal.statement` dialects (Lean surface, and the kernel's own
@@ -78,6 +88,13 @@ ARTIFACT = ROOT / "artifacts" / "autogenesis" / "frontier-shape-census-v1.json"
 HOLDOUT_ISOLATION = ROOT / "scripts" / "check-autogenesis-holdout-isolation.py"
 FACT_FRONTIER = ROOT / "scripts" / "fact-frontier.py"
 BRIEF_STEP0 = ROOT / "scripts" / "brief-step0.py"
+# The mirror-divergence registry: constructions where OUR definition and
+# Mathlib's are different functions, so the mirror is a different proposition
+# and no amount of proof effort closes it. A producer cannot close one of these
+# any more than it can close a mutation control, so a census that ranked buckets
+# without them would overstate every bucket it touched -- and the largest one
+# here is entirely made of them.
+DISPATCHABLE_FRONTIER = ROOT / "scripts" / "check-dispatchable-frontier.py"
 
 # Conclusion-head classes. The key is what a PRODUCER would dispatch on, so the
 # vocabulary is deliberately small: two heads that need the same proof move
@@ -241,6 +258,24 @@ def kernel_names(step0_module) -> tuple[frozenset[str] | None, dict[str, Any]]:
     state["provisional"] = bool(snapshot.get("binary_stale"))
     names = frozenset(row["name"] for row in snapshot.get("declarations", []))
     return (names or None), state
+
+
+def divergence_registry() -> tuple[list[dict[str, Any]] | None, Any]:
+    """`(registry, blockers_for)`, or `(None, None)` when it cannot be read.
+
+    `load_registry` calls `die()` (a `SystemExit`) on absence, which would take
+    the whole census with it. Degrading to `None` is right, and the artifact
+    records WHICH -- a `divergence_blocked` column that quietly meant nothing
+    would be the checker-that-cannot-fail defect in a data file.
+    """
+    try:
+        module = load_module(DISPATCHABLE_FRONTIER, "dispatchable_frontier_for_census")
+        registry = module.load_registry(module.DEFAULT_REGISTRY)
+    except (CensusError, SystemExit, OSError, ValueError):
+        return None, None
+    if not registry:
+        return None, None
+    return registry, module.blockers_for
 
 
 # ---------------------------------------------------------------------------
@@ -452,7 +487,9 @@ def declared_state(statement: str, names: frozenset[str] | None,
 
 
 def signature_of(fact: dict, entry: dict[str, Any], names: frozenset[str] | None,
-                 step0_module, frontier_module, proven: set[str]) -> dict[str, Any]:
+                 step0_module, frontier_module, proven: set[str],
+                 registry: list[dict[str, Any]] | None = None,
+                 blockers_for=None) -> dict[str, Any]:
     statement = fact["formal"]["statement"]
     dialect = dialect_of(statement, step0_module)
     if dialect in (DIALECT_PROSE, DIALECT_SMTLIB):
@@ -499,6 +536,12 @@ def signature_of(fact: dict, entry: dict[str, Any], names: frozenset[str] | None
         "dialect": dialect,
         "provenance": "ml430-mirror" if fact["id"].startswith("F:ml430-") else "native",
         "mutation_control": frontier_module.mutation_kind(fact) is not None,
+        # `None` = the registry could not be read, so this column is unknown
+        # rather than clear. `population.divergence_registry_loaded` says which.
+        "divergence_blocked": (
+            None if blockers_for is None
+            else sorted({hit["mathlib_constant"] for hit in
+                         blockers_for(statement, registry)}) or False),
         "fragment": entry["fragment"],
     }
 
@@ -518,19 +561,33 @@ def coarse_key(signature: dict[str, Any]) -> dict[str, Any]:
 def fine_key(signature: dict[str, Any]) -> dict[str, Any]:
     key = dict(signature)
     # The member list already carries per-fact detail; a fine bucket keyed on
-    # the missing-constant NAMES would be one bucket per fact by construction.
+    # the missing-constant NAMES, or on WHICH construction diverges, would be
+    # one bucket per fact by construction.
     key.pop("missing_conclusion_constants", None)
+    blocked = key.get("divergence_blocked")
+    key["divergence_blocked"] = None if blocked is None else bool(blocked)
     return key
 
 
 def rank_buckets(rows: list[dict[str, Any]], key_of) -> list[dict[str, Any]]:
     """Buckets, largest first, ties broken lexicographically on the key.
 
-    `targetable_size` is size minus the deliberate mutation controls in it. A
-    producer cannot close a mutation control -- those are false propositions
-    kept as negative controls -- so a bucket ranked by raw size overstates what
-    building for it would buy. Both numbers are reported; neither replaces the
-    other.
+    `targetable_size` is size minus the members a producer CANNOT close however
+    well it works, and there are two such classes, not one:
+
+      mutation controls        deliberately perturbed propositions kept as
+                               negative controls. Often FALSE; proving one is a
+                               soundness alarm, not a result.
+      divergence-blocked       the mirror names a construction that is not our
+                               construction, so the statement is a different
+                               proposition. `Nat.testBit` returns a `Nat` here
+                               and a `Bool` in Mathlib; no proof effort bridges
+                               that.
+
+    Ranking on raw size alone is how the largest bucket in this census -- nine
+    facts, every targetable one of them divergence-blocked -- would have been
+    read as the obvious place to point a producer. All three numbers are
+    reported; none replaces the others.
     """
     grouped: dict[str, list[dict[str, Any]]] = collections.defaultdict(list)
     keys: dict[str, dict[str, Any]] = {}
@@ -541,12 +598,19 @@ def rank_buckets(rows: list[dict[str, Any]], key_of) -> list[dict[str, Any]]:
         grouped[token].append(row)
     buckets = []
     for token, members in grouped.items():
-        targetable = [m for m in members if not m["signature"]["mutation_control"]]
+        mutations = [m for m in members if m["signature"]["mutation_control"]]
+        blocked = [m for m in members
+                   if not m["signature"]["mutation_control"]
+                   and m["signature"].get("divergence_blocked")]
+        targetable = [m for m in members
+                      if not m["signature"]["mutation_control"]
+                      and not m["signature"].get("divergence_blocked")]
         buckets.append({
             "signature": keys[token],
             "size": len(members),
             "targetable_size": len(targetable),
-            "mutation_control_count": len(members) - len(targetable),
+            "mutation_control_count": len(mutations),
+            "divergence_blocked_count": len(blocked),
             "fact_ids": sorted(m["fact_id"] for m in members),
         })
     buckets.sort(key=lambda b: (-b["size"], -b["targetable_size"],
@@ -573,6 +637,7 @@ def build_census(frontier: dict[str, Any], meta: dict[str, Any] | None = None
     if meta is not None:
         meta["freshness"] = snapshot_state["freshness"]
     proven = frontier_module.proven_identifier_names(facts)
+    registry, blockers_for = divergence_registry()
 
     ready = list(frontier["selection"]["ready_fact_ids"])
     entries = {entry["fact_id"]: entry for entry in frontier["entries"]}
@@ -592,7 +657,8 @@ def build_census(frontier: dict[str, Any], meta: dict[str, Any] | None = None
             "route_class": entry["route_class"],
             "contract_matched": bool(entry["matched_producer_contract_ids"]),
             "signature": signature_of(fact, entry, names, step0_module,
-                                      frontier_module, proven),
+                                      frontier_module, proven,
+                                      registry, blockers_for),
         })
 
     # The PRIMARY population: exactly the facts the next producer would have to
@@ -630,10 +696,17 @@ def build_census(frontier: dict[str, Any], meta: dict[str, Any] | None = None
             "censused_count": len(censused),
             "primary_count": len(primary),
             "other_count": len(other),
+            "divergence_registry_loaded": registry is not None,
             "primary_mutation_control_count": sum(
                 1 for row in primary if row["signature"]["mutation_control"]),
+            "primary_divergence_blocked_count": sum(
+                1 for row in primary
+                if not row["signature"]["mutation_control"]
+                and row["signature"].get("divergence_blocked")),
             "primary_targetable_count": sum(
-                1 for row in primary if not row["signature"]["mutation_control"]),
+                1 for row in primary
+                if not row["signature"]["mutation_control"]
+                and not row["signature"].get("divergence_blocked")),
             "by_route_class": dict(sorted(collections.Counter(
                 row["route_class"] for row in censused).items())),
             "by_dialect": dict(sorted(collections.Counter(
@@ -663,7 +736,8 @@ def format_signature(signature: dict[str, Any]) -> str:
     return (f"{carriers:<8} {signature['conclusion_head']:<10} "
             f"hyps[{hyps}] vars:{signature['bound_variable_count']} "
             f"{signature['provenance']} {declared}"
-            + (" MUTATION-CONTROL" if signature["mutation_control"] else ""))
+            + (" MUTATION-CONTROL" if signature["mutation_control"] else "")
+            + (" DIVERGENCE-BLOCKED" if signature.get("divergence_blocked") else ""))
 
 
 def report(census: dict[str, Any], limit: int = 12,
@@ -679,10 +753,15 @@ def report(census: dict[str, Any], limit: int = 12,
         f"  censused            {pop['censused_count']}",
         f"  primary population  {pop['primary_count']}  "
         f"(proof-route-only, no matching contract)",
-        f"      of which mutation controls (NOT targets)  "
+        f"      of which mutation controls (FALSE by construction)  "
         f"{pop['primary_mutation_control_count']}",
-        f"      genuinely targetable                      "
-        f"{pop['primary_targetable_count']}",
+        f"      of which divergence-blocked (not our proposition) "
+        f"{pop['primary_divergence_blocked_count']}",
+        f"      genuinely targetable                              "
+        f"{pop['primary_targetable_count']}"
+        + ("" if pop["divergence_registry_loaded"]
+           else "   [divergence registry NOT loaded -- this number is an "
+                "UPPER BOUND]"),
         f"  environment         {(meta or {}).get('freshness', 'not-recorded')}, "
         f"{census['environment_snapshot']['declaration_count']} declarations"
         + ("  PROVISIONAL (stale projection binary)"
@@ -692,13 +771,17 @@ def report(census: dict[str, Any], limit: int = 12,
     ]
     for bucket in census["buckets"]["coarse"][:limit]:
         lines.append(f"  {bucket['rank']:>3}. size {bucket['size']:>3} "
-                     f"(targetable {bucket['targetable_size']:>3})  "
+                     f"(targetable {bucket['targetable_size']:>3}, "
+                     f"mut {bucket['mutation_control_count']:>2}, "
+                     f"div {bucket['divergence_blocked_count']:>2})  "
                      f"{format_signature(bucket['signature'])}")
     lines.append("")
     lines.append("FINE BUCKETS (whole signature)")
     for bucket in census["buckets"]["fine"][:limit]:
         lines.append(f"  {bucket['rank']:>3}. size {bucket['size']:>3} "
-                     f"(targetable {bucket['targetable_size']:>3})  "
+                     f"(targetable {bucket['targetable_size']:>3}, "
+                     f"mut {bucket['mutation_control_count']:>2}, "
+                     f"div {bucket['divergence_blocked_count']:>2})  "
                      f"{format_signature(bucket['signature'])}")
     lines.append("")
     coarse = census["buckets"]["coarse"]

@@ -163,6 +163,32 @@ class ConclusionHeadTests(unittest.TestCase):
         self.assertTrue(got["mutation_control"])
         self.assertEqual(got["provenance"], "ml430-mirror")
 
+    def test_divergence_blocking_is_read_from_the_registry(self) -> None:
+        """Blocked in one direction and clear in the other, over the SAME
+        statement, so a blocker that matched everything would fail here."""
+        dispatchable = load(ROOT / "scripts" / "check-dispatchable-frontier.py",
+                            "dispatchable_frontier_for_census_tests")
+        registry = [{"mathlib_constant": "Nat.testBit", "class": "codomain",
+                     "surface_forms": [".testBit"]}]
+        fact = {"id": "F:ml430-synthetic", "statement": "",
+                "formal": {"statement": "∀ (m n k : ℕ), (m &&& n).testBit k = 0"}}
+        clear = {"id": "F:ml430-synthetic", "statement": "",
+                 "formal": {"statement": "∀ (n : ℕ), n.multichoose 0 = 1"}}
+        frontier_module = load(ROOT / "scripts" / "fact-frontier.py",
+                               "fact_frontier_for_divergence_test")
+        blocked = CENSUS.signature_of(fact, {"fragment": "Nat"}, None, STEP0,
+                                      frontier_module, set(), registry,
+                                      dispatchable.blockers_for)
+        self.assertEqual(blocked["divergence_blocked"], ["Nat.testBit"])
+        unblocked = CENSUS.signature_of(clear, {"fragment": "Nat"}, None, STEP0,
+                                        frontier_module, set(), registry,
+                                        dispatchable.blockers_for)
+        self.assertEqual(unblocked["divergence_blocked"], False)
+
+    def test_no_registry_means_unknown_not_unblocked(self) -> None:
+        got = signature("∀ (m n k : ℕ), (m &&& n).testBit k = 0")
+        self.assertIsNone(got["divergence_blocked"])
+
     def test_unknown_environment_is_unknown_never_absent(self) -> None:
         """With no snapshot the declared flag must be None. A false ABSENT here
         would say a producer cannot state a fact it can state perfectly well --
@@ -179,29 +205,42 @@ class BucketingTests(unittest.TestCase):
         self.assertEqual(CENSUS.band(2), "2+")
         self.assertEqual(CENSUS.band(9), "2+")
 
-    def test_targetable_size_excludes_mutation_controls(self) -> None:
-        rows = [
-            {"fact_id": "F:a", "signature": {"carriers": ["Nat"],
-                                             "conclusion_head": "Eq",
-                                             "hypothesis_count": 0,
-                                             "mutation_control": False}},
-            {"fact_id": "F:b", "signature": {"carriers": ["Nat"],
-                                             "conclusion_head": "Eq",
-                                             "hypothesis_count": 0,
-                                             "mutation_control": True}},
-        ]
-        buckets = CENSUS.rank_buckets(rows, CENSUS.coarse_key)
+    @staticmethod
+    def _row(name: str, **overrides) -> dict:
+        signature = {"carriers": ["Nat"], "conclusion_head": "Eq",
+                     "hypothesis_count": 0, "mutation_control": False,
+                     "divergence_blocked": False}
+        signature.update(overrides)
+        return {"fact_id": f"F:{name}", "signature": signature}
+
+    def test_targetable_size_excludes_both_unclosable_classes(self) -> None:
+        """Mutation controls AND divergence-blocked mirrors. Subtracting only
+        the first is how the largest bucket in this census -- nine facts, zero
+        targetable -- reads as the obvious place to point a producer."""
+        buckets = CENSUS.rank_buckets(
+            [self._row("a"),
+             self._row("b", mutation_control=True),
+             self._row("c", divergence_blocked=["Nat.testBit"])],
+            CENSUS.coarse_key)
         self.assertEqual(len(buckets), 1)
-        self.assertEqual(buckets[0]["size"], 2)
+        self.assertEqual(buckets[0]["size"], 3)
         self.assertEqual(buckets[0]["targetable_size"], 1)
         self.assertEqual(buckets[0]["mutation_control_count"], 1)
+        self.assertEqual(buckets[0]["divergence_blocked_count"], 1)
+
+    def test_an_unloaded_divergence_registry_is_unknown_not_clear(self) -> None:
+        """`None` must NOT be read as "nothing is blocked": that would inflate
+        every targetable count silently. It counts as targetable (the number is
+        then an UPPER BOUND, which the report says) and
+        `divergence_registry_loaded` is what tells a reader which it is."""
+        buckets = CENSUS.rank_buckets(
+            [self._row("a", divergence_blocked=None)], CENSUS.coarse_key)
+        self.assertEqual(buckets[0]["divergence_blocked_count"], 0)
+        self.assertEqual(buckets[0]["targetable_size"], 1)
 
     def test_buckets_rank_largest_first_and_ties_are_deterministic(self) -> None:
         rows = [
-            {"fact_id": f"F:{name}", "signature": {"carriers": [carrier],
-                                                   "conclusion_head": head,
-                                                   "hypothesis_count": 0,
-                                                   "mutation_control": False}}
+            self._row(name, carriers=[carrier], conclusion_head=head)
             for name, carrier, head in (
                 ("a", "Nat", "Eq"), ("b", "Nat", "Eq"), ("c", "Int", "le"))
         ]
