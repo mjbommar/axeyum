@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1055 names,
+/// The `NatPrelude` field table (1059 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1117,6 +1117,10 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("coprime_part_aux", p.coprime_part_aux),
             ("factorization_lcm_left", p.factorization_lcm_left),
             ("factorization_lcm_right", p.factorization_lcm_right),
+            ("is_prime", p.is_prime),
+            ("prime_counting_prime", p.prime_counting_prime),
+            ("prime_counting", p.prime_counting),
+            ("lcm_upto", p.lcm_upto),
             ("nth_aux", p.nth_aux),
             ("nth", p.nth),
             ("nth_root_aux", p.nth_root_aux),
