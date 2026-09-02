@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-gausscount-sum-even",
+  "title": "The two Gauss counting exponents and n*m have the same parity",
+  "statement": "QUADRATIC RECIPROCITY, NAT HALF. For odd `pp = 2m+1` and odd `q = 2n+1` with `gcd q pp = 1`, the two Gauss-lemma counting exponents `N_p := gaussNegCount pp q m` and `N_q := gaussNegCount q pp n` satisfy `Nat.Even ((N_p + N_q) + n*m)`. `Nat.Even x := exists k, x = k + k`, so this says `N_p + N_q == n*m (mod 2)` -- which IS quadratic reciprocity, one `(-1)^.` away from the classical statement, since Gauss's lemma gives the Legendre symbol `(q|pp)` as `(-1)^N_p`. HOW IT IS PROVED: pure assembly, no new mathematics. `Nat.eisenstein_lemma` at `(m, n)` gives `Even (F_p + N_p)` and at `(n, m)` gives `Even (F_q + N_q)`, where at `(n, m)` its own modulus is `succ (2n) = q` and its own multiplier is `succ (2m) = pp`, so its floor sum is literally `F_q` and its count is literally `N_q` -- the two instances share no term but the hypothesis. `Nat.eisenstein_floor_sum_min_free` then gives `F_p + F_q = n*m`, spelled with the same index functions, so no congruence is needed to align them. Two `regroup_four` moves and the two Even witnesses finish it at `k := k1 + k2`. One `Nat.gcd_comm` bridges the two hypothesis orders (`eisenstein_lemma` takes `gcd q pp = 1`, the other two take `gcd pp q = 1`) and is the only bridging step in the file. No subtraction appears anywhere, so `Nat.sub`'s truncation never enters. COPRIMALITY IS LOAD-BEARING, refuted inside the kernel at `pp = q = 3` (`m = n = 1`), where the sum reduces to `1` and `1` is refuted as `k + k` for every reachable `k`. NOT ASSUMED: primality. `Kernel::axiom_footprint` is EMPTY. Admitted on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.gaussCount_sum_even : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (AxNat.succ AxNat.zero)) -> AxNat.Even (AxNat.add (AxNat.add (AxNat.gaussNegCount (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) x0) (AxNat.gaussNegCount (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0)) x1)) (AxNat.mul x1 x0)))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Nat.gaussCount_sum_even"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-add-assoc",
+    "F:nat-add-comm",
+    "F:nat-add-right-comm",
+    "F:nat-eisenstein-floor-sum-min-free",
+    "F:nat-eisenstein-lemma",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.gaussCount_sum_even",
+      "kind": "kernel-term",
+      "supports": "Nat.gaussCount_sum_even is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.gaussCount_sum_even 2>/dev/null | grep -cE '^Nat\\.gaussCount_sum_even[[:space:]]'",
+      "checker_seconds": 14,
+      "kernel_declaration": "Nat.gaussCount_sum_even",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY (the debug build SIGABRTs). Pass ONE name per invocation: this tool silently keeps only the FIRST name argument, and a PREBUILT copy reports a just-declared theorem ABSENT (ADR-1552 finding 5), which is why the command runs `cargo run` rather than the binary."
+    },
+    {
+      "id": "footprint-Nat.gaussCount_sum_even",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the nat prelude's trusted surface is empty, which bounds Nat.gaussCount_sum_even.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in the module's test file."
+    },
+    {
+      "id": "numeric-Nat.gaussCount_sum_even",
+      "kind": "exhaustive-enumeration",
+      "supports": "ADR-1557's check script re-derives gaussNegCount and the floor sums from their own definitions and verifies this parity statement at every coprime pair below a bound, plus the two named non-coprime witnesses (one refuting, one a recorded survivor).",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1557-quadratic-reciprocity-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1557-quadratic-reciprocity-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy with one uniquely-named file per mutant (so the stale-__pycache__ trap cannot report the previous mutant's result)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/quadratic_reciprocity_count.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character in the module's test file). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts, so it is an INTERSECTION and not the full dependency set -- Nat.gcd_comm is a direct dependency of Nat.gaussCount_sum_even with no fact row and is therefore omitted. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane quadratic-reciprocity-2)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/quadratic_reciprocity_count.rs`. ADR-1557. Declaration kind: theorem. This is step 1 of the assembly ADR-1552 left open; step 2 is `Int.quadraticReciprocity`, and both are landed. GRADED FAMILY (ADR-0603): row 1, the general constructive form over this kernel's own constructed naturals and integers -- and STRICTLY MORE GENERAL than the classical statement, which is about two distinct odd PRIMES, because only coprimality is assumed. Row 2 (a boundary refutation) is EMPTY BY PROOF for this family in the sense that matters: the statement is decidable at every concrete pair and no boundary case escapes it, so the row-2 work is the hypothesis-dropping refutation, which IS done numerically and inside the kernel at a named non-coprime witness (p = q = 3) with a recorded SURVIVOR (p = q = 5, where the two sides agree and the control separates nothing). It is not stated as a kernel theorem. Row 3 (a decidable-fragment exact form) is what the concrete instantiations are, at five prime pairs, but no closed-form decision procedure is declared. Row 4, the labeled Mathlib import (`Mathlib.NumberTheory.LegendreSymbol.QuadraticReciprocity`), is A SEPARATE LANE and is not attempted here; nothing in this row is an import.",
+  "external_status": "proved"
+}

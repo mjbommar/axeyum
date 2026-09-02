@@ -848,4 +848,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1554](adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md) | `Rat.rowEchelon` lands as a `Definition` the kernel REDUCES — | accepted |
 | [1555](adr-1555-rank-is-an-uncapped-count-and-row-operation-invariance-does-not-follow-from-the-inverse-laws.md) | `Rat.rank M rows cols` lands as a `Definition` the kernel | accepted |
 | [1556](adr-1556-draw-19-is-refused-one-viable-held-out-family-and-r5-needs-two.md) | Draw 19 is refused — exactly one viable held-out family exists, and R5 needs two | accepted |
+| [1557](adr-1557-quadratic-reciprocity-is-proved-and-the-legendre-symbol-is-defined-by-gausss-count.md) | **The law of quadratic reciprocity is now a kernel theorem** | accepted |
 | [1558](adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md) | `Rat.rank_nullity : ∀ M rows cols, | accepted |

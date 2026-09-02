@@ -142,7 +142,7 @@ fn mod_of(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, y: ExprId) -> ExprId {
 /// Not a declaration: `mul x 2` ι-reduces to `add (add (mul x zero) x) x`
 /// (`Nat.mul` recurses on its RIGHT argument), so the whole content is one
 /// `mul_comm` and one `zero_add` under a congruence.
-fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
+pub(super) fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
     let p_ = *p;
     let two = d.num(2);
     let start = d.mul(two, x);
@@ -838,9 +838,11 @@ fn declare_eisenstein_lemma_mod_eq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     Ok(())
 }
 
-/// `(a+b)+(c+e) = (a+c)+(b+e)` — a per-file-private copy of `finite_set.rs`'s
-/// helper of the same shape, this prelude's stated convention.
-fn regroup_four(
+/// `(a+b)+(c+e) = (a+c)+(b+e)` — originally a per-file-private copy of
+/// `finite_set.rs`'s helper of the same shape. Exported (with [`two_mul`])
+/// for `quadratic_reciprocity_count.rs`, which needs the same two moves and
+/// would otherwise carry a third copy.
+pub(super) fn regroup_four(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
     a: ExprId,

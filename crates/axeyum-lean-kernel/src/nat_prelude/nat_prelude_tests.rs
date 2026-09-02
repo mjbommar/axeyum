@@ -1563,6 +1563,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // `eisenstein_floor_min_free.rs` (`eisenstein-3` lane): residue 5.
         p.div_mul_succ_le_of_le,
         p.eisenstein_floor_sum_min_free,
+        // `quadratic_reciprocity_count.rs` (`quadratic-reciprocity-2` lane):
+        // quadratic reciprocity's `Nat` half.
+        p.gauss_count_sum_even,
+        p.gauss_count_sum_mod_eq,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by
