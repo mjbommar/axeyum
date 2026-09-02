@@ -842,3 +842,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1544](adr-1544-the-lattice-count-was-assembly-and-the-min-is-not-decoration.md) | **Eisenstein's lemma is still NOT proved, and neither is | accepted |
 | [1545](adr-1545-the-testbit-codomain-is-the-outermost-link-of-a-chain-and-the-bool-view-is-already-built.md) | The `shape-census` lane named the `Nat.testBit` codomain as | accepted |
 | [1546](adr-1546-draw-19-is-refused-and-the-partition-gate-is-held-green-by-a-growing-exemption.md) | Draw 19 is refused, and the reason is not two bad commits — the v2 partition design cannot hold the property its gate enforces | Accepted |
+| [1552](adr-1552-eisensteins-lemma-was-blocked-on-a-missing-aggregate-and-nothing-else.md) | **Eisenstein's lemma is now a kernel theorem** | accepted |

@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-eisenstein-lemma",
+  "title": "Eisenstein's lemma: the Gauss count and the floor sum have the same parity",
+  "statement": "EISENSTEIN'S LEMMA. For odd `q = 2n+1` coprime to odd `pp = 2m+1`, the Gauss-lemma counting exponent `N = gaussNegCount pp q m` and the floor sum `F = SUM_{k=1..m} floor(q*k/pp)` have the SAME PARITY: `Nat.Even (F + N)`. `Nat.Even x := exists k, x = k + k` (`parity.rs`), so this is `N == SUM floor(q*k/pp) (mod 2)`, which is the form quadratic reciprocity consumes -- Gauss's lemma gives the Legendre symbol as `(-1)^N`, and this replaces the counting exponent by the floor sum that `Nat.eisenstein_floor_sum` (ADR-1544) can then pair with the symmetric one. HOW IT IS PROVED: from `Nat.eisenstein_count_identity` at `a := q`. The odd parts of both products come off DEFINITIONALLY -- `Nat.mul` recurses on its RIGHT argument, so after one `mul_comm` the terms `mul T (succ (2n))` and `mul X (succ (2m))` iota-reduce to `mul T (2n) + T` and `mul X (2m) + X` with no lemma at all. One `Nat.add_right_cancel` removes the `+ T` from each side, leaving `C + C = (B + B) + X` with `C := T*n + S` and `B := X*m`; taking `mod _ 2` of both sides, `Nat.add_mul_mod_self_left` deletes both doubled blocks, `Nat.zero_mod` finishes, and `Nat.even_iff_mod_two_eq_zero` converts the result to the existential. COPRIMALITY IS LOAD-BEARING: at `pp = 9`, `q = 3` the sum `F + N` is 3, and 3 is refuted as `k + k` inside the kernel by exhausting every `k` that could reach it. WHAT THIS DOES NOT PROVE: quadratic reciprocity. This is one of its two halves; the other, `Nat.eisenstein_floor_sum`, is already proved. What is missing is the Int-side assembly through `Int.gaussLemmaSignCount`. `Kernel::axiom_footprint` is EMPTY. Admitted on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.eisenstein_lemma : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (AxNat.succ AxNat.zero)) -> AxNat.Even (AxNat.add (AxNat.sumRange (fun (x3 : AxNat) => AxNat.div (AxNat.mul (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ x3)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) x0) (AxNat.gaussNegCount (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) x0)))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.eisenstein_lemma"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-add-mul-mod-self-left-108b5fe0",
+    "F:ml430-nat-even-iff-024826e9",
+    "F:nat-add-assoc",
+    "F:nat-add-right-cancel",
+    "F:nat-add-right-comm",
+    "F:nat-eisenstein-count-identity",
+    "F:nat-left-distrib",
+    "F:nat-mul-comm",
+    "F:nat-zero-add",
+    "F:nat-zero-mod",
+    "F:ml430-nat-add-assoc-8c87a1f1"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.eisenstein_lemma",
+      "kind": "kernel-term",
+      "supports": "Nat.eisenstein_lemma is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.eisenstein_lemma 2>/dev/null | grep -cE '^Nat\\.eisenstein_lemma[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.eisenstein_lemma",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.eisenstein_lemma",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.eisenstein_lemma.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in eisenstein_lemma_tests.rs."
+    },
+    {
+      "id": "numeric-Nat.eisenstein_lemma",
+      "kind": "exhaustive-enumeration",
+      "supports": "ADR-1552's check script sweeps this statement's arithmetic over 8450 (modulus, multiplier, bound) instances for the hypothesis-free rows, 519 coprime instances for the counting identity, and 399 coprime odd pairs plus all 240 ordered pairs of distinct odd primes below 60 for Eisenstein's lemma; the control table refutes eight wrong readings at named witnesses.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1552-eisenstein-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy with one uniquely-named file per mutant (so the stale-__pycache__ trap cannot report the previous mutant's result): 16 of 16 mutations exit 1. Two recorded SURVIVORS, M9 and M10, are the argument order of the congruence and of `Even (F + N)` -- invisible to every numeric check and guarded only by the character-for-character type pins in eisenstein_lemma_tests.rs."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character in eisenstein_lemma_tests.rs). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts, so it is an INTERSECTION and not the full dependency set -- direct dependencies with no fact row are omitted. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-3)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs`. ADR-1552. Declaration kind: theorem. WHAT IS STILL OPEN: quadratic reciprocity. Its two halves are `Nat.eisenstein_lemma` (this lane) and `Nat.eisenstein_floor_sum` (ADR-1544); what is missing is the Int-side assembly that turns the parity statement about `N_p + N_q` into one about Legendre symbols through `Int.gaussLemmaSignCount`. Also open: ADR-1544's residue 5, the min-free corollary of `Nat.eisenstein_floor_sum`, which needs `div (q*(succ x)) pp <= n` at `pp = succ (2m)`, `q = succ (2n)`, `succ x <= m`. GRADED FAMILY (ADR-0603): row 1, the general constructive form -- and STRICTLY MORE GENERAL than the classical statement, which is about two distinct odd PRIMES. Row 2 is PARTLY ASSESSED and this is the strongest row-2 evidence in this family: dropping coprimality is refuted INSIDE THE KERNEL at `pp = 9`, `q = 3` by showing `F + N` reduces to `3` and exhausting every `k` with `k + k = 3`, with a positive control that the same query accepts `2 = 1 + 1`. It is still not stated as a kernel theorem. Row 3 (a decidable-fragment exact form) and row 4 (a labeled import) are absent.",
+  "external_status": "proved"
+}

@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2160,
+    "min_identity_bound": 2169,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16302,11 +16302,32 @@
       "kernel_theorem": "Nat.dvd_zero"
     },
     {
+      "fact_id": "F:nat-eisenstein-count-identity",
+      "language": "lean4",
+      "statement_sha256": "1729e1b28cfec24c6ff8d1d4b02c175956847f0938000a8a9f520dc60dccbe3a",
+      "prose_sha256": "ef92f2078fbfbdddc51ff4a9f03ee478b80aaa8870b75cb68beec4659ccb3d51",
+      "kernel_theorem": "Nat.eisenstein_count_identity"
+    },
+    {
       "fact_id": "F:nat-eisenstein-floor-sum",
       "language": "lean4",
       "statement_sha256": "e209fc1ef67d745bbf364e14abb09ad93dc6837bb8bef8c01d1f3c7b363a0901",
       "prose_sha256": "d1ee436a786edc31f97561e98924833afc565deb9ecc044f45bb16f3e5c2c899",
       "kernel_theorem": "Nat.eisenstein_floor_sum"
+    },
+    {
+      "fact_id": "F:nat-eisenstein-lemma",
+      "language": "lean4",
+      "statement_sha256": "58e07292589d2816830e1833d5ca6e84d7c15924e5601a59df606ed430b44bda",
+      "prose_sha256": "0a9fc4ed80a4f80ecacbc67f39cdd14f71f6aa6c04b550adeb789b31f95d5ed5",
+      "kernel_theorem": "Nat.eisenstein_lemma"
+    },
+    {
+      "fact_id": "F:nat-eisenstein-lemma-modeq",
+      "language": "lean4",
+      "statement_sha256": "260aca80f503d3ba065c7d5a37bd489117340db2daf7256f1cc4d7386f9d46fe",
+      "prose_sha256": "6836e9db521b79af334a51b9b2751646e8d1718468c0b25e634f190f8563b3cd",
+      "kernel_theorem": "Nat.eisenstein_lemma_modEq"
     },
     {
       "fact_id": "F:nat-eq-equivalence-on",
@@ -17226,6 +17247,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-leastresidue-sumrange-reconcile",
+      "language": "lean4",
+      "statement_sha256": "603474165dfa5922fbb72f5408661058ca8b4b1ad091ba69243054f54d2f9973",
+      "prose_sha256": "b8a5925aeba46e9c348d2ba36565390fd73fcdbe669d4b0024d19b30148268b0",
+      "kernel_theorem": "Nat.leastResidue_sumRange_reconcile"
+    },
+    {
       "fact_id": "F:nat-left-distrib",
       "language": "lean4",
       "statement_sha256": "3d4f359cd0ed66a5495b65938ac72221a0f2df6b8865ee1be8a6acbb4125ddd5",
@@ -17974,6 +18002,13 @@
       "statement_sha256": "a7cc88fdc80e6fcae9343a5b02f416b286a519ce48c582d41ba175cb4f488385",
       "prose_sha256": "b54fd360ecea508518bf5cb937fc45480643db222a686a593f4ae44cf5ad4dcc",
       "kernel_theorem": "Nat.mul_sumRange"
+    },
+    {
+      "fact_id": "F:nat-mul-sumrange-div-add-leastresidue",
+      "language": "lean4",
+      "statement_sha256": "85daf461b60815eb0ca225d0636733fe743abad915a0f1ef6a51ef434fc7a05c",
+      "prose_sha256": "5914210bcbbfd849ddc9f33f9938b5b6ecdd0ad387d0faf61db9d3af4ad16957",
+      "kernel_theorem": "Nat.mul_sumRange_div_add_leastResidue"
     },
     {
       "fact_id": "F:nat-mul-sumrange-pow",
@@ -19135,6 +19170,34 @@
       "statement_sha256": "dbeec9f3a65d0da5379643d5341e97f0a92703e4246ebe2423146ffe30af995e",
       "prose_sha256": "2624fcfa1eb76a270f06c5c7b8f68a322f07bdf8c441c40ae479c6b227579582",
       "kernel_theorem": "Nat.sumRange_zero"
+    },
+    {
+      "fact_id": "F:nat-sumrangeif-compl",
+      "language": "lean4",
+      "statement_sha256": "9396e312c91feb6ebf1747ebb9f86f233e30d102b4e31e2a168ab38329ab9257",
+      "prose_sha256": "25c52f0f9aac7915c61f84ed5f13024f0107b58764f5151fbd1ee7f36497cda3",
+      "kernel_theorem": "Nat.sumRangeIf_compl"
+    },
+    {
+      "fact_id": "F:nat-sumrangeif-congr-lt",
+      "language": "lean4",
+      "statement_sha256": "4f79c1c32e7aa584bd6cefbdf3c58829fabd5f8661d2ff7644ef3abfee37dc20",
+      "prose_sha256": "a0d0fa63190ebdcc60cb3a6851aacd2fd49014b0821a7975092f7ea4fd9a6392",
+      "kernel_theorem": "Nat.sumRangeIf_congr_lt"
+    },
+    {
+      "fact_id": "F:nat-sumrangeif-succ",
+      "language": "lean4",
+      "statement_sha256": "e01dadf8b66f0ffa247137ac131e899e6eb28424f04a12822221e900575f9cd6",
+      "prose_sha256": "b3e396ba9a89976253dedfede305a9f09818256ee0055cc36f6ae88fa606a36e",
+      "kernel_theorem": "Nat.sumRangeIf_succ"
+    },
+    {
+      "fact_id": "F:nat-sumrangeif-zero",
+      "language": "lean4",
+      "statement_sha256": "eecdfac4c56849ec9517a8cd37a8a350697ecdf99800e6a6a9577fb963dbdf0d",
+      "prose_sha256": "8a27e2fdc452fd9d7c6f5bcfd7ccc2975c5d987b53996edb6ab380eea976fedf",
+      "kernel_theorem": "Nat.sumRangeIf_zero"
     },
     {
       "fact_id": "F:nat-symmetric-group-isgrouponfn",
