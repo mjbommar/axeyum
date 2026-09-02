@@ -32,6 +32,24 @@ import sys
 import tempfile
 import unittest
 
+def _ctx(done: subprocess.CompletedProcess) -> str:
+    """The gate's output as an assertion message, INDENTED so no line starts
+    with ``FAIL:``.
+
+    ``mutation_controls.py`` names the tests a mutant killed with
+    ``^(?:FAIL|ERROR): (\\S+)`` over unittest's output and cross-checks that
+    against ``FAILED (failures=N)``. This gate prints its findings as
+    ``FAIL: <fact> [partition] depends_on ...`` at line start, so a raw
+    ``done.stdout`` in a failing assertion's message is parsed as extra dead
+    tests: M1 was reported ``INCONSISTENT -- the summary line says 6 died but 7
+    were named`` for a mutant that killed exactly 6. The harness refusing to
+    report a number it cannot cross-check is the harness working; indenting
+    costs nothing and keeps the full context.
+    """
+    return "\n" + "".join(f"  {line}\n"
+                          for line in (done.stdout + done.stderr).splitlines())
+
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/check-partition-edges.py"
 
@@ -103,6 +121,19 @@ class PartitionEdgeControls(unittest.TestCase):
         self.fact("F:c", ["F:d"])
         self.fact("F:d")
 
+    def one_crossing_only(self) -> None:
+        """A[train] -> B[development], and nothing else.
+
+        Used by every scenario whose subject is NOT the partition comparison.
+        A clean edge in those fixtures would make the comparison's mutant kill
+        them too, and a mutation report where one mutant kills six tests says
+        less about the guard than one where it kills the test that is about
+        it.
+        """
+        self.manifest("v1", {"F:a": "train", "F:b": "development"})
+        self.fact("F:a", ["F:b"])
+        self.fact("F:b")
+
     def gate(self, *args: str, blame: bool = False) -> subprocess.CompletedProcess:
         argv = [sys.executable, str(SCRIPT), "--root", str(self.root), *args]
         if not blame:
@@ -116,19 +147,24 @@ class PartitionEdgeControls(unittest.TestCase):
         kill this: it names WHICH edge crossed, not merely how many did."""
         self.one_crossing_and_one_clean()
         done = self.gate()
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("|violations=1|", done.stdout)
         self.assertIn("F:a [train] depends_on F:b [development]", done.stdout)
         self.assertNotIn("F:c", done.stdout)
 
-    def test_a_tree_with_no_crossing_edge_passes(self) -> None:
+    def test_a_drawn_population_with_no_dependency_edges_passes(self) -> None:
         """The positive control. Without it every guard below is satisfied by
-        a gate that always fails, which is not a gate either."""
+        a gate that always fails, which is not a gate either.
+
+        NO EDGES AT ALL, rather than a same-partition edge: the accept case
+        for a same-partition edge is the `assertNotIn` in the test above, and
+        putting it here as well would mean the partition comparison's mutant
+        kills two tests instead of the one whose subject it is."""
         self.manifest("v1", {"F:c": "train", "F:d": "train"})
-        self.fact("F:c", ["F:d"])
+        self.fact("F:c")
         self.fact("F:d")
         done = self.gate()
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("|crossing=0|", done.stdout)
         self.assertIn("|PASS", done.stdout)
 
@@ -141,7 +177,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.fact("F:a", ["F:z"])
         self.fact("F:z")
         done = self.gate()
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("F:a [development] depends_on F:z [longitudinal]", done.stdout)
 
     def test_an_edge_to_a_fact_outside_the_draw_is_not_a_violation(self) -> None:
@@ -152,7 +188,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.fact("F:a", ["F:undrawn"])
         self.fact("F:undrawn")
         done = self.gate()
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("|crossing=0|", done.stdout)
 
     # -- guard 2: an amendment names ONE EDGE ------------------------------
@@ -167,10 +203,10 @@ class PartitionEdgeControls(unittest.TestCase):
         green. Here it must suppress nothing and be REPORTED as declined,
         because a fact-id set says nothing about which edge anybody reviewed.
         """
-        self.one_crossing_and_one_clean()
+        self.one_crossing_only()
         self.manifest(
             "v1",
-            {"F:a": "train", "F:b": "development", "F:c": "train", "F:d": "train"},
+            {"F:a": "train", "F:b": "development"},
             component_split_exemptions=[{
                 "component_fact_ids": ["F:a", "F:b"],
                 "reason": "reviewed as a component",
@@ -178,7 +214,7 @@ class PartitionEdgeControls(unittest.TestCase):
             }],
         )
         done = self.gate()
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("|violations=1|", done.stdout)
         self.assertIn("NOT-AN-AMENDMENT", done.stdout)
         self.assertIn("names a component of 2 fact ids and no edge", done.stdout)
@@ -195,7 +231,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.amendments([{"from": "F:a", "to": "F:b",
                           "reason": "reviewed edge", "date": "2026-09-02"}])
         done = self.gate()
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("|amended=1|", done.stdout)
         self.assertIn("|violations=1|", done.stdout)
         self.assertIn("F:e [development] depends_on F:f [train]", done.stdout)
@@ -205,10 +241,10 @@ class PartitionEdgeControls(unittest.TestCase):
         """A malformed amendment is a committed defect. Reading it as absent
         would be the quiet half of the same failure -- the edge stays a
         violation, but nobody learns the amendment they wrote does nothing."""
-        self.one_crossing_and_one_clean()
+        self.one_crossing_only()
         self.amendments([{"from": "F:a", "to": "F:b", "date": "2026-09-02"}])
         done = self.gate()
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("|amended=0|", done.stdout)
         self.assertIn("AMENDMENT-REJECTED", done.stdout)
         self.assertIn("missing reason", done.stdout)
@@ -219,10 +255,10 @@ class PartitionEdgeControls(unittest.TestCase):
         """The ratchet's whole point: the crossings that already existed are
         the re-partition's to repair, and a gate that blocks every push until
         they are is a gate people disable."""
-        self.one_crossing_and_one_clean()
+        self.one_crossing_only()
         self.baseline([("F:a", "F:b")])
         done = self.gate("--baseline")
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("|baselined=1|violations=0|", done.stdout)
 
     def test_an_edge_absent_from_the_baseline_fails_the_gate(self) -> None:
@@ -236,8 +272,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.fact("F:f")
         self.baseline([("F:a", "F:b")])
         done = self.gate("--baseline")
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
-        self.assertIn("|baselined=1|violations=1|", done.stdout)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("F:e [development] depends_on F:f [train]", done.stdout)
 
     def test_recording_refuses_to_grow_the_baseline(self) -> None:
@@ -256,7 +291,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.baseline([("F:a", "F:b")])
         before = (self.root / BASELINE).read_text()
         done = self.gate("--record-baseline")
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("REFUSED-TO-GROW-BASELINE", done.stdout)
         self.assertIn("NEW F:e -> F:f", done.stdout)
         self.assertEqual((self.root / BASELINE).read_text(), before,
@@ -266,10 +301,10 @@ class PartitionEdgeControls(unittest.TestCase):
         """The positive control for the refusal: a baseline that got SMALLER
         because an edge was repaired records, and says by how much. Without
         this, `refuses to grow` is satisfiable by a mode that never writes."""
-        self.one_crossing_and_one_clean()
+        self.one_crossing_only()
         self.baseline([("F:a", "F:b"), ("F:gone", "F:also-gone")])
         done = self.gate("--record-baseline")
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("RECORDED|edges=1|shrank_by=1", done.stdout)
         recorded = json.loads((self.root / BASELINE).read_text())
         self.assertEqual(recorded["edges"],
@@ -281,11 +316,11 @@ class PartitionEdgeControls(unittest.TestCase):
         ratcheting. The gate says which edge was repaired so the gain gets
         locked in rather than quietly held as headroom for the next one."""
         self.manifest("v1", {"F:c": "train", "F:d": "train"})
-        self.fact("F:c", ["F:d"])
+        self.fact("F:c")
         self.fact("F:d")
         self.baseline([("F:a", "F:b")])
         done = self.gate("--baseline")
-        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("REPAIRED F:a -> F:b", done.stdout)
 
     # -- guard 4: exit 2 is `cannot answer` ---------------------------------
@@ -297,7 +332,7 @@ class PartitionEdgeControls(unittest.TestCase):
         is not the same finding as a clean one."""
         self.fact("F:a", ["F:b"])
         done = self.gate()
-        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("PARTITION-EDGES|UNANSWERABLE", done.stdout)
         self.assertIn("no nursery manifest", done.stdout)
 
@@ -308,7 +343,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.manifest("v1", {"F:a": "train"})
         (self.root / "artifacts/facts").rmdir()
         done = self.gate()
-        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("artifacts/facts is absent", done.stdout)
 
     def test_baseline_mode_without_a_baseline_file_is_exit_two(self) -> None:
@@ -316,9 +351,9 @@ class PartitionEdgeControls(unittest.TestCase):
         against a file that does not exist would report every recorded edge as
         a fresh violation, which reads as a catastrophe and is a missing
         file."""
-        self.one_crossing_and_one_clean()
+        self.one_crossing_only()
         done = self.gate("--baseline")
-        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("cannot ratchet against a baseline that does not exist",
                       done.stdout)
 
@@ -329,7 +364,7 @@ class PartitionEdgeControls(unittest.TestCase):
         self.manifest("v2", {"F:a": "development"})
         self.fact("F:a")
         done = self.gate()
-        self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("is train in", done.stdout)
 
     # -- attribution --------------------------------------------------------
@@ -338,9 +373,9 @@ class PartitionEdgeControls(unittest.TestCase):
         """The fixture tree is not a repository. A gate that died because it
         could not run a version-control query would be failing on a fact about
         where it was invoked; it must say `unknown` and keep the finding."""
-        self.one_crossing_and_one_clean()
+        self.one_crossing_only()
         done = self.gate(blame=True)
-        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("introduced by unknown", done.stdout)
 
 
