@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-mat-mul-expand",
+  "title": "The Cauchy-Binet expansion over the constructed rationals: a product matrix determinant as a sum over the function space of index maps",
+  "statement": "For every natural m and n and every pair of matrices A, B : Nat -> Nat -> Rat, det (Rat.matMul A B n) (m+1) = sumMaps (m+1) n (fun g => prodRange (fun i => A i (g i)) (m+1) * det (fun r c => B (g r) c) (m+1)), where Rat.sumMaps m n F folds Rat.add over F g for every index map g : [0,m) -> [0,n) and Rat.prodRange is the finite product over a range. This is ADR-1440 obligation 1: the multilinear expansion of a product matrix determinant in its rows, one row at a time, whose index set is a FUNCTION SPACE rather than a Nat range. ADR-1135 recorded that index set as inexpressible in this kernel; Int.sumMaps refuted that over the integers and this is the constructed-rational analogue, carrying the determinant rather than a product of sums. Proved by an induction on a cursor (how many rows are still to expand) against an offset (which row is next), using Rat.det_row_multilinear and Rat.det_row_replaced at the same row to turn the determinant into a sum over the inner index, Rat.det_row_smul to pull each coefficient out, and Rat.matSubstRows -- whose recursion peels the outermost row first, so that substituting a cons-extended map is definitionally substituting one row and then recursing.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_matMul_expand : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat) -> Rat))) -> Eq.{1} Rat (Rat.det (Rat.matMul x2 x3 x1) (AxNat.succ x0)) (Rat.sumMaps (AxNat.succ x0) x1 (fun (x4 : ((x4 : AxNat) -> AxNat)) => Rat.mul (Rat.prodRange (fun (x5 : AxNat) => x2 x5 (x4 x5)) (AxNat.succ x0)) (Rat.det (fun (x5 : AxNat) => fun (x6 : AxNat) => x3 (x4 x5) x6) (AxNat.succ x0))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Rat.det_matMul_expand"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-beq-eq-false-of-ne", "F:nat-le-add-right", "F:nat-le-succ-succ", "F:nat-lt-irrefl", "F:nat-succ-add", "F:nat-succ-le-succ", "F:nat-zero-add", "F:nat-zero-le", "F:rat-mul-assoc", "F:rat-mul-comm", "F:rat-mul-one", "F:rat-sumrange-congr"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-det-mat-mul-expand-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.det_matMul_expand` is in the environment as a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint`, in all four preludes that carry the rationals. The `formal.statement` above is the row's own `canonical_type`, so the sum's index set (`Rat.sumMaps (succ x0) x1`, i.e. every map `[0,m+1) -> [0,n)`) and the summand's shape are read off the admitted type rather than from prose.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.det_matMul_expand --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.det_matMul_expand[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.det_matMul_expand 0` rows and exits 0. The checker counts them and requires exactly 4; see the sibling fact `F:rat-det-mat-mul` for what each failure mode does to that count. `scripts/new-fact.py` verified the pattern fails on mutated output."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs)",
+    "source": "Lane det-mul-2, closing ADR-1440's obligation 1 and with it determinant multiplicativity at symbolic n. Decision recorded in ADR-1543. Status note: docs/plan/status/det-mul-2.md."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It is not the Leibniz formula: there is no permutation type, no sign, and no injectivity predicate anywhere in the statement -- `Rat.sumMaps` is a summation SCHEDULE over the function space, and the non-injective maps are killed later by `Rat.det_row_selection`, not here. The dimension is `succ m`, not a bare `n`: `Rat.det_row_multilinear` and `Rat.det_row_replaced` are both stated at `succ m`, and the `n = 0` case of multiplicativity is handled separately in `Rat.det_matMul`. The inner bound `n` of `Rat.matMul` is left independent of the dimension, so this is more general than the instance multiplicativity uses."
+}
