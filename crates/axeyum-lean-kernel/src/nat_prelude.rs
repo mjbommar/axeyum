@@ -225,6 +225,7 @@ mod modeq_cancel_div_gcd;
 mod modular;
 mod mul_order_lemmas;
 mod multichoose;
+mod multiset;
 mod no_confusion;
 mod nth;
 mod nth_root;
@@ -401,6 +402,7 @@ use mul_order_lemmas::{
     declare_div_lt_of_lt_mul, declare_lt_of_mul_lt_mul, declare_mul_lt_mul_iff,
 };
 use multichoose::declare_multichoose_all;
+use multiset::declare_multiset_all;
 use no_confusion::declare_no_confusion;
 use nth::declare_nth_all;
 use nth_root::declare_nth_root_all;
@@ -5533,6 +5535,55 @@ pub struct NatPrelude {
     /// of the divisor is the constructive `succ ap`, so no `Lt zero a`
     /// hypothesis is formed.
     pub count_range_mul_succ_le_eq_floor: NameId,
+
+    // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
+    /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
+    /// past which it is read as zero. The carrier that makes UNIQUENESS of
+    /// prime factorization statable here; see `multiset.rs`'s module doc for
+    /// what it deliberately does not provide (no permutation quotient, no
+    /// `Finset`, no extensional equality of multisets).
+    pub multiset: NameId,
+    /// `Nat.Multiset.mk : (Nat -> Nat) -> Nat -> Nat.Multiset`.
+    pub multiset_mk: NameId,
+    /// `Nat.Multiset.rec` — the kernel-generated recursor both projections go
+    /// through.
+    pub multiset_rec: NameId,
+    /// `Nat.Multiset.raw : Nat.Multiset -> Nat -> Nat` — the stored
+    /// multiplicity function, NOT truncated at the bound. Use
+    /// [`multiset_count`](Self::multiset_count) instead unless you specifically
+    /// mean the untruncated function.
+    pub multiset_raw: NameId,
+    /// `Nat.Multiset.bound : Nat.Multiset -> Nat`.
+    pub multiset_bound: NameId,
+    /// `Nat.Multiset.count m x := if x < bound m then raw m x else 0` — the
+    /// observable multiplicity. Truncating here rather than carrying a
+    /// well-formedness hypothesis is what makes
+    /// [`multiset_count_eq_zero_of_bound_le`](Self::multiset_count_eq_zero_of_bound_le)
+    /// a theorem about EVERY multiset.
+    pub multiset_count: NameId,
+    /// `Nat.Multiset.zero : Nat.Multiset` — the empty multiset.
+    pub multiset_zero: NameId,
+    /// `Nat.Multiset.singleton : Nat -> Nat.Multiset`.
+    pub multiset_singleton: NameId,
+    /// `Nat.Multiset.add : Nat.Multiset -> Nat.Multiset -> Nat.Multiset` —
+    /// pointwise sum of counts. Its bound is the SUM of the two bounds, not the
+    /// maximum: `Nat.max` lives in the `Max` namespace here and `Nat.add` needs
+    /// none of its comparison lemmas, is at least as large, and leaves
+    /// [`multiset_count_add`](Self::multiset_count_add) unchanged.
+    pub multiset_add: NameId,
+    /// `Nat.Multiset.Mem m x := Lt 0 (count m x)`.
+    pub multiset_mem: NameId,
+    /// `Nat.Multiset.prod m := prodRange (fun q => pow q (count m q)) (bound m)`.
+    pub multiset_prod: NameId,
+    /// `Nat.Multiset.card m := sumRange (count m) (bound m)` — the number of
+    /// elements counted with multiplicity.
+    pub multiset_card: NameId,
+    /// `Nat.Multiset.eqBelow : (Nat -> Nat) -> (Nat -> Nat) -> Nat -> Bool` —
+    /// the bounded loop `∀ j < k, beq (f j) (g j)`, as a `Bool`.
+    pub multiset_eq_below: NameId,
+    /// `Nat.Multiset.beq m1 m2 := eqBelow (count m1) (count m2)
+    /// (bound m1 + bound m2)`.
+    pub multiset_beq: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5581,6 +5632,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let le = kernel.name_str(nat, "le");
         let fin = kernel.name_str(nat, "Fin");
         let pair = kernel.name_str(nat, "Pair");
+        let multiset = kernel.name_str(nat, "Multiset");
         let primrec = kernel.name_str(nat, "Primrec");
         let cases_on_uparam_name = {
             let anon = kernel.anon();
@@ -6391,6 +6443,20 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ldiff_bit: kernel.name_str(nat, "ldiff_bit"),
             pair,
             pair_mk: kernel.name_str(pair, "mk"),
+            multiset,
+            multiset_mk: kernel.name_str(multiset, "mk"),
+            multiset_rec: kernel.name_str(multiset, "rec"),
+            multiset_raw: kernel.name_str(multiset, "raw"),
+            multiset_bound: kernel.name_str(multiset, "bound"),
+            multiset_count: kernel.name_str(multiset, "count"),
+            multiset_zero: kernel.name_str(multiset, "zero"),
+            multiset_singleton: kernel.name_str(multiset, "singleton"),
+            multiset_add: kernel.name_str(multiset, "add"),
+            multiset_mem: kernel.name_str(multiset, "Mem"),
+            multiset_prod: kernel.name_str(multiset, "prod"),
+            multiset_card: kernel.name_str(multiset, "card"),
+            multiset_eq_below: kernel.name_str(multiset, "eqBelow"),
+            multiset_beq: kernel.name_str(multiset, "beq"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7626,6 +7692,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_prime_dvd_mirrors_all`, just above). Nothing needs it,
         // so it goes last.
         declare_prime_dvd_factorial_lcm_all(&mut d, &p)?;
+        // `Nat.Multiset` and the uniqueness of prime factorization stated as
+        // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
+        // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
+        // `pow_succ`/`pow_zero`, `Nat.ble`/`Nat.beq` and their order bridges
+        // (`ble.rs`/`log.rs`), `Nat.euclid_lemma` (`bezout.rs`),
+        // `Nat.prime_dvd_of_dvd_pow`/`prime_eq_one_or_self_of_dvd`/
+        // `prime_not_dvd_one`/`prime_pos` (`primes.rs` and
+        // `prime_dvd_mirrors.rs`, above) and `Nat.mul_left_cancel_of_pos`.
+        // Nothing needs it, so it goes last.
+        declare_multiset_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -7705,3 +7781,6 @@ mod asc_factorial_div_tests;
 
 #[cfg(test)]
 mod add_factorial_le_tests;
+
+#[cfg(test)]
+mod multiset_tests;

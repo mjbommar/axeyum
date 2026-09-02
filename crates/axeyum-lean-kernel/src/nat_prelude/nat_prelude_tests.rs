@@ -598,6 +598,23 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.min_min,
         p.nat_inst_max,
         p.inst_min_nat,
+        // `nat-multiset` lane: `multiset.rs`. The multiplicity carrier that
+        // makes uniqueness of prime factorization statable. The inductive
+        // machinery (`Nat.Multiset`, `.mk`, `.rec`) is checked by name in
+        // `every_promised_name_is_admitted_with_the_expected_kind` instead --
+        // an `Inductive`/`Constructor`/`Recursor` has no proof term for
+        // `axiom_footprint` to inspect.
+        p.multiset_raw,
+        p.multiset_bound,
+        p.multiset_count,
+        p.multiset_zero,
+        p.multiset_singleton,
+        p.multiset_add,
+        p.multiset_mem,
+        p.multiset_prod,
+        p.multiset_card,
+        p.multiset_eq_below,
+        p.multiset_beq,
     ]
 }
 
@@ -1636,6 +1653,13 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
         p.pair,
         p.pair_mk,
         p.pair_rec,
+        // `Nat.Multiset` (`multiset.rs`, lane nat-multiset). Named here for
+        // the same reason `Nat.Primrec`'s constructors are: a constructor
+        // silently dropped from `add_inductive` would leave a weaker carrier
+        // that nothing else checks.
+        p.multiset,
+        p.multiset_mk,
+        p.multiset_rec,
         // `Nat.Primrec` (ADR-1240, `primrec.rs`). An inductive `Prop`, so it
         // is invisible to `every_nat_declaration_is_checked_and_axiom_free`,
         // which is scoped to `Definition`/`Theorem`. All seven constructors
