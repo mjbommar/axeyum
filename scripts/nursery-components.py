@@ -44,9 +44,12 @@ WHAT IT MEASURES, in the order the argument needs
   4. THE RESIDUAL CANNOT TAKE ONE PARTITION EITHER. Cut the two pinned
      families out and 42 families / 508 rows remain in one component.
      Assigning that one partition would empty one of
-     `required_evaluation_partitions: [train, development, held-out]`, which
-     `check-autogenesis-nursery.py` reports as `empty-partition:` -- the very
-     gate option 1 exists to turn green.
+     `required_evaluation_partitions`, which `check-autogenesis-nursery.py`
+     reports as `empty-partition:` -- the very gate option 1 exists to turn
+     green. (That list was `[train, development, held-out]` when this was
+     measured; ADR-1564 made it `[development, held-out]` with train a
+     TRAINING partition, so the tool reads it from the policy rather than
+     naming it here.)
 
   5. AND THE GRAPH IS NOT OUTCOME-BLIND. `depends_on` on a kernel-route fact
      is DERIVED FROM THE ADMITTED PROOF TERM (`check-fact-depends-derived.py`,
@@ -94,6 +97,7 @@ import argparse
 import collections
 import datetime
 import hashlib
+import importlib.util
 import json
 import os
 import pathlib
@@ -120,7 +124,13 @@ ADR = ("docs/research/09-decisions/"
        "adr-1551-the-family-graph-is-one-blob-and-the-dependency-edge-is-"
        "proof-derived.md")
 
-EVALUATION_PARTITIONS = ("train", "development", "held-out")
+# WHICH PARTITIONS ARE EVALUATED IS READ FROM THE POLICY (ADR-1564), not
+# spelled here. It was the literal `("train", "development", "held-out")`, and
+# F2 below -- "the largest family component still spans two evaluation
+# partitions" -- is only a finding about the SPLIT if it uses the split's own
+# list. `Drawn.evaluation_partitions` carries it; `census` publishes it into
+# the manifest block so `findings` reads the measured value rather than a
+# second copy.
 PARTITIONS = ("longitudinal", "train", "development", "held-out")
 
 # The two families ADR-1551 pins. Named, not derived, because each is pinned
@@ -200,6 +210,7 @@ class Drawn:
         self.module: dict[str, str] = {}
         self.manifest: dict[str, str] = {}
         self.minimum_rows = 0
+        self.evaluation_partitions: list[str] = []
         for path in manifests:
             rel = str(path.relative_to(root))
             self.manifest_names.append(rel)
@@ -211,6 +222,17 @@ class Drawn:
                 counts = policy.get("evaluation_fact_count")
                 if isinstance(counts, dict) and isinstance(counts.get("minimum"), int):
                     self.minimum_rows = max(self.minimum_rows, counts["minimum"])
+                required = policy.get("required_evaluation_partitions")
+                if not isinstance(required, list) or not required or any(
+                    p not in PARTITIONS for p in required
+                ):
+                    raise Unanswerable(
+                        f"{rel}: policy.required_evaluation_partitions must "
+                        f"be a non-empty list drawn from {list(PARTITIONS)}; "
+                        f"a split that evaluates nothing has no crossings to "
+                        f"measure and this tool must not report one clean")
+                self.evaluation_partitions = sorted(
+                    set(self.evaluation_partitions) | set(required))
             entries = document.get("entries")
             if not isinstance(entries, list):
                 raise Unanswerable(f"{rel}: entries is not a list")
@@ -319,12 +341,39 @@ def family_weights(drawn: Drawn,
     return dict(weights)
 
 
-def crossing_edge_count(drawn: Drawn, dependencies: dict[str, list[str]],
-                        partition_of_family: dict[str, str]) -> int:
-    """Directed `depends_on` edges whose endpoints differ in partition.
+def partition_roles(root: pathlib.Path) -> Any:
+    """`check-partition-edges.py`'s OWN `PartitionRoles`, loaded by path.
 
-    Computed the same way `check-partition-edges.py` computes it, so the
-    `crossings_now` this tool prints can be compared to that gate's
+    ADR-1564 made "is this pair of partitions a crossing?" a question with a
+    non-trivial answer (a training partition paired with a non-blind
+    evaluation partition is not one). Re-implementing that rule here would put
+    two answers in the tree, and `crossing_edge_count`'s whole contract is that
+    its number is comparable to the gate's `crossing=` without either being
+    re-derived from the other's report. Same device, and the same reason, as
+    `check-autogenesis-nursery.py` loading `load_amendments` by path.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_axeyum_check_partition_edges",
+        DEFAULT_ROOT / "scripts/check-partition-edges.py")
+    if spec is None or spec.loader is None:
+        raise Unanswerable(
+            "scripts/check-partition-edges.py is not importable, so the "
+            "crossing rule cannot be read and this tool must not invent one")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        return module.load_policy(root)
+    except module.Unanswerable as error:
+        raise Unanswerable(f"the partition roles are unreadable: {error}") from error
+
+
+def crossing_edge_count(drawn: Drawn, dependencies: dict[str, list[str]],
+                        partition_of_family: dict[str, str],
+                        roles: Any) -> int:
+    """Directed `depends_on` edges that CROSS, per the policy's roles.
+
+    Computed by `check-partition-edges.py`'s own `PartitionRoles.is_crossing`,
+    so the `crossings_now` this tool prints can be compared to that gate's
     `crossing=` without either being re-derived from the other's report.
     """
     total = 0
@@ -333,7 +382,9 @@ def crossing_edge_count(drawn: Drawn, dependencies: dict[str, list[str]],
         for dependency in dependencies.get(fact_id, []):
             if dependency not in drawn.partition:
                 continue
-            if partition_of_family[drawn.family[dependency]] != source:
+            if roles.is_crossing(
+                source, partition_of_family[drawn.family[dependency]]
+            ):
                 total += 1
     return total
 
@@ -421,6 +472,7 @@ def propose(drawn: Drawn, weights: dict[tuple[str, str], int],
 
 def census(root: pathlib.Path) -> dict[str, Any]:
     drawn = Drawn(root)
+    roles = partition_roles(root)
     dependencies = load_dependencies(root)
     rows_of = drawn.rows_of_family()
 
@@ -502,7 +554,8 @@ def census(root: pathlib.Path) -> dict[str, Any]:
         "inter_family_edges": sum(weights.values()),
         "pinned_incident_edges": pinned_incident,
         "pinned_incident_edge_count": sum(pinned_incident.values()),
-        "crossings_now": crossing_edge_count(drawn, dependencies, incumbent),
+        "crossings_now": crossing_edge_count(drawn, dependencies,
+                                             incumbent, roles),
         "proposal": propose(drawn, weights, rows_of),
         "ledger_sha256": sha256_of(
             [[f, drawn.partition[f], sorted(dependencies.get(f, []))]
@@ -511,6 +564,7 @@ def census(root: pathlib.Path) -> dict[str, Any]:
 
     manifest_block = {
         "manifests": drawn.manifest_names,
+        "evaluation_partitions": drawn.evaluation_partitions,
         "drawn": len(drawn.partition),
         "partition_counts": dict(sorted(collections.Counter(
             drawn.partition.values()).items())),
@@ -556,7 +610,8 @@ def findings(measured: dict[str, Any]) -> list[str]:
     if blob is None:
         complaints.append("F2 there are no family components at all")
     else:
-        evaluation = [p for p in blob["partitions"] if p in EVALUATION_PARTITIONS]
+        evaluated = manifest["evaluation_partitions"]
+        evaluation = [p for p in blob["partitions"] if p in evaluated]
         if len(evaluation) < 2:
             complaints.append(
                 "F2 the largest family component no longer spans two "

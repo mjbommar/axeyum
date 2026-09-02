@@ -26,7 +26,26 @@ RESULT = ROOT / "artifacts/autogenesis/autogenesis-1-result.json"
 PARTITION_EDGE_ROOT = ROOT
 
 PARTITIONS = {"longitudinal", "train", "development", "held-out"}
-EVALUATION_PARTITIONS = {"train", "development", "held-out"}
+
+# WHICH PARTITIONS ARE EVALUATED IS READ FROM THE POLICY, NOT FROM HERE.
+#
+# This used to be `EVALUATION_PARTITIONS = {"train", "development",
+# "held-out"}` -- a module-level literal sitting three lines away from
+# `validate_policy`, which separately asserted that the manifest's
+# `required_evaluation_partitions` was that same triple. Two copies of one
+# decision, and the gate answered from the copy that was never the authority.
+# ADR-1564 changes the decision (train is the TRAINING partition), and a
+# literal here would have been a second place to forget.
+#
+# `evaluation_partitions()` reads `policy.required_evaluation_partitions`, and
+# `validate_policy` is what refuses a policy that names none. This is
+# CLAUDE.md's rule that a check named "every X" derives its X from the
+# authority rather than from the maintainer's memory of it.
+def evaluation_partitions(policy: dict[str, Any]) -> set[str]:
+    """The partitions this gate's leakage checks are scoped to."""
+    return set(policy["required_evaluation_partitions"])
+
+
 PROVENANCE_CLASSES = {
     "project-constructed",
     "external-transcribed",
@@ -90,9 +109,51 @@ def validate_policy(policy: Any) -> dict[str, Any]:
     count = policy.get("evaluation_fact_count")
     if not isinstance(count, dict) or count.get("minimum") != 100 or count.get("maximum") != 300:
         raise NurseryError("evaluation_fact_count must retain the 100..300 programme range")
+    # ADR-1564. The list is no longer pinned to one literal triple; it is the
+    # authority every leakage check below is scoped to, so what is checked here
+    # is that it is USABLE -- a non-empty, duplicate-free list of real
+    # partitions, disjoint from the training partitions, with a non-empty blind
+    # set inside it.
+    #
+    # A POLICY NAMING NO EVALUATION PARTITION IS REFUSED RATHER THAN READ AS
+    # "nothing leaks". That is the shape a gate takes when it stops being able
+    # to fail: every component would trivially sit in at most one evaluation
+    # partition and the whole check would report a clean tree it never looked
+    # at.
     required = policy.get("required_evaluation_partitions")
-    if required != ["train", "development", "held-out"]:
-        raise NurseryError("required evaluation partitions changed or are unordered")
+    if (
+        not isinstance(required, list)
+        or not required
+        or len(set(required)) != len(required)
+        or any(partition not in PARTITIONS for partition in required)
+    ):
+        raise NurseryError(
+            "policy.required_evaluation_partitions must be a non-empty, "
+            f"duplicate-free list drawn from {sorted(PARTITIONS)}; a split "
+            "that evaluates nothing cannot leak and cannot be checked"
+        )
+    training = policy.get("training_partitions")
+    if (
+        not isinstance(training, list)
+        or len(set(training)) != len(training)
+        or any(partition not in PARTITIONS for partition in training)
+    ):
+        raise NurseryError(
+            "policy.training_partitions must be a duplicate-free list drawn "
+            f"from {sorted(PARTITIONS)}"
+        )
+    overlap = sorted(set(training) & set(required))
+    if overlap:
+        raise NurseryError(
+            f"policy: {overlap} is both a training and an evaluation partition"
+        )
+    blind = policy.get("blind_partitions")
+    if not isinstance(blind, list) or not blind or set(blind) - set(required):
+        raise NurseryError(
+            "policy.blind_partitions must be a non-empty subset of "
+            "required_evaluation_partitions: the blind population is what the "
+            "split exists to protect and it is not optional"
+        )
     for key in (
         "minimum_declared_dependency_depth",
         "minimum_held_out_components",
@@ -460,7 +521,9 @@ def build_report(
     exempted_component_ids = {exemption["component_id"] for exemption in exemptions}
     by_fact, component_members = components(entries, facts)
     by_partition = Counter(entry["partition"] for entry in entries)
-    evaluation = [entry for entry in entries if entry["partition"] in EVALUATION_PARTITIONS]
+    partitions_evaluated = evaluation_partitions(policy)
+    evaluation = [entry for entry in entries
+                  if entry["partition"] in partitions_evaluated]
     evaluation_ids = {entry["fact_id"] for entry in evaluation}
     component_partitions: dict[str, set[str]] = defaultdict(set)
     family_partitions: dict[str, set[str]] = defaultdict(set)
@@ -742,7 +805,17 @@ def build_cross_population_report(
     exempted_component_ids = {exemption["component_id"] for exemption in exemptions}
 
     by_fact, component_members = components(entries, facts)
-    evaluation = [entry for entry in entries if entry["partition"] in EVALUATION_PARTITIONS]
+    # Scoped by the SAME policy `build_report` validates, read from the base
+    # manifest this extension declares itself to extend. The two arms of one
+    # gate disagreeing about which partitions are evaluated would be two
+    # reports describing no split at all -- the same reason ADR-1563 made the
+    # amendment contraction load the edge gate's own `load_amendments` rather
+    # than re-implement it here.
+    partitions_evaluated = evaluation_partitions(
+        validate_policy(v1_nursery.get("policy"))
+    )
+    evaluation = [entry for entry in entries
+                  if entry["partition"] in partitions_evaluated]
     component_partitions: dict[str, set[str]] = defaultdict(set)
     for entry in evaluation:
         component_partitions[by_fact[entry["fact_id"]]].add(entry["partition"])

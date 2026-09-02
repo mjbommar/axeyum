@@ -39,6 +39,125 @@ BREACH_KEYS = {
     "registered_date", "detected_date",
 }
 
+# WHICH PARTITIONS ARE EVALUATED, AND WHICH ONE IS FOR TRAINING (ADR-1564).
+#
+# This used to be a literal three-element list inside `build`, copied verbatim
+# into every gate that read it. It is now carried from the split policy's
+# `partition_roles` block, because it is a PREREGISTERED decision about what
+# the split protects and the gates that enforce it must derive it from one
+# authority rather than each hold their own copy -- CLAUDE.md's rule that a
+# check named "every X" must read its X from the authority, not from the
+# maintainer's memory of it.
+#
+# `PREREGISTERED_PARTITION_ROLES` is the shape the split was FROZEN with on
+# 2026-08-18. It is not the shape that ships today; it is what a departure is
+# measured against, so that changing the roles requires a dated
+# `policy_amendments` entry and cannot be an edit in place. See
+# `validate_partition_roles`.
+PARTITION_ROLE_KEYS = {
+    "required_evaluation_partitions", "training_partitions",
+    "blind_partitions", "crossing_rule",
+}
+POLICY_AMENDMENT_KEYS = {
+    "date", "authority", "change", "reason", "does_not_change", "irreversible",
+}
+PREREGISTERED_PARTITION_ROLES = {
+    "required_evaluation_partitions": ["train", "development", "held-out"],
+    "training_partitions": [],
+    "blind_partitions": ["held-out"],
+}
+
+
+def validate_partition_roles(split_policy: dict[str, Any]) -> dict[str, Any]:
+    """The three role lists, and the dated amendment any departure needs.
+
+    THE POINT OF THE AMENDMENT REQUIREMENT. The split policy is frozen
+    `before-target-outcomes`; the partitions it evaluates are part of what was
+    frozen. Editing that list in place would be indistinguishable from having
+    always meant it, which is the exact failure mode ADR-1546 measured on the
+    component exemption that was re-scoped 228 -> 230 -> 258 -> 274 to fit
+    whatever it had just failed on. So a `partition_roles` block that differs
+    from `PREREGISTERED_PARTITION_ROLES` in ANY of the three lists must be
+    accompanied by at least one `policy_amendments` entry -- dated, with an
+    authority and a stated change.
+
+    Two structural rules the roles themselves must satisfy, both of which are
+    the reason `blind_partitions` exists as its own list rather than being
+    inferred from the evaluation list:
+
+      * a training partition is never also an evaluation partition, or the
+        role says nothing; and
+      * `blind_partitions` is a NON-EMPTY subset of the evaluation partitions.
+        A policy that seals nothing would make a training partition's edges to
+        the blind population ordinary, and held-out blindness once spent
+        cannot be un-spent. This validator is where that is refused, so the
+        seal is not something a producer can drop by editing data.
+    """
+    roles = split_policy.get("partition_roles")
+    if not isinstance(roles, dict) or set(roles) != PARTITION_ROLE_KEYS:
+        raise SplitError(
+            f"split policy partition_roles must be an object with exactly "
+            f"{sorted(PARTITION_ROLE_KEYS)}")
+    lists: dict[str, list[str]] = {}
+    for key in ("required_evaluation_partitions", "training_partitions",
+                "blind_partitions"):
+        value = roles[key]
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) and item for item in value
+        ):
+            raise SplitError(f"partition_roles.{key} must be a list of strings")
+        if len(set(value)) != len(value):
+            raise SplitError(f"partition_roles.{key} repeats a partition")
+        lists[key] = value
+    if not lists["required_evaluation_partitions"]:
+        raise SplitError(
+            "partition_roles.required_evaluation_partitions is empty: a split "
+            "that evaluates nothing is not a split")
+    overlap = sorted(set(lists["training_partitions"])
+                     & set(lists["required_evaluation_partitions"]))
+    if overlap:
+        raise SplitError(
+            f"partition_roles: {overlap} is both a training and an evaluation "
+            f"partition, which is not a role")
+    if not lists["blind_partitions"]:
+        raise SplitError(
+            "partition_roles.blind_partitions is empty: the blind population "
+            "is what the split exists to protect and it is not optional")
+    stray = sorted(set(lists["blind_partitions"])
+                   - set(lists["required_evaluation_partitions"]))
+    if stray:
+        raise SplitError(
+            f"partition_roles.blind_partitions names {stray}, which is not an "
+            f"evaluation partition")
+    if not isinstance(roles["crossing_rule"], str) or not roles["crossing_rule"]:
+        raise SplitError("partition_roles.crossing_rule must say what a crossing is")
+
+    amendments = split_policy.get("policy_amendments", [])
+    if not isinstance(amendments, list):
+        raise SplitError("split policy policy_amendments must be a list")
+    for amendment in amendments:
+        if not isinstance(amendment, dict) or set(amendment) != POLICY_AMENDMENT_KEYS:
+            raise SplitError(
+                f"policy amendment fields differ: {sorted(amendment)}")
+        for key in ("date", "authority", "change", "reason"):
+            if not isinstance(amendment[key], str) or not amendment[key]:
+                raise SplitError(f"policy amendment {key} must be a nonempty string")
+    departed = any(lists[key] != PREREGISTERED_PARTITION_ROLES[key]
+                   for key in PREREGISTERED_PARTITION_ROLES)
+    if departed and not amendments:
+        raise SplitError(
+            "partition_roles departs from the preregistered roles "
+            f"{PREREGISTERED_PARTITION_ROLES} with no policy_amendments entry: "
+            "the evaluated partitions are part of what was frozen "
+            "before-target-outcomes, so a change to them is an AMENDMENT with "
+            "a date and an authority, never an edit in place")
+    if amendments and not departed:
+        raise SplitError(
+            "policy_amendments are recorded but partition_roles is still the "
+            "preregistered shape: an amendment that changes nothing is a "
+            "claim nobody can check")
+    return lists
+
 
 def validate_amendments(split_policy: dict[str, Any]) -> list[dict[str, Any]]:
     """A partition amendment is a spend of evaluation value; it must be legible.
@@ -98,6 +217,7 @@ def build(catalog: dict[str, Any], split_policy: dict[str, Any]) -> dict[str, An
     if split_policy.get("state") not in PREREGISTERED_STATES:
         raise SplitError("split policy is not preregistered")
     amendments = validate_amendments(split_policy)
+    roles = validate_partition_roles(split_policy)
     family_partitions = split_policy.get("family_partitions")
     route_hypotheses = split_policy.get("route_hypotheses")
     if not isinstance(family_partitions, dict) or not isinstance(route_hypotheses, dict):
@@ -177,7 +297,9 @@ def build(catalog: dict[str, Any], split_policy: dict[str, Any]) -> dict[str, An
             "family_leakage": "no-family-may-cross-evaluation-partitions",
             "proof_shape_leakage": "no-proof-shape-may-cross-evaluation-partitions",
             "source_group_leakage": "no-source-review-group-may-cross-evaluation-partitions",
-            "required_evaluation_partitions": ["train", "development", "held-out"],
+            "required_evaluation_partitions": roles["required_evaluation_partitions"],
+            "training_partitions": roles["training_partitions"],
+            "blind_partitions": roles["blind_partitions"],
             "split_component_authority": "declared-dependency-weak-component",
             "split_freeze": "before-target-outcomes",
             "split_leakage": "no-declared-component-may-cross-evaluation-partitions",

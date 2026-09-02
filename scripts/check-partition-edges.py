@@ -121,6 +121,12 @@ AMENDMENTS_PATH = "artifacts/autogenesis/partition-edge-amendments-v1.json"
 # name.
 PARTITIONS = ("longitudinal", "train", "development", "held-out")
 
+# The three role lists this gate reads out of a manifest's `policy` block, and
+# what each one does to the crossing rule. See `load_policy` and
+# `PartitionRoles.is_crossing`.
+POLICY_ROLE_KEYS = ("required_evaluation_partitions", "training_partitions",
+                    "blind_partitions")
+
 # The exemption keys this gate refuses to read as amendments. Named, not
 # pattern-matched, so the report says WHICH construct was declined.
 COUNT_STYLE_EXEMPTION_KEYS = (
@@ -227,11 +233,135 @@ def load_dependencies(root: pathlib.Path) -> dict[str, tuple[list[str], str]]:
     return out
 
 
+class PartitionRoles:
+    """Which partitions are evaluated, which train, and which are blind.
+
+    ADR-1564. This gate used to treat EVERY pair of distinct partitions as a
+    crossing, which was right while `required_evaluation_partitions` was
+    `[train, development, held-out]` and is wrong now that it is
+    `[development, held-out]`. The roles are READ FROM THE POLICY (see
+    `load_policy`), never spelled here: a literal would be a second copy of a
+    preregistered decision, and the whole reason ADR-1563 could not amend the
+    147 dev<->train edges was that the gate's literal and the manifest's list
+    said the same wrong thing to each other.
+
+    THE RULE, and why `blind` is its own list rather than something inferred.
+    A `depends_on` edge is a crossing unless it joins a TRAINING partition to a
+    NON-BLIND evaluation partition, in either direction. Training is what a
+    producer is allowed to build on, so `development -> train` (a development
+    row citing a proved train lemma) and `train -> development` are both fine
+    -- that is what a training set is for. A BLIND partition is sealed in both
+    directions whatever the other endpoint's role: `train -> held-out` spends
+    blindness exactly as `development -> held-out` does, and `held-out -> X`
+    entangles a blind row with a population producers work on. Blindness once
+    spent cannot be un-spent, so it is not a role that trades against
+    convenience, and `load_policy` REFUSES a policy that seals nothing.
+    """
+
+    def __init__(self, evaluation: set[str], training: set[str],
+                 blind: set[str]) -> None:
+        self.evaluation = evaluation
+        self.training = training
+        self.blind = blind
+
+    def is_crossing(self, source: str, target: str) -> bool:
+        if source == target:
+            return False
+        peers = {source, target} - self.training
+        if len(peers) != 1:
+            # No training endpoint (so nothing licenses the pair), or BOTH
+            # endpoints training (so there is no evaluation partition here to
+            # protect and the pair is not this gate's subject either way --
+            # `len(peers) != 1` covers both, and the second case cannot occur
+            # while one partition trains).
+            return len(peers) == 2
+        peer = next(iter(peers))
+        if peer in self.blind:
+            # A BLIND partition is sealed in BOTH directions, training peer or
+            # not. `train -> held-out` spends blindness exactly as
+            # `development -> held-out` does.
+            return True
+        return peer not in self.evaluation
+
+    def summary(self) -> str:
+        return (f"evaluation={'+'.join(sorted(self.evaluation))}"
+                f"|training={'+'.join(sorted(self.training)) or 'none'}"
+                f"|blind={'+'.join(sorted(self.blind))}")
+
+
+def load_policy(root: pathlib.Path) -> PartitionRoles:
+    """The partition roles, read from the manifests' own `policy` block.
+
+    Exactly one manifest may carry a `policy`; today that is
+    `nursery-v1.json`, and `nursery-v*-extension.json` declares `extends` and
+    inherits it. TWO disagreeing policies is `Unanswerable`, not a choice: a
+    gate that picks one of two authorities is reporting on a tree that does not
+    exist.
+
+    A POLICY NAMING NO EVALUATION PARTITION IS EXIT 2, NOT A CLEAN TREE. With
+    an empty evaluation set every edge would be permitted and this gate would
+    print `crossing=0 ... PASS` over a ledger it never judged -- the shape
+    CLAUDE.md names, a checker that cannot fail. Same for an empty
+    `blind_partitions`: it would silently unseal the held-out population, which
+    is the one thing here that cannot be undone.
+    """
+    found: list[tuple[str, dict[str, Any]]] = []
+    for path in manifest_paths(root):
+        document = load_json(path)
+        if isinstance(document, dict) and "policy" in document:
+            policy = document["policy"]
+            if not isinstance(policy, dict):
+                raise Unanswerable(
+                    f"{path.relative_to(root)}: policy is not an object")
+            found.append((str(path.relative_to(root)), policy))
+    if not found:
+        raise Unanswerable(
+            "no nursery manifest carries a `policy` block, so which "
+            "partitions are evaluated is unknown -- that is not the same as "
+            "nothing crossing")
+    roles: list[str] = []
+    for name, policy in found:
+        values = {key: policy.get(key) for key in POLICY_ROLE_KEYS}
+        for key, value in values.items():
+            if not isinstance(value, list) or any(
+                item not in PARTITIONS for item in value
+            ):
+                raise Unanswerable(
+                    f"{name}: policy.{key} must be a list drawn from "
+                    f"{list(PARTITIONS)}")
+        roles.append(json.dumps(values, sort_keys=True))
+    if len(set(roles)) != 1:
+        raise Unanswerable(
+            "the nursery manifests disagree about the partition roles: "
+            + "; ".join(f"{name} says {role}"
+                        for (name, _), role in zip(found, roles)))
+    values = json.loads(roles[0])
+    evaluation = set(values["required_evaluation_partitions"])
+    training = set(values["training_partitions"])
+    blind = set(values["blind_partitions"])
+    if not evaluation:
+        raise Unanswerable(
+            "policy.required_evaluation_partitions is empty: with nothing "
+            "evaluated every edge is permitted and this gate would pass over "
+            "a ledger it never judged")
+    if training & evaluation:
+        raise Unanswerable(
+            f"policy: {sorted(training & evaluation)} is both a training and "
+            f"an evaluation partition, which is not a role")
+    if not blind or blind - evaluation:
+        raise Unanswerable(
+            "policy.blind_partitions must be a non-empty subset of "
+            "required_evaluation_partitions: blindness once spent cannot be "
+            "un-spent, so the seal is not optional")
+    return PartitionRoles(evaluation, training, blind)
+
+
 def crossing_edges(
     partition_of: dict[str, str],
     dependencies: dict[str, tuple[list[str], str]],
+    roles: PartitionRoles,
 ) -> list[dict[str, str]]:
-    """Every DIRECTED `depends_on` edge whose endpoints differ in partition.
+    """Every DIRECTED `depends_on` edge that CROSSES, per `roles`.
 
     Directed, not collapsed to an unordered pair, because the directed edge is
     what a producer writes: it is one string in one fact file, and it is what
@@ -243,7 +373,9 @@ def crossing_edges(
         depends_on, source_path = dependencies.get(fact_id, ([], ""))
         for dependency in depends_on:
             target_partition = partition_of.get(dependency)
-            if target_partition is None or target_partition == source_partition:
+            if target_partition is None or not roles.is_crossing(
+                source_partition, target_partition
+            ):
                 continue
             edges.append({
                 "from": fact_id,
@@ -657,8 +789,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         partition_of, manifests = load_partitions(root)
+        roles = load_policy(root)
         dependencies = load_dependencies(root)
-        edges = crossing_edges(partition_of, dependencies)
+        edges = crossing_edges(partition_of, dependencies, roles)
         amendments, amendment_complaints = load_amendments(root, partition_of)
         not_amendments, component_covered = count_style_exemptions(root)
         previous: dict[str, Any] | None = None
@@ -746,6 +879,7 @@ def main(argv: list[str] | None = None) -> int:
 
     unamended_total = len([e for e in edges if edge_key(e) not in honoured])
     summary = (f"PARTITION-EDGES|manifests={len(manifests)}"
+               f"|{roles.summary()}"
                f"|drawn={len(partition_of)}"
                f"|crossing={len(edges)}"
                f"|amended={len(amended)}"
