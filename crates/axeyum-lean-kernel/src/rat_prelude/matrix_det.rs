@@ -2922,7 +2922,7 @@ fn select_nat_false(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq:
 /// hypothesis instead, which is what the summand identification needs: the two
 /// branches differ in which `Rat.matSkip_comm` orientation applies, not in the
 /// shape of the goal.
-fn bool_cases_eq(
+pub(super) fn bool_cases_eq(
     d: &mut IntDev<'_>,
     cond: ExprId,
     target: ExprId,
