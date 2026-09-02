@@ -337,6 +337,8 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
             "rank_nullity_rows_of_pivotSection",
             p.rank_nullity_rows_of_pivot_section,
         ),
+        ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero),
+        ("pivotSearch_ne_zero", p.pivot_search_ne_zero),
     ]
 }
 
@@ -7091,6 +7093,8 @@ fn the_determinant_toolkit_is_axiom_free() {
             p.rank_nullity_rows_of_pivot_section,
             true,
         ),
+        ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero, true),
+        ("pivotSearch_ne_zero", p.pivot_search_ne_zero, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

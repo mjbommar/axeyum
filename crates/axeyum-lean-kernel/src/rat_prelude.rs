@@ -77,6 +77,7 @@ mod model;
 mod nullity;
 pub(crate) mod ops;
 mod pivot_bound;
+mod pivot_content;
 mod polynomial;
 mod pow_bridge;
 mod probability;
@@ -2872,6 +2873,23 @@ pub struct RatPrelude {
     /// **rank-nullity in the ROW form**, `Rat.rank_nullity` with `rankCols`
     /// rewritten to `rank` across the bridge and nothing else.
     pub rank_nullity_rows_of_pivot_section: NameId,
+
+    // --- obligation 2's VALUE half (`rat_prelude::pivot_content`, ADR-1562) --
+    /// `Rat.pivotSearchAux_ne_zero : ∀ M c rows fuel r,
+    /// Lt (pivotSearchAux M c rows fuel r) rows →
+    /// Not (Eq Rat (M (pivotSearchAux M c rows fuel r) c) Rat.zero)` — if the
+    /// pivot scan landed in range, the entry it landed on is nonzero.
+    pub pivot_search_aux_ne_zero: NameId,
+    /// `Rat.pivotSearch_ne_zero : ∀ M c start rows,
+    /// Lt (pivotSearch M c start rows) rows →
+    /// Not (Eq Rat (M (pivotSearch M c start rows) c) Rat.zero)` — the **value
+    /// half** of ADR-1554 obligation 2, and the half obligation 3 spends
+    /// through `Rat.mul_inv_cancel_of_ne_zero`. The range half is
+    /// [`Self::pivot_search_le_rows`]; the exhaustion disjunct (the answer is
+    /// `rows` and the column is zero throughout the scanned range) is still
+    /// open, and needs a different induction — one carrying the accumulated
+    /// range in its motive.
+    pub pivot_search_ne_zero: NameId,
 }
 
 impl RatPrelude {
@@ -3387,6 +3405,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_eq_rank_cols_of_pivot_section: child(kernel, "rank_eq_rankCols_of_pivotSection"),
         rank_le_cols_of_pivot_section: child(kernel, "rank_le_cols_of_pivotSection"),
         rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
+        pivot_search_aux_ne_zero: child(kernel, "pivotSearchAux_ne_zero"),
+        pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
     }
 }
 
@@ -3452,6 +3472,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         nullity::declare_nullity(&mut d, prelude)?;
         pivot_bound::declare_pivot_bound(&mut d, prelude)?;
         rank_bridge::declare_rank_bridge(&mut d, prelude)?;
+        pivot_content::declare_pivot_content(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3487,6 +3508,9 @@ mod nullity_tests;
 
 #[cfg(test)]
 mod rank_bridge_tests;
+
+#[cfg(test)]
+mod pivot_content_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

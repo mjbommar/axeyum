@@ -410,7 +410,7 @@ fn declare_pivot_row_of_col_eq_search(
 /// `pivot_bound.rs` carries the same term for the same reason
 /// (`nat_prelude::ops::bool_true_or_false` has a `NatDev`-specific signature
 /// and this file runs at `IntDev`); it is private there.
-fn bool_cases(d: &mut IntDev<'_>, b: ExprId) -> ExprId {
+pub(super) fn bool_cases(d: &mut IntDev<'_>, b: ExprId) -> ExprId {
     let bool_ty = d.bool_ty();
     let logic = d.prelude().logic;
 
