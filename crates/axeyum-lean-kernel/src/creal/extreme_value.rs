@@ -45,11 +45,11 @@
 //! on every interval and therefore squarely inside classical EVT's hypothesis
 //! class. This used to be a labeled gap here — no kernel declaration said
 //! so, and an asserted claim is exactly what
-//! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! [`CReal.evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //! exists to replace, so leaving one unlabeled would have reintroduced the
 //! defect one level down.
 //!
-//! [`CReal.evtLinear_uniformly_continuous`](super::CRealPrelude::evt_linear_uniformly_continuous)
+//! [`CReal.evtLinear_uniformly_continuous`](super::ExtremeValueNames::evt_linear_uniformly_continuous)
 //! closes it: `∀ v, UniformlyContinuousOn (evtLinear v) zero one`, pure
 //! assembly, exactly the route this section used to plan rather than walk:
 //! [`CReal.uniformly_continuous_mul`](super::CRealPrelude::uniformly_continuous_mul)
@@ -89,7 +89,7 @@
 //! `uniformly_continuous_mul` demands. Neither `BoundedOn` argument above
 //! goes through it.
 //!
-//! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! [`CReal.evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //! turns that observation into a kernel-checked implication:
 //!
 //! ```text
@@ -170,10 +170,12 @@
 
 use super::ring_helpers::right_distrib;
 use super::{CRealPrelude, cadd, cle, clt, creal_ty};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::{IntDev, exists_elim};
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 /// Admit `CReal.evtLinear` and `CReal.evt_attained_max_decides_sign`.
@@ -358,7 +360,7 @@ fn declare_evt_linear(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelE
         d.arrow(carrier, inner)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.evt_linear,
+        name: p.extreme_value.evt_linear,
         uparams: vec![],
         ty,
         value,
@@ -586,7 +588,7 @@ fn declare_evt_attained_max_decides_sign(
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.evt_attained_max_decides_sign,
+        name: p.extreme_value.evt_attained_max_decides_sign,
         uparams: vec![],
         ty,
         value,
@@ -687,15 +689,91 @@ fn declare_evt_linear_uniformly_continuous(
 
     let value = d.lam_fv(v_fv, carrier, value_at_v);
     let ty = {
-        let evt_linear_v = d.const_app(p.evt_linear, &[v]);
+        let evt_linear_v = d.const_app(p.extreme_value.evt_linear, &[v]);
         let concl = uc_ty(d, p, evt_linear_v, zero, one);
         d.pi_fv(v_fv, carrier, concl)
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.evt_linear_uniformly_continuous,
+        name: p.extreme_value.evt_linear_uniformly_continuous,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/extreme_value.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ExtremeValueNames {
+    /// `CReal.evtLinear : CReal -> CReal -> CReal := fun v t => mul t v` --
+    /// the EVT counterexample family (`creal/extreme_value.rs`). Classical
+    /// supremum `max(0, v)` on `[0, 1]`, attained at `1` when `v >= 0` and at
+    /// `0` when `v <= 0`, so *which endpoint attains it* IS the sign of `v` --
+    /// checked by kernel reduction to exact rationals, both signs, in
+    /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
+    ///
+    /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
+    /// and inside classical EVT's hypothesis class -- **now proved, not
+    /// asserted**: see [`super::ExtremeValueNames::evt_linear_uniformly_continuous`].
+    pub evt_linear: NameId,
+    /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
+    /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
+    /// (mul c v)) -> Or (le v zero) (le zero v)` --
+    /// **ADR-0603 row 2 for the Extreme Value Theorem**, machine-checked
+    /// rather than asserted (`creal/extreme_value.rs`).
+    ///
+    /// An *attained* maximiser for [`super::ExtremeValueNames::evt_linear`] on `[0, 1]` yields
+    /// `v <= 0` or `0 <= v` for an ARBITRARY real -- analytic LLPO,
+    /// equivalently the total order `le_total` that
+    /// `creal/cotransitivity.rs`'s module documentation states is neither
+    /// assumed nor provable here. So an operator handing back a maximiser for
+    /// every `v` would hand back the comparison the order deliberately lacks,
+    /// which is what makes [`super::CRealPrelude::bounded_of_uniformly_continuous`] -- a
+    /// COMPUTED bound, no attaining point -- optimal rather than merely
+    /// unimproved.
+    ///
+    /// One [`super::CRealPrelude::lt_cotrans`] call on the fixed strict pair
+    /// [`super::CRealPrelude::zero_lt_one`] at `z := c`, then
+    /// [`super::CRealPrelude::le_of_mul_le_mul_left`] against the modulus
+    /// [`super::CRealPrelude::pos_bound_of_lt`] supplies -- at `c` in the `0 < c` branch and
+    /// at `1 + (-c)` in the `c < 1` branch. See that module's own
+    /// documentation, including its "Honest scope" section: this proves the
+    /// classical conclusion at least as strong as a decision principle this
+    /// kernel does not have, NOT that the principle is false (it is
+    /// consistent, hence unprovable here rather than refutable).
+    pub evt_attained_max_decides_sign: NameId,
+    /// `CReal.evtLinear_uniformly_continuous : forall v,
+    /// UniformlyContinuousOn (evtLinear v) zero one` -- the bridge sentence
+    /// [`super::ExtremeValueNames::evt_linear`]'s own doc comment used to call asserted, now
+    /// proved: `evtLinear v` is `fun t => mul t v`, so this is
+    /// [`super::CRealPrelude::uniformly_continuous_mul`] applied at `F := id`
+    /// ([`super::CRealPrelude::uniformly_continuous_id`]) and `G := fun _ => v`
+    /// ([`super::CRealPrelude::uniformly_continuous_const`]), with `F`'s `BoundedOn`
+    /// argument discharged by [`super::CRealPrelude::bounded_on_id_zero_one`] and `G`'s by
+    /// [`super::CRealPrelude::abs_bound_of_self`] applied at `v` directly (a constant
+    /// function's `BoundedOn` obligation, once the two range hypotheses are
+    /// dropped, IS that lemma). With this, the EVT counterexample family is
+    /// machine-checked to lie inside classical EVT's hypothesis class, not
+    /// merely asserted to. See `creal/extreme_value.rs`.
+    pub evt_linear_uniformly_continuous: NameId,
+}
+
+impl ExtremeValueNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            evt_linear: kernel.name_str(creal, "evtLinear"),
+            evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
+            evt_linear_uniformly_continuous: kernel
+                .name_str(creal, "evtLinear_uniformly_continuous"),
+        }
+    }
 }

@@ -25,7 +25,6 @@
     "alternating_e_le_o": "CReal.alternatingELeO",
     "alternating_lower_bound": "CReal.alternatingLowerBound",
     "alternating_upper_bound": "CReal.alternatingUpperBound",
-    "alternating_upper_bound_tail": "CReal.alternatingUpperBoundTail",
     "antiderivative": "CReal.antiderivative",
     "antiderivative_abs_le": "CReal.antiderivative_abs_le",
     "antitone_of_nonpos_deriv": "CReal.antitone_of_nonpos_deriv",
@@ -60,6 +59,11 @@
     "clamp_mono": "CReal.clamp_mono",
     "close_within_of_within": "CReal.close_within_of_within",
     "close_within_of_within_indexed": "CReal.close_within_of_within_indexed",
+    "completeness.limit": "CReal.limit",
+    "completeness.limit_dist": "CReal.limit_dist",
+    "completeness.limit_seq": "CReal.limitSeq",
+    "completeness.limit_seq_regular": "CReal.limitSeq_regular",
+    "completeness.regular_seq": "CReal.RegularSeq",
     "congr_of_uniformly_continuous": "CReal.congrOfUniformlyContinuous",
     "constant_of_zero_deriv": "CReal.constant_of_zero_deriv",
     "continuous_add": "CReal.continuous_add",
@@ -88,7 +92,6 @@
     "converges_sub": "CReal.converges_sub",
     "converges_unique": "CReal.converges_unique",
     "converges_upper_bound": "CReal.converges_upper_bound",
-    "converges_upper_bound_shift": "CReal.converges_upper_bound_shift",
     "cos_dominant_16_over_25": "CReal.cosDominant16Over25",
     "cos_dominant_16_over_25_cauchy_body": "CReal.cosDominant16Over25CauchyBody",
     "cos_fn": "CReal.cosFn",
@@ -115,23 +118,26 @@
     "cos_one_le_four": "CReal.cosOne_le_four",
     "cos_one_nonneg": "CReal.cosOne_nonneg",
     "cos_series_partial": "CReal.cosSeriesPartial",
+    "cos_sign.alternating_upper_bound_tail": "CReal.alternatingUpperBoundTail",
+    "cos_sign.converges_upper_bound_shift": "CReal.converges_upper_bound_shift",
+    "cos_sign.cos_wide_nonpositive": "CReal.cosWideNonpositive",
+    "cos_sign.cos_wide_series_converges": "CReal.cosWideSeriesConverges",
+    "cos_sign.cos_wide_tail_antitone": "CReal.cosWideTailAntitone",
+    "cos_sign.cos_wide_tail_nonneg": "CReal.cosWideTailNonneg",
     "cos_term": "CReal.cosTerm",
     "cos_term_abs_le_dominant": "CReal.cosTermAbsLeDominant",
-    "cos_wide_nonpositive": "CReal.cosWideNonpositive",
-    "cos_wide_series_converges": "CReal.cosWideSeriesConverges",
-    "cos_wide_tail_antitone": "CReal.cosWideTailAntitone",
-    "cos_wide_tail_nonneg": "CReal.cosWideTailNonneg",
     "creal": "CReal",
-    "crossing_close": "CReal.crossingClose",
-    "crossing_close_clamped": "CReal.crossingCloseClamped",
-    "crossing_index": "CReal.crossingIndex",
-    "crossing_lower": "CReal.crossingLower",
-    "crossing_sample_ge_a": "CReal.crossingSampleGeA",
-    "crossing_sample_lower": "CReal.crossingSampleLower",
-    "crossing_sample_pairing_close": "CReal.riemannSampleCrossingClose",
-    "crossing_sample_upper": "CReal.crossingSampleUpper",
-    "crossing_upper": "CReal.crossingUpper",
+    "crossing.crossing_close": "CReal.crossingClose",
+    "crossing.crossing_close_clamped": "CReal.crossingCloseClamped",
+    "crossing.crossing_index": "CReal.crossingIndex",
+    "crossing.crossing_lower": "CReal.crossingLower",
+    "crossing.crossing_sample_ge_a": "CReal.crossingSampleGeA",
+    "crossing.crossing_sample_lower": "CReal.crossingSampleLower",
+    "crossing.crossing_sample_pairing_close": "CReal.riemannSampleCrossingClose",
+    "crossing.crossing_sample_upper": "CReal.crossingSampleUpper",
+    "crossing.crossing_upper": "CReal.crossingUpper",
     "density": "CReal.density",
+    "deriv_unique.has_derivative_unique": "CReal.hasDerivative_unique",
     "diff_le_of_strict_mono_magnitude": "CReal.diff_le_of_strict_mono_magnitude",
     "e": "CReal.e",
     "e_converges": "CReal.e_converges",
@@ -149,17 +155,14 @@
     "equiv_trans": "CReal.Equiv.trans",
     "equiv_zero_of_rate": "CReal.equiv_zero_of_rate",
     "equiv_zero_of_small": "CReal.equiv_zero_of_small",
-    "evt_approx_max": "CReal.evt_approx_max",
-    "evt_attained_max_decides_sign": "CReal.evt_attained_max_decides_sign",
-    "evt_linear": "CReal.evtLinear",
-    "evt_linear_uniformly_continuous": "CReal.evtLinear_uniformly_continuous",
+    "evt_row1.evt_approx_max": "CReal.evt_approx_max",
     "exp_dominant": "CReal.expDominant",
     "exp_dominant_cauchy": "CReal.expDominantCauchy",
     "exp_dominant_nonneg": "CReal.exp_dominant_nonneg",
-    "exp_fn": "CReal.expFn",
-    "exp_fn_one_equiv_e": "CReal.expFn_one_equiv_e",
-    "exp_fn_term_abs_le": "CReal.expFnTermAbsLe",
-    "exp_fn_uniform_converges": "CReal.expFnUniformConverges",
+    "exp_fn.exp_fn": "CReal.expFn",
+    "exp_fn.exp_fn_one_equiv_e": "CReal.expFn_one_equiv_e",
+    "exp_fn.exp_fn_term_abs_le": "CReal.expFnTermAbsLe",
+    "exp_fn.exp_fn_uniform_converges": "CReal.expFnUniformConverges",
     "exp_of_modulus": "CReal.expOfModulus",
     "exp_of_modulus_le_true_exp_of_modulus": "CReal.expOfModulus_le_trueExpOfModulus",
     "exp_series_partial": "CReal.expSeriesPartial",
@@ -173,6 +176,9 @@
     "exp_term_one_eq_one": "CReal.expTerm_one_eq_one",
     "exp_term_succ_scale": "CReal.expTermSuccScale",
     "exp_term_zero_eq_one": "CReal.expTerm_zero_eq_one",
+    "extreme_value.evt_attained_max_decides_sign": "CReal.evt_attained_max_decides_sign",
+    "extreme_value.evt_linear": "CReal.evtLinear",
+    "extreme_value.evt_linear_uniformly_continuous": "CReal.evtLinear_uniformly_continuous",
     "fermat_interior_extremum": "CReal.fermat_interiorExtremum",
     "fine_block_sum_close": "CReal.fineBlockSum_close",
     "fine_sample_close": "CReal.fineSample_close",
@@ -187,7 +193,6 @@
     "geom_cauchy_ordered_of_gap": "CReal.geomCauchyOrderedOfGap",
     "geom_half_inv_leaf_bound": "CReal.geomHalfInvLeafBound",
     "geom_pair_within": "CReal.geom_pair_within",
-    "geom_scaled_cauchy_of_lt": "CReal.geomScaledCauchyOfLt",
     "geom_sum_bounded": "CReal.geom_sum_bounded",
     "geom_tail_bounded": "CReal.geom_tail_bounded",
     "geom_tail_bounded_div": "CReal.geom_tail_bounded_div",
@@ -215,7 +220,6 @@
     "has_derivative_sq": "CReal.hasDerivative_sq",
     "has_derivative_sub": "CReal.hasDerivative_sub",
     "has_derivative_uniform_limit": "CReal.hasDerivative_uniform_limit",
-    "has_derivative_unique": "CReal.hasDerivative_unique",
     "hd_mk": "CReal.HasDerivativeOn.mk",
     "hd_modulus": "CReal.HasDerivativeOn.modulus",
     "hd_rec": "CReal.HasDerivativeOn.rec",
@@ -242,6 +246,8 @@
     "inv_le_of_pos_bound": "CReal.invLeOfPosBound",
     "inv_nonneg": "CReal.inv_nonneg",
     "inv_shift": "CReal.invShift",
+    "inverse_fn.ivt_exact_root_at": "CReal.ivt_exact_root_at",
+    "inverse_fn.order_reflect_of_pos_deriv": "CReal.order_reflect_of_pos_deriv",
     "inverse_lipschitz_of_pos_deriv": "CReal.inverse_lipschitz_of_pos_deriv",
     "ivt_approx": "CReal.ivt_approx",
     "ivt_bisect": "CReal.ivt_bisect",
@@ -262,7 +268,6 @@
     "ivt_boundary.uniformly_continuous_max": "CReal.uniformly_continuous_max",
     "ivt_boundary.uniformly_continuous_min": "CReal.uniformly_continuous_min",
     "ivt_exact_root": "CReal.ivt_exact_root",
-    "ivt_exact_root_at": "CReal.ivt_exact_root_at",
     "ivt_iter": "CReal.ivt_iter",
     "ivt_step": "CReal.ivt_step",
     "k_regular_pred": "CReal.KRegular",
@@ -284,10 +289,6 @@
     "le_refl": "CReal.le_refl",
     "le_trans": "CReal.le_trans",
     "left_distrib": "CReal.left_distrib",
-    "limit": "CReal.limit",
-    "limit_dist": "CReal.limit_dist",
-    "limit_seq": "CReal.limitSeq",
-    "limit_seq_regular": "CReal.limitSeq_regular",
     "lipschitz_of_deriv_bound": "CReal.lipschitz_of_deriv_bound",
     "lt": "CReal.lt",
     "lt_congr": "CReal.lt_congr",
@@ -296,10 +297,10 @@
     "lt_of_le_of_lt": "CReal.lt_of_le_of_lt",
     "lt_of_lt_of_le": "CReal.lt_of_lt_of_le",
     "lt_trans": "CReal.lt_trans",
-    "lub_decides_em": "CReal.lub_decides_em",
-    "lub_set": "CReal.lubSet",
-    "lub_set_bounded": "CReal.lubSet_bounded",
-    "lub_set_inhabited": "CReal.lubSet_inhabited",
+    "lub_boundary.lub_decides_em": "CReal.lub_decides_em",
+    "lub_boundary.lub_set": "CReal.lubSet",
+    "lub_boundary.lub_set_bounded": "CReal.lubSet_bounded",
+    "lub_boundary.lub_set_inhabited": "CReal.lubSet_inhabited",
     "mag_bound_le_sum_range_of_lt": "CReal.mag_bound_le_sumRange_of_lt",
     "max": "CReal.max",
     "max_congr": "CReal.max_congr",
@@ -357,7 +358,7 @@
     "mul_sub_one_geom_tail": "CReal.mul_sub_one_geom_tail",
     "mul_sum_range": "CReal.mul_sumRange",
     "mul_zero": "CReal.mul_zero",
-    "mvt_interior_extremum": "CReal.mvt_interiorExtremum",
+    "mvt.mvt_interior_extremum": "CReal.mvt_interiorExtremum",
     "nat_div_succ_step_le": "CReal.natDivSuccStepLe",
     "nat_sqrt": "CReal.natSqrt",
     "nat_sqrt_le": "CReal.natSqrtLe",
@@ -393,29 +394,30 @@
     "of_rat_sub": "CReal.ofRat_sub",
     "one": "CReal.one",
     "one_le_pow_of_one_le": "CReal.one_le_pow_of_one_le",
-    "order_reflect_of_pos_deriv": "CReal.order_reflect_of_pos_deriv",
-    "pi": "CReal.pi",
-    "pi_half": "CReal.piHalf",
-    "pi_half_coef": "CReal.piHalfCoef",
-    "pi_half_coef_nonneg": "CReal.piHalfCoefNonneg",
-    "pi_half_converges": "CReal.piHalfConverges",
-    "pi_half_le_two": "CReal.piHalfLeTwo",
-    "pi_half_series_partial": "CReal.piHalfSeriesPartial",
-    "pi_half_term": "CReal.piHalfTerm",
-    "pi_half_term_abs_le_dominant": "CReal.piHalfTermAbsLeDominant",
-    "pi_half_term_le_pow_half": "CReal.piHalfTermLePowHalf",
-    "pi_half_term_nonneg": "CReal.piHalfTermNonneg",
-    "pi_le_four": "CReal.piLeFour",
-    "poly_add": "CReal.polyAdd",
-    "poly_degree_lt": "CReal.polyDegreeLt",
-    "poly_degree_lt_poly_add": "CReal.polyDegreeLt_polyAdd",
-    "poly_degree_lt_poly_scale": "CReal.polyDegreeLt_polyScale",
-    "poly_eval": "CReal.polyEval",
-    "poly_eval_poly_add": "CReal.polyEval_polyAdd",
-    "poly_eval_poly_scale": "CReal.polyEval_polyScale",
-    "poly_eval_succ": "CReal.polyEval_succ",
-    "poly_eval_zero": "CReal.polyEval_zero",
-    "poly_scale": "CReal.polyScale",
+    "pi.pi": "CReal.pi",
+    "pi.pi_half": "CReal.piHalf",
+    "pi.pi_half_coef": "CReal.piHalfCoef",
+    "pi.pi_half_coef_nonneg": "CReal.piHalfCoefNonneg",
+    "pi.pi_half_converges": "CReal.piHalfConverges",
+    "pi.pi_half_le_two": "CReal.piHalfLeTwo",
+    "pi.pi_half_series_partial": "CReal.piHalfSeriesPartial",
+    "pi.pi_half_term": "CReal.piHalfTerm",
+    "pi.pi_half_term_abs_le_dominant": "CReal.piHalfTermAbsLeDominant",
+    "pi.pi_half_term_le_pow_half": "CReal.piHalfTermLePowHalf",
+    "pi.pi_half_term_nonneg": "CReal.piHalfTermNonneg",
+    "pi.pi_le_four": "CReal.piLeFour",
+    "pi.three_le_pi": "CReal.threeLePi",
+    "pi.two_le_pi": "CReal.twoLePi",
+    "polynomial.poly_add": "CReal.polyAdd",
+    "polynomial.poly_degree_lt": "CReal.polyDegreeLt",
+    "polynomial.poly_degree_lt_poly_add": "CReal.polyDegreeLt_polyAdd",
+    "polynomial.poly_degree_lt_poly_scale": "CReal.polyDegreeLt_polyScale",
+    "polynomial.poly_eval": "CReal.polyEval",
+    "polynomial.poly_eval_poly_add": "CReal.polyEval_polyAdd",
+    "polynomial.poly_eval_poly_scale": "CReal.polyEval_polyScale",
+    "polynomial.poly_eval_succ": "CReal.polyEval_succ",
+    "polynomial.poly_eval_zero": "CReal.polyEval_zero",
+    "polynomial.poly_scale": "CReal.polyScale",
     "pos_bound": "CReal.PosBound",
     "pos_bound_of_lt": "CReal.pos_bound_of_lt",
     "pos_of_pos_bound": "CReal.pos_of_pos_bound",
@@ -447,13 +449,14 @@
     "rat_sq_sandwich": "CReal.ratSqSandwich",
     "rat_unit_eq_one": "CReal.ratUnitEqOne",
     "ratio_decay_bound": "CReal.ratioDecayBound",
+    "ratio_test.geom_scaled_cauchy_of_lt": "CReal.geomScaledCauchyOfLt",
+    "ratio_test.sum_range_ratio_test": "CReal.sumRangeRatioTest",
     "reblock_block_eq_fine_block_sum": "CReal.reblockBlock_eq_fineBlockSum",
     "rec": "CReal.rec",
     "regular": "CReal.regular",
     "regular_of_kregular": "CReal.regular_of_kregular",
     "regular_of_scaled_cauchy": "CReal.regular_of_scaled_cauchy",
     "regular_pred": "CReal.Regular",
-    "regular_seq": "CReal.RegularSeq",
     "riemann_sample_in_bounds": "CReal.riemannSum_sample_in_bounds",
     "riemann_sum": "CReal.riemannSum",
     "riemann_sum_add": "CReal.riemannSum_add",
@@ -537,7 +540,6 @@
     "sum_range_double": "CReal.sumRange_double",
     "sum_range_le": "CReal.sumRange_le",
     "sum_range_mono_outer": "CReal.sumRange_mono_outer",
-    "sum_range_ratio_test": "CReal.sumRangeRatioTest",
     "sum_range_reblock": "CReal.sumRange_reblock",
     "sum_range_seq_succ": "CReal.sumRange_seq_succ",
     "sum_range_seq_zero": "CReal.sumRange_seq_zero",
@@ -567,14 +569,12 @@
     "sup_seq_le_shift": "CReal.supSeq_le_shift",
     "sup_seq_le_sup_on": "CReal.supSeq_le_supOn",
     "sup_seq_mono": "CReal.supSeq_mono",
-    "three_le_pi": "CReal.threeLePi",
     "true_exp_of_modulus": "CReal.trueExpOfModulus",
     "true_exp_of_modulus_mono": "CReal.trueExpOfModulus_mono",
     "true_exp_of_modulus_step_le": "CReal.trueExpOfModulus_step_le",
     "true_exp_of_modulus_succ": "CReal.trueExpOfModulus_succ",
     "true_exp_of_modulus_zero": "CReal.trueExpOfModulus_zero",
     "two_le_e": "CReal.two_le_e",
-    "two_le_pi": "CReal.twoLePi",
     "two_sided_of_abs_sub_le": "CReal.two_sided_of_abs_sub_le",
     "uc_mk": "CReal.UniformlyContinuousOn.mk",
     "uc_modulus": "CReal.UniformlyContinuousOn.modulus",
@@ -1139,11 +1139,24 @@
   "schema": "creal-declare-deps/v1",
   "source": {
     "creal_prelude_fields": 606,
-    "creal_rs_lines": 12004,
-    "fields_in_module_registries": 7,
-    "functions_indexed": 1916,
+    "creal_rs_lines": 11439,
+    "fields_in_module_registries": 69,
+    "functions_indexed": 1929,
     "module_registries": {
-      "ivt_boundary": "IvtBoundaryNames"
+      "completeness": "CompletenessNames",
+      "cos_sign": "CosSignNames",
+      "crossing": "CrossingNames",
+      "deriv_unique": "DerivUniqueNames",
+      "evt_row1": "EvtRow1Names",
+      "exp_fn": "ExpFnNames",
+      "extreme_value": "ExtremeValueNames",
+      "inverse_fn": "InverseFnNames",
+      "ivt_boundary": "IvtBoundaryNames",
+      "lub_boundary": "LubBoundaryNames",
+      "mvt": "MvtNames",
+      "pi": "PiNames",
+      "polynomial": "PolynomialNames",
+      "ratio_test": "RatioTestNames"
     },
     "modules_indexed": 48,
     "steps": 211
@@ -2597,11 +2610,11 @@
     },
     {
       "declared_provides": [
-        "limit",
-        "limit_dist",
-        "limit_seq",
-        "limit_seq_regular",
-        "regular_seq"
+        "completeness.limit",
+        "completeness.limit_dist",
+        "completeness.limit_seq",
+        "completeness.limit_seq_regular",
+        "completeness.regular_seq"
       ],
       "declared_requires": [
         "creal",
@@ -2614,11 +2627,11 @@
       "index": 34,
       "label": "completeness::declare_completeness",
       "measured_provides": [
-        "limit",
-        "limit_dist",
-        "limit_seq",
-        "limit_seq_regular",
-        "regular_seq"
+        "completeness.limit",
+        "completeness.limit_dist",
+        "completeness.limit_seq",
+        "completeness.limit_seq_regular",
+        "completeness.regular_seq"
       ],
       "measured_requires": [
         "creal",
@@ -2962,10 +2975,10 @@
     },
     {
       "declared_provides": [
-        "crossing_index",
-        "crossing_lower",
-        "crossing_sample_ge_a",
-        "crossing_upper"
+        "crossing.crossing_index",
+        "crossing.crossing_lower",
+        "crossing.crossing_sample_ge_a",
+        "crossing.crossing_upper"
       ],
       "declared_requires": [
         "add",
@@ -3008,10 +3021,10 @@
       "index": 39,
       "label": "crossing::declare_crossing",
       "measured_provides": [
-        "crossing_index",
-        "crossing_lower",
-        "crossing_sample_ge_a",
-        "crossing_upper"
+        "crossing.crossing_index",
+        "crossing.crossing_lower",
+        "crossing.crossing_sample_ge_a",
+        "crossing.crossing_upper"
       ],
       "measured_requires": [
         "add",
@@ -3263,7 +3276,7 @@
     },
     {
       "declared_provides": [
-        "has_derivative_unique"
+        "deriv_unique.has_derivative_unique"
       ],
       "declared_requires": [
         "abs",
@@ -3317,7 +3330,7 @@
       "index": 42,
       "label": "deriv_unique::declare_deriv_unique",
       "measured_provides": [
-        "has_derivative_unique"
+        "deriv_unique.has_derivative_unique"
       ],
       "measured_requires": [
         "abs",
@@ -3534,7 +3547,7 @@
     },
     {
       "declared_provides": [
-        "mvt_interior_extremum"
+        "mvt.mvt_interior_extremum"
       ],
       "declared_requires": [
         "abs",
@@ -3573,7 +3586,7 @@
       "index": 45,
       "label": "mvt::declare_mvt",
       "measured_provides": [
-        "mvt_interior_extremum"
+        "mvt.mvt_interior_extremum"
       ],
       "measured_requires": [
         "abs",
@@ -4004,8 +4017,8 @@
     },
     {
       "declared_provides": [
-        "crossing_sample_lower",
-        "crossing_sample_upper"
+        "crossing.crossing_sample_lower",
+        "crossing.crossing_sample_upper"
       ],
       "declared_requires": [
         "add",
@@ -4013,8 +4026,8 @@
         "add_congr",
         "bucket_index",
         "creal",
-        "crossing_lower",
-        "crossing_upper",
+        "crossing.crossing_lower",
+        "crossing.crossing_upper",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -4036,8 +4049,8 @@
       "index": 51,
       "label": "crossing::declare_crossing_sample",
       "measured_provides": [
-        "crossing_sample_lower",
-        "crossing_sample_upper"
+        "crossing.crossing_sample_lower",
+        "crossing.crossing_sample_upper"
       ],
       "measured_requires": [
         "add",
@@ -4045,8 +4058,8 @@
         "add_congr",
         "bucket_index",
         "creal",
-        "crossing_lower",
-        "crossing_upper",
+        "crossing.crossing_lower",
+        "crossing.crossing_upper",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -4071,7 +4084,7 @@
     },
     {
       "declared_provides": [
-        "crossing_close"
+        "crossing.crossing_close"
       ],
       "declared_requires": [
         "abs",
@@ -4085,8 +4098,8 @@
         "add_zero",
         "bucket_index",
         "creal",
-        "crossing_sample_lower",
-        "crossing_sample_upper",
+        "crossing.crossing_sample_lower",
+        "crossing.crossing_sample_upper",
         "equiv_refl",
         "equiv_trans",
         "le",
@@ -4106,7 +4119,7 @@
       "index": 52,
       "label": "crossing::declare_crossing_close",
       "measured_provides": [
-        "crossing_close"
+        "crossing.crossing_close"
       ],
       "measured_requires": [
         "abs",
@@ -4120,8 +4133,8 @@
         "add_zero",
         "bucket_index",
         "creal",
-        "crossing_sample_lower",
-        "crossing_sample_upper",
+        "crossing.crossing_sample_lower",
+        "crossing.crossing_sample_upper",
         "equiv_refl",
         "equiv_trans",
         "le",
@@ -4144,7 +4157,7 @@
     },
     {
       "declared_provides": [
-        "crossing_close_clamped"
+        "crossing.crossing_close_clamped"
       ],
       "declared_requires": [
         "abs",
@@ -4158,9 +4171,9 @@
         "add_zero",
         "bucket_index",
         "creal",
-        "crossing_sample_ge_a",
-        "crossing_sample_lower",
-        "crossing_sample_upper",
+        "crossing.crossing_sample_ge_a",
+        "crossing.crossing_sample_lower",
+        "crossing.crossing_sample_upper",
         "equiv_refl",
         "equiv_trans",
         "le",
@@ -4185,7 +4198,7 @@
       "index": 53,
       "label": "crossing::declare_crossing_close_clamped",
       "measured_provides": [
-        "crossing_close_clamped"
+        "crossing.crossing_close_clamped"
       ],
       "measured_requires": [
         "abs",
@@ -4199,9 +4212,9 @@
         "add_zero",
         "bucket_index",
         "creal",
-        "crossing_sample_ge_a",
-        "crossing_sample_lower",
-        "crossing_sample_upper",
+        "crossing.crossing_sample_ge_a",
+        "crossing.crossing_sample_lower",
+        "crossing.crossing_sample_upper",
         "equiv_refl",
         "equiv_trans",
         "le",
@@ -4229,14 +4242,14 @@
     },
     {
       "declared_provides": [
-        "crossing_sample_pairing_close"
+        "crossing.crossing_sample_pairing_close"
       ],
       "declared_requires": [
         "abs",
         "add",
         "bucket_index",
         "creal",
-        "crossing_close_clamped",
+        "crossing.crossing_close_clamped",
         "le",
         "min",
         "mul",
@@ -4249,14 +4262,14 @@
       "index": 54,
       "label": "crossing::declare_crossing_sample_pairing_close",
       "measured_provides": [
-        "crossing_sample_pairing_close"
+        "crossing.crossing_sample_pairing_close"
       ],
       "measured_requires": [
         "abs",
         "add",
         "bucket_index",
         "creal",
-        "crossing_close_clamped",
+        "crossing.crossing_close_clamped",
         "le",
         "min",
         "mul",
@@ -9125,7 +9138,7 @@
     },
     {
       "declared_provides": [
-        "order_reflect_of_pos_deriv"
+        "inverse_fn.order_reflect_of_pos_deriv"
       ],
       "declared_requires": [
         "apart",
@@ -9141,7 +9154,7 @@
       "index": 128,
       "label": "inverse_fn::declare_order_reflect_of_pos_deriv",
       "measured_provides": [
-        "order_reflect_of_pos_deriv"
+        "inverse_fn.order_reflect_of_pos_deriv"
       ],
       "measured_requires": [
         "apart",
@@ -10291,7 +10304,7 @@
     },
     {
       "declared_provides": [
-        "geom_scaled_cauchy_of_lt"
+        "ratio_test.geom_scaled_cauchy_of_lt"
       ],
       "declared_requires": [
         "add",
@@ -10318,7 +10331,7 @@
       "index": 144,
       "label": "ratio_test::declare_geom_scaled_cauchy_of_lt",
       "measured_provides": [
-        "geom_scaled_cauchy_of_lt"
+        "ratio_test.geom_scaled_cauchy_of_lt"
       ],
       "measured_requires": [
         "add",
@@ -10348,14 +10361,13 @@
     },
     {
       "declared_provides": [
-        "sum_range_ratio_test"
+        "ratio_test.sum_range_ratio_test"
       ],
       "declared_requires": [
         "abs",
         "add",
         "cauchy",
         "creal",
-        "geom_scaled_cauchy_of_lt",
         "le",
         "lt",
         "mul",
@@ -10364,6 +10376,7 @@
         "pos_bound",
         "pow",
         "ratio_decay_bound",
+        "ratio_test.geom_scaled_cauchy_of_lt",
         "sum_range",
         "sum_range_cauchy_of_dominated",
         "zero"
@@ -10371,14 +10384,13 @@
       "index": 145,
       "label": "ratio_test::declare_sum_range_ratio_test",
       "measured_provides": [
-        "sum_range_ratio_test"
+        "ratio_test.sum_range_ratio_test"
       ],
       "measured_requires": [
         "abs",
         "add",
         "cauchy",
         "creal",
-        "geom_scaled_cauchy_of_lt",
         "le",
         "lt",
         "mul",
@@ -10387,6 +10399,7 @@
         "pos_bound",
         "pow",
         "ratio_decay_bound",
+        "ratio_test.geom_scaled_cauchy_of_lt",
         "sum_range",
         "sum_range_cauchy_of_dominated",
         "zero"
@@ -10836,7 +10849,7 @@
     },
     {
       "declared_provides": [
-        "converges_upper_bound_shift"
+        "cos_sign.converges_upper_bound_shift"
       ],
       "declared_requires": [
         "add",
@@ -10861,7 +10874,7 @@
       "index": 149,
       "label": "cos_sign::declare_converges_upper_bound_shift",
       "measured_provides": [
-        "converges_upper_bound_shift"
+        "cos_sign.converges_upper_bound_shift"
       ],
       "measured_requires": [
         "add",
@@ -10980,7 +10993,7 @@
     },
     {
       "declared_provides": [
-        "alternating_upper_bound_tail"
+        "cos_sign.alternating_upper_bound_tail"
       ],
       "declared_requires": [
         "add",
@@ -10992,7 +11005,7 @@
         "add_zero",
         "alternating_bracket_upper",
         "converges",
-        "converges_upper_bound_shift",
+        "cos_sign.converges_upper_bound_shift",
         "creal",
         "equiv",
         "equiv_refl",
@@ -11013,7 +11026,7 @@
       "index": 151,
       "label": "cos_sign::declare_alternating_upper_bound_tail",
       "measured_provides": [
-        "alternating_upper_bound_tail"
+        "cos_sign.alternating_upper_bound_tail"
       ],
       "measured_requires": [
         "add",
@@ -11025,7 +11038,7 @@
         "add_zero",
         "alternating_bracket_upper",
         "converges",
-        "converges_upper_bound_shift",
+        "cos_sign.converges_upper_bound_shift",
         "creal",
         "equiv",
         "equiv_refl",
@@ -11380,7 +11393,7 @@
     },
     {
       "declared_provides": [
-        "ivt_exact_root_at"
+        "inverse_fn.ivt_exact_root_at"
       ],
       "declared_requires": [
         "add",
@@ -11412,7 +11425,7 @@
       "index": 155,
       "label": "inverse_fn::declare_ivt_exact_root_at",
       "measured_provides": [
-        "ivt_exact_root_at"
+        "inverse_fn.ivt_exact_root_at"
       ],
       "measured_requires": [
         "add",
@@ -11447,16 +11460,16 @@
     },
     {
       "declared_provides": [
-        "poly_add",
-        "poly_degree_lt",
-        "poly_degree_lt_poly_add",
-        "poly_degree_lt_poly_scale",
-        "poly_eval",
-        "poly_eval_poly_add",
-        "poly_eval_poly_scale",
-        "poly_eval_succ",
-        "poly_eval_zero",
-        "poly_scale"
+        "polynomial.poly_add",
+        "polynomial.poly_degree_lt",
+        "polynomial.poly_degree_lt_poly_add",
+        "polynomial.poly_degree_lt_poly_scale",
+        "polynomial.poly_eval",
+        "polynomial.poly_eval_poly_add",
+        "polynomial.poly_eval_poly_scale",
+        "polynomial.poly_eval_succ",
+        "polynomial.poly_eval_zero",
+        "polynomial.poly_scale"
       ],
       "declared_requires": [
         "add",
@@ -11483,16 +11496,16 @@
       "index": 156,
       "label": "polynomial::declare_polynomial",
       "measured_provides": [
-        "poly_add",
-        "poly_degree_lt",
-        "poly_degree_lt_poly_add",
-        "poly_degree_lt_poly_scale",
-        "poly_eval",
-        "poly_eval_poly_add",
-        "poly_eval_poly_scale",
-        "poly_eval_succ",
-        "poly_eval_zero",
-        "poly_scale"
+        "polynomial.poly_add",
+        "polynomial.poly_degree_lt",
+        "polynomial.poly_degree_lt_poly_add",
+        "polynomial.poly_degree_lt_poly_scale",
+        "polynomial.poly_eval",
+        "polynomial.poly_eval_poly_add",
+        "polynomial.poly_eval_poly_scale",
+        "polynomial.poly_eval_succ",
+        "polynomial.poly_eval_zero",
+        "polynomial.poly_scale"
       ],
       "measured_requires": [
         "add",
@@ -11612,9 +11625,9 @@
     },
     {
       "declared_provides": [
-        "evt_attained_max_decides_sign",
-        "evt_linear",
-        "evt_linear_uniformly_continuous"
+        "extreme_value.evt_attained_max_decides_sign",
+        "extreme_value.evt_linear",
+        "extreme_value.evt_linear_uniformly_continuous"
       ],
       "declared_requires": [
         "abs_bound_of_self",
@@ -11660,9 +11673,9 @@
       "index": 159,
       "label": "extreme_value::declare_extreme_value",
       "measured_provides": [
-        "evt_attained_max_decides_sign",
-        "evt_linear",
-        "evt_linear_uniformly_continuous"
+        "extreme_value.evt_attained_max_decides_sign",
+        "extreme_value.evt_linear",
+        "extreme_value.evt_linear_uniformly_continuous"
       ],
       "measured_requires": [
         "abs_bound_of_self",
@@ -11830,10 +11843,10 @@
     },
     {
       "declared_provides": [
-        "lub_decides_em",
-        "lub_set",
-        "lub_set_bounded",
-        "lub_set_inhabited"
+        "lub_boundary.lub_decides_em",
+        "lub_boundary.lub_set",
+        "lub_boundary.lub_set_bounded",
+        "lub_boundary.lub_set_inhabited"
       ],
       "declared_requires": [
         "creal",
@@ -11853,10 +11866,10 @@
       "index": 161,
       "label": "lub_boundary::declare_lub_boundary",
       "measured_provides": [
-        "lub_decides_em",
-        "lub_set",
-        "lub_set_bounded",
-        "lub_set_inhabited"
+        "lub_boundary.lub_decides_em",
+        "lub_boundary.lub_set",
+        "lub_boundary.lub_set_bounded",
+        "lub_boundary.lub_set_inhabited"
       ],
       "measured_requires": [
         "creal",
@@ -13283,9 +13296,9 @@
     },
     {
       "declared_provides": [
-        "exp_fn",
-        "exp_fn_term_abs_le",
-        "exp_fn_uniform_converges"
+        "exp_fn.exp_fn",
+        "exp_fn.exp_fn_term_abs_le",
+        "exp_fn.exp_fn_uniform_converges"
       ],
       "declared_requires": [
         "abs",
@@ -13335,9 +13348,9 @@
       "index": 176,
       "label": "exp_fn::declare_exp_fn_family",
       "measured_provides": [
-        "exp_fn",
-        "exp_fn_term_abs_le",
-        "exp_fn_uniform_converges"
+        "exp_fn.exp_fn",
+        "exp_fn.exp_fn_term_abs_le",
+        "exp_fn.exp_fn_uniform_converges"
       ],
       "measured_requires": [
         "abs",
@@ -13390,7 +13403,7 @@
     },
     {
       "declared_provides": [
-        "exp_fn_one_equiv_e"
+        "exp_fn.exp_fn_one_equiv_e"
       ],
       "declared_requires": [
         "abs",
@@ -13412,7 +13425,7 @@
         "equiv_symm",
         "equiv_trans",
         "equiv_zero_of_rate",
-        "exp_fn_uniform_converges",
+        "exp_fn.exp_fn_uniform_converges",
         "exp_series_partial",
         "exp_term",
         "le",
@@ -13446,7 +13459,7 @@
       "index": 177,
       "label": "exp_fn::declare_exp_fn_equiv_e",
       "measured_provides": [
-        "exp_fn_one_equiv_e"
+        "exp_fn.exp_fn_one_equiv_e"
       ],
       "measured_requires": [
         "abs",
@@ -13468,7 +13481,7 @@
         "equiv_symm",
         "equiv_trans",
         "equiv_zero_of_rate",
-        "exp_fn_uniform_converges",
+        "exp_fn.exp_fn_uniform_converges",
         "exp_series_partial",
         "exp_term",
         "le",
@@ -14754,7 +14767,7 @@
     },
     {
       "declared_provides": [
-        "evt_approx_max"
+        "evt_row1.evt_approx_max"
       ],
       "declared_requires": [
         "add",
@@ -14770,7 +14783,7 @@
       "index": 205,
       "label": "evt_row1::declare_evt_approx_max",
       "measured_provides": [
-        "evt_approx_max"
+        "evt_row1.evt_approx_max"
       ],
       "measured_requires": [
         "add",
@@ -14789,7 +14802,7 @@
     },
     {
       "declared_provides": [
-        "cos_wide_tail_nonneg"
+        "cos_sign.cos_wide_tail_nonneg"
       ],
       "declared_requires": [
         "exp_term",
@@ -14803,7 +14816,7 @@
       "index": 206,
       "label": "cos_sign::declare_cos_wide_tail_nonneg",
       "measured_provides": [
-        "cos_wide_tail_nonneg"
+        "cos_sign.cos_wide_tail_nonneg"
       ],
       "measured_requires": [
         "exp_term",
@@ -14820,7 +14833,7 @@
     },
     {
       "declared_provides": [
-        "cos_wide_tail_antitone"
+        "cos_sign.cos_wide_tail_antitone"
       ],
       "declared_requires": [
         "add_comm",
@@ -14853,7 +14866,7 @@
       "index": 207,
       "label": "cos_sign::declare_cos_wide_tail_antitone",
       "measured_provides": [
-        "cos_wide_tail_antitone"
+        "cos_sign.cos_wide_tail_antitone"
       ],
       "measured_requires": [
         "add_comm",
@@ -14889,7 +14902,7 @@
     },
     {
       "declared_provides": [
-        "cos_wide_series_converges"
+        "cos_sign.cos_wide_series_converges"
       ],
       "declared_requires": [
         "abs",
@@ -14921,7 +14934,7 @@
       "index": 208,
       "label": "cos_sign::declare_cos_wide_series_converges",
       "measured_provides": [
-        "cos_wide_series_converges"
+        "cos_sign.cos_wide_series_converges"
       ],
       "measured_requires": [
         "abs",
@@ -14956,7 +14969,7 @@
     },
     {
       "declared_provides": [
-        "cos_wide_nonpositive"
+        "cos_sign.cos_wide_nonpositive"
       ],
       "declared_requires": [
         "add",
@@ -14964,11 +14977,11 @@
         "add_congr",
         "add_le_add",
         "add_zero",
-        "alternating_upper_bound_tail",
         "cos_fn_wide",
-        "cos_wide_series_converges",
-        "cos_wide_tail_antitone",
-        "cos_wide_tail_nonneg",
+        "cos_sign.alternating_upper_bound_tail",
+        "cos_sign.cos_wide_series_converges",
+        "cos_sign.cos_wide_tail_antitone",
+        "cos_sign.cos_wide_tail_nonneg",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -14997,7 +15010,7 @@
       "index": 209,
       "label": "cos_sign::declare_cos_wide_nonpositive",
       "measured_provides": [
-        "cos_wide_nonpositive"
+        "cos_sign.cos_wide_nonpositive"
       ],
       "measured_requires": [
         "add",
@@ -15005,11 +15018,11 @@
         "add_congr",
         "add_le_add",
         "add_zero",
-        "alternating_upper_bound_tail",
         "cos_fn_wide",
-        "cos_wide_series_converges",
-        "cos_wide_tail_antitone",
-        "cos_wide_tail_nonneg",
+        "cos_sign.alternating_upper_bound_tail",
+        "cos_sign.cos_wide_series_converges",
+        "cos_sign.cos_wide_tail_antitone",
+        "cos_sign.cos_wide_tail_nonneg",
         "equiv_refl",
         "equiv_symm",
         "equiv_trans",
@@ -15041,20 +15054,20 @@
     },
     {
       "declared_provides": [
-        "pi",
-        "pi_half",
-        "pi_half_coef",
-        "pi_half_coef_nonneg",
-        "pi_half_converges",
-        "pi_half_le_two",
-        "pi_half_series_partial",
-        "pi_half_term",
-        "pi_half_term_abs_le_dominant",
-        "pi_half_term_le_pow_half",
-        "pi_half_term_nonneg",
-        "pi_le_four",
-        "three_le_pi",
-        "two_le_pi"
+        "pi.pi",
+        "pi.pi_half",
+        "pi.pi_half_coef",
+        "pi.pi_half_coef_nonneg",
+        "pi.pi_half_converges",
+        "pi.pi_half_le_two",
+        "pi.pi_half_series_partial",
+        "pi.pi_half_term",
+        "pi.pi_half_term_abs_le_dominant",
+        "pi.pi_half_term_le_pow_half",
+        "pi.pi_half_term_nonneg",
+        "pi.pi_le_four",
+        "pi.three_le_pi",
+        "pi.two_le_pi"
       ],
       "declared_requires": [
         "abs",
@@ -15112,20 +15125,20 @@
       "index": 210,
       "label": "pi::declare_pi_family",
       "measured_provides": [
-        "pi",
-        "pi_half",
-        "pi_half_coef",
-        "pi_half_coef_nonneg",
-        "pi_half_converges",
-        "pi_half_le_two",
-        "pi_half_series_partial",
-        "pi_half_term",
-        "pi_half_term_abs_le_dominant",
-        "pi_half_term_le_pow_half",
-        "pi_half_term_nonneg",
-        "pi_le_four",
-        "three_le_pi",
-        "two_le_pi"
+        "pi.pi",
+        "pi.pi_half",
+        "pi.pi_half_coef",
+        "pi.pi_half_coef_nonneg",
+        "pi.pi_half_converges",
+        "pi.pi_half_le_two",
+        "pi.pi_half_series_partial",
+        "pi.pi_half_term",
+        "pi.pi_half_term_abs_le_dominant",
+        "pi.pi_half_term_le_pow_half",
+        "pi.pi_half_term_nonneg",
+        "pi.pi_le_four",
+        "pi.three_le_pi",
+        "pi.two_le_pi"
       ],
       "measured_requires": [
         "abs",

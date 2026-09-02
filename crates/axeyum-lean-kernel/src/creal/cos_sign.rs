@@ -64,10 +64,12 @@ use super::trig::{
     cabs, cadd, cle, cmul, cneg, cpow, czero, double_neg, echain, erefl, esymm, one_c,
 };
 use super::{CRealPrelude, creal_ty};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::{NatOps, NatPrelude};
 
 // ---------------------------------------------------------------------------
@@ -75,7 +77,7 @@ use crate::nat_prelude::{NatOps, NatPrelude};
 // ---------------------------------------------------------------------------
 
 /// `CReal.converges_upper_bound_shift`. See
-/// [`CRealPrelude::converges_upper_bound_shift`] and this module's own
+/// [`CosSignNames::converges_upper_bound_shift`] and this module's own
 /// documentation.
 ///
 /// # Errors
@@ -169,7 +171,7 @@ pub(super) fn declare_converges_upper_bound_shift(
         d.pi_fv(s_fv, nat, with_f)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.converges_upper_bound_shift,
+        name: p.cos_sign.converges_upper_bound_shift,
         uparams: vec![],
         ty,
         value,
@@ -372,7 +374,7 @@ fn kk_mm_regroup(d: &mut IntDev<'_>, np: NatPrelude, k: ExprId, m: ExprId) -> Ex
 // ---------------------------------------------------------------------------
 
 /// `CReal.alternatingUpperBoundTail`. See
-/// [`CRealPrelude::alternating_upper_bound_tail`] and this module's own
+/// [`CosSignNames::alternating_upper_bound_tail`] and this module's own
 /// documentation for the clamp `â k := a (succ (pred k))` and why it is used
 /// in place of `169-pi.md`'s proposed index shift.
 ///
@@ -671,7 +673,7 @@ pub(super) fn declare_alternating_upper_bound_tail(
     };
 
     let result = d.const_app(
-        p.converges_upper_bound_shift,
+        p.cos_sign.converges_upper_bound_shift,
         &[two_nat, f_expr, l, b_term, upper_lam, hconv],
     );
 
@@ -691,7 +693,7 @@ pub(super) fn declare_alternating_upper_bound_tail(
         d.pi_fv(a_fv, fn_ty, with_hnn)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.alternating_upper_bound_tail,
+        name: p.cos_sign.alternating_upper_bound_tail,
         uparams: vec![],
         ty,
         value,
@@ -1076,7 +1078,7 @@ pub(super) fn declare_cos_wide_tail_nonneg(
     let value = d.lam_fv(k_fv, nat, body);
     let ty = d.kernel().infer(value)?;
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.cos_wide_tail_nonneg,
+        name: p.cos_sign.cos_wide_tail_nonneg,
         uparams: vec![],
         ty,
         value,
@@ -1131,7 +1133,7 @@ pub(super) fn declare_cos_wide_tail_antitone(
     let value = d.lam_fv(k_fv, nat, result);
     let ty = d.kernel().infer(value)?;
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.cos_wide_tail_antitone,
+        name: p.cos_sign.cos_wide_tail_antitone,
         uparams: vec![],
         ty,
         value,
@@ -1301,7 +1303,7 @@ pub(super) fn declare_cos_wide_series_converges(
     let value = d.lemma(p.converges_of_abs_diff_le, &[f_expr, g_r, rate, hyp_lam]);
     let ty = d.kernel().infer(value)?;
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.cos_wide_series_converges,
+        name: p.cos_sign.cos_wide_series_converges,
         uparams: vec![],
         ty,
         value,
@@ -1707,7 +1709,7 @@ fn cos_wide_term_bounded(
 }
 
 /// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- pi rung
-/// 2's target. [`CRealPrelude::alternating_upper_bound_tail`] (at `a :=
+/// 2's target. [`CosSignNames::alternating_upper_bound_tail`] (at `a :=
 /// a_wide`, `hnn := cosWideTailNonneg`, `htail := cosWideTailAntitone`,
 /// `hconv := cosWideSeriesConverges`) gives `le (cosFnWide R) (sumRange t
 /// 3)`; what remains is the numeric leaf `sumRange t 3 = 1 - 32/25 +
@@ -1885,15 +1887,17 @@ pub(super) fn declare_cos_wide_nonpositive(
         &[s2, of_q_sum, zero_c, s2_le_q_sum, creal_zero_le],
     );
 
-    let hconv = d.kernel().const_(p.cos_wide_series_converges, vec![]);
-    let hnn = d.kernel().const_(p.cos_wide_tail_nonneg, vec![]);
-    let htail = d.kernel().const_(p.cos_wide_tail_antitone, vec![]);
+    let hconv = d
+        .kernel()
+        .const_(p.cos_sign.cos_wide_series_converges, vec![]);
+    let hnn = d.kernel().const_(p.cos_sign.cos_wide_tail_nonneg, vec![]);
+    let htail = d.kernel().const_(p.cos_sign.cos_wide_tail_antitone, vec![]);
     let cos_fn_wide_c = d.kernel().const_(p.cos_fn_wide, vec![]);
     let g_r = d.apply(cos_fn_wide_c, &[r]);
     let b_term = sum_at(d, p, t_lam, three_nat);
 
     let upper = d.lemma(
-        p.alternating_upper_bound_tail,
+        p.cos_sign.alternating_upper_bound_tail,
         &[a_wide, hnn, htail, g_r, hconv],
     );
     // upper : le g_r b_term
@@ -1901,9 +1905,101 @@ pub(super) fn declare_cos_wide_nonpositive(
     let value = d.lemma(p.le_trans, &[g_r, b_term, zero_c, upper, final_le]);
     let ty = cle(d, p, g_r, zero_c);
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.cos_wide_nonpositive,
+        name: p.cos_sign.cos_wide_nonpositive,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/cos_sign.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CosSignNames {
+    /// `CReal.converges_upper_bound_shift : ∀ s f L b, (∀ n, le (f
+    /// (Nat.add n s)) b) → Converges f L → le L b`.
+    ///
+    /// The EVENTUAL form of [`super::CRealPrelude::converges_upper_bound`], and the mirror
+    /// of [`super::CRealPrelude::converges_lower_bound_shift`]: a bound that only holds
+    /// past some index still bounds the limit. `creal/alternating.rs`'s own
+    /// `declare_alternating_upper_bound` records in its doc comment that
+    /// "this development has no `converges_upper_bound_shift`" and then runs
+    /// the negation route INLINE on its own concrete sequence — this is that
+    /// route as a named, general theorem, so the next caller composes rather
+    /// than rebuilds. See `creal/cos_sign.rs`.
+    pub converges_upper_bound_shift: NameId,
+    /// `CReal.alternatingUpperBoundTail : ∀ a, (∀ k, le zero (a k)) →
+    /// (∀ k, le (a (succ (succ k))) (a (succ k))) → ∀ L,
+    /// Converges (sumRange t) L → le L (sumRange t 3)`, `t j := mul (pow (neg
+    /// one) j) (a j)`.
+    ///
+    /// The Leibniz upper bound requiring antitonicity only **from index 1**.
+    /// [`super::CRealPrelude::alternating_upper_bound`]'s `hdec` premise is the GLOBAL `∀ k,
+    /// a (succ k) ≤ a k`, which cosine's magnitude sequence at `8/5`
+    /// (`a k = (8/5)^{2k}/(2k)!`) fails at `k = 0`: `a 0 = 1 < a 1 = 32/25`.
+    /// The tail from `k = 1` is antitone, and that is all this needs.
+    ///
+    /// Proved by CLAMPING rather than shifting: `â k := a (succ (pred k))` is
+    /// globally antitone, so [`super::CRealPrelude::alternating_bracket_upper`] applies to it
+    /// unchanged, and `â`'s partial sums differ from `a`'s by the single
+    /// constant `a 1 − a 0` at every index `≥ 1` — which cancels off both
+    /// sides, leaving a statement about `a`'s own partial sums, closed by
+    /// [`super::CosSignNames::converges_upper_bound_shift`] at shift `2`. See
+    /// `creal/cos_sign.rs`.
+    pub alternating_upper_bound_tail: NameId,
+    /// `CReal.cosWideTailNonneg : ∀ k, le zero (mul (expTerm (add k k)) (pow
+    /// R (add k k)))`, `R := ofRat (natDivSucc 8 4) = 8/5` -- π rung 2's
+    /// `hnn` premise for [`super::CosSignNames::alternating_upper_bound_tail`] instantiated
+    /// at cosine's magnitude sequence at `R`. See `creal/cos_sign.rs`.
+    pub cos_wide_tail_nonneg: NameId,
+    /// `CReal.cosWideTailAntitone : ∀ k, le (mul (expTerm (add (succ (succ
+    /// k)) (succ (succ k)))) (pow R (add (succ (succ k)) (succ (succ k)))))
+    /// (mul (expTerm (add (succ k) (succ k))) (pow R (add (succ k) (succ
+    /// k))))`, `R := 8/5` -- π rung 2's `htail` premise (the sized blocker
+    /// `docs/plan/status/174-pi-rung2.md` names). Reduces to `R² <=
+    /// (m+1)(m+2)` at `m := add (succ k) (succ k) >= 2`, via two
+    /// [`super::CRealPrelude::exp_term_succ_scale`] applications and `R² <= 3` (`Rat.ble`
+    /// computation on `8/5 * 8/5` vs `3/1`). See `creal/cos_sign.rs`.
+    pub cos_wide_tail_antitone: NameId,
+    /// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide
+    /// R)`, `t j := mul (pow (neg one) j) (mul (expTerm (add j j)) (pow R
+    /// (add j j)))`, `R := 8/5` -- pi rung 2 item 3, the `Converges` witness
+    /// [`super::CosSignNames::alternating_upper_bound_tail`] needs at cosine. Composes
+    /// [`super::CRealPrelude::converges_of_abs_diff_le`] with `cosFnWideUniformConverges`'s
+    /// own `.spec` at the fixed point `R`, bridged per index from
+    /// `cosFnTerm`'s shape to `t`'s by one `mul_assoc`
+    /// ([`super::CRealPrelude::sum_range_congr`]). See `creal/cos_sign.rs`.
+    pub cos_wide_series_converges: NameId,
+    /// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- pi
+    /// rung 2's target. [`super::CosSignNames::alternating_upper_bound_tail`] (at
+    /// [`super::CosSignNames::cos_wide_tail_nonneg`]/[`super::CosSignNames::cos_wide_tail_antitone`]/
+    /// [`super::CosSignNames::cos_wide_series_converges`]) gives `le (cosFnWide R)
+    /// (sumRange t 3)`; the numeric leaf `sumRange t 3 = -13/1875 <= 0` is
+    /// closed by a BOUND (`512/1875 <= 7/25`, then `add_le_add`) rather than
+    /// by evaluating the sum, because the sum's own `Rat.add` needs a
+    /// `Nat.gcd` and two `Nat.div`s at 46,875 on unary numerals and two
+    /// reverted attempts measured that at 616 s and 415 s against a
+    /// 94-123 s band. See `creal/cos_sign.rs`.
+    pub cos_wide_nonpositive: NameId,
+}
+
+impl CosSignNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            converges_upper_bound_shift: kernel.name_str(creal, "converges_upper_bound_shift"),
+            alternating_upper_bound_tail: kernel.name_str(creal, "alternatingUpperBoundTail"),
+            cos_wide_tail_nonneg: kernel.name_str(creal, "cosWideTailNonneg"),
+            cos_wide_tail_antitone: kernel.name_str(creal, "cosWideTailAntitone"),
+            cos_wide_series_converges: kernel.name_str(creal, "cosWideSeriesConverges"),
+            cos_wide_nonpositive: kernel.name_str(creal, "cosWideNonpositive"),
+        }
+    }
 }

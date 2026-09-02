@@ -589,8 +589,12 @@ fn instantiate_evt_at_evt_linear(s: &mut Probe, evt_name: NameId, evt_ty: ExprId
     let one = s.kernel.const_(p.one, vec![]);
     let zlo = s.kernel.const_(p.zero_lt_one, vec![]);
     let hab = capp(&mut s.kernel, p.le_of_lt, &[zero, one, zlo]);
-    let big_f = capp(&mut s.kernel, p.evt_linear, &[v]);
-    let huc = capp(&mut s.kernel, p.evt_linear_uniformly_continuous, &[v]);
+    let big_f = capp(&mut s.kernel, p.extreme_value.evt_linear, &[v]);
+    let huc = capp(
+        &mut s.kernel,
+        p.extreme_value.evt_linear_uniformly_continuous,
+        &[v],
+    );
 
     let args = [big_f, zero, one, hab, huc, n];
     let body = capp(&mut s.kernel, evt_name, &args);
@@ -841,7 +845,7 @@ fn report_representability(s: &mut Probe) {
         ),
         (
             "CReal.evt_attained_max_decides_sign",
-            p.evt_attained_max_decides_sign,
+            p.extreme_value.evt_attained_max_decides_sign,
         ),
         ("CReal.supOn", p.sup_on),
         ("CReal.supOn_ub", p.sup_on_ub),

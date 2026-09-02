@@ -103,11 +103,24 @@ use crate::rat_prelude::ops::{
 use crate::rat_prelude::{RatPrelude, build_rat_prelude};
 use crate::{Kernel, KernelError, PreludeKey, PreludeValue};
 
+pub use completeness::CompletenessNames;
+pub use cos_sign::CosSignNames;
+pub use crossing::CrossingNames;
+pub use deriv_unique::DerivUniqueNames;
+pub use evt_row1::EvtRow1Names;
+pub use exp_fn::ExpFnNames;
+pub use extreme_value::ExtremeValueNames;
+pub use inverse_fn::InverseFnNames;
 /// Re-exported so `CRealPrelude::ivt_boundary` -- a `pub` field -- has a
 /// publicly nameable type. `mod creal` is private at the crate root, so a
 /// `pub struct` inside it is not reachable without this; without it the
 /// `private_interfaces` lint fires. ADR-1512.
 pub use ivt_boundary::IvtBoundaryNames;
+pub use lub_boundary::LubBoundaryNames;
+pub use mvt::MvtNames;
+pub use pi::PiNames;
+pub use polynomial::PolynomialNames;
+pub use ratio_test::RatioTestNames;
 
 /// The build table the prelude actually runs: `STEP_DISPATCH`'s order and
 /// dispatch, plus the `requires`/`provides` edges
@@ -816,63 +829,15 @@ pub struct CRealPrelude {
     pub apart_cotrans: NameId,
 
     // --- Bishop completeness (ADR-0512 phase R8) ------------------------------
-    /// `CReal.RegularSeq : (Nat → CReal) → Prop` —
-    /// `RegularSeq X := ∀ m n, Within (seq (X m) m − seq (X n) n) (1/(m+1)+1/(n+1))`.
+    /// `creal/completeness.rs`'s own 5 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// **The canonical-sample formulation, not the arbitrary-index one.** The
-    /// textbook statement compares `X m` and `X n` as reals at an arbitrary
-    /// shared representative index (`CReal.le`/`CReal.add`-shaped, the way
-    /// [`Self::le`] itself is stated), which routes every consumer through
-    /// `CReal.add`'s index shift before it can be unfolded at all. This
-    /// definition instead compares the sample **each real already offers at
-    /// its own index** — `seq (X m) m`, exactly the quantity
-    /// [`Self::rat_approx_upper`]/[`Self::rat_approx_lower`] already prove is
-    /// within `1/(m+1)` of the real `X m` — so it is equivalent up to a
-    /// constant factor to the textbook condition, never mentions `CReal.add`,
-    /// and is what [`Self::limit`] below is built from directly.
-    pub regular_seq: NameId,
-    /// `CReal.limitSeq : (Nat → CReal) → Nat → Rat` —
-    /// `limitSeq X n := seq (X (2n+1)) (2n+1)`.
-    ///
-    /// The **diagonal**, sampled at Bishop's shift `2n+1` rather than at `n`
-    /// itself: [`Self::limit_seq_regular`]'s estimate needs the two halves of
-    /// each pairwise bound to fuse via
-    /// [`Rat.natDivSucc_halve`](crate::RatPrelude::nat_div_succ_halve) into
-    /// exactly `1/(n+1)`, which only happens at this shift — sampling at `n`
-    /// leaves a bound twice the size [`Self::regular_pred`] asks for, with no
-    /// rearrangement able to close the gap.
-    pub limit_seq: NameId,
-    /// `CReal.limitSeq_regular : ∀ X, RegularSeq X → Regular (limitSeq X)`.
-    ///
-    /// **Obligation 1: the diagonal is a `CReal` at all.** The proof needs no
-    /// arbitrary third index and no Archimedean closing step — unlike
-    /// `Equiv.trans`/`le_trans` — because [`Self::regular_seq`]'s hypothesis
-    /// is already stated at the two *fixed* diagonal indices `shift m` and
-    /// `shift n`; from there it is one instantiation of `RegularSeq` plus
-    /// `weaken` against the rational fact `modulus (shift m) (shift n) ≤
-    /// modulus m n`.
-    pub limit_seq_regular: NameId,
-    /// `CReal.limit : (X : Nat → CReal) → RegularSeq X → CReal := fun X h =>
-    /// CReal.mk (limitSeq X) (limitSeq_regular X h)`.
-    ///
-    /// **Bishop completeness, the construction half.** Every `RegularSeq`
-    /// sequence of reals has a limit, produced rather than merely asserted to
-    /// exist.
-    pub limit: NameId,
-    /// `CReal.limit_dist : ∀ X (h : RegularSeq X) n k, Within (seq (X n) k −
-    /// seq (limit X h) k) (2/(k+1) + 2/(n+1))`.
-    ///
-    /// **Bishop completeness, the convergence half**, at the rate `X`'s own
-    /// regularity carries (`O(1/n)`, uniformly in the sampling index `k`) —
-    /// not merely `∀ n, Equiv (X n) (limit ...)`, which is false in general
-    /// (a converging sequence is generally not equal to its limit at any
-    /// finite `n`). The estimate chains `X n`'s own regularity between `(k,
-    /// n)` with one [`Self::regular_seq`] instance at `(n, shift k)`, folds
-    /// the two `seq (X n) n` occurrences via `Rat.sub_add_sub`, and widens
-    /// `1/(shift k + 1)` up to `1/(k+1)` — no arbitrary third index or
-    /// Archimedean lemma needed, for the same reason as
-    /// [`Self::limit_seq_regular`].
-    pub limit_dist: NameId,
+    /// Reached as `p.completeness.regular_seq` and documented in
+    /// [`CompletenessNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub completeness: CompletenessNames,
 
     // --- convergence of sequences of `CReal` (ADR-0512 phase R9) -------------
     /// `CReal.Converges (f : Nat → CReal) (L : CReal) : Prop :=
@@ -937,7 +902,7 @@ pub struct CRealPrelude {
     /// Regular (speedup (fun n => seq (f n) n) K)`.
     ///
     /// The `Cauchy → Converges` bridge's reusable half. A `K`-scaled Cauchy
-    /// witness is not itself a [`Self::regular_seq`] instance: `RegularSeq`'s
+    /// witness is not itself a [`CompletenessNames::regular_seq`] instance: `RegularSeq`'s
     /// fixed modulus has no room for the extra factor `K`. But the **diagonal**
     /// `fun n => seq (f n) n` (a bare `Nat → Rat`, not a `Nat → CReal`) is
     /// exactly [`Self::k_regular_pred`]'s shape at `c := K` — the Cauchy
@@ -947,7 +912,7 @@ pub struct CRealPrelude {
     /// [`Self::regular_of_kregular`] applies unchanged and needs no new
     /// estimate. This is **not** the `RegularSeq (X : Nat → CReal)` shape a
     /// first reading of the goal suggests: routing a `Nat → CReal` sequence
-    /// through [`Self::regular_seq`]/[`Self::limit`] forces a
+    /// through [`CompletenessNames::regular_seq`]/[`CompletenessNames::limit`] forces a
     /// [`Self::regular`] bridge at the *shallow* outer index on top of the
     /// Cauchy estimate, which costs a whole extra `1/(m+1)` per side and
     /// overshoots `RegularSeq`'s fixed modulus by a factor of two — see
@@ -1052,71 +1017,15 @@ pub struct CRealPrelude {
     /// Converges f L → le L b`. The mirror of
     /// [`Self::converges_lower_bound`].
     pub converges_upper_bound: NameId,
-    /// `CReal.converges_upper_bound_shift : ∀ s f L b, (∀ n, le (f
-    /// (Nat.add n s)) b) → Converges f L → le L b`.
+    /// `creal/cos_sign.rs`'s own 6 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// The EVENTUAL form of [`Self::converges_upper_bound`], and the mirror
-    /// of [`Self::converges_lower_bound_shift`]: a bound that only holds
-    /// past some index still bounds the limit. `creal/alternating.rs`'s own
-    /// `declare_alternating_upper_bound` records in its doc comment that
-    /// "this development has no `converges_upper_bound_shift`" and then runs
-    /// the negation route INLINE on its own concrete sequence — this is that
-    /// route as a named, general theorem, so the next caller composes rather
-    /// than rebuilds. See `creal/cos_sign.rs`.
-    pub converges_upper_bound_shift: NameId,
-    /// `CReal.alternatingUpperBoundTail : ∀ a, (∀ k, le zero (a k)) →
-    /// (∀ k, le (a (succ (succ k))) (a (succ k))) → ∀ L,
-    /// Converges (sumRange t) L → le L (sumRange t 3)`, `t j := mul (pow (neg
-    /// one) j) (a j)`.
-    ///
-    /// The Leibniz upper bound requiring antitonicity only **from index 1**.
-    /// [`Self::alternating_upper_bound`]'s `hdec` premise is the GLOBAL `∀ k,
-    /// a (succ k) ≤ a k`, which cosine's magnitude sequence at `8/5`
-    /// (`a k = (8/5)^{2k}/(2k)!`) fails at `k = 0`: `a 0 = 1 < a 1 = 32/25`.
-    /// The tail from `k = 1` is antitone, and that is all this needs.
-    ///
-    /// Proved by CLAMPING rather than shifting: `â k := a (succ (pred k))` is
-    /// globally antitone, so [`Self::alternating_bracket_upper`] applies to it
-    /// unchanged, and `â`'s partial sums differ from `a`'s by the single
-    /// constant `a 1 − a 0` at every index `≥ 1` — which cancels off both
-    /// sides, leaving a statement about `a`'s own partial sums, closed by
-    /// [`Self::converges_upper_bound_shift`] at shift `2`. See
-    /// `creal/cos_sign.rs`.
-    pub alternating_upper_bound_tail: NameId,
-    /// `CReal.cosWideTailNonneg : ∀ k, le zero (mul (expTerm (add k k)) (pow
-    /// R (add k k)))`, `R := ofRat (natDivSucc 8 4) = 8/5` -- π rung 2's
-    /// `hnn` premise for [`Self::alternating_upper_bound_tail`] instantiated
-    /// at cosine's magnitude sequence at `R`. See `creal/cos_sign.rs`.
-    pub cos_wide_tail_nonneg: NameId,
-    /// `CReal.cosWideTailAntitone : ∀ k, le (mul (expTerm (add (succ (succ
-    /// k)) (succ (succ k)))) (pow R (add (succ (succ k)) (succ (succ k)))))
-    /// (mul (expTerm (add (succ k) (succ k))) (pow R (add (succ k) (succ
-    /// k))))`, `R := 8/5` -- π rung 2's `htail` premise (the sized blocker
-    /// `docs/plan/status/174-pi-rung2.md` names). Reduces to `R² <=
-    /// (m+1)(m+2)` at `m := add (succ k) (succ k) >= 2`, via two
-    /// [`Self::exp_term_succ_scale`] applications and `R² <= 3` (`Rat.ble`
-    /// computation on `8/5 * 8/5` vs `3/1`). See `creal/cos_sign.rs`.
-    pub cos_wide_tail_antitone: NameId,
-    /// `CReal.cosWideSeriesConverges : Converges (sumRange t) (cosFnWide
-    /// R)`, `t j := mul (pow (neg one) j) (mul (expTerm (add j j)) (pow R
-    /// (add j j)))`, `R := 8/5` -- pi rung 2 item 3, the `Converges` witness
-    /// [`Self::alternating_upper_bound_tail`] needs at cosine. Composes
-    /// [`Self::converges_of_abs_diff_le`] with `cosFnWideUniformConverges`'s
-    /// own `.spec` at the fixed point `R`, bridged per index from
-    /// `cosFnTerm`'s shape to `t`'s by one `mul_assoc`
-    /// ([`Self::sum_range_congr`]). See `creal/cos_sign.rs`.
-    pub cos_wide_series_converges: NameId,
-    /// `CReal.cosWideNonpositive : le (cosFnWide R) zero`, `R := 8/5` -- pi
-    /// rung 2's target. [`Self::alternating_upper_bound_tail`] (at
-    /// [`Self::cos_wide_tail_nonneg`]/[`Self::cos_wide_tail_antitone`]/
-    /// [`Self::cos_wide_series_converges`]) gives `le (cosFnWide R)
-    /// (sumRange t 3)`; the numeric leaf `sumRange t 3 = -13/1875 <= 0` is
-    /// closed by a BOUND (`512/1875 <= 7/25`, then `add_le_add`) rather than
-    /// by evaluating the sum, because the sum's own `Rat.add` needs a
-    /// `Nat.gcd` and two `Nat.div`s at 46,875 on unary numerals and two
-    /// reverted attempts measured that at 616 s and 415 s against a
-    /// 94-123 s band. See `creal/cos_sign.rs`.
-    pub cos_wide_nonpositive: NameId,
+    /// Reached as `p.cos_sign.converges_upper_bound_shift` and documented in
+    /// [`CosSignNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub cos_sign: CosSignNames,
     /// `CReal.converges_le : ∀ f g L M, Converges f L → Converges g M →
     /// (∀ n, le (f n) (g n)) → le L M`.
     ///
@@ -1498,178 +1407,15 @@ pub struct CRealPrelude {
     /// to a `Nat.le` on the numerator `bucketIndex w k` itself, scaled by
     /// `k+1`. See `creal/uniform_continuity.rs`.
     pub bucket_index_bound: NameId,
-    /// `CReal.crossingIndex : CReal → CReal → Rat → Nat` — the Archimedean
-    /// **crossing index**: given a base `a`, a target `c` and a positive
-    /// rational step `Δ`, the computed count of `Δ`-steps from `a` at which
-    /// `c` is reached, within a small fixed slack. `crossingIndex a c delta
-    /// := bucketIndex (mul (ofRat (Rat.inv delta)) (add c (neg a))) 0` —
-    /// rescale `c − a` by `Δ⁻¹` and read [`Self::bucket_index`] at the FIXED
-    /// grid `k := 0` (step `1`), reducing an arbitrary step to the one
-    /// `bucketIndex` already handles. Computed, never `Exists`-derived. See
-    /// `creal/crossing.rs`.
-    pub crossing_index: NameId,
-    /// `CReal.crossingUpper : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le c (CReal.add a (CReal.mul (CReal.ofRat delta) (CReal.ofRat
-    /// (Rat.add (Rat.natDivSucc (Nat.succ (CReal.crossingIndex a c delta)) 0)
-    /// (Rat.natDivSucc 2 j)))))`, `j` the closed term `bucketIndex` samples
-    /// at when `k = 0` (`(succ 0)*(succ 0)`, definitionally `1`).
+    /// `creal/crossing.rs`'s own 9 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all.** Both
-    /// `bucketIndexFloorUpper` and `bucketClampUpper` are unconditional, and
-    /// scaling a `CReal.le` fact by a positive rational preserves it
-    /// regardless of `c − a`'s sign. See `creal/crossing.rs`.
-    pub crossing_upper: NameId,
-    /// `CReal.crossingLower : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le a c → CReal.le (CReal.add a (CReal.mul (CReal.ofRat delta)
-    /// (CReal.ofRat (Rat.sub (Rat.natDivSucc (CReal.crossingIndex a c delta)
-    /// 0) (Rat.natDivSucc 3 j))))) c`.
-    ///
-    /// **Genuinely needs `a ≤ c`** (unlike [`Self::crossing_upper`]):
-    /// `bucketClampLower`'s hypothesis is `0 ≤` the value being bucketed —
-    /// here `(c−a)·Δ⁻¹` — which `a ≤ c` supplies via `CReal.mul_nonneg` on
-    /// the two nonnegative factors. See `creal/crossing.rs`.
-    pub crossing_lower: NameId,
-    /// `CReal.crossingSampleGeA : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le a (CReal.add a (CReal.mul (CReal.ofNat (CReal.crossingIndex a
-    /// c delta)) (CReal.ofRat delta)))` — `samplePt` (the SAME closed term
-    /// [`Self::crossing_sample_upper`]/[`Self::crossing_sample_lower`] use)
-    /// never falls BELOW its own base point `a`.
-    ///
-    /// **Needs only `0 < Δ` — no `a ≤ c` hypothesis at all**, unlike
-    /// [`Self::crossing_lower`]: `crossingIndex` embeds as a nonnegative
-    /// `Nat` regardless of `c`'s position, and `Δ > 0` makes the product
-    /// nonnegative too, via [`Self::mul_nonneg`] — the same shape
-    /// `integral.rs`'s `riemannSum_sample_in_bounds` already proves for an
-    /// ordinary mesh sample. This is HALF of `crossingClose`'s domain
-    /// membership hypothesis pair; the other half, `samplePt ≤ b`, is
-    /// discharged nowhere in this prelude — see `creal/integral.rs`'s
-    /// 2026-08-27 module doc entries (the fifth: it is not a `+3`-slack
-    /// artifact of [`Self::bucket_index_bound`] and cannot be fixed by
-    /// tightening that bound, however far). See `creal/crossing.rs`.
-    pub crossing_sample_ge_a: NameId,
-    /// `CReal.crossingSampleUpper : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le c (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
-    /// (CReal.crossingIndex a c delta)) delta)) (CReal.add delta (CReal.mul
-    /// delta (CReal.ofRat (Rat.natDivSucc 2 j)))))` — [`Self::crossing_upper`]
-    /// restated against an ORDINARY Riemann-sum sample point `a + ofNat(i)·Δ`
-    /// (`integral.rs`'s own `sample_point` shape) rather than the raw
-    /// rational bound `crossingUpper` computes internally: `c` is within a
-    /// fixed slack (unreduced here, but equal to `2Δ`) ABOVE the coarse
-    /// mesh's `crossingIndex`-th sample point. See `creal/crossing.rs`.
-    pub crossing_sample_upper: NameId,
-    /// `CReal.crossingSampleLower : ∀ a c delta, Rat.lt Rat.zero delta →
-    /// CReal.le a c → CReal.le (CReal.add (CReal.add a (CReal.mul (CReal.ofNat
-    /// (CReal.crossingIndex a c delta)) delta)) (CReal.mul delta (CReal.ofRat
-    /// (Rat.neg (Rat.natDivSucc 3 j))))) c` — the mirror of
-    /// [`Self::crossing_sample_upper`]: `c` is no more than a fixed slack
-    /// (`1.5Δ`, left as `Δ·(negative rational)` rather than rewritten to
-    /// `neg(Δ·positive)`) BELOW the same sample point. See
-    /// `creal/crossing.rs`.
-    pub crossing_sample_lower: NameId,
-    /// `CReal.crossingClose : ∀ F a b c delta e (u : UniformlyContinuousOn F
-    /// a b), Rat.lt Rat.zero delta → CReal.le a c → CReal.le c b → CReal.le a
-    /// samplePt → CReal.le samplePt b → CReal.le slackUpper (CReal.ofRat
-    /// (Rat.natDivSucc 1 (UniformlyContinuousOn.modulus F a b u e))) →
-    /// CReal.le (CReal.neg slackLower) (CReal.ofRat (Rat.natDivSucc 1
-    /// (UniformlyContinuousOn.modulus F a b u e))) → CReal.le (CReal.abs
-    /// (CReal.add (F c) (CReal.neg (F samplePt)))) (CReal.ofRat
-    /// (Rat.natDivSucc 1 e))`, `samplePt`/`slackUpper`/`slackLower` the SAME
-    /// closed terms [`Self::crossing_sample_upper`]/
-    /// [`Self::crossing_sample_lower`] place `c` within.
-    ///
-    /// The analytic half of the cross-width Riemann comparison's single
-    /// block: `F(c)` is close to `F` at the coarse mesh's crossing-index
-    /// sample point, PROVIDED the two crossing slacks (`≈2Δ`, `≈1.5Δ`) are
-    /// already within `UniformlyContinuousOn`'s modulus at accuracy `e`.
-    /// Does **not** derive that Archimedean smallness from a mesh count, nor
-    /// `samplePt`'s own domain membership — both are explicit hypotheses
-    /// here. The first is now DISCHARGEABLE in general via
-    /// [`Self::mesh_scaled_le_of_ge`] (not yet wired into this theorem's own
-    /// statement). The second remains open, and is NOT merely unattempted —
-    /// `integral.rs`'s third 2026-08-27 module doc entry works through the
-    /// natural reading of "a mesh count `m`" for this theorem's `Rat`-typed
-    /// `Δ` and finds it does not make `samplePt ≤ b` provable from `m`
-    /// alone without also bounding the interval's own Archimedean constant,
-    /// which is data about `[a,b]`, not about `m`. See `creal/crossing.rs`
-    /// and `creal/integral.rs`'s 2026-08-27 module doc entries (all five —
-    /// the fourth tests and REFUTES, with an exact worked bound, the
-    /// hypothesis that fixing `[a,b]` (so `magnitude` is a known constant)
-    /// rescues this via `bucket_index_bound`'s `+4` slack; the fifth then
-    /// builds the tighter, purpose-built `crossingIndex` bound the fourth
-    /// called for — a genuine, ZERO-excess replacement — and shows it STILL
-    /// does not rescue `samplePt ≤ b`, because the real obstruction is
-    /// `CReal.bound`'s own non-tight over-estimate of `b − a`
-    /// (`magnitude`), independent of `crossingIndex`'s tightness, plus
-    /// `crossingLower`'s own already-fixed `1.5Δ` closeness slack). Still
-    /// open, and not reachable by any further `crossingIndex`-side
-    /// tightening — [`Self::crossing_sample_ge_a`] discharges the OTHER half
-    /// of this pair (`a ≤ samplePt`, unconditionally on `0 < Δ`).
-    pub crossing_close: NameId,
-    /// `CReal.crossingCloseClamped : ...` -- `crossingClose` with `samplePt`
-    /// replaced by `clampedPt := CReal.min samplePt b`.
-    ///
-    /// Both domain-membership hypotheses `crossingClose` needs (`a <=
-    /// samplePt`, `samplePt <= b`) are GONE from this statement, discharged
-    /// by construction rather than assumed: `clampedPt <= b` is
-    /// `min_le_right`, unconditional; `a <= clampedPt` is `le_min` applied
-    /// to `crossingSampleGeA` (`a <= samplePt`) and `a <= b` (`le_trans` on
-    /// the two hypotheses this theorem already carries). `samplePt <= b` is
-    /// not itself provable (per `integral.rs`'s 2026-08-27 module doc
-    /// entries), but the theorem never needed `samplePt` un-clamped --
-    /// clamping into range costs nothing (`min` is fully constructive, no
-    /// comparison decided) and the closeness bound survives the
-    /// substitution via the SAME `le_min` move applied to `c - bound_embed`:
-    /// `c - bound_embed <= samplePt` (from `crossingSampleUpper` widened by
-    /// the `h_upper` hypothesis) and `c - bound_embed <= b` (from `hcb`
-    /// widened by `le_add_of_nonneg`) give, by `le_min`, `c - bound_embed <=
-    /// clampedPt`, and adding `bound_embed` back gives the upper half
-    /// `abs_le` needs. The lower half needs no `le_min` at all: `clampedPt
-    /// <= samplePt` (`min_le_left`) transfers `crossingSampleLower`'s
-    /// existing bound on `c - samplePt` up to `c - clampedPt` by plain
-    /// transitivity, no case split anywhere. See `creal/crossing.rs`.
-    pub crossing_close_clamped: NameId,
-    /// `CReal.riemannSampleCrossingClose : ∀ F a b (u : UniformlyContinuousOn
-    /// F a b) stepAb i deltaAc e, Rat.lt Rat.zero deltaAc → CReal.le a ptI →
-    /// CReal.le ptI b → CReal.le slackUpper bound → CReal.le (CReal.neg
-    /// slackLower) bound → CReal.le (CReal.abs (CReal.add (F ptI) (CReal.neg
-    /// (F clampedPt)))) (CReal.ofRat (Rat.natDivSucc 1 e))`, where `ptI := a +
-    /// (ofNat i)·stepAb` is an ORDINARY Riemann-sum sample point (`stepAb` an
-    /// arbitrary `CReal`, not necessarily `riemannSum`'s own mesh step) and
-    /// `clampedPt`/`slackUpper`/`slackLower` are [`Self::crossing_close_clamped`]'s
-    /// own terms at `c := ptI`, `delta := deltaAc`.
-    ///
-    /// `integral.rs`'s SEVENTH 2026-08-27 module doc entry's proposed
-    /// term-pairing lemma — literally [`Self::crossing_close_clamped`]
-    /// specialized at `c := ptI` — **restricted to the one case that
-    /// type-checks against this file's existing machinery**: `crossingIndex`
-    /// (hence `crossingCloseClamped`) takes its step as a `Rat`, not a
-    /// `CReal` (`declare_crossing_index`'s `delta` parameter is `rat_ty_`
-    /// itself, not `creal_ty`). The natural cross-mesh step for an ARBITRARY
-    /// split point `c`, `deltaAc := (c−a)·ofRat(natDivSucc 1 m_ac)`, is
-    /// `CReal`-valued whenever `c−a` is not itself rational — the same "not a
-    /// computable rational multiple" fact `integral.rs`'s module doc already
-    /// names, sharpened here to the exact type-level obstruction: this
-    /// theorem is only USABLE when the caller already has a **rational**
-    /// `deltaAc` in hand (e.g. `c := a + ofRat q` for some `Rat q`, giving
-    /// `deltaAc := q·natDivSucc(1,m_ac)`, itself `Rat`), not for a fully
-    /// general `CReal c`.
-    ///
-    /// The only `CReal`-level inverse in this prelude,
-    /// [`Self::inv`] `(x : CReal) (k : Nat) (h : PosBound x k) : CReal`,
-    /// could in principle build `(c−a)⁻¹` given an explicit positivity
-    /// witness, but none of `crossing.rs`'s internal recipe (`build_scaled`,
-    /// `scale_cancels`, the four `bucketIndex` closeness lemmas'
-    /// composition) is stated against it — it is hard-wired to `Rat.inv`.
-    /// Pre-rescaling `ptI` by `(c−a)⁻¹` before calling `crossingIndex` (so
-    /// `crossingIndex` itself only ever sees a plain `Rat` delta) is possible
-    /// in principle, but translating the resulting NORMALIZED-coordinate
-    /// closeness bound back into a bound on `|ptI − ptAc(j(i))|` in ORIGINAL
-    /// units needs multiplying back through by the `CReal` factor `(c−a)`,
-    /// which is a REAL (not `Nat`, unlike [`Self::mesh_scaled_le_of_ge`])
-    /// scaling step with no existing lemma covering it — a second gap on top
-    /// of `crossingCloseClamped`'s own already-flagged ones. See
-    /// `creal/crossing.rs`.
-    pub crossing_sample_pairing_close: NameId,
+    /// Reached as `p.crossing.crossing_index` and documented in
+    /// [`CrossingNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub crossing: CrossingNames,
     /// `CReal.sampleUpperBound : ∀ x m, CReal.le x (CReal.ofRat (Rat.add
     /// (CReal.seq x m) (Rat.natDivSucc 1 m)))` — the general
     /// self-approximation lemma every `CReal` satisfies: it never exceeds
@@ -2862,53 +2608,15 @@ pub struct CRealPrelude {
     /// (a function of `bigK`, never simplified to a literal) in place of that
     /// theorem's fixed `K := 7`.
     pub geom_cauchy_of_lt: NameId,
-    /// `CReal.geomScaledCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h :
-    /// PosBound (add one (neg x)) k) (w : CReal), Cauchy (sumRange (fun n =>
-    /// mul w (pow x n)))` — a CONSTANT
-    /// times a geometric series stays Cauchy, at a GENERAL ratio `0 ≤ x < 1`
-    /// and a general scale `w`. This is `creal/ratio_test.rs`'s "scaled
-    /// geometric bridge", the piece Chapter 22–23's ratio test needs and
-    /// [`Self::geom_cauchy_of_lt`] alone does not supply: `sumRange (fun n =>
-    /// mul w (pow x n))` is only `Equiv` to `mul w (sumRange (pow x ·) n)`
-    /// (`CReal.mul_sumRange`, `series.rs`, already landed), not literally
-    /// equal — `CReal.mul`'s own representative resamples its factors at a
-    /// shifted index (`product.rs`), so the two sides are not the same
-    /// rational at any index.
+    /// `creal/ratio_test.rs`'s own 2 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Mirrors `exponential.rs::declare_exp_dominant_cauchy`'s own route
-    /// verbatim, generalized from the fixed pair `(two, half)` to `(w, x)`
-    /// and from [`Self::geom_cauchy`] to [`Self::geom_cauchy_of_lt`]:
-    /// [`Self::geom_cauchy_of_lt`] gives `Cauchy (sumRange (pow x ·))`;
-    /// [`Self::converges_of_cauchy`] lifts it to `Converges (sumRange (pow x
-    /// ·)) L` for some `L` (eliminated immediately into the Prop goal, never
-    /// into data); [`Self::converges_of_const`]/[`Self::converges_mul`] give
-    /// `Converges (fun n => mul w (sumRange (pow x ·) n)) (mul w L)`;
-    /// [`Self::converges_cauchy`] turns that into `Cauchy (fun n => mul w
-    /// (sumRange (pow x ·) n))`; and [`Self::cauchy_of_pointwise_equiv`]
-    /// transports it across `CReal.mul_sumRange`'s `Equiv` onto the stated
-    /// conclusion. See `creal/ratio_test.rs::declare_geom_scaled_cauchy_of_lt`.
-    pub geom_scaled_cauchy_of_lt: NameId,
-    /// `CReal.sumRangeRatioTest : ∀ f r, le zero r → lt r one → ∀ k (h :
-    /// PosBound (add one (neg r)) k) (hdec : ∀ n, le (abs (f (Nat.succ n)))
-    /// (mul r (abs (f n)))), Cauchy (sumRange f)` — Spivak Chapter 22–23's
-    /// ratio test: a sequence whose consecutive
-    /// absolute terms shrink by a factor `r < 1` has a Cauchy (hence
-    /// convergent) partial-sum sequence, even when `f` changes sign.
-    ///
-    /// Composes three already-landed general theorems, none of them redone
-    /// here: [`Self::ratio_decay_bound`] applied to `g := fun n => abs (f
-    /// n)` gives `∀ n, le (abs (f n)) (mul (abs (f 0)) (pow r n))`;
-    /// [`Self::geom_scaled_cauchy_of_lt`] at `w := abs (f 0)` gives `Cauchy
-    /// (sumRange (fun n => mul (abs (f 0)) (pow r n)))`; and
-    /// `series.rs::sumRange_cauchy_of_dominated` combines the two directly
-    /// into `Cauchy (sumRange f)` — its domination hypothesis is stated on
-    /// `abs (f k)`, so no separate "absolute convergence ⟹ convergence"
-    /// bridge (`sumRange_cauchy_of_abs_cauchy`) is needed: that bridge is for
-    /// a hypothesis already phrased as `Cauchy (sumRange (fun k => abs (f
-    /// k)))`, and the ratio hypothesis here is a termwise BOUND, not a
-    /// pre-existing Cauchy fact about the absolute series. See
-    /// `creal/ratio_test.rs::declare_sum_range_ratio_test`.
-    pub sum_range_ratio_test: NameId,
+    /// Reached as `p.ratio_test.geom_scaled_cauchy_of_lt` and documented in
+    /// [`RatioTestNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub ratio_test: RatioTestNames,
     /// `CReal.one_le_pow_of_one_le : ∀ x, le one x → ∀ n, le one (pow x n)` —
     /// the mirror of [`Self::pow_le_one`]: powers of a base at least `1` stay
     /// at least `1`. Induction on `n`, and simpler than `pow_le_one`'s own
@@ -3843,28 +3551,15 @@ pub struct CRealPrelude {
     /// says so.
     pub strict_injective_of_pos_deriv: NameId,
 
-    /// `CReal.order_reflect_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F F' a
-    /// b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
-    /// ∀ x y, le a x → le x b → le a y → le y b → Apart x y → lt (F x) (F y)
-    /// → lt x y` (`creal/inverse_fn.rs`) — the CONVERSE half of
-    /// [`Self::strict_mono_of_pos_deriv`], and the reason it is stated with
-    /// `Apart x y` as a HYPOTHESIS rather than derived: producing `lt x y`
-    /// from nothing but a codomain inequality would require deciding which
-    /// of `lt x y`/`lt y x` holds, and `CReal.lt` is not decidable. Given
-    /// `Apart x y` as DATA (not derived via excluded middle), the proof
-    /// cases on it: the `lt x y` branch is the goal already; the `lt y x`
-    /// branch applies [`Self::strict_mono_of_pos_deriv`] to get
-    /// `lt (F y) (F x)`, which together with the hypothesis `lt (F x) (F y)`
-    /// gives `lt (F x) (F x)` via `lt_trans`, refuted by `lt_irrefl`.
+    /// `creal/inverse_fn.rs`'s own 2 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Unconditional order-reflection (no `Apart x y` hypothesis) is NOT
-    /// proved here and is not reachable with this development's current
-    /// machinery: it is exactly as hard as finding an exact preimage
-    /// (`creal/ivt.rs`'s `ivt_approx`, still open), since both require
-    /// turning a codomain inequality into domain POSITION information, which
-    /// needs some form of bisection/localisation this file does not have in
-    /// exact form.
-    pub order_reflect_of_pos_deriv: NameId,
+    /// Reached as `p.inverse_fn.order_reflect_of_pos_deriv` and documented in
+    /// [`InverseFnNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub inverse_fn: InverseFnNames,
 
     /// `CReal.inverse_lipschitz_of_pos_deriv : ∀ F F' a b, HasDerivativeOn F
     /// F' a b → ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k))
@@ -3896,36 +3591,12 @@ pub struct CRealPrelude {
     /// the sign facts (`x−y ≤ 0 ≤ (2k+2)·(F hi−F lo)` in the branch where
     /// `x < y`, and its mirror).
     ///
-    /// Unlike [`Self::order_reflect_of_pos_deriv`], this does NOT need the
+    /// Unlike [`InverseFnNames::order_reflect_of_pos_deriv`], this does NOT need the
     /// codomain hypothesis `lt (F x) (F y)` at all — it bounds the gap in
     /// BOTH directions from `Apart x y` alone, which is what makes it a
     /// genuine continuity-of-the-inverse statement rather than a restatement
     /// of order-reflection.
     pub inverse_lipschitz_of_pos_deriv: NameId,
-
-    /// `CReal.ivt_exact_root_at : ∀ F F' a b, HasDerivativeOn F F' a b →
-    /// UniformlyContinuousOn F a b → le a b → ∀ y, le (F a) y → le y (F b) →
-    /// ∀ k, (∀ z, le a z → le z b → le (ofRat (natDivSucc 1 k)) (F' z)) →
-    /// ∃ c, le a c ∧ (le c b ∧ Equiv (F c) y)` (`creal/inverse_fn.rs`) —
-    /// Chapter 12's EXISTENCE half: `F` has a genuine preimage for every
-    /// target `y` between `F a` and `F b`, not just for `y = zero`.
-    ///
-    /// Not a re-derivation of [`Self::ivt_exact_root`] — a wrapper applying
-    /// it to the SHIFTED function `G := fun z => add (F z) (neg y)`, whose
-    /// root is `F`'s `y`-preimage. `G`'s derivative and continuity come from
-    /// [`Self::has_derivative_sub`]/[`Self::uniformly_continuous_sub`]
-    /// composed with [`Self::has_derivative_const`]/
-    /// [`Self::uniformly_continuous_const`] at `y` — a constant shift changes
-    /// neither — and the derivative-bound hypothesis on `F'` transports to
-    /// `G'` through the ring identity `F' z ~ F' z − 0`
-    /// ([`Self::add_zero`] plus `monotone.rs`'s private `neg_zero_equiv`,
-    /// via [`Self::le_congr`]). `G a ≤ 0 ≤ G b` is
-    /// [`Self::add_le_add`]/[`Self::add_neg`] applied to `F a ≤ y ≤ F b`,
-    /// the same shift at the other two endpoints. `ivt_exact_root`'s result
-    /// `Equiv (G c) zero` reads back as `Equiv (F c) y` via `monotone.rs`'s
-    /// `equiv_of_sub_equiv_zero`, built there for an unrelated purpose and
-    /// reused here unchanged.
-    pub ivt_exact_root_at: NameId,
 
     /// `CReal.ivt_step : ∀ F P Q eps, lt zero eps → le P Q → le (F P) eps →
     /// le (neg eps) (F Q) → ∃ P' Q', le P P' ∧ le P' Q' ∧ le Q' Q ∧
@@ -4375,16 +4046,15 @@ pub struct CRealPrelude {
     /// only ever blocked `Type`-valued elimination, and the bisection being
     /// DATA is what keeps the sequence itself out of that case.
     pub ivt_exact_root: NameId,
-    /// `CReal.hasDerivative_unique : ∀ F F1 F2 a b, HasDerivativeOn F F1 a b
-    /// → HasDerivativeOn F F2 a b → lt a b → ∀ z, le a z → le z b → Equiv
-    /// (F1 z) (F2 z)` (`creal/deriv_unique.rs`) — the derivative of a
-    /// function on `[a,b]` is unique, GIVEN the interval is genuinely
-    /// nondegenerate (`lt a b`, not merely `le a b`). The naive statement
-    /// without that hypothesis is refuted at a degenerate interval `a = b`
-    /// (`id`'s derivative is simultaneously `const zero` and `const one`
-    /// there); see that module's own documentation for the refutation and
-    /// the `lt_cotrans`-based nearby-point construction that replaces it.
-    pub has_derivative_unique: NameId,
+    /// `creal/deriv_unique.rs`'s own name, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.deriv_unique.has_derivative_unique` and documented in
+    /// [`DerivUniqueNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub deriv_unique: DerivUniqueNames,
     /// `CReal.fermat_interior_extremum : ∀ F F' lo hi, HasDerivativeOn F F'
     /// lo hi → ∀ c, lt lo c → lt c hi → (∀ x, le lo x → le x hi →
     /// le (F x) (F c)) → Equiv (F' c) zero` (`creal/fermat.rs`) — Fermat's
@@ -4421,24 +4091,15 @@ pub struct CRealPrelude {
     /// the full accounting, including why the UNRESTRICTED (existential)
     /// form is NOT landed here.
     pub rolle_interior_extremum: NameId,
-    /// `CReal.mvt_interiorExtremum : ∀ F F' lo hi, HasDerivativeOn F F' lo
-    /// hi → ∀ m, Equiv (F hi) (add (F lo) (mul m (add hi (neg lo)))) → ∀ c,
-    /// lt lo c → lt c hi → (Or (∀ x, le lo x → le x hi → le (g x) (g c)) (∀
-    /// x, le lo x → le x hi → le (g c) (g x))) → Equiv (F' c) m`, where `g :=
-    /// fun r => add (F r) (neg (mul m r))` (`creal/mvt.rs`) — the Mean Value
-    /// Theorem (Spivak ch. 11, Thm 3), a thin wrapper over
-    /// [`Self::rolle_interior_extremum`] applied to `g`: the secant-slope
-    /// hypothesis makes `Equiv (g lo) (g hi)` provable UNCONDITIONALLY (pure
-    /// algebra, no extra hypothesis), `g`'s derivative is `fun x => add (F'
-    /// x) (neg m)` via [`Self::has_derivative_sub`] composed with a
-    /// from-scratch (not [`Self::has_derivative_smul`], which would need an
-    /// extra magnitude bound on `m`) derivative witness for `r ↦ m·r`, and
-    /// the `Or` case-split hypothesis is Rolle's own, passed through
-    /// verbatim with no case analysis performed in this theorem at all. See
-    /// `creal/mvt.rs`'s module documentation for the full graded-family
-    /// accounting (row 2 unassessed, row 3 already the existing CAS
-    /// certificate).
-    pub mvt_interior_extremum: NameId,
+    /// `creal/mvt.rs`'s own name, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.mvt.mvt_interior_extremum` and documented in
+    /// [`MvtNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub mvt: MvtNames,
     /// `CReal.mesh_le_of_ge : ∀ a b outer m, le a b → Nat.le ((Nat.succ
     /// (bound (add b (neg a))))*outer + bound (add b (neg a))) m → le (mul
     /// (add b (neg a)) (ofRat (natDivSucc 1 m))) (ofRat (natDivSucc 1
@@ -4917,7 +4578,7 @@ pub struct CRealPrelude {
     /// `t := (c−a)/(b−a)`, and [`Self::inv`] takes the positivity witness as
     /// an explicit argument, which `le a b` does not supply.
     ///
-    /// The route bypasses [`Self::crossing_index`], [`Self::bound`] and
+    /// The route bypasses [`CrossingNames::crossing_index`], [`Self::bound`] and
     /// [`Self::bucket_index_bound`] entirely — the three things five earlier
     /// lanes measured as blocking this. `t` lives in `[0,1]`, so
     /// [`Self::bucket_index`] can be read at grid `succ g` directly: the
@@ -5407,44 +5068,15 @@ pub struct CRealPrelude {
     pub uniform_limit_uniformly_continuous: NameId,
 
     // --- polynomials over `CReal` (creal/polynomial.rs) ----------------------
-    /// `CReal.polyEval : (Nat → CReal) → Nat → CReal → CReal` — `polyEval c n
-    /// x := sumRange (fun i => mul (c i) (pow x i)) n`, sum of monomials, not
-    /// Horner. See `creal/polynomial.rs`'s module doc for why.
-    pub poly_eval: NameId,
-    /// `CReal.polyEval_zero : ∀ c x, Eq CReal (polyEval c Nat.zero x) zero`.
-    /// Closes by `Eq.refl` alone.
-    pub poly_eval_zero: NameId,
-    /// `CReal.polyEval_succ : ∀ c n x, Eq CReal (polyEval c (Nat.succ n) x)
-    /// (add (polyEval c n x) (mul (c n) (pow x n)))`. Closes by `Eq.refl`
-    /// alone.
-    pub poly_eval_succ: NameId,
-    /// `CReal.polyAdd : (Nat → CReal) → (Nat → CReal) → (Nat → CReal) := fun
-    /// c g i => add (c i) (g i)` — pointwise coefficient addition.
-    pub poly_add: NameId,
-    /// `CReal.polyEval_polyAdd : ∀ c g n x, Equiv (polyEval (polyAdd c g) n
-    /// x) (add (polyEval c n x) (polyEval g n x))` — evaluation is a
-    /// homomorphism from `(polyAdd, polyEval)` to `(add, ·)`, at one shared
-    /// bound `n` for both operands.
-    pub poly_eval_poly_add: NameId,
-    /// `CReal.polyScale : CReal → (Nat → CReal) → (Nat → CReal) := fun a c i
-    /// => mul a (c i)` — scaling every coefficient by a constant.
-    pub poly_scale: NameId,
-    /// `CReal.polyEval_polyScale : ∀ a c n x, Equiv (polyEval (polyScale a c)
-    /// n x) (mul a (polyEval c n x))` — evaluation is a homomorphism from
-    /// `(polyScale, polyEval)` to `(mul, ·)`.
-    pub poly_eval_poly_scale: NameId,
-    /// `CReal.polyDegreeLt : (Nat → CReal) → Nat → Prop := fun c n => ∀ i,
-    /// Nat.le n i → Equiv (c i) zero` — the honest stand-in for a *computed*
-    /// degree bound, ruled out by `CReal.Equiv`'s undecidability: a
-    /// **hypothesis** a caller supplies, never derived from `c`/`n` alone.
-    pub poly_degree_lt: NameId,
-    /// `CReal.polyDegreeLt_polyAdd : ∀ c g n, polyDegreeLt c n →
-    /// polyDegreeLt g n → polyDegreeLt (polyAdd c g) n` — preserved at the
-    /// same bound (no `Nat.max` is used or available in this kernel).
-    pub poly_degree_lt_poly_add: NameId,
-    /// `CReal.polyDegreeLt_polyScale : ∀ a c n, polyDegreeLt c n →
-    /// polyDegreeLt (polyScale a c) n`.
-    pub poly_degree_lt_poly_scale: NameId,
+    /// `creal/polynomial.rs`'s own 10 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.polynomial.poly_eval` and documented in
+    /// [`PolynomialNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub polynomial: PolynomialNames,
     /// `CReal.uniform_converges_add : ∀ F H G K a b, UniformConvergesOn F G a
     /// b → UniformConvergesOn H K a b → UniformConvergesOn (fun n x => add (F
     /// n x) (H n x)) (fun x => add (G x) (K x)) a b`
@@ -5539,7 +5171,7 @@ pub struct CRealPrelude {
     /// rather than taken as parameters. The raw Cauchy modulus `(k, …)` for
     /// the DOMINATING geometric series `M·rʲ` is still a parameter, exactly
     /// as `weierstrassMTest` itself takes one — a caller obtains it from
-    /// [`Self::geom_scaled_cauchy_of_lt`] plus an `Exists`-elimination of
+    /// [`RatioTestNames::geom_scaled_cauchy_of_lt`] plus an `Exists`-elimination of
     /// their own, which this declaration cannot perform internally: the
     /// M-test's own limit `G` is built FROM `k`, so a target that must not
     /// mention the witness (`Exists.rec`'s own restriction) cannot be `G`
@@ -5634,57 +5266,15 @@ pub struct CRealPrelude {
     pub mul_pow_congr: NameId,
 
     // --- the Extreme Value Theorem's boundary certificate (ADR-0603 row 2) ---
-    /// `CReal.evtLinear : CReal -> CReal -> CReal := fun v t => mul t v` --
-    /// the EVT counterexample family (`creal/extreme_value.rs`). Classical
-    /// supremum `max(0, v)` on `[0, 1]`, attained at `1` when `v >= 0` and at
-    /// `0` when `v <= 0`, so *which endpoint attains it* IS the sign of `v` --
-    /// checked by kernel reduction to exact rationals, both signs, in
-    /// `creal_tests::evt_linear_endpoint_values_reduce_and_flip_with_the_sign_of_v`.
+    /// `creal/extreme_value.rs`'s own 3 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// It is also Lipschitz with constant `|v|`, hence uniformly continuous
-    /// and inside classical EVT's hypothesis class -- **now proved, not
-    /// asserted**: see [`Self::evt_linear_uniformly_continuous`].
-    pub evt_linear: NameId,
-    /// `CReal.evt_attained_max_decides_sign : forall v c, le zero c ->
-    /// le c one -> (forall t, le zero t -> le t one -> le (mul t v)
-    /// (mul c v)) -> Or (le v zero) (le zero v)` --
-    /// **ADR-0603 row 2 for the Extreme Value Theorem**, machine-checked
-    /// rather than asserted (`creal/extreme_value.rs`).
-    ///
-    /// An *attained* maximiser for [`Self::evt_linear`] on `[0, 1]` yields
-    /// `v <= 0` or `0 <= v` for an ARBITRARY real -- analytic LLPO,
-    /// equivalently the total order `le_total` that
-    /// `creal/cotransitivity.rs`'s module documentation states is neither
-    /// assumed nor provable here. So an operator handing back a maximiser for
-    /// every `v` would hand back the comparison the order deliberately lacks,
-    /// which is what makes [`Self::bounded_of_uniformly_continuous`] -- a
-    /// COMPUTED bound, no attaining point -- optimal rather than merely
-    /// unimproved.
-    ///
-    /// One [`Self::lt_cotrans`] call on the fixed strict pair
-    /// [`Self::zero_lt_one`] at `z := c`, then
-    /// [`Self::le_of_mul_le_mul_left`] against the modulus
-    /// [`Self::pos_bound_of_lt`] supplies -- at `c` in the `0 < c` branch and
-    /// at `1 + (-c)` in the `c < 1` branch. See that module's own
-    /// documentation, including its "Honest scope" section: this proves the
-    /// classical conclusion at least as strong as a decision principle this
-    /// kernel does not have, NOT that the principle is false (it is
-    /// consistent, hence unprovable here rather than refutable).
-    pub evt_attained_max_decides_sign: NameId,
-    /// `CReal.evtLinear_uniformly_continuous : forall v,
-    /// UniformlyContinuousOn (evtLinear v) zero one` -- the bridge sentence
-    /// [`Self::evt_linear`]'s own doc comment used to call asserted, now
-    /// proved: `evtLinear v` is `fun t => mul t v`, so this is
-    /// [`Self::uniformly_continuous_mul`] applied at `F := id`
-    /// ([`Self::uniformly_continuous_id`]) and `G := fun _ => v`
-    /// ([`Self::uniformly_continuous_const`]), with `F`'s `BoundedOn`
-    /// argument discharged by [`Self::bounded_on_id_zero_one`] and `G`'s by
-    /// [`Self::abs_bound_of_self`] applied at `v` directly (a constant
-    /// function's `BoundedOn` obligation, once the two range hypotheses are
-    /// dropped, IS that lemma). With this, the EVT counterexample family is
-    /// machine-checked to lie inside classical EVT's hypothesis class, not
-    /// merely asserted to. See `creal/extreme_value.rs`.
-    pub evt_linear_uniformly_continuous: NameId,
+    /// Reached as `p.extreme_value.evt_linear` and documented in
+    /// [`ExtremeValueNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub extreme_value: ExtremeValueNames,
 
     /// **The Intermediate Value Theorem's boundary certificate** (ADR-0603
     /// row 2) -- `creal/ivt_boundary.rs`'s own seven names, the first module
@@ -5698,54 +5288,15 @@ pub struct CRealPrelude {
     pub ivt_boundary: IvtBoundaryNames,
 
     // --- the least-upper-bound property's boundary certificate (ADR-0603 row 2)
-    /// `CReal.lubSet : Prop -> CReal -> Prop := fun A x => Or (le x zero)
-    /// (And A (le x one))` -- the LUB counterexample family
-    /// (`creal/lub_boundary.rs`), the set `(-inf, 0] union ((-inf, 1] if A)`.
-    /// Classical supremum `1` when `A` holds and `0` when it does not, so
-    /// *where the supremum sits* IS the truth value of `A`.
+    /// `creal/lub_boundary.rs`'s own 4 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Spivak ch. 8's P13 quantifies over an ARBITRARY inhabited bounded-above
-    /// set, so a set carved out by an arbitrary `Prop` is faithful to the
-    /// classical statement rather than a strawman -- and it is exactly the
-    /// generalisation [`Self::sup_on`] (a uniformly continuous function on a
-    /// compact interval, whose modulus supplies the locatedness) stops short
-    /// of.
-    pub lub_set: NameId,
-    /// `CReal.lubSet_inhabited : forall (A : Prop), lubSet A zero` -- classical
-    /// LUB's first hypothesis, **proved rather than asserted**, and at an
-    /// EXHIBITED witness rather than as an `Exists`. One [`Self::le_refl`]
-    /// under `Or.inl`. See `creal/lub_boundary.rs`.
-    pub lub_set_inhabited: NameId,
-    /// `CReal.lubSet_bounded : forall (A : Prop) (x : CReal), lubSet A x ->
-    /// le x one` -- classical LUB's second hypothesis, **proved rather than
-    /// asserted**, and at an EXPLICIT bound rather than as an `Exists`. The
-    /// `x <= 0` disjunct reaches `1` through [`Self::le_trans`] against
-    /// `0 <= 1`, the other by projection. See `creal/lub_boundary.rs`.
-    pub lub_set_bounded: NameId,
-    /// `CReal.lub_decides_em : forall (A : Prop) (s : CReal),
-    /// (forall x, lubSet A x -> le x s) ->
-    /// (forall t, lt t s -> Exists CReal (fun x => And (lubSet A x) (lt t x)))
-    /// -> Or A (Not A)` --
-    /// **ADR-0603 row 2 for the least upper bound property**, machine-checked
-    /// rather than asserted (`creal/lub_boundary.rs`).
-    ///
-    /// A supremum for [`Self::lub_set`] -- in **Bishop's** sense, an upper
-    /// bound plus the approximation property, which is the constructive
-    /// definition and the one [`Self::sup_on_approx_lub`] proves for the
-    /// located case -- yields `Or A (Not A)` for an ARBITRARY proposition.
-    /// That is UNRESTRICTED EXCLUDED MIDDLE, a strictly stronger boundary
-    /// than [`Self::evt_attained_max_decides_sign`] and
-    /// [`crate::IvtBoundaryNames::ivt_exact_root_decides_sign`], which both land on analytic
-    /// LLPO (consistent with Bishop; this is not).
-    ///
-    /// One [`Self::lt_cotrans`] call on the fixed strict pair
-    /// [`Self::zero_lt_one`] at `z := s`: the `0 < s` branch reads `A` off the
-    /// approximation witness at `t := 0`, and the `s < 1` branch refutes `A`
-    /// because `A` would put `1` in the set. See that module's own
-    /// documentation, including its "Honest scope" section: this proves the
-    /// classical conclusion at least as strong as a decision principle this
-    /// kernel does not have, NOT that the principle is false.
-    pub lub_decides_em: NameId,
+    /// Reached as `p.lub_boundary.lub_set` and documented in
+    /// [`LubBoundaryNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub lub_boundary: LubBoundaryNames,
 
     // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
@@ -6093,49 +5644,15 @@ pub struct CRealPrelude {
     pub cos_fn_wide_has_derivative: NameId,
 
     // --- general `exp : CReal → CReal` (creal/exp_fn.rs) -----------------------
-    /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
-    /// (powerSeriesTerm expTerm k x)) (expDominant k)` — the domination bound
-    /// [`Self::weierstrass_m_test`] needs. Unlike
-    /// [`Self::cos_fn_term_abs_le`], NO new per-file term/congruence pair is
-    /// needed here: `expTerm`'s coefficients cover EVERY `Nat` index (cosine's
-    /// support only even exponents), so [`Self::power_series_term`] /
-    /// [`Self::power_series_term_congr`] (already generic, `creal/power.rs`)
-    /// apply directly at `c := expTerm`. `0 ≤ x ≤ 1` gives `pow x k ≤ one`
-    /// ([`Self::pow_le_one`]), `abs_mul_le_of_bounds` folds that against
-    /// `le_refl (abs (expTerm k))` to `abs (powerSeriesTerm expTerm k x) ≤ abs
-    /// (expTerm k)` (up to `mul_one`), and [`Self::exp_term_abs_le_dominant`]
-    /// closes the rest by `le_trans`. See `creal/exp_fn.rs`.
-    pub exp_fn_term_abs_le: NameId,
-    /// `CReal.expFn : CReal → CReal` — general exponential on the bounded
-    /// domain `[0, 1]`, the `G` [`Self::weierstrass_m_test`]'s own proof
-    /// builds when applied at `f := powerSeriesTerm expTerm`, `mseq :=
-    /// expDominant`, `a := zero`, `b := one`, extracted from that
-    /// application's INFERRED type (never hand-reconstructed) so it is the
-    /// identical closed term [`Self::exp_fn_uniform_converges`]'s own `G`
-    /// slot names. See `creal/exp_fn.rs`.
-    pub exp_fn: NameId,
-    /// `CReal.expFnUniformConverges : UniformConvergesOn (fun n x => sumRange
-    /// (fun k => powerSeriesTerm expTerm k x) n) expFn zero one` — the M-test
-    /// applied at the exponential power series, ascribed against the NAMED
-    /// `expFn` (rather than the raw extracted `G`) so a caller sees the
-    /// constant, not its unfolding. `expDominantCauchy`'s own concrete
-    /// witness (`exp_dominant_cauchy_body_concrete`, reused unchanged from
-    /// `CReal.e`'s and `cosOne`'s own constructions) supplies the M-test's
-    /// `(k, hcauchy)` pair DIRECTLY — no bridge needed. See
-    /// `creal/exp_fn.rs`.
-    pub exp_fn_uniform_converges: NameId,
-    /// `CReal.expFn_one_equiv_e : Equiv (expFn one) e` — the bridge between
-    /// the general power-series `expFn` (bounded to `[0, 1]`) and the
-    /// concrete `CReal.e` construction, at the shared endpoint `x := 1`.
-    /// Eliminates `CReal.e_converges`'s `Exists` witness into a per-`n`
-    /// `Within` fact, bridges it to `close_within` via
-    /// `CReal.close_within_of_within`'s own per-index construction (leg 1),
-    /// transports `expFnUniformConverges`'s `.spec` at `x := one` from
-    /// `powerSeriesTerm expTerm j one` to `expTerm j` via
-    /// `CReal.sumRange_congr` (leg 2), combines both legs by the triangle
-    /// inequality, and closes with `CReal.equiv_zero_of_rate`. See
-    /// `creal/exp_fn.rs`.
-    pub exp_fn_one_equiv_e: NameId,
+    /// `creal/exp_fn.rs`'s own 4 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.exp_fn.exp_fn.exp_fn_term_abs_le` and documented in
+    /// [`ExpFnNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub exp_fn: ExpFnNames,
     /// `CReal.maxRange : (Nat → CReal) → Nat → CReal` — the `max`-lattice
     /// analogue of [`Self::sum_range`]: `maxRange f 0 := f 0`, `maxRange f
     /// (succ n) := max (maxRange f n) (f (succ n))`, so `maxRange f n` is
@@ -6357,7 +5874,7 @@ pub struct CRealPrelude {
     ///
     /// **A VALUE, never an argmax.** Each term is a finite maximum over a
     /// mesh, so it is a height; nothing here names a point attaining it, and
-    /// [`Self::evt_attained_max_decides_sign`] says no construction can.
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`] says no construction can.
     /// See `creal/supremum.rs`.
     pub sup_seq: NameId,
     /// `CReal.supSeq_mono : ∀ F a b u, le a b → ∀ k k', Nat.le k k' →
@@ -6408,7 +5925,7 @@ pub struct CRealPrelude {
     /// interval, produced rather than asserted to exist.**
     ///
     /// EVT's row 1 under ADR-0603's grading. Row 2,
-    /// [`Self::evt_attained_max_decides_sign`], proves a MAXIMISER cannot be
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`], proves a MAXIMISER cannot be
     /// constructed; this is the maximum's VALUE, which can. Nothing here names
     /// a point attaining it, and nothing should.
     ///
@@ -6465,7 +5982,7 @@ pub struct CRealPrelude {
     /// `supOn` is approached by values of `F` on `[a, b]` to any requested
     /// accuracy, at a point the proof exhibits. It is NOT attained, and the
     /// exact form is REFUTED rather than unproved —
-    /// [`Self::evt_attained_max_decides_sign`] shows an attaining maximiser
+    /// [`ExtremeValueNames::evt_attained_max_decides_sign`] shows an attaining maximiser
     /// would decide the sign of an arbitrary real. That is why this statement
     /// is approximate and must stay so. See `creal/sup_laws.rs`.
     pub sup_on_approx_lub: NameId,
@@ -6539,7 +6056,7 @@ pub struct CRealPrelude {
     /// With [`Self::sup_on_approx_lub`] this is the pair that characterizes
     /// `supOn`: it dominates every value of `F` on `[a, b]`, and it is
     /// approached by them to any requested accuracy. Neither produces an
-    /// argmax and neither may — [`Self::evt_attained_max_decides_sign`] proves
+    /// argmax and neither may — [`ExtremeValueNames::evt_attained_max_decides_sign`] proves
     /// an attaining maximiser would decide the sign of an arbitrary real.
     ///
     /// [`Self::step_family_locate`] places `x` within one mesh cell plus an
@@ -6550,18 +6067,15 @@ pub struct CRealPrelude {
     /// [`Self::sup_on_ub_at_fine_mesh_point`] bounds the sampled value. See
     /// `creal/sup_laws.rs`.
     pub sup_on_ub: NameId,
-    /// `CReal.evt_approx_max : ∀ F a b (hab : le a b) (u :
-    /// UniformlyContinuousOn F a b) (n : Nat), ∃ x, le a x ∧ (le x b ∧
-    /// ∀ y, le a y → le y b → le (F y) (add (F x) (ofRat (natDivSucc 1
-    /// n))))` — the Extreme Value Theorem's honest row 1: an APPROXIMATE
-    /// maximum, exact structural mirror of [`Self::ivt_approx`].
+    /// `creal/evt_row1.rs`'s own name, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
     ///
-    /// Pure composition of [`Self::sup_on_approx_lub`] (the witness `x`) and
-    /// [`Self::sup_on_ub`] (bounds every `F y`) through [`Self::le_trans`].
-    /// Adds nothing to the supremum machinery and does not narrow
-    /// [`Self::evt_attained_max_decides_sign`] at all — `x` moves with `n`
-    /// and is never claimed to converge. See `creal/evt_row1.rs`.
-    pub evt_approx_max: NameId,
+    /// Reached as `p.evt_row1.evt_approx_max` and documented in
+    /// [`EvtRow1Names`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub evt_row1: EvtRow1Names,
     /// `CReal.abs_diff_le_of_deriv_bound : ∀ F F' a b, HasDerivativeOn F F'
     /// a b → ∀ M, (∀ z, le a z → le z b → le (abs (F' z)) M) → ∀ x y,
     /// le a x → le x y → le y b →
@@ -6682,45 +6196,15 @@ pub struct CRealPrelude {
     /// sums once those carry a per-index derivative witness.
     pub has_derivative_uniform_limit: NameId,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
-    /// `CReal.piHalfCoef : Nat -> Rat` -- `t 0 = 1/1`,
-    /// `t (k+1) = t k * (k+1)/(2k+3)`. The terms of Euler's transform of
-    /// Leibniz, `pi/2 = sum_k 2^k (k!)^2/(2k+1)!`, defined by the RECURSION
-    /// rather than the closed form so the ratio is definitional.
-    pub pi_half_coef: NameId,
-    /// `CReal.piHalfTerm : Nat -> CReal := fun k => ofRat (piHalfCoef k)`.
-    pub pi_half_term: NameId,
-    /// `CReal.piHalfSeriesPartial : Nat -> CReal := sumRange piHalfTerm`.
-    pub pi_half_series_partial: NameId,
-    /// `CReal.piHalfCoefNonneg : forall k, Rat.le Rat.zero (piHalfCoef k)`.
-    pub pi_half_coef_nonneg: NameId,
-    /// `CReal.piHalfTermNonneg : forall k, le zero (piHalfTerm k)`.
-    pub pi_half_term_nonneg: NameId,
-    /// `CReal.piHalfTermLePowHalf : forall k, le (piHalfTerm k) (pow half k)`
-    /// -- the geometric domination, by induction on the definitional ratio
-    /// `(k+1)/(2k+3) <= 1/2`.
-    pub pi_half_term_le_pow_half: NameId,
-    /// `CReal.piHalfTermAbsLeDominant : forall k,
-    /// le (abs (piHalfTerm k)) (expDominant k)` -- stated against `CReal.e`'s
-    /// OWN dominant series so that its concrete Cauchy witness is reusable
-    /// unchanged.
-    pub pi_half_term_abs_le_dominant: NameId,
-    /// `CReal.piHalf : CReal` -- `pi/2`, by `CReal.mk` on an explicit regular
-    /// sequence. No root, no IVT: `creal/ivt.rs` refutes the exact-root
-    /// construction, and that refutation is about one DEFINITION of pi, not
-    /// about pi.
-    pub pi_half: NameId,
-    /// `CReal.piHalfConverges : Converges piHalfSeriesPartial piHalf`.
-    pub pi_half_converges: NameId,
-    /// `CReal.pi : CReal := mul two piHalf`.
-    pub pi: NameId,
-    /// `CReal.piHalfLeTwo : le piHalf two`.
-    pub pi_half_le_two: NameId,
-    /// `CReal.piLeFour : le pi (mul two two)`.
-    pub pi_le_four: NameId,
-    /// `CReal.twoLePi : le two pi`.
-    pub two_le_pi: NameId,
-    /// `CReal.threeLePi : le (ofRat (Rat.natDivSucc 3 0)) pi`.
-    pub three_le_pi: NameId,
+    /// `creal/pi.rs`'s own 14 names, moved out of this struct by
+    /// ADR-1512 so that adding a declaration to that module touches
+    /// that module alone.
+    ///
+    /// Reached as `p.pi.pi.pi_half_coef` and documented in
+    /// [`PiNames`] rather than here. No other `creal` module reads
+    /// these names, which is what makes the move local rather than a
+    /// cross-module rename (`scripts/creal-declare-deps.py`).
+    pub pi: PiNames,
 }
 
 impl CRealPrelude {
@@ -6893,11 +6377,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         density: kernel.name_str(creal, "density"),
         lt_cotrans: kernel.name_str(creal, "lt_cotrans"),
         apart_cotrans: kernel.name_str(creal, "apart_cotrans"),
-        regular_seq: kernel.name_str(creal, "RegularSeq"),
-        limit_seq: kernel.name_str(creal, "limitSeq"),
-        limit_seq_regular: kernel.name_str(creal, "limitSeq_regular"),
-        limit: kernel.name_str(creal, "limit"),
-        limit_dist: kernel.name_str(creal, "limit_dist"),
+        completeness: completeness::CompletenessNames::intern(kernel, creal),
         converges: kernel.name_str(creal, "Converges"),
         converges_unique: kernel.name_str(creal, "converges_unique"),
         converges_of_close: kernel.name_str(creal, "converges_of_close"),
@@ -6912,12 +6392,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_lower_bound: kernel.name_str(creal, "converges_lower_bound"),
         converges_lower_bound_shift: kernel.name_str(creal, "converges_lower_bound_shift"),
         converges_upper_bound: kernel.name_str(creal, "converges_upper_bound"),
-        converges_upper_bound_shift: kernel.name_str(creal, "converges_upper_bound_shift"),
-        alternating_upper_bound_tail: kernel.name_str(creal, "alternatingUpperBoundTail"),
-        cos_wide_tail_nonneg: kernel.name_str(creal, "cosWideTailNonneg"),
-        cos_wide_tail_antitone: kernel.name_str(creal, "cosWideTailAntitone"),
-        cos_wide_series_converges: kernel.name_str(creal, "cosWideSeriesConverges"),
-        cos_wide_nonpositive: kernel.name_str(creal, "cosWideNonpositive"),
+        cos_sign: cos_sign::CosSignNames::intern(kernel, creal),
         converges_le: kernel.name_str(creal, "converges_le"),
         bounded: kernel.name_str(creal, "Bounded"),
         converges_bounded: kernel.name_str(creal, "converges_bounded"),
@@ -6953,15 +6428,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         bucket_clamp_upper: kernel.name_str(creal, "bucketClampUpper"),
         bucket_clamp_lower: kernel.name_str(creal, "bucketClampLower"),
         bucket_index_bound: kernel.name_str(creal, "bucketIndexBound"),
-        crossing_index: kernel.name_str(creal, "crossingIndex"),
-        crossing_upper: kernel.name_str(creal, "crossingUpper"),
-        crossing_lower: kernel.name_str(creal, "crossingLower"),
-        crossing_sample_ge_a: kernel.name_str(creal, "crossingSampleGeA"),
-        crossing_sample_upper: kernel.name_str(creal, "crossingSampleUpper"),
-        crossing_sample_lower: kernel.name_str(creal, "crossingSampleLower"),
-        crossing_close: kernel.name_str(creal, "crossingClose"),
-        crossing_close_clamped: kernel.name_str(creal, "crossingCloseClamped"),
-        crossing_sample_pairing_close: kernel.name_str(creal, "riemannSampleCrossingClose"),
+        crossing: crossing::CrossingNames::intern(kernel, creal),
         sample_upper_bound: kernel.name_str(creal, "sampleUpperBound"),
         sample_lower_bound: kernel.name_str(creal, "sampleLowerBound"),
         bucket_close: kernel.name_str(creal, "bucketClose"),
@@ -7067,8 +6534,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         geom_cauchy_body_of_gap: kernel.name_str(creal, "geomCauchyBodyOfGap"),
         geom_cauchy_body_16_over_25: kernel.name_str(creal, "geomCauchyBody16Over25"),
         geom_cauchy_of_lt: kernel.name_str(creal, "geomCauchyOfLt"),
-        geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
-        sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
+        ratio_test: ratio_test::RatioTestNames::intern(kernel, creal),
         one_le_pow_of_one_le: kernel.name_str(creal, "one_le_pow_of_one_le"),
         pow_le_pow_of_one_le: kernel.name_str(creal, "pow_le_pow_of_one_le"),
         pow_pos: kernel.name_str(creal, "pow_pos"),
@@ -7162,9 +6628,8 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         diff_le_of_strict_mono_magnitude: kernel
             .name_str(creal, "diff_le_of_strict_mono_magnitude"),
         strict_injective_of_pos_deriv: kernel.name_str(creal, "strict_injective_of_pos_deriv"),
-        order_reflect_of_pos_deriv: kernel.name_str(creal, "order_reflect_of_pos_deriv"),
+        inverse_fn: inverse_fn::InverseFnNames::intern(kernel, creal),
         inverse_lipschitz_of_pos_deriv: kernel.name_str(creal, "inverse_lipschitz_of_pos_deriv"),
-        ivt_exact_root_at: kernel.name_str(creal, "ivt_exact_root_at"),
         ivt_step: kernel.name_str(creal, "ivt_step"),
         constant_of_zero_deriv: kernel.name_str(creal, "constant_of_zero_deriv"),
         antitone_of_nonpos_deriv: kernel.name_str(creal, "antitone_of_nonpos_deriv"),
@@ -7187,10 +6652,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         converges_of_abs_diff_le: kernel.name_str(creal, "converges_of_abs_diff_le"),
         ivt_bisect_cauchy: kernel.name_str(creal, "ivt_bisect_cauchy"),
         ivt_exact_root: kernel.name_str(creal, "ivt_exact_root"),
-        has_derivative_unique: kernel.name_str(creal, "hasDerivative_unique"),
+        deriv_unique: deriv_unique::DerivUniqueNames::intern(kernel, creal),
         fermat_interior_extremum: kernel.name_str(creal, "fermat_interiorExtremum"),
         rolle_interior_extremum: kernel.name_str(creal, "rolle_interiorExtremum"),
-        mvt_interior_extremum: kernel.name_str(creal, "mvt_interiorExtremum"),
+        mvt: mvt::MvtNames::intern(kernel, creal),
         mesh_le_of_ge: kernel.name_str(creal, "mesh_le_of_ge"),
         mesh_scaled_le_of_ge: kernel.name_str(creal, "meshScaledLeOfGe"),
         fine_sample_in_bounds: kernel.name_str(creal, "fineSample_in_bounds"),
@@ -7250,16 +6715,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniform_converges_geom_half: kernel.name_str(creal, "uniform_converges_geom_half"),
         uniform_limit_uniformly_continuous: kernel
             .name_str(creal, "uniform_limit_uniformly_continuous"),
-        poly_eval: kernel.name_str(creal, "polyEval"),
-        poly_eval_zero: kernel.name_str(creal, "polyEval_zero"),
-        poly_eval_succ: kernel.name_str(creal, "polyEval_succ"),
-        poly_add: kernel.name_str(creal, "polyAdd"),
-        poly_eval_poly_add: kernel.name_str(creal, "polyEval_polyAdd"),
-        poly_scale: kernel.name_str(creal, "polyScale"),
-        poly_eval_poly_scale: kernel.name_str(creal, "polyEval_polyScale"),
-        poly_degree_lt: kernel.name_str(creal, "polyDegreeLt"),
-        poly_degree_lt_poly_add: kernel.name_str(creal, "polyDegreeLt_polyAdd"),
-        poly_degree_lt_poly_scale: kernel.name_str(creal, "polyDegreeLt_polyScale"),
+        polynomial: polynomial::PolynomialNames::intern(kernel, creal),
         uniform_converges_add: kernel.name_str(creal, "uniform_converges_add"),
         close_within_of_within: kernel.name_str(creal, "close_within_of_within"),
         close_within_of_within_indexed: kernel.name_str(creal, "close_within_of_within_indexed"),
@@ -7280,14 +6736,9 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         exp_term_zero_eq_one: kernel.name_str(creal, "expTerm_zero_eq_one"),
         exp_term_one_eq_one: kernel.name_str(creal, "expTerm_one_eq_one"),
         mul_pow_congr: kernel.name_str(creal, "mulPowCongr"),
-        evt_linear: kernel.name_str(creal, "evtLinear"),
-        evt_attained_max_decides_sign: kernel.name_str(creal, "evt_attained_max_decides_sign"),
-        evt_linear_uniformly_continuous: kernel.name_str(creal, "evtLinear_uniformly_continuous"),
+        extreme_value: extreme_value::ExtremeValueNames::intern(kernel, creal),
         ivt_boundary: ivt_boundary::IvtBoundaryNames::intern(kernel, creal),
-        lub_set: kernel.name_str(creal, "lubSet"),
-        lub_set_inhabited: kernel.name_str(creal, "lubSet_inhabited"),
-        lub_set_bounded: kernel.name_str(creal, "lubSet_bounded"),
-        lub_decides_em: kernel.name_str(creal, "lub_decides_em"),
+        lub_boundary: lub_boundary::LubBoundaryNames::intern(kernel, creal),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
@@ -7323,10 +6774,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         uniform_converges_shift: kernel.name_str(creal, "uniformConvergesShift"),
         uniform_converges_neg: kernel.name_str(creal, "uniformConvergesNeg"),
         cos_fn_wide_has_derivative: kernel.name_str(creal, "cosFnWideHasDerivative"),
-        exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
-        exp_fn: kernel.name_str(creal, "expFn"),
-        exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
-        exp_fn_one_equiv_e: kernel.name_str(creal, "expFn_one_equiv_e"),
+        exp_fn: exp_fn::ExpFnNames::intern(kernel, creal),
         max_range: kernel.name_str(creal, "maxRange"),
         max_range_zero: kernel.name_str(creal, "maxRange_zero"),
         max_range_succ: kernel.name_str(creal, "maxRange_succ"),
@@ -7373,25 +6821,12 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         mesh_max_le_sup_on_add: kernel.name_str(creal, "meshMax_le_supOn_add"),
         sup_on_ub_at_fine_mesh_point: kernel.name_str(creal, "supOn_ub_at_fine_mesh_point"),
         sup_on_ub: kernel.name_str(creal, "supOn_ub"),
-        evt_approx_max: kernel.name_str(creal, "evt_approx_max"),
+        evt_row1: evt_row1::EvtRow1Names::intern(kernel, creal),
         abs_diff_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_le_of_deriv_bound"),
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
         has_derivative_uniform_limit: kernel.name_str(creal, "hasDerivative_uniform_limit"),
-        pi_half_coef: kernel.name_str(creal, "piHalfCoef"),
-        pi_half_term: kernel.name_str(creal, "piHalfTerm"),
-        pi_half_series_partial: kernel.name_str(creal, "piHalfSeriesPartial"),
-        pi_half_coef_nonneg: kernel.name_str(creal, "piHalfCoefNonneg"),
-        pi_half_term_nonneg: kernel.name_str(creal, "piHalfTermNonneg"),
-        pi_half_term_le_pow_half: kernel.name_str(creal, "piHalfTermLePowHalf"),
-        pi_half_term_abs_le_dominant: kernel.name_str(creal, "piHalfTermAbsLeDominant"),
-        pi_half: kernel.name_str(creal, "piHalf"),
-        pi_half_converges: kernel.name_str(creal, "piHalfConverges"),
-        pi: kernel.name_str(creal, "pi"),
-        pi_half_le_two: kernel.name_str(creal, "piHalfLeTwo"),
-        pi_le_four: kernel.name_str(creal, "piLeFour"),
-        two_le_pi: kernel.name_str(creal, "twoLePi"),
-        three_le_pi: kernel.name_str(creal, "threeLePi"),
+        pi: pi::PiNames::intern(kernel, creal),
     }
 }
 

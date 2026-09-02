@@ -38,10 +38,12 @@
 
 use super::convergence::{converges_applied, exists_elim};
 use super::{CRealPrelude, clt, creal_ty};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 
 // --- small local term builders, verbatim in shape to every other `creal/*`
@@ -224,7 +226,7 @@ pub(super) fn declare_geom_scaled_cauchy_of_lt(
         d.lam_fv(x_fv, carrier, with_hx0)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.geom_scaled_cauchy_of_lt,
+        name: p.ratio_test.geom_scaled_cauchy_of_lt,
         uparams: vec![],
         ty,
         value,
@@ -313,7 +315,10 @@ pub(super) fn declare_sum_range_ratio_test(
     let w = cabs(d, p, f0);
 
     // cauchy_scaled : Cauchy (sumRange (fun n => mul w (pow r n)))
-    let cauchy_scaled = d.lemma(p.geom_scaled_cauchy_of_lt, &[r, hx0, hlt, k, h, w]);
+    let cauchy_scaled = d.lemma(
+        p.ratio_test.geom_scaled_cauchy_of_lt,
+        &[r, hx0, hlt, k, h, w],
+    );
 
     // g_scaled := fun n => mul w (pow r n)
     let g_scaled = {
@@ -351,9 +356,79 @@ pub(super) fn declare_sum_range_ratio_test(
         d.lam_fv(f_fv, fn_ty, with_r)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.sum_range_ratio_test,
+        name: p.ratio_test.sum_range_ratio_test,
         uparams: vec![],
         ty,
         value,
     })
+}
+
+/// The kernel names `creal/ratio_test.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RatioTestNames {
+    /// `CReal.geomScaledCauchyOfLt : ∀ x, le zero x → lt x one → ∀ k (h :
+    /// PosBound (add one (neg x)) k) (w : CReal), Cauchy (sumRange (fun n =>
+    /// mul w (pow x n)))` — a CONSTANT
+    /// times a geometric series stays Cauchy, at a GENERAL ratio `0 ≤ x < 1`
+    /// and a general scale `w`. This is `creal/ratio_test.rs`'s "scaled
+    /// geometric bridge", the piece Chapter 22–23's ratio test needs and
+    /// [`super::CRealPrelude::geom_cauchy_of_lt`] alone does not supply: `sumRange (fun n =>
+    /// mul w (pow x n))` is only `Equiv` to `mul w (sumRange (pow x ·) n)`
+    /// (`CReal.mul_sumRange`, `series.rs`, already landed), not literally
+    /// equal — `CReal.mul`'s own representative resamples its factors at a
+    /// shifted index (`product.rs`), so the two sides are not the same
+    /// rational at any index.
+    ///
+    /// Mirrors `exponential.rs::declare_exp_dominant_cauchy`'s own route
+    /// verbatim, generalized from the fixed pair `(two, half)` to `(w, x)`
+    /// and from [`super::CRealPrelude::geom_cauchy`] to [`super::CRealPrelude::geom_cauchy_of_lt`]:
+    /// [`super::CRealPrelude::geom_cauchy_of_lt`] gives `Cauchy (sumRange (pow x ·))`;
+    /// [`super::CRealPrelude::converges_of_cauchy`] lifts it to `Converges (sumRange (pow x
+    /// ·)) L` for some `L` (eliminated immediately into the Prop goal, never
+    /// into data); [`super::CRealPrelude::converges_of_const`]/[`super::CRealPrelude::converges_mul`] give
+    /// `Converges (fun n => mul w (sumRange (pow x ·) n)) (mul w L)`;
+    /// [`super::CRealPrelude::converges_cauchy`] turns that into `Cauchy (fun n => mul w
+    /// (sumRange (pow x ·) n))`; and [`super::CRealPrelude::cauchy_of_pointwise_equiv`]
+    /// transports it across `CReal.mul_sumRange`'s `Equiv` onto the stated
+    /// conclusion. See `creal/ratio_test.rs::declare_geom_scaled_cauchy_of_lt`.
+    pub geom_scaled_cauchy_of_lt: NameId,
+    /// `CReal.sumRangeRatioTest : ∀ f r, le zero r → lt r one → ∀ k (h :
+    /// PosBound (add one (neg r)) k) (hdec : ∀ n, le (abs (f (Nat.succ n)))
+    /// (mul r (abs (f n)))), Cauchy (sumRange f)` — Spivak Chapter 22–23's
+    /// ratio test: a sequence whose consecutive
+    /// absolute terms shrink by a factor `r < 1` has a Cauchy (hence
+    /// convergent) partial-sum sequence, even when `f` changes sign.
+    ///
+    /// Composes three already-landed general theorems, none of them redone
+    /// here: [`super::CRealPrelude::ratio_decay_bound`] applied to `g := fun n => abs (f
+    /// n)` gives `∀ n, le (abs (f n)) (mul (abs (f 0)) (pow r n))`;
+    /// [`super::RatioTestNames::geom_scaled_cauchy_of_lt`] at `w := abs (f 0)` gives `Cauchy
+    /// (sumRange (fun n => mul (abs (f 0)) (pow r n)))`; and
+    /// `series.rs::sumRange_cauchy_of_dominated` combines the two directly
+    /// into `Cauchy (sumRange f)` — its domination hypothesis is stated on
+    /// `abs (f k)`, so no separate "absolute convergence ⟹ convergence"
+    /// bridge (`sumRange_cauchy_of_abs_cauchy`) is needed: that bridge is for
+    /// a hypothesis already phrased as `Cauchy (sumRange (fun k => abs (f
+    /// k)))`, and the ratio hypothesis here is a termwise BOUND, not a
+    /// pre-existing Cauchy fact about the absolute series. See
+    /// `creal/ratio_test.rs::declare_sum_range_ratio_test`.
+    pub sum_range_ratio_test: NameId,
+}
+
+impl RatioTestNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            geom_scaled_cauchy_of_lt: kernel.name_str(creal, "geomScaledCauchyOfLt"),
+            sum_range_ratio_test: kernel.name_str(creal, "sumRangeRatioTest"),
+        }
+    }
 }

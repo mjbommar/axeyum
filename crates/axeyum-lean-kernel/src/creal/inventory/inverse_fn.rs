@@ -30,9 +30,13 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
     vec![
         (
             "CReal.order_reflect_of_pos_deriv",
-            p.order_reflect_of_pos_deriv,
+            p.inverse_fn.order_reflect_of_pos_deriv,
             "theorem",
         ),
-        ("CReal.ivt_exact_root_at", p.ivt_exact_root_at, "theorem"),
+        (
+            "CReal.ivt_exact_root_at",
+            p.inverse_fn.ivt_exact_root_at,
+            "theorem",
+        ),
     ]
 }

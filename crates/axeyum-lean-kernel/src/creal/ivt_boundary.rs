@@ -22,7 +22,7 @@
 //! this file: `ivt.rs` answers "do these algorithms converge to the root?"
 //! (no), and this file answers "what does the classical conclusion cost?".
 //!
-//! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! [`CReal.evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //! is the structural model — `creal/extreme_value.rs`, ADR-0603 row 2 for the
 //! Extreme Value Theorem — and this file follows it deliberately, down to the
 //! shape of the proof (one [`CReal.lt_cotrans`](super::CRealPrelude::lt_cotrans)
@@ -309,7 +309,7 @@ pub struct IvtBoundaryNames {
     /// meet's own projections supplying `0 <= c` and `0 <= max (c + (-1)) v`
     /// for free. Both interval hypotheses are faithful but UNUSED, exactly as
     /// in
-    /// [`evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign).
+    /// [`evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign).
     ///
     /// This does NOT contradict
     /// [`ivt_exact_root`](super::CRealPrelude::ivt_exact_root), which does

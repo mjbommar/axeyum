@@ -124,10 +124,12 @@ use super::trig::{
 use super::uniform_continuity::abs_neg_le;
 use super::uniform_convergence::close_within_of_within_at;
 use super::{CRealPrelude, DERIVED_HEIGHT, creal_ty, embed, equiv};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::{ExprId, ExprNode};
 use crate::int_prelude::ops::{IntDev, exists_elim};
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::{radd, rat_eq_rewrite};
 
@@ -296,7 +298,7 @@ fn declare_exp_fn_term_abs_le(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(),
         d.pi_fv(x_fv, carrier, with_hax)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.exp_fn_term_abs_le,
+        name: p.exp_fn.exp_fn_term_abs_le,
         uparams: vec![],
         ty,
         value,
@@ -348,7 +350,7 @@ pub(super) fn declare_exp_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
         let hax = d.kernel().fvar(hax_fv);
         let hxb_fv = d.fresh_fvar();
         let hxb = d.kernel().fvar(hxb_fv);
-        let body = d.lemma(p.exp_fn_term_abs_le, &[pt, hax, hxb, j]);
+        let body = d.lemma(p.exp_fn.exp_fn_term_abs_le, &[pt, hax, hxb, j]);
         let hax_ty = cle(d, p, zero_c, pt);
         let hxb_ty = cle(d, p, pt, one_cc);
         let with_hxb = d.lam_fv(hxb_fv, hxb_ty, body);
@@ -372,7 +374,7 @@ pub(super) fn declare_exp_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
 
     let exp_fn_ty = d.arrow(carrier, carrier);
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.exp_fn,
+        name: p.exp_fn.exp_fn,
         uparams: vec![],
         ty: exp_fn_ty,
         value: g0,
@@ -396,11 +398,11 @@ pub(super) fn declare_exp_fn(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), 
         let with_pt = d.lam_fv(pt_fv, carrier, body);
         d.lam_fv(n_fv, nat, with_pt)
     };
-    let exp_fn_c = d.kernel().const_(p.exp_fn, vec![]);
+    let exp_fn_c = d.kernel().const_(p.exp_fn.exp_fn, vec![]);
     let ty = d.const_app(p.uniform_converges_on, &[big_f, exp_fn_c, zero_c, one_cc]);
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.exp_fn_uniform_converges,
+        name: p.exp_fn.exp_fn_uniform_converges,
         uparams: vec![],
         ty,
         value: u0,
@@ -695,7 +697,7 @@ pub(super) fn declare_exp_fn_equiv_e(
     // Peel `F`/`G`/`a`/`b` off `expFnUniformConverges`'s own INFERRED type,
     // rather than reconstructing `big_f` by hand — guarantees an exact match
     // with the declared theorem's actual ascribed type.
-    let u_conv = d.kernel().const_(p.exp_fn_uniform_converges, vec![]);
+    let u_conv = d.kernel().const_(p.exp_fn.exp_fn_uniform_converges, vec![]);
     let ty_u = d.kernel().infer(u_conv)?;
     let (inner1, b_u) = unapp(d, ty_u);
     let (inner2, a_u) = unapp(d, inner1);
@@ -832,9 +834,77 @@ pub(super) fn declare_exp_fn_equiv_e(
     let value = exists_elim(d, predicate, target, e_converges_c, minor);
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.exp_fn_one_equiv_e,
+        name: p.exp_fn.exp_fn_one_equiv_e,
         uparams: vec![],
         ty: target,
         value,
     })
+}
+
+/// The kernel names `creal/exp_fn.rs` declares.
+///
+/// One of ADR-1512's per-module registries behind the [`CRealPrelude`]
+/// facade: the field, its documentation and its interning all live
+/// beside the `declare_*` that uses them, so a declaration added here
+/// does not touch `creal.rs` at all.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ExpFnNames {
+    /// `CReal.expFnTermAbsLe : ∀ x, le zero x → le x one → ∀ k, le (abs
+    /// (powerSeriesTerm expTerm k x)) (expDominant k)` — the domination bound
+    /// [`super::CRealPrelude::weierstrass_m_test`] needs. Unlike
+    /// [`super::CRealPrelude::cos_fn_term_abs_le`], NO new per-file term/congruence pair is
+    /// needed here: `expTerm`'s coefficients cover EVERY `Nat` index (cosine's
+    /// support only even exponents), so [`super::CRealPrelude::power_series_term`] /
+    /// [`super::CRealPrelude::power_series_term_congr`] (already generic, `creal/power.rs`)
+    /// apply directly at `c := expTerm`. `0 ≤ x ≤ 1` gives `pow x k ≤ one`
+    /// ([`super::CRealPrelude::pow_le_one`]), `abs_mul_le_of_bounds` folds that against
+    /// `le_refl (abs (expTerm k))` to `abs (powerSeriesTerm expTerm k x) ≤ abs
+    /// (expTerm k)` (up to `mul_one`), and [`super::CRealPrelude::exp_term_abs_le_dominant`]
+    /// closes the rest by `le_trans`. See `creal/exp_fn.rs`.
+    pub exp_fn_term_abs_le: NameId,
+    /// `CReal.expFn : CReal → CReal` — general exponential on the bounded
+    /// domain `[0, 1]`, the `G` [`super::CRealPrelude::weierstrass_m_test`]'s own proof
+    /// builds when applied at `f := powerSeriesTerm expTerm`, `mseq :=
+    /// expDominant`, `a := zero`, `b := one`, extracted from that
+    /// application's INFERRED type (never hand-reconstructed) so it is the
+    /// identical closed term [`super::ExpFnNames::exp_fn_uniform_converges`]'s own `G`
+    /// slot names. See `creal/exp_fn.rs`.
+    pub exp_fn: NameId,
+    /// `CReal.expFnUniformConverges : UniformConvergesOn (fun n x => sumRange
+    /// (fun k => powerSeriesTerm expTerm k x) n) expFn zero one` — the M-test
+    /// applied at the exponential power series, ascribed against the NAMED
+    /// `expFn` (rather than the raw extracted `G`) so a caller sees the
+    /// constant, not its unfolding. `expDominantCauchy`'s own concrete
+    /// witness (`exp_dominant_cauchy_body_concrete`, reused unchanged from
+    /// `CReal.e`'s and `cosOne`'s own constructions) supplies the M-test's
+    /// `(k, hcauchy)` pair DIRECTLY — no bridge needed. See
+    /// `creal/exp_fn.rs`.
+    pub exp_fn_uniform_converges: NameId,
+    /// `CReal.expFn_one_equiv_e : Equiv (expFn one) e` — the bridge between
+    /// the general power-series `expFn` (bounded to `[0, 1]`) and the
+    /// concrete `CReal.e` construction, at the shared endpoint `x := 1`.
+    /// Eliminates `CReal.e_converges`'s `Exists` witness into a per-`n`
+    /// `Within` fact, bridges it to `close_within` via
+    /// `CReal.close_within_of_within`'s own per-index construction (leg 1),
+    /// transports `expFnUniformConverges`'s `.spec` at `x := one` from
+    /// `powerSeriesTerm expTerm j one` to `expTerm j` via
+    /// `CReal.sumRange_congr` (leg 2), combines both legs by the triangle
+    /// inequality, and closes with `CReal.equiv_zero_of_rate`. See
+    /// `creal/exp_fn.rs`.
+    pub exp_fn_one_equiv_e: NameId,
+}
+
+impl ExpFnNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name sits in the file that declares it.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            exp_fn_term_abs_le: kernel.name_str(creal, "expFnTermAbsLe"),
+            exp_fn: kernel.name_str(creal, "expFn"),
+            exp_fn_uniform_converges: kernel.name_str(creal, "expFnUniformConverges"),
+            exp_fn_one_equiv_e: kernel.name_str(creal, "expFn_one_equiv_e"),
+        }
+    }
 }
