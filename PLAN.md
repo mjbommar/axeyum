@@ -148,6 +148,9 @@ now. Nothing was deleted.
 | 2026-09-01 | kernel-rustdoc-links | Fixed all 23 broken rustdoc intra-doc-links in `crates/axeyum-lean-kernel/src/{nat_prelude,ipc_heyting,ipc_provable,rat_prelude}.rs`; `cargo doc -p axeyum-lean-kernel --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 24 error lines). Workspace-wide doc build still red: 8 errors in `axeyum-cas` (out of scope, reported not fixed). |
 | 2026-09-01 | `1e33d51ee` | Split ADR-1495's bundled universe-guard test into seven named controls so each admission control is observed in the configuration whose answer it gives; added the polymorphic refusal, the bundled-structure and Nat-like admissions, and the `Prop`-exemption soundness control. `--lib inductive` 49 -> 55 passed. |
 | 2026-09-01 | `d9b9249d9` | Ordering control (the positivity pre-pass masks the universe error, refuting the assumption this lane started with); registered `inductive-universe-guard` in `scripts/tests/mutation_controls.py` (baseline green 56 tests, both mutations killed, disjoint kill sets); ADR-1500. |
+| 2026-09-01 | `f3a74e653` | generator reads ADR-1512 registries: `creal` Python table 537 → 606 names |
+| 2026-09-01 | `9a6ef752b` | `gen-py-prelude-fields.py --check` registered in the merge gate, 2 mutants |
+| 2026-09-01 | `5df5e43d3` | migration refuses a move that breaks a consumer outside the kernel crate |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
@@ -45745,6 +45748,42 @@ re-running both, so this is a measurement rather than an inference:
   lane's `Int.sumRange` landing into this lane's commit.
 - `curriculum-bucket-cohesion` — 3 findings, naming `Int.sum*`, `Nat.count*`
   and `Nat.primrec*`. None IPC, none this lane's.
+
+**Your lane's block (`done`, py-fields-registries, 2026-09-01).** Both defects
+left by the ADR-1512 registry split are closed, and the reason they were
+possible is closed with them.
+
+**What was measured.** `CRealPrelude` is 606 names: 537 flat plus 69 in 14
+per-module registries (`completeness` 5, `cos_sign` 6, `crossing` 9,
+`ratio_test` 2, `inverse_fn` 2, `deriv_unique` 1, `mvt` 1, `polynomial` 10,
+`extreme_value` 3, `ivt_boundary` 7, `lub_boundary` 4, `exp_fn` 4, `evt_row1` 1,
+`pi` 14 — the brief's "62 in 13" was one migration behind). The Python table
+carried 537 of them. `gen-py-prelude-fields.py --check` was registered in NO
+gate: zero hits across `scripts/check.sh`, `scripts/check-merge-hygiene.sh`, the
+`justfile` and `hooks/pre-push`, which is the whole explanation for how a stale
+generated file reached main.
+
+**What landed.** (1) The generator flattens a `*Names` field under a dotted name
+(`("pi.pi_le_four", p.pi.pi_le_four)`), resolving the defining file by scanning
+for `pub struct <T> {` rather than trusting the field-name-is-module-name
+convention — and an unclassified field type is now a HARD ERROR rather than a
+skip, which is the actual root cause. Table back to 606; workspace total
+2,712 → 2,781. (2) `--check` registered in `check-merge-hygiene.sh` (guard 8),
+`check.sh` and the `justfile`, with two controls and two mutants that kill
+exactly one test each; its exit 2 means "no `rustfmt`, cannot answer" and is
+reported as skipped rather than as drift. (3) `creal-migrate-registry.py` now
+refuses a move whose fields are read by any workspace `.rs` file the rewriter
+will not fix, naming each site as [GENERATED] or [hand-written]; nine controls,
+seven mutants, all killed.
+
+**What the next lane should know.** Every remaining module is currently
+"blocked" by `prelude_fields.rs`, because that generated file names every field.
+That is correct and the workflow is now: `--allow-external`, migrate, then rerun
+BOTH `creal-declare-deps.py` and `gen-py-prelude-fields.py` — both are gated by
+`check-merge-hygiene.sh`. This lane moved no fields.
+
+**Not run:** `cargo test` (out of scope by brief). `cargo check -p axeyum-py`
+and `clippy -p axeyum-py --all-targets -D warnings` both exit 0.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 and the
