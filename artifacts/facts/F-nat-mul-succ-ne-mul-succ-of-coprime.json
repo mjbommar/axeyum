@@ -52,12 +52,12 @@
     {
       "id": "numeric-side-condition-shifted",
       "kind": "exhaustive-enumeration",
-      "supports": "C2 of the ADR-1510 check script verifies the shifted implication over the same coprime (p,q) sweep, separately from C1 because the SHIFT is where an off-by-one in the corollary would live; C3 then verifies the consequence the partition actually needs -- that at 40,548 lattice points across every ordered pair of distinct odd primes below 60, exactly one of the two strict half-plane predicates holds.",
+      "supports": "C2 of the ADR-1540 check script verifies the shifted implication over the same coprime (p,q) sweep, separately from C1 because the SHIFT is where an off-by-one in the corollary would live; C3 then verifies the consequence the partition actually needs -- that at 40,548 lattice points across every ordered pair of distinct odd primes below 60, exactly one of the two strict half-plane predicates holds.",
       "check_status": "checked",
       "checkers": [
-        "adr-1510-eisenstein-side-and-sum-permute-checks.py"
+        "adr-1540-eisenstein-side-and-sum-permute-checks.py"
       ],
-      "checker_command": "python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py",
+      "checker_command": "python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py",
       "checker_seconds": 3,
       "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself: 11 of 11 mutations (each claim inverted, each control's named witness moved or neutered, and the recorded survivor made to stop surviving) exit 1. One control, M6, is recorded as a DELIBERATE SURVIVOR and asserted to survive: swapping `a` and `b` throughout sumRange_point_change leaves a true statement, because the equation is symmetric in that swap. No numeric check can separate those two readings, which is why the declared type is pinned character for character in the module's test file."
     }
@@ -68,6 +68,6 @@
     "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs)",
     "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (nat_theorem_inventory, which is Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the module's the_family_states_the_intended_types test). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-lattice)."
   },
-  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs`. ADR-1510. Declaration kind: theorem. GRADED FAMILY (ADR-0603): row 1. Row 2 unassessed as a kernel statement, for the reason recorded on F:nat-mul-ne-mul-of-coprime-of-lt.",
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs`. ADR-1540. Declaration kind: theorem. GRADED FAMILY (ADR-0603): row 1. Row 2 unassessed as a kernel statement, for the reason recorded on F:nat-mul-ne-mul-of-coprime-of-lt.",
   "external_status": "proved"
 }

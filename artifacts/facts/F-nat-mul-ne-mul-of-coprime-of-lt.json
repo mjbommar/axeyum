@@ -53,12 +53,12 @@
     {
       "id": "numeric-side-condition",
       "kind": "exhaustive-enumeration",
-      "supports": "C1 of the ADR-1510 check script verifies the implication at 766,167 (x,y) witnesses over 979 coprime (p,q) pairs with p,q <= 40, and controls M1/M2/M3 refute the three ways of weakening it (drop the bound, bound the wrong index, drop coprimality) at named witnesses.",
+      "supports": "C1 of the ADR-1540 check script verifies the implication at 766,167 (x,y) witnesses over 979 coprime (p,q) pairs with p,q <= 40, and controls M1/M2/M3 refute the three ways of weakening it (drop the bound, bound the wrong index, drop coprimality) at named witnesses.",
       "check_status": "checked",
       "checkers": [
-        "adr-1510-eisenstein-side-and-sum-permute-checks.py"
+        "adr-1540-eisenstein-side-and-sum-permute-checks.py"
       ],
-      "checker_command": "python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py",
+      "checker_command": "python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py",
       "checker_seconds": 3,
       "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself: 11 of 11 mutations (each claim inverted, each control's named witness moved or neutered, and the recorded survivor made to stop surviving) exit 1. One control, M6, is recorded as a DELIBERATE SURVIVOR and asserted to survive: swapping `a` and `b` throughout sumRange_point_change leaves a true statement, because the equation is symmetric in that swap. No numeric check can separate those two readings, which is why the declared type is pinned character for character in the module's test file."
     }
@@ -69,6 +69,6 @@
     "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs)",
     "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (nat_theorem_inventory, which is Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the module's the_family_states_the_intended_types test). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-lattice)."
   },
-  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs`. ADR-1510, closing ADR-1260's residue 2. Declaration kind: theorem. GRADED FAMILY (ADR-0603): this is row 1, the general constructive form. Row 2 (a boundary refutation) is UNASSESSED as a kernel statement -- the two false readings are refuted numerically at named witnesses by the ADR script's M1/M2/M3 and by the module's own `def_eq` controls, but no refutation is stated as a kernel theorem, and this fact does not claim one is impossible.",
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs`. ADR-1540, closing ADR-1260's residue 2. Declaration kind: theorem. GRADED FAMILY (ADR-0603): this is row 1, the general constructive form. Row 2 (a boundary refutation) is UNASSESSED as a kernel statement -- the two false readings are refuted numerically at named witnesses by the ADR script's M1/M2/M3 and by the module's own `def_eq` controls, but no refutation is stated as a kernel theorem, and this fact does not claim one is impossible.",
   "external_status": "proved"
 }

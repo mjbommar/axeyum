@@ -22,12 +22,14 @@ pointwise trichotomy. The step that decides it is now a kernel theorem.
 
 **The law is not proved, and neither of Eisenstein's two steps is.** The
 remaining obstruction is named in ADR-1260 and it is a DIFFERENT kind of gap
-from ADR-1135's: **`Int.sumRange` does not exist** (the Int prelude has
-`prodRange` and no sum aggregate at all — 291 registered Int names, 20 matching
-`prodRange`, 0 matching `sumRange`), and Eisenstein's lemma is a signed-sum
-argument. That is a missing construction over an existing carrier, not a missing
-carrier, and nothing structural blocks it.
-<!-- absent: Int.sumRange -- the obstruction; when it lands this paragraph is stale -->
+from ADR-1135's: **`Int.sumRange` did not exist** when this lane ran (the Int
+prelude had `prodRange` and no sum aggregate at all — 291 registered Int names,
+20 matching `prodRange`, 0 matching `sumRange`), and Eisenstein's lemma is a
+signed-sum argument. That was a missing construction over an existing carrier,
+not a missing carrier, and nothing structural blocked it. **It has since landed**
+(ADR-1275, `int_prelude/sum.rs`), so this paragraph records the obstruction as it
+stood on 2026-08-31 and not as it stands now.
+<!-- was-absent: Int.sumRange -- the obstruction; landed in ADR-1275 and the sentence above is now past tense -->
 
 ## Landed changes
 

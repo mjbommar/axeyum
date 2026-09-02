@@ -55,12 +55,12 @@
     {
       "id": "numeric-point-change",
       "kind": "exhaustive-enumeration",
-      "supports": "C4 of the ADR-1510 check script verifies the identity at 144 (n, i0, delta) cases; control M7 refutes the version without the one-index-differs hypothesis (two indices differing gives 25 against 20), and control M6 is recorded as a deliberate SURVIVOR.",
+      "supports": "C4 of the ADR-1540 check script verifies the identity at 144 (n, i0, delta) cases; control M7 refutes the version without the one-index-differs hypothesis (two indices differing gives 25 against 20), and control M6 is recorded as a deliberate SURVIVOR.",
       "check_status": "checked",
       "checkers": [
-        "adr-1510-eisenstein-side-and-sum-permute-checks.py"
+        "adr-1540-eisenstein-side-and-sum-permute-checks.py"
       ],
-      "checker_command": "python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py",
+      "checker_command": "python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py",
       "checker_seconds": 3,
       "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself: 11 of 11 mutations (each claim inverted, each control's named witness moved or neutered, and the recorded survivor made to stop surviving) exit 1. One control, M6, is recorded as a DELIBERATE SURVIVOR and asserted to survive: swapping `a` and `b` throughout sumRange_point_change leaves a true statement, because the equation is symmetric in that swap. No numeric check can separate those two readings, which is why the declared type is pinned character for character in the module's test file."
     }
@@ -71,6 +71,6 @@
     "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs)",
     "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (nat_theorem_inventory, which is Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the module's the_family_states_the_intended_types test). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-lattice)."
   },
-  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs`. ADR-1510. Declaration kind: theorem. The `Bool`-valued analogue `Nat.countRange_point_change` (`count_range_permute.rs`, ADR of the totient-bijection lane) is this statement's `{0,1}`-valued special case, reached by `Nat.countRange_eq_sumRange`, which is `Eq.refl`; the two coexist because the counting one is already consumed by `Nat.countRange_permute`. GRADED FAMILY (ADR-0603): row 1. Row 2 unassessed as a kernel statement.",
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs`. ADR-1540. Declaration kind: theorem. The `Bool`-valued analogue `Nat.countRange_point_change` (`count_range_permute.rs`, ADR of the totient-bijection lane) is this statement's `{0,1}`-valued special case, reached by `Nat.countRange_eq_sumRange`, which is `Eq.refl`; the two coexist because the counting one is already consumed by `Nat.countRange_permute`. GRADED FAMILY (ADR-0603): row 1. Row 2 unassessed as a kernel statement.",
   "external_status": "proved"
 }

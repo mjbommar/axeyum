@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Numeric verification for ADR-1510.
+"""Numeric verification for ADR-1540.
 
 Five claims (C1-C5) and seven controls (M1-M7). **The exit status depends on
 the finding**: a claim that fails, or a control that behaves other than as
@@ -9,7 +9,7 @@ the reason it survives is a fact about the statement.
 
 Run it:
 
-    python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py
+    python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py
 
 Nothing here is a proof. The kernel theorems are the proofs; this script exists
 so the ADR's arithmetic claims are re-runnable rather than asserted, and so the

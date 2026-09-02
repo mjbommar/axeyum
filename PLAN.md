@@ -39326,7 +39326,7 @@ condition `p·y ≠ q·x`, Euclid's lemma) and residue 3 (the mod-2 bookkeeping 
 landed is ADR-1260's **residue 2** in general form, plus the piece residue 3 was
 actually short of — which is not the piece any prior handoff named. Decision,
 mutation table and what the controls cannot catch:
-[ADR-1510](docs/research/09-decisions/adr-1510-the-side-condition-is-coprimality-and-the-additive-bijection-was-missing.md).
+[ADR-1540](docs/research/09-decisions/adr-1540-the-side-condition-is-coprimality-and-the-additive-bijection-was-missing.md).
 
 ## Prerequisite verification (this lane, in-tree, not inherited)
 
@@ -39354,8 +39354,8 @@ additive statement.
 | `crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs` | instantiation at a non-`{0,1}` summand, both hypothesis-dropping controls, footprint, type pins |
 | `crates/axeyum-lean-kernel/src/nat_prelude.rs` | four name fields, registrations, two build-order calls |
 | `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` | the four names added to the environment-derived coverage list |
-| `docs/research/09-decisions/adr-1510-*.md` | the decision, the mutation table, and the honest report that this table has NO admitted-and-survived instance |
-| `docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py` | 5 claims, 7 controls, 1 recorded survivor; exit status depends on the finding, and 11 of 11 self-mutations exit 1 |
+| `docs/research/09-decisions/adr-1540-the-side-condition-is-coprimality-and-the-additive-bijection-was-missing.md` | the decision, the mutation table, and the honest report that this table has NO admitted-and-survived instance |
+| `docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py` | 5 claims, 7 controls, 1 recorded survivor; exit status depends on the finding, and 11 of 11 self-mutations exit 1 |
 | `artifacts/facts/F-nat-{mul-ne-mul-of-coprime-of-lt,mul-succ-ne-mul-succ-of-coprime,sumrange-point-change,sumrange-permute}.json` | four ledger rows, statements verbatim from `nat_theorem_inventory` |
 
 Declarations:
@@ -39370,7 +39370,7 @@ Declarations:
 - `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude:: --test-threads=4` — **335 passed, 0 failed**
 - `cargo test --release -p axeyum-lean-kernel --lib -- int_prelude:: --test-threads=4` — **74 passed, 0 failed**
 - `cargo clippy --release -p axeyum-lean-kernel --lib --all-targets -- -D warnings` — clean
-- `python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py` — PASS; 11 of 11 self-mutations exit 1
+- `python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py` — PASS; 11 of 11 self-mutations exit 1
 - `python3 scripts/validate-facts.py` — **2580 facts, 0 errors**
 - `python3 scripts/check-settled-fact-statements.py` — PASS, 2347 pinned, drifted 0
 - `python3 scripts/gen-adr-index.py --check` — PASS
@@ -39392,7 +39392,7 @@ Every hypothesis of the two side-condition instances is discharged, including
 the coprimality proof by `Eq.refl` — so `Nat.gcd` really does reduce at both
 prime pairs. The permutation instances supply `InjectiveOn`/`MapsInto` as opaque
 free variables in a `LocalContext` and check the inferred CONCLUSION; that is a
-weaker check and ADR-1510 says so.
+weaker check and ADR-1540 says so.
 
 ## Not proved, and what a next lane takes
 
@@ -39418,17 +39418,41 @@ verified in-tree:
 
 Graded family (ADR-0603): all four facts are row 1, the general constructive
 form. **Row 2 is UNASSESSED** — the false readings are refuted numerically at
-named witnesses (ADR-1510's M1–M5, M7) and asserted as `def_eq` controls in the
+named witnesses (ADR-1540's M1–M5, M7) and asserted as `def_eq` controls in the
 test files, but none is stated as a kernel theorem, and no claim is made that
 one is impossible.
 
-## Found, not fixed
+## Merge notes
 
-`scripts/check-shape-duplicates.py` is **RED on this branch and the group is not
-this lane's**: `Nat.coprime_factorial_of_lt_prime` (`gauss_lemma.rs`) and
-`Nat.prime_coprime_factorial_of_lt` (`prime_dvd_factorial_lcm.rs`) are an
-unadjudicated shape duplicate. Neither file is touched by this lane's commits.
-It needs adjudication by whoever owns `prime_dvd_factorial_lcm.rs`.
+- **The ADR was renumbered 1510 -> 1540** after the coordinator reported a
+  collision: this worktree branched from a stale `origin/main` and did not see
+  `adr-1510-a-contract-is-sized-by-the-frontier-and-a-decline-dies-with-its-fact.md`,
+  landed 2026-09-01. `git merge main`, then the file, its checks script and every
+  cross-reference in this document and the four fact rows were renamed together;
+  `check-merge-hygiene.sh` prints `adr_index=ok`.
+- Merging local `main` conflicted in `nat_prelude_tests.rs` (both sides append to
+  `theorem_names`) and in the generated ADR index. Resolved by keeping this
+  lane's four entries alongside main's deletion of
+  `p.prime_coprime_factorial_of_lt`, and by regenerating the index.
+- **A shape duplicate this lane found is already fixed on main.**
+  `scripts/check-shape-duplicates.py` was RED on this branch before the merge,
+  on `Nat.coprime_factorial_of_lt_prime` (`gauss_lemma.rs`) against
+  `Nat.prime_coprime_factorial_of_lt` (`prime_dvd_factorial_lcm.rs`) -- neither
+  file this lane's. Main's 2026-09-02 retrieval audit deleted the duplicate, and
+  the merge picked that up.
+- **`scripts/check-absence-claims.py` was RED on local `main` before this lane
+  touched anything, and this lane fixed half of it.** Measured on a detached
+  worktree at `main`: `FAIL: 2 absence claim(s) have EXPIRED` plus
+  `FAIL: 146 unexpirable absence claim(s) ... over the budget of 122`. Both
+  expired markers were this lane's subject --
+  `docs/plan/status/quadratic-reciprocity.md` and
+  `docs/research/09-decisions/adr-1260-...` each carry
+  `<!-- absent: Int.sumRange -->`, which ADR-1275 made stale a day later. Both
+  sentences are corrected here and both markers flipped to `was-absent:`, so
+  **the EXPIRED failure is gone on this branch**. The budget failure remains and
+  this branch is **147 against 146 on main** -- one worse, and that one is not
+  laundered with `--update-budget`. The remaining 25-over-budget drift is
+  pre-existing and belongs to whoever is tracking that ratchet.
 
 **Your lane's block (`DONE`, euler-assembly, 2026-08-31).** Dispatched to
 pick up item 3 of `docs/plan/status/374-euler-theorem.md`/
@@ -45965,12 +45989,14 @@ pointwise trichotomy. The step that decides it is now a kernel theorem.
 
 **The law is not proved, and neither of Eisenstein's two steps is.** The
 remaining obstruction is named in ADR-1260 and it is a DIFFERENT kind of gap
-from ADR-1135's: **`Int.sumRange` does not exist** (the Int prelude has
-`prodRange` and no sum aggregate at all — 291 registered Int names, 20 matching
-`prodRange`, 0 matching `sumRange`), and Eisenstein's lemma is a signed-sum
-argument. That is a missing construction over an existing carrier, not a missing
-carrier, and nothing structural blocks it.
-<!-- absent: Int.sumRange -- the obstruction; when it lands this paragraph is stale -->
+from ADR-1135's: **`Int.sumRange` did not exist** when this lane ran (the Int
+prelude had `prodRange` and no sum aggregate at all — 291 registered Int names,
+20 matching `prodRange`, 0 matching `sumRange`), and Eisenstein's lemma is a
+signed-sum argument. That was a missing construction over an existing carrier,
+not a missing carrier, and nothing structural blocked it. **It has since landed**
+(ADR-1275, `int_prelude/sum.rs`), so this paragraph records the obstruction as it
+stood on 2026-08-31 and not as it stands now.
+<!-- was-absent: Int.sumRange -- the obstruction; landed in ADR-1275 and the sentence above is now past tense -->
 
 ## Landed changes
 

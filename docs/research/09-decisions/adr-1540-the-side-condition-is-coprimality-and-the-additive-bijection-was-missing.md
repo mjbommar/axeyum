@@ -1,4 +1,4 @@
-# ADR-1510: The side condition is coprimality, not primality, and the additive bijection was the thing nobody had built
+# ADR-1540: The side condition is coprimality, not primality, and the additive bijection was the thing nobody had built
 
 Status: accepted
 Date: 2026-09-02
@@ -173,7 +173,7 @@ each item verified in-tree rather than inherited from a prior handoff:
 Re-runnable, and **this is the command, not a claim that it passed**:
 
 ```sh
-python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py
+python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py
 ```
 
 Five claims (C1–C5) and seven controls (M1–M7). C1 sweeps 766,167 `(x,y)`
@@ -217,7 +217,7 @@ because `sumRange_permute` CONSUMES it, applying it at `f ∘ τ` on the left an
 the argument order that the statement alone does not.
 
 So this table contains **no instance of an admitted-and-surviving mutant**, and
-that is a gap, not a strength: the survivor exists (ADR-1510's M6 shows the swap
+that is a gap, not a strength: the survivor exists (ADR-1540's M6 shows the swap
 is true numerically), it is simply masked here by a consumer that happens to
 exist today. Were `sumRange_point_change` to be landed without
 `sumRange_permute` above it, the same mutation would survive and only the pinned
@@ -240,7 +240,7 @@ registering them.
   **74 passed, 0 failed** (the downstream prelude builds on this one).
 - `cargo clippy --release -p axeyum-lean-kernel --lib --all-targets -- -D warnings`
   — clean.
-- `python3 docs/research/09-decisions/adr-1510-eisenstein-side-and-sum-permute-checks.py`
+- `python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py`
   — PASS, and 11 of 11 self-mutations exit 1.
 - `python3 scripts/validate-facts.py` — **2580 facts, 0 errors**.
 - Both fact `checker_command`s were run with a negative control:
