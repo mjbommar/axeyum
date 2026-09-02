@@ -77,9 +77,23 @@ class NurseryComponentControls(unittest.TestCase):
     def manifest(self, name: str,
                  rows: list[tuple[str, str, str]],
                  **extra: object) -> None:
-        """``rows`` is ``[(fact_id, partition, family)]``."""
+        """``rows`` is ``[(fact_id, partition, family)]``.
+
+        THE PARTITION ROLES DEFAULT TO THE PREREGISTERED ONES (ADR-1564), so
+        every scenario written before that decision keeps `train` evaluated
+        and keeps its train/development crossing. A test that is ABOUT the
+        roles passes them in its own ``policy=`` and overrides these.
+        """
+        policy: dict[str, object] = {
+            "required_evaluation_partitions": ["train", "development",
+                                               "held-out"],
+            "training_partitions": [],
+            "blind_partitions": ["held-out"],
+        }
+        policy.update(extra.pop("policy", None) or {})  # type: ignore[arg-type]
         document: dict[str, object] = {
             "kind": "axeyum-autogenesis-nursery",
+            "policy": policy,
             "entries": [{"fact_id": f, "partition": p, "family": fam}
                         for f, p, fam in rows],
         }

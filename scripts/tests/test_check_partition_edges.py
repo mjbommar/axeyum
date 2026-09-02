@@ -57,6 +57,22 @@ SCRIPT = ROOT / "scripts/check-partition-edges.py"
 BASELINE = "artifacts/autogenesis/partition-edge-baseline-v1.json"
 AMENDMENTS = "artifacts/autogenesis/partition-edge-amendments-v1.json"
 
+# The roles the split was FROZEN with on 2026-08-18: train evaluated, nothing
+# training. The default fixture policy, so every pre-ADR-1564 scenario keeps
+# `train -> development` as its crossing.
+PREREGISTERED_POLICY: dict[str, object] = {
+    "required_evaluation_partitions": ["train", "development", "held-out"],
+    "training_partitions": [],
+    "blind_partitions": ["held-out"],
+}
+
+# The roles that ship today (ADR-1564): train is the TRAINING partition.
+AMENDED_POLICY: dict[str, object] = {
+    "required_evaluation_partitions": ["development", "held-out"],
+    "training_partitions": ["train"],
+    "blind_partitions": ["held-out"],
+}
+
 
 class PartitionEdgeControls(unittest.TestCase):
     """One scenario per guard in `scripts/check-partition-edges.py`."""
@@ -77,10 +93,25 @@ class PartitionEdgeControls(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
 
-    def manifest(self, name: str, rows: dict[str, str], **extra: object) -> None:
-        """`rows` is `{fact_id: partition}`; `extra` adds manifest-level keys."""
+    def manifest(self, name: str, rows: dict[str, str],
+                 policy: dict[str, object] | None = None,
+                 **extra: object) -> None:
+        """`rows` is `{fact_id: partition}`; `extra` adds manifest-level keys.
+
+        THE DEFAULT POLICY IS THE PREREGISTERED ONE, not the shipped one.
+        Every scenario written before ADR-1564 uses a `train -> development`
+        edge as its crossing, and those scenarios are about amendments,
+        baselines and redaction rather than about which partitions are
+        evaluated. Handing them the ORIGINAL
+        `required_evaluation_partitions: [train, development, held-out]` keeps
+        each one's subject intact; the ADR-1564 scenarios below pass the
+        shipped roles explicitly and assert the SAME fixture answers
+        differently. That contrast is the point -- it is what makes "the roles
+        are read from the policy" a measured property rather than a comment.
+        """
         document: dict[str, object] = {
             "kind": "axeyum-autogenesis-nursery",
+            "policy": PREREGISTERED_POLICY if policy is None else policy,
             "entries": [{"fact_id": fact_id, "partition": partition}
                         for fact_id, partition in rows.items()],
         }
@@ -561,6 +592,145 @@ class PartitionEdgeControls(unittest.TestCase):
         done = self.gate()
         self.assertEqual(done.returncode, 2, _ctx(done))
         self.assertIn("is train in", done.stdout)
+
+    # -- guard 6: the partition ROLES come from the policy (ADR-1564) -------
+
+    def test_a_train_development_edge_is_not_a_crossing_under_the_amended_roles(
+        self,
+    ) -> None:
+        """THE ADR-1564 DECISION, measured on the SAME tree as the fixture
+        above that calls it a crossing.
+
+        `one_crossing_only` is `F:a [train] -> F:b [development]`, and under
+        the preregistered policy every other scenario uses it is a violation.
+        Hand the identical population the amended roles and it is not one --
+        both directions, because a development row citing a proved train lemma
+        and a train row citing a development one are the same permission.
+
+        This is what makes "the roles are read from the policy" a measurement
+        rather than a comment: no fact, no edge and no partition changed
+        between this test and the one above; only the authority did."""
+        self.manifest("v1", {"F:a": "train", "F:b": "development"},
+                      policy=AMENDED_POLICY)
+        self.fact("F:a", ["F:b"])
+        self.fact("F:b", ["F:a"])
+        done = self.gate()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("|crossing=0|", done.stdout)
+        self.assertIn("|training=train|", done.stdout)
+
+    def test_a_training_edge_to_the_blind_partition_still_crosses_both_ways(
+        self,
+    ) -> None:
+        """THE SEAL. `train` is a training partition and `held-out` is blind,
+        so this pair is the one place the ADR-1564 permission must NOT reach:
+        blindness once spent cannot be un-spent, and a train row is worked on
+        by producers exactly as a development row is.
+
+        Both directions in one fixture on purpose -- they are one decision,
+        and splitting them would make the seal's mutant kill two tests."""
+        self.manifest("v1", {"F:a": "train", "F:h": "held-out"},
+                      policy=AMENDED_POLICY)
+        self.fact("F:a", ["F:h"])
+        self.fact("F:h", ["F:a"])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("|crossing=2|", done.stdout)
+        self.assertIn("F:a [train] depends_on F:h [held-out]", done.stdout)
+        self.assertIn("F:h [held-out] depends_on F:a [train]", done.stdout)
+
+    def test_a_development_to_held_out_edge_still_crosses(self) -> None:
+        """Two evaluation partitions, neither of them training. ADR-1564
+        changed which partitions are evaluated and changed nothing about what
+        happens between two that are."""
+        self.manifest("v1", {"F:b": "development", "F:h": "held-out"},
+                      policy=AMENDED_POLICY)
+        self.fact("F:b", ["F:h"])
+        self.fact("F:h")
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("F:b [development] depends_on F:h [held-out]",
+                      done.stdout)
+
+    def test_a_policy_naming_no_evaluation_partition_is_exit_two(self) -> None:
+        """A gate that cannot fail is worse than no gate.
+
+        With `required_evaluation_partitions: []` every pair would be
+        permitted and this gate would print `crossing=0 ... PASS` over a
+        ledger it never judged. The MESSAGE is asserted, not merely the exit
+        code: several inputs here are exit 2, and a guard whose test accepts
+        any of them is satisfied by the wrong refusal."""
+        self.manifest("v1", {"F:a": "train", "F:b": "development"},
+                      policy={"required_evaluation_partitions": [],
+                              "training_partitions": ["train"],
+                              "blind_partitions": []})
+        self.fact("F:a", ["F:b"])
+        self.fact("F:b")
+        done = self.gate()
+        self.assertEqual(done.returncode, 2, _ctx(done))
+        self.assertIn("required_evaluation_partitions is empty", done.stdout)
+
+    def test_a_policy_that_seals_no_blind_partition_is_exit_two(self) -> None:
+        """`blind_partitions: []` would silently unseal the held-out
+        population -- the one thing here that cannot be undone -- by making a
+        training partition's edges into it ordinary. Refused, not read as
+        `nothing is blind`."""
+        self.manifest("v1", {"F:a": "train", "F:h": "held-out"},
+                      policy={"required_evaluation_partitions":
+                              ["development", "held-out"],
+                              "training_partitions": ["train"],
+                              "blind_partitions": []})
+        self.fact("F:a", ["F:h"])
+        self.fact("F:h")
+        done = self.gate()
+        self.assertEqual(done.returncode, 2, _ctx(done))
+        self.assertIn("blind_partitions must be a non-empty subset",
+                      done.stdout)
+
+    def test_a_partition_that_is_both_training_and_evaluation_is_exit_two(
+        self,
+    ) -> None:
+        """A partition cannot be the thing producers build on AND the thing
+        they are scored against. Naming it both is a defect in the policy, and
+        reading it as either one silently picks a side."""
+        self.manifest("v1", {"F:a": "train", "F:b": "development"},
+                      policy={"required_evaluation_partitions":
+                              ["train", "development", "held-out"],
+                              "training_partitions": ["train"],
+                              "blind_partitions": ["held-out"]})
+        self.fact("F:a", ["F:b"])
+        self.fact("F:b")
+        done = self.gate()
+        self.assertEqual(done.returncode, 2, _ctx(done))
+        self.assertIn("is both a training and an evaluation partition",
+                      done.stdout)
+
+    def test_a_manifest_carrying_no_policy_at_all_is_exit_two(self) -> None:
+        """Which partitions are evaluated is UNKNOWN, which is not the same as
+        nothing crossing. The pre-ADR-1564 gate had the answer compiled in, so
+        this input used to be indistinguishable from a clean tree."""
+        self.write("artifacts/autogenesis/nursery-v1.json",
+                   {"kind": "axeyum-autogenesis-nursery",
+                    "entries": [{"fact_id": "F:a", "partition": "train"},
+                                {"fact_id": "F:b", "partition": "development"}]})
+        self.fact("F:a", ["F:b"])
+        self.fact("F:b")
+        done = self.gate()
+        self.assertEqual(done.returncode, 2, _ctx(done))
+        self.assertIn("no nursery manifest carries a `policy` block",
+                      done.stdout)
+
+    def test_two_manifests_disagreeing_about_the_roles_is_exit_two(self) -> None:
+        """Two authorities is no authority. A gate that picked one of them
+        would report on a split that exists in neither file."""
+        self.manifest("v1", {"F:a": "train"})
+        self.manifest("v2-extension", {"F:b": "development"},
+                      policy=AMENDED_POLICY)
+        self.fact("F:a", ["F:b"])
+        self.fact("F:b")
+        done = self.gate()
+        self.assertEqual(done.returncode, 2, _ctx(done))
+        self.assertIn("disagree about the partition roles", done.stdout)
 
     # -- attribution --------------------------------------------------------
 

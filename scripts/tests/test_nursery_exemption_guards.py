@@ -55,6 +55,30 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
+# THE FIXTURE POLICY IS PINNED TO THE PREREGISTERED ROLES, not inherited from
+# the committed manifest.
+#
+# Every scenario in this module uses a `train`/`development` component as its
+# crossing, and ADR-1564 made that pair legal: `train` is now the TRAINING
+# partition. Reading the live policy would silently turn each exemption
+# scenario into a population with no crossing at all -- the guard would still
+# be there and nothing would be exercising it, which is the shape this whole
+# module exists to prevent. Pinning the ORIGINAL roles keeps each test's
+# subject the exemption guard; `AmendedPartitionRoleTests` below is where the
+# roles themselves are the subject.
+PREREGISTERED_ROLES = {
+    "required_evaluation_partitions": ["train", "development", "held-out"],
+    "training_partitions": [],
+    "blind_partitions": ["held-out"],
+}
+
+
+def with_preregistered_roles(nursery: dict) -> dict:
+    """`nursery`, with its policy pinned to the preregistered roles."""
+    nursery["policy"] = {**nursery["policy"], **PREREGISTERED_ROLES}
+    return nursery
+
+
 def fact(fact_id: str, dependencies: list[str] | None = None) -> dict:
     return {"id": fact_id, "depends_on": dependencies or []}
 
@@ -93,7 +117,7 @@ class ExemptionGuardTests(unittest.TestCase):
 
     def setUp(self) -> None:
         repository = json.loads(MODULE.NURSERY.read_text())
-        self.nursery = copy.deepcopy(repository)
+        self.nursery = with_preregistered_roles(copy.deepcopy(repository))
         self.nursery["state"] = "foundation-only"
         self.nursery["entries"] = [
             row for row in repository["entries"] if row["partition"] == "longitudinal"
@@ -231,7 +255,7 @@ class CrossPopulationExemptionGuardTests(unittest.TestCase):
 
     def setUp(self) -> None:
         repository = json.loads(MODULE.NURSERY.read_text())
-        self.v1 = copy.deepcopy(repository)
+        self.v1 = with_preregistered_roles(copy.deepcopy(repository))
         self.v1["entries"] = [
             row for row in repository["entries"] if row["partition"] == "longitudinal"
         ]
@@ -318,7 +342,7 @@ class AmendedEdgeContractionTests(unittest.TestCase):
 
     def setUp(self) -> None:
         repository = json.loads(MODULE.NURSERY.read_text())
-        self.nursery = copy.deepcopy(repository)
+        self.nursery = with_preregistered_roles(copy.deepcopy(repository))
         self.nursery["state"] = "foundation-only"
         self.nursery["entries"] = [
             row for row in repository["entries"] if row["partition"] == "longitudinal"
@@ -423,6 +447,123 @@ class AmendedEdgeContractionTests(unittest.TestCase):
         self.install([{"from": "F:dev", "to": "F:nat-zero-add",
                        "date": "2026-09-02"}])
         with self.assertRaisesRegex(MODULE.NurseryError, "NOT honoured"):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+
+class AmendedPartitionRoleTests(unittest.TestCase):
+    """Controls for ADR-1564: the evaluated partitions come from the POLICY.
+
+    `check-autogenesis-nursery.py` used to hold `EVALUATION_PARTITIONS =
+    {"train", "development", "held-out"}` as a module literal three lines from
+    a `validate_policy` that separately asserted the manifest said the same
+    triple -- two copies of one decision, with the gate answering from the copy
+    that was never the authority. These tests hand the SAME population two
+    different policies and require two different answers, which is the only
+    way to distinguish a derived set from a literal that happens to agree.
+    """
+
+    def setUp(self) -> None:
+        repository = json.loads(MODULE.NURSERY.read_text())
+        self.nursery = copy.deepcopy(repository)
+        self.nursery["state"] = "foundation-only"
+        self.nursery["entries"] = [
+            row for row in repository["entries"] if row["partition"] == "longitudinal"
+        ]
+        self.nursery["component_split_exemptions"] = []
+        self.result = {"verdict": "autogenesis-1-passed"}
+        self.facts = {
+            "F:nat-zero-add": fact("F:nat-zero-add"),
+            "F:nat-mul-one": fact("F:nat-mul-one", ["F:nat-zero-add"]),
+            "F:train": fact("F:train"),
+            "F:dev": fact("F:dev", ["F:train"]),
+        }
+        self.nursery["entries"].extend(
+            [entry("F:train", "train"), entry("F:dev", "development")]
+        )
+
+    def roles(self, **overrides: object) -> None:
+        self.nursery["policy"] = {**self.nursery["policy"], **overrides}
+
+    def test_a_train_development_component_leaks_under_the_preregistered_roles(
+        self,
+    ) -> None:
+        """The BEFORE half of the pair. With train evaluated, the component is
+        a leak -- which is what makes the AFTER half a measurement of the
+        policy rather than of the fixture."""
+        self.roles(**PREREGISTERED_ROLES)
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "crosses evaluation partitions"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_the_same_component_does_not_leak_once_train_is_a_training_partition(
+        self,
+    ) -> None:
+        """THE AFTER HALF. Identical facts, identical entries, identical
+        `depends_on` edge; only `required_evaluation_partitions` differs. A
+        literal evaluation set in the gate keeps this red."""
+        self.roles(required_evaluation_partitions=["development", "held-out"],
+                   training_partitions=["train"],
+                   blind_partitions=["held-out"])
+        report = MODULE.build_report(self.nursery, self.facts, self.result)
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+        self.assertEqual(
+            report["population"]["partitions"]["train"], 1,
+            "the train row is still DRAWN; it is just not evaluated")
+
+    def test_a_development_held_out_component_still_leaks_after_the_amendment(
+        self,
+    ) -> None:
+        """The seal ADR-1564 does not touch. Two evaluation partitions fused
+        by a real `depends_on` edge is the same finding it always was."""
+        self.facts["F:held"] = fact("F:held", ["F:dev"])
+        self.nursery["entries"].append(entry("F:held", "held-out"))
+        self.roles(required_evaluation_partitions=["development", "held-out"],
+                   training_partitions=["train"],
+                   blind_partitions=["held-out"])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "crosses evaluation partitions"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_a_policy_naming_no_evaluation_partition_is_refused(self) -> None:
+        """A gate that cannot fail is worse than no gate. With nothing
+        evaluated, every component sits in at most one evaluation partition and
+        this report would be clean over a split it never looked at."""
+        self.roles(required_evaluation_partitions=[],
+                   training_partitions=["train"],
+                   blind_partitions=["held-out"])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError,
+            "required_evaluation_partitions must be a non-empty"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_a_policy_that_seals_no_blind_partition_is_refused(self) -> None:
+        """`blind_partitions: []` unseals the held-out population by data
+        edit. Blindness once spent cannot be un-spent, so the seal is not a
+        field a producer may empty."""
+        self.roles(required_evaluation_partitions=["development", "held-out"],
+                   training_partitions=["train"],
+                   blind_partitions=[])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "blind_partitions must be a non-empty subset"
+        ):
+            MODULE.build_report(self.nursery, self.facts, self.result)
+
+    def test_a_partition_that_is_both_training_and_evaluation_is_refused(
+        self,
+    ) -> None:
+        """A partition cannot be what producers build on AND what they are
+        scored against; reading it as either silently picks a side."""
+        self.roles(required_evaluation_partitions=["train", "development",
+                                                   "held-out"],
+                   training_partitions=["train"],
+                   blind_partitions=["held-out"])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError,
+            "is both a training and an evaluation partition"
+        ):
             MODULE.build_report(self.nursery, self.facts, self.result)
 
 

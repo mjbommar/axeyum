@@ -4878,6 +4878,53 @@ SUITES["partition-edges"] = (
             "        return record(root, edges,\n"
             "                      manifests, partition_of, dependencies, previous)",
         ),
+        # ADR-1564. The partition ROLES are read from the policy, and the
+        # crossing rule is no longer "the endpoints differ". M17 restores the
+        # old rule and must kill exactly one test -- which it can only do
+        # because every OTHER scenario in the suite runs under the
+        # PREREGISTERED policy (train evaluated) on purpose. A suite whose
+        # fixtures all used the shipped roles could not tell "read from the
+        # policy" from "the literal happens to have been updated".
+        #
+        # M19/M20's tests assert the MESSAGE, not just exit 2: four inputs
+        # here are exit 2, and with M19 applied the empty-evaluation policy
+        # still exits 2 through the blind check, so an exit-code-only test
+        # would have survived it.
+        (
+            "M17 a training/evaluation pair is not a crossing",
+            "        if len(peers) != 1:",
+            "        if True:",
+        ),
+        (
+            "M18 a BLIND partition is sealed in both directions",
+            "        if peer in self.blind:\n",
+            "        if False:\n",
+        ),
+        (
+            "M19 a policy naming no evaluation partition is unanswerable",
+            "    if not evaluation:\n        raise Unanswerable(",
+            "    if False:\n        raise Unanswerable(",
+        ),
+        (
+            "M20 blind_partitions may not be empty",
+            "    if not blind or blind - evaluation:",
+            "    if False:",
+        ),
+        (
+            "M21 training and evaluation are disjoint roles",
+            "    if training & evaluation:",
+            "    if False:",
+        ),
+        (
+            "M22 a manifest carrying no policy at all is unanswerable",
+            "    if not found:\n        raise Unanswerable(",
+            "    if False:\n        raise Unanswerable(",
+        ),
+        (
+            "M23 two manifests disagreeing about the roles is unanswerable",
+            "    if len(set(roles)) != 1:",
+            "    if False:",
+        ),
         (
             "M11 a held-out endpoint is redacted before it is written to the "
             "baseline",
@@ -5971,6 +6018,76 @@ SUITES["nursery-split-exemption-guards"] = (
             "        raise NurseryError(",
             "    if False:\n"
             "        raise NurseryError(",
+        ),
+        # ADR-1564. `EVALUATION_PARTITIONS` was a module literal three lines
+        # from a `validate_policy` that asserted the manifest said the same
+        # triple -- two copies of one decision, with the gate answering from
+        # the copy that was never the authority. N4 restores the literal.
+        # `AmendedPartitionRoleTests` is a BEFORE/AFTER pair over ONE fixture
+        # (same facts, same entries, same edge; only the policy differs), so
+        # N4 kills the AFTER half alone and leaves the BEFORE half green --
+        # which is what distinguishes a derived set from a lucky literal.
+        (
+            "N4 the evaluated partitions are read from the policy",
+            '    return set(policy["required_evaluation_partitions"])',
+            '    return {"train", "development", "held-out"}',
+        ),
+        (
+            "N5 a policy naming no evaluation partition is refused",
+            "        or any(partition not in PARTITIONS for partition in required)\n"
+            "    ):",
+            "        or False\n"
+            "    ):",
+        ),
+        (
+            "N6 blind_partitions may not be empty or foreign",
+            "    if not isinstance(blind, list) or not blind or set(blind) - set(required):",
+            "    if False:",
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `mathlib-nursery-split` -- the AMENDMENT REQUIREMENT on the partition roles
+# (ADR-1564).
+#
+# `required_evaluation_partitions` is part of what `split_freeze:
+# before-target-outcomes` froze. Editing it in place would be
+# indistinguishable from having always meant it -- ADR-1546's exemption
+# re-scoped 228 -> 230 -> 258 -> 274 at a coarser unit. So the generator
+# carries a `PREREGISTERED_PARTITION_ROLES` constant (the shape frozen on
+# 2026-08-18, NOT the shape that ships) and refuses a departure with no dated
+# `policy_amendments` entry.
+#
+# S2 is the direction that is easy to leave out, and the reason it is here:
+# without it a lane could record an amendment, change nothing, and the file
+# would carry a dated claim about a change that never happened.
+# --------------------------------------------------------------------------
+
+SUITES["mathlib-nursery-split"] = (
+    "scripts/create-autogenesis-mathlib-nursery-split.py",
+    Unittest("scripts.tests.test_create_autogenesis_mathlib_nursery_split"),
+    [
+        (
+            "S1 a role change with no policy_amendments entry is refused",
+            "    if departed and not amendments:",
+            "    if False:",
+        ),
+        (
+            "S2 an amendment recorded against unchanged roles is refused",
+            "    if amendments and not departed:",
+            "    if False:",
+        ),
+        (
+            "S3 blind_partitions may not be empty",
+            '    if not lists["blind_partitions"]:',
+            "    if False:",
+        ),
+        (
+            "S4 the emitted counts are re-derived, not a stale literal",
+            '            "partition": family_partitions[family],',
+            '            "partition": "train",',
         ),
     ],
 )

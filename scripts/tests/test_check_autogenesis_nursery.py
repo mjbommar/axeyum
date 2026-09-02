@@ -57,10 +57,24 @@ def unshared_entry(fact_id: str, partition: str) -> dict:
     return row
 
 
+# The roles the split was FROZEN with (ADR-1564 later made `train` a TRAINING
+# partition). Every scenario in `NurseryTests` and `CrossPopulationTests` uses
+# a train/development crossing as its subject, so they pin the ORIGINAL roles
+# and keep testing the leak checks rather than silently testing a population
+# with no crossing in it. The roles themselves are the subject of
+# `AmendedPartitionRoleTests` in `test_nursery_exemption_guards.py`.
+PREREGISTERED_ROLES = {
+    "required_evaluation_partitions": ["train", "development", "held-out"],
+    "training_partitions": [],
+    "blind_partitions": ["held-out"],
+}
+
+
 class NurseryTests(unittest.TestCase):
     def setUp(self) -> None:
         repository = json.loads(MODULE.NURSERY.read_text())
         self.nursery = copy.deepcopy(repository)
+        self.nursery["policy"] = {**self.nursery["policy"], **PREREGISTERED_ROLES}
         self.nursery["state"] = "foundation-only"
         self.nursery["entries"] = [
             row for row in repository["entries"] if row["partition"] == "longitudinal"
@@ -371,7 +385,13 @@ class CrossPopulationTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.facts: dict[str, dict] = {}
-        self.v1 = {"entries": []}
+        # The cross-population arm reads the evaluated partitions out of the
+        # BASE manifest's policy (ADR-1564), so the fixture v1 has to carry a
+        # whole one -- an arm that fell back to a literal when the base said
+        # nothing would be exactly the second copy this change removed.
+        self.v1 = {"policy": {**json.loads(MODULE.NURSERY.read_text())["policy"],
+                              **PREREGISTERED_ROLES},
+                   "entries": []}
         self.v2 = v2_extension([])
 
     def test_wrong_extension_kind_is_rejected(self) -> None:
