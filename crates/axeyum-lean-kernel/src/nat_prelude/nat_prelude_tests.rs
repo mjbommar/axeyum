@@ -676,6 +676,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_product,
         p.count_range_eq_zero_of_all_false,
         p.count_range_bij,
+        p.count_range_bij_of_inverse,
         p.div_mod_block,
         p.crt_self_map_maps_into,
         p.crt_self_map_injective_on,

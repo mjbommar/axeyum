@@ -3,7 +3,7 @@
 //! A separate file rather than an addition to the dense `nat_prelude_tests.rs`,
 //! per this repository's standing merge-hazard note.
 //!
-//! Four kinds of check, on disjoint defect classes:
+//! Five checks, on disjoint defect classes:
 //!
 //! 1. **The arithmetic, before any proof term.** The two ranges the
 //!    instantiation uses are counted by evaluation, and the count at the WRONG
@@ -22,7 +22,14 @@
 //!    evaluation (`2` against `1`), and — the sharper half — the injectivity
 //!    hypothesis at that `σ` is shown to be UNINHABITED: a closed term of type
 //!    `H1(σ) → False` type-checks, built by applying the hypothesis at the two
-//!    distinct selected indices `1` and `2`, where `σ` agrees.
+//!    distinct selected indices `1` and `2`, where `σ` agrees. The same
+//!    refutation is then required to FAIL at an injective `σ`, so the control
+//!    is not inverted.
+//! 5. **The derived form `countRange_bij_of_inverse`** at its own concrete
+//!    instance (`σ = τ = transposition 2 3`, a total involution, carrying the
+//!    singleton `{2}` below `3` to the singleton `{3}` below `4`), with its
+//!    whole declared type rebuilt independently — the check that it really has
+//!    FOUR hypotheses and no injectivity among them.
 
 use crate::expr::ExprId;
 use crate::tc::{LocalContext, LocalDecl};
@@ -687,5 +694,255 @@ fn a_non_injective_sigma_cannot_discharge_the_hypothesis() {
         f.k.infer(good_attempt).is_err(),
         "the same refutation must NOT type-check at the injective sigma := succ \
          -- otherwise the negative control is inverted and measures nothing"
+    );
+}
+
+/// `Nat.countRange_bij_of_inverse` at a fully CERTIFIED concrete instance, with
+/// the two-sided inverse supplied by the prelude's own
+/// `transposition_involutive` rather than assumed.
+///
+/// `σ = τ = Nat.transposition 2 3`, a total involution of `Nat`. `p := (2 ≤ ·)`
+/// selects `{2}` below `3` and `q := (3 ≤ ·)` selects `{3}` below `4`:
+/// different bounds, different singletons, and the transposition carries one to
+/// the other. The two `MapsInto` obligations are discharged symbolically —
+/// `Lt i 3` with `Le 2 i` forces `i = 2` by `le_antisymm`, and only then does
+/// the instance become concrete — so nothing here is a numeral pretending to be
+/// a proof.
+///
+/// The derived form's whole point is that INJECTIVITY IS NOT AMONG ITS
+/// HYPOTHESES, so the last assertion pins its arity at four rather than five.
+#[test]
+#[allow(clippy::too_many_lines)]
+fn count_range_bij_of_inverse_certifies_a_transposition_across_two_bounds() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let nat = f.nat_ty();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let true_ = f.bool_true();
+
+    let p_pred = f.at_least(two);
+    let q_pred = f.at_least(three);
+    // `Lt 2 3` is `Le 3 3`.
+    let lt_2_3 = f.const_app(p.le_refl, &[three]);
+    let swap = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let body = f.const_app(p.transposition, &[two, three, k]);
+        f.lam_fv(k_fv, nat, body)
+    };
+
+    // The involution, unconditionally on all of `Nat`, used for BOTH round
+    // trips because `σ` and `τ` are the same map.
+    let involutive = f.const_app(p.transposition_involutive, &[two, three, lt_2_3]);
+
+    // H2: `{i < 3 | 2 ≤ i}` is `{2}`, and `σ 2 = 3` lands in `{j < 4 | 3 ≤ j}`.
+    let h2 = {
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let hi_fv = f.fresh_fvar();
+        let hi = f.k.fvar(hi_fv);
+        let hp_fv = f.fresh_fvar();
+        let hp = f.k.fvar(hp_fv);
+
+        let le_i_2 = f.const_app(p.le_of_succ_le_succ, &[i, two, hi]);
+        let le_2_i = f.const_app(p.le_of_ble_eq_true, &[two, i, hp]);
+        let i_eq_2 = f.const_app(p.le_antisymm, &[i, two, le_i_2, le_2_i]);
+        let two_eq_i = f.symm(i, two, i_eq_2);
+
+        // At the concrete `2`: `σ 2 = 3`, so `Lt 3 4` and `q 3 = true` both
+        // reduce, and `Lt 3 4` is `Le 4 4`.
+        let at_two = {
+            let s2 = f.apply(swap, &[two]);
+            let bound_ty = f.lt(s2, four);
+            let q_s2 = f.apply(q_pred, &[s2]);
+            let sel_ty = f.bool_eq(q_s2, true_);
+            let bound = f.const_app(p.le_refl, &[four]);
+            let selected = f.bool_refl(true_);
+            f.const_app(p.logic.and_intro, &[bound_ty, sel_ty, bound, selected])
+        };
+        let body = f.transport_eq(two, i, at_two, two_eq_i, &|d: &mut Fixture, x| {
+            let four = d.num(4);
+            let true_ = d.bool_true();
+            let sx = d.apply(swap, &[x]);
+            let bound = d.lt(sx, four);
+            let q_sx = d.apply(q_pred, &[sx]);
+            let sel = d.bool_eq(q_sx, true_);
+            let and_name = d.p.logic.and;
+            d.const_app(and_name, &[bound, sel])
+        });
+
+        let pi = f.apply(p_pred, &[i]);
+        let hp_ty = f.bool_eq(pi, true_);
+        let with_hp = f.lam_fv(hp_fv, hp_ty, body);
+        let hi_ty = f.lt(i, three);
+        let with_hi = f.lam_fv(hi_fv, hi_ty, with_hp);
+        f.lam_fv(i_fv, nat, with_hi)
+    };
+
+    // H3: `{j < 4 | 3 ≤ j}` is `{3}`, and `τ 3 = 2` lands back in `{2}`.
+    let h3 = {
+        let j_fv = f.fresh_fvar();
+        let j = f.k.fvar(j_fv);
+        let hj_fv = f.fresh_fvar();
+        let hj = f.k.fvar(hj_fv);
+        let hq_fv = f.fresh_fvar();
+        let hq = f.k.fvar(hq_fv);
+
+        let le_j_3 = f.const_app(p.le_of_succ_le_succ, &[j, three, hj]);
+        let le_3_j = f.const_app(p.le_of_ble_eq_true, &[three, j, hq]);
+        let j_eq_3 = f.const_app(p.le_antisymm, &[j, three, le_j_3, le_3_j]);
+        let three_eq_j = f.symm(j, three, j_eq_3);
+
+        let at_three = {
+            let s3 = f.apply(swap, &[three]);
+            let bound_ty = f.lt(s3, three);
+            let p_s3 = f.apply(p_pred, &[s3]);
+            let sel_ty = f.bool_eq(p_s3, true_);
+            let bound = f.const_app(p.le_refl, &[three]);
+            let selected = f.bool_refl(true_);
+            f.const_app(p.logic.and_intro, &[bound_ty, sel_ty, bound, selected])
+        };
+        let body = f.transport_eq(three, j, at_three, three_eq_j, &|d: &mut Fixture, x| {
+            let three = d.num(3);
+            let true_ = d.bool_true();
+            let sx = d.apply(swap, &[x]);
+            let bound = d.lt(sx, three);
+            let p_sx = d.apply(p_pred, &[sx]);
+            let sel = d.bool_eq(p_sx, true_);
+            let and_name = d.p.logic.and;
+            d.const_app(and_name, &[bound, sel])
+        });
+
+        let qj = f.apply(q_pred, &[j]);
+        let hq_ty = f.bool_eq(qj, true_);
+        let with_hq = f.lam_fv(hq_fv, hq_ty, body);
+        let hj_ty = f.lt(j, four);
+        let with_hj = f.lam_fv(hj_fv, hj_ty, with_hq);
+        f.lam_fv(j_fv, nat, with_hj)
+    };
+
+    let proof = f.const_app(
+        p.count_range_bij_of_inverse,
+        &[
+            p_pred, q_pred, swap, swap, three, four, involutive, involutive, h2, h3,
+        ],
+    );
+    let inferred = match f.k.infer(proof) {
+        Ok(t) => t,
+        Err(e) => panic!(
+            "countRange_bij_of_inverse must apply at the transposition 2 3: {}",
+            f.explain(&e)
+        ),
+    };
+
+    let lhs = f.count(p_pred, three);
+    let rhs = f.count(q_pred, four);
+    let expected = f.eq(lhs, rhs);
+    assert!(
+        f.k.def_eq(inferred, expected),
+        "the instance must state countRange (2<=.) 3 = countRange (3<=.) 4"
+    );
+    assert!(
+        f.k.def_eq(lhs, one),
+        "the left count is the singleton {{2}}"
+    );
+    assert!(
+        f.k.def_eq(rhs, one),
+        "the right count is the singleton {{3}}"
+    );
+    // Genuinely different selected sets, not the same one twice.
+    let false_ = f.bool_false();
+    let p_at_3 = f.apply(p_pred, &[three]);
+    let q_at_2 = f.apply(q_pred, &[two]);
+    assert!(f.k.def_eq(p_at_3, true_), "3 satisfies the left predicate");
+    assert!(
+        f.k.def_eq(q_at_2, false_),
+        "2 does NOT satisfy the right predicate"
+    );
+
+    // The derived form takes FOUR hypotheses, not five: NO INJECTIVITY. The
+    // whole declared type is rebuilt here, independently of the declaration, so
+    // an extra or reordered binder fails rather than passes.
+    let declared = {
+        let c = f.k.const_(p.count_range_bij_of_inverse, vec![]);
+        match f.k.infer(c) {
+            Ok(t) => t,
+            Err(e) => panic!("the constant must have a type: {}", f.explain(&e)),
+        }
+    };
+    let rebuilt = {
+        let bool_ty = f.bool_ty();
+        let pred_ty = f.arrow(nat, bool_ty);
+        let fn_ty = f.arrow(nat, nat);
+        let pp_fv = f.fresh_fvar();
+        let pp = f.k.fvar(pp_fv);
+        let q_fv = f.fresh_fvar();
+        let q = f.k.fvar(q_fv);
+        let sg_fv = f.fresh_fvar();
+        let sg = f.k.fvar(sg_fv);
+        let tu_fv = f.fresh_fvar();
+        let tu = f.k.fvar(tu_fv);
+        let n_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+        let m_fv = f.fresh_fvar();
+        let m = f.k.fvar(m_fv);
+
+        let total = |f: &mut Fixture, a: ExprId, b: ExprId| {
+            let nat = f.nat_ty();
+            let i_fv = f.fresh_fvar();
+            let i = f.k.fvar(i_fv);
+            let ai = f.apply(a, &[i]);
+            let bai = f.apply(b, &[ai]);
+            let concl = f.eq(bai, i);
+            f.pi_fv(i_fv, nat, concl)
+        };
+        let maps = |f: &mut Fixture, from: ExprId, to: ExprId, g: ExprId, src, dst| {
+            let nat = f.nat_ty();
+            let true_ = f.bool_true();
+            let i_fv = f.fresh_fvar();
+            let i = f.k.fvar(i_fv);
+            let gi = f.apply(g, &[i]);
+            let bound = f.lt(gi, dst);
+            let to_gi = f.apply(to, &[gi]);
+            let selected = f.bool_eq(to_gi, true_);
+            let and_name = f.p.logic.and;
+            let concl = f.const_app(and_name, &[bound, selected]);
+            let from_i = f.apply(from, &[i]);
+            let sel_i = f.bool_eq(from_i, true_);
+            let s2 = f.arrow(sel_i, concl);
+            let bi = f.lt(i, src);
+            let s1 = f.arrow(bi, s2);
+            f.pi_fv(i_fv, nat, s1)
+        };
+        let hts = total(&mut f, sg, tu);
+        let hst = total(&mut f, tu, sg);
+        let hm1 = maps(&mut f, pp, q, sg, n, m);
+        let hm2 = maps(&mut f, q, pp, tu, m, n);
+        let l = f.count(pp, n);
+        let r = f.count(q, m);
+        let concl = f.eq(l, r);
+        let s4 = f.arrow(hm2, concl);
+        let s3 = f.arrow(hm1, s4);
+        let s2 = f.arrow(hst, s3);
+        let s1 = f.arrow(hts, s2);
+        let over_m = f.pi_fv(m_fv, nat, s1);
+        let over_n = f.pi_fv(n_fv, nat, over_m);
+        let over_tau = f.pi_fv(tu_fv, fn_ty, over_n);
+        let over_sigma = f.pi_fv(sg_fv, fn_ty, over_tau);
+        let over_q = f.pi_fv(q_fv, pred_ty, over_sigma);
+        f.pi_fv(pp_fv, pred_ty, over_q)
+    };
+    assert!(
+        f.k.def_eq(declared, rebuilt),
+        "the declared type must be the four-hypothesis form written out here -- \
+         an injectivity hypothesis, or a reordered binder, would fail this"
+    );
+
+    assert!(
+        f.k.axiom_footprint(p.count_range_bij_of_inverse).is_empty(),
+        "the derived form must rest on zero axioms"
     );
 }

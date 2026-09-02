@@ -1403,3 +1403,171 @@ pub(super) fn declare_count_range_bij(
     };
     d.declare_theorem(p.count_range_bij, ty, value)
 }
+
+// ============================================================================
+// `Nat.countRange_bij_of_inverse` — the common case, where `τ` is a two-sided
+// inverse of `σ` on ALL of `Nat` rather than only on the selected sets.
+// ============================================================================
+
+/// `∀ i, Eq Nat (g (f i)) i` — an UNCONDITIONAL round trip, no bound and no
+/// selection.
+fn total_roundtrip_ty(d: &mut NatDev<'_>, f: ExprId, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let fi = d.apply(f, &[i]);
+    let gfi = d.apply(g, &[fi]);
+    let concl = d.eq(gfi, i);
+    d.pi_fv(i_fv, nat, concl)
+}
+
+/// `Nat.countRange_bij_of_inverse : ∀ p q σ τ n m,
+///   (∀ i, Eq Nat (τ (σ i)) i) → (∀ j, Eq Nat (σ (τ j)) j) →
+///   (∀ i, Lt i n → p i = true → And (Lt (σ i) m) (q (σ i) = true)) →
+///   (∀ j, Lt j m → q j = true → And (Lt (τ j) n) (p (τ j) = true)) →
+///   Eq Nat (countRange p n) (countRange q m)`.
+///
+/// The shape a consumer usually has: `σ` and `τ` are mutually inverse
+/// everywhere (`succ`/`pred` on a positive range, an index reflection, a
+/// modular rotation), and the only genuinely per-instance obligations are the
+/// two `MapsInto` facts. Injectivity is then FREE — `σ i = σ j` gives
+/// `τ (σ i) = τ (σ j)`, i.e. `i = j` — so this form has four hypotheses rather
+/// than five and none of them mentions injectivity.
+///
+/// Derived from [`declare_count_range_bij`], not re-proved.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+pub(super) fn declare_count_range_bij_of_inverse(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+    let fn_ty = d.arrow(nat, nat);
+    let true_val = d.bool_true();
+
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let tau_fv = d.fresh_fvar();
+    let tau = d.kernel().fvar(tau_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let hts_ty = total_roundtrip_ty(d, sigma, tau);
+    let hst_ty = total_roundtrip_ty(d, tau, sigma);
+    let h2_ty = maps_sel_ty(d, &p, pp, q, sigma, n, m);
+    let h3_ty = maps_sel_ty(d, &p, q, pp, tau, m, n);
+
+    let hts_fv = d.fresh_fvar();
+    let hts = d.kernel().fvar(hts_fv);
+    let hst_fv = d.fresh_fvar();
+    let hst = d.kernel().fvar(hst_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    // Injectivity on the selected set, from the unconditional round trip.
+    let h1 = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hpi_fv = d.fresh_fvar();
+        let hj_fv = d.fresh_fvar();
+        let hpj_fv = d.fresh_fvar();
+        let he_fv = d.fresh_fvar();
+        let he = d.kernel().fvar(he_fv);
+
+        let si = d.apply(sigma, &[i]);
+        let sj = d.apply(sigma, &[j]);
+        let tsi = d.apply(tau, &[si]);
+        let tsj = d.apply(tau, &[sj]);
+        let at_i = d.apply(hts, &[i]);
+        let at_j = d.apply(hts, &[j]);
+        let i_eq_tsi = d.symm(tsi, i, at_i);
+        let moved = d.congr(si, sj, he, &|d, x| d.apply(tau, &[x]));
+        let (_e, body) = d.chain(i, &[(tsi, i_eq_tsi), (tsj, moved), (j, at_j)]);
+
+        let he_ty = d.eq(si, sj);
+        let with_he = d.lam_fv(he_fv, he_ty, body);
+        let pj = d.apply(pp, &[j]);
+        let hpj_ty = d.bool_eq(pj, true_val);
+        let with_hpj = d.lam_fv(hpj_fv, hpj_ty, with_he);
+        let hj_ty = d.lt(j, n);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_hpj);
+        let pi = d.apply(pp, &[i]);
+        let hpi_ty = d.bool_eq(pi, true_val);
+        let with_hpi = d.lam_fv(hpi_fv, hpi_ty, with_hj);
+        let hi_ty = d.lt(i, n);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hpi);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    // The two selected-set round trips, by forgetting the hypotheses.
+    let forget = |d: &mut NatDev<'_>, pred: ExprId, bound: ExprId, total: ExprId| -> ExprId {
+        let nat = d.nat_ty();
+        let true_val = d.bool_true();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hp_fv = d.fresh_fvar();
+        let body = d.apply(total, &[i]);
+        let pi = d.apply(pred, &[i]);
+        let hp_ty = d.bool_eq(pi, true_val);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, body);
+        let hi_ty = d.lt(i, bound);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hp);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+    let h4 = forget(d, pp, n, hts);
+    let h5 = forget(d, q, m, hst);
+
+    let applied = d.const_app(
+        p.count_range_bij,
+        &[pp, q, sigma, tau, n, m, h1, h2, h3, h4, h5],
+    );
+
+    let lhs = count_range(d, &p, pp, n);
+    let rhs = count_range(d, &p, q, m);
+    let concl = d.eq(lhs, rhs);
+
+    let ty = {
+        let s4 = d.arrow(h3_ty, concl);
+        let s3 = d.arrow(h2_ty, s4);
+        let s2 = d.arrow(hst_ty, s3);
+        let s1 = d.arrow(hts_ty, s2);
+        let over_m = d.pi_fv(m_fv, nat, s1);
+        let over_n = d.pi_fv(n_fv, nat, over_m);
+        let over_tau = d.pi_fv(tau_fv, fn_ty, over_n);
+        let over_sigma = d.pi_fv(sigma_fv, fn_ty, over_tau);
+        let over_q = d.pi_fv(q_fv, pred_ty, over_sigma);
+        d.pi_fv(pp_fv, pred_ty, over_q)
+    };
+    let value = {
+        let s4 = d.lam_fv(h3_fv, h3_ty, applied);
+        let s3 = d.lam_fv(h2_fv, h2_ty, s4);
+        let s2 = d.lam_fv(hst_fv, hst_ty, s3);
+        let s1 = d.lam_fv(hts_fv, hts_ty, s2);
+        let over_m = d.lam_fv(m_fv, nat, s1);
+        let over_n = d.lam_fv(n_fv, nat, over_m);
+        let over_tau = d.lam_fv(tau_fv, fn_ty, over_n);
+        let over_sigma = d.lam_fv(sigma_fv, fn_ty, over_tau);
+        let over_q = d.lam_fv(q_fv, pred_ty, over_sigma);
+        d.lam_fv(pp_fv, pred_ty, over_q)
+    };
+    d.declare_theorem(p.count_range_bij_of_inverse, ty, value)
+}

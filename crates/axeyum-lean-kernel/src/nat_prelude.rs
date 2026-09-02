@@ -338,7 +338,10 @@ use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use coprime_mul_add_mul_ne_mul::declare_coprime_mul_add_mul_ne_mul;
 use count_and_div_max_pow::declare_count_and_div_max_pow;
-use count_range_bij::{declare_count_range_bij, declare_count_range_eq_zero_of_all_false};
+use count_range_bij::{
+    declare_count_range_bij, declare_count_range_bij_of_inverse,
+    declare_count_range_eq_zero_of_all_false,
+};
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
     declare_count_range_product,
@@ -6065,6 +6068,17 @@ pub struct NatPrelude {
     /// the next index, so the induction could not carry a coherent inverse
     /// down from `succ n`.
     pub count_range_bij: NameId,
+    /// `Nat.countRange_bij_of_inverse : ∀ p q σ τ n m,
+    ///   (∀ i, Eq Nat (τ (σ i)) i) → (∀ j, Eq Nat (σ (τ j)) j) →
+    ///   (∀ i, Lt i n → p i = true → And (Lt (σ i) m) (q (σ i) = true)) →
+    ///   (∀ j, Lt j m → q j = true → And (Lt (τ j) n) (p (τ j) = true)) →
+    ///   Eq Nat (countRange p n) (countRange q m)` — the shape a consumer
+    /// usually has: `σ` and `τ` are mutually inverse EVERYWHERE, so
+    /// injectivity is free (`σ i = σ j` gives `τ (σ i) = τ (σ j)`) and the only
+    /// per-instance obligations are the two `MapsInto` facts. Four hypotheses
+    /// rather than [`count_range_bij`](Self::count_range_bij)'s five, and none
+    /// of them mentions injectivity. Derived, not re-proved.
+    pub count_range_bij_of_inverse: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6985,6 +6999,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_eq_zero_of_all_false: kernel
                 .name_str(nat, "countRange_eq_zero_of_all_false"),
             count_range_bij: kernel.name_str(nat, "countRange_bij"),
+            count_range_bij_of_inverse: kernel.name_str(nat, "countRange_bij_of_inverse"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7447,6 +7462,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `restrict_ble_eq_false_of_lt` (`finite.rs`), all long declared.
         declare_count_range_eq_zero_of_all_false(&mut d, &p)?;
         declare_count_range_bij(&mut d, &p)?;
+        declare_count_range_bij_of_inverse(&mut d, &p)?;
         declare_div_mod_block(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
