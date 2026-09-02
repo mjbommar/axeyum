@@ -34,6 +34,7 @@
 use super::RatPrelude;
 use super::nullity_tests::{CASES, rect_matrix};
 use super::rank_bridge::{rpivot_col_of_row, rpivot_row_of_col};
+use crate::env::Declaration;
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use crate::{ExprId, Kernel, build_rat_prelude};
@@ -248,6 +249,221 @@ fn the_rank_bridge_family_is_axiom_free() {
             footprint.is_empty(),
             "Rat.{label} must be axiom-free, found {} axiom(s)",
             footprint.len()
+        );
+    }
+}
+
+/// The section property is a REAL constraint on a matrix, not something every
+/// matrix satisfies.
+///
+/// `Rat.rank_eq_rankCols_of_pivotSection` is a conditional theorem, so the
+/// first question to ask of it is whether its hypothesis says anything at all:
+/// a hypothesis satisfied by every matrix would make the bridge unconditional
+/// and this lane's residue imaginary. It is not. At the matrix `[[1,0],[1,0]]`
+/// — two nonzero rows sharing leading index `0`, which is exactly what echelon
+/// form forbids — the section equation FAILS at row `1`: the scan finds row `0`
+/// first and never reaches row `1`, while row `1` is nonzero and in range.
+///
+/// The matrix is used RAW here, not through `rowEchelon`, because that is the
+/// point: the property is a fact about echelon forms, and the residue
+/// `rowEchelon_isEchelon` is what would supply it.
+#[test]
+fn the_section_property_is_a_real_constraint() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let e = rect_matrix(&mut d, p, 2, 2, &[1, 0, 1, 0]);
+    let two_n = d.num(2);
+    let one_n = d.num(1);
+    let zero_n = d.num(0);
+    let true_v = d.bool_true();
+
+    // Row 1 is in range and nonzero, so it is inside the hypothesis's scope.
+    let nonzero = d.const_app(p.nonzero_row_b, &[e, two_n, one_n]);
+    assert!(
+        d.kernel().def_eq(nonzero, true_v),
+        "row 1 of [[1,0],[1,0]] is nonzero, so the hypothesis would have to cover it"
+    );
+
+    // ... and its leading index is 0, the same as row 0's.
+    let lead_one = rpivot_col_of_row(&mut d, p, e, two_n, one_n);
+    assert_eq!(
+        nat_value(&mut d, lead_one, 8),
+        Some(0),
+        "both rows lead in column 0 -- that is the shape echelon form forbids"
+    );
+
+    // So the section equation fails: the scan comes back with row 0, not row 1.
+    let back = rpivot_row_of_col(&mut d, p, e, two_n, two_n, lead_one);
+    assert_eq!(
+        nat_value(&mut d, back, 8),
+        Some(0),
+        "the scan finds the FIRST such row"
+    );
+    assert!(
+        !d.kernel().def_eq(back, one_n),
+        "the section equation must FAIL here -- otherwise the bridge's hypothesis is vacuous"
+    );
+
+    // The positive control: at row 0 the same equation HOLDS, so the failure
+    // above is about the repeated leading index and not about the matrix being
+    // outside the definition's reach altogether.
+    let lead_zero = rpivot_col_of_row(&mut d, p, e, two_n, zero_n);
+    let back_zero = rpivot_row_of_col(&mut d, p, e, two_n, two_n, lead_zero);
+    assert!(
+        d.kernel().def_eq(back_zero, zero_n),
+        "the section equation must still hold at row 0"
+    );
+}
+
+/// The three headline statements, pinned by their RENDERED TYPE.
+///
+/// A name says nothing: `rank_le_cols_of_pivotSection` would still be called
+/// that if its conclusion were `Le (rank …) rows`, which is free. Reading the
+/// type out of the environment is what makes the pin a check on the theorem
+/// rather than on the maintainer's memory.
+///
+/// The assertions are stated as required substrings plus one FORBIDDEN
+/// substring each, because the full rendering of a four-binder matrix statement
+/// is long enough that an exact pin would be maintained by copy-paste and would
+/// stop being read.
+#[test]
+fn the_bridge_statements_say_what_they_claim() {
+    let (mut kernel, p) = built();
+    let rendered = |kernel: &mut Kernel, name: crate::NameId| -> String {
+        let ty = match kernel.environment().get(name).expect("declared") {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            other => panic!("{other:?} is not a theorem or definition"),
+        };
+        kernel
+            .render_lean(ty)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let bridge = rendered(&mut kernel, p.rank_eq_rank_cols_of_pivot_section);
+    for needle in [
+        "Rat.rank ",
+        "Rat.rankCols ",
+        "Rat.pivotRowOfCol",
+        "Rat.pivotColOfRow",
+        "Rat.nonzeroRowB",
+        "Rat.rowEchelon",
+    ] {
+        assert!(
+            bridge.contains(needle),
+            "the bridge statement must mention {needle}: {bridge}"
+        );
+    }
+    assert!(
+        !bridge.contains("Rat.isEchelon"),
+        "the bridge must NOT assume the full echelon predicate -- \
+         its hypothesis is strictly weaker: {bridge}"
+    );
+
+    let bound = rendered(&mut kernel, p.rank_le_cols_of_pivot_section);
+    assert!(
+        bound.contains("Nat.le (Rat.rank x0 x1 x2) x2"),
+        "the bound must be rank <= COLS, not rank <= rows: {bound}"
+    );
+
+    let rank_nullity = rendered(&mut kernel, p.rank_nullity_rows_of_pivot_section);
+    assert!(
+        rank_nullity.contains("Nat.add (Rat.rank x0 x1 x2) (Rat.nullity x0 x1 x2)"),
+        "the row form must add rank and nullity: {rank_nullity}"
+    );
+    assert!(
+        !rank_nullity.contains("Nat.add (Rat.rankCols"),
+        "the row form must not be the column form under a new name: {rank_nullity}"
+    );
+}
+
+/// Every theorem the bridge adds is axiom-free, read from the kernel.
+///
+/// The existence check is load-bearing for the same reason as in
+/// [`the_rank_bridge_family_is_axiom_free`]: `axiom_footprint` of a name that
+/// was never declared is EMPTY.
+#[test]
+fn the_bridge_theorems_are_axiom_free() {
+    let (kernel, p) = built();
+    let names = [
+        ("pivotColSearchAux_eq_ble", p.pivot_col_search_aux_eq_ble),
+        ("isPivotColB_eq_ble", p.is_pivot_col_b_eq_ble),
+        ("pivotRowOfCol_lt_rows", p.pivot_row_of_col_lt_rows),
+        (
+            "pivotRowSearchAux_leadingIndex",
+            p.pivot_row_search_aux_leading_index,
+        ),
+        (
+            "leadingIndex_pivotRowOfCol",
+            p.leading_index_pivot_row_of_col,
+        ),
+        (
+            "rank_eq_rankCols_of_pivotSection",
+            p.rank_eq_rank_cols_of_pivot_section,
+        ),
+        (
+            "rank_le_cols_of_pivotSection",
+            p.rank_le_cols_of_pivot_section,
+        ),
+        (
+            "rank_nullity_rows_of_pivotSection",
+            p.rank_nullity_rows_of_pivot_section,
+        ),
+    ];
+    for (label, name) in names {
+        assert!(
+            kernel.environment().get(name).is_some(),
+            "Rat.{label} must be declared -- an absent name has an EMPTY footprint"
+        );
+        let footprint = kernel.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "Rat.{label} must be axiom-free, found {} axiom(s)",
+            footprint.len()
+        );
+    }
+}
+
+/// `Rat.isPivotColB_eq_ble` is not vacuous: it separates the two answers on the
+/// SAME matrix.
+///
+/// The identity `isPivotColB E rows cols j = ble (succ (pivotRowOfCol …)) rows`
+/// would hold trivially if `isPivotColB` were constantly `false` and
+/// `pivotRowOfCol` constantly `rows`. `[[1,2],[2,4]]`'s echelon form
+/// `[[1,2],[0,0]]` has column `0` a pivot column (so both sides are `true`) and
+/// column `1` free (so both sides are `false`), which is what makes the
+/// identity a statement about two agreeing searches rather than about two
+/// constants.
+#[test]
+fn the_scan_identity_separates_a_pivot_column_from_a_free_one() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let (e, rows_n, cols_n) = echelon_of(&mut d, p, 2, 2, &[1, 2, 2, 4]);
+    let true_v = d.bool_true();
+    let false_v = d.bool_false();
+
+    for (j, want_pivot, want_row) in [(0u32, true, 0u32), (1, false, 2)] {
+        let j_n = d.num(j);
+        let is_pivot = d.const_app(p.is_pivot_col_b, &[e, rows_n, cols_n, j_n]);
+        let expected = if want_pivot { true_v } else { false_v };
+        let other = if want_pivot { false_v } else { true_v };
+        assert!(
+            d.kernel().def_eq(is_pivot, expected),
+            "isPivotColB at column {j} must be {want_pivot}"
+        );
+        assert!(
+            !d.kernel().def_eq(is_pivot, other),
+            "isPivotColB at column {j} must not be both"
+        );
+
+        let row = rpivot_row_of_col(&mut d, p, e, rows_n, cols_n, j_n);
+        assert_eq!(
+            nat_value(&mut d, row, 8),
+            Some(want_row),
+            "pivotRowOfCol at column {j} must be {want_row}"
         );
     }
 }

@@ -314,6 +314,29 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("pivotRowSearchAux", p.pivot_row_search_aux),
         ("pivotRowOfCol", p.pivot_row_of_col),
         ("pivotRowOfCol_eq_search", p.pivot_row_of_col_eq_search),
+        ("pivotColSearchAux_eq_ble", p.pivot_col_search_aux_eq_ble),
+        ("isPivotColB_eq_ble", p.is_pivot_col_b_eq_ble),
+        ("pivotRowOfCol_lt_rows", p.pivot_row_of_col_lt_rows),
+        (
+            "pivotRowSearchAux_leadingIndex",
+            p.pivot_row_search_aux_leading_index,
+        ),
+        (
+            "leadingIndex_pivotRowOfCol",
+            p.leading_index_pivot_row_of_col,
+        ),
+        (
+            "rank_eq_rankCols_of_pivotSection",
+            p.rank_eq_rank_cols_of_pivot_section,
+        ),
+        (
+            "rank_le_cols_of_pivotSection",
+            p.rank_le_cols_of_pivot_section,
+        ),
+        (
+            "rank_nullity_rows_of_pivotSection",
+            p.rank_nullity_rows_of_pivot_section,
+        ),
     ]
 }
 
@@ -7034,6 +7057,38 @@ fn the_determinant_toolkit_is_axiom_free() {
         (
             "pivotRowOfCol_eq_search",
             p.pivot_row_of_col_eq_search,
+            true,
+        ),
+        (
+            "pivotColSearchAux_eq_ble",
+            p.pivot_col_search_aux_eq_ble,
+            true,
+        ),
+        ("isPivotColB_eq_ble", p.is_pivot_col_b_eq_ble, true),
+        ("pivotRowOfCol_lt_rows", p.pivot_row_of_col_lt_rows, true),
+        (
+            "pivotRowSearchAux_leadingIndex",
+            p.pivot_row_search_aux_leading_index,
+            true,
+        ),
+        (
+            "leadingIndex_pivotRowOfCol",
+            p.leading_index_pivot_row_of_col,
+            true,
+        ),
+        (
+            "rank_eq_rankCols_of_pivotSection",
+            p.rank_eq_rank_cols_of_pivot_section,
+            true,
+        ),
+        (
+            "rank_le_cols_of_pivotSection",
+            p.rank_le_cols_of_pivot_section,
+            true,
+        ),
+        (
+            "rank_nullity_rows_of_pivotSection",
+            p.rank_nullity_rows_of_pivot_section,
             true,
         ),
     ];

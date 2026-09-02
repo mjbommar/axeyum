@@ -77,12 +77,12 @@ mod model;
 mod nullity;
 pub(crate) mod ops;
 mod pivot_bound;
-mod rank_bridge;
 mod polynomial;
 mod pow_bridge;
 mod probability;
 mod product;
 mod rank;
+mod rank_bridge;
 mod scaling;
 mod statements;
 mod sum;
@@ -2823,6 +2823,55 @@ pub struct RatPrelude {
     /// cols j = pivotRowSearchAux E rows cols j rows 0` — the defining
     /// equation, `Eq.refl`.
     pub pivot_row_of_col_eq_search: NameId,
+    /// `Rat.pivotColSearchAux_eq_ble : ∀ E rows cols j fuel r,
+    /// pivotColSearchAux E rows cols j fuel r =
+    /// Nat.ble (succ (pivotRowSearchAux E rows cols j fuel r)) rows` — the
+    /// `Bool` scan answers `true` exactly when the `Nat` scan lands in range.
+    /// One fuel induction; the base case needs `ble (succ rows) rows = false`.
+    pub pivot_col_search_aux_eq_ble: NameId,
+    /// `Rat.isPivotColB_eq_ble : ∀ E rows cols j, isPivotColB E rows cols j =
+    /// Nat.ble (succ (pivotRowOfCol E rows cols j)) rows` — ADR-1558's
+    /// pivot-column TEST and this file's pivot-row MAP are the same scan.
+    pub is_pivot_col_b_eq_ble: NameId,
+    /// `Rat.pivotRowOfCol_lt_rows : ∀ E rows cols j,
+    /// isPivotColB E rows cols j = true → Lt (pivotRowOfCol E rows cols j) rows`
+    /// — a pivot column's row is a real row.
+    pub pivot_row_of_col_lt_rows: NameId,
+    /// `Rat.pivotRowSearchAux_leadingIndex : ∀ E rows cols j fuel r,
+    /// Lt (pivotRowSearchAux E rows cols j fuel r) rows →
+    /// Eq Nat (leadingIndex E (pivotRowSearchAux E rows cols j fuel r) cols) j`
+    /// — if the scan landed in range it landed on a row with leading index `j`.
+    pub pivot_row_search_aux_leading_index: NameId,
+    /// `Rat.leadingIndex_pivotRowOfCol : ∀ E rows cols j,
+    /// isPivotColB E rows cols j = true →
+    /// Eq Nat (leadingIndex E (pivotRowOfCol E rows cols j) cols) j` — **the
+    /// round trip that makes the bridge cheap.** It supplies three of
+    /// [`NatPrelude::count_range_bij`](crate::NatPrelude::count_range_bij)'s
+    /// five hypotheses at once when the COLUMNS are taken as the left-hand
+    /// count: injectivity of `pivotRowOfCol`, the selected half of its
+    /// `MapsInto`, and one round-trip equation verbatim.
+    pub leading_index_pivot_row_of_col: NameId,
+    /// `Rat.rank_eq_rankCols_of_pivotSection : ∀ M rows cols,
+    /// (∀ r, Lt r rows → nonzeroRowB (rowEchelon M rows cols) cols r = true →
+    ///    Eq Nat (pivotRowOfCol E rows cols (pivotColOfRow E cols r)) r) →
+    /// Eq Nat (rank M rows cols) (rankCols M rows cols)` — **the bridge**,
+    /// through `Nat.countRange_bij` with the COLUMNS as the left-hand count.
+    /// The single hypothesis is the weakest form of ADR-1554 obligation 4 the
+    /// bridge consumes: *the first row whose leading index is row `r`'s is `r`
+    /// itself*. Every other hypothesis of the counting law is discharged from
+    /// the two scans alone.
+    pub rank_eq_rank_cols_of_pivot_section: NameId,
+    /// `Rat.rank_le_cols_of_pivotSection : ∀ M rows cols,
+    /// (the section hypothesis) → Le (rank M rows cols) cols` — the bound
+    /// ADR-1555 left open, transported from the free
+    /// [`Self::rank_cols_le_cols`] across the bridge.
+    pub rank_le_cols_of_pivot_section: NameId,
+    /// `Rat.rank_nullity_rows_of_pivotSection : ∀ M rows cols,
+    /// (the section hypothesis) →
+    /// Eq Nat (Nat.add (rank M rows cols) (nullity M rows cols)) cols` —
+    /// **rank-nullity in the ROW form**, `Rat.rank_nullity` with `rankCols`
+    /// rewritten to `rank` across the bridge and nothing else.
+    pub rank_nullity_rows_of_pivot_section: NameId,
 }
 
 impl RatPrelude {
@@ -3330,6 +3379,14 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         pivot_row_search_aux: child(kernel, "pivotRowSearchAux"),
         pivot_row_of_col: child(kernel, "pivotRowOfCol"),
         pivot_row_of_col_eq_search: child(kernel, "pivotRowOfCol_eq_search"),
+        pivot_col_search_aux_eq_ble: child(kernel, "pivotColSearchAux_eq_ble"),
+        is_pivot_col_b_eq_ble: child(kernel, "isPivotColB_eq_ble"),
+        pivot_row_of_col_lt_rows: child(kernel, "pivotRowOfCol_lt_rows"),
+        pivot_row_search_aux_leading_index: child(kernel, "pivotRowSearchAux_leadingIndex"),
+        leading_index_pivot_row_of_col: child(kernel, "leadingIndex_pivotRowOfCol"),
+        rank_eq_rank_cols_of_pivot_section: child(kernel, "rank_eq_rankCols_of_pivotSection"),
+        rank_le_cols_of_pivot_section: child(kernel, "rank_le_cols_of_pivotSection"),
+        rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
     }
 }
 
