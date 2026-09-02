@@ -847,3 +847,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1552](adr-1552-eisensteins-lemma-was-blocked-on-a-missing-aggregate-and-nothing-else.md) | **Eisenstein's lemma is now a kernel theorem** | accepted |
 | [1554](adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md) | `Rat.rowEchelon` lands as a `Definition` the kernel REDUCES — | accepted |
 | [1555](adr-1555-rank-is-an-uncapped-count-and-row-operation-invariance-does-not-follow-from-the-inverse-laws.md) | `Rat.rank M rows cols` lands as a `Definition` the kernel | accepted |
+| [1558](adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md) | `Rat.rank_nullity : ∀ M rows cols, | accepted |

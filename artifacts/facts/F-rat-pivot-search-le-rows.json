@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-pivot-search-le-rows",
+  "title": "Gaussian elimination's pivot search never returns an out-of-range row",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every column c, every start index and every row count rows, Nat.Le (Rat.pivotSearch M c start rows) rows -- and the same bound for the fuelled Rat.pivotSearchAux at an arbitrary fuel and start. No bound on start is required: a start already past rows takes the out-of-range branch on its first step and returns rows. This is the RANGE HALF of ADR-1554 obligation 2, the postcondition of Rat.pivotSearch. That obligation is stated as a disjunction -- the answer is rows and column c is zero throughout [start, rows), or it is in [start, rows) with a nonzero entry there -- and both disjuncts assert result <= rows, which needs neither the Or nor the bounded forall. The content half, which of the two disjuncts holds, is NOT proved here and still needs the same fuel induction carrying an Or in its motive. The route is induction on the fuel with the row index generalised inside the motive, because the step instantiates its hypothesis at succ r rather than at r.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.pivotSearch_le_rows : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> AxNat.le (Rat.pivotSearch x0 x1 x2 x3) x3)))) ; theorem Rat.pivotSearchAux_le_rows : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> AxNat.le (Rat.pivotSearchAux x0 x1 x2 x3 x4) x2)))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.pivotSearch_le_rows"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-pivot-search-le-rows-1",
+      "kind": "kernel-term",
+      "supports": "Both `Rat.pivotSearch_le_rows` and the fuelled `Rat.pivotSearchAux_le_rows` are checked `Declaration::Theorem`s with EMPTY axiom footprints in all four preludes, and both rendered types bound the search result by the ROW COUNT argument. The checker counts EIGHT rows (two declarations across four preludes) and requires exactly that, so losing either half -- or either half's statement drifting to a different bound -- makes the count differ and the command exit 1.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.pivotSearch(Aux)?_le_rows[[:space:]]+0[[:space:]].*AxNat\\.le \\(Rat\\.pivotSearch(Aux)? x0 x1 x2 x3( x4)?\\) x[23]\\)+$' 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^8$')\" = 1",
+      "notes": "Run 2026-09-02: exactly eight rows match. `scripts/new-fact.py` verified the pattern fails on mutated output. The regex admits both arities deliberately (`pivotSearch` takes four arguments, `pivotSearchAux` five) and pins the bound to `x3` and `x2` respectively, which are the row-count binders in each signature -- so a version bounding by the column index would not match."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/pivot_bound.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form. Row 2 empty by proof (see F:rat-rank-nullity). Row 3 is `the_pivot_search_bound_is_tight_in_one_case_and_strict_in_another` in `rat_prelude/nullity_tests.rs`, which shows the bound is NOT vacuous: at `[[0,1],[1,0]]` the search comes in strictly under it from row 0 (it finds row 1) and attains it from row 2. A `pivotSearch` that always returned `rows` satisfies the theorem and fails that test. Row 4: no import. WHAT THIS DOES NOT SAY: it does not say WHICH of ADR-1554 obligation 2's two disjuncts holds. It does not say that a returned index below `rows` has a nonzero entry there, nor that a returned `rows` means the column is zero throughout the scanned range. Both of those are the content half of the obligation and remain open; they need the same fuel induction carrying an `Or` in its motive, together with obligation 1's `Rat.eq_zero_of_isZeroB` / `Rat.ne_zero_of_isZeroB_false` to move between the `Bool` the search branches on and the `Prop` the invariant states. It also does not say anything about `Rat.clearBelow` (obligation 3) or the loop invariant (obligation 4)."
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-cols-le-cols",
+  "title": "The column-form rank of a rational matrix is at most its column count",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every pair of dimensions rows, cols, Nat.Le (Rat.rankCols M rows cols) cols. Rat.rankCols is a Nat.countRange over the range [0, cols), so the bound is one application of Nat.countRange_le and uses NO property of Rat.rowEchelon, of Rat.leadingIndex, or of Rat.isPivotColB. The point of recording it separately is the CONTRAST: the row-form statement Nat.Le (Rat.rank M rows cols) cols is open in this tree, because Rat.rank counts over [0, rows) and bounding that by cols asserts the echelon form has at most one pivot per column -- ADR-1554 obligation 4. The two statements coincide only once the bridge Rat.rank = Rat.rankCols is proved, and it is not. So the column form buys the dimension bound outright while the bridge is open, and that asymmetry, not the bound itself, is what this fact records.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rankCols_le_cols : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> AxNat.le (Rat.rankCols x0 x1 x2) x2)))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rankCols_le_cols"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-rank-nullity",
+    "F:nat-countrange-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-cols-le-cols-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rankCols_le_cols` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all four preludes, and its rendered type bounds the count by `x2` -- the SECOND dimension argument, the column count. Reading that is the whole content: the same declaration bounding by `x1` would be a row bound and a different claim, and the point of this fact is precisely which dimension the free bound is against.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null | grep -cE '^(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rankCols_le_cols[[:space:]]+0[[:space:]].*AxNat\\.le \\(Rat\\.rankCols x0 x1 x2\\) x2\\)\\)\\)$' 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^4$')\" = 1",
+      "notes": "Run 2026-09-02: exactly four rows match name, kind, axiom count `0` and the rendered conclusion `AxNat.le (Rat.rankCols x0 x1 x2) x2`; the checker requires exactly 4 and exits 1 otherwise. `scripts/new-fact.py` verified the pattern fails on mutated output."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/nullity.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form. Row 2 empty by proof (see F:rat-rank-nullity). Row 3 is the six-matrix table in `rat_prelude/nullity_tests.rs`. Row 4: no import. WHAT THIS DOES NOT SAY: it does NOT say `Nat.Le (Rat.rank M rows cols) cols`. That is the row-form statement, it is open, and the two are the same statement only once the bridge `rank = rankCols` is proved -- which it is not. Nor does it say the bound is attained or tight; at a zero matrix the count is 0 for any `cols`. And it uses no property of `Rat.rowEchelon`, so a broken elimination would still satisfy it."
+}
