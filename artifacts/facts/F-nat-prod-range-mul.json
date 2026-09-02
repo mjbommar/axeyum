@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-prod-range-mul",
+  "title": "A product over a pointwise product splits into two products",
+  "statement": "The product over [0,n) of a pointwise product of two functions equals the product of the two functions' own products over [0,n). The successor step is the four-factor rearrangement (A*B)*(a*b) = (A*a)*(B*b).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.prodRange_mul : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : ((x1 : AxNat) -> AxNat)) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.prodRange (fun (x3 : AxNat) => AxNat.mul (x0 x3) (x1 x3)) x2) (AxNat.mul (AxNat.prodRange x0 x2) (AxNat.prodRange x1 x2)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prodRange_mul"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:nat-mul-assoc", "F:nat-mul-comm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-prod-range-mul-1",
+      "kind": "kernel-term",
+      "supports": "Nat.prodRange_mul is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prodRange_mul 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.prodRange_mul.5.\\(\\(x0 : \\(\\(x0 : AxNat\\) -> AxNat\\)\\) -> \\(\\(x1 : \\(\\(x1 : AxNat\\) -> AxNat\\)\\) -> \\(\\(x2 : AxNat\\) -> Eq\\.\\{1\\} AxNat \\(AxNat\\.prodRange \\(fun \\(x3 : AxNat\\) => AxNat\\.mul \\(x0 x3\\) \\(x1 x3\\)\\) x2\\) \\(AxNat\\.mul \\(AxNat\\.prodRange x0 x2\\) \\(AxNat\\.prodRange x1 x2\\)\\)\\)\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.prodRange_mul"
+    },
+    {
+      "id": "footprint-nat-prod-range-mul",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 905 `nat` rows do."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset_prod.rs` (lane nat-factorization)."
+  },
+  "notes": "The Nat twin of `Int.prodRange_mul`. The statement's left-hand side is the LITERAL lambda `fun i => mul (f i) (g i)`, so a caller whose fold is written in any other beta-equivalent shape relies on the kernel's defeq to line the two up; that is what `Nat.Multiset.prod_add` does. It says nothing about a SUM over a pointwise product, and nothing about folds over different bounds."
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-prod-singleton",
+  "title": "The product of a singleton multiset is its element",
+  "statement": "The product of the multiset containing a single copy of a is a. The fold runs over [0, a+1) and every factor strictly below a has multiplicity 0, so it must collapse to 1 -- including the factor at 0, where a fold that forgot the multiplicity would give 0.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.prod_singleton : ((x0 : AxNat) -> Eq.{1} AxNat (AxNat.Multiset.prod (AxNat.Multiset.singleton x0)) x0)",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.prod_singleton"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:nat-beq-eq-false-of-ne", "F:nat-not-succ-le-self", "F:nat-one-mul", "F:nat-pow-zero", "F:nat-prod-range-eq-one-of-below"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-multiset-prod-singleton-1",
+      "kind": "kernel-term",
+      "supports": "Nat.Multiset.prod_singleton is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Multiset.prod_singleton 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.Multiset\\.prod_singleton.1.\\(\\(x0 : AxNat\\) -> Eq\\.\\{1\\} AxNat \\(AxNat\\.Multiset\\.prod \\(AxNat\\.Multiset\\.singleton x0\\)\\) x0\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.Multiset.prod_singleton"
+    },
+    {
+      "id": "footprint-nat-multiset-prod-singleton",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 905 `nat` rows do."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/factorization_multiset.rs` (lane nat-factorization)."
+  },
+  "notes": "Not free, and the two reasons are worth separating. The fold runs over `[0, a+1)` so every factor strictly below `a` must collapse, which is `Nat.prodRange_eq_one_of_below` plus `count_singleton_of_ne`; and the top factor `pow a 1` reduces only as far as `mul 1 a`, because `Nat.mul` recurses on its RIGHT argument and that term is STUCK for symbolic `a` -- the last step is `Nat.one_mul`, not reduction. It says nothing about `prod` of a multiset built any other way."
+}

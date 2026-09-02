@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-min-fac-prime",
+  "title": "The least factor of a number at least 2 is prime",
+  "statement": "For every natural n with 2 <= n, minFac n is prime -- at least 2, and every divisor of it is 1 or itself. Primality is spelled inline, matching this prelude's own convention (it has no Prime predicate).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.min_fac_prime : ((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.minFac x0)) (((x2 : AxNat) -> ((x3 : AxNat.dvd x2 (AxNat.minFac x0)) -> Or (Eq.{1} AxNat x2 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x2 (AxNat.minFac x0)))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.min_fac_prime"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:ml430-nat-le-antisymm-79dccead", "F:ml430-nat-le-of-lt-succ-120bd6db", "F:nat-dvd-trans", "F:nat-le-of-dvd", "F:nat-le-trans", "F:nat-lt-or-eq-of-le", "F:nat-lt-or-ge", "F:nat-min-fac-dvd", "F:nat-min-fac-two-le", "F:nat-not-succ-le-zero", "F:nat-zero-le", "F:nat-zero-mul"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-min-fac-prime-1",
+      "kind": "kernel-term",
+      "supports": "Nat.min_fac_prime is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- min_fac_prime 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.min_fac_prime.4.\\(\\(x0 : AxNat\\) -> \\(\\(x1 : AxNat\\.le \\(AxNat\\.succ \\(AxNat\\.succ AxNat\\.zero\\)\\) x0\\) -> And \\(AxNat\\.le \\(AxNat\\.succ \\(AxNat\\.succ AxNat\\.zero\\)\\) \\(AxNat\\.minFac x0\\)\\) \\(\\(\\(x2 : AxNat\\) -> \\(\\(x3 : AxNat\\.dvd x2 \\(AxNat\\.minFac x0\\)\\) -> Or \\(Eq\\.\\{1\\} AxNat x2 \\(AxNat\\.succ AxNat\\.zero\\)\\) \\(Eq\\.\\{1\\} AxNat x2 \\(AxNat\\.minFac x0\\)\\)\\)\\)\\)\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.min_fac_prime"
+    },
+    {
+      "id": "footprint-nat-min-fac-prime",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 905 `nat` rows do."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/min_fac_dvd.rs` (lane nat-factorization)."
+  },
+  "notes": "Primality is spelled inline as `2 <= p` together with `every divisor is 1 or p`, matching `Nat.exists_prime_dvd`'s own convention: this prelude has no `Prime` predicate. Needs no new induction -- it is `min_fac_dvd` plus `min_fac_minimal_of_two_le` plus `Nat.le_of_dvd`. It is about THIS `minFac` and flips no `ml430` mirror, and it says nothing at `n < 2` (where `minFac 0 = 2` happens to be prime and `minFac 1 = 1` is not)."
+}

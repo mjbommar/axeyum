@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-factorization-prime",
+  "title": "Every element of the computed prime factorization is prime",
+  "statement": "For every natural n and every x with positive multiplicity in Nat.factorization n, x is prime. Each step of the trial division emits minFac of the current cofactor, which is prime.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.factorization_prime : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat.lt AxNat.zero (AxNat.Multiset.count (AxNat.factorization x0) x1)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x1) (((x3 : AxNat) -> ((x4 : AxNat.dvd x3 x1) -> Or (Eq.{1} AxNat x3 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x3 x1)))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.factorization_prime"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-factorization-prime-1",
+      "kind": "kernel-term",
+      "supports": "Nat.factorization_prime is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- factorization_prime 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.factorization_prime.5.\\(\\(x0 : AxNat\\) -> \\(\\(x1 : AxNat\\) -> \\(\\(x2 : AxNat\\.lt AxNat\\.zero \\(AxNat\\.Multiset\\.count \\(AxNat\\.factorization x0\\) x1\\)\\) -> And \\(AxNat\\.le \\(AxNat\\.succ \\(AxNat\\.succ AxNat\\.zero\\)\\) x1\\) \\(\\(\\(x3 : AxNat\\) -> \\(\\(x4 : AxNat\\.dvd x3 x1\\) -> Or \\(Eq\\.\\{1\\} AxNat x3 \\(AxNat\\.succ AxNat\\.zero\\)\\) \\(Eq\\.\\{1\\} AxNat x3 x1\\)\\)\\)\\)\\)\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.factorization_prime"
+    },
+    {
+      "id": "footprint-nat-factorization-prime",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 905 `nat` rows do."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/factorization_multiset.rs` (lane nat-factorization)."
+  },
+  "notes": "Stated as `positive multiplicity implies prime` rather than over a membership predicate, because `Nat.Multiset.Mem m x` is DEFINED as `0 < count m x` -- the two are the same proposition, and the count form is what every consumer already builds. It needs no `0 < n` hypothesis: at `n = 0` and `n = 1` the multiset is empty, so the premise is unsatisfiable and the statement holds vacuously there. It says nothing about which primes appear, or with what multiplicity -- that is `F:nat-prod-factorization` together with uniqueness."
+}
