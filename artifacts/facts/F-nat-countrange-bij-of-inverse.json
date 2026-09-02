@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrange-bij-of-inverse",
+  "title": "The cross-bound counting law where the inverse is total: four hypotheses and no injectivity",
+  "statement": "For all p q : Nat -> Bool, all sigma tau : Nat -> Nat and all n m : Nat: if tau (sigma i) = i for EVERY i and sigma (tau j) = j for EVERY j (not merely on the selected sets), and sigma maps {i < n | p i = true} into {j < m | q j = true} while tau maps that set back, then Nat.countRange p n = Nat.countRange q m. Injectivity is not a hypothesis and does not need to be: sigma i = sigma j gives tau (sigma i) = tau (sigma j), i.e. i = j. So this form has FOUR hypotheses where Nat.countRange_bij has five, and none of them mentions injectivity. It is the shape a consumer usually has, because a mutually inverse pair is normally exhibited by a formula (succ and pred on a positive range, an index reflection, a transposition, a modular rotation) whose inverse property holds unconditionally. Derived from Nat.countRange_bij, not reproved.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRange_bij_of_inverse : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : ((x2 : AxNat) -> AxNat)) -> ((x3 : ((x3 : AxNat) -> AxNat)) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : ((x6 : AxNat) -> Eq.{1} AxNat (x3 (x2 x6)) x6)) -> ((x7 : ((x7 : AxNat) -> Eq.{1} AxNat (x2 (x3 x7)) x7)) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x4) -> ((x10 : Eq.{1} Bool (x0 x8) Bool.true) -> And (AxNat.lt (x2 x8) x5) (Eq.{1} Bool (x1 (x2 x8)) Bool.true))))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x5) -> ((x11 : Eq.{1} Bool (x1 x9) Bool.true) -> And (AxNat.lt (x3 x9) x4) (Eq.{1} Bool (x0 (x3 x9)) Bool.true))))) -> Eq.{1} AxNat (AxNat.countRange x0 x4) (AxNat.countRange x1 x5)))))))))))",
+    "fragment": "Nat",
+    "free_symbols": [],
+    "kernel_theorem": "Nat.countRange_bij_of_inverse"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-countrange-bij"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-countrange-bij-of-inverse-1",
+      "kind": "kernel-term",
+      "supports": "`Nat.countRange_bij_of_inverse` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all eight preludes that build the naturals, AND its admitted type renders with BOTH round trips stated UNCONDITIONALLY -- `(x6 : ((x6 : AxNat) -> Eq.{1} AxNat (x3 (x2 x6)) x6))` and its mirror -- and with the cross-bound conclusion. The unconditional shape is the whole content of this row: a version whose round trips were restricted to the selected sets would be `Nat.countRange_bij` with a hypothesis silently deleted, i.e. an UNSOUND statement, and it would render with `AxNat.lt` and `Bool.true` guards inside the binder that this pattern's `((x6 : AxNat) -> Eq...)` shape excludes.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(nat|integer|characterization|rat|creal|complex|cpoint|ipc)[[:space:]]+theorem[[:space:]]+Nat\\.countRange_bij_of_inverse[[:space:]]+0[[:space:]].*\\(x6 : \\(\\(x6 : AxNat\\) -> Eq\\.\\{1\\} AxNat \\(x3 \\(x2 x6\\)\\) x6\\)\\).*\\(x7 : \\(\\(x7 : AxNat\\) -> Eq\\.\\{1\\} AxNat \\(x2 \\(x3 x7\\)\\) x7\\)\\).*Eq\\.\\{1\\} AxNat \\(AxNat\\.countRange x0 x4\\) \\(AxNat\\.countRange x1 x5\\)')\" = 8",
+      "notes": "Verified discriminating by scripts/new-fact.py before this file was written: the pattern matches the real output and its match count drops on mutated output. Anchored on the footprint column `0`, on the two unconditional round-trip binders written out in full (which is what pins them as total rather than selected-set hypotheses), and on the cross-bound conclusion, with the row count pinned at 8. Run 2026-09-02: 8 rows.",
+      "kernel_declaration": "Nat.countRange_bij_of_inverse",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection rendered-type re-list"
+      ],
+      "checker_seconds": 20
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form, a specialization of `F:nat-countrange-bij` rather than an independent result -- its proof term is one application of `Nat.countRange_bij`, and the projection's direct-theorem column shows exactly that one dependency. Row 2 (boundary refutation) is EMPTY BY PROOF for the same reason as the general form. Row 3 (decidable-fragment exact form) is the transposition instance in `count_range_bij_tests.rs`: `sigma = tau = Nat.transposition 2 3`, whose inverse hypotheses come from `Nat.transposition_involutive`, carrying the singleton `{2}` below `3` to the singleton `{3}` below `4`. Row 4 (labelled import) is absent. WHAT THIS DOES NOT SAY: the totality of the inverse is a real strengthening of the hypothesis, not a convenience. `succ`/`pred` do NOT satisfy it (`succ (pred 0) = 1`), so a consumer with that pair must use the general `Nat.countRange_bij`; this form applies only when the pair is a genuine bijection of all of `Nat`. Nothing here asserts that such a pair exists for any particular counting problem."
+}

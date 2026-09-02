@@ -161,6 +161,7 @@ mod clog;
 mod coprime_lemmas;
 mod coprime_mul_add_mul_ne_mul;
 mod count_and_div_max_pow;
+mod count_range_bij;
 mod count_range_permute;
 mod count_range_reversal;
 mod crt;
@@ -339,6 +340,10 @@ use clog::declare_clog_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use coprime_mul_add_mul_ne_mul::declare_coprime_mul_add_mul_ne_mul;
 use count_and_div_max_pow::declare_count_and_div_max_pow;
+use count_range_bij::{
+    declare_count_range_bij, declare_count_range_bij_of_inverse,
+    declare_count_range_eq_zero_of_all_false,
+};
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
     declare_count_range_product,
@@ -6077,6 +6082,52 @@ pub struct NatPrelude {
     /// prime_condition x` — every element of the computed factorization is
     /// prime (`factorization_multiset.rs`).
     pub factorization_prime: NameId,
+
+    // --- the cross-bound counting law (`count_range_bij.rs`) ----------------
+    // Curriculum: the piece ADR-1558 sized as the ONE thing standing between
+    // `Rat.rank_nullity`'s column form and its row form.
+    /// `Nat.countRange_eq_zero_of_all_false : ∀ f n,
+    /// (∀ k, Lt k n → Eq Bool (f k) false) → Eq Nat (countRange f n) zero` —
+    /// the `false` twin of [`count_range_const_true`](Self::count_range_const_true),
+    /// which had none. A three-line induction; the route through
+    /// [`count_range_compl`](Self::count_range_compl) would need an
+    /// `add`-cancellation this one does not.
+    pub count_range_eq_zero_of_all_false: NameId,
+    /// `Nat.countRange_bij : ∀ p q σ τ n m,
+    ///   (∀ i j, Lt i n → p i = true → Lt j n → p j = true →
+    ///      Eq Nat (σ i) (σ j) → Eq Nat i j) →
+    ///   (∀ i, Lt i n → p i = true → And (Lt (σ i) m) (q (σ i) = true)) →
+    ///   (∀ j, Lt j m → q j = true → And (Lt (τ j) n) (p (τ j) = true)) →
+    ///   (∀ i, Lt i n → p i = true → Eq Nat (τ (σ i)) i) →
+    ///   (∀ j, Lt j m → q j = true → Eq Nat (σ (τ j)) j) →
+    ///   Eq Nat (countRange p n) (countRange q m)` — **the cross-bound counting
+    /// law** (`count_range_bij.rs`). Every other `countRange` law in this
+    /// prelude keeps the SAME bound on both sides
+    /// ([`count_range_permute`](Self::count_range_permute) permutes within
+    /// `[0,n)`; [`count_range_split`](Self::count_range_split) and
+    /// [`count_range_product`](Self::count_range_product) relate `n+m`/`n*m` to
+    /// their own parts), which is why ADR-1558 could not form the
+    /// `Rat.rank = Rat.rankCols` bridge.
+    ///
+    /// `Nat.injectiveOn`/`Nat.mapsInto` (`finite.rs`) are SELF-map notions on
+    /// one shared bound, so the hypotheses here are their selected-set
+    /// relativizations, written out. Surjectivity is the explicit inverse `τ`
+    /// with its own `MapsInto` and the two round-trip equations, never an
+    /// `Exists`: an existential witness carries no relationship to the one at
+    /// the next index, so the induction could not carry a coherent inverse
+    /// down from `succ n`.
+    pub count_range_bij: NameId,
+    /// `Nat.countRange_bij_of_inverse : ∀ p q σ τ n m,
+    ///   (∀ i, Eq Nat (τ (σ i)) i) → (∀ j, Eq Nat (σ (τ j)) j) →
+    ///   (∀ i, Lt i n → p i = true → And (Lt (σ i) m) (q (σ i) = true)) →
+    ///   (∀ j, Lt j m → q j = true → And (Lt (τ j) n) (p (τ j) = true)) →
+    ///   Eq Nat (countRange p n) (countRange q m)` — the shape a consumer
+    /// usually has: `σ` and `τ` are mutually inverse EVERYWHERE, so
+    /// injectivity is free (`σ i = σ j` gives `τ (σ i) = τ (σ j)`) and the only
+    /// per-instance obligations are the two `MapsInto` facts. Four hypotheses
+    /// rather than [`count_range_bij`](Self::count_range_bij)'s five, and none
+    /// of them mentions injectivity. Derived, not re-proved.
+    pub count_range_bij_of_inverse: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6994,6 +7045,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             prod_factorization: kernel.name_str(nat, "prod_factorization"),
             factorization_aux_prime: kernel.name_str(nat, "factorizationAuxPrime"),
             factorization_prime: kernel.name_str(nat, "factorization_prime"),
+            count_range_eq_zero_of_all_false: kernel
+                .name_str(nat, "countRange_eq_zero_of_all_false"),
+            count_range_bij: kernel.name_str(nat, "countRange_bij"),
+            count_range_bij_of_inverse: kernel.name_str(nat, "countRange_bij_of_inverse"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7463,6 +7518,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_count_range_point_change(&mut d, &p)?;
         declare_count_range_permute(&mut d, &p)?;
         declare_count_range_product(&mut d, &p)?;
+        // The cross-bound law (`count_range_bij.rs`): needs
+        // `countRange_point_change` (just above) plus `countRange_succ`,
+        // `countRange_zero`, `lt_or_ge`, `lt_or_eq_of_le`, `le_of_lt_succ` and
+        // `restrict_ble_eq_false_of_lt` (`finite.rs`), all long declared.
+        declare_count_range_eq_zero_of_all_false(&mut d, &p)?;
+        declare_count_range_bij(&mut d, &p)?;
+        declare_count_range_bij_of_inverse(&mut d, &p)?;
         declare_div_mod_block(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
@@ -8435,6 +8497,9 @@ mod eisenstein_side_tests;
 
 #[cfg(test)]
 mod sum_range_permute_tests;
+
+#[cfg(test)]
+mod count_range_bij_tests;
 
 #[cfg(test)]
 mod floor_count_tests;

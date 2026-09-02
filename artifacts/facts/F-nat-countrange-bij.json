@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrange-bij",
+  "title": "The cross-bound counting law: a constructive bijection between two selected sets equates their counts",
+  "statement": "For all p q : Nat -> Bool, all sigma tau : Nat -> Nat and all n m : Nat: if sigma is injective on {i < n | p i = true}, maps that set into {j < m | q j = true}, tau maps the latter back into the former, and the two round trips tau (sigma i) = i and sigma (tau j) = j hold on the respective selected sets, then Nat.countRange p n = Nat.countRange q m. This is the first Nat.countRange law in the tree relating counts at TWO DIFFERENT BOUNDS over TWO DIFFERENT PREDICATES; every earlier one keeps the bound fixed on both sides (countRange_permute permutes within [0,n), countRange_split and countRange_product relate n+m and n*m to their own parts, countRange_le_of_le moves the bound but keeps the predicate, countRange_le_of_subset moves the predicate but keeps the bound). Nat.injectiveOn and Nat.mapsInto are self-map notions on one shared bound and cannot express the hypothesis, so it is written out relativized to the selected sets. Surjectivity is CONSTRUCTIVE: the explicit inverse tau plus the two round-trip equations, never an existential.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRange_bij : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : ((x2 : AxNat) -> AxNat)) -> ((x3 : ((x3 : AxNat) -> AxNat)) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : ((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : AxNat.lt x6 x4) -> ((x9 : Eq.{1} Bool (x0 x6) Bool.true) -> ((x10 : AxNat.lt x7 x4) -> ((x11 : Eq.{1} Bool (x0 x7) Bool.true) -> ((x12 : Eq.{1} AxNat (x2 x6) (x2 x7)) -> Eq.{1} AxNat x6 x7)))))))) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x4) -> ((x9 : Eq.{1} Bool (x0 x7) Bool.true) -> And (AxNat.lt (x2 x7) x5) (Eq.{1} Bool (x1 (x2 x7)) Bool.true))))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x5) -> ((x10 : Eq.{1} Bool (x1 x8) Bool.true) -> And (AxNat.lt (x3 x8) x4) (Eq.{1} Bool (x0 (x3 x8)) Bool.true))))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.lt x9 x4) -> ((x11 : Eq.{1} Bool (x0 x9) Bool.true) -> Eq.{1} AxNat (x3 (x2 x9)) x9)))) -> ((x10 : ((x10 : AxNat) -> ((x11 : AxNat.lt x10 x5) -> ((x12 : Eq.{1} Bool (x1 x10) Bool.true) -> Eq.{1} AxNat (x2 (x3 x10)) x10)))) -> Eq.{1} AxNat (AxNat.countRange x0 x4) (AxNat.countRange x1 x5))))))))))))",
+    "fragment": "Nat",
+    "free_symbols": [],
+    "kernel_theorem": "Nat.countRange_bij"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-countrange-eq-zero-of-all-false",
+    "F:nat-countrange-succ",
+    "F:nat-countrange-zero",
+    "F:logic-bool-false-ne-true",
+    "F:logic-bool-true-ne-false",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:nat-le-trans",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-lt-or-ge",
+    "F:nat-lt-succ-self",
+    "F:nat-not-lt-zero",
+    "F:nat-not-succ-le-self"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-countrange-bij-1",
+      "kind": "kernel-term",
+      "supports": "`Nat.countRange_bij` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all eight preludes that build the naturals, AND its admitted type renders with the selected-set INJECTIVITY hypothesis (`Eq.{1} AxNat (x2 x6) (x2 x7)) -> Eq.{1} AxNat x6 x7`), the SECOND ROUND TRIP (`Eq.{1} AxNat (x2 (x3 x10)) x10`), and the CROSS-BOUND conclusion (`AxNat.countRange x0 x4` against `AxNat.countRange x1 x5` -- two different predicates at two different bounds). Each of the three is load-bearing. Without the conclusion anchor the checker would pass for a same-bound law; without the round-trip anchor it would pass for a version whose surjectivity had been dropped (making the statement FALSE, since an injection into a larger selected set does not equate the counts); without the injectivity anchor it would pass for the derived four-hypothesis form.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(nat|integer|characterization|rat|creal|complex|cpoint|ipc)[[:space:]]+theorem[[:space:]]+Nat\\.countRange_bij[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(x2 x6\\) \\(x2 x7\\)\\) -> Eq\\.\\{1\\} AxNat x6 x7.*Eq\\.\\{1\\} AxNat \\(x2 \\(x3 x10\\)\\) x10.*Eq\\.\\{1\\} AxNat \\(AxNat\\.countRange x0 x4\\) \\(AxNat\\.countRange x1 x5\\)')\" = 8",
+      "notes": "Verified discriminating by scripts/new-fact.py before this file was written: the pattern matches the real output and its match count drops on mutated output. Anchored on the footprint column `0` and on three separate fragments of the rendered type -- the injectivity hypothesis, the second round trip, and the cross-bound conclusion -- with the row count pinned at 8, one per prelude that builds the naturals. The name alone would NOT discriminate, because `Nat.countRange_bij` is a prefix of `Nat.countRange_bij_of_inverse`; the `[[:space:]]+0[[:space:]]` after the name is what separates them, and the injectivity fragment confirms it independently. Run 2026-09-02: 8 rows.",
+      "kernel_declaration": "Nat.countRange_bij",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection rendered-type re-list"
+      ],
+      "checker_seconds": 20
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form. Row 2 (a boundary refutation) is EMPTY BY PROOF: every hypothesis is a decidable `Bool` equation or a `Nat` order fact on a finite range, and surjectivity is supplied as an explicit inverse rather than an existential, so nothing here has a classical boundary. Row 3 (the decidable-fragment exact form) is the certified concrete instance in `count_range_bij_tests.rs`: `(1 <= .)` on `[0,3)` against `(2 <= .)` on `[0,4)`, with all five hypotheses discharged from the prelude's own order lemmas rather than assumed. Row 4 (a labelled import) is absent. WHAT THIS DOES NOT SAY. (1) It does not say the bridge `Rat.rank = Rat.rankCols` follows. This is the missing NUMBER-THEORETIC piece ADR-1558 sized, and the bridge additionally needs the pivot-row-to-pivot-column bijection itself, which is ADR-1554 obligation 4 and is NOT proved anywhere in this tree. (2) It does not give the counts an ORDER relation from a one-sided map: a version with only injectivity and only the forward `MapsInto` would state `<=` and is not proved here. (3) The hypotheses constrain `sigma` and `tau` ONLY on the selected sets, so nothing is asserted about either map anywhere else -- the concrete instance deliberately uses a `sigma` whose value at an unselected index lands outside the right-hand selected set. (4) The injectivity hypothesis is REDUNDANT given the two round trips (see `Nat.countRange_bij_of_inverse`, which derives it); it is kept in this form because it mirrors `Nat.countRange_permute`'s shape and because the proof uses it directly rather than re-deriving it at each step."
+}
