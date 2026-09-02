@@ -2371,6 +2371,24 @@ pub struct RatPrelude {
     /// would need `Lt (matSkip j c) (succ m)` from `Lt c m`, which nothing in
     /// this prelude supplies.
     pub det_congr_lt: NameId,
+    /// `Rat.matSkip_lt_succ : ∀ p c m, Lt c m → Lt (matSkip p c) (succ m)` —
+    /// the column bound, and the only reason [`Self::det_congr_lt`] stops at
+    /// the row. Both branches of [`Self::mat_skip`]'s `bool_select_nat` are
+    /// below `succ m`, so it is one `Bool.rec` on the guard and never a
+    /// decision about it.
+    pub mat_skip_lt_succ: NameId,
+    /// `Rat.det_congr_entry_lt : ∀ n A B,
+    /// (∀ r, Lt r n → ∀ c, Lt c n → A r c = B r c) → det A n = det B n` — the
+    /// congruence bounded on BOTH indices, i.e. on exactly the square
+    /// `det A n` reads.
+    ///
+    /// [`Self::det_congr_lt`] is the right tool when a reindexing map is under
+    /// no control outside `[0,n)`; this is the right tool when the two
+    /// matrices agree only where the determinant looks, which is what the
+    /// identity laws give — [`Self::mat_mul_id_right`] is
+    /// `Lt j n → matMul A matId n i j = A i j`, bounded in the COLUMN, so the
+    /// row-bounded form cannot consume it.
+    pub det_congr_entry_lt: NameId,
     /// `Rat.det_row_selection_injective : ∀ m B g, InjectiveOn g (succ m) →
     /// MapsInto g (succ m) → det (B∘g) (succ m) =
     /// det (matId∘g) (succ m) * det B (succ m)` — the SELECTION lemma's
@@ -2827,6 +2845,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_mat_mul_2: child(kernel, "det_matMul_2"),
         det_row_selection_of_duplicate: child(kernel, "det_row_selection_of_duplicate"),
         det_congr_lt: child(kernel, "det_congr_lt"),
+        mat_skip_lt_succ: child(kernel, "matSkip_lt_succ"),
+        det_congr_entry_lt: child(kernel, "det_congr_entry_lt"),
         det_row_selection_injective: child(kernel, "det_row_selection_injective"),
         det_row_selection: child(kernel, "det_row_selection"),
     }

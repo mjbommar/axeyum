@@ -1574,7 +1574,7 @@ fn declare_det_mat_id(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelErr
 /// scrutinee, so every `Nat.ble`-guarded index identity in this file needs
 /// this — `nat_prelude`'s own copies are `pub(super)` there and not reachable
 /// from `rat_prelude`.
-fn bool_cases(
+pub(super) fn bool_cases(
     d: &mut IntDev<'_>,
     scrutinee: ExprId,
     motive: &dyn Fn(&mut IntDev<'_>, ExprId) -> ExprId,

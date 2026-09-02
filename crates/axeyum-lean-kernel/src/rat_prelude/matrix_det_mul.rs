@@ -38,7 +38,7 @@
 
 use super::RatPrelude;
 use super::matrix_det::{
-    alt_hyp_ne, mat_ty, one_mul_pf, ralt_sign, rdet, rmat_id, rmat_minor_of, rmat_skip,
+    alt_hyp_ne, bool_cases, mat_ty, one_mul_pf, ralt_sign, rdet, rmat_id, rmat_minor_of, rmat_skip,
 };
 use super::matrix_det_selection::row_compose;
 use super::ops::{nat_eq_to_rat, rchain, rcongr, req, rmul, rneg, rone, rrefl, rsymm, rtrans};
@@ -56,6 +56,8 @@ use crate::nat_prelude::NatOps;
 /// **refused** a proof, not that a script gave up.
 pub(super) fn declare_matrix_det_mul(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_det_congr_lt(d, p)?;
+    declare_mat_skip_lt_succ(d, p)?;
+    declare_det_congr_entry_lt(d, p)?;
     declare_det_row_selection_injective(d, p)?;
     declare_det_row_selection_full(d, p)?;
     Ok(())
@@ -1135,4 +1137,241 @@ fn declare_det_row_selection_full(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
         d.lam_fv(m_fv, nat, over_b)
     };
     d.declare_theorem(p.det_row_selection, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// The ENTRY-bounded congruence -- the one obligation 1's final step needs
+// ---------------------------------------------------------------------------
+
+/// `∀ r, Lt r bound → ∀ c, Lt c bound → Eq Rat (A r c) (B r c)` — two matrices
+/// agreeing on exactly the square the determinant reads.
+fn entry_bounded_eq_ty(d: &mut IntDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let hr = d.lt(r, bound);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let hc = d.lt(c, bound);
+    let ar = d.apply(a, &[r, c]);
+    let br = d.apply(b, &[r, c]);
+    let eq = req(d, ar, br);
+    let with_hc = d.arrow(hc, eq);
+    let inner = d.pi_fv(c_fv, nat, with_hc);
+    let with_hr = d.arrow(hr, inner);
+    d.pi_fv(r_fv, nat, with_hr)
+}
+
+/// Admit `Rat.matSkip_lt_succ : ∀ p c m, Lt c m → Lt (matSkip p c) (succ m)` —
+/// the column bound the entry-bounded congruence needs, and the only reason
+/// `Rat.det_congr_lt` stops at the row.
+///
+/// `matSkip p c` is `bool_select_nat (ble p c) (succ c) c`, and BOTH branches
+/// are below `succ m`: `succ c` by `Nat.succ_le_succ` on the hypothesis, `c`
+/// by `Nat.le_succ`. A bound that holds either way holds for the selector, so
+/// this is one `Bool.rec` on the guard and never a decision about it.
+fn declare_mat_skip_lt_succ(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let at_fv = d.fresh_fvar();
+    let at = d.kernel().fvar(at_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let sm = d.succ(m);
+    let hyp_ty = d.lt(c, m);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let skipped = rmat_skip(d, p, at, c);
+    let concl = d.lt(skipped, sm);
+
+    let cond = NatOps::ble(d, at, c);
+    let sc = d.succ(c);
+    let proof = bool_cases(
+        d,
+        cond,
+        &|d, b| {
+            let sc = d.succ(c);
+            let selected = NatOps::bool_select_nat(d, b, sc, c);
+            let sm = d.succ(m);
+            d.lt(selected, sm)
+        },
+        &|d| {
+            let np = d.prelude();
+            d.lemma(np.succ_le_succ, &[sc, m, h])
+        },
+        &|d| {
+            let np = d.prelude();
+            let le = d.lemma(np.le_succ, &[m]);
+            d.lemma(np.lt_of_lt_of_le, &[c, m, sm, h, le])
+        },
+    );
+
+    let ty = {
+        let with_h = d.arrow(hyp_ty, concl);
+        let over_m = d.pi_fv(m_fv, nat, with_h);
+        let over_c = d.pi_fv(c_fv, nat, over_m);
+        d.pi_fv(at_fv, nat, over_c)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let over_m = d.lam_fv(m_fv, nat, with_h);
+        let over_c = d.lam_fv(c_fv, nat, over_m);
+        d.lam_fv(at_fv, nat, over_c)
+    };
+    d.declare_theorem(p.mat_skip_lt_succ, ty, value)
+}
+
+/// Admit `Rat.det_congr_entry_lt : ∀ n A B,
+/// (∀ r, Lt r n → ∀ c, Lt c n → A r c = B r c) → det A n = det B n` — the
+/// congruence bounded on BOTH indices, i.e. on exactly the square `det A n`
+/// reads.
+///
+/// [`declare_det_congr_lt`] is the right tool when a reindexing map is under
+/// no control outside `[0,n)`; this is the right tool when the two matrices
+/// agree only where the determinant looks, which is what the identity laws
+/// give: `Rat.matMul_id_right` is `Lt j n → matMul A matId n i j = A i j`,
+/// bounded in the COLUMN, so the row-bounded form cannot consume it.
+///
+/// Same induction, with two changes: the outer sum needs
+/// [`RatPrelude::sum_range_congr_lt`] rather than the unrestricted
+/// `sum_range_congr`, and the minor's column obligation is discharged by
+/// [`declare_mat_skip_lt_succ`].
+fn declare_det_congr_entry_lt(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let mty = mat_ty(d);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hyp = entry_bounded_eq_ty(d, a, b, x);
+        let lhs = rdet(d, p, a, x);
+        let rhs = rdet(d, p, b, x);
+        let eq = req(d, lhs, rhs);
+        let with_h = d.arrow(hyp, eq);
+        let over_b = d.pi_fv(b_fv, mty, with_h);
+        d.pi_fv(a_fv, mty, over_b)
+    };
+    let stmt = motive(d, n);
+
+    let proof = d.induct(
+        &motive,
+        &|d| {
+            let mty = mat_ty(d);
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let zero_n = d.zero();
+            let hyp = entry_bounded_eq_ty(d, a, b, zero_n);
+            let h_fv = d.fresh_fvar();
+            let one = rone(d, p);
+            let refl = rrefl(d, one);
+            let with_h = d.lam_fv(h_fv, hyp, refl);
+            let over_b = d.lam_fv(b_fv, mty, with_h);
+            d.lam_fv(a_fv, mty, over_b)
+        },
+        &|d, j, ih| {
+            let nat = d.nat_ty();
+            let mty = mat_ty(d);
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let sj = d.succ(j);
+            let hyp = entry_bounded_eq_ty(d, a, b, sj);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let zero_n = d.zero();
+            let f_a = cofactor_summand(d, p, a, j);
+            let f_b = cofactor_summand(d, p, b, j);
+
+            let pointwise = {
+                let c_fv = d.fresh_fvar();
+                let c = d.kernel().fvar(c_fv);
+                let hc_ty = d.lt(c, sj);
+                let hc_fv = d.fresh_fvar();
+                let hc = d.kernel().fvar(hc_fv);
+
+                let entry_a = d.apply(a, &[zero_n, c]);
+                let entry_b = d.apply(b, &[zero_n, c]);
+                let sub_a = rmat_minor_of(d, p, a, zero_n, c);
+                let sub_b = rmat_minor_of(d, p, b, zero_n, c);
+                let det_a = rdet(d, p, sub_a, j);
+                let det_b = rdet(d, p, sub_b, j);
+                let sign = ralt_sign(d, p, c);
+
+                let minor_pointwise = {
+                    let np = d.prelude();
+                    let r_fv = d.fresh_fvar();
+                    let r = d.kernel().fvar(r_fv);
+                    let hr_ty = d.lt(r, j);
+                    let hr_fv = d.fresh_fvar();
+                    let hr = d.kernel().fvar(hr_fv);
+                    let cc_fv = d.fresh_fvar();
+                    let cc = d.kernel().fvar(cc_fv);
+                    let hcc_ty = d.lt(cc, j);
+                    let hcc_fv = d.fresh_fvar();
+                    let hcc = d.kernel().fvar(hcc_fv);
+                    let sr = d.succ(r);
+                    let lifted = d.lemma(np.succ_le_succ, &[sr, j, hr]);
+                    let col = rmat_skip(d, p, c, cc);
+                    let col_bound = d.lemma(p.mat_skip_lt_succ, &[c, cc, j, hcc]);
+                    let body = d.apply(h, &[sr, lifted, col, col_bound]);
+                    let with_hcc = d.lam_fv(hcc_fv, hcc_ty, body);
+                    let inner = d.lam_fv(cc_fv, nat, with_hcc);
+                    let with_hr = d.lam_fv(hr_fv, hr_ty, inner);
+                    d.lam_fv(r_fv, nat, with_hr)
+                };
+                let h_det = d.apply(ih, &[sub_a, sub_b, minor_pointwise]);
+
+                let np = d.prelude();
+                let lt_zero = d.lemma(np.zero_lt_succ, &[j]);
+                let h_entry = d.apply(h, &[zero_n, lt_zero, c, hc]);
+
+                let start = {
+                    let product = rmul(d, entry_a, det_a);
+                    rmul(d, sign, product)
+                };
+                let s1 = rcongr(d, entry_a, entry_b, h_entry, &|d, t| {
+                    let product = rmul(d, t, det_a);
+                    rmul(d, sign, product)
+                });
+                let mid = {
+                    let product = rmul(d, entry_b, det_a);
+                    rmul(d, sign, product)
+                };
+                let s2 = rcongr(d, det_a, det_b, h_det, &|d, t| {
+                    let product = rmul(d, entry_b, t);
+                    rmul(d, sign, product)
+                });
+                let end = {
+                    let product = rmul(d, entry_b, det_b);
+                    rmul(d, sign, product)
+                };
+                let (_e, body) = rchain(d, start, &[(mid, s1), (end, s2)]);
+                let with_hc = d.lam_fv(hc_fv, hc_ty, body);
+                d.lam_fv(c_fv, nat, with_hc)
+            };
+
+            let sum_pf = d.lemma(p.sum_range_congr_lt, &[f_a, f_b, sj, pointwise]);
+
+            let with_h = d.lam_fv(h_fv, hyp, sum_pf);
+            let over_b = d.lam_fv(b_fv, mty, with_h);
+            d.lam_fv(a_fv, mty, over_b)
+        },
+        n,
+    );
+
+    let ty = d.pi_fv(n_fv, nat, stmt);
+    let value = d.lam_fv(n_fv, nat, proof);
+    d.declare_theorem(p.det_congr_entry_lt, ty, value)
 }
