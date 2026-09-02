@@ -263,6 +263,7 @@ mod squarefree;
 mod stirling;
 mod stirling_lemmas;
 mod subset_product;
+mod subset_sum;
 mod sum_range_permute;
 mod testbit_bitwise;
 mod totient;
@@ -477,6 +478,7 @@ use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
 use stirling_lemmas::declare_stirling_lemmas_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
+use subset_sum::declare_subset_sum_all;
 use sum_range_permute::declare_sum_range_permute_all;
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -5690,6 +5692,39 @@ pub struct NatPrelude {
     /// `Int.prodRange_permute`; this is the same three steps over
     /// [`sum_range_permute`](Self::sum_range_permute).
     pub gauss_fold_sum_range_eq: NameId,
+    // -- `eisenstein-3` lane: `subset_sum.rs` --
+    /// `Nat.sumRangeIf : (Nat → Bool) → (Nat → Nat) → Nat → Nat`
+    /// (`subset_sum.rs`) — `sumRangeIf p f n := sumRange (fun i =>
+    /// bool_select_nat (p i) (f i) 0) n`, the sum of `f` over the indices
+    /// below `n` that satisfy the `Bool`-valued predicate `p`. The additive
+    /// corner of the subset-fold triangle whose other two corners are
+    /// [`count_range`](Self::count_range) (`totient.rs`) and
+    /// [`prod_range_if`](Self::prod_range_if) (`subset_product.rs`); it was
+    /// measured ABSENT from every prelude by two prior lanes (ADR-1540,
+    /// ADR-1544) and is what a conditional-sum consumer needs.
+    pub sum_range_if: NameId,
+    /// `Nat.sumRangeIf_zero : ∀ p f, Eq (sumRangeIf p f zero) 0` —
+    /// `Eq.refl`, by δ into `Nat.sumRange`'s own `Nat.rec`.
+    pub sum_range_if_zero: NameId,
+    /// `Nat.sumRangeIf_succ : ∀ p f n, Eq (sumRangeIf p f (succ n))
+    /// (add (sumRangeIf p f n) (bool_select_nat (p n) (f n) 0))` — `Eq.refl`.
+    /// The new term is on the RIGHT because `Nat.sumRange`'s step is
+    /// `add ih (f j)` and `Nat.add` recurses on its right argument.
+    pub sum_range_if_succ: NameId,
+    /// `Nat.sumRangeIf_congr_lt : ∀ p q f g n, (∀ i, Lt i n → Eq Bool (p i)
+    /// (q i)) → (∀ i, Lt i n → Eq (f i) (g i)) → Eq (sumRangeIf p f n)
+    /// (sumRangeIf q g n)` — bounded, matching
+    /// [`sum_range_congr_lt`](Self::sum_range_congr_lt) and
+    /// [`prod_range_if_congr_lt`](Self::prod_range_if_congr_lt) rather than
+    /// `countRange_congr`'s unconditional convention.
+    pub sum_range_if_congr_lt: NameId,
+    /// `Nat.sumRangeIf_compl : ∀ p f n, Eq (add (sumRangeIf p f n)
+    /// (sumRangeIf (setCompl p) f n)) (sumRange f n)` (`subset_sum.rs`) — the
+    /// split of a full-range sum into the selected and unselected parts. No
+    /// complementarity hypothesis: this kernel has no `Bool.not`, and
+    /// [`set_compl`](Self::set_compl) (`finite_set.rs`) IS that function. The
+    /// additive twin of [`count_range_compl`](Self::count_range_compl).
+    pub sum_range_if_compl: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -7061,6 +7096,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ble_select_add_of_ne: kernel.name_str(nat, "ble_select_add_of_ne"),
             eisenstein_floor_sum: kernel.name_str(nat, "eisenstein_floor_sum"),
             gauss_fold_sum_range_eq: kernel.name_str(nat, "gauss_fold_sumRange_eq"),
+            sum_range_if: kernel.name_str(nat, "sumRangeIf"),
+            sum_range_if_zero: kernel.name_str(nat, "sumRangeIf_zero"),
+            sum_range_if_succ: kernel.name_str(nat, "sumRangeIf_succ"),
+            sum_range_if_congr_lt: kernel.name_str(nat, "sumRangeIf_congr_lt"),
+            sum_range_if_compl: kernel.name_str(nat, "sumRangeIf_compl"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -8105,6 +8145,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.sumRange_congr_lt`/`Nat.succ_pred_of_pos`. Nothing needs it
         // yet, so it goes last.
         declare_gauss_fold_sum_all(&mut d, &p)?;
+        // `Nat.sumRangeIf` and its equations/congruence/split (`subset_sum.rs`):
+        // needs `Nat.sumRange` (`defs.rs`), `Nat.setCompl` (`finite_set.rs`),
+        // and the `Nat.add` lemmas `zero_add`/`add_assoc`/`add_right_comm`
+        // plus the order bridges `lt_succ_self`/`le_succ`/`lt_of_lt_of_le` --
+        // all far above. Nothing needs it yet, so it goes last.
+        declare_subset_sum_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8182,6 +8228,9 @@ mod eisenstein_lattice_tests;
 
 #[cfg(test)]
 mod gauss_fold_sum_tests;
+
+#[cfg(test)]
+mod subset_sum_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;

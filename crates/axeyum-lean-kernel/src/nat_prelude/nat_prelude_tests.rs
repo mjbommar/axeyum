@@ -480,6 +480,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.eq_on,
         p.prod_range,
         p.prod_range_if,
+        // `subset_sum.rs` (`eisenstein-3` lane).
+        p.sum_range_if,
         p.injective_on_p,
         p.maps_into_p,
         p.surjective_on_p,
@@ -1543,6 +1545,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.eisenstein_floor_sum,
         // `gauss_fold_sum.rs` (`eisenstein-2` lane): ADR-1540's residue 1.
         p.gauss_fold_sum_range_eq,
+        // `subset_sum.rs` (`eisenstein-3` lane): the conditional sum
+        // ADR-1540/ADR-1544 both measured absent.
+        p.sum_range_if_zero,
+        p.sum_range_if_succ,
+        p.sum_range_if_congr_lt,
+        p.sum_range_if_compl,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by
