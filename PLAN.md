@@ -44630,7 +44630,7 @@ exist and no theorem about either has been declared.
 `docs/plan/status/nat-multiset.md` handed off the COMPUTED form of prime
 factorization and named one blocker: `prod (add m₁ m₂) = prod m₁ * prod m₂`.
 All four targets landed, every declaration admitted on the FIRST attempt, all
-axiom-free (`theorem_axiom_footprint`: `nat` is 905 theorems, 905 axiom-free,
+axiom-free (`theorem_axiom_footprint`: `nat` is 904 theorems, 904 axiom-free,
 footprint max 0).
 
 **`Nat.Multiset.prod_add` (`multiset_prod.rs`).** The handoff named
