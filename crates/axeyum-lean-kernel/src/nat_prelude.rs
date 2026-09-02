@@ -254,6 +254,7 @@ mod prime_dvd_factorial_lcm;
 mod prime_dvd_mirrors;
 mod primes;
 mod primrec;
+mod quadratic_reciprocity_count;
 mod rec_agreement;
 mod rectangle;
 mod rel_prime;
@@ -463,6 +464,7 @@ use primes::{
     declare_prime_odd_of_ne_two, declare_prime_pred_pos, declare_primes, declare_succ_pred_prime,
 };
 use primrec::declare_primrec_all;
+use quadratic_reciprocity_count::declare_quadratic_reciprocity_count_all;
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
     declare_land_le_left_all, declare_land_le_right_all, declare_land_zero_propagation_all,
@@ -5807,6 +5809,26 @@ pub struct NatPrelude {
     /// generality [`eisenstein_floor_sum`](Self::eisenstein_floor_sum) states
     /// IS removable at `pp = 2m+1`, `q = 2n+1`, and this is that statement.
     pub eisenstein_floor_sum_min_free: NameId,
+    // -- `quadratic-reciprocity-2` lane: `quadratic_reciprocity_count.rs` --
+    /// `Nat.gaussCount_sum_even : ∀ m n, Eq (gcd (succ (2*n)) (succ (2*m))) 1
+    ///   → Even (add (add N_p N_q) (mul n m))`
+    /// (`quadratic_reciprocity_count.rs`), with
+    /// `N_p := gaussNegCount (succ (2*m)) (succ (2*n)) m` and
+    /// `N_q := gaussNegCount (succ (2*n)) (succ (2*m)) n` — quadratic
+    /// reciprocity's `Nat` half. Pure assembly: the two
+    /// [`eisenstein_lemma`](Self::eisenstein_lemma) instances at `(m, n)` and
+    /// `(n, m)` supply the two parities and
+    /// [`eisenstein_floor_sum_min_free`](Self::eisenstein_floor_sum_min_free)
+    /// cancels the two floor sums against `n*m`. Only coprimality is
+    /// assumed, never primality.
+    pub gauss_count_sum_even: NameId,
+    /// `Nat.gaussCount_sum_modEq : ∀ m n, Eq (gcd (succ (2*n)) (succ (2*m))) 1
+    ///   → modEq 2 (add N_p N_q) (mul n m)`
+    /// (`quadratic_reciprocity_count.rs`) —
+    /// [`gauss_count_sum_even`](Self::gauss_count_sum_even) as a congruence,
+    /// a corollary at `u := n*m`, `v := k` in `Nat.modEq`'s balanced form
+    /// rather than a second proof.
+    pub gauss_count_sum_mod_eq: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -7192,6 +7214,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             eisenstein_lemma_mod_eq: kernel.name_str(nat, "eisenstein_lemma_modEq"),
             div_mul_succ_le_of_le: kernel.name_str(nat, "div_mul_succ_le_of_le"),
             eisenstein_floor_sum_min_free: kernel.name_str(nat, "eisenstein_floor_sum_min_free"),
+            gauss_count_sum_even: kernel.name_str(nat, "gaussCount_sum_even"),
+            gauss_count_sum_mod_eq: kernel.name_str(nat, "gaussCount_sum_modEq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -8268,6 +8292,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.right_distrib` and `Nat.mul_assoc`. Nothing needs it, so it
         // goes last.
         declare_eisenstein_floor_min_free_all(&mut d, &p)?;
+        // Quadratic reciprocity's `Nat` half (`quadratic_reciprocity_count.rs`):
+        // needs `Nat.eisenstein_lemma` and
+        // `Nat.eisenstein_floor_sum_min_free` (both immediately above), plus
+        // `Nat.gcd_comm`, `Nat.add_comm`/`add_assoc`/`add_right_comm` and
+        // `Nat.even`. Nothing in this prelude needs it -- the `Int` prelude
+        // does -- so it goes here, last of the Eisenstein family.
+        declare_quadratic_reciprocity_count_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8357,6 +8388,9 @@ mod eisenstein_lemma_tests;
 
 #[cfg(test)]
 mod eisenstein_floor_min_free_tests;
+
+#[cfg(test)]
+mod quadratic_reciprocity_count_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
