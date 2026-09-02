@@ -6042,6 +6042,31 @@ SUITES["nursery-split-exemption-guards"] = (
             "    if not isinstance(blind, list) or not blind or set(blind) - set(required):",
             "    if False:",
         ),
+        # ADR-1565. N4 above made the evaluated set derived, and in doing so
+        # ADR-1564 silently dropped a seal: the leak check filtered to the
+        # EVALUATED rows before counting a component's partitions, so a
+        # `held-out`/`train` component collapsed to one evaluated partition
+        # and raised nothing once `train` stopped being evaluated. N7 deletes
+        # the restored clause; N8 is the one worth reading twice, because it
+        # does not delete the clause but WIDENS it to every training-touching
+        # component -- the mutation that would call `train`/`development`
+        # a leak again and undo ADR-1564 while still "having a seal". A guard
+        # whose only mutant is `if False:` never gets asked whether it is
+        # sealing the right pair.
+        (
+            "N7 a blind row sharing a component with a training row is a leak",
+            "        elif partitions & blind and partitions & training:\n"
+            "            leaking.append(component_id)",
+            "        elif False:\n"
+            "            leaking.append(component_id)",
+        ),
+        (
+            "N8 the seal is BLIND-specific, not every training-touching component",
+            "        elif partitions & blind and partitions & training:\n"
+            "            leaking.append(component_id)",
+            "        elif partitions & training:\n"
+            "            leaking.append(component_id)",
+        ),
     ],
 )
 

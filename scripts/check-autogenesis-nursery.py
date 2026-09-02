@@ -46,6 +46,75 @@ def evaluation_partitions(policy: dict[str, Any]) -> set[str]:
     return set(policy["required_evaluation_partitions"])
 
 
+def blind_partitions(policy: dict[str, Any]) -> set[str]:
+    """The partitions whose rows are SEALED against every other partition.
+
+    Read from the policy for the same reason `evaluation_partitions` is, and
+    validated by `validate_policy` (non-empty, a subset of the evaluation
+    partitions).
+    """
+    return set(policy["blind_partitions"])
+
+
+def training_partitions(policy: dict[str, Any]) -> set[str]:
+    """The partitions a producer is allowed to build on (ADR-1564).
+
+    From the policy, never a literal here: the whole reason ADR-1563 could not
+    amend the 147 `train <-> development` edges was that the gate's own copy
+    and the manifest's list said the same wrong thing to each other.
+    """
+    return set(policy["training_partitions"])
+
+
+def crossing_components(
+    entries: list[dict[str, Any]],
+    by_fact: dict[str, str],
+    evaluated: set[str],
+    blind: set[str],
+    training: set[str],
+) -> list[str]:
+    """Component ids whose drawn rows cross a partition seal.
+
+    TWO rules, and the second is the one ADR-1564 dropped by accident.
+
+    * **Two evaluation partitions in one component.** The original rule, and
+      the only one this gate had. While `required_evaluation_partitions` was
+      `[train, development, held-out]` it also covered `held-out <-> train`,
+      because `train` was evaluated.
+
+    * **A BLIND row sharing a component with a TRAINING row.** ADR-1564 moved
+      `train` out of the evaluation set, and this gate's leak check filters to
+      the evaluated rows BEFORE counting partitions -- so a component holding
+      only `held-out` and `train` rows collapsed to a single evaluated
+      partition and stopped being a leak at all. Measured 2026-09-02 on a
+      synthetic population: a `held-out` row depending on a `train` row raised
+      nothing. That is the seal ADR-1564's own table marks in bold as
+      surviving the amendment (`train -> held-out` and `held-out -> train`
+      stay crossings), and it was left enforced only in
+      `check-partition-edges.py`'s `PartitionRoles.is_crossing`, which does
+      apply it in both directions. Blindness once spent cannot be un-spent, so
+      the seal may not be a side effect of which partitions happen to be
+      evaluated this week.
+
+    `longitudinal` is deliberately NOT part of the second rule. It was never
+    in the evaluated set, so ADR-1564 changed nothing about it, and a
+    component shared with the longitudinal bootstrap is a separate, separately
+    amendable violation (ADR-1563) that both report paths already raise.
+    Folding it in here would report one finding twice under a rule that did
+    not regress.
+    """
+    all_partitions: dict[str, set[str]] = defaultdict(set)
+    for entry in entries:
+        all_partitions[by_fact[entry["fact_id"]]].add(entry["partition"])
+    leaking = []
+    for component_id, partitions in all_partitions.items():
+        if len(partitions & evaluated) > 1:
+            leaking.append(component_id)
+        elif partitions & blind and partitions & training:
+            leaking.append(component_id)
+    return sorted(leaking)
+
+
 PROVENANCE_CLASSES = {
     "project-constructed",
     "external-transcribed",
@@ -535,10 +604,9 @@ def build_report(
         shape_partitions[entry["proof_shape"]].add(entry["partition"])
         source_group_partitions[entry["source_group"]].add(entry["partition"])
 
-    all_leaking_components = sorted(
-        component_id
-        for component_id, partitions in component_partitions.items()
-        if len(partitions) > 1
+    all_leaking_components = crossing_components(
+        entries, by_fact, partitions_evaluated,
+        blind_partitions(policy), training_partitions(policy),
     )
     leaks = [c for c in all_leaking_components if c not in exempted_component_ids]
     leaks_exempted = [c for c in all_leaking_components if c in exempted_component_ids]
@@ -811,18 +879,13 @@ def build_cross_population_report(
     # reports describing no split at all -- the same reason ADR-1563 made the
     # amendment contraction load the edge gate's own `load_amendments` rather
     # than re-implement it here.
-    partitions_evaluated = evaluation_partitions(
-        validate_policy(v1_nursery.get("policy"))
-    )
+    cross_policy = validate_policy(v1_nursery.get("policy"))
+    partitions_evaluated = evaluation_partitions(cross_policy)
     evaluation = [entry for entry in entries
                   if entry["partition"] in partitions_evaluated]
-    component_partitions: dict[str, set[str]] = defaultdict(set)
-    for entry in evaluation:
-        component_partitions[by_fact[entry["fact_id"]]].add(entry["partition"])
-    all_leaking_components = sorted(
-        component_id
-        for component_id, partitions in component_partitions.items()
-        if len(partitions) > 1
+    all_leaking_components = crossing_components(
+        entries, by_fact, partitions_evaluated,
+        blind_partitions(cross_policy), training_partitions(cross_policy),
     )
     leaks = [c for c in all_leaking_components if c not in exempted_component_ids]
     leaks_exempted = [c for c in all_leaking_components if c in exempted_component_ids]

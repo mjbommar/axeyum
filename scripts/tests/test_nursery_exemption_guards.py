@@ -526,6 +526,55 @@ class AmendedPartitionRoleTests(unittest.TestCase):
         ):
             MODULE.build_report(self.nursery, self.facts, self.result)
 
+    def test_a_held_out_train_component_still_leaks_after_the_amendment(
+        self,
+    ) -> None:
+        """THE SEAL ADR-1564 DROPPED BY ACCIDENT, and the reason this test
+        exists at all.
+
+        ADR-1564's own table marks `held-out -> train` in bold as a crossing
+        that SURVIVES the amendment ("blind seal"), and
+        `check-partition-edges.py` does apply it -- the six edges baselined in
+        `partition-edge-baseline-v1.json` are exactly this shape. This gate
+        did not. Its leak check filtered `entries` down to the EVALUATED rows
+        before counting a component's partitions, so once `train` left the
+        evaluation set a component holding only `held-out` and `train` rows
+        collapsed to one evaluated partition and raised nothing. Measured
+        2026-09-02, before the repair: this population passed.
+
+        The component here is ISOLATED from `setUp`'s `F:dev -> F:train` one
+        on purpose. Were it fused, the leak would be reported for the
+        ordinary reason -- two evaluation partitions, `development` and
+        `held-out`, in one component -- and this test would pass with the
+        blind seal deleted, measuring the confound instead of the subject.
+
+        Its positive control is
+        `test_the_same_component_does_not_leak_once_train_is_a_training_partition`
+        above: the same roles over a `train`/`development` component must
+        still come back CLEAN, so a rule that simply called every
+        train-touching component a leak fails that one.
+        """
+        self.facts["F:trainB"] = fact("F:trainB")
+        self.facts["F:heldB"] = fact("F:heldB", ["F:trainB"])
+        self.nursery["entries"].extend(
+            [entry("F:trainB", "train"), entry("F:heldB", "held-out")]
+        )
+        self.roles(required_evaluation_partitions=["development", "held-out"],
+                   training_partitions=["train"],
+                   blind_partitions=["held-out"])
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "crosses evaluation partitions"
+        ) as raised:
+            MODULE.build_report(self.nursery, self.facts, self.result)
+        message = str(raised.exception)
+        # The finding must name the BLIND row, not merely fire somewhere.
+        self.assertIn("F:heldB", message)
+        self.assertIn("F:trainB", message)
+        # ...and it must not have fired on the benign train/development
+        # component that `setUp` builds, which the positive control above
+        # requires to stay clean.
+        self.assertNotIn("F:dev ", message)
+
     def test_a_policy_naming_no_evaluation_partition_is_refused(self) -> None:
         """A gate that cannot fail is worse than no gate. With nothing
         evaluated, every component sits in at most one evaluation partition and
