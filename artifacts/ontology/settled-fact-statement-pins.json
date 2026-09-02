@@ -9,6 +9,17 @@
   },
   "amendments": [
     {
+      "fact_id": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
+      "date": "2026-09-02",
+      "from_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
+      "to_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
+      "from_prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
+      "to_prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
+      "from_kernel_theorem": "Nat.prime_coprime_factorial_of_lt",
+      "to_kernel_theorem": "Nat.coprime_factorial_of_lt_prime",
+      "reason": "REPOINT ONLY -- both digests are byte-identical (from == to on the formal statement AND on the reader-facing prose). The proposition this fact is about did not change; the DECLARATION it names did, because there were two of them. The 2026-09-02 daily retrieval audit (ADR-0608's structural remedy) ran `shape_search --include-constructed --duplicates` and found `Nat.prime_coprime_factorial_of_lt` (nat_prelude/prime_dvd_factorial_lcm.rs, landed 2026-09-01) and `Nat.coprime_factorial_of_lt_prime` (nat_prelude/gauss_lemma.rs, landed under ADR-1070) reporting the SAME shape; `kernel_declaration_projection` shows their rendered types byte-identical, and the two proofs are the same induction with `gcd_comm` vs `coprime_symmetric` as the only difference. This is a re-derivation, not two results. The later declaration is deleted; this fact now names the earlier one, per ADR-0608's survivor rule (earliest landed, most consumers -- gauss_lemma's is already mirrored at Int by int_prelude/gauss_factorial_coprime.rs, the other had one consumer in its own file). Nothing about the claim widened: the admitted rendered type is unchanged character for character, and the evidence checker still fails if no declaration of that name is in the built Nat environment."
+    },
+    {
       "fact_id": "F:creal-evt-attained-max-decides-sign",
       "date": "2026-08-31",
       "from_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
@@ -14247,7 +14258,7 @@
       "language": "lean4-surface",
       "statement_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
       "prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
-      "kernel_theorem": "Nat.prime_coprime_factorial_of_lt"
+      "kernel_theorem": "Nat.coprime_factorial_of_lt_prime"
     },
     {
       "fact_id": "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",

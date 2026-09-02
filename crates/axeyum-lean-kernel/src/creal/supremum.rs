@@ -17,7 +17,7 @@
 //! **The supremum VALUE of a uniformly continuous `F` on `[a, b]` is
 //! constructive. The ARGMAX is not, and never will be with the tools this
 //! kernel has.**
-//! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! [`CReal.evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //! (`creal/extreme_value.rs`) proves that an *attaining* maximiser for a
 //! specific uniformly continuous family would decide the sign of an
 //! arbitrary real — i.e. attainment is EVT's row 2, and it is a genuine
@@ -513,7 +513,7 @@
 //! - **The least-upper-bound law**, in its constructive form: for every
 //!   `eps > 0` there is a point of `[a, b]` at which `F` exceeds `supOn −
 //!   eps`. Note this is an APPROXIMATE statement and must stay one —
-//!   [`super::CRealPrelude::evt_attained_max_decides_sign`] rules out the
+//!   [`super::ExtremeValueNames::evt_attained_max_decides_sign`] rules out the
 //!   exact version, which is precisely why EVT's row 2 exists.
 //!
 //! Until the upper-bound law lands, `supOn` is honestly described as "the
@@ -4154,7 +4154,7 @@ fn declare_sup_level_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kern
 /// **This is a VALUE, never an argmax.** Each term is a finite maximum over a
 /// mesh, so it is a height; nothing here names or produces a point at which
 /// that height is attained, and
-/// [`CRealPrelude::evt_attained_max_decides_sign`] says no construction can
+/// [`ExtremeValueNames::evt_attained_max_decides_sign`] says no construction can
 /// (`creal/extreme_value.rs`). See this module's own value/argmax section.
 fn declare_sup_seq_def(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
     let carrier = creal_ty(d, p);
@@ -4851,7 +4851,7 @@ pub(super) fn declare_sup_seq_cauchy(
 /// produced rather than asserted to exist.**
 ///
 /// EVT's row 1 under ADR-0603's grading. Its row 2,
-/// [`CRealPrelude::evt_attained_max_decides_sign`], proves that a MAXIMISER
+/// [`ExtremeValueNames::evt_attained_max_decides_sign`], proves that a MAXIMISER
 /// cannot be constructed; this is the maximum's VALUE, which can. Nothing in
 /// this file names or produces a point at which the value is attained, and
 /// nothing should — see the module documentation's value/argmax section.

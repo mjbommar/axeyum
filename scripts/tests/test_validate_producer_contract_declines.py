@@ -225,5 +225,124 @@ class DuplicateAndDirScanTests(unittest.TestCase):
                 declines_module.load_declines(directory)
 
 
+def make_resolution(**overrides) -> dict:
+    resolution = {
+        "date": "2026-09-01",
+        "route": "kernel-lane",
+        # Any path that really exists in this repository; the guard checks the
+        # filesystem, not this particular file.
+        "closed_by": "crates/axeyum-lean-kernel/src/nat_prelude/primes.rs",
+        "diagnosis_status": "not-re-executed",
+    }
+    resolution.update(overrides)
+    return resolution
+
+
+class DeclineLifecycleTests(unittest.TestCase):
+    """ADR-1510 rule 2: a decline dies with its fact.
+
+    One test per guard, and each is expected to be the ONLY test that dies
+    when its guard is deleted (`scripts/tests/mutation_controls.py
+    producer-contract-declines`).
+    """
+
+    def setUp(self) -> None:
+        self.open_facts = {"F:target": {"id": "F:target", "epistemic_status": "open"}}
+        self.settled_facts = {
+            "F:target": {"id": "F:target", "epistemic_status": "proved"}
+        }
+
+    def test_settled_fact_without_a_resolution_is_rejected(self) -> None:
+        # The measured failure mode: 26 of 27 live suppressions named facts
+        # that were already proved, and nothing could tell them apart from a
+        # decline suppressing live work.
+        with self.assertRaisesRegex(declines_module.DeclineError, "no `resolution` block"):
+            declines_module.validate_decline(make_decline(), self.settled_facts)
+        # Control: the SAME decline against the SAME settled fact passes once
+        # the resolution is there, so this cannot be satisfied by another guard.
+        declines_module.validate_decline(
+            make_decline(resolution=make_resolution()), self.settled_facts
+        )
+
+    def test_open_fact_with_a_resolution_is_rejected(self) -> None:
+        # The inverse direction. Without it, a lane could write a resolution
+        # ahead of time and permanently silence the guard above while the work
+        # is still outstanding.
+        decline = make_decline(resolution=make_resolution())
+        with self.assertRaisesRegex(declines_module.DeclineError, "still open"):
+            declines_module.validate_decline(decline, self.open_facts)
+
+    def test_resolution_closed_by_must_resolve_to_a_real_path(self) -> None:
+        decline = make_decline(
+            resolution=make_resolution(closed_by="crates/axeyum-lean-kernel/src/no_such_module.rs")
+        )
+        with self.assertRaisesRegex(
+            declines_module.DeclineError, "does not resolve to a real path"
+        ):
+            declines_module.validate_decline(decline, self.settled_facts)
+
+    def test_resolution_route_must_be_a_producer_route(self) -> None:
+        decline = make_decline(resolution=make_resolution(route="by-hand"))
+        with self.assertRaisesRegex(declines_module.DeclineError, "resolution.route"):
+            declines_module.validate_decline(decline, self.settled_facts)
+
+    def test_diagnosis_status_is_three_valued_not_a_boolean(self) -> None:
+        # A boolean here would let "nobody re-checked" be recorded as "still
+        # accurate", which is the checker-that-cannot-fail defect moved into
+        # the data. 19 of the 26 backfilled resolutions are exactly that case.
+        for bad in (True, "yes", "still-accurate"):
+            decline = make_decline(resolution=make_resolution(diagnosis_status=bad))
+            with self.assertRaisesRegex(
+                declines_module.DeclineError, "diagnosis_status"
+            ):
+                declines_module.validate_decline(decline, self.settled_facts)
+        for good in sorted(declines_module.DIAGNOSIS_STATUSES):
+            declines_module.validate_decline(
+                make_decline(resolution=make_resolution(diagnosis_status=good)),
+                self.settled_facts,
+            )
+
+    def test_resolution_rejects_unknown_and_missing_keys(self) -> None:
+        missing = make_resolution()
+        del missing["closed_by"]
+        with self.assertRaisesRegex(declines_module.DeclineError, "missing required key"):
+            declines_module.validate_decline(
+                make_decline(resolution=missing), self.settled_facts
+            )
+        extra = make_resolution(proved=True)
+        with self.assertRaisesRegex(declines_module.DeclineError, "unexpected key"):
+            declines_module.validate_decline(
+                make_decline(resolution=extra), self.settled_facts
+            )
+
+    def test_committed_ledger_has_a_resolution_for_every_settled_decline(self) -> None:
+        # Derived from the AUTHORITY (each decline's own fact), never from a
+        # literal count: a test named "every settled decline" that iterated a
+        # hand-written list would measure the maintainer's memory instead.
+        facts = declines_module.load_facts()
+        settled_without_resolution = []
+        resolved_but_open = []
+        for path, decline in declines_module.load_declines():
+            fact = facts[decline["fact_id"]]
+            settled = fact.get("epistemic_status") not in declines_module.OPEN_STATUSES
+            has_resolution = decline.get("resolution") is not None
+            if settled and not has_resolution:
+                settled_without_resolution.append(path.name)
+            if not settled and has_resolution:
+                resolved_but_open.append(path.name)
+        self.assertEqual(settled_without_resolution, [])
+        self.assertEqual(resolved_but_open, [])
+
+    def test_every_committed_resolution_names_an_artifact_that_exists(self) -> None:
+        for path, decline in declines_module.load_declines():
+            resolution = decline.get("resolution")
+            if resolution is None:
+                continue
+            self.assertTrue(
+                (ROOT / resolution["closed_by"]).exists(),
+                f"{path.name}: resolution.closed_by {resolution['closed_by']!r} is gone",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

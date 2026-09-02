@@ -2063,7 +2063,25 @@ impl Kernel {
             let ExprNode::Sort(domain_level) = self.expr_node(domain_type) else {
                 return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
             };
-            let field_is_proof = self.level_is_zero(*domain_level);
+            let domain_level = *domain_level;
+            let field_is_proof = self.level_is_zero(domain_level);
+
+            // Lean's `check_constructor` universe constraint: every field's
+            // type must live at or below the family's own result universe.
+            // `Prop` is exempt because it is impredicative. Without this an
+            // inductive can store its own universe (`U : Sort 1` with
+            // `mk : Sort 1 → U`), which together with large elimination makes
+            // `Sort u` a retract of an inhabitant of `Sort u` — the
+            // `Type : Type` precondition for Girard's paradox. ADR-1495.
+            if !self.level_is_zero(group.result_level)
+                && !self.level_leq(domain_level, group.result_level)
+            {
+                return Err(KernelError::ConstructorFieldUniverseTooBig {
+                    inductive: owner.name,
+                    ctor: ctor_name,
+                    field_index: u32::try_from(fields.len()).unwrap_or(u32::MAX),
+                });
+            }
 
             if let Some((target_family, opened)) =
                 self.open_group_recursive_field_shape(group, &param_values, domain, None, &mut ctx)

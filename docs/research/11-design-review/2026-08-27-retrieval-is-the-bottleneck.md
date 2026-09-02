@@ -383,3 +383,27 @@ lane contention.
   declared limit rather than a silent one.
 * It does not rank. A broad query returns a list, and reading it is the lane's
   job; `--limit` truncates and says so.
+
+---
+
+# The running ledger: daily audits after 2026-08-27
+
+The seventeen above are a one-off measurement over 2026-08-25..27. ADR-0608's
+structural remedy is that **one lane per day audits the previous day's commits
+by the same method**, so a duplicate costs hours instead of weeks. Each day's
+audit gets its own write-up; this table is the ledger, and the running total is
+what should be quoted, not the seventeen.
+
+| day audited | audit | commits in window / kernel-path | candidates | confirmed | literal duplicates | deduped |
+|---|---|---|---|---|---|---|
+| 2026-08-25..27 | [§1 above](#1-the-audit-of-thirteen) | 1,032 / — | 65 | 17 | 3 | 3 (in-session) |
+| 2026-09-01 | [2026-09-02-retrieval-audit-for-2026-09-01.md](2026-09-02-retrieval-audit-for-2026-09-01.md) | 240 / 69 | 17 | 4 | 1 | 1 (`b4fb008d8`) |
+
+**Running total: 21 audited instances, 4 of them landed as real duplicates.**
+
+Do not add the two rows' *candidate* counts and read a rate off them: the
+windows differ in length, the second window's classifier is wider (it adds
+`turns out`, `promote`, `hoist`, `unexpose`, `dedup`, `was already` and six
+more), and the second is scoped to `crates/axeyum-lean-kernel` where the first
+was not. What is comparable is the confirmed-per-audited-day figure, and only
+once there are enough days to have one.

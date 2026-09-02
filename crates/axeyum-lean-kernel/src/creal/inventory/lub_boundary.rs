@@ -14,9 +14,21 @@
 /// declaration built by `crates/axeyum-lean-kernel/src/creal/lub_boundary.rs`.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![
-        ("CReal.lubSet", p.lub_set, "def"),
-        ("CReal.lubSet_inhabited", p.lub_set_inhabited, "theorem"),
-        ("CReal.lubSet_bounded", p.lub_set_bounded, "theorem"),
-        ("CReal.lub_decides_em", p.lub_decides_em, "theorem"),
+        ("CReal.lubSet", p.lub_boundary.lub_set, "def"),
+        (
+            "CReal.lubSet_inhabited",
+            p.lub_boundary.lub_set_inhabited,
+            "theorem",
+        ),
+        (
+            "CReal.lubSet_bounded",
+            p.lub_boundary.lub_set_bounded,
+            "theorem",
+        ),
+        (
+            "CReal.lub_decides_em",
+            p.lub_boundary.lub_decides_em,
+            "theorem",
+        ),
     ]
 }

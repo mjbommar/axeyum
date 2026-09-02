@@ -117,6 +117,8 @@ now. Nothing was deleted.
 
 | Date | Commit | Result |
 |---|---|---|
+| 2026-09-02 | `b4fb008d8` | `dedupe(nat)`: deleted `Nat.prime_coprime_factorial_of_lt`, a second proof of `gauss_lemma`'s `Nat.coprime_factorial_of_lt_prime`; consumer and fact repointed, pin amended, projection 14,673 → 14,665. |
+| 2026-09-02 | `a766acdce` | `docs`: the 2026-09-01 retrieval audit, and the running daily-audit ledger appended to the ADR-0608 write-up. |
 | 2026-09-01 | cas-ledger-audit | audited all 55 `axeyum-cas` modules against the fact ledger; corrected both of the deficiency's headline numbers (certificate surface 41→**27 of 55** masked; CAS facts 19 filename-matches→**48** by route; real gap **13 modules**, not 34); 9 reconstruct-today / 8 could-reconstruct / rest `cas-internal` with reasons; found **eleven certificates that cannot express a distinction their producer makes**, sharpest being `gosper.rs`'s three unrecorded acceptance modes and `gf2_shard`'s exhaustion theorem accepted by incrementing a counter; landed 6 facts (route 48→54) each with a checker verified to fail in both directions; ADR-1400 |
 | 2026-09-01 | nursery-draw-17 | REFUSED draw 17 and said why: `Nat.count` is a definitional alias of `Nat.countRange` and **4 of 10 drawn rows are the same proposition term-for-term** with a 5th entailed, invisible to R9 (which compares names) and to R11's vocabulary map (which holds only nursery family subjects); independently, the `(ℕ → Prop)+DecidablePred` vs `Nat → Bool` divergence is the one the registry records for `Nat.nth`. Exhaustive: **0 of 902** viable held-out families sort before `Mathlib.Data.Nat.Count`, and all 240 viable families over the whole unowned universe contain one of three anchors, two of which are refused — so R5 cannot be met. Found that a `do-not-draw-held-out` verdict for this module was **already on record and enforced by nothing** (`screen_family` reads `reviews[family]`; the row is module-keyed); `assert_draw_lawful` now enforces it, draw-time and held-out-only, with 4 mutation-verified guards each killing exactly one test. Zero-diff over all 460 drawn rows with a firing negative control. ADR-1450 |
 | 2026-09-01 | refill-economics | ADR-1475: refill ceiling is admission not supply; 1,443 dispatchable rows unreachable behind `PER_FAMILY`/F4, new-family supply exhausted at R5 |
@@ -125,9 +127,36 @@ now. Nothing was deleted.
 | 2026-09-01 | `53a0065d2` | 4 of 10: the `natAbs_inj_of_*` mirrors, first attempt each. Three of four branches close on the sign hypothesis alone, because `Int.le Int.zero (negSucc n)` IS `False`. |
 | 2026-09-01 | `ce3a4cbac` | 5 more: the `mul_self` cluster (3 new `Nat` squaring lemmas carry all its content) and the `coe_sub_coe` pair (`subNatNat_elim` after the `ofNat_add_negOfNat` bridge — the two stuck terms are NOT defeq). Plus the `Nat.`-namespace axiom-freedom gap, 13 declarations. |
 | 2026-09-01 | `32e338978` | Row 1, `natAbs_emod_two`: the family scores **10 of 10**. Its two parity cases take different routes — there is no `Nat.odd_iff_even_succ` to mirror `even_iff_odd_succ` with. |
+| 2026-09-01 | ledger-regen | status stub committed |
+| 2026-09-01 | ledger-regen | fixed ipc-prelude coverage gap in two generators; regenerated all four stale ledgers (theorem-production 1,448 -> 2,340; provenance 2,054 -> 2,343; import-backlog 147 -> 213; ledger-coverage kernel_theorems 2,340) |
+| 2026-09-01 | ledger-regen | ADR-1511: import-backlog and production-provenance --checks now block in check-merge-hygiene.sh; added a cross-consistency ratchet for the two cargo-dependent ledgers; flywheel-status.sh PRODUCTION panel now shows the ledger's last-regenerated date |
+| 2026-09-01 | shell-antipatterns-red | fix `grep -q` in pipeline under pipefail in 5 mutation-control scripts, check-shell-antipatterns.sh red -> green |
+| 2026-09-01 | `2be5cd11d` | First measurement before any probe: the kernel already admits dependent records with proof fields (`Rat` carries two, `Complex` uses large-elimination projections, `Exists.{u}`/`Acc.{u}` take a `Sort u` parameter). |
+| 2026-09-01 | `de1a36083` | `bundled_structure_probe` + `inductive_universe_probe`: a 17-field `Field` bundle admits and a derived theorem quantified over it is accepted axiom-free; the universe control does NOT fire, exposing the `Type : Type` retraction. |
+| 2026-09-01 | `c72fd281b` | Kernel guard: `KernelError::ConstructorFieldUniverseTooBig`, Lean's `check_constructor` universe constraint with `Prop` exempt. Repairs the two fixtures that asserted Lean-illegal inductives admit (grammar `type` families to `Sort 2`, pin and digest unchanged; seam-fuzz data fields clamped for bare-parameter universes). New test with two positive controls. |
+| 2026-09-01 | `f933965ad` | `module_over_field_probe`: a bundle carrying another bundle, `smul` through two nested projections, derived theorem admitted — "a vector space over a field" is stateable and provable here. |
+| 2026-09-01 | cas-rustdoc-links | Fixed all 6 broken rustdoc intra-doc-links in `crates/axeyum-cas/src/{inverse,normalforms,rationality}.rs`; `cargo doc -p axeyum-cas --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 8 error lines). Workspace-wide doc build still red: 7 error lines in `axeyum-lean-import` and `axeyum-solver` (out of scope, reported not fixed). |
+| 2026-09-01 | `c56868c75` | Lane opened; status stub and starting measurements recorded. |
+| 2026-09-01 | `208104bd5` | Slice A: `scripts/creal-declare-deps.py` re-derives `creal.rs`'s dependency graph from source and checks the `STEPS` table against it. 0 order violations, but 977 of 4,831 `requires` edges unnamed and two false `provides` disarming the preflight over a 48-step window. `--self-check` permutes a step before its provider and requires the scan to fire; `--strict` exits 2 on a table/code disagreement. |
+| 2026-09-01 | `b3b449dfc` | Slice B: `plan_step_order` computes the build order (Kahn, array-index tie-break) instead of validating a hand-written one; the two false `provides` deleted; duplicate providers rejected. Projection byte-identical (same SHA-256, 14,673 rows); build time unchanged. Inversion demo: level 1 exit 101, level 2 exit 0 with identical output. Six new tests, each a distinct failure mode. clippy `--all-targets -D warnings` exit 0. |
+| 2026-09-01 | `3096c587c` | Slice C: ADR-1512 (per-module registries behind the `CRealPrelude` facade) plus the first migration, `ivt_boundary`. 606 → 599 fields; 15 self-contained modules identified as the migratable population. Analyzer extended to follow the facade, with a mutation-verified guard (every struct field provided by exactly one step). Projection byte-identical. clippy exit 0. |
+| 2026-09-01 | `4fc6ba86e` | Lane opened; status stub with the before-snapshot digest. |
+| 2026-09-01 | `b17d66d9e` | Slice D: the `STEPS` `requires`/`provides` are generated from a measurement of the source into `creal/steps_generated.rs`; `creal.rs` keeps `STEP_DISPATCH` (order + dispatch) and asserts the two agree. Unlisted-edge inversion demonstrated both ways (old table 0 violations, measured graph 1) and pinned by a test that dies when the edge is deleted. Gate registered in `check.sh`, the `justfile` and `check-merge-hygiene.sh` with a control and mutation M7. `--strict` 2 → 0; `creal.rs` 17,172 → 12,004 lines; projection byte-identical. |
+| 2026-09-01 | `461a58573` | Slice E: 13 self-contained modules (62 fields) moved into per-module registries behind the `CRealPrelude` facade; `scripts/creal-migrate-registry.py` promoted, with `--list`. ADR-1530, plus a correction pointer on ADR-1512 — `sqrt` is NOT a local move (`complex.rs`, 19 sites). `NameId` fields 599 → 537, registries 1 → 14, `creal.rs` → 11,439 lines. Projection byte-identical; `creal::` 216 passed; clippy exit 0. |
+| 2026-09-01 | `5db923e75` | status(frontier-holdout-screen): open the lane stub |
+| 2026-09-01 | `f4df69696` | fix(frontier): screen held-out facts out of the JSON selection path, read every nursery manifest |
+| 2026-09-01 | `34a62b02d` | status(frontier-test-drift): open the lane stub |
+| 2026-09-01 | (pending) | fix(frontier): derive test_fact_frontier's real-ledger targets at test time, add ADR-1510 sizing to the contract fixture |
+| 2026-09-01 | kernel-rustdoc-links | Fixed all 23 broken rustdoc intra-doc-links in `crates/axeyum-lean-kernel/src/{nat_prelude,ipc_heyting,ipc_provable,rat_prelude}.rs`; `cargo doc -p axeyum-lean-kernel --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 (was exit 101, 24 error lines). Workspace-wide doc build still red: 8 errors in `axeyum-cas` (out of scope, reported not fixed). |
+| 2026-09-01 | `1e33d51ee` | Split ADR-1495's bundled universe-guard test into seven named controls so each admission control is observed in the configuration whose answer it gives; added the polymorphic refusal, the bundled-structure and Nat-like admissions, and the `Prop`-exemption soundness control. `--lib inductive` 49 -> 55 passed. |
+| 2026-09-01 | `d9b9249d9` | Ordering control (the positivity pre-pass masks the universe error, refuting the assumption this lane started with); registered `inductive-universe-guard` in `scripts/tests/mutation_controls.py` (baseline green 56 tests, both mutations killed, disjoint kill sets); ADR-1500. |
+| 2026-09-01 | `f3a74e653` | generator reads ADR-1512 registries: `creal` Python table 537 → 606 names |
+| 2026-09-01 | `9a6ef752b` | `gen-py-prelude-fields.py --check` registered in the merge gate, 2 mutants |
+| 2026-09-01 | `5df5e43d3` | migration refuses a move that breaks a consumer outside the kernel crate |
 | 2026-09-01 | `PENDING` | ADR-1455: re-scoped the two nursery-v1 split exemptions a `depends_on` repair voided (the `--fix` runs widened the leak 1 -> 3 -> 4 crossing components; edges are proof-derived, so the remedy is the re-review ADR-0850's self-invalidation demands, not an edge removal or a partition move). Added the two guards the mechanism's own safety argument always assumed and never checked: no exemption may name a `held-out` row, and a recorded exemption matching no live crossing component now FAILS instead of being a `--json` field. Fixed `rescope-nursery-exemption.py`, which had no tests and would have overwritten the 258-member cross-population exemption with 13 nursery-v1 fact ids at exit 0. Mutation-verified: `nursery-split-exemption-guards` 3/3 killed, `nursery-rescope-parser` 2/2 killed over disjoint cases, every negative case paired with a positive control. |
 | 2026-09-01 | `PENDING` | Established that `held_out=186` is CORRECT before moving the stale `held_out=146` pin — composition 16 (v1) + 170 (v2, matching the extension's own `coverage.partition_counts`), two RISES from draws with v1 unchanged so no ledger amendment is owed, and all 186 rows measured `open` / no evidence / unreferenced by any of the 29 operations against a positive control of 191/191/37 over the 198 train rows. Pin now carries a failure message naming the procedure. Control mutates the SUBJECT: perturbing the gate's reported count kills the pin. |
 | 2026-09-01 | `PENDING` | `check-generated-artifact-ownership.py`: one of its two COVER failures was a fiction — `schema.json` reported as a three-producer artifact because basenames were matched as substrings of `fact.schema.json` and `obstruction-graph.schema.json`. Recording it would have put an invention into the ratchet's population. Now extracts whole `*.json` path components per producer (35 -> 34 candidates, dropping only `schema.json`, adding none, removing none of the 32 recorded; also 112 s -> 0.05 s, past a timeout that made the gate unrunnable), and the genuinely multi-named `mirror-divergence-registry.json` is recorded. Gate `fails=0|PASS`. |
+| 2026-09-01 | solver-rustdoc-links | Fixed the last 7 broken rustdoc intra-doc-links in `crates/axeyum-lean-import/src/thin_adapter.rs` and `crates/axeyum-solver/src/{proof,int_reconstruct/diophantine}.rs`; `cargo doc --workspace --all-features --no-deps` under `RUSTDOCFLAGS="-D warnings"` now exits 0 workspace-wide (was exit 101, 7 error lines — the last two crates left red by `kernel-rustdoc-links` and `cas-rustdoc-links`). |
 | 2026-08-31 | quadratic-residue-two | `Int.euler_criterion_residue_imp_one` + `Int.euler_criterion_neg_one_imp_not_residue` land axiom-free in new `int_prelude/qr_criterion.rs`, extending Euler's criterion toward the second supplementary law (ADR-0960); the law itself stays open, sized for the next lane. |
 | 2026-08-31 | `0a19a8faa` | wip: `nat_prelude/bit_extra.rs` (untested, compiles) |
 | 2026-08-31 | `e0dbe1481` | fix: bit_extra build-order + `lt_succ_self` argument bugs; 240 nat_prelude:: tests pass |
@@ -35585,6 +35614,98 @@ unexercised widening of a blindness guard is the failure this repository cares
 most about, arriving in the direction nobody watches. ADR-1480 hands the
 decision to whoever has a crossing whose verdict depends on it.
 
+**Your lane's block (`DONE`, ledger-regen, 2026-09-01).** All four generated
+ledgers regenerated and their `--check`s green: `theorem-production-ledger.md`
+(1,448 -> 2,340 distinct theorems), `production-provenance-ledger.md` (2,054
+-> 2,343 established facts, multi-target unchanged at 30),
+`artifacts/import-backlog.json` (147 -> 213 rows), `artifacts/ledger-
+coverage.json` (kernel_theorems 2,340, registered 2,063, unregistered 277).
+Root cause of the staleness: the kernel grew an `ipc` (intuitionistic
+propositional calculus) prelude group on 2026-08-31 that neither generator's
+coverage list knew about — `gen-theorem-production-ledger.py`'s own
+fail-closed guard caught it correctly (`coverage changed`) the first time
+this lane ran it; fixed `EXPECTED_PRELUDES` and `gen-ledger-coverage.py`'s
+`prelude_of()` namespace map.
+
+ADR-1511 decides the merge-blocking question: none of the four `--check`s
+ran in `hooks/pre-push` or CI before this lane; all four were only wired
+into `scripts/check.sh`/`just check` (~10 min, not run per merge).
+`gen-import-backlog.py --check` and `gen-production-provenance-ledger.py
+--check` (~0.1s each, no cargo) now run for real in
+`scripts/check-merge-hygiene.sh`. `gen-theorem-production-ledger.py --check`
+and `gen-ledger-coverage.py --check` (~40s warm / ~3min cold — both shell
+out to a release kernel build) stay in the full gate, but
+`check-merge-hygiene.sh` gained a cheap cross-consistency ratchet comparing
+the two ledgers' theorem counts against each other (no cargo). Discriminating
+test both directions confirmed for the ratchet and for import-backlog: corrupt
+the committed count -> gate exits 1 naming the mismatch; restore -> exits 0.
+
+`scripts/flywheel-status.sh`'s PRODUCTION panel now prints the git-log date
+of `theorem-production-ledger.md` beside the theorem count.
+
+Did not run: `cargo test` (excluded by brief). Did not implement: path-
+conditioning the two expensive checks into `pre-push` (left as a named
+Alternative in ADR-1511 — a larger change than this lane's scope; the
+cross-consistency ratchet already closes the specific drift this lane found).
+
+**Your lane's block (`DONE`, shell-antipatterns-red, 2026-09-01).**
+`scripts/check-shell-antipatterns.sh` was red on `main`: `bash
+scripts/check-shell-antipatterns.sh` exited 1 with 5 `SHELL_ANTIPATTERN_ERROR`
+lines, one per file, all "NEW file using `grep -q` in a pipeline under
+pipefail" (the baseline only pins known files/counts; these 5 files were
+absent from it entirely). All 5 landed 2026-08-30, after the checker's own
+last edit that day (09:55) — the checker existed when each landed, nothing
+ran it against them before merge.
+
+Flagged sites (file:line, count, git-log date/sha):
+
+| file | line(s) | count | landed |
+| --- | --- | --- | --- |
+| `scripts/tests/test-checked-interchange-mutations.sh` | 88, 93 | 2 | 2026-08-30 `46fabf264` |
+| `scripts/tests/test-credit-transaction-ledger-mutations.sh` | 78 | 1 | 2026-08-30 `917b3456b` |
+| `scripts/tests/test-credit-transaction-mutations.sh` | 78 | 1 | 2026-08-30 `2d5ee83e1` |
+| `scripts/tests/test-lean-adapter-mutations.sh` | 92, 97 | 2 | 2026-08-30 `e862dc294` |
+| `scripts/tests/test-structural-index-mutations.sh` | 110, 115, 155, 160, 166 | 5 | 2026-08-30 `fb82f8bfc` |
+
+Every site was `echo "$x" | grep -q[xE] PATTERN || { … exit 1 }` under
+`set -euo pipefail`; each was rewritten to
+`[ "$(echo "$x" | grep -c[xE] PATTERN)" -gt 0 ] || { … exit 1 }`, which
+consumes the whole pipe and cannot SIGPIPE the producer — meaning preserved
+exactly (count-of-matches-`>`-0 is equivalent to first-match-found for these
+single/multi-line greps).
+
+Post-fix, each affected mutation-control script was re-run directly (each is
+Python-based and copies the checker under test into its own `mktemp -d`
+scratch dir before mutating — never the shared worktree, per its own header
+comment; none needed a cargo build):
+
+- `test-checked-interchange-mutations.sh` — exit 0, `MUTATION KILL TABLE
+  PASSED -- 7 guards, each kills exactly its own fixture`
+- `test-credit-transaction-mutations.sh` — exit 0, `MUTATION TABLE: all 9
+  guards each killed exactly their own canary`
+- `test-credit-transaction-ledger-mutations.sh` — exit 0, `MUTATION TABLE:
+  all 9 guards each killed exactly their own canary`
+- `test-lean-adapter-mutations.sh` — exit 0, `MUTATION KILL TABLE PASSED --
+  7 guards, each kills exactly its own fixture`
+- `test-structural-index-mutations.sh` — exit 0, `all 6 guards killed 1:1`
+
+`scripts/check-shell-antipatterns.sh`: before `exit 1` (5
+`SHELL_ANTIPATTERN_ERROR` lines); after `exit 0`,
+`SHELL_ANTIPATTERNS|scanned=141|files=7|grep_q_in_pipeline=14|pipeline_status_reads=0`
+(the remaining 7 files/14 occurrences are the pre-existing baseline, unchanged
+and not risen).
+
+Control suites, both green:
+- `python3 -m unittest scripts.tests.test_check_shell_antipatterns_scope` —
+  `Ran 9 tests in 0.648s, OK`
+- `scripts/tests/test-check-shell-antipatterns.sh` (the detector's own
+  positive/negative controls, bonus check) —
+  `SHELL_ANTIPATTERN_CONTROLS|cases=12|positive=4|negative=6|PASS`
+
+Did not run: `just check`, `check.sh`, or any cargo-based gate — not touched
+by this diff (only 5 shell scripts and this status doc changed) and out of
+scope per the brief. Nothing was pushed.
+
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
 supported (arithmetic; the other three were refuted). Re-measured first, and did
@@ -36626,6 +36747,66 @@ Break/restore through the real gate: stale `Nat.clog` text restored -> exit 1,
 | 2026-08-31 | (this lane) | pair a claim to its own sentence, not its whole block; budget 249 -> 122; 8-claim fixture regression; 7 mutations |
 | 2026-08-31 | (this lane) | register the checker itself in `check.sh` and `just check`; ADR-1190 |
 
+**DONE, abstraction-mechanism, 2026-09-01. The answer is YES, and it was
+already true.** Driver:
+`docs/research/11-design-review/2026-09-01-the-abstraction-question-has-never-been-asked.md`
+and [`docs/curriculum/foundational-books/axler.md`](docs/curriculum/foundational-books/axler.md),
+which tags roughly half of Axler's chapters `X-TA` — "no polymorphism in this
+kernel's term language, so 'for every vector space' cannot even be **stated**
+… **permanent** absent a change to the kernel's term language".
+
+**That verdict is false.** Three probes, every stage first attempt, every
+control firing, `axiom_footprint` empty throughout:
+
+- `examples/bundled_structure_probe.rs` — `AbsProbe.Field`, a one-constructor
+  inductive in `Sort 2` carrying a `Sort 1` **carrier as a field**, seven
+  operations and ten laws (17 fields). Selectors by large elimination, then a
+  **derived** cancellation theorem quantified over the structure.
+- `examples/module_over_field_probe.rs` — `AbsMod.VecSp` **carrying the
+  `Field` bundle as a field**, with `smul` typed through two nested
+  projections, and a derived theorem chaining two of its laws. That is exactly
+  "a vector space `V` over a field `F`", so Axler Ch.1–2 is stateable.
+- `examples/g4_pilot_generic_assoc_probe.rs` (prior art, ADR-0865, 2026-08-30)
+  had already settled the unbundled telescope half. Its finding was correct
+  and was never propagated to the curriculum.
+
+**The gap is surface, not capability.** 1,774 probe lines bought one `Field`,
+one `VecSp`, 13 selectors and 2 theorems — no `structure` command, no
+projection sugar, no instance resolution, and a dev-helper layer that hardcodes
+a carrier.
+
+**Decision (ADR-1495): yes to the statement class, no to a hierarchy, gated on
+one named first consumer** — the carrier-generic congruence layer, whose
+running metric is the 4 files carrying per-carrier `congr` helpers. `Nat.Fin`
+still has **zero non-test consumers** (re-verified with a positive control), so
+a mechanism ahead of a consumer is the outcome to avoid. Second rung, if the
+first is adopted: a bundled algebraic structure over the **15 lemma names
+proved at all five** of `Nat`/`Int`/`Rat`/`CReal`/`Complex` (49 at 3+, 23 at
+4+). It must carry its own equality — `CReal.add_comm` is a setoid `Equiv`, not
+`Eq`, and quotienting would cost `Quot.sound`.
+
+**A soundness hole fell out of the probe's own control.**
+`Kernel::add_inductive` never enforced Lean's constructor-field universe
+constraint, so `U : Sort 1` with `mk : Sort 1 → U` plus large elimination made
+`Sort u` a retract of an inhabitant of `Sort u` — `Type : Type`. Nothing in the
+tree declared such an inductive and no `axiom_footprint` moves; this was a
+checker weakness. Fixed, and **two pinned fixtures had been asserting that
+Lean-illegal inductives ADMIT**, which is why it survived: 360 of the grammar
+suite's 720 cases, and three universe shapes in the seam fuzz.
+
+**Not run:** the full workspace `--lib` and `--tests` sweeps. Both were killed
+at a 10-minute wall (exit 143, SIGTERM) inside the `creal`/`complex` suites and
+neither reached a `test result:` line. What did run: `--lib inductive` 49
+passed; twelve inductive-related integration suites 72 passed;
+`prelude_theorem_inventory --release --include-constructed` exit 0 with 11,969
+rows (every prelude still builds under the new guard); `clippy --release
+-p axeyum-lean-kernel --all-targets -D warnings` clean.
+
+**Highest-value follow-up, and it is a documentation task:** re-grade
+`axler.md`'s legend and its Chapter 1/2/7/9 rows from `X-TA` ("permanent") to
+unbuilt surface. The current text tells every future lane that half of linear
+algebra is out of reach.
+
 **ADR-0601 SS2+SS3 landed (`WIP`, adr601-impl, 2026-08-27).**
 `scripts/validate-facts.py` now classifies every `cas-certificate` fact's
 evidence by what its `checker_command` actually executes
@@ -37306,6 +37487,29 @@ Also open, and a separate decision:
 matrix under a name that promises the whole stack. Nothing in it is wrong; the
 CAS simply cannot appear. Widening the generator's source is the fix.
 
+**Your lane's block (`DONE`, cas-rustdoc-links, 2026-09-01).** Fixed all 8
+`error:` lines (7 broken-link errors + the summary line) that made
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-cas --no-deps` fail —
+confirmed by reproducing the failure first (exit 101, matched the count
+`kernel-rustdoc-links` reported) and re-running the identical command after
+the edits (exit 0, 0 errors). All six broken links name genuinely private
+items with no public re-export (`checker_derivative`, `checker_shift_by` in
+`inverse.rs`; `certifies_hermite_shape`, `certifies_smith_shape` in
+`normalforms.rs`; `rational_root_candidates`, `MAX_ABS_INT_COEFF`,
+`MAX_CANDIDATES` in `rationality.rs`) — every one demoted to plain
+code-formatted text (`` `name` `` instead of `` [`name`] ``), doc-comment-only,
+no visibility or code change. `rustfmt --edition 2024` on all three touched
+files: no diff beyond the intended edits.
+
+Also ran `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+--no-deps` once, report-only, no fix: exit 101, 7 `error:` lines, all in
+`crates/axeyum-lean-import` (`thin_adapter.rs`, unresolved link to
+`NeedsLeanCheck`) and `crates/axeyum-solver` (`proof.rs`,
+private-intra-doc-links to `finish_unsat_proof_outcome_with_check_budget`
+and `qf_bv_cnf_encoding`; `int_reconstruct/diophantine.rs`, unresolved link
+to `Kernel::render_lean_module_compact`) — confirmed `axeyum-cas` itself is
+clean in this run. Out of this lane's scope, not fixed here.
+
 **A bucket MIS-attribution is now loud, not just an unattributed one** (`COMPLETE`, classifier-fail-loud, 2026-08-31). ADR-1215.
 
 `scripts/measure-curriculum-kernel-coverage.py`'s residual counter catches a
@@ -37465,6 +37669,79 @@ registry row and the gate will fail until it does.
 - The function-valued duplication hazard (366 definitions) is unaddressed and
   needs a different instrument -- proof-skeleton retrieval, not a registry.
 
+**Answered (`done-for-now`, contract-declines, 2026-09-01).** The 2026-08-27
+batch dispatched 27 facts through the two seed producer contracts and all 27
+declined (15 `TrustedDeclaration`, 12 `TerminalNotClosed`). The question was
+whether the contracts were aimed at the wrong shape (a), whether one specific
+capability was missing that every dispatch hits (b), or something else (c).
+
+**Verdict: (c).** Full write-up, with the command behind every number, in
+[docs/research/11-design-review/2026-09-01-why-every-contract-dispatch-declined.md](docs/research/11-design-review/2026-09-01-why-every-contract-dispatch-declined.md).
+
+- Not (a): both shape predicates matched exactly their families and nothing
+  else. The mismatch is one level up — both contracts named the same recipe
+  (`examples/modeq_family_operation.rs`), whose vocabulary can only *permute*
+  equalities already given as hypotheses. The members it can permute were
+  already proved before the contracts were written, so each shape covered
+  exactly the complement of its recipe's competence.
+- Not (b): four structurally distinct causes across two pipeline stages.
+  `TrustedDeclaration` is not a producer decline reason at all — for all 15
+  nat-coprime facts the producer never ran.
+
+**Root causes (27 rows, grouped; groups sum to 27):**
+
+| # | stage | reason | mechanism | facts | disposition |
+|---|---|---|---|---:|---|
+| G1 | import | `TrustedDeclaration` | `Quot` via `Nat.minFac` | 1 | permanent (hard rule) |
+| G2 | import | `TrustedDeclaration` | `eq_self`, needs `propext` | 5 | permanent (kernel has none) |
+| G3 | import | `TrustedDeclaration` | `Nat.mod_lt` via `Nat.gcd`'s WF elaboration | 9 | deferred, ≥15 uncovered theorems incl. 7 WF internals (doc 295) |
+| G4 | producer | `TerminalNotClosed` | goal needs a NEW `Int.emod` equality | 12 | deferred, a whole `emod` theory |
+
+**The finding that actually explains the silence: 26 of the 27 declined facts
+are now `proved`** — closed within days by hand-authored kernel declarations
+(`int_prelude/modeq_family.rs`, `nat_prelude/primes.rs`) that never invoked a
+producer, contract, or the import pipeline. The one still open is
+`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`, the single permanently-blocked
+`Quot` case. The contract layer now matches **2 of 217** dependency-ready
+open facts (`shape_matched_count`), and the only three facts in the 209-fact
+`proof-route-only` pool that either contract's `statement_contains` would
+match are outcome-blind mutation negative controls. Both contracts describe
+exhausted families.
+
+**Re-run, per the brief.** Two of the 27 dispatches (one per contract, one
+per stage) were re-run today on the 2026-08-27 exports, whose sha256 digests
+match the `identity.export_ndjson_sha256` recorded in the decline artifacts.
+Both reproduce exactly. **No decline flipped**, and no bounded change would
+flip one: every group is far above 200 lines, two are architecturally
+permanent, and for 26 of 27 facts a flip would re-prove an already-proved
+fact. No Rust and no checker was changed.
+
+**Landed:**
+- `docs/research/11-design-review/2026-09-01-why-every-contract-dispatch-declined.md`
+  — the verdict, the 4-cause table, the reproduction, the 209-fact
+  classification, the minimum change.
+- `docs/research/09-decisions/adr-1510-a-contract-is-sized-by-the-frontier-and-a-decline-dies-with-its-fact.md`
+  — a contract records the open population it was sized against and retires
+  when that population empties; a decline against a settled fact must carry a
+  `resolution` block. Both are strictly additional guards on artifacts; no
+  accept path, kernel policy, or substitution allowlist changes.
+
+**Next actions (for other lanes, not started here):**
+1. Dispatch `F:ml430-nat-coprime-factorizationlcmleft-factorizationlcmright-e7db70ce`
+   — it is `admissible`, dependency-ready, and has never been dispatched;
+   `selection.outcome` is `selected`, not `refused`. Expect a G3 decline, but
+   from a run.
+2. Implement ADR-1510: the `resolution` backfill on 21 decline artifacts and
+   the validator guard must land together, or the gate goes red.
+3. Size a third producer against the 209-fact pool *before* writing its
+   contract. The pool is dominated by `Iff`-headed (40), existential (14),
+   `Decidable` (10) and higher-order induction-principle (10) statements no
+   current producer addresses.
+
+**Did not run:** no Lean/`lean4export` invocation on s5 (exports reused,
+digests checked); 25 of the 27 dispatches not re-run; no workspace test
+sweep; no mutation control (nothing mutable was changed).
+
 **`DONE`, creal-pi, 2026-08-31.** **`CReal.pi` is constructed and
 `3 ≤ π ≤ 4` is proved, axiom-free.** Thirteen declarations in
 `crates/axeyum-lean-kernel/src/creal/pi.rs`, admitted through
@@ -37525,6 +37802,188 @@ depending on `|x|` — the power-series row, Spivak ch 24 — and after that the
 construction `creal/ivt.rs` refutes. Sharpening `π ≤ 3.2` needs the tail
 bounded from index 4 rather than 0 (a re-indexed domination), the same call
 `declare_e_le_four` makes for `e ≤ 4` versus `e ≤ 3`.
+
+**Both slices landed** (`WIP`, creal-split-2, 2026-09-01). Continues
+[creal-split](docs/plan/status/creal-split.md) and
+[ADR-1512](docs/research/09-decisions/adr-1512-per-module-name-registries-behind-the-crealprelude-facade.md);
+the decisions are in
+[ADR-1530](docs/research/09-decisions/adr-1530-the-creal-build-table-is-generated-not-maintained.md).
+
+**D — the build table is generated, not maintained.** `creal.rs`'s
+hand-written `requires`/`provides` named **3,934 of the 4,831** `requires`
+edges the code has: 977 missing across 175 of the 211 steps, so a planner that
+can only constrain the edges it is told about was blind on most of its subject.
+`creal.rs` now keeps only `STEP_DISPATCH` — the order and the dispatch, one
+line per step — and `scripts/creal-declare-deps.py` generates
+`crates/axeyum-lean-kernel/src/creal/steps_generated.rs`, the `STEPS` table the
+prelude builds against.
+
+**Why a generated Rust file rather than the planner reading the JSON artifact
+at build time.** It keeps the trusted surface unchanged. The entries stay
+`fn(CRealPrelude) -> NameId` accessors, so a renamed field is still a compile
+error — the property the `BuildStep` design was chosen for over a
+`HashMap<&str, NameId>` — `BuildStep` is untouched, and `plan_step_order` runs
+on exactly the data it ran on before. Reading JSON would put a file read, a
+parser and a new failure mode on the prelude build path, and make the build
+depend on an artifact nothing type-checks.
+
+**The unlisted-edge inversion, both outcomes.**
+`integral::declare_riemann_sum_shared_accuracy_close_at` reads
+`CReal.sharedIndexToCanonical`, declared two steps earlier by
+`integral::declare_shared_index_to_canonical`; the hand-written table omitted
+that edge. Lifting the consumer above its provider gives **0** violations
+against `declared_requires` at `a503a9241` and **1** against
+`measured_requires`, naming `CReal.sharedIndexToCanonical`. Pinned by
+`creal_tests::an_edge_the_hand_written_table_never_named_is_now_enforced`,
+which MOVES the consumer rather than swapping the pair — a swap also displaces
+the sibling `..._close`, whose edge the old table *did* name, so it fires for a
+reason unrelated to the omitted edge. That swap version was written first and
+its failure named the sibling. Mutation-verified: deleting the one accessor
+line from the generated table kills exactly this test.
+
+**The build asserts the two halves agree.** `STEPS` and `STEP_DISPATCH` are the
+same list written twice, so `build_creal_prelude_uncached` checks them
+entry-for-entry (label and `run` pointer) before planning. `--check` catches a
+stale file too, but that is a gate somebody has to run.
+
+**Gates.** `--check --strict --self-check` (~1.1 s, pure Python) in
+`scripts/check.sh`, the `justfile`, and `scripts/check-merge-hygiene.sh` — the
+last because `creal.rs` has the highest edit rate in the repository, so its
+generated table is the file most likely to be merged stale. New control
+`test_stale_creal_steps_table_fails_the_gate`, mutation M7, measured to kill
+exactly one test. **Not** an L0 gate; that needs `ci.yml`, `hooks/pre-push`,
+`local-ci.sh` and `check-l0-gate-enforcement.py` together, and is the obvious
+next step.
+
+**E — 13 modules into per-module registries, 62 fields.** `pi` 14,
+`polynomial` 10, `crossing` 9, `cos_sign` 6, `completeness` 5, `lub_boundary` 4,
+`exp_fn` 4, `extreme_value` 3, `inverse_fn` 2, `ratio_test` 2, `deriv_unique` 1,
+`mvt` 1, `evt_row1` 1. The migration is
+`scripts/creal-migrate-registry.py`, promoted from a throwaway because the
+remaining work is the same mechanism; it reads its field list from the
+dependency graph, and `--list` answers "which module can move" from the tree.
+
+**ADR-1512's migration table was wrong about `sqrt`, and that is the whole
+difference between its 15 modules / 76 fields and this lane's 13 / 62.** That
+table scanned `creal.rs` plus `creal/*.rs` and nothing else, so it could not
+see `src/complex.rs` reading `creal.sqrt`, `creal.sqrt_approx`,
+`creal.mul_self_sqrt`, `creal.le_of_sq_le`, `creal.nat_sqrt` and
+`creal.sqrt_congr` at 19 sites. Moving `sqrt` — its largest entry, 17 fields —
+is the cross-module rename ADR-1512's own criterion excludes. ADR-1512 now
+carries a correction pointer. The new scan states its own limit in the other
+direction too: it matches by NAME, not by receiver TYPE, so
+`RatPrelude::poly_eval` reads as an external use of `CRealPrelude::poly_eval` —
+a module it calls blocked may still be movable; a module it calls movable
+really is.
+
+**Counts, one method for before and after** (`pub <x>: <T>,` inside
+`pub struct CRealPrelude`):
+
+| | `a503a9241` | slice D | slice E |
+| --- | --- | --- | --- |
+| `creal.rs` lines | 17,172 | 12,004 | **11,439** |
+| `NameId` fields | 599 | 599 | **537** |
+| module registries | 1 | 1 | **14** |
+| struct fields, all kinds | 601 | 601 | **552** |
+| `creal/steps_generated.rs` lines | — | 6,843 | 6,843 |
+| `--strict` exit | 2 | **0** | **0** |
+
+**The invariant held at every step.**
+`target/release/examples/kernel_declaration_projection` is byte-identical —
+SHA-256 `576296bf531513e04749c77fb2162f374e3006cb837355ee0f06c7721ecd0c87`,
+14,673 rows — on the base commit and after each slice. `creal::` suite 216
+passed / 0 failed (release, `--test-threads=4`, 113 s). `cargo doc` back to the
+crate's 24 pre-existing errors, none in a file this lane touched. clippy
+`-p axeyum-lean-kernel --all-targets -D warnings` exit 0; `cargo fmt --check`
+exit 0.
+
+**A timing regression I nearly reported as fact.** `prelude_build_timing 3`
+(release, `AXEYUM_PRELUDE_CACHE=0`) read **22.93 / 23.00 / 22.96 s** after
+slice E against 20.34 s after slice D — a 13% regression with no mechanism I
+could name, since a registry field is a compile-time offset. Interleaving the
+two builds back to back in the same warm target dir instead:
+
+| | run 1 | run 2 | run 3 |
+| --- | --- | --- | --- |
+| slice D | 20.328 | 20.306 | 20.296 |
+| slice E | 20.334 | 20.348 | 20.254 |
+
+Identical within noise. The 22.9 s window had another lane's `python3` at
+99.9% CPU. This is `frontier-ratchet-reference-frame.md`'s hazard in a
+different gate: **a before/after separated by an hour on a shared box measures
+the box.** Interleave, or do not compare.
+
+**Next.** The remaining `creal/` modules are not local moves — `--list` reports
+32 blocked, led by `integral` (61 fields), `supremum` (36) and `trig_fn` (33) —
+and the shared vocabulary (`lattice` 23 fields read by 27 modules,
+`uniform_continuity` 29 by 17) should move last or not at all, exactly as
+ADR-1512 says. The cheap next increments are wiring `creal-declare-deps.py`
+into L0, and `sqrt` if `complex.rs`'s 19 sites are worth the rename.
+
+**All three slices landed** (`WIP`, creal-split, 2026-09-01). The refactor
+named in
+[2026-08-27-architecture-review.md](docs/research/11-design-review/2026-08-27-architecture-review.md)
+§1: `crates/axeyum-lean-kernel/src/creal.rs` fuses the name registry, the
+`CRealPrelude` field struct, the build ORDER, and dispatch.
+
+Starting state on base commit `5c8eaf7b8` (the review's 2026-08-27 numbers in
+parentheses): `creal.rs` **17,050** lines (9,284), `CRealPrelude` **606**
+fields (441), `STEPS` **211** entries (135 at the level-1 landing).
+
+**A — measured the real dependency graph.** `scripts/creal-declare-deps.py`
+re-derives it from the source (1,916 functions across `creal.rs` and 49
+modules) and checks it against the hand-maintained `STEPS` table.
+Headline: the hand-written order really is topologically valid (0 violations,
+independently confirmed), and every one of the 606 fields is provided by
+exactly one step — but the table is missing **977 of the 4,831** measured
+`requires` edges, and two `provides` entries named declarations their step
+does not make, leaving a 48-step window where the preflight was silently
+disarmed for `CReal.sharedIndexToCanonical`. Five defects in the analysis
+produced clean, plausible, entirely false reports before the numbers meant
+anything; they are tabulated in the note, and the script now carries controls
+for each.
+
+**B — the builder sorts.** `plan_step_order` computes the order (Kahn, array
+index as tie-break) instead of validating a hand-written one. The tie-break
+makes the plan the array order whenever the array order is valid, so the
+kernel sees the identical call sequence. Order-inversion demonstration, with
+`declare_projections`/`declare_carrier` swapped: level 1 refuses the build
+(exit 101, naming the missing `CReal` and its provider); level 2 produces a
+projection byte-identical to the unpermuted run. The two false `provides` are
+deleted and a duplicate provider is now rejected outright.
+
+**C — the god-struct split, one module.**
+[ADR-1512](docs/research/09-decisions/adr-1512-per-module-name-registries-behind-the-crealprelude-facade.md)
+designs the facade and derives the migration order from the graph: **15
+modules are fully self-contained** (76 fields), and they can migrate
+independently in any order. `ivt_boundary` moved — `IvtBoundaryNames` lives in
+`creal/ivt_boundary.rs`, `CRealPrelude` 606 → 599 fields, `creal.rs`
+17,243 → 17,171 lines. The analyzer follows the facade (composite field ids,
+`registries=1|fields_in_registries=7`) because a scan that stops at
+`p.<one segment>` reads every migrated name as provided-by-none.
+
+**The invariant, checked after every slice.**
+`target/release/examples/kernel_declaration_projection` is **byte-identical**
+across all three: SHA-256
+`576296bf531513e04749c77fb2162f374e3006cb837355ee0f06c7721ecd0c87`, 14,673
+rows, before and after. `creal` construction (release,
+`AXEYUM_PRELUDE_CACHE=0`, three iterations) 20.196 / 20.272 / 20.215 s before
+against 20.110 / 20.494 / 20.135 s after — no regression.
+
+**Next, for whoever picks this up.** The 14 remaining self-contained modules
+migrate the same way, one commit each, `sqrt` (17 fields) being the largest.
+The 977 unnamed `requires` edges are the real remaining exposure: the planner
+can only use the edges the table names, so the fix is to GENERATE
+`requires`/`provides` rather than maintain them, which is what
+`scripts/creal-declare-deps.py` already computes. Re-apply after any merge
+touching `creal` with `python3 scripts/creal-declare-deps.py --self-check
+--strict` (exit 2 today, by design — 175 steps' tables still disagree with
+the code).
+
+**Not this lane's, but observed:** `cargo doc -p axeyum-lean-kernel --no-deps`
+with `RUSTDOCFLAGS=-D warnings` has **24 pre-existing unresolved-link errors**
+in `nat_prelude.rs`, `ipc_heyting.rs` and `ipc_provable.rs`. None are in files
+this lane touched, and they were red before it.
 
 **Landed and green** (`WIP`, creal-steps, 2026-08-27). Applied the spike's
 level 1 ([2026-08-27-prelude-build-spike.md](docs/research/11-design-review/2026-08-27-prelude-build-spike.md))
@@ -39492,6 +39951,299 @@ one.
 `Nat.totient`. It is the only risk whose honest number is under one percent
 *and* has no central gate quietly covering the rest.
 
+Status: DONE. The dispatch was REFUSED (the selected fact is held-out); both
+ADR-1510 guards landed, mutation-verified, six new guards each killing exactly
+one test.
+
+## 1. Dispatch: refused, not run
+
+`F:ml430-nat-coprime-factorizationlcmleft-factorizationlcmright-e7db70ce` —
+the one fact `scripts/fact-frontier.py --json` reported as
+`admissible_via_contract` with `outcome: selected` — is **held-out blind
+evaluation population**, confirmed from two independent authorities
+(`artifacts/autogenesis/nursery-v2-extension.json` entry 260,
+`partition: held-out`, `answer_access: withheld-during-episode`; and
+`drawn-population-partition-snapshot-v1.json`). Its family
+`natural-factorization-lcm` is held-out 10 of 10, so under ADR-0542's split key
+closing it would have spent all ten — 10 of the 190 held-out rows in the v2
+extension.
+
+Nothing was dispatched. No producer, no import, no export, no Lean.
+
+The reason the selector said otherwise, and the two blind readers behind it,
+are written up in
+[2026-09-01-the-selector-selected-a-held-out-fact.md](docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md).
+In one line: `fact-frontier.py`'s `held_out_fact_ids()` names
+`nursery-v1.json` literally (the v2 extension landed two days later) **and** is
+called from exactly one site — the human-rendered queue line — so the `--json`
+selection path applies no held-out screen at all. A third reader, this
+repository's own control for the hazard
+(`SeedContractHoldoutIsolationTests`), had the same v1-only literal and was
+green throughout.
+
+`fact-frontier.py` itself was deliberately NOT changed: putting a held-out
+screen on the selection path changes what the selector means and wants its own
+ADR.
+
+## 2. ADR-1510's two guards, landed
+
+### Contracts (`scripts/validate-producer-contracts.py`)
+
+`sizing` is now required (`date`, `ledger_sha256`,
+`matched_open_ready_count`, plus optional `matched_open_ready_fact_ids`,
+`frontier_query`, `note`); `retirement` is the optional lifecycle marker.
+`live_population()` is open AND dependency-ready AND not held-out AND not an
+outcome-blind mutation fixture — every exclusion is permanent, so counting
+them would keep an exhausted contract alive on work nobody may ever do.
+`held_out_fact_ids()` reads EVERY `artifacts/autogenesis/nursery*.json`.
+
+What the data said, measured by re-executing each shape predicate:
+
+| contract | live population | outcome |
+| --- | --- | --- |
+| `producer-contract-int-modeq-family-v1` | **0** | **RETIRED** |
+| `producer-contract-nat-coprime-family-v1` | 1 (`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`) | stays live |
+
+So exactly one of the two retires. The naive count would have been 2 for
+nat-coprime; one of those two is the held-out fact above, which is why the
+exclusion is part of the definition rather than a nicety.
+
+### Declines (`scripts/validate-producer-contract-declines.py`)
+
+A decline whose fact is settled must carry `resolution`; one whose fact is
+still open must not; `resolution.closed_by` must resolve to a real path.
+26 blocks backfilled (all 26 settled declines; 1 of the 27 is still open and
+correctly carries none). `closed_by` is DERIVED — the theorem name from the
+fact's own evidence `checker_command`, the module from the `declare_*` /
+`d.theorem(p.*` site that admits it: `int_prelude/modeq_family.rs` ×5,
+`int_prelude/modeq.rs` ×7, `nat_prelude/primes.rs` ×13,
+`nat_prelude/rel_prime.rs` ×1.
+
+`diagnosis_status` is a three-valued vocabulary
+(`reproduced` 2 / `attested` 5 / `not-re-executed` 19), **not** a boolean:
+only two dispatches have been re-executed since 2026-08-27 and only five carry
+a lane attestation, so a boolean here would have recorded "nobody re-checked"
+as "still accurate".
+
+### Mutation tables — every new guard kills exactly one test
+
+```
+producer-contracts (baseline green, 25 tests)                       exit 0
+  a contract may not be SIZED against held-out population   killed 1
+  an exhausted contract must be retired                     killed 1
+  retirement may not silence a contract with live work      killed 1
+
+producer-contract-declines (baseline green, 33 tests)               exit 0
+  a decline against a settled fact must carry a resolution  killed 1
+  a decline against an OPEN fact may not carry a resolution killed 1
+  resolution.closed_by must name a real path                killed 1
+```
+
+Running the table found a regression this lane had introduced and would
+otherwise have shipped: `validate_resolution` first used the local names
+`missing`/`extra`, duplicating the top-level key guard's anchor, so the
+PRE-EXISTING mutation "every required top-level key must be present" reported
+`AMBIGUOUS ANCHOR` — an unmeasured mutation, not a result. Renamed; that
+mutation is back to `killed 1`. The harness anchors on source TEXT, so a
+duplicated `if <name>:` silently converts a registered guard into an
+unmeasured one.
+
+## 3. Deliberate side effect
+
+Adding `sizing` changes each contract's digest, so doc 291's re-dispatch rule
+correctly stops treating the 27 declines as live. `contract_sha256` was left
+UNTOUCHED — editing digests to preserve liveness would defeat the guard that
+catches a real capability change. The frontier now reports
+`admissible_count: 0` / `refused-no-admissible-candidate`, but that is mostly
+coincidence (the gate-coupling rule, not a held-out screen) and is disentangled
+in the design-review note.
+
+## 4. Checks run
+
+| check | result |
+| --- | --- |
+| `python3 scripts/validate-producer-contracts.py` | `contracts=2 retired=1`, exit 0 |
+| `python3 scripts/validate-producer-contract-declines.py` | `declines=27 resolved=26`, exit 0 |
+| `python3 -m unittest scripts.tests.test_validate_producer_contracts` | 25 tests, OK |
+| `python3 -m unittest scripts.tests.test_validate_producer_contract_declines` | 33 tests, OK |
+| `python3 -m unittest scripts.tests.test_mutation_controls` | 35 tests, OK |
+| `python3 scripts/tests/mutation_controls.py producer-contracts` | exit 0 |
+| `python3 scripts/tests/mutation_controls.py producer-contract-declines` | exit 0 |
+| `scripts/check-control-registration.sh` | `orphans=0 py_orphans=0`, exit 0 |
+| `scripts/tests/test-check-control-registration.sh` | 17 cases, all passed |
+| `python3 scripts/validate-facts.py` | 2576 facts, **0 errors**, exit 0 |
+
+Did not run: any cargo build or Rust test sweep (this lane changed no Rust);
+any Lean or `lean4export` invocation; the producer dispatch itself.
+
+## Landed changes
+
+| commit | what |
+| --- | --- |
+| `fce483215` | lane stub |
+| `307e5d2e6` | ADR-1510's two guards + the contract sizing/retirement and 26 resolution backfills |
+| `71cd59d04` | mutation-control registration for the six new guards + the ambiguous-anchor fix |
+
+**DONE, frontier-holdout-screen, 2026-09-01.** Fixed the defect in
+[2026-09-01-the-selector-selected-a-held-out-fact.md](docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md):
+`scripts/fact-frontier.py`'s `held_out_fact_ids()` read `nursery-v1.json`
+literally and missed `nursery-v2-extension.json`'s 190 held-out rows, and its
+one call site was the human-rendered queue line only -- the `--json` path
+(`selection`/`admissible_fact_ids`/`diagnostics`) applied no held-out screen
+at all.
+
+Delegated `fact-frontier.py`'s `held_out_fact_ids()` to
+`validate-producer-contracts.py`'s already-fixed glob reader (landed
+2026-09-01, commit `45d605c4d`) instead of re-reading one manifest name, so
+the two readers cannot drift apart again. Confirmed the union is 206 today
+(v1's 16 + v2-extension's 190, no overlap). Added a `held_out` parameter to
+`build_machine_frontier` that defaults to the real disk partition (same
+asymmetry as `registry`, never the `contracts`/`declines` None-means-empty
+side, since the screen must never be silently disabled by omission), folded
+it into the admissibility loop with a named
+`held-out-blind-evaluation-population` rejection reason, and surfaced
+`diagnostics.held_out_fact_id_count`, `diagnostics.held_out_ready_count`, and
+`selection.held_out_ready_fact_ids`. Confirmed via `--json`: the target fact
+(`F:ml430-nat-coprime-factorizationlcmleft-factorizationlcmright-e7db70ce`)
+now carries `held-out-blind-evaluation-population` in its `rejected_by`,
+independently of the coincidental `gate-coupling-review-required` it also
+still carries; `outcome` stays `refused-no-admissible-candidate`.
+
+`SeedContractHoldoutIsolationTests` (`scripts/tests/test_validate_producer_contracts.py`)
+already reads the glob (fixed same-day by `flywheel-restart`, commit
+`45d605c4d` before this lane started); added
+`test_synthetic_v2_style_manifest_is_detected`, a synthetic-manifest control
+for that class's own detection logic.
+
+Mutation-verified both new `fact-frontier.py` guards in an isolated snapshot
+(`scripts/lane-snapshot.sh`, never the shared worktree):
+
+| guard | mutation | baseline (78 tests) | mutant | killed |
+| --- | --- | --- | --- | --- |
+| multi-manifest read | `held_out_fact_ids()` reverted to reading `nursery-v1.json` only | 10 fail/error (pre-existing, see below) | 11 fail/error | exactly 1: `HeldOutFactIdsMultiManifestTests.test_the_real_union_equals_v1_plus_v2_extension_held_out_rows` |
+| JSON-path screen | `is_admissible`/`reasons` no longer consult `held_out` | 10 fail/error | 11 fail/error | exactly 1: `JsonPathHeldOutScreenTests.test_a_held_out_fact_is_never_admissible_even_with_a_registered_operation` |
+
+**Found, not fixed (out of scope): 10 pre-existing failures in
+`scripts/tests/test_fact_frontier.py`, unrelated to this lane.** Confirmed
+present against the pre-fix `fact-frontier.py` (commit `45d605c4d`) too, so
+this lane did not cause them. Two separate real-ledger drifts: (1) the
+`contract()` fixture helper is missing the `sizing` key ADR-1510 made
+required on producer contracts, so every `ProducerContractAdmissibilityTests`/
+`ProducerContractDeclineTests` case using it errors; (2)
+`F:ml430-int-add-modeq-right-e58108ee` (used as `ProducerContractDeclineTests.TARGET`)
+and `F:ml430-int-add-modeq-left-ee732b5b` (used in `RealDeclineFeedbackLoopTests`)
+have since been proved, so tests asserting they are still open/admissible now
+fail. `check-control-registration.sh` (exit 0, 316 python controls, 0
+orphans) does not catch this because the suite runs and fails loudly, it is
+not silently skipped -- but nothing gates on `python3 -m unittest
+scripts.tests.test_fact_frontier` passing, so this went unnoticed. Worth a
+follow-up lane.
+
+`python3 scripts/validate-facts.py`: exit 0, 2576 facts checked, 0 errors.
+`scripts/check-control-registration.sh`: exit clean, `orphans=0`,
+`py_orphans=0`.
+
+**DONE, frontier-test-drift, 2026-09-01.** Fixed the 10 pre-existing
+failures (`failures=3, errors=7`, confirmed exact match on `main`) that
+`docs/plan/status/frontier-holdout-screen.md` found but left unfixed.
+
+Starting point: worktree was branched from an older `main`, 47 commits
+behind (missing ADR-1510 itself, `307e5d2e6`). Merged local `main`
+fast-forward-clean (no conflicts) before reproducing, landing at `5d03dd4f6`,
+so the fix is against current `main`, not the stale branch point.
+
+**Per-test cause table (all 10, confirmed individually, not assumed from the
+prior lane's diagnosis):**
+
+| test | class | cause |
+| --- | --- | --- |
+| `test_ambiguous_producer_contract_match_is_not_admissible` | `ProducerContractAdmissibilityTests` | ERROR: `contract()` fixture missing ADR-1510 `sizing` key |
+| `test_matched_contract_with_capable_route_is_admissible` | `ProducerContractAdmissibilityTests` | ERROR: same |
+| `test_matched_contract_with_incapable_route_is_not_admissible` | `ProducerContractAdmissibilityTests` | ERROR: same |
+| `test_no_route_fact_is_never_admissible_via_contract` | `ProducerContractAdmissibilityTests` | ERROR: same |
+| `test_declines_default_to_none_not_auto_loaded` | `ProducerContractDeclineTests` | FAIL: hard-coded `TARGET = F:ml430-int-add-modeq-right-e58108ee`, now `proved` |
+| `test_live_decline_removes_admissibility_and_reports_declined` | `ProducerContractDeclineTests` | ERROR: same drifted `TARGET`, decline against a settled fact needs an ADR-1510 `resolution` block |
+| `test_shape_matched_count_is_unaffected_by_a_decline` | `ProducerContractDeclineTests` | ERROR: same |
+| `test_stale_decline_against_a_changed_contract_does_not_suppress` | `ProducerContractDeclineTests` | ERROR: same |
+| `test_the_declined_fact_is_no_longer_selected` | `RealDeclineFeedbackLoopTests` | FAIL: hard-coded `F:ml430-int-add-modeq-left-ee732b5b`, now `proved` |
+| `test_real_seed_contracts_move_admissible_off_zero` | `RealSeedProducerContractTests` | FAIL: **not** sizing/drift — the real ledger's contract-admissible population is genuinely 0 right now (see below) |
+
+**A third, previously undiagnosed root cause**, found by not assuming the
+prior lane's 2-cause diagnosis was complete (per this lane's brief):
+`test_real_seed_contracts_move_admissible_off_zero` asserts
+`admissible_via_contract_count > 0` against the real ledger with the real
+seed contracts and no declines — genuinely `0` today, confirmed directly
+against `frontier.build_machine_frontier`, independent of the sizing fixture
+and the two proved targets. Two real, current, orthogonal facts: (1)
+`int-modeq-family-v1` closed its whole matched family and now carries a
+`retirement` block (0 live population); (2) `nat-coprime-family-v1`'s one
+remaining live candidate, `F:ml430-nat-coprime-of-lt-minfac-0f79bdba`, is
+blocked by an unrelated `gate-coupling-review-required` finding
+(`gen-obstruction-producers.py` names it — real gate coupling, not a false
+positive). Separately, every real committed decline against either seed
+contract went stale the moment ADR-1510 added a `sizing` block to both
+contract files, by the re-dispatch policy's own design (editing a contract's
+content auto-reopens what it declined) — so `declined_fact_ids` over the
+real declines alone is also currently empty, which is why
+`RealDeclineFeedbackLoopTests` needed the same treatment.
+
+**Fix approach**, honoring the brief's constraints (no touching the two
+proved facts, any nursery manifest, any held-out fact, or any contract):
+
+- `contract()` test fixture (`ProducerContractAdmissibilityTests`,
+  `ProducerContractDeclineTests`'s sibling fixtures): added a valid `sizing`
+  block (count 0, since the fixture's `id_prefix` never matches a real fact)
+  and the `retirement` block ADR-1510 rule 1(b) then requires for a
+  zero-population contract.
+- Added `derive_contract_admissible_target` (real-ledger-first, synthetic
+  in-memory-only fallback) and `derive_contract_path_target` (real-fact-only,
+  narrower contract-path level — a decline can only ever validly name a real
+  committed fact id, so it cannot use the synthetic fallback) to
+  `scripts/tests/test_fact_frontier.py`. Every previously hard-coded
+  `TARGET`/declined-fact literal is now derived from the live ledger at test
+  time instead (CLAUDE.md: "a test relying on 'an X exists' must derive its
+  X from the authority, not a literal").
+- `ProducerContractDeclineTests` now asserts at the CONTRACT-PATH level
+  (`declined_producer_contract_ids`, `declined_fact_ids`,
+  `declined_by_contract`, `declined_count`) rather than full pipeline
+  `admissible_fact_ids`, since the one real fact with an open contract path
+  today is separately gate-blocked — matches the engine's own documented
+  separation between the two populations, so nothing was weakened to force a
+  pass.
+- `RealSeedProducerContractTests` and `RealDeclineFeedbackLoopTests` fall
+  back to one synthetic, in-memory-only fact (never written to disk) shaped
+  to match a real, non-retired contract, only when the real population is
+  empty — reverts to the real-ledger branch automatically once it
+  repopulates.
+
+**Result:** all 10 originally-failing tests now pass, run individually
+(`ProducerContractAdmissibilityTests` 5/5 in 0.8s,
+`RealSeedProducerContractTests` 2/2 in 40s, `ProducerContractDeclineTests`
+5/5 in 134s, `RealDeclineFeedbackLoopTests` 1/1 in 25s). The remaining 13
+tests in the suite (`MachineFrontierTests`,
+`HeldOutFactIdsMultiManifestTests`, `JsonPathHeldOutScreenTests`, and the
+untouched methods in the classes above) were not modified and were already
+green in the pre-fix baseline run.
+
+**Did not run: the whole-suite aggregate `python3 scripts/tests/test_fact_frontier.py`
+in one invocation.** Each real-ledger call reloads and re-validates the full
+fact/contract/decline set from disk, and the suite now makes more such calls
+than before (the derivation helpers each build one extra frontier snapshot);
+one full run exceeded the 5-minute bound and was stopped
+(`TaskStop`) rather than left to poll in the background, per this lane's
+brief. The per-class runs above are the evidence instead; each ran to
+completion with an explicit exit code, and every non-fixed class was
+confirmed green in the last complete full-suite run before these edits
+(`failures=3, errors=7`, exactly the 10 above, 23 tests total).
+
+`scripts/check-control-registration.sh`: exit 0,
+`controls=51|orphans=0|py_controls=316|py_orphans=0`.
+`scripts/tests/mutation_controls.py` has no entries for `fact-frontier.py`
+or `scripts/tests/test_fact_frontier.py` (only for
+`validate-producer-contracts.py` and
+`validate-producer-contract-declines.py`, unrelated to this fix) — nothing
+to run there.
+
 **Verification throughput was the binding constraint, and the cause was
 scheduling rather than any gate** (`landed`, gate-throughput, 2026-08-27). The
 `hooks/pre-push` battery went from ~250 s uncontended to **2,152 s / 2,654 s**
@@ -41172,6 +41924,30 @@ it stays fresh) —
 `multi_target_operations=4` (was 3). `python3 scripts/gen-adr-index.py
 --check` — unchanged (ADR-0602's front matter was not touched, only its
 body).
+
+**Your lane's block (`DONE`, kernel-rustdoc-links, 2026-09-01).** Fixed all 23
+broken intra-doc-links (24 `error:` lines including the summary) that made
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-lean-kernel --no-deps` fail —
+confirmed by reproducing the failure first (exit 101, 24 `error:` lines) and
+re-running the identical command after the edits (exit 0, 0 errors). Every
+fix is doc-comment-only: two real public items (`NatPrelude`, `NatOps`'s
+trait methods, both re-exported at the crate root) got an explicit
+`crate::`-rooted path; every other link named a `pub(super)`/private
+free function, a private submodule (`ops`, `parity`, `matrix_n`,
+`rec_agreement`), or a Lean-level name with no Rust item at all
+(`Formula`, `FormulaList`) — those were demoted to plain code-formatted text
+since fixing them into a real link would need a visibility/code change, out
+of scope for a doc-comment-only fix. Touched files:
+`nat_prelude.rs`, `ipc_heyting.rs`, `ipc_provable.rs`, `rat_prelude.rs` (the
+last two beyond the three files the initial repro named — `rat_prelude.rs`
+carried 2 of the 23 broken links, discovered during reproduction).
+`rustfmt --edition 2024` on all four touched files: no diff, already clean.
+
+Also ran `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features
+--no-deps` once, report-only, no fix: exit 101, 8 `error:` lines, all in
+`crates/axeyum-cas` (`inverse.rs`, `normalforms.rs`, `rationality.rs`) —
+same defect class (public docs linking to private items), out of this
+lane's scope. Not fixed here.
 
 **Status:** complete — all seven L0 gates wired, each proved able to fail, and
 an enforcement gate added so the wiring cannot silently regress (ADR-1050).
@@ -44703,6 +45479,96 @@ python3 scripts/gen-adr-index.py --check         # 707 rows, duplicates unchange
 ./scripts/check-links.sh                         # green
 ```
 
+**DONE, pin-the-universe-guard, 2026-09-01.** ADR-1495 closed a `Type : Type`
+hole in `Kernel::add_inductive` (Lean's `check_constructor` universe
+constraint, `KernelError::ConstructorFieldUniverseTooBig`). The question here
+was whether anything detects its removal. Full reasoning in
+[ADR-1500](docs/research/09-decisions/adr-1500-a-soundness-fix-is-not-pinned-until-a-control-dies-without-it.md).
+
+**Reproduced the surviving mutant, and found the measurement was aimed at the
+wrong suites.** In an isolated snapshot with the guard's first conjunct
+replaced by `false`, all three suites the coordinator ran survive —
+`kernel_seam_fuzz`, `mutual_inductive_group_grammar` and
+`nested_inductive_grammar` each report **1 passed, exit 0**. But
+`cargo test -p axeyum-lean-kernel --lib inductive` **does** die: ADR-1495 had
+landed `reject_ctor_field_universe_above_result_universe`, which the
+three-suite sweep did not include. So the guard was pinned by exactly one test
+and nobody had shown it. The generators survive because ADR-1495's own fixture
+change moved their `Type` families from `Sort 1` to `Sort 2`, so they now emit
+only Lean-legal shapes.
+
+**The one pinning test measured less than it looked.** It carried the rejection
+and both admission controls in a single `#[test]`, so it dies on its first
+assertion and the admission controls are unreachable in the only configuration
+where their answer matters. Split into eight, each reported with AND without
+the guard:
+
+| control | with | without |
+| --- | --- | --- |
+| `reject_ctor_field_universe_above_result_universe` | pass | **FAIL** |
+| `reject_ctor_field_universe_above_result_universe_polymorphic` (new) | pass | **FAIL** |
+| `admit_sort1_field_under_sort2_family` | pass | pass |
+| `admit_bundled_sort2_structure_with_sort1_carrier` (new) | pass | pass |
+| `admit_nat_like_family_baseline` (new) | pass | pass |
+| `admit_prop_family_with_sort1_field` | pass | pass |
+| `prop_exemption_is_sound_because_large_elimination_is_denied` (new) | pass | pass |
+| `positivity_prepass_precedes_the_universe_check` (new) | pass | pass |
+
+`--lib inductive` baseline: **56 passed, 0 failed** (was 49).
+
+**Nothing checked that `Prop`'s exemption is sound rather than present.** It is
+sound because a *separate* mechanism — `allows_large_elimination`'s
+`exposes_non_prop_fields` arm — denies large elimination to a `Prop` family
+carrying a non-proof field, so the second half of the Girard construction is
+unavailable. No test connected the two. It does now, with a fieldless
+`True`-like `Prop` singleton (which DOES get large elimination) as the
+non-vacuity control. This is mutation testing's documented blind spot exactly:
+the connection between two correct mechanisms is not a guard, so there was
+nothing to delete.
+
+**The check order is the reverse of what the tree says.** A test asserting the
+universe check precedes positivity was written and the kernel refuted it:
+`check_group_constructor_positivity` is a whole separate pre-pass over every
+constructor, so it masks the universe error even when the universe-illegal
+field comes FIRST (`field_index: 1`, the non-positive one, for a constructor
+whose field 0 is universe-illegal). Recorded as an ordering control.
+
+**Registered in `scripts/tests/mutation_controls.py` as
+`inductive-universe-guard`** — the harness does cover Rust, via its `Cargo`
+runner through `scripts/cargo-serialized.sh`. Two mutations failing in opposite
+directions: guard made dead kills 2 tests, `Prop` exemption dropped kills 6.
+Re-run the whole measurement with
+`python3 scripts/tests/mutation_controls.py inductive-universe-guard`.
+
+**Deferred, with a design: restoring illegal coverage to the grammar
+generators.** They once emitted 360 Lean-illegal cases asserting ADMIT and now
+emit none; neither is right. Not done here because
+`mutual_inductive_group_grammar` pins a byte-exact fnv1a64 digest over all 360
+descriptors — regenerating it in the commit that changes it is the
+"editing a file that pins its own digest" failure — and because the positivity
+pre-pass makes the sort axis and the positivity axis non-independent, so
+`expected_error` becomes order-dependent. ADR-1500 §Decision 3 carries the
+design.
+
+**Over-refusal, checked against the eleven preludes rather than argued.**
+A guard in `add_inductive` sits in the path of all 98 `add_inductive` call
+sites, so refusing too much would break everything at once:
+
+    cargo test -p axeyum-lean-kernel --lib prelude_builds
+    -> 8 passed, 0 failed, finished in 191.65s
+
+`clippy -p axeyum-lean-kernel --all-targets -- -D warnings` exits 0. Note
+that clippy caught an `items_after_statements` defect in a new test that
+all 56 tests passed over, both before and after — the same class that
+caught a detached `#[test]` attribute earlier this week, and one no test
+count can see.
+
+**DID NOT RUN:** `cargo test -p axeyum-lean-kernel --lib` (the whole
+1,318-test crate sweep). Started, reached `running 1318 tests`, and was
+SIGTERMed at the harness timeout — **exit 143, killed, not a failure**. The
+bounded `prelude_builds` and `inductive` filters above are what ran to
+completion; the full sweep is for the coordinator's pre-merge gate.
+
 **Prototype landed and green** (`WIP`, prelude-spike, 2026-08-27). Built the
 level-1 phase-order fix and the level-2 topological-order validation from
 [2026-08-27-architecture-review.md](docs/research/11-design-review/2026-08-27-architecture-review.md)
@@ -44993,6 +45859,42 @@ re-running both, so this is a measurement rather than an inference:
   lane's `Int.sumRange` landing into this lane's commit.
 - `curriculum-bucket-cohesion` — 3 findings, naming `Int.sum*`, `Nat.count*`
   and `Nat.primrec*`. None IPC, none this lane's.
+
+**Your lane's block (`done`, py-fields-registries, 2026-09-01).** Both defects
+left by the ADR-1512 registry split are closed, and the reason they were
+possible is closed with them.
+
+**What was measured.** `CRealPrelude` is 606 names: 537 flat plus 69 in 14
+per-module registries (`completeness` 5, `cos_sign` 6, `crossing` 9,
+`ratio_test` 2, `inverse_fn` 2, `deriv_unique` 1, `mvt` 1, `polynomial` 10,
+`extreme_value` 3, `ivt_boundary` 7, `lub_boundary` 4, `exp_fn` 4, `evt_row1` 1,
+`pi` 14 — the brief's "62 in 13" was one migration behind). The Python table
+carried 537 of them. `gen-py-prelude-fields.py --check` was registered in NO
+gate: zero hits across `scripts/check.sh`, `scripts/check-merge-hygiene.sh`, the
+`justfile` and `hooks/pre-push`, which is the whole explanation for how a stale
+generated file reached main.
+
+**What landed.** (1) The generator flattens a `*Names` field under a dotted name
+(`("pi.pi_le_four", p.pi.pi_le_four)`), resolving the defining file by scanning
+for `pub struct <T> {` rather than trusting the field-name-is-module-name
+convention — and an unclassified field type is now a HARD ERROR rather than a
+skip, which is the actual root cause. Table back to 606; workspace total
+2,712 → 2,781. (2) `--check` registered in `check-merge-hygiene.sh` (guard 8),
+`check.sh` and the `justfile`, with two controls and two mutants that kill
+exactly one test each; its exit 2 means "no `rustfmt`, cannot answer" and is
+reported as skipped rather than as drift. (3) `creal-migrate-registry.py` now
+refuses a move whose fields are read by any workspace `.rs` file the rewriter
+will not fix, naming each site as [GENERATED] or [hand-written]; nine controls,
+seven mutants, all killed.
+
+**What the next lane should know.** Every remaining module is currently
+"blocked" by `prelude_fields.rs`, because that generated file names every field.
+That is correct and the workflow is now: `--allow-external`, migrate, then rerun
+BOTH `creal-declare-deps.py` and `gen-py-prelude-fields.py` — both are gated by
+`check-merge-hygiene.sh`. This lane moved no fields.
+
+**Not run:** `cargo test` (out of scope by brief). `cargo check -p axeyum-py`
+and `clippy -p axeyum-py --all-targets -D warnings` both exit 0.
 
 **WIP (agent-python-layer, 2026-08-24).** Strand
 [`docs/python-2026-08/`](docs/python-2026-08/README.md). Plans 01-03 and the
@@ -45520,6 +46422,43 @@ is not recorded anywhere machine-checkable** — the brief's "9 deliberate"
 count was two facts short even before this lane started, and the true
 "deliberate or structurally unresolvable" population, once someone finishes
 marking it, is closer to 62 than 9.
+
+**`DONE`, retrieval-audit-0901, 2026-09-02.** First daily retrieval-audit lane
+(ADR-0608's structural remedy: one lane per day audits the previous day's
+commits for rederived lemmas). Window 2026-09-01, **240 commits on `main`, 69
+touching `crates/axeyum-lean-kernel`** — not the ~465 the brief cited, which is
+not reproducible from any ref here. **17 candidates, 4 confirmed, 1 a literal
+duplicate, deduped in `b4fb008d8`.**
+
+`Nat.prime_coprime_factorial_of_lt` (`prime_dvd_factorial_lcm.rs`, 2026-09-01
+04:25) and `Nat.coprime_factorial_of_lt_prime` (`gauss_lemma.rs`, 2026-08-31
+11:56) render byte-identically in `kernel_declaration_projection` and prove the
+same statement by the same induction — landed **16 h 29 min apart**. The later
+is deleted, its one consumer repointed, and
+`F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201` (train partition, not
+held-out) repointed under a pin amendment with both digests unchanged.
+Projection 14,673 → 14,665: 8 rows removed, 0 added, 8 changed in the
+dependency columns only, rendered type and axiom footprint unchanged on every
+one. The corroboration arrived on its own —
+`check-fact-depends-derived.py` found that the Int mirror's proof term already
+used the survivor.
+
+The **L0 duplicate gate `check-shape-duplicates.py` had been red on `main` for
+about 25 hours** and no lane ran it; it exits 0 again at `b4fb008d8`. The other
+three confirmed instances are all hiding place 2 (inline / private / not
+visible) and none is deletable — `dvd_elim` has **13** private per-file copies
+in this crate, `absurd` 12, `dvd_intro` 10. That is where the remaining problem
+lives, and no index over `kernel.environment()` can see any of it.
+
+Tool usage on the day: `shape_search` in 2 of 27 lane status docs (7.4%),
+`brief-step0` in **0**. Write-up:
+`docs/research/11-design-review/2026-09-02-retrieval-audit-for-2026-09-01.md`;
+the running ledger is now at the foot of
+`docs/research/11-design-review/2026-08-27-retrieval-is-the-bottleneck.md`
+(21 audited instances, 4 landed as real duplicates).
+
+Next for tomorrow's lane: check the duplicate gate's colour first, run the tool
+before reading commit messages, and scope the phrase sweep to the kernel path.
 
 **Status: DONE.** The gap was an **unadopted tool, not a missing one** — twice
 over. No new script was written. Full reasoning, method and verification:
@@ -46124,6 +47063,35 @@ composes with `Int.euler_criterion_neg_one_imp_not_residue` to give "2 is not a
 residue mod `p` for `p ≡ 3, 5 (mod 8)`" — one application, left to a caller. The
 `≡ 1` half needs the converse of Euler's criterion; `qr_criterion.rs`'s recorded
 gap is unchanged.
+
+**Your lane's block (`DONE`, solver-rustdoc-links, 2026-09-01).** Fixed all 7
+`error:` lines that `kernel-rustdoc-links` and `cas-rustdoc-links` reported
+out of scope, closing out the workspace rustdoc gate they left red —
+confirmed by reproducing the failure first (exit 101, 7 `error:` lines,
+matching their reports exactly) and re-running the identical command after
+the edits (exit 0, 0 errors). One link named a real public item and got a
+qualified path: `[`NeedsLeanCheck`]` in `thin_adapter.rs` is the enum variant
+`PreLeanStage::NeedsLeanCheck`, and `[`Kernel::render_lean_module_compact`]`
+in `diophantine.rs` needed the fully-qualified
+`axeyum_lean_kernel::Kernel::render_lean_module_compact` (the file only
+imports `BinderInfo`/`ExprId` from that crate, and other files in this same
+crate already use this exact qualified-path pattern). The other two links in
+`proof.rs` (`finish_unsat_proof_outcome_with_check_budget`,
+`qf_bv_cnf_encoding`) name genuinely private free functions with no public
+re-export, so both were demoted to plain code-formatted text, same as the
+prior two lanes' fixes. Every fix is doc-comment-only: no lint disable, no
+`allow`, no visibility change, no deleted doc comment. Touched files:
+`crates/axeyum-lean-import/src/thin_adapter.rs`,
+`crates/axeyum-solver/src/proof.rs`,
+`crates/axeyum-solver/src/int_reconstruct/diophantine.rs`. `rustfmt
+--edition 2024` on all three: only the intended-edit lines changed, no other
+diff.
+
+Re-ran the full command: `RUSTDOCFLAGS="-D warnings"
+scripts/cargo-serialized.sh doc --workspace --all-features --no-deps` — exit
+0, 0 `error:` lines (was exit 101, 7 error lines). `--all-features` built
+cleanly, including the `z3` feature, so no C-toolchain fallback was needed.
+The workspace rustdoc gate is now green end to end.
 
 **Done (`statement-headers`, 2026-08-31).** `check-settled-fact-statements.py`
 was failing at `header_exempt=79` against `floor_header_exempt=67` and blocking

@@ -28,29 +28,33 @@
 /// footprint.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![
-        ("CReal.crossingIndex", p.crossing_index, "def"),
-        ("CReal.crossingUpper", p.crossing_upper, "theorem"),
-        ("CReal.crossingLower", p.crossing_lower, "theorem"),
-        ("CReal.crossingSampleGeA", p.crossing_sample_ge_a, "theorem"),
+        ("CReal.crossingIndex", p.crossing.crossing_index, "def"),
+        ("CReal.crossingUpper", p.crossing.crossing_upper, "theorem"),
+        ("CReal.crossingLower", p.crossing.crossing_lower, "theorem"),
+        (
+            "CReal.crossingSampleGeA",
+            p.crossing.crossing_sample_ge_a,
+            "theorem",
+        ),
         (
             "CReal.crossingSampleUpper",
-            p.crossing_sample_upper,
+            p.crossing.crossing_sample_upper,
             "theorem",
         ),
         (
             "CReal.crossingSampleLower",
-            p.crossing_sample_lower,
+            p.crossing.crossing_sample_lower,
             "theorem",
         ),
-        ("CReal.crossingClose", p.crossing_close, "theorem"),
+        ("CReal.crossingClose", p.crossing.crossing_close, "theorem"),
         (
             "CReal.crossingCloseClamped",
-            p.crossing_close_clamped,
+            p.crossing.crossing_close_clamped,
             "theorem",
         ),
         (
             "CReal.riemannSampleCrossingClose",
-            p.crossing_sample_pairing_close,
+            p.crossing.crossing_sample_pairing_close,
             "theorem",
         ),
     ]

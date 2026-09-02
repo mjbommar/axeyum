@@ -460,6 +460,7 @@ fn instantiate_universe_shape(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn fuzz_universes_and_inductives(summary: &mut FuzzSummary) {
     let mut rng = Lcg(UNIVERSE_SEED);
     for case_index in 0..UNIVERSE_CASES {
@@ -468,7 +469,7 @@ fn fuzz_universes_and_inductives(summary: &mut FuzzSummary) {
             shape,
             ctor_count,
             proof_fields,
-            data_fields,
+            mut data_fields,
         } = generate_universe_case(case_index, &mut rng);
         let case_name = format!("universe_{case_index}_{seed:016x}");
 
@@ -479,6 +480,32 @@ fn fuzz_universes_and_inductives(summary: &mut FuzzSummary) {
         let family_name = k.name_str(namespace, "Generated");
         let (result_level, uparams, family_levels, one) =
             instantiate_universe_shape(&mut k, namespace, shape);
+
+        // The data field's type is `Prop`, which lives at `Sort 1`. Lean's
+        // `check_constructor` universe constraint (enforced here as
+        // `ConstructorFieldUniverseTooBig`, ADR-1495) requires every field's
+        // type to sit at or below the family's own result universe, `Prop`
+        // excepted because it is impredicative. For a family at a bare
+        // universe PARAMETER — `Sort u`, `max u 0`, `imax 1 u` — nothing is
+        // provably at or below `u`, so such a family can carry no non-proof
+        // field at all. That is a fact about Lean, not a limitation of this
+        // fuzz: before ADR-1495 these cases generated Lean-illegal inductives
+        // and asserted they ADMIT, which is one of the two fixtures that let
+        // the missing constraint survive.
+        //
+        // The clamp keeps every shape and every proof-field count in the
+        // population; `data_field_hits` stays fully covered by the five shapes
+        // that can legally carry data.
+        let one_level = {
+            let z = k.level_zero();
+            k.level_succ(z)
+        };
+        if data_fields > 0
+            && !k.level_is_zero(result_level)
+            && !k.level_leq(one_level, result_level)
+        {
+            data_fields = 0;
+        }
         let family_type = k.sort(result_level);
         let family = k.const_(family_name, family_levels);
         let true_type = k.const_(logic.true_, vec![]);

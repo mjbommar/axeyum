@@ -11,7 +11,7 @@
 //! in a named formal proof system, so a machine-checked version of it needs,
 //! at minimum:
 //!
-//! 1. an inductive type of IPC **formulas** (this file: [`Formula`]),
+//! 1. an inductive type of IPC **formulas** (this file: `Formula`),
 //! 2. an inductive **derivation relation** over formulas (natural-deduction
 //!    rules: assumption, `∧I`/`∧E`, `∨I`/`∨E`, `→I`/`→E`, `⊥E`) — **not
 //!    built here**,
@@ -29,7 +29,7 @@
 //! honest gap for (2)/(3), is the "bounded slice" this repository's standing
 //! rule asks for rather than declaring the whole fact done or deferring it.
 //!
-//! **What this file does NOT claim**: neither [`Formula`] nor
+//! **What this file does NOT claim**: neither `Formula` nor
 //! [`declare_excluded_middle_countermodel`] closes
 //! `F:excluded-middle-not-intuitionistic`. That fact stays `open`, with a
 //! decomposition into slices recorded in its `notes` field and in
@@ -161,9 +161,9 @@ pub struct IpcHeytingPrelude {
     pub join_not_ne_top: NameId,
 }
 
-/// A thin, `Copy`-able handle onto the [`NatPrelude`] names this file needs,
-/// so [`IpcHeytingPrelude`] does not have to embed the (large, non-`Copy`)
-/// [`NatPrelude`] by value.
+/// A thin, `Copy`-able handle onto the [`NatPrelude`](crate::NatPrelude) names
+/// this file needs, so [`IpcHeytingPrelude`] does not have to embed the
+/// (large, non-`Copy`) [`NatPrelude`](crate::NatPrelude) by value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NatPreludeHandle {
     /// `Nat : Type`.
@@ -190,7 +190,7 @@ pub struct NatPreludeHandle {
     pub bool_false: NameId,
 }
 
-/// Build the [`Formula`] AST and the 3-element Heyting-chain semantics,
+/// Build the `Formula` AST and the 3-element Heyting-chain semantics,
 /// registering every declaration through the trusted
 /// [`crate::Kernel::add_inductive`] / [`crate::Kernel::add_declaration`]
 /// gates. Not cached (unlike the large shared preludes): this package is

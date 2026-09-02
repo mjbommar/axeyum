@@ -362,6 +362,24 @@ pub enum KernelError {
         /// The constructor whose result was wrong.
         ctor: crate::name::NameId,
     },
+    /// A constructor field's type lives in a universe strictly larger than the
+    /// inductive family's own result universe. Lean's kernel rejects this
+    /// (`check_constructor`: "universe level of the field's type is too big for
+    /// the corresponding inductive datatype"); without it an inductive can store
+    /// its own universe — `U : Sort 1` with `mk : Sort 1 → U` — which makes
+    /// `Sort u` a retract of an inhabitant of `Sort u`, the `Type : Type`
+    /// precondition for Girard's paradox. `Prop` (result level zero) is exempt
+    /// because it is impredicative.
+    ///
+    /// Found by `examples/inductive_universe_probe.rs`; see ADR-1495.
+    ConstructorFieldUniverseTooBig {
+        /// The inductive family being declared.
+        inductive: crate::name::NameId,
+        /// The constructor containing the offending field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
+    },
     /// A constructor field contains the inductive family being declared in the
     /// domain of a function type. Such a negative occurrence violates Lean's
     /// strict-positivity condition and is rejected before the inductive is
