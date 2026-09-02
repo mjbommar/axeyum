@@ -4574,6 +4574,17 @@ SUITES["artifact-ownership"] = (
 # reported) and M9 removes the exit-2 branch (a host without `rustfmt` starts
 # being reported as drift). Each must kill exactly one test -- a single mutant
 # over the whole block could not tell the two apart.
+#
+# M10/M11/M12 are the ADR-1511 amendment (2026-09-02), and they are split three
+# ways for the same reason M8/M9 are two. The shape-duplicates guard has an
+# exit code that means two different things: `check-shape-duplicates.py` exits
+# 2 both for a malformed allowlist (a committed defect, must block) and for an
+# absent-or-stale prebuilt binary (a fact about this host, must not). M11
+# removes the marker condition, so an unanswerable run starts blocking; M12
+# removes the marker requirement's discrimination, so a malformed allowlist
+# starts being swallowed as `skipped`. A single mutant over the whole block
+# would report a kill without saying which direction is guarded, and the
+# direction that matters most is the one that fails SILENTLY.
 # --------------------------------------------------------------------------
 
 SUITES["merge-hygiene"] = (
@@ -4624,6 +4635,26 @@ SUITES["merge-hygiene"] = (
         (
             "M9 exit 2 (no rustfmt) is SKIPPED, not a failure",
             'if [ "$py_fields_rc" -eq 2 ]; then',
+            "if false; then",
+        ),
+        (
+            "M10 a reported duplicate declaration group fails the gate",
+            'elif [ "$shape_dupes_rc" -ne 0 ]; then',
+            "elif false; then",
+        ),
+        (
+            "M11 an absent/stale prebuilt index is SKIPPED, not a failure",
+            'if [ "$shape_dupes_rc" -eq 2 ] && [ -n "$shape_dupes_marker" ]; then',
+            'if [ "$shape_dupes_rc" -eq 99 ]; then',
+        ),
+        (
+            "M12 exit 2 WITHOUT the UNAVAILABLE marker still blocks",
+            '[ "$shape_dupes_rc" -eq 2 ] && [ -n "$shape_dupes_marker" ]',
+            '[ "$shape_dupes_rc" -eq 2 ]',
+        ),
+        (
+            "M13 the opt-out is honoured and reported",
+            'if [ "${AXEYUM_SKIP_SHAPE_DUPLICATES:-0}" = "1" ]; then',
             "if false; then",
         ),
     ],
