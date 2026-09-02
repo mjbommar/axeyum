@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2134,
+    "min_identity_bound": 2147,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -15496,6 +15496,13 @@
       "kernel_theorem": "Nat.ble_eq_true_of_le"
     },
     {
+      "fact_id": "F:nat-ble-select-add-of-ne",
+      "language": "lean4",
+      "statement_sha256": "202dc7ac3fe26233ba8cea970e34d051eebf332da38f22c83a2cb3c5648456ca",
+      "prose_sha256": "73a85f4f430188f59299f8f3197d27910317e4301e6f88205415eb91a50ba9b7",
+      "kernel_theorem": "Nat.ble_select_add_of_ne"
+    },
+    {
       "fact_id": "F:nat-ble-self-eq-true",
       "language": "lean4",
       "statement_sha256": "200079047d8740c00f70180d0e1859a617cd3b4e80cd18db10c1de5037b7bad7",
@@ -16225,6 +16232,13 @@
       "kernel_theorem": "Nat.dvd_of_mod_eq_zero_of_pos"
     },
     {
+      "fact_id": "F:nat-dvd-prodrange-of-lt",
+      "language": "lean4",
+      "statement_sha256": "6d070e0733632b829fca4c1fcb452d7820ccac93fac734dd28ed3733cdb7db39",
+      "prose_sha256": "a29808cf5b89e00de3a974f7bb395eed5e1c8a4054139ee28e3f7e16673e1871",
+      "kernel_theorem": "Nat.dvd_prodRange_of_lt"
+    },
+    {
       "fact_id": "F:nat-dvd-refl",
       "language": "lean4",
       "statement_sha256": "e7a07a94b0cea66be330af0383346bc724e6a4c551faf3d102c6f2e256e90023",
@@ -16286,6 +16300,13 @@
       "statement_sha256": "e7aff78f06846dca32ea6b15db29fe786d44191ef1bbd27af14d01d8b515ee96",
       "prose_sha256": "841949a647dd2e8d5cb5a3147d65590ce6f3919c8939bd66ffe967dd960b2baf",
       "kernel_theorem": "Nat.dvd_zero"
+    },
+    {
+      "fact_id": "F:nat-eisenstein-floor-sum",
+      "language": "lean4",
+      "statement_sha256": "e209fc1ef67d745bbf364e14abb09ad93dc6837bb8bef8c01d1f3c7b363a0901",
+      "prose_sha256": "d1ee436a786edc31f97561e98924833afc565deb9ecc044f45bb16f3e5c2c899",
+      "kernel_theorem": "Nat.eisenstein_floor_sum"
     },
     {
       "fact_id": "F:nat-eq-equivalence-on",
@@ -16457,6 +16478,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-exponent-unique-of-exact-dvd",
+      "language": "lean4",
+      "statement_sha256": "b3b2ee5511f0657e4c578563b7ae88e619666175408eb59fb6fd8b50ece140fb",
+      "prose_sha256": "98be0a63526eb5561eafc0e85b1b991ed3a9593919e0b655081e6a16c0f429d3",
+      "kernel_theorem": "Nat.exponent_unique_of_exact_dvd"
+    },
+    {
       "fact_id": "F:nat-factorial-succ",
       "language": "lean4",
       "statement_sha256": "74cd94f38eef992bcd6be94d2db47c2393bac245d6f647fd0610d926718a125c",
@@ -16504,6 +16532,13 @@
       "statement_sha256": "37c0876082d26013cd35f2c31de310bc1c93a7901e8eeef91b68d1b3b3571bbd",
       "prose_sha256": "253183357bf2e41f8443b4f27d6a5e64acbcbefdc42f4c9ea7e13cad1735a0fe",
       "kernel_theorem": "Nat.Fin.val_mk"
+    },
+    {
+      "fact_id": "F:nat-gauss-fold-sumrange-eq",
+      "language": "lean4",
+      "statement_sha256": "72b1944027f60294810aa6eba58da7e82100976559a2c9636212359e2784a38f",
+      "prose_sha256": "0fb9a21ded651bf60a9406fb012ac43c53bf53f13d05dae4f3a418b22f1537e0",
+      "kernel_theorem": "Nat.gauss_fold_sumRange_eq"
     },
     {
       "fact_id": "F:nat-gauss-lemma",
@@ -16666,6 +16701,13 @@
       "statement_sha256": "09152f69ad9bd2fcf48dc1c7871e8d3ceb693cd008b33dd88ecb0d12ba729135",
       "prose_sha256": "d71f7e99c3f8685cc4a6ddcbc912cf4ab86ba9783be36ceb7b94d04de9a5ac03",
       "kernel_theorem": "Nat.injective_on_imp_surjective_on"
+    },
+    {
+      "fact_id": "F:nat-injective-on-or-duplicate",
+      "language": "lean4",
+      "statement_sha256": "b668682245fd564ef565e72b37f3be912464254de8429a02d83841069c3f7537",
+      "prose_sha256": "fd65417b1297971a3af31b74983076723613dd31e1ad19a68115a7b69a5807d9",
+      "kernel_theorem": "Nat.injective_on_or_duplicate"
     },
     {
       "fact_id": "F:nat-injective-on-p-imp-surjective-on-p",
@@ -17969,6 +18011,27 @@
       ]
     },
     {
+      "fact_id": "F:nat-multiset-not-pow-succ-count-dvd-prod",
+      "language": "lean4",
+      "statement_sha256": "8e6d8f99123f6d2444fc71e1896c479d507f04213d6fe9ddb4a6f3443b3ddd2d",
+      "prose_sha256": "283ba4381b8be97a20450e23b049996536ecba76a5620a44aa0e8ca6e8df3424",
+      "kernel_theorem": "Nat.Multiset.not_pow_succ_count_dvd_prod"
+    },
+    {
+      "fact_id": "F:nat-multiset-pow-count-dvd-prod",
+      "language": "lean4",
+      "statement_sha256": "7d13f573b475908b22da907344ec3ce84c2c44a9043706cbaa03cd0ad553db84",
+      "prose_sha256": "caad700d5f633589945fb69ce55ec75ba2f1e7cc556da1cb0c0b16186a14282f",
+      "kernel_theorem": "Nat.Multiset.pow_count_dvd_prod"
+    },
+    {
+      "fact_id": "F:nat-multiset-prime-factorization-unique",
+      "language": "lean4",
+      "statement_sha256": "e3f8d0999fdf30e6fec70f0b5c4de40a1ccbd6fc7ac9ca3ebcc089b800e0e59e",
+      "prose_sha256": "32e77f01885235c371bccef7df5e27584eb28995c3b789c50f022d66a98e2f9a",
+      "kernel_theorem": "Nat.Multiset.count_eq_of_prod_eq"
+    },
+    {
       "fact_id": "F:nat-ne-of-beq-eq-false",
       "language": "lean4",
       "statement_sha256": "fb8d2189acb7f4e68fac68921dd0cf2288ae0545f59fb6e254532883ebe63490",
@@ -18239,6 +18302,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-pow-dvd-pow-of-le",
+      "language": "lean4",
+      "statement_sha256": "d999ca89f8ddb760e3b29fe9dec44ef3760bfae47835d2751f4b945752de1b75",
+      "prose_sha256": "1300ef417f9c3f640076c9cd14477e16c4afda4d856d01e29b5c3475be7b1973",
+      "kernel_theorem": "Nat.pow_dvd_pow_of_le"
+    },
+    {
       "fact_id": "F:nat-pow-half-split",
       "language": "lean4",
       "statement_sha256": "3c8fb923ee6caa68ac76ff6234bc6d32e13e3881ac3b0520b34b5a76b403f8b8",
@@ -18391,6 +18461,13 @@
           "prose_sha256": "ef39d6057ee4181acd0a9010503fdfcf484dc98be6c2ed6d94c8f3a952314ee0"
         }
       ]
+    },
+    {
+      "fact_id": "F:nat-prime-pow-dvd-of-dvd-mul-of-not-dvd",
+      "language": "lean4",
+      "statement_sha256": "85adf169e787d180ac87255a2d433521225fd8285cb716d70f8392d7bd52dca7",
+      "prose_sha256": "9606d60d918dc656d5d0f34accc8775e79415c68769cbf491e867655e98058ee",
+      "kernel_theorem": "Nat.prime_pow_dvd_of_dvd_mul_of_not_dvd"
     },
     {
       "fact_id": "F:nat-prodrange-succ",
@@ -20080,6 +20157,20 @@
       "statement_sha256": "a408cf34895739c61256fdb80813b1a4d6428893a3873a5c4eaeda8945eb2137",
       "prose_sha256": "8236bf361c8335e179ce90bbe42445413d3075cf1e06cb6c47f8728593aaab5f",
       "kernel_theorem": "Rat.det_row_expansion"
+    },
+    {
+      "fact_id": "F:rat-det-row-selection",
+      "language": "lean4",
+      "statement_sha256": "0bdffdbeadea76866093ec2ad4b45b6adc347798a8bf4da05e49f2fb77ec097b",
+      "prose_sha256": "bf784f2a6f30efd47daadc292f8af88f7a7615071e30b96fdb8c198767d78fa1",
+      "kernel_theorem": "Rat.det_row_selection"
+    },
+    {
+      "fact_id": "F:rat-det-row-selection-injective",
+      "language": "lean4",
+      "statement_sha256": "78c7d04bde0759822a7fa3fc8487277fcca8b14679b1fd242c3276f6c9e6515f",
+      "prose_sha256": "f54399a928b5ed3131424b1d816212834fb134b5febfd0c1e5bf5764ef4ff72d",
+      "kernel_theorem": "Rat.det_row_selection_injective"
     },
     {
       "fact_id": "F:rat-det-transpose",

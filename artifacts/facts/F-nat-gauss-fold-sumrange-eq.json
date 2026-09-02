@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-gauss-fold-sumrange-eq",
+  "title": "The signed Gauss fold preserves the sum over [1, m]",
+  "statement": "For `a` coprime to `pp = 2m+1`, `1 + 2 + ... + m` equals `gaussFold pp a 1 + ... + gaussFold pp a m`: the folded least residues are a permutation of `[1, m]`, so summing them changes nothing. WHY IT IS THE POINT: Gauss's lemma has needed exactly this permutation since ADR-1130 and gets it MULTIPLICATIVELY -- `int_prelude/gauss_assembly.rs` runs `Int.prodRange_permute` at the self-map `sigma j := pred (gaussFold pp a (succ j))` to prove that the product of folded least residues is `m!`. Eisenstein's lemma needs the SAME bijection additively, and ADR-1540 identified that as the piece three prior sizings had described the arithmetic of without ever naming the set-theoretic step underneath it. HOW IT IS PROVED: assembly, in the three steps ADR-1540 predicted. `Nat.gauss_fold_shift_injective_on` and `Nat.gauss_fold_shift_maps_into` (ADR-1015) supply `InjectiveOn sigma m` and `MapsInto sigma m` VERBATIM -- they are already `Nat`-typed and quantified over exactly the predicates `Nat.sumRange_permute` takes, so there is no bridging step at all. `Nat.sumRange_permute` (ADR-1540) at `f := succ` gives `sumRange succ m = sumRange (succ . sigma) m`, and one `Nat.sumRange_congr_lt` repairs `succ (pred (gaussFold ...))` to `gaussFold ...` by `Nat.succ_pred_of_pos` fed the positivity half of `Nat.gauss_fold_in_range`, whose `Le k m` hypothesis at `k := succ j` is the congruence's own `Lt j m` definitionally. Nothing is `Int`-valued and nothing is lifted. COPRIMALITY IS LOAD-BEARING: at `m = 1`, `a = 3` (so `pp = 3` and `gcd 3 3 = 3`) the least residue is `0`, the fold sum is `0` and the triangular sum is `1`. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.gauss_fold_sumRange_eq : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (AxNat.succ AxNat.zero)) -> Eq.{1} AxNat (AxNat.sumRange (fun (x3 : AxNat) => AxNat.succ x3) x0) (AxNat.sumRange (fun (x3 : AxNat) => AxNat.gaussFold (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0)) x1 (AxNat.succ x3)) x0))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.gauss_fold_sumRange_eq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-le-succ-succ", "F:nat-succ-pred-of-pos", "F:nat-sumrange-congr-lt", "F:nat-sumrange-permute", "F:nat-zero-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.gauss_fold_sumRange_eq",
+      "kind": "kernel-term",
+      "supports": "Nat.gauss_fold_sumRange_eq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.gauss_fold_sumRange_eq 2>/dev/null | grep -cE '^Nat\\.gauss_fold_sumRange_eq[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.gauss_fold_sumRange_eq",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.gauss_fold_sumRange_eq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.gauss_fold_sumRange_eq.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in gauss_fold_sum_tests.rs."
+    },
+    {
+      "id": "numeric-additive-bijection",
+      "kind": "exhaustive-enumeration",
+      "supports": "C4 of the ADR-1544 check script verifies the sum identity at 452 coprime (m, a) instances for m <= 20, and C5 verifies the STRONGER claim it follows from -- that the fold's image on [1,m] is exactly [1,m] -- at 356 of them, so the theorem is not passing by an accidental coincidence of sums. Controls M7, M8 and M9 refute dropping coprimality, replacing the fold by the bare least residue, and taking the left-hand side as m*m.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1544-eisenstein-lattice-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1544-eisenstein-lattice-checks.py",
+      "checker_seconds": 4,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy: 12 of 12 mutations exit 1. Neither recorded survivor (M5, M10) bears on this fact. What NO numeric check here can see is the ORIENTATION of the equation -- swapping the two sides is an equally true theorem with a different Eq argument order, and every consumer chaining through it would need a symm that is not there -- so the declared type is pinned character for character in gauss_fold_sum_tests.rs."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the_additive_gauss_bijection_states_the_intended_type). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts -- Nat.gauss_fold_in_range, Nat.gauss_fold_shift_injective_on and Nat.gauss_fold_shift_maps_into are direct dependencies and are NOT registered here, so this list is the intersection and not the full dependency set. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-2)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum.rs`. ADR-1544, closing ADR-1540's residue 1. Declaration kind: theorem. WHAT IS STILL OPEN: Eisenstein's lemma and quadratic reciprocity. ADR-1540's residue 2 (the residue/fold reconciliation, `sum leastResidue = sum gaussFold + pp*N - 2*sum_neg gaussFold`) wants a CONDITIONAL sum, and this lane measured that no `sumRangeIf` exists in any prelude (`shape_search --name-like sumRangeIf` returns ABSENT against a `prodRangeIf` control returning 12 declarations). Residue 3, the mod-2 bookkeeping over `Int.sumRange`/`Int.modEq_sumRange`, is untouched. GRADED FAMILY (ADR-0603): row 1, the general constructive form. Row 2 UNASSESSED -- the coprimality-dropping refutation is numeric (m = 1, a = 3) and is asserted as a `def_eq` control in the test file, but it is not stated as a kernel theorem.",
+  "external_status": "proved"
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-ble-select-add-of-ne",
+  "title": "Two distinct naturals are compared one way or the other, never both",
+  "statement": "For `a` and `b` distinct, exactly one of `a <= b` and `b <= a` holds, expressed as `bool_select_nat (ble a b) 1 0 + bool_select_nat (ble b a) 1 0 = 1`. WHY IT IS THE POINT: `Nat.countRectangle_partition` (ADR-1260) takes its complementarity as a BOUNDED hypothesis on the two selectors, deliberately, so that the side condition stays in the consumer -- and until now NOTHING had ever discharged that hypothesis from a side condition. `Nat.countRectangle_partition_compl` discharges it from `setCompl`, which a pair of half-plane comparisons cannot supply. This is the missing half, and it is what lets Eisenstein's rectangle be counted at all. HOW IT IS PROVED: one `Nat.lt_or_ge` split. On `a < b`: `ble a b = true` from `Le a b` (`le_trans` through `le_succ`, since `Lt a b` IS `Le (succ a) b` definitionally), and `ble b a = false` from `ble_eq_false_of_lt` at the same witness -- the hypothesis is unused on this side. On `b <= a`: `ble b a = true` directly, and `ble a b = false` once `Le b a` is upgraded to `Lt b a`, which is where `Not (Eq a b)` is spent, refuting `lt_or_eq_of_le`'s equality branch. The value at the two Bool constructors is `1` by iota alone (`add 1 0` and `add 0 1` both reduce, since `Nat.add` recurses on its RIGHT argument), so the closing step is two `Eq.rec` transports over `Bool` carrying one `Eq.refl`. THE HYPOTHESIS IS LOAD-BEARING AND FAILS AT EXACTLY ONE PLACE: at `a = b` both comparisons hold and the selector sum is `2`. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.ble_select_add_of_ne : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Not (Eq.{1} AxNat x0 x1)) -> Eq.{1} AxNat (AxNat.add (Bool.rec.{1} (fun (x3 : Bool) => AxNat) AxNat.zero (AxNat.succ AxNat.zero) (AxNat.ble x0 x1)) (Bool.rec.{1} (fun (x3 : Bool) => AxNat) AxNat.zero (AxNat.succ AxNat.zero) (AxNat.ble x1 x0))) (AxNat.succ AxNat.zero))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.ble_select_add_of_ne"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:nat-ble-eq-false-of-lt", "F:nat-ble-eq-true-of-le", "F:nat-le-trans", "F:nat-lt-or-eq-of-le", "F:nat-lt-or-ge"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.ble_select_add_of_ne",
+      "kind": "kernel-term",
+      "supports": "Nat.ble_select_add_of_ne is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.ble_select_add_of_ne 2>/dev/null | grep -cE '^Nat\\.ble_select_add_of_ne[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.ble_select_add_of_ne",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.ble_select_add_of_ne",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.ble_select_add_of_ne.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in eisenstein_lattice_tests.rs."
+    },
+    {
+      "id": "numeric-selector-partition",
+      "kind": "exhaustive-enumeration",
+      "supports": "C1 of the ADR-1544 check script verifies the selector sum is 1 at all 1640 ordered pairs of distinct naturals below 41; control M1 refutes the statement with the hypothesis dropped (at a = b the sum is 2).",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1544-eisenstein-lattice-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1544-eisenstein-lattice-checks.py",
+      "checker_seconds": 4,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy: 12 of 12 mutations exit 1. One control bearing on THIS fact, M10, is recorded as a DELIBERATE SURVIVOR and asserted to survive -- stating the two comparisons STRICTLY (the spelling ADR-1260 and ADR-1540 describe) is numerically indistinguishable away from a = b, so no instantiation can separate the landed statement from that one. The declared type is pinned character for character in eisenstein_lattice_tests.rs instead."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the_lattice_assembly_states_the_intended_types). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts -- Nat.le_succ is a direct dependency and is NOT registered here, so this list is the intersection and not the full dependency set. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-2)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs`. ADR-1544. Declaration kind: theorem. GRADED FAMILY (ADR-0603): row 1, the general constructive form. Row 2 UNASSESSED -- the hypothesis-dropping refutation is numeric (a = b, selector sum 2) and is asserted as a `def_eq` control in the test file, but it is not stated as a kernel theorem and no claim is made that it cannot be.",
+  "external_status": "proved"
+}
