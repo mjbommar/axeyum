@@ -77,6 +77,9 @@ class MergeHygieneControls(unittest.TestCase):
             # The Python binding's prelude field table -- the generated file
             # that reached main stale because its `--check` was in no gate.
             ("gen-py-prelude-fields", "PRELUDE-FIELDS ok"),
+            # The census guard (lane `shape-census`): stubbed like the generators so
+            # the scenario chooses the exit and the THREE-outcome dispatch is measured.
+            ("frontier-shape-census", "SHAPE_CENSUS ok"),
         ):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
@@ -136,8 +139,7 @@ class MergeHygieneControls(unittest.TestCase):
 
     def test_a_bare_seven_equals_line_is_a_marker(self) -> None:
         """The middle marker carries no trailing text, so a pattern written
-        only for `<<<<<<< ` / `>>>>>>> ` misses the one git leaves behind most
-        often in a JSON fact file."""
+        only for `        often in a JSON fact file."""
         self.write("artifacts/facts/F-x.json", "{\n" + _marker("=") + "\n}\n")
         done = self.run_gate()
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
@@ -243,6 +245,22 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("SKIPPED (rustfmt not on PATH)", done.stdout)
         self.assertIn("py_prelude_fields=skipped (no rustfmt)", done.stdout)
+    # -- guard 4: the frontier shape census ---------------------------------
+
+    def test_stale_shape_census_fails_the_gate(self) -> None:
+        done = self.run_gate(frontier_shape_census=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: frontier-shape-census.py --check", done.stdout)
+        self.assertIn("frontier-shape-census-v1.json", done.stdout)
+
+    def test_an_unanswerable_shape_census_does_NOT_fail_the_gate(self) -> None:
+        """Exit 2 is the census saying it could not compute an answer. A gate
+        that reports a disagreement when its subject was unavailable is wrong
+        about its own subject -- so 2 is reported, not failed."""
+        done = self.run_gate(frontier_shape_census=2)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("shape_census=not-answerable", done.stdout)
+        self.assertIn("|PASS", done.stdout)
 
     # -- the aggregate ------------------------------------------------------
 

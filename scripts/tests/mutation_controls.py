@@ -1576,7 +1576,14 @@ def baseline_and_mutants(name: str, quiet: bool = False) -> tuple[int, list[tupl
                 # certificate-checker suite registered here reported `BASELINE
                 # DID NOT BUILD` with 99 errors, all of them missing corpus
                 # paths, and no mutation was measurable at all.
-                ".git", "target", "references", "bench-results", "__pycache__"
+                ".git", "target", "references", "bench-results", "__pycache__",
+                # `.claude` holds every lane worktree (`.claude/worktrees/*`,
+                # 279 of them on 2026-09-02, each with its own `target/`).
+                # Run from the MAIN checkout this copy reached 47 GB and the
+                # harness sat in uninterruptible disk wait for 27 minutes with
+                # an empty log; from inside a worktree the directory does not
+                # exist, which is why every lane's run had been fast.
+                ".claude",
             ),
             symlinks=True,
         )
@@ -4626,6 +4633,15 @@ SUITES["merge-hygiene"] = (
             'if [ "$py_fields_rc" -eq 2 ]; then',
             "if false; then",
         ),
+        (
+            # Lane `shape-census`: widening the exit-2 arm to swallow every
+            # nonzero status must split the two census scenarios -- the stale
+            # run must die, the unanswerable run must survive. (Was M7 on that
+            # lane's branch; renumbered at merge, three lanes appended here.)
+            "M10 a stale shape census fails the gate, and exit 2 does not",
+            'elif [ "$census_rc" -eq 2 ]; then',
+            'elif [ "$census_rc" -ne 0 ]; then',
+        ),
     ],
 )
 
@@ -4685,6 +4701,15 @@ SUITES["creal-migrate-consumers"] = (
             "C7 a clean tree is NOT refused (the vacuity control)",
             "    if not findings:",
             "    if False:",
+            # NOT `fail=1 -> fail=0`: that would also weaken the aggregate
+            # scenario, so the mutant would kill two tests and prove nothing
+            # about this guard specifically. Widening the exit-2 arm to swallow
+            # EVERY nonzero status is the mutation that separates the two
+            # census scenarios -- the stale run must die, the unanswerable run
+            # must survive.
+            "M7 a stale shape census fails the gate, and exit 2 does not",
+            'elif [ "$census_rc" -eq 2 ]; then',
+            'elif [ "$census_rc" -ne 0 ]; then',
         ),
     ],
 )

@@ -79,7 +79,17 @@ NESTED = os.environ.get(NEST) == "1"
 # Directories the sandbox needs. Every guarded producer resolves its own ROOT
 # as `parents[1]` of `__file__`, so a copy of these two under a scratch root
 # is a complete working tree for them.
-SANDBOX_TREES = ("artifacts", "scripts")
+#
+# `crates` joined them on 2026-09-02, for `frontier-shape-census-v1.json`. Its
+# producer runs `fact-frontier.py --json`, which validates the operation
+# registry, and that validation checks that every operation's
+# `producer.implementation` / `checker.implementation` PATH EXISTS -- all of
+# them under `crates/`. Without the tree the frontier exits 1, the census
+# reports UNANSWERABLE (exit 2), and the OWNER arm reads that as "did not
+# restore" -- a gate red because its sandbox was too small, which says nothing
+# about ownership. Source only: 59 MB, one copy per run (the sandbox is built
+# once), against the 333 MB the other two trees already cost.
+SANDBOX_TREES = ("artifacts", "scripts", "crates")
 
 
 class Producer(NamedTuple):
@@ -193,6 +203,81 @@ GUARDED: tuple[Artifact, ...] = (
                 "no write call.",
             ),
         ),
+    ),
+    Artifact(
+        path="artifacts/autogenesis/frontier-shape-census-v1.json",
+        owner=Producer(
+            "scripts/frontier-shape-census.py",
+            (),
+            "The sole writer. Bare argv is the WRITING invocation; --check "
+            "never writes and so would prove nothing about ownership.",
+        ),
+        # The keys a reader of this artifact reasons from. `population` and
+        # `buckets` carry the measurement; `environment_snapshot` says which
+        # kernel environment the declared-constant flags were read against, and
+        # a census whose flags cannot be attributed to an environment is not
+        # evidence about statability.
+        required_keys=(
+            "authority",
+            "buckets",
+            "environment_snapshot",
+            "frontier",
+            "kind",
+            "ledger",
+            "other",
+            "population",
+            "produced_by",
+            "schema_version",
+        ),
+        required_nested={
+            # The held-out accounting specifically. If `held_out_excluded` or
+            # `held_out_authority` were ever dropped, the artifact would still
+            # look complete while no longer showing that a blind evaluation
+            # population was excluded at all -- which is the one property a
+            # reader must be able to check without rerunning anything.
+            "population": (
+                "by_route_class",
+                "censused_count",
+                "held_out_authority",
+                "held_out_excluded",
+                "held_out_source_gap",
+                "primary_count",
+                "primary_mutation_control_count",
+                "primary_targetable_count",
+                "ready_count",
+            ),
+            "buckets": ("coarse", "fine"),
+        },
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason it is listed above: it "
+                "writes a sandbox and a perturbed copy, so it cannot be "
+                "declared read-only.",
+            ),
+            Producer(
+                "scripts/check-merge-hygiene.sh",
+                (),
+                "Gates the artifact with --check and names it in its remedy "
+                "line. A bash script cannot be proved write-free by AST, so "
+                "the property is MEASURED here instead of asserted.",
+            ),
+            Producer(
+                "scripts/tests/test_frontier_shape_census.py",
+                (),
+                "The census's own controls. They build throwaway trees and "
+                "write census artifacts INSIDE them; that the real one is "
+                "untouched is exactly what this arm measures.",
+            ),
+            Producer(
+                "scripts/tests/test_check_merge_hygiene.py",
+                (),
+                "Names the artifact in its assertion on the gate's remedy "
+                "line. Drives the shipped gate against a throwaway tree.",
+            ),
+        ),
+        reads=(),
     ),
 )
 
