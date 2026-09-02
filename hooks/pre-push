@@ -79,6 +79,14 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
   else
     base="$remote_sha"
   fi
+  # Captured UNCONDITIONALLY (not just when Rust/TOML changed) for the L0
+  # block below: a diff-based L0 gate must see the whole PUSHED RANGE, not just
+  # its tip commit. Lanes are told to batch several commits into one push
+  # (CLAUDE.md), so a gate defaulting to `HEAD~1` would only ever look at the
+  # last of them and silently miss a violation three commits earlier in the
+  # same push.
+  L0_BEFORE="$base"
+  L0_TIP="$local_sha"
   # `Cargo.lock` IS LOAD-BEARING HERE AND WAS MISSING, so a dependency bump
   # skipped the ENTIRE battery. Measured 2026-08-27 against a real commit:
   #
@@ -99,12 +107,13 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
   fi
 done
 export PREPUSH_BASE PREPUSH_TIP
+export L0_BEFORE L0_TIP
 
 # ---------------------------------------------------------------------------
 # L0 trusted-library safety gates (ADR-1050).
 #
 # These run BEFORE the Rust/TOML early exit below, and that placement is the
-# whole point. The eight L0 gates guard `artifacts/facts/`, the proposition
+# whole point. The L0 gates guard `artifacts/facts/`, the proposition
 # corpus, the credit ledger and the blind-evaluation partition -- JSON and
 # documentation content, none of which is `*.rs`, `*.toml` or `Cargo.lock`. A
 # push touching only those files exits at the "no cargo gate needed" line and
@@ -117,8 +126,12 @@ export PREPUSH_BASE PREPUSH_TIP
 #   check-holdout-closed-evaluation   0.06s
 #   check-semantic-control-fixtures   1.09s
 #   check-partition-edges --baseline  0.13s
+#   check-development-partition       0.13s
+#   check-autogenesis-holdout-isolation 0.80s
+#   check-holdout-adjacency           0.43s
+#   check-draw7-frozen-families       0.04s
 #   ------------------------------------------
-#   total                             ~1.3s
+#   total                             ~2.7s
 #
 # `check-partition-edges.py --baseline` joined on 2026-09-02 (ADR-1546 option
 # 2, ADR-1550) and it is the reason this block exists, stated by a measurement
@@ -136,6 +149,20 @@ export PREPUSH_BASE PREPUSH_TIP
 # `artifacts/autogenesis/partition-edge-baseline-v1.json` -- normally none --
 # and costs 0.13s. It blocks a NEW crossing from today without holding every
 # push hostage to a re-partition nobody has done yet.
+#
+# The four gates below `check-partition-edges` joined 2026-09-02 for the exact
+# same reason ADR-1546 names them by: `check-development-partition.py` and
+# `check-autogenesis-holdout-isolation.py` were registered only in
+# `scripts/check.sh`/`justfile` (~10-minute gate), `check-holdout-adjacency.py`
+# likewise, and `check-draw7-frozen-families.py` was invoked by NOTHING AT ALL
+# -- not `check.sh`, not `justfile`, not any hook -- so `check-control-
+# registration.sh` never saw it either (that gate derives its registry from
+# `scripts/tests/*`, not from top-level `scripts/check-*.py`). All four are
+# state checks except the last: `check-draw7-frozen-families.py --before <ref>`
+# is a DIFF, comparing the pushed range's frozen-family partitions against
+# `$L0_BEFORE` (captured unconditionally above, per ref, before the Rust/TOML
+# filter) rather than its own default `HEAD~1` -- `HEAD~1` only sees the last
+# commit of a push, and lanes are told to batch several commits into one push.
 #
 # The other four L0 gates are deliberately NOT here and run in CI instead:
 # `credit-transaction-ledger` (10.6s), `kernel-differential` (7-27s, and it
@@ -161,7 +188,11 @@ for l0_gate in \
   "scripts/check-settled-fact-statements.py" \
   "scripts/check-holdout-closed-evaluation.py" \
   "scripts/check-semantic-control-fixtures.py --check" \
-  "scripts/check-partition-edges.py --baseline"
+  "scripts/check-partition-edges.py --baseline" \
+  "scripts/check-development-partition.py" \
+  "scripts/check-autogenesis-holdout-isolation.py" \
+  "scripts/check-holdout-adjacency.py" \
+  "scripts/check-draw7-frozen-families.py --before ${L0_BEFORE:-HEAD~1}"
 do
   l0_step_start=$(date +%s)
   # Word-splitting is intended: the entries above carry their own flags.

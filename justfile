@@ -193,6 +193,12 @@ autogenesis-nursery:
     python3 -m unittest scripts.tests.test_check_holdout_adjacency
     python3 scripts/check-holdout-adjacency.py --self-test
     python3 scripts/check-holdout-adjacency.py
+    # Registered here for the first time 2026-09-02 (mirrors scripts/check.sh):
+    # this script had its own negative control but was invoked by NOTHING --
+    # check-control-registration.sh derives its registry from
+    # scripts/tests/*, so a top-level scripts/check-*.py with no matching
+    # test file was invisible to it too.
+    python3 scripts/check-draw7-frozen-families.py
     # ADR-0652. One producer per generated artifact: the statable vocabulary
     # had two writers and the poorer one deleted `bridge_provenance` and
     # `row_digest` at exit 0. Runs each non-owner producer in a sandboxed copy

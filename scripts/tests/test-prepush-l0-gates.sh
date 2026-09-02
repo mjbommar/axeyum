@@ -28,6 +28,19 @@
 #      form audits all 198 recorded crossings at 27s and would be removed from
 #      the hook within a day; the ratchet form is 0.13s. Naming the FLAG is
 #      the point, not decoration.
+#   D-F  `check-development-partition.py`, `check-autogenesis-holdout-
+#      isolation.py` and `check-holdout-adjacency.py` joined 2026-09-02: all
+#      three were registered only in `scripts/check.sh`/`justfile` (the same
+#      ~10-minute-aggregate hole ADR-1546 measured for the edge gate) and
+#      `check-holdout-isolation`/`check-holdout-adjacency` are the exact two
+#      gates ADR-1546's own table shows fusing evaluation partitions when
+#      nothing runs them at push time.
+#   G  `check-draw7-frozen-families.py` is one of them, with `--before`. This
+#      one is worse than "aggregate-only": it was invoked by NOTHING at all
+#      before 2026-09-02, not even `check.sh`. It is a DIFF gate (its default
+#      `--before HEAD~1` only sees the tip commit of a push), so the arm
+#      checks for the flag rather than a bare match -- a bare invocation would
+#      silently miss every commit but the last in a batched push.
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2
 
@@ -81,6 +94,38 @@ if ! printf '%s\n' "$gates" \
   echo "      only gate for that property lived in the ~10-minute aggregate." >&2
   echo "      ADR-1550 put the per-edge ratchet here; the ratchet form is" >&2
   echo "      0.13s, the bare audit is 27s and would not survive in a hook." >&2
+  echo "      It is listed: $(printf '%s' "$gates" | tr '\n' ' ')" >&2
+fi
+
+# ADR-1546 (arms D-F). Bare match: these three are plain state checks with no
+# flag to lose.
+for want in \
+  "scripts/check-development-partition.py" \
+  "scripts/check-autogenesis-holdout-isolation.py" \
+  "scripts/check-holdout-adjacency.py"
+do
+  if ! printf '%s\n' "$gates" | /usr/bin/grep -qx "$want"; then
+    fail=1
+    echo "FAIL: the L0 block does not run '$want'." >&2
+    echo "      ADR-1546's own table shows this is one of the two gates that" >&2
+    echo "      already caught a real partition fusion, and it ran only in" >&2
+    echo "      the ~10-minute aggregate -- days after the push it should" >&2
+    echo "      have blocked." >&2
+  fi
+done
+
+# arm G. `check-draw7-frozen-families.py` is a DIFF gate: naming the FLAG
+# matters here even more than for arm C, because the gate's OWN default
+# (`--before HEAD~1`) is wrong for a hook that must see a whole pushed range,
+# not just its tip commit. A bare match would pass while the hook silently
+# reverted to the single-commit default.
+if ! printf '%s\n' "$gates" | /usr/bin/grep -qE '^scripts/check-draw7-frozen-families\.py --before '; then
+  fail=1
+  echo "FAIL: the L0 block does not run" >&2
+  echo "      'scripts/check-draw7-frozen-families.py --before <ref>'." >&2
+  echo "      This gate was invoked by NOTHING before 2026-09-02 -- not even" >&2
+  echo "      check.sh -- and its bare form silently checks only HEAD~1," >&2
+  echo "      missing every earlier commit in a batched push." >&2
   echo "      It is listed: $(printf '%s' "$gates" | tr '\n' ' ')" >&2
 fi
 
