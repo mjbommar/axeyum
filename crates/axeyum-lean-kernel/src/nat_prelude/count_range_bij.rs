@@ -696,6 +696,7 @@ fn roundtrip_ty(d: &mut NatDev<'_>, pred: ExprId, f: ExprId, g: ExprId, src: Exp
 }
 
 /// The five hypothesis types at bound `x`, in declaration order.
+#[allow(clippy::too_many_arguments)]
 fn hyp_types(
     d: &mut NatDev<'_>,
     p: &NatPrelude,

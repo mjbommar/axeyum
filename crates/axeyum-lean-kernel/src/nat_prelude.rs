@@ -8411,6 +8411,9 @@ mod eisenstein_side_tests;
 mod sum_range_permute_tests;
 
 #[cfg(test)]
+mod count_range_bij_tests;
+
+#[cfg(test)]
 mod floor_count_tests;
 
 #[cfg(test)]
