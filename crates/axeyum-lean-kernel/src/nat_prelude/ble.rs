@@ -9,7 +9,7 @@
 //! `ble (succ x) (succ y) ≡ ble x y`, all definitionally.
 
 use super::NatPrelude;
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, cases_lt_or_ge};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -356,6 +356,52 @@ pub(super) fn declare_boolean_le(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
         let not_le = d.arrow(le_nm, false_ty);
         let stmt = d.arrow(not_ble, not_le);
         let proof = d.lam_fv(h1_fv, not_ble, inner);
+        (stmt, proof)
+    })?;
+
+    // lt_of_ble_eq_false : ∀ n m, ble n m = false → Lt m n
+    //
+    // The false side of the bridge, in the STRICT form. `Nat` had
+    // `le_of_ble_eq_true` and no false-side twin at all, and three consumers
+    // worked around that separately (ADR-1558 §4, ADR-1562 §4). The strict
+    // conclusion is the one the echelon searches need: `ble rows r = false` is
+    // the only place a row index is known to be in range, and `Lt r rows` is
+    // what a `MapsInto` hypothesis takes. Deriving `Le` first and strengthening
+    // afterwards is not possible, so the split is `lt_or_ge` rather than
+    // `le_total`: its left disjunct IS the conclusion, and its right disjunct
+    // `Le n m` contradicts the hypothesis through `ble_eq_true_of_le`.
+    d.theorem(p.lt_of_ble_eq_false, 2, &|d, v| {
+        let (n, m) = (v[0], v[1]);
+        let ble_nm = d.ble(n, m);
+        let false_ = d.bool_false();
+        let hyp_ty = d.bool_eq(ble_nm, false_);
+        let concl = d.lt(m, n);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // `lt_or_ge m n : Or (Lt m n) (Le n m)`.
+        let body = cases_lt_or_ge(
+            d,
+            &p,
+            m,
+            n,
+            &|d, _| d.lt(m, n),
+            &|_d, _, hlt| hlt,
+            &|d, _, hle| {
+                let htrue = d.lemma(p.ble_eq_true_of_le, &[n, m, hle]);
+                let true_ = d.bool_true();
+                let false_ = d.bool_false();
+                let ble_nm = d.ble(n, m);
+                let symm_h = d.bool_symm(ble_nm, false_, h);
+                let false_eq_true = d.bool_trans(false_, ble_nm, true_, symm_h, htrue);
+                let target = d.lt(m, n);
+                d.false_true_elim(target, false_eq_true)
+            },
+        );
+
+        let stmt = d.arrow(hyp_ty, concl);
+        let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
     })?;
 

@@ -1183,6 +1183,7 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.ble_eq_true_of_le,
         p.le_of_ble_eq_true,
         p.not_le_of_not_ble_eq_true,
+        p.lt_of_ble_eq_false,
         p.one_le_factorial,
         p.exists_prime_gt,
         p.eq_one_of_dvd_one,
@@ -24169,4 +24170,97 @@ fn prime_counting_and_lcm_upto_evaluate_correctly() {
             f.k.display_name(name)
         );
     }
+}
+
+/// `Nat.lt_of_ble_eq_false` -- the false side of the `ble`/`le` bridge, in the
+/// STRICT form (ADR-1558 §4, ADR-1562 §4). `Nat` carried `le_of_ble_eq_true`
+/// and no false-side twin at all, so three consumers worked around it
+/// separately; the echelon searches need `Lt`, not `Le`, because
+/// `Nat.ble rows r = false` is the only place a row index is known to be in
+/// range and a `MapsInto` hypothesis takes a strict bound.
+///
+/// Checked twice, because the two catch disjoint defects. Symbolically the
+/// conclusion must be `Lt m n` and NOT `Lt n m` -- a transposed statement is
+/// well-typed and means the wrong thing. Concretely at `(3, 1)`, where
+/// `ble 3 1` reduces to `false` so the hypothesis is `Eq.refl`, the conclusion
+/// must be `Lt 1 3`; the control asks for `Lt 3 1`, which is false.
+#[test]
+fn lt_of_ble_eq_false_is_strict_at_free_variables_and_a_concrete_instance() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    // Symbolic: free `(n, m)` and a free hypothesis, all in a LocalContext.
+    {
+        let anon = f.anon_name();
+        let nat = f.nat_ty();
+        let n_fv = f.fresh_fvar();
+        let m_fv = f.fresh_fvar();
+        let n = f.k.fvar(n_fv);
+        let m = f.k.fvar(m_fv);
+        let ble_nm = f.ble(n, m);
+        let false_ = f.bool_false();
+        let hyp_ty = f.bool_eq(ble_nm, false_);
+        let h_fv = f.fresh_fvar();
+        let h = f.k.fvar(h_fv);
+
+        let mut ctx = LocalContext::new();
+        for (fvar, ty) in [(n_fv, nat), (m_fv, nat), (h_fv, hyp_ty)] {
+            ctx.push(LocalDecl {
+                fvar,
+                name: anon,
+                ty,
+                info: BinderInfo::Default,
+            });
+        }
+
+        let applied = f.const_app(p.lt_of_ble_eq_false, &[n, m, h]);
+        let inferred = f.k.infer_in(applied, &mut ctx).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lt_of_ble_eq_false must type-check at free variables: {shown}")
+        });
+        let want = f.lt(m, n);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lt_of_ble_eq_false must conclude Lt m n symbolically"
+        );
+        let transposed = f.lt(n, m);
+        assert!(
+            !f.k.def_eq(inferred, transposed),
+            "negative control: lt_of_ble_eq_false must not ALSO conclude Lt n m"
+        );
+        let weakened = f.le(m, n);
+        assert!(
+            !f.k.def_eq(inferred, weakened),
+            "negative control: the conclusion is the STRICT Lt m n, not Le m n"
+        );
+    }
+
+    // Concrete: `ble 3 1` reduces to `false`, so `Eq.refl false` is the
+    // hypothesis and the conclusion is `Lt 1 3`.
+    {
+        let three = f.num(3);
+        let one = f.num(1);
+        let false_ = f.bool_false();
+        let refl = f.bool_refl(false_);
+        let applied = f.lemma(p.lt_of_ble_eq_false, &[three, one, refl]);
+        let inferred = f.k.infer(applied).unwrap_or_else(|e| {
+            let shown = f.explain(&e);
+            panic!("lt_of_ble_eq_false must apply at (n=3, m=1): {shown}")
+        });
+        let want = f.lt(one, three);
+        assert!(
+            f.k.def_eq(inferred, want),
+            "lt_of_ble_eq_false 3 1 must state Lt 1 3"
+        );
+        let transposed = f.lt(three, one);
+        assert!(
+            !f.k.def_eq(inferred, transposed),
+            "negative control: lt_of_ble_eq_false 3 1 must not state Lt 3 1"
+        );
+    }
+
+    assert!(
+        f.k.axiom_footprint(p.lt_of_ble_eq_false).is_empty(),
+        "lt_of_ble_eq_false must rest on zero axioms"
+    );
 }

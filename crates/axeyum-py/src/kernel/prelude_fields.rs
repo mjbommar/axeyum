@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1064 names,
+/// The `NatPrelude` field table (1065 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -313,6 +313,7 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("ble_eq_true_of_le", p.ble_eq_true_of_le),
             ("le_of_ble_eq_true", p.le_of_ble_eq_true),
             ("not_le_of_not_ble_eq_true", p.not_le_of_not_ble_eq_true),
+            ("lt_of_ble_eq_false", p.lt_of_ble_eq_false),
             ("div_mod", p.div_mod),
             ("div_mod_exists", p.div_mod_exists),
             ("div_mod_unique", p.div_mod_unique),
