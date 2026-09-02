@@ -8,10 +8,43 @@
     "statement": "∀ (n : ℕ), Nat.bit false n = 2 * n",
     "fragment": "Nat"
   },
-  "epistemic_status": "open",
+  "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [],
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "autogenesis-operation-nat-bit-constructor-bit-false-apply",
+      "kind": "kernel-term",
+      "supports": "The proposition declared as `Nat.bit_false_apply` in the pinned Mathlib v4.30 source.",
+      "check_status": "checked",
+      "checkers": [
+        "bounded-induction-reflexivity-v1",
+        "axeyum-lean-import/bounded-induction-operation-v1",
+        "check-autogenesis-nat-bit-constructor-family.py"
+      ],
+      "checker_command": "python3 scripts/check-autogenesis-nat-bit-constructor-family.py",
+      "checker_seconds": 120,
+      "artifact": "sha256:7586fe6fea6b1c8a3703f6e3e09303fc38bcb496071b331cdc55378426924d73",
+      "checker_operation": {
+        "id": "authoritative-mathlib-nat-bit-constructor-family-v1",
+        "admitted_declarations": 60,
+        "binders_used": 1,
+        "inductions_used": 1,
+        "max_binders": 8,
+        "max_inductions": 2,
+        "goal_sha256": "ed078d9968fd5a15339ffc19baec3b2dbd3c424572f961f75302eb36c38eba77",
+        "proof_sha256": "16ea06d2a5993fd14b0b927bfd31e0dcbd22f77d460609e24d338faa8f5b6107",
+        "target_content_sha256": "d62faf4b40988650461efb3f318470a265337f26e2d1b03fc6f17d0d2ec57e7d",
+        "external_artifact_sha256": "7586fe6fea6b1c8a3703f6e3e09303fc38bcb496071b331cdc55378426924d73",
+        "formal_statement_sha256": "c35abe86d23e89742672f0137d7e5a2bac3ae8369b4aac6486cbd7ebd15247ef",
+        "registry_sha256_at_registration": "3ed6ba0ecc36121504ef6d0aefe2e051734d1a21d7689e8cd1b56d1dbdd04ec9",
+        "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-apply-statement-adapter-v1.json",
+        "induction_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-apply-v1.json",
+        "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitFalseApply"
+      },
+      "notes": "Derived from a proof-isolated statement import of the pinned Mathlib v4.30.0 declaration `Nat.bit_false_apply` (statement only -- `import_statement_ndjson` refuses any proof-bearing or trusted declaration, and the import admitted 60 declarations with 0 axioms), handed to the target-agnostic producer `axeyum_lean_import::producers::bounded_induction::propose_bounded_induction`. No proof code was written for this fact: the same producer, unchanged, closed three sibling facts of this family in the same run and declined six others with typed reasons. The registered checker (scripts/check-autogenesis-nat-bit-constructor-family.py) replays every accept from the hash-pinned export through a fresh independent kernel, requires every receipt field to match this row, re-runs the six declines and requires them to still decline, and re-runs an outcome-blind FALSE mutation control and requires it to be refused."
+    }
+  ],
   "provenance": {
     "date": "2026-08-29",
     "established_by": "not established in this ledger",
@@ -26,5 +59,7 @@
       }
     ]
   },
-  "notes": "Open in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration."
+  "notes": "CLOSED BY AXEYUM AUTOGENESIS. The registered operation authoritative-mathlib-nat-bit-constructor-family-v1 closes FOUR previously open sibling facts of draw 19's `natural-bit-constructor` family with one target-agnostic producer and no per-target proof code -- the exit criterion docs/top-three-focus-plan-2026-08.md Priority 1 has asked for since August. The producer is `propose_bounded_induction` (peel the leading telescope, `Eq.refl` at the terminal, and where that is stuck one bounded structural induction plus one congruence rewrite driven by the induction hypothesis); it predates this closure and was not modified for it. See ADR-1570 and artifacts/autogenesis/producer-contracts/natural-bit-constructor-family-v1.json.\n\n--- PRE-CLOSURE RECORD, RETAINED AS HISTORY ---\n\nOpen in Axeyum. The external theorem declaration is prior art, not a locally constructed proof. formal.statement is a BYTE-IDENTICAL quotation of the pinned extractor's pretty-printed type. This row carries the QUOTATION grade, weaker than the 214 nursery-v1 rows, which were re-elaborated as axioms after `import Mathlib` and accepted: a pretty-printed type is not guaranteed to re-parse and this one has not been tried. Preregistered in artifacts/autogenesis/nursery-v2-extension.json, which carries the partition; that manifest, not this file, is the split authority. Screened against the mirror-divergence registry and the statable-here vocabulary before preregistration.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
 }

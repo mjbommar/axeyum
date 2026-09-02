@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-bit-constructor-bit-ne-zero-iff-decline-v1",
+  "state": "clean-import-producer-declines-unsupported-iff-shape",
+  "contract": "artifacts/autogenesis/producer-contracts/natural-bit-constructor-family-v1.json",
+  "contract_sha256": "38aaecb9abf7fa786042eea6f7bc7ffecece13f63a3c8a8a97df9d1c245bed72",
+  "fact_id": "F:ml430-nat-bit-ne-zero-iff-d811128e",
+  "fact_sha256": "641d05da04895768e2fa9738a176d8c99af2455afbf0075bcea6a42802abbf08",
+  "nursery_partition": "development",
+  "lane": "flywheel-3",
+  "date": "2026-09-02",
+  "adapter": {
+    "host": "s5",
+    "path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumFlywheel3NatBitFamilyV1.lean",
+    "tracked_copy": "scripts/lean/autogenesis_statement_adapter_nat_bit_family_v1.lean",
+    "namespace": "Axeyum.Autogenesis.Statement.NatBitFamily",
+    "definition": "bitNeZeroIff",
+    "statement": "∀ {n : ℕ} {b : Bool}, Nat.bit b n ≠ 0 ↔ n = 0 → b = true",
+    "mathlib_source": "pinned Mathlib v4.30.0 declaration `Nat.bit_ne_zero_iff`",
+    "note": "batched: one adapter file carries all ten members of this family, one `lake env lean` compile and ten `lean4export` invocations for the whole dispatch."
+  },
+  "identity": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean_version": "4.30.0",
+    "lean4export_version": "3.1.0",
+    "export_path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-bit-constructor-family-v1/bit-ne-zero-iff.ndjson",
+    "export_ndjson_sha256": "ae0d4d197489a1b97d6932fc1b70120da995b762ed5d509f816836b0ecbb586e",
+    "export_records": 1004,
+    "export_stderr_bytes": 0
+  },
+  "import": {
+    "tool": "crates/axeyum-lean-import/examples/statement_adapter_import.rs",
+    "result": "clean",
+    "axioms": 0
+  },
+  "producer": {
+    "tool": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "module": "axeyum_lean_import::producers::bounded_induction::propose_bounded_induction",
+    "result": "declined",
+    "decline_reason": "UnsupportedIffShape",
+    "decline_message": "terminal goal is not an exact Eq application after transparent reduction",
+    "stage": "producer",
+    "analysis": "`Nat.bit b n != 0 <-> (n = 0 -> b = true)`. An `Iff` whose left side is itself a `Ne` (an arrow into `False`) and whose right side is an implication; the producer's terminal test sees neither an `Eq` nor anything it can peel further."
+  },
+  "effects": {
+    "fact_status_changes": 0,
+    "evidence_rows_added": 0,
+    "operations_registered": 0,
+    "kernel_declarations_added": 0
+  },
+  "disposition": "epistemic_status stays open; no operation registered per ADR-0602 (admission precedes registration). The four SIBLING members the same producer did close in this dispatch are registered as authoritative-mathlib-nat-bit-constructor-family-v1.",
+  "full_writeup": "docs/research/09-decisions/adr-1570-one-operation-closed-four-sibling-facts-and-the-other-six-say-what-is-missing.md"
+}

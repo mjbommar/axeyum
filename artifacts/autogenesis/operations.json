@@ -1737,6 +1737,86 @@
         "axiom_footprint_policy": "must-be-empty",
         "axiom_footprint": []
       }
+    },
+    {
+      "id": "authoritative-mathlib-nat-bit-constructor-family-v1",
+      "scope": "authoritative",
+      "reviewed_gate_mentions": [
+        "check-autogenesis-nat-bit-constructor-family.py"
+      ],
+      "applicability": {
+        "fact_ids": [
+          "F:ml430-nat-bit-false-98b0bf2a",
+          "F:ml430-nat-bit-false-apply-5962146d",
+          "F:ml430-nat-bit-true-2456e237",
+          "F:ml430-nat-bit-true-apply-02338ebc"
+        ],
+        "formal_languages": [
+          "lean4-surface"
+        ],
+        "fragments": [
+          "Nat"
+        ]
+      },
+      "producer": {
+        "operation": "bounded-induction-reflexivity-v1",
+        "implementation": "crates/axeyum-lean-import/src/producers/bounded_induction.rs",
+        "input_kind": "axeyum-proof-isolated-kernel-goal",
+        "output_kind": "axeyum-bounded-induction-candidate"
+      },
+      "checker": {
+        "operation": "axeyum-lean-import/bounded-induction-operation-v1",
+        "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+        "input_kind": "axeyum-bounded-induction-candidate",
+        "output_kind": "axeyum-source-bound-kernel-evidence-v1"
+      },
+      "executor": {
+        "driver": "axeyum-lean-import/bounded-induction-multi-target-v1",
+        "implementation": "scripts/execute-autogenesis-operation.py",
+        "input_fact_id": "F:ml430-nat-bit-false-98b0bf2a",
+        "additional_fact_ids": [
+          "F:ml430-nat-bit-false-apply-5962146d",
+          "F:ml430-nat-bit-true-2456e237",
+          "F:ml430-nat-bit-true-apply-02338ebc"
+        ],
+        "targets": [
+          {
+            "fact_id": "F:ml430-nat-bit-false-98b0bf2a",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitFalse"
+          },
+          {
+            "fact_id": "F:ml430-nat-bit-false-apply-5962146d",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-apply-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-apply-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitFalseApply"
+          },
+          {
+            "fact_id": "F:ml430-nat-bit-true-2456e237",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-true-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-true-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitTrue"
+          },
+          {
+            "fact_id": "F:ml430-nat-bit-true-apply-02338ebc",
+            "statement_adapter_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-true-apply-statement-adapter-v1.json",
+            "induction_manifest": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-true-apply-v1.json",
+            "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitTrueApply"
+          }
+        ],
+        "max_binders": 8,
+        "max_inductions": 2,
+        "timeout_seconds": 120,
+        "expected_evidence_label": "kernel-term-mathlib-nat-bit-constructor-family-axiom-free"
+      },
+      "admission": {
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean",
+        "evidence_kind": "kernel-term",
+        "axiom_footprint_policy": "must-be-empty",
+        "axiom_footprint": []
+      }
     }
   ]
 }

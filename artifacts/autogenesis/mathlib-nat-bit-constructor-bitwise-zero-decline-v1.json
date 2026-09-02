@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-nat-bit-constructor-bitwise-zero-decline-v1",
+  "state": "import-refuses-trusted-declaration-producer-never-ran",
+  "contract": "artifacts/autogenesis/producer-contracts/natural-bit-constructor-family-v1.json",
+  "contract_sha256": "38aaecb9abf7fa786042eea6f7bc7ffecece13f63a3c8a8a97df9d1c245bed72",
+  "fact_id": "F:ml430-nat-bitwise-zero-7c0e3f82",
+  "fact_sha256": "2136ca123c16982e04ceabdf59bc74a8d620fdbdfd90c9c441497ec74f15184d",
+  "nursery_partition": "development",
+  "lane": "flywheel-3",
+  "date": "2026-09-02",
+  "adapter": {
+    "host": "s5",
+    "path": "/home/mjbommar/lean-import-scale/mathlib4/AxeyumFlywheel3NatBitFamilyV1.lean",
+    "tracked_copy": "scripts/lean/autogenesis_statement_adapter_nat_bit_family_v1.lean",
+    "namespace": "Axeyum.Autogenesis.Statement.NatBitFamily",
+    "definition": "bitwiseZero",
+    "statement": "∀ {f : Bool → Bool → Bool}, Nat.bitwise f 0 0 = 0",
+    "mathlib_source": "pinned Mathlib v4.30.0 declaration `Nat.bitwise_zero`",
+    "note": "batched: one adapter file carries all ten members of this family, one `lake env lean` compile and ten `lean4export` invocations for the whole dispatch."
+  },
+  "identity": {
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "lean_version": "4.30.0",
+    "lean4export_version": "3.1.0",
+    "export_path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-bit-constructor-family-v1/bitwise-zero.ndjson",
+    "export_ndjson_sha256": "4638d57d819d1b032976a227a5aae7401dc0bd7320dc01588cb439a3fa77b07c",
+    "export_records": 13254,
+    "export_stderr_bytes": 0
+  },
+  "import": {
+    "tool": "crates/axeyum-lean-import/examples/statement_adapter_import.rs",
+    "result": "refused"
+  },
+  "producer": {
+    "tool": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "module": "axeyum_lean_import::producers::bounded_induction::propose_bounded_induction",
+    "result": "declined",
+    "decline_reason": "TrustedDeclaration",
+    "decline_message": "TrustedDeclaration { name: \"dif_pos\", kind: Theorem }",
+    "stage": "import",
+    "analysis": "The producer NEVER RAN. Elaborating the statement `Nat.bitwise f 0 0 = 0` as a bare `Prop` pulls in, transitively, the already-proved Mathlib theorem `dif_pos` -- a byproduct of `Nat.bitwise`'s well-founded-recursion compilation -- and `import_statement_ndjson`'s fail-closed policy refuses any proof-bearing declaration in a proof-free statement stream. This is the SAME structurally-earlier gate that took 15 of 27 dispatches on 2026-08-27 (doc 292), reconfirmed here on a family neither of those contracts covered. A shape predicate cannot see it: nothing in `formal.statement` says whether the statement elaborates through a theorem."
+  },
+  "effects": {
+    "fact_status_changes": 0,
+    "evidence_rows_added": 0,
+    "operations_registered": 0,
+    "kernel_declarations_added": 0
+  },
+  "disposition": "epistemic_status stays open; no operation registered per ADR-0602 (admission precedes registration). The four SIBLING members the same producer did close in this dispatch are registered as authoritative-mathlib-nat-bit-constructor-family-v1.",
+  "full_writeup": "docs/research/09-decisions/adr-1570-one-operation-closed-four-sibling-facts-and-the-other-six-say-what-is-missing.md"
+}
