@@ -1325,6 +1325,17 @@ step adr-index      python3 scripts/gen-adr-index.py --check
 # 3,934 of 4,831 real edges for as long as it existed, precisely because
 # nothing re-derived it.
 step creal-declare-deps python3 scripts/creal-declare-deps.py --check --strict --self-check
+# The Python binding's prelude field table,
+# `crates/axeyum-py/src/kernel/prelude_fields.rs`, is generated because Rust has
+# no reflection. It was registered in NO gate until 2026-09-01, and that is
+# exactly how it reached main stale: the ADR-1512 registry split changed
+# `CRealPrelude`'s shape, the generator matched flat `pub <n>: NameId` lines
+# only, and the regeneration that unbroke the build silently deleted 69 of
+# `creal`'s 606 names from the Python surface. A missing field reads as "that
+# theorem does not exist". ~0.3s, pure Python plus one `rustfmt`, no cargo. Also
+# in scripts/check-merge-hygiene.sh, which is the gate that actually runs per
+# merge.
+step py-prelude-fields python3 scripts/gen-py-prelude-fields.py --check
 # ADR-0601 SS3: the import backlog (external-proved, epistemically-open facts)
 # as a produced, deterministic artifact rather than a bare count in
 # validate-facts.py's summary. docs/autogenesis/289-import-backlog-artifact.md.

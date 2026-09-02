@@ -1529,6 +1529,11 @@ generated-trackers:
     # --strict: the measured graph contradicts it; --self-check: the positive
     # control. Pure Python, ~1.1s.
     python3 scripts/creal-declare-deps.py --check --strict --self-check
+    # The Python binding's generated prelude field table. Registered in no
+    # gate until 2026-09-01, which is how it reached main stale: the ADR-1512
+    # registry split deleted 69 of creal's 606 names from the Python surface
+    # and nothing noticed. ~0.3s, pure Python.
+    python3 scripts/gen-py-prelude-fields.py --check
     # ADR-0601 SS3: the import backlog as a produced artifact, not a bare
     # count. docs/autogenesis/289-import-backlog-artifact.md.
     python3 -m unittest scripts.tests.test_gen_import_backlog

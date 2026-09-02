@@ -2,7 +2,7 @@
 # Post-merge hygiene: the things that have actually gone wrong when a
 # coordinator merges a lane branch, in one command that takes a few seconds.
 #
-# EIGHT are listed below and SEVEN are enforced. The pinned-inventory one is
+# NINE are listed below and EIGHT are enforced. The pinned-inventory one is
 # written down with the reason it is not gated (there are no live subjects, so
 # a guard for it could not fail), because a header claiming more checks than
 # the body enforces is exactly the kind of gap this file exists to close.
@@ -67,7 +67,21 @@
 #      replaced (the hand-written table it succeeded named 3,934 of 4,831
 #      real edges). ~1.1s, pure Python over the source, no cargo.
 #
-# Exit 0 only when all seven enforced checks pass. Each failure names its own
+#   8. THE SECOND GENERATED SOURCE FILE, AND THE ONE THAT PROVED THE RULE.
+#      `crates/axeyum-py/src/kernel/prelude_fields.rs` is the Python binding's
+#      `{field name -> NameId}` table for all nine preludes, generated because
+#      Rust has no reflection. When lane `creal-split-2` moved `CRealPrelude`'s
+#      per-module names behind ADR-1512 registries (8dd580a1c), main stopped
+#      compiling; the regeneration that fixed that ALSO silently deleted 69 of
+#      `creal`'s 606 names from the Python surface, because the generator
+#      matched flat `pub <n>: NameId` lines only. Nothing caught it -- measured
+#      2026-09-01, `gen-py-prelude-fields.py --check` was registered in NO gate
+#      (`scripts/check.sh`, this file, the `justfile`, `hooks/pre-push`: zero
+#      hits), which is exactly why the stale file reached main. ~0.3s, pure
+#      Python plus one `rustfmt`, no cargo. Its exit 2 means "no `rustfmt`, so
+#      the question cannot be answered" and is reported, not failed.
+#
+# Exit 0 only when all eight enforced checks pass. Each failure names its own
 # remedy.
 set -u
 # `AXEYUM_MERGE_HYGIENE_ROOT` points the SHIPPED script at a throwaway tree, so
@@ -137,6 +151,34 @@ if ! creal_out=$(python3 scripts/creal-declare-deps.py --check --strict --self-c
   note "Run scripts/creal-declare-deps.py and commit BOTH"
   note "crates/axeyum-lean-kernel/src/creal/steps_generated.rs and"
   note "artifacts/refactor/creal-declare-deps.json."
+fi
+
+# `crates/axeyum-py/src/kernel/prelude_fields.rs` is the OTHER generated source
+# file, and it is the one that proved the rule. The registry split (8dd580a1c)
+# changed `CRealPrelude`'s shape; the generator matched flat `pub <n>: NameId`
+# lines only, so the regeneration that unbroke main dropped 69 of `creal`'s 606
+# names from the Python binding and no gate said a word -- because
+# `gen-py-prelude-fields.py --check` was registered in NO gate at all
+# (`check.sh`, this file, the justfile, `hooks/pre-push`: zero hits). ~0.3s,
+# pure Python plus one `rustfmt`, no cargo.
+#
+# EXIT 2 IS "CANNOT ANSWER", NOT A FAILURE. The committed file is `rustfmt`'s
+# fixed point, so on a host without `rustfmt` the comparison is against a
+# different text and every tree would read as stale. The generator says so and
+# exits 2; reporting that is honest, turning it red is noise.
+py_fields_out=$(python3 scripts/gen-py-prelude-fields.py --check 2>&1)
+py_fields_rc=$?
+py_fields_state=current
+if [ "$py_fields_rc" -eq 2 ]; then
+  py_fields_state="skipped (no rustfmt)"
+  note "gen-py-prelude-fields.py --check: SKIPPED (rustfmt not on PATH)"
+elif [ "$py_fields_rc" -ne 0 ]; then
+  fail=1
+  echo "FAIL: gen-py-prelude-fields.py --check"
+  printf '%s\n' "$py_fields_out" | sed 's/^/    /'
+  note "Run scripts/gen-py-prelude-fields.py and commit"
+  note "crates/axeyum-py/src/kernel/prelude_fields.rs. A prelude gained, lost or"
+  note "MOVED a name -- an ADR-1512 registry move shrinks the table silently."
 fi
 
 # --- 4. pinned inventory counts: DELIBERATELY NOT CHECKED HERE ---------------
@@ -225,7 +267,7 @@ else
 fi
 
 if [ "$fail" -eq 0 ]; then
-  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|PASS"
+  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|creal_steps_table=current|py_prelude_fields=$py_fields_state|pinned_inventories=$pins|import_backlog=ok|production_provenance=ok|theorem_ledger_consistency=ok|PASS"
   exit 0
 fi
 echo "MERGE_HYGIENE|FAILED"

@@ -252,6 +252,9 @@ def render() -> tuple[str, dict[str, int], dict[str, tuple[int, int]]]:
     return "\n".join(out), counts, split
 
 
+RUSTFMT_MISSING = False
+
+
 def rustfmt(text: str) -> str:
     """`text` as `rustfmt --edition 2024` would write it.
 
@@ -272,6 +275,8 @@ def rustfmt(text: str) -> str:
         )
         return scratch.read_text(encoding="utf-8")
     except FileNotFoundError:
+        global RUSTFMT_MISSING  # noqa: PLW0603 -- one process-wide capability fact
+        RUSTFMT_MISSING = True
         print("PRELUDE-FIELDS|WARN rustfmt not on PATH -- emitting unformatted")
         return text
     finally:
@@ -295,6 +300,20 @@ def main() -> int:
         print("PRELUDE-FIELDS|FAIL parsed zero fields")
         return 1
     if "--check" in sys.argv:
+        if RUSTFMT_MISSING:
+            # UNANSWERABLE, not stale. The committed file is `rustfmt`'s fixed
+            # point, so without `rustfmt` the comparison is against a different
+            # text and every tree reads as drifted. Exit 2 -- the repository's
+            # code for "no subject / cannot answer", as
+            # `recount-pinned-inventory.py` uses it -- so a gate can report the
+            # missing toolchain instead of a red that means nothing. Measured
+            # 2026-08-16, `just` and `lean` existed on one fleet host of five;
+            # a host-capability assumption in a gate is not a safe one.
+            print(
+                "PRELUDE-FIELDS|SKIP rustfmt not on PATH -- cannot compare "
+                "against the formatted fixed point"
+            )
+            return 2
         current = TARGET.read_text(encoding="utf-8") if TARGET.exists() else ""
         if current != text:
             print(f"PRELUDE-FIELDS|FAIL {TARGET} is stale -- rerun without --check")

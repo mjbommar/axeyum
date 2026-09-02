@@ -4568,6 +4568,12 @@ SUITES["artifact-ownership"] = (
 # gate rather than a weak suite: the marker branch is ONE `if`, and three
 # scenarios (a `.rs` file, a bare `=======` in a fact file, a control suite)
 # reach failure through it. Kill sets are reported as measured.
+#
+# M8/M9 are the two halves of the ADR-1512 guard and are deliberately split:
+# M8 removes the failure branch (a stale `prelude_fields.rs` stops being
+# reported) and M9 removes the exit-2 branch (a host without `rustfmt` starts
+# being reported as drift). Each must kill exactly one test -- a single mutant
+# over the whole block could not tell the two apart.
 # --------------------------------------------------------------------------
 
 SUITES["merge-hygiene"] = (
@@ -4608,6 +4614,16 @@ SUITES["merge-hygiene"] = (
             "M7 a stale creal STEPS table fails the gate",
             "if ! creal_out=$(python3 scripts/creal-declare-deps.py "
             "--check --strict --self-check 2>&1); then",
+            "if false; then",
+        ),
+        (
+            "M8 a stale Python prelude field table fails the gate",
+            'elif [ "$py_fields_rc" -ne 0 ]; then',
+            "elif false; then",
+        ),
+        (
+            "M9 exit 2 (no rustfmt) is SKIPPED, not a failure",
+            'if [ "$py_fields_rc" -eq 2 ]; then',
             "if false; then",
         ),
     ],
