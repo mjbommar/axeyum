@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-countrange-eq-zero-of-all-false",
+  "title": "A countRange over a predicate false everywhere below the bound is zero",
+  "statement": "For every f : Nat -> Bool and every n : Nat, if f k = Bool.false for every k < n, then Nat.countRange f n = Nat.zero. The false twin of Nat.countRange_const_true, which had none. Proved by induction on n with the hypothesis carried inside the motive: the base is Eq.refl, and the successor step is countRange f (succ j) = countRange f j + bool_select_nat (f j) 1 0, whose two summands the induction hypothesis and the assumption at j drive to zero. The route through Nat.countRange_compl (complement the constant-true predicate, then cancel) would work too, but needs an add-cancellation the direct induction does not, so it was not taken. The hypothesis is BOUNDED (k < n) and not pointwise-everywhere, which is what lets a consumer supply it after ruling out selection on a range rather than on all of Nat.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.countRange_eq_zero_of_all_false : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat.lt x2 x1) -> Eq.{1} Bool (x0 x2) Bool.false))) -> Eq.{1} AxNat (AxNat.countRange x0 x1) AxNat.zero)))",
+    "fragment": "Nat",
+    "free_symbols": [],
+    "kernel_theorem": "Nat.countRange_eq_zero_of_all_false"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-countrange-succ",
+    "F:nat-countrange-zero",
+    "F:nat-le-trans",
+    "F:nat-lt-succ-self"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-countrange-eq-zero-of-all-false-1",
+      "kind": "kernel-term",
+      "supports": "`Nat.countRange_eq_zero_of_all_false` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all eight preludes that build the naturals, AND its admitted type renders with BOTH the `Bool.false` in its hypothesis and the `AxNat.zero` in its conclusion. Anchoring on both is what makes this a checker rather than a name lookup: the near-miss theorem, and the one a careless edit would produce, is the same statement with `Bool.true` in the hypothesis (which would be false) or `x1` in the conclusion (which is `countRange_const_true` under the wrong name).",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>/dev/null 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^(nat|integer|characterization|rat|creal|complex|cpoint|ipc)[[:space:]]+theorem[[:space:]]+Nat\\.countRange_eq_zero_of_all_false[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(x0 x2\\) Bool\\.false.*Eq\\.\\{1\\} AxNat \\(AxNat\\.countRange x0 x1\\) AxNat\\.zero')\" = 8",
+      "notes": "Verified discriminating by scripts/new-fact.py before this file was written: the pattern matches the real output and its match count drops on mutated output. Anchored on the footprint column `0`, on `Eq.{1} Bool (x0 x2) Bool.false` (the bounded hypothesis) and on `Eq.{1} AxNat (AxNat.countRange x0 x1) AxNat.zero` (the conclusion), with the row count pinned at 8 -- one per prelude that builds the naturals. The count fails when the declaration disappears from any prelude; the `0` fails if an axiom enters the footprint; the two rendered fragments fail if the statement drifts while the name survives. Run 2026-09-02: 8 rows.",
+      "kernel_declaration": "Nat.countRange_eq_zero_of_all_false",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection rendered-type re-list"
+      ],
+      "checker_seconds": 20
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij.rs)",
+    "source": "docs/research/09-decisions/adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md"
+  },
+  "notes": "ADR-0603 grading: general constructive form. Row 2 (a boundary refutation) is EMPTY BY PROOF here -- the hypothesis is a decidable `Bool` equation on a finite range, so there is no Markov-style boundary to refute. Row 3 (the decidable-fragment exact form) is the concrete counting table in `crates/axeyum-lean-kernel/src/nat_prelude/count_range_bij_tests.rs`. Row 4 (a labelled import) is absent; nothing was imported. WHAT THIS DOES NOT SAY: it does not claim the converse. `countRange f n = 0` does NOT imply `f` is false below `n` by anything proved here, and that direction is not in the tree. It also says nothing about `f` above `n`, which is exactly why the hypothesis is bounded."
+}

@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2182,
+    "min_identity_bound": 2185,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -15775,6 +15775,20 @@
       "kernel_theorem": "Nat.coprime_of_lt_prime"
     },
     {
+      "fact_id": "F:nat-countrange-bij",
+      "language": "lean4",
+      "statement_sha256": "6686f3ee352c383048a987ffddea15ee0818b4a218d2fa22f1205dca99e8123c",
+      "prose_sha256": "fe79979261b8445a28954d0620b9fc1615ca8c73ed0f44282151d5eda32ee437",
+      "kernel_theorem": "Nat.countRange_bij"
+    },
+    {
+      "fact_id": "F:nat-countrange-bij-of-inverse",
+      "language": "lean4",
+      "statement_sha256": "565b9f9da684d3a34f0902dae6a11aa5877a922af908b9541d064542fe383b17",
+      "prose_sha256": "bcfed64e34fbcdbcea1299db713f999d015fb5ae26206614e812a23f0e593bd2",
+      "kernel_theorem": "Nat.countRange_bij_of_inverse"
+    },
+    {
       "fact_id": "F:nat-countrange-compl",
       "language": "lean4",
       "statement_sha256": "4cc54eb158a67ab95fabbac789a898cc6e71e47893cb0882aa0ef99fe0f20c49",
@@ -15801,6 +15815,13 @@
       "statement_sha256": "5f70204e93edf28944b8449271b0ed10a6d0778d2e325fae6ad7c78e33f60675",
       "prose_sha256": "99c7c87aba8844b4abe13a66695aa50507ed7a3a8e2eb3acb016a810fd2bcb07",
       "kernel_theorem": "Nat.countRange_eq_sumRange"
+    },
+    {
+      "fact_id": "F:nat-countrange-eq-zero-of-all-false",
+      "language": "lean4",
+      "statement_sha256": "37003dbcc75d4fc34d2c40d666a05ce1e832a9f7a607f71668ce26bf3200e830",
+      "prose_sha256": "f2ba3d43c00968ed05d54985ea6fc137cae24d9756049f71fcc5c4b6b697e617",
+      "kernel_theorem": "Nat.countRange_eq_zero_of_all_false"
     },
     {
       "fact_id": "F:nat-countrange-le",
