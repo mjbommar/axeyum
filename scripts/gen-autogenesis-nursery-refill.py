@@ -913,6 +913,118 @@ FAMILY_MODULES: dict[str, tuple[str, ...]] = {
     "natural-logarithm-base": ("Mathlib.Data.Nat.Log",),
     "natural-max-power-dividing": (
         "Mathlib.Data.Nat.MaxPowDiv", "Mathlib.NumberTheory.Bertrand"),
+    # --- draw 19, 2026-09-02 (ADR-1561) ---------------------------------------
+    # Draw 19 was refused twice -- ADR-1420 for draw 17's shape and ADR-1556 for
+    # this one -- because R5 needs TWO module-disjoint held-out families and the
+    # unowned pool could build at most one. ADR-1559's construction
+    # (`Nat.isPrime`, `Nat.primeCounting'`, `Nat.primeCounting`, `Nat.lcmUpto`:
+    # four Definitions with no theorem about any) opened
+    # `Mathlib.NumberTheory.{PrimeCounting,Chebyshev}` and took the screen to
+    # 196 viable tens and 219 module-disjoint pairs. This is the draw.
+    #
+    # WHY THIS DRAW IS TWO CROSS-TOPIC FAMILIES AND NOT TWO TEXTBOOK CHAPTERS,
+    # measured rather than apologised for. R11 allows at most 5 of 10 rows to be
+    # about a constant a development/train family publishes. Enumerated over
+    # EVERY module subset of the unowned pool up to six modules
+    # (docs/research/09-decisions/adr-1561-draw-19-screen.py), requiring each
+    # family's modules to share two leading path segments -- the obvious
+    # coherence constraint -- leaves 3 clean held-out bundles out of 168, and NO
+    # TWO OF THEM ARE MODULE-DISJOINT, so R5 cannot be met from topically tight
+    # families at all (all three are `Mathlib.NumberTheory.*` and all three draw
+    # `Chebyshev` + `PrimeCounting` + `PythagoreanTriples`). Each refusal
+    # elsewhere has a measured cause: `Mathlib.Data.Nat.Choose.*` collides on the
+    # topic segment `Choose` with `natural-binomial` and
+    # `natural-factorial-choose-and-squarefree` and runs 10/10 on vocabulary;
+    # `Mathlib.Data.Nat.{BinaryRec,Bitwise}` collides on `Bitwise` with
+    # `natural-bitwise` and `natural-bitwise-basics` at 9/10;
+    # `Mathlib.Data.Nat.Factorization.*` with `Multiplicity` runs 9/10 on
+    # `Nat.Prime`/`Nat.choose`/`Nat.Coprime`/`Nat.gcd`; the whole of
+    # `Mathlib.NumberTheory.{Chebyshev,PowModTotient,PrimeCounting,
+    # PrimesCongruentOne}` runs 6/10 on `Nat.totient`/`Nat.Coprime`/
+    # `Nat.factorial`. A held-out family here is therefore assembled ACROSS
+    # topics by construction -- which is what R11 is for, and which is the
+    # draw-10 precedent (`descent-and-well-ordering` = LeastGreatest +
+    # SumFourSquares + Order.Interval.Finset.Nat) rather than a departure.
+    #
+    # DRAW 10'S DEFERRAL OF `Mathlib.NumberTheory.{SumTwoSquares,
+    # PythagoreanTriples}` IS OVERTURNED HERE, on a measurement carried by
+    # ADR-1561. ADR-1556 found that deferral lives only in draw 10's comment
+    # above, is read by no guard, and states a preference -- "it is not worth a
+    # mild leak to buy slack" -- not a finding of non-blindness. Measured now:
+    # with both modules withheld the pool admits 47 clean held-out bundles and
+    # ZERO module-disjoint pairs at every module cap from four to six, and
+    # withholding either one ALONE also gives zero. The deferral is no longer a
+    # preference; it is the entire refusal. Its stated reason does not survive
+    # either: `Int.sq_ne_two_mod_four` (`z * z % 4 <> 2`) was called adjacent to
+    # the TRAIN family `integer-modular-equivalence`, whose whole published
+    # subject vocabulary is the single constant `Int.ModEq` -- which that row
+    # does not mention; it is about `%`, and none of that family's 20 rows is
+    # about a square. `Nat.sq_add_sq_mul` (Brahmagupta-Fibonacci) was named in
+    # the same sentence with no reason given at all. Both rows use ZERO
+    # constants any development or train family publishes, which by the
+    # enforced measure makes them among the LEAST adjacent rows in the pool.
+    #
+    # THE TWO HELD-OUT FAMILIES, R9- and R12-clean by measurement:
+    #
+    #   discrete-step-and-counting-bounds (cycle index 0) --
+    #   `Mathlib.Algebra.Order.Ring.Int` (3) + `Mathlib.NumberTheory.
+    #   PrimeCounting` (9) + `Mathlib.Tactic.IntervalCases` (2). One question:
+    #   what a discrete step buys you. Four rows are the integers' discreteness
+    #   (`not b <= a -> a + 1 <= b`) and its parity refinement (`Even (n - m) ->
+    #   (m + 2 <= n <-> m < n)`), one is the Frobenius/Chicken-McNugget
+    #   representability threshold, and five are the prime-counting function's
+    #   monotonicity, its subadditive step bound and where it vanishes.
+    #   Vocabulary 5 of 10 (the allowance), topic hits 0.
+    #
+    #   power-and-square-decompositions (cycle index 3) --
+    #   `Mathlib.Data.Nat.Factorization.Basic` (5) + `Mathlib.NumberTheory.
+    #   Chebyshev` (3) + `Mathlib.NumberTheory.PythagoreanTriples` (1) +
+    #   `Mathlib.NumberTheory.SumTwoSquares` (1) = exactly 10, none dropped.
+    #   One question: what can be pulled out of a number as a power or as a sum
+    #   of two squares. Prime-power splitting (`n = p ^ e * n'`, and
+    #   `n = 2 ^ k * m` with `m` odd), perfect-power recognition from coprime
+    #   exponents, the divisibility test by prime powers, Chebyshev's `lcmUpto`
+    #   bounded by the factorial, squares mod 4, and multiplicativity of sums of
+    #   two squares. Vocabulary 5 of 10 (the allowance), topic hits 0.
+    #
+    # THE TWO DISPATCHABLE FAMILIES are the two largest coherent blocks in the
+    # window between the held-out primaries, which is what the cycle needs:
+    # `natural-bit-constructor` (BinaryRec 7 + Bitwise 6) is `Nat.bit`'s
+    # constructor algebra, and `natural-binomial-bounds` (Choose.Bounds 7 +
+    # Choose.Dvd 3 + Choose.Sum 2) is the binomial coefficient's size bounds and
+    # its prime divisibility. Both are REFUSED for held-out on topic (`Bitwise`,
+    # `Choose`), which is exactly why they are the right development/train
+    # families: R11 is saying a lane already works that mathematics.
+    #
+    # PRIMARY-MODULE ORDERING IS CHOSEN, NOT INCIDENTAL, as in draws 4 and 10:
+    # the cycle is mechanical over `FAMILY_MODULES[f][0]` sorted
+    # lexicographically, and the SET plus each tuple's first element are picked
+    # to put the two held-out-safe families at cycle indices 0 and 3. Every
+    # tuple below is in plain alphabetical order, so "first element" is not a
+    # free parameter. Verified by running assign_partitions():
+    #
+    #   Mathlib.Algebra.Order.Ring.Int        discrete-step-and-counting-bounds  held-out
+    #   Mathlib.Data.Nat.BinaryRec            natural-bit-constructor            development
+    #   Mathlib.Data.Nat.Choose.Bounds        natural-binomial-bounds            train
+    #   Mathlib.Data.Nat.Factorization.Basic  power-and-square-decompositions    held-out
+    #
+    # No target outcome was consulted, and both held-out families' R11
+    # disclosure reviews were recorded in holdout-adjacency-review-v1.json
+    # before the draw.
+    "discrete-step-and-counting-bounds": (
+        "Mathlib.Algebra.Order.Ring.Int",
+        "Mathlib.NumberTheory.PrimeCounting",
+        "Mathlib.Tactic.IntervalCases"),
+    "natural-bit-constructor": (
+        "Mathlib.Data.Nat.BinaryRec", "Mathlib.Data.Nat.Bitwise"),
+    "natural-binomial-bounds": (
+        "Mathlib.Data.Nat.Choose.Bounds", "Mathlib.Data.Nat.Choose.Dvd",
+        "Mathlib.Data.Nat.Choose.Sum"),
+    "power-and-square-decompositions": (
+        "Mathlib.Data.Nat.Factorization.Basic",
+        "Mathlib.NumberTheory.Chebyshev",
+        "Mathlib.NumberTheory.PythagoreanTriples",
+        "Mathlib.NumberTheory.SumTwoSquares"),
 }
 
 FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
@@ -1026,6 +1138,25 @@ FAMILY_ROUTES: dict[str, tuple[str, ...]] = {
         "kernel-induction", "recursive-function-reconstruction"),
     "natural-max-power-dividing": (
         "divisibility-library-application", "recursive-function-reconstruction"),
+    # --- draw 19, 2026-09-02 (ADR-1561) ---------------------------------------
+    # `discrete-step-and-counting-bounds` splits in two: the four integer
+    # discreteness/parity rows and the Frobenius threshold are order-library
+    # application, while `Monotone Nat.primeCounting` and the two subadditive
+    # step bounds are induction over the counting recursion.
+    # `natural-bit-constructor` is `Nat.bit`'s constructor algebra, which is the
+    # `natural-bitwise` route: the bit-vector lowering hypothesis plus kernel
+    # recursion on `binaryRec`. `natural-binomial-bounds` is `natural-binomial`'s
+    # route -- induction on Pascal's rule plus the `Nat.choose`/`descFactorial`
+    # recursions. `power-and-square-decompositions` extracts a power out of a
+    # number, so it is the divisibility library plus induction on the exponent.
+    "discrete-step-and-counting-bounds": (
+        "kernel-induction", "kernel-library-application"),
+    "natural-bit-constructor": (
+        "bitvector-lowering-hypothesis", "kernel-recursion"),
+    "natural-binomial-bounds": (
+        "kernel-induction", "recursive-function-reconstruction"),
+    "power-and-square-decompositions": (
+        "divisibility-library-application", "kernel-induction"),
 }
 
 PER_FAMILY = 10
