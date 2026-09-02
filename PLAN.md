@@ -118,6 +118,8 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-09-02 | `dd5b54b68` | `invokes`, the third artifact-ownership classification: an orchestrator may name a guarded artifact to STAGE it and must regenerate it by calling the owner, checked by inspection. Gate FAIL→PASS with no artifact changed; 25 mutants, exit 0. |
+| 2026-09-02 | 8a8412634 | lane stub opened |
+| 2026-09-02 | f6e747001 | 3 rows added to `mirror-divergence-registry.json` (`Nat.land`/`Nat.lor`/`Nat.ldiff`, `class: recursion-principle`); `Nat.bitwise` deliberately left unregistered (would violate the registry's own G3 guard against its 3 already-settled mirrors); `docs/research/11-design-review/2026-09-02-land-lor-ldiff-are-recursion-principle-divergences.md` records the chain, file:line citations, and the empirical G3 failure text. No fact moved buckets (all 3 affected facts were already `DIVERGENCE-BLOCKED` via the pre-existing `Nat.testBit` row); each now carries a second, independent, checkable reason. |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -35774,6 +35776,99 @@ Next for whoever picks this up: the arm's staging list (`add`, `checkout`,
 `restore`, `rm`, `stage`, `update-index`) is a closed literal, and a new git
 subcommand that moves a file would be refused rather than misread — the safe
 direction, but someone will have to extend it deliberately.
+
+**divergence-bitwise (`DONE`, divergence-bitwise, 2026-09-02).** Took
+`testbit-codomain`'s named next action: `Nat.land`/`Nat.lor`/`Nat.ldiff`
+diverge from Mathlib by the same standard the registry applies to
+`Nat.minFac`. Registered three rows (`class: recursion-principle`), each
+read at the pinned commit `c5ea00351c28e24afc9f0f84379aa41082b1188f` --
+Mathlib builds `land`/`lor` from core's well-founded `Nat.bitwise`
+(`Init/Data/Nat/Bitwise/Basic.lean:27`, `decreasing_by`), `ldiff` from the
+same combinator one layer up (`Mathlib/Data/Nat/Bits.lean:147`); this
+kernel lands each as an independent structural fuel recursion
+(`nat_prelude/land.rs:90-190`, `lor.rs:113-217`, `ldiff.rs:120-228`), and
+its own general `Nat.bitwise` (`nat_prelude/bitwise.rs:339-482`) is ALSO
+fuel-based, never well-founded.
+
+**`Nat.bitwise` itself is deliberately NOT a standalone row.** A naive
+blanket surface form (`"&&&"`, `"|||"`, `"Nat.bitwise"`) was tried and
+measured, not assumed, to fail `check-dispatchable-frontier.py`'s own G3
+guard: `Nat.land` with `surface_forms: ["&&&"]` blocks 13 already-settled
+mirrors closed by this kernel's own `bitwise_and_eq_land`/`bitwise_or_eq_lor`
+bridge theorems (`nat_prelude/rec_agreement.rs:403-411`); `Nat.bitwise` with
+`surface_forms: ["Nat.bitwise"]` likewise blocks its own 3 settled mirrors
+and matches zero open ones. Per that guard's stated philosophy -- "a
+construction we have closed a mirror over does not diverge" -- registering
+either would be a false claim, the same over-blocking direction caught for
+`Max.max`/`Min.min` on 2026-09-01. The three rows landed instead use
+`surface_forms` scoped to the operator-composed-with-`.testBit` shape
+(`"&&& n).testBit"` etc.), matching Mathlib's own `testBit_land`/
+`testBit_lor`/`testBit_ldiff` argument names (`Mathlib/Data/Nat/Bitwise.lean
+:115,118,122`) -- the only shape currently unclosed.
+
+**`brief-step0.py` verdict move.** Grepping `artifacts/facts/F-ml430-*.json`
+for `land`/`lor`/`ldiff`/`bitwise` (by id/title, the reliable axis --
+operator-notation false-positives on `formal.statement` substrings were
+ruled out by hand) found 13 facts total: **10 already `proved`** (`and-comm`,
+`and-assoc`, `and-le-left`, `and-le-right`, `and-self`, `and-div-two`,
+`and-mod-two-eq-one`, `and-one-is-mod`, `and-or-distrib-left`,
+`and-or-distrib-right`, plus `land-comm`/`land-assoc`/`land-bit`/`lor-comm`/
+`lor-assoc`/`lor-bit`/`ldiff-bit`/`bitwise-bit`/`bitwise-comm`/
+`bitwise-swap` -- 19 distinct ids across the `nat-and-*`/`nat-land-*`/
+`nat-lor-*`/`nat-ldiff-*`/`nat-bitwise-*` families, not the ~10-20 the brief
+predicted for the OPEN set specifically) and exactly **3 open**:
+`F:ml430-nat-testbit-land-dfef7ca4`, `F:ml430-nat-testbit-lor-7644e067`,
+`F:ml430-nat-testbit-ldiff-16f94162`. `python3 scripts/brief-step0.py` on
+all three, before and after: **all three were ALREADY `DIVERGENCE-BLOCKED`
+before this lane**, via the pre-existing `Nat.testBit` row (its own `why`
+field already narrated this exact chain as item 3). After: each now shows
+**two** independent `DIVERGENCE-BLOCKED` lines (`Nat.testBit (codomain)` +
+`Nat.land`/`Nat.lor`/`Nat.ldiff (recursion-principle)`). No fact moved
+buckets -- expected and documented, not a defect: the value is an
+independent, second, checkable reason plus G3/`--screen` coverage against a
+future misclosure or a future preregistration of this same composite shape.
+
+**Frontier and census counts, before vs. after (registry swapped both ways
+against the identical fact/nursery snapshot):**
+
+| | before (9 registry rows) | after (12 registry rows) |
+| --- | --- | --- |
+| `check-dispatchable-frontier.py --json`: `blocked` | 12 | 12 |
+| `check-dispatchable-frontier.py --json`: `dispatchable` | 2 | 2 |
+| `check-dispatchable-frontier.py --json`: `guard_failures` | 1 (pre-existing `G7 queue-below-floor`, unrelated) | 1 (same) |
+| `frontier-shape-census.py --print`: `divergence-blocked` | 9 | 9 |
+| `frontier-shape-census.py --print`: `genuinely targetable` | 4 | 4 |
+
+Unchanged in every column. Full chain, empirical G3 failure text, and file:
+line citations on both sides in
+[2026-09-02-land-lor-ldiff-are-recursion-principle-divergences.md](docs/research/11-design-review/2026-09-02-land-lor-ldiff-are-recursion-principle-divergences.md).
+
+**Held-out check (deliverable 4).** All three affected `ml430` facts are
+`partition: development`, family `natural-bitwise`, confirmed both by
+reading `artifacts/autogenesis/nursery-v1.json` directly and by calling
+`check-dispatchable-frontier.py`'s own `load_partitions()` -- none is in the
+`held` set. Registry rows are about declarations, not facts, so this was
+never expected to arise, and it did not.
+
+**Verified.** `python3 scripts/frontier-shape-census.py --check`: PASS
+(committed artifact already matches fresh recomputation -- no `--write`
+needed, since no fact moved buckets). `python3
+scripts/gen-obstruction-producers.py --check`: `OK`. `python3
+scripts/check-obstruction-producers.py`: `OK -- 7 obstruction(s) classified,
+2 producer contract(s) compiled, all guards passed` (both producers already
+`kind=fulfilled`, unrelated to this lane's change -- the `P2` failure
+`testbit-codomain` recorded on `main` was already fixed by lane
+`obstruction-producers-red` before this lane merged `main`). `python3
+scripts/validate-facts.py`: `2606 facts checked, 0 errors`. `python3
+scripts/check-mirror-statement-fidelity.py`:
+`MIRROR_STATEMENT_FIDELITY|facts=2606|mirrors=716|hash_verified=702|
+unpinned=14|violations=0|verdict=PASS`. No ADR needed (no decision
+reversed).
+
+**Did not run:** `just check`/`./scripts/check.sh` (Rust workspace gate --
+this lane touched no Rust or fact-ledger content, only the registry JSON and
+docs; `just brief`/`shape_search` rebuild not attempted, no cargo needed per
+brief). `cargo` was not invoked at all.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
