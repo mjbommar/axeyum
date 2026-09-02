@@ -17,7 +17,7 @@
 # tree still shows what needs a hand.
 set -u
 BRANCH="${1:?usage: lane-merge-land.sh <branch>}"
-GENERATED=(PLAN.md docs/research/09-decisions/README.md artifacts/autogenesis/frontier-shape-census-v1.json artifacts/import-backlog.json docs/plan/generated/production-provenance-ledger.md)
+GENERATED=(PLAN.md docs/research/09-decisions/README.md artifacts/autogenesis/frontier-shape-census-v1.json artifacts/refactor/private-helper-census.json artifacts/import-backlog.json docs/plan/generated/production-provenance-ledger.md)
 
 # A DIRTY TREE BEFORE THE MERGE GETS SWEPT INTO THE MERGE COMMIT.
 # Line 44 below is `git add -A -- PLAN.md docs/ artifacts/ scripts/ crates/
@@ -83,6 +83,11 @@ python3 scripts/gen-production-provenance-ledger.py > /tmp/lane-merge-land.prov 
 # which the gate reports as skipped; only exit 1 stops here.
 python3 scripts/gen-py-prelude-fields.py > /tmp/lane-merge-land.pyfields 2>&1
 [ $? -eq 1 ] && { echo "LANE_MERGE_LAND|gen-py-prelude-fields failed" >&2; exit 1; }
+# The private-helper census is a function of the kernel SOURCE, so any merge
+# landing a kernel change stales it (three did on 2026-09-02 after it was
+# pinned). Same rule as the ledger artifacts above.
+python3 scripts/private-helper-census.py > /tmp/lane-merge-land.helpers 2>&1 || {
+  echo "LANE_MERGE_LAND|private-helper-census failed" >&2; exit 1; }
 python3 scripts/frontier-shape-census.py > /tmp/lane-merge-land.census 2>&1
 census_rc=$?
 if [ "$census_rc" -eq 1 ]; then

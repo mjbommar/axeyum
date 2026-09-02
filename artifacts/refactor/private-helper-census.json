@@ -14,31 +14,31 @@
     ]
   },
   "population": {
-    "files_scanned": 458,
-    "private_fns": 9030,
-    "private_fns_outside_tests": 7554,
-    "distinct_names": 7362,
-    "distinct_body_digests": 8037,
-    "duplicated_name_groups": 670,
-    "duplicated_body_groups": 364,
-    "sites_in_duplicated_body_groups": 1357,
-    "inline_step_fns": 6228,
-    "inline_step_name_groups": 492,
-    "inline_step_body_groups": 262,
-    "sites_in_inline_step_body_groups": 880
+    "files_scanned": 470,
+    "private_fns": 9245,
+    "private_fns_outside_tests": 7656,
+    "distinct_names": 7530,
+    "distinct_body_digests": 8219,
+    "duplicated_name_groups": 687,
+    "duplicated_body_groups": 376,
+    "sites_in_duplicated_body_groups": 1402,
+    "inline_step_fns": 6330,
+    "inline_step_name_groups": 499,
+    "inline_step_body_groups": 268,
+    "sites_in_inline_step_body_groups": 896
   },
   "by_name": [
     {
       "key": "new",
-      "count": 49,
+      "count": 53,
       "names": [
         "new"
       ],
-      "files": 49,
+      "files": 53,
       "carriers": [],
       "body_lines": 4,
       "signature": "fn new(kernel: &'k mut Kernel, int: IntPrelude) -> Self",
-      "test_file_members": 29,
+      "test_file_members": 33,
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:42",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:45",
@@ -51,7 +51,9 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/avg_pair_tests.rs:35",
         "crates/axeyum-lean-kernel/src/nat_prelude/bit_extra_tests.rs:33",
         "crates/axeyum-lean-kernel/src/nat_prelude/choose_factorial_add_tests.rs:24",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:49",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:49",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:104",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_root_tests.rs:68",
@@ -59,6 +61,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/find_greatest_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/floor_count_tests.rs:41",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:38",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:110",
         "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_lemmas_tests.rs:50",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_tests.rs:37",
@@ -70,6 +73,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/size_order_tests.rs:25",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_lemmas_tests.rs:85",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_tests.rs:50",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:100",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/unpair_tests.rs:53",
         "crates/axeyum-lean-kernel/src/string_prelude/all.rs:115",
@@ -157,15 +161,15 @@
     },
     {
       "key": "kernel",
-      "count": 32,
+      "count": 36,
       "names": [
         "kernel"
       ],
-      "files": 32,
+      "files": 36,
       "carriers": [],
       "body_lines": 3,
       "signature": "fn kernel(&mut self) -> &mut Kernel",
-      "test_file_members": 29,
+      "test_file_members": 33,
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:407",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:508",
@@ -177,7 +181,9 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/avg_pair_tests.rs:25",
         "crates/axeyum-lean-kernel/src/nat_prelude/bit_extra_tests.rs:23",
         "crates/axeyum-lean-kernel/src/nat_prelude/choose_factorial_add_tests.rs:14",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:26",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:39",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_root_tests.rs:58",
@@ -185,6 +191,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/find_greatest_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/floor_count_tests.rs:31",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:28",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:34",
         "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd_tests.rs:26",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_lemmas_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_tests.rs:27",
@@ -197,21 +204,22 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/size_order_tests.rs:15",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_lemmas_tests.rs:75",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_tests.rs:40",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:34",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/unpair_tests.rs:43"
       ]
     },
     {
       "key": "nat_state",
-      "count": 32,
+      "count": 36,
       "names": [
         "nat_state"
       ],
-      "files": 32,
+      "files": 36,
       "carriers": [],
       "body_lines": 3,
       "signature": "fn nat_state(&mut self) -> &mut NatState",
-      "test_file_members": 29,
+      "test_file_members": 33,
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:411",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:512",
@@ -223,7 +231,9 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/avg_pair_tests.rs:29",
         "crates/axeyum-lean-kernel/src/nat_prelude/bit_extra_tests.rs:27",
         "crates/axeyum-lean-kernel/src/nat_prelude/choose_factorial_add_tests.rs:18",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:30",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:43",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_root_tests.rs:62",
@@ -231,6 +241,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/find_greatest_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/floor_count_tests.rs:35",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:32",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:38",
         "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd_tests.rs:30",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_lemmas_tests.rs:44",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_tests.rs:31",
@@ -243,6 +254,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/size_order_tests.rs:19",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_lemmas_tests.rs:79",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_tests.rs:44",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:38",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/unpair_tests.rs:47"
       ]
@@ -839,6 +851,32 @@
       ]
     },
     {
+      "key": "built",
+      "count": 12,
+      "names": [
+        "built"
+      ],
+      "files": 12,
+      "carriers": [],
+      "body_lines": 12,
+      "signature": "fn built() -> (Kernel, ComplexPrelude)",
+      "test_file_members": 12,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs:115",
+        "crates/axeyum-lean-kernel/src/complex/complex_tests.rs:18",
+        "crates/axeyum-lean-kernel/src/creal/creal_tests.rs:21",
+        "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs:7",
+        "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs:168",
+        "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs:108",
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul_tests.rs:33",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_tests.rs:45",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs:10",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank_tests.rs:45",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs:7",
+        "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps_tests.rs:44"
+      ]
+    },
+    {
       "key": "cabs",
       "count": 12,
       "names": [
@@ -946,6 +984,34 @@
       ]
     },
     {
+      "key": "count_range",
+      "count": 11,
+      "names": [
+        "count_range"
+      ],
+      "files": 11,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn count_range(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:102",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:141",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs:101",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:109",
+        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:72",
+        "crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs:88",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:143",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:246",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_mul.rs:109",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:109",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank.rs:105"
+      ]
+    },
+    {
       "key": "induct",
       "count": 11,
       "names": [
@@ -1025,53 +1091,29 @@
       ]
     },
     {
-      "key": "built",
+      "key": "bool_congr_nat",
       "count": 10,
       "names": [
-        "built"
-      ],
-      "files": 10,
-      "carriers": [],
-      "body_lines": 12,
-      "signature": "fn built() -> (Kernel, ComplexPrelude)",
-      "test_file_members": 10,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs:115",
-        "crates/axeyum-lean-kernel/src/complex/complex_tests.rs:18",
-        "crates/axeyum-lean-kernel/src/creal/creal_tests.rs:21",
-        "crates/axeyum-lean-kernel/src/creal_point/creal_point_tests.rs:7",
-        "crates/axeyum-lean-kernel/src/rat_prelude/cas_geometry_bridge_tests.rs:168",
-        "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs:108",
-        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul_tests.rs:33",
-        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_invertible_tests.rs:10",
-        "crates/axeyum-lean-kernel/src/rat_prelude/rat_prelude_tests.rs:7",
-        "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps_tests.rs:44"
-      ]
-    },
-    {
-      "key": "count_range",
-      "count": 10,
-      "names": [
-        "count_range"
+        "bool_congr_nat"
       ],
       "files": 10,
       "carriers": [
         "NatDev"
       ],
-      "body_lines": 3,
-      "signature": "fn count_range(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> ExprId",
+      "body_lines": 9,
+      "signature": "fn bool_congr_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, body: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:102",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:141",
-        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs:101",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:109",
-        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:72",
-        "crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs:88",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:143",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:246",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_mul.rs:109",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:109"
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:177",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
+        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:1254",
+        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:286",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
       ]
     },
     {
@@ -1177,31 +1219,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_dvd_chain.rs:102",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_gcd_mul.rs:105",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:177"
-      ]
-    },
-    {
-      "key": "bool_congr_nat",
-      "count": 9,
-      "names": [
-        "bool_congr_nat"
-      ],
-      "files": 9,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn bool_congr_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, body: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:177",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
-        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:1254",
-        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
       ]
     },
     {
@@ -1406,6 +1423,56 @@
       ]
     },
     {
+      "key": "selector",
+      "count": 8,
+      "names": [
+        "selector"
+      ],
+      "files": 8,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 10,
+      "signature": "fn selector(d: &mut IntDev<'_>, pred: ExprId, f: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:88",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_coprime.rs:55",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_factor.rs:43",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_modeq.rs:43",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_pow.rs:64",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_theorem.rs:135",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:123",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:150"
+      ]
+    },
+    {
+      "key": "shifted",
+      "count": 8,
+      "names": [
+        "shifted"
+      ],
+      "files": 8,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn shifted(d: &mut NatDev<'_>, f: ExprId) -> ExprId",
+      "test_file_members": 1,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/binary.rs:477",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:1147",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:119",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile.rs:99",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:135",
+        "crates/axeyum-lean-kernel/src/nat_prelude/rectangle.rs:61",
+        "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:160",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:411"
+      ]
+    },
+    {
       "key": "shifted_fn",
       "count": 8,
       "names": [
@@ -1590,30 +1657,6 @@
       ]
     },
     {
-      "key": "selector",
-      "count": 7,
-      "names": [
-        "selector"
-      ],
-      "files": 7,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 10,
-      "signature": "fn selector(d: &mut IntDev<'_>, pred: ExprId, f: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:88",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_coprime.rs:55",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_factor.rs:43",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_modeq.rs:43",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_pow.rs:64",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_theorem.rs:135",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:123"
-      ]
-    },
-    {
       "key": "add",
       "count": 6,
       "names": [
@@ -1631,6 +1674,29 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:198",
         "crates/axeyum-lean-kernel/src/string_prelude/length_append.rs:157",
         "crates/axeyum-lean-kernel/src/string_prelude/substr_arithmetic.rs:179"
+      ]
+    },
+    {
+      "key": "add_regroup_four",
+      "count": 6,
+      "names": [
+        "add_regroup_four"
+      ],
+      "files": 6,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 27,
+      "signature": "fn add_regroup_four( d: &mut IntDev<'_>, np: NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/alternating.rs:1154",
+        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:321",
+        "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs:1541",
+        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:108"
       ]
     },
     {
@@ -1776,7 +1842,7 @@
         "crates/axeyum-lean-kernel/src/creal.rs:6256",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1413",
         "crates/axeyum-lean-kernel/src/int_prelude.rs:1882",
-        "crates/axeyum-lean-kernel/src/rat_prelude.rs:2575"
+        "crates/axeyum-lean-kernel/src/rat_prelude.rs:2742"
       ]
     },
     {
@@ -1799,28 +1865,6 @@
         "crates/axeyum-lean-kernel/src/ipc_soundness/tests.rs:19",
         "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:189",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:29"
-      ]
-    },
-    {
-      "key": "add_regroup_four",
-      "count": 5,
-      "names": [
-        "add_regroup_four"
-      ],
-      "files": 5,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 27,
-      "signature": "fn add_regroup_four( d: &mut IntDev<'_>, np: NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/alternating.rs:1154",
-        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:321",
-        "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs:1541",
-        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325"
       ]
     },
     {
@@ -1943,6 +1987,27 @@
         "crates/axeyum-lean-kernel/src/string_prelude/char_beq.rs:165",
         "crates/axeyum-lean-kernel/src/string_prelude/decidable.rs:149",
         "crates/axeyum-lean-kernel/src/string_prelude/str_beq.rs:174"
+      ]
+    },
+    {
+      "key": "bool_select_bool",
+      "count": 5,
+      "names": [
+        "bool_select_bool"
+      ],
+      "files": 5,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn bool_select_bool<D: NatOps>( d: &mut D, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:174",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:90",
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
+        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:92"
       ]
     },
     {
@@ -2319,28 +2384,6 @@
       ]
     },
     {
-      "key": "shifted",
-      "count": 5,
-      "names": [
-        "shifted"
-      ],
-      "files": 5,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn shifted(d: &mut NatDev<'_>, f: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/binary.rs:477",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:1147",
-        "crates/axeyum-lean-kernel/src/nat_prelude/rectangle.rs:61",
-        "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:160",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:411"
-      ]
-    },
-    {
       "key": "add_add_add_comm",
       "count": 4,
       "names": [
@@ -2376,26 +2419,6 @@
         "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:195",
         "crates/axeyum-lean-kernel/src/string_prelude/bool_predicates.rs:307",
         "crates/axeyum-lean-kernel/src/string_prelude/str_beq.rs:193"
-      ]
-    },
-    {
-      "key": "bool_select_bool",
-      "count": 4,
-      "names": [
-        "bool_select_bool"
-      ],
-      "files": 4,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn bool_select_bool<D: NatOps>( d: &mut D, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:174",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:90",
-        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
-        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87"
       ]
     },
     {
@@ -3191,6 +3214,24 @@
       ]
     },
     {
+      "key": "reduces_to",
+      "count": 4,
+      "names": [
+        "reduces_to"
+      ],
+      "files": 4,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn reduces_to(&mut self, term: ExprId, value: u32) -> bool",
+      "test_file_members": 4,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:171",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:156",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:185"
+      ]
+    },
+    {
       "key": "refl_bool",
       "count": 4,
       "names": [
@@ -3585,6 +3626,25 @@
         "crates/axeyum-lean-kernel/src/string_prelude/all_bool.rs:306",
         "crates/axeyum-lean-kernel/src/string_prelude/bool_predicates.rs:541",
         "crates/axeyum-lean-kernel/src/string_prelude/str_beq.rs:393"
+      ]
+    },
+    {
+      "key": "bool_select_congr",
+      "count": 3,
+      "names": [
+        "bool_select_congr"
+      ],
+      "files": 3,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn bool_select_congr( d: &mut NatDev<'_>, cond: ExprId, value: ExprId, h: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac.rs:251",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:282",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:304"
       ]
     },
     {
@@ -4442,6 +4502,42 @@
       ]
     },
     {
+      "key": "fold",
+      "count": 3,
+      "names": [
+        "fold"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 10,
+      "signature": "fn fold(d: &mut IntDev<'_>, p: CRealPrelude, op: Op, atoms: &[ExprId]) -> ExprId",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/complex/ring.rs:232",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:57",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:56"
+      ]
+    },
+    {
+      "key": "gcd",
+      "count": 3,
+      "names": [
+        "gcd"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 10,
+      "signature": "fn gcd(&self, other: &Self) -> Self",
+      "test_file_members": 1,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/expr.rs:145",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:202",
+        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:248"
+      ]
+    },
+    {
       "key": "guarded",
       "count": 3,
       "names": [
@@ -4715,6 +4811,23 @@
         "crates/axeyum-lean-kernel/src/creal/derivative.rs:947",
         "crates/axeyum-lean-kernel/src/creal/ivt.rs:528",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:6031"
+      ]
+    },
+    {
+      "key": "le_proof",
+      "count": 3,
+      "names": [
+        "le_proof"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 11,
+      "signature": "fn le_proof(&mut self, a: u32, b: u32) -> ExprId",
+      "test_file_members": 3,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:95",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:58",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:56"
       ]
     },
     {
@@ -5301,6 +5414,25 @@
       ]
     },
     {
+      "key": "rinv",
+      "count": 3,
+      "names": [
+        "rinv"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rinv(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/cancellation.rs:108",
+        "crates/axeyum-lean-kernel/src/creal/inverse.rs:191",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:154"
+      ]
+    },
+    {
       "key": "rmat_mul",
       "count": 3,
       "names": [
@@ -5357,6 +5489,26 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/diagonal.rs:111",
         "crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs:119",
         "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:92"
+      ]
+    },
+    {
+      "key": "row_sum",
+      "count": 3,
+      "names": [
+        "row_sum"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn row_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId",
+      "test_file_members": 1,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/diagonal.rs:159",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:36",
+        "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:140"
       ]
     },
     {
@@ -5889,6 +6041,24 @@
       ]
     },
     {
+      "key": "beq_false_ty",
+      "count": 2,
+      "names": [
+        "beq_false_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn beq_false_ty(d: &mut IntDev<'_>, r: ExprId, t: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:149",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:272"
+      ]
+    },
+    {
       "key": "bit",
       "count": 2,
       "names": [
@@ -5993,24 +6163,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:140",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:1884"
-      ]
-    },
-    {
-      "key": "bool_select_congr",
-      "count": 2,
-      "names": [
-        "bool_select_congr"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn bool_select_congr( d: &mut NatDev<'_>, cond: ExprId, value: ExprId, h: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac.rs:251",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:282"
       ]
     },
     {
@@ -6190,6 +6342,42 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:115",
         "crates/axeyum-lean-kernel/src/nat_prelude/binomial.rs:266"
+      ]
+    },
+    {
+      "key": "bounded_pointwise_bool",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_bool"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_bool(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:303",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:325"
+      ]
+    },
+    {
+      "key": "bounded_pointwise_nat",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_nat(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:316",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:338"
       ]
     },
     {
@@ -8892,6 +9080,22 @@
       ]
     },
     {
+      "key": "floor_sum",
+      "count": 2,
+      "names": [
+        "floor_sum"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 30,
+      "signature": "fn floor_sum(&mut self, pp_v: u32, q_v: u32, m_v: u32, n_v: u32) -> ExprId",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:76",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:63"
+      ]
+    },
+    {
       "key": "from",
       "count": 2,
       "names": [
@@ -8941,22 +9145,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:81",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:1200"
-      ]
-    },
-    {
-      "key": "gcd",
-      "count": 2,
-      "names": [
-        "gcd"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 10,
-      "signature": "fn gcd(&self, other: &Self) -> Self",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/expr.rs:145",
-        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:248"
       ]
     },
     {
@@ -9469,22 +9657,6 @@
       ]
     },
     {
-      "key": "le_proof",
-      "count": 2,
-      "names": [
-        "le_proof"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 11,
-      "signature": "fn le_proof(&mut self, a: u32, b: u32) -> ExprId",
-      "test_file_members": 2,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:58",
-        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:56"
-      ]
-    },
-    {
       "key": "le_transport_lhs",
       "count": 2,
       "names": [
@@ -9945,7 +10117,7 @@
       "test_file_members": 2,
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs:5008",
-        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:19963"
+        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:19983"
       ]
     },
     {
@@ -10897,6 +11069,22 @@
       ]
     },
     {
+      "key": "open",
+      "count": 2,
+      "names": [
+        "open"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 16,
+      "signature": "fn open(&mut self, tys: &[ExprId]) -> (Vec<ExprId>, LocalContext)",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:112",
+        "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:56"
+      ]
+    },
+    {
       "key": "or",
       "count": 2,
       "names": [
@@ -11613,6 +11801,38 @@
       ]
     },
     {
+      "key": "residue",
+      "count": 2,
+      "names": [
+        "residue"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn residue(pp: u32, a: u32, k: u32) -> u32",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:47",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:46"
+      ]
+    },
+    {
+      "key": "residue_fn",
+      "count": 2,
+      "names": [
+        "residue_fn"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 12,
+      "signature": "fn residue_fn(&mut self, ap: u32, a: u32) -> ExprId",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:135",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:118"
+      ]
+    },
+    {
       "key": "restate_as_difference",
       "count": 2,
       "names": [
@@ -11685,24 +11905,6 @@
       ]
     },
     {
-      "key": "rinv",
-      "count": 2,
-      "names": [
-        "rinv"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn rinv(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/cancellation.rs:108",
-        "crates/axeyum-lean-kernel/src/creal/inverse.rs:191"
-      ]
-    },
-    {
       "key": "rmat_id",
       "count": 2,
       "names": [
@@ -11739,22 +11941,21 @@
       ]
     },
     {
-      "key": "row_sum",
+      "key": "rset_row",
       "count": 2,
       "names": [
-        "row_sum"
+        "rset_row"
       ],
       "files": 2,
       "carriers": [
-        "IntDev",
-        "NatDev"
+        "IntDev"
       ],
-      "body_lines": 4,
-      "signature": "fn row_sum(d: &mut NatDev<'_>, ff: ExprId, n: ExprId) -> ExprId",
+      "body_lines": 3,
+      "signature": "fn rset_row(d: &mut IntDev<'_>, p: RatPrelude, t: ExprId, h: ExprId, m: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/diagonal.rs:159",
-        "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:140"
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:174",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs:6709"
       ]
     },
     {
@@ -11845,6 +12046,44 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/poly.rs:624",
         "crates/axeyum-lean-kernel/src/creal/polynomial.rs:390"
+      ]
+    },
+    {
+      "key": "select_bool_false",
+      "count": 2,
+      "names": [
+        "select_bool_false"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn select_bool_false( d: &mut NatDev<'_>, p: &NatPrelude, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1876",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:1959"
+      ]
+    },
+    {
+      "key": "select_bool_true",
+      "count": 2,
+      "names": [
+        "select_bool_true"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn select_bool_true( d: &mut NatDev<'_>, p: &NatPrelude, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1856",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:1946"
       ]
     },
     {
@@ -11969,6 +12208,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:434",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:511"
+      ]
+    },
+    {
+      "key": "sign_neg",
+      "count": 2,
+      "names": [
+        "sign_neg"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn sign_neg(pp: u32, a: u32, k: u32) -> bool",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:51",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:50"
       ]
     },
     {
@@ -12221,6 +12476,24 @@
       ]
     },
     {
+      "key": "succ_fn",
+      "count": 2,
+      "names": [
+        "succ_fn"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn succ_fn(d: &mut NatDev<'_>) -> ExprId",
+      "test_file_members": 1,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:129",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:112"
+      ]
+    },
+    {
       "key": "sum_maps_counts_exactly_the_maps_into_the_range",
       "count": 2,
       "names": [
@@ -12272,6 +12545,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/sum_maps_tests.rs:148",
         "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps_tests.rs:251"
+      ]
+    },
+    {
+      "key": "sum_range_if",
+      "count": 2,
+      "names": [
+        "sum_range_if"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn sum_range_if(d: &mut NatDev<'_>, pred: ExprId, f: ExprId, n: ExprId) -> ExprId",
+      "test_file_members": 1,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:162",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:160"
       ]
     },
     {
@@ -12408,7 +12699,7 @@
       "test_file_members": 2,
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/complex_tests.rs:560",
-        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:11783"
+        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:11803"
       ]
     },
     {
@@ -12515,6 +12806,22 @@
       ]
     },
     {
+      "key": "triangular",
+      "count": 2,
+      "names": [
+        "triangular"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn triangular(m: u32) -> u32",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:73",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:46"
+      ]
+    },
+    {
       "key": "true_intro",
       "count": 2,
       "names": [
@@ -12562,6 +12869,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/exponential.rs:645",
         "crates/axeyum-lean-kernel/src/creal/trig.rs:542"
+      ]
+    },
+    {
+      "key": "two_mul",
+      "count": 2,
+      "names": [
+        "two_mul"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 17,
+      "signature": "fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs:80",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:145"
       ]
     },
     {
@@ -12936,15 +13261,15 @@
   "by_body": [
     {
       "key": "8dc055de7e74ea3b",
-      "count": 29,
+      "count": 33,
       "names": [
         "kernel"
       ],
-      "files": 29,
+      "files": 33,
       "carriers": [],
       "body_lines": 3,
       "signature": "fn kernel(&mut self) -> &mut Kernel",
-      "test_file_members": 29,
+      "test_file_members": 33,
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/abundant_deficient_tests.rs:28",
         "crates/axeyum-lean-kernel/src/nat_prelude/add_choose_div_tests.rs:15",
@@ -12954,7 +13279,9 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/avg_pair_tests.rs:25",
         "crates/axeyum-lean-kernel/src/nat_prelude/bit_extra_tests.rs:23",
         "crates/axeyum-lean-kernel/src/nat_prelude/choose_factorial_add_tests.rs:14",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:26",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:39",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_root_tests.rs:58",
@@ -12962,6 +13289,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/find_greatest_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/floor_count_tests.rs:31",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:28",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:34",
         "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd_tests.rs:26",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_lemmas_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_tests.rs:27",
@@ -12973,21 +13301,22 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/size_order_tests.rs:15",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_lemmas_tests.rs:75",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_tests.rs:40",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:34",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/unpair_tests.rs:43"
       ]
     },
     {
       "key": "cc40e057b936bd88",
-      "count": 29,
+      "count": 33,
       "names": [
         "nat_state"
       ],
-      "files": 29,
+      "files": 33,
       "carriers": [],
       "body_lines": 3,
       "signature": "fn nat_state(&mut self) -> &mut NatState",
-      "test_file_members": 29,
+      "test_file_members": 33,
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/abundant_deficient_tests.rs:32",
         "crates/axeyum-lean-kernel/src/nat_prelude/add_choose_div_tests.rs:19",
@@ -12997,7 +13326,9 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/avg_pair_tests.rs:29",
         "crates/axeyum-lean-kernel/src/nat_prelude/bit_extra_tests.rs:27",
         "crates/axeyum-lean-kernel/src/nat_prelude/choose_factorial_add_tests.rs:18",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:30",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:43",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_root_tests.rs:62",
@@ -13005,6 +13336,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/find_greatest_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/floor_count_tests.rs:35",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:32",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:38",
         "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd_tests.rs:30",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_lemmas_tests.rs:44",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_tests.rs:31",
@@ -13016,21 +13348,22 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/size_order_tests.rs:19",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_lemmas_tests.rs:79",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_tests.rs:44",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:38",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:40",
         "crates/axeyum-lean-kernel/src/nat_prelude/unpair_tests.rs:47"
       ]
     },
     {
       "key": "1365fd38e975134f",
-      "count": 28,
+      "count": 32,
       "names": [
         "new"
       ],
-      "files": 28,
+      "files": 32,
       "carriers": [],
       "body_lines": 6,
       "signature": "fn new() -> Self",
-      "test_file_members": 28,
+      "test_file_members": 32,
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/abundant_deficient_tests.rs:38",
         "crates/axeyum-lean-kernel/src/nat_prelude/add_choose_div_tests.rs:25",
@@ -13040,7 +13373,9 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/avg_pair_tests.rs:35",
         "crates/axeyum-lean-kernel/src/nat_prelude/bit_extra_tests.rs:33",
         "crates/axeyum-lean-kernel/src/nat_prelude/choose_factorial_add_tests.rs:24",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:49",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:49",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:104",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_multiset_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/factorization_root_tests.rs:68",
@@ -13048,6 +13383,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/find_greatest_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/floor_count_tests.rs:41",
         "crates/axeyum-lean-kernel/src/nat_prelude/gauss_fold_sum_tests.rs:38",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:110",
         "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd_tests.rs:36",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_lemmas_tests.rs:50",
         "crates/axeyum-lean-kernel/src/nat_prelude/minmax_tests.rs:37",
@@ -13058,6 +13394,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/size_order_tests.rs:25",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_lemmas_tests.rs:85",
         "crates/axeyum-lean-kernel/src/nat_prelude/stirling_tests.rs:50",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:100",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:46",
         "crates/axeyum-lean-kernel/src/nat_prelude/unpair_tests.rs:53"
       ]
@@ -13605,6 +13942,34 @@
       ]
     },
     {
+      "key": "06654dcb5d689e72",
+      "count": 11,
+      "names": [
+        "bool_congr_nat",
+        "congr_bool_to_nat"
+      ],
+      "files": 11,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn congr_bool_to_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:650",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
+        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:333",
+        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
+        "crates/axeyum-lean-kernel/src/nat_prelude/size_order.rs:77",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:286",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
+      ]
+    },
+    {
       "key": "08ec557d365cf8ba",
       "count": 11,
       "names": [
@@ -13685,33 +14050,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:246",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_mul.rs:109",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:109"
-      ]
-    },
-    {
-      "key": "06654dcb5d689e72",
-      "count": 10,
-      "names": [
-        "bool_congr_nat",
-        "congr_bool_to_nat"
-      ],
-      "files": 10,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn congr_bool_to_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:650",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
-        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:333",
-        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
-        "crates/axeyum-lean-kernel/src/nat_prelude/size_order.rs:77",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
       ]
     },
     {
@@ -14650,6 +14988,24 @@
       ]
     },
     {
+      "key": "519a3a7f50025fe3",
+      "count": 4,
+      "names": [
+        "reduces_to"
+      ],
+      "files": 4,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn reduces_to(&mut self, term: ExprId, value: u32) -> bool",
+      "test_file_members": 4,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:171",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:156",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:185"
+      ]
+    },
+    {
       "key": "527b7a262ab84099",
       "count": 4,
       "names": [
@@ -14723,6 +15079,27 @@
         "crates/axeyum-lean-kernel/src/string_prelude/length.rs:153",
         "crates/axeyum-lean-kernel/src/string_prelude/map.rs:209",
         "crates/axeyum-lean-kernel/src/string_prelude/take_drop.rs:228"
+      ]
+    },
+    {
+      "key": "76722b63a5984345",
+      "count": 4,
+      "names": [
+        "add_regroup_four",
+        "regroup_four"
+      ],
+      "files": 4,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 28,
+      "signature": "fn regroup_four( d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:843",
+        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:108"
       ]
     },
     {
@@ -14824,6 +15201,24 @@
         "crates/axeyum-lean-kernel/src/creal/crossing.rs:118",
         "crates/axeyum-lean-kernel/src/creal/sup_laws.rs:102",
         "crates/axeyum-lean-kernel/src/creal/supremum.rs:890"
+      ]
+    },
+    {
+      "key": "bc2d5224bb3c75e1",
+      "count": 4,
+      "names": [
+        "built"
+      ],
+      "files": 4,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn built() -> (Kernel, RatPrelude)",
+      "test_file_members": 4,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul_tests.rs:33",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_tests.rs:45",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank_tests.rs:45",
+        "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps_tests.rs:44"
       ]
     },
     {
@@ -15883,6 +16278,25 @@
       ]
     },
     {
+      "key": "c4ee9ab49ad876fd",
+      "count": 3,
+      "names": [
+        "bool_select_bool"
+      ],
+      "files": 3,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn bool_select_bool( d: &mut NatDev<'_>, p: &NatPrelude, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
+        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:92"
+      ]
+    },
+    {
       "key": "c55efdf1cf1a7855",
       "count": 3,
       "names": [
@@ -16090,6 +16504,23 @@
         "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:194",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:535",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:234"
+      ]
+    },
+    {
+      "key": "f1ade58bc2c4ee4e",
+      "count": 3,
+      "names": [
+        "le_proof"
+      ],
+      "files": 3,
+      "carriers": [],
+      "body_lines": 11,
+      "signature": "fn le_proof(&mut self, a: u32, b: u32) -> ExprId",
+      "test_file_members": 3,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs:95",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:58",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:56"
       ]
     },
     {
@@ -16519,6 +16950,22 @@
       ]
     },
     {
+      "key": "2029ece490c31489",
+      "count": 2,
+      "names": [
+        "residue"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 3,
+      "signature": "fn residue(pp: u32, a: u32, k: u32) -> u32",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:47",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:46"
+      ]
+    },
+    {
       "key": "2035b1a84f09d3f1",
       "count": 2,
       "names": [
@@ -16553,6 +17000,22 @@
       ]
     },
     {
+      "key": "227454deb0531d10",
+      "count": 2,
+      "names": [
+        "fold"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn fold(pp: u32, a: u32, k: u32) -> u32",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:57",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:56"
+      ]
+    },
+    {
       "key": "2277f8729d13e4ae",
       "count": 2,
       "names": [
@@ -16568,6 +17031,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/rat_prelude/decide.rs:155",
         "crates/axeyum-lean-kernel/src/rat_prelude/lattice.rs:159"
+      ]
+    },
+    {
+      "key": "23d29ccc23517dbd",
+      "count": 2,
+      "names": [
+        "rmat_set_row",
+        "rset_row"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rmat_set_row( d: &mut IntDev<'_>, p: RatPrelude, t: ExprId, h: ExprId, m: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:125",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:174"
       ]
     },
     {
@@ -16899,6 +17381,22 @@
       ]
     },
     {
+      "key": "4233e2406631d402",
+      "count": 2,
+      "names": [
+        "open"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 16,
+      "signature": "fn open(&mut self, tys: &[ExprId]) -> (Vec<ExprId>, LocalContext)",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum_tests.rs:112",
+        "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute_tests.rs:56"
+      ]
+    },
+    {
       "key": "4367b348ae059098",
       "count": 2,
       "names": [
@@ -16986,6 +17484,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:274",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:362"
+      ]
+    },
+    {
+      "key": "4d0a73e36e605c17",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_bool"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_bool(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:303",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:325"
       ]
     },
     {
@@ -17091,6 +17607,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:210",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:350"
+      ]
+    },
+    {
+      "key": "513b8b1ece130cc3",
+      "count": 2,
+      "names": [
+        "sign_neg"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 5,
+      "signature": "fn sign_neg(pp: u32, a: u32, k: u32) -> bool",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs:51",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs:50"
       ]
     },
     {
@@ -17362,6 +17894,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs:197",
         "crates/axeyum-lean-kernel/src/rat_prelude/cas_ivt_bridge_tests.rs:215"
+      ]
+    },
+    {
+      "key": "617c4f70f43079c1",
+      "count": 2,
+      "names": [
+        "base3",
+        "base_matrix"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn base_matrix(d: &mut IntDev<'_>, p: RatPrelude) -> ExprId",
+      "test_file_members": 2,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul_tests.rs:41",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon_tests.rs:52"
       ]
     },
     {
@@ -17649,24 +18200,6 @@
       ]
     },
     {
-      "key": "76722b63a5984345",
-      "count": 2,
-      "names": [
-        "add_regroup_four"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 28,
-      "signature": "fn add_regroup_four( d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325"
-      ]
-    },
-    {
       "key": "77c2cb528a29229b",
       "count": 2,
       "names": [
@@ -17753,6 +18286,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:48",
         "crates/axeyum-lean-kernel/src/int_prelude/ops.rs:57"
+      ]
+    },
+    {
+      "key": "7b3d28869ba81183",
+      "count": 2,
+      "names": [
+        "shifted"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn shifted(d: &mut NatDev<'_>, body: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:119",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile.rs:99"
       ]
     },
     {
@@ -17997,6 +18548,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/integral.rs:5103",
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:1076"
+      ]
+    },
+    {
+      "key": "889a732827abe30a",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_nat(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:316",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:338"
       ]
     },
     {
@@ -18284,6 +18853,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/euclid.rs:39",
         "crates/axeyum-lean-kernel/src/int_prelude/euler.rs:66"
+      ]
+    },
+    {
+      "key": "98d66b69b5b8aa5e",
+      "count": 2,
+      "names": [
+        "row_echelon",
+        "rrow_echelon"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rrow_echelon( d: &mut IntDev<'_>, p: RatPrelude, m: ExprId, rows: ExprId, cols: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:238",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank.rs:122"
       ]
     },
     {
@@ -18718,6 +19306,24 @@
       ]
     },
     {
+      "key": "b91520ac9f38ea5a",
+      "count": 2,
+      "names": [
+        "two_mul"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 17,
+      "signature": "fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs:80",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:145"
+      ]
+    },
+    {
       "key": "b96df6ffec252d2c",
       "count": 2,
       "names": [
@@ -18751,22 +19357,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/derivative.rs:947",
         "crates/axeyum-lean-kernel/src/creal/ivt.rs:528"
-      ]
-    },
-    {
-      "key": "bc2d5224bb3c75e1",
-      "count": 2,
-      "names": [
-        "built"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 5,
-      "signature": "fn built() -> (Kernel, RatPrelude)",
-      "test_file_members": 2,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul_tests.rs:33",
-        "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps_tests.rs:44"
       ]
     },
     {
@@ -18895,24 +19485,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/second_supplementary.rs:84",
         "crates/axeyum-lean-kernel/src/nat_prelude/parity.rs:73"
-      ]
-    },
-    {
-      "key": "c4ee9ab49ad876fd",
-      "count": 2,
-      "names": [
-        "bool_select_bool"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn bool_select_bool( d: &mut NatDev<'_>, p: &NatPrelude, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
-        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87"
       ]
     },
     {
@@ -19825,22 +20397,6 @@
       ]
     },
     {
-      "key": "f1ade58bc2c4ee4e",
-      "count": 2,
-      "names": [
-        "le_proof"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 11,
-      "signature": "fn le_proof(&mut self, a: u32, b: u32) -> ExprId",
-      "test_file_members": 2,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice_tests.rs:58",
-        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side_tests.rs:56"
-      ]
-    },
-    {
       "key": "f1db47967dafd4ec",
       "count": 2,
       "names": [
@@ -20388,12 +20944,13 @@
     },
     {
       "key": "count_range",
-      "count": 10,
+      "count": 11,
       "names": [
         "count_range"
       ],
-      "files": 10,
+      "files": 11,
       "carriers": [
+        "IntDev",
         "NatDev"
       ],
       "body_lines": 3,
@@ -20409,7 +20966,34 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:143",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:246",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_mul.rs:109",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:109"
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:109",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank.rs:105"
+      ]
+    },
+    {
+      "key": "bool_congr_nat",
+      "count": 10,
+      "names": [
+        "bool_congr_nat"
+      ],
+      "files": 10,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn bool_congr_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, body: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:177",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
+        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:1254",
+        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:286",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
       ]
     },
     {
@@ -20515,31 +21099,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_dvd_chain.rs:102",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_gcd_mul.rs:105",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:177"
-      ]
-    },
-    {
-      "key": "bool_congr_nat",
-      "count": 9,
-      "names": [
-        "bool_congr_nat"
-      ],
-      "files": 9,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn bool_congr_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, body: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:177",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
-        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:1254",
-        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
       ]
     },
     {
@@ -20768,6 +21327,31 @@
       ]
     },
     {
+      "key": "selector",
+      "count": 8,
+      "names": [
+        "selector"
+      ],
+      "files": 8,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 10,
+      "signature": "fn selector(d: &mut IntDev<'_>, pred: ExprId, f: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:88",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_coprime.rs:55",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_factor.rs:43",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_modeq.rs:43",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_pow.rs:64",
+        "crates/axeyum-lean-kernel/src/int_prelude/euler_theorem.rs:135",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:123",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:150"
+      ]
+    },
+    {
       "key": "shifted_fn",
       "count": 8,
       "names": [
@@ -20932,27 +21516,50 @@
       ]
     },
     {
-      "key": "selector",
+      "key": "shifted",
       "count": 7,
       "names": [
-        "selector"
+        "shifted"
       ],
       "files": 7,
       "carriers": [
         "IntDev",
         "NatDev"
       ],
-      "body_lines": 10,
-      "signature": "fn selector(d: &mut IntDev<'_>, pred: ExprId, f: ExprId) -> ExprId",
+      "body_lines": 8,
+      "signature": "fn shifted(d: &mut NatDev<'_>, f: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:88",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_coprime.rs:55",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_factor.rs:43",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_modeq.rs:43",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_prod_pow.rs:64",
-        "crates/axeyum-lean-kernel/src/int_prelude/euler_theorem.rs:135",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:123"
+        "crates/axeyum-lean-kernel/src/nat_prelude/binary.rs:477",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:1147",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:119",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile.rs:99",
+        "crates/axeyum-lean-kernel/src/nat_prelude/rectangle.rs:61",
+        "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:160",
+        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:411"
+      ]
+    },
+    {
+      "key": "add_regroup_four",
+      "count": 6,
+      "names": [
+        "add_regroup_four"
+      ],
+      "files": 6,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 27,
+      "signature": "fn add_regroup_four( d: &mut IntDev<'_>, np: NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/alternating.rs:1154",
+        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:321",
+        "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs:1541",
+        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:108"
       ]
     },
     {
@@ -21038,29 +21645,7 @@
         "crates/axeyum-lean-kernel/src/creal.rs:6256",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1413",
         "crates/axeyum-lean-kernel/src/int_prelude.rs:1882",
-        "crates/axeyum-lean-kernel/src/rat_prelude.rs:2575"
-      ]
-    },
-    {
-      "key": "add_regroup_four",
-      "count": 5,
-      "names": [
-        "add_regroup_four"
-      ],
-      "files": 5,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 27,
-      "signature": "fn add_regroup_four( d: &mut IntDev<'_>, np: NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/alternating.rs:1154",
-        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:321",
-        "crates/axeyum-lean-kernel/src/int_prelude/fibonacci.rs:1541",
-        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325"
+        "crates/axeyum-lean-kernel/src/rat_prelude.rs:2742"
       ]
     },
     {
@@ -21082,6 +21667,27 @@
         "crates/axeyum-lean-kernel/src/creal/sqrt.rs:3733",
         "crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs:4502",
         "crates/axeyum-lean-kernel/src/creal_point.rs:2070"
+      ]
+    },
+    {
+      "key": "bool_select_bool",
+      "count": 5,
+      "names": [
+        "bool_select_bool"
+      ],
+      "files": 5,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn bool_select_bool<D: NatOps>( d: &mut D, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:174",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:90",
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
+        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:92"
       ]
     },
     {
@@ -21360,28 +21966,6 @@
       ]
     },
     {
-      "key": "shifted",
-      "count": 5,
-      "names": [
-        "shifted"
-      ],
-      "files": 5,
-      "carriers": [
-        "IntDev",
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn shifted(d: &mut NatDev<'_>, f: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/binary.rs:477",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:1147",
-        "crates/axeyum-lean-kernel/src/nat_prelude/rectangle.rs:61",
-        "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:160",
-        "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:411"
-      ]
-    },
-    {
       "key": "add_add_add_comm",
       "count": 4,
       "names": [
@@ -21417,26 +22001,6 @@
         "crates/axeyum-lean-kernel/src/ipc_heyting.rs:310",
         "crates/axeyum-lean-kernel/src/ipc_provable.rs:262",
         "crates/axeyum-lean-kernel/src/prelude.rs:440"
-      ]
-    },
-    {
-      "key": "bool_select_bool",
-      "count": 4,
-      "names": [
-        "bool_select_bool"
-      ],
-      "files": 4,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn bool_select_bool<D: NatOps>( d: &mut D, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:174",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:90",
-        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
-        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87"
       ]
     },
     {
@@ -22338,6 +22902,25 @@
         "crates/axeyum-lean-kernel/src/int_prelude/gcd.rs:1072",
         "crates/axeyum-lean-kernel/src/nat_prelude/bezout.rs:200",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:858"
+      ]
+    },
+    {
+      "key": "bool_select_congr",
+      "count": 3,
+      "names": [
+        "bool_select_congr"
+      ],
+      "files": 3,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn bool_select_congr( d: &mut NatDev<'_>, cond: ExprId, value: ExprId, h: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac.rs:251",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:282",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:304"
       ]
     },
     {
@@ -23704,6 +24287,25 @@
       ]
     },
     {
+      "key": "rinv",
+      "count": 3,
+      "names": [
+        "rinv"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rinv(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/cancellation.rs:108",
+        "crates/axeyum-lean-kernel/src/creal/inverse.rs:191",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:154"
+      ]
+    },
+    {
       "key": "rmat_mul",
       "count": 3,
       "names": [
@@ -24136,6 +24738,24 @@
       ]
     },
     {
+      "key": "beq_false_ty",
+      "count": 2,
+      "names": [
+        "beq_false_ty"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 5,
+      "signature": "fn beq_false_ty(d: &mut IntDev<'_>, r: ExprId, t: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:149",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:272"
+      ]
+    },
+    {
       "key": "bit",
       "count": 2,
       "names": [
@@ -24224,24 +24844,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/euler_assembly.rs:140",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:1884"
-      ]
-    },
-    {
-      "key": "bool_select_congr",
-      "count": 2,
-      "names": [
-        "bool_select_congr"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn bool_select_congr( d: &mut NatDev<'_>, cond: ExprId, value: ExprId, h: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/min_fac.rs:251",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:282"
       ]
     },
     {
@@ -24389,6 +24991,42 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:115",
         "crates/axeyum-lean-kernel/src/nat_prelude/binomial.rs:266"
+      ]
+    },
+    {
+      "key": "bounded_pointwise_bool",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_bool"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_bool(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:303",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:325"
+      ]
+    },
+    {
+      "key": "bounded_pointwise_nat",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_nat(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:316",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:338"
       ]
     },
     {
@@ -28711,24 +29349,6 @@
       ]
     },
     {
-      "key": "rinv",
-      "count": 2,
-      "names": [
-        "rinv"
-      ],
-      "files": 2,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 3,
-      "signature": "fn rinv(d: &mut IntDev<'_>, p: CRealPrelude, q: ExprId) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/cancellation.rs:108",
-        "crates/axeyum-lean-kernel/src/creal/inverse.rs:191"
-      ]
-    },
-    {
       "key": "rmat_id",
       "count": 2,
       "names": [
@@ -28781,6 +29401,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/diagonal.rs:159",
         "crates/axeyum-lean-kernel/src/rat_prelude/diagonal.rs:140"
+      ]
+    },
+    {
+      "key": "rset_row",
+      "count": 2,
+      "names": [
+        "rset_row"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rset_row(d: &mut IntDev<'_>, p: RatPrelude, t: ExprId, h: ExprId, m: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:174",
+        "crates/axeyum-lean-kernel/src/rat_prelude/matrix_det.rs:6709"
       ]
     },
     {
@@ -28871,6 +29509,44 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/poly.rs:624",
         "crates/axeyum-lean-kernel/src/creal/polynomial.rs:390"
+      ]
+    },
+    {
+      "key": "select_bool_false",
+      "count": 2,
+      "names": [
+        "select_bool_false"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn select_bool_false( d: &mut NatDev<'_>, p: &NatPrelude, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1876",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:1959"
+      ]
+    },
+    {
+      "key": "select_bool_true",
+      "count": 2,
+      "names": [
+        "select_bool_true"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev",
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn select_bool_true( d: &mut NatDev<'_>, p: &NatPrelude, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:1856",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:1946"
       ]
     },
     {
@@ -29256,6 +29932,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/exponential.rs:645",
         "crates/axeyum-lean-kernel/src/creal/trig.rs:542"
+      ]
+    },
+    {
+      "key": "two_mul",
+      "count": 2,
+      "names": [
+        "two_mul"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 17,
+      "signature": "fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs:80",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:145"
       ]
     },
     {
@@ -29852,6 +30546,34 @@
       ]
     },
     {
+      "key": "06654dcb5d689e72",
+      "count": 11,
+      "names": [
+        "bool_congr_nat",
+        "congr_bool_to_nat"
+      ],
+      "files": 11,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 9,
+      "signature": "fn congr_bool_to_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:650",
+        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
+        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:333",
+        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
+        "crates/axeyum-lean-kernel/src/nat_prelude/size_order.rs:77",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:286",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
+        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
+      ]
+    },
+    {
       "key": "16056914895fd1c9",
       "count": 11,
       "names": [
@@ -29907,33 +30629,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:246",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_mul.rs:109",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_prime_pow.rs:109"
-      ]
-    },
-    {
-      "key": "06654dcb5d689e72",
-      "count": 10,
-      "names": [
-        "bool_congr_nat",
-        "congr_bool_to_nat"
-      ],
-      "files": 10,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 9,
-      "signature": "fn congr_bool_to_nat( d: &mut NatDev<'_>, a: ExprId, b: ExprId, h: ExprId, f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/bitwise.rs:650",
-        "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:106",
-        "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs:107",
-        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs:333",
-        "crates/axeyum-lean-kernel/src/nat_prelude/perfect.rs:247",
-        "crates/axeyum-lean-kernel/src/nat_prelude/size_order.rs:77",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:262",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
-        "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
       ]
     },
     {
@@ -30700,6 +31395,27 @@
         "crates/axeyum-lean-kernel/src/creal/derivative.rs:715",
         "crates/axeyum-lean-kernel/src/creal/fermat.rs:228",
         "crates/axeyum-lean-kernel/src/creal/mvt.rs:306"
+      ]
+    },
+    {
+      "key": "76722b63a5984345",
+      "count": 4,
+      "names": [
+        "add_regroup_four",
+        "regroup_four"
+      ],
+      "files": 4,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 28,
+      "signature": "fn regroup_four( d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:843",
+        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
+        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:108"
       ]
     },
     {
@@ -31569,6 +32285,25 @@
       ]
     },
     {
+      "key": "c4ee9ab49ad876fd",
+      "count": 3,
+      "names": [
+        "bool_select_bool"
+      ],
+      "files": 3,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn bool_select_bool( d: &mut NatDev<'_>, p: &NatPrelude, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
+        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:92"
+      ]
+    },
+    {
       "key": "c55efdf1cf1a7855",
       "count": 3,
       "names": [
@@ -32060,6 +32795,25 @@
       ]
     },
     {
+      "key": "23d29ccc23517dbd",
+      "count": 2,
+      "names": [
+        "rmat_set_row",
+        "rset_row"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rmat_set_row( d: &mut IntDev<'_>, p: RatPrelude, t: ExprId, h: ExprId, m: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs:125",
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:174"
+      ]
+    },
+    {
       "key": "26b329a12d2451f4",
       "count": 2,
       "names": [
@@ -32329,6 +33083,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:1689",
         "crates/axeyum-lean-kernel/src/nat_prelude/xor_parity.rs:59"
+      ]
+    },
+    {
+      "key": "4d0a73e36e605c17",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_bool"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_bool(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:303",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:325"
       ]
     },
     {
@@ -32824,24 +33596,6 @@
       ]
     },
     {
-      "key": "76722b63a5984345",
-      "count": 2,
-      "names": [
-        "add_regroup_four"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 28,
-      "signature": "fn add_regroup_four( d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, c: ExprId, e: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs:556",
-        "crates/axeyum-lean-kernel/src/nat_prelude/finite_set.rs:325"
-      ]
-    },
-    {
       "key": "77c2cb528a29229b",
       "count": 2,
       "names": [
@@ -32911,6 +33665,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:176",
         "crates/axeyum-lean-kernel/src/creal/trig_fn.rs:512"
+      ]
+    },
+    {
+      "key": "7b3d28869ba81183",
+      "count": 2,
+      "names": [
+        "shifted"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 8,
+      "signature": "fn shifted(d: &mut NatDev<'_>, body: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:119",
+        "crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile.rs:99"
       ]
     },
     {
@@ -33074,6 +33846,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal/integral.rs:5103",
         "crates/axeyum-lean-kernel/src/creal/monotone.rs:1076"
+      ]
+    },
+    {
+      "key": "889a732827abe30a",
+      "count": 2,
+      "names": [
+        "bounded_pointwise_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 11,
+      "signature": "fn bounded_pointwise_nat(d: &mut NatDev<'_>, a: ExprId, b: ExprId, bound: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_product.rs:316",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:338"
       ]
     },
     {
@@ -33313,6 +34103,25 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/euclid.rs:39",
         "crates/axeyum-lean-kernel/src/int_prelude/euler.rs:66"
+      ]
+    },
+    {
+      "key": "98d66b69b5b8aa5e",
+      "count": 2,
+      "names": [
+        "row_echelon",
+        "rrow_echelon"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 3,
+      "signature": "fn rrow_echelon( d: &mut IntDev<'_>, p: RatPrelude, m: ExprId, rows: ExprId, cols: ExprId, ) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs:238",
+        "crates/axeyum-lean-kernel/src/rat_prelude/rank.rs:122"
       ]
     },
     {
@@ -33715,6 +34524,24 @@
       ]
     },
     {
+      "key": "b91520ac9f38ea5a",
+      "count": 2,
+      "names": [
+        "two_mul"
+      ],
+      "files": 2,
+      "carriers": [
+        "NatDev"
+      ],
+      "body_lines": 17,
+      "signature": "fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs:80",
+        "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs:145"
+      ]
+    },
+    {
       "key": "b96df6ffec252d2c",
       "count": 2,
       "names": [
@@ -33876,24 +34703,6 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/second_supplementary.rs:84",
         "crates/axeyum-lean-kernel/src/nat_prelude/parity.rs:73"
-      ]
-    },
-    {
-      "key": "c4ee9ab49ad876fd",
-      "count": 2,
-      "names": [
-        "bool_select_bool"
-      ],
-      "files": 2,
-      "carriers": [
-        "NatDev"
-      ],
-      "body_lines": 8,
-      "signature": "fn bool_select_bool( d: &mut NatDev<'_>, p: &NatPrelude, condition: ExprId, on_true: ExprId, on_false: ExprId, ) -> ExprId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs:187",
-        "crates/axeyum-lean-kernel/src/nat_prelude/squarefree.rs:87"
       ]
     },
     {
