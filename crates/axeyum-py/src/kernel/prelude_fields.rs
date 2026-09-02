@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1023 names,
+/// The `NatPrelude` field table (1024 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1318,6 +1318,7 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("sum_range_permute", p.sum_range_permute),
             ("ble_select_add_of_ne", p.ble_select_add_of_ne),
             ("eisenstein_floor_sum", p.eisenstein_floor_sum),
+            ("gauss_fold_sum_range_eq", p.gauss_fold_sum_range_eq),
             ("multiset", p.multiset),
             ("multiset_mk", p.multiset_mk),
             ("multiset_rec", p.multiset_rec),

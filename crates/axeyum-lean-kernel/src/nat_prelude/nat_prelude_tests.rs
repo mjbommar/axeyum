@@ -1518,6 +1518,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // assembled.
         p.ble_select_add_of_ne,
         p.eisenstein_floor_sum,
+        // `gauss_fold_sum.rs` (`eisenstein-2` lane): ADR-1540's residue 1.
+        p.gauss_fold_sum_range_eq,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by

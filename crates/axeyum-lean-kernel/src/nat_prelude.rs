@@ -194,6 +194,7 @@ mod find_greatest;
 mod finite;
 mod finite_set;
 mod floor_count;
+mod gauss_fold_sum;
 mod gauss_lemma;
 mod gcd;
 mod gcd_dvd_mirrors;
@@ -371,6 +372,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use floor_count::declare_floor_count_all;
+use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
@@ -503,6 +505,16 @@ use xor_trichotomy::declare_xor_trichotomy_all;
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels. All fields are public so callers can build `Const` terms
 /// (`k.const_(nat.add, vec![])`) directly.
+// `derive(Debug)` lowers to `debug_struct_fields_finish` over two LOCAL
+// arrays, one entry per field, so this struct's `Debug::fmt` allocates a
+// stack array proportional to the field count. It crossed clippy's 16 KiB
+// `large_stack_arrays` threshold on 2026-09-02 at 1026 fields (`eisenstein-2`
+// lane) -- the array is only built when someone actually `{:?}`-prints a
+// `NatPrelude`, which nothing on a hot path does. The lint is silenced rather
+// than the `Debug` hand-written, but the real fix is ADR-1512's per-module
+// name registry (already applied to `CRealPrelude`), which this struct has
+// not had.
+#[allow(clippy::large_stack_arrays)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NatPrelude {
     /// The embedded logical prelude (`False`, `Not`, `Eq`, `Exists`, `Nat`, …).
@@ -5651,6 +5663,19 @@ pub struct NatPrelude {
     /// produces and is NOT eliminated. **This is not Eisenstein's lemma** —
     /// nothing here mentions `gaussFold` or a congruence mod 2.
     pub eisenstein_floor_sum: NameId,
+
+    // -- `eisenstein-2` lane: `gauss_fold_sum.rs` --
+    /// `Nat.gauss_fold_sumRange_eq : ∀ m a, Eq (gcd a (succ (mul 2 m))) 1 →
+    /// Eq (sumRange (fun k => succ k) m)
+    ///    (sumRange (fun j => gaussFold (succ (mul 2 m)) a (succ j)) m)`
+    /// (`gauss_fold_sum.rs`) — ADR-1540's residue 1: the additive Gauss
+    /// bijection, instantiated. `1 + 2 + … + m` equals the sum of the folded
+    /// least residues, because the fold permutes `[1, m]`. The
+    /// MULTIPLICATIVE version of this step is what
+    /// `int_prelude/gauss_assembly.rs` already runs through
+    /// `Int.prodRange_permute`; this is the same three steps over
+    /// [`sum_range_permute`](Self::sum_range_permute).
+    pub gauss_fold_sum_range_eq: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -6907,6 +6932,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_permute: kernel.name_str(nat, "sumRange_permute"),
             ble_select_add_of_ne: kernel.name_str(nat, "ble_select_add_of_ne"),
             eisenstein_floor_sum: kernel.name_str(nat, "eisenstein_floor_sum"),
+            gauss_fold_sum_range_eq: kernel.name_str(nat, "gauss_fold_sumRange_eq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -7944,6 +7970,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `le_succ`/`lt_of_le_of_lt`, all far above. Nothing needs it yet, so
         // it goes last.
         declare_eisenstein_lattice_all(&mut d, &p)?;
+        // ADR-1540's residue 1 (`gauss_fold_sum.rs`): needs
+        // `Nat.sumRange_permute` (`sum_range_permute.rs`, just above) and
+        // `Nat.gauss_fold_shift_injective_on`/`_maps_into`/
+        // `gauss_fold_in_range` (`gauss_lemma.rs`, far above), plus
+        // `Nat.sumRange_congr_lt`/`Nat.succ_pred_of_pos`. Nothing needs it
+        // yet, so it goes last.
+        declare_gauss_fold_sum_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8001,6 +8034,9 @@ mod stirling_lemmas_tests;
 
 #[cfg(test)]
 mod eisenstein_lattice_tests;
+
+#[cfg(test)]
+mod gauss_fold_sum_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
