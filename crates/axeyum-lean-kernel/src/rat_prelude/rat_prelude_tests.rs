@@ -222,6 +222,19 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("det_congr_entry_lt", p.det_congr_entry_lt),
         ("det_row_selection_injective", p.det_row_selection_injective),
         ("det_row_selection", p.det_row_selection),
+        ("prodRange", p.prod_range),
+        ("prodRange_zero", p.prod_range_zero),
+        ("prodRange_succ", p.prod_range_succ),
+        ("prodRange_shiftFront", p.prod_range_shift_front),
+        ("prodRange_congr", p.prod_range_congr),
+        ("sumRange_mul_right", p.sum_range_mul_right),
+        ("sumRange_mul_left", p.sum_range_mul_left),
+        ("sumMaps", p.sum_maps),
+        ("sumMaps_zero", p.sum_maps_zero),
+        ("sumMaps_succ", p.sum_maps_succ),
+        ("sumMaps_congr", p.sum_maps_congr),
+        ("sumMaps_mul_left", p.sum_maps_mul_left),
+        ("sumMaps_mul_right", p.sum_maps_mul_right),
     ]
 }
 
@@ -6841,6 +6854,19 @@ fn the_determinant_toolkit_is_axiom_free() {
             true,
         ),
         ("det_row_selection", p.det_row_selection, true),
+        ("prodRange", p.prod_range, false),
+        ("prodRange_zero", p.prod_range_zero, true),
+        ("prodRange_succ", p.prod_range_succ, true),
+        ("prodRange_shiftFront", p.prod_range_shift_front, true),
+        ("prodRange_congr", p.prod_range_congr, true),
+        ("sumRange_mul_right", p.sum_range_mul_right, true),
+        ("sumRange_mul_left", p.sum_range_mul_left, true),
+        ("sumMaps", p.sum_maps, false),
+        ("sumMaps_zero", p.sum_maps_zero, true),
+        ("sumMaps_succ", p.sum_maps_succ, true),
+        ("sumMaps_congr", p.sum_maps_congr, true),
+        ("sumMaps_mul_left", p.sum_maps_mul_left, true),
+        ("sumMaps_mul_right", p.sum_maps_mul_right, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
