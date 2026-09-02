@@ -754,9 +754,8 @@
   },
   "environment_snapshot": {
     "declaration_count": 2876,
-    "kernel_tree": "987f7ddd0f69651666051e71fbe06fbcd6119d9a",
-    "snapshot_kernel_tree": "524df45e2a879c96384fa4607803d16cbca77d1e",
-    "state": "EQUIVALENT"
+    "provisional": false,
+    "snapshot_kernel_tree": "524df45e2a879c96384fa4607803d16cbca77d1e"
   },
   "frontier": {
     "diagnostics": {

@@ -4566,6 +4566,17 @@ SUITES["merge-hygiene"] = (
             "if ! plan_out=$(python3 scripts/gen-plan.py --check 2>&1); then",
             "if false; then",
         ),
+        (
+            # NOT `fail=1 -> fail=0`: that would also weaken the aggregate
+            # scenario, so the mutant would kill two tests and prove nothing
+            # about this guard specifically. Widening the exit-2 arm to swallow
+            # EVERY nonzero status is the mutation that separates the two
+            # census scenarios -- the stale run must die, the unanswerable run
+            # must survive.
+            "M7 a stale shape census fails the gate, and exit 2 does not",
+            'elif [ "$census_rc" -eq 2 ]; then',
+            'elif [ "$census_rc" -ne 0 ]; then',
+        ),
     ],
 )
 

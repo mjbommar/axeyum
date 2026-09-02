@@ -65,7 +65,14 @@ class MergeHygieneControls(unittest.TestCase):
         self.git("init", "-q")
         self.git("config", "user.email", "t@example.com")
         self.git("config", "user.name", "t")
-        for name, tag in (("gen-adr-index", "ADR_INDEX ok"), ("gen-plan", "plan ok")):
+        for name, tag in (("gen-adr-index", "ADR_INDEX ok"),
+                          ("gen-plan", "plan ok"),
+                          # The census guard. Its real run reads the whole fact
+                          # ledger; stubbed here like the generators, so the
+                          # scenario chooses the exit status and the guard's
+                          # THREE-outcome dispatch (0 current / 2 unanswerable /
+                          # anything else a failure) is what gets measured.
+                          ("frontier-shape-census", "SHAPE_CENSUS ok")):
             path = self.root / "scripts" / f"{name}.py"
             path.write_text(STUB.format(name=name.replace("-", "_").upper(), tag=tag))
         self.write("README.md", "clean\n")
@@ -176,6 +183,23 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
         self.assertIn("FAIL: gen-plan.py --check", done.stdout)
         self.assertIn("commit PLAN.md", done.stdout)
+
+    # -- guard 4: the frontier shape census ---------------------------------
+
+    def test_stale_shape_census_fails_the_gate(self) -> None:
+        done = self.run_gate(frontier_shape_census=1)
+        self.assertEqual(done.returncode, 1, done.stdout + done.stderr)
+        self.assertIn("FAIL: frontier-shape-census.py --check", done.stdout)
+        self.assertIn("frontier-shape-census-v1.json", done.stdout)
+
+    def test_an_unanswerable_shape_census_does_NOT_fail_the_gate(self) -> None:
+        """Exit 2 is the census saying it could not compute an answer. A gate
+        that reports a disagreement when its subject was unavailable is wrong
+        about its own subject -- so 2 is reported, not failed."""
+        done = self.run_gate(frontier_shape_census=2)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("shape_census=not-answerable", done.stdout)
+        self.assertIn("|PASS", done.stdout)
 
     # -- the aggregate ------------------------------------------------------
 

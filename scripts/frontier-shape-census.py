@@ -219,16 +219,26 @@ def kernel_names(step0_module) -> tuple[frozenset[str] | None, dict[str, Any]]:
     would say a producer cannot state a fact it can state perfectly well.
     """
     snapshot, freshness = step0_module.load_snapshot(ROOT)
+    # SNAPSHOT-INTRINSIC FIELDS ONLY. The artifact must be a function of the
+    # ledger and the snapshot, and of nothing else about the tree it was
+    # produced in: `check-generated-artifact-ownership.py`'s OWNER arm re-runs
+    # this producer in a sandbox holding only `artifacts/` and `scripts/`, and
+    # requires the bytes back. Recording `freshness["state"]` or the worktree's
+    # own kernel tree sha -- both of which read `crates/` and `.git`, absent
+    # there -- would make that arm red for a reason that has nothing to do with
+    # ownership. The freshness state is still computed; it is PRINTED, where a
+    # reader wants it, rather than stored.
     state = {
-        "state": freshness["state"],
-        "kernel_tree": freshness.get("kernel_tree"),
         "snapshot_kernel_tree": None,
         "declaration_count": None,
+        "provisional": None,
+        "freshness": freshness["state"],
     }
     if snapshot is None:
         return None, state
     state["snapshot_kernel_tree"] = snapshot.get("head")
     state["declaration_count"] = snapshot.get("declaration_count")
+    state["provisional"] = bool(snapshot.get("binary_stale"))
     names = frozenset(row["name"] for row in snapshot.get("declarations", []))
     return (names or None), state
 
@@ -550,12 +560,18 @@ def rank_buckets(rows: list[dict[str, Any]], key_of) -> list[dict[str, Any]]:
 # the census
 
 
-def build_census(frontier: dict[str, Any]) -> dict[str, Any]:
+def build_census(frontier: dict[str, Any], meta: dict[str, Any] | None = None
+                 ) -> dict[str, Any]:
+    """The census document. `meta`, when given, receives the tree-local facts
+    that are deliberately NOT part of the artifact -- today only the snapshot's
+    freshness, which the human report prints and the artifact must not carry."""
     facts = load_facts()
     frontier_module = load_module(FACT_FRONTIER, "fact_frontier_for_census")
     step0_module = load_module(BRIEF_STEP0, "brief_step0_for_census")
     held, holdout_gap = held_out_ids(frontier_module)
     names, snapshot_state = kernel_names(step0_module)
+    if meta is not None:
+        meta["freshness"] = snapshot_state["freshness"]
     proven = frontier_module.proven_identifier_names(facts)
 
     ready = list(frontier["selection"]["ready_fact_ids"])
@@ -599,7 +615,10 @@ def build_census(frontier: dict[str, Any]) -> dict[str, Any]:
             "frontier_sha256": frontier.get("frontier_sha256"),
             "diagnostics": diagnostics,
         },
-        "environment_snapshot": snapshot_state,
+        # `freshness` is a property of the TREE this ran in, not of the census,
+        # so it is dropped here and printed instead -- see `kernel_names`.
+        "environment_snapshot": {key: value for key, value in snapshot_state.items()
+                                 if key != "freshness"},
         "population": {
             "ready_count": len(ready),
             "held_out_excluded": excluded_held_out,
@@ -647,7 +666,8 @@ def format_signature(signature: dict[str, Any]) -> str:
             + (" MUTATION-CONTROL" if signature["mutation_control"] else ""))
 
 
-def report(census: dict[str, Any], limit: int = 12) -> str:
+def report(census: dict[str, Any], limit: int = 12,
+           meta: dict[str, Any] | None = None) -> str:
     pop = census["population"]
     lines = [
         "FRONTIER SHAPE CENSUS",
@@ -663,8 +683,10 @@ def report(census: dict[str, Any], limit: int = 12) -> str:
         f"{pop['primary_mutation_control_count']}",
         f"      genuinely targetable                      "
         f"{pop['primary_targetable_count']}",
-        f"  environment         {census['environment_snapshot']['state']}, "
-        f"{census['environment_snapshot']['declaration_count']} declarations",
+        f"  environment         {(meta or {}).get('freshness', 'not-recorded')}, "
+        f"{census['environment_snapshot']['declaration_count']} declarations"
+        + ("  PROVISIONAL (stale projection binary)"
+           if census["environment_snapshot"]["provisional"] else ""),
         "",
         "COARSE BUCKETS (carrier x conclusion head x hypothesis band)",
     ]
@@ -740,9 +762,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=12)
     args = parser.parse_args(argv)
 
+    meta: dict[str, Any] = {}
     try:
         frontier = load_frontier(args.frontier)
-        census = build_census(frontier)
+        census = build_census(frontier, meta)
     except CensusError as error:
         print(f"SHAPE_CENSUS|UNANSWERABLE|{error}", file=sys.stderr)
         return 2
@@ -779,7 +802,7 @@ def main(argv: list[str] | None = None) -> int:
               f"{census['population']['primary_targetable_count']}{note}|PASS")
         return 0
 
-    print(report(census, args.limit))
+    print(report(census, args.limit, meta))
     if not args.print_only:
         args.artifact.parent.mkdir(parents=True, exist_ok=True)
         args.artifact.write_text(json.dumps(census, indent=2, sort_keys=True) + "\n")

@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # Post-merge hygiene: the things that have actually gone wrong when a
-# coordinator merges a lane branch, in one command that takes ~2 seconds.
+# coordinator merges a lane branch, in one command.
 #
-# FOUR are listed below and THREE are enforced. The fourth is written down with
+# FIVE are listed below and FOUR are enforced. The fifth is written down with
 # the reason it is not gated (there are no live subjects, so a guard for it
-# could not fail), because a header claiming four while the body enforces three
+# could not fail), because a header claiming five while the body enforces four
 # is exactly the kind of gap this file exists to close.
+#
+# COST: guards 1-3 are ~2 seconds. Guard 4 runs `fact-frontier.py --json` over
+# the whole ledger and is ~15 seconds on s4, so the whole command is ~20. Stated
+# here rather than left as a surprise: this file advertised ~2 seconds while
+# that guard was added, and an unexpectedly slow gate is a gate that stops being
+# run.
 #
 # Why this exists. Merging lane branches is the coordinator's most frequent
 # operation and the full gate is ~10 minutes, so it is not run per merge. Each
@@ -26,11 +32,16 @@
 #      the two files every lane touches. `gen-plan.py` sat exiting 1 for hours
 #      while being run as `>/dev/null 2>&1`, so `PLAN.md` was never regenerated
 #      and was committed repeatedly as though it had been.
-#   4. A PINNED-INVENTORY COUNT BROKEN BY A CLEAN MERGE. Two lanes can each
+#   4. A STALE FRONTIER SHAPE CENSUS. The census is a pure function of the fact
+#      ledger, so a merge that lands or flips facts invalidates it while
+#      touching neither the script nor the artifact -- invisible in
+#      `git show --stat`, and the artifact's whole job is to tell the next
+#      producer designer what the frontier is shaped like.
+#   5. A PINNED-INVENTORY COUNT BROKEN BY A CLEAN MERGE. Two lanes can each
 #      correctly bump a pinned length and git merges both entries without
 #      conflict, leaving the declared size one short. Eight times in one day.
 #
-# Exit 0 only when all three enforced checks pass. Each failure names its own
+# Exit 0 only when all four enforced checks pass. Each failure names its own
 # remedy.
 set -u
 # `AXEYUM_MERGE_HYGIENE_ROOT` points the SHIPPED script at a throwaway tree, so
@@ -84,7 +95,32 @@ if ! plan_out=$(python3 scripts/gen-plan.py --check 2>&1); then
   note "lane status doc puts prose BEFORE its first plan-section marker."
 fi
 
-# --- 4. pinned inventory counts: DELIBERATELY NOT CHECKED HERE ---------------
+# --- 4. the frontier shape census is current ---------------------------------
+# Same class of defect as guard 3, on an artifact a merge moves silently. The
+# census is a pure function of the fact ledger, and a merge that lands or flips
+# facts changes it while touching neither the census script nor its artifact --
+# so `git show --stat` shows nothing and a stale census keeps telling the next
+# producer designer that the frontier has a shape it no longer has.
+#
+# THREE outcomes, not two. Exit 2 is the census saying it could not compute an
+# answer (no frontier), which must NOT be a failure: a gate that reports
+# "disagrees" when its subject was unavailable is wrong about its own subject,
+# which this repository has shipped three times in one day.
+census_out=$(python3 scripts/frontier-shape-census.py --check 2>&1)
+census_rc=$?
+if [ "$census_rc" -eq 0 ]; then
+  census="current"
+elif [ "$census_rc" -eq 2 ]; then
+  census="not-answerable"
+else
+  fail=1
+  echo "FAIL: frontier-shape-census.py --check"
+  printf '%s\n' "$census_out" | tail -4 | sed 's/^/    /'
+  note "Run scripts/frontier-shape-census.py and commit"
+  note "artifacts/autogenesis/frontier-shape-census-v1.json."
+fi
+
+# --- 5. pinned inventory counts: DELIBERATELY NOT CHECKED HERE ---------------
 # A clean merge of two correct pin increments leaves the declared size one
 # short, and that happened eight-plus times in one day -- so a guard here looked
 # obviously right. It is not, because THERE ARE NO LIVE PINNED-INVENTORY ARRAYS
@@ -107,7 +143,7 @@ fi
 pins="n/a (no live pin sites; see the note above)"
 
 if [ "$fail" -eq 0 ]; then
-  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|pinned_inventories=$pins|PASS"
+  echo "MERGE_HYGIENE|markers=0|adr_index=ok|generated=current|shape_census=$census|pinned_inventories=$pins|PASS"
   exit 0
 fi
 echo "MERGE_HYGIENE|FAILED"
