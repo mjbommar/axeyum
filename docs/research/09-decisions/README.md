@@ -854,3 +854,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1561](adr-1561-draw-19-is-authored-and-draw-10s-deferral-was-the-whole-refusal.md) | draw 19 is authored, and draw 10's unenforced deferral was the whole refusal | accepted |
 | [1562](adr-1562-the-bridge-orientation-is-the-finding-and-obligation-4-collapses-to-one-section-equation.md) | `Rat.rank_eq_rankCols_of_pivotSection` closes ADR-1558's open | accepted |
 | [1563](adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md) | the bootstrap lemma is not a leak, the stale exemption is retired, and the receipt cannot be | accepted |
+| [1564](adr-1564-train-is-the-training-partition-not-an-evaluation-partition.md) | train is the TRAINING partition, not an evaluation partition — the list was wrong, so the list changes | accepted |
