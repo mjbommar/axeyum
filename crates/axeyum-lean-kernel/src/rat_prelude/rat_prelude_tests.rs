@@ -304,6 +304,8 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ),
         ("rankCols_zero_rows", p.rank_cols_zero_rows),
         ("nullity_zero_rows", p.nullity_zero_rows),
+        ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows),
+        ("pivotSearch_le_rows", p.pivot_search_le_rows),
     ]
 }
 
@@ -7011,6 +7013,8 @@ fn the_determinant_toolkit_is_axiom_free() {
         ),
         ("rankCols_zero_rows", p.rank_cols_zero_rows, true),
         ("nullity_zero_rows", p.nullity_zero_rows, true),
+        ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows, true),
+        ("pivotSearch_le_rows", p.pivot_search_le_rows, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

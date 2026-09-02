@@ -421,3 +421,63 @@ fn the_nullity_family_is_axiom_free() {
         );
     }
 }
+
+/// `Rat.pivotSearch_le_rows` is not vacuous: the search hits its bound in one
+/// case and comes in strictly under it in another, at the same matrix.
+///
+/// A `Le _ rows` theorem is a type, so it cannot be reduced against a wrong
+/// answer the way a `Definition` can. What CAN be checked is that the bounded
+/// quantity actually moves: `[[0,1],[1,0]]` has no nonzero entry in column `0`
+/// at or after row `2`, so the search returns `rows` (the bound is TIGHT); from
+/// row `0` it finds row `1` (the bound is STRICT). A `pivotSearch` that always
+/// returned `rows` would satisfy the theorem and fail the second assertion.
+#[test]
+fn the_pivot_search_bound_is_tight_in_one_case_and_strict_in_another() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let m = rect_matrix(&mut d, p, 2, 2, &[0, 1, 1, 0]);
+    let two_n = d.num(2);
+    let zero_n = d.num(0);
+    let one_n = d.num(1);
+
+    // Column 0, starting at row 0: row 0 is zero there, row 1 is not.
+    let found = d.const_app(p.pivot_search, &[m, zero_n, zero_n, two_n]);
+    assert!(
+        d.kernel().def_eq(found, one_n),
+        "the search must find row 1, strictly under the bound"
+    );
+    assert!(
+        !d.kernel().def_eq(found, two_n),
+        "the search must NOT always return rows -- the bound would be vacuous"
+    );
+
+    // Column 0, starting at row 2: already out of range, so the answer is the
+    // bound itself.
+    let exhausted = d.const_app(p.pivot_search, &[m, zero_n, two_n, two_n]);
+    assert!(
+        d.kernel().def_eq(exhausted, two_n),
+        "an exhausted search returns rows, so the bound is attained"
+    );
+    assert!(
+        !d.kernel().def_eq(exhausted, one_n),
+        "the exhausted answer must not also be 1"
+    );
+}
+
+/// Both halves of the range bound are axiom-free, read from the kernel.
+#[test]
+fn the_pivot_bound_family_is_axiom_free() {
+    let (kernel, p) = built();
+    for (label, name) in [
+        ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows),
+        ("pivotSearch_le_rows", p.pivot_search_le_rows),
+    ] {
+        let footprint = kernel.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "Rat.{label} must be axiom-free, found {} axiom(s)",
+            footprint.len()
+        );
+    }
+}

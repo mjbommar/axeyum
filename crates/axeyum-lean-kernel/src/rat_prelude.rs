@@ -76,6 +76,7 @@ mod matrix_transpose;
 mod model;
 mod nullity;
 pub(crate) mod ops;
+mod pivot_bound;
 mod polynomial;
 mod pow_bridge;
 mod probability;
@@ -2778,6 +2779,19 @@ pub struct RatPrelude {
     /// `nullity` that returned `0` satisfies
     /// [`Self::rank_cols_zero_rows`] and fails this.
     pub nullity_zero_rows: NameId,
+
+    // --- obligation 2, range half (`rat_prelude::pivot_bound`, ADR-1558) ----
+    /// `Rat.pivotSearchAux_le_rows : ∀ M c rows fuel r,
+    /// Le (pivotSearchAux M c rows fuel r) rows` — the pivot scan never returns
+    /// an index past the row count, whatever the fuel and wherever it starts.
+    /// The range half of ADR-1554 obligation 2; the content half (WHICH
+    /// disjunct holds) is still open.
+    pub pivot_search_aux_le_rows: NameId,
+    /// `Rat.pivotSearch_le_rows : ∀ M c start rows,
+    /// Le (pivotSearch M c start rows) rows` —
+    /// [`Self::pivot_search_aux_le_rows`] at the fuel `pivotSearch` picks. No
+    /// bound on `start` is required.
+    pub pivot_search_le_rows: NameId,
 }
 
 impl RatPrelude {
@@ -3278,6 +3292,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         count_range_is_pivot_col_b_zero_rows: child(kernel, "countRange_isPivotColB_zeroRows"),
         rank_cols_zero_rows: child(kernel, "rankCols_zero_rows"),
         nullity_zero_rows: child(kernel, "nullity_zero_rows"),
+        pivot_search_aux_le_rows: child(kernel, "pivotSearchAux_le_rows"),
+        pivot_search_le_rows: child(kernel, "pivotSearch_le_rows"),
     }
 }
 
@@ -3341,6 +3357,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         echelon::declare_echelon(&mut d, prelude)?;
         rank::declare_rank(&mut d, prelude)?;
         nullity::declare_nullity(&mut d, prelude)?;
+        pivot_bound::declare_pivot_bound(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
