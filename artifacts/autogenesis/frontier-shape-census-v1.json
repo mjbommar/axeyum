@@ -1,0 +1,963 @@
+{
+  "authority": "artifacts/facts via scripts/fact-frontier.py --json",
+  "buckets": {
+    "coarse": [
+      {
+        "fact_ids": [
+          "F:ml430-mutation-7afa5ec620720a1501bf349d",
+          "F:ml430-mutation-a6dd1759bce60d820292e107",
+          "F:ml430-mutation-edb05acf07d9ef3f9f8232fc",
+          "F:ml430-nat-fastfib-eq-cde11774",
+          "F:ml430-nat-multichoose-zero-right-6ef827c8",
+          "F:ml430-nat-testbit-eq-inth-ffa07392",
+          "F:ml430-nat-testbit-land-dfef7ca4",
+          "F:ml430-nat-testbit-ldiff-16f94162",
+          "F:ml430-nat-testbit-lor-7644e067"
+        ],
+        "mutation_control_count": 3,
+        "rank": 1,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Eq",
+          "hypothesis_band": "0"
+        },
+        "size": 9,
+        "targetable_size": 6
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+        ],
+        "mutation_control_count": 0,
+        "rank": 2,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Eq",
+          "hypothesis_band": "1"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-fermat-primefactors-one-lt-58343c6f"
+        ],
+        "mutation_control_count": 0,
+        "rank": 3,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Eq",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:twin-prime-unbounded"
+        ],
+        "mutation_control_count": 0,
+        "rank": 4,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Exists",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:goldbach-strong"
+        ],
+        "mutation_control_count": 0,
+        "rank": 5,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Exists",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-squarefree-ext-iff-7218327d"
+        ],
+        "mutation_control_count": 0,
+        "rank": 6,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Iff",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-lt-of-testbit-72f64ab8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 7,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "lt",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-prime-deficient-pow-9c5e1fef"
+        ],
+        "mutation_control_count": 0,
+        "rank": 8,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "other:Deficient",
+          "hypothesis_band": "1"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
+        ],
+        "mutation_control_count": 1,
+        "rank": 9,
+        "signature": {
+          "carriers": [
+            "Int"
+          ],
+          "conclusion_head": "And",
+          "hypothesis_band": "1"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-aabb80b1f89f0c5847364692"
+        ],
+        "mutation_control_count": 1,
+        "rank": 10,
+        "signature": {
+          "carriers": [
+            "Int"
+          ],
+          "conclusion_head": "Iff",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-aca37b68d3cdf06f0127def9"
+        ],
+        "mutation_control_count": 1,
+        "rank": 11,
+        "signature": {
+          "carriers": [
+            "Int"
+          ],
+          "conclusion_head": "ModEq",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-1432b2277cf2cc26c1d11cd6"
+        ],
+        "mutation_control_count": 1,
+        "rank": 12,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "Iff",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-c86940b52af8159ca9b381d6"
+        ],
+        "mutation_control_count": 1,
+        "rank": 13,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "ModEq",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-e8583599cfae2d40cefae3f0"
+        ],
+        "mutation_control_count": 1,
+        "rank": 14,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "lt",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-5179f333b8333ecff8adc223"
+        ],
+        "mutation_control_count": 1,
+        "rank": 15,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "lt",
+          "hypothesis_band": "1"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
+        ],
+        "mutation_control_count": 1,
+        "rank": 16,
+        "signature": {
+          "carriers": [],
+          "conclusion_head": "other:Coprime",
+          "hypothesis_band": "0"
+        },
+        "size": 1,
+        "targetable_size": 0
+      }
+    ],
+    "fine": [
+      {
+        "fact_ids": [
+          "F:ml430-nat-testbit-land-dfef7ca4",
+          "F:ml430-nat-testbit-ldiff-16f94162",
+          "F:ml430-nat-testbit-lor-7644e067"
+        ],
+        "mutation_control_count": 0,
+        "rank": 1,
+        "signature": {
+          "bound_variable_count": 3,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 3,
+        "targetable_size": 3
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-fastfib-eq-cde11774",
+          "F:ml430-nat-multichoose-zero-right-6ef827c8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 2,
+        "signature": {
+          "bound_variable_count": 1,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 2,
+        "targetable_size": 2
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-7afa5ec620720a1501bf349d",
+          "F:ml430-mutation-edb05acf07d9ef3f9f8232fc"
+        ],
+        "mutation_control_count": 2,
+        "rank": 3,
+        "signature": {
+          "bound_variable_count": 1,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 2,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-testbit-eq-inth-ffa07392"
+        ],
+        "mutation_control_count": 0,
+        "rank": 4,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-fermat-primefactors-one-lt-58343c6f"
+        ],
+        "mutation_control_count": 0,
+        "rank": 5,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 3,
+          "hypothesis_heads": [
+            "lt",
+            "other:Prime",
+            "dvd"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-prime-deficient-pow-9c5e1fef"
+        ],
+        "mutation_control_count": 0,
+        "rank": 6,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "other:Deficient",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 1,
+          "hypothesis_heads": [
+            "other:Prime"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
+        ],
+        "mutation_control_count": 0,
+        "rank": 7,
+        "signature": {
+          "bound_variable_count": 3,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 1,
+          "hypothesis_heads": [
+            "Eq"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:twin-prime-unbounded"
+        ],
+        "mutation_control_count": 0,
+        "rank": 8,
+        "signature": {
+          "bound_variable_count": 5,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Exists",
+          "dialect": "kernel-rendered",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": false,
+          "provenance": "native"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-lt-of-testbit-72f64ab8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 9,
+        "signature": {
+          "bound_variable_count": 5,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "lt",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 3,
+          "hypothesis_heads": [
+            "Eq",
+            "Eq",
+            "Eq"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:goldbach-strong"
+        ],
+        "mutation_control_count": 0,
+        "rank": 10,
+        "signature": {
+          "bound_variable_count": 7,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Exists",
+          "dialect": "kernel-rendered",
+          "fragment": "Nat",
+          "hypothesis_count": 2,
+          "hypothesis_heads": [
+            "le",
+            "dvd"
+          ],
+          "mutation_control": false,
+          "provenance": "native"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-nat-squarefree-ext-iff-7218327d"
+        ],
+        "mutation_control_count": 0,
+        "rank": 11,
+        "signature": {
+          "bound_variable_count": 8,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Iff",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 2,
+          "hypothesis_heads": [
+            "other:Squarefree",
+            "other:Squarefree"
+          ],
+          "mutation_control": false,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
+        ],
+        "mutation_control_count": 1,
+        "rank": 12,
+        "signature": {
+          "bound_variable_count": 0,
+          "carriers": [],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "other:Coprime",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-aabb80b1f89f0c5847364692"
+        ],
+        "mutation_control_count": 1,
+        "rank": 13,
+        "signature": {
+          "bound_variable_count": 1,
+          "carriers": [
+            "Int"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Iff",
+          "dialect": "lean-surface",
+          "fragment": "Int",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-1432b2277cf2cc26c1d11cd6"
+        ],
+        "mutation_control_count": 1,
+        "rank": 14,
+        "signature": {
+          "bound_variable_count": 1,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Iff",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-5179f333b8333ecff8adc223"
+        ],
+        "mutation_control_count": 1,
+        "rank": 15,
+        "signature": {
+          "bound_variable_count": 1,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "lt",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 1,
+          "hypothesis_heads": [
+            "other:Prime"
+          ],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
+        ],
+        "mutation_control_count": 1,
+        "rank": 16,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Int"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "And",
+          "dialect": "lean-surface",
+          "fragment": "Int",
+          "hypothesis_count": 1,
+          "hypothesis_heads": [
+            "Ne"
+          ],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-a6dd1759bce60d820292e107"
+        ],
+        "mutation_control_count": 1,
+        "rank": 17,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "Eq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-e8583599cfae2d40cefae3f0"
+        ],
+        "mutation_control_count": 1,
+        "rank": 18,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "lt",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-aca37b68d3cdf06f0127def9"
+        ],
+        "mutation_control_count": 1,
+        "rank": 19,
+        "signature": {
+          "bound_variable_count": 3,
+          "carriers": [
+            "Int"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "ModEq",
+          "dialect": "lean-surface",
+          "fragment": "Int",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      },
+      {
+        "fact_ids": [
+          "F:ml430-mutation-c86940b52af8159ca9b381d6"
+        ],
+        "mutation_control_count": 1,
+        "rank": 20,
+        "signature": {
+          "bound_variable_count": 3,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "ModEq",
+          "dialect": "lean-surface",
+          "fragment": "Nat",
+          "hypothesis_count": 0,
+          "hypothesis_heads": [],
+          "mutation_control": true,
+          "provenance": "ml430-mirror"
+        },
+        "size": 1,
+        "targetable_size": 0
+      }
+    ]
+  },
+  "environment_snapshot": {
+    "declaration_count": 2876,
+    "kernel_tree": "987f7ddd0f69651666051e71fbe06fbcd6119d9a",
+    "snapshot_kernel_tree": "524df45e2a879c96384fa4607803d16cbca77d1e",
+    "state": "EQUIVALENT"
+  },
+  "frontier": {
+    "diagnostics": {
+      "admissible_count": 1,
+      "admissible_via_contract_count": 1,
+      "admissible_via_operation_count": 0,
+      "declined_by_contract": {
+        "producer-contract-int-modeq-family-v1": 12,
+        "producer-contract-nat-coprime-family-v1": 15
+      },
+      "declined_count": 1,
+      "no_route_ready_fact_ids": [
+        "F:collatz-reaches-one",
+        "F:continuum-hypothesis-independent",
+        "F:fermat-last-theorem",
+        "F:fol-validity-undecidable",
+        "F:godel-first-incompleteness",
+        "F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier"
+      ],
+      "ready_count": 217,
+      "shape_matched_count": 2,
+      "unmatched_by_route_class": {
+        "no-route": 6,
+        "proof-route-only": 209
+      },
+      "unregistered_by_route_class": {
+        "no-route": 6,
+        "proof-route-only": 211
+      }
+    },
+    "frontier_sha256": "667f360ee285aba7d931061a0be33e9bd50a4c33f4e244d5358e8a0d0578ad89"
+  },
+  "kind": "axeyum-frontier-shape-census",
+  "ledger": {
+    "fact_count": 2576,
+    "ledger_sha256": "d27c42ba18003eadb36e5680b3664cecc9935401418c3db5d7733c9a1ca42a31"
+  },
+  "other": [
+    {
+      "contract_matched": false,
+      "fact_id": "F:collatz-reaches-one",
+      "route_class": "no-route",
+      "signature": {
+        "bound_variable_count": 1,
+        "carriers": [
+          "Nat"
+        ],
+        "conclusion_constants_declared": true,
+        "conclusion_head": "Eq",
+        "dialect": "lean-surface",
+        "fragment": "none",
+        "hypothesis_count": 0,
+        "hypothesis_heads": [],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "native"
+      }
+    },
+    {
+      "contract_matched": false,
+      "fact_id": "F:continuum-hypothesis-independent",
+      "route_class": "no-route",
+      "signature": {
+        "bound_variable_count": 0,
+        "carriers": [],
+        "conclusion_constants_declared": null,
+        "conclusion_head": "unparsed",
+        "dialect": "prose",
+        "fragment": "none",
+        "hypothesis_count": 0,
+        "hypothesis_heads": [],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "native"
+      }
+    },
+    {
+      "contract_matched": false,
+      "fact_id": "F:fermat-last-theorem",
+      "route_class": "no-route",
+      "signature": {
+        "bound_variable_count": 0,
+        "carriers": [],
+        "conclusion_constants_declared": null,
+        "conclusion_head": "unparsed",
+        "dialect": "smtlib",
+        "fragment": "none",
+        "hypothesis_count": 0,
+        "hypothesis_heads": [],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "native"
+      }
+    },
+    {
+      "contract_matched": false,
+      "fact_id": "F:fol-validity-undecidable",
+      "route_class": "no-route",
+      "signature": {
+        "bound_variable_count": 0,
+        "carriers": [],
+        "conclusion_constants_declared": null,
+        "conclusion_head": "unparsed",
+        "dialect": "prose",
+        "fragment": "none",
+        "hypothesis_count": 0,
+        "hypothesis_heads": [],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "native"
+      }
+    },
+    {
+      "contract_matched": false,
+      "fact_id": "F:godel-first-incompleteness",
+      "route_class": "no-route",
+      "signature": {
+        "bound_variable_count": 0,
+        "carriers": [],
+        "conclusion_constants_declared": null,
+        "conclusion_head": "unparsed",
+        "dialect": "prose",
+        "fragment": "none",
+        "hypothesis_count": 0,
+        "hypothesis_heads": [],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "native"
+      }
+    },
+    {
+      "contract_matched": false,
+      "fact_id": "F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier",
+      "route_class": "no-route",
+      "signature": {
+        "bound_variable_count": 0,
+        "carriers": [],
+        "conclusion_constants_declared": true,
+        "conclusion_head": "other:Let",
+        "dialect": "lean-surface",
+        "fragment": "lean4-kernel-declaration-stream",
+        "hypothesis_count": 0,
+        "hypothesis_heads": [],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "native"
+      }
+    },
+    {
+      "contract_matched": true,
+      "fact_id": "F:ml430-nat-coprime-of-lt-minfac-0f79bdba",
+      "route_class": "proof-route-only",
+      "signature": {
+        "bound_variable_count": 2,
+        "carriers": [
+          "Nat"
+        ],
+        "conclusion_constants_declared": true,
+        "conclusion_head": "other:Coprime",
+        "dialect": "lean-surface",
+        "fragment": "Nat",
+        "hypothesis_count": 2,
+        "hypothesis_heads": [
+          "Ne",
+          "lt"
+        ],
+        "missing_conclusion_constants": [],
+        "mutation_control": false,
+        "provenance": "ml430-mirror"
+      }
+    }
+  ],
+  "population": {
+    "by_dialect": {
+      "kernel-rendered": 2,
+      "lean-surface": 25,
+      "prose": 3,
+      "smtlib": 1
+    },
+    "by_route_class": {
+      "no-route": 6,
+      "proof-route-only": 25
+    },
+    "censused_count": 31,
+    "held_out_authority": [
+      "artifacts/autogenesis/nursery-v1.json",
+      "artifacts/autogenesis/nursery-v2-extension.json"
+    ],
+    "held_out_excluded": 186,
+    "held_out_source_gap": {
+      "fact_frontier_count": 16,
+      "isolation_gate_count": 206,
+      "known_only_to_fact_frontier": 0,
+      "known_only_to_isolation_gate": 190
+    },
+    "other_count": 7,
+    "primary_count": 24,
+    "primary_mutation_control_count": 11,
+    "primary_targetable_count": 13,
+    "ready_count": 217
+  },
+  "produced_by": "scripts/frontier-shape-census.py",
+  "schema_version": 1
+}
