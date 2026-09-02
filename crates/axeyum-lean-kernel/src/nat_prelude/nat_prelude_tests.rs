@@ -1554,6 +1554,12 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // `gauss_residue_reconcile.rs` (`eisenstein-3` lane): ADR-1540's /
         // ADR-1544's residue 2.
         p.least_residue_sum_range_reconcile,
+        // `eisenstein_lemma.rs` (`eisenstein-3` lane): residue 3 and
+        // Eisenstein's lemma.
+        p.mul_sum_range_div_add_least_residue,
+        p.eisenstein_count_identity,
+        p.eisenstein_lemma,
+        p.eisenstein_lemma_mod_eq,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by

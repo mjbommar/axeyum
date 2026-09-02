@@ -48,7 +48,9 @@ fn residue(pp: u32, a: u32, k: u32) -> u32 {
 }
 
 fn sign_neg(pp: u32, a: u32, k: u32) -> bool {
-    pp / 2 + 1 <= residue(pp, a, k)
+    // `gaussSignNeg pp a k := ble (succ (div pp 2)) (leastResidue pp a k)`,
+    // i.e. the residue STRICTLY exceeds `pp / 2`.
+    pp / 2 < residue(pp, a, k)
 }
 
 fn fold(pp: u32, a: u32, k: u32) -> u32 {

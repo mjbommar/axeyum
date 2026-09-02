@@ -177,6 +177,7 @@ mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
 mod eisenstein_lattice;
+mod eisenstein_lemma;
 mod eisenstein_side;
 mod euler;
 mod even_add_family;
@@ -357,6 +358,7 @@ use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
 use eisenstein_lattice::declare_eisenstein_lattice_all;
+use eisenstein_lemma::declare_eisenstein_lemma_all;
 use eisenstein_side::declare_eisenstein_side_all;
 use euler::declare_mod_eq_cancel;
 use even_add_family::declare_even_add_family_all;
@@ -5743,6 +5745,45 @@ pub struct NatPrelude {
     /// needed** — it is what makes the fold a bijection, not what makes a
     /// residue and its reflection add to `pp`.
     pub least_residue_sum_range_reconcile: NameId,
+    // -- `eisenstein-3` lane: `eisenstein_lemma.rs` --
+    /// `Nat.mul_sumRange_div_add_leastResidue : ∀ ap a m,
+    ///   Eq (mul a (sumRange succ m))
+    ///      (add (mul (succ ap) (sumRange (fun j => div (mul a (succ j))
+    ///           (succ ap)) m))
+    ///           (sumRange (fun j => leastResidue (succ ap) a (succ j)) m))`
+    /// (`eisenstein_lemma.rs`) — the division algorithm, summed. Its
+    /// pointwise content is the LEFT CONJUNCT of
+    /// [`div_mod_exec`](Self::div_mod_exec), because `Nat.divMod d n q r`
+    /// unfolds to `And (Eq n (add (mul d q) r)) (Lt r d)`. Worth knowing: a
+    /// name search finds nothing — there is no `Nat.div_add_mod` here.
+    pub mul_sum_range_div_add_least_residue: NameId,
+    /// `Nat.eisenstein_count_identity : ∀ m a, Eq (gcd a (succ (2*m))) 1 →
+    ///   Eq (add (mul a T) (add S S)) (add (mul (succ (2*m)) (add F N)) T)`
+    /// (`eisenstein_lemma.rs`) — the three residues combined: step 1's
+    /// division algorithm, residue 2's
+    /// [`least_residue_sum_range_reconcile`](Self::least_residue_sum_range_reconcile),
+    /// and residue 1's
+    /// [`gauss_fold_sum_range_eq`](Self::gauss_fold_sum_range_eq). The
+    /// residue sum cancels by ASSOCIATION alone, so no subtraction appears
+    /// anywhere. Coprimality enters here and only here, through the
+    /// bijection.
+    pub eisenstein_count_identity: NameId,
+    /// `Nat.eisenstein_lemma : ∀ m n, Eq (gcd (succ (2*n)) (succ (2*m))) 1 →
+    ///   Even (add F N)` (`eisenstein_lemma.rs`) — **Eisenstein's lemma**:
+    /// the Gauss-lemma counting exponent `N` and the floor sum `F` have the
+    /// same parity. `Nat.Even x := ∃ k, x = k + k`, so this is `N ≡ Σ⌊qk/p⌋
+    /// (mod 2)`. Quadratic reciprocity is NOT proved: this is one of its two
+    /// halves, the other being
+    /// [`eisenstein_floor_sum`](Self::eisenstein_floor_sum), and the
+    /// `Int`-side assembly through `Int.gaussLemmaSignCount` is not built.
+    pub eisenstein_lemma: NameId,
+    /// `Nat.eisenstein_lemma_modEq : ∀ m n,
+    ///   Eq (gcd (succ (2*n)) (succ (2*m))) 1 → modEq 2 F N`
+    /// (`eisenstein_lemma.rs`) — [`eisenstein_lemma`](Self::eisenstein_lemma)
+    /// as a congruence. `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` is the
+    /// BALANCED form, so this is a corollary at `u := N`, `v := k`, not a
+    /// second proof.
+    pub eisenstein_lemma_mod_eq: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -7121,6 +7162,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_if_compl: kernel.name_str(nat, "sumRangeIf_compl"),
             least_residue_sum_range_reconcile: kernel
                 .name_str(nat, "leastResidue_sumRange_reconcile"),
+            mul_sum_range_div_add_least_residue: kernel
+                .name_str(nat, "mul_sumRange_div_add_leastResidue"),
+            eisenstein_count_identity: kernel.name_str(nat, "eisenstein_count_identity"),
+            eisenstein_lemma: kernel.name_str(nat, "eisenstein_lemma"),
+            eisenstein_lemma_mod_eq: kernel.name_str(nat, "eisenstein_lemma_modEq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -8180,6 +8226,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.countRange_eq_sumRange`. Nothing needs it yet, so it goes
         // last.
         declare_gauss_residue_reconcile_all(&mut d, &p)?;
+        // ADR-1540's/ADR-1544's residue 3 and Eisenstein's lemma
+        // (`eisenstein_lemma.rs`): needs `declare_gauss_residue_reconcile_all`
+        // immediately above, `Nat.gauss_fold_sumRange_eq`
+        // (`gauss_fold_sum.rs`), `Nat.div_mod_exec` (`division.rs`),
+        // `Nat.even_iff_mod_two_eq_zero` (`parity.rs`), and the arithmetic
+        // lemmas `left_distrib`/`mul_comm`/`add_right_comm`/
+        // `add_right_cancel`/`add_mul_mod_self_left`/`zero_mod`. Nothing needs
+        // it yet, so it goes last.
+        declare_eisenstein_lemma_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8263,6 +8318,9 @@ mod subset_sum_tests;
 
 #[cfg(test)]
 mod gauss_residue_reconcile_tests;
+
+#[cfg(test)]
+mod eisenstein_lemma_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
