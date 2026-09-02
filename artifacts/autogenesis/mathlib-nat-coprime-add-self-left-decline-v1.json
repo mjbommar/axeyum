@@ -49,5 +49,13 @@
     "kernel_declarations_added": 0
   },
   "disposition": "epistemic_status stays open; no operation registered per ADR-0602 (admission precedes registration). This is an IMPORT-stage decline, not a producer-search decline: propose_modeq_family never runs for any of the 15 nat-coprime-family-v1 facts in this batch, because the statement's own dependency closure is blocked first.",
-  "full_writeup": "docs/autogenesis/292-flywheel-2-batch-contract-dispatch.md"
+  "full_writeup": "docs/autogenesis/292-flywheel-2-batch-contract-dispatch.md",
+  "resolution": {
+    "date": "2026-09-01",
+    "route": "kernel-lane",
+    "closed_by": "crates/axeyum-lean-kernel/src/nat_prelude/primes.rs",
+    "theorem": "Nat.coprime_add_self_left",
+    "diagnosis_status": "reproduced",
+    "note": "Re-executed on 2026-09-01 against the byte-identical 2026-08-27 export (sha256 matches this artifact's identity.export_ndjson_sha256) through target/release/examples/modeq_family_operation: the same typed decline came back, exit 1. Section 3 of docs/research/11-design-review/2026-09-01-why-every-contract-dispatch-declined.md."
+  }
 }

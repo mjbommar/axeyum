@@ -28,10 +28,14 @@
 /// footprint.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
     vec![
-        ("CReal.RegularSeq", p.regular_seq, "def"),
-        ("CReal.limitSeq", p.limit_seq, "def"),
-        ("CReal.limitSeq_regular", p.limit_seq_regular, "theorem"),
-        ("CReal.limit", p.limit, "def"),
-        ("CReal.limit_dist", p.limit_dist, "theorem"),
+        ("CReal.RegularSeq", p.completeness.regular_seq, "def"),
+        ("CReal.limitSeq", p.completeness.limit_seq, "def"),
+        (
+            "CReal.limitSeq_regular",
+            p.completeness.limit_seq_regular,
+            "theorem",
+        ),
+        ("CReal.limit", p.completeness.limit, "def"),
+        ("CReal.limit_dist", p.completeness.limit_dist, "theorem"),
     ]
 }

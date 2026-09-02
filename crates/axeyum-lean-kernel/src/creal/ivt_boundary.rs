@@ -22,7 +22,7 @@
 //! this file: `ivt.rs` answers "do these algorithms converge to the root?"
 //! (no), and this file answers "what does the classical conclusion cost?".
 //!
-//! [`CReal.evt_attained_max_decides_sign`](super::CRealPrelude::evt_attained_max_decides_sign)
+//! [`CReal.evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign)
 //! is the structural model — `creal/extreme_value.rs`, ADR-0603 row 2 for the
 //! Extreme Value Theorem — and this file follows it deliberately, down to the
 //! shape of the proof (one [`CReal.lt_cotrans`](super::CRealPrelude::lt_cotrans)
@@ -67,26 +67,26 @@
 //! is machine-checked to lie inside classical IVT's hypothesis class rather
 //! than asserted to:
 //!
-//! - [`CReal.ivtPlateau_nonpos_at_zero`](super::CRealPrelude::ivt_plateau_nonpos_at_zero)
+//! - [`CReal.ivtPlateau_nonpos_at_zero`](IvtBoundaryNames::ivt_plateau_nonpos_at_zero)
 //!   `: ∀ v, le (ivtPlateau v zero) zero`. One
 //!   [`CReal.min_le_left`](super::CRealPrelude::min_le_left) — the whole point
 //!   of putting the window's ceiling at `x` is that the left endpoint's value
 //!   is `min zero _`, nonpositive by the meet's own universal property, with
 //!   **no case split and no condition on `v`**.
-//! - [`CReal.ivtPlateau_nonneg_at_one`](super::CRealPrelude::ivt_plateau_nonneg_at_one)
+//! - [`CReal.ivtPlateau_nonneg_at_one`](IvtBoundaryNames::ivt_plateau_nonneg_at_one)
 //!   `: ∀ v, le zero (ivtPlateau v one)`. One
 //!   [`CReal.le_min`](super::CRealPrelude::le_min) against `0 ≤ 1` and
 //!   `0 ≤ max (1 + (−1)) v`, the latter being
 //!   [`CReal.le_max_left`](super::CRealPrelude::le_max_left) transported
 //!   across `add_neg`. Again unconditional in `v`.
-//! - [`CReal.ivtPlateau_uniformly_continuous`](super::CRealPrelude::ivt_plateau_uniformly_continuous)
+//! - [`CReal.ivtPlateau_uniformly_continuous`](IvtBoundaryNames::ivt_plateau_uniformly_continuous)
 //!   `: ∀ v, UniformlyContinuousOn (ivtPlateau v) zero one`. Pure assembly,
 //!   once the lattice closure lemmas below exist.
 //!
 //! ## The lattice is uniformly-continuity-closed, and that is new
 //!
-//! [`CReal.uniformly_continuous_max`](super::CRealPrelude::uniformly_continuous_max)
-//! and [`CReal.uniformly_continuous_min`](super::CRealPrelude::uniformly_continuous_min)
+//! [`CReal.uniformly_continuous_max`](IvtBoundaryNames::uniformly_continuous_max)
+//! and [`CReal.uniformly_continuous_min`](IvtBoundaryNames::uniformly_continuous_min)
 //! are declared here because this file is their first consumer, and they are
 //! general: `∀ F G a b, UC F a b → UC G a b → UC (fun r => max (F r) (G r)) a
 //! b`, and the same for `min`. They are the lattice's entries in the same
@@ -209,12 +209,138 @@
 #![allow(clippy::too_many_lines, clippy::many_single_char_names)]
 
 use super::{CRealPrelude, cadd, cle, clt, creal_ty};
+use crate::Kernel;
 use crate::KernelError;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
+use crate::name::NameId;
 use crate::nat_prelude::NatOps;
 use crate::rat_prelude::ops::nat_rewrite_prop;
+
+/// This module's own name registry — ADR-1512's first migration out of the
+/// `CRealPrelude` god-struct.
+///
+/// Reached as `p.ivt_boundary.<name>`. It lives here rather than in
+/// `creal.rs` so that adding a declaration to this file touches **this file
+/// only**: the field, its documentation, and its interning are all beside the
+/// `declare_*` that uses them.
+///
+/// The measurement behind the split
+/// (`docs/research/11-design-review/2026-09-01-creal-declare-deps-measured.md`):
+/// `CRealPrelude` had grown from 441 fields to 606 in five days, and nothing
+/// in this module's seven names is read by any other module — which is what
+/// makes the move local rather than a cross-module rename.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct IvtBoundaryNames {
+    /// `CReal.uniformly_continuous_max : forall F G a b,
+    /// UniformlyContinuousOn F a b -> UniformlyContinuousOn G a b ->
+    /// UniformlyContinuousOn (fun r => max (F r) (G r)) a b` -- the lattice's
+    /// entry in the same closure table
+    /// [`uniformly_continuous_add`](super::CRealPrelude::uniformly_continuous_add)/`_neg`/`_sub`/`_mul`
+    /// fill for the ring operations. Combined modulus `mF n + mG n`, and
+    /// unlike `add` there is **no index shift**: `max` is one-Lipschitz
+    /// JOINTLY in both arguments (`creal/lattice.rs`, `Rat.sub_max_le`), so
+    /// both specs are consulted at the caller's own accuracy `n`. Declared
+    /// here because this file is its first consumer.
+    pub uniformly_continuous_max: NameId,
+    /// `CReal.uniformly_continuous_min` -- the same for the meet, and NOT a
+    /// transcription of [`Self::uniformly_continuous_max`]'s proof: `min`
+    /// sits on the LEFT of the goal, so
+    /// [`le_min`](super::CRealPrelude::le_min) would need the RIGHT to be a
+    /// meet and `min (G x) (G y) + q` is not one. It moves `q` across first.
+    pub uniformly_continuous_min: NameId,
+    /// `CReal.ivtPlateau : CReal -> CReal -> CReal :=
+    /// fun v x => min x (max (add x (neg one)) v)` -- the IVT counterexample
+    /// family, the **clamp of `v` into the unit-width window `[x-1, x]`**.
+    /// Classically a ramp, then a horizontal PLATEAU at height `v`, then a
+    /// ramp: the root sits at the left endpoint exactly when `v >= 0` and at
+    /// the right endpoint exactly when `v <= 0`, so *which end attains it* IS
+    /// the sign of `v`.
+    ///
+    /// A plateau is what forces this, which is why no polynomial family could
+    /// serve -- constructive IVT IS available for polynomials, and the two
+    /// lattice operations are exactly what takes this family outside that
+    /// fragment.
+    pub ivt_plateau: NameId,
+    /// `CReal.ivtPlateau_nonpos_at_zero : forall v,
+    /// le (ivtPlateau v zero) zero` -- IVT's left-endpoint sign condition,
+    /// proved and unconditional in `v`: one
+    /// [`min_le_left`](super::CRealPrelude::min_le_left), since the window's
+    /// ceiling at `x` makes the left endpoint's value `min zero _`.
+    pub ivt_plateau_nonpos_at_zero: NameId,
+    /// `CReal.ivtPlateau_nonneg_at_one : forall v,
+    /// le zero (ivtPlateau v one)` -- IVT's right-endpoint sign condition,
+    /// also unconditional in `v`: one
+    /// [`le_min`](super::CRealPrelude::le_min) against `0 <= 1` and
+    /// [`le_max_left`](super::CRealPrelude::le_max_left) transported across
+    /// `add_neg`.
+    pub ivt_plateau_nonneg_at_one: NameId,
+    /// `CReal.ivtPlateau_uniformly_continuous : forall v,
+    /// UniformlyContinuousOn (ivtPlateau v) zero one` -- the third and last
+    /// of classical IVT's hypotheses, **proved rather than asserted**, so the
+    /// counterexample family is machine-checked to lie inside IVT's
+    /// hypothesis class. Pure assembly over
+    /// [`Self::uniformly_continuous_min`], [`Self::uniformly_continuous_max`],
+    /// [`uniformly_continuous_add`](super::CRealPrelude::uniformly_continuous_add),
+    /// [`uniformly_continuous_id`](super::CRealPrelude::uniformly_continuous_id)
+    /// and
+    /// [`uniformly_continuous_const`](super::CRealPrelude::uniformly_continuous_const).
+    pub ivt_plateau_uniformly_continuous: NameId,
+    /// `CReal.ivt_exact_root_decides_sign : forall v c, le zero c ->
+    /// le c one -> Equiv (min c (max (add c (neg one)) v)) zero ->
+    /// Or (le v zero) (le zero v)` --
+    /// **ADR-0603 row 2 for the Intermediate Value Theorem**, machine-checked
+    /// rather than asserted.
+    ///
+    /// An *exact* root of [`Self::ivt_plateau`] on `[0, 1]` yields
+    /// `v <= 0` or `0 <= v` for an ARBITRARY real -- analytic LLPO,
+    /// equivalently the total order `le_total` that
+    /// `creal/cotransitivity.rs`'s module documentation states is neither
+    /// assumed nor provable here. So an operator handing back a root for
+    /// every `v` would hand back the comparison the order deliberately lacks,
+    /// which is what makes [`ivt_approx`](super::CRealPrelude::ivt_approx) --
+    /// an APPROXIMATE root, `|F x| <= e` per accuracy -- optimal rather than
+    /// merely unimproved.
+    ///
+    /// One [`lt_cotrans`](super::CRealPrelude::lt_cotrans) call on the fixed
+    /// strict pair [`zero_lt_one`](super::CRealPrelude::zero_lt_one) at
+    /// `z := c`, then one more inside each branch (at `z := v`), with the
+    /// meet's own projections supplying `0 <= c` and `0 <= max (c + (-1)) v`
+    /// for free. Both interval hypotheses are faithful but UNUSED, exactly as
+    /// in
+    /// [`evt_attained_max_decides_sign`](super::ExtremeValueNames::evt_attained_max_decides_sign).
+    ///
+    /// This does NOT contradict
+    /// [`ivt_exact_root`](super::CRealPrelude::ivt_exact_root), which does
+    /// produce an exact root: that theorem carries a uniformly positive
+    /// derivative hypothesis, and a plateau is precisely the shape it
+    /// excludes. See this module's "Honest scope" section: this proves the
+    /// classical conclusion at least as strong as a decision principle this
+    /// kernel does not have, NOT that the principle is false (it is
+    /// consistent, hence unprovable here rather than refutable).
+    pub ivt_exact_root_decides_sign: NameId,
+}
+
+impl IvtBoundaryNames {
+    /// Interns this module's names under the `CReal` root.
+    ///
+    /// Split out of `creal.rs`'s `intern_names` by ADR-1512: the kernel
+    /// spelling of each name now sits in the file that declares it, so a
+    /// rename is one edit rather than two files apart.
+    pub(super) fn intern(kernel: &mut Kernel, creal: NameId) -> Self {
+        Self {
+            uniformly_continuous_max: kernel.name_str(creal, "uniformly_continuous_max"),
+            uniformly_continuous_min: kernel.name_str(creal, "uniformly_continuous_min"),
+            ivt_plateau: kernel.name_str(creal, "ivtPlateau"),
+            ivt_plateau_nonpos_at_zero: kernel.name_str(creal, "ivtPlateau_nonpos_at_zero"),
+            ivt_plateau_nonneg_at_one: kernel.name_str(creal, "ivtPlateau_nonneg_at_one"),
+            ivt_plateau_uniformly_continuous: kernel
+                .name_str(creal, "ivtPlateau_uniformly_continuous"),
+            ivt_exact_root_decides_sign: kernel.name_str(creal, "ivt_exact_root_decides_sign"),
+        }
+    }
+}
 
 /// Admit this file's seven declarations, in dependency order.
 ///
@@ -350,9 +476,9 @@ fn declare_uniformly_continuous_lattice(
     let nat = d.nat_ty();
     let op = if join { p.max } else { p.min };
     let name = if join {
-        p.uniformly_continuous_max
+        p.ivt_boundary.uniformly_continuous_max
     } else {
-        p.uniformly_continuous_min
+        p.ivt_boundary.uniformly_continuous_min
     };
 
     let f_fv = d.fresh_fvar();
@@ -639,7 +765,7 @@ fn declare_ivt_plateau(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Kernel
         d.arrow(carrier, inner)
     };
     d.kernel().add_declaration(Declaration::Definition {
-        name: p.ivt_plateau,
+        name: p.ivt_boundary.ivt_plateau,
         uparams: vec![],
         ty,
         value,
@@ -665,12 +791,12 @@ fn declare_ivt_plateau_nonpos_at_zero(
 
     let value = d.lam_fv(v_fv, carrier, body);
     let ty = {
-        let applied = d.const_app(p.ivt_plateau, &[v, zero]);
+        let applied = d.const_app(p.ivt_boundary.ivt_plateau, &[v, zero]);
         let conclusion = cle(d, p, applied, zero);
         d.pi_fv(v_fv, carrier, conclusion)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.ivt_plateau_nonpos_at_zero,
+        name: p.ivt_boundary.ivt_plateau_nonpos_at_zero,
         uparams: vec![],
         ty,
         value,
@@ -715,12 +841,12 @@ fn declare_ivt_plateau_nonneg_at_one(
     let body = d.lemma(p.le_min, &[one, lifted, zero, zero_le_one, zero_le_lifted]);
     let value = d.lam_fv(v_fv, carrier, body);
     let ty = {
-        let applied = d.const_app(p.ivt_plateau, &[v, one]);
+        let applied = d.const_app(p.ivt_boundary.ivt_plateau, &[v, one]);
         let conclusion = cle(d, p, zero, applied);
         d.pi_fv(v_fv, carrier, conclusion)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.ivt_plateau_nonneg_at_one,
+        name: p.ivt_boundary.ivt_plateau_nonneg_at_one,
         uparams: vec![],
         ty,
         value,
@@ -777,22 +903,22 @@ fn declare_ivt_plateau_uniformly_continuous(
         &[id_fn, const_neg_one_fn, zero, one, uc_id, uc_cn],
     );
     let uc_lifted = d.lemma(
-        p.uniformly_continuous_max,
+        p.ivt_boundary.uniformly_continuous_max,
         &[shift_fn, const_v_fn, zero, one, uc_shift, uc_cv],
     );
     let body = d.lemma(
-        p.uniformly_continuous_min,
+        p.ivt_boundary.uniformly_continuous_min,
         &[id_fn, lifted_fn, zero, one, uc_id, uc_lifted],
     );
 
     let value = d.lam_fv(v_fv, carrier, body);
     let ty = {
-        let family = d.const_app(p.ivt_plateau, &[v]);
+        let family = d.const_app(p.ivt_boundary.ivt_plateau, &[v]);
         let conclusion = uc_ty(d, p, family, zero, one);
         d.pi_fv(v_fv, carrier, conclusion)
     };
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.ivt_plateau_uniformly_continuous,
+        name: p.ivt_boundary.ivt_plateau_uniformly_continuous,
         uparams: vec![],
         ty,
         value,
@@ -974,7 +1100,7 @@ fn declare_ivt_exact_root_decides_sign(
     };
 
     d.kernel().add_declaration(Declaration::Theorem {
-        name: p.ivt_exact_root_decides_sign,
+        name: p.ivt_boundary.ivt_exact_root_decides_sign,
         uparams: vec![],
         ty,
         value,

@@ -63,6 +63,13 @@ COMMAND = (
 # `build_groups` never built it before, so its 32 axiom-free theorems were
 # silently absent from `distinct` with no error -- see
 # `docs/research/11-design-review/2026-08-27-rat-reindexing-and-the-denominator-gap.md`.
+#
+# `ipc` (the intuitionistic-propositional-calculus soundness package,
+# `ipc_*` flat names) added to `prelude_theorem_inventory` on 2026-08-31 and
+# never added here -- this ledger's `--check` caught the gap on 2026-09-01
+# (measured: this generator raised `coverage changed` rather than silently
+# publishing a narrower distinct count, which is the fail-closed behaviour
+# this comment block exists to keep true for the NEXT prelude too).
 EXPECTED_PRELUDES: tuple[str, ...] = (
     "axreal",
     "characterization",
@@ -70,6 +77,7 @@ EXPECTED_PRELUDES: tuple[str, ...] = (
     "cpoint",
     "creal",
     "integer",
+    "ipc",
     "logic",
     "nat",
     "rat",

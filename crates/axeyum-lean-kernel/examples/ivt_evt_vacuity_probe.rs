@@ -589,8 +589,12 @@ fn instantiate_evt_at_evt_linear(s: &mut Probe, evt_name: NameId, evt_ty: ExprId
     let one = s.kernel.const_(p.one, vec![]);
     let zlo = s.kernel.const_(p.zero_lt_one, vec![]);
     let hab = capp(&mut s.kernel, p.le_of_lt, &[zero, one, zlo]);
-    let big_f = capp(&mut s.kernel, p.evt_linear, &[v]);
-    let huc = capp(&mut s.kernel, p.evt_linear_uniformly_continuous, &[v]);
+    let big_f = capp(&mut s.kernel, p.extreme_value.evt_linear, &[v]);
+    let huc = capp(
+        &mut s.kernel,
+        p.extreme_value.evt_linear_uniformly_continuous,
+        &[v],
+    );
 
     let args = [big_f, zero, one, hab, huc, n];
     let body = capp(&mut s.kernel, evt_name, &args);
@@ -625,10 +629,22 @@ fn instantiate_ivt_at_plateau(s: &mut Probe) {
     let one = s.kernel.const_(p.one, vec![]);
     let zlo = s.kernel.const_(p.zero_lt_one, vec![]);
     let hab = capp(&mut s.kernel, p.le_of_lt, &[zero, one, zlo]);
-    let big_f = capp(&mut s.kernel, p.ivt_plateau, &[v]);
-    let huc = capp(&mut s.kernel, p.ivt_plateau_uniformly_continuous, &[v]);
-    let hfa = capp(&mut s.kernel, p.ivt_plateau_nonpos_at_zero, &[v]);
-    let hfb = capp(&mut s.kernel, p.ivt_plateau_nonneg_at_one, &[v]);
+    let big_f = capp(&mut s.kernel, p.ivt_boundary.ivt_plateau, &[v]);
+    let huc = capp(
+        &mut s.kernel,
+        p.ivt_boundary.ivt_plateau_uniformly_continuous,
+        &[v],
+    );
+    let hfa = capp(
+        &mut s.kernel,
+        p.ivt_boundary.ivt_plateau_nonpos_at_zero,
+        &[v],
+    );
+    let hfb = capp(
+        &mut s.kernel,
+        p.ivt_boundary.ivt_plateau_nonneg_at_one,
+        &[v],
+    );
 
     let args = [big_f, zero, one, huc, hab, hfa, hfb, n];
     let body = capp(&mut s.kernel, p.ivt_approx, &args);
@@ -825,11 +841,11 @@ fn report_representability(s: &mut Probe) {
         ("CReal.ivt_exact_root", p.ivt_exact_root),
         (
             "CReal.ivt_exact_root_decides_sign",
-            p.ivt_exact_root_decides_sign,
+            p.ivt_boundary.ivt_exact_root_decides_sign,
         ),
         (
             "CReal.evt_attained_max_decides_sign",
-            p.evt_attained_max_decides_sign,
+            p.extreme_value.evt_attained_max_decides_sign,
         ),
         ("CReal.supOn", p.sup_on),
         ("CReal.supOn_ub", p.sup_on_ub),

@@ -76,13 +76,13 @@
 //! conditions.
 //!
 //! The enumeration itself carries a soundness check (`E1`), because it had a
-//! soundness bug: see [`rational_root_candidates`] on `a_0 = 0`.
+//! soundness bug: see `rational_root_candidates` on `a_0 = 0`.
 //!
 //! ## Bounds
 //!
 //! The candidate enumeration is `d(|a_0|) * d(|a_n|) * 2` values and the
 //! divisor search is trial division, so both ends are capped explicitly
-//! ([`MAX_ABS_INT_COEFF`], [`MAX_CANDIDATES`]) and exceeding either yields
+//! (`MAX_ABS_INT_COEFF`, `MAX_CANDIDATES`) and exceeding either yields
 //! `None` — a decline, never a guessed verdict.
 
 use core::cmp::Ordering;

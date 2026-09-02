@@ -13,7 +13,7 @@
 //! The kernel has no `List` type (the complete inductive list remains
 //! `True/False/And/Or/Iff/Eq/Exists/Acc/Bool/Nat/Decidable` + `Nat.le` +
 //! `Nat.Fin` + `Char` + `Nat.Pair`, per the prior lane's grep), so
-//! [`FormulaList`] is built here the same way `Str` and `Formula` itself
+//! `FormulaList` is built here the same way `Str` and `Formula` itself
 //! were: [`crate::Kernel::add_recursive_datatype_family`], with `Formula`
 //! itself as the (non-recursive) carrier sort for `cons`'s `head` field:
 //!
@@ -137,7 +137,7 @@ pub struct IpcProvablePrelude {
     pub and_elim1_example: NameId,
 }
 
-/// Build [`FormulaList`], the `Provable` natural-deduction relation, and the
+/// Build `FormulaList`, the `Provable` natural-deduction relation, and the
 /// two example derivations, registering every declaration through the
 /// trusted [`crate::Kernel::add_inductive`] / [`crate::Kernel::add_declaration`]
 /// gates.

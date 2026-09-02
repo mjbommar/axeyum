@@ -107,12 +107,12 @@ clear_pycache
 baseline="$(run_all_fixtures)"
 echo "$baseline"
 
-echo "$baseline" | grep -qx 'good=PASS' || {
+[ "$(echo "$baseline" | grep -cx 'good=PASS')" -gt 0 ] || {
   echo "FAIL: good fixture does not pass the unmutated checker" >&2
   exit 1
 }
 for guard in "${GUARDS[@]}"; do
-  echo "$baseline" | grep -qx "bad_${guard}=FAIL" || {
+  [ "$(echo "$baseline" | grep -cx "bad_${guard}=FAIL")" -gt 0 ] || {
     echo "FAIL: bad_${guard} does not fail the unmutated checker" >&2
     exit 1
   }
@@ -152,18 +152,18 @@ PYEOF
   ok=1
   for other in "${GUARDS[@]}"; do
     if [ "$other" = "$guard" ]; then
-      echo "$mutated" | grep -qx "bad_${other}=PASS" || {
+      [ "$(echo "$mutated" | grep -cx "bad_${other}=PASS")" -gt 0 ] || {
         echo "FAIL: mutating ${guard} did not flip bad_${other} to PASS" >&2
         ok=0
       }
     else
-      echo "$mutated" | grep -qx "bad_${other}=FAIL" || {
+      [ "$(echo "$mutated" | grep -cx "bad_${other}=FAIL")" -gt 0 ] || {
         echo "FAIL: mutating ${guard} also flipped bad_${other} (should stay FAIL)" >&2
         ok=0
       }
     fi
   done
-  echo "$mutated" | grep -qx 'good=PASS' || {
+  [ "$(echo "$mutated" | grep -cx 'good=PASS')" -gt 0 ] || {
     echo "FAIL: mutating ${guard} broke the good fixture" >&2
     ok=0
   }

@@ -216,10 +216,27 @@ fn sort_one(kernel: &mut Kernel) -> ExprId {
     kernel.sort(one)
 }
 
+/// The `Type` families sit at `Sort 2`, not `Sort 1`, because every generated
+/// constructor field's domain is `Sort 1` (see the filler and higher-order
+/// recursive field builders below) and a `Sort 1` field is illegal in a
+/// `Sort 1` family — Lean's `check_constructor` universe constraint, enforced
+/// here as [`KernelError::ConstructorFieldUniverseTooBig`] (ADR-1495). `Prop`
+/// is impredicative and needs no such room.
+///
+/// This is the ONLY reason for the offset. Before ADR-1495 this generator
+/// emitted 720 cases of which the `type`-sorted ones were Lean-illegal and
+/// asserted to ADMIT, which is why the missing constraint survived: the
+/// kernel's most systematic inductive-admission fixture encoded the wrong
+/// expectation.
 fn result_sort(kernel: &mut Kernel, family_sort: FamilySort) -> ExprId {
     match family_sort {
         FamilySort::Prop => kernel.sort_zero(),
-        FamilySort::Type => sort_one(kernel),
+        FamilySort::Type => {
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
+            let two = kernel.level_succ(one);
+            kernel.sort(two)
+        }
     }
 }
 
