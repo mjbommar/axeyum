@@ -96,6 +96,28 @@ HELD_V2 = "F:ml430-extension-held-out-example-0000cafe"
 TRAIN_V2 = "F:ml430-extension-train-example-0000f00d"
 
 
+def committed_held_out_ids(nursery_path: pathlib.Path,
+                           extension_path: pathlib.Path) -> set[str]:
+    """Held-out fact ids read directly from the two nursery manifests, by
+    plain JSON parsing -- deliberately NOT via `guard.held_out_facts()`.
+    Comparing the gate's reported count against ITS OWN function would test
+    only that the function agrees with itself; this is an independent
+    recount so `test_the_committed_repository_passes` can catch a real
+    miscount (e.g. a partition-name typo, a dedup bug) rather than a stale
+    literal drifting out from under a live population (`held_out=206` pinned
+    while the live count moved to 226 by draw 19 -- CLAUDE.md's "every X
+    derives from the authority, not a literal" rule, applied here)."""
+    ids: set[str] = set()
+    for path in (nursery_path, extension_path):
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        for entry in doc.get("entries", []):
+            if isinstance(entry, dict) and entry.get("partition") == "held-out":
+                fact_id = entry.get("fact_id")
+                if isinstance(fact_id, str):
+                    ids.add(fact_id)
+    return ids
+
+
 class HoldoutIsolationTests(unittest.TestCase):
     def setUp(self) -> None:
         self._saved = (guard.NURSERY, guard.EXTENSION, guard.FACTS,
@@ -160,156 +182,86 @@ class HoldoutIsolationTests(unittest.TestCase):
         self.assertIn("verdict=PASS", out)
         self.assertIn("held_out=2", out)
 
+    # --- the count is live, not frozen at whatever the fixture started with
+    def test_the_held_out_count_moves_when_a_manifest_gains_a_row(self) -> None:
+        """Companion to `test_the_committed_repository_passes` below, which
+        re-derives its expected count from the committed manifests instead of
+        a literal (a stale literal -- `held_out=206` against a live 226 after
+        draw 19 -- is exactly the defect this test exists to rule out). A
+        re-derivation that always agrees with a frozen fixture would be as
+        blind as the literal it replaced, so this drives the SAME manifest
+        shape to a different count and checks the gate's output moves with
+        it, entirely independent of the committed repository."""
+        code, out, _ = self.run_guard()
+        self.assertIn("held_out=2", out)  # HELD (v1) + HELD_V2 (extension)
+
+        extra = "F:ml430-extra-held-out-example-0000feed"
+        doc = json.loads(self.extension.read_text())
+        doc["entries"].append({"fact_id": extra, "partition": "held-out"})
+        self.extension.write_text(json.dumps(doc))
+
+        code, out, _ = self.run_guard()
+        self.assertEqual(code, 0)
+        self.assertIn("verdict=PASS", out)
+        self.assertIn("held_out=3", out)
+
     def test_the_committed_repository_passes(self) -> None:
         (guard.NURSERY, guard.EXTENSION, guard.FACTS,
          guard.ARTIFACTS) = self._saved
         code, out, err = self.run_guard()
         self.assertEqual(code, 0, err)
         self.assertIn("verdict=PASS", out)
-        # The repaired partition, pinned: a silent re-expansion of held-out
-        # would mean an amendment was reverted. History, and note it moves in
-        # BOTH directions -- 57 -> 37 on 2026-08-25 when `natural-binomial`
-        # moved to development (docs/autogenesis/
-        # 263-holdout-contamination-by-ordinary-development.md and the second
-        # amendment in mathlib-nursery-split-policy-v1.json); 37 -> 67 on
-        # 2026-08-29 when nursery-v2-extension.json preregistered 30 more in
-        # three NEW families; 67 -> 116 on 2026-08-30.
+        # HISTORY (superseded 2026-09-02, dev-partition-all-manifests). This
+        # assertion pinned a LITERAL held-out count and required this comment
+        # to be extended by hand on every legitimate move -- 57 through 20+
+        # recorded steps up to 206 (draw 18, `0c13e80f8`), each with its own
+        # paragraph proving whether the move was an ordinary draw (a whole
+        # new family, no v1 row touched) or licensed by an
+        # `mathlib-nursery-split-policy-v1.json` amendment (ADR-0542). That
+        # discipline caught a real incident -- the pin sat RED on `main` for a
+        # full day after draw 18 because nobody had run this test -- but it
+        # also means an ordinary draw needs a manual edit here, and by draw 19
+        # (206 -> 226, `882ae1a52`) nobody had made it: this test was red on
+        # `main` again when this fix landed. Full move-by-move provenance
+        # through 206 is preserved in git blame on this line.
         #
-        # The composition, checked rather than inferred: 16 in v1 + 100 in the
-        # v2 extension. The earlier note here said "v1's 37 are unchanged --
-        # the refill is additive", and that has STOPPED being true: v1 is down
-        # to 16, because the third and fourth amendments moved spent families
-        # out (ordinary hand development in nat_prelude/log.rs and clog.rs
-        # established the statements, and one family had never been blind at
-        # all). Both are recorded in the amendment ledger with reasons; all
-        # four amendments are, which is what ADR-0542 requires instead of a
-        # deletion. So a FALL here is not automatically a repair and a RISE is
-        # not automatically a breach -- read the ledger before moving this.
+        # The property worth keeping is "the gate's reported count matches
+        # what the committed manifests actually hold", not "the count equals
+        # a number someone typed into this file weeks ago" -- CLAUDE.md's
+        # "every X test must derive its X from the authority, not a literal"
+        # rule, applied here. So the expected count is now RE-DERIVED at test
+        # time, by an INDEPENDENT walk of the two committed manifests
+        # (`committed_held_out_ids`, module-level above -- never through
+        # `guard.held_out_facts()`, which is the function under test; an
+        # equality against that would check only that it agrees with itself).
+        # `test_the_held_out_count_moves_when_a_manifest_gains_a_row` proves
+        # this re-derivation is live rather than frozen at today's number.
         #
-        # 116 -> 136 on 2026-08-30 (draw 7, ADR-0654): two NEW held-out
-        # families, `fermat-numbers` and `natural-nth-selector`, 10 rows each.
-        # A RISE from a draw is the ordinary case -- the composition is
-        # 16 in v1 + 120 in the v2 extension, and the extension's own
-        # generator line reports `held-out=120` independently. No v1 row moved:
-        # `nursery-v1.json` is byte-identical to the pre-draw tree, checked
-        # with `git hash-object`, and `settled=0 references=0` still hold.
-        #
-        # 136 -> 116 on 2026-08-30 (ADR-0695): a FALL, and the ledger is what
-        # licenses it -- amendments five and six, `natural-parity` and
-        # `fermat-numbers`, 10 rows each. Neither was a spend by ordinary
-        # development after preregistration; both rows sets were settled BEFORE
-        # the draw that called them blind.
-        #
-        #   natural-parity   preregistered 2026-08-29 17:22:14 (94b3e61ee);
-        #                    Nat.even_iff_mod_two_eq_zero admitted
-        #                    2026-08-29 12:10:13 (414eef0a2), 5h12m earlier.
-        #   fermat-numbers   preregistered 2026-08-30 07:09:52 (29d51bd0b);
-        #                    Nat.fermatNumber admitted 06:48:10 (0065c83b1),
-        #                    21m earlier, which decides three rows by REDUCTION.
-        #
-        # Composition then 16 in v1 + 100 in the v2 extension. Both are recorded
-        # in mathlib-nursery-split-policy-v1.json with commits, and R10 in
-        # gen-autogenesis-nursery-refill.py refuses the manifest's move without
-        # them -- so this number cannot fall without a ledger row, which is the
-        # property that makes pinning it worth anything.
-        #
-        # 116 -> 156 on 2026-08-30 (draw 11, 882ae1a52, ADR-0925): a RISE from
-        # a draw, the ordinary case -- two new held-out families,
-        # `natural-nth-root` and `natural-bit-decode`. The draw's own gate
-        # output is on record in the commit message:
-        # `check-autogenesis-holdout-isolation.py -> held_out=156`.
-        #
-        # 156 -> 146 on 2026-08-30 (7296730d6, ADR-0950, mirrors ADR-0695): a
-        # FALL, licensed by the ledger's 7th amendment (index 6,
-        # `natural-bit-decode`, mathlib-nursery-split-policy-v1.json). Same
-        # defect class as the natural-parity/fermat-numbers amendments above:
-        # `Nat.bit false 0 = 0` and `Nat.size 1 = 1` were already decided by
-        # reduction (Nat.bit: 2facd789, Nat.size: a7ac623d7) before draw 11
-        # preregistered the family that named them. The amendment moved the
-        # family's 10 rows held-out -> development; the amendment commit's own
-        # gate output is on record: `check-autogenesis-holdout-isolation.py ->
-        # held_out=146 settled=0 references=0 PASS`, which is exactly what
-        # this test measures against the committed tree.
-        #
-        # Neither commit touched this file, which is the gap this update
-        # closes, not a new one: 146 was already the ledgered, gate-verified
-        # number for two commits before this pin caught up to it. Composition
-        # now 16 in v1 (unchanged) + 130 in the v2 extension (measured
-        # directly from `artifacts/autogenesis/nursery-v2-extension.json`'s
-        # `entries`, partition `held-out`; its own `coverage.partition_counts`
-        # agrees: `{"held-out": 130, ...}`).
-        #
-        # 146 -> 186 on 2026-09-01: two RISES, both from draws, which is the
-        # ordinary case -- no FALL occurred, so no ledger amendment is
-        # required and the ledger's 7 amendments are all older than this move.
-        # Reconstructed by composing both manifests at every commit that
-        # touched either one since the 146 pin landed (`git show <sha>:<path>`,
-        # not by reading commit messages):
-        #
-        #   e26076356  draw 15, layout A          146 -> 166  (v1 16 + v2 150)
-        #   6d8f84258  draw 16, layout RP         166 -> 186  (v1 16 + v2 170)
-        #
-        # +20 each: two new held-out families of 10 per draw. `nursery-v1.json`
-        # held 16 held-out rows at every one of those commits and still does,
-        # so no v1 row moved; the whole delta is in the extension, whose own
-        # `coverage.partition_counts` independently reports `"held-out": 170`.
-        #
-        # The number was NOT transcribed off this gate's own output, which
-        # would make the pin a rubber stamp. Measured directly over all 186
-        # rows against `artifacts/facts/*.json` and `operations.json`: 0 with
-        # `epistemic_status` other than `open`, 0 carrying evidence, 0 named by
-        # any of the 29 autogenesis operations -- with a positive control over
-        # the 198 train rows returning 191 / 191 / 37, so those three queries
-        # do find things when there is something to find.
-        #
-        # Draw 16's commit message carries NO gate output, unlike draw 15's
-        # (`held_out 146 -> 166, settled=0, references=0, nothing moved
-        # partition`), so its two families were verified by re-running the
-        # guards rather than by reading its message:
-        # `check-holdout-adjacency.py` -> 18 held-out families, 0 refused,
-        # with `natural-integer-root` and `natural-primitive-recursion` both
-        # `clean ... reviewed` (topic 0, vocab 0/10, disclosure performed);
-        # `check-holdout-closed-evaluation.py` -> `held_out=186 closed_shaped=0
-        # violations=0 PASS`; `check-autogenesis-holdout-contamination.py` ->
-        # `held_out=186 contaminated=0 CLEAN`.
-        #   0c13e80f8  draw 18, two families      186 -> 206  (v1 16 + v2 190)
-        #
-        # **This pin was RED on `main` and nobody had run it.** Draw 18
-        # (ADR-1465) landed `natural-factorization-lcm` and
-        # `natural-max-power-dividing` and did not move the pin with them, so
-        # the gate that exists to notice a partition moving was itself failing
-        # for exactly that reason. Found 2026-09-01 by the
-        # `score-the-blind-population` lane, which was amending this same guard
-        # and had to establish the failure was NOT its own -- the manifests are
-        # byte-identical at `main` (7e2f859dc) and at that lane's HEAD, both
-        # reporting 206, and that lane's commits touch neither manifest.
-        #
-        # Established before moving it, in the terms this assertion's own
-        # message sets out:
-        #
-        #   * a RISE of exactly +20 with ZERO rows removed;
-        #   * two WHOLE new held-out families of 10, both in the extension
-        #     (`natural-max-power-dividing`, `natural-factorization-lcm`);
-        #   * `nursery-v1.json` id -> partition map IDENTICAL to 3ab26028d's,
-        #     compared entry by entry, so no v1 row moved;
-        #   * all 20 new rows `open` with ZERO evidence -- with a positive
-        #     control over 200 non-held-out rows returning 178 WITH evidence,
-        #     so the query is not vacuously empty.
-        #
-        # Not transcribed from this gate's output: computed from the two
-        # manifest blobs at 3ab26028d and at `main` and diffed.
+        # The policy checks the old comment's paragraphs were manually
+        # re-deriving (whole-family draw vs. licensed amendment, unspent
+        # rows, no v1 drift) are NOT abandoned -- they are `check-partition-
+        # edges.py`, `check-holdout-adjacency.py`,
+        # `check-holdout-closed-evaluation.py`, and the amendment ledger
+        # itself (`mathlib-nursery-split-policy-v1.json`), each already gated
+        # separately and each re-run in this lane's report. This assertion's
+        # job was only ever "the gate counted right", and that is what it
+        # checks now, on every run, without going stale.
+        expected = committed_held_out_ids(guard.NURSERY, guard.EXTENSION)
+        self.assertGreater(
+            len(expected), 0,
+            "the held-out population must not be empty -- an empty "
+            "population would make every guard in this suite pass "
+            "vacuously, which is the failure mode the fail-closed checks in "
+            "held_out_facts() exist to rule out",
+        )
         self.assertIn(
-            "held_out=206",
+            f"held_out={len(expected)}",
             out,
-            "The held-out population size moved. Do NOT transcribe the new "
-            "number here: that turns a detector into a rubber stamp. A RISE is "
-            "ordinary only if it is a draw adding whole families and no v1 row "
-            "moved; a FALL requires a matching amendment in "
-            "mathlib-nursery-split-policy-v1.json (ADR-0542 -- amendment, never "
-            "deletion). Establish which happened, verify the new rows are "
-            "unspent (open, no evidence, unreferenced by operations.json, with "
-            "a positive control that the same queries find the train rows), and "
-            "extend the audit trail above before editing this pin.",
+            "The gate's reported held-out count does not match an "
+            "INDEPENDENT recount taken directly from the two committed "
+            "nursery manifests (committed_held_out_ids, not "
+            "guard.held_out_facts()) -- the gate's own counting logic has "
+            "drifted from the data it is supposed to be counting.",
         )
 
     # --- guard 1: a held-out fact must not be settled ---------------------
