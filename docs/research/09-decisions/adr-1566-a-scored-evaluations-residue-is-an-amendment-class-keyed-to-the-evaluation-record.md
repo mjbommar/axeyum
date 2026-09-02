@@ -133,6 +133,37 @@ gates:
 * **An unscored record, or an absent one.** A record whose `state` is not
   `scored` is a preregistration, not a result. Clause (b).
 
+### The one tolerance, and why it is loud rather than silent
+
+Clause (b) is a question about the commit graph, and **three real trees here
+do not have one**: `scripts/tests/mutation_controls.py` copies the checkout
+with `.git` in its `ignore_patterns` (measured — the nursery suite's baseline
+went red on exactly this before the tolerance existed), a lane snapshot from
+`git archive | tar -x` carries no history, and every control fixture is built
+from scratch.
+
+Both obvious behaviours are wrong:
+
+* **Refuse every amendment there.** The gate then goes red on a fact about
+  *where it ran* rather than about the ledger — the failure `exit 2` exists to
+  avoid, one level down.
+* **Honour them silently.** The reader is told a clause held when it was never
+  asked. That is the shape CLAUDE.md names: a checker that cannot fail, in one
+  environment, with nothing in its output to say so.
+
+So the clause is **skipped and recorded**. `ClassContext.git_available()` is
+the narrow test (`rev-parse --is-inside-work-tree`), the skip lands in
+`ClassContext.unverified`, and BOTH gates print it — `CLASS-UNVERIFIED <line>`
+plus a `class_unverified=N` field on `check-partition-edges.py`'s summary, and
+the same lines from `check-autogenesis-nursery.py` before its OK rows. The
+authoritative run is the one in a checkout, and the output says which kind of
+run it was. M30 is the mutant that asserts availability instead, and it kills
+exactly the control for this.
+
+The note is deliberately NOT in the nursery report dict: that report's digest
+is a property of the drawn population, and a fact about where the gate ran
+does not belong in it.
+
 ### And what does not change
 
 * `--record-baseline` still excludes honoured amendments, so the six edges
@@ -158,6 +189,22 @@ gates:
   the last red partition gate from ADR-1546's exit criterion.
 * The blind seal ADR-1565 restored is intact and is now driven by three
   controls rather than one, each aimed at a different clause of the class.
+  Every exemption list behind these numbers is EMPTY: `component_split_
+  exemptions` 0, `cross_population_component_split_exemptions` 0, baselined
+  edges 0. Nothing is suppressed; 51 edges are amended under two re-derived
+  classes and the rest do not cross.
+* **Mutation, measured, and the two mutants that kill two.** `partition-edges`:
+  42 tests, 28 mutants, 26 single kills. M24 (record key), M25 (scored
+  membership), M26 (direction), M27 (preregistration order), M28 (record
+  state), M29 (redacted matching) and M30 (the tolerance) are the new ones.
+  **M11 kills 2** because `redacted_key` is now one rule with two readers —
+  what the baseline records, and which form an amendment may name a blind
+  endpoint in; retargeting it at `redacted_row` to force a single kill was
+  tried and kills THREE, two of them for a self-inconsistency the shipped code
+  cannot have. `nursery-split-exemption-guards`: 26 tests, 11 mutants; **N1
+  kills 2** — one contraction, now exercised by two amendment classes, and the
+  second kill is the new class's accept case, which is the positive control the
+  three seals need.
 * The audit question for the NEXT `held-out -> X` edge is unchanged and is now
   executable: which commit introduced it, and does the preregistering commit
   precede it. A lane that answers "yes" writes one amendment; a lane that

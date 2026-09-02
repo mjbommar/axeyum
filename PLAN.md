@@ -203,6 +203,11 @@ now. Nothing was deleted.
 | 2026-09-02 | heldout-never-blind | measured that the six edges POSTDATE the seal by 3 days and enter at the scoring commit — the brief's premise is false |
 | 2026-09-02 | heldout-never-blind | restored the `held-out`/`train` blind seal ADR-1564 dropped from `check-autogenesis-nursery.py`; N7 kills exactly one test |
 | 2026-09-02 | heldout-never-blind | ADR-1565 records the refusal, the timeline, and the seal repair |
+| 2026-09-02 | scored-residue-class | lane opened; status stub |
+| 2026-09-02 | scored-residue-class | ADR-1566: a scored evaluation's residue is an amendment class keyed to the record, never to a fact |
+| 2026-09-02 | scored-residue-class | `scored-evaluation-residue` in `check-partition-edges.py`, four re-derived clauses; baseline 6 → 0 |
+| 2026-09-02 | scored-residue-class | `check-autogenesis-nursery.py` honours it through the edge gate's own loader and the shared `edge_is_amended`; 1 crossing component → 0 |
+| 2026-09-02 | scored-residue-class | fourteen controls incl. the three seals; M24–M30 one kill each; the git-less tolerance is reported, not silent |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -38191,6 +38196,94 @@ the same family, so the count of families to move is **0**.
 Two of the four targets are themselves ex-held-out rows moved to development by
 the 2026-08-30 `natural-parity` amendment, which is why they read as
 `development` rather than as a second held-out family.
+
+**Your lane's block (`DONE`, scored-residue-class, 2026-09-02).** ADR-1565
+identified the last red partition gate's whole subject and named two repairs.
+This lane built the second: a component-level analogue of ADR-1563's per-edge
+amendment class, **keyed to the evaluation record and never to a fact id**
+([ADR-1566](docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md)).
+
+**The rule as implemented.** `scored-evaluation-residue` is honoured only when
+`class_complaint` re-derives all four clauses — none is taken on the
+amendment's word, and none is stated in the artifact:
+
+| clause | re-derived from |
+| --- | --- |
+| (d) keyed to `evaluation_record`, a `record_id` in `holdout-evaluation-v1.json` | the record file |
+| (c) the edge runs **from** the blind row to a non-blind one | the live manifests and `policy.blind_partitions` |
+| (a) the edge's **blind endpoint** is in that record's `outcomes` **and** in the family the record names | the live manifests (`family`) and the record |
+| (b) the record's `state` is `scored`, and its `protocol_commit` is a **strict git ancestor** of the commit that introduced the edge | `git merge-base --is-ancestor` plus the first-parent pickaxe |
+
+Clause (a) is written against the **blind endpoint**, not the edge's source.
+Written against the source it would also refuse a reversed edge, and clause
+(c)'s mutant would then kill nothing while looking exactly as present.
+
+**No held-out row is named anywhere.** A blind endpoint is written in the
+salted-digest form the baseline already uses, and `ClassContext.resolve`
+inverts it through the live manifests. `check-autogenesis-holdout-isolation.py`
+still scans the amendments artifact (verified: 1121 scan targets, the file
+among them) and still reports `references=0`.
+
+**Measured.** `check-partition-edges.py --baseline`: **baseline 6 → 0**,
+`violations=0`, `amended=51`, a no-op re-record byte-identical (`317c5f2c…`
+twice). `check-autogenesis-nursery.py`: **1 crossing component → 0**, both
+report paths, `component_split_leaks: []` and
+`evaluation_longitudinal_component_overlap: []` on each. It stands on nothing
+suppressed: `component_split_exemptions` and
+`cross_population_component_split_exemptions` are both **0 entries**, and the
+edge baseline is **0 edges**. The nursery gate honours the class through the
+edge gate's own `load_amendments` and a new shared `edge_is_amended`, so what
+an amendment covers is decided in one place, not two.
+
+**The one tolerance, and why it is loud.** Clause (b) is a question about the
+commit graph, and three real trees have none: `mutation_controls.py` copies the
+checkout with `.git` in its `ignore_patterns`, a `git archive` lane snapshot
+has no history, and a fixture tree is built from scratch. Refusing there would
+make the gate red on a fact about *where it ran*; honouring silently would
+claim a clause held that was never asked. So the clause is **skipped and
+reported** — a `CLASS-UNVERIFIED` line and a `class_unverified=N` field on both
+gates — and M30 is the mutant that asserts availability instead.
+
+**The three seals ADR-1565 restored still hold**, each a synthetic population
+differing from the accept case in one thing: an amendment naming a record that
+does not exist, an edge INTO the scored blind row, and an edge whose
+introducing commit predates the preregistration. All three still fail
+`check-autogenesis-nursery.py`; all three are refused by name in the edge
+gate's own suite at one mutant kill each.
+
+**Mutation.** `partition-edges`: 42 tests, 28 mutants, **26 kill exactly one**.
+M24 (record key) · M25 (scored membership) · M26 (direction) · M27
+(preregistration order) · M28 (record state) · M29 (redacted matching) · M30
+(the tolerance) are the new ones, one kill each. **M11 kills 2**, and the
+second is not an accident: `redacted_key` is one rule with two readers now
+(what the baseline records, and which form an amendment may name a blind
+endpoint in). Retargeting it at `redacted_row` to force a single kill was tried
+and is worse — three kills, two of them for a self-inconsistency the shipped
+code cannot have. `nursery-split-exemption-guards`: 26 tests, 11 mutants; **N1
+kills 2** (its own accept case and the new class's, which is the positive
+control the three seals need); N2/N3/N5/N6/N7 one each; the four pre-existing
+2-kill mutants are unchanged.
+
+**Gate table, all run by name, all green.** `check-development-partition` 0 ·
+`check-autogenesis-holdout-isolation` 0 (`references=0`, `recorded_scores=10`,
+`files_scanned=1114`) · `check-holdout-adjacency` 0 ·
+`check-holdout-closed-evaluation` 0 · `check-dispatchable-frontier` 0 ·
+`check-draw7-frozen-families` 0 (`new families: []`) ·
+`check-partition-edges --baseline` **0** · `check-autogenesis-nursery` **0** ·
+`gen-autogenesis-nursery-refill --check` 0 ·
+`create-autogenesis-mathlib-nursery-split.py --check` 0 ·
+`frontier-shape-census --check` 0 (`current`; regenerated byte-identical) ·
+`validate-facts` 0 · `check-control-registration.sh` 0 (`controls=52
+orphans=0`).
+
+**For the next lane.** The audit question for the next `held-out -> X` edge is
+now executable rather than advisory: which commit introduced it, and does the
+preregistering commit strictly precede it. Answer yes and it is one amendment;
+answer no and it is a leak to repair or reclassify. Nothing was moved between
+partitions, no row's outcome or id appears in any artifact this lane wrote, and
+`integer-absolute-value` remains held-out and remains spent exactly as
+`holdout-evaluation-v1.json` already records. No cargo work was in scope and
+none was run.
 
 **Both of Euclid's missing ingredients are in; `F:nat-exists-prime-gt` is one
 slice from closing** (`WIP`, nat-prime-divisor, 2026-08-17).
