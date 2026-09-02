@@ -1313,6 +1313,617 @@ fn declare_count_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// The two inductions over the bound, and the three headline statements.
+// ---------------------------------------------------------------------------
+
+/// `∀ q, Lt 0 (g q) → prime_condition q` — "every element of this multiplicity
+/// function is prime".
+fn prime_support_ty(d: &mut NatDev<'_>, p: &NatPrelude, g: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let gq = d.apply(g, &[q]);
+    let zero = d.zero();
+    let positive = d.lt(zero, gq);
+    let prime = prime_condition(d, p, q);
+    let body = d.arrow(positive, prime);
+    d.pi_fv(q_fv, nat, body)
+}
+
+/// From `hy : dvd pv (pow j (g j))` and `ne : Not (Eq pv j)`, derive `False`.
+///
+/// The two branches are the two ways `pow j (g j)` can fail to be divisible by
+/// a prime other than `j`, and the FIRST is what rules out `j = 0`: if `g j` is
+/// zero the factor is `1` (and `j` need not be prime at all), while otherwise
+/// `j` is prime by the support hypothesis and `prime_dvd_of_dvd_pow` reduces
+/// the goal to `pv ∣ j`, which for two primes forces `pv = j`.
+#[allow(clippy::too_many_arguments)]
+fn refute_dvd_pow_factor(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    g: ExprId,
+    hps: ExprId,
+    pv: ExprId,
+    hp: ExprId,
+    j: ExprId,
+    ne: ExprId,
+    hy: ExprId,
+) -> ExprId {
+    let p = *p;
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let gj = d.apply(g, &[j]);
+    let one_lit = d.num(1);
+    let motive =
+        |d: &mut NatDev<'_>, _y: ExprId| -> ExprId { d.kernel().const_(p.logic.false_, vec![]) };
+    let small = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+        // `g j < 1`, so `g j = 0` and the factor is `pow j 0 = 1`.
+        let zero = d.zero();
+        let le_zero = d.lemma(p.le_of_lt_succ, &[gj, zero, h]);
+        let zero_le = d.lemma(p.zero_le, &[gj]);
+        let is_zero = d.lemma(p.le_antisymm, &[gj, zero, le_zero, zero_le]);
+        let pow_gj = d.pow(j, gj);
+        let pow_zero_term = d.pow(j, zero);
+        let to_zero = d.congr(gj, zero, is_zero, &|d, x| d.pow(j, x));
+        let pz = d.lemma(p.pow_zero, &[j]);
+        let (_, factor_is_one) = d.chain(pow_gj, &[(pow_zero_term, to_zero), (one_lit, pz)]);
+        let at_one = transport_dvd_right(d, pv, pow_gj, one_lit, factor_is_one, hy);
+        let refute = d.lemma(p.prime_not_dvd_one, &[pv, hp]);
+        d.apply(refute, &[at_one])
+    };
+    let big = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+        // `0 < g j`, so `j` is prime, and a prime dividing `j ^ (g j)` divides
+        // `j` itself -- forcing `pv = 1` (impossible) or `pv = j` (excluded).
+        let prime_j = d.apply(hps, &[j, h]);
+        let dvd_j = d.lemma(p.prime_dvd_of_dvd_pow, &[pv, j, gj, hp, hy]);
+        let split = d.lemma(p.prime_eq_one_or_self_of_dvd, &[j, pv, prime_j, dvd_j]);
+        let is_one = d.eq(pv, one_lit);
+        let is_j = d.eq(pv, j);
+        let left = {
+            let he_fv = d.fresh_fvar();
+            let he = d.kernel().fvar(he_fv);
+            let one_lt = d.lemma(p.prime_one_lt, &[pv, hp]);
+            let moved = {
+                let motive = d.eq_motive(pv, &|d, y| {
+                    let one_inner = d.num(1);
+                    d.lt(one_inner, y)
+                });
+                d.transport(pv, motive, one_lt, one_lit, he)
+            };
+            let bad = d.lemma(p.lt_irrefl, &[one_lit, moved]);
+            d.lam_fv(he_fv, is_one, bad)
+        };
+        let right = {
+            let he_fv = d.fresh_fvar();
+            let he = d.kernel().fvar(he_fv);
+            let bad = d.apply(ne, &[he]);
+            d.lam_fv(he_fv, is_j, bad)
+        };
+        or_cases(d, &p, is_one, is_j, false_ty, left, right, split)
+    };
+    cases_lt_or_ge(d, &p, gj, one_lit, &motive, &small, &big)
+}
+
+/// `hlt : Lt a b ⊢ Not (Eq a b)` — the same fact in the other orientation.
+/// Both are needed: `refute_dvd_pow_factor` always wants `Not (Eq pv j)`, and
+/// the two callers hold the strict inequality in opposite directions.
+fn ne_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId {
+    let p = *p;
+    let eq_ty = d.eq(a, b);
+    let he_fv = d.fresh_fvar();
+    let he = d.kernel().fvar(he_fv);
+    // `Eq a b` moves `Lt a b` to `Lt b b`.
+    let motive = d.eq_motive(a, &|d, y| d.lt(y, b));
+    let moved = d.transport(a, motive, hlt, b, he);
+    let bad = d.lemma(p.lt_irrefl, &[b, moved]);
+    d.lam_fv(he_fv, eq_ty, bad)
+}
+
+/// `hlt : Lt a b ⊢ Not (Eq b a)` — the two are distinct because one is
+/// strictly below the other.
+fn ne_of_lt_rev(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId, hlt: ExprId) -> ExprId {
+    let p = *p;
+    let eq_ty = d.eq(b, a);
+    let he_fv = d.fresh_fvar();
+    let he = d.kernel().fvar(he_fv);
+    // `Eq b a` moves `Lt a b` to `Lt a a`.
+    let motive = d.eq_motive(b, &|d, y| d.lt(a, y));
+    let moved = d.transport(b, motive, hlt, a, he);
+    let bad = d.lemma(p.lt_irrefl, &[a, moved]);
+    d.lam_fv(he_fv, eq_ty, bad)
+}
+
+/// `Nat.not_dvd_prodRange_of_le` and `Nat.not_pow_succ_dvd_prodRange_of_lt` —
+/// the two inductions over the fold's bound.
+fn declare_prod_range_valuation(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fn_ty = d.arrow(nat, nat);
+
+    // not_dvd_prodRange_of_le :
+    //   ∀ g pv k, prime_condition pv → (∀ q, Lt 0 (g q) → prime_condition q) →
+    //     Le k pv → Not (dvd pv (prodRange (fun q => pow q (g q)) k))
+    {
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let pv_fv = d.fresh_fvar();
+        let pv = d.kernel().fvar(pv_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let prime_ty = prime_condition(d, &p, pv);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let ps_ty = prime_support_ty(d, &p, g);
+        let hps_fv = d.fresh_fvar();
+        let hps = d.kernel().fvar(hps_fv);
+        let factors = pow_factor(d, g);
+
+        let claim = |d: &mut NatDev<'_>, bound: ExprId| -> ExprId {
+            let pr = prod_range(d, &p, factors, bound);
+            let divides = d.dvd(pv, pr);
+            let refute = not_ty(d, &p, divides);
+            let hyp = d.le(bound, pv);
+            d.arrow(hyp, refute)
+        };
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let hyp = d.le(zero, pv);
+            let h_fv = d.fresh_fvar();
+            let pr = prod_range(d, &p, factors, zero);
+            let divides = d.dvd(pv, pr);
+            let hd_fv = d.fresh_fvar();
+            let hd = d.kernel().fvar(hd_fv);
+            let refute = d.lemma(p.prime_not_dvd_one, &[pv, hp]);
+            let bad = d.apply(refute, &[hd]);
+            let with_hd = d.lam_fv(hd_fv, divides, bad);
+            d.lam_fv(h_fv, hyp, with_hd)
+        };
+        let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            let succ_j = d.succ(j);
+            let hyp = d.le(succ_j, pv);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let pr_succ = prod_range(d, &p, factors, succ_j);
+            let divides = d.dvd(pv, pr_succ);
+            let hd_fv = d.fresh_fvar();
+            let hd = d.kernel().fvar(hd_fv);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+            let le_succ_j = d.lemma(p.le_succ, &[j]);
+            let le_j_pv = d.lemma(p.le_trans, &[j, succ_j, pv, le_succ_j, h]);
+            let ih_applied = d.apply(ih, &[le_j_pv]);
+            let pr_j = prod_range(d, &p, factors, j);
+            let gj = d.apply(g, &[j]);
+            let factor = d.pow(j, gj);
+            let split = d.lemma(p.euclid_lemma, &[pv, pr_j, factor, hp, hd]);
+            let left_ty = d.dvd(pv, pr_j);
+            let right_ty = d.dvd(pv, factor);
+            let left = {
+                let hx_fv = d.fresh_fvar();
+                let hx = d.kernel().fvar(hx_fv);
+                let bad = d.apply(ih_applied, &[hx]);
+                d.lam_fv(hx_fv, left_ty, bad)
+            };
+            let right = {
+                let hy_fv = d.fresh_fvar();
+                let hy = d.kernel().fvar(hy_fv);
+                let ne = ne_of_lt_rev(d, &p, j, pv, h);
+                let bad = refute_dvd_pow_factor(d, &p, g, hps, pv, hp, j, ne, hy);
+                d.lam_fv(hy_fv, right_ty, bad)
+            };
+            let cases = or_cases(d, &p, left_ty, right_ty, false_ty, left, right, split);
+            let with_hd = d.lam_fv(hd_fv, divides, cases);
+            d.lam_fv(h_fv, hyp, with_hd)
+        };
+        let proof = d.induct(&claim, &base, &step, k);
+        let stmt = claim(d, k);
+        declare_forall(
+            d,
+            p.not_dvd_prod_range_of_le,
+            &[
+                (g_fv, fn_ty),
+                (pv_fv, nat),
+                (k_fv, nat),
+                (hp_fv, prime_ty),
+                (hps_fv, ps_ty),
+            ],
+            stmt,
+            proof,
+        )?;
+    }
+
+    // not_pow_succ_dvd_prodRange_of_lt :
+    //   ∀ g pv k, prime_condition pv → (∀ q, Lt 0 (g q) → prime_condition q) →
+    //     Lt pv k → Not (dvd (pow pv (succ (g pv)))
+    //                        (prodRange (fun q => pow q (g q)) k))
+    {
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let pv_fv = d.fresh_fvar();
+        let pv = d.kernel().fvar(pv_fv);
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let prime_ty = prime_condition(d, &p, pv);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let ps_ty = prime_support_ty(d, &p, g);
+        let hps_fv = d.fresh_fvar();
+        let hps = d.kernel().fvar(hps_fv);
+        let factors = pow_factor(d, g);
+        let c = d.apply(g, &[pv]);
+        let succ_c = d.succ(c);
+        let pow_c = d.pow(pv, c);
+        let pow_succ_c = d.pow(pv, succ_c);
+
+        let claim = |d: &mut NatDev<'_>, bound: ExprId| -> ExprId {
+            let pr = prod_range(d, &p, factors, bound);
+            let divides = d.dvd(pow_succ_c, pr);
+            let refute = not_ty(d, &p, divides);
+            let hyp = d.lt(pv, bound);
+            d.arrow(hyp, refute)
+        };
+        let base = |d: &mut NatDev<'_>| -> ExprId {
+            let zero = d.zero();
+            let hyp = d.lt(pv, zero);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let pr = prod_range(d, &p, factors, zero);
+            let divides = d.dvd(pow_succ_c, pr);
+            let hd_fv = d.fresh_fvar();
+            let bad = d.lemma(p.not_succ_le_zero, &[pv, h]);
+            let with_hd = d.lam_fv(hd_fv, divides, bad);
+            d.lam_fv(h_fv, hyp, with_hd)
+        };
+        let step = |d: &mut NatDev<'_>, j: ExprId, ih: ExprId| -> ExprId {
+            let succ_j = d.succ(j);
+            let hyp = d.lt(pv, succ_j);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let pr_succ = prod_range(d, &p, factors, succ_j);
+            let divides = d.dvd(pow_succ_c, pr_succ);
+            let hd_fv = d.fresh_fvar();
+            let hd = d.kernel().fvar(hd_fv);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+            let pr_j = prod_range(d, &p, factors, j);
+            let gj = d.apply(g, &[j]);
+            let factor = d.pow(j, gj);
+            let le_pv_j = d.lemma(p.le_of_lt_succ, &[pv, j, h]);
+            let split = d.lemma(p.lt_or_eq_of_le, &[pv, j, le_pv_j]);
+            let lt_ty = d.lt(pv, j);
+            let eq_ty = d.eq(pv, j);
+
+            let left = {
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let ih_applied = d.apply(ih, &[hl]);
+                // `pv /= j` because `pv < j`. Note the ORIENTATION:
+                // `refute_dvd_pow_factor` wants `Not (Eq pv j)`, and here the
+                // strict inequality runs the other way from the first
+                // induction's, so this is `ne_of_lt` rather than
+                // `ne_of_lt_rev`.
+                let ne = ne_of_lt(d, &p, pv, j, hl);
+                let nd_factor = {
+                    let hy_fv = d.fresh_fvar();
+                    let hy = d.kernel().fvar(hy_fv);
+                    let divides_factor = d.dvd(pv, factor);
+                    let bad = refute_dvd_pow_factor(d, &p, g, hps, pv, hp, j, ne, hy);
+                    d.lam_fv(hy_fv, divides_factor, bad)
+                };
+                let moved = d.lemma(
+                    p.prime_pow_dvd_of_dvd_mul_of_not_dvd,
+                    &[pv, factor, succ_c, hp, nd_factor, pr_j, hd],
+                );
+                let bad = d.apply(ih_applied, &[moved]);
+                d.lam_fv(hl_fv, lt_ty, bad)
+            };
+            let right = {
+                let he_fv = d.fresh_fvar();
+                let he = d.kernel().fvar(he_fv);
+                // `pv = j`, so the new factor IS `pow pv c` and cancelling it
+                // leaves `pv ∣ prodRange factors j`, which the first induction
+                // refutes at `k := j` (`Le j pv` holds because `j = pv`).
+                let j_eq_pv = d.symm(pv, j, he);
+                let factor_eq = d.congr(j, pv, j_eq_pv, &|d, x| {
+                    let gx = d.apply(g, &[x]);
+                    d.pow(x, gx)
+                });
+                let product = d.mul(pr_j, factor);
+                let product_c = d.mul(pr_j, pow_c);
+                let to_pow_c = d.congr(factor, pow_c, factor_eq, &|d, x| d.mul(pr_j, x));
+                let comm = d.lemma(p.mul_comm, &[pr_j, pow_c]);
+                let flipped = d.mul(pow_c, pr_j);
+                let (_, product_eq) = d.chain(product, &[(product_c, to_pow_c), (flipped, comm)]);
+                let moved_right =
+                    transport_dvd_right(d, pow_succ_c, product, flipped, product_eq, hd);
+                let folded = d.mul(pow_c, pv);
+                let pow_succ_eq = d.lemma(p.pow_succ, &[pv, c]);
+                let moved_left =
+                    transport_dvd_left(d, pow_succ_c, folded, pow_succ_eq, flipped, moved_right);
+                let pv_pos = d.lemma(p.prime_pos, &[pv, hp]);
+                let pow_pos = d.lemma(p.pow_pos, &[pv, c, pv_pos]);
+                let cancelled = dvd_cancel_left_of_pos(d, &p, pow_c, pv, pr_j, pow_pos, moved_left);
+                let le_j_j = d.lemma(p.le_refl, &[j]);
+                let le_j_pv = {
+                    let motive = d.eq_motive(j, &|d, y| d.le(j, y));
+                    d.transport(j, motive, le_j_j, pv, j_eq_pv)
+                };
+                let refute = d.lemma(p.not_dvd_prod_range_of_le, &[g, pv, j, hp, hps, le_j_pv]);
+                let bad = d.apply(refute, &[cancelled]);
+                d.lam_fv(he_fv, eq_ty, bad)
+            };
+            let cases = or_cases(d, &p, lt_ty, eq_ty, false_ty, left, right, split);
+            let with_hd = d.lam_fv(hd_fv, divides, cases);
+            d.lam_fv(h_fv, hyp, with_hd)
+        };
+        let proof = d.induct(&claim, &base, &step, k);
+        let stmt = claim(d, k);
+        declare_forall(
+            d,
+            p.not_pow_succ_dvd_prod_range_of_lt,
+            &[
+                (g_fv, fn_ty),
+                (pv_fv, nat),
+                (k_fv, nat),
+                (hp_fv, prime_ty),
+                (hps_fv, ps_ty),
+            ],
+            stmt,
+            proof,
+        )?;
+    }
+
+    Ok(())
+}
+
+/// The three headline statements: the two halves of "`count m p` is the
+/// `p`-adic valuation of `prod m`", and uniqueness.
+fn declare_uniqueness(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let ms = multiset_ty(d, &p);
+
+    // pow_count_dvd_prod : ∀ m x, dvd (pow x (count m x)) (prod m)
+    //
+    // No hypotheses. Below the bound `pow x (count m x)` IS one of the folded
+    // factors; at or above it the count is `0` and the power is `1`.
+    {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let g = d.const_app(p.multiset_count, &[m]);
+        let factors = pow_factor(d, g);
+        let b = ms_bound(d, &p, m);
+        let count = ms_count(d, &p, m, x);
+        let pow_count = d.pow(x, count);
+        let prod = ms_prod(d, &p, m);
+        let stmt = d.dvd(pow_count, prod);
+
+        let motive = |d: &mut NatDev<'_>, _y: ExprId| -> ExprId {
+            let count = ms_count(d, &p, m, x);
+            let pow_count = d.pow(x, count);
+            let prod = ms_prod(d, &p, m);
+            d.dvd(pow_count, prod)
+        };
+        let small = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+            d.lemma(p.dvd_prod_range_of_lt, &[factors, x, b, h])
+        };
+        let big = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+            let zero = d.zero();
+            let one_lit = d.num(1);
+            let is_zero = d.lemma(p.multiset_count_eq_zero_of_bound_le, &[m, x, h]);
+            let pow_zero_term = d.pow(x, zero);
+            let to_zero = d.congr(count, zero, is_zero, &|d, y| d.pow(x, y));
+            let pz = d.lemma(p.pow_zero, &[x]);
+            let (_, is_one) = d.chain(pow_count, &[(pow_zero_term, to_zero), (one_lit, pz)]);
+            let one_eq = d.symm(pow_count, one_lit, is_one);
+            let one_prod = d.mul(one_lit, prod);
+            let om = d.lemma(p.one_mul, &[prod]);
+            let prod_eq = d.symm(one_prod, prod, om);
+            let one_dvd = dvd_intro(d, &p, one_lit, prod, prod, prod_eq);
+            transport_dvd_left(d, one_lit, pow_count, one_eq, prod, one_dvd)
+        };
+        let proof = cases_lt_or_ge(d, &p, x, b, &motive, &small, &big);
+        declare_forall(
+            d,
+            p.multiset_pow_count_dvd_prod,
+            &[(m_fv, ms), (x_fv, nat)],
+            stmt,
+            proof,
+        )?;
+    }
+
+    // not_pow_succ_count_dvd_prod :
+    //   ∀ m x, prime_condition x → (∀ q, Lt 0 (count m q) → prime_condition q) →
+    //     Not (dvd (pow x (succ (count m x))) (prod m))
+    {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let g = d.const_app(p.multiset_count, &[m]);
+        let b = ms_bound(d, &p, m);
+        let prime_ty = prime_condition(d, &p, x);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+        let ps_ty = prime_support_ty(d, &p, g);
+        let hps_fv = d.fresh_fvar();
+        let hps = d.kernel().fvar(hps_fv);
+        let count = ms_count(d, &p, m, x);
+        let succ_count = d.succ(count);
+        let pow_succ_count = d.pow(x, succ_count);
+        let prod = ms_prod(d, &p, m);
+        let divides = d.dvd(pow_succ_count, prod);
+        let stmt = not_ty(d, &p, divides);
+
+        let motive = |d: &mut NatDev<'_>, _y: ExprId| -> ExprId {
+            let count = ms_count(d, &p, m, x);
+            let succ_count = d.succ(count);
+            let pow_succ_count = d.pow(x, succ_count);
+            let prod = ms_prod(d, &p, m);
+            let divides = d.dvd(pow_succ_count, prod);
+            not_ty(d, &p, divides)
+        };
+        let small = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+            d.lemma(p.not_pow_succ_dvd_prod_range_of_lt, &[g, x, b, hp, hps, h])
+        };
+        let big = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+            // `count m x = 0`, so the exponent is `1` and `pow x 1 = x`; the
+            // first induction refutes `x ∣ prodRange factors (bound m)`.
+            let zero = d.zero();
+            let one_lit = d.num(1);
+            let is_zero = d.lemma(p.multiset_count_eq_zero_of_bound_le, &[m, x, h]);
+            let pow_one_term = d.pow(x, one_lit);
+            let to_one = d.congr(count, zero, is_zero, &|d, y| {
+                let s = d.succ(y);
+                d.pow(x, s)
+            });
+            let ps = d.lemma(p.pow_succ, &[x, zero]);
+            let pow_zero_term = d.pow(x, zero);
+            let folded = d.mul(pow_zero_term, x);
+            let pz = d.lemma(p.pow_zero, &[x]);
+            let to_one_mul = d.congr(pow_zero_term, one_lit, pz, &|d, y| d.mul(y, x));
+            let one_x = d.mul(one_lit, x);
+            let om = d.lemma(p.one_mul, &[x]);
+            let (_, collapses) = d.chain(
+                pow_succ_count,
+                &[
+                    (pow_one_term, to_one),
+                    (folded, ps),
+                    (one_x, to_one_mul),
+                    (x, om),
+                ],
+            );
+            let refute = d.lemma(p.not_dvd_prod_range_of_le, &[g, x, b, hp, hps, h]);
+            let hd_fv = d.fresh_fvar();
+            let hd = d.kernel().fvar(hd_fv);
+            let moved = transport_dvd_left(d, pow_succ_count, x, collapses, prod, hd);
+            let bad = d.apply(refute, &[moved]);
+            d.lam_fv(hd_fv, divides, bad)
+        };
+        let proof = cases_lt_or_ge(d, &p, x, b, &motive, &small, &big);
+        declare_forall(
+            d,
+            p.multiset_not_pow_succ_count_dvd_prod,
+            &[(m_fv, ms), (x_fv, nat), (hp_fv, prime_ty), (hps_fv, ps_ty)],
+            stmt,
+            proof,
+        )?;
+    }
+
+    // count_eq_of_prod_eq : UNIQUENESS.
+    //   ∀ m1 m2, (∀ q, Lt 0 (count m1 q) → prime_condition q)
+    //          → (∀ q, Lt 0 (count m2 q) → prime_condition q)
+    //          → Eq (prod m1) (prod m2)
+    //          → ∀ x, Eq (count m1 x) (count m2 x)
+    {
+        let m1_fv = d.fresh_fvar();
+        let m1 = d.kernel().fvar(m1_fv);
+        let m2_fv = d.fresh_fvar();
+        let m2 = d.kernel().fvar(m2_fv);
+        let g1 = d.const_app(p.multiset_count, &[m1]);
+        let g2 = d.const_app(p.multiset_count, &[m2]);
+        let ps1_ty = prime_support_ty(d, &p, g1);
+        let hps1_fv = d.fresh_fvar();
+        let hps1 = d.kernel().fvar(hps1_fv);
+        let ps2_ty = prime_support_ty(d, &p, g2);
+        let hps2_fv = d.fresh_fvar();
+        let hps2 = d.kernel().fvar(hps2_fv);
+        let prod1 = ms_prod(d, &p, m1);
+        let prod2 = ms_prod(d, &p, m2);
+        let prod_eq_ty = d.eq(prod1, prod2);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let x_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let c1 = ms_count(d, &p, m1, x);
+        let c2 = ms_count(d, &p, m2, x);
+        let stmt = d.eq(c1, c2);
+
+        // The valuation argument, available as soon as `x` is known prime.
+        let settle = |d: &mut NatDev<'_>, hx: ExprId| -> ExprId {
+            let d1 = d.lemma(p.multiset_pow_count_dvd_prod, &[m1, x]);
+            let n1 = d.lemma(p.multiset_not_pow_succ_count_dvd_prod, &[m1, x, hx, hps1]);
+            let d2_raw = d.lemma(p.multiset_pow_count_dvd_prod, &[m2, x]);
+            let n2_raw = d.lemma(p.multiset_not_pow_succ_count_dvd_prod, &[m2, x, hx, hps2]);
+            let pow_c2 = d.pow(x, c2);
+            let back = d.symm(prod1, prod2, heq);
+            let d2 = transport_dvd_right(d, pow_c2, prod2, prod1, back, d2_raw);
+            let succ_c2 = d.succ(c2);
+            let pow_s2 = d.pow(x, succ_c2);
+            let n2 = {
+                let hd_fv = d.fresh_fvar();
+                let hd = d.kernel().fvar(hd_fv);
+                let at_prod1 = d.dvd(pow_s2, prod1);
+                let moved = transport_dvd_right(d, pow_s2, prod1, prod2, heq, hd);
+                let bad = d.apply(n2_raw, &[moved]);
+                d.lam_fv(hd_fv, at_prod1, bad)
+            };
+            d.lemma(
+                p.exponent_unique_of_exact_dvd,
+                &[x, prod1, c1, c2, d1, n1, d2, n2],
+            )
+        };
+
+        let one_lit = d.num(1);
+        let outer_motive = |d: &mut NatDev<'_>, _y: ExprId| -> ExprId {
+            let c1 = ms_count(d, &p, m1, x);
+            let c2 = ms_count(d, &p, m2, x);
+            d.eq(c1, c2)
+        };
+        let outer_big = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+            // `0 < count m1 x`, so `x` is prime by `m1`'s support hypothesis.
+            let hx = d.apply(hps1, &[x, h]);
+            settle(d, hx)
+        };
+        let outer_small = |d: &mut NatDev<'_>, _y: ExprId, h1: ExprId| -> ExprId {
+            // `count m1 x = 0`. Either `m2` still has `x`, which makes `x`
+            // prime and hands the argument back to the valuation route, or
+            // both counts are zero and the goal is a chain through `0`.
+            let zero = d.zero();
+            let le_zero = d.lemma(p.le_of_lt_succ, &[c1, zero, h1]);
+            let zero_le = d.lemma(p.zero_le, &[c1]);
+            let c1_zero = d.lemma(p.le_antisymm, &[c1, zero, le_zero, zero_le]);
+            let inner_motive = |d: &mut NatDev<'_>, _y: ExprId| -> ExprId {
+                let c1 = ms_count(d, &p, m1, x);
+                let c2 = ms_count(d, &p, m2, x);
+                d.eq(c1, c2)
+            };
+            let inner_big = |d: &mut NatDev<'_>, _y: ExprId, h: ExprId| -> ExprId {
+                let hx = d.apply(hps2, &[x, h]);
+                settle(d, hx)
+            };
+            let inner_small = |d: &mut NatDev<'_>, _y: ExprId, h2: ExprId| -> ExprId {
+                let zero = d.zero();
+                let le_zero2 = d.lemma(p.le_of_lt_succ, &[c2, zero, h2]);
+                let zero_le2 = d.lemma(p.zero_le, &[c2]);
+                let c2_zero = d.lemma(p.le_antisymm, &[c2, zero, le_zero2, zero_le2]);
+                let back = d.symm(c2, zero, c2_zero);
+                d.trans(c1, zero, c2, c1_zero, back)
+            };
+            cases_lt_or_ge(d, &p, c2, one_lit, &inner_motive, &inner_small, &inner_big)
+        };
+        let proof = cases_lt_or_ge(d, &p, c1, one_lit, &outer_motive, &outer_small, &outer_big);
+        declare_forall(
+            d,
+            p.multiset_count_eq_of_prod_eq,
+            &[
+                (m1_fv, ms),
+                (m2_fv, ms),
+                (hps1_fv, ps1_ty),
+                (hps2_fv, ps2_ty),
+                (heq_fv, prod_eq_ty),
+                (x_fv, nat),
+            ],
+            stmt,
+            proof,
+        )?;
+    }
+
+    Ok(())
+}
+
 /// Declare the whole `Nat.Multiset` package.
 ///
 /// # Errors
@@ -1323,5 +1934,7 @@ pub(super) fn declare_multiset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
     declare_carrier(d, p)?;
     declare_arithmetic_support(d, p)?;
     declare_count_laws(d, p)?;
+    declare_prod_range_valuation(d, p)?;
+    declare_uniqueness(d, p)?;
     Ok(())
 }

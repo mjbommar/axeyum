@@ -76,6 +76,35 @@ impl Fixture {
         let name = self.p.multiset_count;
         self.const_app(name, &[m, lit])
     }
+
+    /// `∀ q, Lt 0 (g q) → prime_condition q`, rebuilt here rather than
+    /// imported: `nat_prelude::primes::prime_condition` takes a `NatDev`, not a
+    /// `Fixture`. It is alpha-equivalent to the module's own builder, which is
+    /// what makes the `def_eq` comparisons below meaningful.
+    fn prime_support_ty(&mut self, g: ExprId) -> ExprId {
+        let nat = self.nat_ty();
+        let q_fv = self.fresh_fvar();
+        let q = self.k.fvar(q_fv);
+        let gq = self.apply(g, &[q]);
+        let zero = self.zero();
+        let positive = self.lt(zero, gq);
+        let two = self.num(2);
+        let lower = self.le(two, q);
+        let c_fv = self.fresh_fvar();
+        let c = self.k.fvar(c_fv);
+        let divides = self.dvd(c, q);
+        let one = self.num(1);
+        let trivial = self.eq(c, one);
+        let whole = self.eq(c, q);
+        let or_name = self.p.logic.or;
+        let disjunction = self.const_app(or_name, &[trivial, whole]);
+        let body = self.arrow(divides, disjunction);
+        let divisors = self.pi_fv(c_fv, nat, body);
+        let and_name = self.p.logic.and;
+        let prime = self.const_app(and_name, &[lower, divisors]);
+        let inner = self.arrow(positive, prime);
+        self.pi_fv(q_fv, nat, inner)
+    }
 }
 
 /// `Nat.Multiset.count` reads the multiplicity, and **truncates at the bound**.
@@ -321,5 +350,127 @@ fn raw_and_count_disagree_above_the_bound() {
     assert!(
         !f.k.def_eq(count_at_7, one),
         "negative control: `count` must NOT be `raw` -- it truncates"
+    );
+}
+
+/// `Nat.Multiset.pow_count_dvd_prod` APPLIES at concrete arguments, and its
+/// instantiated statement is the arithmetic fact it should be.
+///
+/// The kernel admitted the theorem against a statement full of `count` and
+/// `prod` applications; nothing in that admission says those unfold to the
+/// right numbers. Instantiating at `{2,2,3}` and inferring gives a type that
+/// must be `def_eq` to `dvd 4 12` — so a `count` off by one or a `prod` that
+/// dropped multiplicity would be caught here even though it type-checked.
+#[test]
+fn pow_count_dvd_prod_instantiates_to_a_concrete_divisibility() {
+    let mut f = Fixture::new();
+    let m = f.of(&[2, 2, 3]);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let eight = f.num(8);
+    let nine = f.num(9);
+    let twelve = f.num(12);
+    let name = f.p.multiset_pow_count_dvd_prod;
+
+    let at_two = f.const_app(name, &[m, two]);
+    let ty =
+        f.k.infer(at_two)
+            .expect("pow_count_dvd_prod {2,2,3} 2 must infer");
+    let expected = f.dvd(four, twelve);
+    assert!(
+        f.k.def_eq(ty, expected),
+        "pow_count_dvd_prod {{2,2,3}} 2 must state `4 | 12`, got {}",
+        f.k.render_lean(ty)
+    );
+    let wrong = f.dvd(eight, twelve);
+    assert!(
+        !f.k.def_eq(ty, wrong),
+        "negative control: it must NOT state `8 | 12` -- that is the exponent \
+         one too large"
+    );
+
+    let at_three = f.const_app(name, &[m, three]);
+    let ty3 =
+        f.k.infer(at_three)
+            .expect("pow_count_dvd_prod {2,2,3} 3 must infer");
+    let expected3 = f.dvd(three, twelve);
+    assert!(
+        f.k.def_eq(ty3, expected3),
+        "pow_count_dvd_prod {{2,2,3}} 3 must state `3 | 12`"
+    );
+    let wrong3 = f.dvd(nine, twelve);
+    assert!(
+        !f.k.def_eq(ty3, wrong3),
+        "negative control: it must NOT state `9 | 12`"
+    );
+}
+
+/// **Uniqueness applies, and it says something.**
+///
+/// `Nat.Multiset.count_eq_of_prod_eq` is instantiated at the two multisets
+/// `{2,3}` and `{3,2}` — built by `add` in opposite orders, so different `mk`
+/// arguments and different bounds — and at the point `x := 2`, with the three
+/// hypotheses abstracted rather than proved (proving `{2,3}` is prime-supported
+/// needs a primality proof at every point, which is a different theorem's job).
+/// Inferring the resulting closed lambda gives the hypotheses back as an arrow
+/// chain ending in the conclusion, and the conclusion must reduce to `1 = 1`.
+///
+/// A statement whose conclusion did not actually mention the counts of the two
+/// multisets would not survive the negative control, which asks for `1 = 2`.
+#[test]
+fn uniqueness_applies_to_two_concrete_multisets() {
+    let mut f = Fixture::new();
+    let p = f.p;
+    let m1 = f.of(&[2, 3]);
+    let m2 = f.of(&[3, 2]);
+    let two = f.num(2);
+    let one = f.num(1);
+
+    let g1 = f.const_app(p.multiset_count, &[m1]);
+    let g2 = f.const_app(p.multiset_count, &[m2]);
+    let ps1 = f.prime_support_ty(g1);
+    let ps2 = f.prime_support_ty(g2);
+    let prod1 = f.const_app(p.multiset_prod, &[m1]);
+    let prod2 = f.const_app(p.multiset_prod, &[m2]);
+    let prod_eq = f.eq(prod1, prod2);
+
+    let h1_fv = f.fresh_fvar();
+    let h1 = f.k.fvar(h1_fv);
+    let h2_fv = f.fresh_fvar();
+    let h2 = f.k.fvar(h2_fv);
+    let he_fv = f.fresh_fvar();
+    let he = f.k.fvar(he_fv);
+    let applied = f.const_app(p.multiset_count_eq_of_prod_eq, &[m1, m2, h1, h2, he, two]);
+    let closed = {
+        let with_he = f.lam_fv(he_fv, prod_eq, applied);
+        let with_h2 = f.lam_fv(h2_fv, ps2, with_he);
+        f.lam_fv(h1_fv, ps1, with_h2)
+    };
+    let ty =
+        f.k.infer(closed)
+            .expect("count_eq_of_prod_eq must apply at two concrete multisets");
+
+    let conclusion = f.eq(one, one);
+    let expected = {
+        let with_he = f.arrow(prod_eq, conclusion);
+        let with_h2 = f.arrow(ps2, with_he);
+        f.arrow(ps1, with_h2)
+    };
+    assert!(
+        f.k.def_eq(ty, expected),
+        "uniqueness at ({{2,3}}, {{3,2}}, x := 2) must conclude `1 = 1`, got {}",
+        f.k.render_lean(ty)
+    );
+
+    let wrong_conclusion = f.eq(one, two);
+    let wrong = {
+        let with_he = f.arrow(prod_eq, wrong_conclusion);
+        let with_h2 = f.arrow(ps2, with_he);
+        f.arrow(ps1, with_h2)
+    };
+    assert!(
+        !f.k.def_eq(ty, wrong),
+        "negative control: the conclusion must NOT be `1 = 2`"
     );
 }

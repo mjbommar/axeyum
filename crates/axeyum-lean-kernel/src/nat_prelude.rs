@@ -5618,6 +5618,36 @@ pub struct NatPrelude {
     /// `Nat.Multiset.count_add : ∀ m1 m2 x, Eq (count (add m1 m2) x)
     /// (add (count m1 x) (count m2 x))`.
     pub multiset_count_add: NameId,
+    /// `Nat.not_dvd_prodRange_of_le : ∀ g p k, prime_condition p →
+    /// (∀ q, Lt 0 (g q) → prime_condition q) → Le k p →
+    /// Not (dvd p (prodRange (fun q => pow q (g q)) k))` — a prime at or above
+    /// the fold's bound is not among its factors. Induction on `k`; the
+    /// `g j = 0` branch is what rules out `j = 0`, where the factor would be
+    /// `0` and everything would divide the product (`multiset.rs`).
+    pub not_dvd_prod_range_of_le: NameId,
+    /// `Nat.not_pow_succ_dvd_prodRange_of_lt : ∀ g p k, prime_condition p →
+    /// (∀ q, Lt 0 (g q) → prime_condition q) → Lt p k →
+    /// Not (dvd (pow p (succ (g p))) (prodRange (fun q => pow q (g q)) k))` —
+    /// the fold carries EXACTLY `g p` copies of a prime `p` below its bound
+    /// (`multiset.rs`).
+    pub not_pow_succ_dvd_prod_range_of_lt: NameId,
+    /// `Nat.Multiset.pow_count_dvd_prod : ∀ m x, dvd (pow x (count m x))
+    /// (prod m)` — no hypotheses at all.
+    pub multiset_pow_count_dvd_prod: NameId,
+    /// `Nat.Multiset.not_pow_succ_count_dvd_prod : ∀ m x, prime_condition x →
+    /// (∀ q, Lt 0 (count m q) → prime_condition q) →
+    /// Not (dvd (pow x (succ (count m x))) (prod m))`. With
+    /// [`multiset_pow_count_dvd_prod`](Self::multiset_pow_count_dvd_prod) this
+    /// says `count m x` is the `x`-adic valuation of `prod m`.
+    pub multiset_not_pow_succ_count_dvd_prod: NameId,
+    /// `Nat.Multiset.count_eq_of_prod_eq : ∀ m1 m2,
+    /// (∀ q, Lt 0 (count m1 q) → prime_condition q) →
+    /// (∀ q, Lt 0 (count m2 q) → prime_condition q) →
+    /// Eq (prod m1) (prod m2) → ∀ x, Eq (count m1 x) (count m2 x)` —
+    /// **uniqueness of prime factorization**, as multiplicity agreement.
+    /// ADR-1520; row 1 (general constructive form) of the graded family
+    /// ADR-0603 asks for.
+    pub multiset_count_eq_of_prod_eq: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6500,6 +6530,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(multiset, "count_eq_zero_of_bound_le"),
             multiset_count_of_lt_bound: kernel.name_str(multiset, "count_of_lt_bound"),
             multiset_count_add: kernel.name_str(multiset, "count_add"),
+            not_dvd_prod_range_of_le: kernel.name_str(nat, "not_dvd_prodRange_of_le"),
+            not_pow_succ_dvd_prod_range_of_lt: kernel
+                .name_str(nat, "not_pow_succ_dvd_prodRange_of_lt"),
+            multiset_pow_count_dvd_prod: kernel.name_str(multiset, "pow_count_dvd_prod"),
+            multiset_not_pow_succ_count_dvd_prod: kernel
+                .name_str(multiset, "not_pow_succ_count_dvd_prod"),
+            multiset_count_eq_of_prod_eq: kernel.name_str(multiset, "count_eq_of_prod_eq"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
