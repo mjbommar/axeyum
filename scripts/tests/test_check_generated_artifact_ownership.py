@@ -49,7 +49,8 @@ GOOD_DOC = {
 }
 
 
-def synthetic(runs=(), reads=(), owner_argv=("--write",)) -> "own.Artifact":
+def synthetic(runs=(), reads=(), invokes=(),
+              owner_argv=("--write",)) -> "own.Artifact":
     """An Artifact over a two-file tree, shaped like the real registry."""
     return own.Artifact(
         path=ARTIFACT,
@@ -58,6 +59,7 @@ def synthetic(runs=(), reads=(), owner_argv=("--write",)) -> "own.Artifact":
         required_nested={"coverage": ("tier_one", "tier_two")},
         runs=tuple(runs),
         reads=tuple(reads),
+        invokes=tuple(invokes),
     )
 
 
@@ -359,19 +361,31 @@ class CoverDerivation(unittest.TestCase):
         for base, producers in current.items():
             self.assertGreaterEqual(len(producers), 2, base)
 
-    def test_every_guarded_artifact_is_itself_a_candidate(self):
+    def test_the_derivation_SEES_a_guarded_artifact(self):
         """The positive control for the derivation, and not a coincidence: the
-        registry exists because that artifact HAD a second writer, so a
-        derivation that cannot see it is not measuring what it claims.
+        registry's first entry exists because that artifact HAD a second
+        writer, so a derivation that cannot see it is not measuring what it
+        claims.
 
-        The name is DERIVED from `GUARDED` rather than written out. Spelling it
+        It asserted this of EVERY guarded artifact until 2026-09-02, and that
+        universal is false. The second entry, added the day before, is guarded
+        with ONE writer whose file is not named `gen-*.py`, so COVER's producer
+        population structurally cannot see it -- and need not: guarding is
+        STRONGER than being a candidate, `cover_arm` treats a guarded artifact
+        as satisfied, and `--update-candidates` omits it by design. So the
+        honest control is that the derivation is not silently empty, which is
+        what an empty answer and a broken query share.
+
+        Names are DERIVED from `GUARDED` rather than written out. Spelling one
         makes this control file a script that names a guarded artifact, and the
-        KNOWN arm then correctly demands it be classified as a producer -- which
-        it is not. Caught by the gate's own arm on the first run."""
+        KNOWN arm then correctly demands it be classified as a producer --
+        which it is not. Caught by the gate's own arm on the first run."""
         current = own.multi_writer_candidates()
-        for art in own.GUARDED:
-            with self.subTest(artifact=art.path):
-                self.assertIn(pathlib.PurePath(art.path).name, current)
+        seen = [a.path for a in own.GUARDED
+                if pathlib.PurePath(a.path).name in current]
+        self.assertTrue(
+            seen, "the derivation sees NO guarded artifact, so it is not "
+                  "reading the tree the registry was built from")
 
     def test_the_committed_candidate_list_matches_the_tree(self):
         recorded = own.read_candidates(own.CANDIDATES)
@@ -444,6 +458,157 @@ class CoverDerivation(unittest.TestCase):
         self.assertIsNone(own.read_candidates(pathlib.Path(tmp.name) / "absent"))
 
 
+# An orchestrator in its simplest form: the artifact is conflict-cleared and
+# staged, and its CONTENT comes from the owner. Nothing here writes it.
+#
+# Deliberately NOT array-shaped. The real script binds the path into an array,
+# and a positive control built that way dies for the binding mutant as well as
+# for its own guard -- leaving no mutant that discriminates the staging shape.
+# The array shape is exercised by its own case and by the real-tree control.
+INVOKER_SRC = """\
+#!/usr/bin/env bash
+git checkout --theirs artifacts/thing-v1.json 2>/dev/null || true
+python3 scripts/owner.py --write > /tmp/land.log 2>&1
+git add -A -- artifacts/
+"""
+
+# The real shape: bound into an array, staged through a loop variable.
+ARRAY_SRC = """\
+#!/usr/bin/env bash
+GENERATED=(PLAN.md artifacts/thing-v1.json)
+for g in "${GENERATED[@]}"; do
+  git checkout --theirs "$g" 2>/dev/null || true
+done
+python3 scripts/owner.py --write > /tmp/land.log 2>&1
+"""
+
+
+def invokes_fails(src: str, artifact=None) -> list[str]:
+    """The INVOKES arm over one synthetic invoker whose source is `src`."""
+    art = artifact or synthetic(
+        invokes=(own.Invoker("scripts/land.sh", "synthetic orchestrator"),))
+    return own.invokes_arm(art, lambda path: src)
+
+
+class InvokesArm(unittest.TestCase):
+    """INVOKES: the third classification, for a script that only STAGES the
+    artifact and regenerates it by calling the OWNER.
+
+    `runs` would execute a merge driver inside the ownership sandbox, which
+    measures nothing about ownership; `reads` is false for a script that
+    redirects and stages, and its AST decision procedure does not apply to
+    bash at all. So this arm is BY INSPECTION, and every case below is paired
+    with the same input made benign -- a control that only ever exercises the
+    failing side cannot tell a fired guard from a broken fixture.
+    """
+
+    def test_a_staging_only_invoker_passes(self):
+        """The positive control. Without it every refusal below is consistent
+        with an arm that refuses everything."""
+        self.assertEqual(invokes_fails(INVOKER_SRC), [])
+
+    def test_a_write_by_another_route_is_rejected(self):
+        benign = ("git add artifacts/thing-v1.json\n"
+                  "python3 scripts/owner.py --write\n")
+        self.assertEqual(invokes_fails(benign), [])
+        # Not `subTest`: it reports one failure line per shape, and this is the
+        # case that has to be seen to die exactly once when the guard goes.
+        for bad in ("cp /tmp/x artifacts/thing-v1.json",
+                    "printf '{}' > artifacts/thing-v1.json",
+                    "mv /tmp/x artifacts/thing-v1.json"):
+            fails = invokes_fails(benign + bad + "\n")
+            self.assertEqual(len(fails), 1, (bad, fails))
+            self.assertIn("outside a git staging command", fails[0], bad)
+            self.assertIn(bad, fails[0])
+
+    def test_a_binding_that_also_writes_is_judged_not_followed(self):
+        """`p = open(path, "w")` binds a name too. Exempting every binding
+        would make the follow-through a laundry: the write reaches the
+        artifact on a line the arm declined to judge.
+
+        Asserted at `invoker_uses`, where the decision is made, so this case
+        dies for the binding exemption and not for the staging shape."""
+        pure = 'P = pathlib.Path("artifacts/thing-v1.json")\n'
+        self.assertEqual(own.invoker_uses(pure, "thing-v1.json"), {},
+                         "a binding that writes nothing is a derivation")
+        laundered = 'P = open("artifacts/thing-v1.json", "w")\n'
+        self.assertIn(1, own.invoker_uses(laundered, "thing-v1.json"),
+                      "a binding that writes must be judged as a use")
+
+    def test_a_redirection_on_a_staging_line_is_rejected(self):
+        """The one shape that carries a staging word and still writes the
+        file. Without this guard, (a) is satisfied by the mere presence of the
+        word `git` somewhere on the line."""
+        benign = ('git checkout --theirs artifacts/thing-v1.json\n'
+                  'python3 scripts/owner.py --write\n')
+        self.assertEqual(invokes_fails(benign), [])
+        laundered = benign + (
+            'git show :3:artifacts/thing-v1.json '
+            '> artifacts/thing-v1.json && git add artifacts/thing-v1.json\n')
+        fails = invokes_fails(laundered)
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("REDIRECTS into", fails[0])
+
+    def test_an_invoker_that_never_calls_the_owner_is_rejected(self):
+        """An invoker is what it is because it REGENERATES the artifact. One
+        that only clears the conflict leaves a stale artifact staged."""
+        staging = "git checkout --theirs artifacts/thing-v1.json\n"
+        self.assertEqual(
+            invokes_fails(staging + "python3 scripts/owner.py --write\n"), [])
+        fails = invokes_fails(staging)
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("never names scripts/owner.py", fails[0])
+
+    def test_a_classification_that_stages_nothing_is_refused(self):
+        """The vacuity guard. A script whose only reference is a binding
+        nothing uses satisfies (a) and (b) without the arm ever judging a
+        line -- a classification asserting a property nothing can fail."""
+        bound = "GENERATED=(artifacts/thing-v1.json)\npython3 scripts/owner.py\n"
+        fails = invokes_fails(bound)
+        self.assertEqual(len(fails), 1, fails)
+        self.assertIn("no line reaching it is a staging command", fails[0])
+        used = bound.replace("python3", 'git add "${GENERATED[@]}"\npython3')
+        self.assertEqual(invokes_fails(used), [])
+
+    def test_a_mention_in_a_comment_is_not_a_use(self):
+        """A comment executes nothing. Judging one turns a remark into a
+        finding, and the arm's whole claim is about what the script DOES.
+
+        The positive control is taken at `invoker_uses`, where the decision is
+        made, rather than by uncommenting a write -- a write reads as a finding
+        through the STAGING guard too, and then this case would die for that
+        guard as well as for this one."""
+        src = ("# regenerate artifacts/thing-v1.json like PLAN.md\n"
+               "git add artifacts/thing-v1.json\n"
+               "python3 scripts/owner.py --write\n")
+        self.assertEqual(invokes_fails(src), [])
+        self.assertEqual(sorted(own.invoker_uses(src, "thing-v1.json")), [2],
+                         "only the staging line is a use")
+        # POSITIVE CONTROL on the same text: the identical line uncommented IS
+        # a use, or "comments are skipped" would be indistinguishable from
+        # "nothing is ever judged".
+        uncommented = src.replace("# regenerate ", "touch ")
+        self.assertEqual(sorted(own.invoker_uses(uncommented, "thing-v1.json")),
+                         [1, 2])
+
+    def test_a_binding_is_followed_to_every_use(self):
+        """"Reaches the name" is not "contains the name". The real script binds
+        the path into an array and stages the array's elements, so an arm that
+        judged only the naming LINE would accept an array later used to copy
+        over the file.
+
+        The leak is asserted at `invoker_uses` for the same reason as the
+        comment case: reported through the arm it would die for the STAGING
+        guard too, and the point here is REACHABILITY."""
+        self.assertEqual(invokes_fails(ARRAY_SRC), [])
+        leaked = ARRAY_SRC.replace(
+            "python3 scripts/owner.py",
+            'cp /tmp/x "$g"\npython3 scripts/owner.py')
+        uses = own.invoker_uses(leaked, "thing-v1.json")
+        self.assertIn('cp /tmp/x "$g"', [line for line, _ in uses.values()],
+                      "a use of the bound name must be reached and judged")
+
+
 class RealTree(SandboxCase):
     """The false-positive control, on the real registry rather than a fixture.
 
@@ -465,6 +630,21 @@ class RealTree(SandboxCase):
                 self.assertEqual(own.known_arm(art, found), [])
                 self.assertEqual(
                     own.reads_arm(art, lambda p: (ROOT / p).read_text()), [])
+                self.assertEqual(
+                    own.invokes_arm(art, lambda p: (ROOT / p).read_text()), [])
+
+    def test_the_three_classifications_are_disjoint(self):
+        """A script has one classification. An invoker also listed under
+        `runs` would be executed in the sandbox, which is the thing the
+        classification exists to say must not happen."""
+        for art in own.GUARDED:
+            with self.subTest(artifact=art.path):
+                runs = {p.path for p in art.runs}
+                reads = {r.path for r in art.reads}
+                invokes = {i.path for i in art.invokes}
+                self.assertEqual(runs & invokes, set())
+                self.assertEqual(reads & invokes, set())
+                self.assertNotIn(art.owner.path, invokes)
 
     def test_the_owner_is_never_also_a_runs_producer(self):
         for art in own.GUARDED:

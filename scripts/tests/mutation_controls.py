@@ -4555,6 +4555,61 @@ SUITES["artifact-ownership"] = (
             "        if line.strip() and not line.lstrip().startswith(\"#\")",
             "        if line.strip()",
         ),
+        # -- INVOKES, the third classification (2026-09-02). The KNOWN arm
+        # went red on `scripts/lane-merge-land.sh`, which names a guarded
+        # artifact to clear a merge conflict on it and stage it, and then
+        # regenerates it by calling the OWNER. `runs` would execute a merge
+        # driver inside the ownership sandbox and `reads` is false for a
+        # script that redirects and stages, so the arm is BY INSPECTION.
+        #
+        # The LAST mutant kills FOUR cases, and that is the structure of the
+        # arm rather than a weak suite. Following bindings is not one of the
+        # arm's guards; it is its REACHABILITY -- what lets a path bound into
+        # an array and staged through a loop variable be judged at all. Every
+        # case whose fixture binds a name therefore depends on it: the array
+        # case, the binding-that-writes case, the vacuity case, and the
+        # real-tree false-positive control, whose script is the array shape.
+        # Removing it does not blind the arm, it makes the arm judge the
+        # BINDING line and refuse the real script -- so the four deaths are
+        # over-firing, not a shared blind spot. The six guards above each kill
+        # exactly one. Kill sets are reported as measured.
+        (
+            "INVOKES a line reaching the artifact must be a staging line",
+            "            if not STAGING.search(line):",
+            "            if False:",
+        ),
+        (
+            "INVOKES a redirection INTO the artifact is not staging, whatever "
+            "else is on the line",
+            "            if redirects_into(line, pat):",
+            "            if False:",
+        ),
+        (
+            "INVOKES an invoker must name the OWNER it regenerates with",
+            "        if artifact.owner.path not in text:",
+            "        if False:",
+        ),
+        (
+            "INVOKES a classification that stages nothing is vacuous",
+            "        if not staged:",
+            "        if False:",
+        ),
+        (
+            "INVOKES a binding that also writes is judged, not exempted",
+            "                if binding and not WRITE_SHAPE.search(line):",
+            "                if binding:",
+        ),
+        (
+            "INVOKES a comment reaching the artifact executes nothing",
+            '                if line.lstrip().startswith("#") or not pat.search(line):',
+            "                if not pat.search(line):",
+        ),
+        (
+            "INVOKES bindings are FOLLOWED, so a name reaching the artifact "
+            "is judged wherever it is used",
+            "                binding = FOR_BINDING.match(line) or NAME_BINDING.match(line)",
+            "                binding = None",
+        ),
     ],
 )
 
