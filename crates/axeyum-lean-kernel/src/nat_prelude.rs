@@ -474,7 +474,8 @@ use totient_multiplicative::{declare_coprime_mul_of_coprime, declare_gcd_comm};
 use totient_prime_pow::declare_totient_prime_pow_all;
 use transposition::{
     declare_conjugate_injective, declare_conjugate_maps_into, declare_transposition,
-    declare_transposition_injective, declare_transposition_involutive,
+    declare_transposition_at_i, declare_transposition_at_j, declare_transposition_eq_of_ne,
+    declare_transposition_gt_j, declare_transposition_injective, declare_transposition_involutive,
     declare_transposition_maps_into,
 };
 use unpair::declare_unpair_all;
@@ -2583,6 +2584,34 @@ pub struct NatPrelude {
     /// `Nat.transposition_maps_into : ∀ i j n, Lt i j → Lt j n →
     /// MapsInto (fun k => transposition i j k) n`.
     pub transposition_maps_into: NameId,
+    /// `Nat.transposition_at_i : ∀ i j, Eq Nat (transposition i j i) j` —
+    /// the value at the LOWER swapped point, unconditional (the `i` leaf of
+    /// the case tree is reached with no ordering fact).
+    ///
+    /// This and the three below exist as THEOREMS, not merely as the Rust
+    /// helpers `transposition.rs` has always had, because a helper taking
+    /// `&mut NatDev<'_>` is unreachable from a prelude built on another dev
+    /// struct — `rat_prelude` runs on `IntDev` and Rust does not let a
+    /// function written against one concrete type be called with a value of
+    /// another even when both implement `NatOps`. ADR-1470 recorded exactly
+    /// that wall as the reason its selection-lemma route could not reuse
+    /// `Nat.transposition` at all. A `NameId` has no such restriction.
+    pub transposition_at_i: NameId,
+    /// `Nat.transposition_at_j : ∀ i j, Lt i j →
+    /// Eq Nat (transposition i j j) i` — the value at the UPPER swapped point.
+    pub transposition_at_j: NameId,
+    /// `Nat.transposition_gt_j : ∀ i j k, Lt i j → Lt j k →
+    /// Eq Nat (transposition i j k) k` — the region above both swapped
+    /// points, which is what a cursor induction needs in order to know it has
+    /// not disturbed anything it already fixed.
+    pub transposition_gt_j: NameId,
+    /// `Nat.transposition_eq_of_ne : ∀ i j k, Lt i j → Not (Eq Nat k i) →
+    /// Not (Eq Nat k j) → Eq Nat (transposition i j k) k` — a transposition
+    /// fixes every point that is neither of the two it exchanges. The
+    /// five-region split [`Self::transposition_involutive`] runs, with the two
+    /// equality regions discharged by the `Not` hypotheses instead of
+    /// transported.
+    pub transposition_eq_of_ne: NameId,
     /// `Nat.conjugate_injective : ∀ t σ n, (∀ x, Eq Nat (t (t x)) x) →
     /// MapsInto t n → InjectiveOn σ n →
     /// InjectiveOn (fun k => t (σ (t k))) n` — conjugating an injective
@@ -6068,6 +6097,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             transposition_involutive: kernel.name_str(nat, "transposition_involutive"),
             transposition_injective: kernel.name_str(nat, "transposition_injective"),
             transposition_maps_into: kernel.name_str(nat, "transposition_maps_into"),
+            transposition_at_i: kernel.name_str(nat, "transposition_at_i"),
+            transposition_at_j: kernel.name_str(nat, "transposition_at_j"),
+            transposition_gt_j: kernel.name_str(nat, "transposition_gt_j"),
+            transposition_eq_of_ne: kernel.name_str(nat, "transposition_eq_of_ne"),
             conjugate_injective: kernel.name_str(nat, "conjugate_injective"),
             conjugate_maps_into: kernel.name_str(nat, "conjugate_maps_into"),
             setwise_fixed: kernel.name_str(nat, "setwise_fixed"),
@@ -6830,6 +6863,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_transposition_involutive(&mut d, &p)?;
         declare_transposition_injective(&mut d, &p)?;
         declare_transposition_maps_into(&mut d, &p)?;
+        declare_transposition_at_i(&mut d, &p)?;
+        declare_transposition_at_j(&mut d, &p)?;
+        declare_transposition_gt_j(&mut d, &p)?;
+        declare_transposition_eq_of_ne(&mut d, &p)?;
         declare_conjugate_injective(&mut d, &p)?;
         declare_conjugate_maps_into(&mut d, &p)?;
         declare_setwise_fixed(&mut d, &p)?;

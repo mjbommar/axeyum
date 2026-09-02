@@ -985,3 +985,320 @@ pub(super) fn declare_conjugate_maps_into(
 
     d.declare_theorem(p.conjugate_maps_into, ty, value)
 }
+
+// ---------------------------------------------------------------------------
+// The pointwise correctness facts as KERNEL THEOREMS (ADR-1470's remainder)
+// ---------------------------------------------------------------------------
+//
+// `transposition_eq_at_i`/`_at_j`/`_gt_j`/`_between`/`_lt_i` above are Rust
+// helpers taking `&mut NatDev<'_>`, so they are unreachable from any prelude
+// built on a different dev struct -- `rat_prelude` runs on `IntDev`, and Rust
+// does not let a function written against one concrete type be called with a
+// value of another even when both implement `NatOps`. ADR-1470 recorded that
+// wall as the reason its selection-lemma route could not reuse
+// `Nat.transposition`, and sketched a second, private two-point swap instead.
+//
+// A `NameId` has no such restriction, so the four facts a caller in another
+// prelude actually needs are declared here as theorems instead, stated at the
+// `Nat.transposition` CONSTANT (the helpers above build the raw case tree; the
+// two are defeq by delta, so each helper serves directly as the proof body).
+// `transposition_eq_of_ne` is the one that is not a helper already: it is the
+// five-region split `declare_transposition_involutive` runs, with the two
+// equality regions discharged by the `Not` hypotheses instead of transported.
+
+/// `False.rec` into `goal` from a proof of `False`. Per-file local copy of the
+/// `absurd` convention used elsewhere in `nat_prelude`.
+fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d
+        .kernel()
+        .lam(anon, false_ty, goal, crate::BinderInfo::Default);
+    let zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, contradiction])
+}
+
+/// Admit `Nat.transposition_at_i : ∀ i j, Eq Nat (transposition i j i) j` —
+/// unconditional, because the `i` leaf of the case tree is reached without any
+/// ordering fact.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_transposition_at_i(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let lhs = d.const_app(p.transposition, &[i, j, i]);
+    let goal = d.eq(lhs, j);
+    let body = transposition_eq_at_i(d, &p, i, j);
+
+    let ty = {
+        let with_j = d.pi_fv(j_fv, nat, goal);
+        d.pi_fv(i_fv, nat, with_j)
+    };
+    let value = {
+        let with_j = d.lam_fv(j_fv, nat, body);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+    d.declare_theorem(p.transposition_at_i, ty, value)
+}
+
+/// Admit `Nat.transposition_at_j : ∀ i j, Lt i j →
+/// Eq Nat (transposition i j j) i`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_transposition_at_j(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let h_ij_ty = d.lt(i, j);
+    let hij_fv = d.fresh_fvar();
+    let h_ij = d.kernel().fvar(hij_fv);
+
+    let lhs = d.const_app(p.transposition, &[i, j, j]);
+    let goal = d.eq(lhs, i);
+    let body = transposition_eq_at_j(d, &p, i, j, h_ij);
+
+    let ty = {
+        let with_h = d.arrow(h_ij_ty, goal);
+        let with_j = d.pi_fv(j_fv, nat, with_h);
+        d.pi_fv(i_fv, nat, with_j)
+    };
+    let value = {
+        let with_h = d.lam_fv(hij_fv, h_ij_ty, body);
+        let with_j = d.lam_fv(j_fv, nat, with_h);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+    d.declare_theorem(p.transposition_at_j, ty, value)
+}
+
+/// Admit `Nat.transposition_gt_j : ∀ i j k, Lt i j → Lt j k →
+/// Eq Nat (transposition i j k) k` — the region above both swapped points,
+/// the one a cursor induction needs in order to know it has not disturbed
+/// anything it already fixed.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_transposition_gt_j(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let h_ij_ty = d.lt(i, j);
+    let hij_fv = d.fresh_fvar();
+    let h_ij = d.kernel().fvar(hij_fv);
+    let h_jk_ty = d.lt(j, k);
+    let hjk_fv = d.fresh_fvar();
+    let h_jk = d.kernel().fvar(hjk_fv);
+
+    let lhs = d.const_app(p.transposition, &[i, j, k]);
+    let goal = d.eq(lhs, k);
+    let body = transposition_eq_gt_j(d, &p, i, j, k, h_ij, h_jk);
+
+    let ty = {
+        let with_h2 = d.arrow(h_jk_ty, goal);
+        let with_h1 = d.arrow(h_ij_ty, with_h2);
+        let with_k = d.pi_fv(k_fv, nat, with_h1);
+        let with_j = d.pi_fv(j_fv, nat, with_k);
+        d.pi_fv(i_fv, nat, with_j)
+    };
+    let value = {
+        let with_h2 = d.lam_fv(hjk_fv, h_jk_ty, body);
+        let with_h1 = d.lam_fv(hij_fv, h_ij_ty, with_h2);
+        let with_k = d.lam_fv(k_fv, nat, with_h1);
+        let with_j = d.lam_fv(j_fv, nat, with_k);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+    d.declare_theorem(p.transposition_gt_j, ty, value)
+}
+
+/// Admit `Nat.transposition_eq_of_ne : ∀ i j k, Lt i j → Not (Eq Nat k i) →
+/// Not (Eq Nat k j) → Eq Nat (transposition i j k) k` — a transposition fixes
+/// every point that is neither of the two it exchanges.
+///
+/// The same five-region split as [`declare_transposition_involutive`] (nested
+/// [`trichotomy`], `i` against `k` then `j` against `k`), with the three
+/// inequality regions closed by [`transposition_eq_lt_i`],
+/// [`transposition_eq_between`] and [`transposition_eq_gt_j`] and the two
+/// equality regions discharged by the corresponding `Not` hypothesis through
+/// [`ex_falso`] rather than transported.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// check.
+pub(super) fn declare_transposition_eq_of_ne(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+
+    let h_ij_ty = d.lt(i, j);
+    let hij_fv = d.fresh_fvar();
+    let h_ij = d.kernel().fvar(hij_fv);
+
+    let eq_k_i = d.eq(k, i);
+    let not_ki_ty = d.const_app(p.logic.not, &[eq_k_i]);
+    let hni_fv = d.fresh_fvar();
+    let hni = d.kernel().fvar(hni_fv);
+
+    let eq_k_j = d.eq(k, j);
+    let not_kj_ty = d.const_app(p.logic.not, &[eq_k_j]);
+    let hnj_fv = d.fresh_fvar();
+    let hnj = d.kernel().fvar(hnj_fv);
+
+    let lhs = d.const_app(p.transposition, &[i, j, k]);
+    let goal = d.eq(lhs, k);
+
+    let lt_k_i = d.lt(k, i);
+    let lt_i_k = d.lt(i, k);
+    let lt_k_j = d.lt(k, j);
+    let lt_j_k = d.lt(j, k);
+
+    // --- region: k < i ---
+    let branch_lt_i = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let fact = transposition_eq_lt_i(d, &p, i, j, k, h);
+        d.lam_fv(h_fv, lt_k_i, fact)
+    };
+
+    // --- region: k = i, refuted by the first `Not` ---
+    let branch_eq_i = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let contradiction = d.apply(hni, &[h]);
+        let body = ex_falso(d, &p, goal, contradiction);
+        d.lam_fv(h_fv, eq_k_i, body)
+    };
+
+    // --- region: i < k, split against j ---
+    let branch_gt_i = {
+        let hg_fv = d.fresh_fvar();
+        let hg = d.kernel().fvar(hg_fv);
+
+        let tri_inner = trichotomy(d, &p, j, k);
+
+        let inner_lt_j = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+            let fact = transposition_eq_between(d, &p, i, j, k, hg, h2);
+            d.lam_fv(h2_fv, lt_k_j, fact)
+        };
+
+        let inner_rest = {
+            let h2_fv = d.fresh_fvar();
+            let h2 = d.kernel().fvar(h2_fv);
+
+            let inner_eq_j = {
+                let h3_fv = d.fresh_fvar();
+                let h3 = d.kernel().fvar(h3_fv);
+                let contradiction = d.apply(hnj, &[h3]);
+                let body = ex_falso(d, &p, goal, contradiction);
+                d.lam_fv(h3_fv, eq_k_j, body)
+            };
+            let inner_gt_j = {
+                let h3_fv = d.fresh_fvar();
+                let h3 = d.kernel().fvar(h3_fv);
+                let fact = transposition_eq_gt_j(d, &p, i, j, k, h_ij, h3);
+                d.lam_fv(h3_fv, lt_j_k, fact)
+            };
+
+            let body = d.const_app(
+                p.logic.or_elim,
+                &[eq_k_j, lt_j_k, goal, h2, inner_eq_j, inner_gt_j],
+            );
+            let or_rest2_ty = d.const_app(p.logic.or, &[eq_k_j, lt_j_k]);
+            d.lam_fv(h2_fv, or_rest2_ty, body)
+        };
+
+        let or_rest2_ty = d.const_app(p.logic.or, &[eq_k_j, lt_j_k]);
+        let body = d.const_app(
+            p.logic.or_elim,
+            &[lt_k_j, or_rest2_ty, goal, tri_inner, inner_lt_j, inner_rest],
+        );
+        d.lam_fv(hg_fv, lt_i_k, body)
+    };
+
+    let branch_rest = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = d.const_app(
+            p.logic.or_elim,
+            &[eq_k_i, lt_i_k, goal, h, branch_eq_i, branch_gt_i],
+        );
+        let or_rest_ty = d.const_app(p.logic.or, &[eq_k_i, lt_i_k]);
+        d.lam_fv(h_fv, or_rest_ty, body)
+    };
+
+    let tri_outer = trichotomy(d, &p, i, k);
+    let or_rest_ty = d.const_app(p.logic.or, &[eq_k_i, lt_i_k]);
+    let proof_body = d.const_app(
+        p.logic.or_elim,
+        &[
+            lt_k_i,
+            or_rest_ty,
+            goal,
+            tri_outer,
+            branch_lt_i,
+            branch_rest,
+        ],
+    );
+
+    let ty = {
+        let with_nj = d.arrow(not_kj_ty, goal);
+        let with_ni = d.arrow(not_ki_ty, with_nj);
+        let with_hij = d.arrow(h_ij_ty, with_ni);
+        let with_k = d.pi_fv(k_fv, nat, with_hij);
+        let with_j = d.pi_fv(j_fv, nat, with_k);
+        d.pi_fv(i_fv, nat, with_j)
+    };
+    let value = {
+        let with_nj = d.lam_fv(hnj_fv, not_kj_ty, proof_body);
+        let with_ni = d.lam_fv(hni_fv, not_ki_ty, with_nj);
+        let with_hij = d.lam_fv(hij_fv, h_ij_ty, with_ni);
+        let with_k = d.lam_fv(k_fv, nat, with_hij);
+        let with_j = d.lam_fv(j_fv, nat, with_k);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+    d.declare_theorem(p.transposition_eq_of_ne, ty, value)
+}
