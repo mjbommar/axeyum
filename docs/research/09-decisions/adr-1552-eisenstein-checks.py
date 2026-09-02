@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Numeric checks behind ADR-1552 (lane `eisenstein-3`).
 
-Five claims (C1-C5) and ten controls (M1-M10). **The exit status depends on
+Six claims (C1-C6) and eleven controls (M1-M11). **The exit status depends on
 the finding**: a claim that fails, or a control that behaves other than as
 recorded here, exits 1. Two controls are recorded SURVIVORS -- they are
 printed as survivors and do NOT fail the run, because the ADR records them as
@@ -270,6 +270,40 @@ def c5() -> None:
     )
 
 
+
+# --- C6: residue 5, the min-free floor sum ------------------------------------
+
+
+def bare_row_sum(pp: int, q: int, m: int) -> int:
+    return sum((q * (x + 1)) // pp for x in range(m))
+
+
+def max_row_floor(pp: int, q: int, m: int) -> int:
+    return max(((q * (x + 1)) // pp for x in range(m)), default=0)
+
+
+def c6() -> None:
+    print("C6  residue 5: the min-free floor sum at pp = 2m+1, q = 2n+1")
+    count = 0
+    ok = True
+    cap_ok = True
+    for m in range(0, 20):
+        for n in range(0, 20):
+            pp, q = 2 * m + 1, 2 * n + 1
+            if math.gcd(pp, q) != 1:
+                continue
+            count += 1
+            if bare_row_sum(pp, q, m) + bare_row_sum(q, pp, n) != n * m:
+                ok = False
+                print(f"       fails at m={m}, n={n}")
+            # The cap never binds on EITHER axis -- the fact the kernel lemma
+            # `Nat.div_mul_succ_le_of_le` states.
+            if max_row_floor(pp, q, m) > n or max_row_floor(q, pp, n) > m:
+                cap_ok = False
+                print(f"       the cap BINDS at m={m}, n={n}")
+    record(ok, "C6", f"holds at {count} coprime odd pairs")
+    record(cap_ok, "C6b", "and the min never binds at any of them")
+
 # --- controls -----------------------------------------------------------------
 
 
@@ -352,6 +386,18 @@ def controls() -> None:
         f"REFUTED: `i <= 1` is not the complement of `3 <= i` ({bad_split} vs 21)",
     )
 
+    # M11: the SAME min-free reading at a general instance
+    # `Nat.eisenstein_floor_sum` also reaches -- pp = 2, q = 5, m = 1, n = 0,
+    # coprime and within the bound -- where the cap DOES bind.
+    record(
+        max_row_floor(2, 5, 1) > 0
+        and bare_row_sum(2, 5, 1) + bare_row_sum(5, 2, 0) != 0 * 1,
+        "M11",
+        "REFUTED: dropping the min at pp=2, q=5, m=1, n=0 gives 2 against 0, "
+        "so residue 5 is a fact about the Eisenstein shape and not about "
+        "counting (this reproduces ADR-1544's M4)",
+    )
+
     # M9: SURVIVOR -- the congruence form is symmetric in F and N, so no
     # numeric check can see which side is which.
     survivor(
@@ -378,6 +424,7 @@ def main() -> int:
     c3()
     c4()
     c5()
+    c6()
     controls()
     print()
     print(f"claims/controls failed: {len(FAILURES)}")

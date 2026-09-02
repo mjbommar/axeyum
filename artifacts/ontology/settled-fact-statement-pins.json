@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2169,
+    "min_identity_bound": 2171,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16063,6 +16063,13 @@
       "kernel_theorem": "Nat.div_mul_cancel_of_dvd"
     },
     {
+      "fact_id": "F:nat-div-mul-succ-le-of-le",
+      "language": "lean4",
+      "statement_sha256": "2c4775c91ea4a7101e86f8c7d9c92232d5a66002c444172e1b5d212f44a5fb7a",
+      "prose_sha256": "a5d5d05f5b5f22fed08262c099bfc00db2fd72e5a5d37274db30379e4cd57032",
+      "kernel_theorem": "Nat.div_mul_succ_le_of_le"
+    },
+    {
       "fact_id": "F:nat-div-succ",
       "language": "lean4",
       "statement_sha256": "8728f4c0ed62c301975d9cdd2a675d9006079f9652fe7e85bf832acaf9276ce0",
@@ -16314,6 +16321,13 @@
       "statement_sha256": "e209fc1ef67d745bbf364e14abb09ad93dc6837bb8bef8c01d1f3c7b363a0901",
       "prose_sha256": "d1ee436a786edc31f97561e98924833afc565deb9ecc044f45bb16f3e5c2c899",
       "kernel_theorem": "Nat.eisenstein_floor_sum"
+    },
+    {
+      "fact_id": "F:nat-eisenstein-floor-sum-min-free",
+      "language": "lean4",
+      "statement_sha256": "2e99c6bcb5ed15be68e9b15be6e9ecb3aca3fb9ccc6f2f1e6798e0534b2db968",
+      "prose_sha256": "fa17f84ad5e6a2c66c0486ad7bf124264e3bec1e56a6971d7ef3e04802334c5c",
+      "kernel_theorem": "Nat.eisenstein_floor_sum_min_free"
     },
     {
       "fact_id": "F:nat-eisenstein-lemma",

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-div-mul-succ-le-of-le",
+  "title": "At the Eisenstein shape the row floor never exceeds the rectangle's height",
+  "statement": "For every `m`, `n` and every `x` with `x + 1 <= m`: `floor((2n+1)(x+1) / (2m+1)) <= n`. This is the one arithmetic fact ADR-1544's residue 5 was short of, and it is a fact about the Eisenstein shape rather than about counting. WHY IT IS NOT ONE LINE: the bound is `q(x+1) <= q*m < pp(n+1)`, and the strict half is `2nm + m < 2mn + 2m + n + 1`, i.e. `0 < m + n + 1`. But `mul q m` is STUCK in both directions -- `Nat.mul` recurses on its RIGHT argument, so `mul q m` with `m` symbolic reduces to nothing, and `mul pp n` likewise. One `Nat.mul_comm` on each turns them into `mul m (succ (2n))` and `mul n (succ (2m))`, which iota-reduce to `mul m (2n) + m` and `mul n (2m) + n`, and the two leading products are the same number `2mn` written two different ways -- a nine-step chain through `mul_assoc`, `right_distrib` and `mul_comm` to identify. Everything after that is `Nat.add_lt_add_left`, `Nat.succ_le_succ`, `Nat.mul_le_mul_left`, `Nat.lt_of_le_of_lt`, `Nat.div_lt_of_lt_mul` and `Nat.le_of_lt_succ`, plus four one-hole transports at `Le`/`Lt` positions where the Nat-valued `NatOps::congr` does not apply. `Kernel::axiom_footprint` is EMPTY. Admitted on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.div_mul_succ_le_of_le : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le (AxNat.succ x2) x0) -> AxNat.le (AxNat.div (AxNat.mul (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ x2)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) x1))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.div_mul_succ_le_of_le"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:ml430-nat-div-lt-of-lt-mul-818dc4c7",
+    "F:nat-add-assoc",
+    "F:nat-add-lt-add-left",
+    "F:nat-le-add-right",
+    "F:nat-le-of-lt-succ",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-mul-assoc",
+    "F:nat-mul-comm",
+    "F:nat-mul-le-mul-left",
+    "F:nat-right-distrib",
+    "F:nat-succ-le-succ",
+    "F:nat-zero-add",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.div_mul_succ_le_of_le",
+      "kind": "kernel-term",
+      "supports": "Nat.div_mul_succ_le_of_le is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.div_mul_succ_le_of_le 2>/dev/null | grep -cE '^Nat\\.div_mul_succ_le_of_le[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.div_mul_succ_le_of_le",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY, and so is a FRESH build: this lane hit the stale-binary trap here, and a prebuilt inventory reported this very theorem ABSENT. `cargo run` rebuilds; a prebuilt binary does not. Pass ONE name per invocation."
+    },
+    {
+      "id": "footprint-Nat.div_mul_succ_le_of_le",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.div_mul_succ_le_of_le.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in eisenstein_floor_min_free_tests.rs."
+    },
+    {
+      "id": "numeric-Nat.div_mul_succ_le_of_le",
+      "kind": "exhaustive-enumeration",
+      "supports": "C6 of ADR-1552's check script verifies the min-free identity at 317 coprime odd pairs, and C6b verifies separately that the cap never binds on either axis at any of them -- the fact the bound lemma states. M11 refutes the same reading at pp=2, q=5, m=1, n=0, a general instance where the cap does bind.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1552-eisenstein-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy with one uniquely-named file per mutant: 19 of 19 mutations exit 1, including shifting the min-free floor sum, making C6b's cap check fire spuriously, and making M11's witness satisfy the cap. TWO mutations were deliberately NOT run and the omissions are recorded: vacuity edits (`if FAILURES:` and C6b's cap condition replaced by `if False:`) are no-ops against a PASSING baseline, so running them would measure nothing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character in eisenstein_floor_min_free_tests.rs). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts, so it is an INTERSECTION and not the full dependency set. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-3)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs`. ADR-1552, closing ADR-1544's residue 5. Declaration kind: theorem. WHAT IS STILL OPEN: quadratic reciprocity. Its two halves are `Nat.eisenstein_lemma` and this min-free floor sum; what is missing is the assembly -- combine the two parity statements at `(m,n)` and `(n,m)` with `F_p + F_q = n*m` to get `N_p + N_q == n*m (mod 2)` (Nat-side, every input present), then turn that into Legendre symbols through `Int.gaussLemmaSignCount` (Int-side). GRADED FAMILY (ADR-0603): row 1, the general constructive form. Row 2 is PARTLY ASSESSED for the min-free identity -- the restriction to the Eisenstein shape is refuted INSIDE the kernel at pp=2, q=5, m=1, n=0 by `def_eq`, not only in Rust -- and UNASSESSED for the bound lemma. Neither refutation is stated as a kernel theorem.",
+  "external_status": "proved"
+}

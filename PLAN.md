@@ -121,7 +121,8 @@ now. Nothing was deleted.
 | 2026-09-02 | eisenstein-3 | `Nat.sumRangeIf` + defining equations + bounded congruence + the `setCompl` split (5 declarations, `subset_sum.rs`) |
 | 2026-09-02 | eisenstein-3 | residue 2: `Nat.leastResidue_sumRange_reconcile`, hypothesis-free (`gauss_residue_reconcile.rs`) |
 | 2026-09-02 | eisenstein-3 | residue 3 and **Eisenstein's lemma**, plus the congruence form (4 declarations, `eisenstein_lemma.rs`) |
-| 2026-09-02 | eisenstein-3 | ADR-1552 + its check script (5 claims, 10 controls, 16/16 self-mutations exit 1) and nine ledger rows |
+| 2026-09-02 | eisenstein-3 | residue 5: `Nat.eisenstein_floor_sum_min_free` and its bound lemma (`eisenstein_floor_min_free.rs`) |
+| 2026-09-02 | eisenstein-3 | ADR-1552 + its check script (6 claims, 11 controls, 19/19 self-mutations exit 1) and eleven ledger rows |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -35780,9 +35781,10 @@ subcommand that moves a file would be refused rather than misread — the safe
 direction, but someone will have to extend it deliberately.
 
 **Status: landed (2026-09-02). Eisenstein's lemma is a kernel theorem.**
-ADR-1540's and ADR-1544's residues 2 and 3 both close, and so does the thing
-that was blocking them. **Quadratic reciprocity is still NOT proved** — its two
-halves are now both proved and what is missing is the assembly. Decision, the
+ADR-1544's three remaining residues — 2, 3 and 5 — all close, and so does the
+thing that was blocking them. Nothing ADR-1540 or ADR-1544 left open is still
+open. **Quadratic reciprocity is still NOT proved** — its two halves are now
+both proved and what is missing is the assembly. Decision, the
 correction it forces, and the two recorded survivors:
 [ADR-1552](docs/research/09-decisions/adr-1552-eisensteins-lemma-was-blocked-on-a-missing-aggregate-and-nothing-else.md).
 
@@ -35809,11 +35811,13 @@ this lane's own declarations, so not a stale binary reporting a false ABSENT).
 | `crates/axeyum-lean-kernel/src/nat_prelude/gauss_residue_reconcile_tests.rs` | 6 tests: four instances incl. an even composite modulus and a non-coprime pair; three wrong readings refuted numerically |
 | `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs` | four declarations (residue 3 + Eisenstein's lemma + the congruence form), all admitted FIRST attempt, all axiom-free |
 | `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma_tests.rs` | 8 tests; coprimality refuted INSIDE the kernel with a positive control |
-| `crates/axeyum-lean-kernel/src/nat_prelude.rs` | ten name fields, registrations, three build-order calls |
-| `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` | the ten names added to the environment-derived coverage list |
+| `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs` | two declarations (residue 5), both admitted FIRST attempt, both axiom-free |
+| `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free_tests.rs` | 5 tests; the restriction to the Eisenstein shape refuted INSIDE the kernel |
+| `crates/axeyum-lean-kernel/src/nat_prelude.rs` | twelve name fields, registrations, four build-order calls |
+| `crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs` | the twelve names added to the environment-derived coverage list |
 | `crates/axeyum-py/src/kernel/prelude_fields.rs` | regenerated (`scripts/gen-py-prelude-fields.py`) |
-| `docs/research/09-decisions/adr-1552-…md` + `adr-1552-eisenstein-checks.py` | 5 claims, 10 controls, 2 recorded survivors; 16 of 16 self-mutations exit 1 |
-| `artifacts/facts/F-nat-{sumrangeif-zero,sumrangeif-succ,sumrangeif-congr-lt,sumrangeif-compl,leastresidue-sumrange-reconcile,mul-sumrange-div-add-leastresidue,eisenstein-count-identity,eisenstein-lemma,eisenstein-lemma-modeq}.json` | nine ledger rows, statements verbatim from the kernel's own rendering |
+| `docs/research/09-decisions/adr-1552-…md` + `adr-1552-eisenstein-checks.py` | 6 claims, 11 controls, 2 recorded survivors; 19 of 19 self-mutations exit 1 |
+| `artifacts/facts/F-nat-{sumrangeif-zero,sumrangeif-succ,sumrangeif-congr-lt,sumrangeif-compl,leastresidue-sumrange-reconcile,mul-sumrange-div-add-leastresidue,eisenstein-count-identity,eisenstein-lemma,eisenstein-lemma-modeq,div-mul-succ-le-of-le,eisenstein-floor-sum-min-free}.json` | eleven ledger rows, statements verbatim from the kernel's own rendering |
 
 Declarations:
 
@@ -35826,8 +35830,10 @@ Declarations:
 - `Nat.eisenstein_count_identity : ∀ m a, gcd a (2m+1) = 1 → a·T + (S+S) = pp·(F+N) + T`
 - `Nat.eisenstein_lemma : ∀ m n, gcd (2n+1) (2m+1) = 1 → Even (F + N)`
 - `Nat.eisenstein_lemma_modEq : ∀ m n, gcd (2n+1) (2m+1) = 1 → modEq 2 F N`
+- `Nat.div_mul_succ_le_of_le : ∀ m n x, Le (succ x) m → Le (div (q·(succ x)) pp) n`
+- `Nat.eisenstein_floor_sum_min_free : ∀ m n, gcd pp q = 1 → Σ⌊·⌋ + Σ⌊·⌋ = n·m` (no `min`)
 
-## Four findings a name search does not give you
+## Five findings a name search does not give you
 
 1. **Residue 2 was never blocked on Gauss's lemma or on coprimality.** Both
    prior ADRs sized it as downstream of the bijection. It is
@@ -35853,19 +35859,26 @@ Declarations:
    argument, so after one `mul_comm` both `mul T (succ (2n))` and
    `mul X (succ (2m))` ι-reduce to `mul T (2n) + T` and `mul X (2m) + X` with
    no lemma at all. That is what makes the parity step short.
+5. **A prebuilt inventory reported a theorem this lane had just declared as
+   ABSENT.** `theorem_dependency_inventory` was rebuilt for the first nine
+   declarations and NOT for the last two, and it answered *"no theorem matches
+   `Nat.div_mul_succ_le_of_le`"* — which its own error text correctly calls a
+   failure rather than an empty answer. The fact rows' `checker_command` uses
+   `cargo run`, which rebuilds; a prebuilt binary does not.
 
 ## Checks run
 
-- `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude:: --test-threads=4` — **389 passed, 0 failed**
+- `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude:: --test-threads=4` — **395 passed, 0 failed**
 - `cargo clippy --release -p axeyum-lean-kernel --all-targets -- -D warnings` — clean
-- `python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py` — PASS; **16 of 16 self-mutations exit 1**
-- `python3 scripts/validate-facts.py` — **2615 facts, 0 errors** (after `check-fact-depends-derived.py --fix` added 5 derived edges)
-- `python3 scripts/check-settled-fact-statements.py --write` — 2382 pins, unpinned 0
+- `python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py` — PASS; **19 of 19 self-mutations exit 1**
+- `python3 scripts/validate-facts.py` — **2617 facts, 0 errors** (after `check-fact-depends-derived.py --fix` added 7 derived edges)
+- `python3 scripts/check-settled-fact-statements.py --write` — 2384 pins, unpinned 0
+- `scripts/check-merge-hygiene.sh` — PASS
 - `python3 scripts/gen-adr-index.py --check` — exit 0
 - `nat_axiom_inventory --require-axiom-free nat` — `ok: nat trusted surface = 0`
 - the fact `checker_command` run WITH a negative control: the real name prints
   `1` at exit 0, a one-character typo prints `0` at exit **1**
-- **ten kernel declarations, all ten admitted on the FIRST attempt**
+- **twelve kernel declarations, all twelve admitted on the FIRST attempt**
 
 ## Instantiation table
 
@@ -35883,6 +35896,9 @@ Declarations:
 | `eisenstein_lemma` | `(pp,q) = (7,3)`, `(5,3)`, `(7,5)` | `F+N` reduces to `2`, `2`, `4`; each rejects its neighbour |
 | `eisenstein_lemma` | `(pp,q) = (9,3)` (`gcd 3 9 = 3`) | `F+N` reduces to `3`, and `3` is refuted as `k+k` for every reachable `k` INSIDE the kernel, with a positive control on `2 = 1+1` |
 | `eisenstein_lemma_modEq` | the same three coprime pairs | conclusion inferred and matched against `modEq 2 F N` |
+| `div_mul_succ_le_of_le` | every `x < m` at `(m,n) = (3,2)`, `(2,1)`, `(3,1)` | the bound is inferred and the quotient reduces at each index |
+| `eisenstein_floor_sum_min_free` | the same three pairs | both sides reduce to `n·m` = `6`, `2`, `3`; each rejects its neighbour |
+| `eisenstein_floor_sum_min_free` | `pp = 2`, `q = 5`, `m = 1`, `n = 0` (the cap BINDS) | bare row sum `2`, capped row sum `0`, `def_eq` rejects — so the min-free reading is FALSE at a general instance `eisenstein_floor_sum` reaches |
 
 Every coprimality hypothesis is discharged by `Eq.refl`, so `Nat.gcd` really
 does reduce at each pair.
@@ -35897,20 +35913,9 @@ does reduce at each pair.
    The second step is `Int`-side: turn that into Legendre symbols through
    `Int.gaussLemmaSignCount`, which needs a `(−1)^(a+b) = (−1)^a·(−1)^b` step
    over `Int.pow_neg_one_of_even`/`_of_odd`, both of which exist.
-2. **ADR-1544's residue 5, the `min`-free corollary — NOT ATTEMPTED**, and the
-   reason is budget rather than a stuck term. It was sized in-tree instead:
-   it needs `div (q·(succ x)) pp ≤ n` under `pp = succ (2m)`, `q = succ (2n)`,
-   `succ x ≤ m`, which follows from `Nat.div_lt_of_lt_mul` +
-   `Nat.le_of_lt_succ` once `Lt (mul q (succ x)) (mul pp (succ n))` is in hand,
-   and that from `Nat.mul_le_mul_left` plus `q·m < pp·(n+1)` — i.e.
-   `2nm + m < 2mn + 2m + n + 1`, i.e. `0 < m + n + 1`. Every named lemma was
-   checked PRESENT (`div_lt_of_lt_mul`, `le_of_lt_succ`, `mul_le_mul_left`,
-   `min_eq_right`, `le_add_right`, `succ_le_succ`, `right_distrib`,
-   `mul_assoc`, `mul_comm`). What makes it more than a one-liner: `mul q m` is
-   stuck at a symbolic `m` in both directions, so getting the two sides into a
-   common `2mn` form takes a chain of `mul_comm`/`mul_assoc`/`right_distrib`,
-   and `min_eq_right` then has to be pushed under two `sumRange_congr_lt`s, one
-   per axis.
+2. ~~ADR-1544's residue 5, the `min`-free corollary.~~ **Closed** —
+   `Nat.eisenstein_floor_sum_min_free`. The `min` is removable at
+   `pp = 2m+1`, `q = 2n+1` and NOT in general, and both halves are tested.
 
 ## Two things a next lane inherits
 

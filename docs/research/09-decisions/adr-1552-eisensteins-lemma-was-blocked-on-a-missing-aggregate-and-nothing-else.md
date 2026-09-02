@@ -4,9 +4,10 @@ Status: accepted
 Date: 2026-09-02
 Index-summary: **Eisenstein's lemma is now a kernel theorem**
 (`Nat.eisenstein_lemma : ∀ m n, gcd (2n+1) (2m+1) = 1 → Even (F + N)`), with
-the congruence form `Nat.eisenstein_lemma_modEq` beside it. Ten declarations
+the congruence form `Nat.eisenstein_lemma_modEq` beside it. Twelve declarations
 land, every one admitted on the FIRST kernel attempt and every one axiom-free.
-ADR-1540's and ADR-1544's residues 2 and 3 both close. The finding that
+**ADR-1544's three remaining residues — 2, 3 and 5 — all close**, so nothing
+ADR-1540 or ADR-1544 left open is still open. The finding that
 matters is a correction: **residue 2 was never blocked on Gauss's lemma or on
 coprimality** — it is hypothesis-free, and the only thing standing in front of
 it was `Nat.sumRangeIf`, an aggregate two lanes measured ABSENT and neither
@@ -53,7 +54,7 @@ the *only* obstacle.
 
 ## Decision
 
-Ten declarations, in four groups.
+Twelve declarations, in five groups.
 
 ### 1. `Nat.sumRangeIf`, the missing corner of the subset-fold triangle
 
@@ -208,6 +209,40 @@ rather than a second proof: from `F + N = k + k` take `u := N`, `v := k`, and
 `F + 2·N = (F + N) + N = (k + k) + N` while `N + 2·k = N + (k + k)` — one
 `add_comm` apart.
 
+### 6. Residue 5: the `min` comes off, at this shape and not in general
+
+```text
+Nat.div_mul_succ_le_of_le : ∀ m n x, Le (succ x) m →
+  Le (div (mul (succ (2n)) (succ x)) (succ (2m))) n
+
+Nat.eisenstein_floor_sum_min_free : ∀ m n, gcd (succ (2m)) (succ (2n)) = 1 →
+  Σ_{x<m} ⌊q(x+1)/pp⌋ + Σ_{y<n} ⌊pp(y+1)/q⌋ = n·m
+```
+
+ADR-1544's `M4`/`M5` recorded that dropping the `min` from
+`Nat.eisenstein_floor_sum` is **REFUTED** at the generality that theorem states
+and **SURVIVES** only at Eisenstein's own `m = (p−1)/2`, `n = (q−1)/2`. This
+turns the survivor into a theorem: at `pp = 2m+1`, `q = 2n+1` the cap never
+binds.
+
+**The arithmetic is trivial on paper and is not one line here.** The bound is
+`q(x+1) ≤ q·m < pp(n+1)`, and the strict half is `2nm + m < 2mn + 2m + n + 1`,
+i.e. `0 < m + n + 1`. But `mul q m` is STUCK in both directions — `Nat.mul`
+recurses on its RIGHT argument, so with `m` symbolic it reduces to nothing, and
+`mul pp n` likewise. One `mul_comm` on each turns them into `mul m (succ (2n))`
+and `mul n (succ (2m))`, which ι-reduce, and the two leading products are then
+the same number `2mn` written two different ways — a nine-step chain through
+`mul_assoc`, `right_distrib` and `mul_comm` to identify. Everything after that
+is `add_lt_add_left`, `succ_le_succ`, `mul_le_mul_left`, `lt_of_le_of_lt`,
+`div_lt_of_lt_mul` and `le_of_lt_succ`, plus four **one-hole transports at
+`Le`/`Lt` positions**, where the `Nat`-valued `NatOps::congr` does not apply.
+
+**The restriction is refuted inside the kernel, not only in Rust.** At
+`pp = 2`, `q = 5`, `m = 1`, `n = 0` — a general instance
+`Nat.eisenstein_floor_sum` also reaches, since `gcd 2 5 = 1` and `1 < 2` — the
+cap does bind: the bare row sum reduces to `2`, the capped one to `0`, and
+`def_eq` rejects the two.
+
 ## What this does NOT prove
 
 **Quadratic reciprocity is not proved.** Its two halves are now both proved —
@@ -225,19 +260,7 @@ attempted here:
    is `Int`-side and needs a `(−1)^(a+b) = (−1)^a·(−1)^b` step over
    `Int.pow_neg_one_of_even`/`_of_odd`, both of which exist.
 
-**ADR-1544's residue 5 is also still open** — the `min`-free corollary of
-`Nat.eisenstein_floor_sum`. It is not attempted here, and its route was sized
-in-tree rather than guessed: it needs `div (q·(succ x)) pp ≤ n` under
-`pp = succ (2m)`, `q = succ (2n)`, `succ x ≤ m`, which follows from
-`Nat.div_lt_of_lt_mul` + `Nat.le_of_lt_succ` once
-`Lt (mul q (succ x)) (mul pp (succ n))` is in hand, and that in turn from
-`Nat.mul_le_mul_left` plus the inequality `q·m < pp·(n+1)` — which is
-`2nm + m < 2mn + 2m + n + 1`, i.e. `0 < m + n + 1`. Every named lemma was
-checked present. What makes it more than a one-liner is that `mul q m` is stuck
-at a symbolic `m` in both directions, so getting the two sides into a common
-`2mn`-shaped form takes a chain of `mul_comm`/`mul_assoc`/`right_distrib`
-steps, and then `min_eq_right` has to be pushed under two `sumRange_congr_lt`s.
-Sized, not attempted.
+ADR-1544's residue 5 is **closed here too** — see §6.
 
 ## Numeric verification
 
@@ -247,29 +270,35 @@ Re-runnable, and **this is the command, not a claim that it passed**:
 python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py
 ```
 
-Five claims (C1–C5) and ten controls (M1–M10). C1 checks the conditional sum
+Six claims (C1–C6) and eleven controls (M1–M11). C1 checks the conditional sum
 and its complement split at 180 instances; C2 sweeps 8,450 instances of the
 reconciliation, of which 5,070 have a composite modulus and 3,250 are
 non-coprime; C3 sweeps the same 8,450 for the summed division algorithm; C4
 checks 519 coprime instances of the counting identity; C5 checks 399 coprime
 odd pairs of Eisenstein's lemma and, separately, all 240 ordered pairs of
-distinct odd primes below 60.
+distinct odd primes below 60; C6 checks the min-free floor sum at 317 coprime
+odd pairs and, separately (C6b), that the cap never binds on either axis at any
+of them.
 
-Exit status depends on the finding. That claim is itself measured: **16 of 16
+Exit status depends on the finding. That claim is itself measured: **19 of 19
 mutations of the script exit 1** — the reconciliation's count shifted, the
 doubling dropped, step 1's floor sum shifted, its index range shifted, the fold
 threshold loosened, the fold's reflection shifted, the counting identity
 shifted, Eisenstein's parity read the other way, each coprimality filter
 dropped, the complement split broken, M5's and M6's named witnesses made wrong,
-C5b's prime range emptied, C2b made blind to non-coprimality, and M8's second
-predicate made the true complement. Each mutant is written to its own filename
+C5b's prime range emptied, C2b made blind to non-coprimality, M8's second
+predicate made the true complement, the min-free floor sum shifted, C6b's cap
+check made to fire spuriously, and M11's witness made to satisfy the cap. Each mutant is written to its own filename
 in a scratch directory, so the stale-`__pycache__` trap cannot report the
 previous mutant's result.
 
-**One mutation was deliberately NOT run and the omission is recorded**: turning
-`if FAILURES: … return 1` into `if False:` is a *no-op against a passing
-baseline*, so running it would measure nothing. The return-1 path is exercised
-by every one of the sixteen mutations above.
+**Two mutations were deliberately NOT run and the omissions are recorded**, and
+they are the same kind: a VACUITY edit of a guard that is *satisfied* in the
+baseline cannot be measured, because the guard has nothing to fail on. Turning
+`if FAILURES: … return 1` into `if False:` and replacing C6b's cap condition by
+`if False:` are both no-ops against a passing run. The measurable form is to
+make a condition WRONG rather than absent, which is what M17 does to C6b; and
+the return-1 path is exercised by every one of the nineteen mutations above.
 
 ### The two recorded survivors
 
@@ -284,23 +313,24 @@ M10 recorded for the strict/non-strict half-plane spelling.
 
 ## Graded family (ADR-0603)
 
-All nine ledger rows are **row 1**, the general constructive form — and
+All eleven ledger rows are **row 1**, the general constructive form — and
 `F:nat-eisenstein-lemma` is strictly MORE general than the classical statement,
 which is about two distinct odd primes rather than any coprime odd pair (C5b
 verifies that every classical instance below 60 satisfies the hypothesis).
 
-**Row 2 is UNASSESSED for eight of the nine** and PARTLY ASSESSED for
-`F:nat-eisenstein-lemma`: its coprimality-dropping refutation is carried out
-inside the kernel by `def_eq`, with a positive control, rather than only in
-Rust. It is still not stated as a kernel theorem, and no claim is made that one
+**Row 2 is UNASSESSED for nine of the eleven** and PARTLY ASSESSED for
+`F:nat-eisenstein-lemma` and `F:nat-eisenstein-floor-sum-min-free`: the
+coprimality-dropping refutation for the first, and the shape-dropping
+refutation for the second, are carried out inside the kernel by `def_eq`, with
+positive controls, rather than only in Rust. It is still not stated as a kernel theorem, and no claim is made that one
 is impossible. Rows 3 and 4 are absent throughout.
 
 ## Checks run
 
-- `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude:: --test-threads=4` — **389 passed, 0 failed**
+- `cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude:: --test-threads=4` — **395 passed, 0 failed**
 - `cargo clippy --release -p axeyum-lean-kernel --all-targets -- -D warnings` — clean
-- `python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py` — PASS; 16 of 16 self-mutations exit 1
-- `python3 scripts/validate-facts.py` — **2615 facts, 0 errors**
-- `python3 scripts/check-settled-fact-statements.py --write` — 2382 pins, unpinned 0
-- ten kernel declarations, **all ten admitted on the FIRST attempt**, all ten
-  with an empty `Kernel::axiom_footprint`
+- `python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py` — PASS; 19 of 19 self-mutations exit 1
+- `python3 scripts/validate-facts.py` — **2617 facts, 0 errors**
+- `python3 scripts/check-settled-fact-statements.py --write` — 2384 pins, unpinned 0
+- twelve kernel declarations, **all twelve admitted on the FIRST attempt**, all
+  twelve with an empty `Kernel::axiom_footprint`
