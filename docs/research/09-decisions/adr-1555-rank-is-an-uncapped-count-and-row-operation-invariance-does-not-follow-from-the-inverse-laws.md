@@ -46,12 +46,20 @@ the `isZeroB` bridges — and added one claim that this ADR corrects:
 > obligation 4 above, and sizing it as blocked on `rowEchelon_isEchelon` would
 > be wrong.
 
-Step 0 was rerun on a FRESH `shape_search` index built in this lane's worktree
-(the previous lane's own status file records a stale binary reporting a false
-ABSENT, so the control used here postdates `echelon.rs`): `Rat.rank` and
-`Rat.nonzeroRowB` are absent, `Rat.leadingIndex` and `Rat.rowEchelon` are
-present, and `Nat.countRange` with `countRange_le`, `countRange_congr`,
-`countRange_split` and `countRange_compl` all exist in the ℕ prelude.
+**On the retrieval evidence, stated as it was actually gathered.** This lane
+did not run `shape_search` before writing the code — the existence question was
+answered from `rat_prelude.rs`'s field struct and from `grep` over
+`crates/`, which found `Nat.countRange` and its laws (`countRange_le`,
+`countRange_congr`, `countRange_split`, `countRange_compl`) and found no `rank`
+field. `shape_search` was run AFTERWARDS, on a FRESH index built in this lane's
+worktree (2,130 declarations; the previous lane's own status file records a
+stale binary reporting a false ABSENT, so freshness is not optional here). It
+reports `--name-like rank` → exactly the five declarations this lane added, and
+`--name-like nonzerorow` → exactly the four it added; `--name-contains
+countRange --ns Nat` → 23. So nothing pre-existing was duplicated, and the
+control is newer than the change it is being asked about — but that is a
+post-hoc check, not the step 0 the contributor guide asks for, and it is
+recorded as such.
 
 ## Decision 1 — `rank` is a `Nat.countRange` over the ROWS, computed
 
