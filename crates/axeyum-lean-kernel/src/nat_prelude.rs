@@ -182,6 +182,7 @@ mod even_add_family;
 mod even_div;
 mod factorization;
 mod factorization_lcm;
+mod factorization_multiset;
 mod factorization_root;
 mod fermat;
 mod fermat_number;
@@ -357,6 +358,7 @@ use even_add_family::declare_even_add_family_all;
 use even_div::declare_even_div;
 use factorization::{declare_exists_prime_factorization, declare_prod_range};
 use factorization_lcm::declare_factorization_lcm;
+use factorization_multiset::declare_factorization_multiset_all;
 use factorization_root::declare_factorization_root_all;
 use fermat::declare_fermat;
 use fermat_number::declare_fermat_number_all;
@@ -5800,6 +5802,52 @@ pub struct NatPrelude {
     /// [`min_fac_minimal_of_two_le`](Self::min_fac_minimal_of_two_le) and
     /// [`le_of_dvd`](Self::le_of_dvd) (`min_fac_dvd.rs`).
     pub min_fac_prime: NameId,
+
+    // --- the COMPUTED prime factorization (`factorization_multiset.rs`) ------
+    /// `Nat.prodRange_eq_one_of_below : ∀ f k, (∀ i, Lt i k → Eq (f i) 1) →
+    /// Eq (prodRange f k) 1`. The hypothesis lives INSIDE the induction's
+    /// motive, because the bound moves (`factorization_multiset.rs`).
+    pub prod_range_eq_one_of_below: NameId,
+    /// `Nat.Multiset.count_singleton_self : ∀ a, Eq (count (singleton a) a) 1`.
+    pub multiset_count_singleton_self: NameId,
+    /// `Nat.Multiset.count_singleton_of_ne : ∀ a x, Eq Bool (beq x a) false →
+    /// Eq (count (singleton a) x) 0`.
+    pub multiset_count_singleton_of_ne: NameId,
+    /// `Nat.Multiset.prod_singleton : ∀ a, Eq (prod (singleton a)) a`. Not
+    /// free: the fold over `[0, a)` has to collapse
+    /// ([`prod_range_eq_one_of_below`](Self::prod_range_eq_one_of_below)) and
+    /// the top factor `pow a 1` reduces only to `mul 1 a`, which is STUCK for
+    /// symbolic `a` because [`mul`](Self::mul) recurses on its RIGHT argument
+    /// — the last step is [`one_mul`](Self::one_mul), not reduction.
+    pub multiset_prod_singleton: NameId,
+    /// `Nat.factorizationAux : Nat → Nat → Nat.Multiset` — trial division by
+    /// [`min_fac`](Self::min_fac), structural on the fuel:
+    /// `factorizationAux (succ j) n := if n ≤ 1 then Multiset.zero else
+    /// singleton (minFac n) + factorizationAux j (n / minFac n)`
+    /// (`factorization_multiset.rs`).
+    pub factorization_aux: NameId,
+    /// `Nat.factorization n := factorizationAux n n` — the COMPUTED prime
+    /// factorization as a [`multiset`](Self::multiset). Distinct from
+    /// [`exists_prime_factorization`](Self::exists_prime_factorization), which
+    /// is an anonymous `(k, f)` pair inside an `Exists`
+    /// (`factorization_multiset.rs`).
+    pub factorization: NameId,
+    /// `Nat.prodFactorizationAux : ∀ fuel n, Lt 0 n → Le n fuel →
+    /// Eq (prod (factorizationAux fuel n)) n`. BOTH hypotheses are
+    /// load-bearing: `Lt 0 n` rules out `n = 0` (where the guard is true and
+    /// `prod zero = 1 ≠ 0`), and `Le n fuel` makes the fuel-exhaustion case
+    /// VACUOUS rather than wrong (`factorization_multiset.rs`).
+    pub prod_factorization_aux: NameId,
+    /// `Nat.prod_factorization : ∀ n, Lt 0 n → Eq (prod (factorization n)) n`
+    /// (`factorization_multiset.rs`).
+    pub prod_factorization: NameId,
+    /// `Nat.factorizationAuxPrime : ∀ fuel n x,
+    /// Lt 0 (count (factorizationAux fuel n) x) → prime_condition x`.
+    pub factorization_aux_prime: NameId,
+    /// `Nat.factorization_prime : ∀ n x, Lt 0 (count (factorization n) x) →
+    /// prime_condition x` — every element of the computed factorization is
+    /// prime (`factorization_multiset.rs`).
+    pub factorization_prime: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6707,6 +6755,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             min_fac_two_le: kernel.name_str(nat, "min_fac_two_le"),
             min_fac_dvd: kernel.name_str(nat, "min_fac_dvd"),
             min_fac_prime: kernel.name_str(nat, "min_fac_prime"),
+            prod_range_eq_one_of_below: kernel.name_str(nat, "prodRange_eq_one_of_below"),
+            multiset_count_singleton_self: kernel.name_str(multiset, "count_singleton_self"),
+            multiset_count_singleton_of_ne: kernel.name_str(multiset, "count_singleton_of_ne"),
+            multiset_prod_singleton: kernel.name_str(multiset, "prod_singleton"),
+            factorization_aux: kernel.name_str(nat, "factorizationAux"),
+            factorization: kernel.name_str(nat, "factorization"),
+            prod_factorization_aux: kernel.name_str(nat, "prodFactorizationAux"),
+            prod_factorization: kernel.name_str(nat, "prod_factorization"),
+            factorization_aux_prime: kernel.name_str(nat, "factorizationAuxPrime"),
+            factorization_prime: kernel.name_str(nat, "factorization_prime"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7986,6 +8044,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.div_mod_remainder_eq_zero_iff_dvd`, `Nat.le_of_dvd` and
         // `Nat.dvd_trans`. Nothing above it needs these, so they go last.
         declare_min_fac_dvd_all(&mut d, &p)?;
+        // The COMPUTED prime factorization (`factorization_multiset.rs`). Needs
+        // `declare_min_fac_dvd_all` immediately above, `declare_multiset_prod_all`
+        // (for `Nat.Multiset.prod_add`), `Nat.div_lt_self` and
+        // `Nat.div_mul_cancel_of_dvd`. Nothing needs it, so it goes last.
+        declare_factorization_multiset_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -8080,3 +8143,6 @@ mod multiset_prod_tests;
 
 #[cfg(test)]
 mod min_fac_dvd_tests;
+
+#[cfg(test)]
+mod factorization_multiset_tests;
