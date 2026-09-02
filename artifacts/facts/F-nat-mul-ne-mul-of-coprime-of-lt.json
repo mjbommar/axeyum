@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-mul-ne-mul-of-coprime-of-lt",
+  "title": "No lattice point sits on the line through a coprime pair",
+  "statement": "`gcd p q = 1`, `0 < x < p` implies `p*y != q*x`. WHY IT IS THE POINT: this is ADR-1260's residue 2, the side condition that makes the two STRICT half-plane predicates of `Nat.countRectangle_partition` complementary -- `p*(y+1) < q*(x+1)` and `q*(x+1) < p*(y+1)` are exhaustive exactly when no lattice point of the rectangle lies on the line, and that is the only place primality would enter Eisenstein's step 2. HOW IT IS PROVED: `p*y = q*x` makes `y` a witness for `p | q*x`; `Nat.gauss_lemma` (coprime divisor of a product divides the other factor) gives `p | x`; `Nat.le_of_dvd` with `0 < x` gives `p <= x`, contradicting `x < p` through `lt_of_lt_of_le` and `lt_irrefl`. No induction and no case split. THE HYPOTHESIS IS COPRIMALITY, NOT PRIMALITY: ADR-1260 sized this as Euclid's lemma, and `Nat.gauss_lemma` is Euclid with the primality side condition already dropped, so the theorem is strictly more general and no consumer carries a `PrimeCond` proof through a step that does not use it. THE BOUND IS ON `x`, the index paired with `q`, and the asymmetry is real: `p*y = q*x` forces `p | x`, never `p | y`, and the transposed reading is FALSE at `(p,q,x,y) = (5,3,5,3)`. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.mul_ne_mul_of_coprime_of_lt : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.gcd x0 x1) (AxNat.succ AxNat.zero)) -> ((x5 : AxNat.lt AxNat.zero x2) -> ((x6 : AxNat.lt x2 x0) -> Not (Eq.{1} AxNat (AxNat.mul x0 x3) (AxNat.mul x1 x2)))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ],
+    "kernel_theorem": "Nat.mul_ne_mul_of_coprime_of_lt"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-gauss-lemma", "F:nat-le-of-dvd", "F:nat-lt-irrefl", "F:nat-lt-of-lt-of-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.mul_ne_mul_of_coprime_of_lt",
+      "kind": "kernel-term",
+      "supports": "Nat.mul_ne_mul_of_coprime_of_lt is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.mul_ne_mul_of_coprime_of_lt 2>/dev/null | grep -cE '^Nat\\\\.mul_ne_mul_of_coprime_of_lt[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.mul_ne_mul_of_coprime_of_lt",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.mul_ne_mul_of_coprime_of_lt",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.mul_ne_mul_of_coprime_of_lt.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in the module's own test file."
+    },
+    {
+      "id": "numeric-side-condition",
+      "kind": "exhaustive-enumeration",
+      "supports": "C1 of the ADR-1540 check script verifies the implication at 766,167 (x,y) witnesses over 979 coprime (p,q) pairs with p,q <= 40, and controls M1/M2/M3 refute the three ways of weakening it (drop the bound, bound the wrong index, drop coprimality) at named witnesses.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1540-eisenstein-side-and-sum-permute-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1540-eisenstein-side-and-sum-permute-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself: 11 of 11 mutations (each claim inverted, each control's named witness moved or neutered, and the recorded survivor made to stop surviving) exit 1. One control, M6, is recorded as a DELIBERATE SURVIVOR and asserted to survive: swapping `a` and `b` throughout sumRange_point_change leaves a true statement, because the equation is symmetric in that swap. No numeric check can separate those two readings, which is why the declared type is pinned character for character in the module's test file."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs)",
+    "source": "formal.statement and axiom_footprint are taken verbatim from the kernel's own rendering (nat_theorem_inventory, which is Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the module's the_family_states_the_intended_types test). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-lattice)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_side.rs`. ADR-1540, closing ADR-1260's residue 2. Declaration kind: theorem. GRADED FAMILY (ADR-0603): this is row 1, the general constructive form. Row 2 (a boundary refutation) is UNASSESSED as a kernel statement -- the two false readings are refuted numerically at named witnesses by the ADR script's M1/M2/M3 and by the module's own `def_eq` controls, but no refutation is stated as a kernel theorem, and this fact does not claim one is impossible.",
+  "external_status": "proved"
+}

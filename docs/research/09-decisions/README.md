@@ -835,4 +835,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1511](adr-1511-cheap-checks-block-merge-expensive-ones-stay-in-the-full-gate.md) | Cheap ledger `--check`s block a merge directly; the two that need a release kernel build get a cheap cross-consistency ratchet instead | Accepted |
 | [1512](adr-1512-per-module-name-registries-behind-the-crealprelude-facade.md) | per-module name registries behind the `CRealPrelude` facade | Accepted |
 | [1530](adr-1530-the-creal-build-table-is-generated-not-maintained.md) | the `creal` build table is generated, not maintained | Accepted |
+| [1540](adr-1540-the-side-condition-is-coprimality-and-the-additive-bijection-was-missing.md) | **Quadratic reciprocity is still NOT proved, and neither is | accepted |
 | [1541](adr-1541-both-blockers-on-the-selection-lemma-were-stale.md) | ADR-1470 designed the determinant selection lemma's injective | accepted |

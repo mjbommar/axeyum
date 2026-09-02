@@ -1472,6 +1472,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_floor,
+        // `eisenstein_side.rs` (`eisenstein-lattice` lane): ADR-1260's
+        // residue 2.
+        p.mul_ne_mul_of_coprime_of_lt,
+        p.mul_succ_ne_mul_succ_of_coprime,
+        // `sum_range_permute.rs` (`eisenstein-lattice` lane).
+        p.sum_range_point_change,
+        p.sum_range_permute,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by

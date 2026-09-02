@@ -14,10 +14,13 @@ declarations land, all admitted on the FIRST kernel attempt, all axiom-free:
 not have it), **`Nat.countRectangle_partition`** (the headline), and
 `Nat.countRectangle_partition_compl` (which exists to prove the headline's
 hypothesis is satisfiable). The remaining obstruction is named precisely and it
-is NOT an aggregate problem: **`Int.sumRange` does not exist**, and Eisenstein's
-lemma — `gaussNegCount p a m ≡ Σ_{k=1}^{m} ⌊ak/p⌋ (mod 2)` — is a signed-sum
-argument. `Int` has `prodRange` and no `sumRange` at all.
-<!-- absent: Int.sumRange -- the obstruction this ADR names; when it lands, Eisenstein's lemma is unblocked and this summary must be rewritten -->
+is NOT an aggregate problem: **`Int.sumRange` did not exist** on 2026-08-31, and
+Eisenstein's lemma — `gaussNegCount p a m ≡ Σ_{k=1}^{m} ⌊ak/p⌋ (mod 2)` — is a
+signed-sum argument; `Int` had `prodRange` and no `sumRange` at all. **It landed
+in ADR-1275**, and ADR-1540 then measured that it was not in fact the binding
+constraint: Eisenstein needs the ADDITIVE form of the bijection Gauss's lemma
+already runs multiplicatively, which is `Nat.sumRange_permute`.
+<!-- was-absent: Int.sumRange -- the obstruction this ADR named; landed in ADR-1275, and ADR-1540 corrected the sizing -->
 Index-status: accepted
 
 ## Context
