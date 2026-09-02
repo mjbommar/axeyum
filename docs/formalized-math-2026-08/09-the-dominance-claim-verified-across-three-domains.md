@@ -377,7 +377,7 @@ Row 2 is empty by proof throughout, by `Rat.le_total` (FOUND, theorem, 0).
 | family | row 1 | row 2 | row 3 | row 4 |
 |---|---|---|---|---|
 | matrix algebra | `Rat.matMul` + assoc / id / distrib / smul, `Rat.matTranspose_mul`, all at **symbolic dimension** over `Nat -> Nat -> Rat` (0) | **proof** | `matTranspose_mul_example` etc. at concrete 2×2 (0) | **omission** |
-| determinant multiplicativity | **fixed size only** — `Rat.det2_mul` (2×2), `det3_*` (3×3), all 0 | **proof** | concrete entries; CAS `determinant`/`bareiss_determinant` ship **no certificate and no verifier** | **omission** |
+| determinant multiplicativity | **`Rat.det_matMul` at symbolic `n`** (0), landed 2026-09-02 (ADR-1543); the fixed-size `Rat.det2_mul` / `det3_*` remain | **proof** | concrete entries; CAS `determinant`/`bareiss_determinant` ship **no certificate and no verifier** | **omission** |
 | `Ax = b` solvability | not built as a kernel theorem | **proof** | **the strongest row 3 in the repository** — `simplex::feasible` + `check_farkas` and `lra::FarkasCertificate::verify`, two independent re-checkers, kernel-reconstructed | **omission** |
 | rank / linear independence | not built; **no `rank` function at all** (0 matches in `matrix.rs`, against an 11-match `rref` control in the same file) | **proof** | 2×2 only (`Rat.det2_eq_zero_of_lin_dep`) | **omission** |
 | inner-product geometry | `Rat.dotN_cauchy_schwarz` at **arbitrary `n`** (0); `CPoint` at dimension 2 | **proof** | `CPoint` facts | **omission** |
@@ -385,10 +385,14 @@ Row 2 is empty by proof throughout, by `Rat.le_total` (FOUND, theorem, 0).
 One correction to the received picture is worth pulling out, because it is
 routinely stated too pessimistically: **matrix multiplication and transpose are
 already at symbolic dimension**, with associativity, two-sided identity,
-distributivity and `(AB)^T = B^T A^T` all axiom-free. It is specifically the
-**determinant** that is fixed-size, and `rank` that does not exist. "General-
-dimension linear algebra is not built" is wrong as a blanket; "the general-`n`
-determinant and rank are not built" is right.
+distributivity and `(AB)^T = B^T A^T` all axiom-free. `rank` still does not
+exist. "General-dimension linear algebra is not built" is wrong as a blanket.
+
+**Corrected 2026-09-02 (ADR-1543): the determinant is no longer fixed-size
+either.** `Rat.det` has been at symbolic `n` since ADR-1120, and its last
+missing law, `Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n *
+det B n`, is landed and axiom-free. What remains absent in this family is
+`rank`, not the determinant.
 
 ### 4.4 The claim the brief asked me to verify, and where it fails
 

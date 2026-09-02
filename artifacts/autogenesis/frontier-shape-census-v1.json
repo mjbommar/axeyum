@@ -841,12 +841,12 @@
         "proof-route-only": 211
       }
     },
-    "frontier_sha256": "fcc8e9c5e33db0c96e94b8c9ccf0f711280538b971867ee6b6e20bab3f1c4cd4"
+    "frontier_sha256": "e73ac56e5b8482ab7e7527977d443dc33e56a37d7104d1854ed99f52dba55d5d"
   },
   "kind": "axeyum-frontier-shape-census",
   "ledger": {
-    "fact_count": 2604,
-    "ledger_sha256": "3b283b8f0349548bcf2806a07426cfc7da9cc1781c64be908ba0fc639614cd2a"
+    "fact_count": 2606,
+    "ledger_sha256": "372a02aebf75864df9aa3d63a406897a19866cc873d37d0d817afe3aab523959"
   },
   "other": [
     {

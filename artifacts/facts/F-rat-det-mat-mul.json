@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-mat-mul",
+  "title": "Determinant multiplicativity over the constructed rationals at a symbolic dimension: det (A*B) n = det A n * det B n",
+  "statement": "For every natural n and every pair of matrices A, B : Nat -> Nat -> Rat, the general-n cofactor determinant Rat.det satisfies det (Rat.matMul A B n) n = det A n * det B n, where Rat.matMul A B n i j = sumRange (fun t => A i t * B t j) n. The dimension is a single symbolic argument shared by the product and by all three determinants; nothing here is fixed at 2 or 3. Proved by the Cauchy-Binet route: Rat.det_matMul_expand expands det (A*B) n over the function space of index maps [0,n) -> [0,n) (ADR-1440 obligation 1), Rat.det_row_selection factors each summand (obligation 2), Rat.sumMaps_mul_right pulls det B n out of the sum, and the SAME expansion instantiated at Rat.matId identifies what is left with det A n through Rat.matMul_id_right and Rat.det_congr_entry_lt. The coefficient prodRange (fun i => A i (g i)) n is never evaluated -- it is the same term in both instances of the expansion.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_matMul : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> Eq.{1} Rat (Rat.det (Rat.matMul x1 x2 x0) x0) (Rat.mul (Rat.det x1 x0) (Rat.det x2 x0)))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Rat.det_matMul"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:rat-det-mat-mul-expand", "F:rat-det-row-selection", "F:rat-matmul-id-right", "F:rat-mul-assoc", "F:rat-mul-one"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-det-mat-mul-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.det_matMul` is in the environment as a checked `Declaration::Theorem` (not a `Definition`, not an axiom) with an EMPTY `Kernel::axiom_footprint`, in all four preludes that carry the rationals. The `formal.statement` above is the row's own `canonical_type` -- `Kernel::render_lean` of the admitted type -- not a paraphrase of the Rust source or of a doc comment. Reading it confirms the dimension is a single universally quantified `AxNat` shared by `Rat.matMul` and all three `Rat.det`s, which is what distinguishes this from `Rat.det_matMul_2`.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.det_matMul --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.det_matMul[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.det_matMul 0` rows (rat, creal, complex, cpoint) and exits 0. The checker counts those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/det_mul.rs)",
+    "source": "Lane det-mul-2, closing ADR-1440's obligation 1 and with it determinant multiplicativity at symbolic n. Decision recorded in ADR-1543. Status note: docs/plan/status/det-mul-2.md."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It says nothing about `Rat.det` agreeing with any other notion of determinant beyond what `Rat.det_eq_det2`/`Rat.det_eq_det3` already establish, and nothing about invertibility, rank, or the Cauchy-Binet formula for NON-square products (`Rat.matMul A B k` is used here only at `k = n`, the square case). The `n = 0` leg is included and is trivial -- `det _ 0` reduces to `Rat.one` on both sides. And it is a statement over the CONSTRUCTED rationals (`Rat`), not over `AxReal`: no ordered-field axiom is reached, and the axiom footprint printed by the checker is empty."
+}
