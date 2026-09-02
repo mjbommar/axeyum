@@ -1560,6 +1560,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.eisenstein_count_identity,
         p.eisenstein_lemma,
         p.eisenstein_lemma_mod_eq,
+        // `eisenstein_floor_min_free.rs` (`eisenstein-3` lane): residue 5.
+        p.div_mul_succ_le_of_le,
+        p.eisenstein_floor_sum_min_free,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by

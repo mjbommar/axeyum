@@ -176,6 +176,7 @@ mod divisor_sum_scale;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
+mod eisenstein_floor_min_free;
 mod eisenstein_lattice;
 mod eisenstein_lemma;
 mod eisenstein_side;
@@ -357,6 +358,7 @@ use divisor_sum_scale::declare_divisor_sum_scale_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
+use eisenstein_floor_min_free::declare_eisenstein_floor_min_free_all;
 use eisenstein_lattice::declare_eisenstein_lattice_all;
 use eisenstein_lemma::declare_eisenstein_lemma_all;
 use eisenstein_side::declare_eisenstein_side_all;
@@ -5784,6 +5786,24 @@ pub struct NatPrelude {
     /// BALANCED form, so this is a corollary at `u := N`, `v := k`, not a
     /// second proof.
     pub eisenstein_lemma_mod_eq: NameId,
+    // -- `eisenstein-3` lane: `eisenstein_floor_min_free.rs` --
+    /// `Nat.div_mul_succ_le_of_le : ∀ m n x, Le (succ x) m →
+    ///   Le (div (mul (succ (2*n)) (succ x)) (succ (2*m))) n`
+    /// (`eisenstein_floor_min_free.rs`) — the one arithmetic fact ADR-1544's
+    /// residue 5 was short of: at the Eisenstein shape the row count never
+    /// reaches the rectangle's height, so `Min.min`'s cap does not bind.
+    pub div_mul_succ_le_of_le: NameId,
+    /// `Nat.eisenstein_floor_sum_min_free : ∀ m n,
+    ///   Eq (gcd (succ (2*m)) (succ (2*n))) 1 →
+    ///   Eq (add (sumRange (fun x => div (mul (succ (2*n)) (succ x))
+    ///           (succ (2*m))) m)
+    ///           (sumRange (fun y => div (mul (succ (2*m)) (succ y))
+    ///           (succ (2*n))) n))
+    ///      (mul n m)` (`eisenstein_floor_min_free.rs`) — ADR-1544's residue
+    /// 5. The `Min.min` that ADR-1544's `M4` showed is NOT removable at the
+    /// generality [`eisenstein_floor_sum`](Self::eisenstein_floor_sum) states
+    /// IS removable at `pp = 2m+1`, `q = 2n+1`, and this is that statement.
+    pub eisenstein_floor_sum_min_free: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -7167,6 +7187,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             eisenstein_count_identity: kernel.name_str(nat, "eisenstein_count_identity"),
             eisenstein_lemma: kernel.name_str(nat, "eisenstein_lemma"),
             eisenstein_lemma_mod_eq: kernel.name_str(nat, "eisenstein_lemma_modEq"),
+            div_mul_succ_le_of_le: kernel.name_str(nat, "div_mul_succ_le_of_le"),
+            eisenstein_floor_sum_min_free: kernel.name_str(nat, "eisenstein_floor_sum_min_free"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -8235,6 +8257,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `add_right_cancel`/`add_mul_mod_self_left`/`zero_mod`. Nothing needs
         // it yet, so it goes last.
         declare_eisenstein_lemma_all(&mut d, &p)?;
+        // ADR-1544's residue 5 (`eisenstein_floor_min_free.rs`): needs
+        // `Nat.eisenstein_floor_sum` (`eisenstein_lattice.rs`, above),
+        // `Nat.min_eq_right`, `Nat.div_lt_of_lt_mul`, `Nat.le_of_lt_succ`,
+        // `Nat.mul_le_mul_left`, `Nat.lt_of_le_of_lt`,
+        // `Nat.add_lt_add_left`, `Nat.le_add_right`, `Nat.succ_le_succ`,
+        // `Nat.right_distrib` and `Nat.mul_assoc`. Nothing needs it, so it
+        // goes last.
+        declare_eisenstein_floor_min_free_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8321,6 +8351,9 @@ mod gauss_residue_reconcile_tests;
 
 #[cfg(test)]
 mod eisenstein_lemma_tests;
+
+#[cfg(test)]
+mod eisenstein_floor_min_free_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
