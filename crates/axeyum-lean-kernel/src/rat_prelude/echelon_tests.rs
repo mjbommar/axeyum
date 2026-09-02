@@ -617,8 +617,12 @@ fn the_echelon_family_is_axiom_free() {
     use crate::env::Declaration;
 
     let (kernel, p) = built();
-    let expected: [(crate::NameId, bool); 25] = [
+    let expected: [(crate::NameId, bool); 29] = [
         (p.is_zero_b, false),
+        (p.is_zero_b_zero, true),
+        (p.eq_zero_of_is_zero_b, true),
+        (p.is_zero_b_of_eq_zero, true),
+        (p.ne_zero_of_is_zero_b_false, true),
         (p.row_swap, false),
         (p.row_scale, false),
         (p.row_add_mul, false),

@@ -55,8 +55,8 @@
 use super::RatPrelude;
 use super::matrix_det::{bool_cases_eq, mat_ty};
 use super::ops::{
-    nat_eq_to_rat, nat_rewrite_prop, radd, rat_ty, rchain, rcongr, req, rmul, rneg, rone, rsymm,
-    rtrans, rzero,
+    nat_eq_to_rat, nat_rewrite_prop, radd, rat_eq_rewrite, rat_ty, rchain, rcongr, req, rmul, rneg,
+    rone, rsymm, rtrans, rzero,
 };
 use crate::BinderInfo;
 use crate::KernelError;
@@ -98,6 +98,10 @@ const ENTRY_HEIGHT: u16 = 61;
 /// **refused** a declaration, not that a script gave up.
 pub(super) fn declare_echelon(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_is_zero_b(d, p)?;
+    declare_is_zero_b_zero(d, p)?;
+    declare_eq_zero_of_is_zero_b(d, p)?;
+    declare_is_zero_b_of_eq_zero(d, p)?;
+    declare_ne_zero_of_is_zero_b_false(d, p)?;
     declare_row_swap(d, p)?;
     declare_row_scale(d, p)?;
     declare_row_add_mul(d, p)?;
@@ -1933,4 +1937,206 @@ fn declare_is_echelon(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelErr
         value,
         hint: ReducibilityHint::Regular(DRIVER_HEIGHT),
     })
+}
+
+// --- the decided zero test agrees with the propositional one ---------------
+
+/// `heq : Eq Bool cond true ⊢ Eq Bool (bool_select_at Bool cond a b) a` — the
+/// `Bool`-valued twin of `select_rat_true`.
+fn select_bool_true(d: &mut IntDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let symm_hb = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let bool_ty = d.bool_ty();
+        let sel = bool_select_at(d, bool_ty, value, a, b);
+        d.bool_eq(sel, a)
+    });
+    let refl_case = d.bool_refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, symm_hb)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Bool (bool_select_at Bool cond a b) b`.
+fn select_bool_false(
+    d: &mut IntDev<'_>,
+    cond: ExprId,
+    a: ExprId,
+    b: ExprId,
+    heq: ExprId,
+) -> ExprId {
+    let false_val = d.bool_false();
+    let symm_hb = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let bool_ty = d.bool_ty();
+        let sel = bool_select_at(d, bool_ty, value, a, b);
+        d.bool_eq(sel, b)
+    });
+    let refl_case = d.bool_refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, symm_hb)
+}
+
+/// Admit `Rat.isZeroB_zero : Rat.isZeroB Rat.zero = Bool.true`.
+///
+/// `Eq.refl`. `Rat.zero` is built with `Rat.mk` so both projections compute,
+/// and `Rat.ble` decides by cross-multiplication into `Int.ble`, so both
+/// comparisons ι-reduce and the nested `Bool.rec` fires.
+fn declare_is_zero_b_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let zero = rzero(d, p);
+    let lhs = ris_zero_b(d, p, zero);
+    let true_v = d.bool_true();
+    let ty = d.bool_eq(lhs, true_v);
+    let value = d.bool_refl(true_v);
+    d.declare_theorem(p.is_zero_b_zero, ty, value)
+}
+
+/// Admit `Rat.eq_zero_of_isZeroB : ∀ x, Rat.isZeroB x = Bool.true →
+/// Eq Rat x Rat.zero`.
+///
+/// **This is the bridge `rank` needs, and it is the only place the decided test
+/// has to be reconciled with the propositional one.** Split on `Rat.ble x 0`:
+/// its `true` branch reduces `isZeroB x` to `Rat.ble 0 x`, so the hypothesis
+/// becomes the second comparison and `Rat.le_antisymm` closes it from the two
+/// `Rat.le_of_ble_eq_true` bridges. Its `false` branch reduces `isZeroB x` to
+/// `Bool.false`, contradicting the hypothesis.
+fn declare_eq_zero_of_is_zero_b(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero = rzero(d, p);
+    let test = ris_zero_b(d, p, x);
+    let true_v = d.bool_true();
+    let false_v = d.bool_false();
+    let h_ty = d.bool_eq(test, true_v);
+    let target = req(d, x, zero);
+
+    let upper = rble(d, p, x, zero);
+    let lower = rble(d, p, zero, x);
+
+    let at_true = {
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let g_ty = d.bool_eq(upper, true_v);
+        // `isZeroB x = ble 0 x`, so the hypothesis carries over to it.
+        let sel = select_bool_true(d, upper, lower, false_v, g);
+        let flipped = d.bool_symm(test, lower, sel);
+        let lower_true = d.bool_trans(lower, test, true_v, flipped, h);
+        let le_upper = d.lemma(p.le_of_ble_eq_true, &[x, zero, g]);
+        let le_lower = d.lemma(p.le_of_ble_eq_true, &[zero, x, lower_true]);
+        let body = d.lemma(p.le_antisymm, &[x, zero, le_upper, le_lower]);
+        d.lam_fv(g_fv, g_ty, body)
+    };
+    let at_false = {
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let g_ty = d.bool_eq(upper, false_v);
+        let sel = select_bool_false(d, upper, lower, false_v, g);
+        let flipped = d.bool_symm(test, false_v, sel);
+        let bad = d.bool_trans(false_v, test, true_v, flipped, h);
+        let body = d.false_true_elim(target, bad);
+        d.lam_fv(g_fv, g_ty, body)
+    };
+    let proof = bool_cases_eq(d, upper, target, at_true, at_false);
+
+    let ty = {
+        let over_h = d.pi_fv(h_fv, h_ty, target);
+        d.pi_fv(x_fv, carrier, over_h)
+    };
+    let value = {
+        let over_h = d.lam_fv(h_fv, h_ty, proof);
+        d.lam_fv(x_fv, carrier, over_h)
+    };
+    d.declare_theorem(p.eq_zero_of_is_zero_b, ty, value)
+}
+
+/// Admit `Rat.isZeroB_of_eq_zero : ∀ x, Eq Rat x Rat.zero →
+/// Rat.isZeroB x = Bool.true` — the converse, by transporting
+/// [`declare_is_zero_b_zero`] along the equation.
+fn declare_is_zero_b_of_eq_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let zero = rzero(d, p);
+    let h_ty = req(d, x, zero);
+    let test = ris_zero_b(d, p, x);
+    let true_v = d.bool_true();
+    let concl = d.bool_eq(test, true_v);
+
+    let base = d.lemma(p.is_zero_b_zero, &[]);
+    let flipped = rsymm(d, x, zero, h);
+    let proof = rat_eq_rewrite(d, zero, x, flipped, base, &|d, y| {
+        let t = ris_zero_b(d, p, y);
+        let true_v = d.bool_true();
+        d.bool_eq(t, true_v)
+    });
+
+    let ty = {
+        let over_h = d.pi_fv(h_fv, h_ty, concl);
+        d.pi_fv(x_fv, carrier, over_h)
+    };
+    let value = {
+        let over_h = d.lam_fv(h_fv, h_ty, proof);
+        d.lam_fv(x_fv, carrier, over_h)
+    };
+    d.declare_theorem(p.is_zero_b_of_eq_zero, ty, value)
+}
+
+/// Admit `Rat.ne_zero_of_isZeroB_false : ∀ x, Rat.isZeroB x = Bool.false →
+/// Not (Eq Rat x Rat.zero)`.
+///
+/// The form the pivot's nonzero-ness arrives in: `Rat.pivotSearch` returns an
+/// index because `isZeroB` said `false` there, and every field law that could
+/// then divide by it — `Rat.mul_inv_cancel_of_ne_zero` above all — wants
+/// `Not (Eq x 0)`.
+fn declare_ne_zero_of_is_zero_b_false(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let carrier = rat_ty(d);
+
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+    let e_fv = d.fresh_fvar();
+    let e = d.kernel().fvar(e_fv);
+
+    let zero = rzero(d, p);
+    let test = ris_zero_b(d, p, x);
+    let false_v = d.bool_false();
+    let true_v = d.bool_true();
+    let h_ty = d.bool_eq(test, false_v);
+    let e_ty = req(d, x, zero);
+    let logic = d.prelude().logic;
+    let false_prop = d.kernel().const_(logic.false_, vec![]);
+
+    // Move the hypothesis to `x := 0`, where `isZeroB` is known to be `true`.
+    let at_zero = rat_eq_rewrite(d, x, zero, e, h, &|d, y| {
+        let t = ris_zero_b(d, p, y);
+        let false_v = d.bool_false();
+        d.bool_eq(t, false_v)
+    });
+    let zero_test = ris_zero_b(d, p, zero);
+    let base = d.lemma(p.is_zero_b_zero, &[]);
+    let flipped = d.bool_symm(zero_test, false_v, at_zero);
+    let bad = d.bool_trans(false_v, zero_test, true_v, flipped, base);
+    let body = d.false_true_elim(false_prop, bad);
+
+    let ty = {
+        let over_e = d.pi_fv(e_fv, e_ty, false_prop);
+        let over_h = d.pi_fv(h_fv, h_ty, over_e);
+        d.pi_fv(x_fv, carrier, over_h)
+    };
+    let value = {
+        let over_e = d.lam_fv(e_fv, e_ty, body);
+        let over_h = d.lam_fv(h_fv, h_ty, over_e);
+        d.lam_fv(x_fv, carrier, over_h)
+    };
+    d.declare_theorem(p.ne_zero_of_is_zero_b_false, ty, value)
 }

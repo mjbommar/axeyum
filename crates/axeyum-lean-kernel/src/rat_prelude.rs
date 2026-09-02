@@ -2545,6 +2545,24 @@ pub struct RatPrelude {
     /// choice principle is involved — ADR-0603's row 2 (a boundary refutation)
     /// is empty for this family for exactly that reason.
     pub is_zero_b: NameId,
+    /// `Rat.isZeroB_zero : Rat.isZeroB Rat.zero = Bool.true` — `Eq.refl`.
+    pub is_zero_b_zero: NameId,
+    /// `Rat.eq_zero_of_isZeroB : ∀ x, Rat.isZeroB x = Bool.true →
+    /// Eq Rat x Rat.zero`.
+    ///
+    /// **The bridge from the DECIDED zero test to the propositional one**, and
+    /// the piece `Rat.rank` needs to turn "`leadingIndex` stopped here" into a
+    /// statement about the entry. It is where the decidability of `ℚ`'s order is
+    /// actually spent: `Rat.le_antisymm` over the two `Rat.ble` bridges.
+    pub eq_zero_of_is_zero_b: NameId,
+    /// `Rat.isZeroB_of_eq_zero : ∀ x, Eq Rat x Rat.zero →
+    /// Rat.isZeroB x = Bool.true` — the converse of
+    /// [`Self::eq_zero_of_is_zero_b`], by transport along the equation.
+    pub is_zero_b_of_eq_zero: NameId,
+    /// `Rat.ne_zero_of_isZeroB_false : ∀ x, Rat.isZeroB x = Bool.false →
+    /// Not (Eq Rat x Rat.zero)` — the form a found pivot's nonzero-ness has to
+    /// arrive in for `Rat.mul_inv_cancel_of_ne_zero` to consume it.
+    pub ne_zero_of_is_zero_b_false: NameId,
     /// `Rat.rowSwap : Nat → Nat → Mat → Mat` — exchange rows `i` and `j`.
     /// Built from two [`Self::mat_set_row`] writes over the ORIGINAL matrix, so
     /// both rows read pre-swap values.
@@ -3080,6 +3098,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_mat_mul_expand: child(kernel, "det_matMul_expand"),
         det_mat_mul: child(kernel, "det_matMul"),
         is_zero_b: child(kernel, "isZeroB"),
+        is_zero_b_zero: child(kernel, "isZeroB_zero"),
+        eq_zero_of_is_zero_b: child(kernel, "eq_zero_of_isZeroB"),
+        is_zero_b_of_eq_zero: child(kernel, "isZeroB_of_eq_zero"),
+        ne_zero_of_is_zero_b_false: child(kernel, "ne_zero_of_isZeroB_false"),
         row_swap: child(kernel, "rowSwap"),
         row_scale: child(kernel, "rowScale"),
         row_add_mul: child(kernel, "rowAddMul"),
