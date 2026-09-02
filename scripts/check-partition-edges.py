@@ -55,6 +55,20 @@ ones are repaired by the re-partition. `--record-baseline` REFUSES to record a
 set that is not a subset of the committed baseline, so the ratchet can only
 tighten: a lane cannot silence a new crossing by re-recording.
 
+HELD-OUT ENDPOINTS ARE NEVER WRITTEN IN PLAIN TEXT
+
+The recorded baseline is a committed, producer-readable artifact, and
+`scripts/check-autogenesis-holdout-isolation.py` treats a held-out fact id
+appearing anywhere outside the split manifests as a breach -- which the first
+version of this baseline was, for the six of 198 crossings with a held-out
+endpoint. So a `held-out`-partition endpoint is stored as a salted SHA-256
+digest (`held_out_endpoint: true`), with the salt committed alongside it
+(`held_out_salt`); every other endpoint stays plain. `--baseline` digests a
+live crossing edge's held-out endpoint with the committed salt before testing
+membership, and `--record-baseline` reuses that salt whenever the edge set is
+unchanged, so an unperturbed re-record is still byte-identical. See
+`redacted_key`'s docstring for the mechanism.
+
 EXITS
   0  no violation (or, under --baseline, no violation outside the baseline)
   1  at least one violation
