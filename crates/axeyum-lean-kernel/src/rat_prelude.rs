@@ -2371,6 +2371,29 @@ pub struct RatPrelude {
     /// would need `Lt (matSkip j c) (succ m)` from `Lt c m`, which nothing in
     /// this prelude supplies.
     pub det_congr_lt: NameId,
+    /// `Rat.det_row_selection_injective : ∀ m B g, InjectiveOn g (succ m) →
+    /// MapsInto g (succ m) → det (B∘g) (succ m) =
+    /// det (matId∘g) (succ m) * det B (succ m)` — the SELECTION lemma's
+    /// INJECTIVE half, ADR-1440's obligation 2 and the half ADR-1470 designed
+    /// but did not build. Together with
+    /// [`Self::det_row_selection_of_duplicate`] (the free, non-injective half)
+    /// it covers every reindexing map, once a decision procedure for
+    /// `InjectiveOn` splits them.
+    ///
+    /// `MapsInto` is load-bearing on the STATEMENT, not just the proof:
+    /// ADR-1470's counterexample is `n = 1`, `g 0 = 5`, `B 5 0 = 7`, where the
+    /// left side is `7` and the right side `0`.
+    ///
+    /// A CURSOR induction on how many trailing positions `g` already fixes,
+    /// with the dimension and `B` outside the induction and `g` inside it (the
+    /// step applies the induction hypothesis at a DIFFERENT map). Pigeonhole
+    /// ([`crate::nat_prelude::NatPrelude::injective_on_imp_surjective_on`])
+    /// supplies the preimage of the cursor, `Nat.transposition` brings it into
+    /// place, and [`Self::det_row_swap`] pays for the move with one sign that
+    /// [`Self::neg_mul`]/[`Self::neg_neg`] cancel. The base case needs
+    /// [`Self::det_congr_lt`] rather than [`Self::det_congr`], because `g` is
+    /// the identity only on `[0,n)`.
+    pub det_row_selection_injective: NameId,
 }
 
 impl RatPrelude {
@@ -2791,6 +2814,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_mat_mul_2: child(kernel, "det_matMul_2"),
         det_row_selection_of_duplicate: child(kernel, "det_row_selection_of_duplicate"),
         det_congr_lt: child(kernel, "det_congr_lt"),
+        det_row_selection_injective: child(kernel, "det_row_selection_injective"),
     }
 }
 
