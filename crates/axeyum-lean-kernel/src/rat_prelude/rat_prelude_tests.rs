@@ -306,6 +306,14 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("nullity_zero_rows", p.nullity_zero_rows),
         ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows),
         ("pivotSearch_le_rows", p.pivot_search_le_rows),
+        ("pivotColOfRow", p.pivot_col_of_row),
+        (
+            "pivotColOfRow_eq_leadingIndex",
+            p.pivot_col_of_row_eq_leading_index,
+        ),
+        ("pivotRowSearchAux", p.pivot_row_search_aux),
+        ("pivotRowOfCol", p.pivot_row_of_col),
+        ("pivotRowOfCol_eq_search", p.pivot_row_of_col_eq_search),
     ]
 }
 
@@ -7015,6 +7023,19 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("nullity_zero_rows", p.nullity_zero_rows, true),
         ("pivotSearchAux_le_rows", p.pivot_search_aux_le_rows, true),
         ("pivotSearch_le_rows", p.pivot_search_le_rows, true),
+        ("pivotColOfRow", p.pivot_col_of_row, false),
+        (
+            "pivotColOfRow_eq_leadingIndex",
+            p.pivot_col_of_row_eq_leading_index,
+            true,
+        ),
+        ("pivotRowSearchAux", p.pivot_row_search_aux, false),
+        ("pivotRowOfCol", p.pivot_row_of_col, false),
+        (
+            "pivotRowOfCol_eq_search",
+            p.pivot_row_of_col_eq_search,
+            true,
+        ),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

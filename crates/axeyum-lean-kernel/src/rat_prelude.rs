@@ -77,6 +77,7 @@ mod model;
 mod nullity;
 pub(crate) mod ops;
 mod pivot_bound;
+mod rank_bridge;
 mod polynomial;
 mod pow_bridge;
 mod probability;
@@ -2792,6 +2793,36 @@ pub struct RatPrelude {
     /// [`Self::pivot_search_aux_le_rows`] at the fuel `pivotSearch` picks. No
     /// bound on `start` is required.
     pub pivot_search_le_rows: NameId,
+
+    // --- the rank/rankCols bridge (`rat_prelude::rank_bridge`, ADR-1562) ----
+    /// `Rat.pivotColOfRow : Mat → Nat → Nat → Nat`,
+    /// `pivotColOfRow E cols r := leadingIndex E r cols` — the pivot COLUMN of
+    /// a row, with the row index LAST so `pivotColOfRow E cols` is already the
+    /// `Nat → Nat` map
+    /// [`NatPrelude::count_range_bij`](crate::NatPrelude::count_range_bij)
+    /// wants. `leadingIndex` takes `r` in the middle, and a lambda at the use
+    /// site is what the counting laws cannot see through.
+    pub pivot_col_of_row: NameId,
+    /// `Rat.pivotColOfRow_eq_leadingIndex : ∀ E cols r,
+    /// pivotColOfRow E cols r = leadingIndex E r cols` — the defining equation,
+    /// `Eq.refl`.
+    pub pivot_col_of_row_eq_leading_index: NameId,
+    /// `Rat.pivotRowSearchAux : Mat → Nat → Nat → Nat → Nat → Nat → Nat`,
+    /// `pivotRowSearchAux E rows cols j fuel r` — the first `r' ≥ r` below
+    /// `rows` whose leading index is `j`, and `rows` for both exhaustion
+    /// answers. [`Self::pivot_col_search_aux`]'s scan with the answer changed
+    /// from `Bool` to the row index.
+    pub pivot_row_search_aux: NameId,
+    /// `Rat.pivotRowOfCol : Mat → Nat → Nat → Nat → Nat`,
+    /// `pivotRowOfCol E rows cols j := pivotRowSearchAux E rows cols j rows 0`
+    /// — the pivot ROW of a column, **computed**. The inverse map `τ` of the
+    /// bridge; the column index comes LAST so `pivotRowOfCol E rows cols` is
+    /// already a `Nat → Nat` map.
+    pub pivot_row_of_col: NameId,
+    /// `Rat.pivotRowOfCol_eq_search : ∀ E rows cols j, pivotRowOfCol E rows
+    /// cols j = pivotRowSearchAux E rows cols j rows 0` — the defining
+    /// equation, `Eq.refl`.
+    pub pivot_row_of_col_eq_search: NameId,
 }
 
 impl RatPrelude {
@@ -3294,6 +3325,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         nullity_zero_rows: child(kernel, "nullity_zero_rows"),
         pivot_search_aux_le_rows: child(kernel, "pivotSearchAux_le_rows"),
         pivot_search_le_rows: child(kernel, "pivotSearch_le_rows"),
+        pivot_col_of_row: child(kernel, "pivotColOfRow"),
+        pivot_col_of_row_eq_leading_index: child(kernel, "pivotColOfRow_eq_leadingIndex"),
+        pivot_row_search_aux: child(kernel, "pivotRowSearchAux"),
+        pivot_row_of_col: child(kernel, "pivotRowOfCol"),
+        pivot_row_of_col_eq_search: child(kernel, "pivotRowOfCol_eq_search"),
     }
 }
 
@@ -3358,6 +3394,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         rank::declare_rank(&mut d, prelude)?;
         nullity::declare_nullity(&mut d, prelude)?;
         pivot_bound::declare_pivot_bound(&mut d, prelude)?;
+        rank_bridge::declare_rank_bridge(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3390,6 +3427,9 @@ mod rank_tests;
 
 #[cfg(test)]
 mod nullity_tests;
+
+#[cfg(test)]
+mod rank_bridge_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;
