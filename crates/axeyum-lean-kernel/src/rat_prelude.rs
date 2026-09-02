@@ -66,6 +66,7 @@ pub(crate) mod lattice;
 mod laws;
 mod matrix;
 mod matrix_det;
+mod matrix_det_mul;
 mod matrix_det_selection;
 mod matrix_invertible;
 mod matrix_n;
@@ -2354,6 +2355,22 @@ pub struct RatPrelude {
     /// not land (ADR-1470). `InjectiveOn` alone (this declaration's shape)
     /// needs neither `MapsInto` nor that induction.
     pub det_row_selection_of_duplicate: NameId,
+    /// `Rat.det_congr_lt : ∀ n A B, (∀ r, Lt r n → ∀ c, A r c = B r c) →
+    /// det A n = det B n` — the ROW-BOUNDED determinant congruence.
+    ///
+    /// [`Self::det_congr`] wants agreement at EVERY index pair. Every
+    /// reindexing map the multiplicativity route builds — a `g` produced by a
+    /// fold over a function space, or a `g` corrected to fix everything above
+    /// a cursor — is under no control at all outside `[0,n)`, so the
+    /// unrestricted form is unusable there.
+    ///
+    /// Only the ROW index is bounded. `det A n` reads `A` at `(r,c)` with
+    /// both `r < n` and `c < n`, but the cofactor recursion reaches a column
+    /// only through [`Self::mat_skip`], so bounding the row carries the
+    /// induction and needs no `matSkip` bound lemma; bounding the column too
+    /// would need `Lt (matSkip j c) (succ m)` from `Lt c m`, which nothing in
+    /// this prelude supplies.
+    pub det_congr_lt: NameId,
 }
 
 impl RatPrelude {
@@ -2773,6 +2790,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_row_multilinear: child(kernel, "det_row_multilinear"),
         det_mat_mul_2: child(kernel, "det_matMul_2"),
         det_row_selection_of_duplicate: child(kernel, "det_row_selection_of_duplicate"),
+        det_congr_lt: child(kernel, "det_congr_lt"),
     }
 }
 
@@ -2830,6 +2848,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_invertible::declare_matrix_invertible(&mut d, prelude)?;
         matrix_det::declare_matrix_det(&mut d, prelude)?;
         matrix_det_selection::declare_det_row_selection(&mut d, prelude)?;
+        matrix_det_mul::declare_matrix_det_mul(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();

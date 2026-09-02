@@ -192,7 +192,7 @@ pub(super) fn mat_ty(d: &mut IntDev<'_>) -> ExprId {
 }
 
 /// `Rat.matSkip p x`.
-fn rmat_skip(d: &mut IntDev<'_>, p: RatPrelude, at: ExprId, x: ExprId) -> ExprId {
+pub(super) fn rmat_skip(d: &mut IntDev<'_>, p: RatPrelude, at: ExprId, x: ExprId) -> ExprId {
     d.const_app(p.mat_skip, &[at, x])
 }
 
@@ -210,12 +210,18 @@ fn rmat_minor(
 }
 
 /// `Rat.matMinor A i j`, partially applied — itself a `Nat → Nat → Rat`.
-fn rmat_minor_of(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, i: ExprId, j: ExprId) -> ExprId {
+pub(super) fn rmat_minor_of(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    a: ExprId,
+    i: ExprId,
+    j: ExprId,
+) -> ExprId {
     d.const_app(p.mat_minor, &[a, i, j])
 }
 
 /// `Rat.altSign j`.
-fn ralt_sign(d: &mut IntDev<'_>, p: RatPrelude, j: ExprId) -> ExprId {
+pub(super) fn ralt_sign(d: &mut IntDev<'_>, p: RatPrelude, j: ExprId) -> ExprId {
     d.const_app(p.alt_sign, &[j])
 }
 
