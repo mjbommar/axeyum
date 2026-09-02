@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-prod-range-congr",
+  "title": "prodRange respects a pointwise identity of its function",
+  "statement": "Two functions that agree at every natural have the same product over every initial segment. This kernel has no funext, so a pointwise identity cannot be pushed under prodRange by rewriting the function argument; the statement has to be proved by induction on the bound.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.prodRange_congr : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : ((x1 : AxNat) -> AxNat)) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Eq.{1} AxNat (x0 x3) (x1 x3))) -> Eq.{1} AxNat (AxNat.prodRange x0 x2) (AxNat.prodRange x1 x2)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prodRange_congr"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-prod-range-congr-1",
+      "kind": "kernel-term",
+      "supports": "Nat.prodRange_congr is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prodRange_congr 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.prodRange_congr.7.\\(\\(x0 : \\(\\(x0 : AxNat\\) -> AxNat\\)\\) -> \\(\\(x1 : \\(\\(x1 : AxNat\\) -> AxNat\\)\\) -> \\(\\(x2 : AxNat\\) -> \\(\\(x3 : \\(\\(x3 : AxNat\\) -> Eq\\.\\{1\\} AxNat \\(x0 x3\\) \\(x1 x3\\)\\)\\) -> Eq\\.\\{1\\} AxNat \\(AxNat\\.prodRange x0 x2\\) \\(AxNat\\.prodRange x1 x2\\)\\)\\)\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.prodRange_congr"
+    },
+    {
+      "id": "footprint-nat-prod-range-congr",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 904 `nat` rows do. (Count the tool's OWN summary line, not `grep -c '^nat'` -- the summary starts with `nat:` too, so the naive count is 905.)"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset_prod.rs` (lane nat-factorization)."
+  },
+  "notes": "Declared for `Nat.Multiset.prod_add`, which needs to rewrite a fold's FUNCTION and cannot: this kernel has no `funext`, so `count_add` and `pow_add` holding at every point does not let the two lambdas be identified. This is the Nat twin of the already-landed `Int.prodRange_congr`; the Int proof was not transported, because the induction is three lines either way. It says nothing about a hypothesis restricted BELOW the bound -- that would be a `prodRange_congr_lt`, which this lane did not need and did not build."
+}

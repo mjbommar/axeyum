@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-prod-range-eq-one-of-below",
+  "title": "A product of ones is one",
+  "statement": "If a function is 1 at every point strictly below k, its product over [0, k) is 1. The hypothesis lives inside the induction's motive, because the bound moves as the induction proceeds.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.prodRange_eq_one_of_below : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat.lt x2 x1) -> Eq.{1} AxNat (x0 x2) (AxNat.succ AxNat.zero)))) -> Eq.{1} AxNat (AxNat.prodRange x0 x1) (AxNat.succ AxNat.zero))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.prodRange_eq_one_of_below"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:ml430-nat-le-refl-fd7d9e15"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-prod-range-eq-one-of-below-1",
+      "kind": "kernel-term",
+      "supports": "Nat.prodRange_eq_one_of_below is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- prodRange_eq_one_of_below 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.prodRange_eq_one_of_below.6.\\(\\(x0 : \\(\\(x0 : AxNat\\) -> AxNat\\)\\) -> \\(\\(x1 : AxNat\\) -> \\(\\(x2 : \\(\\(x2 : AxNat\\) -> \\(\\(x3 : AxNat\\.lt x2 x1\\) -> Eq\\.\\{1\\} AxNat \\(x0 x2\\) \\(AxNat\\.succ AxNat\\.zero\\)\\)\\)\\) -> Eq\\.\\{1\\} AxNat \\(AxNat\\.prodRange x0 x1\\) \\(AxNat\\.succ AxNat\\.zero\\)\\)\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.prodRange_eq_one_of_below"
+    },
+    {
+      "id": "footprint-nat-prod-range-eq-one-of-below",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 904 `nat` rows do. (Count the tool's OWN summary line, not `grep -c '^nat'` -- the summary starts with `nat:` too, so the naive count is 905.)"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/factorization_multiset.rs` (lane nat-factorization)."
+  },
+  "notes": "The hypothesis is inside the induction's motive rather than fixed outside it, because the bound moves: at `succ j` the induction hypothesis needs the premise restricted to `j`. Not a special case of `Nat.prodRange_add_of_one_above` -- that one collapses a fold's TAIL above a point, this one collapses a whole fold below one, and its hypothesis is `Lt i k`, not `Le k i`."
+}

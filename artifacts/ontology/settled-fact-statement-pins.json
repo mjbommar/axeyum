@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2147,
+    "min_identity_bound": 2158,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16499,6 +16499,13 @@
       "kernel_theorem": "Nat.factorial_zero"
     },
     {
+      "fact_id": "F:nat-factorization-prime",
+      "language": "lean4",
+      "statement_sha256": "17cf6047cc6dab06711f435c1245248a2b8a230138a75071e398e5d86455c17e",
+      "prose_sha256": "eee77500e63e595825b24c50c381bf9d9d652e224279cba549be9ac91a6c0069",
+      "kernel_theorem": "Nat.factorization_prime"
+    },
+    {
       "fact_id": "F:nat-fib-add",
       "language": "lean4",
       "statement_sha256": "7eb82ce73fce214556ebaa2e9222d2140655167a0ede06f86fcedeb837b55590",
@@ -17555,6 +17562,27 @@
       "kernel_theorem": "Nat.lt_succ_self"
     },
     {
+      "fact_id": "F:nat-min-fac-dvd",
+      "language": "lean4",
+      "statement_sha256": "1c156ff8020d529e64e9f63e1abcea2ff2206a38a81f189d23d0ad21b0c4ea09",
+      "prose_sha256": "8d143d2959d005978cee98a5c522341e0e618402d96d87df6bde00f60c424919",
+      "kernel_theorem": "Nat.min_fac_dvd"
+    },
+    {
+      "fact_id": "F:nat-min-fac-prime",
+      "language": "lean4",
+      "statement_sha256": "036c665400077b0390e3c96acb2e18248d4b7a85d41e3f9a3a36fae6e4252a1f",
+      "prose_sha256": "7c0a8999ccf6feb025c4524ae54e646412c5a12af8713f68d27bf7ed57590d5a",
+      "kernel_theorem": "Nat.min_fac_prime"
+    },
+    {
+      "fact_id": "F:nat-min-fac-two-le",
+      "language": "lean4",
+      "statement_sha256": "e28a50533d5122139eb584118a5ef79c6ebc223f7b79752dd4c25f2fefa81d3e",
+      "prose_sha256": "7628a57879b063fab6cc0a54d16928445e78f84b3cf211feb5c50bdda85d1f55",
+      "kernel_theorem": "Nat.min_fac_two_le"
+    },
+    {
       "fact_id": "F:nat-mod-eq-add",
       "language": "lean4",
       "statement_sha256": "45deb99314813760d1fbd620d84a159b7e7559e55c5bc563af51509ea8ee014e",
@@ -18032,6 +18060,20 @@
       "kernel_theorem": "Nat.Multiset.count_eq_of_prod_eq"
     },
     {
+      "fact_id": "F:nat-multiset-prod-add",
+      "language": "lean4",
+      "statement_sha256": "ba14cf59ff430db4849ad79d3dcfb8fce76928209b54366a894348373f555f22",
+      "prose_sha256": "92b370624c9c372a6e6a70a372f6203ab3dce52731affc6911012a0515c9ab4e",
+      "kernel_theorem": "Nat.Multiset.prod_add"
+    },
+    {
+      "fact_id": "F:nat-multiset-prod-singleton",
+      "language": "lean4",
+      "statement_sha256": "a7c8d32ce61ba2877043cb4d44e585f6f0b572c411d06400a59aff87e48bf7b7",
+      "prose_sha256": "0ea9f28641dc0d854bf9eb22f026de006c56803bdcc6c61d065adf1aed2f5941",
+      "kernel_theorem": "Nat.Multiset.prod_singleton"
+    },
+    {
       "fact_id": "F:nat-ne-of-beq-eq-false",
       "language": "lean4",
       "statement_sha256": "fb8d2189acb7f4e68fac68921dd0cf2288ae0545f59fb6e254532883ebe63490",
@@ -18468,6 +18510,41 @@
       "statement_sha256": "85adf169e787d180ac87255a2d433521225fd8285cb716d70f8392d7bd52dca7",
       "prose_sha256": "9606d60d918dc656d5d0f34accc8775e79415c68769cbf491e867655e98058ee",
       "kernel_theorem": "Nat.prime_pow_dvd_of_dvd_mul_of_not_dvd"
+    },
+    {
+      "fact_id": "F:nat-prod-factorization",
+      "language": "lean4",
+      "statement_sha256": "562d8c6186b627a10bf427affba694dca7ca5bea0cb383602b9015cf99907cf0",
+      "prose_sha256": "151d518ac58029049a6bfe1bb63767c89b67ca5965ef8ae621be4be057ad74f2",
+      "kernel_theorem": "Nat.prod_factorization"
+    },
+    {
+      "fact_id": "F:nat-prod-range-add-of-one-above",
+      "language": "lean4",
+      "statement_sha256": "61da9c1fb702eb8d745cf7e2a5a9ea834d8b69ecb2fd9646ffdc34251ccb0016",
+      "prose_sha256": "12da898b59f18bf38d1694a6c9c38a3d087b4fa884b0c1e4b03c90b017322013",
+      "kernel_theorem": "Nat.prodRange_add_of_one_above"
+    },
+    {
+      "fact_id": "F:nat-prod-range-congr",
+      "language": "lean4",
+      "statement_sha256": "40335b96085bc88b6e5a064e7d4a6e74d5ce6cd55c44f86aeb80996cca515558",
+      "prose_sha256": "a10ec2bd103640fc53a34965b7876b2ed2b92e9642b1e9079c6b25a54a89e0bd",
+      "kernel_theorem": "Nat.prodRange_congr"
+    },
+    {
+      "fact_id": "F:nat-prod-range-eq-one-of-below",
+      "language": "lean4",
+      "statement_sha256": "ac02a15b90cdc87ed435542567b0be92ea505e5ed4da505d5ff8a2f2eb5a5748",
+      "prose_sha256": "d430c6f7b1ded8abb14617a4ccfadad5da1558bfce33c6a2e6ef0224e88e728a",
+      "kernel_theorem": "Nat.prodRange_eq_one_of_below"
+    },
+    {
+      "fact_id": "F:nat-prod-range-mul",
+      "language": "lean4",
+      "statement_sha256": "1c18358f7c9b9da8b6c077154567f559e972f36cf0e6faaebc3ded5576df51ed",
+      "prose_sha256": "7ce95ecfee0d86427723c0907574185deb14ec46f85aa1e1268c8c444c688d03",
+      "kernel_theorem": "Nat.prodRange_mul"
     },
     {
       "fact_id": "F:nat-prodrange-succ",

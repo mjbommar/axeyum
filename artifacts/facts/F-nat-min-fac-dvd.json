@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-min-fac-dvd",
+  "title": "The least prime factor divides its argument",
+  "statement": "For every natural n with 2 <= n, minFac n divides n. This is the fact minimality does not give: a minFac returning a non-divisor satisfies min_fac_minimal_of_two_le vacuously.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.min_fac_dvd : ((x0 : AxNat) -> ((x1 : AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x0) -> AxNat.dvd (AxNat.minFac x0) x0))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.min_fac_dvd"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:nat-add-sub-cancel-of-le", "F:nat-beq-eq-false-of-ne", "F:nat-le-succ-succ", "F:nat-lt-of-lt-of-le", "F:nat-not-succ-le-self", "F:nat-zero-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-min-fac-dvd-1",
+      "kind": "kernel-term",
+      "supports": "Nat.min_fac_dvd is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- min_fac_dvd 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.min_fac_dvd.2.\\(\\(x0 : AxNat\\) -> \\(\\(x1 : AxNat\\.le \\(AxNat\\.succ \\(AxNat\\.succ AxNat\\.zero\\)\\) x0\\) -> AxNat\\.dvd \\(AxNat\\.minFac x0\\) x0\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.min_fac_dvd"
+    },
+    {
+      "id": "footprint-nat-min-fac-dvd",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 904 `nat` rows do. (Count the tool's OWN summary line, not `grep -c '^nat'` -- the summary starts with `nat:` too, so the naive count is 905.)"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/min_fac_dvd.rs` (lane nat-factorization)."
+  },
+  "notes": "This is the fact MINIMALITY does not give. `Nat.min_fac_minimal_of_two_le` says nothing between 2 and `minFac n` divides `n`, which a `minFac` returning a non-divisor satisfies vacuously; before this lane the prelude had only that. It is about THIS `minFac` (fuel-recursive linear search), not Mathlib's well-founded one, and it flips no `ml430` mirror. It does not claim `minFac n` is the LEAST divisor -- that is the separate minimality theorem -- and it says nothing at `n < 2`."
+}

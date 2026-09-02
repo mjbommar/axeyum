@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-prod-add",
+  "title": "The product of a multiset sum is the product of the parts",
+  "statement": "For any two multisets over the naturals, the product of their sum is the product of their products. The two sides fold over three different bounds -- the sum's bound is the sum of the two bounds -- so neither factor's fold is a subfold of the left-hand side, and the proof collapses each tail rather than splitting a range.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.prod_add : ((x0 : AxNat.Multiset) -> ((x1 : AxNat.Multiset) -> Eq.{1} AxNat (AxNat.Multiset.prod (AxNat.Multiset.add x0 x1)) (AxNat.mul (AxNat.Multiset.prod x0) (AxNat.Multiset.prod x1))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.prod_add"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:ml430-nat-add-comm-56a2d614", "F:nat-pow-add", "F:nat-pow-zero", "F:nat-prod-range-add-of-one-above", "F:nat-prod-range-congr", "F:nat-prod-range-mul"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-multiset-prod-add-1",
+      "kind": "kernel-term",
+      "supports": "Nat.Multiset.prod_add is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Multiset.prod_add 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^Nat\\.Multiset\\.prod_add.2.\\(\\(x0 : AxNat\\.Multiset\\) -> \\(\\(x1 : AxNat\\.Multiset\\) -> Eq\\.\\{1\\} AxNat \\(AxNat\\.Multiset\\.prod \\(AxNat\\.Multiset\\.add x0 x1\\)\\) \\(AxNat\\.mul \\(AxNat\\.Multiset\\.prod x0\\) \\(AxNat\\.Multiset\\.prod x1\\)\\)\\)\\)$')\" = 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. The pattern pins the ARITY and the FULL rendered type, not the theorem's presence: `scripts/new-fact.py` rejected a name-only pattern as population-only, because it catches the row disappearing but not the statement changing inside a row that is still there.",
+      "kernel_declaration": "Nat.Multiset.prod_add"
+    },
+    {
+      "id": "footprint-nat-multiset-prod-add",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` via `theorem_axiom_footprint`, this theorem's row prints footprint size 0 and an empty axiom column, and all 904 `nat` rows do. (Count the tool's OWN summary line, not `grep -c '^nat'` -- the summary starts with `nat:` too, so the naive count is 905.)"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset_prod.rs` (lane nat-factorization)."
+  },
+  "notes": "This is the blocker `docs/plan/status/nat-multiset.md` handed off. Two candidates it named do not transport: `Int.prodRange_split` splits ONE function's fold at a point and leaves a SHIFTED fold behind, where what is needed is the upper half collapsing to 1; and `Nat.prodRangeIf` is a selector whose only theorems are `_zero`, `_succ` and `_congr_lt`. It says nothing about `Nat.Multiset.card` of a sum, and nothing about equality of the two multisets themselves -- `Nat.Multiset` has no extensional equality (ADR-1520), which is exactly why the uniqueness theorem is stated at the level of counts."
+}

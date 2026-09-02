@@ -423,6 +423,9 @@ fn symmetric_group_is_group_on_fn_applies_at_transposition_0_1_with_unbounded_ne
 
 fn definition_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `nat-factorization` lane: `factorization_multiset.rs`.
+        p.factorization_aux,
+        p.factorization,
         p.set_union,
         p.set_inter,
         p.set_compl,
@@ -620,6 +623,26 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `nat-factorization` lane: `factorization_multiset.rs`.
+        p.prod_range_eq_one_of_below,
+        p.multiset_count_singleton_self,
+        p.multiset_count_singleton_of_ne,
+        p.multiset_prod_singleton,
+        p.prod_factorization_aux,
+        p.prod_factorization,
+        p.factorization_aux_prime,
+        p.factorization_prime,
+        // `nat-factorization` lane: `min_fac_dvd.rs`.
+        p.min_fac_aux_two_le,
+        p.min_fac_aux_dvd,
+        p.min_fac_two_le,
+        p.min_fac_dvd,
+        p.min_fac_prime,
+        // `nat-factorization` lane: `multiset_prod.rs`.
+        p.prod_range_congr,
+        p.prod_range_mul,
+        p.prod_range_add_of_one_above,
+        p.multiset_prod_add,
         // `nat-multiset` lane: `multiset.rs`.
         p.pow_dvd_pow_of_le,
         p.not_dvd_prod_range_of_le,
