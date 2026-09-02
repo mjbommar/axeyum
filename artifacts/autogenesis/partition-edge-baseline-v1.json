@@ -1,0 +1,1206 @@
+{
+  "authority": "docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md",
+  "edge_count": 198,
+  "edge_set_sha256": "fc29b9f138375c0507471c01cca52325da1085a14274b1ac11279f370839284e",
+  "edges": [
+    {
+      "from": "F:ml430-int-add-assoc-749cb0ff",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-assoc-8c87a1f1",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-add-assoc-749cb0ff",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-add-comm-c5722728",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-add-one-ediv-two-mul-two-of-odd-3c9ef32f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-dvd-coe-gcd-6bda035e",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-gcd-aebc8aa1",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-gcd-iff-5c30733d",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-gcd-mul-gcd-iff-dvd-mul-8ea752a5",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-gcd-mul-iff-dvd-mul-12f61b99",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-mul-3a7b94cd",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-mul-3a7b94cd",
+      "from_partition": "development",
+      "to": "F:ml430-nat-eq-zero-of-gcd-eq-zero-left-72cc4246",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-dvd-mul-gcd-iff-dvd-mul-22d6488e",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-ediv-two-mul-two-add-one-of-odd-a7ec30d7",
+      "from_partition": "train",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-ediv-two-mul-two-of-even-0095e2a6",
+      "from_partition": "train",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-even-add-3c4536e3",
+      "from_partition": "train",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-even-add-bc8e1394",
+      "from_partition": "train",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-even-add-one-af33da18",
+      "from_partition": "train",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-exists-gcd-one-657db3e2",
+      "from_partition": "development",
+      "to": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-exists-gcd-one-d8820780",
+      "from_partition": "development",
+      "to": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
+      "from_partition": "development",
+      "to": "F:ml430-int-fib-of-odd-66560495",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-int-gcd-div-5e01872f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-antisymm-507f9026",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-gcd-dvd-iff-66fa03b3",
+      "from_partition": "development",
+      "to": "F:ml430-int-gcd-eq-gcd-ab-63005aef",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "from_partition": "train",
+      "to": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-left-8533eb82",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "from_partition": "train",
+      "to": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-gcd-eq-one-of-gcd-mul-right-eq-one-right-a9b19222",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-gcd-greatest-5b31c5fe",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-gcd-ne-one-iff-gcd-mul-right-ne-one-ae6099bd",
+      "from_partition": "train",
+      "to": "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-modeq-add-left-cancel-c1adde5a",
+      "from_partition": "development",
+      "to": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-modeq-add-right-cancel-f74acb64",
+      "from_partition": "development",
+      "to": "F:ml430-int-modeq-add-left-cancel-062ad5fe",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-modeq-cancel-left-div-gcd-b2d407e8",
+      "from_partition": "development",
+      "to": "F:ml430-int-gcd-div-gcd-div-gcd-2db608dc",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-mul-neg-iff-79c18955",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-le-add-left-4a766697",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-mul-neg-iff-79c18955",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-left-neg-c1bf80e1",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-mul-nonneg-of-nonneg-or-nonpos-79da88c9",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-le-add-left-4a766697",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-mul-nonneg-of-nonneg-or-nonpos-79da88c9",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-left-neg-c1bf80e1",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-mul-nonpos-iff-4da0d0b9",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-le-add-left-4a766697",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-mul-nonpos-iff-4da0d0b9",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-left-neg-c1bf80e1",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-mul-pos-iff-e4bfa31d",
+      "from_partition": "train",
+      "to": "F:ml430-int-add-left-neg-c1bf80e1",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-natabs-coe-sub-coe-le-of-le-d2800d86",
+      "from_partition": "held-out",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-natabs-coe-sub-coe-lt-of-lt-e0566dd0",
+      "from_partition": "held-out",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-int-natabs-emod-two-18514063",
+      "from_partition": "held-out",
+      "to": "F:ml430-nat-even-add-one-15b5cb18",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-natabs-emod-two-18514063",
+      "from_partition": "held-out",
+      "to": "F:ml430-nat-even-iff-024826e9",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-natabs-inj-of-nonneg-of-nonpos-b5d96f53",
+      "from_partition": "held-out",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-natabs-inj-of-nonpos-of-nonneg-ecdb334a",
+      "from_partition": "held-out",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
+      "from_partition": "train",
+      "to": "F:ml430-nat-not-prime-of-dvd-of-ne-4ff592c0",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-abundant-mul-left-4de4fbe7",
+      "from_partition": "development",
+      "to": "F:ml430-nat-mul-lt-mul-left-af33301e",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-abundant-of-dvd-686548ce",
+      "from_partition": "development",
+      "to": "F:ml430-nat-mul-lt-mul-left-af33301e",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-add-choose-eb49fa11",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-add-comm-56a2d614",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-div-left-1b15b2b2",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-div-right-4b60b393",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-eq-max-iff-39576e6d",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-eq-min-iff-e60cf432",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-add-eq-one-iff-f8463abc",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-add-eq-right-9067eb1a",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-eq-three-iff-799a0a8f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-mod-left-6b337077",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-mod-left-6b337077",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-add-mod-right-c047c67a",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-and-assoc-273b60d8",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-and-comm-7525d05a",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-and-one-is-mod-d861e96b",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-ascfactorial-eq-div-87d768e8",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-base-induction-83561d4c",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-bit-add-b1edcc8e",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-assoc-8c87a1f1",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-bit-ne-zero-181bd65c",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-bit-ne-zero-181bd65c",
+      "from_partition": "development",
+      "to": "F:ml430-nat-mul-lt-mul-left-af33301e",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-choose-le-choose-907b5042",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-choose-le-succ-62ae968b",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-choose-one-right-7eda8e39",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-clog-anti-left-d72bd6cd",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-antitone-left-44a87771",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-eq-one-f7834503",
+      "from_partition": "train",
+      "to": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-eq-one-f7834503",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-eq-one-f7834503",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-eq-one-f7834503",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-clog-mono-74b44081",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-antitone-left-44a87771",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-mono-74b44081",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-mono-right-8d87a410",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-left-le-one-a6640cee",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-one-left-b496af12",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-left-le-one-a6640cee",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-zero-left-1c61a5bf",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-left-le-one-a6640cee",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-left-le-one-a6640cee",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-right-le-one-8f11b62f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-one-right-1ce3d52f",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-right-le-one-8f11b62f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-clog-zero-right-d42d47b1",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-right-le-one-8f11b62f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-clog-of-right-le-one-8f11b62f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-add-self-right-c3ed0f45",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-assoc-8c87a1f1",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-of-dvd-right-a640bd56",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-self-add-left-51351fa1",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-self-add-right-966e5434",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-descfactorial-le-2b8cc09a",
+      "from_partition": "train",
+      "to": "F:ml430-nat-choose-le-choose-907b5042",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-descfactorial-of-lt-fbcf5d26",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-descfactorial-one-d4856d4a",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-dist-self-0cfa5426",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-div-mul-cancel-99799a00",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-div-gcd-pos-of-pos-right-8d26808c",
+      "from_partition": "train",
+      "to": "F:ml430-nat-div-mul-cancel-99799a00",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-dvd-add-iff-left-332cbe04",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-dvd-gcd-mul-gcd-iff-dvd-mul-07fec722",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-dvd-gcd-mul-iff-dvd-mul-0afe640a",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-dvd-mul-ebd102e2",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-dvd-mul-gcd-iff-dvd-mul-f9517e6b",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-even-add-31386639",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-add-add-comm-74d2c151",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-even-add-39e3bc07",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-add-add-comm-74d2c151",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-even-div-395c6b5e",
+      "from_partition": "development",
+      "to": "F:ml430-nat-mod-mul-right-div-self-900e0b01",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-factorial-dvd-ascfactorial-44a4e641",
+      "from_partition": "development",
+      "to": "F:ml430-nat-ascfactorial-zero-fd183202",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-factorial-dvd-factorial-e9d14845",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-fermatnumber-strictmono-acbcb8c6",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-assoc-8c87a1f1",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "from_partition": "development",
+      "to": "F:ml430-nat-fib-add-two-b86e0c82",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-fib-lt-fib-succ-b4305b68",
+      "from_partition": "development",
+      "to": "F:ml430-nat-fib-lt-fib-3582b881",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-fib-strictmonoon-905810a9",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-le-fib-add-one-5284f0bf",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-anti-left-b72490ec",
+      "from_partition": "train",
+      "to": "F:ml430-nat-log-antitone-left-20d1326c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "from_partition": "train",
+      "to": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "from_partition": "train",
+      "to": "F:ml430-nat-log-of-lt-89eaf42e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "from_partition": "train",
+      "to": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "from_partition": "train",
+      "to": "F:ml430-nat-log-of-lt-89eaf42e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-a89f8bab",
+      "from_partition": "train",
+      "to": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-a89f8bab",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-antisymm-79dccead",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-a89f8bab",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-one-iff-a89f8bab",
+      "from_partition": "train",
+      "to": "F:ml430-nat-log-of-lt-89eaf42e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-log-eq-zero-iff-819cea74",
+      "from_partition": "train",
+      "to": "F:ml430-nat-log-of-lt-89eaf42e",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-assoc-8c87a1f1",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-mod-mul-beaccbad",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-mod-mul-left-div-self-0aca6c6e",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-mod-mul-right-div-self-900e0b01",
+      "from_partition": "train",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-odd-fermatnumber-251041a5",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+      "from_partition": "development",
+      "to": "F:ml430-nat-mul-lt-mul-left-af33301e",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3",
+      "from_partition": "train",
+      "to": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3",
+      "from_partition": "train",
+      "to": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
+      "from_partition": "train",
+      "to": "F:ml430-nat-coprime-of-lt-prime-1978a919",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
+      "from_partition": "train",
+      "to": "F:ml430-nat-coprime-symmetric-9b5cfa12",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-coprime-pow-of-not-dvd-2752b17f",
+      "from_partition": "development",
+      "to": "F:ml430-nat-prime-coprime-iff-not-dvd-a85d46a4",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-deficient-89e0badf",
+      "from_partition": "development",
+      "to": "F:ml430-nat-prime-one-lt-bc90cfc7",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-deficient-89e0badf",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-lcm-237d267c",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-lcm-left-c83bcebc",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-lcm-237d267c",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-lcm-right-18ab8e2f",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-lcm-237d267c",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-left-of-dvd-200e20a4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-lcm-237d267c",
+      "from_partition": "train",
+      "to": "F:ml430-nat-gcd-mul-lcm-b7217ace",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-mul-59446847",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-left-of-dvd-200e20a4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-of-dvd-pow-e76f834a",
+      "from_partition": "development",
+      "to": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-add-0c5bcc91",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "from_partition": "train",
+      "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-prime-eq-one-of-pow-846d2949",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+      "from_partition": "development",
+      "to": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+      "from_partition": "development",
+      "to": "F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-not-dvd-mul-cb3a915e",
+      "from_partition": "development",
+      "to": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-prime-not-prime-pow-5f14afc6",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-prime-not-prime-pow-d6480abf",
+      "from_partition": "development",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-stirlingfirst-eq-zero-of-lt-6f46764f",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
+      "from_partition": "train",
+      "to": "F:ml430-nat-choose-one-right-7eda8e39",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
+      "from_partition": "train",
+      "to": "F:nat-mul-one",
+      "to_partition": "longitudinal"
+    },
+    {
+      "from": "F:ml430-nat-stirlingsecond-eq-zero-of-lt-f3caf8bd",
+      "from_partition": "train",
+      "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+      "to_partition": "development"
+    },
+    {
+      "from": "F:ml430-nat-totient-coprime-totient-iff-3932cf83",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-totient-even-28e0415f",
+      "from_partition": "development",
+      "to": "F:ml430-nat-add-comm-56a2d614",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-totient-even-28e0415f",
+      "from_partition": "development",
+      "to": "F:ml430-nat-dvd-gcd-e5184fc5",
+      "to_partition": "train"
+    },
+    {
+      "from": "F:ml430-nat-totient-even-28e0415f",
+      "from_partition": "development",
+      "to": "F:nat-zero-add",
+      "to_partition": "longitudinal"
+    }
+  ],
+  "kind": "axeyum-partition-edge-baseline",
+  "ledger_sha256": "0826de5188235b121d6c5dbb38e3da4fe8ed859a9e0594e77c1cbac5beaf1805",
+  "manifests": [
+    "artifacts/autogenesis/nursery-v1.json",
+    "artifacts/autogenesis/nursery-v2-extension.json"
+  ],
+  "produced_by": "scripts/check-partition-edges.py --record-baseline",
+  "recorded_at_commit": "e042449a3a4472d584dabf38ddd1e0f1dd2441e8",
+  "recorded_date": "2026-09-02",
+  "rule": "This set may only SHRINK. --record-baseline refuses a set that is not a subset of the committed one, so a new crossing cannot be silenced by re-recording; it must be repaired or carry a per-edge amendment.",
+  "schema_version": 1
+}

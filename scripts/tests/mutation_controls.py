@@ -4728,6 +4728,111 @@ SUITES["merge-hygiene"] = (
             'if [ "${AXEYUM_SKIP_SHAPE_DUPLICATES:-0}" = "1" ]; then',
             "if false; then",
         ),
+        (
+            # ADR-1550 (lane `partition-edge-gate`). Split the same two ways
+            # M10 is: the blocking arm and the not-answerable arm are separate
+            # decisions, and the one that fails SILENTLY is the second.
+            "M15 a new partition-crossing edge fails the gate",
+            'elif [ "$part_edges_rc" -eq 2 ]; then',
+            'elif [ "$part_edges_rc" -ne 0 ]; then',
+        ),
+        (
+            "M16 an unanswerable partition-edge check does NOT fail the gate",
+            'if [ "$part_edges_rc" -eq 0 ]; then',
+            'if [ "$part_edges_rc" -ne 1 ]; then',
+        ),
+    ],
+)
+
+
+# --------------------------------------------------------------------------
+# `partition-edges` -- `scripts/check-partition-edges.py`, the per-EDGE
+# replacement for the component-level partition gate (ADR-1546 option 2,
+# ADR-1550).
+#
+# This suite matters more than most, because the gate it supersedes for
+# producer purposes is the one CLAUDE.md's rule was written about: it was kept
+# green for four days by an exemption re-scoped 228 -> 230 -> 258 -> 274 to
+# fit whatever it had just failed on. A replacement whose own guards were
+# never driven to failure would be the same artifact with a newer date.
+#
+# EVERY MUTANT BELOW KILLS EXACTLY ONE TEST, and getting there changed the
+# FIXTURES rather than the guards. M1 widens the "same partition" test to
+# `False`, so every edge in the drawn population becomes a crossing; the first
+# draft of the suite put a clean same-partition edge in nine fixtures and M1
+# killed six of them. A mutant that kills six says less about the guard than
+# one that kills the test whose subject it is, so only
+# `one_crossing_and_one_clean` -- the fixture for the comparison itself --
+# carries a clean edge now, and `one_crossing_only` serves the rest. Same for
+# M4: the `new crossing blocks` scenario stopped asserting the baselined COUNT,
+# because ignoring the baseline leaves that scenario's subject true and only
+# the accept case is about the subtraction.
+#
+# M2 is the mutant this gate exists to make possible. `component_covered`
+# holds every ordered pair a manifest's component exemption would suppress;
+# the shipped line honours the per-edge amendments and nothing else, and M2
+# unions the component pairs in. On the live tree that is not hypothetical:
+# `component_exemptions_would_wave=154` of the 198 recorded crossings.
+# --------------------------------------------------------------------------
+
+SUITES["partition-edges"] = (
+    "scripts/check-partition-edges.py",
+    Unittest("scripts.tests.test_check_partition_edges"),
+    [
+        (
+            "M1 an edge within one partition is not a crossing",
+            "if target_partition is None or target_partition == source_partition:",
+            "if target_partition is None or False:",
+        ),
+        (
+            "M2 a component exemption is NOT honoured as an amendment",
+            "    honoured = amendments\n",
+            "    honoured = amendments | component_covered\n",
+        ),
+        (
+            "M3 an amendment must name from/to/reason/date",
+            'missing = [k for k in ("from", "to", "reason", "date")',
+            "missing = [k for k in ()",
+        ),
+        (
+            "M4 an edge already in the baseline is not a new violation",
+            "    violations = [e for e in edges if edge_key(e) not in honoured\n"
+            "                  and edge_key(e) not in baseline]",
+            "    violations = [e for e in edges if edge_key(e) not in honoured\n"
+            "                  and True]",
+        ),
+        (
+            "M5 --record-baseline refuses to grow the baseline",
+            "        if grew:",
+            "        if False:",
+        ),
+        (
+            "M6 no nursery manifest is UNANSWERABLE, not clean",
+            "    if not manifests:",
+            "    if False:",
+        ),
+        (
+            "M7 --baseline without a baseline file says WHY it cannot answer",
+            "    if not path.is_file():\n"
+            "        raise Unanswerable(",
+            "    if False:\n"
+            "        raise Unanswerable(",
+        ),
+        (
+            "M8 a fact drawn into two partitions is UNANSWERABLE",
+            "            if fact_id in partition_of and partition_of[fact_id] != partition:",
+            "            if False:",
+        ),
+        (
+            "M9 the declined component exemptions are REPORTED, not merely unused",
+            "    if violations or args.verbose:",
+            "    if False:",
+        ),
+        (
+            "M10 a repaired baseline edge is reported so the gain is locked in",
+            "        repaired = sorted(baseline - {edge_key(e) for e in edges})",
+            "        repaired = []",
+        ),
     ],
 )
 
