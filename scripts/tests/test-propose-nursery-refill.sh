@@ -27,6 +27,11 @@ trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 CASES=0
 ALL_GUARDS=(R2 R3 R4 R5 R6)
+# R3 is the QUEUE-SIZE finding (see case 0, below), not an artifact defect --
+# mirrors ARTIFACT_GUARDS in scripts/tests/test-dispatchable-frontier.sh, which
+# carved the same guard (there G7) out of its own real-tree false-positive
+# control for the identical reason.
+ARTIFACT_GUARDS=(R2 R4 R5 R6)
 
 # The gate reads its paths from the module, so a fixture is exercised by
 # swapping the snapshot file itself. It is restored by the EXIT trap of each
@@ -36,11 +41,33 @@ BACKUP="$WORK/snapshot.orig"
 cp "$SNAPSHOT" "$BACKUP"
 trap 'cp "$BACKUP" "$SNAPSHOT" 2>/dev/null; rm -rf "$WORK"' EXIT
 
+# Guard-isolation base for every mutation case below (R2, R4, R5, R6, and the
+# R3 boundary case). The REAL committed snapshot's `ready_families` has held at
+# a single entry since the pool crossed R3's floor (see case 0): a case that
+# mutates one unrelated field on top of that base trips R3 as well as its own
+# guard, and "this case must kill exactly one" fails for every one of them --
+# measured 2026-09-02, all of R2's six cases plus both R5 zero/total cases plus
+# both R6 cases. A synthetic second ready-family entry restores isolation
+# without touching what each case actually mutates. The name cannot collide
+# with a real Mathlib module (so R4's own case, which adds a REAL owned module
+# name, is unaffected), and its count is irrelevant -- `check()` only reads
+# `len(ready_families)`, never validates each entry against PER_FAMILY.
+HEALTHY="$WORK/snapshot.healthy"
+python3 - "$BACKUP" "$HEALTHY" <<'PY'
+import json, pathlib, sys
+src, dst = sys.argv[1], sys.argv[2]
+d = json.loads(pathlib.Path(src).read_text())
+d["ready_families"] = dict(sorted(d["ready_families"].items()))
+d["ready_families"]["Zzz.Synthetic.HealthySpareFamily"] = 99
+d["ready_family_count"] = len(d["ready_families"])
+pathlib.Path(dst).write_text(json.dumps(d, indent=1, sort_keys=True) + "\n")
+PY
+
 run_with_snapshot() {
   # run_with_snapshot <label> <expected-exit> <expected-guard-or-NONE> <edit.py>
   local label="$1" want_exit="$2" want_guard="$3" edit="$4"
   CASES=$((CASES + 1))
-  cp "$BACKUP" "$SNAPSHOT"
+  cp "$HEALTHY" "$SNAPSHOT"
   if [ -n "$edit" ]; then
     python3 - "$SNAPSHOT" <<PY
 import json, pathlib, sys
@@ -80,24 +107,51 @@ PY
 }
 
 # ---- case 0: FALSE-POSITIVE control ----------------------------------------
-# The committed snapshot must be healthy AND must actually be measuring
-# something. A positive control runs in the same case: an empty report would
-# satisfy every "guard did not fire" assertion above, which is the shape this
-# repository calls an empty grep reported as a negative result.
+# The real tree's committed snapshot must fire no ARTIFACT guard (R2/R4/R5/R6)
+# AND must actually be measuring something. A positive control runs in the
+# same case: an empty report would satisfy every "guard did not fire"
+# assertion above, which is the shape this repository calls an empty grep
+# reported as a negative result.
+#
+# This does NOT also require R3 to stay silent. R3 is the QUEUE-SIZE finding
+# -- "can the pool still refill the queue" -- and asserting exit 0 here made
+# this a control over the size of the queue, not over false positives: it
+# failed the day the pool crossed the floor for a reason that has nothing to
+# do with a spurious guard. `scripts/tests/test-dispatchable-frontier.sh` hit
+# the identical shape for its own G7 on 2026-08-30 and fixed it by asserting
+# over ARTIFACT_GUARDS only (see its `real-tree-fires-no-artifact-guard`); this
+# case had the same fix documented in docs/plan/status/321-queue-refill.md but
+# it was never actually applied here -- confirmed 2026-09-02 by reproducing the
+# red exit 1 on main, `git log`-ing the guard to `natural-logarithm`/pool-size
+# drift rather than any code change to this file, and finding this test still
+# demanded exit 0 in the committed source. R3 keeps its own dedicated coverage
+# below (`R3-one-ready-family-cannot-refill`, `R3-no-ready-family-at-all`,
+# `R3-two-ready-families-is-exactly-enough`), so no discriminating power is
+# lost -- only the redundant, moving-target assertion.
 CASES=$((CASES + 1))
 OUT="$(python3 "$SCRIPT" 2>&1)"; STATUS=$?
 BAD=0
-[ "$STATUS" -ne 0 ] && { echo "FAIL [healthy-real-tree-passes]: exit $STATUS"; BAD=1; }
+if [ "$STATUS" -ne 0 ] && [ "$STATUS" -ne 1 ]; then
+  echo "FAIL [real-tree-fires-no-artifact-guard]: exit $STATUS, expected 0 or 1"
+  BAD=1
+fi
+for G in "${ARTIFACT_GUARDS[@]}"; do
+  HITS="$(printf '%s\n' "$OUT" | /usr/bin/grep -cE "\b${G} [a-z-]+" || true)"
+  if [ "$HITS" -ne 0 ]; then
+    echo "FAIL [real-tree-fires-no-artifact-guard]: artifact guard $G fired on the real tree ($HITS line(s))"
+    BAD=1
+  fi
+done
 HITS="$(printf '%s\n' "$OUT" | /usr/bin/grep -cE '^READY FAMILIES +[0-9]+' || true)"
 [ "$HITS" -ne 1 ] && {
-  echo "FAIL [healthy-real-tree-passes]: no READY FAMILIES line; the run produced"
-  echo "               no report, so 'no guard fired' is not evidence of anything"
+  echo "FAIL [real-tree-fires-no-artifact-guard]: no READY FAMILIES line; the run"
+  echo "               produced no report, so 'no guard fired' is not evidence of anything"
   BAD=1; }
 if [ "$BAD" -ne 0 ]; then
   FAILURES=$((FAILURES + 1))
-  echo "--- output [healthy-real-tree-passes] ---"; printf '%s\n' "$OUT" | sed 's/^/    /'
+  echo "--- output [real-tree-fires-no-artifact-guard] ---"; printf '%s\n' "$OUT" | sed 's/^/    /'
 else
-  echo "ok   [healthy-real-tree-passes]"
+  echo "ok   [real-tree-fires-no-artifact-guard] (exit $STATUS)"
 fi
 
 # ---- R2: the snapshot was measured against a screen this tree no longer has -
@@ -186,15 +240,27 @@ fi
 CASES=$((CASES + 1))
 INV="/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson"
 if [ -r "$INV" ]; then
+  # `--remeasure` reproducing the committed bytes is a claim about the
+  # MEASUREMENT, not about the aggregate finding -- R3 can legitimately fire
+  # on a byte-for-byte reproducible snapshot (that is exactly what case 0
+  # tolerates), so this no longer requires exit 0. It still refuses exit 2:
+  # that means an input could not be read, which is a real defect, not the
+  # queue-size finding.
   OUT="$(python3 "$SCRIPT" --remeasure 2>&1)"; STATUS=$?
-  if [ "$STATUS" -eq 0 ] && [ -z "$(git -C "$ROOT" status --porcelain -- "$SNAPSHOT")" ]; then
-    echo "ok   [remeasure-reproduces-the-committed-snapshot]"
-  else
-    echo "FAIL [remeasure-reproduces-the-committed-snapshot]: exit $STATUS, or the"
-    echo "               snapshot changed -- the committed measurement is not"
-    echo "               reproducible from the pinned inventory"
+  if [ "$STATUS" -eq 2 ]; then
+    echo "FAIL [remeasure-reproduces-the-committed-snapshot]: exit 2 -- an input"
+    echo "               could not be read"
     FAILURES=$((FAILURES + 1))
     printf '%s\n' "$OUT" | sed 's/^/    /'
+  elif [ -n "$(git -C "$ROOT" status --porcelain -- "$SNAPSHOT")" ]; then
+    echo "FAIL [remeasure-reproduces-the-committed-snapshot]: the committed"
+    echo "               snapshot is not byte-reproducible from the pinned"
+    echo "               inventory -- someone edited it by hand, or forgot to"
+    echo "               commit after running --remeasure"
+    FAILURES=$((FAILURES + 1))
+    printf '%s\n' "$OUT" | sed 's/^/    /'
+  else
+    echo "ok   [remeasure-reproduces-the-committed-snapshot] (exit $STATUS)"
   fi
 else
   echo "SKIP [remeasure-reproduces-the-committed-snapshot]: no $INV on this host."
