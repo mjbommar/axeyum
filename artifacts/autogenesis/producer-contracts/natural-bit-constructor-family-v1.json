@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-natural-bit-constructor-family-v1",
+  "title": "Mathlib v4.30 Nat.bit binary-constructor family, kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Author one s5-side Lean statement-adapter `def <name> : Prop := <the fact's formal.statement, verbatim>` per target in a single batch file, compile it once against pinned Mathlib v4.30.0, export each target with `lean4export`, import the proof-free statement stream into a fresh independent kernel (`import_statement_ndjson`, which refuses any proof-bearing or trusted declaration), and hand the resulting goal to the SHAPE-GENERIC producer `axeyum_lean_import::producers::bounded_induction::propose_bounded_induction`: peel the leading Pi/hypothesis telescope, try `Eq.refl` at the terminal, and where that is stuck attempt one bounded structural induction over a discovered zero/succ binder plus one congruence rewrite driven by the induction hypothesis. The producer never sees a theorem name and has no per-target arm: it decides only from the goal's own shape, and declines with a typed reason (`TerminalNotClosed`-class messages from the bounded chain, or a `StatementImportError` before it ever runs). That is what makes one recipe cover the family rather than one fact.",
+    "reference": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs"
+  },
+  "shape": {
+    "formal_language": [
+      "lean4-surface"
+    ],
+    "fragments": [
+      "Nat"
+    ],
+    "statement_contains": "Nat.bit"
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:ml430-nat-testbit-land-dfef7ca4",
+      "reason": "Same fragment (`Nat`), same `lean4-surface` language, same `Mathlib v4.30 source proposition` title family, and topically the nearest neighbour there is -- but its statement mentions `Nat.testBit`, and `Nat.bit` is not a substring of `Nat.testBit`. The distinction is load-bearing rather than cosmetic: `Nat.testBit` is divergence-blocked here (ours returns a `Nat`, Mathlib's a `Bool`, docs/research/11-design-review/2026-09-02-what-the-frontier-is-shaped-like.md), so a shape that swallowed it would be claiming capability over a proposition this project does not hold."
+    },
+    {
+      "fact_id": "F:ml430-nat-choose-le-two-pow-ef6f7dcd",
+      "reason": "Same fragment, same language, same ml430 mirror population, and it is the LARGEST live sibling bucket on the frontier (`natural-binomial-bounds`, train partition, 10 open rows) -- deliberately named as the non-example because it is the bucket a size-ranked selector would have merged with this one. `Nat.choose n k <= 2 ^ n` contains no `Nat.bit`, and no bounded refl/induction chain closes an arithmetic bound: it needs a real inequality argument. The predicate discriminates by recipe, not by carrier."
+    }
+  ],
+  "notes": "Sized against the 2026-09-02 regeneration of artifacts/autogenesis/frontier-shape-census-v1.json (23 targetable of 257 ready). This shape matches ten facts, ALL of them `development` partition rows of draw 19's `natural-bit-constructor` family (ADR-1561, primary module `Mathlib.Data.Nat.BinaryRec`), none held-out, none an outcome-blind mutation fixture.\n\nWHY THIS CONTRACT MATCHES NO TRAIN ROW, STATED RATHER THAN OMITTED. `scripts/check-development-partition.py` enforces that an OPERATION closing a development fact must also close a train fact, so a contract aimed only at development is a warning sign by construction. Measured 2026-09-02: the whole live train population is 17 open rows -- 5 outcome-blind mutation controls (FALSE by construction, must never be closed), 2 divergence-blocked (`Nat.fastFib`, `Squarefree`), and the 10 `natural-binomial-bounds` rows above. There is no train row this recipe can reach, because the only recipe-coherent train bucket in existence is the binomial bounds one, and a refl/bounded-induction chain does not prove `choose n k <= 2 ^ n`. The honest statement is therefore: this contract is development-only because the frontier offers no train sibling for this recipe, not because the producer was authored against the evaluation set -- `propose_bounded_induction` predates this lane (registered 2026-08-22 under `authoritative-mathlib-bounded-induction-factorial-family-v1`, sized against TRAIN facts) and was not modified by it. See ADR-1570.\n\nThis contract asserts only that the shape is dischargeable via `kernel-lane`; admission of any instance still requires an independently kernel-checked, axiom-free proof, per ADR-0602 SS1.",
+  "sizing": {
+    "date": "2026-09-02",
+    "ledger_sha256": "2df6a33982b7ba615f643c9223c8d84bd734e8a909605d64a9739eab30b57ce5",
+    "matched_open_ready_count": 10,
+    "matched_open_ready_fact_ids": [
+      "F:ml430-nat-bit-div-two-d74e7898",
+      "F:ml430-nat-bit-eq-zero-iff-6b701e2b",
+      "F:ml430-nat-bit-false-98b0bf2a",
+      "F:ml430-nat-bit-false-apply-5962146d",
+      "F:ml430-nat-bit-mod-two-eq-one-iff-d9b00bec",
+      "F:ml430-nat-bit-mod-two-eq-zero-iff-b69a9790",
+      "F:ml430-nat-bit-ne-zero-iff-d811128e",
+      "F:ml430-nat-bit-true-2456e237",
+      "F:ml430-nat-bit-true-apply-02338ebc",
+      "F:ml430-nat-bitwise-zero-7c0e3f82"
+    ],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Measured 2026-09-02 by re-executing this contract's own shape predicate over artifacts/facts/, restricted to facts that are open, dependency-ready, NOT in a held-out nursery partition (read from every artifacts/autogenesis/nursery*.json, not just nursery-v1.json) and not an outcome-blind mutation fixture. Cross-checked against the independently produced shape census, whose coarse buckets rank this family's members 1/3/6/8/9/10 and mark all ten targetable."
+  }
+}

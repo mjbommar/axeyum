@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-bounded-induction-candidate",
+  "state": "candidate-checked-not-admitted",
+  "source_fact_id": "F:ml430-nat-bit-false-98b0bf2a",
+  "statement_adapter": "artifacts/autogenesis/mathlib-nat-bit-constructor-family-bit-false-statement-adapter-v1.json",
+  "operation": {
+    "implementation": "crates/axeyum-lean-import/examples/bounded_induction_operation.rs",
+    "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitFalse",
+    "goal_sha256": "83210f460f3ac1ee0aafd9e43870575c621d7de1cda51d86e2a90b142cecc785",
+    "proof_sha256": "01a071324143392f847e92b768b268615277f7f2ba6ea6893913faa1ff2cd97c",
+    "target_content_sha256": "ca6da754f50f753ac57a007f44a7ff1bd0f34c110d8ae16d476a4011b57b631c",
+    "binders_used": 0,
+    "inductions_used": 0,
+    "max_binders": 8,
+    "max_inductions": 2,
+    "admitted_declarations": 60,
+    "axioms": 0,
+    "theorem_dependencies": 0,
+    "target_dependency": false,
+    "ledger_writes": 0
+  },
+  "reproduction": "python3 scripts/check-autogenesis-nat-bit-constructor-family.py",
+  "limitations": "The candidate is independently kernel checked but remains uncredited until the exact registered operation completes the authoritative transaction. This target is closed by the producer's FIRST leg (Eq.refl over the imported Mathlib construction of Nat.bit); the bounded induction leg is available and, where it fires, is recorded in inductions_used."
+}

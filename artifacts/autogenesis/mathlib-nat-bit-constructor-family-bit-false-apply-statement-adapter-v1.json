@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "kind": "axeyum-autogenesis-mathlib-statement-adapter",
+  "state": "independent-kernel-goal-admitted-proof-free",
+  "source_fact_id": "F:ml430-nat-bit-false-apply-5962146d",
+  "source_statement_sha256": "c35abe86d23e89742672f0137d7e5a2bac3ae8369b4aac6486cbd7ebd15247ef",
+  "adapter_source": {
+    "path": "scripts/lean/autogenesis_statement_adapter_nat_bit_family_v1.lean",
+    "sha256": "fa9ffba6424d4f1b4cd39eda49142ce9a13fdeb8f59c171b42bdf8fefbde9bf0",
+    "target_definition": "Axeyum.Autogenesis.Statement.NatBitFamily.bitFalseApply",
+    "encoding": "transparent-definition-of-prop",
+    "proof_declarations_allowed": false
+  },
+  "toolchain": {
+    "lean_version": "4.30.0",
+    "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "external_artifact": {
+    "path": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-bit-constructor-family-v1/bit-false-apply.ndjson",
+    "sha256": "7586fe6fea6b1c8a3703f6e3e09303fc38bcb496071b331cdc55378426924d73",
+    "bytes": 54018,
+    "records": 928,
+    "mode": "0444"
+  },
+  "independent_import": {
+    "goal_sha256": "ed078d9968fd5a15339ffc19baec3b2dbd3c424572f961f75302eb36c38eba77",
+    "target_content_sha256": "d62faf4b40988650461efb3f318470a265337f26e2d1b03fc6f17d0d2ec57e7d",
+    "direct_dependencies": 9,
+    "admitted_declarations": 60,
+    "axioms": 0
+  },
+  "reproduction": {
+    "host_profile": "s5 pinned Mathlib v4.30.0 checkout",
+    "export": "copy the tracked adapter source to the pinned Mathlib root as AxeyumFlywheel3NatBitFamilyV1.lean; lake env lean AxeyumFlywheel3NatBitFamilyV1.lean -o .lake/build/lib/lean/AxeyumFlywheel3NatBitFamilyV1.olean; lake env /home/mjbommar/lean-import-scale/lean4export/.lake/build/bin/lean4export AxeyumFlywheel3NatBitFamilyV1 -- Axeyum.Autogenesis.Statement.NatBitFamily.bitFalseApply",
+    "check": "python3 scripts/check-autogenesis-nat-bit-constructor-family.py"
+  },
+  "limitations": "This adapts the development proposition F:ml430-nat-bit-false-apply-5962146d into a checked goal. It exposes no Mathlib proof and grants no proof credit before authoritative execution."
+}
