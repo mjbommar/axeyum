@@ -136,6 +136,11 @@ now. Nothing was deleted.
 | 2026-09-02 | nursery-repartition | `scripts/nursery-components.py` — the component census, `--propose` for the rule's cost, `--check` for the five findings; registered in `check.sh` and the justfile |
 | 2026-09-02 | nursery-repartition | census artifact registered in `check-generated-artifact-ownership.py`; 17 controls, 11 mutants, 11 single kills |
 | 2026-09-02 | nursery-repartition | found: `check-autogenesis-holdout-isolation.py` is red on main from ADR-1550's baseline artifact, and a new `nursery*.json` artifact makes two gates unanswerable |
+| 2026-09-02 | baseline-holdout-leak | `check-partition-edges.py`: held-out baseline endpoints are salted-SHA-256 digests (`held_out_salt`, `held_out_endpoint: true`), not plain fact ids; `--baseline`/`--record-baseline` digest the live id the same way before comparing (ADR-1550 amendment) |
+| 2026-09-02 | baseline-holdout-leak | `check-autogenesis-holdout-isolation.py`: `references=6` -> `references=0`, `verdict=FAIL` -> `verdict=PASS`; `check-partition-edges.py --baseline` unchanged at `crossing=198|baselined=198|violations=0|PASS` |
+| 2026-09-02 | baseline-holdout-leak | `check-partition-edges.py` + `nursery-components.py`: `MANIFEST_GLOB` narrowed from `nursery*.json` to `nursery-v1.json` + `nursery-v*-extension.json`; both were `Unanswerable` against an unrelated matching file, both now pass with one committed |
+| 2026-09-02 | baseline-holdout-leak | mutation table: M11 added ("a held-out id is never written in plain text"), M1-M10 preserved as single kills; 11/11, exit 0 |
+| 2026-09-02 | baseline-holdout-leak | fixed a pre-existing (not this lane's) syntax defect in `check-generated-artifact-ownership.py` from a prior bad merge, blocking verification of the ownership gate; `held_out_salt` added to the baseline artifact's `required_keys` |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -36258,6 +36263,53 @@ cycle; D3's sequencing item 3 now depends on item 4 (`D1` narrowing), not the
 other way round. Whoever takes that: run
 `scripts/analyze_solver_group_collapse.py --group arith-core --check` and watch
 it go green — that is the exit criterion, and it is currently red.
+
+**Your lane's block (`DONE`, baseline-holdout-leak, 2026-09-02).** ADR-1550's
+`partition-edge-baseline-v1.json` wrote six crossing edges' held-out endpoint
+as a plain-text fact id, so `check-autogenesis-holdout-isolation.py` was red
+on `main` (`references=6`). Lane `nursery-repartition` verified this on a
+clean snapshot and it stays the guard that measures it. Fixed the baseline
+FORMAT, not the finding: an endpoint whose partition is `held-out` is now a
+salted SHA-256 digest, tagged `held_out_endpoint: true`; the salt is
+committed beside it (`held_out_salt`); non-held-out endpoints stay plain.
+`--baseline`'s live comparison digests the current crossing edge with the
+committed salt before testing membership, and `--record-baseline` reuses that
+salt whenever the edge set is unchanged, so an unperturbed re-record stays
+byte-identical. Edge set unchanged: still 198, `crossing=198|baselined=198
+|violations=0|PASS`. Isolation gate: `references=6` -> `references=0`,
+`verdict=FAIL` -> `verdict=PASS`.
+
+Second, independent finding from the same brief: `MANIFEST_GLOB =
+"nursery*.json"` in both `check-partition-edges.py` and
+`nursery-components.py` went `Unanswerable` against ANY unrelated file
+matching that glob dropped into `artifacts/autogenesis/`. Narrowed both to
+`nursery-v1.json` plus `nursery-v*-extension.json`; a decoy control in each
+suite drops `nursery-zzz-notes.json` and asserts the tool still answers.
+
+Blocking, not assigned, fixed as a prerequisite:
+`scripts/check-generated-artifact-ownership.py` did not `py_compile` on
+`main` -- a prior merge had silently dropped the closing/opening boundary
+between two `GUARDED` `Artifact(...)` entries and separately duplicated and
+garbled a third entry's `runs=` block with text copied from the first. Not
+this lane's defect (present before this lane's first commit; confirmed
+against `main`'s tip directly), but it blocks verifying "ownership gate
+passes for the baseline" at all, so reconstructed both entries verbatim from
+their two originating commits (`6af4e162a`, `43b16059f`) rather than working
+around it.
+
+Mutation table: ten pre-existing single kills (M1-M10) preserved (two of
+their `old_string` anchors had to move with the surrounding code but the
+guard and its one kill are unchanged), plus **M11** ("a held-out endpoint is
+redacted before it is written to the baseline") — deleting the digesting
+kills exactly one test. `python3 scripts/tests/mutation_controls.py
+partition-edges`: 11 mutants, 11 single kills, exit 0.
+
+ADR-1550 amended (dated section) with the format change and both findings.
+
+Did not run: `cargo` in any form, `just check`, `./scripts/check.sh`. No
+`.rs` file touched. `scripts/check-generated-artifact-ownership.py` (full,
+all `GUARDED` artifacts) run to completion, foreground, after the syntax fix
+above -- see this lane's commit for the exit/summary line.
 
 **Both of Euclid's missing ingredients are in; `F:nat-exists-prime-gt` is one
 slice from closing** (`WIP`, nat-prime-divisor, 2026-08-17).
