@@ -843,4 +843,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1545](adr-1545-the-testbit-codomain-is-the-outermost-link-of-a-chain-and-the-bool-view-is-already-built.md) | The `shape-census` lane named the `Nat.testBit` codomain as | accepted |
 | [1546](adr-1546-draw-19-is-refused-and-the-partition-gate-is-held-green-by-a-growing-exemption.md) | Draw 19 is refused, and the reason is not two bad commits — the v2 partition design cannot hold the property its gate enforces | Accepted |
 | [1550](adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md) | Gate the producer, not the draw — the partition-crossing EDGE is the unit, and its baseline may only shrink | accepted |
+| [1551](adr-1551-the-family-graph-is-one-blob-and-the-dependency-edge-is-proof-derived.md) | Option 1 is refused — the family graph is ONE blob, and the dependency edge it would partition on is proof-derived | accepted |
 | [1554](adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md) | `Rat.rowEchelon` lands as a `Definition` the kernel REDUCES — | accepted |

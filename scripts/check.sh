@@ -721,6 +721,17 @@ step autogenesis-nursery python3 scripts/check-autogenesis-nursery.py
 # form by hand when you want the attribution.
 step autogenesis-partition-edges python3 scripts/check-partition-edges.py --baseline
 step autogenesis-partition-edge-controls python3 -m unittest scripts.tests.test_check_partition_edges
+# ADR-1551 refused option 1 (re-partition by dependency component) on five
+# measured findings. A refusal that lives only in an ADR accumulates staleness
+# by construction, so the findings are enforced instead: this goes RED when a
+# family holds two partitions, when the 44-family blob stops spanning two
+# evaluation partitions, when it stops containing a pinned family, when the 51
+# structurally unrepairable crossings disappear, or when the rule reaches zero.
+# Each of those means option 1 has become possible and ADR-1551 must be
+# re-decided. GREEN by construction today -- unlike the bare edge audit above,
+# which is red by construction, so this one belongs in the aggregate.
+step nursery-components python3 scripts/nursery-components.py --check
+step nursery-components-controls python3 -m unittest scripts.tests.test_nursery_components
 step autogenesis-mathlib-nursery-split python3 scripts/create-autogenesis-mathlib-nursery-split.py --check
 step autogenesis-nursery-dispatch-baseline python3 scripts/create-autogenesis-nursery-dispatch-baseline.py --check
 step autogenesis-statement-adapter-rust cargo test -p axeyum-lean-import --test statement_adapter

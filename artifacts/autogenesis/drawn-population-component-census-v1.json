@@ -1,0 +1,1412 @@
+{
+  "authority": "docs/research/09-decisions/adr-1551-the-family-graph-is-one-blob-and-the-dependency-edge-is-proof-derived.md",
+  "kind": "axeyum-nursery-component-census",
+  "ledger_block": {
+    "crossings_now": 198,
+    "fact_components": {
+      "count": 357,
+      "largest_component": 305,
+      "multi_partition": [
+        {
+          "families": [
+            "fermat-numbers",
+            "integer-absolute-value",
+            "integer-basic-arithmetic",
+            "integer-congruence-lemmas",
+            "integer-fibonacci",
+            "integer-gcd",
+            "integer-gcd-algorithm",
+            "integer-order",
+            "integer-order-inequalities",
+            "integer-parity",
+            "nat-bootstrap",
+            "natural-basic-arithmetic",
+            "natural-binomial",
+            "natural-bit-decode",
+            "natural-bitwise",
+            "natural-bitwise-basics",
+            "natural-congruence-lemmas",
+            "natural-coprimality",
+            "natural-distance",
+            "natural-divisibility",
+            "natural-division",
+            "natural-factorial",
+            "natural-factorial-choose-and-squarefree",
+            "natural-factors-and-factorisation-properties",
+            "natural-fibonacci",
+            "natural-fibonacci-basic",
+            "natural-gcd",
+            "natural-gcd-algorithm",
+            "natural-gcd-and-bitwise-basics",
+            "natural-lcm",
+            "natural-logarithm",
+            "natural-logarithm-base",
+            "natural-minmax",
+            "natural-modular-equivalence",
+            "natural-modulus",
+            "natural-order-bridging",
+            "natural-parity",
+            "natural-prime-arithmetic",
+            "natural-prime-characterizations",
+            "natural-prime-divisibility",
+            "natural-primes",
+            "natural-stirling-numbers",
+            "natural-totient"
+          ],
+          "modules": [
+            "Init.Data.Dyadic.Basic",
+            "Init.Data.Int.Gcd",
+            "Init.Data.Int.Lemmas",
+            "Init.Data.Int.Order",
+            "Init.Data.Nat.Basic",
+            "Init.Data.Nat.Bitwise.Lemmas",
+            "Init.Data.Nat.Coprime",
+            "Init.Data.Nat.Div.Basic",
+            "Init.Data.Nat.Div.Lemmas",
+            "Init.Data.Nat.Dvd",
+            "Init.Data.Nat.Gcd",
+            "Init.Data.Nat.Lcm",
+            "Init.Data.Nat.Lemmas",
+            "Init.Data.Nat.MinMax",
+            "Init.Data.Nat.Mod",
+            "Init.Prelude",
+            "Mathlib.Algebra.Group.Int.Even",
+            "Mathlib.Algebra.Group.Nat.Even",
+            "Mathlib.Algebra.Ring.Int.Parity",
+            "Mathlib.Algebra.Ring.Parity",
+            "Mathlib.Combinatorics.Enumerative.Stirling",
+            "Mathlib.Data.Int.Fib.Basic",
+            "Mathlib.Data.Int.GCD",
+            "Mathlib.Data.Int.Lemmas",
+            "Mathlib.Data.Int.ModEq",
+            "Mathlib.Data.Int.NatPrime",
+            "Mathlib.Data.Int.Order.Basic",
+            "Mathlib.Data.Nat.Bits",
+            "Mathlib.Data.Nat.Choose.Basic",
+            "Mathlib.Data.Nat.Dist",
+            "Mathlib.Data.Nat.Factorial.Basic",
+            "Mathlib.Data.Nat.Fib.Basic",
+            "Mathlib.Data.Nat.GCD.Basic",
+            "Mathlib.Data.Nat.GCD.Prime",
+            "Mathlib.Data.Nat.Log",
+            "Mathlib.Data.Nat.ModEq",
+            "Mathlib.Data.Nat.Prime.Basic",
+            "Mathlib.Data.Nat.Prime.Defs",
+            "Mathlib.Data.Nat.Prime.Factorial",
+            "Mathlib.Data.Nat.Size",
+            "Mathlib.Data.Nat.Totient",
+            "Mathlib.NumberTheory.FactorisationProperties",
+            "Mathlib.NumberTheory.Fermat",
+            "Mathlib.RingTheory.Int.Basic",
+            "autogenesis-1",
+            "mathlib-v4.30.0-03318a97f5d9c067",
+            "mathlib-v4.30.0-04b5992203855fc2",
+            "mathlib-v4.30.0-0948bc81df7acdcc",
+            "mathlib-v4.30.0-0a92c5444156fa80",
+            "mathlib-v4.30.0-0f4a2909bae26f91",
+            "mathlib-v4.30.0-0f5b970407bcc279",
+            "mathlib-v4.30.0-14a4bdea3716db7b",
+            "mathlib-v4.30.0-1f0eac984fc2e8b7",
+            "mathlib-v4.30.0-21034a8981d599dd",
+            "mathlib-v4.30.0-22ed23121a880dda",
+            "mathlib-v4.30.0-2552fe053a3976ed",
+            "mathlib-v4.30.0-29d8a4807856ddb4",
+            "mathlib-v4.30.0-2f841ec7bfb62e80",
+            "mathlib-v4.30.0-32d9b36c9de57a64",
+            "mathlib-v4.30.0-349664929d4b20cf",
+            "mathlib-v4.30.0-35005e802231af21",
+            "mathlib-v4.30.0-39256e2968b0e1d2",
+            "mathlib-v4.30.0-3b9de7b385a5a0cb",
+            "mathlib-v4.30.0-3c41a84178f748e7",
+            "mathlib-v4.30.0-3e9e176afeb222f8",
+            "mathlib-v4.30.0-4aaec3b2ba4c2183",
+            "mathlib-v4.30.0-4c725f39100b926a",
+            "mathlib-v4.30.0-68d94d6dd3f7fd84",
+            "mathlib-v4.30.0-6a419a1a14546a55",
+            "mathlib-v4.30.0-6d39b59d22fd3649",
+            "mathlib-v4.30.0-72882823816e8782",
+            "mathlib-v4.30.0-772791fcb89127a3",
+            "mathlib-v4.30.0-784b337733caaefb",
+            "mathlib-v4.30.0-7a0f0e674194da44",
+            "mathlib-v4.30.0-7c36b21bbb3a5dae",
+            "mathlib-v4.30.0-7f2909c7d58a9007",
+            "mathlib-v4.30.0-7f777cc1a0316e33",
+            "mathlib-v4.30.0-841c7d52cf03e6e4",
+            "mathlib-v4.30.0-84ffc18b86745c93",
+            "mathlib-v4.30.0-85cf153fd2a3d00a",
+            "mathlib-v4.30.0-8d01187efd126f0b",
+            "mathlib-v4.30.0-a5e2f0f0fb66e795",
+            "mathlib-v4.30.0-b064fa21f15a772b",
+            "mathlib-v4.30.0-b92098ec339263f0",
+            "mathlib-v4.30.0-bc196822165c7f58",
+            "mathlib-v4.30.0-bef809d855cc57c1",
+            "mathlib-v4.30.0-c0029d24c3bb7a7f",
+            "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+            "mathlib-v4.30.0-c42a5cca06e73e07",
+            "mathlib-v4.30.0-c4d6980fa7b38432",
+            "mathlib-v4.30.0-c851a7fdd6dacbde",
+            "mathlib-v4.30.0-d48a520ede3cd1e8",
+            "mathlib-v4.30.0-dad675b054e7a82a",
+            "mathlib-v4.30.0-e4a351263398fa5d",
+            "mathlib-v4.30.0-e7e80bd79f8762e6",
+            "mathlib-v4.30.0-eb36cbc0baee7f2c",
+            "mathlib-v4.30.0-ec11d4735cad89fd",
+            "mathlib-v4.30.0-f1259356540dba68",
+            "mathlib-v4.30.0-f495858cd421b817",
+            "mathlib-v4.30.0-f5e0081ba0d3ce13",
+            "mathlib-v4.30.0-f752f40b1b7067eb",
+            "mathlib-v4.30.0-fbe0b99ece942a46"
+          ],
+          "partitions": {
+            "development": 172,
+            "held-out": 5,
+            "longitudinal": 2,
+            "train": 126
+          },
+          "size": 305
+        },
+        {
+          "families": [
+            "natural-logarithm",
+            "natural-logarithm-base"
+          ],
+          "modules": [
+            "Mathlib.Data.Nat.Log",
+            "mathlib-v4.30.0-0e70ff905b4e67d7",
+            "mathlib-v4.30.0-67733b1101973f6f",
+            "mathlib-v4.30.0-bf20046ab52424dd"
+          ],
+          "partitions": {
+            "development": 8,
+            "train": 2
+          },
+          "size": 10
+        },
+        {
+          "families": [
+            "integer-congruence-lemmas",
+            "integer-modular-equivalence"
+          ],
+          "modules": [
+            "Mathlib.Data.Int.ModEq",
+            "mathlib-v4.30.0-c281acadeeb7f3e4"
+          ],
+          "partitions": {
+            "development": 3,
+            "train": 1
+          },
+          "size": 4
+        },
+        {
+          "families": [
+            "natural-logarithm",
+            "natural-logarithm-base"
+          ],
+          "modules": [
+            "Mathlib.Data.Nat.Log",
+            "mathlib-v4.30.0-7d1d4a6a6f597955",
+            "mathlib-v4.30.0-9da63bd4e59d00f6"
+          ],
+          "partitions": {
+            "development": 3,
+            "train": 1
+          },
+          "size": 4
+        },
+        {
+          "families": [
+            "natural-divisibility",
+            "natural-gcd-algorithm"
+          ],
+          "modules": [
+            "Init.Data.Nat.Dvd",
+            "Init.Data.Nat.Gcd"
+          ],
+          "partitions": {
+            "development": 1,
+            "train": 2
+          },
+          "size": 3
+        }
+      ],
+      "single_partition": 352,
+      "singleton_components": 334,
+      "size_distribution": [
+        {
+          "components": 334,
+          "size": 1
+        },
+        {
+          "components": 8,
+          "size": 2
+        },
+        {
+          "components": 7,
+          "size": 3
+        },
+        {
+          "components": 2,
+          "size": 4
+        },
+        {
+          "components": 3,
+          "size": 5
+        },
+        {
+          "components": 1,
+          "size": 7
+        },
+        {
+          "components": 1,
+          "size": 10
+        },
+        {
+          "components": 1,
+          "size": 305
+        }
+      ]
+    },
+    "family_components": {
+      "components": [
+        {
+          "families": [
+            "fermat-numbers",
+            "integer-absolute-value",
+            "integer-basic-arithmetic",
+            "integer-congruence-lemmas",
+            "integer-fibonacci",
+            "integer-gcd",
+            "integer-gcd-algorithm",
+            "integer-modular-equivalence",
+            "integer-order",
+            "integer-order-inequalities",
+            "integer-parity",
+            "nat-bootstrap",
+            "natural-basic-arithmetic",
+            "natural-binomial",
+            "natural-bit-decode",
+            "natural-bitwise",
+            "natural-bitwise-basics",
+            "natural-congruence-lemmas",
+            "natural-coprimality",
+            "natural-distance",
+            "natural-divisibility",
+            "natural-division",
+            "natural-factorial",
+            "natural-factorial-choose-and-squarefree",
+            "natural-factors-and-factorisation-properties",
+            "natural-fibonacci",
+            "natural-fibonacci-basic",
+            "natural-gcd",
+            "natural-gcd-algorithm",
+            "natural-gcd-and-bitwise-basics",
+            "natural-lcm",
+            "natural-logarithm",
+            "natural-logarithm-base",
+            "natural-minmax",
+            "natural-modular-equivalence",
+            "natural-modulus",
+            "natural-order-bridging",
+            "natural-parity",
+            "natural-prime-arithmetic",
+            "natural-prime-characterizations",
+            "natural-prime-divisibility",
+            "natural-primes",
+            "natural-stirling-numbers",
+            "natural-totient"
+          ],
+          "family_count": 44,
+          "modules": [
+            "Init.Data.Dyadic.Basic",
+            "Init.Data.Int.Gcd",
+            "Init.Data.Int.Lemmas",
+            "Init.Data.Int.Order",
+            "Init.Data.Nat.Basic",
+            "Init.Data.Nat.Bitwise.Lemmas",
+            "Init.Data.Nat.Coprime",
+            "Init.Data.Nat.Div.Basic",
+            "Init.Data.Nat.Div.Lemmas",
+            "Init.Data.Nat.Dvd",
+            "Init.Data.Nat.Gcd",
+            "Init.Data.Nat.Lcm",
+            "Init.Data.Nat.Lemmas",
+            "Init.Data.Nat.MinMax",
+            "Init.Data.Nat.Mod",
+            "Init.Prelude",
+            "Mathlib.Algebra.Group.Int.Even",
+            "Mathlib.Algebra.Group.Nat.Even",
+            "Mathlib.Algebra.Ring.Int.Parity",
+            "Mathlib.Algebra.Ring.Parity",
+            "Mathlib.Combinatorics.Enumerative.Stirling",
+            "Mathlib.Data.Int.Fib.Basic",
+            "Mathlib.Data.Int.GCD",
+            "Mathlib.Data.Int.Lemmas",
+            "Mathlib.Data.Int.ModEq",
+            "Mathlib.Data.Int.NatPrime",
+            "Mathlib.Data.Int.Order.Basic",
+            "Mathlib.Data.Int.Order.Lemmas",
+            "Mathlib.Data.Nat.Bits",
+            "Mathlib.Data.Nat.Choose.Basic",
+            "Mathlib.Data.Nat.Dist",
+            "Mathlib.Data.Nat.Factorial.Basic",
+            "Mathlib.Data.Nat.Fib.Basic",
+            "Mathlib.Data.Nat.GCD.Basic",
+            "Mathlib.Data.Nat.GCD.Prime",
+            "Mathlib.Data.Nat.Log",
+            "Mathlib.Data.Nat.ModEq",
+            "Mathlib.Data.Nat.Prime.Basic",
+            "Mathlib.Data.Nat.Prime.Defs",
+            "Mathlib.Data.Nat.Prime.Factorial",
+            "Mathlib.Data.Nat.Size",
+            "Mathlib.Data.Nat.Squarefree",
+            "Mathlib.Data.Nat.Totient",
+            "Mathlib.NumberTheory.FactorisationProperties",
+            "Mathlib.NumberTheory.Fermat",
+            "Mathlib.RingTheory.Int.Basic",
+            "autogenesis-1",
+            "mathlib-v4.30.0-03318a97f5d9c067",
+            "mathlib-v4.30.0-04b5992203855fc2",
+            "mathlib-v4.30.0-06206e0a59d7c3da",
+            "mathlib-v4.30.0-08ee032d9058b06c",
+            "mathlib-v4.30.0-0948bc81df7acdcc",
+            "mathlib-v4.30.0-0a92c5444156fa80",
+            "mathlib-v4.30.0-0e70ff905b4e67d7",
+            "mathlib-v4.30.0-0f4a2909bae26f91",
+            "mathlib-v4.30.0-0f5b970407bcc279",
+            "mathlib-v4.30.0-11abc97c89380ee4",
+            "mathlib-v4.30.0-11da32849191a5ae",
+            "mathlib-v4.30.0-14a4bdea3716db7b",
+            "mathlib-v4.30.0-14fb60aba4988f41",
+            "mathlib-v4.30.0-1f0eac984fc2e8b7",
+            "mathlib-v4.30.0-21034a8981d599dd",
+            "mathlib-v4.30.0-221b47afb20afd1a",
+            "mathlib-v4.30.0-22ed23121a880dda",
+            "mathlib-v4.30.0-2552fe053a3976ed",
+            "mathlib-v4.30.0-28d465b4d0fa4c90",
+            "mathlib-v4.30.0-292800e4421fa31a",
+            "mathlib-v4.30.0-29d8a4807856ddb4",
+            "mathlib-v4.30.0-2bd246da70511653",
+            "mathlib-v4.30.0-2f841ec7bfb62e80",
+            "mathlib-v4.30.0-3149d7f9cd050cac",
+            "mathlib-v4.30.0-32d9b36c9de57a64",
+            "mathlib-v4.30.0-346e912c62f2c876",
+            "mathlib-v4.30.0-349664929d4b20cf",
+            "mathlib-v4.30.0-35005e802231af21",
+            "mathlib-v4.30.0-36db9e2cb36c31b5",
+            "mathlib-v4.30.0-39256e2968b0e1d2",
+            "mathlib-v4.30.0-3b9de7b385a5a0cb",
+            "mathlib-v4.30.0-3c41a84178f748e7",
+            "mathlib-v4.30.0-3c547df4c5be18f3",
+            "mathlib-v4.30.0-3e9e176afeb222f8",
+            "mathlib-v4.30.0-429ffadfbb38d5ea",
+            "mathlib-v4.30.0-4aaec3b2ba4c2183",
+            "mathlib-v4.30.0-4ae13ae945c61591",
+            "mathlib-v4.30.0-4c725f39100b926a",
+            "mathlib-v4.30.0-4f7f93a429b7752d",
+            "mathlib-v4.30.0-50d3735f1a086e77",
+            "mathlib-v4.30.0-52448fed5f91002d",
+            "mathlib-v4.30.0-5d1003a0d2494aec",
+            "mathlib-v4.30.0-61d815b2edf793ed",
+            "mathlib-v4.30.0-67733b1101973f6f",
+            "mathlib-v4.30.0-68252a7d4d8c1329",
+            "mathlib-v4.30.0-68d94d6dd3f7fd84",
+            "mathlib-v4.30.0-6a419a1a14546a55",
+            "mathlib-v4.30.0-6d39b59d22fd3649",
+            "mathlib-v4.30.0-6e1b2f332b43a55c",
+            "mathlib-v4.30.0-6f230047ce83981a",
+            "mathlib-v4.30.0-6fc2be2d83334e77",
+            "mathlib-v4.30.0-7131d99a953dc330",
+            "mathlib-v4.30.0-72882823816e8782",
+            "mathlib-v4.30.0-754b540be332facb",
+            "mathlib-v4.30.0-772791fcb89127a3",
+            "mathlib-v4.30.0-77595c4fe0b2aedf",
+            "mathlib-v4.30.0-77912b67b18f2e18",
+            "mathlib-v4.30.0-784b337733caaefb",
+            "mathlib-v4.30.0-7a0f0e674194da44",
+            "mathlib-v4.30.0-7c36b21bbb3a5dae",
+            "mathlib-v4.30.0-7d1d4a6a6f597955",
+            "mathlib-v4.30.0-7ea970a1a23d9dcd",
+            "mathlib-v4.30.0-7f2909c7d58a9007",
+            "mathlib-v4.30.0-7f777cc1a0316e33",
+            "mathlib-v4.30.0-841c7d52cf03e6e4",
+            "mathlib-v4.30.0-84ffc18b86745c93",
+            "mathlib-v4.30.0-85cf153fd2a3d00a",
+            "mathlib-v4.30.0-8a9b388391142d26",
+            "mathlib-v4.30.0-8d01187efd126f0b",
+            "mathlib-v4.30.0-9556aecf1bb98439",
+            "mathlib-v4.30.0-96996505b088b81a",
+            "mathlib-v4.30.0-9da63bd4e59d00f6",
+            "mathlib-v4.30.0-a5e2f0f0fb66e795",
+            "mathlib-v4.30.0-a88e55a985ea72d4",
+            "mathlib-v4.30.0-af1fb231b4a4420a",
+            "mathlib-v4.30.0-b064fa21f15a772b",
+            "mathlib-v4.30.0-b413bfcde9767d29",
+            "mathlib-v4.30.0-b92098ec339263f0",
+            "mathlib-v4.30.0-bc196822165c7f58",
+            "mathlib-v4.30.0-bc8c8765b9355652",
+            "mathlib-v4.30.0-be1c3ada4fef6ea6",
+            "mathlib-v4.30.0-be80f6203158797b",
+            "mathlib-v4.30.0-bef809d855cc57c1",
+            "mathlib-v4.30.0-bf20046ab52424dd",
+            "mathlib-v4.30.0-bfc4303ba1ab035e",
+            "mathlib-v4.30.0-c0029d24c3bb7a7f",
+            "mathlib-v4.30.0-c2635744801654c7",
+            "mathlib-v4.30.0-c281acadeeb7f3e4",
+            "mathlib-v4.30.0-c3c6c5f60ad0b6b5",
+            "mathlib-v4.30.0-c42a5cca06e73e07",
+            "mathlib-v4.30.0-c4d6980fa7b38432",
+            "mathlib-v4.30.0-c851a7fdd6dacbde",
+            "mathlib-v4.30.0-cd344903f04530b2",
+            "mathlib-v4.30.0-ce4e3e890bcf8f1c",
+            "mathlib-v4.30.0-d22c0fd2eb74e7fd",
+            "mathlib-v4.30.0-d2b3ae01ee9a9ed0",
+            "mathlib-v4.30.0-d48a520ede3cd1e8",
+            "mathlib-v4.30.0-d4e21b6b7acdcecb",
+            "mathlib-v4.30.0-d666bed9b70442ab",
+            "mathlib-v4.30.0-dad675b054e7a82a",
+            "mathlib-v4.30.0-e4a351263398fa5d",
+            "mathlib-v4.30.0-e7e80bd79f8762e6",
+            "mathlib-v4.30.0-eb36cbc0baee7f2c",
+            "mathlib-v4.30.0-ec11d4735cad89fd",
+            "mathlib-v4.30.0-ef8adf35bc935542",
+            "mathlib-v4.30.0-f1259356540dba68",
+            "mathlib-v4.30.0-f1ef809f7abb9158",
+            "mathlib-v4.30.0-f495858cd421b817",
+            "mathlib-v4.30.0-f5e0081ba0d3ce13",
+            "mathlib-v4.30.0-f72b51f6b6106a61",
+            "mathlib-v4.30.0-f752f40b1b7067eb",
+            "mathlib-v4.30.0-f9d5f5029ac8431f",
+            "mathlib-v4.30.0-fbe0b99ece942a46",
+            "mathlib-v4.30.0-fc2d188b8c710774",
+            "mathlib-v4.30.0-fcf7017e9257db89",
+            "mathlib-v4.30.0-fd6092e3581cbf6c"
+          ],
+          "partitions": {
+            "development": 300,
+            "held-out": 10,
+            "longitudinal": 2,
+            "train": 208
+          },
+          "pinned_families": [
+            "integer-absolute-value",
+            "nat-bootstrap"
+          ],
+          "rows": 520
+        },
+        {
+          "families": [
+            "descent-and-well-ordering"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Int.LeastGreatest",
+            "Mathlib.NumberTheory.SumFourSquares",
+            "Mathlib.Order.Interval.Finset.Nat"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "integer-division"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Init.Data.Int.DivMod.Bootstrap",
+            "Init.Data.Int.DivMod.Lemmas"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "integer-division-boundary-cases"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Init.Data.Int.DivMod.Basic",
+            "Mathlib.Data.Int.Basic"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "integer-division-inequalities"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Int.Init"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "integer-elementary-identities"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Init.Data.Int.Basic",
+            "Init.Data.Int.Compare",
+            "Init.Data.Int.Linear",
+            "Mathlib.Data.Int.DivMod"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "integer-multiplicative-structure"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Init.Data.Int.Cooper",
+            "Mathlib.Algebra.Group.Int.Units"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "integer-natcast"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Init.Data.Int.LemmasAux"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-avg-pair"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Batteries.Data.Nat.Bisect",
+            "Mathlib.Data.Nat.Pairing"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-elementary-bounds"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Batteries.Data.Nat.Lemmas",
+            "Init.Data.Nat.Simproc",
+            "Init.SimpLemmas",
+            "Mathlib.Data.Nat.Basic",
+            "Mathlib.Data.Nat.Digits.Defs",
+            "Mathlib.Data.Nat.Order.Lemmas",
+            "Mathlib.Data.Nat.Sqrt",
+            "Mathlib.Data.Nat.SuccPred"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-factorization-lcm"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Factorization.LCM"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-find-greatest"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Find"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-induction-and-divisibility"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Init"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-integer-root"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Factorization.Root"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-max-power-dividing"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.MaxPowDiv",
+            "Mathlib.NumberTheory.Bertrand"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-nth-root"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Analysis.SpecialFunctions.Pow.NthRootLemmas"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-nth-selector"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Data.Nat.Nth"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-primitive-recursion"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Mathlib.Computability.Primrec.Basic"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        },
+        {
+          "families": [
+            "natural-square-root"
+          ],
+          "family_count": 1,
+          "modules": [
+            "mathlib-v4.30.0-09459741d0b79459",
+            "mathlib-v4.30.0-3625c080cb3916be",
+            "mathlib-v4.30.0-73522f76a61eb5b5",
+            "mathlib-v4.30.0-a39a4e278c870ecd"
+          ],
+          "partitions": {
+            "held-out": 16
+          },
+          "pinned_families": [],
+          "rows": 16
+        },
+        {
+          "families": [
+            "range-induction"
+          ],
+          "family_count": 1,
+          "modules": [
+            "Init.Data.Range.Polymorphic.IntLemmas",
+            "Init.Data.Range.Polymorphic.NatLemmas"
+          ],
+          "partitions": {
+            "held-out": 10
+          },
+          "pinned_families": [],
+          "rows": 10
+        }
+      ],
+      "count": 20,
+      "single_partition": 19
+    },
+    "inter_family_edge_classes": 126,
+    "inter_family_edges": 374,
+    "ledger_sha256": "0826de5188235b121d6c5dbb38e3da4fe8ed859a9e0594e77c1cbac5beaf1805",
+    "pinned_incident_edge_count": 51,
+    "pinned_incident_edges": {
+      "fermat-numbers--nat-bootstrap": 4,
+      "integer-absolute-value--natural-basic-arithmetic": 2,
+      "integer-absolute-value--natural-order-bridging": 2,
+      "integer-absolute-value--natural-parity": 2,
+      "nat-bootstrap--natural-basic-arithmetic": 3,
+      "nat-bootstrap--natural-bitwise-basics": 1,
+      "nat-bootstrap--natural-distance": 1,
+      "nat-bootstrap--natural-division": 7,
+      "nat-bootstrap--natural-factorial": 3,
+      "nat-bootstrap--natural-factorial-choose-and-squarefree": 3,
+      "nat-bootstrap--natural-factors-and-factorisation-properties": 1,
+      "nat-bootstrap--natural-fibonacci-basic": 3,
+      "nat-bootstrap--natural-gcd-and-bitwise-basics": 2,
+      "nat-bootstrap--natural-logarithm-base": 4,
+      "nat-bootstrap--natural-modular-equivalence": 1,
+      "nat-bootstrap--natural-modulus": 3,
+      "nat-bootstrap--natural-prime-arithmetic": 4,
+      "nat-bootstrap--natural-prime-divisibility": 1,
+      "nat-bootstrap--natural-stirling-numbers": 1,
+      "nat-bootstrap--natural-totient": 3
+    },
+    "proposal": {
+      "assignment": {
+        "descent-and-well-ordering": "held-out",
+        "fermat-numbers": "development",
+        "integer-absolute-value": "held-out",
+        "integer-basic-arithmetic": "development",
+        "integer-congruence-lemmas": "development",
+        "integer-division": "held-out",
+        "integer-division-boundary-cases": "held-out",
+        "integer-division-inequalities": "held-out",
+        "integer-elementary-identities": "held-out",
+        "integer-fibonacci": "train",
+        "integer-gcd": "development",
+        "integer-gcd-algorithm": "development",
+        "integer-modular-equivalence": "development",
+        "integer-multiplicative-structure": "held-out",
+        "integer-natcast": "held-out",
+        "integer-order": "development",
+        "integer-order-inequalities": "development",
+        "integer-parity": "train",
+        "nat-bootstrap": "longitudinal",
+        "natural-avg-pair": "held-out",
+        "natural-basic-arithmetic": "train",
+        "natural-binomial": "development",
+        "natural-bit-decode": "development",
+        "natural-bitwise": "development",
+        "natural-bitwise-basics": "development",
+        "natural-congruence-lemmas": "train",
+        "natural-coprimality": "development",
+        "natural-distance": "train",
+        "natural-divisibility": "development",
+        "natural-division": "train",
+        "natural-elementary-bounds": "held-out",
+        "natural-factorial": "development",
+        "natural-factorial-choose-and-squarefree": "development",
+        "natural-factorization-lcm": "held-out",
+        "natural-factors-and-factorisation-properties": "train",
+        "natural-fibonacci": "train",
+        "natural-fibonacci-basic": "train",
+        "natural-find-greatest": "held-out",
+        "natural-gcd": "development",
+        "natural-gcd-algorithm": "development",
+        "natural-gcd-and-bitwise-basics": "development",
+        "natural-induction-and-divisibility": "held-out",
+        "natural-integer-root": "held-out",
+        "natural-lcm": "development",
+        "natural-logarithm": "development",
+        "natural-logarithm-base": "development",
+        "natural-max-power-dividing": "held-out",
+        "natural-minmax": "development",
+        "natural-modular-equivalence": "development",
+        "natural-modulus": "train",
+        "natural-nth-root": "held-out",
+        "natural-nth-selector": "held-out",
+        "natural-order-bridging": "development",
+        "natural-parity": "train",
+        "natural-prime-arithmetic": "development",
+        "natural-prime-characterizations": "development",
+        "natural-prime-divisibility": "development",
+        "natural-primes": "development",
+        "natural-primitive-recursion": "held-out",
+        "natural-square-root": "held-out",
+        "natural-stirling-numbers": "development",
+        "natural-totient": "development",
+        "range-induction": "held-out"
+      },
+      "cost_curve": [
+        {
+          "development_rows": 300,
+          "moved": null,
+          "moves": 0,
+          "residual_cut": 147,
+          "train_rows": 208
+        },
+        {
+          "development_rows": 310,
+          "moved": "natural-logarithm-base",
+          "moves": 1,
+          "residual_cut": 124,
+          "train_rows": 198
+        },
+        {
+          "development_rows": 320,
+          "moved": "natural-gcd-algorithm",
+          "moves": 2,
+          "residual_cut": 103,
+          "train_rows": 188
+        },
+        {
+          "development_rows": 331,
+          "moved": "integer-gcd",
+          "moves": 3,
+          "residual_cut": 92,
+          "train_rows": 177
+        },
+        {
+          "development_rows": 321,
+          "moved": "natural-parity",
+          "moves": 4,
+          "residual_cut": 84,
+          "train_rows": 187
+        },
+        {
+          "development_rows": 331,
+          "moved": "integer-order-inequalities",
+          "moves": 5,
+          "residual_cut": 77,
+          "train_rows": 177
+        },
+        {
+          "development_rows": 341,
+          "moved": "natural-prime-divisibility",
+          "moves": 6,
+          "residual_cut": 71,
+          "train_rows": 167
+        },
+        {
+          "development_rows": 351,
+          "moved": "natural-prime-characterizations",
+          "moves": 7,
+          "residual_cut": 58,
+          "train_rows": 157
+        },
+        {
+          "development_rows": 341,
+          "moved": "natural-fibonacci-basic",
+          "moves": 8,
+          "residual_cut": 53,
+          "train_rows": 167
+        },
+        {
+          "development_rows": 351,
+          "moved": "natural-stirling-numbers",
+          "moves": 9,
+          "residual_cut": 50,
+          "train_rows": 157
+        },
+        {
+          "development_rows": 371,
+          "moved": "integer-modular-equivalence",
+          "moves": 10,
+          "residual_cut": 48,
+          "train_rows": 137
+        },
+        {
+          "development_rows": 386,
+          "moved": "natural-factorial",
+          "moves": 11,
+          "residual_cut": 47,
+          "train_rows": 122
+        },
+        {
+          "development_rows": 396,
+          "moved": "natural-factorial-choose-and-squarefree",
+          "moves": 12,
+          "residual_cut": 45,
+          "train_rows": 112
+        },
+        {
+          "development_rows": 386,
+          "moved": "natural-factors-and-factorisation-properties",
+          "moves": 13,
+          "residual_cut": 44,
+          "train_rows": 122
+        }
+      ],
+      "families_moved": [
+        "integer-gcd",
+        "integer-modular-equivalence",
+        "integer-order-inequalities",
+        "natural-factorial",
+        "natural-factorial-choose-and-squarefree",
+        "natural-factors-and-factorisation-properties",
+        "natural-fibonacci-basic",
+        "natural-gcd-algorithm",
+        "natural-logarithm-base",
+        "natural-parity",
+        "natural-prime-characterizations",
+        "natural-prime-divisibility",
+        "natural-stirling-numbers"
+      ],
+      "partition_counts": {
+        "development": 386,
+        "held-out": 206,
+        "longitudinal": 2,
+        "train": 122
+      },
+      "pinned_incident_edges": 51,
+      "residual_cut_at_fixed_point": 44,
+      "row_floor_per_partition": 100,
+      "rows_moved": 146,
+      "rule": "ADR-1551. UNIT: contract each `family` to one node (forced by `family_leakage: no-family-may-cross-evaluation-partitions`); join two families when a drawn row of one declares `depends_on` a drawn row of the other; take weak components. PINS: `integer-absolute-value` (held-out, ADR-0542) and `nat-bootstrap` (longitudinal, pinned in check-autogenesis-nursery.py) keep their partition and are removed from their component; every crossing edge incident to them is a per-edge amendment. ASSIGNMENT: each residual component takes ONE partition -- the one its declared dependencies bind it to most strongly, computed by moving the single family with the largest crossing-weight gain until no move improves, in lexicographic family order, ties keeping the incumbent, subject to `train` and `development` each retaining at least `policy.evaluation_fact_count.minimum` rows. OUTCOME-BLIND ONLY IN ITS ARITHMETIC: the graph it runs on is proof-derived, which is why ADR-1551 does not apply it."
+    }
+  },
+  "manifest_block": {
+    "drawn": 716,
+    "families": [
+      {
+        "family": "descent-and-well-ordering",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "fermat-numbers",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "integer-absolute-value",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-basic-arithmetic",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "integer-congruence-lemmas",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "integer-division",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-division-boundary-cases",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-division-inequalities",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-elementary-identities",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-fibonacci",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "train",
+        "rows": 16
+      },
+      {
+        "family": "integer-gcd",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "train",
+        "rows": 11
+      },
+      {
+        "family": "integer-gcd-algorithm",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "integer-modular-equivalence",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "train",
+        "rows": 20
+      },
+      {
+        "family": "integer-multiplicative-structure",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-natcast",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "integer-order",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "integer-order-inequalities",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "integer-parity",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "nat-bootstrap",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "longitudinal",
+        "rows": 2
+      },
+      {
+        "family": "natural-avg-pair",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-basic-arithmetic",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-binomial",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "development",
+        "rows": 20
+      },
+      {
+        "family": "natural-bit-decode",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-bitwise",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "development",
+        "rows": 19
+      },
+      {
+        "family": "natural-bitwise-basics",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-congruence-lemmas",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-coprimality",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-distance",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-divisibility",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-division",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-elementary-bounds",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-factorial",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "train",
+        "rows": 15
+      },
+      {
+        "family": "natural-factorial-choose-and-squarefree",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-factorization-lcm",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-factors-and-factorisation-properties",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-fibonacci",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "train",
+        "rows": 16
+      },
+      {
+        "family": "natural-fibonacci-basic",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-find-greatest",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-gcd",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "development",
+        "rows": 19
+      },
+      {
+        "family": "natural-gcd-algorithm",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-gcd-and-bitwise-basics",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-induction-and-divisibility",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-integer-root",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-lcm",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-logarithm",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "development",
+        "rows": 21
+      },
+      {
+        "family": "natural-logarithm-base",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-max-power-dividing",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-minmax",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-modular-equivalence",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "development",
+        "rows": 20
+      },
+      {
+        "family": "natural-modulus",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-nth-root",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-nth-selector",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-order-bridging",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-parity",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-prime-arithmetic",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "natural-prime-characterizations",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-prime-divisibility",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-primes",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "development",
+        "rows": 21
+      },
+      {
+        "family": "natural-primitive-recursion",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      },
+      {
+        "family": "natural-square-root",
+        "manifest": "artifacts/autogenesis/nursery-v1.json",
+        "partition": "held-out",
+        "rows": 16
+      },
+      {
+        "family": "natural-stirling-numbers",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "train",
+        "rows": 10
+      },
+      {
+        "family": "natural-totient",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "development",
+        "rows": 10
+      },
+      {
+        "family": "range-induction",
+        "manifest": "artifacts/autogenesis/nursery-v2-extension.json",
+        "partition": "held-out",
+        "rows": 10
+      }
+    ],
+    "families_holding_two_partitions": [],
+    "manifests": [
+      "artifacts/autogenesis/nursery-v1.json",
+      "artifacts/autogenesis/nursery-v2-extension.json"
+    ],
+    "partition_counts": {
+      "development": 300,
+      "held-out": 206,
+      "longitudinal": 2,
+      "train": 208
+    },
+    "pinned_families": {
+      "integer-absolute-value": "held-out; a held-out row never leaves held-out (ADR-0542), so the family cannot be absorbed into a component's partition",
+      "nat-bootstrap": "longitudinal; check-autogenesis-nursery.py pins the longitudinal partition to exactly {F:nat-mul-one, F:nat-zero-add}, so these two rows cannot be relabelled by any re-partition"
+    },
+    "row_floor_per_partition": 100
+  },
+  "measured_at_commit": "a44a41313de8875677a91256facd942723a8785e",
+  "measured_date": "2026-09-02",
+  "note": "The ledger-derived block is a SNAPSHOT and is carried forward by --record; re-measure it with --record --remeasure. `--check` enforces the findings ADR-1551 rests on against the live tree, never equality with this snapshot -- see the module docstring.",
+  "produced_by": "scripts/nursery-components.py --record",
+  "rule": "ADR-1551. UNIT: contract each `family` to one node (forced by `family_leakage: no-family-may-cross-evaluation-partitions`); join two families when a drawn row of one declares `depends_on` a drawn row of the other; take weak components. PINS: `integer-absolute-value` (held-out, ADR-0542) and `nat-bootstrap` (longitudinal, pinned in check-autogenesis-nursery.py) keep their partition and are removed from their component; every crossing edge incident to them is a per-edge amendment. ASSIGNMENT: each residual component takes ONE partition -- the one its declared dependencies bind it to most strongly, computed by moving the single family with the largest crossing-weight gain until no move improves, in lexicographic family order, ties keeping the incumbent, subject to `train` and `development` each retaining at least `policy.evaluation_fact_count.minimum` rows. OUTCOME-BLIND ONLY IN ITS ARITHMETIC: the graph it runs on is proof-derived, which is why ADR-1551 does not apply it.",
+  "schema_version": 1
+}

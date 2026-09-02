@@ -432,6 +432,61 @@ GUARDED: tuple[Artifact, ...] = (
         ),
         reads=(),
     ),
+    Artifact(
+        path="artifacts/autogenesis/drawn-population-component-census-v1.json",
+        owner=Producer(
+            "scripts/nursery-components.py",
+            ("--record",),
+            "ADR-1551. The sole writer, and the only mode of it that writes: "
+            "the default, --propose and --check modes never touch the file. "
+            "The census is what ADR-1551's refusal of option 1 rests on, so a "
+            "second writer here is not a stale artifact -- it is a partition "
+            "decision whose evidence stopped being derived.",
+        ),
+        # `ledger_block` is named because it is the half a reader argues with,
+        # and `measured_date`/`measured_at_commit` because a snapshot with no
+        # provenance cannot be told from a live measurement -- which is the
+        # whole reason this artifact carries the ledger block forward rather
+        # than re-deriving it. `schema_version` is LAST deliberately: the
+        # OWNER arm pops `required_keys[-1]` from a perturbed copy and demands
+        # a byte-identical restore, and the regenerator recomputes
+        # `manifest_block` while carrying `ledger_block`, `measured_date` and
+        # `measured_at_commit` forward from the file it finds. Popping one of
+        # THOSE would leave the restore honest and the arm still red, for a
+        # reason about this list rather than about ownership.
+        required_keys=(
+            "authority",
+            "kind",
+            "ledger_block",
+            "manifest_block",
+            "measured_at_commit",
+            "measured_date",
+            "note",
+            "produced_by",
+            "rule",
+            "schema_version",
+        ),
+        required_nested={},
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason it is listed on the "
+                "artifacts above: it writes a sandbox and a perturbed copy, "
+                "so it cannot be declared read-only.",
+            ),
+            Producer(
+                "scripts/tests/test_nursery_components.py",
+                (),
+                "The tool's own controls. They build throwaway trees under "
+                "AXEYUM_NURSERY_COMPONENTS_ROOT and write censuses INSIDE "
+                "them -- including the --record scenarios, which are the only "
+                "tests that exercise this artifact's writer. That the real "
+                "one is untouched is exactly what this arm measures.",
+            ),
+        ),
+        reads=(),
+    ),
 )
 
 # A call is a write if it is any of these. Used only for the READS arm, where

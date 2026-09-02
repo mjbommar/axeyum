@@ -6075,6 +6075,101 @@ SUITES["obstruction-testbit-classification"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `nursery-components` -- `scripts/nursery-components.py`, the measurement
+# ADR-1546 option 1 needed and the refusal ADR-1551 records.
+#
+# This suite's subject is unusual: the tool's entire output is a REFUSAL, so
+# the guards that must be driven to failure are the ones that would tell the
+# next lane the refusal has expired. A `--check` that cannot go red asserts
+# "option 1 is still impossible" forever with nobody able to falsify it --
+# which is the exemption shape ADR-1550 replaced, wearing a newer date.
+#
+# N6 and N7 are the two that carry the artifact's ownership rather than a
+# finding: the ledger block is carried forward on `--record` because
+# `check-generated-artifact-ownership.py`'s OWNER arm perturbs the committed
+# file and demands a byte-identical restore, and `--remeasure` is the mode
+# that keeps that carry-forward from being a permanent snapshot. Each mutant
+# kills exactly one test.
+# --------------------------------------------------------------------------
+
+SUITES["nursery-components"] = (
+    "scripts/nursery-components.py",
+    Unittest("scripts.tests.test_nursery_components"),
+    [
+        (
+            "N1 a family holding two partitions is a finding",
+            '    if manifest["families_holding_two_partitions"]:',
+            "    if False:",
+        ),
+        (
+            "N2 the blob no longer spanning two evaluation partitions is a finding",
+            "        if len(evaluation) < 2:",
+            "        if False:",
+        ),
+        (
+            "N3 a blob containing neither pinned family is a finding",
+            '    if blob is not None and not blob["pinned_families"]:',
+            "    if False:",
+        ),
+        (
+            "N4 the pinned crossings disappearing is a finding",
+            '    if ledger["pinned_incident_edge_count"] == 0:',
+            "    if False:",
+        ),
+        (
+            "N5 an internally inconsistent census FAILS rather than drifting",
+            '        if fams.get("count") != len(fams["components"]):',
+            "        if False:",
+        ),
+        (
+            "N6 --record carries the ledger block forward",
+            "    if previous is not None and not remeasure:",
+            "    if False:",
+        ),
+        (
+            "N7 --remeasure actually re-measures",
+            "    if args.record:\n"
+            "        path.write_text(render(root, measured, previous, args.remeasure))",
+            "    if args.record:\n"
+            "        path.write_text(render(root, measured, previous, False))",
+        ),
+        (
+            "N8 a pinned family is never proposed for a move",
+            "    free = sorted(f for f in rows_of\n"
+            "                  if f not in PINNED_FAMILIES",
+            "    free = sorted(f for f in rows_of\n"
+            "                  if True",
+        ),
+        (
+            "N9 numeric drift from the snapshot is advisory, not a failure",
+            "    return 1 if (complaints or inconsistent) else 0",
+            "    return 1 if (complaints or inconsistent or drift) else 0",
+        ),
+        (
+            # The defect this caught for real. A dict keyed by component SIZE
+            # is written in numeric order and read back in lexicographic
+            # order, so the carried-forward block changes shape on the second
+            # write and the artifact stops being a fixed point of its own
+            # writer -- which is precisely what
+            # `check-generated-artifact-ownership.py`'s OWNER arm measures.
+            "N11 --record is a fixed point on its own output",
+            '            "size_distribution": [\n'
+            '                {"size": size, "components": count}\n'
+            "                for size, count in sorted(collections.Counter(\n"
+            "                    len(m) for m in facts).items())],",
+            '            "size_distribution": dict(sorted(collections.Counter(\n'
+            "                len(m) for m in facts).items())),",
+        ),
+        (
+            "N10 a component's families really do take ONE partition",
+            "        if best is None or best[0] >= cut(assignment):",
+            "        if True:",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
