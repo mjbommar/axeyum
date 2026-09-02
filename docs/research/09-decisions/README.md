@@ -845,3 +845,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1550](adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md) | Gate the producer, not the draw — the partition-crossing EDGE is the unit, and its baseline may only shrink | accepted |
 | [1551](adr-1551-the-family-graph-is-one-blob-and-the-dependency-edge-is-proof-derived.md) | Option 1 is refused — the family graph is ONE blob, and the dependency edge it would partition on is proof-derived | accepted |
 | [1554](adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md) | `Rat.rowEchelon` lands as a `Definition` the kernel REDUCES — | accepted |
+| [1556](adr-1556-draw-19-is-refused-one-viable-held-out-family-and-r5-needs-two.md) | Draw 19 is refused — exactly one viable held-out family exists, and R5 needs two | accepted |
