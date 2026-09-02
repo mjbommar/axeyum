@@ -1471,6 +1471,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         // residue 2.
         p.mul_ne_mul_of_coprime_of_lt,
         p.mul_succ_ne_mul_succ_of_coprime,
+        // `sum_range_permute.rs` (`eisenstein-lattice` lane).
+        p.sum_range_point_change,
+        p.sum_range_permute,
         // `prime_dvd_factorial_lcm.rs`: five `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`.
         p.prime_coprime_factorial_of_lt,

@@ -256,6 +256,7 @@ mod squarefree;
 mod stirling;
 mod stirling_lemmas;
 mod subset_product;
+mod sum_range_permute;
 mod testbit_bitwise;
 mod totient;
 mod totient_dvd_chain;
@@ -462,6 +463,7 @@ use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
 use stirling_lemmas::declare_stirling_lemmas_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
+use sum_range_permute::declare_sum_range_permute_all;
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
 use totient_dvd_chain::declare_totient_dvd_chain_all;
@@ -5554,6 +5556,26 @@ pub struct NatPrelude {
     /// partition consumes, with the positivity hypothesis discharged
     /// constructively by the `succ` shape.
     pub mul_succ_ne_mul_succ_of_coprime: NameId,
+
+    // -- `eisenstein-lattice` lane: `sum_range_permute.rs` --
+    // The additive half of the bijection Gauss's lemma already uses
+    // multiplicatively, and what ADR-1260's residue 3 (Eisenstein's lemma)
+    // needs to turn a sum of folded least residues into a sum over `[1, m]`.
+    /// `Nat.sumRange_point_change : ∀ a b i0 n, Lt i0 n →
+    /// (∀ k, Lt k i0 → Eq (a k) (b k)) →
+    /// (∀ k, Lt i0 k → Lt k n → Eq (a k) (b k)) →
+    /// Eq (add (sumRange a n) (b i0)) (add (sumRange b n) (a i0))`
+    /// (`sum_range_permute.rs`) — two families agreeing on `[0,n)` except
+    /// possibly at one index have sums differing exactly as their values there
+    /// do. Stated ADDITIVELY, because `Nat.sub` is truncated.
+    pub sum_range_point_change: NameId,
+    /// `Nat.sumRange_permute : ∀ f σ n, InjectiveOn σ n → MapsInto σ n →
+    /// Eq (sumRange f n) (sumRange (fun k => f (σ k)) n)`
+    /// (`sum_range_permute.rs`) — summing over `[0,n)` is invariant under any
+    /// injective self-map of `[0,n)`. The `Nat`-valued generalization of
+    /// [`count_range_permute`](Self::count_range_permute), which is its
+    /// `{0,1}`-valued special case (`countRange_eq_sumRange` is `Eq.refl`).
+    pub sum_range_permute: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6640,6 +6662,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             mul_ne_mul_of_coprime_of_lt: kernel.name_str(nat, "mul_ne_mul_of_coprime_of_lt"),
             mul_succ_ne_mul_succ_of_coprime: kernel
                 .name_str(nat, "mul_succ_ne_mul_succ_of_coprime"),
+            sum_range_point_change: kernel.name_str(nat, "sumRange_point_change"),
+            sum_range_permute: kernel.name_str(nat, "sumRange_permute"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -7655,6 +7679,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`divisibility.rs`) and the `Nat.lt_of_lt_of_le`/`Nat.lt_irrefl`
         // order lemmas, all far above. Nothing needs it yet, so it goes last.
         declare_eisenstein_side_all(&mut d, &p)?;
+        // `sum_range_permute.rs`: needs `Nat.sumRange_congr_lt` (`binomial.rs`),
+        // `Nat.injectiveOn`/`Nat.mapsInto`, the pigeonhole
+        // `injective_on_imp_surjective_on` and the single-point override
+        // helpers `restrict_injective`/`restrict_maps_into` (`finite.rs`), all
+        // far above -- exactly `declare_count_range_permute`'s own inputs.
+        // Nothing needs it yet, so it goes last.
+        declare_sum_range_permute_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -7702,6 +7733,9 @@ mod stirling_lemmas_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
+
+#[cfg(test)]
+mod sum_range_permute_tests;
 
 #[cfg(test)]
 mod floor_count_tests;
