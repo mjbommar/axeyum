@@ -838,3 +838,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1530](adr-1530-the-creal-build-table-is-generated-not-maintained.md) | the `creal` build table is generated, not maintained | Accepted |
 | [1540](adr-1540-the-side-condition-is-coprimality-and-the-additive-bijection-was-missing.md) | **Quadratic reciprocity is still NOT proved, and neither is | accepted |
 | [1541](adr-1541-both-blockers-on-the-selection-lemma-were-stale.md) | ADR-1470 designed the determinant selection lemma's injective | accepted |
+| [1546](adr-1546-draw-19-is-refused-and-the-partition-gate-is-held-green-by-a-growing-exemption.md) | Draw 19 is refused, and the reason is not two bad commits — the v2 partition design cannot hold the property its gate enforces | Accepted |
