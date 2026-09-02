@@ -118,6 +118,9 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-09-02 | `dd5b54b68` | `invokes`, the third artifact-ownership classification: an orchestrator may name a guarded artifact to STAGE it and must regenerate it by calling the owner, checked by inspection. Gate FAIL→PASS with no artifact changed; 25 mutants, exit 0. |
+| 2026-09-02 | rat-echelon | `rat_prelude/echelon.rs`: 29 axiom-free declarations — the three elementary row operations with their equations and inverses, `Rat.rowEchelon` as a computed Gaussian elimination, and the decidable `Rat.isEchelon` |
+| 2026-09-02 | rat-echelon | `Rat.isZeroB` and four bridges to the propositional `Eq x 0`; the one place ℚ's decidable order is spent, and obligation 1 of `rowEchelon_isEchelon` |
+| 2026-09-02 | rat-echelon | ADR-1554 (computed pivot search, exact `cols` fuel, `leadingIndex = cols` for a zero row; ADR-0603 row 2 empty by proof) and five facts |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -35774,6 +35777,87 @@ Next for whoever picks this up: the arm's staging list (`add`, `checkout`,
 `restore`, `rm`, `stage`, `update-index`) is a closed literal, and a new git
 subcommand that moves a file would be refused rather than misread — the safe
 direction, but someone will have to extend it deliberately.
+
+**Your lane's block (`DONE`, rat-echelon, 2026-09-02).** Twenty-nine
+declarations landed in a new `crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs`,
+every one admitted axiom-free (`Kernel::axiom_footprint` empty, read from the
+kernel by `the_echelon_family_is_axiom_free`). ADR-1554 carries the design.
+`rat_prelude::` is 183 passed / 0 failed in 121 s, up from 169 tests. The `rat`
+prelude builds in 1.61–1.66 s over three `prelude_build_timing` runs, against a
+briefed baseline of ~1.65 s — no measurable change, and the run-to-run spread
+exceeds any effect. Clippy `-D warnings` clean on `axeyum-lean-kernel` and
+`axeyum-py`.
+
+**What landed.** `Rat.isZeroB`, the decided zero test, with four bridge theorems
+to the propositional `Eq x 0`. The three elementary row operations
+`Rat.rowSwap` / `Rat.rowScale` / `Rat.rowAddMul`, each ONE `Rat.matSetRow`
+write, with their `_at`/`_off` equations. `Rat.pivotSearch`, `Rat.clearBelow`,
+`Rat.echelonAux` and `Rat.rowEchelon` — Gaussian elimination as a `Definition`
+the kernel reduces. `Rat.leadingIndex`, `Rat.echelonStepOk` and
+`Rat.isEchelon`, the decidable predicate. And the three inverse laws
+`Rat.rowSwap_involutive` (unconditional, `i = j` included),
+`Rat.rowAddMul_inverse` (`j ≠ i` required — at `i = j` the operation scales row
+`i` by `1 + k`) and `Rat.rowScale_inverse` (`k ≠ 0`, not `0 < k`, so it covers
+the negative pivots elimination produces).
+
+**Evaluation table** (each row reduced by `def_eq` at concrete arguments, each
+with a control that must FAIL to be defeq):
+
+| input | `rowEchelon … 2 2` / `… 3 3` | `isEchelon` before | after | what only this input separates |
+| --- | --- | --- | --- | --- |
+| `[[1,2],[3,4]]` | `[[1,2],[0,-2]]` | `false` | `true` | ordinary elimination; `(1,0)` was 3 |
+| `[[1,2],[2,4]]` | `[[1,2],[0,0]]` | `false` | `true` | dependent pair; `leadingIndex` row 1 = `cols` = 2 |
+| `[[0,1],[1,0]]` | `[[1,0],[0,1]]` | `false` | `true` | zero pivot forces a SWAP; `(0,0)` was 0 |
+| `[[1,2,3],[2,4,6],[1,1,1]]` | `[[1,2,3],[0,-1,-2],[0,0,0]]` | `false` | `true` | zero row created in the MIDDLE, so the second pivot column re-pivots |
+| `[[0,0],[1,0]]` | — | `false` | — | zero row ABOVE a nonzero one; the clause `echelonStepOk`'s second conjunct exists for |
+| `isZeroB` at `0 / 1 / -1 / 2` | `true / false / false / false` | — | — | the NEGATIVE case, where a one-sided `ble x 0` is wrong |
+| `pivotSearch [[0,1],[1,0]]` col 0 from 0 | `1` | — | — | not the start index |
+| `pivotSearch [[0,1],[1,0]]` col 1 from 1 | `2` (= `rows`, absent) | — | — | not the start index either |
+
+**Two things worth carrying forward, neither of them about the mathematics.**
+
+The coordinator's step 0 was run against a STALE prebuilt `shape_search`. Its
+`matSetRow` and `matSubstRows` ABSENT verdicts were wrong — both exist in
+`rat_prelude/det_mul.rs` and landed the same day. The stale binary reported a
+bare-index positive control of 1,963 against a current 2,092 (and 2,835
+`--include-constructed` against 2,092 fresh), and the freshness probe passed
+because the control used, `Rat.det_matMul_2`, PREDATES the merge that landed
+`matSetRow`. A 73-second rebuild turned both ABSENTs into `FOUND 3`. The lesson
+is narrower than "rebuild before trusting ABSENT": **the freshness control has
+to be newer than the change you are asking about**, and `Rat.det_matMul_2` is
+not `Rat.det_matMul`.
+
+`rat_prelude_tests::every_rat_declaration_is_checked_and_axiom_free` fired on
+its first run after the module landed and named all 25 declarations nothing was
+checking. It derives its subject from `kernel.environment()` rather than from a
+literal, which is exactly why it could. Registering them in the two inventory
+lists is a mechanical fix and the test earned its keep.
+
+**What did NOT land, and what it would cost.**
+`rowEchelon_isEchelon : ∀ A r c, isEchelon (rowEchelon A r c) r c = true` was
+not attempted. It is a full correctness proof of Gaussian elimination at
+symbolic dimension. ADR-1554 sizes its four obligations; the short version is
+that obligation 1 (the `isZeroB` ↔ `Eq 0` bridge) was the only cheap one and it
+landed here, obligations 2 (`pivotSearch`'s postcondition) and 3
+(`clearBelow`'s postcondition) are a lane each, and obligation 4 (the loop
+invariant, a fuel induction with the invariant as an explicit `Prop` in the
+motive) is at least one lane and probably two. **Nothing is stuck** — no term
+was rejected, no defeq failed; the work was simply not attempted, and reporting
+it as "did not run" is more useful than a partial attempt.
+
+**The next lane's starting point.** `rank` needs three things from this module
+and no more: `Rat.leadingIndex` over the rows of `Rat.rowEchelon`, a count of
+the rows whose leading index is strictly below `cols`, and
+`Rat.eq_zero_of_isZeroB` / `Rat.ne_zero_of_isZeroB_false` to say anything about
+an ENTRY from a statement about where the scan stopped. Rank INVARIANCE needs
+only the three inverse laws — it does **not** depend on obligation 4 above, and
+sizing it as blocked on `rowEchelon_isEchelon` would be wrong. Facts are
+`F:rat-row-swap-involutive`, `F:rat-row-add-mul-inverse`,
+`F:rat-row-scale-inverse`, `F:rat-eq-zero-of-is-zero-b`,
+`F:rat-ne-zero-of-is-zero-b-false`. The seven `_at`/`_off` equation lemmas and
+`Rat.isZeroB_zero` / `Rat.isZeroB_of_eq_zero` carry no fact of their own —
+they are checked by the environment-derived inventory assertion, not by the
+ledger.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
