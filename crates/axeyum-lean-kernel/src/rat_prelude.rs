@@ -66,6 +66,7 @@ pub(crate) mod lattice;
 mod laws;
 mod matrix;
 mod matrix_det;
+mod matrix_det_mul;
 mod matrix_det_selection;
 mod matrix_invertible;
 mod matrix_n;
@@ -2354,6 +2355,76 @@ pub struct RatPrelude {
     /// not land (ADR-1470). `InjectiveOn` alone (this declaration's shape)
     /// needs neither `MapsInto` nor that induction.
     pub det_row_selection_of_duplicate: NameId,
+    /// `Rat.det_congr_lt : ∀ n A B, (∀ r, Lt r n → ∀ c, A r c = B r c) →
+    /// det A n = det B n` — the ROW-BOUNDED determinant congruence.
+    ///
+    /// [`Self::det_congr`] wants agreement at EVERY index pair. Every
+    /// reindexing map the multiplicativity route builds — a `g` produced by a
+    /// fold over a function space, or a `g` corrected to fix everything above
+    /// a cursor — is under no control at all outside `[0,n)`, so the
+    /// unrestricted form is unusable there.
+    ///
+    /// Only the ROW index is bounded. `det A n` reads `A` at `(r,c)` with
+    /// both `r < n` and `c < n`, but the cofactor recursion reaches a column
+    /// only through [`Self::mat_skip`], so bounding the row carries the
+    /// induction and needs no `matSkip` bound lemma; bounding the column too
+    /// would need `Lt (matSkip j c) (succ m)` from `Lt c m`, which nothing in
+    /// this prelude supplies.
+    pub det_congr_lt: NameId,
+    /// `Rat.matSkip_lt_succ : ∀ p c m, Lt c m → Lt (matSkip p c) (succ m)` —
+    /// the column bound, and the only reason [`Self::det_congr_lt`] stops at
+    /// the row. Both branches of [`Self::mat_skip`]'s `bool_select_nat` are
+    /// below `succ m`, so it is one `Bool.rec` on the guard and never a
+    /// decision about it.
+    pub mat_skip_lt_succ: NameId,
+    /// `Rat.det_congr_entry_lt : ∀ n A B,
+    /// (∀ r, Lt r n → ∀ c, Lt c n → A r c = B r c) → det A n = det B n` — the
+    /// congruence bounded on BOTH indices, i.e. on exactly the square
+    /// `det A n` reads.
+    ///
+    /// [`Self::det_congr_lt`] is the right tool when a reindexing map is under
+    /// no control outside `[0,n)`; this is the right tool when the two
+    /// matrices agree only where the determinant looks, which is what the
+    /// identity laws give — [`Self::mat_mul_id_right`] is
+    /// `Lt j n → matMul A matId n i j = A i j`, bounded in the COLUMN, so the
+    /// row-bounded form cannot consume it.
+    pub det_congr_entry_lt: NameId,
+    /// `Rat.det_row_selection_injective : ∀ m B g, InjectiveOn g (succ m) →
+    /// MapsInto g (succ m) → det (B∘g) (succ m) =
+    /// det (matId∘g) (succ m) * det B (succ m)` — the SELECTION lemma's
+    /// INJECTIVE half, ADR-1440's obligation 2 and the half ADR-1470 designed
+    /// but did not build. Together with
+    /// [`Self::det_row_selection_of_duplicate`] (the free, non-injective half)
+    /// it covers every reindexing map, once a decision procedure for
+    /// `InjectiveOn` splits them.
+    ///
+    /// `MapsInto` is load-bearing on the STATEMENT, not just the proof:
+    /// ADR-1470's counterexample is `n = 1`, `g 0 = 5`, `B 5 0 = 7`, where the
+    /// left side is `7` and the right side `0`.
+    ///
+    /// A CURSOR induction on how many trailing positions `g` already fixes,
+    /// with the dimension and `B` outside the induction and `g` inside it (the
+    /// step applies the induction hypothesis at a DIFFERENT map). Pigeonhole
+    /// ([`crate::nat_prelude::NatPrelude::injective_on_imp_surjective_on`])
+    /// supplies the preimage of the cursor, `Nat.transposition` brings it into
+    /// place, and [`Self::det_row_swap`] pays for the move with one sign that
+    /// [`Self::neg_mul`]/[`Self::neg_neg`] cancel. The base case needs
+    /// [`Self::det_congr_lt`] rather than [`Self::det_congr`], because `g` is
+    /// the identity only on `[0,n)`.
+    pub det_row_selection_injective: NameId,
+    /// `Rat.det_row_selection : ∀ m B g, MapsInto g (succ m) →
+    /// det (B∘g) (succ m) = det (matId∘g) (succ m) * det B (succ m)` — **the
+    /// SELECTION lemma**, with no injectivity hypothesis: ADR-1440's
+    /// obligation 2 in the corrected form ADR-1470 states, closed.
+    ///
+    /// One `Or.elim` over
+    /// [`crate::nat_prelude::NatPrelude::injective_on_or_duplicate`] joining
+    /// [`Self::det_row_selection_injective`] to
+    /// [`Self::det_row_selection_of_duplicate`].
+    ///
+    /// `MapsInto` cannot be dropped — ADR-1470's counterexample is `n = 1`,
+    /// `g 0 = 5`, `B 5 0 = 7`, where the left side is `7` and the right `0`.
+    pub det_row_selection: NameId,
 }
 
 impl RatPrelude {
@@ -2773,6 +2844,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         det_row_multilinear: child(kernel, "det_row_multilinear"),
         det_mat_mul_2: child(kernel, "det_matMul_2"),
         det_row_selection_of_duplicate: child(kernel, "det_row_selection_of_duplicate"),
+        det_congr_lt: child(kernel, "det_congr_lt"),
+        mat_skip_lt_succ: child(kernel, "matSkip_lt_succ"),
+        det_congr_entry_lt: child(kernel, "det_congr_entry_lt"),
+        det_row_selection_injective: child(kernel, "det_row_selection_injective"),
+        det_row_selection: child(kernel, "det_row_selection"),
     }
 }
 
@@ -2830,6 +2906,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_invertible::declare_matrix_invertible(&mut d, prelude)?;
         matrix_det::declare_matrix_det(&mut d, prelude)?;
         matrix_det_selection::declare_det_row_selection(&mut d, prelude)?;
+        matrix_det_mul::declare_matrix_det_mul(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();

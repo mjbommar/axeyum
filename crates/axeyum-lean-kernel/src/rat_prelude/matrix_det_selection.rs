@@ -66,7 +66,7 @@ use crate::nat_prelude::NatOps;
 /// this prelude's convention (`matrix_det.rs`'s module doc): `funext` is
 /// absent, so no statement here is an `Eq` between two `Nat -> Nat -> Rat`
 /// values, and nothing downstream needs this to have a name.
-fn row_compose(d: &mut IntDev<'_>, mat: ExprId, g: ExprId) -> ExprId {
+pub(super) fn row_compose(d: &mut IntDev<'_>, mat: ExprId, g: ExprId) -> ExprId {
     let nat = d.nat_ty();
     let r_fv = d.fresh_fvar();
     let r = d.kernel().fvar(r_fv);
