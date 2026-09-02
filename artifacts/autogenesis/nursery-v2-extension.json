@@ -17041,7 +17041,7 @@
     }
   ],
   "extends": "artifacts/autogenesis/nursery-v1.json",
-  "extension_sha256": "0eb9f43f659e108076b2f361dc33ba3374030ade3625d86ccb27d503beaa0e0b",
+  "extension_sha256": "3bab61a428d50f40e182eaa6bc06c55d37b716b3e080f05696490f9d148d90fc",
   "family_modules": {
     "descent-and-well-ordering": [
       "Mathlib.Data.Int.LeastGreatest",
