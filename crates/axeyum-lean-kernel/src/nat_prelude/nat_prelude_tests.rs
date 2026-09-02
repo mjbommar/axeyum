@@ -620,6 +620,11 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `nat-factorization` lane: `multiset_prod.rs`.
+        p.prod_range_congr,
+        p.prod_range_mul,
+        p.prod_range_add_of_one_above,
+        p.multiset_prod_add,
         // `nat-multiset` lane: `multiset.rs`.
         p.pow_dvd_pow_of_le,
         p.not_dvd_prod_range_of_le,

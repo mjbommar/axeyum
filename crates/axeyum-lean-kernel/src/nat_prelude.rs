@@ -176,6 +176,7 @@ mod divisor_sum_scale;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
+mod eisenstein_side;
 mod euler;
 mod even_add_family;
 mod even_div;
@@ -191,7 +192,6 @@ mod fibonacci;
 mod find_greatest;
 mod finite;
 mod finite_set;
-mod eisenstein_side;
 mod floor_count;
 mod gauss_lemma;
 mod gcd;
@@ -228,6 +228,7 @@ mod modular;
 mod mul_order_lemmas;
 mod multichoose;
 mod multiset;
+mod multiset_prod;
 mod no_confusion;
 mod nth;
 mod nth_root;
@@ -349,6 +350,7 @@ use divisor_sum_scale::declare_divisor_sum_scale_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
+use eisenstein_side::declare_eisenstein_side_all;
 use euler::declare_mod_eq_cancel;
 use even_add_family::declare_even_add_family_all;
 use even_div::declare_even_div;
@@ -367,7 +369,6 @@ use finite::{
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
-use eisenstein_side::declare_eisenstein_side_all;
 use floor_count::declare_floor_count_all;
 use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
@@ -408,6 +409,7 @@ use mul_order_lemmas::{
 };
 use multichoose::declare_multichoose_all;
 use multiset::declare_multiset_all;
+use multiset_prod::declare_multiset_prod_all;
 use no_confusion::declare_no_confusion;
 use nth::declare_nth_all;
 use nth_root::declare_nth_root_all;
@@ -5747,6 +5749,30 @@ pub struct NatPrelude {
     /// `Nat.Multiset.beq_comm : ∀ m1 m2, Eq Bool (beq m1 m2) (beq m2 m1)` --
     /// two steps, because the two sides fold over `b1 + b2` and `b2 + b1`.
     pub multiset_beq_comm: NameId,
+
+    // --- `Nat.Multiset.prod_add` and its `prodRange` laws
+    //     (`multiset_prod.rs`) --------------------------------------------
+    /// `Nat.prodRange_congr : ∀ f g n, (∀ i, Eq (f i) (g i)) →
+    /// Eq (prodRange f n) (prodRange g n)` — the Nat twin of
+    /// `Int.prodRange_congr`. This kernel has no `funext`, so a pointwise
+    /// identity cannot otherwise be pushed under the fold (`multiset_prod.rs`).
+    pub prod_range_congr: NameId,
+    /// `Nat.prodRange_mul : ∀ f g n, Eq (prodRange (fun i => mul (f i) (g i))
+    /// n) (mul (prodRange f n) (prodRange g n))` — the Nat twin of
+    /// `Int.prodRange_mul`. The successor step is the four-factor
+    /// rearrangement `(A·B)·(a·b) = (A·a)·(B·b)` (`multiset_prod.rs`).
+    pub prod_range_mul: NameId,
+    /// `Nat.prodRange_add_of_one_above : ∀ f k j, (∀ i, Le k i → Eq (f i) 1) →
+    /// Eq (prodRange f (add k j)) (prodRange f k)` — extending a fold past its
+    /// support changes nothing. Induction on `j`, because
+    /// [`add`](Self::add) recurses on its RIGHT argument and `add k (succ m)`
+    /// is therefore `succ`-shaped for symbolic `k` (`multiset_prod.rs`).
+    pub prod_range_add_of_one_above: NameId,
+    /// `Nat.Multiset.prod_add : ∀ m1 m2, Eq (prod (add m1 m2))
+    /// (mul (prod m1) (prod m2))` — the blocker `docs/plan/status/nat-multiset.md`
+    /// handed off, and the one law the COMPUTED prime factorization needs
+    /// (`multiset_prod.rs`).
+    pub multiset_prod_add: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6645,6 +6671,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             multiset_eq_below_comm: kernel.name_str(multiset, "eqBelow_comm"),
             multiset_beq_refl: kernel.name_str(multiset, "beq_refl"),
             multiset_beq_comm: kernel.name_str(multiset, "beq_comm"),
+            prod_range_congr: kernel.name_str(nat, "prodRange_congr"),
+            prod_range_mul: kernel.name_str(nat, "prodRange_mul"),
+            prod_range_add_of_one_above: kernel.name_str(nat, "prodRange_add_of_one_above"),
+            multiset_prod_add: kernel.name_str(multiset, "prod_add"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7912,6 +7942,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `prime_dvd_mirrors.rs`, above) and `Nat.mul_left_cancel_of_pos`.
         // Nothing needs it, so it goes last.
         declare_multiset_all(&mut d, &p)?;
+        // `Nat.Multiset.prod_add` and the three general `Nat.prodRange` laws it
+        // needs (`multiset_prod.rs`). Needs `declare_multiset_all` immediately
+        // above (`Nat.Multiset.count_add`, `count_eq_zero_of_bound_le`) plus
+        // `Nat.pow_add`/`pow_zero`, `Nat.mul_assoc`/`mul_comm`/`mul_one`,
+        // `Nat.add_comm` and `Nat.le_add_right`, all far above.
+        declare_multiset_prod_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -8000,3 +8036,6 @@ mod add_factorial_le_tests;
 
 #[cfg(test)]
 mod multiset_tests;
+
+#[cfg(test)]
+mod multiset_prod_tests;
