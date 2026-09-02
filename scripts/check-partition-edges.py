@@ -140,7 +140,15 @@ COUNT_STYLE_EXEMPTION_KEYS = (
 # Adding a name here without a matching arm in `class_complaint` would make it
 # a label again, which is why the membership test and the arms live in one
 # function.
-AMENDMENT_CLASSES = ("depends-on-longitudinal-bootstrap",)
+AMENDMENT_CLASSES = ("depends-on-longitudinal-bootstrap",
+                     "scored-evaluation-residue")
+
+# The evaluation records `scored-evaluation-residue` is keyed to (ADR-1566).
+# An amendment in that class names a `record_id` FROM THIS FILE and never a
+# fact id: a record is a committed artifact with a preregistration commit in
+# it, so every clause of the class is a claim about this file and the commit
+# graph rather than a judgement about a row.
+EVALUATION_RECORDS_PATH = "artifacts/autogenesis/holdout-evaluation-v1.json"
 
 
 class Unanswerable(RuntimeError):
@@ -477,17 +485,255 @@ def redacted_row(edge: dict[str, str], salt: str) -> dict[str, Any]:
     return row
 
 
+def committed_salt(root: pathlib.Path) -> str | None:
+    """The salt the COMMITTED baseline records, or `None` when there is none.
+
+    Distinct from `resolve_salt`, which MINTS one when a baseline has none --
+    exactly the wrong behaviour for matching, because a fresh salt would digest
+    a live id into something no committed artifact contains, and every
+    redaction-keyed amendment would silently stop matching. This one never
+    invents a salt: no baseline, no salt, and `edge_is_amended` then compares
+    plain-to-plain, which is right for a fixture tree that has no held-out
+    endpoint to redact in the first place.
+    """
+    path = root / BASELINE_PATH
+    if not path.is_file():
+        return None
+    try:
+        document = load_json(path)
+    except Unanswerable:
+        return None
+    if not isinstance(document, dict):
+        return None
+    salt = document.get("held_out_salt")
+    return salt if isinstance(salt, str) and salt else None
+
+
+def edge_is_amended(edge: dict[str, str], amendments: set[tuple[str, str]],
+                    salt: str | None) -> bool:
+    """Is this DIRECTED edge covered by the amendment set, in either form?
+
+    ADR-1566. An amendment may name its endpoints plainly, or -- when an
+    endpoint is blind -- in the SAME salted-digest form the baseline stores
+    (`redacted_key`). Both are one edge; which representation an author had to
+    use is a property of the endpoint's partition, not of the decision.
+
+    THIS IS THE ONLY PLACE THAT RULE LIVES. `check-autogenesis-nursery.py`
+    calls it rather than re-deriving the comparison, for the same reason it
+    loads `load_amendments` by path: two gates that disagree about which edge an
+    amendment covers is a pair of reports describing no tree at all.
+    """
+    return (edge_key(edge) in amendments
+            or redacted_key(edge, salt) in amendments)
+
+
 # --------------------------------------------------------------------------
 # Amendments -- per edge, or not at all
 # --------------------------------------------------------------------------
 
+class ClassContext:
+    """Everything an amendment CLASS is re-derived from, loaded on demand.
+
+    ADR-1566. `depends-on-longitudinal-bootstrap` needs only the partition map,
+    which `load_amendments` already has. `scored-evaluation-residue` needs four
+    more things -- the drawn population's FAMILY column, the committed
+    evaluation records, the policy's `blind_partitions`, and the commit graph --
+    and every one of them can be absent in a tree that has no such amendment
+    (the control suites' fixture trees carry no policy block and no records
+    file).
+
+    So the loading is LAZY and per-property, and a failure to load is a
+    COMPLAINT about the amendment that asked for it, never a crash and never a
+    silent pass. An amendment whose class cannot be re-derived is not honoured,
+    which is the same treatment a missing field gets: the one thing that must
+    not happen is a class going unchecked because the evidence for it was
+    unavailable.
+    """
+
+    def __init__(self, root: pathlib.Path,
+                 partition_of: dict[str, str]) -> None:
+        self.root = root
+        self.partition_of = partition_of
+        self._families: dict[str, str] | None = None
+        self._records: dict[str, dict[str, Any]] | None = None
+        self._blind: set[str] | None = None
+        self._digests: dict[str, str] | None = None
+        self._paths: dict[str, str] | None = None
+
+    # -- the live manifests ------------------------------------------------
+
+    def families(self) -> dict[str, str]:
+        """`{fact_id: family}` over every nursery manifest.
+
+        The FAMILY is the unit an evaluation record is drawn and scored at, and
+        it is a column of the manifests -- so it is read from them, never from
+        the amendment. An entry with no `family` simply has none here, and the
+        family clause then fails for it rather than matching a `None` against a
+        record's `None`.
+        """
+        if self._families is None:
+            families: dict[str, str] = {}
+            for path in manifest_paths(self.root):
+                document = load_json(path)
+                if not isinstance(document, dict):
+                    continue
+                for entry in document.get("entries") or []:
+                    if not isinstance(entry, dict):
+                        continue
+                    fact_id = entry.get("fact_id")
+                    family = entry.get("family")
+                    if isinstance(fact_id, str) and isinstance(family, str):
+                        families[fact_id] = family
+            self._families = families
+        return self._families
+
+    def blind(self) -> set[str]:
+        """`policy.blind_partitions`, or the empty set when unreadable.
+
+        Read from the policy for ADR-1564's reason: a literal `"held-out"` here
+        would be a second copy of a preregistered decision. An unreadable policy
+        gives an EMPTY blind set, which makes the direction clause below fail
+        for every amendment rather than pass for one -- the safe direction.
+        """
+        if self._blind is None:
+            try:
+                self._blind = set(load_policy(self.root).blind)
+            except Unanswerable:
+                self._blind = set()
+        return self._blind
+
+    def resolve(self, endpoint: str) -> str | None:
+        """A plain fact id, or the blind row whose salted digest this is.
+
+        An amendment in the `scored-evaluation-residue` class stores its BLIND
+        endpoint as the committed baseline's salted digest, because the
+        artifact is inside `check-autogenesis-holdout-isolation.py`'s scan set
+        and a plain held-out id there is a breach (ADR-1550's first baseline was
+        six of them). Resolution is the inverse the gate CAN compute and a
+        producer cannot: digest every blind row of the live manifests with the
+        committed salt and look the amendment's endpoint up in that map.
+        """
+        if endpoint in self.partition_of:
+            return endpoint
+        if self._digests is None:
+            salt = committed_salt(self.root)
+            blind = self.blind()
+            self._digests = ({} if salt is None else
+                             {digest_fact_id(fact_id, salt): fact_id
+                              for fact_id, partition in self.partition_of.items()
+                              if partition in blind})
+        return self._digests.get(endpoint)
+
+    def fact_path(self, fact_id: str) -> str | None:
+        """The ledger file that DECLARES this fact, relative to the root.
+
+        Globbed from the ledger rather than computed from the id: the pickaxe
+        below is only as good as the path it searches, and a guessed
+        `F:x` -> `F-x.json` transform that missed would report `no commit adds
+        this string` -- a phrase that reads like a finding and would silently
+        turn the preregistration clause into a refusal for every amendment.
+        """
+        if self._paths is None:
+            paths: dict[str, str] = {}
+            facts_dir = self.root / FACTS_DIR
+            if facts_dir.is_dir():
+                for path in sorted(facts_dir.glob("*.json")):
+                    try:
+                        fact = load_json(path)
+                    except Unanswerable:
+                        continue
+                    if isinstance(fact, dict) and isinstance(fact.get("id"), str):
+                        paths[fact["id"]] = str(path.relative_to(self.root))
+            self._paths = paths
+        return self._paths.get(fact_id)
+
+    # -- the evaluation records -------------------------------------------
+
+    def records(self) -> dict[str, dict[str, Any]]:
+        """`{record_id: record}` from `EVALUATION_RECORDS_PATH`.
+
+        The file is either ONE record object or a `{"records": [...]}` list;
+        both shapes are read, because which one it is has never been decided
+        and a gate that reads only today's shape would silently honour nothing
+        the day a second record lands.
+        """
+        if self._records is None:
+            records: dict[str, dict[str, Any]] = {}
+            path = self.root / EVALUATION_RECORDS_PATH
+            if path.is_file():
+                try:
+                    document = load_json(path)
+                except Unanswerable:
+                    document = None
+                candidates: list[Any] = []
+                if isinstance(document, dict):
+                    if isinstance(document.get("records"), list):
+                        candidates = document["records"]
+                    else:
+                        candidates = [document]
+                for candidate in candidates:
+                    if (isinstance(candidate, dict)
+                            and isinstance(candidate.get("record_id"), str)):
+                        records[candidate["record_id"]] = candidate
+            self._records = records
+        return self._records
+
+    # -- the commit graph --------------------------------------------------
+
+    def _git(self, *args: str) -> subprocess.CompletedProcess[str] | None:
+        try:
+            return subprocess.run(["git", *args], cwd=self.root,
+                                  capture_output=True, text=True, timeout=60,
+                                  check=False)
+        except (OSError, subprocess.SubprocessError):
+            return None
+
+    def introducing_sha(self, path: str, needle: str) -> str | None:
+        """The FIRST commit that put `needle` into `path`, or `None`.
+
+        `--diff-merges=first-parent` for the reason `introducing_commit`
+        records: a plain pickaxe skips merges, so an edge that entered during a
+        conflict resolution is attributed to nothing at all -- 7 of 198 edges on
+        the 2026-09-02 baseline.
+        """
+        done = self._git("log", "--diff-merges=first-parent", "--no-patch",
+                         f"-S{needle}", "--format=%H", "--reverse", "--", path)
+        if done is None or done.returncode != 0:
+            return None
+        lines = done.stdout.strip().splitlines()
+        return lines[0].strip() if lines else None
+
+    def strictly_precedes(self, earlier: str, later: str) -> bool:
+        """Is `earlier` a git ancestor of `later`, and not the same commit?
+
+        AN ANCESTRY TEST, NOT A TIMESTAMP COMPARISON. A committer date is
+        writable and a rebase rewrites it; `merge-base --is-ancestor` answers
+        the question the argument actually needs -- was the protocol in the tree
+        the edge was written against. STRICT because `is-ancestor` is reflexive:
+        a protocol committed in the same commit as the edge it licenses was not
+        preregistered, it was co-registered, and that is the shape this clause
+        exists to refuse.
+        """
+        resolved = []
+        for revision in (earlier, later):
+            done = self._git("rev-parse", "--verify", f"{revision}^{{commit}}")
+            if done is None or done.returncode != 0:
+                return False
+            resolved.append(done.stdout.strip())
+        if resolved[0] == resolved[1]:
+            return False
+        done = self._git("merge-base", "--is-ancestor", resolved[0], resolved[1])
+        return done is not None and done.returncode == 0
+
+
 def class_complaint(item: dict[str, Any], index: int,
-                    partition_of: dict[str, str]) -> str | None:
+                    partition_of: dict[str, str],
+                    context: ClassContext | None = None) -> str | None:
     """Why this amendment's declared `class` does not hold, or `None`.
 
-    ADR-1563. An amendment MAY declare a `class`, and a class is a rule the
-    checker re-derives from the LIVE manifests rather than a label the author
-    asserts. Only one class exists:
+    ADR-1563, extended by ADR-1566. An amendment MAY declare a `class`, and a
+    class is a rule the checker re-derives from the LIVE manifests rather than a
+    label the author asserts. Two classes exist:
 
     `depends-on-longitudinal-bootstrap` -- the edge's TARGET sits in the
     `longitudinal` partition. That partition is pinned by
@@ -504,6 +750,30 @@ def class_complaint(item: dict[str, Any], index: int,
     IS a leak; it can never carry this class, so
     `check-autogenesis-nursery.py`'s longitudinal-overlap check stays failable
     in exactly the direction that can fail honestly.
+
+    `scored-evaluation-residue` (ADR-1566) -- the edge is the RESIDUE of an
+    evaluation that was scored under a protocol committed before the edge
+    existed. A blind row's proof cites the training set; that is what a
+    training set is for, and it is what scoring a held-out row looks like. Four
+    clauses, each re-derived and each separately deletable:
+
+      (d) the amendment is keyed to `evaluation_record`, the `record_id` of a
+          record in `EVALUATION_RECORDS_PATH`. NEVER to a fact id: keying to a
+          fact would put a held-out id in an artifact
+          `check-autogenesis-holdout-isolation.py` scans, and would turn a
+          checkable claim about a committed record into a judgement about a row.
+      (a) the edge's blind endpoint belongs to the FAMILY that record names AND
+          appears in that record's `outcomes`. Family alone is not enough: a
+          sibling nobody evaluated is still an unscored row.
+      (b) the record's `state` is `scored`, and its `protocol_commit` is a
+          STRICT git ancestor of the commit that introduced this edge. This is
+          ADR-1565's whole argument mechanised -- an edge OLDER than the
+          protocol was not created by the evaluation, and belongs to the
+          ADR-1450 reclassification instrument instead.
+      (c) the edge runs FROM the blind row to a non-blind one. An edge INTO a
+          blind row spends blindness and is the original breach; it can never
+          carry this class, which is what keeps the seal ADR-1565 restored
+          failable in the direction that can fail honestly.
 
     An amendment whose declared class does not hold is REPORTED AND NOT
     HONOURED, the same treatment as a missing field: a class that is a
@@ -524,6 +794,67 @@ def class_complaint(item: dict[str, Any], index: int,
                     f"partition {target_partition!r}, not `longitudinal` -- "
                     f"the class is re-derived from the live manifests, not "
                     f"taken on the author's word, so this one is NOT honoured")
+    if declared == "scored-evaluation-residue":
+        where = f"{AMENDMENTS_PATH}[{index}]"
+        if context is None:
+            return (f"{where}: claims class scored-evaluation-residue but no "
+                    f"class context was built, so none of its four clauses "
+                    f"could be re-derived -- NOT honoured")
+        # (d) KEYED TO THE EVALUATION RECORD, NEVER TO A FACT.
+        record_id = item.get("evaluation_record")
+        records = context.records()
+        if not isinstance(record_id, str) or record_id not in records:
+            return (f"{where}: class scored-evaluation-residue must name "
+                    f"`evaluation_record`, the record_id of a record in "
+                    f"{EVALUATION_RECORDS_PATH}; {record_id!r} is not one of "
+                    f"{sorted(records)} -- the class is keyed to the "
+                    f"evaluation, never to a fact, so this one is NOT honoured")
+        record = records[record_id]
+        source = context.resolve(item["from"])
+        target = context.resolve(item["to"])
+        if source is None or target is None:
+            return (f"{where}: claims class scored-evaluation-residue but an "
+                    f"endpoint resolves to no row of the live manifests (it is "
+                    f"neither a drawn fact id nor the committed salted digest "
+                    f"of one) -- NOT honoured")
+        blind = context.blind()
+        # (c) THE DIRECTION IS HALF THE RULE.
+        if partition_of.get(source) not in blind or partition_of.get(target) in blind:
+            return (f"{where}: claims class scored-evaluation-residue but the "
+                    f"edge does not run FROM a blind row "
+                    f"({partition_of.get(source)!r}) TO a non-blind one "
+                    f"({partition_of.get(target)!r}); an edge INTO a blind row "
+                    f"spends blindness and is the breach this class is not "
+                    f"about -- NOT honoured")
+        # (a) THE FAMILY IS SCORED, AND THIS ROW IS ONE OF THE SCORED ONES.
+        scored_ids = {outcome.get("fact_id")
+                      for outcome in record.get("outcomes") or []
+                      if isinstance(outcome, dict)}
+        if (context.families().get(source) != record.get("family")
+                or source not in scored_ids):
+            return (f"{where}: claims class scored-evaluation-residue against "
+                    f"record {record_id!r}, but its blind endpoint is not a "
+                    f"scored row of family {record.get('family')!r} in that "
+                    f"record's outcomes -- a sibling of a spent family is "
+                    f"still a row nobody evaluated, so this one is NOT "
+                    f"honoured")
+        # (b) THE PREREGISTRATION PREDATES THE EDGE.
+        protocol_commit = record.get("protocol_commit")
+        path = context.fact_path(source)
+        edge_commit = (None if path is None
+                       else context.introducing_sha(path, item["to"]))
+        if (record.get("state") != "scored"
+                or not isinstance(protocol_commit, str)
+                or edge_commit is None
+                or not context.strictly_precedes(protocol_commit, edge_commit)):
+            return (f"{where}: claims class scored-evaluation-residue against "
+                    f"record {record_id!r}, but that record is not a `scored` "
+                    f"one whose protocol_commit is a strict git ancestor of "
+                    f"the commit introducing this edge (state="
+                    f"{record.get('state')!r}, protocol_commit="
+                    f"{protocol_commit!r}, introduced_by={edge_commit!r}) -- "
+                    f"an edge older than the protocol was not created by the "
+                    f"evaluation, so this one is NOT honoured")
     return None
 
 
@@ -547,6 +878,7 @@ def load_amendments(
     document = load_json(path)
     complaints: list[str] = []
     amendments: set[tuple[str, str]] = set()
+    context = ClassContext(root, partition_of)
     raw = document.get("amendments") if isinstance(document, dict) else None
     if not isinstance(raw, list):
         return set(), [f"{AMENDMENTS_PATH}: `amendments` is not a list; "
@@ -563,7 +895,7 @@ def load_amendments(
                 f"an amendment names ONE edge, its reason and its date, so "
                 f"this one is NOT honoured")
             continue
-        wrong_class = class_complaint(item, index, partition_of)
+        wrong_class = class_complaint(item, index, partition_of, context)
         if wrong_class:
             complaints.append(wrong_class)
             continue
@@ -793,6 +1125,13 @@ def main(argv: list[str] | None = None) -> int:
         dependencies = load_dependencies(root)
         edges = crossing_edges(partition_of, dependencies, roles)
         amendments, amendment_complaints = load_amendments(root, partition_of)
+        # The salt an amendment's BLIND endpoint is written with. Read from the
+        # committed baseline on EVERY path, not only under `--baseline`: an
+        # amendment is honoured (or not) identically whether the run is
+        # ratcheting, recording, or reporting the full set, and a salt that
+        # existed on one path only would make `--record-baseline` re-record the
+        # very edges an amendment covers.
+        amendment_salt = committed_salt(root)
         not_amendments, component_covered = count_style_exemptions(root)
         previous: dict[str, Any] | None = None
         if (root / BASELINE_PATH).is_file():
@@ -827,7 +1166,8 @@ def main(argv: list[str] | None = None) -> int:
         # refused would read the unshrunk count as the amendment not mattering.
         for line in amendment_complaints:
             print(f"AMENDMENT-REJECTED {line}")
-        return record(root, [e for e in edges if edge_key(e) not in amendments],
+        return record(root, [e for e in edges
+                             if not edge_is_amended(e, amendments, amendment_salt)],
                       manifests, partition_of, dependencies, previous)
 
     # THE HONOURED SET IS THE PER-EDGE AMENDMENTS AND NOTHING ELSE. This one
@@ -836,14 +1176,17 @@ def main(argv: list[str] | None = None) -> int:
     # unioned in here. `mutation_controls.py` registers the mutant that unions
     # it, because a refusal nobody can delete is not a decision.
     honoured = amendments
-    amended = [e for e in edges if edge_key(e) in honoured]
+    amended = [e for e in edges if edge_is_amended(e, honoured, amendment_salt)]
     # `redacted_key(e, baseline_salt)`, not `edge_key(e)`: a live held-out
     # crossing must be compared against the DIGESTED form the committed
     # baseline actually stores, or it can never be recognised as already
-    # baselined -- see `redacted_key`'s docstring.
-    baselined = [e for e in edges if edge_key(e) not in honoured
+    # baselined -- see `redacted_key`'s docstring. `edge_is_amended` is the
+    # same rule one artifact over (ADR-1566).
+    baselined = [e for e in edges
+                 if not edge_is_amended(e, honoured, amendment_salt)
                  and redacted_key(e, baseline_salt) in baseline]
-    violations = [e for e in edges if edge_key(e) not in honoured
+    violations = [e for e in edges
+                  if not edge_is_amended(e, honoured, amendment_salt)
                   and redacted_key(e, baseline_salt) not in baseline]
     would_be_waved = len([e for e in violations
                           if edge_key(e) in component_covered])
@@ -877,7 +1220,8 @@ def main(argv: list[str] | None = None) -> int:
               f"depends_on {edge['to']} [{edge['to_partition']}] "
               f"-- introduced by {blame}")
 
-    unamended_total = len([e for e in edges if edge_key(e) not in honoured])
+    unamended_total = len([e for e in edges
+                           if not edge_is_amended(e, honoured, amendment_salt)])
     summary = (f"PARTITION-EDGES|manifests={len(manifests)}"
                f"|{roles.summary()}"
                f"|drawn={len(partition_of)}"

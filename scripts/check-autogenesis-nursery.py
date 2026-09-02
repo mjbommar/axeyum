@@ -9,7 +9,7 @@ import importlib.util
 import json
 from collections import Counter, defaultdict, deque
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -299,8 +299,16 @@ def validate_entries(
     return entries
 
 
-def amended_edges() -> set[tuple[str, str]]:
-    """The per-edge amendments `scripts/check-partition-edges.py` honours.
+def amended_edges() -> Callable[[str, str], bool]:
+    """Does `check-partition-edges.py` honour this DIRECTED edge as an amendment?
+
+    Returns a PREDICATE, not a set, because an amendment may name a blind
+    endpoint as the committed baseline's salted digest rather than as a fact id
+    (ADR-1566) -- so membership is a rule, not a lookup. The rule itself is
+    `check-partition-edges.edge_is_amended`, called here rather than
+    re-derived, for exactly the reason the amendment LIST is loaded through
+    that module's own `load_amendments`: two gates that disagree about which
+    edge an amendment covers is a pair of reports describing no tree at all.
 
     ADR-1563. THE AMENDMENT LIST IS LOADED THROUGH THE OTHER GATE'S OWN LOADER,
     by path, rather than re-parsed here. Two readers of one exemption artifact
@@ -353,7 +361,15 @@ def amended_edges() -> set[tuple[str, str]]:
             "per-edge amendment(s) are not honoured, so this report would "
             "describe a graph neither gate agrees with: "
             + "; ".join(complaints))
-    return amendments
+    salt = module.committed_salt(PARTITION_EDGE_ROOT)
+
+    def amended(source: str, target: str) -> bool:
+        return module.edge_is_amended(
+            {"from": source, "from_partition": partition_of.get(source, ""),
+             "to": target, "to_partition": partition_of.get(target, "")},
+            amendments, salt)
+
+    return amended
 
 
 def components(
@@ -367,7 +383,7 @@ def components(
         if not isinstance(dependencies, list):
             raise NurseryError(f"{fact_id}: depends_on is not a list")
         for dependency in dependencies:
-            if (fact_id, dependency) in amended:
+            if amended(fact_id, dependency):
                 continue
             if dependency in selected:
                 adjacency[fact_id].add(dependency)

@@ -359,12 +359,68 @@
       "from": "F:ml430-nat-totient-even-28e0415f",
       "reason": "F:ml430-nat-totient-even-28e0415f depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
       "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md",
+      "class": "scored-evaluation-residue",
+      "date": "2026-09-02",
+      "evaluation_record": "holdout-evaluation-1",
+      "from": "1e44941bf15ffbeaef66afaf165d33df1aace0ad442cd44ea49fbbd7d373a221",
+      "reason": "The residue of a scored evaluation. This edge runs FROM a blind row of family 'integer-absolute-value' TO a train row, and it did not exist until the commit that closed the evaluation recorded in artifacts/autogenesis/holdout-evaluation-v1.json as record 'holdout-evaluation-1', whose protocol_commit is a strict git ancestor of it. A scored row's proof cites the training set; that is what scoring against a training set means, and it is not blindness leaking out. The blind endpoint is written as the committed baseline's salted SHA-256 digest, never as a fact id: this artifact is inside check-autogenesis-holdout-isolation.py's scan set, and the class is keyed to the evaluation record so that every clause is a claim about a committed artifact and the commit graph rather than a judgement about a row. class_complaint re-derives all four clauses -- family and scored membership from the live manifests and the record, the preregistration order from git, and the DIRECTION: an edge INTO a blind row can never carry this class.",
+      "to": "F:ml430-nat-add-comm-56a2d614"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md",
+      "class": "scored-evaluation-residue",
+      "date": "2026-09-02",
+      "evaluation_record": "holdout-evaluation-1",
+      "from": "6cbaff955c560e25d56463f31c713b65e4cd2a28e10886954056f62c0ff7c7ed",
+      "reason": "The residue of a scored evaluation. This edge runs FROM a blind row of family 'integer-absolute-value' TO a train row, and it did not exist until the commit that closed the evaluation recorded in artifacts/autogenesis/holdout-evaluation-v1.json as record 'holdout-evaluation-1', whose protocol_commit is a strict git ancestor of it. A scored row's proof cites the training set; that is what scoring against a training set means, and it is not blindness leaking out. The blind endpoint is written as the committed baseline's salted SHA-256 digest, never as a fact id: this artifact is inside check-autogenesis-holdout-isolation.py's scan set, and the class is keyed to the evaluation record so that every clause is a claim about a committed artifact and the commit graph rather than a judgement about a row. class_complaint re-derives all four clauses -- family and scored membership from the live manifests and the record, the preregistration order from git, and the DIRECTION: an edge INTO a blind row can never carry this class.",
+      "to": "F:ml430-nat-add-comm-56a2d614"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md",
+      "class": "scored-evaluation-residue",
+      "date": "2026-09-02",
+      "evaluation_record": "holdout-evaluation-1",
+      "from": "9bc7ecfd38d576510912b1d952c8f6aa201b2b1b51fd5eb4c3a0f33c54f5df1d",
+      "reason": "The residue of a scored evaluation. This edge runs FROM a blind row of family 'integer-absolute-value' TO a development row, and it did not exist until the commit that closed the evaluation recorded in artifacts/autogenesis/holdout-evaluation-v1.json as record 'holdout-evaluation-1', whose protocol_commit is a strict git ancestor of it. A scored row's proof cites the training set; that is what scoring against a training set means, and it is not blindness leaking out. The blind endpoint is written as the committed baseline's salted SHA-256 digest, never as a fact id: this artifact is inside check-autogenesis-holdout-isolation.py's scan set, and the class is keyed to the evaluation record so that every clause is a claim about a committed artifact and the commit graph rather than a judgement about a row. class_complaint re-derives all four clauses -- family and scored membership from the live manifests and the record, the preregistration order from git, and the DIRECTION: an edge INTO a blind row can never carry this class.",
+      "to": "F:ml430-nat-even-add-one-15b5cb18"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md",
+      "class": "scored-evaluation-residue",
+      "date": "2026-09-02",
+      "evaluation_record": "holdout-evaluation-1",
+      "from": "9bc7ecfd38d576510912b1d952c8f6aa201b2b1b51fd5eb4c3a0f33c54f5df1d",
+      "reason": "The residue of a scored evaluation. This edge runs FROM a blind row of family 'integer-absolute-value' TO a development row, and it did not exist until the commit that closed the evaluation recorded in artifacts/autogenesis/holdout-evaluation-v1.json as record 'holdout-evaluation-1', whose protocol_commit is a strict git ancestor of it. A scored row's proof cites the training set; that is what scoring against a training set means, and it is not blindness leaking out. The blind endpoint is written as the committed baseline's salted SHA-256 digest, never as a fact id: this artifact is inside check-autogenesis-holdout-isolation.py's scan set, and the class is keyed to the evaluation record so that every clause is a claim about a committed artifact and the commit graph rather than a judgement about a row. class_complaint re-derives all four clauses -- family and scored membership from the live manifests and the record, the preregistration order from git, and the DIRECTION: an edge INTO a blind row can never carry this class.",
+      "to": "F:ml430-nat-even-iff-024826e9"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md",
+      "class": "scored-evaluation-residue",
+      "date": "2026-09-02",
+      "evaluation_record": "holdout-evaluation-1",
+      "from": "a2aef1c8d3c5bc757d19f6f144b26d788c45963ab24b9f444b564f17b4d8d68f",
+      "reason": "The residue of a scored evaluation. This edge runs FROM a blind row of family 'integer-absolute-value' TO a development row, and it did not exist until the commit that closed the evaluation recorded in artifacts/autogenesis/holdout-evaluation-v1.json as record 'holdout-evaluation-1', whose protocol_commit is a strict git ancestor of it. A scored row's proof cites the training set; that is what scoring against a training set means, and it is not blindness leaking out. The blind endpoint is written as the committed baseline's salted SHA-256 digest, never as a fact id: this artifact is inside check-autogenesis-holdout-isolation.py's scan set, and the class is keyed to the evaluation record so that every clause is a claim about a committed artifact and the commit graph rather than a judgement about a row. class_complaint re-derives all four clauses -- family and scored membership from the live manifests and the record, the preregistration order from git, and the DIRECTION: an edge INTO a blind row can never carry this class.",
+      "to": "F:ml430-nat-le-antisymm-79dccead"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md",
+      "class": "scored-evaluation-residue",
+      "date": "2026-09-02",
+      "evaluation_record": "holdout-evaluation-1",
+      "from": "c9af28498ce83a9f75c24144e506b3bc36b8f876d5685078e12b407929250037",
+      "reason": "The residue of a scored evaluation. This edge runs FROM a blind row of family 'integer-absolute-value' TO a development row, and it did not exist until the commit that closed the evaluation recorded in artifacts/autogenesis/holdout-evaluation-v1.json as record 'holdout-evaluation-1', whose protocol_commit is a strict git ancestor of it. A scored row's proof cites the training set; that is what scoring against a training set means, and it is not blindness leaking out. The blind endpoint is written as the committed baseline's salted SHA-256 digest, never as a fact id: this artifact is inside check-autogenesis-holdout-isolation.py's scan set, and the class is keyed to the evaluation record so that every clause is a claim about a committed artifact and the commit graph rather than a judgement about a row. class_complaint re-derives all four clauses -- family and scored membership from the live manifests and the record, the preregistration order from git, and the DIRECTION: an edge INTO a blind row can never carry this class.",
+      "to": "F:ml430-nat-le-antisymm-79dccead"
     }
   ],
   "authority": "docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md",
   "classes": {
-    "depends-on-longitudinal-bootstrap": "The edge's TARGET is in the `longitudinal` partition, which check-autogenesis-nursery.py pins to exactly the two Autogenesis-1 bootstrap lemmas. Re-derived by `class_complaint` in scripts/check-partition-edges.py from the live manifests; an amendment claiming it for a non-longitudinal target is reported and NOT honoured. Direction-specific on purpose: longitudinal -> evaluation is a leak and can never carry this class."
+    "depends-on-longitudinal-bootstrap": "The edge's TARGET is in the `longitudinal` partition, which check-autogenesis-nursery.py pins to exactly the two Autogenesis-1 bootstrap lemmas. Re-derived by `class_complaint` in scripts/check-partition-edges.py from the live manifests; an amendment claiming it for a non-longitudinal target is reported and NOT honoured. Direction-specific on purpose: longitudinal -> evaluation is a leak and can never carry this class.",
+    "scored-evaluation-residue": "The edge is the RESIDUE of a scored evaluation (ADR-1566). Honoured only when `class_complaint` in scripts/check-partition-edges.py re-derives all four clauses: (d) the amendment names `evaluation_record`, the record_id of a record in artifacts/autogenesis/holdout-evaluation-v1.json -- never a fact id; (a) the edge's blind endpoint belongs to that record's family AND appears in its outcomes, read from the live manifests and the record; (b) the record's state is `scored` and its protocol_commit is a STRICT git ancestor of the commit that introduced this edge; (c) the edge runs FROM the blind row TO a non-blind one. An edge INTO a blind row, an edge from a blind row the record does not score, and an edge older than the preregistration each remain leaks and are refused here."
   },
+  "endpoint_representation": "An endpoint in a BLIND partition is written as the salted SHA-256 digest recorded in artifacts/autogenesis/partition-edge-baseline-v1.json (`held_out_salt`), never as the fact id -- this artifact is inside scripts/check-autogenesis-holdout-isolation.py's scan set. `edge_is_amended` compares a live edge in both the plain and the redacted representation, and `ClassContext.resolve` inverts the digest through the live manifests, which is what lets a class be re-derived from an endpoint no reader of this file can name.",
   "kind": "axeyum-partition-edge-amendments",
   "not_the_baseline": "The 198 crossings that existed on 2026-09-02 were recorded in artifacts/autogenesis/partition-edge-baseline-v1.json and are the re-partition's to repair (ADR-1546 option 1). An amendment is for an edge somebody DECIDED to keep; the baseline is for an edge nobody has repaired yet. Do not move a row from one to the other to make a gate green -- the one class that has moved, `depends-on-longitudinal-bootstrap` (ADR-1563, 45 edges, baseline 198 -> 153), moved because the checker RE-DERIVES the property from the live manifests rather than reading a label, and because --record-baseline now excludes an honoured amendment, so deleting one makes its edge a violation again.",
   "read_by": "scripts/check-partition-edges.py",
