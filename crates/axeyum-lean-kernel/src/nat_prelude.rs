@@ -176,6 +176,8 @@ mod divisor_sum_scale;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
+mod eisenstein_lattice;
+mod eisenstein_side;
 mod euler;
 mod even_add_family;
 mod even_div;
@@ -191,8 +193,8 @@ mod fibonacci;
 mod find_greatest;
 mod finite;
 mod finite_set;
-mod eisenstein_side;
 mod floor_count;
+mod gauss_fold_sum;
 mod gauss_lemma;
 mod gcd;
 mod gcd_dvd_mirrors;
@@ -349,6 +351,8 @@ use divisor_sum_scale::declare_divisor_sum_scale_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
+use eisenstein_lattice::declare_eisenstein_lattice_all;
+use eisenstein_side::declare_eisenstein_side_all;
 use euler::declare_mod_eq_cancel;
 use even_add_family::declare_even_add_family_all;
 use even_div::declare_even_div;
@@ -367,8 +371,8 @@ use finite::{
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
-use eisenstein_side::declare_eisenstein_side_all;
 use floor_count::declare_floor_count_all;
+use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
@@ -501,6 +505,16 @@ use xor_trichotomy::declare_xor_trichotomy_all;
 /// Handles belong to the kernel they were built in; do not mix them across
 /// kernels. All fields are public so callers can build `Const` terms
 /// (`k.const_(nat.add, vec![])`) directly.
+// `derive(Debug)` lowers to `debug_struct_fields_finish` over two LOCAL
+// arrays, one entry per field, so this struct's `Debug::fmt` allocates a
+// stack array proportional to the field count. It crossed clippy's 16 KiB
+// `large_stack_arrays` threshold on 2026-09-02 at 1026 fields (`eisenstein-2`
+// lane) -- the array is only built when someone actually `{:?}`-prints a
+// `NatPrelude`, which nothing on a hot path does. The lint is silenced rather
+// than the `Debug` hand-written, but the real fix is ADR-1512's per-module
+// name registry (already applied to `CRealPrelude`), which this struct has
+// not had.
+#[allow(clippy::large_stack_arrays)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NatPrelude {
     /// The embedded logical prelude (`False`, `Not`, `Eq`, `Exists`, `Nat`, …).
@@ -5621,6 +5635,47 @@ pub struct NatPrelude {
     /// [`count_range_permute`](Self::count_range_permute), which is its
     /// `{0,1}`-valued special case (`countRange_eq_sumRange` is `Eq.refl`).
     pub sum_range_permute: NameId,
+
+    // -- `eisenstein-2` lane: `eisenstein_lattice.rs` --
+    // ADR-1260's step 1, assembled: the lattice-point count as a sum of
+    // floors. Both inputs (`countRectangle_partition`, ADR-1260; the floor
+    // family, ADR-1290) and the side condition (ADR-1540) already existed.
+    /// `Nat.ble_select_add_of_ne : ∀ a b, Not (Eq a b) →
+    /// Eq (add (bool_select_nat (ble a b) 1 0) (bool_select_nat (ble b a) 1 0)) 1`
+    /// (`eisenstein_lattice.rs`) — two distinct naturals are compared one way
+    /// or the other and never both. This is
+    /// [`count_rectangle_partition`](Self::count_rectangle_partition)'s
+    /// per-point hypothesis at a pair of NON-STRICT comparisons, which is the
+    /// shape [`count_range_mul_succ_le_eq_floor`](Self::count_range_mul_succ_le_eq_floor)
+    /// counts; see `eisenstein_lattice.rs`'s module doc for why `≤` rather
+    /// than the `<` ADR-1260 describes.
+    pub ble_select_add_of_ne: NameId,
+    /// `Nat.eisenstein_floor_sum : ∀ ap aq m n, Eq (gcd (succ ap) (succ aq)) 1 →
+    /// Lt m (succ ap) →
+    /// Eq (add (sumRange (fun x => Min.min n (div (mul (succ aq) (succ x)) (succ ap))) m)
+    ///         (sumRange (fun y => Min.min m (div (mul (succ ap) (succ y)) (succ aq))) n))
+    ///    (mul n m)` (`eisenstein_lattice.rs`) — ADR-1260's step 1: the
+    /// rectangle `[1,m] × [1,n]` counted row-wise and column-wise, with each
+    /// row count named as a floor. Stated at COPRIME `succ ap`, `succ aq` with
+    /// `Lt m (succ ap)` rather than at two odd primes with `m = (p−1)/2`,
+    /// `n = (q−1)/2`; the `Min.min` is what
+    /// [`count_range_mul_succ_le_eq_floor`](Self::count_range_mul_succ_le_eq_floor)
+    /// produces and is NOT eliminated. **This is not Eisenstein's lemma** —
+    /// nothing here mentions `gaussFold` or a congruence mod 2.
+    pub eisenstein_floor_sum: NameId,
+
+    // -- `eisenstein-2` lane: `gauss_fold_sum.rs` --
+    /// `Nat.gauss_fold_sumRange_eq : ∀ m a, Eq (gcd a (succ (mul 2 m))) 1 →
+    /// Eq (sumRange (fun k => succ k) m)
+    ///    (sumRange (fun j => gaussFold (succ (mul 2 m)) a (succ j)) m)`
+    /// (`gauss_fold_sum.rs`) — ADR-1540's residue 1: the additive Gauss
+    /// bijection, instantiated. `1 + 2 + … + m` equals the sum of the folded
+    /// least residues, because the fold permutes `[1, m]`. The
+    /// MULTIPLICATIVE version of this step is what
+    /// `int_prelude/gauss_assembly.rs` already runs through
+    /// `Int.prodRange_permute`; this is the same three steps over
+    /// [`sum_range_permute`](Self::sum_range_permute).
+    pub gauss_fold_sum_range_eq: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -6875,6 +6930,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "mul_succ_ne_mul_succ_of_coprime"),
             sum_range_point_change: kernel.name_str(nat, "sumRange_point_change"),
             sum_range_permute: kernel.name_str(nat, "sumRange_permute"),
+            ble_select_add_of_ne: kernel.name_str(nat, "ble_select_add_of_ne"),
+            eisenstein_floor_sum: kernel.name_str(nat, "eisenstein_floor_sum"),
+            gauss_fold_sum_range_eq: kernel.name_str(nat, "gauss_fold_sumRange_eq"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -7902,6 +7960,23 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // far above -- exactly `declare_count_range_permute`'s own inputs.
         // Nothing needs it yet, so it goes last.
         declare_sum_range_permute_all(&mut d, &p)?;
+        // ADR-1260's step 1, assembled (`eisenstein_lattice.rs`): needs
+        // `Nat.countRectangle_partition` (`lattice_count.rs`, far above),
+        // `Nat.countRange_mul_succ_le_eq_floor` (`floor_count.rs`, above),
+        // `Nat.mul_succ_ne_mul_succ_of_coprime` (`eisenstein_side.rs`, just
+        // above), plus `Nat.sumRange_congr_lt` (`binomial.rs`), `Min.min`,
+        // and the `ble`/order bridges `ble_eq_true_of_le`/
+        // `ble_eq_false_of_lt`/`lt_or_ge`/`lt_or_eq_of_le`/`le_trans`/
+        // `le_succ`/`lt_of_le_of_lt`, all far above. Nothing needs it yet, so
+        // it goes last.
+        declare_eisenstein_lattice_all(&mut d, &p)?;
+        // ADR-1540's residue 1 (`gauss_fold_sum.rs`): needs
+        // `Nat.sumRange_permute` (`sum_range_permute.rs`, just above) and
+        // `Nat.gauss_fold_shift_injective_on`/`_maps_into`/
+        // `gauss_fold_in_range` (`gauss_lemma.rs`, far above), plus
+        // `Nat.sumRange_congr_lt`/`Nat.succ_pred_of_pos`. Nothing needs it
+        // yet, so it goes last.
+        declare_gauss_fold_sum_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -7956,6 +8031,12 @@ mod stirling_tests;
 
 #[cfg(test)]
 mod stirling_lemmas_tests;
+
+#[cfg(test)]
+mod eisenstein_lattice_tests;
+
+#[cfg(test)]
+mod gauss_fold_sum_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;

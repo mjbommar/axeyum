@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-eisenstein-floor-sum",
+  "title": "Eisenstein's lattice rectangle, counted two ways, is a sum of floors",
+  "statement": "For coprime `pp = succ ap` and `q = succ aq` with `m < pp`, the rectangle `[1,m] x [1,n]` counted row-wise and column-wise gives `sum_{x<m} min n (q*(x+1) / pp) + sum_{y<n} min m (pp*(y+1) / q) = n*m`. THIS IS ADR-1260's STEP 1 AND IT IS NOT EISENSTEIN'S LEMMA: no `gaussFold`, no `gaussNegCount`, no congruence mod 2 appears anywhere in it, and quadratic reciprocity remains open. HOW IT IS PROVED: `Nat.countRectangle_partition` (ADR-1260) at `Q x y := ble (pp*(y+1)) (q*(x+1))` and `R x y := ble (q*(x+1)) (pp*(y+1))`, whose per-point hypothesis is `Nat.ble_select_add_of_ne` fed `Nat.mul_succ_ne_mul_succ_of_coprime` (ADR-1540) at `Lt (succ x) pp`, which `lt_of_le_of_lt` gets from `Lt x m` (definitionally `Le (succ x) m`) and the theorem's `Lt m pp`; then `Nat.countRange_mul_succ_le_eq_floor` (ADR-1290) once per axis, lifted across the outer sum by `Nat.sumRange_congr_lt`. Six direct dependencies, no induction, no new arithmetic -- every input existed before this declaration and ADR-1540 was correct that nobody had run them together. THREE DELIBERATE RESTATEMENTS OF ADR-1260's WORDING, argued in ADR-1544: (1) coprimality plus `Lt m pp` instead of two distinct odd primes with `m = (p-1)/2`, `n = (q-1)/2` -- a strict generalization, and Eisenstein's own instances satisfy both hypotheses at all 240 ordered pairs of distinct odd primes below 60; (2) the divisors given constructively as `succ`, which is how the floor lemma supplies positivity, so no `Lt zero p` hypothesis is formed; (3) the row counts kept as `Min.min n (floor ...)`. THE `min` IS NOT DECORATION: dropping it is REFUTED at the generality this theorem states (control M4) and SURVIVES only at Eisenstein's own `m`, `n` (control M5, reproducing ADR-1290's M8), because `floor(q*x/p) <= (q-1)/2` there is a fact about primes and not about counting. `Kernel::axiom_footprint` is EMPTY. Admitted by the trusted gate on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.eisenstein_floor_sum : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Eq.{1} AxNat (AxNat.gcd (AxNat.succ x0) (AxNat.succ x1)) (AxNat.succ AxNat.zero)) -> ((x5 : AxNat.lt x2 (AxNat.succ x0)) -> Eq.{1} AxNat (AxNat.add (AxNat.sumRange (fun (x6 : AxNat) => Min.min x3 (AxNat.div (AxNat.mul (AxNat.succ x1) (AxNat.succ x6)) (AxNat.succ x0))) x2) (AxNat.sumRange (fun (x6 : AxNat) => Min.min x2 (AxNat.div (AxNat.mul (AxNat.succ x0) (AxNat.succ x6)) (AxNat.succ x1))) x3)) (AxNat.mul x3 x2)))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ],
+    "kernel_theorem": "Nat.eisenstein_floor_sum"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-ble-select-add-of-ne", "F:nat-countrange-mul-succ-le-eq-floor", "F:nat-countrectangle-partition", "F:nat-lt-of-le-of-lt", "F:nat-mul-succ-ne-mul-succ-of-coprime", "F:nat-sumrange-congr-lt"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.eisenstein_floor_sum",
+      "kind": "kernel-term",
+      "supports": "Nat.eisenstein_floor_sum is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.eisenstein_floor_sum 2>/dev/null | grep -cE '^Nat\\.eisenstein_floor_sum[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.eisenstein_floor_sum",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.eisenstein_floor_sum",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.eisenstein_floor_sum.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in eisenstein_lattice_tests.rs."
+    },
+    {
+      "id": "numeric-floor-identity",
+      "kind": "exhaustive-enumeration",
+      "supports": "C2 of the ADR-1544 check script verifies the identity at 31404 instances (coprime pp, q below 21; every m < pp; n < 12) and C3 verifies that Eisenstein's own instances -- all 240 ordered pairs of distinct odd primes below 60 -- satisfy both hypotheses, so the restatement is a generalization and not a different theorem. Controls M2, M3 and M6 refute dropping coprimality, dropping the m < pp bound, and taking the right-hand side as m+n.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1544-eisenstein-lattice-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1544-eisenstein-lattice-checks.py",
+      "checker_seconds": 4,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy: 12 of 12 mutations exit 1. TWO controls bearing on this fact are recorded as DELIBERATE SURVIVORS and asserted to survive. M4/M5 are a PAIR and must be read together: the min-free reading is REFUTED at the generality this theorem states (M4) and SURVIVES at Eisenstein's own m, n (M5, reproducing ADR-1290's M8) -- which is precisely why the min stays in the statement. M10 records that spelling the two half-planes strictly, as ADR-1260 describes them, is numerically indistinguishable from the non-strict spelling this proof uses. Swapping the two summands has NO numeric witness at all, since the identity is symmetric in that swap; the declared type is pinned character for character in eisenstein_lattice_tests.rs instead."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character by the_lattice_assembly_states_the_intended_types). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-2)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs`. ADR-1544, closing ADR-1540's residue 4. Declaration kind: theorem. WHAT IS STILL OPEN: Eisenstein's lemma and quadratic reciprocity. This is step 1's COUNTING identity; step 1's mod-2 reading and step 2 are not proved. ADR-1540's residue 2 (the residue/fold reconciliation) is blocked on a conditional sum, and this lane measured that no `sumRangeIf` exists in any prelude (`shape_search --name-like sumRangeIf` returns ABSENT against a `prodRangeIf` control returning 12 declarations). The min-free corollary at `pp = succ (2m)`, `q = succ (2n)` is a separate, unattempted arithmetic fact. GRADED FAMILY (ADR-0603): row 1, the general constructive form. Row 2 UNASSESSED -- the two hypothesis-dropping refutations are numeric (pp = q = 2 with m = n = 1; pp = 2, q = 1 with m = 2, n = 1) and are asserted as `def_eq` controls in the test file, but neither is stated as a kernel theorem.",
+  "external_status": "proved"
+}

@@ -4,68 +4,10 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2144,
+    "min_identity_bound": 2147,
     "max_header_exempt": 0
   },
   "amendments": [
-    {
-      "fact_id": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
-      "date": "2026-09-02",
-      "from_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
-      "to_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
-      "from_prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
-      "to_prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
-      "from_kernel_theorem": "Nat.prime_coprime_factorial_of_lt",
-      "to_kernel_theorem": "Nat.coprime_factorial_of_lt_prime",
-      "reason": "REPOINT ONLY -- both digests are byte-identical (from == to on the formal statement AND on the reader-facing prose). The proposition this fact is about did not change; the DECLARATION it names did, because there were two of them. The 2026-09-02 daily retrieval audit (ADR-0608's structural remedy) ran `shape_search --include-constructed --duplicates` and found `Nat.prime_coprime_factorial_of_lt` (nat_prelude/prime_dvd_factorial_lcm.rs, landed 2026-09-01) and `Nat.coprime_factorial_of_lt_prime` (nat_prelude/gauss_lemma.rs, landed under ADR-1070) reporting the SAME shape; `kernel_declaration_projection` shows their rendered types byte-identical, and the two proofs are the same induction with `gcd_comm` vs `coprime_symmetric` as the only difference. This is a re-derivation, not two results. The later declaration is deleted; this fact now names the earlier one, per ADR-0608's survivor rule (earliest landed, most consumers -- gauss_lemma's is already mirrored at Int by int_prelude/gauss_factorial_coprime.rs, the other had one consumer in its own file). Nothing about the claim widened: the admitted rendered type is unchanged character for character, and the evidence checker still fails if no declaration of that name is in the built Nat environment."
-    },
-    {
-      "fact_id": "F:creal-evt-attained-max-decides-sign",
-      "date": "2026-08-31",
-      "from_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
-      "to_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
-      "from_prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
-      "to_prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
-      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256) and `drifted=0` throughout. The reader-facing text changed for two reasons, both narrowing the claim rather than widening it. (1) Non-vacuity for row 2 is now evidenced IN THIS LEDGER (lane `evt-row2-nonvacuity`, 2026-08-31): the old text said this fact supplies no such evidence and parenthetically conceded 'it plainly is' satisfiable, which is precisely the unfalsifiable form -- an assertion with no checker behind it. Two evidence rows now cite tests that fail when broken. (2) The old text cited `creal/supremum.rs`'s module documentation as saying `CReal.supOn` is 'still not landed'. That phrase occurs ZERO times in that file (control: 32 mentions of `supOn`), and the same stale citation was corrected the same day in `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`. What the new text must NOT be read as: an upgrade of EVT's standing. It still says, and this is the substantive remaining gap, that no operator here PRODUCES an attaining maximiser; `F:creal-evt-approx-max` supplies only the approximate row-1 substitute. The fact remains a refutation of the classical conclusion."
-    },
-    {
-      "fact_id": "F:int-euler-totient-theorem",
-      "date": "2026-08-31",
-      "from_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
-      "to_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
-      "from_prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
-      "to_prose_sha256": "c5e55c25f548b53f0901e61e425c8483bde08bd34d32efe4af3afafc42e5f979",
-      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256). The generated prose opened by declaring that it 'deliberately makes NO mathematical characterisation of the theorem', which is the correct default for a mechanically registered fact and the wrong resting state for a headline classical result that will be quoted. Replaced with a characterisation checked against the RENDERED TYPE, not against the declaration name: the totient is this kernel's own `countRange` predicate rather than an imported or axiomatised phi, which is the substantive claim and is invisible from the name alone. `external_status` set to `proved` (Euler, classical) and curation to `curated`. The new prose states its own limits -- no efficiency claim, no decision procedure, no converse, and both hypotheses load-bearing -- so curating it cannot be read as widening the claim."
-    },
-    {
-      "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
-      "date": "2026-08-30",
-      "from_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
-      "to_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25",
-      "reason": "OVERCLAIM CORRECTED, NOT A ROUTE UPGRADE. The statement claimed pinned Lean's kernel accepts EVERY declaration of the constructed-real carrier. It does not: `Lean.Environment.addDeclCore` refuses a `theorem` whose type is not a proposition, and this kernel admits 48 of them (plus 25 declarations that depend on one), because `CReal.UniformConvergesOn` is deliberately `Type`-valued. Measured 2026-08-30 by L0/S4's `real_lean_replay_census` and re-measured here: population 2,058, representable 1,985, residue 73. The statement is narrowed to the representable population, with the residue typed, counted and named; nothing was proved that was not proved before, and the claim is strictly weaker. The superseded statement is preserved verbatim in the fact's `notes` AND kept executable as `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary`, which fails if pinned Lean ever accepts the unfiltered export. The part that is no longer claimed is now the OPEN row `F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier`. ADR-0775; lane `carrier-replay-overclaim`. The reader-facing `statement` narrows in step with the formal one and its digests are recorded here too -- the gate correctly refused the amendment without them, since the prose is the field most readers actually see.",
-      "from_prose_sha256": "427a14e1a799ae27229548c6963f5af49c2b7e46579365d6ae081e10915c8371",
-      "to_prose_sha256": "fe0cc1e272577f838f63124ee0f39c0a0ce2eae2317f3c6677c6696edb0ea985"
-    },
-    {
-      "fact_id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
-      "from_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
-      "to_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
-      "from_prose_sha256": "225262a5bb22d859ca74701375e3d29d3e3a685b838bd4d046d0714926fdc871",
-      "to_prose_sha256": "579cd46630e36adeced9dd10f8840fdabce7bbe0ec89a885f334ac808809a3ba",
-      "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
-      "recorded_by": "coordinator",
-      "recorded_in": "da61dcef9"
-    },
-    {
-      "fact_id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
-      "from_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
-      "to_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
-      "from_prose_sha256": "b4365409a57fb3a5db419c049d40c706033c39d2b8cfcf19472e9dcd5b0bff1f",
-      "to_prose_sha256": "4cffed622f5a2e0eddc024b51ab556f3cfe09f7aa70f580fcbf4eecbbe542ee8",
-      "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
-      "recorded_by": "coordinator",
-      "recorded_in": "da61dcef9"
-    },
     {
       "fact_id": "F:cassini-as-determinant-of-a-matrix-power",
       "date": "2026-08-31",
@@ -91,11 +33,11 @@
       "recorded_by": "statement-headers"
     },
     {
-      "fact_id": "F:complex-factorquotient-degreelt",
+      "fact_id": "F:complex-admits-no-compatible-order",
       "date": "2026-08-31",
-      "from_sha256": "64e4a00ac5e5372a174e5aa4eb88beb42824f1e742fbe01ea76846af5045082f",
-      "to_sha256": "52639b52e9785940252c05b176cf9e9f8c43c79ed71e5d71884da0b50d9b241d",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.factorQuotient_degreeLt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.factorQuotient_degreeLt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "from_sha256": "d570df8a21ed8ad9ae565871e2e7398783375b35ce6b0bd63e3ffc7eef1ff596",
+      "to_sha256": "be991eafaa2b42231e74a999623080a45feb3b8a86303a120cfb52c485bb8d87",
+      "reason": "CORRECTION TOWARD THE KERNEL, not a route change and not a widening. `formal.statement` was a hand-written Lean-ish paraphrase that no tool produced and none could check; it is now `Kernel::render_lean`'s own rendering of the SAME declaration `Complex.no_compatible_order`, headed so that `check-settled-fact-statements.py`'s structural bind -- the header must name the fact's `kernel_theorem` -- applies to it. This is the same kind of edit as `66cb03eff`, which replaced hand-written seed types with kernel-dumped ones. The two forms agree hypothesis for hypothesis (le_refl, lt_irrefl, lt_of_le_of_lt, add_le_add, le_congr, sq_nonneg, zero_lt_one, then False), checked by hand against the rendered type; the reader-facing `statement`, which is what most readers see, is BYTE-IDENTICAL (from_prose == to_prose, so no prose digests are recorded here); and the superseded text is preserved verbatim in the fact's `notes`. Nothing is claimed that was not claimed before. The lane's tool `scripts/header-settled-fact-statements.py` REFUSED this one as DIVERGENT precisely because it is a content change; it was made by hand, with this record, rather than made to look mechanical.",
       "recorded_by": "statement-headers"
     },
     {
@@ -104,6 +46,22 @@
       "from_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
       "to_sha256": "ff927eb83d8570c869860afc1c0a925c97e44fc7b7e6bd37a594130ef8dd8c92",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.factorQuotient (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def Complex.factorQuotient : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-factorquotient-degreelt",
+      "date": "2026-08-31",
+      "from_sha256": "64e4a00ac5e5372a174e5aa4eb88beb42824f1e742fbe01ea76846af5045082f",
+      "to_sha256": "52639b52e9785940252c05b176cf9e9f8c43c79ed71e5d71884da0b50d9b241d",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.factorQuotient_degreeLt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.factorQuotient_degreeLt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:complex-hornerfromtop",
+      "date": "2026-08-31",
+      "from_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
+      "to_sha256": "f983f82bd0bbbc4dcf64ca0757bae21218900a0c47dee867929760db499bb303",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def Complex.hornerFromTop : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     },
     {
@@ -128,14 +86,6 @@
       "from_sha256": "17d34e9efb719fdc43a6fc8933ebda3a3aa467f3740231b5e379aec2aa28f70d",
       "to_sha256": "36bc21fa7322efa4f7cde8197a42f4e0a0072016c2aa08a7f76510ab1b870563",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Complex.hornerFromTop_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
-      "recorded_by": "statement-headers"
-    },
-    {
-      "fact_id": "F:complex-hornerfromtop",
-      "date": "2026-08-31",
-      "from_sha256": "0a27de3d153f8826b5f367e2a669fdd6a3922c7b2d9d5b8cc8cf5e855b2f884c",
-      "to_sha256": "f983f82bd0bbbc4dcf64ca0757bae21218900a0c47dee867929760db499bb303",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Complex.hornerFromTop (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def Complex.hornerFromTop : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     },
     {
@@ -187,6 +137,15 @@
       "recorded_by": "statement-headers"
     },
     {
+      "fact_id": "F:creal-evt-attained-max-decides-sign",
+      "date": "2026-08-31",
+      "from_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
+      "to_sha256": "f9b1849fce5e9d5fe98df3086805c877e843d5f51c1a0d3abeea498ee4f47ed0",
+      "from_prose_sha256": "0f7a0cadfded5e45948d25e248961652430ca132303e0464a632a997162aa911",
+      "to_prose_sha256": "f2e5ace030cf42f7d6788fab929c01ecfc9f65edb5d10ae1d2b129c36dd72a62",
+      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256) and `drifted=0` throughout. The reader-facing text changed for two reasons, both narrowing the claim rather than widening it. (1) Non-vacuity for row 2 is now evidenced IN THIS LEDGER (lane `evt-row2-nonvacuity`, 2026-08-31): the old text said this fact supplies no such evidence and parenthetically conceded 'it plainly is' satisfiable, which is precisely the unfalsifiable form -- an assertion with no checker behind it. Two evidence rows now cite tests that fail when broken. (2) The old text cited `creal/supremum.rs`'s module documentation as saying `CReal.supOn` is 'still not landed'. That phrase occurs ZERO times in that file (control: 32 mentions of `supOn`), and the same stale citation was corrected the same day in `docs/formalized-math-2026-08/08-ivt-and-evt-measured-against-mathlib.md`. What the new text must NOT be read as: an upgrade of EVT's standing. It still says, and this is the substantive remaining gap, that no operator here PRODUCES an attaining maximiser; `F:creal-evt-approx-max` supplies only the approximate row-1 substitute. The fact remains a refutation of the classical conclusion."
+    },
+    {
       "fact_id": "F:creal-meshscaledleofge",
       "date": "2026-08-31",
       "from_sha256": "db162acea724ca0079a5efdaef0415253ab4da606240313a2f6e490acb764e28",
@@ -211,6 +170,14 @@
       "recorded_by": "statement-headers"
     },
     {
+      "fact_id": "F:creal-polydegreelt",
+      "date": "2026-08-31",
+      "from_sha256": "41102d058f00ed60338abc311db53e8ee555dff34eec60c989372cab7685aa24",
+      "to_sha256": "89862f85fd5fe80a493684f1e12d5c4c8ce76095f89df63c204a567dbb9d4fc2",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyDegreeLt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyDegreeLt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
       "fact_id": "F:creal-polydegreelt-polyadd",
       "date": "2026-08-31",
       "from_sha256": "aed26d190860a8367bfe5a01bd685d82be89cd3ce0f478e4098e318619b6ac43",
@@ -227,11 +194,11 @@
       "recorded_by": "statement-headers"
     },
     {
-      "fact_id": "F:creal-polydegreelt",
+      "fact_id": "F:creal-polyeval",
       "date": "2026-08-31",
-      "from_sha256": "41102d058f00ed60338abc311db53e8ee555dff34eec60c989372cab7685aa24",
-      "to_sha256": "89862f85fd5fe80a493684f1e12d5c4c8ce76095f89df63c204a567dbb9d4fc2",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyDegreeLt (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyDegreeLt : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "from_sha256": "091438075dfa0c8352ac7ef78bcb16d81f6b65fe108263fd62900e40878e536d",
+      "to_sha256": "8f60520e236fc15a255a3f1d4dc0f9a3794229977d0178015ba7166d9d78fb0a",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyEval : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     },
     {
@@ -264,14 +231,6 @@
       "from_sha256": "08187cbbe31305f6e01338e169dcf7481c6faca6ccd7fdac10289a426277b4eb",
       "to_sha256": "be31f59116945c38e1560530f03299ed3b0ea9e59c3f1eafabf73c6dd1c7f14a",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval_zero (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CReal.polyEval_zero : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
-      "recorded_by": "statement-headers"
-    },
-    {
-      "fact_id": "F:creal-polyeval",
-      "date": "2026-08-31",
-      "from_sha256": "091438075dfa0c8352ac7ef78bcb16d81f6b65fe108263fd62900e40878e536d",
-      "to_sha256": "8f60520e236fc15a255a3f1d4dc0f9a3794229977d0178015ba7166d9d78fb0a",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CReal.polyEval (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `def CReal.polyEval : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     },
     {
@@ -323,6 +282,14 @@
       "recorded_by": "statement-headers"
     },
     {
+      "fact_id": "F:excluded-middle-not-intuitionistic",
+      "date": "2026-08-31",
+      "from_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
+      "to_sha256": "4222465e2fd7a6f5bad2d0932a0e0060c48737b42bf632e1895b91e775027326",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for ipc_excluded_middle_not_provable (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem ipc_excluded_middle_not_provable : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
       "fact_id": "F:fermat-little-theorem-over-constructed-naturals",
       "date": "2026-08-31",
       "from_sha256": "a62fe365c9cc154e5e64773f733be071419d03e3f1ee8e576ccaaed2017a2cbd",
@@ -363,12 +330,69 @@
       "recorded_by": "statement-headers"
     },
     {
+      "fact_id": "F:heyting-3-chain-refutes-excluded-middle",
+      "date": "2026-08-31",
+      "from_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
+      "to_sha256": "afb64e393e0ba3daefb97a25e4c333db6998bd9103249ebd9800c1fa7f5af797",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for ipc_heyting_join_not_ne_top (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem ipc_heyting_join_not_ne_top : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:int-euler-totient-theorem",
+      "date": "2026-08-31",
+      "from_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "to_sha256": "b3a3bbaefd72ade99966a3ff2dd35e470d8e56aaebd57dfa470f7b5e839e5601",
+      "from_prose_sha256": "9f8c5db1259ba0ded328ca7733404cd7dd7a8f9cbd1c68ef14412f1666b9b63b",
+      "to_prose_sha256": "c5e55c25f548b53f0901e61e425c8483bde08bd34d32efe4af3afafc42e5f979",
+      "reason": "PROSE ONLY -- the formal statement is byte-identical (from_sha256 == to_sha256). The generated prose opened by declaring that it 'deliberately makes NO mathematical characterisation of the theorem', which is the correct default for a mechanically registered fact and the wrong resting state for a headline classical result that will be quoted. Replaced with a characterisation checked against the RENDERED TYPE, not against the declaration name: the totient is this kernel's own `countRange` predicate rather than an imported or axiomatised phi, which is the substantive claim and is invisible from the name alone. `external_status` set to `proved` (Euler, classical) and curation to `curated`. The new prose states its own limits -- no efficiency claim, no decision procedure, no converse, and both hypotheses load-bearing -- so curating it cannot be read as widening the claim."
+    },
+    {
+      "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
+      "date": "2026-08-30",
+      "from_sha256": "f96a474ca642f8b9801e4cd4cc8ee2fc6125bfc75a46f4955d495b6a78f295d2",
+      "to_sha256": "f24c9a51c52d18c8996e09749143a7ebb324052b193b7745ce0a931a1a91ac25",
+      "reason": "OVERCLAIM CORRECTED, NOT A ROUTE UPGRADE. The statement claimed pinned Lean's kernel accepts EVERY declaration of the constructed-real carrier. It does not: `Lean.Environment.addDeclCore` refuses a `theorem` whose type is not a proposition, and this kernel admits 48 of them (plus 25 declarations that depend on one), because `CReal.UniformConvergesOn` is deliberately `Type`-valued. Measured 2026-08-30 by L0/S4's `real_lean_replay_census` and re-measured here: population 2,058, representable 1,985, residue 73. The statement is narrowed to the representable population, with the residue typed, counted and named; nothing was proved that was not proved before, and the claim is strictly weaker. The superseded statement is preserved verbatim in the fact's `notes` AND kept executable as `the_superseded_whole_carrier_claim_is_refuted_by_the_same_binary`, which fails if pinned Lean ever accepts the unfiltered export. The part that is no longer claimed is now the OPEN row `F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier`. ADR-0775; lane `carrier-replay-overclaim`. The reader-facing `statement` narrows in step with the formal one and its digests are recorded here too -- the gate correctly refused the amendment without them, since the prose is the field most readers actually see.",
+      "from_prose_sha256": "427a14e1a799ae27229548c6963f5af49c2b7e46579365d6ae081e10915c8371",
+      "to_prose_sha256": "fe0cc1e272577f838f63124ee0f39c0a0ce2eae2317f3c6677c6696edb0ea985"
+    },
+    {
       "fact_id": "F:menelaus-and-ceva-over-constructed-plane",
       "date": "2026-08-31",
       "from_sha256": "29c98e2e599958a95bd2154d5391b4acf3d346bb29cc8c45b0e36cad379f3963",
       "to_sha256": "90f9882f7dc062254236e92f8c333591684e6669db377d0bdacd84648952eae7",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for CPoint.menelaus_collinear_of_ratio_product (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem CPoint.menelaus_collinear_of_ratio_product : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+      "from_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
+      "to_sha256": "f3004522c195e2e6bdf98bb90fd224225077cc339c951fee9a6aff0ab10c98a4",
+      "from_prose_sha256": "225262a5bb22d859ca74701375e3d29d3e3a685b838bd4d046d0714926fdc871",
+      "to_prose_sha256": "579cd46630e36adeced9dd10f8840fdabce7bbe0ec89a885f334ac808809a3ba",
+      "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
+      "recorded_by": "coordinator",
+      "recorded_in": "da61dcef9"
+    },
+    {
+      "fact_id": "F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201",
+      "date": "2026-09-02",
+      "from_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
+      "to_sha256": "497b3ad874aff47fe75fada2c167c2ad306d01d2405293a8a65db0a45ea957cf",
+      "from_prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
+      "to_prose_sha256": "5ab779d8b6b8a8a2fc940e20cdd6874d64dc125d363d673b3a43d53ca0a3109d",
+      "from_kernel_theorem": "Nat.prime_coprime_factorial_of_lt",
+      "to_kernel_theorem": "Nat.coprime_factorial_of_lt_prime",
+      "reason": "REPOINT ONLY -- both digests are byte-identical (from == to on the formal statement AND on the reader-facing prose). The proposition this fact is about did not change; the DECLARATION it names did, because there were two of them. The 2026-09-02 daily retrieval audit (ADR-0608's structural remedy) ran `shape_search --include-constructed --duplicates` and found `Nat.prime_coprime_factorial_of_lt` (nat_prelude/prime_dvd_factorial_lcm.rs, landed 2026-09-01) and `Nat.coprime_factorial_of_lt_prime` (nat_prelude/gauss_lemma.rs, landed under ADR-1070) reporting the SAME shape; `kernel_declaration_projection` shows their rendered types byte-identical, and the two proofs are the same induction with `gcd_comm` vs `coprime_symmetric` as the only difference. This is a re-derivation, not two results. The later declaration is deleted; this fact now names the earlier one, per ADR-0608's survivor rule (earliest landed, most consumers -- gauss_lemma's is already mirrored at Int by int_prelude/gauss_factorial_coprime.rs, the other had one consumer in its own file). Nothing about the claim widened: the admitted rendered type is unchanged character for character, and the evidence checker still fails if no declaration of that name is in the built Nat environment."
+    },
+    {
+      "fact_id": "F:ml430-nat-totient-dvd-of-dvd-9622e44a",
+      "from_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
+      "to_sha256": "df5af186f2ca1ddd7cefe0e558827534c9bb0d610fbd60ebb9ef4a2a208d8967",
+      "from_prose_sha256": "b4365409a57fb3a5db419c049d40c706033c39d2b8cfcf19472e9dcd5b0bff1f",
+      "to_prose_sha256": "4cffed622f5a2e0eddc024b51ab556f3cfe09f7aa70f580fcbf4eecbbe542ee8",
+      "reason": "Restoration, not a rewrite. Commit `da61dcef9` restored the preregistered reader-facing `statement` after commit `e79804fdd` had replaced it with a shorter gloss that dropped the theorem's content. The pin was taken on a branch that predated the restoration, so the merge reports the repair as drift. The formal statement is unchanged; only the prose digest moves, and it moves BACK to the preregistered text.",
+      "recorded_by": "coordinator",
+      "recorded_in": "da61dcef9"
     },
     {
       "fact_id": "F:nat-binary-rec-fuel-irrelevance",
@@ -387,19 +411,19 @@
       "recorded_by": "statement-headers"
     },
     {
-      "fact_id": "F:nat-bitwise-and-eq-land-three-five",
-      "date": "2026-08-31",
-      "from_sha256": "178c80a192d4944baa557340ee19cde1e527723d3410dee69d2de62f6e20f555",
-      "to_sha256": "40e4922ab460ad70d5207dfeb35e939935b871dbdc31c30cb3f950e527847212",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_and_eq_land_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_and_eq_land_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
-      "recorded_by": "statement-headers"
-    },
-    {
       "fact_id": "F:nat-bitwise-and-eq-land",
       "date": "2026-08-31",
       "from_sha256": "8e8299eedc3985898bff1ce0e327aaf5a6d7a7c9d54cd383f91c8b80448e2c05",
       "to_sha256": "70d0e0bd8a8f81f28efb08551e2bf5a12ee9fe8ca77d73db7e5a0b53c10a4a29",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_and_eq_land (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_and_eq_land : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-and-eq-land-three-five",
+      "date": "2026-08-31",
+      "from_sha256": "178c80a192d4944baa557340ee19cde1e527723d3410dee69d2de62f6e20f555",
+      "to_sha256": "40e4922ab460ad70d5207dfeb35e939935b871dbdc31c30cb3f950e527847212",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_and_eq_land_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_and_eq_land_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     },
     {
@@ -419,19 +443,19 @@
       "recorded_by": "statement-headers"
     },
     {
-      "fact_id": "F:nat-bitwise-or-eq-lor-three-five",
-      "date": "2026-08-31",
-      "from_sha256": "8a73f2c69ed7f14e5801a5967f03c77e06636f5be17e5193fc79785b44ebceec",
-      "to_sha256": "3b4ab40364f66c297e55482229655a24785564ded226734b3dd4d8643bccd2d8",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_or_eq_lor_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_or_eq_lor_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
-      "recorded_by": "statement-headers"
-    },
-    {
       "fact_id": "F:nat-bitwise-or-eq-lor",
       "date": "2026-08-31",
       "from_sha256": "bf0cc45f6d2bf1b71b436f3fb05832b9e90cb5ae24285a20562fe4ea1e6138a3",
       "to_sha256": "4b45e9d571d7084a89fc5b2f4649219dbb7f8eb0edc5e9c871615f5c806baa12",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_or_eq_lor (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_or_eq_lor : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
+      "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:nat-bitwise-or-eq-lor-three-five",
+      "date": "2026-08-31",
+      "from_sha256": "8a73f2c69ed7f14e5801a5967f03c77e06636f5be17e5193fc79785b44ebceec",
+      "to_sha256": "3b4ab40364f66c297e55482229655a24785564ded226734b3dd4d8643bccd2d8",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Nat.bitwise_or_eq_lor_three_five (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Nat.bitwise_or_eq_lor_three_five : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     },
     {
@@ -688,30 +712,6 @@
       "from_sha256": "bd973fb4bf0fc785bf32ffddf89aa8f09c14167564bed042d45f40c98ed25876",
       "to_sha256": "64a7355ea9d2949253357d81263b9f774b89f5748434e6b50a1e16dc7f082c95",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Int.wilson (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Int.wilson : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
-      "recorded_by": "statement-headers"
-    },
-    {
-      "fact_id": "F:complex-admits-no-compatible-order",
-      "date": "2026-08-31",
-      "from_sha256": "d570df8a21ed8ad9ae565871e2e7398783375b35ce6b0bd63e3ffc7eef1ff596",
-      "to_sha256": "be991eafaa2b42231e74a999623080a45feb3b8a86303a120cfb52c485bb8d87",
-      "reason": "CORRECTION TOWARD THE KERNEL, not a route change and not a widening. `formal.statement` was a hand-written Lean-ish paraphrase that no tool produced and none could check; it is now `Kernel::render_lean`'s own rendering of the SAME declaration `Complex.no_compatible_order`, headed so that `check-settled-fact-statements.py`'s structural bind -- the header must name the fact's `kernel_theorem` -- applies to it. This is the same kind of edit as `66cb03eff`, which replaced hand-written seed types with kernel-dumped ones. The two forms agree hypothesis for hypothesis (le_refl, lt_irrefl, lt_of_le_of_lt, add_le_add, le_congr, sq_nonneg, zero_lt_one, then False), checked by hand against the rendered type; the reader-facing `statement`, which is what most readers see, is BYTE-IDENTICAL (from_prose == to_prose, so no prose digests are recorded here); and the superseded text is preserved verbatim in the fact's `notes`. Nothing is claimed that was not claimed before. The lane's tool `scripts/header-settled-fact-statements.py` REFUSED this one as DIVERGENT precisely because it is a content change; it was made by hand, with this record, rather than made to look mechanical.",
-      "recorded_by": "statement-headers"
-    },
-    {
-      "fact_id": "F:excluded-middle-not-intuitionistic",
-      "date": "2026-08-31",
-      "from_sha256": "92319c6e64635c765c303557fce97ec86d45650b08ce78b06608c3460cd33c3f",
-      "to_sha256": "4222465e2fd7a6f5bad2d0932a0e0060c48737b42bf632e1895b91e775027326",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for ipc_excluded_middle_not_provable (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem ipc_excluded_middle_not_provable : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
-      "recorded_by": "statement-headers"
-    },
-    {
-      "fact_id": "F:heyting-3-chain-refutes-excluded-middle",
-      "date": "2026-08-31",
-      "from_sha256": "131df1511e07e10534fca0b73ce485d88db818630ea40cce54b169aa3216902a",
-      "to_sha256": "afb64e393e0ba3daefb97a25e4c333db6998bd9103249ebd9800c1fa7f5af797",
-      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for ipc_heyting_join_not_ne_top (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem ipc_heyting_join_not_ne_top : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
     }
   ],
@@ -15496,6 +15496,13 @@
       "kernel_theorem": "Nat.ble_eq_true_of_le"
     },
     {
+      "fact_id": "F:nat-ble-select-add-of-ne",
+      "language": "lean4",
+      "statement_sha256": "202dc7ac3fe26233ba8cea970e34d051eebf332da38f22c83a2cb3c5648456ca",
+      "prose_sha256": "73a85f4f430188f59299f8f3197d27910317e4301e6f88205415eb91a50ba9b7",
+      "kernel_theorem": "Nat.ble_select_add_of_ne"
+    },
+    {
       "fact_id": "F:nat-ble-self-eq-true",
       "language": "lean4",
       "statement_sha256": "200079047d8740c00f70180d0e1859a617cd3b4e80cd18db10c1de5037b7bad7",
@@ -16295,6 +16302,13 @@
       "kernel_theorem": "Nat.dvd_zero"
     },
     {
+      "fact_id": "F:nat-eisenstein-floor-sum",
+      "language": "lean4",
+      "statement_sha256": "e209fc1ef67d745bbf364e14abb09ad93dc6837bb8bef8c01d1f3c7b363a0901",
+      "prose_sha256": "d1ee436a786edc31f97561e98924833afc565deb9ecc044f45bb16f3e5c2c899",
+      "kernel_theorem": "Nat.eisenstein_floor_sum"
+    },
+    {
       "fact_id": "F:nat-eq-equivalence-on",
       "language": "lean4",
       "statement_sha256": "7fc8833168bc85181457efb5874d0cdefe1f7c6e639661f49c07895ecdbd24d8",
@@ -16518,6 +16532,13 @@
       "statement_sha256": "37c0876082d26013cd35f2c31de310bc1c93a7901e8eeef91b68d1b3b3571bbd",
       "prose_sha256": "253183357bf2e41f8443b4f27d6a5e64acbcbefdc42f4c9ea7e13cad1735a0fe",
       "kernel_theorem": "Nat.Fin.val_mk"
+    },
+    {
+      "fact_id": "F:nat-gauss-fold-sumrange-eq",
+      "language": "lean4",
+      "statement_sha256": "72b1944027f60294810aa6eba58da7e82100976559a2c9636212359e2784a38f",
+      "prose_sha256": "0fb9a21ded651bf60a9406fb012ac43c53bf53f13d05dae4f3a418b22f1537e0",
+      "kernel_theorem": "Nat.gauss_fold_sumRange_eq"
     },
     {
       "fact_id": "F:nat-gauss-lemma",
