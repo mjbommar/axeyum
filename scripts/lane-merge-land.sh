@@ -17,7 +17,7 @@
 # tree still shows what needs a hand.
 set -u
 BRANCH="${1:?usage: lane-merge-land.sh <branch>}"
-GENERATED=(PLAN.md docs/research/09-decisions/README.md artifacts/autogenesis/frontier-shape-census-v1.json)
+GENERATED=(PLAN.md docs/research/09-decisions/README.md artifacts/autogenesis/frontier-shape-census-v1.json artifacts/import-backlog.json docs/plan/generated/production-provenance-ledger.md)
 
 # A DIRTY TREE BEFORE THE MERGE GETS SWEPT INTO THE MERGE COMMIT.
 # Line 44 below is `git add -A -- PLAN.md docs/ artifacts/ scripts/ crates/
@@ -72,6 +72,17 @@ python3 scripts/gen-plan.py > /tmp/lane-merge-land.plan 2>&1 || {
 # failed post-merge hygiene on exactly this. Regenerate it here like PLAN.md.
 # Its exit 2 means "frontier unavailable"; the gate reports that as
 # not-answerable rather than failing, so only exit 1 is a stop here.
+# Same reason, same fix, for the two ledger-derived artifacts ADR-1511 made
+# blocking: both are ~0.1s and both go stale on every fact-landing merge.
+python3 scripts/gen-import-backlog.py > /tmp/lane-merge-land.backlog 2>&1 || {
+  echo "LANE_MERGE_LAND|gen-import-backlog failed" >&2; exit 1; }
+python3 scripts/gen-production-provenance-ledger.py > /tmp/lane-merge-land.prov 2>&1 || {
+  echo "LANE_MERGE_LAND|gen-production-provenance-ledger failed" >&2; exit 1; }
+# And the Python binding's prelude field table: any lane that adds a prelude
+# field stales it (eisenstein-lattice did, 4b0cb369a). Exit 2 = no rustfmt,
+# which the gate reports as skipped; only exit 1 stops here.
+python3 scripts/gen-py-prelude-fields.py > /tmp/lane-merge-land.pyfields 2>&1
+[ $? -eq 1 ] && { echo "LANE_MERGE_LAND|gen-py-prelude-fields failed" >&2; exit 1; }
 python3 scripts/frontier-shape-census.py > /tmp/lane-merge-land.census 2>&1
 census_rc=$?
 if [ "$census_rc" -eq 1 ]; then
