@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-eisenstein-lemma-modeq",
+  "title": "Eisenstein's lemma as a congruence mod 2",
+  "statement": "Eisenstein's lemma as a congruence: `Nat.modEq 2 F N` for odd `q = 2n+1` coprime to odd `pp = 2m+1`. WHY IT IS A COROLLARY AND NOT A SECOND PROOF: `Nat.modEq d a b := exists u v, a + d*u = b + d*v` (`modular.rs`) is the BALANCED form, so from `F + N = k + k` the witnesses are `u := N` and `v := k`, giving `F + 2*N = (F + N) + N = (k + k) + N` and `N + 2*k = N + (k + k)` -- one `Nat.add_comm` apart. A MEASUREMENT WORTH RECORDING: `Nat.modEq` exists, contrary to what the obvious query says. `shape_search --name-like modEq` returns 40 declarations, EVERY ONE of them `Int`, because the `Nat` theorems are spelled `mod_eq_*` in lower case while the constant they mention is `Nat.modEq`. So the obvious query answers `Int` and looks conclusive. WHAT NO NUMERIC CHECK CAN SEE: `modEq 2 F N` and `modEq 2 N F` are the same claim numerically but different kernel terms, and no consumer chaining through one can use the other without a commutation step. That is a recorded SURVIVOR in ADR-1552's control table and is guarded only by the character-for-character type pin. `Kernel::axiom_footprint` is EMPTY. Admitted on the first attempt.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.eisenstein_lemma_modEq : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} AxNat (AxNat.gcd (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (AxNat.succ AxNat.zero)) -> AxNat.modEq (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.sumRange (fun (x3 : AxNat) => AxNat.div (AxNat.mul (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) (AxNat.succ x3)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) x0) (AxNat.gaussNegCount (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x1)) x0))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ],
+    "kernel_theorem": "Nat.eisenstein_lemma_modEq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-add-assoc",
+    "F:nat-eisenstein-lemma",
+    "F:nat-mul-comm",
+    "F:nat-zero-add",
+    "F:ml430-nat-add-assoc-8c87a1f1"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.eisenstein_lemma_modEq",
+      "kind": "kernel-term",
+      "supports": "Nat.eisenstein_lemma_modEq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Nat.eisenstein_lemma_modEq 2>/dev/null | grep -cE '^Nat\\.eisenstein_lemma_modEq[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Nat.eisenstein_lemma_modEq",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. RUN WITH A NEGATIVE CONTROL and it was: the real name prints 1 with both pipeline stages at 0, a one-character typo prints 0 with both stages at 1. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. Pass ONE name per invocation: this tool silently keeps only the FIRST name argument."
+    },
+    {
+      "id": "footprint-Nat.eisenstein_lemma_modEq",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the natural-number prelude's trusted surface is empty, which bounds Nat.eisenstein_lemma_modEq.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. This is a whole-prelude bound, not a per-declaration measurement; the per-declaration figure is measured 0 by the axiom-footprint assertion in eisenstein_lemma_tests.rs."
+    },
+    {
+      "id": "numeric-Nat.eisenstein_lemma_modEq",
+      "kind": "exhaustive-enumeration",
+      "supports": "ADR-1552's check script sweeps this statement's arithmetic over 8450 (modulus, multiplier, bound) instances for the hypothesis-free rows, 519 coprime instances for the counting identity, and 399 coprime odd pairs plus all 240 ordered pairs of distinct odd primes below 60 for Eisenstein's lemma; the control table refutes eight wrong readings at named witnesses.",
+      "check_status": "checked",
+      "checkers": [
+        "adr-1552-eisenstein-checks.py"
+      ],
+      "checker_command": "python3 docs/research/09-decisions/adr-1552-eisenstein-checks.py",
+      "checker_seconds": 3,
+      "notes": "Exit status depends on the finding: a claim that fails, or a control that behaves other than as recorded, exits 1. Verified by mutating the script itself in a scratch copy with one uniquely-named file per mutant (so the stale-__pycache__ trap cannot report the previous mutant's result): 16 of 16 mutations exit 1. Two recorded SURVIVORS, M9 and M10, are the argument order of the congruence and of `Even (F + N)` -- invisible to every numeric check and guarded only by the character-for-character type pins in eisenstein_lemma_tests.rs."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs)",
+    "source": "formal.statement is taken verbatim from the kernel's own rendering (Kernel::render_lean of the admitted declaration type; the same string is pinned character for character in eisenstein_lemma_tests.rs). depends_on is the direct-theorem column of theorem_dependency_inventory intersected with this ledger's registered facts, so it is an INTERSECTION and not the full dependency set -- direct dependencies with no fact row are omitted. Nothing about the statement was hand transcribed; title, statement and the evidence notes were authored (lane eisenstein-3)."
+  },
+  "notes": "Declared in `crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lemma.rs`. ADR-1552. Declaration kind: theorem. WHAT IS STILL OPEN: quadratic reciprocity. Its two halves are `Nat.eisenstein_lemma` (this lane) and `Nat.eisenstein_floor_sum` (ADR-1544); what is missing is the Int-side assembly that turns the parity statement about `N_p + N_q` into one about Legendre symbols through `Int.gaussLemmaSignCount`. Also open: ADR-1544's residue 5, the min-free corollary of `Nat.eisenstein_floor_sum`, which needs `div (q*(succ x)) pp <= n` at `pp = succ (2m)`, `q = succ (2n)`, `succ x <= m`. GRADED FAMILY (ADR-0603): row 1, the general constructive form. Row 2 UNASSESSED -- the hypothesis-dropping and mis-reading refutations are numeric at named witnesses and asserted as `def_eq` controls in the test file, but none is stated as a kernel theorem and no claim is made that one is impossible.",
+  "external_status": "proved"
+}

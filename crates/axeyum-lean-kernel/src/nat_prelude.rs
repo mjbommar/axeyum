@@ -176,7 +176,9 @@ mod divisor_sum_scale;
 mod draw11_mirrors;
 mod dvd_add_iff_left;
 mod dvd_mul_split;
+mod eisenstein_floor_min_free;
 mod eisenstein_lattice;
+mod eisenstein_lemma;
 mod eisenstein_side;
 mod euler;
 mod even_add_family;
@@ -197,6 +199,7 @@ mod finite_set;
 mod floor_count;
 mod gauss_fold_sum;
 mod gauss_lemma;
+mod gauss_residue_reconcile;
 mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;
@@ -266,6 +269,7 @@ pub(crate) mod steps;
 mod stirling;
 mod stirling_lemmas;
 mod subset_product;
+mod subset_sum;
 mod sum_range_permute;
 mod testbit_bitwise;
 mod totient;
@@ -357,7 +361,9 @@ use divisor_sum_scale::declare_divisor_sum_scale_all;
 use draw11_mirrors::declare_draw11_mirrors_all;
 use dvd_add_iff_left::declare_dvd_add_iff_left;
 use dvd_mul_split::declare_dvd_mul_split;
+use eisenstein_floor_min_free::declare_eisenstein_floor_min_free_all;
 use eisenstein_lattice::declare_eisenstein_lattice_all;
+use eisenstein_lemma::declare_eisenstein_lemma_all;
 use eisenstein_side::declare_eisenstein_side_all;
 use euler::declare_mod_eq_cancel;
 use even_add_family::declare_even_add_family_all;
@@ -381,6 +387,7 @@ use finite_set::declare_finite_set_all;
 use floor_count::declare_floor_count_all;
 use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
+use gauss_residue_reconcile::declare_gauss_residue_reconcile_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use gcd_mul_right::declare_gcd_mul_right;
@@ -480,6 +487,7 @@ use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
 use stirling_lemmas::declare_stirling_lemmas_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
+use subset_sum::declare_subset_sum_all;
 use sum_range_permute::declare_sum_range_permute_all;
 use testbit_bitwise::declare_testbit_bitwise_all;
 use totient::declare_totient_all;
@@ -5693,6 +5701,112 @@ pub struct NatPrelude {
     /// `Int.prodRange_permute`; this is the same three steps over
     /// [`sum_range_permute`](Self::sum_range_permute).
     pub gauss_fold_sum_range_eq: NameId,
+    // -- `eisenstein-3` lane: `subset_sum.rs` --
+    /// `Nat.sumRangeIf : (Nat → Bool) → (Nat → Nat) → Nat → Nat`
+    /// (`subset_sum.rs`) — `sumRangeIf p f n := sumRange (fun i =>
+    /// bool_select_nat (p i) (f i) 0) n`, the sum of `f` over the indices
+    /// below `n` that satisfy the `Bool`-valued predicate `p`. The additive
+    /// corner of the subset-fold triangle whose other two corners are
+    /// [`count_range`](Self::count_range) (`totient.rs`) and
+    /// [`prod_range_if`](Self::prod_range_if) (`subset_product.rs`); it was
+    /// measured ABSENT from every prelude by two prior lanes (ADR-1540,
+    /// ADR-1544) and is what a conditional-sum consumer needs.
+    pub sum_range_if: NameId,
+    /// `Nat.sumRangeIf_zero : ∀ p f, Eq (sumRangeIf p f zero) 0` —
+    /// `Eq.refl`, by δ into `Nat.sumRange`'s own `Nat.rec`.
+    pub sum_range_if_zero: NameId,
+    /// `Nat.sumRangeIf_succ : ∀ p f n, Eq (sumRangeIf p f (succ n))
+    /// (add (sumRangeIf p f n) (bool_select_nat (p n) (f n) 0))` — `Eq.refl`.
+    /// The new term is on the RIGHT because `Nat.sumRange`'s step is
+    /// `add ih (f j)` and `Nat.add` recurses on its right argument.
+    pub sum_range_if_succ: NameId,
+    /// `Nat.sumRangeIf_congr_lt : ∀ p q f g n, (∀ i, Lt i n → Eq Bool (p i)
+    /// (q i)) → (∀ i, Lt i n → Eq (f i) (g i)) → Eq (sumRangeIf p f n)
+    /// (sumRangeIf q g n)` — bounded, matching
+    /// [`sum_range_congr_lt`](Self::sum_range_congr_lt) and
+    /// [`prod_range_if_congr_lt`](Self::prod_range_if_congr_lt) rather than
+    /// `countRange_congr`'s unconditional convention.
+    pub sum_range_if_congr_lt: NameId,
+    /// `Nat.sumRangeIf_compl : ∀ p f n, Eq (add (sumRangeIf p f n)
+    /// (sumRangeIf (setCompl p) f n)) (sumRange f n)` (`subset_sum.rs`) — the
+    /// split of a full-range sum into the selected and unselected parts. No
+    /// complementarity hypothesis: this kernel has no `Bool.not`, and
+    /// [`set_compl`](Self::set_compl) (`finite_set.rs`) IS that function. The
+    /// additive twin of [`count_range_compl`](Self::count_range_compl).
+    pub sum_range_if_compl: NameId,
+    // -- `eisenstein-3` lane: `gauss_residue_reconcile.rs` --
+    /// `Nat.leastResidue_sumRange_reconcile : ∀ ap a m,
+    ///   Eq (add (sumRange (fun j => leastResidue (succ ap) a (succ j)) m)
+    ///           (add (sumRangeIf sign fold m) (sumRangeIf sign fold m)))
+    ///      (add (sumRange (fun j => gaussFold (succ ap) a (succ j)) m)
+    ///           (mul (succ ap) (gaussNegCount (succ ap) a m)))`
+    /// (`gauss_residue_reconcile.rs`) — ADR-1540's/ADR-1544's **residue 2**:
+    /// the least residues and the folded ones differ by `pp` on exactly the
+    /// "negative" indices, so summing them relates the two aggregates through
+    /// [`gauss_neg_count`](Self::gauss_neg_count). Stated additively because
+    /// `Nat.sub` is truncated; hypothesis-free because the only side
+    /// condition is `leastResidue < pp`, which `Nat.mod_lt` supplies at the
+    /// constructively positive modulus `succ ap`. **Coprimality is NOT
+    /// needed** — it is what makes the fold a bijection, not what makes a
+    /// residue and its reflection add to `pp`.
+    pub least_residue_sum_range_reconcile: NameId,
+    // -- `eisenstein-3` lane: `eisenstein_lemma.rs` --
+    /// `Nat.mul_sumRange_div_add_leastResidue : ∀ ap a m,
+    ///   Eq (mul a (sumRange succ m))
+    ///      (add (mul (succ ap) (sumRange (fun j => div (mul a (succ j))
+    ///           (succ ap)) m))
+    ///           (sumRange (fun j => leastResidue (succ ap) a (succ j)) m))`
+    /// (`eisenstein_lemma.rs`) — the division algorithm, summed. Its
+    /// pointwise content is the LEFT CONJUNCT of
+    /// [`div_mod_exec`](Self::div_mod_exec), because `Nat.divMod d n q r`
+    /// unfolds to `And (Eq n (add (mul d q) r)) (Lt r d)`. Worth knowing: a
+    /// name search finds nothing — there is no `Nat.div_add_mod` here.
+    pub mul_sum_range_div_add_least_residue: NameId,
+    /// `Nat.eisenstein_count_identity : ∀ m a, Eq (gcd a (succ (2*m))) 1 →
+    ///   Eq (add (mul a T) (add S S)) (add (mul (succ (2*m)) (add F N)) T)`
+    /// (`eisenstein_lemma.rs`) — the three residues combined: step 1's
+    /// division algorithm, residue 2's
+    /// [`least_residue_sum_range_reconcile`](Self::least_residue_sum_range_reconcile),
+    /// and residue 1's
+    /// [`gauss_fold_sum_range_eq`](Self::gauss_fold_sum_range_eq). The
+    /// residue sum cancels by ASSOCIATION alone, so no subtraction appears
+    /// anywhere. Coprimality enters here and only here, through the
+    /// bijection.
+    pub eisenstein_count_identity: NameId,
+    /// `Nat.eisenstein_lemma : ∀ m n, Eq (gcd (succ (2*n)) (succ (2*m))) 1 →
+    ///   Even (add F N)` (`eisenstein_lemma.rs`) — **Eisenstein's lemma**:
+    /// the Gauss-lemma counting exponent `N` and the floor sum `F` have the
+    /// same parity. `Nat.Even x := ∃ k, x = k + k`, so this is `N ≡ Σ⌊qk/p⌋
+    /// (mod 2)`. Quadratic reciprocity is NOT proved: this is one of its two
+    /// halves, the other being
+    /// [`eisenstein_floor_sum`](Self::eisenstein_floor_sum), and the
+    /// `Int`-side assembly through `Int.gaussLemmaSignCount` is not built.
+    pub eisenstein_lemma: NameId,
+    /// `Nat.eisenstein_lemma_modEq : ∀ m n,
+    ///   Eq (gcd (succ (2*n)) (succ (2*m))) 1 → modEq 2 F N`
+    /// (`eisenstein_lemma.rs`) — [`eisenstein_lemma`](Self::eisenstein_lemma)
+    /// as a congruence. `Nat.modEq d a b := ∃ u v, a + d*u = b + d*v` is the
+    /// BALANCED form, so this is a corollary at `u := N`, `v := k`, not a
+    /// second proof.
+    pub eisenstein_lemma_mod_eq: NameId,
+    // -- `eisenstein-3` lane: `eisenstein_floor_min_free.rs` --
+    /// `Nat.div_mul_succ_le_of_le : ∀ m n x, Le (succ x) m →
+    ///   Le (div (mul (succ (2*n)) (succ x)) (succ (2*m))) n`
+    /// (`eisenstein_floor_min_free.rs`) — the one arithmetic fact ADR-1544's
+    /// residue 5 was short of: at the Eisenstein shape the row count never
+    /// reaches the rectangle's height, so `Min.min`'s cap does not bind.
+    pub div_mul_succ_le_of_le: NameId,
+    /// `Nat.eisenstein_floor_sum_min_free : ∀ m n,
+    ///   Eq (gcd (succ (2*m)) (succ (2*n))) 1 →
+    ///   Eq (add (sumRange (fun x => div (mul (succ (2*n)) (succ x))
+    ///           (succ (2*m))) m)
+    ///           (sumRange (fun y => div (mul (succ (2*m)) (succ y))
+    ///           (succ (2*n))) n))
+    ///      (mul n m)` (`eisenstein_floor_min_free.rs`) — ADR-1544's residue
+    /// 5. The `Min.min` that ADR-1544's `M4` showed is NOT removable at the
+    /// generality [`eisenstein_floor_sum`](Self::eisenstein_floor_sum) states
+    /// IS removable at `pp = 2m+1`, `q = 2n+1`, and this is that statement.
+    pub eisenstein_floor_sum_min_free: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -7064,6 +7178,20 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ble_select_add_of_ne: kernel.name_str(nat, "ble_select_add_of_ne"),
             eisenstein_floor_sum: kernel.name_str(nat, "eisenstein_floor_sum"),
             gauss_fold_sum_range_eq: kernel.name_str(nat, "gauss_fold_sumRange_eq"),
+            sum_range_if: kernel.name_str(nat, "sumRangeIf"),
+            sum_range_if_zero: kernel.name_str(nat, "sumRangeIf_zero"),
+            sum_range_if_succ: kernel.name_str(nat, "sumRangeIf_succ"),
+            sum_range_if_congr_lt: kernel.name_str(nat, "sumRangeIf_congr_lt"),
+            sum_range_if_compl: kernel.name_str(nat, "sumRangeIf_compl"),
+            least_residue_sum_range_reconcile: kernel
+                .name_str(nat, "leastResidue_sumRange_reconcile"),
+            mul_sum_range_div_add_least_residue: kernel
+                .name_str(nat, "mul_sumRange_div_add_leastResidue"),
+            eisenstein_count_identity: kernel.name_str(nat, "eisenstein_count_identity"),
+            eisenstein_lemma: kernel.name_str(nat, "eisenstein_lemma"),
+            eisenstein_lemma_mod_eq: kernel.name_str(nat, "eisenstein_lemma_modEq"),
+            div_mul_succ_le_of_le: kernel.name_str(nat, "div_mul_succ_le_of_le"),
+            eisenstein_floor_sum_min_free: kernel.name_str(nat, "eisenstein_floor_sum_min_free"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -8108,6 +8236,38 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.sumRange_congr_lt`/`Nat.succ_pred_of_pos`. Nothing needs it
         // yet, so it goes last.
         declare_gauss_fold_sum_all(&mut d, &p)?;
+        // `Nat.sumRangeIf` and its equations/congruence/split (`subset_sum.rs`):
+        // needs `Nat.sumRange` (`defs.rs`), `Nat.setCompl` (`finite_set.rs`),
+        // and the `Nat.add` lemmas `zero_add`/`add_assoc`/`add_right_comm`
+        // plus the order bridges `lt_succ_self`/`le_succ`/`lt_of_lt_of_le` --
+        // all far above. Nothing needs it yet, so it goes last.
+        declare_subset_sum_all(&mut d, &p)?;
+        // ADR-1540's/ADR-1544's residue 2 (`gauss_residue_reconcile.rs`):
+        // needs `Nat.sumRangeIf` (just above), `Nat.leastResidue`/
+        // `Nat.gaussSignNeg`/`Nat.gaussFold`/`Nat.gaussNegCount`
+        // (`gauss_lemma.rs`, far above), plus `Nat.mod_lt`,
+        // `Nat.add_sub_cancel_of_le`, `Nat.mul_one`, `Nat.sumRange_add`,
+        // `Nat.sumRange_congr`, `Nat.mul_sumRange` and
+        // `Nat.countRange_eq_sumRange`. Nothing needs it yet, so it goes
+        // last.
+        declare_gauss_residue_reconcile_all(&mut d, &p)?;
+        // ADR-1540's/ADR-1544's residue 3 and Eisenstein's lemma
+        // (`eisenstein_lemma.rs`): needs `declare_gauss_residue_reconcile_all`
+        // immediately above, `Nat.gauss_fold_sumRange_eq`
+        // (`gauss_fold_sum.rs`), `Nat.div_mod_exec` (`division.rs`),
+        // `Nat.even_iff_mod_two_eq_zero` (`parity.rs`), and the arithmetic
+        // lemmas `left_distrib`/`mul_comm`/`add_right_comm`/
+        // `add_right_cancel`/`add_mul_mod_self_left`/`zero_mod`. Nothing needs
+        // it yet, so it goes last.
+        declare_eisenstein_lemma_all(&mut d, &p)?;
+        // ADR-1544's residue 5 (`eisenstein_floor_min_free.rs`): needs
+        // `Nat.eisenstein_floor_sum` (`eisenstein_lattice.rs`, above),
+        // `Nat.min_eq_right`, `Nat.div_lt_of_lt_mul`, `Nat.le_of_lt_succ`,
+        // `Nat.mul_le_mul_left`, `Nat.lt_of_le_of_lt`,
+        // `Nat.add_lt_add_left`, `Nat.le_add_right`, `Nat.succ_le_succ`,
+        // `Nat.right_distrib` and `Nat.mul_assoc`. Nothing needs it, so it
+        // goes last.
+        declare_eisenstein_floor_min_free_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8185,6 +8345,18 @@ mod eisenstein_lattice_tests;
 
 #[cfg(test)]
 mod gauss_fold_sum_tests;
+
+#[cfg(test)]
+mod subset_sum_tests;
+
+#[cfg(test)]
+mod gauss_residue_reconcile_tests;
+
+#[cfg(test)]
+mod eisenstein_lemma_tests;
+
+#[cfg(test)]
+mod eisenstein_floor_min_free_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
