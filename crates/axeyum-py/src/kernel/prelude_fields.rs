@@ -2292,8 +2292,12 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (537 names,
+/// The `CRealPrelude` field table (606 names,
 /// 0 name lists, 1 sub-packages).
+///
+/// 69 of the names come from ADR-1512 per-module registries and
+/// carry a dotted field name (`pi.pi_le_four`); the rest are flat
+/// fields on `CRealPrelude` itself.
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
 pub(super) fn creal(p: &CRealPrelude) -> Fields {
@@ -2414,6 +2418,14 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("density", p.density),
             ("lt_cotrans", p.lt_cotrans),
             ("apart_cotrans", p.apart_cotrans),
+            ("completeness.regular_seq", p.completeness.regular_seq),
+            ("completeness.limit_seq", p.completeness.limit_seq),
+            (
+                "completeness.limit_seq_regular",
+                p.completeness.limit_seq_regular,
+            ),
+            ("completeness.limit", p.completeness.limit),
+            ("completeness.limit_dist", p.completeness.limit_dist),
             ("converges", p.converges),
             ("converges_unique", p.converges_unique),
             ("converges_of_close", p.converges_of_close),
@@ -2431,6 +2443,30 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("converges_lower_bound", p.converges_lower_bound),
             ("converges_lower_bound_shift", p.converges_lower_bound_shift),
             ("converges_upper_bound", p.converges_upper_bound),
+            (
+                "cos_sign.converges_upper_bound_shift",
+                p.cos_sign.converges_upper_bound_shift,
+            ),
+            (
+                "cos_sign.alternating_upper_bound_tail",
+                p.cos_sign.alternating_upper_bound_tail,
+            ),
+            (
+                "cos_sign.cos_wide_tail_nonneg",
+                p.cos_sign.cos_wide_tail_nonneg,
+            ),
+            (
+                "cos_sign.cos_wide_tail_antitone",
+                p.cos_sign.cos_wide_tail_antitone,
+            ),
+            (
+                "cos_sign.cos_wide_series_converges",
+                p.cos_sign.cos_wide_series_converges,
+            ),
+            (
+                "cos_sign.cos_wide_nonpositive",
+                p.cos_sign.cos_wide_nonpositive,
+            ),
             ("converges_le", p.converges_le),
             ("bounded", p.bounded),
             ("converges_bounded", p.converges_bounded),
@@ -2474,6 +2510,30 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("bucket_clamp_upper", p.bucket_clamp_upper),
             ("bucket_clamp_lower", p.bucket_clamp_lower),
             ("bucket_index_bound", p.bucket_index_bound),
+            ("crossing.crossing_index", p.crossing.crossing_index),
+            ("crossing.crossing_upper", p.crossing.crossing_upper),
+            ("crossing.crossing_lower", p.crossing.crossing_lower),
+            (
+                "crossing.crossing_sample_ge_a",
+                p.crossing.crossing_sample_ge_a,
+            ),
+            (
+                "crossing.crossing_sample_upper",
+                p.crossing.crossing_sample_upper,
+            ),
+            (
+                "crossing.crossing_sample_lower",
+                p.crossing.crossing_sample_lower,
+            ),
+            ("crossing.crossing_close", p.crossing.crossing_close),
+            (
+                "crossing.crossing_close_clamped",
+                p.crossing.crossing_close_clamped,
+            ),
+            (
+                "crossing.crossing_sample_pairing_close",
+                p.crossing.crossing_sample_pairing_close,
+            ),
             ("sample_upper_bound", p.sample_upper_bound),
             ("sample_lower_bound", p.sample_lower_bound),
             ("bucket_close", p.bucket_close),
@@ -2605,6 +2665,14 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("geom_cauchy_body_of_gap", p.geom_cauchy_body_of_gap),
             ("geom_cauchy_body_16_over_25", p.geom_cauchy_body_16_over_25),
             ("geom_cauchy_of_lt", p.geom_cauchy_of_lt),
+            (
+                "ratio_test.geom_scaled_cauchy_of_lt",
+                p.ratio_test.geom_scaled_cauchy_of_lt,
+            ),
+            (
+                "ratio_test.sum_range_ratio_test",
+                p.ratio_test.sum_range_ratio_test,
+            ),
             ("one_le_pow_of_one_le", p.one_le_pow_of_one_le),
             ("pow_le_pow_of_one_le", p.pow_le_pow_of_one_le),
             ("pow_pos", p.pow_pos),
@@ -2712,6 +2780,14 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 p.strict_injective_of_pos_deriv,
             ),
             (
+                "inverse_fn.order_reflect_of_pos_deriv",
+                p.inverse_fn.order_reflect_of_pos_deriv,
+            ),
+            (
+                "inverse_fn.ivt_exact_root_at",
+                p.inverse_fn.ivt_exact_root_at,
+            ),
+            (
                 "inverse_lipschitz_of_pos_deriv",
                 p.inverse_lipschitz_of_pos_deriv,
             ),
@@ -2743,8 +2819,13 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("converges_of_abs_diff_le", p.converges_of_abs_diff_le),
             ("ivt_bisect_cauchy", p.ivt_bisect_cauchy),
             ("ivt_exact_root", p.ivt_exact_root),
+            (
+                "deriv_unique.has_derivative_unique",
+                p.deriv_unique.has_derivative_unique,
+            ),
             ("fermat_interior_extremum", p.fermat_interior_extremum),
             ("rolle_interior_extremum", p.rolle_interior_extremum),
+            ("mvt.mvt_interior_extremum", p.mvt.mvt_interior_extremum),
             ("mesh_le_of_ge", p.mesh_le_of_ge),
             ("mesh_scaled_le_of_ge", p.mesh_scaled_le_of_ge),
             ("fine_sample_in_bounds", p.fine_sample_in_bounds),
@@ -2842,6 +2923,28 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 "uniform_limit_uniformly_continuous",
                 p.uniform_limit_uniformly_continuous,
             ),
+            ("polynomial.poly_eval", p.polynomial.poly_eval),
+            ("polynomial.poly_eval_zero", p.polynomial.poly_eval_zero),
+            ("polynomial.poly_eval_succ", p.polynomial.poly_eval_succ),
+            ("polynomial.poly_add", p.polynomial.poly_add),
+            (
+                "polynomial.poly_eval_poly_add",
+                p.polynomial.poly_eval_poly_add,
+            ),
+            ("polynomial.poly_scale", p.polynomial.poly_scale),
+            (
+                "polynomial.poly_eval_poly_scale",
+                p.polynomial.poly_eval_poly_scale,
+            ),
+            ("polynomial.poly_degree_lt", p.polynomial.poly_degree_lt),
+            (
+                "polynomial.poly_degree_lt_poly_add",
+                p.polynomial.poly_degree_lt_poly_add,
+            ),
+            (
+                "polynomial.poly_degree_lt_poly_scale",
+                p.polynomial.poly_degree_lt_poly_scale,
+            ),
             ("uniform_converges_add", p.uniform_converges_add),
             ("close_within_of_within", p.close_within_of_within),
             (
@@ -2868,6 +2971,50 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("exp_term_zero_eq_one", p.exp_term_zero_eq_one),
             ("exp_term_one_eq_one", p.exp_term_one_eq_one),
             ("mul_pow_congr", p.mul_pow_congr),
+            ("extreme_value.evt_linear", p.extreme_value.evt_linear),
+            (
+                "extreme_value.evt_attained_max_decides_sign",
+                p.extreme_value.evt_attained_max_decides_sign,
+            ),
+            (
+                "extreme_value.evt_linear_uniformly_continuous",
+                p.extreme_value.evt_linear_uniformly_continuous,
+            ),
+            (
+                "ivt_boundary.uniformly_continuous_max",
+                p.ivt_boundary.uniformly_continuous_max,
+            ),
+            (
+                "ivt_boundary.uniformly_continuous_min",
+                p.ivt_boundary.uniformly_continuous_min,
+            ),
+            ("ivt_boundary.ivt_plateau", p.ivt_boundary.ivt_plateau),
+            (
+                "ivt_boundary.ivt_plateau_nonpos_at_zero",
+                p.ivt_boundary.ivt_plateau_nonpos_at_zero,
+            ),
+            (
+                "ivt_boundary.ivt_plateau_nonneg_at_one",
+                p.ivt_boundary.ivt_plateau_nonneg_at_one,
+            ),
+            (
+                "ivt_boundary.ivt_plateau_uniformly_continuous",
+                p.ivt_boundary.ivt_plateau_uniformly_continuous,
+            ),
+            (
+                "ivt_boundary.ivt_exact_root_decides_sign",
+                p.ivt_boundary.ivt_exact_root_decides_sign,
+            ),
+            ("lub_boundary.lub_set", p.lub_boundary.lub_set),
+            (
+                "lub_boundary.lub_set_inhabited",
+                p.lub_boundary.lub_set_inhabited,
+            ),
+            (
+                "lub_boundary.lub_set_bounded",
+                p.lub_boundary.lub_set_bounded,
+            ),
+            ("lub_boundary.lub_decides_em", p.lub_boundary.lub_decides_em),
             ("cos_fn_term", p.cos_fn_term),
             ("cos_fn_term_abs_le", p.cos_fn_term_abs_le),
             ("cos_fn_term_congr", p.cos_fn_term_congr),
@@ -2919,6 +3066,13 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("uniform_converges_shift", p.uniform_converges_shift),
             ("uniform_converges_neg", p.uniform_converges_neg),
             ("cos_fn_wide_has_derivative", p.cos_fn_wide_has_derivative),
+            ("exp_fn.exp_fn_term_abs_le", p.exp_fn.exp_fn_term_abs_le),
+            ("exp_fn.exp_fn", p.exp_fn.exp_fn),
+            (
+                "exp_fn.exp_fn_uniform_converges",
+                p.exp_fn.exp_fn_uniform_converges,
+            ),
+            ("exp_fn.exp_fn_one_equiv_e", p.exp_fn.exp_fn_one_equiv_e),
             ("max_range", p.max_range),
             ("max_range_zero", p.max_range_zero),
             ("max_range_succ", p.max_range_succ),
@@ -2973,6 +3127,7 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 p.sup_on_ub_at_fine_mesh_point,
             ),
             ("sup_on_ub", p.sup_on_ub),
+            ("evt_row1.evt_approx_max", p.evt_row1.evt_approx_max),
             ("abs_diff_le_of_deriv_bound", p.abs_diff_le_of_deriv_bound),
             ("lipschitz_of_deriv_bound", p.lipschitz_of_deriv_bound),
             (
@@ -2983,6 +3138,23 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 "has_derivative_uniform_limit",
                 p.has_derivative_uniform_limit,
             ),
+            ("pi.pi_half_coef", p.pi.pi_half_coef),
+            ("pi.pi_half_term", p.pi.pi_half_term),
+            ("pi.pi_half_series_partial", p.pi.pi_half_series_partial),
+            ("pi.pi_half_coef_nonneg", p.pi.pi_half_coef_nonneg),
+            ("pi.pi_half_term_nonneg", p.pi.pi_half_term_nonneg),
+            ("pi.pi_half_term_le_pow_half", p.pi.pi_half_term_le_pow_half),
+            (
+                "pi.pi_half_term_abs_le_dominant",
+                p.pi.pi_half_term_abs_le_dominant,
+            ),
+            ("pi.pi_half", p.pi.pi_half),
+            ("pi.pi_half_converges", p.pi.pi_half_converges),
+            ("pi.pi", p.pi.pi),
+            ("pi.pi_half_le_two", p.pi.pi_half_le_two),
+            ("pi.pi_le_four", p.pi.pi_le_four),
+            ("pi.two_le_pi", p.pi.two_le_pi),
+            ("pi.three_le_pi", p.pi.three_le_pi),
         ],
         lists: Vec::new(),
     }
