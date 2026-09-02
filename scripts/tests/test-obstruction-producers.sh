@@ -31,7 +31,7 @@ trap 'rm -rf "$WORK"' EXIT
 FAILURES=0
 CASES=0
 
-ALL_GUARDS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10)
+ALL_GUARDS=(G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11)
 
 # run <label> <expected-exit> <expected-guard-or-NONE> -- <args...>
 run() {
@@ -375,6 +375,76 @@ cat > "$WORK/g10/artifacts/obstruction-producers/producers/test-producer.json" <
 }
 JSON
 run "G10-coverage-overreach" 1 G10 -- --root "$WORK/g10" --skip-freshness
+
+echo "== G11: a settled-target record names a fact that is still open =="
+build_fixture "$WORK/g11a"
+cat > "$WORK/g11a/artifacts/obstruction-producers/producers/test-producer.json" <<'JSON'
+{
+  "id": "test-producer",
+  "kind": "producer",
+  "route": "kernel-lane",
+  "obstruction_ids": ["test-obstruction"],
+  "capability_gap": "equality-transport",
+  "applicability": {"fact_ids": ["F:test-target-a", "F:test-target-b"]},
+  "spent": [
+    {"fact_id": "F:test-control-d", "closed_status": "proved",
+     "settled_commit": "0123456789abcdef0123456789abcdef01234567",
+     "settled_date": "2026-08-30"}
+  ],
+  "negative_controls": [
+    {"fact_id": "F:test-control-c", "why_declines": "synthetic"}
+  ]
+}
+JSON
+# `F:test-control-d` is open in the fixture. Parking it in `spent` is how a
+# contract could retire live work where G7 -- which only reads applicability --
+# cannot see it.
+run "G11-spent-target-still-open" 1 G11 -- --root "$WORK/g11a" --skip-freshness
+
+echo "== G11: a settled target is recorded AND still claimed as live =="
+build_fixture "$WORK/g11b"
+python3 - "$WORK/g11b/artifacts/obstruction-producers/obstructions.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+doc = json.load(open(p))
+# Widen the population so the settled fact is inside it; otherwise this edit
+# also trips G10 (coverage-overreach) as a genuine second defect.
+doc["obstructions"][0]["blocked_fact_ids"].append("F:test-settled-e")
+json.dump(doc, open(p, "w"))
+PY
+cat > "$WORK/g11b/artifacts/obstruction-producers/producers/test-producer.json" <<'JSON'
+{
+  "id": "test-producer",
+  "kind": "producer",
+  "route": "kernel-lane",
+  "obstruction_ids": ["test-obstruction"],
+  "capability_gap": "equality-transport",
+  "applicability": {"fact_ids": ["F:test-target-a", "F:test-settled-e"]},
+  "spent": [
+    {"fact_id": "F:test-settled-e", "closed_status": "proved",
+     "settled_commit": "0123456789abcdef0123456789abcdef01234567",
+     "settled_date": "2026-08-30"}
+  ],
+  "negative_controls": [
+    {"fact_id": "F:test-control-c", "why_declines": "synthetic"}
+  ]
+}
+JSON
+# A settled fact left in `applicability` is ALSO a genuine G7 defect, so both
+# fire from one edit -- the same shape as the G5/G6/G7b cases above, asserted
+# explicitly rather than through the exact-one-guard helper.
+out="$(python3 "$CHECK" --root "$WORK/g11b" --skip-freshness 2>&1)"
+status=$?
+CASES=$((CASES + 1))
+if [ "$status" -eq 1 ] \
+   && printf '%s\n' "$out" | /usr/bin/grep -cE '\bG11 spent-and-live' >/dev/null \
+   && printf '%s\n' "$out" | /usr/bin/grep -cE '\bG7 non-open-target' >/dev/null; then
+  echo "ok   [G11-spent-and-live-and-consequent-G7]"
+else
+  echo "FAIL [G11-spent-and-live-and-consequent-G7]"
+  printf '%s\n' "$out"
+  FAILURES=$((FAILURES + 1))
+fi
 
 echo "== G1: freshness (real lane artifacts, temporarily mutated) =="
 if [ -f "$GEN" ] && [ -f "$ROOT/artifacts/obstruction-producers/obstructions.json" ]; then

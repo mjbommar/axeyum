@@ -1,9 +1,6 @@
 {
   "applicability": {
-    "fact_ids": [
-      "F:ml430-nat-and-or-distrib-left-fe131f64",
-      "F:ml430-nat-and-or-distrib-right-0daaa284"
-    ],
+    "fact_ids": [],
     "population_description": "open ml430 mirrors stating a pure bitwise (land/lor/ldiff/xor) Nat equality with no existing cross-operator machinery in the tree (re-verified absent on every run of this compiler)"
   },
   "budget": {
@@ -31,7 +28,7 @@
   "capability_gap": "pointwise-extensionality-with-finite-case-exhaustion",
   "falsifiable_prediction": "Both ['F:ml430-nat-and-or-distrib-left-fe131f64', 'F:ml430-nat-and-or-distrib-right-0daaa284'] are closable by this exact 4-step recipe with no induction beyond the finite case split. This is wrong if the testBit rewrite chain fails to reach a closed arithmetic goal (e.g. if AxNat.mul/AxNat.ble do not reduce at the bound {0,1} values without further lemmas).",
   "id": "pointwise-bit-extensionality",
-  "kind": "producer",
+  "kind": "fulfilled",
   "negative_controls": [
     {
       "fact_id": "F:ml430-mutation-a6dd1759bce60d820292e107",
@@ -45,6 +42,7 @@
   "obstruction_ids": [
     "nat-bitwise-cross-operator-proof-gap"
   ],
+  "outcome": "All 2 targets closed. The prediction held and was executed BY HAND (`nat_prelude/and_or_distrib.rs`, whose own route note names Nat.eq_of_testBit_eq extensionality plus testBit_land/testBit_lor and an 8-leaf {0,1} case split -- this contract's recipe, step for step), not by running this producer. So this is an exhausted population and a VALIDATED PREDICTION, not a validated producer RUN: nothing here measures the contract's dispatch. The machinery this contract re-verified absent on every earlier run now exists at ['crates/axeyum-lean-kernel/src/nat_prelude/and_or_distrib.rs', 'crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs'], which is what closed it. A future contract of this shape needs a fresh, frontier-sized target table (ADR-1510 rule 1).",
   "recipe": "1. Apply Nat.eq_of_testbit_eq to reduce the goal to 'forall i, lhs.testBit i = rhs.testBit i'. 2. Rewrite both sides to a Nat.testBit-headed normal form using testbit_land / testbit_lor / testbit_ldiff / testbit_xor. 3. Bound each testBit i term to {0,1} via testbit_le_one and case -split (finite exhaustion). 4. Each of the resulting closed arithmetic goals over {0,1} closes by evaluation.",
   "route": "kernel-lane",
   "shape": {
@@ -61,6 +59,28 @@
       "type": "syntactic"
     }
   },
+  "spent": [
+    {
+      "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.and_or_distrib_left"
+      ],
+      "closing_route": "kernel-lean",
+      "fact_id": "F:ml430-nat-and-or-distrib-left-fe131f64",
+      "settled_commit": "8822d5033d3991401fa35c46bfa963ebab587b7b",
+      "settled_date": "2026-08-30"
+    },
+    {
+      "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.and_or_distrib_right"
+      ],
+      "closing_route": "kernel-lean",
+      "fact_id": "F:ml430-nat-and-or-distrib-right-0daaa284",
+      "settled_commit": "8822d5033d3991401fa35c46bfa963ebab587b7b",
+      "settled_date": "2026-08-30"
+    }
+  ],
   "validation_examples": [
     "F-nat-testbit-land, F-nat-testbit-lor, F-nat-eq-of-testbit-eq, F-nat-testbit-le-one are the proved kernel lemmas this recipe composes; none of them is new work"
   ]

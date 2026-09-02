@@ -119,6 +119,7 @@ import argparse
 import json
 import pathlib
 import re
+import subprocess
 import sys
 from typing import Any
 
@@ -171,6 +172,154 @@ def statement_of(fact: dict[str, Any]) -> str:
 
 def status_of(fact: dict[str, Any]) -> str:
     return fact.get("epistemic_status", "")
+
+
+# --- settlement: a closed target is SPENT, never an error ------------------
+#
+# ADR-1510, applied one arrow over. A producer contract is a PROSPECTIVE claim
+# sized against an open population, and a population can close underneath it --
+# usually because another lane executed exactly the route the contract
+# predicted, by hand. When that happens the honest record is a RETIRED contract
+# naming what closed and when, not a dead generator.
+#
+# Measured on `main` 2026-09-02: `compile_pointwise_bit_extensionality` died
+# with exit 2 (`P2 target F:ml430-nat-and-or-distrib-left-fe131f64 is missing
+# or not open; hypothesis is stale`) because both of its two hard-coded targets
+# were flipped to `proved` in 8822d5033 (2026-08-30) -- by the recipe this very
+# contract wrote down. Nothing downstream could be regenerated: the artifact
+# writer runs AFTER contract compilation, so a settled target took out
+# `obstructions.json` too, and with it `check-obstruction-producers.py` (G1 plus
+# two G7) and 2 of 13 cases in `scripts/tests/test-obstruction-producers.sh`.
+# Success looked exactly like a defect, which is the failure mode ADR-1510
+# names: "a capability claim over an empty population cannot be falsified by any
+# dispatch", and a generator that dies on it cannot report that fact either.
+#
+# A target that does not EXIST in the ledger is still an error -- that is a
+# broken table, not a closed population, and the two must not be confused.
+
+
+def fact_path(fact_id: str) -> pathlib.Path:
+    return FACTS_DIR / (fact_id.replace(":", "-") + ".json")
+
+
+_SETTLEMENT_CACHE: dict[str, dict[str, Any]] = {}
+
+
+def _git_settlement(fact_id: str) -> dict[str, str] | None:
+    """The commit that first flipped this fact off `open`, and its date.
+
+    Git history is the ONLY authority for this. The fact file's own
+    `provenance.date` is when the MIRROR was created (2026-08-29 for both
+    P2 targets, whose status flipped on 2026-08-30) and its
+    `provenance.established_by` reads "not established in this ledger", so
+    neither field can answer the question.
+
+    Returns None when git cannot answer -- no `.git`, no history for the path,
+    or git absent from the host. `settlement_record` then falls back to the
+    value already recorded in the committed artifact, which is the SAME value:
+    a settling commit is immutable history, so the fallback is not a stale
+    read. That is what keeps `--check` free of drift between this tree and a
+    `git archive` snapshot, where `scripts/check.sh` also runs this gate.
+    """
+    path = fact_path(fact_id)
+    if not (ROOT / ".git").exists() or not path.is_file():
+        return None
+    rel = str(path.relative_to(ROOT))
+    try:
+        log = subprocess.run(
+            ["git", "log", "--reverse", "--format=%H %ad", "--date=short", "--", rel],
+            cwd=ROOT, capture_output=True, text=True, timeout=120, check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    for line in log.stdout.splitlines():
+        sha, _, date = line.partition(" ")
+        sha, date = sha.strip(), date.strip()
+        if not sha:
+            continue
+        try:
+            blob = subprocess.run(
+                ["git", "show", f"{sha}:{rel}"],
+                cwd=ROOT, capture_output=True, text=True, timeout=120, check=True,
+            )
+            at_commit = json.loads(blob.stdout)
+        except (OSError, subprocess.SubprocessError, json.JSONDecodeError):
+            continue
+        if status_of(at_commit) not in ("", "open"):
+            return {"settled_commit": sha, "settled_date": date}
+    return None
+
+
+def _committed_settlement(fact_id: str) -> dict[str, str] | None:
+    """The settlement provenance already recorded in a committed contract."""
+    if not PRODUCERS_DIR.is_dir():
+        return None
+    for path in sorted(PRODUCERS_DIR.glob("*.json")):
+        try:
+            doc = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        for entry in doc.get("spent") or []:
+            if isinstance(entry, dict) and entry.get("fact_id") == fact_id \
+                    and entry.get("settled_commit"):
+                return {"settled_commit": entry["settled_commit"],
+                        "settled_date": entry.get("settled_date")}
+    return None
+
+
+def settlement_record(fact_id: str, facts: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """What closed this target, in the fields a reader and a checker both need."""
+    if fact_id in _SETTLEMENT_CACHE:
+        return dict(_SETTLEMENT_CACHE[fact_id])
+    fact = facts[fact_id]
+    record: dict[str, Any] = {
+        "fact_id": fact_id,
+        "closed_status": status_of(fact),
+        "closing_route": fact.get("proof_route"),
+        "closing_declarations": sorted({
+            e["kernel_declaration"] for e in (fact.get("evidence") or [])
+            if isinstance(e, dict) and isinstance(e.get("kernel_declaration"), str)
+        }),
+    }
+    provenance = _git_settlement(fact_id) or _committed_settlement(fact_id)
+    record["settled_commit"] = (provenance or {}).get("settled_commit")
+    record["settled_date"] = (provenance or {}).get("settled_date")
+    _SETTLEMENT_CACHE[fact_id] = dict(record)
+    return record
+
+
+def partition_settled(
+    fact_ids: list[str], facts: dict[str, dict[str, Any]], what: str
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """(targets still open, settlement records for the ones that closed)."""
+    live: list[str] = []
+    spent: list[dict[str, Any]] = []
+    for fid in fact_ids:
+        if fid not in facts:
+            die(f"{what} names {fid}, which is not in the fact ledger")
+        if status_of(facts[fid]) == "open":
+            live.append(fid)
+        else:
+            spent.append(settlement_record(fid, facts))
+    return live, spent
+
+
+def contract_kind(live: list[str], spent: list[dict[str, Any]], what: str) -> str:
+    """The label a contract has earned, from its live and settled counts.
+
+    Mechanical, not a policy choice: each branch is what
+    `check-obstruction-producers.py` already demands. G6 requires >= 2 live
+    targets of anything claiming `producer` and names `capsule` as the label
+    for fewer; G6F requires a `fulfilled` record to name what closed.
+    """
+    if live:
+        return "producer" if len(live) >= 2 else "capsule"
+    if spent:
+        return "fulfilled"
+    die(f"{what} has neither a live target nor a settled one -- an empty "
+        f"hypothesis table is a broken compiler, not an exhausted population",
+        code=1)
+    raise AssertionError("unreachable")  # pragma: no cover
 
 
 # --- nat_prelude source scan: does a declaration by this name exist? ------
@@ -454,31 +603,30 @@ def compile_extensional_duplicate_close(
 ) -> dict[str, Any]:
     applicable: list[dict[str, Any]] = []
     declined: list[dict[str, Any]] = []
-    spent: list[dict[str, Any]] = []
-    for h in P1_HYPOTHESES:
-        fid = h["fact_id"]
-        if fid not in facts:
-            die(f"P1 hypothesis names {fid}, which is not in the fact ledger")
-        # A hypothesis whose fact has since CLOSED is SPENT, not stale. Dying
-        # here was right while some were still open -- a producer must never
-        # name settled work -- but it makes a producer whose WHOLE population
-        # closed indistinguishable from a broken table, and it turns success
-        # into a red gate.
-        #
-        # Measured 2026-08-30: two theorem lanes closed all eight of P1's
-        # hypotheses in one day, by exactly the route P1 predicted, executed by
-        # hand rather than by running the producer. That is a population
-        # exhausted, and the honest record is FULFILLED with the closing route
-        # per target -- not a producer still claiming prospective work it no
-        # longer has.
-        if status_of(facts[fid]) != "open":
-            spent.append({
-                "fact_id": fid,
-                "closed_status": status_of(facts[fid]),
-                "twin_mirror": h.get("twin_mirror") or None,
-                "native_declaration": h.get("native_declaration"),
-            })
-            continue
+    # A hypothesis whose fact has since CLOSED is SPENT, not stale. Dying on it
+    # was right while some were still open -- a producer must never name settled
+    # work -- but it makes a producer whose WHOLE population closed
+    # indistinguishable from a broken table, and it turns success into a red
+    # gate.
+    #
+    # Measured 2026-08-30: two theorem lanes closed all eight of P1's
+    # hypotheses in one day, by exactly the route P1 predicted, executed by hand
+    # rather than by running the producer. That is a population exhausted, and
+    # the honest record is FULFILLED with the closing route per target -- not a
+    # producer still claiming prospective work it no longer has.
+    #
+    # Both producers route the live/settled split through `partition_settled`
+    # so the policy has ONE implementation. P1 grew its own copy first and P2
+    # never grew one at all, which is why P2 was still dying on `main`.
+    by_id = {h["fact_id"]: h for h in P1_HYPOTHESES}
+    live_ids, spent = partition_settled(
+        [h["fact_id"] for h in P1_HYPOTHESES], facts, "P1 hypothesis table")
+    for record in spent:
+        h = by_id[record["fact_id"]]
+        record["twin_mirror"] = h.get("twin_mirror") or None
+        record["native_declaration"] = h.get("native_declaration")
+    for fid in live_ids:
+        h = by_id[fid]
         twin = h["twin_mirror"]
         twin_ok = bool(twin) and twin in facts and status_of(facts[twin]) in ("proved", "computed")
         decl_ok = h["native_declaration"] in declared_names
@@ -511,7 +659,9 @@ def compile_extensional_duplicate_close(
                 "exists to keep that correction load-bearing rather than silent."
             ),
         })
-    if len(applicable) < 2 and spent and not applicable:
+    applicable_ids = sorted(a["fact_id"] for a in applicable)
+    kind = contract_kind(applicable_ids, spent, "extensional-duplicate-close")
+    if kind == "fulfilled":
         # Every hypothesis closed: the population is EXHAUSTED, not broken.
         # Emit a fulfilled record so the outcome is on the record and the gate
         # tells the truth, rather than dying and leaving a red gate that reads
@@ -535,14 +685,14 @@ def compile_extensional_duplicate_close(
             # claims, so they remain the negative controls after fulfilment.
             "negative_controls": declined,
         }
-    if len(applicable) < 2:
-        die("extensional-duplicate-close verified fewer than 2 applicable targets "
-            f"({len(applicable)} applicable, {len(spent)} spent); would have to be "
-            "labeled a capsule, not compiled as this phase's headline producer",
-            code=1)
-    return {
+    # A population that SHRANK below 2 without emptying is a capsule, which is
+    # the label `check-obstruction-producers.py` G6 already names for it. Dying
+    # here instead (the earlier behaviour) had the same defect as P2's
+    # not-open check one function down: it turned a partially-closed population
+    # into a red gate and destroyed the record of what closed.
+    record: dict[str, Any] = {
         "id": "extensional-duplicate-close",
-        "kind": "producer",
+        "kind": kind,
         "route": "kernel-lane",
         "obstruction_ids": ["nat-bitwise-extensional-duplicate"],
         "capability_gap": "equality-transport",
@@ -576,7 +726,7 @@ def compile_extensional_duplicate_close(
         "budget": {"unit": "lookup", "estimate": "O(1) per target; zero new kernel proof text"},
         "candidate_inputs": P1_HYPOTHESES,
         "applicability": {
-            "fact_ids": sorted(a["fact_id"] for a in applicable),
+            "fact_ids": applicable_ids,
             "population_description": (
                 "open ml430 Nat.land/lor/ldiff/xor mirrors with an existing "
                 "same-content declaration under a different name"
@@ -589,7 +739,7 @@ def compile_extensional_duplicate_close(
         ],
         "negative_controls": declined,
         "falsifiable_prediction": (
-            f"Each of {sorted(a['fact_id'] for a in applicable)} is closable with "
+            f"Each of {applicable_ids} is closable with "
             f"ZERO new kernel proof text -- only an evidence row citing an "
             f"existing declaration. This is wrong if any of them turns out, on "
             f"inspection, to need argument-order or implicit/explicit "
@@ -597,6 +747,13 @@ def compile_extensional_duplicate_close(
             f"cited declaration would falsify it for that target)."
         ),
     }
+    # Partial-settle bookkeeping -- see the same block in
+    # `compile_pointwise_bit_extensionality`. A hypothesis that closed is
+    # recorded, not dropped: without this the settled half of a shrinking
+    # population left no trace at all in a `kind=producer` contract.
+    if spent:
+        record["spent"] = spent
+    return record
 
 
 # --- Producer 2: pointwise-bit-extensionality -----------------------------
@@ -606,16 +763,23 @@ def compile_pointwise_bit_extensionality(facts: dict[str, dict[str, Any]]) -> di
         "F:ml430-nat-and-or-distrib-left-fe131f64",
         "F:ml430-nat-and-or-distrib-right-0daaa284",
     ]
-    for fid in targets:
-        if fid not in facts or status_of(facts[fid]) != "open":
-            die(f"P2 target {fid} is missing or not open; hypothesis is stale")
+    live, spent = partition_settled(targets, facts, "P2 target table")
+    kind = contract_kind(live, spent, "pointwise-bit-extensionality")
+
     # The "no machinery exists" claim must be re-derived, not inherited: grep
     # the whole nat_prelude tree for the two names such machinery would need.
-    hits = any_module_mentions("and_or_distrib") + any_module_mentions("joint_induction")
-    if hits:
+    #
+    # It is only a CLAIM while a target is still live. Once the population has
+    # closed, the same grep is the evidence for HOW it closed -- and here it is:
+    # `and_or_distrib.rs` exists now and did not when this contract was written.
+    # Dying on it in the settled case was the second staleness trap in this one
+    # function (the first was the not-open check above): success and defect had
+    # the same exit status twice over.
+    machinery = any_module_mentions("and_or_distrib") + any_module_mentions("joint_induction")
+    if live and machinery:
         die(f"pointwise-bit-extensionality assumed no existing machinery, but "
-            f"found: {hits} -- re-derive this producer, it may already be solved "
-            f"or the shape predicate needs narrowing", code=1)
+            f"found: {machinery} -- re-derive this producer, it may already be "
+            f"solved or the shape predicate needs narrowing", code=1)
     required_lemmas = {
         "eq_of_testbit_eq": "F-nat-eq-of-testbit-eq",
         "testbit_land": "F-nat-testbit-land",
@@ -658,9 +822,9 @@ def compile_pointwise_bit_extensionality(facts: dict[str, dict[str, Any]]) -> di
         die("shape-mismatch control no longer carries an Iff -- it would not "
             "demonstrate the connective mismatch this control is for", code=1)
 
-    return {
+    record: dict[str, Any] = {
         "id": "pointwise-bit-extensionality",
-        "kind": "producer",
+        "kind": kind,
         "route": "kernel-lane",
         "obstruction_ids": ["nat-bitwise-cross-operator-proof-gap"],
         "capability_gap": "pointwise-extensionality-with-finite-case-exhaustion",
@@ -696,7 +860,7 @@ def compile_pointwise_bit_extensionality(facts: dict[str, dict[str, Any]]) -> di
             {"lemma": name, "fact_id": fid} for name, fid in required_lemmas.items()
         ],
         "applicability": {
-            "fact_ids": targets,
+            "fact_ids": live,
             "population_description": (
                 "open ml430 mirrors stating a pure bitwise (land/lor/ldiff/xor) "
                 "Nat equality with no existing cross-operator machinery in the "
@@ -733,6 +897,29 @@ def compile_pointwise_bit_extensionality(facts: dict[str, dict[str, Any]]) -> di
             f"values without further lemmas)."
         ),
     }
+    # Partial-settle bookkeeping. A target that closed leaves `applicability`
+    # (it is no longer prospective work) and lands in `spent` with the commit
+    # and date that closed it -- so a shrinking population is READABLE rather
+    # than either a silent drop or a red gate. `check-obstruction-producers.py`
+    # G11 holds the two halves together: nothing may be in both lists, and
+    # nothing still open may be parked in `spent` to dodge G7.
+    if spent:
+        record["spent"] = spent
+    if kind == "fulfilled":
+        record["outcome"] = (
+            f"All {len(spent)} targets closed. The prediction held and was "
+            f"executed BY HAND (`nat_prelude/and_or_distrib.rs`, whose own "
+            f"route note names Nat.eq_of_testBit_eq extensionality plus "
+            f"testBit_land/testBit_lor and an 8-leaf {{0,1}} case split -- this "
+            f"contract's recipe, step for step), not by running this producer. "
+            f"So this is an exhausted population and a VALIDATED PREDICTION, "
+            f"not a validated producer RUN: nothing here measures the contract's "
+            f"dispatch. The machinery this contract re-verified absent on every "
+            f"earlier run now exists at {machinery}, which is what closed it. A "
+            f"future contract of this shape needs a fresh, frontier-sized target "
+            f"table (ADR-1510 rule 1)."
+        )
+    return record
 
 
 # --- top-level assembly ----------------------------------------------------
@@ -849,6 +1036,25 @@ def build_producers(facts: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any
             die(f"producer {p['id']} claims kind=producer with "
                 f"{len(p['applicability']['fact_ids'])} target(s) -- must be "
                 f"labeled capsule", code=1)
+        # Partial-settle bookkeeping, enforced at the SOURCE as well as in the
+        # checker (G11): the two lists partition, and nothing still open is
+        # parked in `spent`. Without the disjointness half, a settled target
+        # could be recorded AND still claimed as prospective work.
+        live_ids = set(p.get("applicability", {}).get("fact_ids") or [])
+        spent_ids = set()
+        for entry in p.get("spent") or []:
+            fid = entry.get("fact_id")
+            if not fid:
+                die(f"producer {p['id']} has a spent entry with no fact_id", code=1)
+            if status_of(facts.get(fid, {})) == "open":
+                die(f"producer {p['id']} records {fid} as spent, but it is still "
+                    f"open -- settled bookkeeping may not retire live work",
+                    code=1)
+            spent_ids.add(fid)
+        both = live_ids & spent_ids
+        if both:
+            die(f"producer {p['id']} lists {sorted(both)} as BOTH live "
+                f"applicability and spent", code=1)
         if not p.get("negative_controls"):
             die(f"producer {p['id']} has no negative controls", code=1)
     return {p["id"]: p for p in producers}

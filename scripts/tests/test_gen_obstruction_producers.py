@@ -23,6 +23,28 @@ deletion in the generator.
 `test_population_is_not_empty` is the vacuity control and is deliberately NOT
 one of the 1:1 mutation targets -- it exists so the other four cannot pass by
 classifying an empty population.
+
+SETTLEMENT POLICY (ADR-1510, applied to this compiler)
+------------------------------------------------------
+
+`TestSettlementPolicy` pins the second defect this file exists for, found on
+`main` 2026-09-02. `compile_pointwise_bit_extensionality` hard-coded two
+targets and died -- exit 2, before ANY artifact was written -- the moment they
+were flipped to `proved` (`8822d5033`, 2026-08-30) by the very recipe the
+contract predicted. Everything downstream went with it: `obstructions.json`
+could not be regenerated, `check-obstruction-producers.py` was red on G1 plus
+two G7, and 2 of 13 cases in `scripts/tests/test-obstruction-producers.sh`
+failed because they shell out to the dying generator. Success and defect had
+the same exit status, which is exactly the shape ADR-1510 decided against for
+producer contracts one arrow upstream: a claim sized against a population that
+then empties must RETIRE, not error.
+
+The two guards are separate and are killed by DIFFERENT mutations:
+`test_exhausted_population_retires_rather_than_erroring` owns retirement (the
+`contract_kind` fulfilled branch), and
+`test_partial_settlement_keeps_live_targets_and_records_settled` owns the
+partial case (the `partition_settled` live branch). Neither is expressible as
+"the population is empty", which is why one test could not cover both.
 """
 
 from __future__ import annotations
@@ -184,6 +206,113 @@ class TestTestBitClassification(unittest.TestCase):
         )
         self.assertEqual(
             got_list & got_bool, set(), "a fact was filed under both reasons"
+        )
+
+
+P2_TARGETS = (
+    "F:ml430-nat-and-or-distrib-left-fe131f64",
+    "F:ml430-nat-and-or-distrib-right-0daaa284",
+)
+
+# One P1 hypothesis with a proved twin mirror, so that forcing it back to `open`
+# produces an APPLICABLE live target rather than a decline. Read from the
+# generator's own table rather than pinned here, so a renamed hypothesis fails
+# loudly instead of silently making the partial-settlement case vacuous.
+P1_WITH_TWIN = next(
+    h["fact_id"] for h in gen.P1_HYPOTHESES if h.get("twin_mirror")
+)
+
+
+class TestSettlementPolicy(unittest.TestCase):
+    """A closed target is SPENT, never an error (ADR-1510 applied here)."""
+
+    def test_exhausted_population_retires_rather_than_erroring(self) -> None:
+        """P2's whole population closed; the record must say so, not die.
+
+        This is the regression for the `main` red gate: the generator exited 2
+        with `P2 target ... is missing or not open; hypothesis is stale` and
+        wrote nothing at all. A retired contract has to name what closed and
+        with which commit, or the retirement is unauditable -- an unfalsifiable
+        claim replaced by an unverifiable one.
+        """
+        facts = gen.load_facts()
+        doc = gen.compile_pointwise_bit_extensionality(facts)
+        self.assertEqual(
+            doc["kind"],
+            "fulfilled",
+            "both P2 targets are settled in the ledger, so this contract is "
+            "retired; any other kind means it is still claiming prospective "
+            "work it does not have",
+        )
+        self.assertEqual(
+            doc["applicability"]["fact_ids"],
+            [],
+            "a retired contract claims no live targets",
+        )
+        self.assertTrue(doc.get("outcome"), "a retirement with no outcome")
+        spent = {e["fact_id"]: e for e in doc.get("spent") or []}
+        self.assertEqual(
+            set(spent),
+            set(P2_TARGETS),
+            "the retirement must name every target that closed underneath it",
+        )
+        for fid, entry in spent.items():
+            self.assertNotEqual(
+                gen.status_of(facts[fid]),
+                "open",
+                f"{fid} is recorded as spent but is still open",
+            )
+            self.assertTrue(
+                entry.get("settled_commit"),
+                f"{fid} is recorded as spent with no settling commit; a "
+                f"retirement that cannot say what closed the target is "
+                f"unauditable",
+            )
+            self.assertTrue(entry.get("settled_date"), f"{fid}: no settled_date")
+
+    def test_partial_settlement_keeps_live_targets_and_records_settled(self) -> None:
+        """Some closed, some open: keep the live ones, record the settled ones.
+
+        The empty-population case and this one are different guards. A compiler
+        that only handled exhaustion would still, on a partial close, either
+        drop the settled targets without trace or keep claiming them as
+        prospective work -- and G7 would then fire on a contract that is
+        actually healthy.
+
+        Driven by putting ONE of P1's settled hypotheses back to `open` in a
+        copy of the ledger, so the live and settled halves are both non-empty
+        and both come from real data.
+        """
+        facts = {k: dict(v) for k, v in gen.load_facts().items()}
+        facts[P1_WITH_TWIN]["epistemic_status"] = "open"
+        doc = gen.compile_extensional_duplicate_close(
+            facts, gen.declared_nat_prelude_names()
+        )
+        live = doc["applicability"]["fact_ids"]
+        spent_ids = {e["fact_id"] for e in doc.get("spent") or []}
+        self.assertEqual(
+            live,
+            [P1_WITH_TWIN],
+            "the one still-open hypothesis must stay in applicability",
+        )
+        self.assertEqual(
+            doc["kind"],
+            "capsule",
+            "one live target is a capsule, which is the label "
+            "check-obstruction-producers.py's G6 names for it",
+        )
+        self.assertTrue(
+            spent_ids, "the hypotheses that closed left no record at all"
+        )
+        self.assertNotIn(
+            P1_WITH_TWIN,
+            spent_ids,
+            "a live target may not also be recorded as spent",
+        )
+        self.assertEqual(
+            live and set(live) & spent_ids,
+            set(),
+            "applicability and spent must be disjoint",
         )
 
 

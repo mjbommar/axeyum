@@ -24,50 +24,98 @@
   "spent": [
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_comm"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-comm-7525d05a",
       "native_declaration": "land_comm",
+      "settled_commit": "79d9691c6d0dfac69e23d36931d2805a556ddf80",
+      "settled_date": "2026-08-30",
       "twin_mirror": "F:ml430-nat-land-comm-7e6ad72e"
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_assoc"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-assoc-273b60d8",
       "native_declaration": "land_assoc",
+      "settled_commit": "79d9691c6d0dfac69e23d36931d2805a556ddf80",
+      "settled_date": "2026-08-30",
       "twin_mirror": "F:ml430-nat-land-assoc-ad4775b8"
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_le_left"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-le-left-6d04acb7",
       "native_declaration": "land_le_left",
+      "settled_commit": "79d9691c6d0dfac69e23d36931d2805a556ddf80",
+      "settled_date": "2026-08-30",
       "twin_mirror": null
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_le_right"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-le-right-a3f80076",
       "native_declaration": "land_le_right",
+      "settled_commit": "79d9691c6d0dfac69e23d36931d2805a556ddf80",
+      "settled_date": "2026-08-30",
       "twin_mirror": null
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_self"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-self-06a84ccc",
       "native_declaration": "land_self",
+      "settled_commit": "21fa9575c93c1d3d2c92be0ee148c8a2089c004c",
+      "settled_date": "2026-08-30",
       "twin_mirror": null
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_div_two"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-div-two-1a2f7c33",
       "native_declaration": "land_div_two",
+      "settled_commit": "ecbc1bab68b4eca0673ea24e8bbca4cefbd2e96c",
+      "settled_date": "2026-08-30",
       "twin_mirror": null
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_mod_two_eq_one"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-mod-two-eq-one-3e873792",
       "native_declaration": "land_mod_two_eq_one",
+      "settled_commit": "21fa9575c93c1d3d2c92be0ee148c8a2089c004c",
+      "settled_date": "2026-08-30",
       "twin_mirror": null
     },
     {
       "closed_status": "proved",
+      "closing_declarations": [
+        "Nat.land_one_is_mod"
+      ],
+      "closing_route": "kernel-lean",
       "fact_id": "F:ml430-nat-and-one-is-mod-d861e96b",
       "native_declaration": "land_one_is_mod",
+      "settled_commit": "21fa9575c93c1d3d2c92be0ee148c8a2089c004c",
+      "settled_date": "2026-08-30",
       "twin_mirror": null
     }
   ]

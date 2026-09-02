@@ -5886,6 +5886,31 @@ SUITES["obstruction-testbit-classification"] = (
             '        if "bits" in stmt or "getI" in stmt or "List" in stmt:',
             "        if False:",
         ),
+        # --- the ADR-1510 settlement policy (2026-09-02) ------------------
+        #
+        # Both mutations reinstate a shape this generator actually shipped.
+        # The first restores the P2 behaviour that was red on `main`: a
+        # contract whose whole population closed died with exit 2 before any
+        # artifact was written, so success and defect were indistinguishable
+        # at the exit status. The second is the half that no version of this
+        # generator ever had: on a PARTIAL close it kept every settled target
+        # in `applicability`, where G7 would (correctly) fire on a contract
+        # that is actually healthy.
+        (
+            # `raise SystemExit`, not the `die()` this generator really used:
+            # `die` prints `ERROR: ...` to stderr, and `classify_unittest`'s
+            # death regex reads that line as a SECOND dead test, so the run
+            # comes back INCONSISTENT (1 counted, 2 named) and measures
+            # nothing. The exit path being reinstated is identical.
+            "an exhausted population retires instead of erroring",
+            '    if spent:\n        return "fulfilled"\n',
+            "    if spent:\n        raise SystemExit(2)\n",
+        ),
+        (
+            "a partial settlement keeps its live targets live",
+            '        if status_of(facts[fid]) == "open":\n            live.append(fid)\n',
+            "        if False:\n            live.append(fid)\n",
+        ),
     ],
 )
 

@@ -18,10 +18,18 @@ kill to exactly one:
                       generator is unreviewable drift.
   G2  nonempty     -- at least one obstruction must be classified. A
                       compiler that classified nothing did not run.
-  G3  live-producer -- at least one obstruction must be classified
-                      `removability: producer` AND have a compiled
-                      contract. Classifying without ever compiling is a
-                      dead half of this phase.
+  G3  live-producer -- the compiler must have produced SOMETHING: a
+                      contract with kind=producer and >= 2 live targets,
+                      or -- once every population it was sized against has
+                      closed -- a kind=fulfilled retirement record.
+                      Classifying without ever compiling is a dead half of
+                      this phase; retiring an exhausted contract is not
+                      (ADR-1510: a claim over an empty population must
+                      RETIRE, not error). A tree in which every contract is
+                      retired passes, loudly: the EXHAUSTED line below says
+                      so, because a gate that failed on it would report
+                      success as a defect, which is the exact bug this
+                      guard's own generator shipped on 2026-09-02.
   G4  no-proved    -- no producer contract JSON may contain a `proved` key
                       anywhere (recursive scan). ADR-0602's structural
                       guarantee: the false-assertion failure mode must be
@@ -54,6 +62,15 @@ kill to exactly one:
                       decline some of the obstruction's population as
                       negative controls, but it may not claim to cover a
                       fact its own obstruction record never named).
+  G11 spent-bookkeeping -- a contract's `spent` list (the targets that
+                      closed underneath it) must name real facts, none of
+                      them still `open`, each with the `settled_commit`
+                      that closed it, and must be DISJOINT from
+                      `applicability.fact_ids`. Without the disjointness
+                      half a settled target could be recorded as closed and
+                      still claimed as prospective work; without the
+                      still-open half, `spent` would be a way to park live
+                      work where G7 cannot see it.
 
 Exit status:
     0  every guard passed
@@ -201,6 +218,7 @@ def main() -> int:
 
     # --- producer contracts -------------------------------------------
     live_producer_found = False
+    fulfilled_found = False
     for path in sorted(producers_dir.glob("*.json")):
         doc = json.loads(path.read_text())
         pid = doc.get("id", path.stem)
@@ -210,11 +228,49 @@ def main() -> int:
             fails.append(f"G4 proved-field-present: {path.name} contains a "
                          f"'proved' key -- ADR-0602 forbids this structurally")
 
-        # A FULFILLED record is a retired producer whose whole population
-        # closed. It has no open targets by definition, so G6's plurality and
-        # G7's open-target rule do not apply -- but it must name what closed and
-        # what it achieved, which G6F enforces instead.
         kind = doc.get("kind")
+        applicability = doc.get("applicability", {})
+        fact_ids = applicability.get("fact_ids") if isinstance(applicability, dict) else None
+
+        # G11 -- partial-settle bookkeeping, for EVERY kind.
+        #
+        # A population can close underneath a contract while it is still live
+        # (some targets settle, some do not). The settled ones leave
+        # `applicability` and land in `spent`; this guard is what makes that
+        # readable rather than a silent drop, and what stops `spent` becoming a
+        # place to hide live work from G7.
+        spent_ids: set[str] = set()
+        for entry in doc.get("spent") or []:
+            sid = entry.get("fact_id") if isinstance(entry, dict) else None
+            if not sid:
+                fails.append(f"G11 malformed-spent: {path.name} has a spent "
+                             f"entry with no fact_id")
+                continue
+            spent_ids.add(sid)
+            if sid not in facts:
+                fails.append(f"G11 unknown-spent-target: {path.name} records "
+                             f"{sid} as spent, but it is not in the fact ledger")
+                continue
+            if facts[sid].get("epistemic_status") == "open":
+                fails.append(
+                    f"G11 spent-target-still-open: {path.name} records {sid} as "
+                    f"spent, but it is still open -- a contract may not retire "
+                    f"live work")
+            if not entry.get("settled_commit"):
+                fails.append(
+                    f"G11 spent-without-provenance: {path.name} records {sid} as "
+                    f"spent but names no settled_commit -- a retirement that "
+                    f"cannot say WHAT closed the target is unauditable")
+        both = spent_ids & set(fact_ids or [])
+        if both:
+            fails.append(
+                f"G11 spent-and-live: {path.name} lists {sorted(both)} as both "
+                f"live applicability and spent")
+
+        # A FULFILLED record is a retired producer whose whole population
+        # closed. It has no open targets by definition, so G5's non-empty rule,
+        # G6's plurality and G7's open-target rule do not apply -- but it must
+        # name what closed and what it achieved, which G6F enforces instead.
         if kind == "fulfilled":
             if not doc.get("spent"):
                 fails.append(f"G6F fulfilled-without-spent: {path.name} is "
@@ -222,17 +278,8 @@ def main() -> int:
             if not doc.get("outcome"):
                 fails.append(f"G6F fulfilled-without-outcome: {path.name} is "
                              f"kind=fulfilled but records no outcome")
-            for e in doc.get("spent") or []:
-                sid = e.get("fact_id")
-                if sid and sid in facts and facts[sid].get("epistemic_status") == "open":
-                    fails.append(
-                        f"G6F fulfilled-target-still-open: {path.name} lists "
-                        f"{sid} as spent, but it is still open -- a fulfilled "
-                        f"record may not retire live work")
+            fulfilled_found = True
             continue
-
-        applicability = doc.get("applicability", {})
-        fact_ids = applicability.get("fact_ids") if isinstance(applicability, dict) else None
 
         # G5 -- applicability nonempty.
         if not fact_ids:
@@ -297,11 +344,20 @@ def main() -> int:
                         f"{sorted(overreach)}, outside its own obstruction "
                         f"{oid}'s blocked_fact_ids population {sorted(population)}")
 
-    # G3 -- at least one live producer.
-    if not live_producer_found:
+    # G3 -- the compiler produced something: a live producer, or a retirement.
+    if not live_producer_found and not fulfilled_found:
         fails.append("G3 no-live-producer: no compiled contract has "
-                     "kind=producer with >= 2 applicability targets -- "
-                     "classification ran but nothing was actually compiled")
+                     "kind=producer with >= 2 applicability targets, and none "
+                     "is a kind=fulfilled retirement -- classification ran but "
+                     "nothing was actually compiled")
+    elif not live_producer_found:
+        print("EXHAUSTED: every compiled contract is kind=fulfilled -- each "
+              "population this compiler was sized against has closed, so there "
+              "is no live producer to dispatch. That is a true state, not a "
+              "defect (ADR-1510), and it is the OPEN POLICY QUESTION this gate "
+              "cannot answer: the next contract must be sized against the "
+              "current frontier before it is written, not against what a "
+              "producer already did.")
 
     # Report the applicability-set-size distribution honestly, always --
     # this is not a guard, it is the headline number D4 asks this phase to
