@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-row-swap-involutive",
+  "title": "Swapping two rows of a rational matrix twice restores it, with no side condition",
+  "statement": "For every pair of row indices i, j and every matrix M : Nat -> Nat -> Rat, applying Rat.rowSwap i j twice returns the original matrix entry by entry: rowSwap i j (rowSwap i j M) r c = M r c for all r, c. The statement is UNCONDITIONAL -- i = j is included -- and that corner is not free. Rat.rowSwap i j M is two Rat.matSetRow writes over the ORIGINAL M, so at r = i the outer write hands back row j of the once-swapped matrix, and which matSetRow equation applies to that read depends on whether j = i. The proof is therefore a Nat.beq r i split with a second Nat.beq j i split inside its true branch and a Nat.beq r j split inside its false one; three of the four leaves are two chained equation lemmas and the fourth transports the row index. This is what makes a row swap a bijection on matrices, which is the property rank invariance consumes.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rowSwap_involutive : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> ((x3 : AxNat) -> ((x4 : AxNat) -> Eq.{1} Rat (Rat.rowSwap x0 x1 (Rat.rowSwap x0 x1 x2) x3 x4) (x2 x3 x4))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rowSwap_involutive"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:ml430-nat-eq-of-beq-eq-true-6ec35ee4"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-row-swap-involutive-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rowSwap_involutive` is in the environment as a checked `Declaration::Theorem` -- not a `Definition`, not an axiom -- with an EMPTY `Kernel::axiom_footprint`, in all four preludes that carry the rationals. The `formal.statement` above is the kernel's own `render_lean` of the admitted type, not a paraphrase of the Rust source or of a doc comment. Reading it confirms the two row indices `x0`, `x1` are independently quantified with NO hypothesis relating them, which is what distinguishes this statement from the conditional form every neighbouring inverse law carries.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.rowSwap_involutive --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rowSwap_involutive[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.rowSwap_involutive 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs)",
+    "source": "docs/research/09-decisions/adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md"
+  },
+  "notes": "ADR-0603 grading: this is the general constructive form, and row 2 (a boundary refutation) is EMPTY for this family BY PROOF rather than by omission -- the order on the constructed rationals is decidable, so there is no Markov-style boundary to refute and the general form IS the exact form. There is no labelled import row: nothing here was taken from Mathlib. It does NOT say a swap preserves rank, or that the two matrices are equal as functions: the conclusion is pointwise at each `(r, c)`, because this kernel has no function extensionality and matrices are bare `Nat -> Nat -> Rat`. It also says nothing about `Rat.rowEchelon`'s correctness -- the loop's use of `rowSwap` is not constrained by this."
+}

@@ -61,6 +61,7 @@ mod decide;
 mod defs;
 mod det_mul;
 mod diagonal;
+mod echelon;
 mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
@@ -2534,6 +2535,122 @@ pub struct RatPrelude {
     /// ADR-1120's four laws. [`Self::det_mat_mul_2`] is the fixed-dimension
     /// special case whose proof does not generalize.
     pub det_mat_mul: NameId,
+    // --- row-echelon form (ADR-1554) -----------------------------------------
+    /// `Rat.isZeroB : Rat → Bool` — the DECIDED zero test, `ble x 0 && ble 0 x`
+    /// written as one nested `Bool.rec` so nothing but `Rat.ble` is needed.
+    ///
+    /// Row reduction has to BRANCH on whether a candidate pivot is zero, and a
+    /// `Prop`-valued `Eq x 0` cannot drive a computation. Over `ℚ` the order is
+    /// decidable, so this is a total function and no `Decidable` instance or
+    /// choice principle is involved — ADR-0603's row 2 (a boundary refutation)
+    /// is empty for this family for exactly that reason.
+    pub is_zero_b: NameId,
+    /// `Rat.isZeroB_zero : Rat.isZeroB Rat.zero = Bool.true` — `Eq.refl`.
+    pub is_zero_b_zero: NameId,
+    /// `Rat.eq_zero_of_isZeroB : ∀ x, Rat.isZeroB x = Bool.true →
+    /// Eq Rat x Rat.zero`.
+    ///
+    /// **The bridge from the DECIDED zero test to the propositional one**, and
+    /// the piece `Rat.rank` needs to turn "`leadingIndex` stopped here" into a
+    /// statement about the entry. It is where the decidability of `ℚ`'s order is
+    /// actually spent: `Rat.le_antisymm` over the two `Rat.ble` bridges.
+    pub eq_zero_of_is_zero_b: NameId,
+    /// `Rat.isZeroB_of_eq_zero : ∀ x, Eq Rat x Rat.zero →
+    /// Rat.isZeroB x = Bool.true` — the converse of
+    /// [`Self::eq_zero_of_is_zero_b`], by transport along the equation.
+    pub is_zero_b_of_eq_zero: NameId,
+    /// `Rat.ne_zero_of_isZeroB_false : ∀ x, Rat.isZeroB x = Bool.false →
+    /// Not (Eq Rat x Rat.zero)` — the form a found pivot's nonzero-ness has to
+    /// arrive in for `Rat.mul_inv_cancel_of_ne_zero` to consume it.
+    pub ne_zero_of_is_zero_b_false: NameId,
+    /// `Rat.rowSwap : Nat → Nat → Mat → Mat` — exchange rows `i` and `j`.
+    /// Built from two [`Self::mat_set_row`] writes over the ORIGINAL matrix, so
+    /// both rows read pre-swap values.
+    pub row_swap: NameId,
+    /// `Rat.rowScale : Nat → Rat → Mat → Mat` — `rowScale i k M` multiplies row
+    /// `i` by `k`. Total in `k`; the inverse law [`Self::row_scale_inverse`] is
+    /// what carries the `k ≠ 0` side condition.
+    pub row_scale: NameId,
+    /// `Rat.rowAddMul : Nat → Nat → Rat → Mat → Mat` — `rowAddMul i j k M` adds
+    /// `k` times row `j` to row `i`.
+    pub row_add_mul: NameId,
+    /// `Rat.rowSwap_at_left : ∀ i j M c, rowSwap i j M i c = M j c`.
+    pub row_swap_at_left: NameId,
+    /// `Rat.rowSwap_at_right : ∀ i j M, Nat.beq j i = false → ∀ c,
+    /// rowSwap i j M j c = M i c`.
+    pub row_swap_at_right: NameId,
+    /// `Rat.rowSwap_off : ∀ i j M r, Nat.beq r i = false → Nat.beq r j = false →
+    /// ∀ c, rowSwap i j M r c = M r c`.
+    pub row_swap_off: NameId,
+    /// `Rat.rowScale_at : ∀ i k M c, rowScale i k M i c = k * M i c`.
+    pub row_scale_at: NameId,
+    /// `Rat.rowScale_off : ∀ i k M r, Nat.beq r i = false → ∀ c,
+    /// rowScale i k M r c = M r c`.
+    pub row_scale_off: NameId,
+    /// `Rat.rowAddMul_at : ∀ i j k M c,
+    /// rowAddMul i j k M i c = M i c + k * M j c`.
+    pub row_add_mul_at: NameId,
+    /// `Rat.rowAddMul_off : ∀ i j k M r, Nat.beq r i = false → ∀ c,
+    /// rowAddMul i j k M r c = M r c`.
+    pub row_add_mul_off: NameId,
+    /// `Rat.rowSwap_involutive : ∀ i j M r c,
+    /// rowSwap i j (rowSwap i j M) r c = M r c` — UNCONDITIONAL, `i = j`
+    /// included. The `i = j` corner is not free: at `r = i` the outer write
+    /// reads row `j` of the once-swapped matrix, which needs `Nat.beq j i`
+    /// split before either `matSetRow` equation applies.
+    pub row_swap_involutive: NameId,
+    /// `Rat.rowAddMul_inverse : ∀ i j k M, Nat.beq j i = false → ∀ r c,
+    /// rowAddMul i j (neg k) (rowAddMul i j k M) r c = M r c` — the inverse of
+    /// an add-multiple is the same operation with `-k`. `j ≠ i` is REQUIRED
+    /// (at `i = j` the operation scales row `i` by `1 + k` and its inverse is
+    /// not `-k`), and it is stated as `Nat.beq j i` rather than `beq i j`
+    /// because that is the orientation [`Self::mat_set_row_off`] consumes.
+    pub row_add_mul_inverse: NameId,
+    /// `Rat.rowScale_inverse : ∀ i k M, Not (Eq Rat k Rat.zero) → ∀ r c,
+    /// rowScale i (inv k) (rowScale i k M) r c = M r c`.
+    pub row_scale_inverse: NameId,
+    /// `Rat.pivotSearchAux : Nat → Mat → Nat → Nat → Nat → Nat` — the fuelled
+    /// COMPUTED pivot search. `pivotSearchAux fuel M c r rows` walks `r` upward
+    /// looking for the first row below `rows` whose column-`c` entry is
+    /// nonzero, returning `rows` when there is none. Structural recursion on
+    /// the fuel; no `Exists`, no extraction (ADR-1554).
+    pub pivot_search_aux: NameId,
+    /// `Rat.pivotSearch : Mat → Nat → Nat → Nat → Nat` —
+    /// `pivotSearch M c start rows`, [`Self::pivot_search_aux`] at the
+    /// canonical fuel `rows`.
+    pub pivot_search: NameId,
+    /// `Rat.clearBelowAux : Nat → Mat → Nat → Nat → Nat → Nat → Mat` — the
+    /// fuelled elimination sweep. `clearBelowAux fuel M pr pc r rows` subtracts
+    /// the right multiple of pivot row `pr` from every row from `r` up to
+    /// `rows`.
+    pub clear_below_aux: NameId,
+    /// `Rat.clearBelow : Mat → Nat → Nat → Nat → Mat` —
+    /// `clearBelow M pr pc rows`, the sweep starting at `succ pr`.
+    pub clear_below: NameId,
+    /// `Rat.echelonAux : Nat → Mat → Nat → Nat → Nat → Nat → Mat` — one
+    /// Gaussian-elimination step per unit of fuel.
+    pub echelon_aux: NameId,
+    /// `Rat.rowEchelon : Mat → Nat → Nat → Mat` — `rowEchelon A rows cols`.
+    /// [`Self::echelon_aux`] at fuel `cols`, which is EXACT: the pivot column
+    /// advances on every iteration of the loop (both the found and the
+    /// all-zero-column branch increment it), so `cols` steps reach the exit
+    /// guard and no more are possible.
+    pub row_echelon: NameId,
+    /// `Rat.leadingIndexAux : Nat → Mat → Nat → Nat → Nat → Nat`.
+    pub leading_index_aux: NameId,
+    /// `Rat.leadingIndex : Mat → Nat → Nat → Nat` — `leadingIndex M r cols` is
+    /// the first column of row `r` carrying a nonzero entry, and `cols` when
+    /// the row is zero. Total, computed, and the quantity `Rat.rank` will be
+    /// read off next.
+    pub leading_index: NameId,
+    /// `Rat.echelonStepOk : Nat → Nat → Nat → Bool` — one adjacent-row test:
+    /// the leading indices strictly increase, or both rows are zero.
+    pub echelon_step_ok: NameId,
+    /// `Rat.isEchelonAux : Nat → Mat → Nat → Nat → Nat → Bool`.
+    pub is_echelon_aux: NameId,
+    /// `Rat.isEchelon : Mat → Nat → Nat → Bool` — decidable row-echelon test:
+    /// leading entries strictly move right, and zero rows sit at the bottom.
+    pub is_echelon: NameId,
 }
 
 impl RatPrelude {
@@ -2980,6 +3097,35 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         sum_maps_congr_maps_into: child(kernel, "sumMaps_congr_mapsInto"),
         det_mat_mul_expand: child(kernel, "det_matMul_expand"),
         det_mat_mul: child(kernel, "det_matMul"),
+        is_zero_b: child(kernel, "isZeroB"),
+        is_zero_b_zero: child(kernel, "isZeroB_zero"),
+        eq_zero_of_is_zero_b: child(kernel, "eq_zero_of_isZeroB"),
+        is_zero_b_of_eq_zero: child(kernel, "isZeroB_of_eq_zero"),
+        ne_zero_of_is_zero_b_false: child(kernel, "ne_zero_of_isZeroB_false"),
+        row_swap: child(kernel, "rowSwap"),
+        row_scale: child(kernel, "rowScale"),
+        row_add_mul: child(kernel, "rowAddMul"),
+        row_swap_at_left: child(kernel, "rowSwap_at_left"),
+        row_swap_at_right: child(kernel, "rowSwap_at_right"),
+        row_swap_off: child(kernel, "rowSwap_off"),
+        row_scale_at: child(kernel, "rowScale_at"),
+        row_scale_off: child(kernel, "rowScale_off"),
+        row_add_mul_at: child(kernel, "rowAddMul_at"),
+        row_add_mul_off: child(kernel, "rowAddMul_off"),
+        row_swap_involutive: child(kernel, "rowSwap_involutive"),
+        row_add_mul_inverse: child(kernel, "rowAddMul_inverse"),
+        row_scale_inverse: child(kernel, "rowScale_inverse"),
+        pivot_search_aux: child(kernel, "pivotSearchAux"),
+        pivot_search: child(kernel, "pivotSearch"),
+        clear_below_aux: child(kernel, "clearBelowAux"),
+        clear_below: child(kernel, "clearBelow"),
+        echelon_aux: child(kernel, "echelonAux"),
+        row_echelon: child(kernel, "rowEchelon"),
+        leading_index_aux: child(kernel, "leadingIndexAux"),
+        leading_index: child(kernel, "leadingIndex"),
+        echelon_step_ok: child(kernel, "echelonStepOk"),
+        is_echelon_aux: child(kernel, "isEchelonAux"),
+        is_echelon: child(kernel, "isEchelon"),
     }
 }
 
@@ -3040,6 +3186,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         matrix_det_selection::declare_det_row_selection(&mut d, prelude)?;
         matrix_det_mul::declare_matrix_det_mul(&mut d, prelude)?;
         det_mul::declare_det_mul(&mut d, prelude)?;
+        echelon::declare_echelon(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3063,6 +3210,9 @@ mod sum_maps_tests;
 
 #[cfg(test)]
 mod det_mul_tests;
+
+#[cfg(test)]
+mod echelon_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

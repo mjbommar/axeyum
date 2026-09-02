@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-ne-zero-of-is-zero-b-false",
+  "title": "A rational the decided test calls nonzero is nonzero propositionally",
+  "statement": "For every x : Rat, Rat.isZeroB x = Bool.false implies Not (Eq Rat x Rat.zero). This is the direction a FOUND pivot arrives in: Rat.pivotSearch returns an index precisely because Rat.isZeroB said false at that entry, and every field law that would then divide by it -- Rat.mul_inv_cancel_of_ne_zero above all -- wants Not (Eq x 0). The proof moves the hypothesis to x := 0 along the assumed equation and contradicts Rat.isZeroB_zero, which is Eq.refl because Rat.zero is built with Rat.mk so both projections compute and Rat.ble decides by cross-multiplication into Int.ble.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.ne_zero_of_isZeroB_false : ((x0 : Rat) -> ((x1 : Eq.{1} Bool (Rat.isZeroB x0) Bool.false) -> ((x2 : Eq.{1} Rat x0 Rat.zero) -> False)))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.ne_zero_of_isZeroB_false"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-ne-zero-of-is-zero-b-false-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.ne_zero_of_isZeroB_false` is a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint` in all four preludes carrying the rationals. The `formal.statement` is the kernel's `render_lean` of the admitted type; reading it confirms the conclusion is spelled out as `(Eq Rat x0 Rat.zero) -> False` rather than through a `Not` abbreviation, which is what a consumer has to match against.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.ne_zero_of_isZeroB_false --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.ne_zero_of_isZeroB_false[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.ne_zero_of_isZeroB_false 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs)",
+    "source": "docs/research/09-decisions/adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md"
+  },
+  "notes": "ADR-0603 grading: this is the general constructive form, and row 2 (a boundary refutation) is EMPTY for this family BY PROOF rather than by omission -- the order on the constructed rationals is decidable, so there is no Markov-style boundary to refute and the general form IS the exact form. There is no labelled import row: nothing here was taken from Mathlib. It does NOT say the converse -- that a nonzero rational tests `false` -- which is `Rat.isZeroB_of_eq_zero` contraposed and is a separate declaration. And it says nothing about where such an entry sits: relating it to the pivot the search returned is ADR-1554's obligation 2."
+}
