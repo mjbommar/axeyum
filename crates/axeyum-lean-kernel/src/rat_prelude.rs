@@ -74,6 +74,7 @@ mod matrix_invertible;
 mod matrix_n;
 mod matrix_transpose;
 mod model;
+mod nullity;
 pub(crate) mod ops;
 mod polynomial;
 mod pow_bridge;
@@ -2701,6 +2702,82 @@ pub struct RatPrelude {
     /// control a definition counting rows regardless of the leading index
     /// would fail.
     pub rank_zero_cols: NameId,
+
+    // --- rank-nullity in column form (`rat_prelude::nullity`, ADR-1558) -----
+    /// `Rat.pivotColSearchAux : Mat → Nat → Nat → Nat → Nat → Nat → Bool`,
+    /// `pivotColSearchAux E rows cols j fuel r` — `true` when some `r' >= r`
+    /// below `rows` has `leadingIndex E r' cols = j`. Both exhaustion answers
+    /// (fuel out, scan finished) are `false`, mirroring
+    /// [`Self::pivot_search_aux`]'s single out-of-range answer.
+    pub pivot_col_search_aux: NameId,
+    /// `Rat.isPivotColB : Mat → Nat → Nat → Nat → Bool`,
+    /// `isPivotColB E rows cols j := pivotColSearchAux E rows cols j rows 0` —
+    /// "column `j` is a pivot column of `E`", decided. The column index comes
+    /// LAST so `isPivotColB E rows cols` is already the `Nat → Bool` predicate
+    /// [`NatPrelude::count_range`](crate::NatPrelude::count_range) consumes.
+    pub is_pivot_col_b: NameId,
+    /// `Rat.isPivotColB_eq_search : ∀ E rows cols j, isPivotColB E rows cols j
+    /// = pivotColSearchAux E rows cols j rows 0` — the defining equation,
+    /// `Eq.refl`.
+    pub is_pivot_col_b_eq_search: NameId,
+    /// `Rat.isPivotColB_zero_rows : ∀ E cols j, isPivotColB E 0 cols j = false`
+    /// — with no rows there is no pivot. `Eq.refl` at a SYMBOLIC matrix,
+    /// column count and column, because the fuel is `0` and `Nat.rec` takes its
+    /// zero branch without evaluating the leading index.
+    pub is_pivot_col_b_zero_rows: NameId,
+    /// `Rat.rankCols : Mat → Nat → Nat → Nat`, `rankCols M rows cols :=
+    /// Nat.countRange (isPivotColB (rowEchelon M rows cols) rows cols) cols` —
+    /// the number of PIVOT COLUMNS of the row-echelon form, **computed**.
+    ///
+    /// The column-form counterpart of [`Self::rank`]. `rank = rankCols` is the
+    /// bridge, and it is open (ADR-1558): it is where
+    /// `rowEchelon_isEchelon` is genuinely required.
+    pub rank_cols: NameId,
+    /// `Rat.rankCols_eq_countRange : ∀ M rows cols, rankCols M rows cols =
+    /// Nat.countRange (isPivotColB (rowEchelon M rows cols) rows cols) cols` —
+    /// `Eq.refl`, the route every `Nat.countRange` law has to `rankCols`.
+    pub rank_cols_eq_count_range: NameId,
+    /// `Rat.nullity : Mat → Nat → Nat → Nat`, `nullity M rows cols :=
+    /// Nat.countRange (Nat.setCompl (isPivotColB (rowEchelon M rows cols) rows cols)) cols`
+    /// — the FREE columns, **computed**. Deliberately not `cols - rank`: the
+    /// subtraction form inherits `rank ≤ cols`, which is open.
+    pub nullity: NameId,
+    /// `Rat.nullity_eq_countRange : ∀ M rows cols, nullity M rows cols =
+    /// Nat.countRange (Nat.setCompl (isPivotColB (rowEchelon M rows cols) rows cols)) cols`
+    /// — `Eq.refl`.
+    pub nullity_eq_count_range: NameId,
+    /// `Rat.rank_nullity : ∀ M rows cols,
+    /// Nat.add (rankCols M rows cols) (nullity M rows cols) = cols` — **the
+    /// rank-nullity theorem in column form**, one application of
+    /// `Nat.countRange_compl`, symbolic in all three arguments. No property of
+    /// `rowEchelon` is used, which is exactly what the column form buys.
+    pub rank_nullity: NameId,
+    /// `Rat.rankCols_le_cols : ∀ M rows cols, Le (rankCols M rows cols) cols` —
+    /// one `Nat.countRange_le`. Free here, where the row-form `rank ≤ cols` is
+    /// not: a count over `[0, cols)` cannot exceed `cols` whatever the
+    /// predicate does.
+    pub rank_cols_le_cols: NameId,
+    /// `Rat.nullity_le_cols : ∀ M rows cols, Le (nullity M rows cols) cols` —
+    /// the same bound at the complementary predicate.
+    pub nullity_le_cols: NameId,
+    /// `Rat.rankCols_zero_cols : ∀ M rows, rankCols M rows 0 = 0` — `Eq.refl`.
+    pub rank_cols_zero_cols: NameId,
+    /// `Rat.nullity_zero_cols : ∀ M rows, nullity M rows 0 = 0` — `Eq.refl`,
+    /// the degenerate instance of [`Self::rank_nullity`] at `cols = 0`.
+    pub nullity_zero_cols: NameId,
+    /// `Rat.countRange_isPivotColB_zeroRows : ∀ E cols n,
+    /// Nat.countRange (isPivotColB E 0 cols) n = 0` — the generalisation over
+    /// the matrix that [`Self::rank_cols_zero_rows`] needs, for the same reason
+    /// [`Self::count_range_nonzero_row_b_zero`] exists.
+    pub count_range_is_pivot_col_b_zero_rows: NameId,
+    /// `Rat.rankCols_zero_rows : ∀ M cols, rankCols M 0 cols = 0` — with no
+    /// rows there are no pivot columns.
+    pub rank_cols_zero_rows: NameId,
+    /// `Rat.nullity_zero_rows : ∀ M cols, nullity M 0 cols = cols` — with no
+    /// rows EVERY column is free. The discriminating degenerate control: a
+    /// `nullity` that returned `0` satisfies
+    /// [`Self::rank_cols_zero_rows`] and fails this.
+    pub nullity_zero_rows: NameId,
 }
 
 impl RatPrelude {
@@ -3185,6 +3262,22 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_zero_rows: child(kernel, "rank_zero_rows"),
         count_range_nonzero_row_b_zero: child(kernel, "countRange_nonzeroRowB_zero"),
         rank_zero_cols: child(kernel, "rank_zero_cols"),
+        pivot_col_search_aux: child(kernel, "pivotColSearchAux"),
+        is_pivot_col_b: child(kernel, "isPivotColB"),
+        is_pivot_col_b_eq_search: child(kernel, "isPivotColB_eq_search"),
+        is_pivot_col_b_zero_rows: child(kernel, "isPivotColB_zero_rows"),
+        rank_cols: child(kernel, "rankCols"),
+        rank_cols_eq_count_range: child(kernel, "rankCols_eq_countRange"),
+        nullity: child(kernel, "nullity"),
+        nullity_eq_count_range: child(kernel, "nullity_eq_countRange"),
+        rank_nullity: child(kernel, "rank_nullity"),
+        rank_cols_le_cols: child(kernel, "rankCols_le_cols"),
+        nullity_le_cols: child(kernel, "nullity_le_cols"),
+        rank_cols_zero_cols: child(kernel, "rankCols_zero_cols"),
+        nullity_zero_cols: child(kernel, "nullity_zero_cols"),
+        count_range_is_pivot_col_b_zero_rows: child(kernel, "countRange_isPivotColB_zeroRows"),
+        rank_cols_zero_rows: child(kernel, "rankCols_zero_rows"),
+        nullity_zero_rows: child(kernel, "nullity_zero_rows"),
     }
 }
 
@@ -3247,6 +3340,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         det_mul::declare_det_mul(&mut d, prelude)?;
         echelon::declare_echelon(&mut d, prelude)?;
         rank::declare_rank(&mut d, prelude)?;
+        nullity::declare_nullity(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3276,6 +3370,9 @@ mod echelon_tests;
 
 #[cfg(test)]
 mod rank_tests;
+
+#[cfg(test)]
+mod nullity_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

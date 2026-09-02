@@ -134,7 +134,7 @@ pub(super) fn declare_echelon(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
 /// `Bool.rec.{1}` selecting between two values of an arbitrary type `ty` —
 /// [`bool_select_rat`] generalised, needed at `Nat`, `Bool` and the matrix
 /// type.
-fn bool_select_at(
+pub(super) fn bool_select_at(
     d: &mut IntDev<'_>,
     ty: ExprId,
     condition: ExprId,
@@ -1278,7 +1278,7 @@ fn declare_row_scale_inverse(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ke
 
 /// `Nat.rec.{1}` at a motive constant in the recursion variable — the fuel
 /// idiom every definition below uses.
-fn nat_fuel_rec(
+pub(super) fn nat_fuel_rec(
     d: &mut IntDev<'_>,
     inner_ty: ExprId,
     zero_case: ExprId,
