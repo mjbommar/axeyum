@@ -1467,6 +1467,10 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.count_range_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_min,
         p.count_range_mul_succ_le_eq_floor,
+        // `eisenstein_side.rs` (`eisenstein-lattice` lane): ADR-1260's
+        // residue 2.
+        p.mul_ne_mul_of_coprime_of_lt,
+        p.mul_succ_ne_mul_succ_of_coprime,
         // `prime_dvd_factorial_lcm.rs`: five `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`.
         p.prime_coprime_factorial_of_lt,

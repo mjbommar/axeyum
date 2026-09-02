@@ -191,6 +191,7 @@ mod fibonacci;
 mod find_greatest;
 mod finite;
 mod finite_set;
+mod eisenstein_side;
 mod floor_count;
 mod gauss_lemma;
 mod gcd;
@@ -363,6 +364,7 @@ use finite::{
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
+use eisenstein_side::declare_eisenstein_side_all;
 use floor_count::declare_floor_count_all;
 use gauss_lemma::declare_gauss_lemma_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
@@ -5533,6 +5535,25 @@ pub struct NatPrelude {
     /// of the divisor is the constructive `succ ap`, so no `Lt zero a`
     /// hypothesis is formed.
     pub count_range_mul_succ_le_eq_floor: NameId,
+
+    // -- `eisenstein-lattice` lane: `eisenstein_side.rs` --
+    // ADR-1260's residue 2: the side condition that makes the rectangle
+    // partition's two STRICT half-plane predicates complementary. Stated over
+    // coprimality rather than primality, because `Nat.gauss_lemma` already
+    // drops Euclid's primality side condition.
+    /// `Nat.mul_ne_mul_of_coprime_of_lt : ∀ pp q x y, Eq (gcd pp q) 1 →
+    /// Lt 0 x → Lt x pp → Not (Eq (mul pp y) (mul q x))`
+    /// (`eisenstein_side.rs`) — no lattice point sits on the line
+    /// `pp·y = q·x` while `0 < x < pp`. The bound is on `x`, the index paired
+    /// with `q`: `pp·y = q·x` forces `pp ∣ x`, and the transposed reading is
+    /// FALSE (`3·5 = 5·3`).
+    pub mul_ne_mul_of_coprime_of_lt: NameId,
+    /// `Nat.mul_succ_ne_mul_succ_of_coprime : ∀ pp q x y, Eq (gcd pp q) 1 →
+    /// Lt (succ x) pp → Not (Eq (mul pp (succ y)) (mul q (succ x)))`
+    /// (`eisenstein_side.rs`) — the `1`-based corollary the rectangle
+    /// partition consumes, with the positivity hypothesis discharged
+    /// constructively by the `succ` shape.
+    pub mul_succ_ne_mul_succ_of_coprime: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6616,6 +6637,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             count_range_mul_succ_le_eq_min: kernel.name_str(nat, "countRange_mul_succ_le_eq_min"),
             count_range_mul_succ_le_eq_floor: kernel
                 .name_str(nat, "countRange_mul_succ_le_eq_floor"),
+            mul_ne_mul_of_coprime_of_lt: kernel.name_str(nat, "mul_ne_mul_of_coprime_of_lt"),
+            mul_succ_ne_mul_succ_of_coprime: kernel
+                .name_str(nat, "mul_succ_ne_mul_succ_of_coprime"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -7626,6 +7650,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (`declare_prime_dvd_mirrors_all`, just above). Nothing needs it,
         // so it goes last.
         declare_prime_dvd_factorial_lcm_all(&mut d, &p)?;
+        // ADR-1260's residue 2 (`eisenstein_side.rs`): needs `Nat.gauss_lemma`
+        // (`lcm.rs`), `Nat.le_of_dvd` (`primes.rs`), `Nat.dvd`
+        // (`divisibility.rs`) and the `Nat.lt_of_lt_of_le`/`Nat.lt_irrefl`
+        // order lemmas, all far above. Nothing needs it yet, so it goes last.
+        declare_eisenstein_side_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -7670,6 +7699,9 @@ mod stirling_tests;
 
 #[cfg(test)]
 mod stirling_lemmas_tests;
+
+#[cfg(test)]
+mod eisenstein_side_tests;
 
 #[cfg(test)]
 mod floor_count_tests;
