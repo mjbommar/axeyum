@@ -24,6 +24,7 @@
 use super::NatPrelude;
 use super::helpers::iff_reverse;
 use super::ops::{NatDev, NatOps};
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -71,29 +72,6 @@ fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, absurd: ExprId
     let zero = d.kernel().level_zero();
     let false_rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
     d.apply(false_rec, &[motive, absurd])
-}
-
-/// `Or.rec`-based case split (mirrors `log.rs`'s private `or_cases`, not
-/// exported from that file).
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// `Le (bool_select_nat test1 on_true1 zero) (bool_select_nat test2 on_true2
@@ -170,9 +148,7 @@ fn le_of_bool_select_mono(
         d.le(lhs, bound_expr)
     };
     let split = super::ops::bool_true_or_false(d, p, test1);
-    or_cases(
-        d, p, is_true1, is_false1, goal, true_case, false_case, split,
-    )
+    or_cases(d, is_true1, is_false1, goal, true_case, false_case, split)
 }
 
 /// `Nat.div_le_div_right : ∀ n m b, Le n m → Le (div n b) (div m b)`.
@@ -1030,7 +1006,6 @@ pub(super) fn declare_log_aux_le_clog_aux(
                 let split2 = super::ops::bool_true_or_false(d, &p, base_fits);
                 let inner_proof = or_cases(
                     d,
-                    &p,
                     is_true2,
                     is_false2,
                     goal,
@@ -1044,7 +1019,6 @@ pub(super) fn declare_log_aux_le_clog_aux(
             let split1 = super::ops::bool_true_or_false(d, &p, base_exceeds_one);
             let full_proof = or_cases(
                 d,
-                &p,
                 is_true1,
                 is_false1,
                 goal,
@@ -1390,7 +1364,6 @@ pub(super) fn declare_log_aux_lt_of_pos(
 
                     let leaf_proof = or_cases(
                         d,
-                        &p,
                         eq_q0_ty,
                         ex_ty,
                         goal_leaf,
@@ -1419,7 +1392,6 @@ pub(super) fn declare_log_aux_lt_of_pos(
                 let split2 = super::ops::bool_true_or_false(d, &p, base_fits);
                 let inner_proof = or_cases(
                     d,
-                    &p,
                     is_true2,
                     is_false2,
                     goal,
@@ -1433,7 +1405,6 @@ pub(super) fn declare_log_aux_lt_of_pos(
             let split1 = super::ops::bool_true_or_false(d, &p, base_exceeds_one);
             let full_proof = or_cases(
                 d,
-                &p,
                 is_true1,
                 is_false1,
                 goal,
@@ -1590,7 +1561,7 @@ pub(super) fn declare_div_le_div_left(
             d.lam_fv(hex_fv, ex_ty, body)
         };
 
-        let leaf = or_cases(d, &p, eq_a0_ty, ex_ty, goal, case_a_zero, case_a_succ, disj);
+        let leaf = or_cases(d, eq_a0_ty, ex_ty, goal, case_a_zero, case_a_succ, disj);
         let with_hab = d.lam_fv(hab_fv, hab_ty, leaf);
         let inner_stmt = d.arrow(hab_ty, goal);
         let stmt = d.arrow(pos_a_ty, inner_stmt);
@@ -1787,7 +1758,6 @@ pub(super) fn declare_log_aux_antitone_base(
             let split1 = super::ops::bool_true_or_false(d, &p, base_fits_b);
             let full_proof = or_cases(
                 d,
-                &p,
                 is_true1,
                 is_false1,
                 goal,
@@ -2244,7 +2214,6 @@ pub(super) fn declare_clog_aux_antitone_base(
             let split_val = super::ops::bool_true_or_false(d, &p, value_exceeds_one);
             let full_proof = or_cases(
                 d,
-                &p,
                 is_true_val,
                 is_false_val,
                 goal,

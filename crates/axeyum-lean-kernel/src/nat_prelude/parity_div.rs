@@ -53,6 +53,7 @@ use super::helpers::and_left;
 use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
 use super::parity::odd_predicate;
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -78,17 +79,6 @@ fn or_elim(
         or_rec,
         &[left_ty, right_ty, motive, left_case, right_case, or_proof],
     )
-}
-
-/// `False.rec` into `goal` (private copy; see the module doc for why).
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let p = *p;
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 /// `Nat.even_mul_of_even_left : ∀ m n, Even m → Even (mul m n)` — private
@@ -182,7 +172,7 @@ pub(super) fn declare_odd_of_mul_left(
             let onem = d.lemma(p.odd_not_even, &[mul_mn]);
             let not_even_mul = d.apply(onem, &[h]);
             let false_proof = d.apply(not_even_mul, &[even_mul_proof]);
-            let odd_m_from_false = absurd(d, &p, odd_m_ty, false_proof);
+            let odd_m_from_false = absurd(d, odd_m_ty, false_proof);
             d.lam_fv(hm_fv, even_m_ty, odd_m_from_false)
         };
 
@@ -441,7 +431,7 @@ pub(super) fn declare_add_one_lt_of_even(
             let not_even_m = d.apply(onem, &[odd_m]);
             let false_proof = d.apply(not_even_m, &[hm]);
 
-            let lt_from_false = absurd(d, &p, lt_n1m_ty, false_proof);
+            let lt_from_false = absurd(d, lt_n1m_ty, false_proof);
             d.lam_fv(heq_fv, eq_n1m_ty, lt_from_false)
         };
 
@@ -525,7 +515,7 @@ pub(super) fn declare_even_add_one(d: &mut NatDev<'_>, p: &NatPrelude) -> Result
                 let hne_fv = d.fresh_fvar();
                 let hne = d.kernel().fvar(hne_fv);
                 let false_proof = d.apply(hne, &[even_n]);
-                let en1_from_false = absurd(d, &p, even_n1_ty, false_proof);
+                let en1_from_false = absurd(d, even_n1_ty, false_proof);
                 d.lam_fv(hne_fv, not_even_n_ty, en1_from_false)
             };
 

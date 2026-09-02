@@ -53,7 +53,7 @@ use super::NatPrelude;
 use super::finite::ex_falso;
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps, cases_zero_succ, two_mul_eq_add_self};
-use super::primes::or_cases;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -775,7 +775,6 @@ fn even_succ(
 
     let result = or_cases(
         d,
-        &p,
         pow2_ty_half,
         odd_ty_half,
         goal,
@@ -943,7 +942,7 @@ fn odd_factor_step(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, ih: ExprId) ->
     let even_minor = even_branch(d, &p, n, f, hle, hne, ih);
     let odd_minor = odd_branch(d, &p, n);
 
-    let result = or_cases(d, &p, even_ty, odd_ty_eq, goal, even_minor, odd_minor, eo);
+    let result = or_cases(d, even_ty, odd_ty_eq, goal, even_minor, odd_minor, eo);
 
     let with_ne = d.lam_fv(ne_fv, ne_ty, result);
     let with_le = d.lam_fv(le_fv, le_ty, with_ne);
@@ -1162,7 +1161,6 @@ fn pow_of_pow_add_prime_contradiction(
 
     or_cases(
         d,
-        &p,
         eq_base_one_ty,
         eq_base_prime_ty,
         goal,
@@ -1207,7 +1205,6 @@ fn pow_of_pow_add_prime_body(
 
     or_cases(
         d,
-        &p,
         pow2_ty,
         odd_ty,
         goal,

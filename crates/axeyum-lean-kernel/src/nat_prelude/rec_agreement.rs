@@ -85,6 +85,7 @@ use super::ops::{
     NatDev, NatOps, agree_by_double_fuel_induction, agree_by_fuel_induction, bool_select_nat_same,
     cases_lt_bound, cases_mod_two, cases_zero_succ,
 };
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -2289,17 +2290,6 @@ fn or_elim(
     )
 }
 
-/// `False.rec` into `goal` from a proof of `False` (private copy, see
-/// [`or_elim`]'s doc comment for why).
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
-}
-
 /// Non-dependent `Exists.rec` over `Nat` (private copy, same convention):
 /// given `predicate : Nat -> Prop`, `minor : forall w, predicate w -> goal`,
 /// and `proof : Exists Nat predicate`, produce a term of type `goal`.
@@ -2443,7 +2433,7 @@ fn declare_land_aux_eq_zero_hard_leaf(
         let left_fv = d.fresh_fvar();
         let left_h = d.kernel().fvar(left_fv);
         let contradiction = d.lemma(p.succ_ne_zero, &[one, left_h]);
-        let left_body = absurd(d, &p, rec_ab_zero_ty, contradiction);
+        let left_body = absurd(d, rec_ab_zero_ty, contradiction);
         let left_case = d.lam_fv(left_fv, two_zero_ty, left_body);
         let right_fv = d.fresh_fvar();
         let right_h = d.kernel().fvar(right_fv);
@@ -3733,7 +3723,7 @@ fn declare_lor_aux_ne_zero_of_right_ne_zero(
                     let eq0 = d.eq(lor_val, zero);
                     d.arrow(eq0, false_ty)
                 };
-                let body = absurd(d, &p, goal, contradiction);
+                let body = absurd(d, goal, contradiction);
                 d.lam_fv(hn_fv, hn_ty, body)
             },
             &|d, n_pred| {
@@ -4001,7 +3991,7 @@ fn declare_lor_aux_assoc_hard_leaf(
         let hx_fv = d.fresh_fvar();
         let hx = d.kernel().fvar(hx_fv); // Eq x zero
         let contradiction = d.apply(not_x_zero, &[hx]);
-        let body = absurd(d, &p, goal_ty, contradiction);
+        let body = absurd(d, goal_ty, contradiction);
         d.lam_fv(hx_fv, x_zero_ty, body)
     };
 
@@ -4073,7 +4063,7 @@ fn declare_lor_aux_assoc_hard_leaf(
             let hy_fv = d.fresh_fvar();
             let hy = d.kernel().fvar(hy_fv); // Eq y zero
             let contradiction = d.apply(not_y_zero, &[hy]);
-            let body = absurd(d, &p, goal_ty, contradiction);
+            let body = absurd(d, goal_ty, contradiction);
             d.lam_fv(hy_fv, y_zero_ty, body)
         };
 

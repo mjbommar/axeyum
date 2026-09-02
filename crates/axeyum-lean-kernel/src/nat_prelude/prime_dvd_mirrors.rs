@@ -21,7 +21,9 @@ use super::helpers::{
 };
 use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
-use super::primes::{absurd, or_cases, prime_condition, prime_parts};
+use super::primes::{prime_condition, prime_parts};
+use super::steps::absurd;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -316,7 +318,7 @@ pub(super) fn declare_prime_dvd_iff_eq(
                 let h_fv = d.fresh_fvar();
                 let h = d.kernel().fvar(h_fv);
                 let false_pf = d.apply(ne_hyp, &[h]);
-                let body = absurd(d, &p, eq_ty, false_pf);
+                let body = absurd(d, eq_ty, false_pf);
                 d.lam_fv(h_fv, is_one_ty, body)
             };
             let on_p = {
@@ -325,7 +327,7 @@ pub(super) fn declare_prime_dvd_iff_eq(
                 let body = d.symm(a_var, p_var, h);
                 d.lam_fv(h_fv, is_p_ty, body)
             };
-            let case_result = or_cases(d, &p, is_one_ty, is_p_ty, eq_ty, on_one, on_p, disj);
+            let case_result = or_cases(d, is_one_ty, is_p_ty, eq_ty, on_one, on_p, disj);
             d.lam_fv(dvd_fv, dvd_ty, case_result)
         };
 
@@ -393,7 +395,7 @@ pub(super) fn declare_prime_dvd_mul_iff(
                 let result = d.lemma(p.dvd_mul_left_of_dvd, &[p_var, n_var, m_var, hn]);
                 d.lam_fv(hn_fv, dvd_n_ty, result)
             };
-            let case_result = or_cases(d, &p, dvd_m_ty, dvd_n_ty, dvd_mn_ty, on_m, on_n, h);
+            let case_result = or_cases(d, dvd_m_ty, dvd_n_ty, dvd_mn_ty, on_m, on_n, h);
             d.lam_fv(h_fv, disj_ty, case_result)
         };
 
@@ -476,10 +478,10 @@ pub(super) fn declare_prime_coprime_iff_not_dvd(
                 let g_dvd_n = d.lemma(p.gcd_dvd_right, &[p_var, n_var]);
                 let p_dvd_n = transport_dvd_left(d, gcd_pn, p_var, h, n_var, g_dvd_n);
                 let false_pf = d.apply(notdvd_hyp, &[p_dvd_n]);
-                let body = absurd(d, &p, cop_ty, false_pf);
+                let body = absurd(d, cop_ty, false_pf);
                 d.lam_fv(h_fv, is_p_ty, body)
             };
-            let case_result = or_cases(d, &p, is_one_ty, is_p_ty, cop_ty, on_one, on_p, disj);
+            let case_result = or_cases(d, is_one_ty, is_p_ty, cop_ty, on_one, on_p, disj);
             d.lam_fv(notdvd_fv, not_dvd_ty, case_result)
         };
 
@@ -537,7 +539,7 @@ pub(super) fn declare_prime_eq_two_or_odd(
             let injected = d.const_app(p.logic.or_inr, &[eq_two_ty, odd_ty, h]);
             d.lam_fv(h_fv, odd_ty, injected)
         };
-        let result = or_cases(d, &p, even_ty, odd_ty, goal, on_even, on_odd, split);
+        let result = or_cases(d, even_ty, odd_ty, goal, on_even, on_odd, split);
         let proof = d.lam_fv(prime_fv, prime_ty, result);
         (stmt, proof)
     })?;
@@ -590,7 +592,7 @@ pub(super) fn declare_prime_eq_two_or_mod_two_eq_one(
             let injected = d.const_app(p.logic.or_inr, &[eq_two_ty, mod_eq_one_ty, modeq]);
             d.lam_fv(h_fv, odd_ty, injected)
         };
-        let result = or_cases(d, &p, even_ty, odd_ty, goal, on_even, on_odd, split);
+        let result = or_cases(d, even_ty, odd_ty, goal, on_even, on_odd, split);
         let proof = d.lam_fv(prime_fv, prime_ty, result);
         (stmt, proof)
     })?;
@@ -689,7 +691,7 @@ pub(super) fn declare_prime_mod_two_eq_one_iff_ne_two(
                 let mp_fn = iff_forward(d, even_ty, eq_two_ty, iff_pf);
                 let peq2 = d.apply(mp_fn, &[h]);
                 let false_pf = d.apply(hne, &[peq2]);
-                let body = absurd(d, &p, mod_eq_one_ty, false_pf);
+                let body = absurd(d, mod_eq_one_ty, false_pf);
                 d.lam_fv(h_fv, even_ty, body)
             };
             let on_odd = {
@@ -700,16 +702,7 @@ pub(super) fn declare_prime_mod_two_eq_one_iff_ne_two(
                 let result = d.apply(mp_fn2, &[h]);
                 d.lam_fv(h_fv, odd_ty, result)
             };
-            let result = or_cases(
-                d,
-                &p,
-                even_ty,
-                odd_ty,
-                mod_eq_one_ty,
-                on_even,
-                on_odd,
-                split,
-            );
+            let result = or_cases(d, even_ty, odd_ty, mod_eq_one_ty, on_even, on_odd, split);
             d.lam_fv(hne_fv, ne_two_ty, result)
         };
 

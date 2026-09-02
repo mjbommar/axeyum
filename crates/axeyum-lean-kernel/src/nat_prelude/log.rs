@@ -56,6 +56,7 @@
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -76,33 +77,6 @@ fn log_aux(
 /// `Nat.log base value`.
 fn log(d: &mut NatDev<'_>, p: &NatPrelude, base: ExprId, value: ExprId) -> ExprId {
     d.const_app(p.log, &[base, value])
-}
-
-/// `Or.rec` with a non-dependent motive: from `proof : Or left_ty right_ty`
-/// and two functions `left_ty -> goal`, `right_ty -> goal`, produce `goal`.
-///
-/// Mirrors `factorization.rs`'s private helper of the same name (itself
-/// documented as mirroring `primes.rs`'s) — this file's own local copy rather
-/// than a shared `pub(super)`, by the same convention.
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// `Le (bool_select_nat test on_true on_false) bound`, built from proofs at
@@ -163,7 +137,7 @@ fn le_of_bool_select(
         d.le(selected, bound)
     };
     let split = super::ops::bool_true_or_false(d, p, test);
-    or_cases(d, p, is_true, is_false, goal, true_case, false_case, split)
+    or_cases(d, is_true, is_false, goal, true_case, false_case, split)
 }
 
 /// Declare `Nat.logAux`, `Nat.log`, and the four boundary equations that fall

@@ -96,6 +96,7 @@
 use super::NatPrelude;
 use super::helpers::{and_left, and_right, iff_forward, iff_reverse};
 use super::ops::{NatDev, NatOps};
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -145,29 +146,6 @@ fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, absurd: ExprId
     let zero = d.kernel().level_zero();
     let false_rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
     d.apply(false_rec, &[motive, absurd])
-}
-
-/// `Or.rec`-based case split (mirrors `log.rs`'s/`log_clog_order.rs`'s
-/// private `or_cases`, not exported from either file).
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// `Nat.log_anti_left : ∀ {b c n}, Lt 1 c → Le c b → Le (log b n) (log c n)`
@@ -558,7 +536,6 @@ pub(super) fn declare_log_eq_zero_iff(
                 };
                 let split_result = or_cases(
                     d,
-                    &p,
                     lt1_ty,
                     le1_ty,
                     rhs_ty,
@@ -570,7 +547,6 @@ pub(super) fn declare_log_eq_zero_iff(
             };
             let case_result = or_cases(
                 d,
-                &p,
                 lt_ty,
                 ge_ty,
                 rhs_ty,
@@ -601,7 +577,6 @@ pub(super) fn declare_log_eq_zero_iff(
             };
             let result = or_cases(
                 d,
-                &p,
                 n_lt_base,
                 base_le_one,
                 lhs_ty,
@@ -1053,7 +1028,6 @@ fn log_aux_eq_zero_imp_lt(
         let right_branch_term = right_branch(d);
         let case_result = or_cases(
             d,
-            &p,
             lt_ty,
             ge_ty,
             concl,
@@ -1157,7 +1131,6 @@ fn derive_one_lt_base_from_log_eq_one(
     };
     or_cases(
         d,
-        &p,
         lt_ty,
         le_ty,
         target,
@@ -1232,7 +1205,6 @@ fn derive_one_lt_base_from_bounds(
     };
     or_cases(
         d,
-        &p,
         lt_ty,
         le_ty,
         target,
@@ -1279,7 +1251,6 @@ fn log_eq_one_derive_base_le_n(
     };
     or_cases(
         d,
-        &p,
         lt_ty,
         ge_ty,
         target,
@@ -2015,16 +1986,7 @@ pub(super) fn declare_log_div_mul_self(
             d.lam_fv(h1_fv, lt1_ty, body)
         };
 
-        let proof = or_cases(
-            d,
-            &p,
-            lt1_ty,
-            le1_ty,
-            stmt,
-            big_branch,
-            small_branch,
-            dichotomy,
-        );
+        let proof = or_cases(d, lt1_ty, le1_ty, stmt, big_branch, small_branch, dichotomy);
         (stmt, proof)
     })?;
     Ok(())
@@ -2267,7 +2229,6 @@ fn declare_log_div_mul_self_big(
 
     let result_at_base = or_cases(
         d,
-        &p,
         n_lt_ty,
         n_ge_ty,
         stmt_at_base,

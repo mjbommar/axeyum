@@ -34,6 +34,9 @@ use super::ops::{
     NatDev, NatOps, bool_true_or_false, cases_lt_bound_absurd, cases_lt_or_ge,
     two_divisor_dichotomy, two_mul_eq_add_self,
 };
+use super::steps::absurd;
+use super::steps::dvd_elim;
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -126,43 +129,6 @@ fn prime_divisor_predicate(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> Exp
     let divides = d.dvd(x, m);
     let body = d.const_app(p.logic.and, &[prime, divides]);
     d.lam_fv(x_fv, nat, body)
-}
-
-/// `False.rec` into `goal` from a proof of `False`.
-pub(super) fn absurd(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    goal: ExprId,
-    contradiction: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let level = d.kernel().level_zero();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.false_rec, vec![level]);
-    d.apply(rec, &[motive, contradiction])
-}
-
-/// `Or.rec` with a non-dependent motive.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// `le_of_dvd`, `two_le_succ_or_eq_one`, `least_divisor_search`, and
@@ -344,7 +310,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                 let divides = d.dvd(c, m);
                 d.const_app(p.logic.not, &[divides])
             };
-            let body = absurd(d, &p, goal, contradiction);
+            let body = absurd(d, goal, contradiction);
             let with_upper = d.lam_fv(upper_fv, upper_ty, body);
             let with_lower = d.lam_fv(lower_fv, lower_ty, with_upper);
             let none_proof = d.lam_fv(c_fv, nat, with_lower);
@@ -402,7 +368,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                         let divides = d.dvd(c, m);
                         d.const_app(p.logic.not, &[divides])
                     };
-                    let body = absurd(d, &p, goal, contradiction);
+                    let body = absurd(d, goal, contradiction);
                     let with_upper = d.lam_fv(upper_fv, upper_ty, body);
                     let with_lower = d.lam_fv(lower_fv, lower_ty, with_upper);
                     let none_proof = d.lam_fv(c_fv, nat, with_lower);
@@ -529,7 +495,6 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                         };
                         let body = or_cases(
                             d,
-                            &p,
                             strict_ty,
                             equal_ty,
                             goal,
@@ -566,12 +531,12 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                 };
 
                 let body = or_cases(
-                    d, &p, big_ty, small_ty, target, candidate, degenerate, dichotomy,
+                    d, big_ty, small_ty, target, candidate, degenerate, dichotomy,
                 );
                 d.lam_fv(none_fv, none_j, body)
             };
 
-            or_cases(d, &p, found, none_j, target, carry, extend, ih)
+            or_cases(d, found, none_j, target, carry, extend, ih)
         };
 
         let proof = d.induct(&claim, &at_zero, &at_succ, k);
@@ -617,7 +582,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
             let reflexive = d.lemma(p.le_refl, &[m]);
             let divides = d.lemma(p.dvd_refl, &[m]);
             let contradiction = d.apply(none_proof, &[m, lower, reflexive, divides]);
-            let body = absurd(d, &p, target, contradiction);
+            let body = absurd(d, target, contradiction);
             d.lam_fv(none_fv, none, body)
         };
 
@@ -682,7 +647,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                             let below_fv = d.fresh_fvar();
                             let below = d.kernel().fvar(below_fv);
                             let contradiction = d.apply(minimal, &[c, strict, below, c_divides_m]);
-                            let body = absurd(d, &p, goal, contradiction);
+                            let body = absurd(d, goal, contradiction);
                             d.lam_fv(below_fv, inner_strict_ty, body)
                         };
                         let equal_minor = {
@@ -693,7 +658,6 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                         };
                         let body = or_cases(
                             d,
-                            &p,
                             inner_strict_ty,
                             inner_equal_ty,
                             goal,
@@ -715,7 +679,6 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 
                     let body = or_cases(
                         d,
-                        &p,
                         strict_ty,
                         equal_ty,
                         goal,
@@ -753,7 +716,7 @@ pub(super) fn declare_primes(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
             d.lam_fv(witness_fv, found, body)
         };
 
-        let selected = or_cases(d, &p, found, none, target, harvest, exhausted, search);
+        let selected = or_cases(d, found, none, target, harvest, exhausted, search);
         let proof = d.lam_fv(lower_fv, lower_ty, selected);
         (stmt, proof)
     })?;
@@ -881,7 +844,7 @@ pub(super) fn declare_euclid(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                 );
                 let refuted = d.lemma(p.not_dvd_one_of_two_le, &[q, two_le_q]);
                 let contradiction = d.apply(refuted, &[divides_one]);
-                absurd(d, &p, stmt, contradiction)
+                absurd(d, stmt, contradiction)
             };
 
             let conclude = |d: &mut NatDev<'_>, strict_proof: ExprId| {
@@ -925,7 +888,6 @@ pub(super) fn declare_euclid(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                 };
                 let body = or_cases(
                     d,
-                    &p,
                     strict_ty,
                     equal_ty,
                     stmt,
@@ -942,7 +904,7 @@ pub(super) fn declare_euclid(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
                 d.lam_fv(le_fv, q_le_n_ty, body)
             };
 
-            let body = or_cases(d, &p, n_le_q_ty, q_le_n_ty, stmt, forward, backward, split);
+            let body = or_cases(d, n_le_q_ty, q_le_n_ty, stmt, forward, backward, split);
             let hypothesis_ty = {
                 let prime = prime_condition(d, &p, q);
                 let divides = d.dvd(q, bound);
@@ -1060,11 +1022,11 @@ pub(super) fn declare_coprime_of_lt_prime(
             let p_le_a = d.lemma(p.le_of_dvd, &[p_var, a_var, pos_hyp, dvd_p_a]);
             let contra = d.lemma(p.lt_of_le_of_lt, &[p_var, a_var, p_var, p_le_a, ub_hyp]);
             let false_pf = d.lemma(p.lt_irrefl, &[p_var, contra]);
-            let body = absurd(d, &p, concl, false_pf);
+            let body = absurd(d, concl, false_pf);
             d.lam_fv(h_fv, is_p_ty, body)
         };
 
-        let proof_body = or_cases(d, &p, is_one_ty, is_p_ty, concl, on_one, on_p, disj);
+        let proof_body = or_cases(d, is_one_ty, is_p_ty, concl, on_one, on_p, disj);
 
         let with_ub = d.lam_fv(ub_fv, ub_ty, proof_body);
         let with_pos = d.lam_fv(pos_fv, pos_ty, with_ub);
@@ -1293,7 +1255,7 @@ pub(super) fn declare_prime_dvd_iff_not_coprime(
                 let h_fv = d.fresh_fvar();
                 let h = d.kernel().fvar(h_fv);
                 let false_pf = d.apply(notcop_hyp, &[h]);
-                let body = absurd(d, &p, dvd_ty, false_pf);
+                let body = absurd(d, dvd_ty, false_pf);
                 d.lam_fv(h_fv, is_one_ty, body)
             };
             let on_p = {
@@ -1303,7 +1265,7 @@ pub(super) fn declare_prime_dvd_iff_not_coprime(
                 let result = transport_dvd_left(d, gcd_pn, p_var, h, n_var, dvd_gcd_n);
                 d.lam_fv(h_fv, is_p_ty, result)
             };
-            let case_result = or_cases(d, &p, is_one_ty, is_p_ty, dvd_ty, on_one, on_p, disj);
+            let case_result = or_cases(d, is_one_ty, is_p_ty, dvd_ty, on_one, on_p, disj);
             d.lam_fv(notcop_fv, not_cop_ty, case_result)
         };
 
@@ -2036,16 +1998,13 @@ pub(super) fn declare_coprime_primes(
                     let hq_fv = d.fresh_fvar();
                     let hq = d.kernel().fvar(hq_fv);
                     let false_pf = d.apply(ne_hyp, &[hq]);
-                    let result = absurd(d, &p, coprime_ty, false_pf);
+                    let result = absurd(d, coprime_ty, false_pf);
                     d.lam_fv(hq_fv, is_q_ty, result)
                 };
-                let case_result =
-                    or_cases(d, &p, is_one_ty, is_q_ty, coprime_ty, on_one, on_q, disj2);
+                let case_result = or_cases(d, is_one_ty, is_q_ty, coprime_ty, on_one, on_q, disj2);
                 d.lam_fv(h_fv, dvd_ty, case_result)
             };
-            let case_result = or_cases(
-                d, &p, coprime_ty, dvd_ty, coprime_ty, on_coprime, on_dvd, disj,
-            );
+            let case_result = or_cases(d, coprime_ty, dvd_ty, coprime_ty, on_coprime, on_dvd, disj);
             d.lam_fv(ne_fv, ne_ty, case_result)
         };
 
@@ -2118,7 +2077,7 @@ pub(super) fn declare_not_prime_of_dvd_of_ne(
             let false_pf = d.apply(nen_hyp, &[h]);
             d.lam_fv(h_fv, eq_m_n_ty, false_pf)
         };
-        let case_result = or_cases(d, &p, eq_m_one_ty, eq_m_n_ty, false_ty, on_one, on_n, disj);
+        let case_result = or_cases(d, eq_m_one_ty, eq_m_n_ty, false_ty, on_one, on_n, disj);
         let body = d.lam_fv(prime_fv, prime_n_ty, case_result);
 
         let proof_inner2 = d.lam_fv(nen_fv, nen_ty, body);
@@ -2156,7 +2115,7 @@ fn refute_eq_zero_against_prime_lower_bound(
     });
     let two_le_zero = d.transport(p_var, motive, two_le_p, zero, h0);
     let false_pf = d.lemma(p.not_succ_le_zero, &[one, two_le_zero]);
-    absurd(d, p, goal, false_pf)
+    absurd(d, goal, false_pf)
 }
 
 /// The `p = 4` sub-branch: `4` is composite (`4 = 2*2`), refuted via
@@ -2195,7 +2154,7 @@ fn refute_eq_four_against_prime(
     let motive4 = d.eq_motive(p_var, &|d, x| prime_condition(d, p, x));
     let prime_4 = d.transport(p_var, motive4, prime_hyp, four, h4);
     let false_pf = d.apply(not_prime_4, &[prime_4]);
-    absurd(d, p, goal, false_pf)
+    absurd(d, goal, false_pf)
 }
 
 /// `Nat.Prime.five_le_of_ne_two_of_ne_three` — see
@@ -2255,11 +2214,11 @@ pub(super) fn declare_five_le_of_ne_two_of_ne_three(
                 &|d, h| refute_eq_one_against_prime_lower_bound(d, &p, p_var, prime_hyp, h, goal);
             let b2: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId = &|d, h| {
                 let false_pf = d.apply(ne2_hyp, &[h]);
-                absurd(d, &p, goal, false_pf)
+                absurd(d, goal, false_pf)
             };
             let b3: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId = &|d, h| {
                 let false_pf = d.apply(ne3_hyp, &[h]);
-                absurd(d, &p, goal, false_pf)
+                absurd(d, goal, false_pf)
             };
             let b4: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId =
                 &|d, h| refute_eq_four_against_prime(d, &p, p_var, prime_hyp, h, goal);
@@ -2636,7 +2595,7 @@ pub(super) fn declare_coprime_two_left(
                 let mp_fn = iff_forward(d, dvd_ty, not_cop_ty, iff_dvd_notcop);
                 let not_cop = d.apply(mp_fn, &[dvd2n]);
                 let false_pf = d.apply(not_cop, &[h]);
-                let body = absurd(d, &p, odd_ty, false_pf);
+                let body = absurd(d, odd_ty, false_pf);
                 d.lam_fv(he_fv, even_ty, body)
             };
             let on_odd = {
@@ -2644,7 +2603,7 @@ pub(super) fn declare_coprime_two_left(
                 let ho = d.kernel().fvar(ho_fv);
                 d.lam_fv(ho_fv, odd_ty, ho)
             };
-            let result = or_cases(d, &p, even_ty, odd_ty, odd_ty, on_even, on_odd, split);
+            let result = or_cases(d, even_ty, odd_ty, odd_ty, on_even, on_odd, split);
             d.lam_fv(h_fv, cop_ty, result)
         };
 
@@ -2668,10 +2627,10 @@ pub(super) fn declare_coprime_two_left(
                 let not_odd_fn = d.lemma(p.even_not_odd, &[n]);
                 let not_odd = d.apply(not_odd_fn, &[even_n]);
                 let false_pf = d.apply(not_odd, &[ho]);
-                let body = absurd(d, &p, cop_ty, false_pf);
+                let body = absurd(d, cop_ty, false_pf);
                 d.lam_fv(hd_fv, dvd_ty, body)
             };
-            let result = or_cases(d, &p, cop_ty, dvd_ty, cop_ty, on_cop, on_dvd, split);
+            let result = or_cases(d, cop_ty, dvd_ty, cop_ty, on_cop, on_dvd, split);
             d.lam_fv(ho_fv, odd_ty, result)
         };
 
@@ -2838,7 +2797,7 @@ fn refute_eq_one_against_prime_lower_bound(
     let two_le_one = d.transport(p_var, motive, two_le_p, one, h1);
     let one_le_zero = d.lemma(p.le_of_succ_le_succ, &[one, zero, two_le_one]);
     let false_pf = d.lemma(p.not_succ_le_zero, &[zero, one_le_zero]);
-    absurd(d, p, goal, false_pf)
+    absurd(d, goal, false_pf)
 }
 
 /// `Nat.prime_odd_of_ne_two : ∀ p, prime_condition p → Not (Eq p two) →
@@ -2909,13 +2868,13 @@ pub(super) fn declare_prime_odd_of_ne_two(
                 let h2_fv = d.fresh_fvar();
                 let h2 = d.kernel().fvar(h2_fv);
                 let false_pf = d.apply(ne_hyp, &[h2]);
-                let body = absurd(d, &p, odd_ty, false_pf);
+                let body = absurd(d, odd_ty, false_pf);
                 d.lam_fv(h2_fv, is_two_ty, body)
             };
-            let result = or_cases(d, &p, is_one_ty, is_two_ty, odd_ty, on_one, on_two, disj2);
+            let result = or_cases(d, is_one_ty, is_two_ty, odd_ty, on_one, on_two, disj2);
             d.lam_fv(hd_fv, dvd_ty, result)
         };
-        let body = or_cases(d, &p, cop_ty, dvd_ty, odd_ty, on_cop, on_dvd, split);
+        let body = or_cases(d, cop_ty, dvd_ty, odd_ty, on_cop, on_dvd, split);
         let with_ne = d.lam_fv(ne_fv, ne_ty, body);
         let proof = d.lam_fv(prime_fv, prime_ty, with_ne);
         (stmt, proof)
@@ -2974,7 +2933,7 @@ pub(super) fn declare_prime_even_iff(
                 let not_odd_fn = d.lemma(p.even_not_odd, &[p_var]);
                 let not_odd = d.apply(not_odd_fn, &[h]);
                 let false_pf = d.apply(not_odd, &[odd_pf]);
-                let body = absurd(d, &p, is_two_ty, false_pf);
+                let body = absurd(d, is_two_ty, false_pf);
                 d.lam_fv(hc_fv, cop_ty, body)
             };
             let on_dvd = {
@@ -2995,12 +2954,10 @@ pub(super) fn declare_prime_even_iff(
                     let h2 = d.kernel().fvar(h2_fv);
                     d.lam_fv(h2_fv, is_two_ty, h2)
                 };
-                let result = or_cases(
-                    d, &p, is_one_ty, is_two_ty, is_two_ty, on_one, on_two, disj2,
-                );
+                let result = or_cases(d, is_one_ty, is_two_ty, is_two_ty, on_one, on_two, disj2);
                 d.lam_fv(hd_fv, dvd_ty, result)
             };
-            let body = or_cases(d, &p, cop_ty, dvd_ty, is_two_ty, on_cop, on_dvd, split);
+            let body = or_cases(d, cop_ty, dvd_ty, is_two_ty, on_cop, on_dvd, split);
             d.lam_fv(h_fv, even_ty, body)
         };
 
@@ -3080,7 +3037,7 @@ pub(super) fn declare_prime_not_dvd_mul(
             let false_pf = d.apply(nn, &[hn]);
             d.lam_fv(hn_fv, dvd_n_ty, false_pf)
         };
-        let cases_result = or_cases(d, &p, dvd_m_ty, dvd_n_ty, false_ty, on_m, on_n, split);
+        let cases_result = or_cases(d, dvd_m_ty, dvd_n_ty, false_ty, on_m, on_n, split);
         let not_dvd_mn = d.lam_fv(h_fv, dvd_mn_ty, cases_result);
         let with_nn = d.lam_fv(nn_fv, not_dvd_n_ty, not_dvd_mn);
         let with_nm = d.lam_fv(nm_fv, not_dvd_m_ty, with_nn);
@@ -3159,7 +3116,7 @@ pub(super) fn declare_prime_dvd_of_dvd_pow(
             let motive = d.eq_motive(pw0, &|d, x| d.dvd(p_var, x));
             let dvd_one = d.transport(pw0, motive, h, one, eq_pf);
             let false_pf = refute_dvd_one_against_prime(d, &p, p_var, prime_hyp, dvd_one);
-            let body = absurd(d, &p, dvd_m_ty, false_pf);
+            let body = absurd(d, dvd_m_ty, false_pf);
             d.lam_fv(h_fv, dvd_pw0_ty, body)
         };
 
@@ -3190,7 +3147,7 @@ pub(super) fn declare_prime_dvd_of_dvd_pow(
                 let hm = d.kernel().fvar(hm_fv);
                 d.lam_fv(hm_fv, dvd_m_ty, hm)
             };
-            let result = or_cases(d, &p, dvd_pwj_ty, dvd_m_ty, dvd_m_ty, on_pwj, on_m, split);
+            let result = or_cases(d, dvd_pwj_ty, dvd_m_ty, dvd_m_ty, on_pwj, on_m, split);
             d.lam_fv(h_fv, dvd_pw_sj_ty, result)
         };
 
@@ -3253,40 +3210,6 @@ fn eliminate_prime_dvd(
     };
     let exists_rec = d.kernel().const_(p.logic.exists_rec, vec![level]);
     d.apply(exists_rec, &[nat, predicate, motive, minor, exists_proof])
-}
-
-/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness `q`
-/// and `eq_proof : Eq dividend (mul divisor q)` to build a proof of `goal`
-/// (which must not mention `q`). A private per-file copy, matching the ones
-/// already in `lcm.rs`, `irrational.rs`, `perfect.rs` and `divisibility.rs`.
-fn dvd_elim(
-    d: &mut NatDev<'_>,
-    divisor: ExprId,
-    dividend: ExprId,
-    goal: ExprId,
-    dvd_hyp: ExprId,
-    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
-    let predicate = d.dvd_predicate(divisor, dividend);
-    let dvd_ty = d.dvd(divisor, dividend);
-    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
-    let minor = {
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
-        let divisor_q = d.mul(divisor, q);
-        let eq_ty = d.eq(dividend, divisor_q);
-        let eq_fv = d.fresh_fvar();
-        let eq_proof = d.kernel().fvar(eq_fv);
-        let body = continuation(d, q, eq_proof);
-        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
-        d.lam_fv(q_fv, nat, with_eq)
-    };
-    let exists_rec_name = d.prelude().logic.exists_rec;
-    let rec = d.kernel().const_(exists_rec_name, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
 }
 
 /// See [`NatPrelude::coprime_of_forall_prime_dvd`] for the route. Trichotomy
@@ -3391,7 +3314,7 @@ pub(super) fn declare_coprime_of_forall_prime_dvd(
             let dvd_2_1 = d.apply(step2, &[dvd_2_n]);
 
             let false_pf = refute_dvd_one_against_prime(d, &p, two, prime_2, dvd_2_1);
-            let branch_proof = absurd(d, &p, target, false_pf);
+            let branch_proof = absurd(d, target, false_pf);
             d.lam_fv(h_fv, lt_g1_ty, branch_proof)
         };
 
@@ -3430,19 +3353,17 @@ pub(super) fn declare_coprime_of_forall_prime_dvd(
                         let step2 = d.apply(step1, &[dvd_pw_m]);
                         let dvd_pw_1 = d.apply(step2, &[dvd_pw_n]);
                         let false_pf = refute_dvd_one_against_prime(d, &p, pw, prime_pw, dvd_pw_1);
-                        absurd(d, &p, target, false_pf)
+                        absurd(d, target, false_pf)
                     },
                 );
                 d.lam_fv(h2_fv, le_2g_ty, branch_proof)
             };
 
-            let body = or_cases(
-                d, &p, lt_g2_ty, le_2g_ty, target, branch_b1, branch_b2, dich2,
-            );
+            let body = or_cases(d, lt_g2_ty, le_2g_ty, target, branch_b1, branch_b2, dich2);
             d.lam_fv(h1_fv, le_1g_ty, body)
         };
 
-        let body = or_cases(d, &p, lt_g1_ty, le_1g_ty, target, branch_a, branch_b, dich1);
+        let body = or_cases(d, lt_g1_ty, le_1g_ty, target, branch_a, branch_b, dich1);
         let proof = d.lam_fv(hyp_fv, hyp_ty, body);
         (stmt, proof)
     })?;
@@ -3586,13 +3507,11 @@ pub(super) fn declare_dvd_of_forall_prime_mul_dvd(
                 d.lam_fv(h2_fv, le_2a_ty, branch_proof)
             };
 
-            let body = or_cases(
-                d, &p, lt_a2_ty, le_2a_ty, target, branch_b1, branch_b2, dich2,
-            );
+            let body = or_cases(d, lt_a2_ty, le_2a_ty, target, branch_b1, branch_b2, dich2);
             d.lam_fv(h1_fv, le_1a_ty, body)
         };
 
-        let body = or_cases(d, &p, lt_a1_ty, le_1a_ty, target, branch_a, branch_b, dich1);
+        let body = or_cases(d, lt_a1_ty, le_1a_ty, target, branch_a, branch_b, dich1);
         let proof = d.lam_fv(hyp_fv, hyp_ty, body);
         (stmt, proof)
     })?;

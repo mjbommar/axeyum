@@ -35,7 +35,9 @@ use super::fermat_number_mirrors::pos_of_lt_add_left;
 use super::finite::le_of_lt;
 use super::helpers::{iff_forward, transport_dvd_right};
 use super::ops::{NatDev, NatOps};
-use super::primes::{absurd, or_cases, prime_condition};
+use super::primes::prime_condition;
+use super::steps::absurd;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -233,7 +235,7 @@ pub(super) fn declare_prime_dvd_factorial_iff_le(
                 let dvd_p_one = transport_dvd_right(d, p_var, gcd_p_fn, one, cop, dvd_p_gcd);
                 let not_dvd_one = d.lemma(p.prime_not_dvd_one, &[p_var, prime_hyp]);
                 let false_pf = d.apply(not_dvd_one, &[dvd_p_one]);
-                let body = absurd(d, &p, le_ty, false_pf);
+                let body = absurd(d, le_ty, false_pf);
                 d.lam_fv(hl_fv, lt_np_ty, body)
             };
             let on_ge = {
@@ -241,7 +243,7 @@ pub(super) fn declare_prime_dvd_factorial_iff_le(
                 let hg = d.kernel().fvar(hg_fv);
                 d.lam_fv(hg_fv, le_pn_ty, hg)
             };
-            let result = or_cases(d, &p, lt_np_ty, le_pn_ty, le_ty, on_lt, on_ge, disj);
+            let result = or_cases(d, lt_np_ty, le_pn_ty, le_ty, on_lt, on_ge, disj);
             d.lam_fv(h_fv, dvd_ty, result)
         };
 
@@ -316,7 +318,7 @@ pub(super) fn declare_prime_dvd_lcm_iff(
                 let result = d.lemma(p.dvd_trans, &[p_var, b_var, lcm_ab, hb, dvd_b_lcm]);
                 d.lam_fv(hb_fv, dvd_b_ty, result)
             };
-            let result = or_cases(d, &p, dvd_a_ty, dvd_b_ty, dvd_lcm_ty, on_a, on_b, h);
+            let result = or_cases(d, dvd_a_ty, dvd_b_ty, dvd_lcm_ty, on_a, on_b, h);
             d.lam_fv(h_fv, disj_ty, result)
         };
 

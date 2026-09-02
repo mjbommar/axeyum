@@ -187,6 +187,7 @@ use super::finite::{pos_implies_succ_pred, trichotomy, zero_lt_via_c};
 use super::helpers::{iff_forward, iff_reverse};
 use super::ops::{NatDev, NatOps, bool_true_or_false, cases_zero_succ};
 use super::parity::{even_predicate, odd_predicate};
+use super::steps::dvd_intro;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -750,25 +751,6 @@ pub(super) fn declare_count_range_ge_two_of_two_witnesses(
 // The `2 < a`/`2 < n` branch of both `dvd_two_of_totient_le_one` and
 // `totient_eq_one_iff`'s forward direction.
 // ============================================================================
-
-/// `Nat.dvd a n` (`Exists (fun q => Eq n (mul a q))`), built from a witness
-/// `q` and `eq_proof : Eq n (mul a q)` -- local copy of `divisibility.rs`'s
-/// private `dvd_intro`, per this file's own stated convention (local copies
-/// per file rather than a shared private module).
-fn dvd_intro(
-    d: &mut NatDev<'_>,
-    a: ExprId,
-    n: ExprId,
-    witness: ExprId,
-    eq_proof: ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let predicate = d.dvd_predicate(a, n);
-    let intro_name = d.prelude().logic.exists_intro;
-    let intro = d.kernel().const_(intro_name, vec![one]);
-    d.apply(intro, &[nat, predicate, witness, eq_proof])
-}
 
 /// Eliminate a [`trichotomy`] (`Or (Lt x c) (Or (Eq x c) (Lt c x))`) directly
 /// into a proof of `target`, given a proof for each of the three cases --

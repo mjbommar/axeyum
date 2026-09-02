@@ -64,6 +64,7 @@ use super::NatPrelude;
 use super::finite::{select_nat_false, select_nat_true};
 use super::helpers::{iff_forward, transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps, bool_true_or_false, cases_lt_bound_absurd, cases_lt_or_ge};
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -96,28 +97,6 @@ fn from_false(d: &mut NatDev<'_>, p: &NatPrelude, false_proof: ExprId, target: E
     let zero = d.kernel().level_zero();
     let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
     d.apply(rec, &[motive, false_proof])
-}
-
-/// `Or.rec` at a `Prop` goal.
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// A goal shaped `motive(bool_select_nat cond on_true on_false)`, from branch
@@ -170,16 +149,7 @@ fn cases_bool_select_nat(
     };
 
     let split = bool_true_or_false(d, p, cond);
-    or_cases(
-        d,
-        p,
-        left_ty,
-        right_ty,
-        goal,
-        left_minor,
-        right_minor,
-        split,
-    )
+    or_cases(d, left_ty, right_ty, goal, left_minor, right_minor, split)
 }
 
 /// `Nat.minFacAux fuel n candidate`.
@@ -623,7 +593,7 @@ fn declare_min_fac_prime(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kerne
                     let injected = d.const_app(p.logic.or_inr, &[triv, whole, he]);
                     d.lam_fv(he_fv, eq_ty, injected)
                 };
-                or_cases(d, &p, lt_ty, eq_ty, goal_here, left, right, split)
+                or_cases(d, lt_ty, eq_ty, goal_here, left, right, split)
             };
             let body = cases_lt_or_ge(d, &p, c, two, &motive, &small, &big);
             let with_hd = d.lam_fv(hd_fv, hd_ty, body);

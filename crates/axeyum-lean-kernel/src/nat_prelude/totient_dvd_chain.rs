@@ -85,6 +85,7 @@
 use super::NatPrelude;
 use super::helpers::{and_left, and_right, iff_forward};
 use super::ops::{NatDev, NatOps};
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -118,31 +119,6 @@ fn prime_parts(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> (ExprId, ExprId
 fn prime_ty(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
     let (two_le, divisor_clause) = prime_parts(d, p, x);
     d.const_app(p.logic.and, &[two_le, divisor_clause])
-}
-
-/// Non-dependent `Or.rec` into a fixed goal type — both minors already
-/// include their own binder for the corresponding disjunct's hypothesis.
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    or_proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d
-        .kernel()
-        .lam(anon, or_ty, goal, crate::BinderInfo::Default);
-    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        or_rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, or_proof],
-    )
 }
 
 /// From `heq : Eq n (mul pw q)`, `hp2 : Le two pw`, `hq1 : Le one q`, derive
@@ -523,7 +499,6 @@ pub(super) fn declare_totient_dvd_totient_mul(
 
                 let proof_at_kx = or_cases(
                     d,
-                    &p,
                     two_le_ty,
                     eq_one_ty,
                     goal_kx,
@@ -544,9 +519,7 @@ pub(super) fn declare_totient_dvd_totient_mul(
             d.lam_fv(hex_fv, succ_ex_ty, body)
         };
 
-        let body = or_cases(
-            d, &p, eq_zero_ty, succ_ex_ty, goal, case_zero, case_succ, disj,
-        );
+        let body = or_cases(d, eq_zero_ty, succ_ex_ty, goal, case_zero, case_succ, disj);
         let with_ih = d.lam_fv(ih_fv, ih_ty, body);
         d.lam_fv(x_fv, nat, with_ih)
     };
@@ -843,7 +816,7 @@ fn single_prime_step_bound(
             d.lam_fv(h3_fv, lt2q_ty, or_intro_l)
         };
 
-        let inner = or_cases(d, &p, lt2q_ty, eq2q_ty, goal, case_lt2, case_eq2, split2);
+        let inner = or_cases(d, lt2q_ty, eq2q_ty, goal, case_lt2, case_eq2, split2);
         d.lam_fv(hc_fv, coprime_ty, inner)
     };
 
@@ -868,7 +841,6 @@ fn single_prime_step_bound(
 
     or_cases(
         d,
-        &p,
         coprime_ty,
         dvd_ty,
         goal,
@@ -1096,9 +1068,8 @@ pub(super) fn declare_totient_mul_cofactor_bound(
                         let or_r = d.const_app(p.logic.or_inr, &[left_ty, right_ty, and_p]);
                         d.lam_fv(hr_fv, right_q_ty, or_r)
                     };
-                    let result = or_cases(
-                        d, &p, left_q_ty, right_q_ty, goal, case_left, case_right, bound,
-                    );
+                    let result =
+                        or_cases(d, left_q_ty, right_q_ty, goal, case_left, case_right, bound);
                     let _ = xp_eq_mul_a_one;
                     d.lam_fv(heqkp1_fv, eq_one_kp_ty, result)
                 };
@@ -1190,8 +1161,7 @@ pub(super) fn declare_totient_mul_cofactor_bound(
                             let or_l = d.const_app(p.logic.or_inl, &[left_ty, right_ty, result]);
                             d.lam_fv(hsr_fv, sr_ty, or_l)
                         };
-                        let result =
-                            or_cases(d, &p, sl_ty, sr_ty, goal, case_sl, case_sr, step_bound);
+                        let result = or_cases(d, sl_ty, sr_ty, goal, case_sl, case_sr, step_bound);
                         d.lam_fv(hl_fv, left_kp_ty, result)
                     };
                     let case_ih_right = {
@@ -1336,16 +1306,15 @@ pub(super) fn declare_totient_mul_cofactor_bound(
                                 let ex_falso = d.apply(false_rec, &[motive_false, false_proof]);
                                 d.lam_fv(hr2_fv, sr_ty, ex_falso)
                             };
-                            let result = or_cases(d, &p, sl_ty, sr_ty, goal, case_l, case_r, bound);
+                            let result = or_cases(d, sl_ty, sr_ty, goal, case_l, case_r, bound);
                             d.lam_fv(hq3_fv, lt2q_ty, result)
                         };
                         let result =
-                            or_cases(d, &p, lt2q_ty, eq2q_ty, goal, case_qgt2, case_qeq2, split_q);
+                            or_cases(d, lt2q_ty, eq2q_ty, goal, case_qgt2, case_qeq2, split_q);
                         d.lam_fv(hr_fv, right_kp_ty, result)
                     };
                     let result = or_cases(
                         d,
-                        &p,
                         left_kp_ty,
                         right_kp_ty,
                         goal,
@@ -1358,7 +1327,6 @@ pub(super) fn declare_totient_mul_cofactor_bound(
 
                 let body = or_cases(
                     d,
-                    &p,
                     two_le_kp_ty,
                     eq_one_kp_ty,
                     goal,
@@ -1750,7 +1718,6 @@ pub(super) fn declare_eq_or_eq_of_totient_eq_totient(
                                 };
                                 let result = or_cases(
                                     d,
-                                    &p,
                                     left_b_ty,
                                     right_b_ty,
                                     target,
@@ -1763,7 +1730,6 @@ pub(super) fn declare_eq_or_eq_of_totient_eq_totient(
 
                             let result = or_cases(
                                 d,
-                                &p,
                                 two_le_kx_ty,
                                 eq_kx1_ty,
                                 target,
@@ -1784,7 +1750,6 @@ pub(super) fn declare_eq_or_eq_of_totient_eq_totient(
 
                     let body_k = or_cases(
                         d,
-                        &p,
                         eq_k0_ty,
                         succ_ex_ty_k,
                         target,
@@ -1802,7 +1767,6 @@ pub(super) fn declare_eq_or_eq_of_totient_eq_totient(
 
             let body_a = or_cases(
                 d,
-                &p,
                 eq_a0_ty,
                 succ_ex_ty_a,
                 target,
