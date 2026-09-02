@@ -616,6 +616,17 @@ step holdout-closed-evaluation python3 scripts/check-holdout-closed-evaluation.p
 step holdout-adjacency-tests python3 -m unittest scripts.tests.test_check_holdout_adjacency
 step holdout-adjacency-self-test python3 scripts/check-holdout-adjacency.py --self-test
 step holdout-adjacency python3 scripts/check-holdout-adjacency.py
+# Registered here for the first time 2026-09-02: this script existed and had
+# its own negative control (a moved-family fixture, `control=FIRES` in its
+# output) but was invoked by NOTHING -- not `check.sh`, not `justfile`, not
+# any hook. `check-control-registration.sh` never caught it because that gate
+# derives its registry from `scripts/tests/*`, not from a top-level
+# `scripts/check-*.py` with no matching test file. Diffs the working tree's
+# `nursery-v2-extension.json` against its default `HEAD~1`, the standing
+# steady-state check that no already-frozen family moved partition since the
+# last commit; `hooks/pre-push`'s L0 block uses the same script over the
+# whole pushed range instead of just the tip commit.
+step draw7-frozen-families python3 scripts/check-draw7-frozen-families.py
 # ADR-0652. One producer per generated artifact. The statable vocabulary had
 # two writers and the poorer one silently deleted `bridge_provenance` and
 # `row_digest` at exit 0, so this runs each non-owner producer in a sandboxed

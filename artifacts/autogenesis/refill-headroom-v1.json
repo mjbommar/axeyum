@@ -1,33 +1,33 @@
 {
  "input_digests": {
-  "drawn_modules": "9d0b93304440c1ca56bb4cf9c1a63e5a7ec4ac27e02697742c830f9dd4eb4b53",
-  "env_snapshot": "8e05c35a2f6a26823ecf2029c8c8cc1517894f7f70c8fb773d878ab8843d871b",
+  "drawn_modules": "e0c302969abeafe0f7c495133e1cb8d6ebffeb4e8e212c5c0aa8bd50f8e1dad8",
+  "env_snapshot": "3bcd6f18bfff0cac2c96976edb01be469ddd99d275f2b727e1f6cc6c74551e7a",
   "held_out_constructions": "d77cebd31111e594bd4e6d3bbd97789182aa5ed44862d4b2be8c394248445106",
   "registry": "284e33c40de4778f4f8af8d4550193751e4425adf80e6ea5093f831bb45d6347",
-  "used_source_names": "1a564c1b5a84e1af3d48f567319f348bba53e96d97a072c054ba4befdb5dbe6d",
+  "used_source_names": "09795541882b461efda0f3c4683b1d7405c8cef441d7e4a2d363316b04d064bd",
   "vocabulary": "d23b12ae079ee775f6973785bfeae4ae6039fe6bb5e03660eab57442710b15e4"
  },
  "inventory_records": 9729,
  "inventory_sha256": "4285e551680abf3b0cafb11709015f04b3aef3eb05ce23af2392b12cec31aecc",
  "kind": "axeyum-autogenesis-refill-headroom",
  "measured_from": "/nas3/data/axeyum/autogenesis/sources/mathlib-v4.30.0-nat-int-statement-inventory-v2.ndjson",
- "modules_already_owned_by_a_family": 88,
+ "modules_already_owned_by_a_family": 100,
  "modules_in_inventory": 370,
- "modules_with_survivors": 80,
+ "modules_with_survivors": 74,
  "ready_families": {
   "Mathlib.Data.Nat.Count": 23
  },
  "ready_family_count": 1,
  "schema_version": 1,
  "screen_rejections": {
-  "already-drawn": 702,
+  "already-drawn": 742,
   "divergence-registry": 246,
   "held-out-construction": 14,
   "hygienic-or-generated": 1699,
-  "not-statable-here": 5044
+  "not-statable-here": 5032
  },
  "sole_blocker_note": "A constant that is the ONLY thing blocking a row is where pool growth would come from, and the two routes are NOT symmetric. Measured 2026-08-30, and the first reading of this was wrong in a way worth recording: the bridge CAN still grow, but only a little, and only from one fixed population. check-dispatchable-frontier.py's S2 requires every bridge constant to be witnessed by a SETTLED mirror, and the witnesses come from mathlib-nat-int-fact-catalog-v1.json -- 202 rows, 162 settled, sharing ZERO source names with either nursery manifest. Settling all 40 remaining catalog rows would take the bridge from 70 to 79 constants and the unused-statable pool from 2,354 to 2,526. That is the whole of it; the catalog is not growing. So route 1 (bridge growth) has a hard ceiling of +172 candidates, and route 2 (declaring the constant in the kernel, which refreshes the environment snapshot) is the one with real headroom -- and it is ordinary proof work, which is the point. The exception worth a decision: instSubNat is the sole blocker of 292 rows and is pure ELABORATION, not content. Nat.sub is already in the environment and instAddNat / instMulNat / HSub.hSub / instHSub are already bridged, so it is the missing sibling of four constants the bridge has -- but NO catalog row mentions it, so S2 can never admit it. Same for GT.gt (17), GE.ge (13) and NatCast.natCast (14). Those are not unstatable propositions; they are propositions the screen cannot see are statable. The screen is NOT a hand-written word list and should not be loosened into one: it is the kernel environment plus a derived bridge, and every rejection names a Lean constant this kernel does not declare.",
- "survivors": 2024,
+ "survivors": 1996,
  "top_sole_blockers": {
   "Fact": 6,
   "Function.Injective": 6,
@@ -43,6 +43,7 @@
   "Int.instMin": 14,
   "Int.instMonoid": 29,
   "Int.lcm": 78,
+  "Int.pred": 4,
   "Int.sign": 34,
   "Int.sqrt": 5,
   "Int.tdiv": 50,
@@ -58,7 +59,6 @@
   "Nat.greatestFib": 9,
   "Nat.leRec": 5,
   "Nat.leRecOn": 6,
-  "Nat.primeCounting": 5,
   "Nat.shiftLeft'": 5,
   "Nat.uniformBell": 6,
   "NatCast.natCast": 14,
@@ -67,7 +67,7 @@
   "Std.IdempotentOp": 6,
   "Std.LawfulIdentity": 7,
   "Xor": 6,
-  "instSubNat": 310,
+  "instSubNat": 311,
   "padicValNat": 5
  },
  "why": "A draw is a hand edit to gen-autogenesis-nursery-refill.py's FAMILY_MODULES and FAMILY_ROUTES, so the queue cannot refill itself. This snapshot is the mechanical half of that edit: which Mathlib modules still carry PER_FAMILY fully-screened, unused candidates. It names MODULES and COUNTS and never a fact id -- check-autogenesis-holdout-isolation.py forbids any non-population artifact naming a held-out row, and a candidate named here today may be drawn into held-out tomorrow."
