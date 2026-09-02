@@ -442,6 +442,15 @@ GUARDED: tuple[Artifact, ...] = (
             ),
         ),
         reads=(),
+        invokes=(
+            Invoker(
+                "scripts/lane-merge-land.sh",
+                "Names the artifact in `GENERATED` so a merge conflict on it is "
+                "cleared and the result staged, then regenerates it by running "
+                "the OWNER. Added 2026-09-02 after three kernel merges staled "
+                "the census; same shape as the shape-census entry above.",
+            ),
+        ),
     ),
     Artifact(
         path="artifacts/autogenesis/drawn-population-component-census-v1.json",
