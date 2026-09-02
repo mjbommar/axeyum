@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-dvd-prodrange-of-lt",
+  "title": "Every factor below the bound divides a bounded product",
+  "statement": "For a function f on the naturals and indices i < k: f applied to i divides the product of f over the range [0, k).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.dvd_prodRange_of_lt : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x1 x2) -> AxNat.dvd (x0 x1) (AxNat.prodRange x0 x2)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.dvd_prodRange_of_lt"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-prodrange-succ",
+    "F:nat-lt-or-ge",
+    "F:ml430-nat-dvd-mul-left-a1a8a4b8",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:nat-dvd-mul-right-of-dvd",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-not-succ-le-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-dvd-prodrange-of-lt",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.dvd_prodRange_of_lt",
+      "supports": "Nat.dvd_prodRange_of_lt is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- dvd_prodRange_of_lt 2>/dev/null | grep -Ec '^Nat\\.dvd_prodRange_of_lt[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate. The pattern is ANCHORED at the start of the line: `Nat.not_pow_succ_dvd_prodRange_of_lt` contains this theorem's name as a substring, so an unanchored match would pass on the wrong row."
+    },
+    {
+      "id": "footprint-dvd-prodrange-of-lt",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` for these ten `Nat.Multiset.*` theorems, `theorem_axiom_footprint` prints footprint size 0 and an empty axiom column for every one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset.rs` (lane nat-multiset, ADR-1520)."
+  },
+  "notes": "Induction on the bound `k`. `Nat.prodRange f (succ j)` reduces to `prodRange f j * f j`, so the step is `dvd_mul_right_of_dvd` on the induction hypothesis when `i < j` and `dvd_mul_left` transported along `f i = f j` when `i = j`. Declared in `nat_prelude/multiset.rs`, its first consumer; it mentions no multiset.",
+  "external_status": "proved"
+}

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-pow-count-dvd-prod",
+  "title": "A multiset's product is divisible by each element to its multiplicity",
+  "statement": "For a multiset m of naturals and any natural x: x raised to the multiplicity of x in m divides the product of m.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.pow_count_dvd_prod : ((x0 : AxNat.Multiset) -> ((x1 : AxNat) -> AxNat.dvd (AxNat.pow x1 (AxNat.Multiset.count x0 x1)) (AxNat.Multiset.prod x0)))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.pow_count_dvd_prod"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-dvd-prodrange-of-lt",
+    "F:nat-pow-zero",
+    "F:nat-one-mul",
+    "F:nat-lt-or-ge"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-multiset-pow-count-dvd-prod",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Multiset.pow_count_dvd_prod",
+      "supports": "Nat.Multiset.pow_count_dvd_prod is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Multiset.pow_count_dvd_prod 2>/dev/null | grep -Ec '^Nat\\.Multiset\\.pow_count_dvd_prod[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate. `crates/axeyum-lean-kernel/src/nat_prelude/multiset_tests.rs` additionally INSTANTIATES it at concrete arguments and checks the inferred statement is the arithmetic fact it should be (`4 | 12` at the multiset {2,2,3} and the point 2, with `8 | 12` as the negative control) -- the trusted gate cannot tell that `count` and `prod` unfold to the right numbers."
+    },
+    {
+      "id": "footprint-multiset-pow-count-dvd-prod",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` for these ten `Nat.Multiset.*` theorems, `theorem_axiom_footprint` prints footprint size 0 and an empty axiom column for every one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset.rs` (lane nat-multiset, ADR-1520)."
+  },
+  "notes": "No hypotheses at all -- neither primality nor well-formedness. `Nat.Multiset.count` truncates at the multiset's bound in its own definition, so below the bound `pow x (count m x)` IS one of the factors `Nat.Multiset.prod` folds, and at or above it the count is zero and the power is one.",
+  "external_status": "proved"
+}

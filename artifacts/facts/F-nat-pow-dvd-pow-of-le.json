@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-pow-dvd-pow-of-le",
+  "title": "A power divides a higher power of the same base",
+  "statement": "For naturals a, i and j with i at most j: a to the i divides a to the j.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.pow_dvd_pow_of_le : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.le x1 x2) -> AxNat.dvd (AxNat.pow x0 x1) (AxNat.pow x0 x2)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.pow_dvd_pow_of_le"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-le-dest",
+    "F:nat-pow-add",
+    "F:ml430-nat-dvd-mul-right-a87a83c4"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-pow-dvd-pow-of-le",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.pow_dvd_pow_of_le",
+      "supports": "Nat.pow_dvd_pow_of_le is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- pow_dvd_pow_of_le 2>/dev/null | grep -Ec '^Nat\\.pow_dvd_pow_of_le[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check; the command prints the admitted type, copied verbatim into formal.statement, and exits non-zero when the name is absent."
+    },
+    {
+      "id": "footprint-pow-dvd-pow-of-le",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` for these ten `Nat.Multiset.*` theorems, `theorem_axiom_footprint` prints footprint size 0 and an empty axiom column for every one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset.rs` (lane nat-multiset, ADR-1520)."
+  },
+  "notes": "Declared in `nat_prelude/multiset.rs` because that is its first consumer; it mentions no multiset. `Nat.le_dest` turns `Le i j` into a witness `k` with `i + k = j`, and `Nat.pow_add` splits `pow a (i + k)` into `pow a i * pow a k`, of which `pow a i` is a factor.",
+  "external_status": "proved"
+}

@@ -834,4 +834,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1510](adr-1510-a-contract-is-sized-by-the-frontier-and-a-decline-dies-with-its-fact.md) | a producer contract is sized by the frontier, and a decline dies with its fact | Accepted |
 | [1511](adr-1511-cheap-checks-block-merge-expensive-ones-stay-in-the-full-gate.md) | Cheap ledger `--check`s block a merge directly; the two that need a release kernel build get a cheap cross-consistency ratchet instead | Accepted |
 | [1512](adr-1512-per-module-name-registries-behind-the-crealprelude-facade.md) | per-module name registries behind the `CRealPrelude` facade | Accepted |
+| [1520](adr-1520-a-multiplicity-function-is-a-multiset-and-uniqueness-was-a-representation-problem.md) | a multiplicity function is a multiset, and "uniqueness is not expressible here" was a representation problem | Accepted |
 | [1530](adr-1530-the-creal-build-table-is-generated-not-maintained.md) | the `creal` build table is generated, not maintained | Accepted |
