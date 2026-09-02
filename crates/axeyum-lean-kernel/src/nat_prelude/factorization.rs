@@ -36,6 +36,7 @@
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -140,30 +141,6 @@ fn family_body(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let hn_ty = d.le(two, n);
     let concl = factorization_exists(d, p, n);
     d.arrow(hn_ty, concl)
-}
-
-/// `Or.rec` with a non-dependent motive, mirroring `primes.rs`'s private
-/// helper of the same name (duplicated rather than made `pub(super)`, to
-/// keep this slice inside `factorization.rs`).
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
 }
 
 /// `False.rec` into `target` from a proof of `False`.
@@ -289,16 +266,7 @@ fn derive_two_le_q(
             let ex_falso = from_false(d, p, false_proof, goal);
             d.lam_fv(h_fv, right_ty2, ex_falso)
         };
-        let or_result = or_cases(
-            d,
-            p,
-            left_ty2,
-            right_ty2,
-            goal,
-            left_minor2,
-            right_minor2,
-            tw,
-        );
+        let or_result = or_cases(d, left_ty2, right_ty2, goal, left_minor2, right_minor2, tw);
         let inner = d.lam_fv(hk_fv, hk_ty, or_result);
         d.lam_fv(kk_fv, nat, inner)
     };
@@ -632,7 +600,7 @@ fn build_step_body(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, ih: ExprId) ->
             d.lam_fv(hlt_fv, lt_ty, body_dvd)
         };
 
-        let or_result_outer = or_cases(d, p, lt_ty, eq_ty, goal, left_minor, right_minor, hcase);
+        let or_result_outer = or_cases(d, lt_ty, eq_ty, goal, left_minor, right_minor, hcase);
         let inner_outer = d.lam_fv(hpand_fv, hpand_ty, or_result_outer);
         d.lam_fv(pw_fv, nat, inner_outer)
     };

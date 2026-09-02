@@ -94,7 +94,9 @@
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps, cases_lt_or_ge};
-use super::primes::{absurd, or_cases, prime_condition};
+use super::primes::prime_condition;
+use super::steps::absurd;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -398,17 +400,17 @@ pub(super) fn declare_abundant_iff_not_perfect_and_not_deficient(
                     let hh_fv = d.fresh_fvar();
                     let hh = d.kernel().fvar(hh_fv);
                     let false_proof = d.apply(h2, &[hh]);
-                    let result = absurd(d, &p, goal, false_proof);
+                    let result = absurd(d, goal, false_proof);
                     d.lam_fv(hh_fv, lt_yx, result)
                 };
                 let on_eq = {
                     let hh_fv = d.fresh_fvar();
                     let hh = d.kernel().fvar(hh_fv);
                     let false_proof = d.apply(h1, &[hh]);
-                    let result = absurd(d, &p, goal, false_proof);
+                    let result = absurd(d, goal, false_proof);
                     d.lam_fv(hh_fv, eq_yx, result)
                 };
-                or_cases(d, &p, lt_yx, eq_yx, goal, on_lt, on_eq, split)
+                or_cases(d, lt_yx, eq_yx, goal, on_lt, on_eq, split)
             };
             let case_result = cases_lt_or_ge(d, &p, x, y, &move |_d, _n| goal, small, big);
             d.lam_fv(hand_fv, conj, case_result)
@@ -494,7 +496,7 @@ pub(super) fn declare_deficient_iff_not_abundant_and_not_perfect(
                     let hh_fv = d.fresh_fvar();
                     let hh = d.kernel().fvar(hh_fv);
                     let false_proof = d.apply(h1, &[hh]);
-                    let result = absurd(d, &p, goal, false_proof);
+                    let result = absurd(d, goal, false_proof);
                     d.lam_fv(hh_fv, lt_xy, result)
                 };
                 let on_eq = {
@@ -502,12 +504,12 @@ pub(super) fn declare_deficient_iff_not_abundant_and_not_perfect(
                     let hh = d.kernel().fvar(hh_fv); // Eq x y
                     let hh_rev = d.symm(x, y, hh); // Eq y x
                     let false_proof = d.apply(h2, &[hh_rev]);
-                    let result = absurd(d, &p, goal, false_proof);
+                    let result = absurd(d, goal, false_proof);
                     let eq_xy = d.eq(x, y);
                     d.lam_fv(hh_fv, eq_xy, result)
                 };
                 let eq_xy = d.eq(x, y);
-                or_cases(d, &p, lt_xy, eq_xy, goal, on_lt, on_eq, split)
+                or_cases(d, lt_xy, eq_xy, goal, on_lt, on_eq, split)
             };
             let case_result = cases_lt_or_ge(d, &p, y, x, &move |_d, _n| goal, small, big);
             d.lam_fv(hand_fv, conj, case_result)

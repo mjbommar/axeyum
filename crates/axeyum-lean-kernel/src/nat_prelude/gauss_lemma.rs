@@ -64,6 +64,7 @@ use super::group::{mod_eq_of_mod_eq_rel, mod_self_congr};
 use super::helpers::{and_left, and_right, iff_reverse};
 use super::ops::{NatDev, NatOps, bool_true_or_false};
 use super::primes::prime_condition;
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -1311,18 +1312,6 @@ fn or_elim(
     )
 }
 
-/// `False.rec` into `goal` (private per-file copy; see `add_basics.rs`'s
-/// module doc for why this follows the existing convention).
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let p = *p;
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
-}
-
 /// `Lt x y ⊢ Le x y` — weaken a strict bound (`Nat.lt` unfolds definitionally
 /// to `Le (succ x) y`, so this is `le_trans` through `le_succ`, no induction).
 fn le_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, y: ExprId, hlt: ExprId) -> ExprId {
@@ -1717,7 +1706,7 @@ pub(super) fn declare_gauss_fold_injective_of_coprime(
                 let false_pf = opposite_sign_vacuous(
                     d, &p, pp, mul2m, m, a, coprime, pos_pp, k, pos_k, le_k_m, k2, le_k2_m, sub_eq,
                 );
-                let body = absurd(d, &p, concl, false_pf);
+                let body = absurd(d, concl, false_pf);
                 d.lam_fv(hk2_fv, ty_k2_false, body)
             };
             let body = or_elim(
@@ -1760,7 +1749,7 @@ pub(super) fn declare_gauss_fold_injective_of_coprime(
                 let false_pf = opposite_sign_vacuous(
                     d, &p, pp, mul2m, m, a, coprime, pos_pp, k2, pos_k2, le_k2_m, k, le_k_m, sub_eq,
                 );
-                let body = absurd(d, &p, concl, false_pf);
+                let body = absurd(d, concl, false_pf);
                 d.lam_fv(hk2_fv, ty_k2_true, body)
             };
             // Inner branch: test_k2 = false (k2 not negative) -- same-sign identity.

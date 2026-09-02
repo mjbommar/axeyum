@@ -48,6 +48,9 @@
 use super::NatPrelude;
 use super::helpers::transport_dvd_left;
 use super::ops::{NatDev, NatOps, two_divisor_dichotomy};
+use super::steps::absurd;
+use super::steps::dvd_elim;
+use super::steps::dvd_intro;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -57,55 +60,6 @@ use crate::expr::ExprId;
 // prelude already uses for `Exists`/`Or`/`False` elimination — see
 // `perfect.rs`'s `dvd_elim`/`dvd_intro`/`absurd` and `primes.rs`'s `or_cases`).
 // ============================================================================
-
-/// `witness : Nat`, `eq_proof : Eq n (mul a witness) ⊢ dvd a n`.
-fn dvd_intro(
-    d: &mut NatDev<'_>,
-    a: ExprId,
-    n: ExprId,
-    witness: ExprId,
-    eq_proof: ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let predicate = d.dvd_predicate(a, n);
-    let intro_name = d.prelude().logic.exists_intro;
-    let intro = d.kernel().const_(intro_name, vec![one]);
-    d.apply(intro, &[nat, predicate, witness, eq_proof])
-}
-
-/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness `q`
-/// and `eq_proof : Eq dividend (mul divisor q)` to build a proof of `goal`
-/// (which must not mention `q`).
-fn dvd_elim(
-    d: &mut NatDev<'_>,
-    divisor: ExprId,
-    dividend: ExprId,
-    goal: ExprId,
-    dvd_hyp: ExprId,
-    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
-    let predicate = d.dvd_predicate(divisor, dividend);
-    let dvd_ty = d.dvd(divisor, dividend);
-    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
-    let minor = {
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
-        let divisor_q = d.mul(divisor, q);
-        let eq_ty = d.eq(dividend, divisor_q);
-        let eq_fv = d.fresh_fvar();
-        let eq_proof = d.kernel().fvar(eq_fv);
-        let body = continuation(d, q, eq_proof);
-        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
-        d.lam_fv(q_fv, nat, with_eq)
-    };
-    let exists_rec_name = d.prelude().logic.exists_rec;
-    let rec = d.kernel().const_(exists_rec_name, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
-}
 
 /// Non-dependent `Or.rec`: `left_case : arrow(left_ty,goal)`,
 /// `right_case : arrow(right_ty,goal)`, `or_proof : Or(left_ty,right_ty) ⊢ goal`.
@@ -128,16 +82,6 @@ fn or_elim(
         or_rec,
         &[left_ty, right_ty, motive, left_case, right_case, or_proof],
     )
-}
-
-/// `False.rec` into `goal` from a proof of `False`.
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 // ============================================================================
@@ -353,7 +297,7 @@ fn lt_of_double_sq(
         let hle = d.transport(big_big, motive_b, le_final, two_small_small, heq);
         let false_proof = contradiction_from_double_le(d, &p, small, hle, small_ne_zero);
         let goal = d.lt(small, big);
-        let result = absurd(d, &p, goal, false_proof);
+        let result = absurd(d, goal, false_proof);
         d.lam_fv(h_fv, ge_ty, result)
     };
     or_elim(

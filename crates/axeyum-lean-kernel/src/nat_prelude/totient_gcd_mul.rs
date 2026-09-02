@@ -89,7 +89,8 @@ use super::NatPrelude;
 use super::binomial::mul_left_comm;
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
-use crate::BinderInfo;
+use super::steps::dvd_elim;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -120,30 +121,6 @@ fn prime_parts(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> (ExprId, ExprId
 fn prime_ty(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
     let (two_le, divisor_clause) = prime_parts(d, p, x);
     d.const_app(p.logic.and, &[two_le, divisor_clause])
-}
-
-/// Non-dependent `Or.rec` into a fixed goal type.
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    or_proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d
-        .kernel()
-        .lam(anon, or_ty, goal, crate::BinderInfo::Default);
-    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        or_rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, or_proof],
-    )
 }
 
 /// Copied verbatim from `totient_dvd_chain.rs`'s private helper of the same
@@ -197,36 +174,6 @@ fn derive_cofactor_lt(
     let al = d.lemma(p.add_le_add_left, &[q, one_v, q, hq1]);
     let succ_q = d.succ(q);
     d.lemma(p.le_trans, &[succ_q, q_q, n, al, step_e])
-}
-
-fn dvd_elim(
-    d: &mut NatDev<'_>,
-    divisor: ExprId,
-    dividend: ExprId,
-    goal: ExprId,
-    dvd_hyp: ExprId,
-    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
-    let predicate = d.dvd_predicate(divisor, dividend);
-    let dvd_ty = d.dvd(divisor, dividend);
-    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
-    let minor = {
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
-        let divisor_q = d.mul(divisor, q);
-        let eq_ty = d.eq(dividend, divisor_q);
-        let eq_fv = d.fresh_fvar();
-        let eq_proof = d.kernel().fvar(eq_fv);
-        let body = continuation(d, q, eq_proof);
-        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
-        d.lam_fv(q_fv, nat, with_eq)
-    };
-    let exists_rec_name = d.prelude().logic.exists_rec;
-    let rec = d.kernel().const_(exists_rec_name, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
 }
 
 /// `Eq (mul (mul a b) (mul c dd)) (mul (mul a c) (mul b dd))` — the
@@ -1095,7 +1042,6 @@ pub(super) fn declare_totient_gcd_mul_aux(
 
                                     let inner = or_cases(
                                         d,
-                                        &p,
                                         coprime_ty_b1,
                                         dvd_ty_b1,
                                         final_goal,
@@ -1203,7 +1149,6 @@ pub(super) fn declare_totient_gcd_mul_aux(
 
                                     let inner = or_cases(
                                         d,
-                                        &p,
                                         coprime_ty_b1,
                                         dvd_ty_b1,
                                         final_goal,
@@ -1216,7 +1161,6 @@ pub(super) fn declare_totient_gcd_mul_aux(
 
                                 or_cases(
                                     d,
-                                    &p,
                                     coprime_ty_a1,
                                     dvd_ty_a1,
                                     final_goal,
@@ -1244,7 +1188,6 @@ pub(super) fn declare_totient_gcd_mul_aux(
 
                 let proof_at_kx = or_cases(
                     d,
-                    &p,
                     two_le_ty,
                     eq_one_ty,
                     goal_kx,
@@ -1265,9 +1208,7 @@ pub(super) fn declare_totient_gcd_mul_aux(
             d.lam_fv(hex_fv, succ_ex_ty, body)
         };
 
-        let body = or_cases(
-            d, &p, eq_zero_ty, succ_ex_ty, goal, case_zero, case_succ, disj,
-        );
+        let body = or_cases(d, eq_zero_ty, succ_ex_ty, goal, case_zero, case_succ, disj);
         let with_ih = d.lam_fv(ih_fv, ih_ty, body);
         d.lam_fv(x_fv, nat, with_ih)
     };

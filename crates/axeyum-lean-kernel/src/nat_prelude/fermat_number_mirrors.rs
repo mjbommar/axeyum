@@ -41,7 +41,8 @@ use super::finite::{ne_of_lt, ne_symm};
 use super::helpers::{iff_forward, iff_reverse};
 use super::ops::{NatDev, NatOps};
 use super::parity::even_predicate;
-use super::primes::{absurd, or_cases};
+use super::steps::absurd;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -128,7 +129,7 @@ fn pow_le_pow_of_le_local(
         let transported = d.transport(i, motive, refl_case, j, h);
         d.lam_fv(h_fv, eq_ty, transported)
     };
-    or_cases(d, &p, lt_ty, eq_ty, goal, on_lt, on_eq, split)
+    or_cases(d, lt_ty, eq_ty, goal, on_lt, on_eq, split)
 }
 
 /// `Nat.fermatNumber_mono : ∀ x y, Le x y → Le (fermatNumber x) (fermatNumber
@@ -252,10 +253,10 @@ pub(super) fn lt_or_gt_of_ne_local(
             let he_fv = d.fresh_fvar();
             let he = d.kernel().fvar(he_fv);
             let contra = d.apply(hne, &[he]);
-            let result = absurd(d, &p, goal, contra);
+            let result = absurd(d, goal, contra);
             d.lam_fv(he_fv, eq_ty, result)
         };
-        let case_result = or_cases(d, &p, lt_mn, eq_ty, goal, on_lt, on_eq, split);
+        let case_result = or_cases(d, lt_mn, eq_ty, goal, on_lt, on_eq, split);
         d.lam_fv(h_fv, le_mn_ty, case_result)
     };
     let on_le_nm = {
@@ -274,13 +275,13 @@ pub(super) fn lt_or_gt_of_ne_local(
             let he = d.kernel().fvar(he_fv);
             let he_rev = d.symm(n, m, he); // Eq m n
             let contra = d.apply(hne, &[he_rev]);
-            let result = absurd(d, &p, goal, contra);
+            let result = absurd(d, goal, contra);
             d.lam_fv(he_fv, eq_ty, result)
         };
-        let case_result = or_cases(d, &p, lt_nm, eq_ty, goal, on_lt, on_eq, split);
+        let case_result = or_cases(d, lt_nm, eq_ty, goal, on_lt, on_eq, split);
         d.lam_fv(h_fv, le_nm_ty, case_result)
     };
-    or_cases(d, &p, le_mn_ty, le_nm_ty, goal, on_le_mn, on_le_nm, total)
+    or_cases(d, le_mn_ty, le_nm_ty, goal, on_le_mn, on_le_nm, total)
 }
 
 /// `Lt m (add m t) → Lt zero t`, via `zero_le t` + `lt_or_eq_of_le`: the
@@ -315,10 +316,10 @@ pub(super) fn pos_of_lt_add_left(
         });
         let lt_m_addm0 = d.transport(t, motive, hlt, zero, h_rev); // Lt m (add m zero), defeq Lt m m
         let contra = d.lemma(p.lt_irrefl, &[m, lt_m_addm0]);
-        let result = absurd(d, &p, goal, contra);
+        let result = absurd(d, goal, contra);
         d.lam_fv(h_fv, eq_ty, result)
     };
-    or_cases(d, &p, lt_ty, eq_ty, goal, on_lt, on_eq, split)
+    or_cases(d, lt_ty, eq_ty, goal, on_lt, on_eq, split)
 }
 
 /// `Even (pow 2 k)` for `k > 0`: write `k = succ (pred k)`
@@ -652,7 +653,7 @@ pub(super) fn declare_coprime_fermatnumber_fermatnumber(
             let swapped = d.lemma(p.coprime_symmetric, &[fermat_n2, fermat_m2, proof_nm]);
             d.lam_fv(h_fv, lt_nm_ty, swapped)
         };
-        let case_result = or_cases(d, &p, lt_mn_ty, lt_nm_ty, concl, on_lt_mn, on_lt_nm, split);
+        let case_result = or_cases(d, lt_mn_ty, lt_nm_ty, concl, on_lt_mn, on_lt_nm, split);
         let proof = d.lam_fv(hne_fv, ne_ty, case_result);
         (stmt, proof)
     })?;

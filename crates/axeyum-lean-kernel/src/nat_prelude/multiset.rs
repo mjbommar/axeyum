@@ -121,6 +121,9 @@ use super::finite::{select_nat_false, select_nat_true};
 use super::helpers::{transport_dvd_left, transport_dvd_right};
 use super::ops::{NatDev, NatOps, bool_true_or_false, cases_lt_or_ge};
 use super::primes::prime_condition;
+use super::steps::dvd_elim;
+use super::steps::dvd_intro;
+use super::steps::or_cases;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -563,77 +566,6 @@ fn from_false(d: &mut NatDev<'_>, p: &NatPrelude, false_proof: ExprId, target: E
     d.apply(rec, &[motive, false_proof])
 }
 
-/// `Or.rec` with a non-dependent motive.
-#[allow(clippy::too_many_arguments)]
-fn or_cases(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    left_ty: ExprId,
-    right_ty: ExprId,
-    goal: ExprId,
-    left_minor: ExprId,
-    right_minor: ExprId,
-    proof: ExprId,
-) -> ExprId {
-    let anon = d.anon_name();
-    let split_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
-    let motive = d.kernel().lam(anon, split_ty, goal, BinderInfo::Default);
-    let rec = d.kernel().const_(p.logic.or_rec, vec![]);
-    d.apply(
-        rec,
-        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
-    )
-}
-
-/// `witness : Nat`, `eq_proof : Eq n (mul a witness) ⊢ dvd a n`.
-fn dvd_intro(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    a: ExprId,
-    n: ExprId,
-    witness: ExprId,
-    eq_proof: ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let predicate = d.dvd_predicate(a, n);
-    let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
-    d.apply(intro, &[nat, predicate, witness, eq_proof])
-}
-
-/// Eliminate `dvd_hyp : dvd divisor dividend`, continuing with the witness `q`
-/// and `eq_proof : Eq dividend (mul divisor q)` to build a proof of `goal`
-/// (which must not mention `q`).
-fn dvd_elim(
-    d: &mut NatDev<'_>,
-    p: &NatPrelude,
-    divisor: ExprId,
-    dividend: ExprId,
-    goal: ExprId,
-    dvd_hyp: ExprId,
-    continuation: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId) -> ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
-    let predicate = d.dvd_predicate(divisor, dividend);
-    let dvd_ty = d.dvd(divisor, dividend);
-    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
-    let minor = {
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
-        let divisor_q = d.mul(divisor, q);
-        let eq_ty = d.eq(dividend, divisor_q);
-        let eq_fv = d.fresh_fvar();
-        let eq_proof = d.kernel().fvar(eq_fv);
-        let body = continuation(d, q, eq_proof);
-        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
-        d.lam_fv(q_fv, nat, with_eq)
-    };
-    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
-}
-
 /// Eliminate `hyp : Exists Nat predicate`, where `prop_at` rebuilds the
 /// predicate's body at a witness.
 #[allow(clippy::too_many_arguments)]
@@ -683,14 +615,14 @@ fn dvd_cancel_left_of_pos(
     let ka = d.mul(k, a);
     let kb = d.mul(k, b);
     let goal = d.dvd(a, b);
-    dvd_elim(d, &p, ka, kb, goal, dvd_hyp, &|d, q, eq_proof| {
+    dvd_elim(d, ka, kb, goal, dvd_hyp, &|d, q, eq_proof| {
         let ka_q = d.mul(ka, q);
         let aq = d.mul(a, q);
         let k_aq = d.mul(k, aq);
         let assoc = d.lemma(p.mul_assoc, &[k, a, q]);
         let (_, kb_eq_k_aq) = d.chain(kb, &[(ka_q, eq_proof), (k_aq, assoc)]);
         let cancelled = d.lemma(p.mul_left_cancel_of_pos, &[k, b, aq, k_pos, kb_eq_k_aq]);
-        dvd_intro(d, &p, a, b, q, cancelled)
+        dvd_intro(d, a, b, q, cancelled)
     })
 }
 
@@ -856,7 +788,7 @@ fn declare_arithmetic_support(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
                 let moved = transport_dvd_left(d, fj, fi, back, product, at_j);
                 d.lam_fv(he_fv, eq_ty, moved)
             };
-            let body = or_cases(d, &p, lt_ty, eq_ty, goal, left, right, split);
+            let body = or_cases(d, lt_ty, eq_ty, goal, left, right, split);
             d.lam_fv(h_fv, hyp, body)
         };
         let proof = d.induct(&claim, &base, &step, k);
@@ -927,7 +859,7 @@ fn declare_arithmetic_support(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
             let om = d.lemma(p.one_mul, &[a]);
             let (_, product_eq_a) = d.chain(product, &[(one_a, to_one), (a, om)]);
             let a_eq_product = d.symm(product, a, product_eq_a);
-            let witness = dvd_intro(d, &p, pow_zero_term, a, a, a_eq_product);
+            let witness = dvd_intro(d, pow_zero_term, a, a, a_eq_product);
             let with_hd = d.lam_fv(hd_fv, hyp, witness);
             d.lam_fv(a_fv, nat, with_hd)
         };
@@ -963,7 +895,7 @@ fn declare_arithmetic_support(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
             let left = {
                 let hl_fv = d.fresh_fvar();
                 let hl = d.kernel().fvar(hl_fv);
-                let body = dvd_elim(d, &p, pv, a, goal, hl, &|d, w, heq| {
+                let body = dvd_elim(d, pv, a, goal, hl, &|d, w, heq| {
                     // heq : a = pv * w
                     let pv_w = d.mul(pv, w);
                     let wb = d.mul(w, b);
@@ -985,7 +917,7 @@ fn declare_arithmetic_support(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
                     let cancelled =
                         dvd_cancel_left_of_pos(d, &p, pv, pow_j, wb, pv_pos, moved_left);
                     let recursed = d.apply(ih, &[w, cancelled]);
-                    dvd_elim(d, &p, pow_j, w, goal, recursed, &|d, u, heq2| {
+                    dvd_elim(d, pow_j, w, goal, recursed, &|d, u, heq2| {
                         // heq2 : w = pow pv j * u
                         // a = pv * w = pv * (pow pv j * u)
                         //   = (pv * pow pv j) * u = (pow pv j * pv) * u
@@ -1013,12 +945,12 @@ fn declare_arithmetic_support(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
                                 (pow_succ_u, to_pow_succ),
                             ],
                         );
-                        dvd_intro(d, &p, pow_succ_j, a, u, a_eq)
+                        dvd_intro(d, pow_succ_j, a, u, a_eq)
                     })
                 });
                 d.lam_fv(hl_fv, left_ty, body)
             };
-            let cases = or_cases(d, &p, left_ty, right_ty, goal, left, right, split);
+            let cases = or_cases(d, left_ty, right_ty, goal, left, right, split);
             let with_hd = d.lam_fv(hd_fv, hyp, cases);
             d.lam_fv(a_fv, nat, with_hd)
         };
@@ -1130,19 +1062,10 @@ fn declare_arithmetic_support(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
                     let anti = d.lemma(p.le_antisymm, &[c1, c2, h, hge]);
                     d.lam_fv(h_fv, ge21, anti)
                 };
-                let body = or_cases(
-                    d,
-                    &p,
-                    lt21,
-                    ge21,
-                    goal,
-                    inner_left,
-                    inner_right,
-                    inner_split,
-                );
+                let body = or_cases(d, lt21, ge21, goal, inner_left, inner_right, inner_split);
                 d.lam_fv(hge_fv, ge12, body)
             };
-            or_cases(d, &p, lt12, ge12, goal, left, right, outer)
+            or_cases(d, lt12, ge12, goal, left, right, outer)
         };
 
         declare_forall(
@@ -1399,7 +1322,7 @@ fn refute_dvd_pow_factor(
             let bad = d.apply(ne, &[he]);
             d.lam_fv(he_fv, is_j, bad)
         };
-        or_cases(d, &p, is_one, is_j, false_ty, left, right, split)
+        or_cases(d, is_one, is_j, false_ty, left, right, split)
     };
     cases_lt_or_ge(d, &p, gj, one_lit, &motive, &small, &big)
 }
@@ -1511,7 +1434,7 @@ fn declare_prod_range_valuation(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<()
                 let bad = refute_dvd_pow_factor(d, &p, g, hps, pv, hp, j, ne, hy);
                 d.lam_fv(hy_fv, right_ty, bad)
             };
-            let cases = or_cases(d, &p, left_ty, right_ty, false_ty, left, right, split);
+            let cases = or_cases(d, left_ty, right_ty, false_ty, left, right, split);
             let with_hd = d.lam_fv(hd_fv, divides, cases);
             d.lam_fv(h_fv, hyp, with_hd)
         };
@@ -1652,7 +1575,7 @@ fn declare_prod_range_valuation(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<()
                 let bad = d.apply(refute, &[cancelled]);
                 d.lam_fv(he_fv, eq_ty, bad)
             };
-            let cases = or_cases(d, &p, lt_ty, eq_ty, false_ty, left, right, split);
+            let cases = or_cases(d, lt_ty, eq_ty, false_ty, left, right, split);
             let with_hd = d.lam_fv(hd_fv, divides, cases);
             d.lam_fv(h_fv, hyp, with_hd)
         };
@@ -1721,7 +1644,7 @@ fn declare_uniqueness(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
             let one_prod = d.mul(one_lit, prod);
             let om = d.lemma(p.one_mul, &[prod]);
             let prod_eq = d.symm(one_prod, prod, om);
-            let one_dvd = dvd_intro(d, &p, one_lit, prod, prod, prod_eq);
+            let one_dvd = dvd_intro(d, one_lit, prod, prod, prod_eq);
             transport_dvd_left(d, one_lit, pow_count, one_eq, prod, one_dvd)
         };
         let proof = cases_lt_or_ge(d, &p, x, b, &motive, &small, &big);
@@ -2062,7 +1985,6 @@ fn declare_beq_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
             };
             let body = or_cases(
                 d,
-                &p,
                 ba_true,
                 ba_false,
                 stmt,
@@ -2072,7 +1994,7 @@ fn declare_beq_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
             );
             d.lam_fv(h_fv, is_false, body)
         };
-        let proof = or_cases(d, &p, is_true, is_false, stmt, left, right, split);
+        let proof = or_cases(d, is_true, is_false, stmt, left, right, split);
         declare_forall(d, p.beq_comm, &[(a_fv, nat), (b_fv, nat)], stmt, proof)?;
     }
 
@@ -2171,16 +2093,7 @@ fn declare_beq_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErro
                 let body = d.bool_trans(left_sel, mid_sel, right_sel, a, align);
                 d.lam_fv(h_fv, is_false, body)
             };
-            or_cases(
-                d,
-                &p,
-                is_true,
-                is_false,
-                goal,
-                branch_true,
-                branch_false,
-                split,
-            )
+            or_cases(d, is_true, is_false, goal, branch_true, branch_false, split)
         };
         let proof = d.induct(&claim, &base, &step, k);
         let stmt = claim(d, k);

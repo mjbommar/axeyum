@@ -39,6 +39,7 @@
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -64,17 +65,6 @@ fn or_elim(
         or_rec,
         &[left_ty, right_ty, motive, left_case, right_case, or_proof],
     )
-}
-
-/// `False.rec` into `goal` (private copy; see the module doc for why).
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let p = *p;
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 /// `(a+b)+(c+d) = (a+c)+(b+d)`, via `add_assoc` twice, `add_comm` once —
@@ -390,7 +380,7 @@ fn add_eq_lit_mp_bound(
         let hlt = d.kernel().fvar(hlt_fv);
         if bound_val == 0 {
             let contra = d.lemma(p.not_lt_zero, &[m, hlt]); // False
-            let result = absurd(d, &p, disj_ty, contra);
+            let result = absurd(d, disj_ty, contra);
             d.lam_fv(hlt_fv, lt_ty, result)
         } else {
             let new_bound_val = bound_val - 1;

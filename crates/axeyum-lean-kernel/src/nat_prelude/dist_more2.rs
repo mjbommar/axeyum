@@ -36,7 +36,7 @@ use super::NatPrelude;
 use super::fermat_number_mirrors::{lt_or_gt_of_ne_local, pos_of_lt_add_left};
 use super::finite::le_of_lt;
 use super::ops::{NatDev, NatOps};
-use super::primes::or_cases;
+use super::steps::or_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
 
@@ -103,7 +103,7 @@ fn declare_dist_pos_of_ne(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kern
             d.lam_fv(h_fv, lt_ji_ty, body)
         };
 
-        let case_result = or_cases(d, &p, lt_ij_ty, lt_ji_ty, concl, on_lt_ij, on_lt_ji, split);
+        let case_result = or_cases(d, lt_ij_ty, lt_ji_ty, concl, on_lt_ij, on_lt_ji, split);
         let stmt = d.arrow(hne_ty, concl);
         let proof = d.lam_fv(hne_fv, hne_ty, case_result);
         (stmt, proof)
@@ -219,7 +219,7 @@ fn declare_dist_eq_intro(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Kerne
             d.lam_fv(hh_fv, le_nk_ty, body)
         };
 
-        let case_result = or_cases(d, &p, le_kn_ty, le_nk_ty, concl, on_le_kn, on_le_nk, total);
+        let case_result = or_cases(d, le_kn_ty, le_nk_ty, concl, on_le_kn, on_le_nk, total);
         let stmt = d.arrow(hyp_ty, concl);
         let proof = d.lam_fv(h_fv, hyp_ty, case_result);
         (stmt, proof)
@@ -271,7 +271,7 @@ fn le_add_sub_self(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId, n: ExprId) -> 
         d.lam_fv(h_fv, le_mn_ty, body)
     };
 
-    or_cases(d, &p, le_nm_ty, le_mn_ty, goal, on_le_nm, on_le_mn, total)
+    or_cases(d, le_nm_ty, le_mn_ty, goal, on_le_nm, on_le_mn, total)
 }
 
 /// `sub_le_dist_sum : ∀ a b c, Le (sub a c) (add (dist a b) (dist b c))`.
@@ -395,7 +395,7 @@ fn declare_dist_triangle_inequality(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
             d.lam_fv(h_fv, le_kn_ty, body)
         };
 
-        let proof = or_cases(d, &p, le_nk_ty, le_kn_ty, concl, on_le_nk, on_le_kn, total);
+        let proof = or_cases(d, le_nk_ty, le_kn_ty, concl, on_le_nk, on_le_kn, total);
         (concl, proof)
     })?;
     Ok(())

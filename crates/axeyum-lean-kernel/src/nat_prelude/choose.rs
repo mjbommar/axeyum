@@ -35,6 +35,7 @@
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -695,16 +696,6 @@ pub(super) fn declare_choose_symm(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     Ok(())
 }
 
-/// `False.rec` into `goal` from a proof of `False`.
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
-}
-
 /// `choose_one_right : ∀ n, choose n 1 = n`, by induction on `n`: the base
 /// case is `zero_choose_succ` at `k := 0` (`succ 0 ≡ 1`), and the successor
 /// case expands `choose (succ n) 1` via Pascal's rule into `choose n 0 +
@@ -818,7 +809,7 @@ pub(super) fn declare_choose_eq_zero_of_lt(
                         let zero2 = d.zero();
                         d.eq(lhs, zero2)
                     };
-                    let body = absurd(d, &p, goal, false_proof);
+                    let body = absurd(d, goal, false_proof);
                     d.lam_fv(h_fv, hyp_ty, body)
                 },
                 &|d, k_prime, _inner_ih| {
@@ -861,7 +852,7 @@ pub(super) fn declare_choose_eq_zero_of_lt(
                         let zero2 = d.zero();
                         d.eq(lhs, zero2)
                     };
-                    let body = absurd(d, &p, goal, false_proof);
+                    let body = absurd(d, goal, false_proof);
                     d.lam_fv(h_fv, hyp_ty, body)
                 },
                 &|d, k_prime, _inner_ih| {
@@ -956,7 +947,7 @@ fn choose_pos_all(d: &mut NatDev<'_>, p: &NatPrelude) -> ExprId {
                         let zero2 = d.zero();
                         d.lt(zero2, lhs)
                     };
-                    let body = absurd(d, &p, goal, false_proof);
+                    let body = absurd(d, goal, false_proof);
                     d.lam_fv(h_fv, hyp_ty, body)
                 },
                 k,

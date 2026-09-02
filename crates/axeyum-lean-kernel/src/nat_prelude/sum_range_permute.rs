@@ -64,6 +64,7 @@ use super::NatPrelude;
 use super::finite::{override_eq_at, override_eq_gt, override_eq_lt, point_override};
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
+use super::steps::absurd;
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -94,16 +95,6 @@ fn lift_lt(d: &mut NatDev<'_>, p: &NatPrelude, i: ExprId, m: ExprId, h: ExprId) 
     let sm = d.succ(m);
     let m_le_sm = d.lemma(p.le_succ, &[m]);
     d.lemma(p.le_trans, &[succ_i, m, sm, h, m_le_sm])
-}
-
-/// `False.rec (fun _ => goal) contradiction : goal`.
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 /// Non-dependent `Or.rec` into `goal`.
@@ -274,7 +265,7 @@ pub(super) fn declare_sum_range_point_change(
             let hb_fv = d.fresh_fvar();
             let hb = d.kernel().fvar(hb_fv);
             let contradiction = d.lemma(p.not_lt_zero, &[i0, hb]);
-            let body = absurd(d, &p, concl, contradiction);
+            let body = absurd(d, concl, contradiction);
 
             let ha_fv = d.fresh_fvar();
             let with_above = d.lam_fv(ha_fv, above_ty, body);
@@ -598,7 +589,7 @@ fn permute_branch_fixed(
             let n_lt_n = d.transport(ivar, motive, hi, n, i_eq_n);
             let false_pf = d.lemma(p.lt_irrefl, &[n, n_lt_n]);
             let goal = d.lt(si, n);
-            let body = absurd(d, &p, goal, false_pf);
+            let body = absurd(d, goal, false_pf);
             d.lam_fv(e_fv, eq_sin, body)
         };
         let target = d.lt(si, n);

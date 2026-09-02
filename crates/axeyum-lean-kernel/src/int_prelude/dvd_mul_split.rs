@@ -78,6 +78,7 @@ use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
+use crate::nat_prelude::steps::dvd_elim;
 
 // ---------------------------------------------------------------------------
 // `Int`-level local term-building helpers, this development's per-file-copy
@@ -300,36 +301,6 @@ fn imul_mul_mul_comm(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, dd: Ex
 // `IntDev`.
 // ---------------------------------------------------------------------------
 
-fn nat_dvd_elim(
-    d: &mut IntDev<'_>,
-    divisor: ExprId,
-    dividend: ExprId,
-    goal: ExprId,
-    dvd_hyp: ExprId,
-    continuation: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId) -> ExprId,
-) -> ExprId {
-    let nat = d.nat_ty();
-    let one = d.level_one();
-    let anon = d.anon_name();
-    let predicate = d.dvd_predicate(divisor, dividend);
-    let dvd_ty = d.dvd(divisor, dividend);
-    let motive = d.kernel().lam(anon, dvd_ty, goal, BinderInfo::Default);
-    let minor = {
-        let q_fv = d.fresh_fvar();
-        let q = d.kernel().fvar(q_fv);
-        let divisor_q = d.mul(divisor, q);
-        let eq_ty = d.eq(dividend, divisor_q);
-        let eq_fv = d.fresh_fvar();
-        let eq_proof = d.kernel().fvar(eq_fv);
-        let body = continuation(d, q, eq_proof);
-        let with_eq = d.lam_fv(eq_fv, eq_ty, body);
-        d.lam_fv(q_fv, nat, with_eq)
-    };
-    let exists_rec_name = d.prelude().logic.exists_rec;
-    let rec = d.kernel().const_(exists_rec_name, vec![one]);
-    d.apply(rec, &[nat, predicate, motive, minor, dvd_hyp])
-}
-
 fn nat_dvd_intro(
     d: &mut IntDev<'_>,
     a: ExprId,
@@ -359,7 +330,7 @@ fn dvd_cancel_left_of_ne_zero(
     let ka = d.mul(k, a);
     let kb = d.mul(k, b);
     let goal = d.dvd(a, b);
-    nat_dvd_elim(d, ka, kb, goal, dvd_hyp, &|d, q, eq_proof| {
+    dvd_elim(d, ka, kb, goal, dvd_hyp, &|d, q, eq_proof| {
         // eq_proof : Eq kb (mul ka q)
         let ka_q = d.mul(ka, q);
         let aq = d.mul(a, q);

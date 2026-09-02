@@ -68,7 +68,7 @@
 
 use super::NatPrelude;
 use super::ops::{NatDev, NatOps};
-use crate::BinderInfo;
+use super::steps::absurd;
 use crate::KernelError;
 use crate::expr::ExprId;
 use crate::name::NameId;
@@ -87,16 +87,6 @@ enum Kind {
 /// `Nat.stirlingFirst n k` / `Nat.stirlingSecond n k`.
 fn value_at(d: &mut NatDev<'_>, name: NameId, n: ExprId, k: ExprId) -> ExprId {
     d.const_app(name, &[n, k])
-}
-
-/// `False.rec` into `goal` — the two vacuous `k = 0` arms below.
-fn absurd(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, contradiction: ExprId) -> ExprId {
-    let anon = d.anon_name();
-    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
-    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
-    let zero = d.kernel().level_zero();
-    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
-    d.apply(rec, &[motive, contradiction])
 }
 
 /// The four defining equations, one `Eq.refl` each.
@@ -227,7 +217,7 @@ fn declare_eq_zero_of_lt(
                         let zero2 = d.zero();
                         d.eq(lhs, zero2)
                     };
-                    let body = absurd(d, &p, goal, false_proof);
+                    let body = absurd(d, goal, false_proof);
                     d.lam_fv(h_fv, hyp_ty, body)
                 },
                 &|d, k_prime, _inner_ih| {
@@ -272,7 +262,7 @@ fn declare_eq_zero_of_lt(
                         let zero2 = d.zero();
                         d.eq(lhs, zero2)
                     };
-                    let body = absurd(d, &p, goal, false_proof);
+                    let body = absurd(d, goal, false_proof);
                     d.lam_fv(h_fv, hyp_ty, body)
                 },
                 &|d, k_prime, _inner_ih| {
