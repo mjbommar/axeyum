@@ -219,6 +219,20 @@ that a dependency graph "is not available at draw time" is the same fact seen
 from the other end, and ADR-1546 quoted it without following it through to
 here: **it is not available at draw time because it is an outcome.**
 
+**And the same measurement refuses the generator change option 1 asks for.**
+The brief's fifth deliverable was to make `gen-autogenesis-nursery-refill.py`
+assign future draws by component under this rule. A freshly drawn row is `open`
+and has no proof term, so it has no edges: measured over the 221 open drawn
+rows, **204 (92.3%) are in no dependency component at all** — neither
+depending on a drawn row nor depended on by one — and only 12 declare any
+`depends_on` whatsoever. A generator that "assigns by component" over that
+graph puts every new row in its own singleton and is free to choose any
+partition it likes, while the manifest gains a sentence saying the assignment
+is component-based. That is a producer that cannot fail to produce, which is
+the shape CLAUDE.md names, so the generator is **not changed**. The v2
+manifest's existing published caveat — "no dependency-component analysis was
+run" — is the honest description and it stays.
+
 This is why the rule is implemented and not run. A deterministic algorithm over
 an outcome-derived graph is not an outcome-blind partition; it is an
 outcome-dependent partition with a reproducible spelling.

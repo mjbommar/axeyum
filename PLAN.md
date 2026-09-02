@@ -36016,6 +36016,20 @@ measurements, all from the shipped tool over the live tree.
    of whether we proved it — what `split_freeze: before-target-outcomes`
    forbids.
 
+**`gen-autogenesis-nursery-refill.py` is deliberately NOT changed**, for the
+same measurement one step further on. A freshly drawn row is `open` and has no
+proof term, so it has no edges: of the **221 open drawn rows, 204 (92.3%) are
+in no dependency component at all** — neither depending on a drawn row nor
+depended on by one — and only 12 declare any `depends_on` whatever. A generator
+that "assigns by component" over that graph puts every new row in its own
+singleton, is free to choose any partition it likes, and gains a manifest
+sentence saying the assignment is component-based. That is a producer that
+cannot fail to produce. The v2 manifest's existing published caveat — "no
+dependency-component analysis was run" — is the honest description and stays.
+The test the brief asked for (a two-module component landing in ONE partition)
+IS written and passes, in the rule's own suite: the rule works, the live graph
+refuses it.
+
 **Nothing moved.** No manifest row changed partition, no `amendments` array was
 extended, no exemption was added, enlarged or deleted. `nursery-v1.json` and
 `nursery-v2-extension.json` are byte-identical to their state at lane start,
