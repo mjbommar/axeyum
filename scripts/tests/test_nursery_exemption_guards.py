@@ -41,9 +41,11 @@ negative case alone and measure nothing.
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 
@@ -614,6 +616,257 @@ class AmendedPartitionRoleTests(unittest.TestCase):
             "is both a training and an evaluation partition"
         ):
             MODULE.build_report(self.nursery, self.facts, self.result)
+
+
+class ScoredResidueContractionTests(unittest.TestCase):
+    """The nursery gate honours `scored-evaluation-residue` (ADR-1566).
+
+    ADR-1565 left this gate red on ONE component, whose held-out members are
+    all rows of one family that was SCORED against a preregistered protocol.
+    ADR-1566 contracts those edges out through the same mechanism ADR-1563
+    used -- `check-partition-edges.py`'s own `load_amendments` and
+    `edge_is_amended`, never a rule written twice -- and this class is what
+    keeps the mechanism from becoming a hole.
+
+    THE BLIND SEAL MUST SURVIVE. Three refusals, each a synthetic population
+    that differs from the accept case in exactly one thing:
+
+      * the record does not exist (nothing was scored, so there is no
+        evaluation whose residue this could be);
+      * the edge runs INTO the blind row (blindness spent, not recorded);
+      * the edge PREDATES the preregistration (not created by the evaluation).
+
+    Each of the three must fail this gate, not merely fail the edge gate: a
+    refused amendment raises here rather than silently restoring the edge, and
+    that is the property that makes the two gates describe one tree.
+
+    THE DATA ROOT IS A REAL GIT REPOSITORY. The preregistration clause is a
+    question about the commit graph, and a fixture that could not answer it
+    would turn `strictly_precedes` into an unconditional refusal -- which
+    would pass every test here for the wrong reason and hide the accept case
+    being impossible.
+    """
+
+    # WHAT A SEAL TEST ASSERTS, AND WHY IT IS NOT THE REFUSAL MESSAGE.
+    #
+    # The property is "this population does not go green". Whether the gate
+    # refuses the amendment (`NOT honoured`) or reports the restored component
+    # (`crosses evaluation partitions`) is a detail of WHICH mechanism caught
+    # it, and pinning that here would make N3 -- whose subject is that a
+    # refused amendment stops the report rather than restoring edges -- kill
+    # all four tests instead of the one it is about. WHICH clause refuses each
+    # of these three shapes is measured where it belongs, in
+    # `scripts/tests/test_check_partition_edges.py`, at one kill each
+    # (M24/M26/M27).
+    STILL_RED = "NOT honoured|crosses evaluation partitions"
+
+    SALT = "fedcba9876543210" * 4
+    RECORD_ID = "test-evaluation-1"
+    FAMILY = "scored-fixture-family"
+    AMENDED_ROLES = {
+        "required_evaluation_partitions": ["development", "held-out"],
+        "training_partitions": ["train"],
+        "blind_partitions": ["held-out"],
+    }
+
+    def setUp(self) -> None:
+        repository = json.loads(MODULE.NURSERY.read_text())
+        self.nursery = copy.deepcopy(repository)
+        self.nursery["policy"] = {**self.nursery["policy"], **self.AMENDED_ROLES}
+        self.nursery["state"] = "foundation-only"
+        self.nursery["entries"] = [
+            row for row in repository["entries"] if row["partition"] == "longitudinal"
+        ]
+        self.nursery["component_split_exemptions"] = []
+        self.result = {"verdict": "autogenesis-1-passed"}
+        self.facts = {
+            "F:nat-zero-add": fact("F:nat-zero-add"),
+            "F:nat-mul-one": fact("F:nat-mul-one", ["F:nat-zero-add"]),
+            "F:dev": fact("F:dev"),
+            "F:blind": fact("F:blind"),
+        }
+        blind_row = entry("F:blind", "held-out")
+        blind_row["family"] = self.FAMILY
+        self.nursery["entries"].extend([entry("F:dev", "development"), blind_row])
+
+        scratch = Path("/data0/axeyum/scratch")
+        self._tmp = tempfile.TemporaryDirectory(
+            dir=scratch if scratch.is_dir() else None)
+        self.addCleanup(self._tmp.cleanup)
+        self.data_root = Path(self._tmp.name) / "tree"
+        (self.data_root / "artifacts/autogenesis").mkdir(parents=True)
+        (self.data_root / "artifacts/facts").mkdir(parents=True)
+        saved = MODULE.PARTITION_EDGE_ROOT
+        MODULE.PARTITION_EDGE_ROOT = self.data_root
+        self.addCleanup(setattr, MODULE, "PARTITION_EDGE_ROOT", saved)
+        self.git("init", "-q", "-b", "main")
+        self.git("config", "user.email", "fixture@example.invalid")
+        self.git("config", "user.name", "fixture")
+
+    # -- fixture construction ----------------------------------------------
+
+    def git(self, *args: str) -> subprocess.CompletedProcess:
+        done = subprocess.run(["git", *args], cwd=self.data_root,
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        return done
+
+    def commit(self, message: str) -> str:
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", message)
+        return self.git("rev-parse", "HEAD").stdout.strip()
+
+    def digest_of(self, fact_id: str) -> str:
+        return hashlib.sha256(f"{self.SALT}:{fact_id}".encode()).hexdigest()
+
+    def sync(self) -> None:
+        """Mirror the in-memory fixture into the git-backed data root.
+
+        The manifest carries the FAMILY column, because clause (a) is
+        re-derived from the live manifests and a fixture that omitted it would
+        make the accept case impossible for a reason no message would name.
+        """
+        root = self.data_root
+        (root / "artifacts/autogenesis/nursery-v1.json").write_text(
+            json.dumps({"kind": "axeyum-autogenesis-nursery",
+                        "policy": self.AMENDED_ROLES,
+                        "entries": [{"fact_id": row["fact_id"],
+                                     "partition": row["partition"],
+                                     "family": row.get("family", "other")}
+                                    for row in self.nursery["entries"]]},
+                       indent=2, sort_keys=True))
+        (root / "artifacts/autogenesis/partition-edge-baseline-v1.json").write_text(
+            json.dumps({"kind": "axeyum-partition-edge-baseline",
+                        "schema_version": 1, "held_out_salt": self.SALT,
+                        "edges": []}, indent=2, sort_keys=True))
+        for fact_id, body in self.facts.items():
+            (root / f"artifacts/facts/{fact_id.replace(':', '-')}.json"
+             ).write_text(json.dumps(body, indent=2, sort_keys=True))
+
+    def write_record(self, protocol_commit: str = "",
+                     record_id: str | None = None) -> None:
+        (self.data_root
+         / "artifacts/autogenesis/holdout-evaluation-v1.json").write_text(
+            json.dumps({"kind": "axeyum-holdout-evaluation-record",
+                        "record_id": record_id or self.RECORD_ID,
+                        "family": self.FAMILY,
+                        "state": "scored",
+                        "protocol_commit": protocol_commit,
+                        "outcomes": [{"fact_id": "F:blind"}]},
+                       indent=2, sort_keys=True))
+
+    def write_amendments(self, items: list[dict]) -> None:
+        (self.data_root
+         / "artifacts/autogenesis/partition-edge-amendments-v1.json").write_text(
+            json.dumps({"kind": "axeyum-partition-edge-amendments",
+                        "amendments": items}, indent=2, sort_keys=True))
+
+    def residue(self, frm: str, to: str, **overrides: object) -> dict:
+        item = {"class": "scored-evaluation-residue",
+                "evaluation_record": self.RECORD_ID,
+                "from": frm, "to": to,
+                "reason": "the residue of a scored evaluation",
+                "date": "2026-09-02"}
+        item.update(overrides)
+        return item
+
+    def build_after(self, amendments: list[dict]) -> dict:
+        self.write_amendments(amendments)
+        return MODULE.build_report(self.nursery, self.facts, self.result)
+
+    # -- the two commit orders ---------------------------------------------
+
+    def preregister_then_edge(self) -> None:
+        """Population, then the protocol commit, THEN the crossing edge."""
+        self.write_record()
+        self.write_amendments([])
+        self.sync()
+        head = self.commit("the drawn population, no edges")
+        self.write_record(protocol_commit=head)
+        self.commit("preregister the scoring protocol")
+        self.facts["F:blind"] = fact("F:blind", ["F:dev"])
+        self.sync()
+        self.commit("close the evaluation")
+
+    def edge_then_preregister(self) -> None:
+        """The crossing edge FIRST, the preregistration after it."""
+        self.facts["F:blind"] = fact("F:blind", ["F:dev"])
+        self.write_record()
+        self.write_amendments([])
+        self.sync()
+        self.commit("the population WITH the edge already in it")
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+        self.write_record(protocol_commit=head)
+        self.commit("preregister the scoring protocol, too late")
+
+    # -- the pair the contraction is measured by ---------------------------
+
+    def test_the_crossing_is_a_leak_without_the_amendment(self) -> None:
+        """THE NEGATIVE HALF. Without it the accept case below is satisfied by
+        a population in which nothing ever crossed."""
+        self.preregister_then_edge()
+        with self.assertRaisesRegex(
+            MODULE.NurseryError, "crosses evaluation partitions"
+        ):
+            self.build_after([])
+
+    def test_the_scored_residue_is_contracted_out_of_the_component_graph(
+        self,
+    ) -> None:
+        """THE ACCEPT HALF. Identical population, one reviewed amendment whose
+        four clauses all re-derive."""
+        self.preregister_then_edge()
+        report = self.build_after(
+            [self.residue(self.digest_of("F:blind"), "F:dev")])
+        self.assertEqual(report["controls"]["component_split_leaks"], [])
+
+    # -- the three seals -----------------------------------------------------
+
+    def test_a_blind_row_citing_a_drawn_row_with_no_record_still_fails(
+        self,
+    ) -> None:
+        """SEAL 1. There is no evaluation, so there is no residue.
+
+        The amendment names a record id `holdout-evaluation-v1.json` does not
+        contain -- the shape a lane would write to clear this gate without
+        having scored anything. It is refused, and the refusal STOPS the
+        report rather than silently restoring the edge.
+        """
+        self.preregister_then_edge()
+        with self.assertRaisesRegex(MODULE.NurseryError, self.STILL_RED):
+            self.build_after([self.residue(self.digest_of("F:blind"), "F:dev",
+                                           evaluation_record="no-such-record")])
+
+    def test_an_edge_into_the_scored_blind_row_still_fails(self) -> None:
+        """SEAL 2. Every other clause holds; only the direction is wrong.
+
+        A drawn row whose proof cites the blind row spends blindness, and no
+        evaluation record licenses that retroactively -- the record says what
+        was scored, not what may be read.
+        """
+        self.write_record()
+        self.write_amendments([])
+        self.sync()
+        head = self.commit("the drawn population, no edges")
+        self.write_record(protocol_commit=head)
+        self.commit("preregister the scoring protocol")
+        self.facts["F:dev"] = fact("F:dev", ["F:blind"])
+        self.sync()
+        self.commit("a drawn row's proof cites the blind row")
+        with self.assertRaisesRegex(MODULE.NurseryError, self.STILL_RED):
+            self.build_after([self.residue("F:dev", self.digest_of("F:blind"))])
+
+    def test_an_edge_predating_the_preregistration_still_fails(self) -> None:
+        """SEAL 3. ADR-1565's argument, inverted.
+
+        Same population, same record, same direction; the edge was simply in
+        the tree before the protocol was committed, so it was not created by
+        the evaluation and the row was not blind when it was scored.
+        """
+        self.edge_then_preregister()
+        with self.assertRaisesRegex(MODULE.NurseryError, self.STILL_RED):
+            self.build_after(
+                [self.residue(self.digest_of("F:blind"), "F:dev")])
 
 
 if __name__ == "__main__":

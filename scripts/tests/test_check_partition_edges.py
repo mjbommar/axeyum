@@ -28,6 +28,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -746,6 +747,329 @@ class PartitionEdgeControls(unittest.TestCase):
         done = self.gate(blame=True)
         self.assertEqual(done.returncode, 1, _ctx(done))
         self.assertIn("introduced by unknown", done.stdout)
+
+
+class ScoredEvaluationResidueTests(unittest.TestCase):
+    """Controls for the `scored-evaluation-residue` amendment class (ADR-1566).
+
+    THE CLASS EXISTS BECAUSE ONE THING IS TRUE AND THREE NEARBY THINGS ARE NOT.
+    A blind row that was SCORED against a preregistered protocol legitimately
+    ends up citing the training set -- that is what scoring against a training
+    set means, and ADR-1565 measured that every one of the six live crossings
+    entered at the commit that closed the evaluation, three days after the seal
+    and 55 minutes after the protocol. What is NOT true, and what these tests
+    drive one at a time, is that any of the following is the same thing:
+
+      * an edge INTO a blind row (blindness spent, not spent-and-recorded);
+      * an edge from a blind row the record does not score (a sibling of a
+        spent family is still a row nobody evaluated);
+      * an edge whose introducing commit PREDATES the preregistration (not
+        created by the evaluation; that is ADR-1450's reclassification case);
+      * an amendment keyed to anything but the evaluation record.
+
+    THE FIXTURE IS A REAL GIT REPOSITORY, because clause (b) is a question
+    about the commit graph and there is no honest way to fake the answer. Three
+    commits: the population, then the record carrying `protocol_commit`, then
+    the edge. `predating_fixture` inverts the last two, which is the only
+    difference between the accept case and the third refusal.
+
+    EVERY EDGE HERE IS `held-out <-> development`, never `held-out <-> train`.
+    Both are crossings, but the second is one ONLY through
+    `PartitionRoles.is_crossing`'s blind clause -- so M17/M18, whose subject is
+    that clause, would kill all six of these tests and stop being single-kill
+    mutants for the test whose subject they are. A `held-out`/`development`
+    pair crosses through the two-evaluation-partitions arm instead, which no
+    mutant in this suite touches.
+
+    Registered with `scripts/tests/mutation_controls.py` under
+    ``partition-edges`` (M24-M27).
+    """
+
+    SALT = "0123456789abcdef" * 4
+    RECORD_ID = "test-evaluation-1"
+    FAMILY = "fixture-family"
+
+    def setUp(self) -> None:
+        scratch = pathlib.Path("/data0/axeyum/scratch")
+        self._tmp = tempfile.TemporaryDirectory(
+            dir=scratch if scratch.is_dir() else None)
+        self.addCleanup(self._tmp.cleanup)
+        self.root = pathlib.Path(self._tmp.name) / "tree"
+        (self.root / "artifacts/autogenesis").mkdir(parents=True)
+        (self.root / "artifacts/facts").mkdir(parents=True)
+        self.git("init", "-q", "-b", "main")
+        self.git("config", "user.email", "fixture@example.invalid")
+        self.git("config", "user.name", "fixture")
+
+    # -- fixture construction ----------------------------------------------
+
+    def git(self, *args: str) -> subprocess.CompletedProcess:
+        done = subprocess.run(["git", *args], cwd=self.root,
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        return done
+
+    def commit(self, message: str) -> str:
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", message)
+        return self.git("rev-parse", "HEAD").stdout.strip()
+
+    def write(self, rel: str, document: object) -> None:
+        path = self.root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+
+    def fact(self, fact_id: str, depends_on: list[str] | None = None) -> None:
+        self.write(f"artifacts/facts/{fact_id.replace(':', '-')}.json",
+                   {"id": fact_id, "depends_on": depends_on or []})
+
+    def digest(self, fact_id: str) -> str:
+        return hashlib.sha256(f"{self.SALT}:{fact_id}".encode()).hexdigest()
+
+    def population(self, rows: list[tuple[str, str, str | None]]) -> None:
+        """`rows` is `(fact_id, partition, family)`, plus a salted baseline."""
+        self.write("artifacts/autogenesis/nursery-v1.json", {
+            "kind": "axeyum-autogenesis-nursery",
+            "policy": AMENDED_POLICY,
+            "entries": [{"fact_id": fact_id, "partition": partition,
+                         **({} if family is None else {"family": family})}
+                        for fact_id, partition, family in rows],
+        })
+        self.write(BASELINE, {"kind": "axeyum-partition-edge-baseline",
+                              "schema_version": 1, "held_out_salt": self.SALT,
+                              "edges": []})
+
+    def record(self, scored: list[str], protocol_commit: str | None = None,
+               state: str = "scored") -> None:
+        self.write("artifacts/autogenesis/holdout-evaluation-v1.json", {
+            "kind": "axeyum-holdout-evaluation-record",
+            "record_id": self.RECORD_ID,
+            "family": self.FAMILY,
+            "state": state,
+            "protocol_commit": protocol_commit or "",
+            "outcomes": [{"fact_id": fact_id} for fact_id in scored],
+        })
+
+    def amendments(self, items: list[dict]) -> None:
+        self.write(AMENDMENTS, {"kind": "axeyum-partition-edge-amendments",
+                                "amendments": items})
+
+    def residue(self, frm: str, to: str, **overrides: object) -> dict:
+        item = {"class": "scored-evaluation-residue",
+                "evaluation_record": self.RECORD_ID,
+                "from": frm, "to": to,
+                "reason": "the residue of a scored evaluation",
+                "date": "2026-09-02"}
+        item.update(overrides)
+        return item
+
+    def gate(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(SCRIPT), "--root", str(self.root), *args,
+             "--no-blame"], capture_output=True, text=True, timeout=120)
+
+    # -- the two fixture shapes --------------------------------------------
+
+    def scored_fixture(self, extra_blind: bool = False) -> None:
+        """The honest one: population, then protocol, THEN the edge.
+
+        `extra_blind` adds a second blind row of the same family that the
+        record does NOT score -- the sibling that clause (a) is about.
+        """
+        rows = [("F:blind", "held-out", self.FAMILY),
+                ("F:dev", "development", "other-family")]
+        if extra_blind:
+            rows.append(("F:sibling", "held-out", self.FAMILY))
+        self.population(rows)
+        self.fact("F:blind")
+        self.fact("F:dev")
+        if extra_blind:
+            self.fact("F:sibling")
+        self.record(["F:blind"])
+        self.commit("the drawn population, no edges")
+        protocol = self.commit_protocol()
+        # THE EDGE, strictly after the preregistration.
+        self.fact("F:blind", ["F:dev"])
+        if extra_blind:
+            self.fact("F:sibling", ["F:dev"])
+        self.commit("close the evaluation")
+        self.assertTrue(protocol)
+
+    def commit_protocol(self) -> str:
+        """Stamp the record with the HEAD it was preregistered against."""
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+        self.record(["F:blind"], protocol_commit=head)
+        self.commit("preregister the scoring protocol")
+        return head
+
+    def predating_fixture(self) -> None:
+        """The edge FIRST, the preregistration after it.
+
+        The only difference from `scored_fixture`, and the whole of ADR-1565's
+        argument: an edge older than the protocol was not created by the
+        evaluation.
+        """
+        self.population([("F:blind", "held-out", self.FAMILY),
+                         ("F:dev", "development", "other-family")])
+        self.fact("F:blind", ["F:dev"])
+        self.fact("F:dev")
+        self.record(["F:blind"])
+        self.commit("the population WITH the edge already in it")
+        self.commit_protocol()
+
+    # -- the positive control ----------------------------------------------
+
+    def test_a_scored_evaluations_residue_edge_is_honoured(self) -> None:
+        """THE ACCEPT CASE. Without it every refusal below is satisfied by a
+        class that never honours anything, which is not a class."""
+        self.scored_fixture()
+        self.amendments([self.residue("F:blind", "F:dev")])
+        done = self.gate()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("|amended=1|", done.stdout)
+        self.assertIn("|violations=0|", done.stdout)
+
+    def test_the_same_edge_is_a_violation_with_no_amendment(self) -> None:
+        """THE NEGATIVE HALF of the accept case. Without it the test above is
+        satisfied by a fixture in which nothing ever crossed."""
+        self.scored_fixture()
+        self.amendments([])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("F:blind [held-out] depends_on F:dev [development]",
+                      done.stdout)
+
+    # -- clause (d): keyed to the record, never to a fact ------------------
+
+    def test_an_amendment_naming_no_evaluation_record_is_refused(self) -> None:
+        """M24. The key is what makes this a class rather than a judgement: a
+        record is a committed artifact with a preregistration commit in it, and
+        `evaluation_record` is the only field this class reads for identity."""
+        self.scored_fixture()
+        self.amendments([self.residue(self.digest("F:blind"), "F:dev",
+                                      evaluation_record=None)])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("must name `evaluation_record`", done.stdout)
+        self.assertIn("|violations=1|", done.stdout)
+
+    # -- clause (a): the blind endpoint is a SCORED row --------------------
+
+    def test_an_unscored_sibling_of_the_scored_family_is_still_a_leak(self) -> None:
+        """M25. `families_spent` is real, but spent is not scored: a sibling
+        the record does not list is a row nobody evaluated, and an edge from it
+        is the ordinary breach wearing the scored family's name."""
+        self.scored_fixture(extra_blind=True)
+        self.amendments([self.residue("F:blind", "F:dev"),
+                         self.residue("F:sibling", "F:dev")])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("is not a scored row of family", done.stdout)
+        self.assertIn("F:sibling [held-out] depends_on F:dev [development]",
+                      done.stdout)
+        self.assertNotIn("F:blind [held-out] depends_on", done.stdout)
+
+    # -- clause (c): the direction is half the rule ------------------------
+
+    def test_an_edge_into_a_scored_blind_row_can_never_carry_the_class(self) -> None:
+        """M26. THE MUTANT WORTH READING TWICE.
+
+        Every other clause of this amendment HOLDS: the blind endpoint is the
+        scored row of the scored family, the record is scored, and the edge
+        postdates the preregistration. Only the direction is wrong -- a drawn
+        row's proof cites the blind row rather than the other way round -- and
+        that is blindness being spent, which no evaluation record retroactively
+        licenses. If clause (c) were written against the edge's SOURCE family
+        instead of its blind ENDPOINT, clause (a) would refuse this too and
+        M26 would kill nothing.
+        """
+        self.population([("F:blind", "held-out", self.FAMILY),
+                         ("F:dev", "development", "other-family")])
+        self.fact("F:blind")
+        self.fact("F:dev")
+        self.record(["F:blind"])
+        self.commit("the drawn population, no edges")
+        self.commit_protocol()
+        self.fact("F:dev", ["F:blind"])
+        self.commit("a drawn row's proof cites the blind row")
+        self.amendments([self.residue("F:dev", self.digest("F:blind"))])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("does not run FROM a blind row", done.stdout)
+        self.assertIn("F:dev [development] depends_on F:blind [held-out]",
+                      done.stdout)
+
+    # -- clause (b): the preregistration predates the edge -----------------
+
+    def test_an_edge_older_than_the_preregistration_is_refused(self) -> None:
+        """M27. ADR-1565's argument, mechanised and inverted.
+
+        Same population, same record, same family, same direction; the only
+        difference from the accept case is that the edge was in the tree
+        BEFORE the protocol commit. Then the row was not blind when it was
+        scored, the residue story is false, and the instrument is ADR-1450's
+        reclassification rather than this class.
+        """
+        self.predating_fixture()
+        self.amendments([self.residue(self.digest("F:blind"), "F:dev")])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("strict git ancestor", done.stdout)
+        self.assertIn("|violations=1|", done.stdout)
+
+    def test_an_unscored_record_licenses_nothing(self) -> None:
+        """A preregistration is not a result. Same fixture, `state` flipped."""
+        self.scored_fixture()
+        head = self.git("rev-parse", "HEAD~1").stdout.strip()
+        self.record(["F:blind"], protocol_commit=head, state="preregistered")
+        self.commit("downgrade the record to a preregistration")
+        self.amendments([self.residue(self.digest("F:blind"), "F:dev")])
+        done = self.gate()
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("state is 'preregistered', not `scored`", done.stdout)
+
+    # -- the redaction the class depends on --------------------------------
+
+    def test_the_preregistration_clause_is_reported_when_it_cannot_be_asked(
+        self,
+    ) -> None:
+        """A tree with no version control cannot answer clause (b), and the
+        gate must SAY so rather than pass in silence.
+
+        Three real trees here have no history: `mutation_controls.py` copies
+        the checkout with `.git` in its `ignore_patterns`, a lane snapshot from
+        `git archive | tar -x` has none, and a fixture tree is built from
+        scratch. Refusing every amendment in those would make this gate red on
+        a fact about WHERE it ran; honouring silently would tell a reader a
+        clause held that was never asked. So the amendment is honoured and the
+        skipped clause is printed and counted.
+        """
+        self.scored_fixture()
+        shutil.rmtree(self.root / ".git")
+        self.amendments([self.residue("F:blind", "F:dev")])
+        done = self.gate()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("CLASS-UNVERIFIED", done.stdout)
+        self.assertIn("preregistration clause", done.stdout)
+        self.assertIn("|class_unverified=1|", done.stdout)
+
+    def test_the_amendment_names_no_blind_row_and_still_matches(self) -> None:
+        """The property that made the six edges amendable at all (ADR-1563
+        recorded them as structurally un-amendable for exactly this reason).
+
+        The artifact carries a salted digest; the gate resolves it through the
+        live manifests and honours the edge. A `grep` of the amendment file for
+        the blind row's id finds nothing, and that is asserted here rather than
+        described, because it is the whole justification for the format.
+        """
+        self.scored_fixture()
+        self.amendments([self.residue(self.digest("F:blind"), "F:dev")])
+        written = (self.root / AMENDMENTS).read_text()
+        self.assertNotIn("F:blind", written)
+        self.assertIn(self.digest("F:blind"), written)
+        done = self.gate()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("|amended=1|", done.stdout)
 
 
 if __name__ == "__main__":

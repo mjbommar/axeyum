@@ -4823,9 +4823,11 @@ SUITES["partition-edges"] = (
         ),
         (
             "M4 an edge already in the baseline is not a new violation",
-            "    violations = [e for e in edges if edge_key(e) not in honoured\n"
+            "    violations = [e for e in edges\n"
+            "                  if not edge_is_amended(e, honoured, amendment_salt)\n"
             "                  and redacted_key(e, baseline_salt) not in baseline]",
-            "    violations = [e for e in edges if edge_key(e) not in honoured\n"
+            "    violations = [e for e in edges\n"
+            "                  if not edge_is_amended(e, honoured, amendment_salt)\n"
             "                  and True]",
         ),
         (
@@ -4873,7 +4875,8 @@ SUITES["partition-edges"] = (
         ),
         (
             "M14 --record-baseline excludes the honoured amendments",
-            "        return record(root, [e for e in edges if edge_key(e) not in amendments],\n"
+            "        return record(root, [e for e in edges\n"
+            "                             if not edge_is_amended(e, amendments, amendment_salt)],\n"
             "                      manifests, partition_of, dependencies, previous)",
             "        return record(root, edges,\n"
             "                      manifests, partition_of, dependencies, previous)",
@@ -4925,6 +4928,16 @@ SUITES["partition-edges"] = (
             "    if len(set(roles)) != 1:",
             "    if False:",
         ),
+        # M11 KILLS TWO TESTS, AND THE SECOND ONE IS NOT AN ACCIDENT.
+        # `redacted_key` is ONE rule with two readers: it decides what the
+        # baseline records, and (ADR-1566) which representation an amendment
+        # may name a blind endpoint in. Neutralising it therefore breaks both,
+        # and the pair of kills is the coupling being visible rather than a
+        # mutant with a vague subject. Retargeting M11 at `redacted_row` to
+        # force a single kill was tried and is WORSE: it desynchronises the
+        # written rows from the keys `record` and `render_baseline` compute,
+        # so it kills three tests, two of them for a self-inconsistency the
+        # shipped code cannot have. M29 below is the amendment half on its own.
         (
             "M11 a held-out endpoint is redacted before it is written to the "
             "baseline",
@@ -4934,6 +4947,64 @@ SUITES["partition-edges"] = (
             '          if salt and edge["to_partition"] == "held-out" else edge["to"])',
             '    frm = edge["from"]\n'
             '    to = edge["to"]',
+        ),
+        (
+            "M29 an amendment may name a blind endpoint in the REDACTED form",
+            "    return (edge_key(edge) in amendments\n"
+            "            or redacted_key(edge, salt) in amendments)",
+            "    return edge_key(edge) in amendments",
+        ),
+        # ADR-1566. The `scored-evaluation-residue` class, one mutant per
+        # clause. `ScoredEvaluationResidueTests` drives each from a REAL git
+        # repository, because clause (b) is a question about the commit graph
+        # and there is no honest way to fake the answer.
+        #
+        # M26 is the one worth reading twice. Its fixture satisfies every
+        # OTHER clause -- scored row, scored family, scored record, edge after
+        # the preregistration -- and differs only in which way the edge points.
+        # That is only possible because clause (a) is written against the
+        # edge's BLIND ENDPOINT rather than its source; written against the
+        # source it would refuse the reversed edge too, and M26 would kill
+        # nothing while looking exactly as present as it does now.
+        (
+            "M24 the class is keyed to the evaluation RECORD, never to a fact",
+            "        if not isinstance(record_id, str) or record_id not in records:",
+            "        if False:",
+        ),
+        (
+            "M25 the blind endpoint must be a SCORED row of the record's family",
+            "        if (context.families().get(blind_endpoint) != record.get(\"family\")\n"
+            "                or blind_endpoint not in scored_ids):",
+            "        if False:",
+        ),
+        (
+            "M26 an edge INTO a blind row can never carry the class",
+            "        if partition_of.get(source) not in blind or partition_of.get(target) in blind:",
+            "        if False:",
+        ),
+        (
+            "M27 the preregistration must PREDATE the edge that cites it",
+            "        elif (not isinstance(protocol_commit, str)\n"
+            "                or edge_commit is None\n"
+            "                or not context.strictly_precedes(protocol_commit, edge_commit)):",
+            "        elif False:",
+        ),
+        (
+            "M28 a record that is not `scored` licenses nothing",
+            "        if record.get(\"state\") != \"scored\":",
+            "        if False:",
+        ),
+        # M30's subject is the ONE tolerance the class has: in a tree with no
+        # version control the preregistration clause cannot be asked, so it is
+        # skipped AND REPORTED. Asserting availability instead turns every such
+        # tree -- the mutation harness's own copy, a lane snapshot, a fixture --
+        # into a blanket refusal that reads like a finding about the ledger.
+        (
+            "M30 a tree with no version control REPORTS the skipped clause",
+            "            done = self._git(\"rev-parse\", \"--is-inside-work-tree\")\n"
+            "            self._git_available = (done is not None and done.returncode == 0\n"
+            "                                   and done.stdout.strip() == \"true\")",
+            "            self._git_available = True",
         ),
     ],
 )
@@ -5999,17 +6070,17 @@ SUITES["nursery-split-exemption-guards"] = (
         # never gets asked whether it is doing the RIGHT contraction.
         (
             "N1 an amended edge is contracted out of the component graph",
-            "            if (fact_id, dependency) in amended:\n"
+            "            if amended(fact_id, dependency):\n"
             "                continue",
             "            if False:\n"
             "                continue",
         ),
         (
             "N2 the contraction is DIRECTED, so the leaking direction stays",
-            "            if (fact_id, dependency) in amended:\n"
+            "            if amended(fact_id, dependency):\n"
             "                continue",
-            "            if ((fact_id, dependency) in amended\n"
-            "                    or (dependency, fact_id) in amended):\n"
+            "            if (amended(fact_id, dependency)\n"
+            "                    or amended(dependency, fact_id)):\n"
             "                continue",
         ),
         (

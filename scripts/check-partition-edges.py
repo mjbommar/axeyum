@@ -559,6 +559,12 @@ class ClassContext:
         self._blind: set[str] | None = None
         self._digests: dict[str, str] | None = None
         self._paths: dict[str, str] | None = None
+        self._git_available: bool | None = None
+        # Clauses that could NOT be re-derived because the evidence for them
+        # was unavailable. NOT complaints: a complaint means the clause was
+        # checked and failed. These say the check did not happen, which a
+        # reader must be told rather than left to infer from a PASS.
+        self.unverified: list[str] = []
 
     # -- the live manifests ------------------------------------------------
 
@@ -688,6 +694,32 @@ class ClassContext:
         except (OSError, subprocess.SubprocessError):
             return None
 
+    def git_available(self) -> bool:
+        """Is this root a git work tree at all?
+
+        THE ONE TOLERANCE THIS CLASS HAS, and it is narrow on purpose. Clause
+        (b) is a question about the commit graph, and three real trees here do
+        not have one: `scripts/tests/mutation_controls.py` copies the checkout
+        with `.git` excluded (measured -- it is in `ignore_patterns`), a lane
+        snapshot from `git archive | tar -x` has no history either, and the
+        control suites build fixture trees from scratch.
+
+        Refusing every amendment in those trees would make this gate red
+        wherever it is not the checkout, which is a verdict about where the
+        gate ran rather than about the ledger -- the failure mode `exit 2`
+        exists to avoid. Honouring them SILENTLY would be worse: the reader
+        would be told the clause held when it was never asked.
+
+        So: when there is no work tree, the clause is skipped and RECORDED in
+        `unverified`, which both gates print as a `CLASS-UNVERIFIED` line. The
+        authoritative run is the one in a checkout, and it says so.
+        """
+        if self._git_available is None:
+            done = self._git("rev-parse", "--is-inside-work-tree")
+            self._git_available = (done is not None and done.returncode == 0
+                                   and done.stdout.strip() == "true")
+        return self._git_available
+
     def introducing_sha(self, path: str, needle: str) -> str | None:
         """The FIRST commit that put `needle` into `path`, or `None`.
 
@@ -801,6 +833,13 @@ def class_complaint(item: dict[str, Any], index: int,
                     f"class context was built, so none of its four clauses "
                     f"could be re-derived -- NOT honoured")
         # (d) KEYED TO THE EVALUATION RECORD, NEVER TO A FACT.
+        #
+        # `records.get(record_id, {})` rather than `records[record_id]` on
+        # purpose: with this clause deleted (the mutant), an unkeyed amendment
+        # must fall through to the NEXT clause and be refused there, not crash
+        # the gate on a KeyError. A guard whose mutant produces a traceback
+        # cannot be told apart from a guard whose mutant produces a wrong
+        # verdict, and only the second is what mutation is measuring.
         record_id = item.get("evaluation_record")
         records = context.records()
         if not isinstance(record_id, str) or record_id not in records:
@@ -809,7 +848,7 @@ def class_complaint(item: dict[str, Any], index: int,
                     f"{EVALUATION_RECORDS_PATH}; {record_id!r} is not one of "
                     f"{sorted(records)} -- the class is keyed to the "
                     f"evaluation, never to a fact, so this one is NOT honoured")
-        record = records[record_id]
+        record = records.get(record_id, {}) if isinstance(record_id, str) else {}
         source = context.resolve(item["from"])
         target = context.resolve(item["to"])
         if source is None or target is None:
@@ -827,11 +866,19 @@ def class_complaint(item: dict[str, Any], index: int,
                     f"spends blindness and is the breach this class is not "
                     f"about -- NOT honoured")
         # (a) THE FAMILY IS SCORED, AND THIS ROW IS ONE OF THE SCORED ONES.
+        #
+        # The clause is about the BLIND ENDPOINT, whichever end that is -- not
+        # about `source`. Written against `source` it would ALSO fire on a
+        # reversed (into-the-blind-row) edge, and clause (c) could then never
+        # be the only thing refusing one: its mutant would kill nothing, which
+        # is a guard that reads as present and measures nothing.
+        blind_endpoint = (source if partition_of.get(source) in blind
+                          else target)
         scored_ids = {outcome.get("fact_id")
                       for outcome in record.get("outcomes") or []
                       if isinstance(outcome, dict)}
-        if (context.families().get(source) != record.get("family")
-                or source not in scored_ids):
+        if (context.families().get(blind_endpoint) != record.get("family")
+                or blind_endpoint not in scored_ids):
             return (f"{where}: claims class scored-evaluation-residue against "
                     f"record {record_id!r}, but its blind endpoint is not a "
                     f"scored row of family {record.get('family')!r} in that "
@@ -839,27 +886,50 @@ def class_complaint(item: dict[str, Any], index: int,
                     f"still a row nobody evaluated, so this one is NOT "
                     f"honoured")
         # (b) THE PREREGISTRATION PREDATES THE EDGE.
+        #
+        # The pickaxe searches for the RESOLVED target id, never `item["to"]`:
+        # an endpoint may be written here as a salted digest, and a digest
+        # appears in no fact file, so searching the written form would report
+        # `no commit adds this string` for every redacted amendment and turn
+        # this clause into a blanket refusal that looks like a finding.
+        # TWO guards, not one conjunction, because they refuse different
+        # things and a mutant that deletes both at once would kill two tests
+        # and say which of the two properties is load-bearing for neither.
+        if record.get("state") != "scored":
+            return (f"{where}: claims class scored-evaluation-residue against "
+                    f"record {record_id!r}, but that record's state is "
+                    f"{record.get('state')!r}, not `scored` -- a "
+                    f"preregistration is not a result, so this one is NOT "
+                    f"honoured")
         protocol_commit = record.get("protocol_commit")
         path = context.fact_path(source)
         edge_commit = (None if path is None
-                       else context.introducing_sha(path, item["to"]))
-        if (record.get("state") != "scored"
-                or not isinstance(protocol_commit, str)
+                       else context.introducing_sha(path, target))
+        if not context.git_available():
+            context.unverified.append(
+                f"{where}: the preregistration clause of "
+                f"scored-evaluation-residue was NOT re-derived -- "
+                f"{context.root} is not a git work tree, so whether "
+                f"{record_id!r}'s protocol_commit precedes the commit that "
+                f"introduced this edge could not be asked. The amendment is "
+                f"honoured here; the authoritative run is the one in a "
+                f"checkout")
+        elif (not isinstance(protocol_commit, str)
                 or edge_commit is None
                 or not context.strictly_precedes(protocol_commit, edge_commit)):
             return (f"{where}: claims class scored-evaluation-residue against "
-                    f"record {record_id!r}, but that record is not a `scored` "
-                    f"one whose protocol_commit is a strict git ancestor of "
-                    f"the commit introducing this edge (state="
-                    f"{record.get('state')!r}, protocol_commit="
-                    f"{protocol_commit!r}, introduced_by={edge_commit!r}) -- "
-                    f"an edge older than the protocol was not created by the "
-                    f"evaluation, so this one is NOT honoured")
+                    f"record {record_id!r}, but its protocol_commit is not a "
+                    f"strict git ancestor of the commit introducing this edge "
+                    f"(protocol_commit={protocol_commit!r}, "
+                    f"introduced_by={edge_commit!r}) -- an edge older than the "
+                    f"protocol was not created by the evaluation, so this one "
+                    f"is NOT honoured")
     return None
 
 
 def load_amendments(
     root: pathlib.Path, partition_of: dict[str, str],
+    unverified: list[str] | None = None,
 ) -> tuple[set[tuple[str, str]], list[str]]:
     """The per-edge amendments, and the complaints about anything that is not one.
 
@@ -900,6 +970,8 @@ def load_amendments(
             complaints.append(wrong_class)
             continue
         amendments.add((item["from"], item["to"]))
+    if unverified is not None:
+        unverified.extend(context.unverified)
     return amendments, complaints
 
 
@@ -1124,7 +1196,9 @@ def main(argv: list[str] | None = None) -> int:
         roles = load_policy(root)
         dependencies = load_dependencies(root)
         edges = crossing_edges(partition_of, dependencies, roles)
-        amendments, amendment_complaints = load_amendments(root, partition_of)
+        class_unverified: list[str] = []
+        amendments, amendment_complaints = load_amendments(root, partition_of,
+                                                           class_unverified)
         # The salt an amendment's BLIND endpoint is written with. Read from the
         # committed baseline on EVERY path, not only under `--baseline`: an
         # amendment is honoured (or not) identically whether the run is
@@ -1166,6 +1240,8 @@ def main(argv: list[str] | None = None) -> int:
         # refused would read the unshrunk count as the amendment not mattering.
         for line in amendment_complaints:
             print(f"AMENDMENT-REJECTED {line}")
+        for line in class_unverified:
+            print(f"CLASS-UNVERIFIED {line}")
         return record(root, [e for e in edges
                              if not edge_is_amended(e, amendments, amendment_salt)],
                       manifests, partition_of, dependencies, previous)
@@ -1201,6 +1277,8 @@ def main(argv: list[str] | None = None) -> int:
             print(line)
     for line in amendment_complaints:
         print(f"AMENDMENT-REJECTED {line}")
+    for line in class_unverified:
+        print(f"CLASS-UNVERIFIED {line}")
 
     if args.baseline:
         repaired = sorted(baseline - {redacted_key(e, baseline_salt)
@@ -1230,7 +1308,8 @@ def main(argv: list[str] | None = None) -> int:
                f"|baselined={len(baselined)}"
                f"|violations={len(violations)}"
                f"|not_amendments={len(not_amendments)}"
-               f"|component_exemptions_would_wave={would_be_waved}")
+               f"|component_exemptions_would_wave={would_be_waved}"
+               f"|class_unverified={len(class_unverified)}")
     if violations:
         print(summary + "|FAILED")
         print(f"  {len(violations)} `depends_on` edge(s) cross an evaluation "

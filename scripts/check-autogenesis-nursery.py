@@ -25,6 +25,18 @@ RESULT = ROOT / "artifacts/autogenesis/autogenesis-1-result.json"
 # that also substituted the implementation would be measuring a copy.
 PARTITION_EDGE_ROOT = ROOT
 
+# Amendment CLAUSES that could not be re-derived because the evidence was
+# unavailable -- today only `scored-evaluation-residue`'s preregistration
+# clause, in a tree with no version control (ADR-1566). Collected across BOTH
+# report paths and printed by `main` as `CLASS-UNVERIFIED` lines.
+#
+# A set, and printed rather than raised: the amendment IS honoured in such a
+# tree, so a reader who saw only the PASS would be told a clause held that was
+# never asked. It is not in the report dict on purpose -- the report's digest
+# is a property of the population, and a fact about where the gate ran does not
+# belong in it.
+CLASS_UNVERIFIED: set[str] = set()
+
 PARTITIONS = {"longitudinal", "train", "development", "held-out"}
 
 # WHICH PARTITIONS ARE EVALUATED IS READ FROM THE POLICY, NOT FROM HERE.
@@ -354,8 +366,10 @@ def amended_edges() -> Callable[[str, str], bool]:
         raise NurseryError(
             f"the drawn population is unreadable, so no per-edge amendment "
             f"class can be re-derived: {error}") from error
+    unverified: list[str] = []
     amendments, complaints = module.load_amendments(PARTITION_EDGE_ROOT,
-                                                    partition_of)
+                                                    partition_of, unverified)
+    CLASS_UNVERIFIED.update(unverified)
     if complaints:
         raise NurseryError(
             "per-edge amendment(s) are not honoured, so this report would "
@@ -1021,6 +1035,8 @@ def main() -> int:
         )
         if args.require_ready and not report["ready"]:
             raise NurseryError("nursery is not evaluation-ready: " + ", ".join(report["blockers"]))
+        for line in sorted(CLASS_UNVERIFIED):
+            print(f"CLASS-UNVERIFIED {line}")
         if args.json:
             print(json.dumps(report, indent=2, sort_keys=True))
             print(json.dumps(cross_population_report, indent=2, sort_keys=True))
