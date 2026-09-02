@@ -97,9 +97,18 @@
 #      no-cargo route rather than a proxy. `--prebuilt` runs the already-built
 #      `target/release/examples/shape_search` directly -- no build, no
 #      `cargo-serialized.sh` flock -- and that is the REAL check, not a
-#      cross-consistency ratchet. It costs the index build only (measured
-#      below at the `AXEYUM_SKIP_SHAPE_DUPLICATES` note), which is why it is
-#      opt-OUT rather than opt-in.
+#      cross-consistency ratchet. 
+#
+#      MEASURED 2026-09-02 ON s4, AND IT IS THE EXPENSIVE STEP IN THIS GATE:
+#      60.9 s / 70.0 s unpinned (load 11.9 / 17.1), 41.7 s pinned to the
+#      P-cores. The cost is `shape_search`'s index build over ~1,850
+#      declarations, which the cargo route pays too (58.8 s warm) -- so
+#      `--prebuilt` does not save the RUN, it saves the BUILD (91.9 s cold)
+#      and makes the cost bounded and predictable. That is an order of
+#      magnitude over this gate's own ~2-7 s baseline, so it carries
+#      `AXEYUM_SKIP_SHAPE_DUPLICATES=1` as a documented escape, DEFAULTING ON,
+#      and the summary REPORTS the skip -- a run that did not ask must be
+#      distinguishable from one that asked and found nothing.
 #
 #      **EXIT 2 IS NOT UNIFORMLY SKIPPABLE HERE**, which is the one place this
 #      differs from point 8. The script exits 2 for a MALFORMED ALLOWLIST (a
@@ -301,9 +310,10 @@ fi
 # `cargo-serialized.sh` flock, no build. See header point 9.
 #
 # `AXEYUM_SKIP_SHAPE_DUPLICATES=1` opts out, DEFAULTING ON. It exists because
-# the index build is the one step in this gate whose cost is measured in tens
-# of seconds rather than tenths, so a coordinator merging a run of branches has
-# a documented escape that is not `--no-verify` on everything.
+# this is the one step here measured in TENS OF SECONDS rather than tenths
+# (2026-09-02, s4: 41.7 s pinned, 60.9-70.0 s unpinned under load) -- so a
+# coordinator merging a run of branches has a documented, REPORTED escape
+# rather than reaching for `--no-verify` on everything.
 shape_dupes_state="ok"
 if [ "${AXEYUM_SKIP_SHAPE_DUPLICATES:-0}" = "1" ]; then
   shape_dupes_state="skipped (AXEYUM_SKIP_SHAPE_DUPLICATES=1)"
