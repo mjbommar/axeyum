@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-injective-on-or-duplicate",
+  "title": "A self-map of a finite initial segment is either injective there or has an explicit duplicate pair, constructively",
+  "statement": "For every g : Nat -> Nat and every n, either g is injective on [0,n) (Nat.injectiveOn g n) or there exist a < b < n with g a = g b. Constructive: no excluded middle and no classical choice. Built from two nested instances of Nat.lnp_bounded_search, the bounded least-element search for a pointwise-decided predicate. The inner search, at a fixed index i, looks for a j strictly below i with g j = g i, decided pointwise by Nat.beq; searching strictly below i is what makes the produced pair automatically distinct, so the conclusion states Lt a b rather than a negated equality. The outer search runs that decision over [0,n): its no-witness branch yields injectivity through Nat.trichotomy, each strict side building a collision at the larger of the two indices; its witness branch is the duplicate pair.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.injective_on_or_duplicate : ((x0 : ((x0 : AxNat) -> AxNat)) -> ((x1 : AxNat) -> Or (AxNat.injectiveOn x0 x1) (Exists.{1} AxNat (fun (x2 : AxNat) => Exists.{1} AxNat (fun (x3 : AxNat) => And (AxNat.lt x2 x1) (And (AxNat.lt x3 x1) (And (AxNat.lt x2 x3) (Eq.{1} AxNat (x0 x2) (x0 x3)))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "Nat.injective_on_or_duplicate"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:nat-lnp-decidable",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:nat-le-total",
+    "F:nat-le-trans",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-ne-of-beq-eq-false"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.injective_on_or_duplicate",
+      "kind": "kernel-term",
+      "supports": "`Nat.injective_on_or_duplicate` is in the environment as a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint`. The `formal.statement` above is `Kernel::render_lean` of the admitted type, printed by `nat_theorem_inventory` (the `3` in the row is the free-variable count; the footprint is checked by the second row).",
+      "check_status": "checked",
+      "checker_command": "scripts/cargo-serialized.sh run --release -p axeyum-lean-kernel --example nat_theorem_inventory -- injective_on_or_duplicate 2>/dev/null | /usr/bin/grep -cE 'Nat\\.injective_on_or_duplicate[[:space:]]3[[:space:]]'",
+      "notes": "Run 2026-09-02: one row, count 1. `nat_theorem_inventory` consumes only its LAST name argument, so this command passes exactly one name; a filter matching nothing prints no row and `grep -c` then exits 1."
+    },
+    {
+      "id": "suite-Nat.injective_on_or_duplicate",
+      "kind": "kernel-term",
+      "supports": "`nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` derives its population from `kernel.environment()` rather than from a literal list, so it fails both if this declaration rests on an axiom and if it were dropped from the checked list while remaining in the environment.",
+      "check_status": "checked",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel --lib nat_prelude::nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free -- --exact 2>&1 | /usr/bin/grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "Run 2026-09-02: `test result: ok. 1 passed; 0 failed`."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/injective_decide.rs)",
+    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/status/det-mul-general-n.md."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It is not excluded middle and does not imply it: the disjunction is decided by a bounded search over `[0,n)` with `Nat.beq` at each step, which is exactly the hypothesis `Nat.lnp_bounded_search` requires and exactly what `Nat.lnp_unrestricted_implies_em` shows cannot be dropped in general. It says nothing about an unbounded `g` being injective on all of `Nat`, and it produces no LEAST duplicate pair -- the leastness clause the inner search returns is deliberately discarded, because the injectivity branch has to build a collision witness from an arbitrary pair."
+}

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-det-row-selection-injective",
+  "title": "The selection lemma's injective half over the constructed rationals",
+  "statement": "For every natural m, every matrix B : Nat -> Nat -> Rat and every index map g : Nat -> Nat that is injective on [0, m+1) and sends it into itself, det (fun r c => B (g r) c) (m+1) = det (fun r c => matId (g r) c) (m+1) * det B (m+1). Proved by a cursor induction on how many trailing positions of [0, m+1) the map g already fixes, with the dimension and B outside the induction and g inside it. The base case makes g the identity on [0, m+1) and nothing outside it, which is why it needs the ROW-BOUNDED determinant congruence Rat.det_congr_lt rather than the unrestricted Rat.det_congr. The step splits on whether the cursor is below the dimension; below it, the finite pigeonhole principle Nat.injective_on_imp_surjective_on produces a preimage w of the cursor, and when w is strictly below the cursor the map is composed with Nat.transposition w cursor, whose effect on the determinant is one sign by Rat.det_row_swap, cancelled by Rat.neg_mul and two applications of Rat.neg_neg.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.det_row_selection_injective : ((x0 : AxNat) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : ((x2 : AxNat) -> AxNat)) -> ((x3 : AxNat.injectiveOn x2 (AxNat.succ x0)) -> ((x4 : AxNat.mapsInto x2 (AxNat.succ x0)) -> Eq.{1} Rat (Rat.det (fun (x5 : AxNat) => fun (x6 : AxNat) => x1 (x2 x5) x6) (AxNat.succ x0)) (Rat.mul (Rat.det (fun (x5 : AxNat) => fun (x6 : AxNat) => Rat.matId (x2 x5) x6) (AxNat.succ x0)) (Rat.det x1 (AxNat.succ x0))))))))",
+    "fragment": "Rat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Rat.det_row_selection_injective"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:rat-det-alternating",
+    "F:nat-transposition-injective",
+    "F:nat-transposition-maps-into",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:nat-beq-eq-false-of-ne",
+    "F:nat-injective-on-comp",
+    "F:nat-injective-on-imp-surjective-on",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-lt-or-ge",
+    "F:nat-ne-of-beq-eq-false",
+    "F:nat-zero-le",
+    "F:rat-det-mat-id-general-n",
+    "F:rat-mul-comm",
+    "F:rat-mul-one",
+    "F:rat-neg-mul",
+    "F:rat-neg-neg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Rat.det_row_selection_injective",
+      "kind": "kernel-term",
+      "supports": "`Rat.det_row_selection_injective` is in the environment as a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint`, and the row printed carries both. The `formal.statement` above is the row's `canonical_type`, i.e. `Kernel::render_lean` of the admitted type.",
+      "check_status": "checked",
+      "checker_command": "scripts/cargo-serialized.sh run --release -q -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Rat.det_row_selection_injective --require-kind theorem",
+      "notes": "Run 2026-09-02: prints `found\\trat\\ttheorem\\tRat.det_row_selection_injective\\t0` and exits 0. `--require-declaration` exits 1 when no prelude declares that exact display name."
+    },
+    {
+      "id": "suite-Rat.det_row_selection_injective",
+      "kind": "kernel-term",
+      "supports": "`rat_prelude_tests::the_determinant_toolkit_is_axiom_free` names `det_row_selection_injective` in its targeted list and checks kind and footprint from `kernel.environment()` -- a second, independent route to the same two properties.",
+      "check_status": "checked",
+      "checker_command": "test \"$(scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel --lib rat_prelude::rat_prelude_tests::the_determinant_toolkit_is_axiom_free -- --exact 2>&1 | /usr/bin/grep -Ec 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "Run 2026-09-02: `test result: ok. 1 passed; 0 failed`."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/matrix_det_mul.rs)",
+    "source": "Lane det-mul-general-n, closing ADR-1440's obligation 2 (the selection lemma) on the way to determinant multiplicativity at symbolic n. Status note: docs/plan/status/det-mul-general-n.md."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It carries `InjectiveOn` as a hypothesis, so it is a strictly weaker statement than `F:rat-det-row-selection`, which does not. It is kept as its own fact because it is a different proposition with a different proof: the injective case is the cursor induction, and the non-injective case is a separate, much cheaper argument through `Rat.det_alternating` (`Rat.det_row_selection_of_duplicate`). Both hypotheses are load-bearing on the STATEMENT: dropping `MapsInto` makes it false (ADR-1470's `n = 1`, `g 0 = 5` counterexample), and dropping `InjectiveOn` makes the cursor induction's pigeonhole step unavailable."
+}
