@@ -250,6 +250,7 @@ mod permutation;
 mod pow_add_prime;
 mod powsq;
 mod prime_char;
+mod prime_counting;
 mod prime_dvd_factorial_lcm;
 mod prime_dvd_mirrors;
 mod primes;
@@ -448,6 +449,7 @@ use prime_char::{
     declare_prime_mul_eq_prime_sq_iff, declare_prime_not_coprime_iff_dvd,
     declare_prime_not_prime_pow_all,
 };
+use prime_counting::declare_prime_counting;
 use prime_dvd_factorial_lcm::declare_prime_dvd_factorial_lcm_all;
 use prime_dvd_mirrors::declare_prime_dvd_mirrors_all;
 use primes::{
@@ -5004,6 +5006,31 @@ pub struct NatPrelude {
     /// `b = 0`; otherwise `lcm a b / factorizationLCMLeft a b`. Construction
     /// only, ADR-0653.
     pub factorization_lcm_right: NameId,
+    /// `Nat.isPrime (n : Nat) : Bool := beq (countRange (fun j => beq (mod n
+    /// (succ j)) 0) n) 2` — `n` is prime exactly when it has two divisors in
+    /// `1 … n`. NOT Mathlib's `Nat.Prime`: a `Bool` predicate with a different
+    /// construction, so no `ml430` mirror against `Nat.Prime` may be flipped
+    /// on account of it (`prime_counting.rs`'s module doc). Construction only,
+    /// ADR-0653.
+    pub is_prime: NameId,
+    /// `Nat.primeCounting' (n : Nat) : Nat := count isPrime n` — the primes
+    /// strictly below `n`. The trailing `_prime` renders Lean's `'`, as in
+    /// [`IntPrelude`](crate::IntPrelude)'s `prime_dvd_mul_prime`.
+    /// Construction only, ADR-0653; with
+    /// [`prime_counting`](Self::prime_counting) it opens
+    /// `Mathlib.NumberTheory.PrimeCounting` for the autogenesis screen.
+    pub prime_counting_prime: NameId,
+    /// `Nat.primeCounting (n : Nat) : Nat := primeCounting' (succ n)` — the
+    /// primes up to and including `n`. Mathlib's own definition, which makes
+    /// `Nat.primeCounting_eq_primeCounting'_succ` `rfl` here as it is there;
+    /// see `prime_counting.rs`'s module doc for the measurement and why the
+    /// pair is declared anyway. Construction only, ADR-0653.
+    pub prime_counting: NameId,
+    /// `Nat.lcmUpto (n : Nat) : Nat := Nat.rec 1 (fun j ih => lcm ih (succ j))
+    /// n` — `lcm(1, …, n)`, Mathlib's `(Finset.Icc 1 n).lcm id`, with
+    /// `lcmUpto 0 = 1`. Construction only, ADR-0653; opens
+    /// `Mathlib.NumberTheory.Chebyshev` for the autogenesis screen.
+    pub lcm_upto: NameId,
     /// `Nat.nthAux (dec : Nat → Bool) (fuel k n : Nat) : Nat` — fuel-bounded
     /// search for the `n`-th (0-indexed) candidate `≥ k` satisfying `dec`,
     /// `0` if fewer than `n+1` are found within `fuel` steps. See `nth.rs`'s
@@ -7041,6 +7068,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             coprime_part_aux: kernel.name_str(nat, "coprimePartAux"),
             factorization_lcm_left: kernel.name_str(nat, "factorizationLCMLeft"),
             factorization_lcm_right: kernel.name_str(nat, "factorizationLCMRight"),
+            is_prime: kernel.name_str(nat, "isPrime"),
+            prime_counting_prime: kernel.name_str(nat, "primeCounting'"),
+            prime_counting: kernel.name_str(nat, "primeCounting"),
+            lcm_upto: kernel.name_str(nat, "lcmUpto"),
             nth_aux: kernel.name_str(nat, "nthAux"),
             nth: kernel.name_str(nat, "nth"),
             nth_root_aux: kernel.name_str(nat, "nthRootAux"),
@@ -7408,6 +7439,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // need `gcd`/`div`/`beq` plus `Nat.lcm` (`declare_lcm`, far above).
         // Definitions only -- ADR-0653.
         declare_factorization_lcm(&mut d, &p)?;
+        // `prime_counting.rs` (ADR-1559, the ADR-1420 Route 1 unblock for
+        // draw 19): `Nat.isPrime` needs `countRange` (`declare_totient_all`,
+        // above) plus `mod`/`beq`/`succ`, `Nat.primeCounting'` needs `count`
+        // (`declare_count_and_div_max_pow`, immediately above), and
+        // `Nat.lcmUpto` needs `Nat.lcm` (`declare_lcm`, far above).
+        // Definitions only -- ADR-0653.
+        declare_prime_counting(&mut d, &p)?;
 
         declare_perfect_all(&mut d, &p)?;
         declare_finite_set_all(&mut d, &p)?;

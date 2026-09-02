@@ -14,15 +14,15 @@
     ]
   },
   "population": {
-    "files_scanned": 477,
-    "private_fns": 9322,
-    "private_fns_outside_tests": 7697,
-    "distinct_names": 7592,
-    "distinct_body_digests": 8285,
+    "files_scanned": 478,
+    "private_fns": 9324,
+    "private_fns_outside_tests": 7698,
+    "distinct_names": 7594,
+    "distinct_body_digests": 8287,
     "duplicated_name_groups": 691,
     "duplicated_body_groups": 379,
     "sites_in_duplicated_body_groups": 1416,
-    "inline_step_fns": 6371,
+    "inline_step_fns": 6372,
     "inline_step_name_groups": 501,
     "inline_step_body_groups": 269,
     "sites_in_inline_step_body_groups": 901
@@ -10164,7 +10164,7 @@
       "test_file_members": 2,
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs:5015",
-        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:19987"
+        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:19997"
       ]
     },
     {
@@ -12783,7 +12783,7 @@
       "test_file_members": 2,
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/complex_tests.rs:560",
-        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:11807"
+        "crates/axeyum-lean-kernel/src/nat_prelude/nat_prelude_tests.rs:11817"
       ]
     },
     {

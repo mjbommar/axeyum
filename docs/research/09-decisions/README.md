@@ -850,3 +850,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1556](adr-1556-draw-19-is-refused-one-viable-held-out-family-and-r5-needs-two.md) | Draw 19 is refused — exactly one viable held-out family exists, and R5 needs two | accepted |
 | [1557](adr-1557-quadratic-reciprocity-is-proved-and-the-legendre-symbol-is-defined-by-gausss-count.md) | **The law of quadratic reciprocity is now a kernel theorem** | accepted |
 | [1558](adr-1558-rank-nullity-lands-in-column-form-and-the-bridge-to-the-row-form-is-the-open-obligation.md) | `Rat.rank_nullity : ∀ M rows cols, | accepted |
+| [1559](adr-1559-primecounting-and-lcmupto-are-the-construction-that-unblocks-draw-19.md) | `Nat.primeCounting` and `Nat.lcmUpto` are the construction that unblocks draw 19 | accepted |

@@ -543,6 +543,16 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.coprime_part_aux,
         p.factorization_lcm_left,
         p.factorization_lcm_right,
+        // `heldout-construction-1` lane (ADR-1559's ADR-1420 Route 1 unblock
+        // for draw 19). Definitions only, ADR-0653 -- `Nat.primeCounting'`
+        // and `Nat.primeCounting` open `Mathlib.NumberTheory.PrimeCounting`
+        // and `Nat.lcmUpto` opens `Mathlib.NumberTheory.Chebyshev`, and
+        // declaring theorems about any of them would spend the family each
+        // was opening.
+        p.is_prime,
+        p.prime_counting_prime,
+        p.prime_counting,
+        p.lcm_upto,
         // `nat-dist-nth` lane (`docs/plan/status/348-nat-dist-nth.md`).
         p.dist,
         p.nth_aux,
@@ -24007,4 +24017,153 @@ fn coprime_eq_of_mul_eq_zero_selects_the_correct_disjunct() {
         f.k.axiom_footprint(p.coprime_eq_of_mul_eq_zero).is_empty(),
         "coprime_eq_of_mul_eq_zero must rest on zero axioms"
     );
+}
+
+/// `Nat.isPrime`, `Nat.primeCounting'`, `Nat.primeCounting` and
+/// `Nat.lcmUpto` compute the right VALUES (`prime_counting.rs`, ADR-1559).
+/// Expected values come from an independent Python reference (a sieve for the
+/// prime counts, `math.lcm` over `range(1, n + 1)`) run over `n < 40` before
+/// this was written; the arguments here are the smallest ones that separate
+/// the constructions from the way each could plausibly be wrong, because
+/// every `Nat` numeral in this kernel is unary and cost is superlinear in the
+/// largest magnitude formed.
+///
+/// The discriminating choices:
+///
+/// * `isPrime 1` is the boundary the divisor-count formulation decides
+///   differently from a naive "no divisor strictly between 1 and n" test,
+///   which would call `1` prime. `isPrime 9` is the smallest composite whose
+///   smallest proper divisor is NOT `2`, so it separates the fold from a
+///   check that only ever tries `2`.
+/// * `primeCounting 2 = 1` while `primeCounting' 2 = 0`: the pair is
+///   off-by-one by construction, so this single pair of instances is what
+///   catches the two being confused for each other in either direction.
+/// * `lcmUpto 4 = 12`, not `24`: the first argument at which the least common
+///   multiple and the product of `1 … n` disagree.
+#[test]
+fn prime_counting_and_lcm_upto_evaluate_correctly() {
+    let mut f = Fixture::new();
+    let p = f.p;
+
+    let zero = f.zero();
+    let one = f.num(1);
+    let two = f.num(2);
+    let three = f.num(3);
+    let four = f.num(4);
+    let five = f.num(5);
+    let six = f.num(6);
+    let seven = f.num(7);
+    let nine = f.num(9);
+    let twelve = f.num(12);
+    let twenty_four = f.num(24);
+    let true_ = f.bool_true();
+    let false_ = f.bool_false();
+
+    // isPrime: the two boundary rows fall out of the fold (0 has no divisor
+    // in range, 1 has one), then the first four primes and two composites.
+    for (n, expected, why) in [
+        (zero, false_, "isPrime 0 must be false (no divisor in 1..0)"),
+        (one, false_, "isPrime 1 must be false (only the divisor 1)"),
+        (two, true_, "isPrime 2 must be true"),
+        (three, true_, "isPrime 3 must be true"),
+        (four, false_, "isPrime 4 must be false (1, 2, 4)"),
+        (five, true_, "isPrime 5 must be true"),
+        (six, false_, "isPrime 6 must be false (1, 2, 3, 6)"),
+        (seven, true_, "isPrime 7 must be true"),
+        (nine, false_, "isPrime 9 must be false (1, 3, 9)"),
+    ] {
+        let is_prime_n = f.const_app(p.is_prime, &[n]);
+        assert!(f.k.def_eq(is_prime_n, expected), "{why}");
+    }
+
+    let is_prime_1 = f.const_app(p.is_prime, &[one]);
+    assert!(
+        !f.k.def_eq(is_prime_1, true_),
+        "negative control: isPrime 1 must NOT be true -- the value a \
+         'no divisor strictly between 1 and n' test would give"
+    );
+    let is_prime_9 = f.const_app(p.is_prime, &[nine]);
+    assert!(
+        !f.k.def_eq(is_prime_9, true_),
+        "negative control: isPrime 9 must NOT be true -- the value a check \
+         that only ever tries the divisor 2 would give"
+    );
+
+    // primeCounting' counts the primes STRICTLY BELOW its argument.
+    for (n, expected, why) in [
+        (zero, zero, "primeCounting' 0 must be 0"),
+        (two, zero, "primeCounting' 2 must be 0 (no prime below 2)"),
+        (three, one, "primeCounting' 3 must be 1 (2)"),
+        (four, two, "primeCounting' 4 must be 2 (2, 3)"),
+        (six, three, "primeCounting' 6 must be 3 (2, 3, 5)"),
+    ] {
+        let counted = f.const_app(p.prime_counting_prime, &[n]);
+        assert!(f.k.def_eq(counted, expected), "{why}");
+    }
+
+    let counting_prime_3 = f.const_app(p.prime_counting_prime, &[three]);
+    assert!(
+        !f.k.def_eq(counting_prime_3, two),
+        "negative control: primeCounting' 3 must NOT be 2 -- the value a \
+         count up to and INCLUDING the argument would give"
+    );
+
+    // primeCounting counts the primes UP TO AND INCLUDING its argument.
+    for (n, expected, why) in [
+        (zero, zero, "primeCounting 0 must be 0"),
+        (one, zero, "primeCounting 1 must be 0"),
+        (two, one, "primeCounting 2 must be 1 (2)"),
+        (three, two, "primeCounting 3 must be 2 (2, 3)"),
+        (four, two, "primeCounting 4 must be 2 (2, 3)"),
+        (five, three, "primeCounting 5 must be 3 (2, 3, 5)"),
+    ] {
+        let counted = f.const_app(p.prime_counting, &[n]);
+        assert!(f.k.def_eq(counted, expected), "{why}");
+    }
+
+    let counting_2 = f.const_app(p.prime_counting, &[two]);
+    assert!(
+        !f.k.def_eq(counting_2, zero),
+        "negative control: primeCounting 2 must NOT be 0 -- the value \
+         primeCounting' 2 gives, so this is what catches the two being \
+         confused for each other"
+    );
+
+    // lcmUpto n = lcm(1, ..., n), with the empty range at 1.
+    for (n, expected, why) in [
+        (zero, one, "lcmUpto 0 must be 1 (the empty range)"),
+        (one, one, "lcmUpto 1 must be 1"),
+        (two, two, "lcmUpto 2 must be 2"),
+        (three, six, "lcmUpto 3 must be 6"),
+        (four, twelve, "lcmUpto 4 must be 12"),
+    ] {
+        let lcm_upto_n = f.const_app(p.lcm_upto, &[n]);
+        assert!(f.k.def_eq(lcm_upto_n, expected), "{why}");
+    }
+
+    let lcm_upto_4 = f.const_app(p.lcm_upto, &[four]);
+    assert!(
+        !f.k.def_eq(lcm_upto_4, twenty_four),
+        "negative control: lcmUpto 4 must NOT be 24 -- the value a product \
+         over 1..n would give, and 4 is the first argument at which the two \
+         disagree"
+    );
+    assert!(
+        !f.k.def_eq(lcm_upto_4, four),
+        "negative control: lcmUpto 4 must NOT be 4 -- the value a fold that \
+         dropped the accumulator would give"
+    );
+
+    for name in [
+        p.is_prime,
+        p.prime_counting_prime,
+        p.prime_counting,
+        p.lcm_upto,
+    ] {
+        assert!(
+            f.k.axiom_footprint(name).is_empty(),
+            "{} must rest on zero axioms",
+            f.k.display_name(name)
+        );
+    }
 }
