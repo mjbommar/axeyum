@@ -118,6 +118,13 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-09-02 | `dd5b54b68` | `invokes`, the third artifact-ownership classification: an orchestrator may name a guarded artifact to STAGE it and must regenerate it by calling the owner, checked by inspection. Gate FAIL→PASS with no artifact changed; 25 mutants, exit 0. |
+| 2026-09-02 | partition-edge-gate | `scripts/check-partition-edges.py`: every `depends_on` edge crossing an evaluation partition, with both partitions and the introducing commit; 198 measured on `main` |
+| 2026-09-02 | partition-edge-gate | the baseline ratchet — 198 recorded, `--record-baseline` refuses any set that is not a subset of the committed one (ADR-1550) |
+| 2026-09-02 | partition-edge-gate | component exemptions REFUSED as per-edge amendments and measured: they would wave through 154 of the 198 |
+| 2026-09-02 | partition-edge-gate | wired into `hooks/pre-push` (0.13 s), `check-merge-hygiene.sh` guard 9, `check.sh` and the justfile; the property previously ran in no hook |
+| 2026-09-02 | partition-edge-gate | 10 mutants over the gate + M15/M16 in merge-hygiene, each killing exactly one test; `test-prepush-l0-gates.sh` pins the L0 list |
+| 2026-09-02 | partition-edge-gate | a plain pickaxe cannot attribute an edge that entered through a merge — 7 of 198 unattributed until `--diff-merges=first-parent` |
+| 2026-09-02 | partition-edge-gate | ADR-1546's `42847d62c` touched no fact file; its two named commits are where the gate flipped, not where the edges were added |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -35774,6 +35781,101 @@ Next for whoever picks this up: the arm's staging list (`add`, `checkout`,
 `restore`, `rm`, `stage`, `update-index`) is a closed literal, and a new git
 subcommand that moves a file would be refused rather than misread — the safe
 direction, but someone will have to extend it deliberately.
+
+**Done (`DONE`, partition-edge-gate, 2026-09-02).** ADR-1546 left three repair
+options for the v2 nursery's partitions being fused by producers. This lane
+implemented **option 2 — gate the producer, not the draw** — and recorded it as
+taken in [ADR-1550](docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md).
+Option 1 (component-aware draws) is untouched and is the next lane's. **No
+fact's partition, no manifest row and no fact's `depends_on` was changed**;
+`nursery-v1.json` and `nursery-v2-extension.json` are byte-identical to their
+state at the start.
+
+**The measurement on `main`** (`scripts/check-partition-edges.py`, bare audit,
+0.12 s without attribution / 26.7 s with it):
+
+```
+PARTITION-EDGES|manifests=2|drawn=716|crossing=198|amended=0|baselined=0
+              |violations=198|not_amendments=7|component_exemptions_would_wave=154|FAILED
+```
+
+| from → to | edges | | attribution by day | edges |
+| --- | ---: | --- | --- | ---: |
+| train → development | 83 | | 2026-08-29 | 45 |
+| development → train | 64 | | 2026-08-30 | 70 |
+| train → longitudinal | 26 | | 2026-08-31 | 27 |
+| development → longitudinal | 19 | | 2026-09-01 | 56 |
+| held-out → development | 4 | | | |
+| held-out → train | 2 | | largest single commit | 15 |
+| **total** | **198** | | | |
+
+**198 violations, 198 in the baseline, and the baseline may only shrink.** The
+198 are recorded in `artifacts/autogenesis/partition-edge-baseline-v1.json`;
+`--baseline` (0.13 s) fails only on edges outside it, so a NEW crossing blocks
+from today while the re-partition repairs the recorded ones.
+`--record-baseline` REFUSES to write a set that is not a subset of the
+committed one — without that, a lane that hit the gate could clear it in one
+command and this would be the growing component exemption under a new name.
+
+**The unit changed from a component to an edge, and that is the whole point.** A
+component grows whenever any member gains an edge, which is why the exemption
+covering it was re-scoped 228 → 230 → 258 → 274 in four days (ADR-1546). An
+edge is one string in one fact file and does not change shape under the person
+who reviewed it. So an amendment names ONE edge, a reason and a date
+(`partition-edge-amendments-v1.json`, currently empty) and the manifests'
+component exemptions are REFUSED as amendments — reported as
+`NOT-AN-AMENDMENT`, seven of them. **That refusal is measured, not asserted:**
+those seven would wave through **154 of the 198** live violations, a number
+ADR-1546 could not state about the gate it audited because a component
+exemption's effect is not expressible per edge.
+
+**Where it runs.** `hooks/pre-push` L0 block (0.13 s, listed with the other
+three; the property previously ran in NO hook, which is how both 2026-09-01
+crossings were pushed); `scripts/check-merge-hygiene.sh` guard 9 under the
+ADR-1511 three-outcome pattern; `scripts/check.sh` and the `justfile`. All four
+run `--baseline`. The bare audit stays out of the aggregates on purpose — it is
+red by construction until the re-partition lands, and a standing red is how the
+exemption this replaces grew. **Exit 2 blocks in pre-push and does not block in
+merge hygiene**, deliberately: its three causes are all "a committed artifact
+is missing", which is a thing to stop a push for and not a thing to stop a
+mid-merge coordinator for.
+
+**Checker discipline. Ten mutants, ten single kills**
+(`mutation_controls.py partition-edges`), plus M15/M16 for merge-hygiene guard
+9 — also one kill each. Getting to one kill each changed the FIXTURES, not the
+guards: the first draft put a same-partition edge in nine scenarios that did
+not need one and the crossing-detection mutant killed six of them. M1 was also
+reported `INCONSISTENT` until `_ctx()` indented gate output in assertion
+messages — this gate prints `FAIL:` at line start and the harness parses those
+as dead tests. `scripts/tests/test-prepush-l0-gates.sh` derives the L0 list
+from the hook's own loop; all three of its arms were driven to failure against
+scratch copies before being believed. The baseline is registered in
+`check-generated-artifact-ownership.py` as sole-owner: `guarded=3
+producers_run=14 fails=0`, OWNER restored a perturbed copy byte-for-byte.
+
+**Two findings that were not the assignment.**
+
+1. **A plain pickaxe cannot attribute an edge that entered through a merge.**
+   `git log -S` skips merge commits, so 7 of the 198 came back as "no commit
+   adds this string" while the string is plainly in the committed file.
+   `F:ml430-int-add-comm-c5722728 → F:ml430-nat-add-comm-56a2d614` was
+   introduced by the merge `0be9ff41b` and by no other commit in that file's
+   nine-commit history — verified by walking all nine and counting
+   occurrences, not by trusting the pickaxe that had just said nothing.
+   `--diff-merges=first-parent --no-patch` attributes all 198. **Anything else
+   here that attributes a ledger change by pickaxe is blind the same way.**
+2. **ADR-1546's two named commits are where the component gate flipped, not
+   where the edges were added.** `42847d62c` touched exactly one file,
+   `artifacts/ontology/settled-fact-statement-pins.json`, and no fact file at
+   all; the fib edge it names was added by `c1acb4477`. Nothing in ADR-1546's
+   conclusion depends on this, but its attribution should not be quoted as
+   "the commit that added the edge".
+
+**Not run:** `cargo` in any form, `just check`, `scripts/check.sh` (no `.rs`
+file was touched and no step this lane added needs a build).
+`check-autogenesis-nursery.py` and `check-development-partition.py` were NOT
+re-run and are expected to remain red — repairing them is option 1's job, and
+this lane deliberately changed nothing they read.
 
 **D3 grouping is BLOCKED, not queued (`BLOCKED`, solver-arith-group,
 2026-08-17).** Sent to execute the one D3 group the 2026-08-17 edge measurement
