@@ -1551,6 +1551,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_range_if_succ,
         p.sum_range_if_congr_lt,
         p.sum_range_if_compl,
+        // `gauss_residue_reconcile.rs` (`eisenstein-3` lane): ADR-1540's /
+        // ADR-1544's residue 2.
+        p.least_residue_sum_range_reconcile,
         // `prime_dvd_factorial_lcm.rs`: four `ml430` mirrors over
         // `Nat.factorial`/`Nat.descFactorial`/`Nat.lcm`. The fifth,
         // `F:ml430-nat-prime-coprime-factorial-of-lt-2dbea201`, is closed by

@@ -197,6 +197,7 @@ mod finite_set;
 mod floor_count;
 mod gauss_fold_sum;
 mod gauss_lemma;
+mod gauss_residue_reconcile;
 mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;
@@ -379,6 +380,7 @@ use finite_set::declare_finite_set_all;
 use floor_count::declare_floor_count_all;
 use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
+use gauss_residue_reconcile::declare_gauss_residue_reconcile_all;
 use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use gcd_mul_right::declare_gcd_mul_right;
@@ -5725,6 +5727,22 @@ pub struct NatPrelude {
     /// [`set_compl`](Self::set_compl) (`finite_set.rs`) IS that function. The
     /// additive twin of [`count_range_compl`](Self::count_range_compl).
     pub sum_range_if_compl: NameId,
+    // -- `eisenstein-3` lane: `gauss_residue_reconcile.rs` --
+    /// `Nat.leastResidue_sumRange_reconcile : ∀ ap a m,
+    ///   Eq (add (sumRange (fun j => leastResidue (succ ap) a (succ j)) m)
+    ///           (add (sumRangeIf sign fold m) (sumRangeIf sign fold m)))
+    ///      (add (sumRange (fun j => gaussFold (succ ap) a (succ j)) m)
+    ///           (mul (succ ap) (gaussNegCount (succ ap) a m)))`
+    /// (`gauss_residue_reconcile.rs`) — ADR-1540's/ADR-1544's **residue 2**:
+    /// the least residues and the folded ones differ by `pp` on exactly the
+    /// "negative" indices, so summing them relates the two aggregates through
+    /// [`gauss_neg_count`](Self::gauss_neg_count). Stated additively because
+    /// `Nat.sub` is truncated; hypothesis-free because the only side
+    /// condition is `leastResidue < pp`, which `Nat.mod_lt` supplies at the
+    /// constructively positive modulus `succ ap`. **Coprimality is NOT
+    /// needed** — it is what makes the fold a bijection, not what makes a
+    /// residue and its reflection add to `pp`.
+    pub least_residue_sum_range_reconcile: NameId,
     // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
     /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
     /// past which it is read as zero. The carrier that makes UNIQUENESS of
@@ -7101,6 +7119,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             sum_range_if_succ: kernel.name_str(nat, "sumRangeIf_succ"),
             sum_range_if_congr_lt: kernel.name_str(nat, "sumRangeIf_congr_lt"),
             sum_range_if_compl: kernel.name_str(nat, "sumRangeIf_compl"),
+            least_residue_sum_range_reconcile: kernel
+                .name_str(nat, "leastResidue_sumRange_reconcile"),
         };
 
         let mut d = NatDev::new(kernel, p);
@@ -8151,6 +8171,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // plus the order bridges `lt_succ_self`/`le_succ`/`lt_of_lt_of_le` --
         // all far above. Nothing needs it yet, so it goes last.
         declare_subset_sum_all(&mut d, &p)?;
+        // ADR-1540's/ADR-1544's residue 2 (`gauss_residue_reconcile.rs`):
+        // needs `Nat.sumRangeIf` (just above), `Nat.leastResidue`/
+        // `Nat.gaussSignNeg`/`Nat.gaussFold`/`Nat.gaussNegCount`
+        // (`gauss_lemma.rs`, far above), plus `Nat.mod_lt`,
+        // `Nat.add_sub_cancel_of_le`, `Nat.mul_one`, `Nat.sumRange_add`,
+        // `Nat.sumRange_congr`, `Nat.mul_sumRange` and
+        // `Nat.countRange_eq_sumRange`. Nothing needs it yet, so it goes
+        // last.
+        declare_gauss_residue_reconcile_all(&mut d, &p)?;
         // `Nat.Multiset` and the uniqueness of prime factorization stated as
         // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
         // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
@@ -8231,6 +8260,9 @@ mod gauss_fold_sum_tests;
 
 #[cfg(test)]
 mod subset_sum_tests;
+
+#[cfg(test)]
+mod gauss_residue_reconcile_tests;
 
 #[cfg(test)]
 mod eisenstein_side_tests;
