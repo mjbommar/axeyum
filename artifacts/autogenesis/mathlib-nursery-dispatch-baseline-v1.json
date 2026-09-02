@@ -3,7 +3,7 @@
   "kind": "axeyum-autogenesis-nursery-dispatch-baseline",
   "state": "pre-execution-capability-census",
   "authority": {
-    "nursery_sha256": "98d2a1aa2a10fefd3c3849a46514c066fd964c24a4f2b1c22611e3e48da6d7f7",
+    "nursery_sha256": "2cd1fef3acb53438d2a66d4417614d98dd3bf5ef09f51c9a55748d5dce326a08",
     "operation_registry_sha256": "a3c436b86af8af471c47cafa3fc2999e95bb1aa6a5ab1ff99ce59995a510b61e",
     "partitions_inspected": [
       "development",
@@ -2759,5 +2759,5 @@
     }
   ],
   "interpretation": "This is a dispatch-contract census, not a proof episode. A pre-execution decline consumes no producer budget and earns no proof credit; an already-established row is counted separately and is not redispatched.",
-  "baseline_sha256": "09f211217a3af28486a34735befb13c0cb4d83f667405fac70900c1c14d0433f"
+  "baseline_sha256": "b90d6772c5305572234cb57200511c6a1124f795f6b74cd2cbe7a20e6fdc6baa"
 }
