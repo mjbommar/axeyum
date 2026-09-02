@@ -7,7 +7,7 @@
   ],
   "description": "Facts with epistemic_status=open and external_status=proved: settled in the wider literature, not yet established here (ADR-0601 SS3). Never edit by hand -- regenerate with `python3 scripts/gen-import-backlog.py`.",
   "ordering": "dependency_ready rows before blocked ones; within that, curriculum_node-mapped rows before unmapped ones, ordered by (curriculum_layer, curriculum_node); ties (and the whole unmapped population) broken by fact id ascending. See docs/autogenesis/263-import-backlog-artifact.md.",
-  "count": 253,
+  "count": 249,
   "rows": [
     {
       "id": "F:fol-validity-undecidable",
@@ -820,24 +820,6 @@
       "curriculum_title": null
     },
     {
-      "id": "F:ml430-nat-bit-false-98b0bf2a",
-      "statement": "The proposition declared as `Nat.bit_false` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-bit-false-apply-5962146d",
-      "statement": "The proposition declared as `Nat.bit_false_apply` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
       "id": "F:ml430-nat-bit-mod-two-eq-one-iff-d9b00bec",
       "statement": "The proposition declared as `Nat.bit_mod_two_eq_one_iff` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
@@ -858,24 +840,6 @@
     {
       "id": "F:ml430-nat-bit-ne-zero-iff-d811128e",
       "statement": "The proposition declared as `Nat.bit_ne_zero_iff` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-bit-true-2456e237",
-      "statement": "The proposition declared as `Nat.bit_true` in the pinned Mathlib v4.30 source.",
-      "depends_on": [],
-      "dependency_ready": true,
-      "curriculum_node": null,
-      "curriculum_layer": null,
-      "curriculum_title": null
-    },
-    {
-      "id": "F:ml430-nat-bit-true-apply-02338ebc",
-      "statement": "The proposition declared as `Nat.bit_true_apply` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
       "curriculum_node": null,

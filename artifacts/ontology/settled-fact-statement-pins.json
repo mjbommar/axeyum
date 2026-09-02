@@ -11687,6 +11687,18 @@
       ]
     },
     {
+      "fact_id": "F:ml430-nat-bit-false-98b0bf2a",
+      "language": "lean4-surface",
+      "statement_sha256": "8c1f4e03100d3d0ebdc7d44377cd5fc6f89f7e81ce02ceaed734e39c21d59380",
+      "prose_sha256": "14e67fe4ab05046d6a1040c9981ee93ba18fbf44ee687d2d00aef3d8bd0ccaac"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-false-apply-5962146d",
+      "language": "lean4-surface",
+      "statement_sha256": "c35abe86d23e89742672f0137d7e5a2bac3ae8369b4aac6486cbd7ebd15247ef",
+      "prose_sha256": "6758616d31b6d67db4e2c60d1660abd1de75dc2613bd61694c271199c2ee57f6"
+    },
+    {
       "fact_id": "F:ml430-nat-bit-false-zero-d996adbf",
       "language": "lean4-surface",
       "statement_sha256": "aa681293473cac20de096265c6b640116626ab1e147e081650270edd58c5c442",
@@ -11741,6 +11753,18 @@
           "prose_sha256": "b3f0627beb0d8fa9174060f547c3308a6256f0b43e7bc110a6673a3ede26b198"
         }
       ]
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-true-2456e237",
+      "language": "lean4-surface",
+      "statement_sha256": "4b221571b1374787bca293a25fa28a1a04e37ea0613bf98bec15cffade77e179",
+      "prose_sha256": "4244f9cbf0d35150093142080544e894bca5b94e9eeadace1aef412073d76393"
+    },
+    {
+      "fact_id": "F:ml430-nat-bit-true-apply-02338ebc",
+      "language": "lean4-surface",
+      "statement_sha256": "93835019879978eb03e5deb262ecf456dc1611f40fa0fbab013f99bf74459a08",
+      "prose_sha256": "a62afa2a5e8936fc847bb19bc335c180ae57fc2fbbbdad94bc85be1ce631ef62"
     },
     {
       "fact_id": "F:ml430-nat-bitwise-bit-4c4b28a8",

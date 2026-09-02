@@ -8,19 +8,19 @@
 
 | | |
 |---|---:|
-| Established facts (`proved` or `computed`) | 2409 |
-| …via an operation covering **more than one** fact | **30** |
+| Established facts (`proved` or `computed`) | 2413 |
+| …via an operation covering **more than one** fact | **34** |
 | …via a single-target operation (a capsule) | 21 |
 | …with no registered operation (hand-constructed or imported) | 2358 |
-| Registered operations | 29 |
-| …**authoritative** and covering more than one fact | **5** |
+| Registered operations | 30 |
+| …**authoritative** and covering more than one fact | **6** |
 | …fixture-scope covering more than one fact (NOT the metric) | 0 |
 
-**30 fact(s) were established through an operation that
+**34 fact(s) were established through an operation that
 covers more than one fact.** That is the first evidence of generality this
 ledger has ever recorded; it is necessary, not sufficient.
 
-Facts: `F:ml430-int-add-modeq-left-ee732b5b`, `F:ml430-int-add-modeq-right-e58108ee`, `F:ml430-int-mod-modeq-6bec7847`, `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-of-mul-right-c92b7bf0`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-sub-3148f130`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-int-modulus-modeq-zero-5b57a898`, `F:ml430-nat-add-modeq-left-e3b1fba9`, `F:ml430-nat-add-modeq-right-e2f11f21`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-mod-modeq-436e4c10`, `F:ml430-nat-modeq-add-left-cancel-e5287cf6`, `F:ml430-nat-modeq-add-left-e83f0700`, `F:ml430-nat-modeq-add-right-8e2ca0cc`, `F:ml430-nat-modeq-add-right-cancel-e871facf`, `F:ml430-nat-modeq-comm-24b71e7a`, `F:ml430-nat-modeq-dvd-iff-8f130450`, `F:ml430-nat-modeq-of-dvd-d75cc374`, `F:ml430-nat-modeq-of-mul-left-88d20bca`, `F:ml430-nat-modeq-of-mul-right-43078e1c`, `F:ml430-nat-modeq-one-516d46e8`, `F:ml430-nat-modeq-refl-d870c8f5`, `F:ml430-nat-modeq-symm-0a3d4d18`, `F:ml430-nat-modeq-trans-ef9d1c46`, `F:ml430-nat-modulus-modeq-zero-fd9af096`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
+Facts: `F:ml430-int-add-modeq-left-ee732b5b`, `F:ml430-int-add-modeq-right-e58108ee`, `F:ml430-int-mod-modeq-6bec7847`, `F:ml430-int-modeq-comm-1e4bcc07`, `F:ml430-int-modeq-of-mul-right-c92b7bf0`, `F:ml430-int-modeq-refl-30e15520`, `F:ml430-int-modeq-sub-3148f130`, `F:ml430-int-modeq-symm-984a6e67`, `F:ml430-int-modeq-trans-6d7863e0`, `F:ml430-int-modulus-modeq-zero-5b57a898`, `F:ml430-nat-add-modeq-left-e3b1fba9`, `F:ml430-nat-add-modeq-right-e2f11f21`, `F:ml430-nat-bit-false-98b0bf2a`, `F:ml430-nat-bit-false-apply-5962146d`, `F:ml430-nat-bit-true-2456e237`, `F:ml430-nat-bit-true-apply-02338ebc`, `F:ml430-nat-descfactorial-one-d4856d4a`, `F:ml430-nat-mod-modeq-436e4c10`, `F:ml430-nat-modeq-add-left-cancel-e5287cf6`, `F:ml430-nat-modeq-add-left-e83f0700`, `F:ml430-nat-modeq-add-right-8e2ca0cc`, `F:ml430-nat-modeq-add-right-cancel-e871facf`, `F:ml430-nat-modeq-comm-24b71e7a`, `F:ml430-nat-modeq-dvd-iff-8f130450`, `F:ml430-nat-modeq-of-dvd-d75cc374`, `F:ml430-nat-modeq-of-mul-left-88d20bca`, `F:ml430-nat-modeq-of-mul-right-43078e1c`, `F:ml430-nat-modeq-one-516d46e8`, `F:ml430-nat-modeq-refl-d870c8f5`, `F:ml430-nat-modeq-symm-0a3d4d18`, `F:ml430-nat-modeq-trans-ef9d1c46`, `F:ml430-nat-modulus-modeq-zero-fd9af096`, `F:ml430-nat-one-ascfactorial-8bacb017`, `F:ml430-nat-zero-ascfactorial-af4fcdca`
 
 ## By route
 
@@ -28,7 +28,7 @@ Facts: `F:ml430-int-add-modeq-left-ee732b5b`, `F:ml430-int-add-modeq-right-e5810
 |---|---:|---:|---:|---|
 | `cas-certificate` | 0 | 0 | 59 | computer-algebra certificate |
 | `imported-kernel-lean` | 0 | 0 | 7 | kernel proof imported from an external development |
-| `kernel-lean` | 30 | 20 | 2257 | kernel proof, reconstructed and checked here |
+| `kernel-lean` | 34 | 20 | 2257 | kernel proof, reconstructed and checked here |
 | `search-certificate` | 0 | 0 | 9 | search certificate |
 | `smt-clausal` | 0 | 0 | 10 | SMT decision with clausal (DRAT) evidence |
 | `smt-term-level` | 0 | 1 | 16 | SMT decision with term-level evidence |
@@ -50,7 +50,7 @@ is no proof-affecting intervention, which this join cannot see. Multi-target
 coverage is the **necessary** condition that is measurable today, and a
 single-target registry fails it without needing a harder test.
 
-Of the 2409 established facts, 2306 record an
+Of the 2413 established facts, 2310 record an
 empty axiom footprint. That is a different axis from provenance: a
 hand-written proof can be axiom-free and a produced one need not be.
 

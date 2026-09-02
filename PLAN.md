@@ -208,6 +208,11 @@ now. Nothing was deleted.
 | 2026-09-02 | scored-residue-class | `scored-evaluation-residue` in `check-partition-edges.py`, four re-derived clauses; baseline 6 → 0 |
 | 2026-09-02 | scored-residue-class | `check-autogenesis-nursery.py` honours it through the edge gate's own loader and the shared `edge_is_amended`; 1 crossing component → 0 |
 | 2026-09-02 | scored-residue-class | fourteen controls incl. the three seals; M24–M30 one kill each; the git-less tolerance is reported, not silent |
+| 2026-09-02 | flywheel-3 | opened the lane; status stub before any frontier work |
+| 2026-09-02 | flywheel-3 | `producer-contract-natural-bit-constructor-family-v1` sized per ADR-1510 against ten live open facts, with the train-row absence stated rather than omitted |
+| 2026-09-02 | flywheel-3 | dispatched all ten members: 4 accepted, 6 declined with typed reasons, 0 errors; four facts flipped to `proved`, `kernel-lean`, empty axiom footprint |
+| 2026-09-02 | flywheel-3 | `check-autogenesis-nat-bit-constructor-family.py` — four findings, four mutation controls, all four kill |
+| 2026-09-02 | flywheel-3 | ADR-1570: the exit criterion is met, the six declines partition into three findings, and two stale/blind gates are disclosed rather than repaired here |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -38284,6 +38289,60 @@ partitions, no row's outcome or id appears in any artifact this lane wrote, and
 `integer-absolute-value` remains held-out and remains spent exactly as
 `holdout-evaluation-v1.json` already records. No cargo work was in scope and
 none was run.
+
+**Your lane's block (`DONE`, flywheel-3, 2026-09-02).** **The August exit
+criterion is met.** One registered operation,
+`authoritative-mathlib-nat-bit-constructor-family-v1`, closes **four**
+previously open sibling facts (`Nat.bit_false`, `Nat.bit_false_apply`,
+`Nat.bit_true`, `Nat.bit_true_apply`) with **no per-target proof code**, each
+an axiom-free kernel term over a proof-isolated statement import (60
+declarations, 0 axioms) and independently rechecked. The producer,
+`propose_bounded_induction`, was written in August against *train* facts and
+was not modified by this lane.
+
+The whole live population of the contract was dispatched: **4 accepted, 6
+declined, 0 errors**. The six declines are three distinct findings, not one —
+four are `UnsupportedIffShape` (the producer has no `Iff.intro` leg and stops
+at the shape test, never approaching its binder or induction budget, so the fix
+is a leg not a bound), one is `TerminalNotClosed` on real `Nat.div` arithmetic,
+and one is `TrustedDeclaration("dif_pos")` in the **importer**, before the
+producer ran at all — the same structurally-earlier gate that took 15 of 27
+dispatches on 2026-08-27, reconfirmed on a family neither seed contract covered.
+
+`scripts/check-autogenesis-nat-bit-constructor-family.py` is the recheck and its
+exit depends on four separate findings: accepts replay bit for bit, facts bound
+to the operation exactly once with an empty footprint, the **six declines still
+decline and are still open**, and a FALSE outcome-blind mutation is still
+refused. Four mutation controls, one per finding, all exit 1 — table in the
+gate's docstring.
+
+**Two findings the next lane inherits, both measured.**
+(1) `scripts/check-development-partition.py` reports PASS on this operation
+**because it cannot see it**: `NURSERY` is `nursery-v1.json` alone and all four
+closed facts live in `nursery-v2-extension.json` (0 occurrences in v1, 4 in v2).
+Its rule — an operation closing a development fact must also close a train fact
+— would otherwise fire. This lane deliberately did **not** fix the loader:
+repairing a gate in the same change that registers the operation the repair
+would flag is a lane clearing its own gate. The second reader with this exact
+v1-only defect (`fact-frontier.py` was the first, found 2026-09-02).
+(2) The census review's "do not build a producer against this frontier" was
+correct at 4 targetable and is now stale at 23 — draw 19 landed in between. A
+frontier measurement quoted without its ledger digest is a snapshot, not a
+finding.
+
+**Next task, pre-sized:** the `Iff` terminal leg. Population is the four
+declines here plus the 40 `Iff`-headed facts ADR-1510 counted; the contract is
+already written and stays un-retired at 6 live members; and `check_declines()`
+fails loudly the day a decline turns into an accept, so the follow-up cannot
+land silently. Honest bound: an `Iff` leg alone closes at most two of the four
+(one also needs conjunction introduction, two need `Nat.mod` arithmetic).
+
+Gates run and green: `validate-facts.py` (2,682 facts, 0 errors, 2,411 proved),
+`validate-producer-contracts.py` (3 contracts), `validate-autogenesis-operations.py`
+(30), `validate-producer-contract-declines.py` (33), `check-development-partition.py`,
+`check-autogenesis-holdout-isolation.py` (226 held-out, 0 references),
+`check-dispatchable-frontier.py`, `check-partition-edges.py`. No prelude field
+was added, so `prelude_fields.rs` needed no regeneration. Nothing was pushed.
 
 **Both of Euclid's missing ingredients are in; `F:nat-exists-prime-gt` is one
 slice from closing** (`WIP`, nat-prime-divisor, 2026-08-17).
