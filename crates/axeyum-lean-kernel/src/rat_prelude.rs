@@ -55,6 +55,7 @@ use crate::{Kernel, KernelError};
 pub(crate) mod abs;
 mod archimedean;
 mod bernoulli;
+mod clear_below;
 mod core;
 mod decidable;
 mod decide;
@@ -2890,6 +2891,35 @@ pub struct RatPrelude {
     /// open, and needs a different induction — one carrying the accumulated
     /// range in its motive.
     pub pivot_search_ne_zero: NameId,
+
+    // --- obligation 3 (`rat_prelude::clear_below`, ADR-1571) ----------------
+    /// `Rat.add_neg_div_mul_cancel : ∀ a b, Not (Eq Rat b Rat.zero) →
+    /// Eq Rat (Rat.add a (Rat.mul (Rat.neg (Rat.div a b)) b)) Rat.zero` — the
+    /// arithmetic core ADR-1554 names for obligation 3, at the exact shape
+    /// `Rat.clearBelowAux` produces (the multiplier is on the LEFT).
+    pub add_neg_div_mul_cancel: NameId,
+    /// `Rat.clearBelowAux_off : ∀ pr pc rows q c fuel M r, Lt q r →
+    /// Eq Rat (clearBelowAux pr pc rows fuel M r q c) (M q c)` — a row
+    /// strictly above the sweep's cursor is untouched, at ANY fuel.
+    pub clear_below_aux_off: NameId,
+    /// `Rat.clearBelow_off : ∀ M pr pc rows q c, Le q pr →
+    /// Eq Rat (clearBelow M pr pc rows q c) (M q c)` — obligation 3's
+    /// "rows outside the range are untouched" half.
+    pub clear_below_off: NameId,
+    /// `Rat.clearBelowAux_zero : ∀ pr pc rows q fuel M r, Lt pr r → Le r q →
+    /// Lt q rows → Lt q (Nat.add r fuel) → Not (Eq Rat (M pr pc) Rat.zero) →
+    /// Eq Rat (clearBelowAux pr pc rows fuel M r q pc) Rat.zero`.
+    ///
+    /// The fuel bound is a real hypothesis: an exhausted sweep returns `M`
+    /// untouched, which is indistinguishable from a finished one.
+    pub clear_below_aux_zero: NameId,
+    /// `Rat.clearBelow_zero : ∀ M pr pc rows q, Lt pr q → Lt q rows →
+    /// Not (Eq Rat (M pr pc) Rat.zero) →
+    /// Eq Rat (clearBelow M pr pc rows q pc) Rat.zero` — obligation 3's
+    /// "everything below the pivot is zeroed in the pivot column" half, and
+    /// the statement ADR-1554 asks for. Spends obligation 2's value half
+    /// ([`Self::pivot_search_ne_zero`]) through the nonzero-pivot hypothesis.
+    pub clear_below_zero: NameId,
 }
 
 impl RatPrelude {
@@ -3407,6 +3437,11 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
         pivot_search_aux_ne_zero: child(kernel, "pivotSearchAux_ne_zero"),
         pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
+        add_neg_div_mul_cancel: child(kernel, "add_neg_div_mul_cancel"),
+        clear_below_aux_off: child(kernel, "clearBelowAux_off"),
+        clear_below_off: child(kernel, "clearBelow_off"),
+        clear_below_aux_zero: child(kernel, "clearBelowAux_zero"),
+        clear_below_zero: child(kernel, "clearBelow_zero"),
     }
 }
 
@@ -3473,6 +3508,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         pivot_bound::declare_pivot_bound(&mut d, prelude)?;
         rank_bridge::declare_rank_bridge(&mut d, prelude)?;
         pivot_content::declare_pivot_content(&mut d, prelude)?;
+        clear_below::declare_clear_below_post(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3511,6 +3547,9 @@ mod rank_bridge_tests;
 
 #[cfg(test)]
 mod pivot_content_tests;
+
+#[cfg(test)]
+mod clear_below_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

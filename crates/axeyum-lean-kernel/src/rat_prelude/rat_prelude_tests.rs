@@ -339,6 +339,11 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ),
         ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero),
         ("pivotSearch_ne_zero", p.pivot_search_ne_zero),
+        ("add_neg_div_mul_cancel", p.add_neg_div_mul_cancel),
+        ("clearBelowAux_off", p.clear_below_aux_off),
+        ("clearBelow_off", p.clear_below_off),
+        ("clearBelowAux_zero", p.clear_below_aux_zero),
+        ("clearBelow_zero", p.clear_below_zero),
     ]
 }
 
@@ -7095,6 +7100,11 @@ fn the_determinant_toolkit_is_axiom_free() {
         ),
         ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero, true),
         ("pivotSearch_ne_zero", p.pivot_search_ne_zero, true),
+        ("add_neg_div_mul_cancel", p.add_neg_div_mul_cancel, true),
+        ("clearBelowAux_off", p.clear_below_aux_off, true),
+        ("clearBelow_off", p.clear_below_off, true),
+        ("clearBelowAux_zero", p.clear_below_aux_zero, true),
+        ("clearBelow_zero", p.clear_below_zero, true),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

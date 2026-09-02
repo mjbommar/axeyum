@@ -151,12 +151,12 @@ pub(super) fn bool_select_at(
 }
 
 /// `Rat.inv x`.
-fn rinv(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
+pub(super) fn rinv(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
     d.const_app(p.inv, &[x])
 }
 
 /// `Rat.div x y`.
-fn rdiv(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, y: ExprId) -> ExprId {
+pub(super) fn rdiv(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId, y: ExprId) -> ExprId {
     d.const_app(p.div, &[x, y])
 }
 
