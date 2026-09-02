@@ -215,6 +215,12 @@ autogenesis-nursery:
     # classification and every contract from primary sources on each run.
     bash scripts/tests/test-obstruction-producers.sh
     python3 scripts/check-obstruction-producers.py
+    # ...and the CLASSIFICATION itself, which the checker above only compares
+    # against a recomputation -- so a wrong classification that is stably wrong
+    # passes it. ADR-1545: the `Nat.testBit` row claimed `new-construction` and
+    # said the construction was not built, when it was built, axiom-free, and
+    # had moved no mirror. Four mutations, each killing exactly one test.
+    python3 -m unittest scripts.tests.test_gen_obstruction_producers
     # ...and the artifact S2/S3/S4 constrain. Those three pin every field of the
     # statable vocabulary to one value, so it is DERIVED (`--write`) rather than
     # maintained. This checks what no other gate reads: the row digest, which is

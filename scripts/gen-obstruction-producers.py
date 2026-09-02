@@ -64,14 +64,21 @@ it" rules), NOT by inventing new proof technique:
 
 ## What this script deliberately refuses to compile
 
-`Nat.testBit`'s codomain mismatch (Bool vs this kernel's Nat), 5 of its 6
-open mirrors, is classified `new-construction`: Bool exists here, so a
-Bool-valued `Nat.testBit` is buildable, but it is NOT built, so nothing is
-evaluable today -- compiling a producer for it now would be exactly the
-"manufacture a producer to make a count" defect this phase is scored
-against. The 6th (`n.testBit i = n.bits.getI i`) needs `List Bool`, a type
-this kernel's closed inductive set does not have at all; classified
-`not-removable`.
+`Nat.testBit`'s obstruction, 5 of its 6 open mirrors, is classified
+`not-removable` -- CORRECTED by ADR-1545 from an earlier `new-construction`
+whose stated reason ("a Bool-valued view plus a bridge theorem is buildable
+in principle, but neither is built") was false on both halves. It IS built,
+axiom-free, in `examples/nat_testbit_bool_bridge.rs`, and it moved none of
+these mirrors, because the codomain is the OUTERMOST LINK of a chain rather
+than the obstruction: Mathlib's `testBit m n := 1 &&& (m >>> n) != 0` is a
+shift-and-mask closed form over an absent `Nat.shiftRight` and a divergent
+`Nat.land`, and three of the five additionally name `Nat.land`/`lor`/`ldiff`
+themselves. This is the SAME correction shape as `fastFib` below, arrived at
+from the codomain rather than from the recursion principle: syntactic
+similarity is not propositional identity, and one visible divergence is not
+the whole chain. The 6th (`n.testBit i = n.bits.getI i`) needs `List Bool`
+and `Inhabited`, neither of which this kernel's closed inductive set and
+instance-implicit-free elaboration have at all; also `not-removable`.
 
 `Nat.multichoose` (3 mirrors), `Nat.minFac` (1 mirror), and `Nat.fastFib`
 (1 mirror) are all classified `not-removable`: each is recorded, IN THIS
@@ -231,7 +238,15 @@ def registry_blocked_open_mirrors(
 
 
 def classify_testbit(blocked_ids: list[str], facts: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    """Split Nat.testBit's codomain obstruction: Bool-valued vs List-Bool-valued."""
+    """Split Nat.testBit's obstruction: Bool-valued vs List-Bool-valued.
+
+    BOTH halves are `not-removable` (ADR-1545); the split is kept because
+    the two are unclosable for DIFFERENT reasons and a future reader must
+    not collapse them. The Bool-valued group is blocked by a chain of
+    construction divergences (codomain, testBit's own body, and for three of
+    the five a second divergence in `Nat.land`/`lor`/`ldiff`); the
+    List-valued one is blocked by two types this kernel does not have.
+    """
     needs_list = []
     needs_bool_only = []
     for ident in blocked_ids:
@@ -244,19 +259,46 @@ def classify_testbit(blocked_ids: list[str], facts: dict[str, dict[str, Any]]) -
     if needs_bool_only:
         out.append({
             "id": "nat-testbit-bool-codomain",
-            "capability_gap": "codomain-transport",
-            "removability": "new-construction",
+            "capability_gap": "definitional-non-equivalence",
+            "removability": "not-removable",
             "reason": (
-                "Mathlib's Nat.testBit : Nat -> Nat -> Bool; this kernel's returns "
-                "a Nat in {0,1}. Bool exists as a kernel inductive type, so a "
-                "Bool-valued Nat.testBitBool plus a bridge theorem to the existing "
-                "testBit is buildable in principle, but neither is built. No "
-                "producer is evaluable until that construction lands -- compiling "
-                "one now would assert a strategy that cannot be run, which is "
-                "exactly the defect this phase is scored against."
+                "CORRECTED BY ADR-1545, which this compiler must not re-regress "
+                "on. This row said `new-construction` and gave as its reason that "
+                "a Bool-valued testBit view plus a bridge theorem 'is buildable in "
+                "principle, but neither is built'. BOTH HALVES ARE FALSE IN THIS "
+                "TREE. (1) It IS built: examples/nat_testbit_bool_bridge.rs "
+                "declares Axeyum.Autogenesis.bitToBool and testBitBool n i := "
+                "bitToBool (Nat.testBit n i) and proves testBitBool_zero, "
+                "testBitBool_succ, bitToBool_boolToBit and boolToBit_roundtrip_zero, "
+                "every one reporting axioms=0; the family is exported as a "
+                "committed capsule and run from the justfile. It has been in the "
+                "tree since 2026-08-26 and moved none of these mirrors. (2) "
+                "Building it does not remove the obstruction, because the codomain "
+                "is the OUTERMOST LINK OF A CHAIN, not the obstruction. Mathlib's "
+                "def, read at the pinned commit (Init/Data/Nat/Bitwise/Basic.lean:"
+                "147), is `testBit m n := 1 &&& (m >>> n) != 0` -- a shift-and-mask "
+                "closed form over Nat.shiftRight (absent from this kernel entirely) "
+                "and Nat.land (itself divergent, see below), whose imported closure "
+                "doc 279 measured as carrying propext. Ours is a fuel recursion on "
+                "the bit INDEX. Per ADR-0840 a flip needs EVERY constituent "
+                "construction to match, so no codomain change reaches these "
+                "propositions. Three of these facts additionally name &&& / ||| / "
+                "ldiff, i.e. Mathlib's Nat.land/lor/ldiff, each a specialization of "
+                "the WELL-FOUNDED Nat.bitwise where ours are three independent "
+                "hand-rolled structural fuel recursions (nat_prelude/land.rs's own "
+                "module doc records the divergence and the reason for it) -- a "
+                "second, independent divergence stacked on testBit's. The honest "
+                "outcome is the local analogue facts that already exist "
+                "(F:nat-testbit-land, F:nat-testbit-lor, F:nat-lt-of-testbit, "
+                "F:nat-zero-of-testbit-eq-zero)."
             ),
             "evidence": [
                 "artifacts/autogenesis/mirror-divergence-registry.json#Nat.testBit",
+                "docs/research/09-decisions/adr-1545-the-testbit-codomain-is-the-"
+                "outermost-link-of-a-chain-and-the-bool-view-is-already-built.md",
+                "crates/axeyum-lean-kernel/examples/nat_testbit_bool_bridge.rs",
+                "docs/autogenesis/279-bitwise-semantic-law-reconstruction-gap.md",
+                "crates/axeyum-lean-kernel/src/nat_prelude/land.rs",
                 "each fact's formal.statement uses Bool literals (=true/=false) "
                 "or Bool connectives (&&, ||, !) applied to testBit's result",
             ],

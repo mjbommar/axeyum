@@ -647,6 +647,9 @@ step dispatchable-frontier python3 scripts/check-dispatchable-frontier.py
 # a `proved` field anywhere, or a single-target contract claiming generality.
 step obstruction-producers-tests bash scripts/tests/test-obstruction-producers.sh
 step obstruction-producers python3 scripts/check-obstruction-producers.py
+# The classification itself (ADR-1545); the checker above only compares the
+# artifact against a recomputation, so a stably wrong classification passes it.
+step obstruction-testbit-classification python3 -m unittest scripts.tests.test_gen_obstruction_producers
 # ...and the artifact S2/S3/S4 constrain. Those three pin EVERY field of the
 # statable vocabulary to one value -- S2 bounds `bridge` from below, S3 from
 # above, S4 pins the row set to the ledger both ways -- so nothing in it was
