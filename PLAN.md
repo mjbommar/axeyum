@@ -38330,6 +38330,19 @@ correct at 4 targetable and is now stale at 23 — draw 19 landed in between. A
 frontier measurement quoted without its ledger digest is a snapshot, not a
 finding.
 
+**Step 0 disclosure.** `shape_search` (2,187 declarations, control
+`Int.quadraticReciprocity` FOUND) shows our own prelude already carries
+`Nat.bit_false`, `Nat.bit_true`, `Nat.bit_div_two` and `Nat.bit_mod_two` — but
+about OUR `Nat.bit` (`add (mul 2 n) (bool_select_nat test 1 0)`), not Mathlib's
+(`cond b (2n+1) (2n)`). The mirror facts quantify over Mathlib's constant and
+were proved by importing it into a fresh kernel; no evidence row cites a local
+theorem. So the four closures are **not novel mathematics** and this lane does
+not claim they are — what is new is that a producer, not a person, built four
+terms at once. It does surface a cheap unbuilt route: a **transport** producer
+that discharges a mirror by exhibiting the two constructions as definitionally
+equal and citing the local theorem would likely reach `bit_div_two` and the two
+`% 2` members. Named, not planned.
+
 **Next task, pre-sized:** the `Iff` terminal leg. Population is the four
 declines here plus the 40 `Iff`-headed facts ADR-1510 counted; the contract is
 already written and stays un-retired at 6 live members; and `check_declines()`

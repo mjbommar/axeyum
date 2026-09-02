@@ -231,6 +231,47 @@ happen to sit in.
 
 Recorded so the next lane inherits a measurement instead of a green light.
 
+## Finding: our own prelude already carries three of these propositions — about a DIFFERENT constant
+
+Step 0 of a brief is "does it already exist?", and run properly it returns an
+uncomfortable answer here. `shape_search --name-like` over the live kernel
+(2,187 declarations, positive control `Int.quadraticReciprocity` FOUND):
+
+| our declaration | its statement | the ml430 mirror it resembles |
+| --- | --- | --- |
+| `Nat.bit_false` (arity 1) | `∀ n, bit false n = mul 2 n` | `Nat.bit_false_apply` — **accepted** here |
+| `Nat.bit_true` (arity 1) | `∀ n, bit true n = add (mul 2 n) 1` | `Nat.bit_true_apply` — **accepted** here |
+| `Nat.bit_div_two` (arity 2) | `∀ b n, bit b n / 2 = n` | `Nat.bit_div_two` — **declined** here |
+| `Nat.bit_mod_two` (arity 2) | `mod (bit test n) 2 = bool_select_nat test 1 0` | the two `% 2` `Iff` mirrors — declined |
+
+The name collision is real and the reader deserves it stated: **our `Nat.bit`
+is not Mathlib's `Nat.bit`.** Ours is
+`fun test n => Nat.add (Nat.mul 2 n) (bool_select_nat test 1 0)`
+(`crates/axeyum-lean-kernel/src/nat_prelude/bits.rs`), deliberately
+`add`-outermost so several order lemmas fall out by δι-reduction; Mathlib's is
+`cond b (2 * n + 1) (2 * n)`. The mirror facts quantify over *Mathlib's*
+constant, and this dispatch proved them by importing Mathlib's definition into
+a fresh kernel and constructing the term there. Nothing in the four evidence
+rows cites a local `Nat.bit_*` theorem, and the import admits 60 declarations
+with 0 axioms — our prelude is not in that environment at all.
+
+Two consequences, neither of them comfortable:
+
+- The four closures are **not novel mathematics**, and this ADR does not claim
+  they are; their `external_status` was `proved` before and stays `proved`.
+  What is new is the *mechanism* — a producer, not a person, put the term
+  together, for four facts at once. That is the whole content of the exit
+  criterion, and it is the only thing being claimed.
+- `Nat.bit_div_two` is the sharper case: we hold that proposition about our own
+  constructor and the producer still declined its Mathlib mirror. That is
+  correct behaviour — a theorem about a different constant is not evidence for
+  this row — but it does identify a cheaper route nobody has built: a
+  **transport** producer that discharges a mirror by exhibiting the two
+  constructions as definitionally equal and citing the local theorem. That is
+  a different producer from an `Iff` leg, it would reach `bit_div_two` and
+  probably the two `% 2` members, and this lane is not building it. Recorded
+  as a named candidate rather than a plan.
+
 ## Finding: the census's "do not build a producer" recommendation is stale
 
 `2026-09-02-what-the-frontier-is-shaped-like.md` closes with "**Do not build a
