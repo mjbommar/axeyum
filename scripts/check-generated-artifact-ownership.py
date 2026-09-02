@@ -34,6 +34,10 @@ THE ARMS
          nested. This is the arm that would have gone red the moment
          `bridge_provenance` was dropped, whoever dropped it.
   READS  every script declared read-only really has no write call (AST).
+  INVOKES a script that only STAGES the artifact and regenerates it by
+         calling the OWNER. Verified by inspection, like READS: every line
+         reaching the artifact's name is a git staging line, and the owner's
+         path appears in the script.
   RUNS   every other producer, executed in a sandbox, leaves the guarded
          artifact byte-identical.
   OWNER  the owner, executed in the same sandbox over a PERTURBED copy,
@@ -107,6 +111,14 @@ class ReadOnly(NamedTuple):
     note: str
 
 
+class Invoker(NamedTuple):
+    """A script that only STAGES the artifact and regenerates it by calling
+    the owner. Verified by inspection; never executed. See INVOKES below."""
+
+    path: str
+    note: str
+
+
 class Artifact(NamedTuple):
     path: str
     owner: Producer
@@ -114,6 +126,9 @@ class Artifact(NamedTuple):
     required_nested: dict[str, tuple[str, ...]]
     runs: tuple[Producer, ...]
     reads: tuple[ReadOnly, ...]
+    # Trailing and defaulted so an artifact with no orchestrator is written
+    # exactly as before. An unclassified one is caught by KNOWN either way.
+    invokes: tuple[Invoker, ...] = ()
 
 
 GUARDED: tuple[Artifact, ...] = (
@@ -278,6 +293,17 @@ GUARDED: tuple[Artifact, ...] = (
             ),
         ),
         reads=(),
+        invokes=(
+            Invoker(
+                "scripts/lane-merge-land.sh",
+                "Names the artifact in `GENERATED` so a merge conflict on it "
+                "is cleared with `git checkout --theirs` and the result "
+                "staged, then regenerates it by running the OWNER. Running a "
+                "merge driver in the ownership sandbox would measure nothing "
+                "and `reads` is false (it redirects and stages), so the "
+                "property is checked by inspection instead.",
+            ),
+        ),
     ),
 )
 
@@ -495,7 +521,8 @@ def keys_arm(doc: Any, artifact: Artifact) -> list[str]:
 def classified_paths(artifact: Artifact) -> set[str]:
     return ({artifact.owner.path}
             | {p.path for p in artifact.runs}
-            | {r.path for r in artifact.reads})
+            | {r.path for r in artifact.reads}
+            | {i.path for i in artifact.invokes})
 
 
 def known_arm(artifact: Artifact, found: set[str]) -> list[str]:
@@ -512,8 +539,10 @@ def known_arm(artifact: Artifact, found: set[str]) -> list[str]:
             f"KNOWN {artifact.path}: {path} names this artifact and is not "
             f"classified. Classify it in GUARDED as a `runs` producer (it "
             f"will be executed in a sandbox and must leave the file "
-            f"byte-identical) or, only if it contains no write call at all, "
-            f"as `reads`.")
+            f"byte-identical); or, only if it contains no write call at all, "
+            f"as `reads`; or, if it only STAGES the artifact and regenerates "
+            f"it by calling {artifact.owner.path}, as `invokes` (checked by "
+            f"inspection, never run).")
     for path in sorted(classified - found):
         fails.append(
             f"KNOWN {artifact.path}: {path} is classified here but no longer "
@@ -532,6 +561,179 @@ def reads_arm(artifact: Artifact, source_of: Any) -> list[str]:
                 f"{artifact.path} but contains write call(s) {calls}. A "
                 f"script that can write cannot be declared read-only by "
                 f"inspection -- reclassify it as `runs`.")
+    return fails
+
+
+# --------------------------------------------------------------------------
+# INVOKES -- the ORCHESTRATOR, which neither existing category describes.
+#
+# `scripts/lane-merge-land.sh` names the census artifact in its `GENERATED`
+# array so that a merge conflict on it is cleared (with `--theirs`) and the
+# regenerated file staged, and then rebuilds it by running
+# `scripts/frontier-shape-census.py` -- the OWNER. Both existing
+# classifications are dishonest for it, and the gate offered only those two in
+# its own remedy line:
+#
+#   `runs`   would EXECUTE a merge driver inside the ownership sandbox. It
+#            takes a branch argument, merges, resolves and commits; running it
+#            there measures nothing about ownership.
+#   `reads`  is false. The script writes -- redirections, and staging -- and
+#            READS' decision procedure is an AST scan that does not apply to
+#            bash at all.
+#
+# PLAN.md and the ADR index are handled by the same script in the same way;
+# that never surfaced only because they are not guarded artifacts.
+#
+# So this is a third decision procedure, and like READS it is BY INSPECTION
+# rather than by execution, because for this shape inspection is decidable:
+#
+#   (a) every line that reaches the artifact's name is a git STAGING line --
+#       add, checkout, restore, rm, stage, update-index. A staging command
+#       moves a file between the index, the working tree and a merge stage; it
+#       cannot put content into the artifact that the owner did not produce.
+#       A redirection into it, a copy or move onto it, a Python
+#       `open(path, "w")` -- each reaches the name on a line that is not a
+#       staging line, and fails.
+#   (b) the owner's path appears in the script, which is what makes it an
+#       INVOKER rather than merely a stager. A script that clears the conflict
+#       and never regenerates leaves a stale artifact staged.
+#
+# "Reaches the name" is not "contains the name": the real script binds the
+# path into an array and stages the array's elements in a loop, so an arm that
+# judged only the naming LINE would accept an array later used to copy over
+# the file -- a guard that cannot fail. So bindings are followed: a line that
+# BINDS a name reaching the artifact (`VAR=`, `for VAR in`) contributes the new
+# name instead of being judged, and the lines using that name are judged.
+# --------------------------------------------------------------------------
+
+# Git subcommands that move a file between the index, the working tree and a
+# merge stage. Deliberately a small closed list: `git show` and `git cat-file`
+# are NOT on it, because `git show :2:path` redirected into the path writes
+# content -- which is what `redirects_into` exists to catch besides.
+STAGING = re.compile(
+    r"\bgit\b[^\n]*?\b(?:add|checkout|restore|rm|stage|update-index)\b")
+
+# `VAR=`, `export VAR=`, `local VAR=`, and Python's `VAR = ...`. The trailing
+# `[^=]` keeps `==` from reading as a binding.
+NAME_BINDING = re.compile(
+    r"^\s*(?:export\s+|local\s+|declare\s+(?:-\w+\s+)*)?"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*=[^=]")
+FOR_BINDING = re.compile(r"^\s*for\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\b")
+
+# A binding line is exempt from the staging shape because binding a name puts
+# no bytes anywhere. `p = open("artifacts/x.json", "w")` binds a name too, and
+# exempting it would make the follow-through a laundry: the write reaches the
+# artifact on a line the arm declined to judge. So a binding that also carries
+# a write construct is judged like any other use.
+WRITE_SHAPE = re.compile(
+    r"\bopen\s*\(|\.write(?:_text|_bytes)?\s*\(|\bshutil\.\w+\s*\(|"
+    r"\b(?:cp|mv|tee|dd|install|truncate)\b")
+
+
+def literal_pattern(basename: str) -> re.Pattern[str]:
+    """The artifact named directly, with or without its directory prefix."""
+    return re.compile(r"[A-Za-z0-9_./-]*" + re.escape(basename))
+
+
+def var_pattern(name: str) -> re.Pattern[str]:
+    """A bound name, expanded (`$g`, `${g[@]}`) or bare (Python's `P`)."""
+    return re.compile(r"(?<![A-Za-z0-9_])\$?\{?" + re.escape(name) + r"\b")
+
+
+def invoker_uses(text: str, basename: str,
+                 max_depth: int = 4) -> dict[int, tuple[str, re.Pattern[str]]]:
+    """`{lineno: (line, the pattern that matched)}` for every USE of the name.
+
+    A binding line contributes a name and is not itself judged; every other
+    line reaching the artifact is a use and must answer to the staging shape.
+    Comment lines execute nothing and are skipped. `max_depth` bounds the
+    follow-through, which is otherwise a fixpoint over the whole script.
+    """
+    lines = list(enumerate(text.splitlines(), start=1))
+    frontier = [literal_pattern(basename)]
+    bound: set[str] = set()
+    uses: dict[int, tuple[str, re.Pattern[str]]] = {}
+    for _ in range(max_depth):
+        nxt: list[re.Pattern[str]] = []
+        for pat in frontier:
+            for lineno, line in lines:
+                if line.lstrip().startswith("#") or not pat.search(line):
+                    continue
+                binding = FOR_BINDING.match(line) or NAME_BINDING.match(line)
+                if binding and not WRITE_SHAPE.search(line):
+                    name = binding.group(1)
+                    if name not in bound:
+                        bound.add(name)
+                        nxt.append(var_pattern(name))
+                    continue
+                uses[lineno] = (line, pat)
+        if not nxt:
+            break
+        frontier = nxt
+    return uses
+
+
+def redirects_into(line: str, pat: re.Pattern[str]) -> bool:
+    """Is the artifact reference on this line the TARGET of a redirection?
+
+    The one shape that carries a staging word and still writes the file:
+    `git show :2:path > path`. Without this, (a) is satisfied by the mere
+    presence of the word `git` somewhere on the line.
+    """
+    for match in pat.finditer(line):
+        before = line[:match.start()].rstrip("\"'").rstrip()
+        if before.endswith(">"):
+            return True
+    return False
+
+
+def invokes_arm(artifact: Artifact, source_of: Any) -> list[str]:
+    """INVOKES: an orchestrator only stages the artifact, and calls the owner.
+
+    Verified by reading the script, never by running it -- running a merge
+    driver inside the ownership sandbox is not a measurement of anything.
+    """
+    basename = pathlib.PurePath(artifact.path).name
+    fails = []
+    for inv in artifact.invokes:
+        text = source_of(inv.path)
+        uses = invoker_uses(text, basename)
+        staged = 0
+        for lineno in sorted(uses):
+            line, pat = uses[lineno]
+            if not STAGING.search(line):
+                fails.append(
+                    f"INVOKES {inv.path}:{lineno} is classified as an invoker "
+                    f"for {artifact.path} but reaches it outside a git "
+                    f"staging command: {line.strip()!r}. An invoker may name "
+                    f"the artifact only to stage it, and must produce its "
+                    f"content by calling {artifact.owner.path}. Writing it by "
+                    f"any other route makes it a second writer -- reclassify "
+                    f"it as `runs`.")
+                continue
+            if redirects_into(line, pat):
+                fails.append(
+                    f"INVOKES {inv.path}:{lineno} REDIRECTS into "
+                    f"{artifact.path}: {line.strip()!r}. A staging word "
+                    f"elsewhere on the line does not make this a staging "
+                    f"operation; it puts content into the artifact that "
+                    f"{artifact.owner.path} did not produce.")
+                continue
+            staged += 1
+        if artifact.owner.path not in text:
+            fails.append(
+                f"INVOKES {inv.path} is classified as an invoker for "
+                f"{artifact.path} but never names {artifact.owner.path}. An "
+                f"invoker is what it is because it REGENERATES the artifact "
+                f"by calling the owner; one that only clears the conflict "
+                f"leaves a stale artifact staged.")
+        if not staged:
+            fails.append(
+                f"INVOKES {inv.path} names {artifact.path} but no line "
+                f"reaching it is a staging command, so the classification "
+                f"asserts a property nothing here can fail. Either it is a "
+                f"`reads` or a `runs` script, or the reference is a mention "
+                f"this arm cannot see.")
     return fails
 
 
@@ -826,6 +1028,13 @@ def check(verbose: bool, candidates_path: pathlib.Path) -> int:
             if verbose and not arm:
                 for reader in artifact.reads:
                     print(f"READS ok  {reader.path}: no write call")
+
+            arm = invokes_arm(artifact, lambda p: (ROOT / p).read_text())
+            fails += arm
+            if verbose and not arm:
+                for inv in artifact.invokes:
+                    print(f"INVOKES ok {inv.path}: stages only, and names "
+                          f"{artifact.owner.path}")
 
             arm, ran = runs_arm(root, artifact, verbose)
             fails += arm
