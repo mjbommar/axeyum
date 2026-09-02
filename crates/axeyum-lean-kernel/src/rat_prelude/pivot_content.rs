@@ -56,7 +56,7 @@
 use super::RatPrelude;
 use super::echelon::{bool_select_at, ris_zero_b};
 use super::matrix_det::mat_ty;
-use super::ops::{rat_ty, rzero};
+use super::ops::{nat_rewrite_prop, rat_ty, req, rzero};
 use super::rank_bridge::bool_cases;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -73,6 +73,8 @@ use crate::nat_prelude::steps::{absurd, or_cases};
 pub(super) fn declare_pivot_content(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
     declare_pivot_search_aux_ne_zero(d, p)?;
     declare_pivot_search_ne_zero(d, p)?;
+    declare_pivot_search_aux_column_zero(d, p)?;
+    declare_pivot_search_column_zero(d, p)?;
     Ok(())
 }
 
@@ -310,4 +312,380 @@ fn declare_pivot_search_ne_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(),
         d.lam_fv(m_fv, mty, over_c)
     };
     d.declare_theorem(p.pivot_search_ne_zero, ty, value)
+}
+
+/// `Eq Rat (M q c) Rat.zero` — the conclusion of the exhaustion disjunct.
+fn entry_eq_zero(d: &mut IntDev<'_>, p: RatPrelude, m: ExprId, r: ExprId, c: ExprId) -> ExprId {
+    let entry = d.apply(m, &[r, c]);
+    let zero_r = rzero(d, p);
+    req(d, entry, zero_r)
+}
+
+/// Admit `Rat.pivotSearchAux_column_zero : ∀ M c rows q fuel r, Le r q →
+/// Lt q rows → Lt q (Nat.add r fuel) → Eq Nat (pivotSearchAux M c rows fuel r)
+/// rows → Eq Rat (M q c) Rat.zero`.
+///
+/// ADR-1554's obligation 2, FIRST disjunct: *the answer is `rows`, and then
+/// column `c` is zero at every row the scan passed.* ADR-1562 recorded it open
+/// and said why — it is a statement about every index the scan VISITED rather
+/// than about the one it returned, so it needs the accumulated range in the
+/// motive, which is `Le r q` plus the fuel bound.
+///
+/// **The fuel bound is not removable.** A scan that runs out of fuel answers
+/// `rows`, exactly as one that reached the bound does; the two are
+/// indistinguishable in the answer, so without `Lt q (r + fuel)` the statement
+/// is false at `fuel = 0`. The wrapper discharges it from `Lt q rows` because
+/// `pivotSearch` hands the scan `rows` units.
+///
+/// Three of the four leaves are refutations and only one does work. The
+/// `Nat.ble rows r = true` branch is refuted from `Le r q` and `Lt q rows`
+/// (the scan cannot have run past the bound while `q` is still inside it), and
+/// the `isZeroB = false` branch is refuted from its own hypothesis: there the
+/// answer is `r`, so `Eq Nat r rows` transports `Lt r rows` into `Lt rows
+/// rows`. Only `isZeroB = true` splits further, into `r = q` (read the zero
+/// off `Rat.eq_zero_of_isZeroB`) and `Lt r q` (recurse).
+fn declare_pivot_search_aux_column_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+
+    // The three hypotheses that do NOT mention the tested `Bool`, so they are
+    // bound outside every split.
+    let range_hyps = |d: &mut IntDev<'_>, r: ExprId, x: ExprId| -> [ExprId; 3] {
+        let h1 = NatOps::le(d, r, q);
+        let h2 = NatOps::lt(d, q, rows);
+        let bound = NatOps::add(d, r, x);
+        let h3 = NatOps::lt(d, q, bound);
+        [h1, h2, h3]
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let found = d.const_app(p.pivot_search_aux, &[m, c, rows, x, r]);
+        let exhausted = d.eq(found, rows);
+        let concl = entry_eq_zero(d, p, m, q, c);
+        let tail = d.arrow(exhausted, concl);
+        let [h1, h2, h3] = range_hyps(d, r, x);
+        let after3 = d.arrow(h3, tail);
+        let after2 = d.arrow(h2, after3);
+        let body = d.arrow(h1, after2);
+        d.pi_fv(r_fv, nat, body)
+    };
+    let stmt = motive(d, fuel);
+
+    let bind_range = |d: &mut IntDev<'_>,
+                      r: ExprId,
+                      x: ExprId,
+                      body: &dyn Fn(&mut IntDev<'_>, [ExprId; 3]) -> ExprId|
+     -> ExprId {
+        let [t1, t2, t3] = range_hyps(d, r, x);
+        let f1 = d.fresh_fvar();
+        let f2 = d.fresh_fvar();
+        let f3 = d.fresh_fvar();
+        let v1 = d.kernel().fvar(f1);
+        let v2 = d.kernel().fvar(f2);
+        let v3 = d.kernel().fvar(f3);
+        let inner = body(d, [v1, v2, v3]);
+        let l3 = d.lam_fv(f3, t3, inner);
+        let l2 = d.lam_fv(f2, t2, l3);
+        d.lam_fv(f1, t1, l2)
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let zero_n = d.zero();
+        let body = bind_range(d, r, zero_n, &|d, hs| {
+            // `Lt q (r + 0)` is `Lt q r`; with `Le r q` that is `Lt q q`.
+            let lt_of_lt_of_le = d.prelude().lt_of_lt_of_le;
+            let lt_irrefl = d.prelude().lt_irrefl;
+            let self_lt = d.lemma(lt_of_lt_of_le, &[q, r, q, hs[2], hs[0]]);
+            let contradiction = d.lemma(lt_irrefl, &[q, self_lt]);
+            let found = d.const_app(p.pivot_search_aux, &[m, c, rows, zero_n, r]);
+            let exhausted = d.eq(found, rows);
+            let concl = entry_eq_zero(d, p, m, q, c);
+            let goal = d.arrow(exhausted, concl);
+            absurd(d, goal, contradiction)
+        });
+        d.lam_fv(r_fv, nat, body)
+    };
+
+    let step = |d: &mut IntDev<'_>, n: ExprId, ih: ExprId| -> ExprId {
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let sn = d.succ(n);
+
+        let body = bind_range(d, r, sn, &|d, hs| {
+            let entry = d.apply(m, &[r, c]);
+            let is_zero = ris_zero_b(d, p, entry);
+            let sr = d.succ(r);
+            let recursed = d.const_app(p.pivot_search_aux, &[m, c, rows, n, sr]);
+            let inner_row = bool_select_at(d, nat, is_zero, recursed, r);
+            let oor = NatOps::ble(d, rows, r);
+            let concl = entry_eq_zero(d, p, m, q, c);
+
+            // `r` is strictly inside the row count, from the accumulated range.
+            let r_lt_rows = {
+                let lt_of_le_of_lt = d.prelude().lt_of_le_of_lt;
+                d.lemma(lt_of_le_of_lt, &[r, q, rows, hs[0], hs[1]])
+            };
+
+            let outer_shape = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                let chosen = bool_select_at(d, nat, x, rows, inner_row);
+                let exhausted = d.eq(chosen, rows);
+                d.arrow(exhausted, concl)
+            };
+            let goal = outer_shape(d, oor);
+
+            let true_ = d.bool_true();
+            let false_ = d.bool_false();
+            let h_true_ty = d.bool_eq(oor, true_);
+            let h_false_ty = d.bool_eq(oor, false_);
+
+            let left_minor = {
+                let ht_fv = d.fresh_fvar();
+                let ht = d.kernel().fvar(ht_fv);
+                let le_of_ble_eq_true = d.prelude().le_of_ble_eq_true;
+                let lt_of_lt_of_le = d.prelude().lt_of_lt_of_le;
+                let lt_irrefl = d.prelude().lt_irrefl;
+                let rows_le_r = d.lemma(le_of_ble_eq_true, &[rows, r, ht]);
+                let self_lt = d.lemma(lt_of_lt_of_le, &[r, rows, r, r_lt_rows, rows_le_r]);
+                let contradiction = d.lemma(lt_irrefl, &[r, self_lt]);
+                let target = outer_shape(d, true_);
+                let refl_case = absurd(d, target, contradiction);
+                let motive_x = d.bool_eq_motive(true_, &outer_shape);
+                let ht_sym = d.bool_symm(oor, true_, ht);
+                let inner = d.bool_transport(true_, motive_x, refl_case, oor, ht_sym);
+                d.lam_fv(ht_fv, h_true_ty, inner)
+            };
+
+            let right_minor = {
+                let hf_fv = d.fresh_fvar();
+                let hf = d.kernel().fvar(hf_fv);
+
+                let inner_shape = |d: &mut IntDev<'_>, y: ExprId| -> ExprId {
+                    let chosen = bool_select_at(d, nat, y, recursed, r);
+                    let exhausted = d.eq(chosen, rows);
+                    d.arrow(exhausted, concl)
+                };
+                let inner_goal = inner_shape(d, is_zero);
+                let zero_true_ty = d.bool_eq(is_zero, true_);
+                let zero_false_ty = d.bool_eq(is_zero, false_);
+
+                // `M r c = 0`: either `r` IS the row asked about, or the scan
+                // moved on and the induction hypothesis answers.
+                let zero_left = {
+                    let hz_fv = d.fresh_fvar();
+                    let hz = d.kernel().fvar(hz_fv);
+                    let refl_case = {
+                        let he_fv = d.fresh_fvar();
+                        let he = d.kernel().fvar(he_fv);
+                        let assumed = d.eq(recursed, rows);
+
+                        let lt_or_eq_of_le = d.prelude().lt_or_eq_of_le;
+                        let split = d.lemma(lt_or_eq_of_le, &[r, q, hs[0]]);
+                        let lt_ty = NatOps::lt(d, r, q);
+                        let eq_ty = d.eq(r, q);
+
+                        let below = {
+                            let hlt_fv = d.fresh_fvar();
+                            let hlt = d.kernel().fvar(hlt_fv);
+                            let a3 = {
+                                let succ_add = d.prelude().succ_add;
+                                let shifted = d.lemma(succ_add, &[r, n]);
+                                let left = NatOps::add(d, sr, n);
+                                let sum = NatOps::add(d, r, n);
+                                let right = d.succ(sum);
+                                let back = NatOps::symm(d, left, right, shifted);
+                                nat_rewrite_prop(d, right, left, back, hs[2], &|d, t| {
+                                    NatOps::lt(d, q, t)
+                                })
+                            };
+                            let applied = d.apply(ih, &[sr, hlt, hs[1], a3, he]);
+                            d.lam_fv(hlt_fv, lt_ty, applied)
+                        };
+                        let here = {
+                            let heq_fv = d.fresh_fvar();
+                            let heq = d.kernel().fvar(heq_fv);
+                            let at_r = d.lemma(p.eq_zero_of_is_zero_b, &[entry, hz]);
+                            let moved = nat_rewrite_prop(d, r, q, heq, at_r, &|d, t| {
+                                entry_eq_zero(d, p, m, t, c)
+                            });
+                            d.lam_fv(heq_fv, eq_ty, moved)
+                        };
+
+                        let chosen = or_cases(d, lt_ty, eq_ty, concl, below, here, split);
+                        d.lam_fv(he_fv, assumed, chosen)
+                    };
+                    let motive_y = d.bool_eq_motive(true_, &inner_shape);
+                    let hz_sym = d.bool_symm(is_zero, true_, hz);
+                    let inner = d.bool_transport(true_, motive_y, refl_case, is_zero, hz_sym);
+                    d.lam_fv(hz_fv, zero_true_ty, inner)
+                };
+
+                // `M r c ≠ 0`: the scan answers `r`, so the exhaustion
+                // hypothesis says `r = rows`, which `Lt r rows` refutes.
+                let zero_right = {
+                    let hz_fv = d.fresh_fvar();
+                    let hz = d.kernel().fvar(hz_fv);
+                    let refl_case = {
+                        let he_fv = d.fresh_fvar();
+                        let he = d.kernel().fvar(he_fv);
+                        let assumed = d.eq(r, rows);
+                        let moved = nat_rewrite_prop(d, r, rows, he, r_lt_rows, &|d, t| {
+                            NatOps::lt(d, t, rows)
+                        });
+                        let lt_irrefl = d.prelude().lt_irrefl;
+                        let contradiction = d.lemma(lt_irrefl, &[rows, moved]);
+                        let inner = absurd(d, concl, contradiction);
+                        d.lam_fv(he_fv, assumed, inner)
+                    };
+                    let motive_y = d.bool_eq_motive(false_, &inner_shape);
+                    let hz_sym = d.bool_symm(is_zero, false_, hz);
+                    let inner = d.bool_transport(false_, motive_y, refl_case, is_zero, hz_sym);
+                    d.lam_fv(hz_fv, zero_false_ty, inner)
+                };
+
+                let zero_split = bool_cases(d, is_zero);
+                let inner_proof = or_cases(
+                    d,
+                    zero_true_ty,
+                    zero_false_ty,
+                    inner_goal,
+                    zero_left,
+                    zero_right,
+                    zero_split,
+                );
+                let motive_x = d.bool_eq_motive(false_, &outer_shape);
+                let hf_sym = d.bool_symm(oor, false_, hf);
+                let inner = d.bool_transport(false_, motive_x, inner_proof, oor, hf_sym);
+                d.lam_fv(hf_fv, h_false_ty, inner)
+            };
+
+            let split = bool_cases(d, oor);
+            or_cases(
+                d,
+                h_true_ty,
+                h_false_ty,
+                goal,
+                left_minor,
+                right_minor,
+                split,
+            )
+        });
+        d.lam_fv(r_fv, nat, body)
+    };
+
+    let proof = d.induct(&motive, &base, &step, fuel);
+
+    let ty = {
+        let over_fuel = d.pi_fv(fuel_fv, nat, stmt);
+        let over_q = d.pi_fv(q_fv, nat, over_fuel);
+        let over_rows = d.pi_fv(rows_fv, nat, over_q);
+        let over_c = d.pi_fv(c_fv, nat, over_rows);
+        d.pi_fv(m_fv, mty, over_c)
+    };
+    let value = {
+        let over_fuel = d.lam_fv(fuel_fv, nat, proof);
+        let over_q = d.lam_fv(q_fv, nat, over_fuel);
+        let over_rows = d.lam_fv(rows_fv, nat, over_q);
+        let over_c = d.lam_fv(c_fv, nat, over_rows);
+        d.lam_fv(m_fv, mty, over_c)
+    };
+    d.declare_theorem(p.pivot_search_aux_column_zero, ty, value)
+}
+
+/// Admit `Rat.pivotSearch_column_zero : ∀ M c start rows q, Le start q →
+/// Lt q rows → Eq Nat (pivotSearch M c start rows) rows →
+/// Eq Rat (M q c) Rat.zero`.
+///
+/// Obligation 2 is now complete: range half (`pivot_bound.rs`), value half
+/// (above), exhaustion disjunct (here). The fuel bound
+/// [`declare_pivot_search_aux_column_zero`] needs is discharged from `Lt q
+/// rows` and `Nat.le_add_right`, because `pivotSearch` hands the scan `rows`
+/// units of fuel and the scan starts at `start`.
+fn declare_pivot_search_column_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let start_fv = d.fresh_fvar();
+    let start = d.kernel().fvar(start_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let t1 = NatOps::le(d, start, q);
+    let t2 = NatOps::lt(d, q, rows);
+    let found = d.const_app(p.pivot_search, &[m, c, start, rows]);
+    let t3 = d.eq(found, rows);
+    let concl = entry_eq_zero(d, p, m, q, c);
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    let bound = {
+        let le_add_right = d.prelude().le_add_right;
+        let add_comm = d.prelude().add_comm;
+        let lt_of_lt_of_le = d.prelude().lt_of_lt_of_le;
+        let grown = d.lemma(le_add_right, &[rows, start]);
+        let right_sum = NatOps::add(d, rows, start);
+        let left_sum = NatOps::add(d, start, rows);
+        let flip = d.lemma(add_comm, &[rows, start]);
+        let moved = nat_rewrite_prop(d, right_sum, left_sum, flip, grown, &|d, t| {
+            NatOps::le(d, rows, t)
+        });
+        d.lemma(lt_of_lt_of_le, &[q, rows, left_sum, h2, moved])
+    };
+    let aux = d.lemma(
+        p.pivot_search_aux_column_zero,
+        &[m, c, rows, q, rows, start],
+    );
+    let body = d.apply(aux, &[h1, h2, bound, h3]);
+    let proof = {
+        let l3 = d.lam_fv(h3_fv, t3, body);
+        let l2 = d.lam_fv(h2_fv, t2, l3);
+        d.lam_fv(h1_fv, t1, l2)
+    };
+
+    let ty = {
+        let f3 = d.pi_fv(h3_fv, t3, concl);
+        let f2 = d.pi_fv(h2_fv, t2, f3);
+        let f1 = d.pi_fv(h1_fv, t1, f2);
+        let over_q = d.pi_fv(q_fv, nat, f1);
+        let over_rows = d.pi_fv(rows_fv, nat, over_q);
+        let over_start = d.pi_fv(start_fv, nat, over_rows);
+        let over_c = d.pi_fv(c_fv, nat, over_start);
+        d.pi_fv(m_fv, mty, over_c)
+    };
+    let value = {
+        let over_q = d.lam_fv(q_fv, nat, proof);
+        let over_rows = d.lam_fv(rows_fv, nat, over_q);
+        let over_start = d.lam_fv(start_fv, nat, over_rows);
+        let over_c = d.lam_fv(c_fv, nat, over_start);
+        d.lam_fv(m_fv, mty, over_c)
+    };
+    d.declare_theorem(p.pivot_search_column_zero, ty, value)
 }

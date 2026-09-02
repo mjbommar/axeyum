@@ -2891,6 +2891,18 @@ pub struct RatPrelude {
     /// open, and needs a different induction — one carrying the accumulated
     /// range in its motive.
     pub pivot_search_ne_zero: NameId,
+    /// `Rat.pivotSearchAux_column_zero : ∀ M c rows q fuel r, Le r q →
+    /// Lt q rows → Lt q (Nat.add r fuel) →
+    /// Eq Nat (pivotSearchAux M c rows fuel r) rows → Eq Rat (M q c) Rat.zero`.
+    pub pivot_search_aux_column_zero: NameId,
+    /// `Rat.pivotSearch_column_zero : ∀ M c start rows q, Le start q →
+    /// Lt q rows → Eq Nat (pivotSearch M c start rows) rows →
+    /// Eq Rat (M q c) Rat.zero` — ADR-1554 obligation 2's **exhaustion
+    /// disjunct**, which ADR-1562 left open: *the scan answered `rows`, and
+    /// then the column is zero at every row it passed.* With
+    /// [`Self::pivot_search_le_rows`] (range) and [`Self::pivot_search_ne_zero`]
+    /// (value), obligation 2 is complete.
+    pub pivot_search_column_zero: NameId,
 
     // --- obligation 3 (`rat_prelude::clear_below`, ADR-1571) ----------------
     /// `Rat.add_neg_div_mul_cancel : ∀ a b, Not (Eq Rat b Rat.zero) →
@@ -3437,6 +3449,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
         pivot_search_aux_ne_zero: child(kernel, "pivotSearchAux_ne_zero"),
         pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
+        pivot_search_aux_column_zero: child(kernel, "pivotSearchAux_column_zero"),
+        pivot_search_column_zero: child(kernel, "pivotSearch_column_zero"),
         add_neg_div_mul_cancel: child(kernel, "add_neg_div_mul_cancel"),
         clear_below_aux_off: child(kernel, "clearBelowAux_off"),
         clear_below_off: child(kernel, "clearBelow_off"),
