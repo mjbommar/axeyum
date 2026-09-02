@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 from collections import Counter, defaultdict, deque
 from pathlib import Path
@@ -161,16 +162,61 @@ def validate_entries(
     return entries
 
 
+def amended_edges(entries: list[dict[str, Any]]) -> set[tuple[str, str]]:
+    """The per-edge amendments `scripts/check-partition-edges.py` honours.
+
+    ADR-1563. THE AMENDMENT LIST IS LOADED THROUGH THE OTHER GATE'S OWN LOADER,
+    by path, rather than re-parsed here. Two readers of one exemption artifact
+    that disagree about which entries are valid is the failure this repository
+    has already paid for once: a component exemption honoured by one checker
+    and declined by another means neither report describes the tree. So
+    `load_amendments` -- including `class_complaint`, which re-derives a
+    declared class from the LIVE manifests -- is the single implementation, and
+    a malformed or wrongly-classed amendment is unhonoured in both gates by
+    construction.
+
+    An amendment removes the edge from THIS graph's adjacency. That is what
+    makes the 45 `depends-on-longitudinal-bootstrap` edges stop fusing the
+    longitudinal chain into the evaluation population without any hardcoded
+    rule here: the amendment is the whole mechanism, it is per-edge, and
+    deleting one restores the fusion and turns the longitudinal-overlap check
+    red again. A rule hardcoded in this file instead would have made that check
+    structurally unable to fail, which is worse than not having it.
+
+    A failure to load is NOT swallowed: an empty set on a broken amendments
+    file would silently restore every edge and read as a stricter run, which is
+    the one direction a reader would not question.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_axeyum_check_partition_edges", ROOT / "scripts/check-partition-edges.py")
+    if spec is None or spec.loader is None:
+        raise NurseryError("scripts/check-partition-edges.py is not importable; "
+                           "the per-edge amendments cannot be read")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    partition_of = {entry["fact_id"]: entry["partition"] for entry in entries}
+    amendments, complaints = module.load_amendments(ROOT, partition_of)
+    if complaints:
+        raise NurseryError(
+            "per-edge amendment(s) are not honoured, so this report would "
+            "describe a graph neither gate agrees with: "
+            + "; ".join(complaints))
+    return amendments
+
+
 def components(
     entries: list[dict[str, Any]], facts: dict[str, dict[str, Any]]
 ) -> tuple[dict[str, str], dict[str, list[str]]]:
     selected = {entry["fact_id"] for entry in entries}
+    amended = amended_edges(entries)
     adjacency: dict[str, set[str]] = {fact_id: set() for fact_id in selected}
     for fact_id in selected:
         dependencies = facts[fact_id].get("depends_on") or []
         if not isinstance(dependencies, list):
             raise NurseryError(f"{fact_id}: depends_on is not a list")
         for dependency in dependencies:
+            if (fact_id, dependency) in amended:
+                continue
             if dependency in selected:
                 adjacency[fact_id].add(dependency)
                 adjacency[dependency].add(fact_id)

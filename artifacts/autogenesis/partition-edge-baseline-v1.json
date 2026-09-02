@@ -1,7 +1,7 @@
 {
   "authority": "docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md",
-  "edge_count": 198,
-  "edge_set_sha256": "0f1fa1c43e77105fea31faed2730e75c613a30548ec8ef9105adf029f603787d",
+  "edge_count": 153,
+  "edge_set_sha256": "05e3bca7e62670131efd455429b19023d9b99d55936e125f9789dc89fad43248",
   "edges": [
     {
       "from": "F:ml430-int-add-assoc-749cb0ff",
@@ -122,12 +122,6 @@
       "from_partition": "development",
       "to": "F:ml430-int-fib-of-odd-66560495",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-int-gcd-div-5e01872f",
@@ -292,12 +286,6 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-abundant-mul-left-4de4fbe7",
       "from_partition": "development",
       "to": "F:ml430-nat-mul-lt-mul-left-af33301e",
@@ -316,40 +304,10 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-nat-add-comm-56a2d614",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-div-left-1b15b2b2",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
       "from_partition": "train",
       "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-div-right-4b60b393",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-eq-max-iff-39576e6d",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-add-eq-min-iff-e60cf432",
@@ -364,52 +322,10 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-nat-add-eq-right-9067eb1a",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-add-eq-three-iff-799a0a8f",
       "from_partition": "train",
       "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-mod-left-6b337077",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-mod-left-6b337077",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-add-mod-right-c047c67a",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-and-assoc-273b60d8",
@@ -424,22 +340,10 @@
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-nat-and-one-is-mod-d861e96b",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-ascfactorial-eq-div-87d768e8",
       "from_partition": "train",
       "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-base-induction-83561d4c",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-bit-add-b1edcc8e",
@@ -500,12 +404,6 @@
       "from_partition": "train",
       "to": "F:ml430-nat-le-of-lt-succ-120bd6db",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-clog-eq-one-f7834503",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-clog-mono-74b44081",
@@ -592,34 +490,10 @@
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-coprime-iff-isrelprime-0c08eb25",
       "from_partition": "development",
       "to": "F:ml430-nat-dvd-gcd-e5184fc5",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-coprime-of-dvd-left-b0e2aa94",
@@ -664,24 +538,6 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-nat-descfactorial-one-d4856d4a",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-descfactorial-self-899fc0e0",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-dist-self-0cfa5426",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-div-gcd-pos-of-pos-left-dd878a3f",
       "from_partition": "train",
       "to": "F:ml430-nat-div-mul-cancel-99799a00",
@@ -722,18 +578,6 @@
       "from_partition": "train",
       "to": "F:ml430-nat-dvd-mul-right-a87a83c4",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-even-add-31386639",
@@ -788,18 +632,6 @@
       "from_partition": "development",
       "to": "F:ml430-nat-fib-add-two-b86e0c82",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-nat-fib-add-81ea2485",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-fib-add-81ea2485",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-fib-add-two-strictmono-c1e86d4d",
@@ -862,18 +694,6 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-nat-log-div-mul-self-04282351",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-log-div-mul-self-04282351",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
       "from_partition": "train",
       "to": "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
@@ -896,12 +716,6 @@
       "from_partition": "train",
       "to": "F:ml430-nat-log-of-lt-89eaf42e",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-log-eq-one-iff-a89f8bab",
@@ -946,30 +760,6 @@
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-nat-mod-lcm-ee6bdd41",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-mod-mul-beaccbad",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-mod-mul-left-div-self-0aca6c6e",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-mod-mul-right-div-self-900e0b01",
-      "from_partition": "train",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-modeq-gcd-eq-5167ff4f",
       "from_partition": "development",
       "to": "F:ml430-nat-add-comm-56a2d614",
@@ -982,22 +772,10 @@
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-nat-odd-fermatnumber-251041a5",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
       "from_partition": "development",
       "to": "F:ml430-nat-mul-lt-mul-left-af33301e",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-prime-coprime-descfactorial-of-lt-of-le-716dffc3",
@@ -1034,12 +812,6 @@
       "from_partition": "development",
       "to": "F:ml430-nat-prime-one-lt-bc90cfc7",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-nat-prime-deficient-89e0badf",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-prime-dvd-iff-not-coprime-77854741",
@@ -1096,12 +868,6 @@
       "to_partition": "development"
     },
     {
-      "from": "F:ml430-nat-prime-eq-one-of-pow-846d2949",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
       "from_partition": "development",
       "to": "F:ml430-nat-prime-dvd-or-dvd-4ae88221",
@@ -1112,12 +878,6 @@
       "from_partition": "development",
       "to": "F:ml430-nat-prime-eq-one-or-self-of-dvd-48de0abb",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-prime-not-coprime-iff-dvd-c83110ca",
@@ -1132,24 +892,6 @@
       "to_partition": "train"
     },
     {
-      "from": "F:ml430-nat-prime-not-prime-pow-5f14afc6",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-prime-not-prime-pow-d6480abf",
-      "from_partition": "development",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
-      "from": "F:ml430-nat-self-le-factorial-cfdffc69",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
-    },
-    {
       "from": "F:ml430-nat-stirlingfirst-eq-zero-of-lt-6f46764f",
       "from_partition": "train",
       "to": "F:ml430-nat-le-of-succ-le-succ-a180a72c",
@@ -1160,12 +902,6 @@
       "from_partition": "train",
       "to": "F:ml430-nat-choose-one-right-7eda8e39",
       "to_partition": "development"
-    },
-    {
-      "from": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
-      "from_partition": "train",
-      "to": "F:nat-mul-one",
-      "to_partition": "longitudinal"
     },
     {
       "from": "F:ml430-nat-stirlingsecond-eq-zero-of-lt-f3caf8bd",
@@ -1190,23 +926,17 @@
       "from_partition": "development",
       "to": "F:ml430-nat-dvd-gcd-e5184fc5",
       "to_partition": "train"
-    },
-    {
-      "from": "F:ml430-nat-totient-even-28e0415f",
-      "from_partition": "development",
-      "to": "F:nat-zero-add",
-      "to_partition": "longitudinal"
     }
   ],
   "held_out_salt": "54d4112e7b41d7ce0d03e2f51bb2b12451494b636ea3acedfff0475b65374443",
   "kind": "axeyum-partition-edge-baseline",
-  "ledger_sha256": "0826de5188235b121d6c5dbb38e3da4fe8ed859a9e0594e77c1cbac5beaf1805",
+  "ledger_sha256": "369356b10e9c194432d0f3cc353a5a01114f04c23a7fb58de1fbb5b266546c05",
   "manifests": [
     "artifacts/autogenesis/nursery-v1.json",
     "artifacts/autogenesis/nursery-v2-extension.json"
   ],
   "produced_by": "scripts/check-partition-edges.py --record-baseline",
-  "recorded_at_commit": "cebeec20da5d434da7e8a7066901bc969562bcd1",
+  "recorded_at_commit": "39ada5d6109f989bff506a7d4dac8fb3e171075a",
   "recorded_date": "2026-09-02",
   "rule": "This set may only SHRINK. --record-baseline refuses a set that is not a subset of the committed one, so a new crossing cannot be silenced by re-recording; it must be repaired or carry a per-edge amendment. A held-out endpoint is stored as a salted SHA-256 digest (`held_out_endpoint: true`), never as the fact id -- see `redacted_key` in the script.",
   "schema_version": 1

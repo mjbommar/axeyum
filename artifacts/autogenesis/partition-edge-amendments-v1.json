@@ -1,10 +1,374 @@
 {
-  "schema_version": 1,
-  "kind": "axeyum-partition-edge-amendments",
+  "amendments": [
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b",
+      "reason": "F:ml430-int-fib-two-mul-add-one-eq-natfib-natabs-61a8342b depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-int-not-prime-of-int-mul-e3060f5d",
+      "reason": "F:ml430-int-not-prime-of-int-mul-e3060f5d depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-comm-56a2d614",
+      "reason": "F:ml430-nat-add-comm-56a2d614 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-div-left-1b15b2b2",
+      "reason": "F:ml430-nat-add-div-left-1b15b2b2 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0",
+      "reason": "F:ml430-nat-add-div-of-dvd-add-add-one-f17dffc0 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-div-right-4b60b393",
+      "reason": "F:ml430-nat-add-div-right-4b60b393 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-eq-max-iff-39576e6d",
+      "reason": "F:ml430-nat-add-eq-max-iff-39576e6d depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-eq-right-9067eb1a",
+      "reason": "F:ml430-nat-add-eq-right-9067eb1a depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6",
+      "reason": "F:ml430-nat-add-factorial-le-factorial-add-b0400cf6 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
+      "reason": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8",
+      "reason": "F:ml430-nat-add-factorial-lt-factorial-add-7501a8c8 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-mod-left-6b337077",
+      "reason": "F:ml430-nat-add-mod-left-6b337077 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-mod-left-6b337077",
+      "reason": "F:ml430-nat-add-mod-left-6b337077 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-add-mod-right-c047c67a",
+      "reason": "F:ml430-nat-add-mod-right-c047c67a depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-and-one-is-mod-d861e96b",
+      "reason": "F:ml430-nat-and-one-is-mod-d861e96b depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-base-induction-83561d4c",
+      "reason": "F:ml430-nat-base-induction-83561d4c depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-clog-eq-one-f7834503",
+      "reason": "F:ml430-nat-clog-eq-one-f7834503 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "reason": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7",
+      "reason": "F:ml430-nat-coprime-fermatnumber-fermatnumber-161e79c7 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
+      "reason": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70",
+      "reason": "F:ml430-nat-coprime-mul-add-mul-ne-mul-51b56f70 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-descfactorial-one-d4856d4a",
+      "reason": "F:ml430-nat-descfactorial-one-d4856d4a depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-descfactorial-self-899fc0e0",
+      "reason": "F:ml430-nat-descfactorial-self-899fc0e0 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-dist-self-0cfa5426",
+      "reason": "F:ml430-nat-dist-self-0cfa5426 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+      "reason": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7",
+      "reason": "F:ml430-nat-eq-or-eq-of-totient-eq-totient-d4d154c7 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "reason": "F:ml430-nat-fib-add-81ea2485 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-fib-add-81ea2485",
+      "reason": "F:ml430-nat-fib-add-81ea2485 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "reason": "F:ml430-nat-log-div-mul-self-04282351 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-log-div-mul-self-04282351",
+      "reason": "F:ml430-nat-log-div-mul-self-04282351 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-log-eq-one-iff-63d772fb",
+      "reason": "F:ml430-nat-log-eq-one-iff-63d772fb depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-mod-lcm-ee6bdd41",
+      "reason": "F:ml430-nat-mod-lcm-ee6bdd41 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-mod-mul-beaccbad",
+      "reason": "F:ml430-nat-mod-mul-beaccbad depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-mod-mul-left-div-self-0aca6c6e",
+      "reason": "F:ml430-nat-mod-mul-left-div-self-0aca6c6e depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-mod-mul-right-div-self-900e0b01",
+      "reason": "F:ml430-nat-mod-mul-right-div-self-900e0b01 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-odd-fermatnumber-251041a5",
+      "reason": "F:ml430-nat-odd-fermatnumber-251041a5 depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3",
+      "reason": "F:ml430-nat-pow-of-pow-add-prime-ab61d0d3 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-prime-deficient-89e0badf",
+      "reason": "F:ml430-nat-prime-deficient-89e0badf depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-prime-eq-one-of-pow-846d2949",
+      "reason": "F:ml430-nat-prime-eq-one-of-pow-846d2949 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31",
+      "reason": "F:ml430-nat-prime-mul-eq-prime-sq-iff-d3fd2e31 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-prime-not-prime-pow-5f14afc6",
+      "reason": "F:ml430-nat-prime-not-prime-pow-5f14afc6 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-prime-not-prime-pow-d6480abf",
+      "reason": "F:ml430-nat-prime-not-prime-pow-d6480abf depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-self-le-factorial-cfdffc69",
+      "reason": "F:ml430-nat-self-le-factorial-cfdffc69 depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf",
+      "reason": "F:ml430-nat-stirlingfirst-succ-self-left-135bbfbf depends on F:nat-mul-one, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-mul-one"
+    },
+    {
+      "authority": "docs/research/09-decisions/adr-1563-the-bootstrap-lemma-is-not-a-leak-and-the-stale-exemption-is-retired.md",
+      "class": "depends-on-longitudinal-bootstrap",
+      "date": "2026-09-02",
+      "from": "F:ml430-nat-totient-even-28e0415f",
+      "reason": "F:ml430-nat-totient-even-28e0415f depends on F:nat-zero-add, one of the two Autogenesis-1 bootstrap lemmas pinned as the whole `longitudinal` partition by check-autogenesis-nursery.py. Every partition must be free to depend on them and none is ever evaluated on them, so this edge carries no information about the source's partition. The reverse direction (a longitudinal fact depending on a drawn evaluation fact) is NOT covered by this class and cannot be: `class_complaint` re-derives `to` being longitudinal from the live manifests.",
+      "to": "F:nat-zero-add"
+    }
+  ],
   "authority": "docs/research/09-decisions/adr-1550-gate-the-producer-the-crossing-edge-is-the-unit.md",
+  "classes": {
+    "depends-on-longitudinal-bootstrap": "The edge's TARGET is in the `longitudinal` partition, which check-autogenesis-nursery.py pins to exactly the two Autogenesis-1 bootstrap lemmas. Re-derived by `class_complaint` in scripts/check-partition-edges.py from the live manifests; an amendment claiming it for a non-longitudinal target is reported and NOT honoured. Direction-specific on purpose: longitudinal -> evaluation is a leak and can never carry this class."
+  },
+  "kind": "axeyum-partition-edge-amendments",
+  "not_the_baseline": "The 198 crossings that existed on 2026-09-02 were recorded in artifacts/autogenesis/partition-edge-baseline-v1.json and are the re-partition's to repair (ADR-1546 option 1). An amendment is for an edge somebody DECIDED to keep; the baseline is for an edge nobody has repaired yet. Do not move a row from one to the other to make a gate green -- the one class that has moved, `depends-on-longitudinal-bootstrap` (ADR-1563, 45 edges, baseline 198 -> 153), moved because the checker RE-DERIVES the property from the live manifests rather than reading a label, and because --record-baseline now excludes an honoured amendment, so deleting one makes its edge a violation again.",
   "read_by": "scripts/check-partition-edges.py",
   "rule": "An amendment names ONE EDGE and nothing else. Required fields: `from` (the fact whose depends_on carries the edge), `to` (the dependency it names), `reason`, `date`. Optional: `authority`. An element missing any required field is REPORTED AND NOT HONOURED -- a malformed amendment is a committed defect and reading it as absent is how an exemption list stops being reviewable.",
-  "why_not_a_component": "ADR-1546 measured a component-shaped exemption re-scoped 228 -> 230 -> 258 -> 274 members in four days against a live component of 305, because a component grows whenever any member gains an edge. A fact-id SET says nothing about which edge was reviewed, so honouring one suppresses crossings nobody looked at. This gate refuses to read `cross_population_component_split_exemptions` (or `component_split_exemptions`) as an amendment and says so in its report; those entries keep whatever meaning they have for `check-autogenesis-nursery.py`, whose unit IS the component.",
-  "not_the_baseline": "The 198 crossings that already existed on 2026-09-02 are NOT amended. They are recorded in artifacts/autogenesis/partition-edge-baseline-v1.json and are the re-partition's to repair (ADR-1546 option 1). An amendment is for an edge somebody decided to keep; the baseline is for an edge nobody has repaired yet. Do not move a row from one to the other to make a gate green.",
-  "amendments": []
+  "schema_version": 1,
+  "why_not_a_component": "ADR-1546 measured a component-shaped exemption re-scoped 228 -> 230 -> 258 -> 274 members in four days against a live component of 305, because a component grows whenever any member gains an edge. A fact-id SET says nothing about which edge was reviewed, so honouring one suppresses crossings nobody looked at. This gate refuses to read `cross_population_component_split_exemptions` (or `component_split_exemptions`) as an amendment and says so in its report; those entries keep whatever meaning they have for `check-autogenesis-nursery.py`, whose unit IS the component."
 }

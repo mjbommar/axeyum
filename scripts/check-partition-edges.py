@@ -128,6 +128,14 @@ COUNT_STYLE_EXEMPTION_KEYS = (
     "component_split_exemptions",
 )
 
+# The amendment classes this gate re-derives (ADR-1563). A class is not a
+# label an author asserts; it is a property `class_complaint` recomputes from
+# the live manifests, and an amendment whose class does not hold is refused.
+# Adding a name here without a matching arm in `class_complaint` would make it
+# a label again, which is why the membership test and the arms live in one
+# function.
+AMENDMENT_CLASSES = ("depends-on-longitudinal-bootstrap",)
+
 
 class Unanswerable(RuntimeError):
     """The gate could not evaluate its subject. Exit 2, never 1."""
@@ -341,13 +349,65 @@ def redacted_row(edge: dict[str, str], salt: str) -> dict[str, Any]:
 # Amendments -- per edge, or not at all
 # --------------------------------------------------------------------------
 
-def load_amendments(root: pathlib.Path) -> tuple[set[tuple[str, str]], list[str]]:
+def class_complaint(item: dict[str, Any], index: int,
+                    partition_of: dict[str, str]) -> str | None:
+    """Why this amendment's declared `class` does not hold, or `None`.
+
+    ADR-1563. An amendment MAY declare a `class`, and a class is a rule the
+    checker re-derives from the LIVE manifests rather than a label the author
+    asserts. Only one class exists:
+
+    `depends-on-longitudinal-bootstrap` -- the edge's TARGET sits in the
+    `longitudinal` partition. That partition is pinned by
+    `check-autogenesis-nursery.py` to exactly the two Autogenesis-1 bootstrap
+    lemmas (`F:nat-mul-one`, `F:nat-zero-add`), which are the axioms-of-the-
+    library every partition must be free to depend on. An edge INTO one of
+    them reveals nothing about the source's partition, because every partition
+    has the same access to it and the longitudinal row is never a target of
+    evaluation.
+
+    THE DIRECTION IS HALF THE RULE AND IT IS CHECKED. `to_partition ==
+    longitudinal` only. The reverse -- a longitudinal fact whose proof depends
+    on an evaluation fact -- pulls a drawn result into the regression chain and
+    IS a leak; it can never carry this class, so
+    `check-autogenesis-nursery.py`'s longitudinal-overlap check stays failable
+    in exactly the direction that can fail honestly.
+
+    An amendment whose declared class does not hold is REPORTED AND NOT
+    HONOURED, the same treatment as a missing field: a class that is a
+    self-assigned label rather than a re-derived property is the component
+    exemption again with a smaller unit.
+    """
+    declared = item.get("class")
+    if declared is None:
+        return None
+    if declared not in AMENDMENT_CLASSES:
+        return (f"{AMENDMENTS_PATH}[{index}]: class {declared!r} is not one of "
+                f"{sorted(AMENDMENT_CLASSES)} -- NOT honoured")
+    target_partition = partition_of.get(item["to"])
+    if declared == "depends-on-longitudinal-bootstrap":
+        if target_partition != "longitudinal":
+            return (f"{AMENDMENTS_PATH}[{index}]: claims class "
+                    f"depends-on-longitudinal-bootstrap but {item['to']} is in "
+                    f"partition {target_partition!r}, not `longitudinal` -- "
+                    f"the class is re-derived from the live manifests, not "
+                    f"taken on the author's word, so this one is NOT honoured")
+    return None
+
+
+def load_amendments(
+    root: pathlib.Path, partition_of: dict[str, str],
+) -> tuple[set[tuple[str, str]], list[str]]:
     """The per-edge amendments, and the complaints about anything that is not one.
 
     An amendment names ONE edge (`from`, `to`), a `reason` and a `date`. An
     element missing any of those is REPORTED AND NOT HONOURED rather than
     quietly skipped: a malformed amendment is a committed defect, and reading
     it as absent is how an exemption list stops being reviewable.
+
+    An optional `class` is validated against the live manifests by
+    `class_complaint` and, when it does not hold, kills the amendment the same
+    way a missing field does.
     """
     path = root / AMENDMENTS_PATH
     if not path.is_file():
@@ -370,6 +430,10 @@ def load_amendments(root: pathlib.Path) -> tuple[set[tuple[str, str]], list[str]
                 f"{AMENDMENTS_PATH}[{index}]: missing {', '.join(missing)} -- "
                 f"an amendment names ONE edge, its reason and its date, so "
                 f"this one is NOT honoured")
+            continue
+        wrong_class = class_complaint(item, index, partition_of)
+        if wrong_class:
+            complaints.append(wrong_class)
             continue
         amendments.add((item["from"], item["to"]))
     return amendments, complaints
@@ -595,7 +659,7 @@ def main(argv: list[str] | None = None) -> int:
         partition_of, manifests = load_partitions(root)
         dependencies = load_dependencies(root)
         edges = crossing_edges(partition_of, dependencies)
-        amendments, amendment_complaints = load_amendments(root)
+        amendments, amendment_complaints = load_amendments(root, partition_of)
         not_amendments, component_covered = count_style_exemptions(root)
         previous: dict[str, Any] | None = None
         if (root / BASELINE_PATH).is_file():
@@ -615,8 +679,23 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.record_baseline:
-        return record(root, edges, manifests, partition_of, dependencies,
-                      previous)
+        # THE RECORDED SET EXCLUDES EVERY HONOURED AMENDMENT (ADR-1563). An
+        # amended edge is one somebody DECIDED to keep and wrote a per-edge,
+        # class-checked reason for; a baselined edge is one nobody has repaired
+        # yet. Keeping an edge in both would mean deleting its amendment
+        # changes nothing -- the amendment would be un-deletable decoration and
+        # `class_complaint` would gate nothing observable. Excluding it makes
+        # the amendment load-bearing: drop it and the edge is a violation
+        # against a baseline it is no longer in.
+        #
+        # A malformed or wrongly-classed amendment is printed HERE too, because
+        # it is not honoured and its edge therefore stays in the recorded set;
+        # a lane that recorded a baseline without seeing why an amendment was
+        # refused would read the unshrunk count as the amendment not mattering.
+        for line in amendment_complaints:
+            print(f"AMENDMENT-REJECTED {line}")
+        return record(root, [e for e in edges if edge_key(e) not in amendments],
+                      manifests, partition_of, dependencies, previous)
 
     # THE HONOURED SET IS THE PER-EDGE AMENDMENTS AND NOTHING ELSE. This one
     # line is ADR-1550: `component_covered` holds every pair a manifest's
