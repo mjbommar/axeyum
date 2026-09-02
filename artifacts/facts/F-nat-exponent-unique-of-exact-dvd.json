@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-exponent-unique-of-exact-dvd",
+  "title": "An exact divisibility exponent is unique",
+  "statement": "For naturals a and n and exponents c1 and c2: if a to the c1 divides n while a to the c1 plus one does not, and the same holds at c2, then c1 equals c2.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.exponent_unique_of_exact_dvd : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.dvd (AxNat.pow x0 x2) x1) -> ((x5 : ((x5 : AxNat.dvd (AxNat.pow x0 (AxNat.succ x2)) x1) -> False)) -> ((x6 : AxNat.dvd (AxNat.pow x0 x3) x1) -> ((x7 : ((x7 : AxNat.dvd (AxNat.pow x0 (AxNat.succ x3)) x1) -> False)) -> Eq.{1} AxNat x2 x3))))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.exponent_unique_of_exact_dvd"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-pow-dvd-pow-of-le",
+    "F:nat-lt-or-ge",
+    "F:nat-le-antisymm",
+    "F:nat-dvd-trans",
+    "F:ml430-nat-le-antisymm-79dccead"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-exponent-unique-of-exact-dvd",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.exponent_unique_of_exact_dvd",
+      "supports": "Nat.exponent_unique_of_exact_dvd is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- exponent_unique_of_exact_dvd 2>/dev/null | grep -Ec '^Nat\\.exponent_unique_of_exact_dvd[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check."
+    },
+    {
+      "id": "footprint-exponent-unique-of-exact-dvd",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` for these ten `Nat.Multiset.*` theorems, `theorem_axiom_footprint` prints footprint size 0 and an empty axiom column for every one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset.rs` (lane nat-multiset, ADR-1520)."
+  },
+  "notes": "No primality hypothesis is needed and none is taken: if c1 < c2 then `pow a (succ c1)` already divides `pow a c2` and hence `n`, contradicting exactness at c1. This is the uniqueness half of `Nat.valuationAt a n e`, which this prelude carried as a definition with no uniqueness lemma.",
+  "external_status": "proved"
+}

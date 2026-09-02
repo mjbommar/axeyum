@@ -598,11 +598,46 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.min_min,
         p.nat_inst_max,
         p.inst_min_nat,
+        // `nat-multiset` lane: `multiset.rs`. The multiplicity carrier that
+        // makes uniqueness of prime factorization statable. The inductive
+        // machinery (`Nat.Multiset`, `.mk`, `.rec`) is checked by name in
+        // `every_promised_name_is_admitted_with_the_expected_kind` instead --
+        // an `Inductive`/`Constructor`/`Recursor` has no proof term for
+        // `axiom_footprint` to inspect.
+        p.multiset_raw,
+        p.multiset_bound,
+        p.multiset_count,
+        p.multiset_zero,
+        p.multiset_singleton,
+        p.multiset_add,
+        p.multiset_mem,
+        p.multiset_prod,
+        p.multiset_card,
+        p.multiset_eq_below,
+        p.multiset_beq,
     ]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `nat-multiset` lane: `multiset.rs`.
+        p.pow_dvd_pow_of_le,
+        p.not_dvd_prod_range_of_le,
+        p.not_pow_succ_dvd_prod_range_of_lt,
+        p.multiset_pow_count_dvd_prod,
+        p.multiset_not_pow_succ_count_dvd_prod,
+        p.multiset_count_eq_of_prod_eq,
+        p.beq_comm,
+        p.multiset_eq_below_self,
+        p.multiset_eq_below_comm,
+        p.multiset_beq_refl,
+        p.multiset_beq_comm,
+        p.dvd_prod_range_of_lt,
+        p.prime_pow_dvd_of_dvd_mul_of_not_dvd,
+        p.exponent_unique_of_exact_dvd,
+        p.multiset_count_eq_zero_of_bound_le,
+        p.multiset_count_of_lt_bound,
+        p.multiset_count_add,
         p.count_range_union_add_inter,
         p.coprime_dvd_mul_left,
         p.coprime_dvd_mul_right,
@@ -1650,6 +1685,13 @@ fn every_promised_name_is_admitted_with_the_expected_kind() {
         p.pair,
         p.pair_mk,
         p.pair_rec,
+        // `Nat.Multiset` (`multiset.rs`, lane nat-multiset). Named here for
+        // the same reason `Nat.Primrec`'s constructors are: a constructor
+        // silently dropped from `add_inductive` would leave a weaker carrier
+        // that nothing else checks.
+        p.multiset,
+        p.multiset_mk,
+        p.multiset_rec,
         // `Nat.Primrec` (ADR-1240, `primrec.rs`). An inductive `Prop`, so it
         // is invisible to `every_nat_declaration_is_checked_and_axiom_free`,
         // which is scoped to `Definition`/`Theorem`. All seven constructors

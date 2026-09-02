@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (990 names,
+/// The `NatPrelude` field table (1021 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1316,6 +1316,55 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ),
             ("sum_range_point_change", p.sum_range_point_change),
             ("sum_range_permute", p.sum_range_permute),
+            ("multiset", p.multiset),
+            ("multiset_mk", p.multiset_mk),
+            ("multiset_rec", p.multiset_rec),
+            ("multiset_raw", p.multiset_raw),
+            ("multiset_bound", p.multiset_bound),
+            ("multiset_count", p.multiset_count),
+            ("multiset_zero", p.multiset_zero),
+            ("multiset_singleton", p.multiset_singleton),
+            ("multiset_add", p.multiset_add),
+            ("multiset_mem", p.multiset_mem),
+            ("multiset_prod", p.multiset_prod),
+            ("multiset_card", p.multiset_card),
+            ("multiset_eq_below", p.multiset_eq_below),
+            ("multiset_beq", p.multiset_beq),
+            ("pow_dvd_pow_of_le", p.pow_dvd_pow_of_le),
+            ("dvd_prod_range_of_lt", p.dvd_prod_range_of_lt),
+            (
+                "prime_pow_dvd_of_dvd_mul_of_not_dvd",
+                p.prime_pow_dvd_of_dvd_mul_of_not_dvd,
+            ),
+            (
+                "exponent_unique_of_exact_dvd",
+                p.exponent_unique_of_exact_dvd,
+            ),
+            (
+                "multiset_count_eq_zero_of_bound_le",
+                p.multiset_count_eq_zero_of_bound_le,
+            ),
+            ("multiset_count_of_lt_bound", p.multiset_count_of_lt_bound),
+            ("multiset_count_add", p.multiset_count_add),
+            ("not_dvd_prod_range_of_le", p.not_dvd_prod_range_of_le),
+            (
+                "not_pow_succ_dvd_prod_range_of_lt",
+                p.not_pow_succ_dvd_prod_range_of_lt,
+            ),
+            ("multiset_pow_count_dvd_prod", p.multiset_pow_count_dvd_prod),
+            (
+                "multiset_not_pow_succ_count_dvd_prod",
+                p.multiset_not_pow_succ_count_dvd_prod,
+            ),
+            (
+                "multiset_count_eq_of_prod_eq",
+                p.multiset_count_eq_of_prod_eq,
+            ),
+            ("beq_comm", p.beq_comm),
+            ("multiset_eq_below_self", p.multiset_eq_below_self),
+            ("multiset_eq_below_comm", p.multiset_eq_below_comm),
+            ("multiset_beq_refl", p.multiset_beq_refl),
+            ("multiset_beq_comm", p.multiset_beq_comm),
         ],
         lists: Vec::new(),
     }

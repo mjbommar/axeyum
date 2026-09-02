@@ -227,6 +227,7 @@ mod modeq_cancel_div_gcd;
 mod modular;
 mod mul_order_lemmas;
 mod multichoose;
+mod multiset;
 mod no_confusion;
 mod nth;
 mod nth_root;
@@ -406,6 +407,7 @@ use mul_order_lemmas::{
     declare_div_lt_of_lt_mul, declare_lt_of_mul_lt_mul, declare_mul_lt_mul_iff,
 };
 use multichoose::declare_multichoose_all;
+use multiset::declare_multiset_all;
 use no_confusion::declare_no_confusion;
 use nth::declare_nth_all;
 use nth_root::declare_nth_root_all;
@@ -5619,6 +5621,132 @@ pub struct NatPrelude {
     /// [`count_range_permute`](Self::count_range_permute), which is its
     /// `{0,1}`-valued special case (`countRange_eq_sumRange` is `Eq.refl`).
     pub sum_range_permute: NameId,
+    // --- `Nat.Multiset` (`multiset.rs`) --------------------------------------
+    /// `Nat.Multiset : Type 0` — a multiplicity function together with a bound
+    /// past which it is read as zero. The carrier that makes UNIQUENESS of
+    /// prime factorization statable here; see `multiset.rs`'s module doc for
+    /// what it deliberately does not provide (no permutation quotient, no
+    /// `Finset`, no extensional equality of multisets).
+    pub multiset: NameId,
+    /// `Nat.Multiset.mk : (Nat -> Nat) -> Nat -> Nat.Multiset`.
+    pub multiset_mk: NameId,
+    /// `Nat.Multiset.rec` — the kernel-generated recursor both projections go
+    /// through.
+    pub multiset_rec: NameId,
+    /// `Nat.Multiset.raw : Nat.Multiset -> Nat -> Nat` — the stored
+    /// multiplicity function, NOT truncated at the bound. Use
+    /// [`multiset_count`](Self::multiset_count) instead unless you specifically
+    /// mean the untruncated function.
+    pub multiset_raw: NameId,
+    /// `Nat.Multiset.bound : Nat.Multiset -> Nat`.
+    pub multiset_bound: NameId,
+    /// `Nat.Multiset.count m x := if x < bound m then raw m x else 0` — the
+    /// observable multiplicity. Truncating here rather than carrying a
+    /// well-formedness hypothesis is what makes
+    /// [`multiset_count_eq_zero_of_bound_le`](Self::multiset_count_eq_zero_of_bound_le)
+    /// a theorem about EVERY multiset.
+    pub multiset_count: NameId,
+    /// `Nat.Multiset.zero : Nat.Multiset` — the empty multiset.
+    pub multiset_zero: NameId,
+    /// `Nat.Multiset.singleton : Nat -> Nat.Multiset`.
+    pub multiset_singleton: NameId,
+    /// `Nat.Multiset.add : Nat.Multiset -> Nat.Multiset -> Nat.Multiset` —
+    /// pointwise sum of counts. Its bound is the SUM of the two bounds, not the
+    /// maximum: `Nat.max` lives in the `Max` namespace here and `Nat.add` needs
+    /// none of its comparison lemmas, is at least as large, and leaves
+    /// [`multiset_count_add`](Self::multiset_count_add) unchanged.
+    pub multiset_add: NameId,
+    /// `Nat.Multiset.Mem m x := Lt 0 (count m x)`.
+    pub multiset_mem: NameId,
+    /// `Nat.Multiset.prod m := prodRange (fun q => pow q (count m q)) (bound m)`.
+    pub multiset_prod: NameId,
+    /// `Nat.Multiset.card m := sumRange (count m) (bound m)` — the number of
+    /// elements counted with multiplicity.
+    pub multiset_card: NameId,
+    /// `Nat.Multiset.eqBelow : (Nat -> Nat) -> (Nat -> Nat) -> Nat -> Bool` —
+    /// the bounded loop `∀ j < k, beq (f j) (g j)`, as a `Bool`.
+    pub multiset_eq_below: NameId,
+    /// `Nat.Multiset.beq m1 m2 := eqBelow (count m1) (count m2)
+    /// (bound m1 + bound m2)`.
+    pub multiset_beq: NameId,
+
+    /// `Nat.pow_dvd_pow_of_le : ∀ a i j, Le i j → dvd (pow a i) (pow a j)`.
+    /// [`le_dest`](Self::le_dest) turns `Le i j` into `i + k = j` and
+    /// [`pow_add`](Self::pow_add) splits the exponent (`multiset.rs`).
+    pub pow_dvd_pow_of_le: NameId,
+    /// `Nat.dvd_prodRange_of_lt : ∀ f i k, Lt i k → dvd (f i) (prodRange f k)` —
+    /// every factor below the bound divides the fold (`multiset.rs`).
+    pub dvd_prod_range_of_lt: NameId,
+    /// `Nat.prime_pow_dvd_of_dvd_mul_of_not_dvd : ∀ p b c, prime_condition p →
+    /// Not (dvd p b) → ∀ a, dvd (pow p c) (mul a b) → dvd (pow p c) a` — a whole
+    /// prime power passes through a factor the prime does not divide. Induction
+    /// on the EXPONENT with `a` quantified inside the motive, using only
+    /// [`euclid_lemma`](Self::euclid_lemma) and left-cancellation: this prelude
+    /// has [`prime_coprime_pow_of_not_dvd`](Self::prime_coprime_pow_of_not_dvd)
+    /// (a prime coprime to a POWER) but nothing giving coprimality of a prime
+    /// POWER, which is what [`coprime_dvd_mul_right`](Self::coprime_dvd_mul_right)
+    /// would need (`multiset.rs`).
+    pub prime_pow_dvd_of_dvd_mul_of_not_dvd: NameId,
+    /// `Nat.exponent_unique_of_exact_dvd : ∀ a n c1 c2, dvd (pow a c1) n →
+    /// Not (dvd (pow a (succ c1)) n) → dvd (pow a c2) n →
+    /// Not (dvd (pow a (succ c2)) n) → Eq c1 c2` — a valuation is unique. No
+    /// primality needed: `c1 < c2` already makes `pow a (succ c1)` divide
+    /// `pow a c2` and hence `n` (`multiset.rs`).
+    pub exponent_unique_of_exact_dvd: NameId,
+    /// `Nat.Multiset.count_eq_zero_of_bound_le : ∀ m x, Le (bound m) x →
+    /// Eq (count m x) 0` — no well-formedness hypothesis, because
+    /// [`multiset_count`](Self::multiset_count) truncates in its own definition.
+    pub multiset_count_eq_zero_of_bound_le: NameId,
+    /// `Nat.Multiset.count_of_lt_bound : ∀ m x, Lt x (bound m) →
+    /// Eq (count m x) (raw m x)`.
+    pub multiset_count_of_lt_bound: NameId,
+    /// `Nat.Multiset.count_add : ∀ m1 m2 x, Eq (count (add m1 m2) x)
+    /// (add (count m1 x) (count m2 x))`.
+    pub multiset_count_add: NameId,
+    /// `Nat.not_dvd_prodRange_of_le : ∀ g p k, prime_condition p →
+    /// (∀ q, Lt 0 (g q) → prime_condition q) → Le k p →
+    /// Not (dvd p (prodRange (fun q => pow q (g q)) k))` — a prime at or above
+    /// the fold's bound is not among its factors. Induction on `k`; the
+    /// `g j = 0` branch is what rules out `j = 0`, where the factor would be
+    /// `0` and everything would divide the product (`multiset.rs`).
+    pub not_dvd_prod_range_of_le: NameId,
+    /// `Nat.not_pow_succ_dvd_prodRange_of_lt : ∀ g p k, prime_condition p →
+    /// (∀ q, Lt 0 (g q) → prime_condition q) → Lt p k →
+    /// Not (dvd (pow p (succ (g p))) (prodRange (fun q => pow q (g q)) k))` —
+    /// the fold carries EXACTLY `g p` copies of a prime `p` below its bound
+    /// (`multiset.rs`).
+    pub not_pow_succ_dvd_prod_range_of_lt: NameId,
+    /// `Nat.Multiset.pow_count_dvd_prod : ∀ m x, dvd (pow x (count m x))
+    /// (prod m)` — no hypotheses at all.
+    pub multiset_pow_count_dvd_prod: NameId,
+    /// `Nat.Multiset.not_pow_succ_count_dvd_prod : ∀ m x, prime_condition x →
+    /// (∀ q, Lt 0 (count m q) → prime_condition q) →
+    /// Not (dvd (pow x (succ (count m x))) (prod m))`. With
+    /// [`multiset_pow_count_dvd_prod`](Self::multiset_pow_count_dvd_prod) this
+    /// says `count m x` is the `x`-adic valuation of `prod m`.
+    pub multiset_not_pow_succ_count_dvd_prod: NameId,
+    /// `Nat.Multiset.count_eq_of_prod_eq : ∀ m1 m2,
+    /// (∀ q, Lt 0 (count m1 q) → prime_condition q) →
+    /// (∀ q, Lt 0 (count m2 q) → prime_condition q) →
+    /// Eq (prod m1) (prod m2) → ∀ x, Eq (count m1 x) (count m2 x)` —
+    /// **uniqueness of prime factorization**, as multiplicity agreement.
+    /// ADR-1520; row 1 (general constructive form) of the graded family
+    /// ADR-0603 asks for.
+    pub multiset_count_eq_of_prod_eq: NameId,
+    /// `Nat.beq_comm : ∀ a b, Eq Bool (beq a b) (beq b a)`. NOT `refl` --
+    /// [`beq`](Self::beq) is a double recursion -- so this decides `beq a b`
+    /// with a `Bool.rec` and closes each branch (`multiset.rs`).
+    pub beq_comm: NameId,
+    /// `Nat.Multiset.eqBelow_self : ∀ f k, Eq Bool (eqBelow f f k) Bool.true`.
+    pub multiset_eq_below_self: NameId,
+    /// `Nat.Multiset.eqBelow_comm : ∀ f g k, Eq Bool (eqBelow f g k)
+    /// (eqBelow g f k)`.
+    pub multiset_eq_below_comm: NameId,
+    /// `Nat.Multiset.beq_refl : ∀ m, Eq Bool (beq m m) Bool.true`.
+    pub multiset_beq_refl: NameId,
+    /// `Nat.Multiset.beq_comm : ∀ m1 m2, Eq Bool (beq m1 m2) (beq m2 m1)` --
+    /// two steps, because the two sides fold over `b1 + b2` and `b2 + b1`.
+    pub multiset_beq_comm: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -5667,6 +5795,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let le = kernel.name_str(nat, "le");
         let fin = kernel.name_str(nat, "Fin");
         let pair = kernel.name_str(nat, "Pair");
+        let multiset = kernel.name_str(nat, "Multiset");
         let primrec = kernel.name_str(nat, "Primrec");
         let cases_on_uparam_name = {
             let anon = kernel.anon();
@@ -6481,6 +6610,41 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ldiff_bit: kernel.name_str(nat, "ldiff_bit"),
             pair,
             pair_mk: kernel.name_str(pair, "mk"),
+            multiset,
+            multiset_mk: kernel.name_str(multiset, "mk"),
+            multiset_rec: kernel.name_str(multiset, "rec"),
+            multiset_raw: kernel.name_str(multiset, "raw"),
+            multiset_bound: kernel.name_str(multiset, "bound"),
+            multiset_count: kernel.name_str(multiset, "count"),
+            multiset_zero: kernel.name_str(multiset, "zero"),
+            multiset_singleton: kernel.name_str(multiset, "singleton"),
+            multiset_add: kernel.name_str(multiset, "add"),
+            multiset_mem: kernel.name_str(multiset, "Mem"),
+            multiset_prod: kernel.name_str(multiset, "prod"),
+            multiset_card: kernel.name_str(multiset, "card"),
+            multiset_eq_below: kernel.name_str(multiset, "eqBelow"),
+            multiset_beq: kernel.name_str(multiset, "beq"),
+            pow_dvd_pow_of_le: kernel.name_str(nat, "pow_dvd_pow_of_le"),
+            dvd_prod_range_of_lt: kernel.name_str(nat, "dvd_prodRange_of_lt"),
+            prime_pow_dvd_of_dvd_mul_of_not_dvd: kernel
+                .name_str(nat, "prime_pow_dvd_of_dvd_mul_of_not_dvd"),
+            exponent_unique_of_exact_dvd: kernel.name_str(nat, "exponent_unique_of_exact_dvd"),
+            multiset_count_eq_zero_of_bound_le: kernel
+                .name_str(multiset, "count_eq_zero_of_bound_le"),
+            multiset_count_of_lt_bound: kernel.name_str(multiset, "count_of_lt_bound"),
+            multiset_count_add: kernel.name_str(multiset, "count_add"),
+            not_dvd_prod_range_of_le: kernel.name_str(nat, "not_dvd_prodRange_of_le"),
+            not_pow_succ_dvd_prod_range_of_lt: kernel
+                .name_str(nat, "not_pow_succ_dvd_prodRange_of_lt"),
+            multiset_pow_count_dvd_prod: kernel.name_str(multiset, "pow_count_dvd_prod"),
+            multiset_not_pow_succ_count_dvd_prod: kernel
+                .name_str(multiset, "not_pow_succ_count_dvd_prod"),
+            multiset_count_eq_of_prod_eq: kernel.name_str(multiset, "count_eq_of_prod_eq"),
+            beq_comm: kernel.name_str(nat, "beq_comm"),
+            multiset_eq_below_self: kernel.name_str(multiset, "eqBelow_self"),
+            multiset_eq_below_comm: kernel.name_str(multiset, "eqBelow_comm"),
+            multiset_beq_refl: kernel.name_str(multiset, "beq_refl"),
+            multiset_beq_comm: kernel.name_str(multiset, "beq_comm"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7738,6 +7902,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // far above -- exactly `declare_count_range_permute`'s own inputs.
         // Nothing needs it yet, so it goes last.
         declare_sum_range_permute_all(&mut d, &p)?;
+        // `Nat.Multiset` and the uniqueness of prime factorization stated as
+        // multiplicity agreement (`multiset.rs`). Needs `Nat.prodRange`
+        // (`declare_prod_range`, far above), `Nat.sumRange`, `Nat.pow`/
+        // `pow_succ`/`pow_zero`, `Nat.ble`/`Nat.beq` and their order bridges
+        // (`ble.rs`/`log.rs`), `Nat.euclid_lemma` (`bezout.rs`),
+        // `Nat.prime_dvd_of_dvd_pow`/`prime_eq_one_or_self_of_dvd`/
+        // `prime_not_dvd_one`/`prime_pos` (`primes.rs` and
+        // `prime_dvd_mirrors.rs`, above) and `Nat.mul_left_cancel_of_pos`.
+        // Nothing needs it, so it goes last.
+        declare_multiset_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -7823,3 +7997,6 @@ mod asc_factorial_div_tests;
 
 #[cfg(test)]
 mod add_factorial_le_tests;
+
+#[cfg(test)]
+mod multiset_tests;

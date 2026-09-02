@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-multiset-prime-factorization-unique",
+  "title": "Uniqueness of prime factorization, as multiplicity agreement",
+  "statement": "If two multisets of primes over the naturals have the same product, then they assign the same multiplicity to every natural. This is uniqueness of prime factorization, stated as agreement of multiplicities rather than as a permutation between two lists.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Multiset.count_eq_of_prod_eq : ((x0 : AxNat.Multiset) -> ((x1 : AxNat.Multiset) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero (AxNat.Multiset.count x0 x2)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x2) (((x4 : AxNat) -> ((x5 : AxNat.dvd x4 x2) -> Or (Eq.{1} AxNat x4 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x4 x2))))))) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt AxNat.zero (AxNat.Multiset.count x1 x3)) -> And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) x3) (((x5 : AxNat) -> ((x6 : AxNat.dvd x5 x3) -> Or (Eq.{1} AxNat x5 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x5 x3))))))) -> ((x4 : Eq.{1} AxNat (AxNat.Multiset.prod x0) (AxNat.Multiset.prod x1)) -> ((x5 : AxNat) -> Eq.{1} AxNat (AxNat.Multiset.count x0 x5) (AxNat.Multiset.count x1 x5)))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Multiset.count_eq_of_prod_eq"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-multiset-pow-count-dvd-prod",
+    "F:nat-multiset-not-pow-succ-count-dvd-prod",
+    "F:nat-exponent-unique-of-exact-dvd",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:nat-lt-or-ge",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-multiset-count-eq-of-prod-eq",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Multiset.count_eq_of_prod_eq",
+      "supports": "Nat.Multiset.count_eq_of_prod_eq is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Multiset.count_eq_of_prod_eq 2>/dev/null | grep -Ec '^Nat\\.Multiset\\.count_eq_of_prod_eq[[:space:]]')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check. `crates/axeyum-lean-kernel/src/nat_prelude/multiset_tests.rs` additionally INSTANTIATES it at the two multisets {2,3} and {3,2} -- built by `Nat.Multiset.add` in opposite orders, so different constructor arguments and different bounds -- with the three hypotheses abstracted rather than proved, and checks that the inferred conclusion at the point 2 reduces to `1 = 1`, with `1 = 2` as the negative control."
+    },
+    {
+      "id": "footprint-multiset-count-eq-of-prod-eq",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "Reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0` over the FULL trusted surface (Axiom, Opaque and Quotient), not `Declaration::Axiom` alone, and exits non-zero unless the surface is empty. The enumeration is per-environment rather than per-theorem; it bounds this theorem's footprint because a proof cannot depend on a trusted declaration the environment does not contain. Read directly from `Kernel::axiom_footprint` for these ten `Nat.Multiset.*` theorems, `theorem_axiom_footprint` prints footprint size 0 and an empty axiom column for every one."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/multiset.rs` (lane nat-multiset, ADR-1520)."
+  },
+  "notes": "**This is the statement `docs/formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md` section 6 records as not expressible in this kernel at all**, on the ground that there is no `List`, no `Finset` and no quotient by permutation. The concession is about a REPRESENTATION rather than about the theorem: a multiset over the naturals is a multiplicity function that is eventually zero, and `Nat.Multiset` (`nat_prelude/multiset.rs`, ADR-1520) is exactly that -- a function together with a bound past which `count` reads zero. Order is never represented, so there is nothing to quotient by, and the trusted surface stays empty. ADR-0603's graded statement family: this is ROW 1, the general constructive form. It is not a mirror of any Mathlib declaration and flips no `ml430` fact; `external_status` is `proved` because uniqueness of prime factorization is classical mathematics, and the novelty claimed here is only that this system can now state and check it. `Nat.exists_prime_factorization` (`nat_prelude/factorization.rs`) supplies EXISTENCE in its own `(k, f)` shape; the two compose without either being restated in the other's representation. The COMPUTED form -- a `Nat.factorization` by trial division, with `prod (factorization n) = n` -- is NOT part of this fact and was not attempted; it needs a product-splitting law across two different bounds that nothing here provides.",
+  "external_status": "proved"
+}

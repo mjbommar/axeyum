@@ -120,6 +120,11 @@ now. Nothing was deleted.
 | 2026-09-02 | `nat_prelude/transposition.rs` | four pointwise transposition facts as kernel THEOREMS. ADR-1470 recorded the `NatDev`/`IntDev` Rust wall as forcing a second, private two-point swap; a `NameId` has no such restriction, so the facts every other prelude needs are declared instead. Only `transposition_eq_of_ne` is new work — the five-region nested-`trichotomy` split, with the two equality regions discharged by `Not` hypotheses instead of transported. ADR-1541. |
 | 2026-09-02 | `nat_prelude/injective_decide.rs` | `Nat.injective_on_or_duplicate` — a self-map of `[0,n)` is either injective there or has an explicit `a < b < n` with `g a = g b`, CONSTRUCTIVELY. Two nested instances of `Nat.lnp_bounded_search`, which ADR-1470 recorded as absent because it grepped for `pigeonhole`/`exists_dup`/`not_injective` and the tool is filed under the least-number principle. Searching strictly below each index is what makes the pair distinct with no negated equality anywhere. ADR-1541. |
 | 2026-09-02 | `rat_prelude/matrix_det_mul.rs` | `Rat.det_row_selection` — **ADR-1440's obligation 2, closed**: the selection lemma with `MapsInto` and no injectivity hypothesis, at symbolic `n`. Its injective half is ADR-1470's cursor induction, with three things that ADR did not predict: the dimension and the matrix stay OUTSIDE the induction and the map goes inside it; the base case needs a ROW-bounded congruence (`Rat.det_congr_lt`, also new) because `g` is the identity only on `[0,n)`; and the two-point swap is `Nat.transposition` itself. Also `Rat.det_congr_entry_lt` + `Rat.matSkip_lt_succ`, the BOTH-bounded congruence obligation 1's final step needs, which the row-bounded one cannot supply because `Rat.matMul_id_right` is bounded in the column. `rat_prelude::` 156 passed / 0 failed; `nat_prelude::` 325 passed / 0 failed. `Rat.det_mul` did NOT land — obligation 1 (a `Rat` analogue of `Int.sumMaps`, 1,003 lines, plus a `Rat.prodRange`) is the whole remainder. ADR-1541. |
+| 2026-09-02 | nat-multiset | `Nat.Multiset` carrier + 5 evaluation tests (`multiset.rs`, `multiset_tests.rs`) |
+| 2026-09-02 | nat-multiset | the three `count` laws + 4 general `Nat` lemmas (`pow_dvd_pow_of_le`, `dvd_prodRange_of_lt`, `prime_pow_dvd_of_dvd_mul_of_not_dvd`, `exponent_unique_of_exact_dvd`) |
+| 2026-09-02 | nat-multiset | **uniqueness of prime factorization** as multiplicity agreement (`Nat.Multiset.count_eq_of_prod_eq`), axiom-free |
+| 2026-09-02 | nat-multiset | `Nat.Multiset.beq` reflexive and symmetric; `Nat.beq_comm` |
+| 2026-09-02 | nat-multiset | ADR-1520 and seven facts, each checker verified to fail when the theorem is absent |
 | 2026-09-02 | `b4fb008d8` | `dedupe(nat)`: deleted `Nat.prime_coprime_factorial_of_lt`, a second proof of `gauss_lemma`'s `Nat.coprime_factorial_of_lt_prime`; consumer and fact repointed, pin amended, projection 14,673 → 14,665. |
 | 2026-09-02 | `a766acdce` | `docs`: the 2026-09-01 retrieval audit, and the running daily-audit ledger appended to the ADR-0608 write-up. |
 | 2026-09-02 | `28c4cfa45` | `check-merge-hygiene.sh` gains the census guard (three outcomes: exit 2 is reported, not failed), mutation M7 kills exactly one test; 24 controls in `test_frontier_shape_census.py`; artifact registered with `check-generated-artifact-ownership.py` (`crates` added to its sandbox, since the frontier's registry validation checks paths under it). |
@@ -44613,6 +44618,51 @@ Two families and two singletons: ten `stirlingFirst`/`stirlingSecond` rows
 `fermat-primefactors-one-lt` and `squarefree-ext-iff`. The `stirling` ten look
 like the next coherent group, on the same shape as this one — the definitions
 exist and no theorem about either has been declared.
+
+**Your lane's block (`DONE for uniqueness`, nat-multiset, 2026-09-02).**
+
+`docs/formalized-math-2026-08/09-the-dominance-claim-verified-across-three-domains.md`
+§6 concedes that uniqueness of prime factorization "is not expressible here at
+all". **It is now a checked, axiom-free theorem** —
+`Nat.Multiset.count_eq_of_prod_eq`. Nothing in the kernel changed; the
+concession was about a REPRESENTATION. A multiset over ℕ is a multiplicity
+function that is eventually zero, and `Nat.Multiset`
+(`crates/axeyum-lean-kernel/src/nat_prelude/multiset.rs`, ADR-1520) is exactly
+that: a one-constructor inductive `mk : (Nat → Nat) → Nat → Multiset` whose
+`count` truncates at the bound in its own definition. Order is never
+represented, so there is nothing to quotient by and no `propext`/`Quot.sound`
+appears — `Kernel::axiom_footprint` is `[]` for all ten `Nat.Multiset.*`
+theorems, read from the kernel via `theorem_axiom_footprint`.
+
+**Landed:** 24 declarations. The carrier plus `raw`/`bound`/`count`/`zero`/
+`singleton`/`add`/`Mem`/`prod`/`card`/`eqBelow`/`beq`; the three `count` laws;
+`beq_refl`/`beq_comm`; and the valuation chain
+(`Nat.Multiset.pow_count_dvd_prod`, `not_pow_succ_count_dvd_prod`,
+`count_eq_of_prod_eq`). Five general `Nat` lemmas fell out and are declared
+there because it is their first consumer: `pow_dvd_pow_of_le`,
+`dvd_prodRange_of_lt`, `prime_pow_dvd_of_dvd_mul_of_not_dvd`,
+`exponent_unique_of_exact_dvd`, `beq_comm`.
+
+**Not attempted, and this is the handoff:** the COMPUTED form — a
+`Nat.factorization` by trial division, `prod (factorization n) = n`, and
+`0 < count (factorization n) p → prime p`. Uniqueness needs none of it, which
+is why it landed first. The blocker for the computed form is
+`prod (add m₁ m₂) = prod m₁ * prod m₂`, a product-regrouping law across three
+different bounds; `Int.prodRange_split` exists on the Int side and
+`Nat.prodRangeIf` on the Nat side, and **whether either transports was not
+tested by this lane**. The sibling route (converting
+`Nat.exists_prime_factorization`'s `(k, f)` witness into a multiset by
+`countRange (fun i => beq (f i) q) k`) needs the same law, so it is not a way
+around it. `Nat.minFac`/`Nat.minFacAux` already exist and are the natural
+trial-division engine.
+
+**Measurements.** `nat_prelude::` 333 passed, 0 failed (`--release`,
+`--test-threads=4`). `python3 scripts/validate-facts.py` 2583 facts, 0 errors.
+Nat prelude cold build, `prelude_build_timing`, min of 4 runs on a box at load
+13–16: branch point `5c8eaf7b8` **640,693 µs** vs lane HEAD **640,023 µs** — no
+measurable change; individual runs ranged to 1.4 s on both sides, so read the
+minimum, not the mean. Note the "after" tree also carries everything merged from
+`main` today, so this is not a clean isolation of 24 declarations.
 
 **Done (`DONE`, nthroot-squarefree-constructions, 2026-08-30).** Declared
 `Nat.nthRoot`/`Nat.nthRootAux` (`nth_root.rs`) and `Squarefree`/
