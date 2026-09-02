@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2160,
+    "min_identity_bound": 2165,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -20474,6 +20474,13 @@
       ]
     },
     {
+      "fact_id": "F:rat-eq-zero-of-is-zero-b",
+      "language": "lean4",
+      "statement_sha256": "cae09de7ba1db43b2206474e0b719c840f732a4d5a303e527ca71475f73fdd4e",
+      "prose_sha256": "f530a3a21814107908b3975f8c38c334e4d41f58897fd129f1874fbc8c55520b",
+      "kernel_theorem": "Rat.eq_zero_of_isZeroB"
+    },
+    {
       "fact_id": "F:rat-eq-zero-of-num-zero",
       "language": "lean4",
       "statement_sha256": "b48d0525aff8278f5558712f9246867358485154bb3255cc9977da17f6027930",
@@ -21683,6 +21690,13 @@
       ]
     },
     {
+      "fact_id": "F:rat-ne-zero-of-is-zero-b-false",
+      "language": "lean4",
+      "statement_sha256": "00882283266162570af05f427c3c9d9039259f3a7259957dab622d1280b89e13",
+      "prose_sha256": "5a04d614f29f2a0e1356fd040594d8c4fa8d2fb8092f65f7ac01f4d94aa61191",
+      "kernel_theorem": "Rat.ne_zero_of_isZeroB_false"
+    },
+    {
       "fact_id": "F:rat-neg-add",
       "language": "lean4",
       "statement_sha256": "aa919294ea81ca3b038700adf9aefa0fb06c83705fe367141eb069f62e8b52e4",
@@ -22119,6 +22133,27 @@
           "prose_sha256": "55d2a6e640a02eaa697ba806b354e0f81841263120f8dcddecfce14f77959991"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-row-add-mul-inverse",
+      "language": "lean4",
+      "statement_sha256": "562a6d110eae530dac12a5b91f4ef8143f055176f48ef958957189ac62f5f16c",
+      "prose_sha256": "b3e733dd4ede432ddcbcc3e8fa895fa6b8c528d06dedf940494475ce96db3b13",
+      "kernel_theorem": "Rat.rowAddMul_inverse"
+    },
+    {
+      "fact_id": "F:rat-row-scale-inverse",
+      "language": "lean4",
+      "statement_sha256": "c16189e9ad18bda1a1d59dff03d2d20c831ba1b9e87e78f67a64174e851d7bba",
+      "prose_sha256": "014ac5e9761c31af04804266581570530e3aadd2432addeaa7e064dcd9e99cb7",
+      "kernel_theorem": "Rat.rowScale_inverse"
+    },
+    {
+      "fact_id": "F:rat-row-swap-involutive",
+      "language": "lean4",
+      "statement_sha256": "8fed9f46ac2764b36f3aa101e8ba5bab2d0a982ece2c89ce6061fd108806b0ff",
+      "prose_sha256": "ab57ef5974434643c44ca2603b4f6d322e0beeeaba825f0f16fa490720490033",
+      "kernel_theorem": "Rat.rowSwap_involutive"
     },
     {
       "fact_id": "F:rat-self-normalize",

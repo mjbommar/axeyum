@@ -1902,7 +1902,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (400 names,
+/// The `RatPrelude` field table (429 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2345,6 +2345,35 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("sum_maps_congr_maps_into", p.sum_maps_congr_maps_into),
             ("det_mat_mul_expand", p.det_mat_mul_expand),
             ("det_mat_mul", p.det_mat_mul),
+            ("is_zero_b", p.is_zero_b),
+            ("is_zero_b_zero", p.is_zero_b_zero),
+            ("eq_zero_of_is_zero_b", p.eq_zero_of_is_zero_b),
+            ("is_zero_b_of_eq_zero", p.is_zero_b_of_eq_zero),
+            ("ne_zero_of_is_zero_b_false", p.ne_zero_of_is_zero_b_false),
+            ("row_swap", p.row_swap),
+            ("row_scale", p.row_scale),
+            ("row_add_mul", p.row_add_mul),
+            ("row_swap_at_left", p.row_swap_at_left),
+            ("row_swap_at_right", p.row_swap_at_right),
+            ("row_swap_off", p.row_swap_off),
+            ("row_scale_at", p.row_scale_at),
+            ("row_scale_off", p.row_scale_off),
+            ("row_add_mul_at", p.row_add_mul_at),
+            ("row_add_mul_off", p.row_add_mul_off),
+            ("row_swap_involutive", p.row_swap_involutive),
+            ("row_add_mul_inverse", p.row_add_mul_inverse),
+            ("row_scale_inverse", p.row_scale_inverse),
+            ("pivot_search_aux", p.pivot_search_aux),
+            ("pivot_search", p.pivot_search),
+            ("clear_below_aux", p.clear_below_aux),
+            ("clear_below", p.clear_below),
+            ("echelon_aux", p.echelon_aux),
+            ("row_echelon", p.row_echelon),
+            ("leading_index_aux", p.leading_index_aux),
+            ("leading_index", p.leading_index),
+            ("echelon_step_ok", p.echelon_step_ok),
+            ("is_echelon_aux", p.is_echelon_aux),
+            ("is_echelon", p.is_echelon),
         ],
         lists: Vec::new(),
     }

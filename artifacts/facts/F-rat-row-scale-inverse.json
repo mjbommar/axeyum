@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-row-scale-inverse",
+  "title": "Scaling a row of a rational matrix by a nonzero factor is inverted by scaling by its reciprocal",
+  "statement": "For every row index i, every scalar k : Rat with Not (Eq Rat k Rat.zero), and every matrix M : Nat -> Nat -> Rat, rowScale i (inv k) (rowScale i k M) r c = M r c for all r, c. The side condition is stated as k != 0 rather than 0 < k so that it covers the NEGATIVE pivots row reduction actually produces; Rat.mul_inv_cancel_of_ne_zero is the form of the field law that carries it. The rational prelude has no one_mul, so the final step runs 1 * a = a * 1 = a through Rat.mul_comm and Rat.mul_one.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rowScale_inverse : ((x0 : AxNat) -> ((x1 : Rat) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat) -> Rat))) -> ((x3 : ((x3 : Eq.{1} Rat x1 Rat.zero) -> False)) -> ((x4 : AxNat) -> ((x5 : AxNat) -> Eq.{1} Rat (Rat.rowScale x0 (Rat.inv x1) (Rat.rowScale x0 x1 x2) x4 x5) (x2 x4 x5)))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rowScale_inverse"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-mul-inv-cancel-of-ne-zero",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:rat-mul-assoc",
+    "F:rat-mul-comm",
+    "F:rat-mul-one"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-row-scale-inverse-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rowScale_inverse` is a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint` in all four preludes carrying the rationals. The `formal.statement` is the kernel's `render_lean` of the admitted type; reading it confirms the side condition is the negation `((x3 : Eq Rat x1 Rat.zero) -> False)` rather than a positivity hypothesis, and that the outer scaling factor is literally `Rat.inv x1` rather than an unrelated second scalar.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.rowScale_inverse --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rowScale_inverse[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.rowScale_inverse 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs)",
+    "source": "docs/research/09-decisions/adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md"
+  },
+  "notes": "ADR-0603 grading: this is the general constructive form, and row 2 (a boundary refutation) is EMPTY for this family BY PROOF rather than by omission -- the order on the constructed rationals is decidable, so there is no Markov-style boundary to refute and the general form IS the exact form. There is no labelled import row: nothing here was taken from Mathlib. It does NOT say `Rat.inv` is a two-sided inverse in general, nor anything about `rowScale i 0 M`, which is not invertible and is excluded by the hypothesis. It is about invertibility only -- rank preservation is a separate statement nobody has proved here yet."
+}

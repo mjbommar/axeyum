@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-row-add-mul-inverse",
+  "title": "Adding a multiple of one row to another is inverted by adding the negated multiple, provided the rows differ",
+  "statement": "For all row indices i, j with Nat.beq j i = false, every scalar k : Rat and every matrix M : Nat -> Nat -> Rat, rowAddMul i j (neg k) (rowAddMul i j k M) r c = M r c for all r, c. The hypothesis j != i is REQUIRED and not a convenience: at i = j the operation scales row i by 1 + k and its inverse is a scaling by 1/(1+k), not an addition of -k. It also does the real work inside the proof -- it is what says row j of the once-modified matrix still holds M j, which is the only reason the two multiples cancel through Rat.neg_mul, Rat.add_assoc, Rat.add_neg and Rat.add_zero. The hypothesis is oriented Nat.beq j i rather than Nat.beq i j because that is the orientation Rat.matSetRow_off consumes.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rowAddMul_inverse : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Rat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat) -> Rat))) -> ((x4 : Eq.{1} Bool (AxNat.beq x1 x0) Bool.false) -> ((x5 : AxNat) -> ((x6 : AxNat) -> Eq.{1} Rat (Rat.rowAddMul x0 x1 (Rat.neg x2) (Rat.rowAddMul x0 x1 x2 x3) x5 x6) (x3 x5 x6))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.rowAddMul_inverse"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-add-assoc",
+    "F:rat-neg-mul",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:rat-add-neg",
+    "F:rat-add-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-row-add-mul-inverse-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.rowAddMul_inverse` is a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint` in all four preludes carrying the rationals. The `formal.statement` is the kernel's `render_lean` of the admitted type, and reading it confirms two things a prose restatement could lose: the hypothesis is `Eq Bool (AxNat.beq x1 x0) Bool.false` -- `beq j i`, the ORIENTATION -- and the second application's scalar is literally `Rat.neg x2`, so the theorem is about the negated multiple rather than about an arbitrary second scalar that happens to cancel.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.rowAddMul_inverse --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.rowAddMul_inverse[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.rowAddMul_inverse 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs)",
+    "source": "docs/research/09-decisions/adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md"
+  },
+  "notes": "ADR-0603 grading: this is the general constructive form, and row 2 (a boundary refutation) is EMPTY for this family BY PROOF rather than by omission -- the order on the constructed rationals is decidable, so there is no Markov-style boundary to refute and the general form IS the exact form. There is no labelled import row: nothing here was taken from Mathlib. It does NOT cover i = j, where the statement is false, and it does not claim the operation preserves the determinant or the rank -- only that it is invertible. Together with F:rat-row-swap-involutive and F:rat-row-scale-inverse it gives all three elementary operations a kernel-checked inverse, which is the input rank invariance needs and is NOT itself a proof of rank invariance."
+}

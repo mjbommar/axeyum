@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-eq-zero-of-is-zero-b",
+  "title": "The decided rational zero test implies the propositional one: isZeroB x = true entails x = 0",
+  "statement": "For every x : Rat, Rat.isZeroB x = Bool.true implies Eq Rat x Rat.zero, where Rat.isZeroB x is the total Bool-valued test 'if Rat.ble x 0 then Rat.ble 0 x else false'. This is the bridge from the COMPUTED zero test that row reduction branches on to the propositional equation every field law consumes, and it is the one place the decidability of the rational order is actually spent. The proof splits on Rat.ble x 0: its true branch reduces isZeroB x to the second comparison, so the hypothesis becomes Rat.ble 0 x = true and Rat.le_antisymm closes it from two applications of Rat.le_of_ble_eq_true; its false branch reduces isZeroB x to Bool.false, contradicting the hypothesis. A Prop-valued Eq x 0 cannot drive a computation, which is why the definition needed a Bool test in the first place.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.eq_zero_of_isZeroB : ((x0 : Rat) -> ((x1 : Eq.{1} Bool (Rat.isZeroB x0) Bool.true) -> Eq.{1} Rat x0 Rat.zero))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.eq_zero_of_isZeroB"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-le-antisymm",
+    "F:rat-le-of-ble-eq-true"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-eq-zero-of-is-zero-b-1",
+      "kind": "kernel-term",
+      "supports": "`Rat.eq_zero_of_isZeroB` is a checked `Declaration::Theorem` with an EMPTY `Kernel::axiom_footprint` in all four preludes carrying the rationals. The `formal.statement` is the kernel's `render_lean` of the admitted type; reading it confirms the hypothesis is an equation at `Bool` between `Rat.isZeroB x0` and `Bool.true` and the conclusion an equation at `Rat` -- the two different types are the whole content of the bridge, and a paraphrase that said `x is zero` on both sides would lose it.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection --require-declaration Rat.eq_zero_of_isZeroB --require-kind theorem 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'found[[:space:]]+(rat|creal|complex|cpoint)[[:space:]]+theorem[[:space:]]+Rat\\.eq_zero_of_isZeroB[[:space:]]+0$')\" = 4",
+      "notes": "Run 2026-09-02: prints four `found ... theorem Rat.eq_zero_of_isZeroB 0` rows (rat, creal, complex, cpoint) and exits 0. The checker COUNTS those rows and requires exactly 4, so a deletion, a rename, a demotion to a `Definition`, a nonzero axiom footprint, or the declaration failing to survive into a downstream prelude each make the count differ and the command exit 1. `scripts/new-fact.py` verified the pattern fails on mutated output before this file was written."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon.rs)",
+    "source": "docs/research/09-decisions/adr-1554-the-pivot-is-computed-not-extracted-and-the-fuel-is-exact.md"
+  },
+  "notes": "ADR-0603 grading: this is the general constructive form, and row 2 (a boundary refutation) is EMPTY for this family BY PROOF rather than by omission -- the order on the constructed rationals is decidable, so there is no Markov-style boundary to refute and the general form IS the exact form. There is no labelled import row: nothing here was taken from Mathlib. It does NOT establish anything about `Rat.pivotSearch` or `Rat.leadingIndex`: those return indices, and turning 'the scan stopped here' into a statement about the entry needs a fuel induction that does not exist yet (ADR-1554, obligation 2). This fact is that induction's first input, not a substitute for it."
+}
