@@ -6,7 +6,7 @@ Lane: `tactic-list-int`
 
 Index-summary: Amends ADR-1586 and ADR-1589, closing the two cuts each left
 open. `simp::list` (ADR-1586 §4's design sketch, not built) lands as a
-fourth carrier for the rewrite-chain producer: no `NatOps`-style hardcoded
+third carrier for the rewrite-chain producer (after ℕ and ℤ): no `NatOps`-style hardcoded
 carrier (`ListDev` threads `alpha`/`beta` as explicit fields, corrected per
 node during traversal via `set_ambient_carrier`, since `length (map f l)`'s
 own carrier differs from `map f l`'s), congruence through
@@ -293,11 +293,11 @@ search is the dominant term here, not `simp`'s one rewrite step.
 
 ## Consequences
 
-- `simp` is now exercised over four carriers (ℕ, ℤ, ℚ, `List`); `decide` and
-  the `Tactic` combinator now cover
-  ℕ, ℤ, ℚ. ADR-1589's own scope-cut sentence ("left for whichever lane
-  needed a retirement badly enough to justify it") is resolved for ℤ/ℚ;
-  ADR-1586 §4's `List` design sketch is resolved and built.
+- `simp` is now exercised over three carriers (ℕ, ℤ, `List` — no `simp::rat`,
+  §4/§5); `decide` and the `Tactic` combinator now cover ℕ, ℤ, ℚ.
+  ADR-1589's own scope-cut sentence ("left for whichever lane needed a
+  retirement badly enough to justify it") is resolved for ℤ/ℚ; ADR-1586 §4's
+  `List` design sketch is resolved and built.
 - `simp::rat` remains unbuilt. `Tactic::Then` over ℚ is permanently the
   sequential-fallback regime unless a future lane builds one — a `Rat`-
   specific rewrite-chain engine over the SAME `IntDev` carrier `ring::rat`/
