@@ -1445,6 +1445,422 @@ fn declare_card_le_of_subset_b(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Summing over a set.
+// ---------------------------------------------------------------------------
+
+/// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a` — the
+/// `Nat`-codomain twin of [`select_bool_true`].
+fn select_nat_true(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let back = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, a)
+    });
+    let refl_case = d.refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, back)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
+fn select_nat_false(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let back = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, b)
+    });
+    let refl_case = d.refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, back)
+}
+
+/// `h : Eq Bool a b ⊢ Eq Nat (body a) (body b)` — [`NatOps::congr`] transports
+/// along a `Nat` equality and always closes into `Eq Nat`; this one transports
+/// along a `Bool` equality into the same place. `gauss_lemma.rs` carries its own
+/// copy under the same name, per this prelude's per-file convention.
+fn congr_bool_to_nat(
+    d: &mut NatDev<'_>,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    f: &dyn Fn(&mut NatDev<'_>, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(d, a);
+    let motive = d.bool_eq_motive(a, &|d, x| {
+        let fx = f(d, x);
+        d.eq(fa, fx)
+    });
+    let refl_case = d.refl(fa);
+    d.bool_transport(a, motive, refl_case, b, h)
+}
+
+/// `Nat.Finset.sum_eq_sumRangeIf_add : ∀ s j f,
+/// Eq Nat (sumRangeIf (memB s) f (add (bound s) j)) (sum s f)`.
+///
+/// [`declare_card_eq_count_range_add`]'s twin on the additive side, and needed
+/// for the same reason: a two-set law folds both sums over the common bound
+/// `bound s + bound t` and each side has to come back to its own `sum`. The
+/// tail is not merely zero-COUNTED but zero-VALUED — `memB s (bound s + k)` is
+/// `false`, so the guard selects `0` whatever `f` is there — which is what
+/// `sumRange_const_zero` then collapses.
+fn declare_sum_eq_sum_range_if_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fty = fun_ty(d);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let bs = fs_bound(d, &p, s);
+    let total = d.add(bs, j);
+
+    // `fun i => if memB s i then f i else 0`, the function `sumRangeIf` folds.
+    let selected = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let msi = fs_mem(d, &p, s, i);
+        let fi = d.apply(f, &[i]);
+        let zero = d.zero();
+        let body = d.bool_select_nat(msi, fi, zero);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let split = d.lemma(p.sum_range_split, &[selected, bs, j]);
+
+    let tail_fn = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let shifted = d.add(bs, k);
+        let body = d.apply(selected, &[shifted]);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let const_zero = {
+        let k_fv = d.fresh_fvar();
+        let z = d.zero();
+        d.lam_fv(k_fv, nat, z)
+    };
+    let tail_is_zero_fn = {
+        let pointwise = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let hk_fv = d.fresh_fvar();
+            let hk_ty = d.lt(k, j);
+            let shifted = d.add(bs, k);
+            let bound_le = d.lemma(p.le_add_right, &[bs, k]);
+            let vanishes = d.lemma(p.finset_mem_b_of_bound_le, &[s, shifted, bound_le]);
+            let msk = fs_mem(d, &p, s, shifted);
+            let fk = d.apply(f, &[shifted]);
+            let zero = d.zero();
+            let step = select_nat_false(d, msk, fk, zero, vanishes);
+            let with_hk = d.lam_fv(hk_fv, hk_ty, step);
+            d.lam_fv(k_fv, nat, with_hk)
+        };
+        d.lemma(p.sum_range_congr_lt, &[tail_fn, const_zero, j, pointwise])
+    };
+    let tail_zero = {
+        let collapse = d.lemma(p.sum_range_const_zero, &[j]);
+        let lhs = d.sum_range(tail_fn, j);
+        let mid = d.sum_range(const_zero, j);
+        let zero = d.zero();
+        d.trans(lhs, mid, zero, tail_is_zero_fn, collapse)
+    };
+
+    let head = d.sum_range(selected, bs);
+    let tail = d.sum_range(tail_fn, j);
+    let zero = d.zero();
+    let start = d.sum_range(selected, total);
+    let mid = d.add(head, tail);
+    let with_zero = d.add(head, zero);
+    let collapse = d.congr(tail, zero, tail_zero, &|d, x| d.add(head, x));
+    let close = d.lemma(p.add_zero, &[head]);
+    let (_, proof) = d.chain(start, &[(mid, split), (with_zero, collapse), (head, close)]);
+
+    let concl = {
+        let lhs = {
+            let m = fs_mem_fn(d, &p, s);
+            sum_range_if(d, &p, m, f, total)
+        };
+        let rhs = d.const_app(p.finset_sum, &[s, f]);
+        d.eq(lhs, rhs)
+    };
+    let ty = {
+        let with_f = d.pi_fv(f_fv, fty, concl);
+        let with_j = d.pi_fv(j_fv, nat, with_f);
+        d.pi_fv(s_fv, fs, with_j)
+    };
+    let value = {
+        let with_f = d.lam_fv(f_fv, fty, proof);
+        let with_j = d.lam_fv(j_fv, nat, with_f);
+        d.lam_fv(s_fv, fs, with_j)
+    };
+    d.declare_theorem(p.finset_sum_eq_sum_range_if_add, ty, value)?;
+    Ok(())
+}
+
+/// `Nat.Finset.sum_union_disjoint : ∀ s t f,
+/// (∀ i, Eq Bool (setInter (memB s) (memB t) i) false) →
+/// Eq Nat (sum (union s t) f) (add (sum s f) (sum t f))`.
+///
+/// The hypothesis is DISJOINTNESS SPELLED POINTWISE rather than
+/// `card (inter s t) = 0`, and deliberately: this kernel has no route from a
+/// zero count back to a pointwise `false` without a second bounded search, and
+/// every consumer of "these two sets do not meet" has the pointwise fact in
+/// hand already (`Nat.setInter` is where `finite_set.rs` puts it).
+///
+/// The whole proof is ONE per-index identity —
+/// `sel (union i) (f i) 0 = sel (s i) (f i) 0 + sel (t i) (f i) 0` — decided on
+/// `memB s i` alone, plus `Nat.sumRange_add`. Disjointness is used in exactly
+/// one branch: at `memB s i = true` it forces `memB t i = false`, so the right
+/// summand is `0` and `add_zero` closes; at `memB s i = false` the left summand
+/// is `0` by definition and `zero_add` closes with no hypothesis at all.
+fn declare_sum_union_disjoint(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fty = fun_ty(d);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let bs = fs_bound(d, &p, s);
+    let bt = fs_bound(d, &p, t);
+    let width = d.add(bs, bt);
+    let union = d.const_app(p.finset_union, &[s, t]);
+    let m_union = fs_mem_fn(d, &p, union);
+    let u_pred = set_union(d, &p, ms, mt);
+    let i_pred = set_inter(d, &p, ms, mt);
+
+    let hyp_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let meet = d.apply(i_pred, &[i]);
+        let fa = d.bool_false();
+        let body = d.bool_eq(meet, fa);
+        d.pi_fv(i_fv, nat, body)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // The three selected functions, as lambdas, so `sumRange_add` applies.
+    let sel_of = |d: &mut NatDev<'_>, q: ExprId| -> ExprId {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let qi = d.apply(q, &[i]);
+        let fi = d.apply(f, &[i]);
+        let zero = d.zero();
+        let body = d.bool_select_nat(qi, fi, zero);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let sel_s = sel_of(d, ms);
+    let sel_t = sel_of(d, mt);
+    let sel_sum = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let a = d.apply(sel_s, &[i]);
+        let b = d.apply(sel_t, &[i]);
+        let body = d.add(a, b);
+        d.lam_fv(i_fv, nat, body)
+    };
+
+    // Step 1: the union's membership agrees with `setUnion` below the common
+    // bound, so the fold may be restated at the bare predicate.
+    let restate = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, width);
+        let hi = d.kernel().fvar(hi_fv);
+        let step = d.lemma(p.finset_mem_b_of_lt, &[union, i, hi]);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, step);
+        let pred_agree = d.lam_fv(i_fv, nat, with_hi);
+        let fun_agree = {
+            let i2_fv = d.fresh_fvar();
+            let i2 = d.kernel().fvar(i2_fv);
+            let hi2_fv = d.fresh_fvar();
+            let hi2_ty = d.lt(i2, width);
+            let fi = d.apply(f, &[i2]);
+            let step2 = d.refl(fi);
+            let with_hi2 = d.lam_fv(hi2_fv, hi2_ty, step2);
+            d.lam_fv(i2_fv, nat, with_hi2)
+        };
+        d.lemma(
+            p.sum_range_if_congr_lt,
+            &[m_union, u_pred, f, f, width, pred_agree, fun_agree],
+        )
+    };
+
+    // Step 2: the per-index split, decided on `memB s i` alone.
+    let per_index = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let msi = fs_mem(d, &p, s, i);
+        let mti = fs_mem(d, &p, t, i);
+        let fi = d.apply(f, &[i]);
+        let zero = d.zero();
+        let ui = d.apply(u_pred, &[i]);
+        let sel_u_i = d.bool_select_nat(ui, fi, zero);
+        let sel_s_i = d.bool_select_nat(msi, fi, zero);
+        let sel_t_i = d.bool_select_nat(mti, fi, zero);
+        let goal = {
+            let rhs = d.add(sel_s_i, sel_t_i);
+            d.eq(sel_u_i, rhs)
+        };
+
+        let decided = super::ops::bool_true_or_false(d, &p, msi);
+        let left_ty = {
+            let tr = d.bool_true();
+            d.bool_eq(msi, tr)
+        };
+        let right_ty = {
+            let fa = d.bool_false();
+            d.bool_eq(msi, fa)
+        };
+
+        // `memB s i = true`: the union selects `f i`, and disjointness forces
+        // `memB t i = false`, so the right summand vanishes.
+        let left_case = {
+            let hms_fv = d.fresh_fvar();
+            let hms = d.kernel().fvar(hms_fv);
+            let tr = d.bool_true();
+            let union_true = select_bool_true(d, &p, msi, tr, mti, hms);
+            let a = select_nat_true(d, ui, fi, zero, union_true);
+
+            let meet = d.apply(i_pred, &[i]);
+            let false_lit = d.bool_false();
+            let inter_is_t = select_bool_true(d, &p, msi, mti, false_lit, hms);
+            let hmeet = d.apply(h, &[i]);
+            let back = d.bool_symm(meet, mti, inter_is_t);
+            let fa = d.bool_false();
+            let t_false = d.bool_trans(mti, meet, fa, back, hmeet);
+            let t_zero = select_nat_false(d, mti, fi, zero, t_false);
+            let s_is_f = select_nat_true(d, msi, fi, zero, hms);
+
+            let with_zero = d.add(fi, zero);
+            let az = d.lemma(p.add_zero, &[fi]);
+            let unfold_zero = d.symm(with_zero, fi, az);
+            let back_s = d.symm(sel_s_i, fi, s_is_f);
+            let put_s = d.congr(fi, sel_s_i, back_s, &|d, x| d.add(x, zero));
+            let back_t = d.symm(sel_t_i, zero, t_zero);
+            let put_t = d.congr(zero, sel_t_i, back_t, &|d, x| d.add(sel_s_i, x));
+            let step2 = d.add(sel_s_i, zero);
+            let step3 = d.add(sel_s_i, sel_t_i);
+            let (_, proof) = d.chain(
+                sel_u_i,
+                &[
+                    (fi, a),
+                    (with_zero, unfold_zero),
+                    (step2, put_s),
+                    (step3, put_t),
+                ],
+            );
+            d.lam_fv(hms_fv, left_ty, proof)
+        };
+
+        // `memB s i = false`: the union selects `memB t i` and the left summand
+        // is `0`. Disjointness is not used at all here.
+        let right_case = {
+            let hms_fv = d.fresh_fvar();
+            let hms = d.kernel().fvar(hms_fv);
+            let tr = d.bool_true();
+            let union_is_t = select_bool_false(d, &p, msi, tr, mti, hms);
+            let a = congr_bool_to_nat(d, ui, mti, union_is_t, &|d, x| {
+                d.bool_select_nat(x, fi, zero)
+            });
+            let s_zero = select_nat_false(d, msi, fi, zero, hms);
+            let zero_left = d.add(zero, sel_t_i);
+            let za = d.lemma(p.zero_add, &[sel_t_i]);
+            let unfold_zero = d.symm(zero_left, sel_t_i, za);
+            let back_s = d.symm(sel_s_i, zero, s_zero);
+            let put_s = d.congr(zero, sel_s_i, back_s, &|d, x| d.add(x, sel_t_i));
+            let step3 = d.add(sel_s_i, sel_t_i);
+            let (_, proof) = d.chain(
+                sel_u_i,
+                &[(sel_t_i, a), (zero_left, unfold_zero), (step3, put_s)],
+            );
+            d.lam_fv(hms_fv, right_ty, proof)
+        };
+
+        let answered = or_elim(
+            d, &p, left_ty, right_ty, goal, left_case, right_case, decided,
+        );
+        d.lam_fv(i_fv, nat, answered)
+    };
+
+    let sel_u = sel_of(d, u_pred);
+    let regroup = d.lemma(p.sum_range_congr, &[sel_u, sel_sum, width, per_index]);
+    let separate = d.lemma(p.sum_range_add, &[sel_s, sel_t, width]);
+
+    // Each side back to its own `sum`; the `t` side moves the bound first.
+    let h_sum_s = d.lemma(p.finset_sum_eq_sum_range_if_add, &[s, bt, f]);
+    let h_sum_t = {
+        let comm = d.lemma(p.add_comm, &[bs, bt]);
+        let swapped = d.add(bt, bs);
+        let move_bound = d.congr(width, swapped, comm, &|d, x| {
+            let mt_inner = fs_mem_fn(d, &p, t);
+            sum_range_if(d, &p, mt_inner, f, x)
+        });
+        let collapse = d.lemma(p.finset_sum_eq_sum_range_if_add, &[t, bs, f]);
+        let lhs = sum_range_if(d, &p, mt, f, width);
+        let midpoint = sum_range_if(d, &p, mt, f, swapped);
+        let sum_t = d.const_app(p.finset_sum, &[t, f]);
+        d.trans(lhs, midpoint, sum_t, move_bound, collapse)
+    };
+
+    let fold_union = sum_range_if(d, &p, m_union, f, width);
+    let fold_u_pred = d.sum_range(sel_u, width);
+    let fold_sum = d.sum_range(sel_sum, width);
+    let fold_s = d.sum_range(sel_s, width);
+    let fold_t = d.sum_range(sel_t, width);
+    let sum_s = d.const_app(p.finset_sum, &[s, f]);
+    let sum_t = d.const_app(p.finset_sum, &[t, f]);
+
+    let separated = d.add(fold_s, fold_t);
+    let after_s = d.add(sum_s, fold_t);
+    let after_t = d.add(sum_s, sum_t);
+    let step_s = d.congr(fold_s, sum_s, h_sum_s, &|d, x| d.add(x, fold_t));
+    let step_t = d.congr(fold_t, sum_t, h_sum_t, &|d, x| d.add(sum_s, x));
+
+    let (_, proof) = d.chain(
+        fold_union,
+        &[
+            (fold_u_pred, restate),
+            (fold_sum, regroup),
+            (separated, separate),
+            (after_s, step_s),
+            (after_t, step_t),
+        ],
+    );
+
+    let concl = {
+        let lhs = d.const_app(p.finset_sum, &[union, f]);
+        d.eq(lhs, after_t)
+    };
+    let ty = {
+        let with_h = d.arrow(hyp_ty, concl);
+        let with_f = d.pi_fv(f_fv, fty, with_h);
+        let with_t = d.pi_fv(t_fv, fs, with_f);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_f = d.lam_fv(f_fv, fty, with_h);
+        let with_t = d.lam_fv(t_fv, fs, with_f);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_sum_union_disjoint, ty, value)?;
+    Ok(())
+}
+
 /// Every `Nat.Finset` declaration, in dependency order.
 ///
 /// # Errors
@@ -1459,5 +1875,7 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_card_union_add_card_inter(d, p)?;
     declare_all_below_laws(d, p)?;
     declare_card_le_of_subset_b(d, p)?;
+    declare_sum_eq_sum_range_if_add(d, p)?;
+    declare_sum_union_disjoint(d, p)?;
     Ok(())
 }

@@ -6237,8 +6237,19 @@ pub struct NatPrelude {
     /// Eq Bool (subsetB s t) Bool.true → Le (card s) (card t)`.
     pub finset_card_le_of_subset_b: NameId,
     /// `Nat.Finset.sum_union_disjoint : ∀ s t f,
+    /// `Nat.Finset.sum_eq_sumRangeIf_add : ∀ s j f,
+    /// Eq Nat (sumRangeIf (memB s) f (add (bound s) j)) (sum s f)` — the
+    /// additive twin of
+    /// [`finset_card_eq_count_range_add`](Self::finset_card_eq_count_range_add).
+    /// The tail is not merely zero-COUNTED but zero-VALUED: `memB` is `false`
+    /// above the bound, so the guard selects `0` whatever the summand is there.
+    pub finset_sum_eq_sum_range_if_add: NameId,
+    /// `Nat.Finset.sum_union_disjoint : ∀ s t f,
     /// (∀ i, Eq Bool (setInter (memB s) (memB t) i) Bool.false) →
-    /// Eq Nat (sum (union s t) f) (add (sum s f) (sum t f))`.
+    /// Eq Nat (sum (union s t) f) (add (sum s f) (sum t f))`. Disjointness is
+    /// spelled POINTWISE rather than as `card (inter s t) = 0`: this kernel has
+    /// no route from a zero count back to a pointwise `false` without a second
+    /// bounded search, and every consumer has the pointwise fact already.
     pub finset_sum_union_disjoint: NameId,
     /// `Nat.Finset.sum_congr_of_beq : ∀ s t f, Eq Bool (beq s t) Bool.true →
     /// Eq Nat (sum s f) (sum t f)` — this kernel has no `funext`, so the
@@ -7198,6 +7209,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_all_below_of_all_true: kernel.name_str(finset, "allBelow_of_all_true"),
             finset_all_below_true_at: kernel.name_str(finset, "allBelow_true_at"),
             finset_card_le_of_subset_b: kernel.name_str(finset, "card_le_of_subsetB"),
+            finset_sum_eq_sum_range_if_add: kernel.name_str(finset, "sum_eq_sumRangeIf_add"),
             finset_sum_union_disjoint: kernel.name_str(finset, "sum_union_disjoint"),
             finset_sum_congr_of_beq: kernel.name_str(finset, "sum_congr_of_beq"),
             finset_exists_duplicate_of_card_lt: kernel

@@ -460,6 +460,8 @@ fn every_finset_declaration_is_present_and_axiom_free() {
         ("allBelow_of_all_true", p.finset_all_below_of_all_true),
         ("allBelow_true_at", p.finset_all_below_true_at),
         ("card_le_of_subsetB", p.finset_card_le_of_subset_b),
+        ("sum_eq_sumRangeIf_add", p.finset_sum_eq_sum_range_if_add),
+        ("sum_union_disjoint", p.finset_sum_union_disjoint),
     ];
     for (label, name) in names {
         assert!(
@@ -635,5 +637,129 @@ fn all_below_computes_and_stops_at_the_bound() {
     assert!(
         f.k.def_eq(stopped, t),
         "allBelow (k <= 1) 2 must be true -- the failing index is out of range"
+    );
+}
+
+/// `Nat.Finset.sum_union_disjoint`, instantiated, and its hypothesis shown to
+/// be LOAD-BEARING.
+///
+/// The hypothesis `∀ i, setInter (memB s) (memB t) i = false` is `Eq.refl
+/// false` exactly when one side's bound is `0` — at a symbolic index the guard
+/// `ble (succ i) (bound s)` is stuck for any positive bound, so a non-degenerate
+/// witness is a real case analysis and not something a test can spell in one
+/// line. So this checks three things rather than one:
+///
+/// 1. the theorem INSTANTIATED at `s = range 0`, where the witness does reduce,
+///    and its conclusion inferred and compared against `5 = 0 + 5`;
+/// 2. the statement's CONTENT at a non-degenerate disjoint pair, evaluated
+///    directly: `sum ({1} u {2}) id` and `sum {1} id + sum {2} id` are both `3`;
+/// 3. the same two quantities at an OVERLAPPING pair, where they are `6` and
+///    `8` — so the disjointness hypothesis is not decoration, and a
+///    `sum_union_disjoint` stated without it would be false.
+#[test]
+fn sum_union_disjoint_instantiates_and_its_hypothesis_is_load_bearing() {
+    let mut f = Fixture::new();
+    let name = f.p.finset_sum_union_disjoint;
+
+    // (1) the instantiation whose witness reduces.
+    let empty = f.range(0);
+    let t = f.of(&[2, 3]);
+    let id = f.identity();
+    let witness = {
+        let nat = f.nat_ty();
+        let i_fv = f.fresh_fvar();
+        let fa = f.bool_false();
+        let body = f.bool_refl(fa);
+        f.lam_fv(i_fv, nat, body)
+    };
+    let applied = f.const_app(name, &[empty, t, id, witness]);
+    let ty =
+        f.k.infer(applied)
+            .expect("sum_union_disjoint must instantiate at an empty left set");
+    let five = f.num(5);
+    let zero = f.zero();
+    let expected = {
+        let rhs = f.add(zero, five);
+        f.eq(five, rhs)
+    };
+    assert!(
+        f.k.def_eq(ty, expected),
+        "at (range 0, {{2,3}}) the identity must state 5 = 0 + 5, got {}",
+        f.k.render_lean(ty)
+    );
+    let six = f.num(6);
+    let wrong = {
+        let rhs = f.add(zero, five);
+        f.eq(six, rhs)
+    };
+    assert!(
+        !f.k.def_eq(ty, wrong),
+        "negative control: it must NOT state 6 = 0 + 5"
+    );
+
+    // (2) the content at a non-degenerate DISJOINT pair.
+    let a = f.of(&[1]);
+    let b = f.of(&[2]);
+    let joined = f.union(a, b);
+    let id2 = f.identity();
+    let lhs = f.sum(joined, id2);
+    let id3 = f.identity();
+    let sa = f.sum(a, id3);
+    let id4 = f.identity();
+    let sb = f.sum(b, id4);
+    let rhs = f.add(sa, sb);
+    let three = f.num(3);
+    assert!(f.k.def_eq(lhs, three), "sum ({{1}} u {{2}}) id must be 3");
+    assert!(
+        f.k.def_eq(rhs, three),
+        "sum {{1}} id + sum {{2}} id must be 3"
+    );
+
+    // (3) the same two quantities at an OVERLAPPING pair, where they DIFFER.
+    let c = f.of(&[1, 2]);
+    let dset = f.of(&[2, 3]);
+    let overlapped = f.union(c, dset);
+    let id5 = f.identity();
+    let lhs2 = f.sum(overlapped, id5);
+    let id6 = f.identity();
+    let sc = f.sum(c, id6);
+    let id7 = f.identity();
+    let sd = f.sum(dset, id7);
+    let rhs2 = f.add(sc, sd);
+    let six2 = f.num(6);
+    let eight = f.num(8);
+    assert!(
+        f.k.def_eq(lhs2, six2),
+        "sum ({{1,2}} u {{2,3}}) id must be 6 -- the shared 2 counted once"
+    );
+    assert!(
+        f.k.def_eq(rhs2, eight),
+        "sum {{1,2}} id + sum {{2,3}} id must be 8 -- the shared 2 counted twice"
+    );
+    assert!(
+        !f.k.def_eq(lhs2, rhs2),
+        "the disjointness hypothesis is LOAD-BEARING: 6 != 8 at an overlapping \
+         pair, so `sum_union_disjoint` without it would be false"
+    );
+
+    // Symbolic: free sets and a free summand, closed back into lambdas.
+    let fs = f.k.const_(f.p.finset, vec![]);
+    let nat = f.nat_ty();
+    let fn_ty = f.arrow(nat, nat);
+    let s_fv = f.fresh_fvar();
+    let s = f.k.fvar(s_fv);
+    let t_fv = f.fresh_fvar();
+    let tv = f.k.fvar(t_fv);
+    let g_fv = f.fresh_fvar();
+    let g = f.k.fvar(g_fv);
+    let at_free = f.const_app(name, &[s, tv, g]);
+    let closed = {
+        let inner = f.lam_fv(g_fv, fn_ty, at_free);
+        let mid = f.lam_fv(t_fv, fs, inner);
+        f.lam_fv(s_fv, fs, mid)
+    };
+    assert!(
+        f.k.infer(closed).is_ok(),
+        "sum_union_disjoint must infer at free set and summand variables"
     );
 }
