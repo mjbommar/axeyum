@@ -178,20 +178,35 @@ fn two_mul_symm(d: &mut NatDev<'_>, p: &NatPrelude, a: ExprId, b: ExprId) -> Exp
     proof
 }
 
-/// `Le m (mul 2 m)`, by `le_add_right` and one `two_mul` transport.
+/// `Le m (mul 2 m)`.
+///
+/// Retired to the `tactic` combinator (ADR-1589), same statement and same
+/// route as `totient_dvd_chain::le_self_two_mul`: `simp`'s defaults rewrite
+/// `mul 2 m` to `add m m`, `linarith` closes `Le m (add m m)` with no
+/// hypotheses.
 fn le_two_mul_self(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
     let p_ = *p;
-    let base = d.lemma(p_.le_add_right, &[m, m]);
-    let mm = d.add(m, m);
     let two = d.num(2);
     let two_m = d.mul(two, m);
-    let tm = two_mul(d, &p_, m);
-    let back = d.symm(two_m, mm, tm);
-    rewrite(d, mm, two_m, back, base, &|d, z| d.le(m, z))
+    let goal = d.le(m, two_m);
+    let rules = crate::simp::nat::default_rules(&p_);
+    let ctx = crate::tactic::Ctx {
+        prelude: p_,
+        assumptions: &[],
+        rules: &rules,
+    };
+    let tactic = crate::tactic::Tactic::Then(
+        Box::new(crate::tactic::Tactic::Simp),
+        Box::new(crate::tactic::Tactic::Linarith),
+    );
+    crate::tactic::run(d, &ctx, &tactic, goal)
+        .unwrap_or_else(|e| panic!("le_two_mul_self: Then(Simp, Linarith) declined: {e:?}"))
 }
 
 /// `Lt m (succ (mul 2 m))` — `eisenstein_floor_sum`'s bound hypothesis at the
-/// Eisenstein shape, which is where it is free.
+/// Eisenstein shape, which is where it is free. Unchanged: `le_two_mul_self`
+/// then `succ_le_succ`, the same composition as before its own leaf was
+/// retired to the combinator.
 fn lt_succ_two_mul_self(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
     let p_ = *p;
     let le = le_two_mul_self(d, &p_, m);
