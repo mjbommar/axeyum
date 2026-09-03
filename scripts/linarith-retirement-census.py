@@ -83,17 +83,21 @@ NAT_RETIREMENT_COMMIT = "f7cbb3ee3"
 INT_PRE_RETIREMENT_COMMIT = "5b45a40c0^"
 INT_RETIREMENT_COMMIT = "5b45a40c0"
 
-# The ten/five names ADR-1576 and the omega-1 status doc record as already
-# retired. Independent of this script's own detection of `linarith::declare`
-# call sites -- both are computed and compared (`already_retired` in the
-# output), so a drift between "what the doc claims" and "what the source
-# actually shows" is visible rather than assumed away.
-KNOWN_RETIRED_NAT = (
+# The ten/five names ADR-1576 records as the FIRST retirement batch -- fixed,
+# not updated by later retirements. Used only as the positive control's
+# expected set (re-derived from the real pre-retirement source at the two
+# commits below on every run, never asserted). The "citing an already-retired
+# name costs nothing extra" allowance a *candidate* gets uses the CURRENT
+# `already_retired` set instead (computed from source, in `classify`'s
+# caller), so it grows as later lanes retire more -- deriving that from a
+# literal here would go stale the moment this lane's own five retirements
+# landed.
+ADR1576_RETIRED_NAT = (
     "le_refl_thm", "le_succ", "succ_le_succ", "le_of_lt_succ",
     "lt_succ_self", "lt_succ_of_le", "lt_add_one", "le_succ_of_le",
     "zero_lt_succ", "le_of_lt_add_one",
 )
-KNOWN_RETIRED_INT = (
+ADR1576_RETIRED_INT = (
     "add_left_comm", "add_neg_cancel_left", "add_neg_cancel_right",
     "add_le_add_three", "add_le_of_le_sub_left",
 )
@@ -378,12 +382,12 @@ def positive_control() -> dict:
         ("nat", NAT_PRE_RETIREMENT_COMMIT,
          ["crates/axeyum-lean-kernel/src/nat_prelude/order_extra.rs",
           "crates/axeyum-lean-kernel/src/nat_prelude/order_more.rs"],
-         KNOWN_RETIRED_NAT, ALLOWED_NAT, KNOWN_RETIRED_NAT),
+         ADR1576_RETIRED_NAT, ALLOWED_NAT, ADR1576_RETIRED_NAT),
         ("int", INT_PRE_RETIREMENT_COMMIT,
          ["crates/axeyum-lean-kernel/src/int_prelude/add_basics.rs",
           "crates/axeyum-lean-kernel/src/int_prelude/algebra.rs",
           "crates/axeyum-lean-kernel/src/int_prelude/order_add.rs"],
-         KNOWN_RETIRED_INT, ALLOWED_INT, KNOWN_RETIRED_INT),
+         ADR1576_RETIRED_INT, ALLOWED_INT, ADR1576_RETIRED_INT),
     ):
         symtab: dict[str, list[str]] = {}
         parsed = {}
@@ -438,11 +442,14 @@ def build() -> dict:
     int_sites, int_retired, int_symtab = scan_dir(INT_DIR)
     nat_foundational = linarith_foundational(LINARITH_NAT_SRC)
     int_foundational = linarith_foundational(LINARITH_INT_SRC)
+    # The "citing an already-retired name costs nothing extra" allowance uses
+    # every retirement DETECTED IN THE CURRENT SOURCE, not the fixed
+    # ADR-1576 batch -- it must grow as later lanes retire more.
     nat_candidates, nat_declined = classify(
-        nat_sites, nat_symtab, ALLOWED_NAT, KNOWN_RETIRED_NAT, nat_foundational
+        nat_sites, nat_symtab, ALLOWED_NAT, tuple(nat_retired), nat_foundational
     )
     int_candidates, int_declined = classify(
-        int_sites, int_symtab, ALLOWED_INT, KNOWN_RETIRED_INT, int_foundational
+        int_sites, int_symtab, ALLOWED_INT, tuple(int_retired), int_foundational
     )
 
     decline_reasons: dict[str, int] = {}
@@ -471,15 +478,23 @@ def build() -> dict:
         },
         "positive_control": positive_control(),
         "already_retired": {
+            "note": (
+                "`known` is the ORIGINAL fifteen (ADR-1576's own batch), used "
+                "as the positive control's fixed expected set -- it is not "
+                "updated by later retirements, so `match: false` after a new "
+                "retirement lands is expected, not a regression. "
+                "`detected_in_source` is every `linarith::declare(...)` call "
+                "site this run actually finds, current as of this run."
+            ),
             "nat": {
-                "known": sorted(KNOWN_RETIRED_NAT),
+                "known": sorted(ADR1576_RETIRED_NAT),
                 "detected_in_source": nat_retired,
-                "match": sorted(KNOWN_RETIRED_NAT) == nat_retired,
+                "match": sorted(ADR1576_RETIRED_NAT) == nat_retired,
             },
             "int": {
-                "known": sorted(KNOWN_RETIRED_INT),
+                "known": sorted(ADR1576_RETIRED_INT),
                 "detected_in_source": int_retired,
-                "match": sorted(KNOWN_RETIRED_INT) == int_retired,
+                "match": sorted(ADR1576_RETIRED_INT) == int_retired,
             },
         },
         "population": {

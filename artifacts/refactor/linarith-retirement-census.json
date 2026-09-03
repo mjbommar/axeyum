@@ -50,7 +50,9 @@
     "int": {
       "detected_in_source": [
         "add_le_add_three",
+        "add_le_of_le_neg_add",
         "add_le_of_le_sub_left",
+        "add_le_of_le_sub_right",
         "add_left_comm",
         "add_neg_cancel_left",
         "add_neg_cancel_right"
@@ -62,16 +64,19 @@
         "add_neg_cancel_left",
         "add_neg_cancel_right"
       ],
-      "match": true
+      "match": false
     },
     "nat": {
       "detected_in_source": [
+        "add_lt_add_left",
         "le_of_lt_add_one",
         "le_of_lt_succ",
         "le_refl_thm",
         "le_succ",
         "le_succ_of_le",
         "lt_add_one",
+        "lt_of_le_of_lt",
+        "lt_of_lt_of_le",
         "lt_succ_of_le",
         "lt_succ_self",
         "succ_le_succ",
@@ -89,8 +94,9 @@
         "succ_le_succ",
         "zero_lt_succ"
       ],
-      "match": true
-    }
+      "match": false
+    },
+    "note": "`known` is the ORIGINAL fifteen (ADR-1576's own batch), used as the positive control's fixed expected set -- it is not updated by later retirements, so `match: false` after a new retirement lands is expected, not a regression. `detected_in_source` is every `linarith::declare(...)` call site this run actually finds, current as of this run."
   },
   "authority": "<dev>.theorem/<dev>.int_theorem call sites in nat_prelude/ and int_prelude/ (excluding *_tests.rs); a candidate's every direct or one-level-resolved-helper `p.<lemma>` citation must lie in the documented linarith emitter vocabulary plus the primitive order constructors the historical retirements needed",
   "candidates": {
@@ -119,42 +125,6 @@
         "name": "add_left_cancel",
         "resolved_helpers": [
           "cancel_neg_add_left"
-        ]
-      },
-      {
-        "arity": "3",
-        "citations": [
-          "add_assoc",
-          "add_comm",
-          "add_le_add",
-          "add_neg",
-          "add_zero",
-          "le_refl"
-        ],
-        "file": "crates/axeyum-lean-kernel/src/int_prelude/order_add.rs",
-        "line_count": 15,
-        "name": "add_le_of_le_neg_add",
-        "resolved_helpers": [
-          "add_cancel_neg_left",
-          "le_of_le_neg_add_core"
-        ]
-      },
-      {
-        "arity": "3",
-        "citations": [
-          "add_assoc",
-          "add_comm",
-          "add_le_add",
-          "add_neg",
-          "add_zero",
-          "le_refl"
-        ],
-        "file": "crates/axeyum-lean-kernel/src/int_prelude/order_add.rs",
-        "line_count": 14,
-        "name": "add_le_of_le_sub_right",
-        "resolved_helpers": [
-          "cancel_neg_add",
-          "le_of_le_sub_right_core"
         ]
       },
       {
@@ -192,37 +162,6 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/add_basics.rs",
         "line_count": 47,
         "name": "add_add_add_comm",
-        "resolved_helpers": []
-      },
-      {
-        "arity": "3",
-        "citations": [
-          "le_succ_succ",
-          "le_trans"
-        ],
-        "file": "crates/axeyum-lean-kernel/src/nat_prelude/order.rs",
-        "line_count": 23,
-        "name": "lt_of_le_of_lt",
-        "resolved_helpers": []
-      },
-      {
-        "arity": "3",
-        "citations": [
-          "le_trans"
-        ],
-        "file": "crates/axeyum-lean-kernel/src/nat_prelude/order.rs",
-        "line_count": 21,
-        "name": "lt_of_lt_of_le",
-        "resolved_helpers": []
-      },
-      {
-        "arity": "3",
-        "citations": [
-          "add_le_add_left"
-        ],
-        "file": "crates/axeyum-lean-kernel/src/nat_prelude/order.rs",
-        "line_count": 14,
-        "name": "add_lt_add_left",
         "resolved_helpers": []
       },
       {
@@ -6581,7 +6520,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/division.rs",
         "line_count": 252,
         "name": "div_mod_unique",
-        "reason": "uncovered citation(s): ['add_left_cancel', 'add_lt_add_left', 'le_total', 'logic.and', 'logic.and_intro', 'logic.and_rec', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_rec', 'lt_of_lt_of_le', 'lt_or_eq_of_le', 'mul_le_mul_left']",
+        "reason": "uncovered citation(s): ['add_left_cancel', 'le_total', 'logic.and', 'logic.and_intro', 'logic.and_rec', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_rec', 'lt_or_eq_of_le', 'mul_le_mul_left']",
         "resolved_helpers": []
       },
       {
@@ -7112,7 +7051,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/division.rs",
         "line_count": 178,
         "name": "div_mod_lt_mul_iff",
-        "reason": "uncovered citation(s): ['div_mod_bounds', 'le_total', 'logic.and', 'logic.and_rec', 'logic.false_', 'logic.false_rec', 'logic.iff', 'logic.iff_intro', 'logic.or', 'logic.or_rec', 'lt_of_lt_of_le', 'lt_or_eq_of_le', 'mul_le_mul_left']",
+        "reason": "uncovered citation(s): ['div_mod_bounds', 'le_total', 'logic.and', 'logic.and_rec', 'logic.false_', 'logic.false_rec', 'logic.iff', 'logic.iff_intro', 'logic.or', 'logic.or_rec', 'lt_or_eq_of_le', 'mul_le_mul_left']",
         "resolved_helpers": []
       },
       {
@@ -7204,7 +7143,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/division.rs",
         "line_count": 172,
         "name": "div_mod_mul_le_iff",
-        "reason": "uncovered citation(s): ['div_mod_bounds', 'le_total', 'logic.and', 'logic.and_rec', 'logic.false_', 'logic.false_rec', 'logic.iff', 'logic.iff_intro', 'logic.or', 'logic.or_rec', 'lt_of_lt_of_le', 'lt_or_eq_of_le', 'mul_le_mul_left']",
+        "reason": "uncovered citation(s): ['div_mod_bounds', 'le_total', 'logic.and', 'logic.and_rec', 'logic.false_', 'logic.false_rec', 'logic.iff', 'logic.iff_intro', 'logic.or', 'logic.or_rec', 'lt_or_eq_of_le', 'mul_le_mul_left']",
         "resolved_helpers": []
       },
       {
@@ -8442,7 +8381,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_floor_min_free.rs",
         "line_count": 115,
         "name": "div_mul_succ_le_of_le",
-        "reason": "uncovered citation(s): ['add_lt_add_left', 'div_lt_of_lt_mul', 'lt_of_le_of_lt', 'mul_le_mul_left']",
+        "reason": "uncovered citation(s): ['div_lt_of_lt_mul', 'mul_le_mul_left']",
         "resolved_helpers": [
           "rewrite",
           "two_mul",
@@ -8554,7 +8493,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_order.rs",
         "line_count": 113,
         "name": "div_le_div_left",
-        "reason": "uncovered citation(s): ['div_lt_of_lt_mul', 'div_mod_exec', 'div_mod_lt_mul_iff', 'logic.exists_', 'logic.exists_rec', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_rec', 'lt_of_lt_of_le', 'mul_le_mul_left', 'not_lt_zero', 'zero_or_succ']",
+        "reason": "uncovered citation(s): ['div_lt_of_lt_mul', 'div_mod_exec', 'div_mod_lt_mul_iff', 'logic.exists_', 'logic.exists_rec', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_rec', 'mul_le_mul_left', 'not_lt_zero', 'zero_or_succ']",
         "resolved_helpers": [
           "false_elim",
           "iff_reverse",
@@ -8715,7 +8654,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/xor_trichotomy.rs",
         "line_count": 109,
         "name": "lt_xor_cases",
-        "reason": "uncovered citation(s): ['logic.false_', 'logic.false_rec', 'logic.iff_mpr', 'logic.not', 'logic.or', 'logic.or_elim', 'logic.or_inl', 'logic.or_inr', 'lt_of_lt_of_le', 'xor', 'xor_assoc', 'xor_comm', 'xor_ne_zero_iff', 'xor_trichotomy']",
+        "reason": "uncovered citation(s): ['logic.false_', 'logic.false_rec', 'logic.iff_mpr', 'logic.not', 'logic.or', 'logic.or_elim', 'logic.or_inl', 'logic.or_inr', 'xor', 'xor_assoc', 'xor_comm', 'xor_ne_zero_iff', 'xor_trichotomy']",
         "resolved_helpers": [
           "ex_falso"
         ]
@@ -9498,7 +9437,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/gauss_lemma.rs",
         "line_count": 94,
         "name": "gauss_neg_count_two_closed_form",
-        "reason": "uncovered citation(s): ['add_sub_cancel_left', 'count_range', 'count_range_congr_lt', 'div_mod_exec', 'div_mod_unique', 'gauss_count_ble_closed_form_disj', 'gauss_neg_count', 'gauss_residue_two_eq_double_of_lt', 'gauss_sign_neg', 'logic.and', 'logic.and_intro', 'logic.or', 'logic.or_rec', 'lt_of_le_of_lt', 'mul_le_mul_left', 'sub_eq_zero_of_le']",
+        "reason": "uncovered citation(s): ['add_sub_cancel_left', 'count_range', 'count_range_congr_lt', 'div_mod_exec', 'div_mod_unique', 'gauss_count_ble_closed_form_disj', 'gauss_neg_count', 'gauss_residue_two_eq_double_of_lt', 'gauss_sign_neg', 'logic.and', 'logic.and_intro', 'logic.or', 'logic.or_rec', 'mul_le_mul_left', 'sub_eq_zero_of_le']",
         "resolved_helpers": [
           "and_intro2",
           "and_left",
@@ -11014,7 +10953,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/divisor_sum_scale.rs",
         "line_count": 73,
         "name": "abundant_mul_left",
-        "reason": "uncovered citation(s): ['abundant', 'logic.not', 'lt_of_lt_of_le', 'mul_assoc', 'mul_lt_mul_left', 'sum_divisors', 'sum_divisors_scale_le', 'zero_lt_of_ne_zero']",
+        "reason": "uncovered citation(s): ['abundant', 'logic.not', 'mul_assoc', 'mul_lt_mul_left', 'sum_divisors', 'sum_divisors_scale_le', 'zero_lt_of_ne_zero']",
         "resolved_helpers": [
           "iff_reverse",
           "rewrite_le_lhs",
@@ -11239,7 +11178,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/fibonacci.rs",
         "line_count": 71,
         "name": "fib_lt_fib",
-        "reason": "uncovered citation(s): ['fib', 'fib_mono', 'fib_strictmonoon', 'logic.false_', 'logic.false_rec', 'logic.iff', 'logic.iff_intro', 'logic.or', 'logic.or_rec', 'lt_of_lt_of_le', 'lt_or_ge']",
+        "reason": "uncovered citation(s): ['fib', 'fib_mono', 'fib_strictmonoon', 'logic.false_', 'logic.false_rec', 'logic.iff', 'logic.iff_intro', 'logic.or', 'logic.or_rec', 'lt_or_ge']",
         "resolved_helpers": [
           "absurd",
           "or_elim"
@@ -11484,7 +11423,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/division.rs",
         "line_count": 65,
         "name": "div_mod_bounds",
-        "reason": "uncovered citation(s): ['add_lt_add_left', 'logic.and', 'logic.and_intro', 'logic.and_rec']",
+        "reason": "uncovered citation(s): ['logic.and', 'logic.and_intro', 'logic.and_rec']",
         "resolved_helpers": []
       },
       {
@@ -12682,7 +12621,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/log.rs",
         "line_count": 50,
         "name": "ble_eq_false_of_lt",
-        "reason": "uncovered citation(s): ['le_of_ble_eq_true', 'logic.bool_rec', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_inl', 'logic.or_inr', 'logic.or_rec', 'lt_of_lt_of_le']",
+        "reason": "uncovered citation(s): ['le_of_ble_eq_true', 'logic.bool_rec', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_inl', 'logic.or_inr', 'logic.or_rec']",
         "resolved_helpers": [
           "bool_true_or_false"
         ]
@@ -15116,7 +15055,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs",
         "line_count": 31,
         "name": "clog_mono",
-        "reason": "uncovered citation(s): ['clog', 'clog_antitone_left', 'clog_mono_right', 'lt_of_lt_of_le']",
+        "reason": "uncovered citation(s): ['clog', 'clog_antitone_left', 'clog_mono_right']",
         "resolved_helpers": [
           "clog"
         ]
@@ -15264,7 +15203,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/floor_count.rs",
         "line_count": 30,
         "name": "count_range_mul_succ_le_eq_min",
-        "reason": "uncovered citation(s): ['ble_eq_false_of_lt', 'ble_eq_true_of_le', 'count_range', 'count_range_congr', 'count_range_succ_le_eq_min', 'div_mod_mul_le_iff', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_rec', 'lt_of_lt_of_le', 'lt_or_ge', 'min_min']",
+        "reason": "uncovered citation(s): ['ble_eq_false_of_lt', 'ble_eq_true_of_le', 'count_range', 'count_range_congr', 'count_range_succ_le_eq_min', 'div_mod_mul_le_iff', 'logic.false_', 'logic.false_rec', 'logic.or', 'logic.or_rec', 'lt_or_ge', 'min_min']",
         "resolved_helpers": [
           "ble_eq_of_iff",
           "count_range",
@@ -16141,7 +16080,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/min_fac_dvd.rs",
         "line_count": 25,
         "name": "min_fac_two_le",
-        "reason": "uncovered citation(s): ['beq_eq_false_of_ne', 'lt_of_lt_of_le', 'min_fac', 'min_fac_aux', 'min_fac_aux_two_le', 'not_succ_le_self']",
+        "reason": "uncovered citation(s): ['beq_eq_false_of_ne', 'min_fac', 'min_fac_aux', 'min_fac_aux_two_le', 'not_succ_le_self']",
         "resolved_helpers": [
           "min_fac_aux",
           "ne_of_lt",
@@ -16444,7 +16383,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs",
         "line_count": 22,
         "name": "clog_anti_left",
-        "reason": "uncovered citation(s): ['clog', 'clog_antitone_left', 'lt_of_lt_of_le']",
+        "reason": "uncovered citation(s): ['clog', 'clog_antitone_left']",
         "resolved_helpers": [
           "clog"
         ]
@@ -16547,7 +16486,7 @@
         "file": "crates/axeyum-lean-kernel/src/nat_prelude/log_clog_mirrors.rs",
         "line_count": 22,
         "name": "log_anti_left",
-        "reason": "uncovered citation(s): ['log', 'log_antitone_left', 'lt_of_lt_of_le']",
+        "reason": "uncovered citation(s): ['log', 'log_antitone_left']",
         "resolved_helpers": [
           "log"
         ]
@@ -19301,12 +19240,12 @@
   },
   "kind": "linarith-retirement-census",
   "population": {
-    "int_candidates": 6,
+    "int_candidates": 4,
     "int_declined": 238,
-    "int_theorem_call_sites": 244,
-    "nat_candidates": 6,
+    "int_theorem_call_sites": 242,
+    "nat_candidates": 3,
     "nat_declined": 641,
-    "nat_theorem_call_sites": 647
+    "nat_theorem_call_sites": 644
   },
   "positive_control": {
     "int": {
