@@ -413,6 +413,12 @@ pub(super) const STEPS: &[BuildStep] = &[
         run: super::algebra_instance::declare_ordered_ring_s,
     },
     BuildStep {
+        label: "algebra_instance::declare_add_group_s",
+        requires: &[|p: CRealPrelude| p.comm_ring_s],
+        provides: &[|p: CRealPrelude| p.add_group_s],
+        run: super::algebra_instance::declare_add_group_s,
+    },
+    BuildStep {
         label: "field::declare_field",
         requires: &[
             |p: CRealPrelude| p.add,

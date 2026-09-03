@@ -6209,6 +6209,16 @@ pub struct CRealPrelude {
     /// `algebra_instance::declare_ordered_ring_s`, wired into
     /// `STEP_DISPATCH` right after `algebra_instance::declare_comm_ring_s`.
     pub ordered_ring_s: NameId,
+    /// `CReal.addGroupS : AlgS.Group` (`creal/algebra_instance.rs`,
+    /// ADR-1592) — `AlgS.CommGroup.toGroupS(AlgS.CommRing.
+    /// toCommGroupS(CReal.commRingS))`, a NAMED declaration (deliverable
+    /// 2's explicit ask, promoting ADR-1590's test-only `ring_s_additive_
+    /// group_value` route to a real one) — what `AlgS.add_left_cancel`/
+    /// `AlgS.inv_unique`/`AlgS.invInv` (stated over `AlgS.Group`) need to
+    /// reach `CReal`. Declared by `algebra_instance::declare_add_group_s`,
+    /// wired into `STEP_DISPATCH` right after
+    /// `algebra_instance::declare_ordered_ring_s`.
+    pub add_group_s: NameId,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
     /// `creal/pi.rs`'s own 14 names, moved out of this struct by
     /// ADR-1512 so that adding a declaration to that module touches
@@ -6842,6 +6852,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_uniform_limit: kernel.name_str(creal, "hasDerivative_uniform_limit"),
         comm_ring_s: kernel.name_str(creal, "commRingS"),
         ordered_ring_s: kernel.name_str(creal, "orderedRingS"),
+        add_group_s: kernel.name_str(creal, "addGroupS"),
         pi: pi::PiNames::intern(kernel, creal),
     }
 }
@@ -7235,6 +7246,10 @@ const STEP_DISPATCH: &[StepDispatch] = &[
     (
         "algebra_instance::declare_ordered_ring_s",
         algebra_instance::declare_ordered_ring_s,
+    ),
+    (
+        "algebra_instance::declare_add_group_s",
+        algebra_instance::declare_add_group_s,
     ),
     ("field::declare_field", field::declare_field),
     ("inverse::declare_inverse", inverse::declare_inverse),
@@ -9002,6 +9017,7 @@ mod inverse_fn;
 mod ivt;
 mod ivt_boundary;
 mod lattice;
+pub(crate) mod linarith_bridge;
 mod lub_boundary;
 mod monotone;
 mod mul_self_zero;

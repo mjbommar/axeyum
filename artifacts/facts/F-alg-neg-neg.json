@@ -13,7 +13,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "external_status": "unknown",
-  "depends_on": ["F:alg-group-inv-unique"],
+  "depends_on": ["F:alg-group-inv-unique", "F:algs-inv-inv"],
   "axiom_footprint": [],
   "evidence": [
     {

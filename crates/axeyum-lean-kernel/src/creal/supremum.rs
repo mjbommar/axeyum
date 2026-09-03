@@ -4547,6 +4547,11 @@ fn declare_le_mesh_level_count_thm(d: &mut IntDev<'_>, p: CRealPrelude) -> Resul
 }
 
 /// `Rat.le x (Rat.add x y)` from `hy : Rat.le Rat.zero y`.
+///
+/// ADR-1592 retirement: was a hand `le_refl`+`add_le_add`+`add_zero`
+/// rewrite chain; now routed through `linarith::generic::prove_s` over
+/// `AlgS.Rat.orderedRingS` (`super::linarith_bridge::rat_le_add_right`) —
+/// the SAME fact, the SAME type, reached generically.
 fn rat_le_add_right(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -4554,14 +4559,7 @@ fn rat_le_add_right(
     y: ExprId,
     hy: ExprId,
 ) -> ExprId {
-    let rat = p.rat;
-    let zero = rzero(d, rat);
-    let refl_x = d.lemma(rat.le_refl, &[x]);
-    let widened = d.lemma(rat.add_le_add, &[x, x, zero, y, refl_x, hy]);
-    let padded = radd(d, x, zero);
-    let sum = radd(d, x, y);
-    let trim = d.lemma(rat.add_zero, &[x]);
-    rat_eq_rewrite(d, padded, x, trim, widened, &|d, t| rle(d, rat, t, sum))
+    super::linarith_bridge::rat_le_add_right(d, p, x, y, hy)
 }
 
 /// `Rat.le y (Rat.add x y)` from `hx : Rat.le Rat.zero x`.

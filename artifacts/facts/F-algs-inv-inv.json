@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-inv-inv",
+  "title": "In an abstract Setoid-flavored group, the inverse of the inverse is the original element (up to equiv)",
+  "statement": "For any AlgS.Group record G and element a of G's carrier, equiv (inv (inv a)) a -- a direct instantiation of AlgS.inv_unique at (a := inv a, b := inv (inv a), c := a), h1 := invL(inv a), h2 := invL a, mirroring Alg.neg_neg's own proof exactly.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.invInv : ((x0 : AlgS.Group) -> ((x1 : AlgS.Group.carrier x0) -> AlgS.Group.equiv x0 (AlgS.Group.inv x0 (AlgS.Group.inv x0 x1)) x1))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.invInv"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:algs-inv-unique"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-inv-inv-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.invInv admits through the trusted kernel gate and, applied at AlgS.Group.ofAlg(Int.addGroup), type-checks both concretely (at Int.zero) and symbolically (a free a). Int has no named neg_neg/invInv kernel theorem (ADR-1584 section 3: int_prelude/gcd.rs's neg_neg is a private, never-declared Rust helper), so this is a well-typedness measurement, like AlgS.neg_neg's own Int control.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- inv_inv_instantiated_at_int_through_ofalg_concrete_and_symbolic --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "algs-inv-inv-2",
+      "kind": "kernel-term",
+      "supports": "AlgS.invInv, applied at CReal.addGroupS (AlgS.CommGroup.toGroupS(AlgS.CommRing.toCommGroupS(CReal.commRingS)), a NAMED projection chain, not the earlier test-only ring_s_additive_group_value builder), type-checks closed over a free a : CReal -- reaching a carrier Alg.neg_neg (Eq-flavored) could never reach directly.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- generic_inv_unique_and_inv_inv_instantiated_at_creal_add_group_s_type_check --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel nat_prelude::structures_setoid (declare_inv_inv), lane structures-ordered-setoid, ADR-1592.",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (declare_inv_inv, declared as AlgS.invInv); crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (build_neg_neg, now deriving Alg.neg_neg from AlgS.invInv via AlgS.Group.ofAlg); crates/axeyum-lean-kernel/src/creal/algebra_instance.rs (CReal.addGroupS)."
+  },
+  "notes": "Named invInv, not neg_neg: AlgS.neg_neg (ADR-1588, F:algs-neg-neg) already names a DIFFERENT, Ring-scoped theorem (equiv (R.neg (R.neg a)) a, built from negAdd/addComm/addAssoc over AlgS.Ring's additive structure); this one is stated over AlgS.Group's generic inv, the scope Alg.neg_neg actually has. Alg.neg_neg (F:alg-neg-neg) is now DERIVED from this fact via AlgS.Group.ofAlg, with its declared type measured byte-identical before and after -- closing the scope mismatch ADR-1590 section 3 recorded explicitly ('AlgS has no Group-level generic theorem to derive [Alg.neg_neg] from')."
+}

@@ -137,8 +137,12 @@ pub(super) fn half_shift_le(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId) -> E
 
 /// `Rat.le (modulus (shift m) (shift n)) (modulus m n)` — the two halves of
 /// [`half_shift_le`] combined additively.
+///
+/// ADR-1592 retirement: was one direct `d.lemma(rat.add_le_add, &[a, b, c,
+/// e, hm, hn])` citation; now routed through `linarith::generic::prove_s`
+/// over `AlgS.Rat.orderedRingS` (`super::linarith_bridge::rat_add_le_add`)
+/// — the SAME fact, the SAME type, reached generically.
 fn moduli_shift_le(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId, n: ExprId) -> ExprId {
-    let rat = p.rat;
     let sm = shift(d, m);
     let sn = shift(d, n);
     let a = div_succ(d, p, 1, sm);
@@ -147,7 +151,7 @@ fn moduli_shift_le(d: &mut IntDev<'_>, p: CRealPrelude, m: ExprId, n: ExprId) ->
     let e = div_succ(d, p, 1, n);
     let hm = half_shift_le(d, p, m);
     let hn = half_shift_le(d, p, n);
-    d.lemma(rat.add_le_add, &[a, b, c, e, hm, hn])
+    super::linarith_bridge::rat_add_le_add(d, p, a, b, c, e, hm, hn)
 }
 
 /// `Eq Rat ((1/(k+1)+1/(n+1)) + (1/(n+1)+1/(k'+1))) (2/(k+1)+2/(n+1))`, given

@@ -10078,6 +10078,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "product::declare_product",
     "algebra_instance::declare_comm_ring_s",
     "algebra_instance::declare_ordered_ring_s",
+    "algebra_instance::declare_add_group_s",
     "field::declare_field",
     "inverse::declare_inverse",
     "cancellation::declare_cancellation",

@@ -337,6 +337,40 @@ pub(super) fn declare_ordered_ring_s(
     Ok(())
 }
 
+/// `CReal.addGroupS : AlgS.Group` — ADR-1592 deliverable 2's explicit ask:
+/// `AlgS.CommGroup.toGroupS(AlgS.CommRing.toCommGroupS(CReal.commRingS))`,
+/// a NAMED declaration (promoting ADR-1590's test-only `ring_s_additive_
+/// group_value` term-builder route to a real one) — what `AlgS.
+/// add_left_cancel`/`AlgS.inv_unique`/`AlgS.invInv` (all stated over
+/// `AlgS.Group`) need to reach `CReal`.
+///
+/// The `STEP_DISPATCH` entry: declares under `p.add_group_s`, registered
+/// right after `declare_ordered_ring_s` (needs only `p.comm_ring_s`,
+/// already provided by `declare_comm_ring_s`, plus the two `AlgS`
+/// projections, both declared once at `nat_prelude` build time).
+pub(super) fn declare_add_group_s(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let p = &p;
+    let k = d.kernel();
+    let extra = &p.rat.int.nat.structures_s_extra;
+    let comm_ring_s_c = k.const_(p.comm_ring_s, vec![]);
+    let to_comm_group_s = k.const_(extra.comm_ring_to_comm_group_s, vec![]);
+    let comm_group_val = k.app(to_comm_group_s, comm_ring_s_c);
+    let to_group_s = k.const_(extra.comm_group_to_group_s, vec![]);
+    let value = k.app(to_group_s, comm_group_val);
+
+    let st = p.rat.int.nat.structures_s;
+    let ty = k.const_(st.group.ind, vec![]);
+
+    k.add_declaration(Declaration::Definition {
+        name: p.add_group_s,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod algebra_instance_tests {
     use super::*;
@@ -403,6 +437,101 @@ mod algebra_instance_tests {
         assert!(
             k.infer(projected_mn).is_ok(),
             "projected mul_nonneg must apply concretely at CReal.zero"
+        );
+    }
+
+    /// ADR-1592: `CReal.addGroupS` admits and has an empty axiom
+    /// footprint.
+    #[test]
+    fn creal_add_group_s_admits_and_is_axiom_free() {
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        assert!(k.environment().get(p.add_group_s).is_some());
+        assert!(
+            k.axiom_footprint(p.add_group_s).is_empty(),
+            "CReal.addGroupS must have an empty axiom footprint"
+        );
+    }
+
+    /// ADR-1592: `AlgS.add_left_cancel` instantiated at `CReal.addGroupS`
+    /// (the NAMED route, replacing ADR-1590's test-only `ring_s_additive_
+    /// group_value` term-builder), closed over `(a,b,c)`.
+    #[test]
+    fn generic_add_left_cancel_instantiated_at_creal_add_group_s_type_checks() {
+        const A_FV: u64 = 23_050;
+        const B_FV: u64 = 23_051;
+        const C_FV: u64 = 23_052;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let np = p.rat.int.nat;
+        let extra = np.structures_s_extra;
+
+        let add_group_s_c = k.const_(p.add_group_s, vec![]);
+        let add_left_cancel_c = k.const_(extra.add_left_cancel, vec![]);
+        let creal_ty = k.const_(p.creal, vec![]);
+        let a = k.fvar(A_FV);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(add_left_cancel_c, add_group_s_c);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let generic_closed = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, creal_ty, v);
+            let v = lam_over(&mut k, B_FV, creal_ty, v);
+            lam_over(&mut k, A_FV, creal_ty, v)
+        };
+        assert!(
+            k.infer(generic_closed).is_ok(),
+            "AlgS.add_left_cancel applied at CReal.addGroupS must type-check"
+        );
+    }
+
+    /// ADR-1592: `AlgS.inv_unique`/`AlgS.invInv` instantiated at
+    /// `CReal.addGroupS`.
+    #[test]
+    fn generic_inv_unique_and_inv_inv_instantiated_at_creal_add_group_s_type_check() {
+        const A_FV: u64 = 23_060;
+        const B_FV: u64 = 23_061;
+        const C_FV: u64 = 23_062;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let np = p.rat.int.nat;
+        let extra = np.structures_s_extra;
+        let add_group_s_c = k.const_(p.add_group_s, vec![]);
+        let creal_ty = k.const_(p.creal, vec![]);
+
+        let inv_inv_c = k.const_(extra.inv_inv, vec![]);
+        let applied = k.app(inv_inv_c, add_group_s_c);
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed_ii = lam_over(&mut k, A_FV, creal_ty, applied_a);
+        assert!(
+            k.infer(closed_ii).is_ok(),
+            "AlgS.invInv applied at CReal.addGroupS must type-check"
+        );
+
+        let inv_unique_c = k.const_(extra.inv_unique, vec![]);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(inv_unique_c, add_group_s_c);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let closed_iu = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, creal_ty, v);
+            let v = lam_over(&mut k, B_FV, creal_ty, v);
+            lam_over(&mut k, A_FV, creal_ty, v)
+        };
+        assert!(
+            k.infer(closed_iu).is_ok(),
+            "AlgS.inv_unique applied at CReal.addGroupS must type-check"
         );
     }
 

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-ofnat-le-ofnat-of-le",
+  "title": "In an abstract Setoid-flavored ordered ring with 0<=1, the generic numeral builder is monotone",
+  "statement": "For any AlgS.OrderedRing record R with a witness that le zero one, and naturals m n with m <= n, le (ofNat R m) (ofNat R n) -- the setoid twin of Alg.ofNat_le_ofNat_of_le, using leCongr directly (a first-class field) in place of Eq.rec subst to transport the growing bound.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.OrderedRing.ofNat_le_ofNat_of_le : ((x0 : AlgS.OrderedRing) -> ((x1 : AlgS.OrderedRing.le x0 (AlgS.OrderedRing.zero x0) (AlgS.OrderedRing.one x0)) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.le x2 x3) -> AlgS.OrderedRing.le x0 (AlgS.OrderedRing.ofNat x0 x2) (AlgS.OrderedRing.ofNat x0 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.OrderedRing.ofNat_le_ofNat_of_le"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:alg-ofnat-le-ofnat-of-le", "F:algs-ofnat-add"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-ofnat-le-ofnat-of-le-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.OrderedRing.ofNat_le_ofNat_of_le admits through the trusted kernel gate. Proved by induction on the Nat.le DERIVATION exactly as Alg.ofNat_le_ofNat_of_le is, with the growing-bound step le_self_add_one built from leCongr directly rather than an Eq.rec subst -- one field application, not a hand-built motive. The zero<=one hypothesis stays explicit and load-bearing (not derivable from OrderedRing's five order laws alone). Instantiated symbolically at both AlgS.Int.orderedRingS and AlgS.Rat.orderedRingS, zero_le_one supplied from le_of_lt applied to the carrier's own zero_lt_one.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- ofnat_le_ofnat_of_le_s_symbolic_at_int_and_rat --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-ordered-setoid, ADR-1592.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/ordered_ring_ext_s.rs (build_ofnat_le_ofnat_of_le_s); test rat_prelude::ordered_ring_ext_s::ordered_ring_ext_s_tests::ofnat_le_ofnat_of_le_s_symbolic_at_int_and_rat."
+  },
+  "notes": "Used by linarith::generic's setoid backend (Problem::new_s) to bridge a nonzero certificate residual into the goal's own le relation over an AlgS.OrderedRing, e.g. reached at CReal.orderedRingS by creal_linarith_slack_add_one."
+}

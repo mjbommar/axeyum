@@ -12,5 +12,6 @@ pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameI
     vec![
         ("CReal.commRingS", p.comm_ring_s, "def"),
         ("CReal.orderedRingS", p.ordered_ring_s, "def"),
+        ("CReal.addGroupS", p.add_group_s, "def"),
     ]
 }
