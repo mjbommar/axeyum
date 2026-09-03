@@ -182,6 +182,8 @@ fn perm_computes_true_and_false_by_evaluation() {
 fn the_perm_theorems_declare_no_axioms() {
     let f = Fixture::new();
     for name in [
+        f.perm.count_append,
+        f.perm.count_reverse,
         f.perm.perm_refl,
         f.perm.perm_symm,
         f.perm.perm_reverse,
