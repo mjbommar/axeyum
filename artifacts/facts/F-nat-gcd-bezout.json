@@ -31,7 +31,9 @@
     "F:nat-zero-add",
     "F:nat-zero-le",
     "F:ml430-nat-add-assoc-8c87a1f1",
-    "F:ml430-nat-add-comm-56a2d614"
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-add-zero",
+    "F:nat-mul-zero"
   ],
   "axiom_footprint": [],
   "evidence": [
