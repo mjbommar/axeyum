@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-leading-index-eq-cols-of-zero-row",
+  "title": "A zero row's leading index is the column count",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every row r and column count cols, IF (for all k, Nat.Lt k cols implies Eq Rat (M r k) Rat.zero) THEN Eq Nat (Rat.leadingIndex M r cols) cols -- and the same for the fuelled Rat.leadingIndexAux from an arbitrary start c under Nat.Le cols (Nat.add c fuel). ADR-1554 section 3 chose cols as a zero row's leading index so that 'leading entries move right, zero rows last' collapses to one comparison in Rat.echelonStepOk; this is that decision as a THEOREM about the scan rather than a property of the definition, and it is what every row below the last pivot satisfies at exit. The choice pays a second time in the proof: both exhaustion leaves close by Eq.refl, because the scan's give-up answer IS the conclusion, and only the isZeroB = false leaf has to be refuted. That leaf is also the single place F:nat-lt-of-ble-eq-false is spent -- the scan's in-range branch is the only point where Nat.Lt c cols is available, and the zero-range hypothesis will not answer without it, so the non-strict form that Nat.le_total yields cannot be used there at all.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.leadingIndex_eq_cols_of_zero_row : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x2) -> Eq.{1} Rat (x0 x1 x3) Rat.zero))) -> Eq.{1} AxNat (Rat.leadingIndex x0 x1 x2) x2)))) ; theorem Rat.leadingIndexAux_eq_cols_of_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.le x2 (AxNat.add x4 x3)) -> ((x6 : ((x6 : AxNat) -> ((x7 : AxNat.le x4 x6) -> ((x8 : AxNat.lt x6 x2) -> Eq.{1} Rat (x0 x1 x6) Rat.zero)))) -> Eq.{1} AxNat (Rat.leadingIndexAux x0 x1 x2 x3 x4) x2)))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.leadingIndex_eq_cols_of_zero_row"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:nat-lt-of-ble-eq-false",
+    "F:ml430-nat-le-refl-fd7d9e15",
+    "F:nat-zero-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-leading-index-eq-cols-of-zero-row-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The wrapper's regex is anchored on `Eq.{1} AxNat (Rat.leadingIndex x0 x1 x2) x2` -- the answer is the COLUMN COUNT, the same variable that bounds the hypothesis. A version concluding `Nat.zero` (the answer a scan that reported `nothing here` as index zero would give) would not match, and that is the confusion ADR-1554 section 3's design choice exists to avoid.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndex_eq_cols_of_zero_row[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndex x0 x1 x2\\) x2\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered test additionally asserts by reduction that `cols` and `0` are DIFFERENT answers for the all-zero row of `[[1,2,3],[0,0,5],[0,0,0]]`, so a scan reporting absence as `0` could not pass; without that check the two would be indistinguishable at a matrix whose row 0 has a leading entry at column 0."
+    },
+    {
+      "id": "rat-leading-index-eq-cols-of-zero-row-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The wrapper's regex is anchored on `Eq.{1} AxNat (Rat.leadingIndex x0 x1 x2) x2` -- the answer is the COLUMN COUNT, the same variable that bounds the hypothesis. A version concluding `Nat.zero` (the answer a scan that reported `nothing here` as index zero would give) would not match, and that is the confusion ADR-1554 section 3's design choice exists to avoid.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndexAux_eq_cols_of_zero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndexAux x0 x1 x2 x3 x4\\) x2\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered test additionally asserts by reduction that `cols` and `0` are DIFFERENT answers for the all-zero row of `[[1,2,3],[0,0,5],[0,0,0]]`, so a scan reporting absence as `0` could not pass; without that check the two would be indistinguishable at a matrix whose row 0 has a leading entry at column 0."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/leading_index.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about a row with a nonzero entry, which is F:rat-leading-index-eq-of-first-nonzero. It does not say `Rat.echelonStepOk` accepts anything -- that predicate compares two adjacent rows and this is about one -- and it does not say any row of `Rat.rowEchelon` is zero, which is a clause of the unproved loop invariant."
+}

@@ -379,7 +379,7 @@ Row 2 is empty by proof throughout, by `Rat.le_total` (FOUND, theorem, 0).
 | matrix algebra | `Rat.matMul` + assoc / id / distrib / smul, `Rat.matTranspose_mul`, all at **symbolic dimension** over `Nat -> Nat -> Rat` (0) | **proof** | `matTranspose_mul_example` etc. at concrete 2×2 (0) | **omission** |
 | determinant multiplicativity | **`Rat.det_matMul` at symbolic `n`** (0), landed 2026-09-02 (ADR-1543); the fixed-size `Rat.det2_mul` / `det3_*` remain | **proof** | concrete entries; CAS `determinant`/`bareiss_determinant` ship **no certificate and no verifier** | **omission** |
 | `Ax = b` solvability | not built as a kernel theorem | **proof** | **the strongest row 3 in the repository** — `simplex::feasible` + `check_farkas` and `lra::FarkasCertificate::verify`, two independent re-checkers, kernel-reconstructed | **omission** |
-| rank / linear independence | not built; **no `rank` function at all** (0 matches in `matrix.rs`, against an 11-match `rref` control in the same file) | **proof** | 2×2 only (`Rat.det2_eq_zero_of_lin_dep`) | **omission** |
+| rank / linear independence | **`Rat.rank` and `Rat.rankCols` at symbolic dimension** (0), with `Rat.rank_nullity` in the column form; the bridge between the two forms is conditional on one open equation (see the correction below) | **proof** | 2×2 (`Rat.det2_eq_zero_of_lin_dep`) plus the echelon evaluation tests | **omission** |
 | inner-product geometry | `Rat.dotN_cauchy_schwarz` at **arbitrary `n`** (0); `CPoint` at dimension 2 | **proof** | `CPoint` facts | **omission** |
 
 One correction to the received picture is worth pulling out, because it is
@@ -393,6 +393,27 @@ either.** `Rat.det` has been at symbolic `n` since ADR-1120, and its last
 missing law, `Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n *
 det B n`, is landed and axiom-free. What remains absent in this family is
 `rank`, not the determinant.
+
+**Corrected again 2026-09-02 (ADR-1571): `rank` is not absent either, and the
+sentence "`rank` still does not exist" above is now false.** Measured on a
+fresh index built in this lane's worktree (2,201 declarations),
+`shape_search --ns Rat --name-contains rank` returns **14**: `Rat.rank` and
+`Rat.rankCols` as `Definition`s over `Nat -> Nat -> Rat` at symbolic dimension
+(ADR-1555), `Rat.rank_nullity` in the COLUMN form (ADR-1558), `rank_le_rows`,
+`rankCols_le_cols`, the two `countRange` bridges, the four degenerate-dimension
+equations, and the three `_of_pivotSection` results (ADR-1562). The remaining
+gap is narrower and worth stating precisely rather than as an absence: **the
+bridge `Rat.rank = Rat.rankCols` is conditional on one hypothesis**, the pivot
+section, which follows from `Rat.rowEchelon_isEchelon` — and that is not
+proved. So `rank ≤ cols` and rank-nullity in the ROW form are conditional too.
+ADR-1571 §3 measures what is left of that: three of the four prerequisite
+lemmas are landed (`pivotSearch_column_zero`,
+`leadingIndex_eq_of_first_nonzero`, `leadingIndex_eq_cols_of_zero_row`,
+`clearBelow_preserves_zero`), one is not (`rowSwap` preserving a zero range),
+and the invariant itself plus its exit derivation are the two remaining
+inductions. "Not built" was the right description in ADR-1460's snapshot and
+is the wrong one now; **"built, with one open equation between its two
+forms"** is what a referee should check.
 
 ### 4.4 The claim the brief asked me to verify, and where it fails
 

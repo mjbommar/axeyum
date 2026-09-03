@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-clear-below-zero",
+  "title": "Gaussian elimination's clearing sweep zeroes the pivot column below the pivot row",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every pivot row pr, pivot column pc, row count rows and row q, IF Nat.Lt pr q and Nat.Lt q rows and Not (Eq Rat (M pr pc) Rat.zero) THEN Eq Rat (Rat.clearBelow M pr pc rows q pc) Rat.zero -- and the same for the fuelled Rat.clearBelowAux under the extra hypothesis Nat.Lt q (Nat.add r fuel). This is ADR-1554 obligation 3, the postcondition of Rat.clearBelow. THE FUEL BOUND IS NOT REMOVABLE in the fuelled form: an exhausted sweep returns M untouched, which is indistinguishable in the answer from a finished one, so at fuel = 0 the statement is false; Nat.Lt q (r + fuel) is the weakest hypothesis that rules it out and the wrapper discharges it from Nat.Lt q rows. Nat.Lt pr r rather than Nat.Le pr r is what keeps the nonzero pivot alive across the recursion: the hypothesis travels with the matrix inside the motive and is re-established at each step by Rat.rowAddMul_off, because the sweep rewrites row r and pr is strictly above it -- at pr = r the first step would destroy it. The arithmetic is F:rat-add-neg-div-mul-cancel and the nonzero pivot it consumes is F:rat-pivot-search-ne-zero.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.clearBelow_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.lt x1 x4) -> ((x6 : AxNat.lt x4 x3) -> ((x7 : Not (Eq.{1} Rat (x0 x1 x2) Rat.zero)) -> Eq.{1} Rat (Rat.clearBelow x0 x1 x2 x3 x4 x2) Rat.zero)))))))) ; theorem Rat.clearBelowAux_zero : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat) -> Rat))) -> ((x6 : AxNat) -> ((x7 : AxNat.lt x0 x6) -> ((x8 : AxNat.le x6 x3) -> ((x9 : AxNat.lt x3 x2) -> ((x10 : AxNat.lt x3 (AxNat.add x6 x4)) -> ((x11 : Not (Eq.{1} Rat (x5 x0 x1) Rat.zero)) -> Eq.{1} Rat (Rat.clearBelowAux x0 x1 x2 x4 x5 x6 x3 x1) Rat.zero))))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.clearBelow_zero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-add-neg-div-mul-cancel",
+    "F:rat-clear-below-off",
+    "F:rat-pivot-search-ne-zero",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-le-add-right",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-succ-self"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-clear-below-zero-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, with the two populations pinned separately at four. The wrapper's regex is anchored on `Rat.clearBelow x0 x1 x2 x3 x4 x2` -- note the LAST argument is `x2`, the pivot column, not a free column -- so a version concluding about an arbitrary column would not match, and neither would one concluding about the original matrix. The fuelled form's regex pins its own argument order, which differs.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelow_zero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.clearBelow x0 x1 x2 x3 x4 x2\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The sweep is reduced against hand-computed values at 2x2 `[[2,1],[4,3]]` (pivot 2, not 1, so a definition that forgot to DIVIDE would be caught), at 3x3 from (0,0) (two rows below the pivot, so the second is cleared against a matrix the first already rewrote), and at 3x3 from the middle pivot (1,1)."
+    },
+    {
+      "id": "rat-clear-below-zero-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, with the two populations pinned separately at four. The wrapper's regex is anchored on `Rat.clearBelow x0 x1 x2 x3 x4 x2` -- note the LAST argument is `x2`, the pivot column, not a free column -- so a version concluding about an arbitrary column would not match, and neither would one concluding about the original matrix. The fuelled form's regex pins its own argument order, which differs.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelowAux_zero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.clearBelowAux x0 x1 x2 x4 x5 x6 x3 x1\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The sweep is reduced against hand-computed values at 2x2 `[[2,1],[4,3]]` (pivot 2, not 1, so a definition that forgot to DIVIDE would be caught), at 3x3 from (0,0) (two rows below the pivot, so the second is cleared against a matrix the first already rewrote), and at 3x3 from the middle pivot (1,1)."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/clear_below.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about the OTHER columns of the rows it clears -- that is F:rat-clear-below-preserves-zero, and the two are needed together by the loop invariant. It says nothing at pr = q (the pivot row is not cleared against itself) and nothing when the pivot entry is zero. In the fuelled form it says nothing without the fuel bound: an exhausted sweep returns the matrix untouched."
+}

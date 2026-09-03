@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-pivot-search-column-zero",
+  "title": "An exhausted pivot scan means the column is zero at every row it passed",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every column c, start index and row count rows, and every row q, IF Nat.Le start q and Nat.Lt q rows and Eq Nat (Rat.pivotSearch M c start rows) rows THEN Eq Rat (M q c) Rat.zero -- and the same for the fuelled Rat.pivotSearchAux under the extra hypothesis Nat.Lt q (Nat.add r fuel). This is the FIRST DISJUNCT of ADR-1554 obligation 2, which ADR-1562 recorded open and explained: it is a statement about every index the scan VISITED rather than about the one it returned, so the accumulated range has to sit in the motive, and F:rat-pivot-search-ne-zero (the value half) does not generalize to it. With the range half (F:rat-pivot-search-le-rows), the value half and this, obligation 2 is complete. The fuel bound is not removable for the same reason as in F:rat-clear-below-zero: a scan that runs out of fuel answers rows exactly as one that reached the bound does. Three of the four leaves are refutations and only one does work: the ble-true branch is refuted from Le r q and Lt q rows, and the isZeroB = false branch is refuted from its OWN hypothesis, because there the answer is r and Eq Nat r rows transports Lt r rows into Lt rows rows.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.pivotSearch_column_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.le x2 x4) -> ((x6 : AxNat.lt x4 x3) -> ((x7 : Eq.{1} AxNat (Rat.pivotSearch x0 x1 x2 x3) x3) -> Eq.{1} Rat (x0 x4 x1) Rat.zero)))))))) ; theorem Rat.pivotSearchAux_column_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.le x5 x3) -> ((x7 : AxNat.lt x3 x2) -> ((x8 : AxNat.lt x3 (AxNat.add x5 x4)) -> ((x9 : Eq.{1} AxNat (Rat.pivotSearchAux x0 x1 x2 x4 x5) x2) -> Eq.{1} Rat (x0 x3 x1) Rat.zero))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.pivotSearch_column_zero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-pivot-search-le-rows",
+    "F:rat-pivot-search-ne-zero",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-le-add-right",
+    "F:nat-lt-of-lt-of-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-pivot-search-column-zero-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. Each regex pins the exhaustion hypothesis and the conclusion together: `Eq.{1} AxNat (Rat.pivotSearch x0 x1 x2 x3) x3` followed by `Eq.{1} Rat (x0 x4 x1) Rat.zero`, where `x4` is the ARBITRARY in-range row and `x1` the column searched. A version concluding about the START row `x2` would be strictly weaker, would not supply the loop invariant, and would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.pivotSearch_column_zero[[:space:]]+0[[:space:]].*\\(Rat\\.pivotSearch x0 x1 x2 x3\\) x3\\) -> Eq\\.\\{1\\} Rat \\(x0 x4 x1\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The hypothesis is shown SATISFIABLE and the conclusion OBSERVABLE at `[[0,1],[0,2]]`, where column 0 is all zero so the scan answers `rows` by reduction and the conclusion is checked at BOTH rows it passed. The control is the same matrix's column 1, where the scan lands on row 0, the hypothesis is unavailable, and the entries are nonzero -- so the conclusion would be FALSE there."
+    },
+    {
+      "id": "rat-pivot-search-column-zero-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. Each regex pins the exhaustion hypothesis and the conclusion together: `Eq.{1} AxNat (Rat.pivotSearch x0 x1 x2 x3) x3` followed by `Eq.{1} Rat (x0 x4 x1) Rat.zero`, where `x4` is the ARBITRARY in-range row and `x1` the column searched. A version concluding about the START row `x2` would be strictly weaker, would not supply the loop invariant, and would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.pivotSearchAux_column_zero[[:space:]]+0[[:space:]].*\\(Rat\\.pivotSearchAux x0 x1 x2 x4 x5\\) x2\\) -> Eq\\.\\{1\\} Rat \\(x0 x3 x1\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The hypothesis is shown SATISFIABLE and the conclusion OBSERVABLE at `[[0,1],[0,2]]`, where column 0 is all zero so the scan answers `rows` by reduction and the conclusion is checked at BOTH rows it passed. The control is the same matrix's column 1, where the scan lands on row 0, the hypothesis is unavailable, and the entries are nonzero -- so the conclusion would be FALSE there."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/pivot_content.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about the case where the scan LANDS in range; that is F:rat-pivot-search-ne-zero, the other disjunct. In the fuelled form it says nothing without the fuel bound, because a scan that runs out of fuel answers `rows` exactly as one that reached the bound does. It also says nothing about rows BELOW `start`, which the scan never visited."
+}

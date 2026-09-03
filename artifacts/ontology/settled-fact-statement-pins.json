@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2196,
+    "min_identity_bound": 2204,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -17570,6 +17570,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-lt-of-ble-eq-false",
+      "language": "lean4",
+      "statement_sha256": "f60c8f454d1465bcbca630142997da2b8cadab8f58c049a09fc7a861d3c87dbd",
+      "prose_sha256": "055324f8d2b071c500870864b1d2285af5335386ab5c1a11b372164d3803c795",
+      "kernel_theorem": "Nat.lt_of_ble_eq_false"
+    },
+    {
       "fact_id": "F:nat-lt-of-le-of-lt",
       "language": "lean4",
       "statement_sha256": "9a55d67c34d04a85cdd27146a27e4415f2438602ff0b90dc2804a7c0833e7da2",
@@ -19986,6 +19993,13 @@
       ]
     },
     {
+      "fact_id": "F:rat-add-neg-div-mul-cancel",
+      "language": "lean4",
+      "statement_sha256": "71bdcf42bbae6d67300d8bb0f98a86d7e632937661c29adf96d30ec384a4c3ad",
+      "prose_sha256": "1fc9264a1d170de6f125941dce50519c619cb51987d6bcc897baed673dc64143",
+      "kernel_theorem": "Rat.add_neg_div_mul_cancel"
+    },
+    {
       "fact_id": "F:rat-add-neg-inverse",
       "language": "lean4",
       "statement_sha256": "aa6b7bd871e4bbf455005d0ebc944027e571a1443ae5cb0cfb0dade535388879",
@@ -20164,6 +20178,27 @@
           "prose_sha256": "141f8e6bfc17db15f1e60f301535758bb3eb2c48a6a3cb4b404fd7717315b262"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-clear-below-off",
+      "language": "lean4",
+      "statement_sha256": "f59df8261715c753b2c40f885a4ded58fd18c23221158c65d503e3e7dbd1f75b",
+      "prose_sha256": "afc3b0b08b338f5af151e4cedc315391baf70e43723ad15b3170a59e59e1523f",
+      "kernel_theorem": "Rat.clearBelow_off"
+    },
+    {
+      "fact_id": "F:rat-clear-below-preserves-zero",
+      "language": "lean4",
+      "statement_sha256": "495cdc5919344645d5e9bf8d11f96e1224db25ebd63c0aeb402100e2f785fa91",
+      "prose_sha256": "cd82051923efcb3d17dea292a798716a8f1bd2d2be15a732708a78b039358057",
+      "kernel_theorem": "Rat.clearBelow_preserves_zero"
+    },
+    {
+      "fact_id": "F:rat-clear-below-zero",
+      "language": "lean4",
+      "statement_sha256": "0991ea9e1236416e52c4125ad27bb7c6139e41d63a9fe5458e2ce085a3969ca2",
+      "prose_sha256": "8fb75d7beb7902e6892310bdbd60a90658cf822ff696fc025d98cd1bdadf0ade",
+      "kernel_theorem": "Rat.clearBelow_zero"
     },
     {
       "fact_id": "F:rat-covariance-add-right",
@@ -21095,6 +21130,20 @@
           "prose_sha256": "7c3c9ca0ed845acd9969c5d2b5f685ccacb6ee90242319248a9a83b3bcc86fbd"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-leading-index-eq-cols-of-zero-row",
+      "language": "lean4",
+      "statement_sha256": "042e9d402261881d30dec62d0c7c3536dd2c556397d43d5d8ccac6c955b227ce",
+      "prose_sha256": "3a63486737020b7b08c137bcb42424ce6d60cc23d98351d5108ffdc0f8f67509",
+      "kernel_theorem": "Rat.leadingIndex_eq_cols_of_zero_row"
+    },
+    {
+      "fact_id": "F:rat-leading-index-eq-of-first-nonzero",
+      "language": "lean4",
+      "statement_sha256": "9cb3bb7a92c1f2c1b1f81acac2d42b7aeff07c2585721adac884796fff902586",
+      "prose_sha256": "d95b5d0dcb4e29ab4a49fb558c2c7649e52b43f29bde05d42dc51b48ffe10d84",
+      "kernel_theorem": "Rat.leadingIndex_eq_of_first_nonzero"
     },
     {
       "fact_id": "F:rat-leading-index-pivot-row-of-col",
@@ -22147,6 +22196,13 @@
       "statement_sha256": "d3ef459aff14e732a7a96640ae8882a2a9931f851a4911c204032e6db77ee48e",
       "prose_sha256": "4346faabee0bf612600e59dedfa6e136eb19c5f8d01d8e4b2af34b9fbf9172e0",
       "kernel_theorem": "Rat.pivotRowOfCol_lt_rows"
+    },
+    {
+      "fact_id": "F:rat-pivot-search-column-zero",
+      "language": "lean4",
+      "statement_sha256": "836eb05846b6af7b85d479da49be450378096a9e6310e212be1164f2c61b0bf6",
+      "prose_sha256": "5f22a46d26f6f5b020bc1181f42633436130128e960d8bff12544dcc82ec5e7f",
+      "kernel_theorem": "Rat.pivotSearch_column_zero"
     },
     {
       "fact_id": "F:rat-pivot-search-le-rows",

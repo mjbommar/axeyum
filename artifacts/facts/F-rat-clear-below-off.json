@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-clear-below-off",
+  "title": "Gaussian elimination's clearing sweep leaves the pivot row and everything above it untouched",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every pivot row pr, pivot column pc, row count rows, row q and column c, IF Nat.Le q pr THEN Eq Rat (Rat.clearBelow M pr pc rows q c) (M q c) -- and the same for the fuelled Rat.clearBelowAux at an arbitrary fuel and cursor, under Nat.Lt q r. In words: a row at or above the pivot row is byte-for-byte what it was, at EVERY column. This is the 'rows outside that range are untouched' half of ADR-1554 obligation 3. It is not a convenience: the ZERO half's own proof consumes it, because when the sweep reaches the target row it rewrites that row once and then keeps recursing STRICTLY BELOW, so the value the caller asked about is fixed by rows the loop has not visited yet. The statement is unconditional in the FUEL, unlike F:rat-clear-below-zero: a row above the cursor is untouched whether the loop finishes or gives up, which is why the two halves are separate inductions rather than one conjunction.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.clearBelow_off : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.le x4 x1) -> Eq.{1} Rat (Rat.clearBelow x0 x1 x2 x3 x4 x5) (x0 x4 x5)))))))) ; theorem Rat.clearBelowAux_off : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : ((x6 : AxNat) -> ((x7 : AxNat) -> Rat))) -> ((x7 : AxNat) -> ((x8 : AxNat.lt x3 x7) -> Eq.{1} Rat (Rat.clearBelowAux x0 x1 x2 x5 x6 x7 x3 x4) (x6 x3 x4))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.clearBelow_off"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:nat-lt-succ-of-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-clear-below-off-1",
+      "kind": "kernel-term",
+      "supports": "Both the wrapper and the fuelled form are checked, axiom-free theorems in all four rational preludes, and the checker pins each population at four rows SEPARATELY, so losing either half is caught (a single combined count would pass on eight rows of one of them). Each regex is anchored on its own conclusion: the wrapper equates `Rat.clearBelow x0 x1 x2 x3 x4 x5` with `x0 x4 x5`, i.e. the swept entry with the ORIGINAL entry at the same (row, column) -- a version equating it with the entry at a different index, or with `Rat.zero`, would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelow_off[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.clearBelow x0 x1 x2 x3 x4 x5\\) \\(x0 x4 x5\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The column argument is universally quantified and appears on both sides, which is what makes this the EVERY-column statement rather than the pivot-column one; the statement pin in `clear_below_tests.rs` additionally asserts the hypothesis is `AxNat.le x4 x1` and not `AxNat.lt x4 x1`, because the pivot row itself is untouched."
+    },
+    {
+      "id": "rat-clear-below-off-2",
+      "kind": "kernel-term",
+      "supports": "Both the wrapper and the fuelled form are checked, axiom-free theorems in all four rational preludes, and the checker pins each population at four rows SEPARATELY, so losing either half is caught (a single combined count would pass on eight rows of one of them). Each regex is anchored on its own conclusion: the wrapper equates `Rat.clearBelow x0 x1 x2 x3 x4 x5` with `x0 x4 x5`, i.e. the swept entry with the ORIGINAL entry at the same (row, column) -- a version equating it with the entry at a different index, or with `Rat.zero`, would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelowAux_off[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.clearBelowAux x0 x1 x2 x5 x6 x7 x3 x4\\) \\(x6 x3 x4\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The column argument is universally quantified and appears on both sides, which is what makes this the EVERY-column statement rather than the pivot-column one; the statement pin in `clear_below_tests.rs` additionally asserts the hypothesis is `AxNat.le x4 x1` and not `AxNat.lt x4 x1`, because the pivot row itself is untouched."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/clear_below.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about rows strictly BELOW the pivot, which is F:rat-clear-below-zero, and nothing about columns other than the one asked about for those rows, which is F:rat-clear-below-preserves-zero. It is unconditional in the fuel, so it says nothing about whether the sweep finished."
+}

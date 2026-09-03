@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lt-of-ble-eq-false",
+  "title": "The false side of the Nat ble/le bridge, in its strict form",
+  "statement": "For all naturals n and m, IF Eq Bool (Nat.ble n m) Bool.false THEN Nat.Lt m n. This is the false-side twin of Nat.le_of_ble_eq_true, and it is STRICT: the conclusion is Lt m n, not Le m n. Nat carried the true-side bridge and no false-side one at all, so three consumers worked around it separately (ADR-1558 section 4, ADR-1562 section 4): ipc_soundness.rs declared the non-strict statement under a non-Nat name, rat_prelude/pivot_bound.rs inlined the non-strict form through Nat.le_total, and the echelon scans need the strict one because Nat.ble rows r = false is the only place a row or column index is known to be IN RANGE and a MapsInto or bounded-forall hypothesis takes Lt. The strict form implies the non-strict one and not conversely, so this is the statement promoted. The proof splits on Nat.lt_or_ge rather than Nat.le_total: its left disjunct IS the conclusion, and its right disjunct Le n m contradicts the hypothesis through Nat.ble_eq_true_of_le. le_total cannot supply the strict form, which is exactly why pivot_bound.rs stopped at Le.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.lt_of_ble_eq_false : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.ble x0 x1) Bool.false) -> AxNat.lt x1 x0)))",
+    "fragment": "Nat",
+    "free_symbols": [],
+    "kernel_theorem": "Nat.lt_of_ble_eq_false"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:ml430-nat-ble-eq-true-of-le-5ce4ac2e", "F:nat-lt-or-ge"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "nat-lt-of-ble-eq-false-1",
+      "kind": "kernel-term",
+      "supports": "`Nat.lt_of_ble_eq_false` is a checked `Declaration::Theorem` with an EMPTY axiom footprint in all EIGHT preludes that reach `Nat`, and the checker requires exactly eight rows, so losing it from any one of them changes the count and the command exits 1. The regex is anchored on the CONCLUSION `AxNat.lt x1 x0`, which is the whole content of the promotion: the non-strict twin `AxNat.le x1 x0` (which two existing consumers already had) would not match, and neither would the transposed `AxNat.lt x0 x1`. The hypothesis `Eq.{1} Bool (AxNat.ble x0 x1) Bool.false` is pinned in the same line, so a version taking `Bool.true` fails too.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Nat\\.lt_of_ble_eq_false[[:space:]]+0[[:space:]].*\\(AxNat\\.ble x0 x1\\) Bool\\.false\\) -> AxNat\\.lt x1 x0\\)\\)\\)$')\" = 8",
+      "notes": "Run 2026-09-02: exactly eight rows match. `scripts/new-fact.py` verified the pattern FAILS on mutated output (digits perturbed, true -> false, 0 -> 1) before this file was written. The anchor is the conclusion rather than the name because the name would not change if someone weakened `Lt` to `Le`."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/ble.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: it says nothing about the two consumers that predate it. `ipc_le_of_ble_eq_false` still declares the non-strict statement under a non-`Nat` name and `rat_prelude/pivot_bound.rs` still inlines the non-strict form through `Nat.le_total`; retrofitting them onto this lemma is a cosmetic change ADR-1571 deliberately did not make. It is spent exactly once in the tree, in `Rat.leadingIndexAux_eq_cols_of_zero`."
+}
