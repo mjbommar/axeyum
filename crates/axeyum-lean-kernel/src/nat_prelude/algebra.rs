@@ -195,24 +195,18 @@ pub(super) fn declare_additive_theorems(
     })?;
 
     // add_right_comm : ∀ x y z, add (add x y) z = add (add x z) y   (no induction)
-    d.theorem(p.add_right_comm, 3, &|d, v| {
+    // Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md):
+    // a pure ring-rearrangement chain (add_assoc/add_comm/add_assoc), now
+    // searched for and emitted rather than hand-assembled. `ring`'s own
+    // `sort_items` deliberately does NOT call `Nat.add_right_comm` (it
+    // derives the same swap inline) so this declaration is not circular.
+    crate::ring::nat::declare(d, &p, p.add_right_comm, 3, &|d, v| {
         let (x, y, z) = (v[0], v[1], v[2]);
         let xy = d.add(x, y);
-        let start = d.add(xy, z);
-        let yz = d.add(y, z);
-        let s1 = d.add(x, yz);
-        let h1 = d.lemma(p.add_assoc, &[x, y, z]);
-        let zy = d.add(z, y);
-        let s2 = d.add(x, zy);
-        let h_comm = d.lemma(p.add_comm, &[y, z]);
-        let h2 = d.congr(yz, zy, h_comm, &|d, t| d.add(x, t));
+        let lhs = d.add(xy, z);
         let xz = d.add(x, z);
-        let s3 = d.add(xz, y);
-        let h_assoc2 = d.lemma(p.add_assoc, &[x, z, y]);
-        let h3 = d.symm(s3, s2, h_assoc2);
-        let (end, proof) = d.chain(start, &[(s1, h1), (s2, h2), (s3, h3)]);
-        let stmt = d.eq(start, end);
-        (stmt, proof)
+        let rhs = d.add(xz, y);
+        d.eq(lhs, rhs)
     })?;
 
     // succ_injective : ∀ n m, succ n = succ m → n = m
@@ -466,6 +460,15 @@ pub(super) fn declare_multiplicative_theorems(
 
     // right_distrib : ∀ a b c, mul (add a b) c = add (mul a c) (mul b c)
     // Derive the right-handed law from commutativity and left distribution.
+    //
+    // NOT a `crate::ring::nat` retirement target, deliberately: `ring`'s own
+    // `Problem::distribute` USES `right_distrib` as a primitive lemma to
+    // distribute a multi-summand sum over a product (`docs/plan/status/
+    // 460-ring-tactic-1.md`) — routing this declaration through the
+    // producer would try to prove `right_distrib` from itself and fails
+    // with `KernelError::UnknownConst` (the name does not exist yet at this
+    // point in prelude construction). `left_distrib` and `right_distrib`
+    // are foundational to the producer, not identities it can retire.
     d.theorem(p.right_distrib, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
         let sum = d.add(a, b);

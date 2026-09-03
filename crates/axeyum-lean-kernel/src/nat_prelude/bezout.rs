@@ -139,6 +139,15 @@ fn expand_scaled_left(
 }
 
 /// `g * (a·mp + b·np) = (g·a)·mp + (g·b)·np`.
+/// `g * (a·mp + b·np) = (g·a)·mp + (g·b)·np`.
+///
+/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// pure ring-rearrangement chain over `left_distrib`/`mul_assoc`, now
+/// searched for and emitted rather than hand-assembled. Unlike
+/// `left_distrib`/`right_distrib` themselves this identity is a downstream
+/// *consequence* of them, not one of the producer's own primitives, so
+/// there is no bootstrap circularity (both lemmas are declared long before
+/// `bezout.rs` runs).
 fn expand_scaled_right(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -148,43 +157,23 @@ fn expand_scaled_right(
     mp: ExprId,
     np: ExprId,
 ) -> ExprId {
-    let p = *p;
-    let a_mp = d.mul(a, mp);
-    let b_np = d.mul(b, np);
-    let whole = d.add(a_mp, b_np);
-    let g_whole = d.mul(g, whole);
-    let g_a_mp = d.mul(g, a_mp);
-    let g_b_np = d.mul(g, b_np);
-    let split = d.add(g_a_mp, g_b_np);
-    let step_outer = d.lemma(p.left_distrib, &[g, a_mp, b_np]);
-
-    let scaled_a = d.mul(g, a);
-    let scaled_a_mp = d.mul(scaled_a, mp);
-    let assoc_a = d.lemma(p.mul_assoc, &[g, a, mp]);
-    let step_a = {
-        let flipped = d.symm(scaled_a_mp, g_a_mp, assoc_a);
-        d.congr(g_a_mp, scaled_a_mp, flipped, &|d, x| d.add(x, g_b_np))
-    };
-    let after_a = d.add(scaled_a_mp, g_b_np);
-
-    let scaled_b = d.mul(g, b);
-    let scaled_b_np = d.mul(scaled_b, np);
-    let assoc_b = d.lemma(p.mul_assoc, &[g, b, np]);
-    let step_b = {
-        let flipped = d.symm(scaled_b_np, g_b_np, assoc_b);
-        d.congr(g_b_np, scaled_b_np, flipped, &|d, x| d.add(scaled_a_mp, x))
-    };
-    let final_target = d.add(scaled_a_mp, scaled_b_np);
-
-    let (_end, chained) = d.chain(
-        g_whole,
-        &[
-            (split, step_outer),
-            (after_a, step_a),
-            (final_target, step_b),
-        ],
-    );
-    chained
+    // Generic-then-apply (`prove_eq_at`), consistent with the
+    // `add_add_add_comm` family: keeps this sound even if a future caller
+    // passes a compound (non-ring) argument.
+    crate::ring::nat::prove_eq_at(d, p, &[g, a, b, mp, np], &|d, v| {
+        let (g, a, b, mp, np) = (v[0], v[1], v[2], v[3], v[4]);
+        let a_mp = d.mul(a, mp);
+        let b_np = d.mul(b, np);
+        let whole = d.add(a_mp, b_np);
+        let lhs = d.mul(g, whole);
+        let scaled_a = d.mul(g, a);
+        let scaled_a_mp = d.mul(scaled_a, mp);
+        let scaled_b = d.mul(g, b);
+        let scaled_b_np = d.mul(scaled_b, np);
+        let rhs = d.add(scaled_a_mp, scaled_b_np);
+        (lhs, rhs)
+    })
+    .unwrap_or_else(|e| panic!("ring declined expand_scaled_right: {e:?}"))
 }
 
 /// Eliminate a balanced Bézout certificate into `target`.

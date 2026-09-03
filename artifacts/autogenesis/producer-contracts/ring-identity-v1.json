@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-ring-identity-v1",
+  "title": "Commutative-ring equalities over Nat (+, *, succ, numerals), kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Hand the goal to `crate::ring::nat` (`ring::nat::prove` for a goal `Eq Nat lhs rhs`, `ring::nat::prove_eq` when the caller already has `lhs`/`rhs` as terms). The procedure parses both sides into a canonical sum of monomials -- each monomial the left-to-right factor list `*` built it from, each summand repeated by its coefficient, the whole sum sorted so equal monomials sit adjacent -- and compares the two normal forms. When they agree it EMITS a kernel proof term built only from `add_assoc`/`add_comm`/`mul_assoc`/`mul_comm`/`left_distrib`/`right_distrib`, already in the prelude; it is a producer in ADR-0601's sense, untrusted search (here a deterministic normal-form computation, not a bounded search) and trusted checking. The emitted term goes through `Kernel::add_declaration` exactly like a hand-written one, and the procedure's own tests require three CORRUPTED claims (a coefficient off by one, an extra constant, a swapped variable) to be refused by the KERNEL, with the procedure's own normal-form check deliberately disabled so the trust story is not circular. Dischargeable goals: `t1 = t2` over terms built from variables, numerals, `+`, `*`, `succ`, over `Nat`; `div`/`mod`/ℕ's truncated `sub` are outside the fragment and decline `NonRing`. The normalizer does not re-sort factors WITHIN one monomial (`x*y` and `y*x` normalize to different keys and the procedure declines `NotAnIdentity` rather than proving them equal) -- a known, sound incompleteness, not a bug.",
+    "reference": "crates/axeyum-lean-kernel/src/ring.rs"
+  },
+  "shape": {
+    "formal_language": [
+      "lean4-surface"
+    ],
+    "fragments": [
+      "Nat"
+    ],
+    "title_prefix": "Mathlib v4.30 source proposition Nat.mul_left_comm"
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:ml430-nat-add-mul-lt-mul-of-lt-of-lt-4d1d3fbc",
+      "reason": "`Nat.add_mul_lt_mul_of_lt_of_lt` looks ring-adjacent from its name (it mentions `add` and `mul`), and its title even starts with `Mathlib v4.30 source proposition Nat.add_mul`, a near-miss of this contract's own prefix. It is excluded on both grounds that matter. Structurally the `title_prefix` (`Nat.mul_left_comm`) does not match it -- checked, not assumed. Semantically its conclusion is a STRICT INEQUALITY (`Nat.lt`), and this producer's whole fragment is `t1 = t2` -- it has no route to an order goal at all, regardless of how algebraic the hypotheses look."
+    },
+    {
+      "fact_id": "F:ml430-nat-mul-add-lt-mul-of-lt-of-lt-3567e87f",
+      "reason": "The commuted sibling of the fact above (`Nat.mul_add_lt_mul_of_lt_of_lt`), kept as a second non-example because it shows the exclusion is not about which operand order looked wrong: both `add_mul_*` and `mul_add_*` orderings of an order goal are equally outside this producer's `t1 = t2`-only fragment."
+    }
+  ],
+  "notes": "THE LIVE POPULATION IS ZERO, and -- as with `linear-arithmetic-v1` beside it -- the shape is not what makes it zero. Measured 2026-09-03 over all 245 open `Mathlib v4.30 source proposition` facts by reading every title, not by trusting one predicate: not a single one is a commutative-ring EQUALITY over Nat built from `+`/`*`/`succ`/numerals. The 169 open `Nat.*`-titled facts are almost entirely about `sqrt`, `gcd`, primality, `testBit`, `findGreatest`, `nth`, and order (`le`/`lt`) -- none of them a bare ring rearrangement. That tracks the same story ADR-1576 told for `linarith`: the algebraic core of this development (here, `add_assoc`/`add_comm`/`mul_assoc`/`mul_comm`/`left_distrib`/`right_distrib` and their consequences) was finished FIRST, by hand, long before a producer for it existed, so a procedure for it arrives to an empty dispatch queue. What this contract's shape predicate CANNOT see, because the schema has no field for it, is where `ring`'s actual return is: it retired ten hand-written ring-rearrangement proofs across `nat_prelude` on the day it landed (two declared theorems -- `add_right_comm`, and `right_distrib` was tried and found CIRCULAR since the producer uses it as a primitive, so `bezout.rs::expand_scaled_right` stands in as the multiplication-distribution target instead -- and eight independent hand-written copies of one duplicated identity, `(a+b)+(c+d) = (a+c)+(b+d)`, across `binomial.rs`, `div_mod_lemmas.rs`, `finite_set.rs`, `fibonacci.rs`, `subset_sum.rs`, `rec_agreement.rs`, `count_range_reversal.rs`, `eisenstein_lemma.rs`), each re-admitted at a byte-identical projection. The contract system sizes dispatch and cannot see that; the number worth reading is the retirement count, not this one.",
+  "sizing": {
+    "date": "2026-09-03",
+    "ledger_sha256": "8ce6668e60341e3555b0af3ea55eb368624d79a383103d76553bc09b215c1794",
+    "matched_open_ready_count": 0,
+    "matched_open_ready_fact_ids": [],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Zero. `title_prefix` alone (`Nat.mul_left_comm`) matches nothing in the whole 2,714-fact ledger, not merely the open subset -- checked directly with `live_population`. Widening the prefix to the broader `left_distrib`/`right_distrib`/`add_right_comm`/`mul_right_comm`/`add_mul_comm` names each independently also matches zero. Measured at ledger digest 8ce6668e..., 2,714 facts, 262 open."
+  },
+  "retirement": {
+    "date": "2026-09-03",
+    "reason": "Born with an empty live population, per ADR-1510 rule 1: there is no open, dependency-ready, non-held-out fact in the ledger whose statement is a commutative-ring equality over Nat -- checked by reading all 245 open `Mathlib v4.30 source proposition` titles, not by trusting one predicate.",
+    "note": "Not a statement that `ring` is exhausted or unwanted -- `crate::ring::nat` is live, tested (22 unit tests: ten retirement targets, three false-goal declines, four kernel-corruption tests plus the procedure's own-check control, three fragment-boundary declines, one sized negative for `x*y = y*x`), and already retired ten hand-written proofs the day it landed. What emptied is the DISPATCH population, because the ring axioms and their immediate consequences are among the parts of this development finished FIRST, by hand. A ledger import bringing in ring/semiring-family Mathlib mirrors whose statements are genuinely bare `+`/`*` rearrangements (not wrapped in `sqrt`/`gcd`/order) would revive it, and should arrive as a `-v2` rather than by editing this file."
+  }
+}

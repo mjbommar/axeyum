@@ -56,6 +56,14 @@ fn shifted_fn(d: &mut NatDev<'_>, f: ExprId) -> ExprId {
 
 /// `(a+b)+(c+d) = (a+c)+(b+d)`, returned as a `(target, proof)` chain step
 /// (the proof's source is `add(add(a,b),add(c,d))`).
+/// `(a+b)+(c+d) = (a+c)+(b+d)`, returned as `(target, proof)`.
+///
+/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// pure ring-rearrangement chain, now searched for and emitted rather than
+/// hand-assembled — one of eight verbatim-duplicated hand proofs of this
+/// exact identity across `nat_prelude` (`div_mod_lemmas.rs`, `finite_set.rs`,
+/// `fibonacci.rs`, `subset_sum.rs`, `rec_agreement.rs`,
+/// `count_range_reversal.rs`, `eisenstein_lemma.rs`).
 fn add_add_add_comm(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -64,52 +72,24 @@ fn add_add_add_comm(
     c: ExprId,
     dd: ExprId,
 ) -> (ExprId, ExprId) {
-    let p = *p;
-    let cd = d.add(c, dd);
-    let bd = d.add(b, dd);
-    let ab = d.add(a, b);
-    let start = d.add(ab, cd);
-
-    // start = a + (b + (c+d))
-    let bcd = d.add(b, cd);
-    let s1 = d.add(a, bcd);
-    let h1 = d.lemma(p.add_assoc, &[a, b, cd]);
-
-    // b+(c+d) -> (b+c)+d
-    let bc = d.add(b, c);
-    let bc_d = d.add(bc, dd);
-    let s2 = d.add(a, bc_d);
-    let h_bcd = d.lemma(p.add_assoc, &[b, c, dd]); // (b+c)+d = b+(c+d)
-    let h2_inner = d.symm(bc_d, bcd, h_bcd); // b+(c+d) = (b+c)+d
-    let h2 = d.congr(bcd, bc_d, h2_inner, &|d, t| d.add(a, t));
-
-    // (b+c) -> (c+b)
-    let cb = d.add(c, b);
-    let cb_d = d.add(cb, dd);
-    let s3 = d.add(a, cb_d);
-    let h_comm = d.lemma(p.add_comm, &[b, c]); // b+c = c+b
-    let h3 = d.congr(bc, cb, h_comm, &|d, t| {
-        let td = d.add(t, dd);
-        d.add(a, td)
-    });
-
-    // (c+b)+d -> c+(b+d)
-    let c_bd = d.add(c, bd);
-    let s4 = d.add(a, c_bd);
-    let h_assoc2 = d.lemma(p.add_assoc, &[c, b, dd]); // (c+b)+d = c+(b+d)
-    let h4 = d.congr(cb_d, c_bd, h_assoc2, &|d, t| d.add(a, t));
-
-    // a+(c+(b+d)) -> (a+c)+(b+d)
     let ac = d.add(a, c);
+    let bd = d.add(b, dd);
     let target = d.add(ac, bd);
-    let a_c_bd = d.add(a, c_bd);
-    let h_assoc3 = d.lemma(p.add_assoc, &[a, c, bd]); // (a+c)+(b+d) = a+(c+(b+d)), i.e. Eq(target, a_c_bd)
-    let h5 = d.symm(target, a_c_bd, h_assoc3); // Eq(a_c_bd, target)
-
-    let (_e, proof) = d.chain(
-        start,
-        &[(s1, h1), (s2, h2), (s3, h3), (s4, h4), (target, h5)],
-    );
+    // Generic-then-apply (`prove_eq_at`), not `prove_eq` on the literal
+    // arguments: at some call sites `a`/`b`/`c`/`dd` are themselves
+    // `div`/`mod` expressions, which `prove_eq` would (correctly) decline
+    // `NonRing` on.
+    let proof = crate::ring::nat::prove_eq_at(d, p, &[a, b, c, dd], &|d, v| {
+        let (a, b, c, dd) = (v[0], v[1], v[2], v[3]);
+        let ab = d.add(a, b);
+        let cd = d.add(c, dd);
+        let lhs = d.add(ab, cd);
+        let ac = d.add(a, c);
+        let bd = d.add(b, dd);
+        let rhs = d.add(ac, bd);
+        (lhs, rhs)
+    })
+    .unwrap_or_else(|e| panic!("ring declined add_add_add_comm: {e:?}"));
     (target, proof)
 }
 

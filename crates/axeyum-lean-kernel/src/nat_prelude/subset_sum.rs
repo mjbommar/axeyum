@@ -105,6 +105,13 @@ fn bool_select_bool(
 }
 
 /// `(a+b)+(c+e) = (a+c)+(b+e)`.
+///
+/// Retired to `crate::ring::nat` (docs/plan/status/460-ring-tactic-1.md): a
+/// pure ring-rearrangement chain, now searched for and emitted rather than
+/// hand-assembled — one of eight verbatim-duplicated hand proofs of this
+/// exact identity across `nat_prelude` (`binomial.rs`, `div_mod_lemmas.rs`,
+/// `finite_set.rs`, `fibonacci.rs`, `rec_agreement.rs`,
+/// `count_range_reversal.rs`, `eisenstein_lemma.rs`).
 fn add_regroup_four(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
@@ -113,32 +120,20 @@ fn add_regroup_four(
     c: ExprId,
     e: ExprId,
 ) -> ExprId {
-    let p = *p;
-    let ab = d.add(a, b);
-    let ce = d.add(c, e);
-    let start = d.add(ab, ce);
-
-    let abc = d.add(ab, c);
-    let step1 = d.add(abc, e);
-    let h1 = {
-        let fwd = d.lemma(p.add_assoc, &[ab, c, e]);
-        d.symm(step1, start, fwd)
-    };
-
-    let ac = d.add(a, c);
-    let acb = d.add(ac, b);
-    let step2 = d.add(acb, e);
-    let h2 = {
-        let h_comm = d.lemma(p.add_right_comm, &[a, b, c]);
-        d.congr(abc, acb, h_comm, &|d, x| d.add(x, e))
-    };
-
-    let be = d.add(b, e);
-    let target = d.add(ac, be);
-    let h3 = d.lemma(p.add_assoc, &[ac, b, e]);
-
-    let (_end, proof) = d.chain(start, &[(step1, h1), (step2, h2), (target, h3)]);
-    proof
+    // Generic-then-apply (`prove_eq_at`): a caller may pass compound
+    // arguments outside the ring fragment; `prove_eq` on the literal terms
+    // would (correctly) decline `NonRing` on those.
+    crate::ring::nat::prove_eq_at(d, p, &[a, b, c, e], &|d, v| {
+        let (a, b, c, e) = (v[0], v[1], v[2], v[3]);
+        let ab = d.add(a, b);
+        let ce = d.add(c, e);
+        let lhs = d.add(ab, ce);
+        let ac = d.add(a, c);
+        let be = d.add(b, e);
+        let rhs = d.add(ac, be);
+        (lhs, rhs)
+    })
+    .unwrap_or_else(|err| panic!("ring declined add_regroup_four: {err:?}"))
 }
 
 // ============================================================================

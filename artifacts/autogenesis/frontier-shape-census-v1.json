@@ -1078,7 +1078,7 @@
         "proof-route-only": 247
       }
     },
-    "frontier_sha256": "4f814f21118a30ffbc2bbfe9ac12042480b6cba1ad52670c9f429efd14057cde"
+    "frontier_sha256": "a42ee967bd2609a811d9cdd9717e84c9699257907b35c0873afdc02ce4eb9d58"
   },
   "kind": "axeyum-frontier-shape-census",
   "ledger": {

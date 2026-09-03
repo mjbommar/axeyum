@@ -77,6 +77,7 @@ pub mod prelude_cache;
 pub mod proof_plan;
 mod quotient;
 mod rat_prelude;
+pub mod ring;
 pub mod shape_index;
 mod stack;
 mod string_prelude;
