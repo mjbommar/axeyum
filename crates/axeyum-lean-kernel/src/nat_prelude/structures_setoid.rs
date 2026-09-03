@@ -1997,6 +1997,37 @@ mod structures_setoid_tests {
         }
     }
 
+    /// Every `AlgS.*` extra declaration (projections, `sub`/`sub_self`, and
+    /// the two generic theorems) must have an empty axiom footprint.
+    #[test]
+    fn ofalg_and_generic_theorems_are_axiom_free() {
+        let mut k = Kernel::new();
+        let (logic, p, st, alg_p, alg_st) = build_both_spines(&mut k);
+        let extra = declare_structures_s_extra(&mut k, &logic, &p, &st, &alg_p, &alg_st)
+            .expect("ofAlg projections and generic theorems must admit");
+        for name in [
+            extra.comm_ring_to_ring_s,
+            extra.magma_ofalg,
+            extra.semigroup_ofalg,
+            extra.monoid_ofalg,
+            extra.comm_monoid_ofalg,
+            extra.group_ofalg,
+            extra.comm_group_ofalg,
+            extra.semiring_ofalg,
+            extra.ring_ofalg,
+            extra.comm_ring_ofalg,
+            extra.sub,
+            extra.sub_self,
+            extra.neg_neg,
+            extra.mul_zero,
+        ] {
+            assert!(
+                k.axiom_footprint(name).is_empty(),
+                "declaration must have an empty axiom footprint"
+            );
+        }
+    }
+
     /// Evaluation test (deliverable 3): projecting `Int.commRing` through
     /// `AlgS.CommRing.ofAlg` and reading back `mulComm`'s type by
     /// REDUCTION must be `def_eq` to `Int.mul_comm`'s own rendered type.

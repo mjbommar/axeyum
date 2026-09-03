@@ -214,6 +214,20 @@ mod algebra_instance_tests {
         assert!(k.environment().get(name).is_some());
     }
 
+    /// `CReal.commRingS`'s axiom footprint must stay empty -- every field is
+    /// either a selector onto an already axiom-free `CReal` theorem or a
+    /// term composed purely from such selectors (`mulOneL`/`distribR`).
+    #[test]
+    fn creal_comm_ring_s_axiom_footprint_is_empty() {
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let name = declare_creal_comm_ring_s(&mut k, &p).expect("CReal.commRingS must admit");
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "CReal.commRingS must have an empty axiom footprint"
+        );
+    }
+
     /// The named ADR-1587 gap: does `AlgS.mul_zero` applied at
     /// `AlgS.CommRing.toRingS(CReal.commRingS)` have `CReal.mul_zero`'s
     /// exact type by `def_eq`? Measured, not assumed.
