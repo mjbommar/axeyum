@@ -1939,7 +1939,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (484 names,
+/// The `RatPrelude` field table (506 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2508,6 +2508,37 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 p.clear_below_aux_preserves_zero,
             ),
             ("clear_below_preserves_zero", p.clear_below_preserves_zero),
+            (
+                "row_swap_preserves_zero_range",
+                p.row_swap_preserves_zero_range,
+            ),
+            ("leading_index_aux_congr_row", p.leading_index_aux_congr_row),
+            ("leading_index_congr_row", p.leading_index_congr_row),
+            ("clear_below_row_swap_off", p.clear_below_row_swap_off),
+            ("pivot_search_aux_ge_start", p.pivot_search_aux_ge_start),
+            ("pivot_search_ge_start", p.pivot_search_ge_start),
+            ("is_echelon_aux_of_pairs", p.is_echelon_aux_of_pairs),
+            ("is_echelon_of_pairs", p.is_echelon_of_pairs),
+            ("echelon_step_ok_of_lt", p.echelon_step_ok_of_lt),
+            ("echelon_step_ok_both_cols", p.echelon_step_ok_both_cols),
+            ("echelon_aux_is_echelon", p.echelon_aux_is_echelon),
+            ("row_echelon_is_echelon", p.row_echelon_is_echelon),
+            ("lt_of_echelon_step_ok", p.lt_of_echelon_step_ok),
+            ("pairs_of_is_echelon_aux", p.pairs_of_is_echelon_aux),
+            ("pairs_of_is_echelon", p.pairs_of_is_echelon),
+            ("leading_index_strict_below", p.leading_index_strict_below),
+            (
+                "pivot_row_search_aux_eq_of_first",
+                p.pivot_row_search_aux_eq_of_first,
+            ),
+            (
+                "pivot_row_of_col_eq_of_first",
+                p.pivot_row_of_col_eq_of_first,
+            ),
+            ("pivot_section_of_is_echelon", p.pivot_section_of_is_echelon),
+            ("rank_eq_rank_cols", p.rank_eq_rank_cols),
+            ("rank_le_cols", p.rank_le_cols),
+            ("rank_nullity_rows", p.rank_nullity_rows),
         ],
         lists: Vec::new(),
     }

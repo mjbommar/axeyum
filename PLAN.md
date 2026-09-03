@@ -227,6 +227,12 @@ now. Nothing was deleted.
 | 2026-09-02 | echelon-invariant | `Rat.leadingIndex` characterized in both directions (first-nonzero, zero row) |
 | 2026-09-02 | echelon-invariant | `Rat.clearBelow_preserves_zero` — a zero column survives the sweep, with no fuel bound |
 | 2026-09-02 | echelon-invariant | ADR-1571; eight facts; the dominance document's "no `rank`" row corrected |
+| 2026-09-02 | echelon-invariant-2 | `Rat.rowSwap_preserves_zero_range` — ADR-1571 §3's one missing prerequisite |
+| 2026-09-02 | echelon-invariant-2 | `Rat.leadingIndex_congr_row` + `Rat.clearBelow_rowSwap_off` — the placed prefix survives a step without `funext` |
+| 2026-09-02 | echelon-invariant-2 | **ADR-1554 obligation 4 CLOSED** — `Rat.rowEchelon_isEchelon`, axiom-free |
+| 2026-09-02 | echelon-invariant-2 | `Rat.pivotSection_of_isEchelon` — echelon form implies ADR-1562's section equation |
+| 2026-09-02 | echelon-invariant-2 | `Rat.rank_eq_rankCols`, `Rat.rank_le_cols`, `Rat.rank_nullity_rows` — the bridge, unconditional |
+| 2026-09-02 | echelon-invariant-2 | ADR-1574; fifteen facts; `prelude_fields.rs` regenerated |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -38630,6 +38636,69 @@ family is now marginally above the ~1.65 s it was told to watch and inside the
 ~1.7 s band. Final sweeps: `rat_prelude::` 225 passed, `nat_prelude::` 408
 passed (both NONZERO counts, `--release`, `--test-threads=4`); of those,
 `clear_below_tests` 9, `leading_index_tests` 4, `pivot_content_tests` 5.
+
+**Did not run.** No workspace sweep, no `just check`, no `check.sh`, no push.
+Clippy was run as `-p axeyum-lean-kernel --all-targets -- -D warnings` and is
+clean; nothing wider was attempted, so this lane makes no claim about the
+aggregate gate.
+
+**echelon-invariant-2 (`DONE`, 2026-09-02).** Twenty-two axiom-free `Rat`
+declarations, fifteen facts, six commits, ADR-1574. **ADR-1554's obligation 4 is
+closed and all four of its obligations are now complete**, and the ADR-1562
+bridge is unconditional.
+
+**The headline.**
+`Rat.rowEchelon_isEchelon : ∀ M rows cols, isEchelon (rowEchelon M rows cols)
+rows cols = true` — axiom-free, no hypothesis on `M` or the dimensions. ADR-1554
+sized this as *"at least a lane on its own and probably two"*. Behind it:
+`Rat.rank_eq_rankCols`, `Rat.rank_le_cols` and `Rat.rank_nullity_rows`
+(rank-nullity in the ROW form) now hold for every matrix with **no hypothesis**,
+where they were `_of_pivotSection` before.
+
+**The sizing correction, which is the finding.** ADR-1571 §3 listed the
+invariant's preservation and the exit derivation as two inductions. They are
+**one**: carrying `isEchelon … = true` ITSELF as the conclusion at every fuel
+level means each of the three leaves that stop the loop discharges it on the
+spot, and nothing in the proof ever names the cursors the loop stopped at. The
+rule, which is not about matrices: *a loop lemma whose conclusion is the
+INVARIANT needs a separate exit derivation; one whose conclusion is the
+POSTCONDITION does not, provided the postcondition does not mention the loop's
+own cursors.*
+
+**Four more things measured.** (1) The invariant has FIVE clauses, not the three
+ADR-1571 described: `Le pc cols` is a real fifth, because the fuel clause bounds
+`pc` from BELOW and the exit needs the other side. (2) Writing the fuel clause
+as `pc + fuel` rather than `fuel + pc` makes two of the three exit leaves
+literally the same derivation, since `Nat.add` recurses on its right argument
+and `Le cols (Nat.add pc 0)` IS `Le cols pc`. (3) The invariant's clause about
+the already-placed prefix looks like it needs `funext` — ADR-1555 measured that
+the ROW form of rank invariance does — and does not:
+`Rat.leadingIndex_congr_row` is pointwise in, pointwise out. (4) The chain from
+`isEchelon`'s ADJACENT pairs to distinctness at a distance inducts on the UPPER
+ROW, not on the distance, which keeps `Nat.add` and `Nat.sub` out of the family
+entirely.
+
+**Three prerequisites ADR-1571's table did not predict** were needed and landed:
+`Rat.leadingIndex_congr_row`, `Rat.clearBelow_rowSwap_off` and
+`Rat.pivotSearch_ge_start` (ADR-1558 had landed only the other side of that
+bound). The one it did predict, `Rat.rowSwap_preserves_zero_range`, landed
+first.
+
+**Not attempted.** Rank invariance under the elementary row operations
+(deliverable 5) was NOT started — the budget went to the bridge, which the brief
+ordered ahead of it. ADR-1555's finding stands unexamined by this lane: the row
+form needs `funext` and the column form is the one to prove. Nobody has checked
+whether `Rat.rank_eq_rankCols` makes the column form reachable, and that is the
+next lane's first question.
+
+**Cost, bisected rather than attributed.** `rat` builds in **1.786–1.824 s**
+over four runs, against 1.683–1.705 s at the lane's start. Bisected mid-lane by
+removing the two large declarations: 1.720–1.746 s without them and 1.748–1.779 s
+with, so the obligation-4 induction costs ~30 ms, its ten supporting lemmas
+~40 ms, and the ten section declarations ~40 ms. Proportionate; no pathology.
+Final sweep `rat_prelude::` **239 passed** (225 at the lane's start), `--release`,
+`--test-threads=4`; of those, `echelon_invariant_tests` 10 and
+`echelon_section_tests` 4.
 
 **Did not run.** No workspace sweep, no `just check`, no `check.sh`, no push.
 Clippy was run as `-p axeyum-lean-kernel --all-targets -- -D warnings` and is
