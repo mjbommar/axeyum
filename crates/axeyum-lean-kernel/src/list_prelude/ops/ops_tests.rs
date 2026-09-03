@@ -12,7 +12,7 @@
 use super::{apply_all, congr_of, cons_of, eq_of, nil_of, refl_of};
 use crate::expr::ExprId;
 use crate::level::LevelId;
-use crate::{BinderInfo, Kernel, ListPrelude, LogicPrelude, NameId, build_list_prelude};
+use crate::{Kernel, ListPrelude, LogicPrelude, NameId, build_list_prelude};
 
 struct Fixture {
     k: Kernel,
