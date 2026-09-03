@@ -311,6 +311,7 @@ pub fn run<D: NatOps>(d: &mut D, prelude: &NatPrelude, goal: ExprId) -> Result<E
     }
 }
 
+pub mod cost;
 pub(crate) mod int;
 pub(crate) mod rat;
 

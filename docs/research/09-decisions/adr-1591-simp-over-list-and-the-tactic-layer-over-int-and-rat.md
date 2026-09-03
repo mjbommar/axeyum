@@ -235,10 +235,66 @@ free variable), `First` aggregating declines, and a mismatched-producer-output
 test (the closest analogue to a corrupted-glue test this carrier has, since
 there is no glue mechanism to corrupt).
 
+### 5. Zero retirements in `int_prelude`/`rat_prelude`
+
+Searched by the same method ADR-1589 §3 used (grep every hand-proof body for
+BOTH a default-simp-rule-shaped rewrite and an order/ring-lemma citation in
+the same function, then attempt the retirement and keep only what compiles
+and stays green — not inferred from the shape alone). One promising-looking
+`int_prelude` hit — `sign.rs::declare_neg_one_mul`, proving the exact
+statement `simp::int`'s own `neg_one_mul` default rule cites — turned out to
+BE that rule's own base declaration; citing it from a rule set that already
+depends on it would be circular, so it is not a retirement target by
+construction. No other candidate survived: `ring::int` already distributes
+`neg`/`sub` fully over `add`/`mul` as part of its own normal form (§1's
+note), so every shape `simp::int`'s default rules could expose to a
+`Then(Simp, Ring)` composition is already inside `ring::int`'s own fragment
+directly — there is no genuine "`simp` needed first" case in `int_prelude`
+for this rule set. Every `rat_prelude` order-goal hand proof states itself
+via `Rat.le`/`Rat.lt` directly, not via the `Alg.OrderedRing` record's
+selector applications `linarith::generic`'s own parser requires (§4's bug
+note) — retiring one through `tactic::rat` would need a conversion step
+between the two shapes, not a bare `Then`/`First` call, and no existing hand
+proof already pays that conversion cost for free. Both `int_prelude` and
+`rat_prelude` keep their full test suites green, unmodified — a measured
+negative, not a silent gap.
+
+### 6. Cost, beside `simp`/`decide`/`tactic`'s own ℕ data
+
+Measured `--release`, `cargo run --release -p axeyum-lean-kernel --example
+list_int_rat_cost`, 200 emissions per shape, prelude built once per shape,
+single unpinned run on a shared box — order-of-magnitude, not a ratchet
+baseline, the same caveat every other cost table in this crate carries:
+
+| shape | search+emit | +kernel recheck |
+| --- | ---: | ---: |
+| `List  append l nil = l` | 0.118 ms | 0.183 ms |
+| `List  reverse (reverse l) = l` | 0.125 ms | 0.193 ms |
+| `List  append nil (append l nil) = l` | 0.143 ms | 0.210 ms |
+| `Nat  length (append a b) = length a + length b` | 0.123 ms | 0.258 ms |
+| `decide  Eq Int (ofNat 3) (ofNat 3)` | 0.003 ms | 0.004 ms |
+| `decide  Int.le (negSucc 5) (negSucc 2)` | 0.005 ms | 0.017 ms |
+| `decide  Int.lt (ofNat 2) (ofNat 5)` | 0.005 ms | 0.018 ms |
+| `decide  Eq Rat 2 2` | 0.021 ms | 0.022 ms |
+| `decide  Rat.le (-3) 0` | 0.096 ms | 0.110 ms |
+| `decide  Rat.lt 2 5` | 0.110 ms | 0.138 ms |
+| `Then(Simp,Linarith)  Int  -(x+y) <= -x + -y` | 4.502 ms | 4.969 ms |
+
+`simp::list`'s cost sits in the same order of magnitude as `simp::nat`'s own
+table (ADR-1586: 0.21–0.53 ms) despite the extra alpha/beta bookkeeping.
+`decide::int`/`decide::rat` are the cheapest producers in the crate by a
+wide margin, same as `decide`'s own ℕ data (ADR-1589) — `decide::rat` costs
+more than `decide::int` because it delegates through a whole second
+`Definition` unfold (`Rat.le`/`Rat.lt` into `Int.le`/`Int.lt`) rather than
+deciding directly. `Then(Simp, Linarith)` over ℤ is markedly more expensive
+than either alone — consistent with "the combinator's cost is the sum of
+what it dispatches to" (ADR-1589), and `linarith::int`'s own certificate
+search is the dominant term here, not `simp`'s one rewrite step.
+
 ## Consequences
 
-- `simp` is now exercised over four carriers (ℕ, ℤ, ℚ's cousin `List`... —
-  precisely: ℕ, ℤ, `List`); `decide` and the `Tactic` combinator now cover
+- `simp` is now exercised over four carriers (ℕ, ℤ, ℚ, `List`); `decide` and
+  the `Tactic` combinator now cover
   ℕ, ℤ, ℚ. ADR-1589's own scope-cut sentence ("left for whichever lane
   needed a retirement badly enough to justify it") is resolved for ℤ/ℚ;
   ADR-1586 §4's `List` design sketch is resolved and built.

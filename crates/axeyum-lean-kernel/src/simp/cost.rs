@@ -123,3 +123,106 @@ pub fn measure(repeats: u32) -> Vec<Row> {
         }),
     ]
 }
+
+/// Time `repeats` emissions of one `List` goal shape (ADR-1591), at the
+/// `List Nat` carrier with the full default rule set (`+ perm`). `build`
+/// returns `(goal_carrier, lhs, rhs)` over `arity` fresh `List Nat`
+/// variables; the quantified declaration is what the kernel re-checks.
+fn time_list(
+    label: &str,
+    repeats: u32,
+    arity: usize,
+    build: &dyn Fn(&mut super::list::ListDev<'_>, &[ExprId]) -> (ExprId, ExprId, ExprId),
+) -> Row {
+    use super::list::{self as list_simp, ListDev};
+    use crate::{build_list_nat_bridge, build_list_perm};
+
+    let mut kernel = Kernel::new();
+    let (list, nat, bridge) =
+        build_list_nat_bridge(&mut kernel).expect("List/Nat bridge must build");
+    let perm = build_list_perm(&mut kernel, &list, &nat, &bridge).expect("List.Perm must build");
+    let anon = kernel.anon();
+    let root = kernel.name_str(anon, "simp_list_cost");
+    let nat_ty = kernel.const_(nat.nat, vec![]);
+    let names = list_simp::names_of(&list);
+    let rules = list_simp::default_rules_with_perm(
+        list.append_nil,
+        list.append_assoc,
+        list.reverse_reverse,
+        list.length_map,
+        bridge.length_append,
+        perm.count_append,
+    );
+    let mut d = ListDev::new_full(&mut kernel, &nat.logic, &names, &nat, &bridge, nat_ty);
+    let list_ty = d.list_ty();
+
+    let emit = |d: &mut ListDev<'_>, name: crate::NameId, search: &mut Duration| {
+        let t0 = Instant::now();
+        let fvs: Vec<u64> = (0..arity).map(|_| d.fresh_fvar()).collect();
+        let vars: Vec<ExprId> = fvs.iter().map(|&v| d.kernel().fvar(v)).collect();
+        let (ty, lhs, rhs) = build(d, &vars);
+        let proof = list_simp::prove_eq(d, &rules, ty, lhs, rhs).expect("the goal is provable");
+        *search += t0.elapsed();
+        let mut concl = d.eq(ty, lhs, rhs);
+        let mut value = proof;
+        for &fv in fvs.iter().rev() {
+            concl = d.pi_fv(fv, list_ty, concl);
+            value = d.lam_fv(fv, list_ty, value);
+        }
+        d.declare_theorem(name, concl, value)
+            .expect("the kernel must accept the emitted term");
+    };
+
+    let mut scratch = Duration::ZERO;
+    let warm = d.kernel().name_str(root, "warm");
+    emit(&mut d, warm, &mut scratch);
+
+    let mut search = Duration::ZERO;
+    let start = Instant::now();
+    for i in 0..repeats {
+        let name = d.kernel().name_str(root, format!("t{i}"));
+        emit(&mut d, name, &mut search);
+    }
+    row(label, repeats, start.elapsed(), search)
+}
+
+/// Measure every `List` shape (ADR-1591), `repeats` emissions each.
+#[must_use]
+pub fn measure_list(repeats: u32) -> Vec<Row> {
+    vec![
+        time_list("List  append l nil = l", repeats, 1, &|d, v| {
+            let nil = d.nil();
+            let lhs = d.append(v[0], nil);
+            (d.list_ty(), lhs, v[0])
+        }),
+        time_list("List  reverse (reverse l) = l", repeats, 1, &|d, v| {
+            let r = d.reverse(v[0]);
+            let lhs = d.reverse(r);
+            (d.list_ty(), lhs, v[0])
+        }),
+        time_list(
+            "List  append nil (append l nil) = l",
+            repeats,
+            1,
+            &|d, v| {
+                let nil = d.nil();
+                let inner = d.append(v[0], nil);
+                let lhs = d.append(nil, inner);
+                (d.list_ty(), lhs, v[0])
+            },
+        ),
+        time_list(
+            "Nat   length (append a b) = length a + length b",
+            repeats,
+            2,
+            &|d, v| {
+                let ab = d.append(v[0], v[1]);
+                let lhs = d.length(ab);
+                let la = d.length(v[0]);
+                let lb = d.length(v[1]);
+                let rhs = d.nat_add(la, lb);
+                (d.nat_ty(), lhs, rhs)
+            },
+        ),
+    ]
+}
