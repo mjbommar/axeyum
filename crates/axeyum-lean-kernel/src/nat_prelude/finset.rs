@@ -2198,6 +2198,307 @@ fn declare_card_filter_range(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// The pigeonhole principle (ADR-1593).
+// ---------------------------------------------------------------------------
+
+/// `∀ i j, memB s i = true → memB s j = true → Eq Nat (g i) (g j) → Eq Nat i j`
+/// — injectivity on the MEMBERS of `s`.
+///
+/// No `Lt i (bound s)` premise: [`declare_lt_bound_of_mem_b`] recovers the
+/// bound from membership, which is design choice 1 (`memB` truncates) paying
+/// for itself once more. `Nat.countRange_le_of_injOn`'s own hypothesis carries
+/// the bound explicitly because it is stated at a loose `(predicate, bound)`
+/// pair where nothing connects the two.
+fn inj_on_members_ty(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, g: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let t = d.bool_true();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+
+    let gi = d.apply(g, &[i]);
+    let gj = d.apply(g, &[j]);
+    let concl = d.eq(i, j);
+    let hyp_eq = d.eq(gi, gj);
+    let step_eq = d.arrow(hyp_eq, concl);
+    let mj = fs_mem(d, &p, s, j);
+    let sel_j = d.bool_eq(mj, t);
+    let step_j = d.arrow(sel_j, step_eq);
+    let mi = fs_mem(d, &p, s, i);
+    let sel_i = d.bool_eq(mi, t);
+    let inner = d.arrow(sel_i, step_j);
+    let with_j = d.pi_fv(j_fv, nat, inner);
+    d.pi_fv(i_fv, nat, with_j)
+}
+
+/// `∀ i, memB s i = true → memB t (g i) = true` — `g` sends members of `s` to
+/// members of `t`.
+fn maps_members_ty(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, t: ExprId, g: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let tv = d.bool_true();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let gi = d.apply(g, &[i]);
+    let t_gi = fs_mem(d, &p, t, gi);
+    let concl = d.bool_eq(t_gi, tv);
+    let mi = fs_mem(d, &p, s, i);
+    let sel_i = d.bool_eq(mi, tv);
+    let inner = d.arrow(sel_i, concl);
+    d.pi_fv(i_fv, nat, inner)
+}
+
+/// `Nat.Finset.lt_bound_of_memB : ∀ s i, Eq Bool (memB s i) true →
+/// Lt i (bound s)`.
+///
+/// The contrapositive of [`declare_membership_laws`]'s `memB_of_bound_le`, and
+/// the reason every statement below can drop the `Lt i (bound s)` premise that
+/// `Nat.countRange_le_of_injOn` has to carry. `Nat.lt_or_ge` decides `i`
+/// against `bound s`; in the `Le (bound s) i` branch `memB_of_bound_le` makes
+/// membership `false`, which the premise refutes.
+fn declare_lt_bound_of_mem_b(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let mem = fs_mem(d, &p, s, i);
+    let t = d.bool_true();
+    let hyp_ty = d.bool_eq(mem, t);
+    let bound = fs_bound(d, &p, s);
+    let goal = d.lt(i, bound);
+
+    let decided = d.lemma(p.lt_or_ge, &[i, bound]);
+    let lt_ty = d.lt(i, bound);
+    let ge_ty = d.le(bound, i);
+
+    let on_lt = {
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        d.lam_fv(g_fv, lt_ty, g)
+    };
+    let on_ge = {
+        let g_fv = d.fresh_fvar();
+        let g = d.kernel().fvar(g_fv);
+        let is_false = d.lemma(p.finset_mem_b_of_bound_le, &[s, i, g]);
+        let f = d.bool_false();
+        let back = d.bool_symm(mem, f, is_false);
+        let t2 = d.bool_true();
+        let impossible = d.bool_trans(f, mem, t2, back, h);
+        let absurd = d.false_true_elim(goal, impossible);
+        d.lam_fv(g_fv, ge_ty, absurd)
+    };
+    let body = or_elim(d, &p, lt_ty, ge_ty, goal, on_lt, on_ge, decided);
+
+    let ty = {
+        let with_h = d.arrow(hyp_ty, goal);
+        let with_i = d.pi_fv(i_fv, nat, with_h);
+        d.pi_fv(s_fv, fs, with_i)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, body);
+        let with_i = d.lam_fv(i_fv, nat, with_h);
+        d.lam_fv(s_fv, fs, with_i)
+    };
+    d.declare_theorem(p.finset_lt_bound_of_mem_b, ty, value)
+}
+
+/// `Nat.Finset.card_le_of_injOn : ∀ s t g,
+///   (∀ i j, memB s i = true → memB s j = true → Eq Nat (g i) (g j) →
+///      Eq Nat i j) →
+///   (∀ i, memB s i = true → memB t (g i) = true) →
+///   Le (card s) (card t)`.
+///
+/// The carrier-level lift of `Nat.countRange_le_of_injOn`. `card s` IS
+/// `countRange (memB s) (bound s)` by δ, so the whole content of the lift is
+/// re-shaping the two hypotheses: the loose form carries `Lt i n` premises
+/// because nothing there connects a predicate to a bound, and here
+/// [`declare_lt_bound_of_mem_b`] supplies both — the domain one by discarding
+/// it, the codomain one by DERIVING `Lt (g i) (bound t)` from
+/// `memB t (g i) = true`.
+fn declare_card_le_of_inj_on(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let gty = fun_ty(d);
+    let tv = d.bool_true();
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let hinj_ty = inj_on_members_ty(d, &p, s, g);
+    let hmaps_ty = maps_members_ty(d, &p, s, t, g);
+    let hinj_fv = d.fresh_fvar();
+    let hinj = d.kernel().fvar(hinj_fv);
+    let hmaps_fv = d.fresh_fvar();
+    let hmaps = d.kernel().fvar(hmaps_fv);
+
+    let mem_s = fs_mem_fn(d, &p, s);
+    let mem_t = fs_mem_fn(d, &p, t);
+    let bs = fs_bound(d, &p, s);
+    let bt = fs_bound(d, &p, t);
+
+    // The loose injectivity hypothesis: the two `Lt` premises are discarded.
+    let h1 = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hpi_fv = d.fresh_fvar();
+        let hpi = d.kernel().fvar(hpi_fv);
+        let hj_fv = d.fresh_fvar();
+        let hpj_fv = d.fresh_fvar();
+        let hpj = d.kernel().fvar(hpj_fv);
+        let he_fv = d.fresh_fvar();
+        let he = d.kernel().fvar(he_fv);
+
+        let body = d.apply(hinj, &[i, j, hpi, hpj, he]);
+
+        let gi = d.apply(g, &[i]);
+        let gj = d.apply(g, &[j]);
+        let he_ty = d.eq(gi, gj);
+        let with_he = d.lam_fv(he_fv, he_ty, body);
+        let mj = fs_mem(d, &p, s, j);
+        let hpj_ty = d.bool_eq(mj, tv);
+        let with_hpj = d.lam_fv(hpj_fv, hpj_ty, with_he);
+        let hj_ty = d.lt(j, bs);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_hpj);
+        let mi = fs_mem(d, &p, s, i);
+        let hpi_ty = d.bool_eq(mi, tv);
+        let with_hpi = d.lam_fv(hpi_fv, hpi_ty, with_hj);
+        let hi_ty = d.lt(i, bs);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hpi);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    // The loose `MapsInto`: the codomain bound is DERIVED from membership.
+    let h2 = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let member = d.apply(hmaps, &[i, hp]);
+        let gi = d.apply(g, &[i]);
+        let bounded = d.lemma(p.finset_lt_bound_of_mem_b, &[t, gi, member]);
+        let bound_ty = d.lt(gi, bt);
+        let t_gi = fs_mem(d, &p, t, gi);
+        let sel_ty = d.bool_eq(t_gi, tv);
+        let logic = p.logic;
+        let pair = d.const_app(logic.and_intro, &[bound_ty, sel_ty, bounded, member]);
+
+        let mi = fs_mem(d, &p, s, i);
+        let hp_ty = d.bool_eq(mi, tv);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, pair);
+        let hi_ty = d.lt(i, bs);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hp);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    let body = d.const_app(
+        p.count_range_le_of_inj_on,
+        &[mem_s, mem_t, g, bs, bt, h1, h2],
+    );
+
+    let concl = {
+        let lhs = fs_card(d, &p, s);
+        let rhs = fs_card(d, &p, t);
+        d.le(lhs, rhs)
+    };
+
+    let ty = {
+        let s2 = d.arrow(hmaps_ty, concl);
+        let s1 = d.arrow(hinj_ty, s2);
+        let with_g = d.pi_fv(g_fv, gty, s1);
+        let with_t = d.pi_fv(t_fv, fs, with_g);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let s2 = d.lam_fv(hmaps_fv, hmaps_ty, body);
+        let s1 = d.lam_fv(hinj_fv, hinj_ty, s2);
+        let with_g = d.lam_fv(g_fv, gty, s1);
+        let with_t = d.lam_fv(t_fv, fs, with_g);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_card_le_of_inj_on, ty, value)
+}
+
+/// `Nat.Finset.pigeonhole : ∀ s t g, Lt (card t) (card s) →
+///   (∀ i, memB s i = true → memB t (g i) = true) →
+///   (∀ i j, memB s i = true → memB s j = true → Eq Nat (g i) (g j) →
+///      Eq Nat i j) →
+///   False`.
+///
+/// The REFUTATION form: `g` mapping a bigger set into a smaller one cannot be
+/// injective on the members. This is the strongest form whose statement needs
+/// no search — [`declare_exists_collision`] pays for the explicit colliding
+/// pair with a bounded one.
+fn declare_pigeonhole(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let fs = finset_ty(d, &p);
+    let gty = fun_ty(d);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let card_s = fs_card(d, &p, s);
+    let card_t = fs_card(d, &p, t);
+    let hlt_ty = d.lt(card_t, card_s);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let hmaps_ty = maps_members_ty(d, &p, s, t, g);
+    let hmaps_fv = d.fresh_fvar();
+    let hmaps = d.kernel().fvar(hmaps_fv);
+    let hinj_ty = inj_on_members_ty(d, &p, s, g);
+    let hinj_fv = d.fresh_fvar();
+    let hinj = d.kernel().fvar(hinj_fv);
+
+    let bounded = d.lemma(p.finset_card_le_of_inj_on, &[s, t, g, hinj, hmaps]);
+    let strict = d.lemma(p.lt_of_lt_of_le, &[card_t, card_s, card_t, hlt, bounded]);
+    let body = d.lemma(p.lt_irrefl, &[card_t, strict]);
+
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+
+    let ty = {
+        let s3 = d.arrow(hinj_ty, false_ty);
+        let s2 = d.arrow(hmaps_ty, s3);
+        let s1 = d.arrow(hlt_ty, s2);
+        let with_g = d.pi_fv(g_fv, gty, s1);
+        let with_t = d.pi_fv(t_fv, fs, with_g);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let s3 = d.lam_fv(hinj_fv, hinj_ty, body);
+        let s2 = d.lam_fv(hmaps_fv, hmaps_ty, s3);
+        let s1 = d.lam_fv(hlt_fv, hlt_ty, s2);
+        let with_g = d.lam_fv(g_fv, gty, s1);
+        let with_t = d.lam_fv(t_fv, fs, with_g);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_pigeonhole, ty, value)
+}
+
 /// Every `Nat.Finset` declaration, in dependency order.
 ///
 /// # Errors
@@ -2216,5 +2517,8 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_sum_union_disjoint(d, p)?;
     declare_sum_congr_of_beq(d, p)?;
     declare_card_filter_range(d, p)?;
+    declare_lt_bound_of_mem_b(d, p)?;
+    declare_card_le_of_inj_on(d, p)?;
+    declare_pigeonhole(d, p)?;
     Ok(())
 }
