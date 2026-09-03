@@ -19,6 +19,7 @@ use super::modeq::cancel_neg_add_left;
 use super::ops::IntDev;
 use crate::KernelError;
 use crate::expr::ExprId;
+use crate::linarith::int as linarith;
 use crate::nat_prelude::NatOps;
 
 /// `Int.add_left_neg : ∀ (a : Int), Eq Int (add (neg a) a) zero`.
@@ -69,27 +70,13 @@ fn declare_add_neg_eq_sub(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// `add_comm` once (congruence on the shared `+c`).
 fn declare_add_left_comm(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    d.int_theorem(p.add_left_comm, 3, &|d, v| {
+    linarith::declare(d, &p, p.add_left_comm, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
         let bc = d.iadd(b, c);
         let start = d.iadd(a, bc);
-        let ab = d.iadd(a, b);
-        let ba = d.iadd(b, a);
-        let mid1 = d.iadd(ab, c); // (a+b)+c
-        let mid2 = d.iadd(ba, c); // (b+a)+c
         let ac = d.iadd(a, c);
-        let fin = d.iadd(b, ac); // b+(a+c)
-
-        let assoc1 = d.const_app(p.add_assoc, &[a, b, c]); // Eq(mid1, start)
-        let step1 = d.isymm(mid1, start, assoc1); // Eq(start, mid1)
-
-        let comm_ab = d.const_app(p.add_comm, &[a, b]); // Eq(ab, ba)
-        let step2 = d.icongr(ab, ba, comm_ab, &|d, t| d.iadd(t, c)); // Eq(mid1, mid2)
-
-        let step3 = d.const_app(p.add_assoc, &[b, a, c]); // Eq(mid2, fin)
-
-        let (_, proof) = d.ichain(start, &[(mid1, step1), (mid2, step2), (fin, step3)]);
-        (d.ieq(start, fin), proof)
+        let fin = d.iadd(b, ac);
+        (vec![], d.ieq(start, fin))
     })?;
     Ok(())
 }
@@ -143,29 +130,12 @@ fn declare_add_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// outside).
 fn declare_add_neg_cancel_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    d.int_theorem(p.add_neg_cancel_left, 2, &|d, v| {
+    linarith::declare(d, &p, p.add_neg_cancel_left, 2, &|d, v| {
         let (a, bb) = (v[0], v[1]);
         let neg_a = d.ineg(a);
-        let a_nega = d.iadd(a, neg_a);
         let nega_bb = d.iadd(neg_a, bb);
         let start = d.iadd(a, nega_bb);
-        let mid = d.iadd(a_nega, bb); // (a+(-a))+bb
-        let zero = d.izero();
-        let zero_bb = d.iadd(zero, bb);
-
-        let assoc = d.const_app(p.add_assoc, &[a, neg_a, bb]); // Eq(mid, start)
-        let step1 = d.isymm(mid, start, assoc); // Eq(start, mid)
-
-        let a_nega_eq_zero = d.const_app(p.add_neg, &[a]); // Eq(a_nega, zero)
-        let step2 = d.icongr(a_nega, zero, a_nega_eq_zero, &|d, t| d.iadd(t, bb)); // Eq(mid, zero_bb)
-
-        let comm = d.const_app(p.add_comm, &[zero, bb]); // Eq(zero_bb, bb+zero)
-        let bb_zero = d.iadd(bb, zero);
-        let az = d.const_app(p.add_zero, &[bb]); // Eq(bb+zero, bb)
-        let step3 = d.itrans(zero_bb, bb_zero, bb, comm, az); // Eq(zero_bb, bb)
-
-        let (_, proof) = d.ichain(start, &[(mid, step1), (zero_bb, step2), (bb, step3)]);
-        (d.ieq(start, bb), proof)
+        (vec![], d.ieq(start, bb))
     })?;
     Ok(())
 }

@@ -21,6 +21,7 @@ use super::modeq::{cancel_neg_add, cancel_neg_add_left};
 use super::ops::IntDev;
 use crate::KernelError;
 use crate::expr::ExprId;
+use crate::linarith::int as linarith;
 use crate::nat_prelude::NatOps;
 
 // ---------------------------------------------------------------------------
@@ -69,31 +70,6 @@ fn le_of_le_neg_add_core(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h:
     let ab = d.iadd(a, b);
     let a_neg_a_c = d.iadd(a, neg_a_c);
     d.int_eq_rewrite(a_neg_a_c, c, eq_c, raw, &|d, x| d.ile(ab, x))
-}
-
-/// From `h : le b (add c (neg a))`, derive `le (add a b) c`.
-fn le_of_le_sub_left_core(
-    d: &mut IntDev<'_>,
-    a: ExprId,
-    b: ExprId,
-    c: ExprId,
-    h: ExprId,
-) -> ExprId {
-    let p = d.int();
-    let refl_a = d.const_app(p.le_refl, &[a]);
-    let neg_a = d.ineg(a);
-    let c_sub_a = d.iadd(c, neg_a);
-    let raw = d.const_app(p.add_le_add, &[a, a, b, c_sub_a, refl_a, h]);
-    // raw : a+b <= a+(c+(-a))
-    let neg_a_c = d.iadd(neg_a, c);
-    let comm = d.const_app(p.add_comm, &[c, neg_a]); // Eq(c+(-a), (-a)+c)
-    let a_c_sub_a = d.iadd(a, c_sub_a);
-    let a_neg_a_c = d.iadd(a, neg_a_c);
-    let step_inner = d.icongr(c_sub_a, neg_a_c, comm, &|d, t| d.iadd(a, t));
-    let eq_c = add_cancel_neg_left(d, a, c); // Eq(a+((-a)+c), c)
-    let full_eq = d.itrans(a_c_sub_a, a_neg_a_c, c, step_inner, eq_c); // Eq(a+(c+(-a)), c)
-    let ab = d.iadd(a, b);
-    d.int_eq_rewrite(a_c_sub_a, c, full_eq, raw, &|d, x| d.ile(ab, x))
 }
 
 /// From `h : le a (add c (neg b))`, derive `le (add a b) c`.
@@ -265,7 +241,7 @@ pub(super) fn declare_add_le_add_iff(d: &mut IntDev<'_>) -> Result<(), KernelErr
 /// applications of `add_le_add`.
 pub(super) fn declare_add_le_add_three(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    d.int_theorem(p.add_le_add_three, 6, &|d, v| {
+    linarith::declare(d, &p, p.add_le_add_three, 6, &|d, v| {
         let (a, b, c, dd, e, f) = (v[0], v[1], v[2], v[3], v[4], v[5]);
         let h1_ty = d.ile(a, dd);
         let h2_ty = d.ile(b, e);
@@ -274,25 +250,7 @@ pub(super) fn declare_add_le_add_three(d: &mut IntDev<'_>) -> Result<(), KernelE
         let de = d.iadd(dd, e);
         let abc = d.iadd(ab, c);
         let def = d.iadd(de, f);
-        let concl = d.ile(abc, def);
-        let after3 = d.arrow(h3_ty, concl);
-        let after2 = d.arrow(h2_ty, after3);
-        let stmt = d.arrow(h1_ty, after2);
-
-        let h1_fv = d.fresh_fvar();
-        let h1 = d.kernel().fvar(h1_fv);
-        let h2_fv = d.fresh_fvar();
-        let h2 = d.kernel().fvar(h2_fv);
-        let h3_fv = d.fresh_fvar();
-        let h3 = d.kernel().fvar(h3_fv);
-
-        let inner = d.const_app(p.add_le_add, &[a, dd, b, e, h1, h2]); // a+b <= d+e
-        let outer = d.const_app(p.add_le_add, &[ab, de, c, f, inner, h3]); // (a+b)+c <= (d+e)+f
-
-        let with_h3 = d.lam_fv(h3_fv, h3_ty, outer);
-        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_h3);
-        let proof = d.lam_fv(h1_fv, h1_ty, with_h2);
-        (stmt, proof)
+        (vec![h1_ty, h2_ty, h3_ty], d.ile(abc, def))
     })?;
     Ok(())
 }
@@ -350,19 +308,12 @@ pub(super) fn declare_add_le_of_le_sub(d: &mut IntDev<'_>) -> Result<(), KernelE
         (stmt, proof)
     })?;
 
-    d.int_theorem(p.add_le_of_le_sub_left, 3, &|d, v| {
+    linarith::declare(d, &p, p.add_le_of_le_sub_left, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
         let c_sub_a = d.isub(c, a);
         let hyp = d.ile(b, c_sub_a);
         let ab = d.iadd(a, b);
-        let concl = d.ile(ab, c);
-        let stmt = d.arrow(hyp, concl);
-
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = le_of_le_sub_left_core(d, a, b, c, h);
-        let proof = d.lam_fv(h_fv, hyp, body);
-        (stmt, proof)
+        (vec![hyp], d.ile(ab, c))
     })?;
 
     d.int_theorem(p.add_le_of_le_sub_right, 3, &|d, v| {

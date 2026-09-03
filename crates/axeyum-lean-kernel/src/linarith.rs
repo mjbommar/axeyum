@@ -59,7 +59,11 @@
 
 use std::collections::BTreeMap;
 
+pub(crate) mod int;
 pub mod nat;
+
+#[cfg(test)]
+mod int_tests;
 
 #[cfg(test)]
 mod tests;

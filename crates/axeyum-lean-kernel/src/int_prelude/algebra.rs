@@ -21,6 +21,7 @@ use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::expr::ExprId;
+use crate::linarith::int as linarith;
 use crate::nat_prelude::NatOps;
 
 /// `fun t : Nat => Nat.rec.{1} (fun _ => Int) (Int.ofNat t) (fun k _ => Int.negSucc k) t`,
@@ -597,24 +598,9 @@ pub(super) fn declare_add_assoc(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     // add_neg_cancel_right : ∀ a b, (a+b)+(-b) = a.  This is deliberately
     // derived here rather than imported from Mathlib: reassociate, discharge
     // `b + -b` with `add_neg`, then remove the resulting zero.
-    d.int_theorem(p.add_neg_cancel_right, 2, &|d, v| {
-        let (a, b) = (v[0], v[1]);
-        let neg_b = d.ineg(b);
-        let ab = d.iadd(a, b);
-        let left = d.iadd(ab, neg_b);
-        let b_neg_b = d.iadd(b, neg_b);
-        let middle = d.iadd(a, b_neg_b);
-        let zero = d.izero();
-        let near = d.iadd(a, zero);
-
-        let assoc = d.const_app(p.add_assoc, &[a, b, neg_b]);
-        let cancel = d.const_app(p.add_neg, &[b]);
-        let under_a = d.icongr(b_neg_b, zero, cancel, &|d, value| d.iadd(a, value));
-        let remove_zero = d.const_app(p.add_zero, &[a]);
-        let to_near = d.itrans(left, middle, near, assoc, under_a);
-        let proof = d.itrans(left, near, a, to_near, remove_zero);
+    linarith::declare(d, &p, p.add_neg_cancel_right, 2, &|d, v| {
         let stmt = statements::add_neg_cancel_right(d, v);
-        (stmt, proof)
+        (vec![], stmt)
     })?;
     Ok(())
 }
