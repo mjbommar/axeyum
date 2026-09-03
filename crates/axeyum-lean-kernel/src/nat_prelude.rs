@@ -127,6 +127,7 @@ use crate::PreludeKey;
 use crate::PreludeValue;
 use crate::build_logic_prelude;
 use crate::name::NameId;
+use structures::StructuresNames;
 
 mod abundant_deficient;
 mod abundant_deficient_lemmas;
@@ -272,6 +273,7 @@ mod squarefree;
 pub(crate) mod steps;
 mod stirling;
 mod stirling_lemmas;
+pub mod structures;
 mod subset_product;
 mod subset_sum;
 mod sum_range_permute;
@@ -6266,6 +6268,13 @@ pub struct NatPrelude {
     /// `|{k < n : p k}|`; this makes the reading a theorem, with `Nat.totient`
     /// and everything proved about it unchanged.
     pub finset_card_totatives: NameId,
+
+    /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
+    /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
+    /// a field. See [`structures`] for the field lists and every selector
+    /// name (`.sel(i)`, index documented per record's `*_fields()`
+    /// function). Declared under a fresh `Alg` root, never under `Nat`.
+    pub structures: StructuresNames,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6308,6 +6317,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
     let checkpoint = kernel.prelude_checkpoint();
     let built = (|| -> Result<NatPrelude, KernelError> {
         let nat = logic.nat;
+
+        // ADR-1578: the abstract algebra spine. Needs only `logic` (Eq,
+        // False, Sort) -- declared before any `Nat`-specific interning so a
+        // name collision inside `Nat`'s own namespace cannot happen (the
+        // spine's root is `Alg`, not `Nat`; see `structures`'s module doc).
+        let structures_names = structures::intern_structures_names(kernel);
+        let structures = structures::declare_structures_all(kernel, &structures_names, &logic)?;
 
         // Intern every name up front so the `NatPrelude` (which the proof scripts
         // below consult for lemma handles) exists before anything is declared.
@@ -7471,6 +7487,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             eisenstein_floor_sum_min_free: kernel.name_str(nat, "eisenstein_floor_sum_min_free"),
             gauss_count_sum_even: kernel.name_str(nat, "gaussCount_sum_even"),
             gauss_count_sum_mod_eq: kernel.name_str(nat, "gaussCount_sum_modEq"),
+            structures,
         };
 
         let mut d = NatDev::new(kernel, p);

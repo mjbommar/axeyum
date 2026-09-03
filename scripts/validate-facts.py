@@ -68,6 +68,8 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # size is a name component, so `build_string_prelude(k, logic, 2)` declares
 # `axeyum.string.2.append_assoc`. The allowlist below includes all actual
 # kernel theorem namespaces (And, Decidable, Eq, Iff, Or added; Str was never used).
+# `Alg` is ADR-1578's abstract algebra spine (Magma..Field records, declared
+# under a fresh `Alg` root, never under `Nat`/`Int`/`Rat`) -- added 2026-09-03.
 #
 # The logic prelude also declares undotted names (bare identifiers), allowed
 # by a separate LOGIC_UNDOTTED set. Widening to accept any bare identifier
@@ -75,7 +77,7 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # to only these logic-prelude names maintains that guard while registering real
 # declarations the kernel admits.
 KERNEL_THEOREM_RE = re.compile(
-    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|"
+    r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|"
     r"And|Decidable|Eq|Iff|Or|"
     r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"

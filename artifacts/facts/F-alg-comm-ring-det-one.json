@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-comm-ring-det-one",
+  "title": "The 1x1 determinant over an abstract commutative ring is its single entry, and it matches Rat.det symbolically",
+  "statement": "For any commutative-ring record R and any Nat-by-Nat matrix A valued in R's carrier, the generic cofactor-recursion determinant detR R 1 A equals A's (0,0) entry; instantiated at Rat's own CommRing record, detR R 1 A is definitionally equal to Rat.det A 1 at a symbolic matrix A, even though the two are independently-built Nat.rec recursions.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.commRingDetOne : ((x0 : Alg.CommRing) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Alg.CommRing.carrier x0))) -> Eq.{1} (Alg.CommRing.carrier x0) (Alg.detR x0 (AxNat.succ AxNat.zero) x1) (x1 AxNat.zero AxNat.zero)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.commRingDetOne"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-comm-ring-det-one-1",
+      "kind": "kernel-term",
+      "supports": "Alg.commRingDetOne admits through the trusted kernel gate and, applied at Rat.commRing (a CommRing instance built independently of Rat.field, from the same underlying Rat.* lemma constants) closed over a symbolic matrix A, type-checks -- `detR R 1 A` (the generic cofactor recursion, Nat.rec with a function-typed motive since the recursive call is at a different matrix, the same device Rat.det's own module doc names) reduces via iota/beta with no law needed to `add zero (mul one (mul (A 0 0) one))`, and the proof bridges that to `A 0 0` via mulOneR, mulOneL and a derived addZero-left.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- comm_ring_det_one_instantiates_at_rat_and_the_agreement_with_rat_det_is_measured --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "The pattern is anchored on cargo's own pass/fail summary line with BOTH counts pinned ('1 passed; 0 failed')."
+    },
+    {
+      "id": "alg-comm-ring-det-one-2",
+      "kind": "kernel-term",
+      "supports": "THE PAYOFF MEASUREMENT: `detR(Rat.commRing, 1, A) def_eq Rat.det(A, 1)` at a SYMBOLIC A is TRUE -- measured, not assumed. ADR-1578's own text flagged this as an open question in advance, citing the Nat.multichoose 'two independently-built Nat.rec instances' boundary (docs/contributor-guide/kernel-proof-engineering.md) that usually makes such a pair NOT def_eq even when they compute the same value at every concrete input. Here they agree because every selector the n=1 unfolding touches (add/mul/zero/one via Rat.commRing's own fields) is literally Rat.add/Rat.mul/Rat.zero/Rat.one, so both sides reduce to the identical normal form.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- comm_ring_det_one_instantiates_at_rat_and_the_agreement_with_rat_det_is_measured --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'at a symbolic A = true')\" -ge 1",
+      "notes": "Anchored on the literal 'true' the test prints for this specific measurement, so a flipped boolean (a def_eq that started returning false) breaks the pattern; the mutation check confirmed 'true'->'false' does not survive."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-1, ADR-1578 -- Alg.sumR/Alg.altSignR/Alg.detR generalize Rat.det's cofactor recursion over an arbitrary Alg.CommRing; Alg.commRingDetOne proves the n=1 case and is instantiated at Rat.commRing.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs (build_sum_r, build_alt_sign_r, build_det_r, build_comm_ring_det_one); test rat_prelude::algebra_instances::algebra_instances_tests::comm_ring_det_one_instantiates_at_rat_and_the_agreement_with_rat_det_is_measured."
+  },
+  "notes": "det_mul / multiplicativity is explicitly NOT attempted -- only the n=1 base case, matching rat_prelude/matrix_det.rs's own stated boundary (agreement/evaluation only). The Rat.det agreement is measured only at n=1; nothing here claims agreement at general n, and the two recursions (Alg.detR generic, Rat.det carrier-specific) remain independently built -- the n=1 agreement is a fact about how little of either recursion n=1 actually exercises, not a general equivalence proof."
+}

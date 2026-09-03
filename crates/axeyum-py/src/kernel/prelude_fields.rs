@@ -121,8 +121,12 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1094 names,
+/// The `NatPrelude` field table (1124 names,
 /// 0 name lists, 1 sub-packages).
+///
+/// 30 of the names come from ADR-1512 per-module registries and
+/// carry a dotted field name (`pi.pi_le_four`); the rest are flat
+/// fields on `NatPrelude` itself.
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
 pub(super) fn nat(p: &NatPrelude) -> Fields {
@@ -1468,6 +1472,36 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("finset_sum_congr_of_beq", p.finset_sum_congr_of_beq),
             ("finset_card_filter_range", p.finset_card_filter_range),
             ("finset_card_totatives", p.finset_card_totatives),
+            ("structures.magma.ind", p.structures.magma.ind),
+            ("structures.magma.mk", p.structures.magma.mk),
+            ("structures.magma.rec", p.structures.magma.rec),
+            ("structures.semigroup.ind", p.structures.semigroup.ind),
+            ("structures.semigroup.mk", p.structures.semigroup.mk),
+            ("structures.semigroup.rec", p.structures.semigroup.rec),
+            ("structures.monoid.ind", p.structures.monoid.ind),
+            ("structures.monoid.mk", p.structures.monoid.mk),
+            ("structures.monoid.rec", p.structures.monoid.rec),
+            ("structures.comm_monoid.ind", p.structures.comm_monoid.ind),
+            ("structures.comm_monoid.mk", p.structures.comm_monoid.mk),
+            ("structures.comm_monoid.rec", p.structures.comm_monoid.rec),
+            ("structures.group.ind", p.structures.group.ind),
+            ("structures.group.mk", p.structures.group.mk),
+            ("structures.group.rec", p.structures.group.rec),
+            ("structures.comm_group.ind", p.structures.comm_group.ind),
+            ("structures.comm_group.mk", p.structures.comm_group.mk),
+            ("structures.comm_group.rec", p.structures.comm_group.rec),
+            ("structures.semiring.ind", p.structures.semiring.ind),
+            ("structures.semiring.mk", p.structures.semiring.mk),
+            ("structures.semiring.rec", p.structures.semiring.rec),
+            ("structures.ring.ind", p.structures.ring.ind),
+            ("structures.ring.mk", p.structures.ring.mk),
+            ("structures.ring.rec", p.structures.ring.rec),
+            ("structures.comm_ring.ind", p.structures.comm_ring.ind),
+            ("structures.comm_ring.mk", p.structures.comm_ring.mk),
+            ("structures.comm_ring.rec", p.structures.comm_ring.rec),
+            ("structures.field.ind", p.structures.field.ind),
+            ("structures.field.mk", p.structures.field.mk),
+            ("structures.field.rec", p.structures.field.rec),
         ],
         lists: Vec::new(),
     }
@@ -1981,8 +2015,12 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (506 names,
+/// The `RatPrelude` field table (522 names,
 /// 0 name lists, 1 sub-packages).
+///
+/// 16 of the names come from ADR-1512 per-module registries and
+/// carry a dotted field name (`pi.pi_le_four`); the rest are flat
+/// fields on `RatPrelude` itself.
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
 pub(super) fn rat(p: &RatPrelude) -> Fields {
@@ -2581,6 +2619,22 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("rank_eq_rank_cols", p.rank_eq_rank_cols),
             ("rank_le_cols", p.rank_le_cols),
             ("rank_nullity_rows", p.rank_nullity_rows),
+            ("algebra.nat_comm_add_monoid", p.algebra.nat_comm_add_monoid),
+            ("algebra.rat_comm_mul_monoid", p.algebra.rat_comm_mul_monoid),
+            ("algebra.int_add_group", p.algebra.int_add_group),
+            ("algebra.rat_add_group", p.algebra.rat_add_group),
+            ("algebra.int_ring", p.algebra.int_ring),
+            ("algebra.rat_ring", p.algebra.rat_ring),
+            ("algebra.int_comm_ring", p.algebra.int_comm_ring),
+            ("algebra.rat_comm_ring", p.algebra.rat_comm_ring),
+            ("algebra.rat_field", p.algebra.rat_field),
+            ("algebra.monoid_ident_unique", p.algebra.monoid_ident_unique),
+            ("algebra.group_inv_unique", p.algebra.group_inv_unique),
+            ("algebra.ring_mul_zero", p.algebra.ring_mul_zero),
+            ("algebra.sum_r", p.algebra.sum_r),
+            ("algebra.alt_sign_r", p.algebra.alt_sign_r),
+            ("algebra.det_r", p.algebra.det_r),
+            ("algebra.comm_ring_det_one", p.algebra.comm_ring_det_one),
         ],
         lists: Vec::new(),
     }

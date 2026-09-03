@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2221,
+    "min_identity_bound": 2225,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -722,6 +722,34 @@
       "statement_sha256": "77f14c56d1a8de552a9375ae42210ef780279b8bb0aecef45929801d0203c775",
       "prose_sha256": "5016e47a21b549acf1ce1a9e7b706d4837c17cdcfdb9dd923bf8f13b1052d034",
       "kernel_theorem": "Acc.inv"
+    },
+    {
+      "fact_id": "F:alg-comm-ring-det-one",
+      "language": "lean4",
+      "statement_sha256": "7e240be982eade09f318cdd386e2e221b14c6f16f07b0bf9d98f764222056971",
+      "prose_sha256": "32f542cbd6d36734ce638717fa40e7e4dcf582ca7f53eecc0ec2d827535006ce",
+      "kernel_theorem": "Alg.commRingDetOne"
+    },
+    {
+      "fact_id": "F:alg-group-inv-unique",
+      "language": "lean4",
+      "statement_sha256": "489d3ddc644160102b9a1f6673885a260c2fde2c415b466e717cf2f24d3d31dc",
+      "prose_sha256": "3fc738e7a63b8b39ac5ca4baa22b21ef7d56d90138def0adf09974212cb5fccc",
+      "kernel_theorem": "Alg.groupInvUnique"
+    },
+    {
+      "fact_id": "F:alg-monoid-ident-unique",
+      "language": "lean4",
+      "statement_sha256": "ea26daec2209214999103af60a0250a458692a05f1ede1b0fdd2a213e7b5c684",
+      "prose_sha256": "ae3bfa7320c36d2db645203e970976e889d81b3707e9d352db681b93469c273c",
+      "kernel_theorem": "Alg.monoidIdentUnique"
+    },
+    {
+      "fact_id": "F:alg-ring-mul-zero",
+      "language": "lean4",
+      "statement_sha256": "b2fe2f058622e4753c56e8b9befb5470d0d4753b918351148a1c750e4c450f15",
+      "prose_sha256": "668159f88abaedb6c2fee4fcada7b4be800216aacf2ca879559a541466faebad",
+      "kernel_theorem": "Alg.ringMulZero"
     },
     {
       "fact_id": "F:alternating-binomial-row-sum-zero",

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-ring-mul-zero",
+  "title": "In an abstract ring, any element times zero is zero",
+  "statement": "For any ring record R (an abstract carrier, additive commutative group, multiplication, distributive laws) and any a of R's carrier, mul a zero = zero -- derived from the additive-group and distributive axioms alone, without ever using a multiplicative identity.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.ringMulZero : ((x0 : Alg.Ring) -> ((x1 : Alg.Ring.carrier x0) -> Eq.{1} (Alg.Ring.carrier x0) (Alg.Ring.mul x0 x1 (Alg.Ring.zero x0)) (Alg.Ring.zero x0)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.ringMulZero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-ring-mul-zero-1",
+      "kind": "kernel-term",
+      "supports": "Alg.ringMulZero admits through the trusted kernel gate and, applied at TWO CONCRETE Alg.Ring instances (Int.ring, Rat.ring, each built independently of the Alg.CommRing/Alg.Field instances from the same underlying Int.*/Rat.* lemma constants -- no inheritance) closed over a symbolic a, type-checks to a term def_eq to `mul a zero = zero` with mul/zero iota-reduced through each instance's own selectors.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- ring_mul_zero_applies_at_int_and_rat_instances --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "The pattern is anchored on cargo's own pass/fail summary line with BOTH counts pinned ('1 passed; 0 failed'), so a wrong reduced type (a def_eq assertion failure) or a kernel refusal of the instantiation both make the test panic and the pattern stop matching."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-1, ADR-1578 -- proved once over the abstract Alg.Ring record from the additive-group and distributive axioms alone, and instantiated at two independently-built carriers.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs (build_ring_mul_zero, declared as Alg.ringMulZero); test rat_prelude::algebra_instances::algebra_instances_tests::ring_mul_zero_applies_at_int_and_rat_instances."
+  },
+  "notes": "The proof never invokes a multiplicative identity field (Alg.Ring.mulOneL/mulOneR are unused) -- only distribL, addZero, addComm, negAdd and addAssoc, matching the task's 'from the ring axioms alone'. Does not extend to a Semiring (no additive inverse, so the cancellation step this proof uses is unavailable) -- Alg.Semiring has no negAdd field and this theorem is not stated over it."
+}
