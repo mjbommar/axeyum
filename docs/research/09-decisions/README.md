@@ -860,3 +860,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1570](adr-1570-one-operation-closed-four-sibling-facts-and-the-other-six-say-what-is-missing.md) | one operation closed four sibling facts, and the other six say exactly what is missing | accepted |
 | [1571](adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md) | Thirteen axiom-free `Rat` declarations and one `Nat` one close | accepted |
 | [1574](adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md) | **`Rat.rowEchelon_isEchelon` is proved, axiom-free**, closing | accepted |
+| [1577](adr-1577-a-decidable-predicate-with-a-bound-is-a-finset-and-what-was-missing-was-an-object.md) | a decidable predicate with a bound is a `Finset`, and what was missing was an object rather than a proof | Accepted |

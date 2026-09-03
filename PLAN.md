@@ -119,6 +119,13 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
+| 2026-09-03 | finset-role | `Nat.Finset` carrier + inclusion–exclusion (`464b9cce9`) |
+| 2026-09-03 | finset-role | bounded-loop reflection + `card_le_of_subsetB` (`1d6da1db6`) |
+| 2026-09-03 | finset-role | `sum_union_disjoint` and its sum workhorse (`22568ec44`) |
+| 2026-09-03 | finset-role | `sum_congr_of_beq` (`75d72dcec`) |
+| 2026-09-03 | finset-role | consumer: `card_totatives` identifies the totient (`cfd85cf1a`) |
+| 2026-09-03 | finset-role | eight facts, checkers verified to fail when perturbed (`3b53ee52e`) |
+| 2026-09-03 | finset-role | ADR-1577, regenerated ADR index and py prelude fields |
 | 2026-09-02 | `dd5b54b68` | `invokes`, the third artifact-ownership classification: an orchestrator may name a guarded artifact to STAGE it and must regenerate it by calling the owner, checked by inspection. Gate FAIL→PASS with no artifact changed; 25 mutants, exit 0. |
 | 2026-09-02 | 8a8412634 | lane stub opened |
 | 2026-09-02 | f6e747001 | 3 rows added to `mirror-divergence-registry.json` (`Nat.land`/`Nat.lor`/`Nat.ldiff`, `class: recursion-principle`); `Nat.bitwise` deliberately left unregistered (would violate the registry's own G3 guard against its 3 already-settled mirrors); `docs/research/11-design-review/2026-09-02-land-lor-ldiff-are-recursion-principle-divergences.md` records the chain, file:line citations, and the empirical G3 failure text. No fact moved buckets (all 3 affected facts were already `DIVERGENCE-BLOCKED` via the pre-existing `Nat.testBit` row); each now carries a second, independent, checkable reason. |
@@ -38804,6 +38811,65 @@ the script then reported **every one of the 32 integration suites as `0 INERT`**
 At `AXEYUM_CARGO_MEM=64G` the same command ran to completion and all 32 suites
 reported their real nonzero counts with the `--lib` target as the sole failure.
 Read the lib target's line before believing an INERT row.
+
+**Your lane's block (`DONE`, finset-role, 2026-09-03).** `Nat.Finset` landed
+(`nat_prelude/finset.rs`, ADR-1577): a one-constructor inductive
+`mk : (Nat → Bool) → Nat → Finset`, with `memB` truncating inside its own
+definition, `card s := countRange (memB s) (bound s)` and
+`sum s f := sumRangeIf (memB s) f (bound s)`. **Twelve theorems, every one
+admitted on the first attempt, every one with `Kernel::axiom_footprint = []`**
+read from `theorem_axiom_footprint`. No quotient, no `propext`, no `List`, ℕ
+only — ADR-1520's `Nat.Multiset` shape applied to sets. `nat_prelude::` suite
+422 passed / 0 failed; clippy clean on the crate.
+
+**The one thing that did NOT land is the pigeonhole principle, and the
+obstruction is measured rather than guessed.** A pigeonhole over two
+`Nat.Finset`s needs `countRange p n ≤ countRange q m` from an INJECTION between
+two selected sets, and that lemma is absent:
+`shape_search --hyp Nat.injectiveOn --concl Nat.le` returns ABSENT on a freshly
+built binary (`declarations=3095`, positive control `Rat.rank_eq_rankCols`
+`FOUND 2`, namespace control `ns Nat=1088`). `Nat.pigeonhole` DOES exist but is
+the RANGE form — domain `[0,n)`, codomain `[0,m)` — and bridging it needs an
+ENUMERATION of a finite set's members as `[0, card s)`, which
+`--name-like nthtrue / enumerate / rankof` reports absent as well. Sizing for
+the next lane is in ADR-1577: an induction on the domain's bound that peels one
+member and removes its image, so it needs a "removing one member decreases
+`countRange` by exactly one" step; `Nat.countRange_point_change` is the closest
+existing piece. It is comparable in size to everything else in the ADR put
+together, which is why it was not attempted rather than attempted badly.
+
+**A second finding, about the tree rather than this lane.** The brief asked for
+an existing ad-hoc-`countRange` proof to be REWRITTEN through the carrier. I
+surveyed and found no site where the substitution makes an existing proof
+shorter: every one already has the predicate-level algebra it needs, because
+`finite_set.rs` landed `setUnion`/`setInter`/`setDiff`/`Subset` with their
+counting laws first. What was missing was not a shorter proof but an OBJECT. So
+the consumer is a bridge — `Nat.Finset.card_totatives` proves that
+`Nat.totient`'s defining ad hoc `countRange` IS a `Finset` cardinality, with
+`Nat.totient` and everything proved about it unchanged.
+
+Reused rather than rebuilt, and the carrier is thin on purpose:
+`Nat.countRange` with `countRange_split` / `countRange_congr_lt` /
+`countRange_eq_zero_of_all_false` / `countRange_union_add_inter` /
+`countRange_le_of_subset`, `Nat.setUnion`/`setInter`/`setDiff` and `Nat.Subset`
+(`finite_set.rs`), `Nat.sumRangeIf` with `sumRangeIf_congr_lt`
+(`subset_sum.rs`), and `Nat.sumRange_split`/`sumRange_add`/`sumRange_const_zero`.
+
+Eight facts registered, one per distinct statement, all `proved` with empty
+`axiom_footprint`. Both ledger checkers were **verified to fail before being
+written**: the kernel-term row greps a distinguishing substring of the TYPE (the
+same pattern with `union`/`inter` transposed hits zero), and the footprint row
+pins the name AND the size with `awk` on tab fields (a one-character name typo
+hits zero; asking for size 1 hits zero). `validate-facts.py` then rejected the
+first draft — it DERIVES dependencies from the proof term and found nine edges
+the hand-written `depends_on` lists had missed.
+
+**One hand-computed expectation was wrong and the evaluation test caught it**:
+the first draft asserted `bound {0,1,2} = 9`, but `union` takes the SUM of its
+operands' bounds, so it is `(1 + 2) + 3 = 6`.
+
+**Nothing did-not-run.** Every gate quoted above was executed in this worktree
+and its output read.
 
 **Both of Euclid's missing ingredients are in; `F:nat-exists-prime-gt` is one
 slice from closing** (`WIP`, nat-prime-divisor, 2026-08-17).

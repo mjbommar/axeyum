@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1065 names,
+/// The `NatPrelude` field table (1094 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1427,6 +1427,47 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ),
             ("count_range_bij", p.count_range_bij),
             ("count_range_bij_of_inverse", p.count_range_bij_of_inverse),
+            ("finset", p.finset),
+            ("finset_mk", p.finset_mk),
+            ("finset_rec", p.finset_rec),
+            ("finset_pred", p.finset_pred),
+            ("finset_bound", p.finset_bound),
+            ("finset_mem_b", p.finset_mem_b),
+            ("finset_card", p.finset_card),
+            ("finset_sum", p.finset_sum),
+            ("finset_union", p.finset_union),
+            ("finset_inter", p.finset_inter),
+            ("finset_sdiff", p.finset_sdiff),
+            ("finset_filter", p.finset_filter),
+            ("finset_range", p.finset_range),
+            ("finset_singleton", p.finset_singleton),
+            ("finset_all_below", p.finset_all_below),
+            ("finset_subset_b", p.finset_subset_b),
+            ("finset_beq", p.finset_beq),
+            ("finset_mem_b_of_lt", p.finset_mem_b_of_lt),
+            ("finset_mem_b_of_bound_le", p.finset_mem_b_of_bound_le),
+            (
+                "finset_card_eq_count_range_add",
+                p.finset_card_eq_count_range_add,
+            ),
+            (
+                "finset_card_union_add_card_inter",
+                p.finset_card_union_add_card_inter,
+            ),
+            (
+                "finset_all_below_of_all_true",
+                p.finset_all_below_of_all_true,
+            ),
+            ("finset_all_below_true_at", p.finset_all_below_true_at),
+            ("finset_card_le_of_subset_b", p.finset_card_le_of_subset_b),
+            (
+                "finset_sum_eq_sum_range_if_add",
+                p.finset_sum_eq_sum_range_if_add,
+            ),
+            ("finset_sum_union_disjoint", p.finset_sum_union_disjoint),
+            ("finset_sum_congr_of_beq", p.finset_sum_congr_of_beq),
+            ("finset_card_filter_range", p.finset_card_filter_range),
+            ("finset_card_totatives", p.finset_card_totatives),
         ],
         lists: Vec::new(),
     }
