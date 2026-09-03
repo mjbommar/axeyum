@@ -121,7 +121,7 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1064 names,
+/// The `NatPrelude` field table (1065 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -313,6 +313,7 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("ble_eq_true_of_le", p.ble_eq_true_of_le),
             ("le_of_ble_eq_true", p.le_of_ble_eq_true),
             ("not_le_of_not_ble_eq_true", p.not_le_of_not_ble_eq_true),
+            ("lt_of_ble_eq_false", p.lt_of_ble_eq_false),
             ("div_mod", p.div_mod),
             ("div_mod_exists", p.div_mod_exists),
             ("div_mod_unique", p.div_mod_unique),
@@ -1938,7 +1939,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (471 names,
+/// The `RatPrelude` field table (484 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2476,6 +2477,37 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ),
             ("pivot_search_aux_ne_zero", p.pivot_search_aux_ne_zero),
             ("pivot_search_ne_zero", p.pivot_search_ne_zero),
+            (
+                "pivot_search_aux_column_zero",
+                p.pivot_search_aux_column_zero,
+            ),
+            ("pivot_search_column_zero", p.pivot_search_column_zero),
+            (
+                "leading_index_aux_eq_of_first_nonzero",
+                p.leading_index_aux_eq_of_first_nonzero,
+            ),
+            (
+                "leading_index_eq_of_first_nonzero",
+                p.leading_index_eq_of_first_nonzero,
+            ),
+            (
+                "leading_index_aux_eq_cols_of_zero",
+                p.leading_index_aux_eq_cols_of_zero,
+            ),
+            (
+                "leading_index_eq_cols_of_zero_row",
+                p.leading_index_eq_cols_of_zero_row,
+            ),
+            ("add_neg_div_mul_cancel", p.add_neg_div_mul_cancel),
+            ("clear_below_aux_off", p.clear_below_aux_off),
+            ("clear_below_off", p.clear_below_off),
+            ("clear_below_aux_zero", p.clear_below_aux_zero),
+            ("clear_below_zero", p.clear_below_zero),
+            (
+                "clear_below_aux_preserves_zero",
+                p.clear_below_aux_preserves_zero,
+            ),
+            ("clear_below_preserves_zero", p.clear_below_preserves_zero),
         ],
         lists: Vec::new(),
     }

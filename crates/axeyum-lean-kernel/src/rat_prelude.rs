@@ -55,6 +55,7 @@ use crate::{Kernel, KernelError};
 pub(crate) mod abs;
 mod archimedean;
 mod bernoulli;
+mod clear_below;
 mod core;
 mod decidable;
 mod decide;
@@ -66,6 +67,7 @@ mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
+mod leading_index;
 mod matrix;
 mod matrix_det;
 mod matrix_det_mul;
@@ -2890,6 +2892,88 @@ pub struct RatPrelude {
     /// open, and needs a different induction — one carrying the accumulated
     /// range in its motive.
     pub pivot_search_ne_zero: NameId,
+    /// `Rat.pivotSearchAux_column_zero : ∀ M c rows q fuel r, Le r q →
+    /// Lt q rows → Lt q (Nat.add r fuel) →
+    /// Eq Nat (pivotSearchAux M c rows fuel r) rows → Eq Rat (M q c) Rat.zero`.
+    pub pivot_search_aux_column_zero: NameId,
+    /// `Rat.pivotSearch_column_zero : ∀ M c start rows q, Le start q →
+    /// Lt q rows → Eq Nat (pivotSearch M c start rows) rows →
+    /// Eq Rat (M q c) Rat.zero` — ADR-1554 obligation 2's **exhaustion
+    /// disjunct**, which ADR-1562 left open: *the scan answered `rows`, and
+    /// then the column is zero at every row it passed.* With
+    /// [`Self::pivot_search_le_rows`] (range) and [`Self::pivot_search_ne_zero`]
+    /// (value), obligation 2 is complete.
+    pub pivot_search_column_zero: NameId,
+
+    // --- what `leadingIndex` ANSWERS (`rat_prelude::leading_index`) ---------
+    /// `Rat.leadingIndexAux_eq_of_first_nonzero : ∀ M r cols j c fuel,
+    /// Le c j → Lt j cols → Lt j (Nat.add c fuel) →
+    /// (∀ k, Le c k → Lt k j → Eq Rat (M r k) Rat.zero) →
+    /// Not (Eq Rat (M r j) Rat.zero) →
+    /// Eq Nat (leadingIndexAux M r cols fuel c) j`.
+    pub leading_index_aux_eq_of_first_nonzero: NameId,
+    /// `Rat.leadingIndex_eq_of_first_nonzero : ∀ M r cols j, Lt j cols →
+    /// (∀ k, Lt k j → Eq Rat (M r k) Rat.zero) →
+    /// Not (Eq Rat (M r j) Rat.zero) → Eq Nat (leadingIndex M r cols) j`.
+    ///
+    /// The characterization a freshly-pivoted row satisfies: zero left of the
+    /// pivot column (the clause `echelonAux` maintains) and nonzero AT it
+    /// ([`Self::pivot_search_ne_zero`]).
+    pub leading_index_eq_of_first_nonzero: NameId,
+    /// `Rat.leadingIndexAux_eq_cols_of_zero : ∀ M r cols c fuel,
+    /// Le cols (Nat.add c fuel) →
+    /// (∀ k, Le c k → Lt k cols → Eq Rat (M r k) Rat.zero) →
+    /// Eq Nat (leadingIndexAux M r cols fuel c) cols`.
+    pub leading_index_aux_eq_cols_of_zero: NameId,
+    /// `Rat.leadingIndex_eq_cols_of_zero_row : ∀ M r cols,
+    /// (∀ k, Lt k cols → Eq Rat (M r k) Rat.zero) →
+    /// Eq Nat (leadingIndex M r cols) cols` — *a zero row's leading index is
+    /// `cols`*, ADR-1554 §3's design decision as a theorem rather than a
+    /// property of the definition.
+    pub leading_index_eq_cols_of_zero_row: NameId,
+
+    // --- obligation 3 (`rat_prelude::clear_below`, ADR-1571) ----------------
+    /// `Rat.add_neg_div_mul_cancel : ∀ a b, Not (Eq Rat b Rat.zero) →
+    /// Eq Rat (Rat.add a (Rat.mul (Rat.neg (Rat.div a b)) b)) Rat.zero` — the
+    /// arithmetic core ADR-1554 names for obligation 3, at the exact shape
+    /// `Rat.clearBelowAux` produces (the multiplier is on the LEFT).
+    pub add_neg_div_mul_cancel: NameId,
+    /// `Rat.clearBelowAux_off : ∀ pr pc rows q c fuel M r, Lt q r →
+    /// Eq Rat (clearBelowAux pr pc rows fuel M r q c) (M q c)` — a row
+    /// strictly above the sweep's cursor is untouched, at ANY fuel.
+    pub clear_below_aux_off: NameId,
+    /// `Rat.clearBelow_off : ∀ M pr pc rows q c, Le q pr →
+    /// Eq Rat (clearBelow M pr pc rows q c) (M q c)` — obligation 3's
+    /// "rows outside the range are untouched" half.
+    pub clear_below_off: NameId,
+    /// `Rat.clearBelowAux_zero : ∀ pr pc rows q fuel M r, Lt pr r → Le r q →
+    /// Lt q rows → Lt q (Nat.add r fuel) → Not (Eq Rat (M pr pc) Rat.zero) →
+    /// Eq Rat (clearBelowAux pr pc rows fuel M r q pc) Rat.zero`.
+    ///
+    /// The fuel bound is a real hypothesis: an exhausted sweep returns `M`
+    /// untouched, which is indistinguishable from a finished one.
+    pub clear_below_aux_zero: NameId,
+    /// `Rat.clearBelow_zero : ∀ M pr pc rows q, Lt pr q → Lt q rows →
+    /// Not (Eq Rat (M pr pc) Rat.zero) →
+    /// Eq Rat (clearBelow M pr pc rows q pc) Rat.zero` — obligation 3's
+    /// "everything below the pivot is zeroed in the pivot column" half, and
+    /// the statement ADR-1554 asks for. Spends obligation 2's value half
+    /// ([`Self::pivot_search_ne_zero`]) through the nonzero-pivot hypothesis.
+    pub clear_below_zero: NameId,
+    /// `Rat.clearBelowAux_preserves_zero : ∀ pr pc rows k q fuel M r,
+    /// Le pr r → Le r q → Lt q rows →
+    /// (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+    /// Eq Rat (clearBelowAux pr pc rows fuel M r q k) Rat.zero`.
+    pub clear_below_aux_preserves_zero: NameId,
+    /// `Rat.clearBelow_preserves_zero : ∀ M pr pc rows k q, Lt pr q →
+    /// Lt q rows → (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+    /// Eq Rat (clearBelow M pr pc rows q k) Rat.zero` — *a column already zero
+    /// from the pivot row down STAYS zero.*
+    ///
+    /// Unlike [`Self::clear_below_zero`] this needs NO fuel bound: its
+    /// conclusion is about a value the sweep PRESERVES rather than one it
+    /// creates, so the exhausted answer satisfies it directly.
+    pub clear_below_preserves_zero: NameId,
 }
 
 impl RatPrelude {
@@ -3407,6 +3491,19 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
         pivot_search_aux_ne_zero: child(kernel, "pivotSearchAux_ne_zero"),
         pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
+        pivot_search_aux_column_zero: child(kernel, "pivotSearchAux_column_zero"),
+        pivot_search_column_zero: child(kernel, "pivotSearch_column_zero"),
+        leading_index_aux_eq_of_first_nonzero: child(kernel, "leadingIndexAux_eq_of_first_nonzero"),
+        leading_index_eq_of_first_nonzero: child(kernel, "leadingIndex_eq_of_first_nonzero"),
+        leading_index_aux_eq_cols_of_zero: child(kernel, "leadingIndexAux_eq_cols_of_zero"),
+        leading_index_eq_cols_of_zero_row: child(kernel, "leadingIndex_eq_cols_of_zero_row"),
+        add_neg_div_mul_cancel: child(kernel, "add_neg_div_mul_cancel"),
+        clear_below_aux_off: child(kernel, "clearBelowAux_off"),
+        clear_below_off: child(kernel, "clearBelow_off"),
+        clear_below_aux_zero: child(kernel, "clearBelowAux_zero"),
+        clear_below_zero: child(kernel, "clearBelow_zero"),
+        clear_below_aux_preserves_zero: child(kernel, "clearBelowAux_preserves_zero"),
+        clear_below_preserves_zero: child(kernel, "clearBelow_preserves_zero"),
     }
 }
 
@@ -3473,6 +3570,8 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         pivot_bound::declare_pivot_bound(&mut d, prelude)?;
         rank_bridge::declare_rank_bridge(&mut d, prelude)?;
         pivot_content::declare_pivot_content(&mut d, prelude)?;
+        clear_below::declare_clear_below_post(&mut d, prelude)?;
+        leading_index::declare_leading_index_facts(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3511,6 +3610,12 @@ mod rank_bridge_tests;
 
 #[cfg(test)]
 mod pivot_content_tests;
+
+#[cfg(test)]
+mod clear_below_tests;
+
+#[cfg(test)]
+mod leading_index_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

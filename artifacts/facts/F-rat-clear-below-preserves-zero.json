@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-clear-below-preserves-zero",
+  "title": "Gaussian elimination's clearing sweep preserves a column already zero from the pivot row down",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every pivot row pr, pivot column pc, row count rows, column k and row q, IF Nat.Lt pr q and Nat.Lt q rows and (for all s, Nat.Le pr s and Nat.Lt s rows imply Eq Rat (M s k) Rat.zero) THEN Eq Rat (Rat.clearBelow M pr pc rows q k) Rat.zero. In words: a column that is already zero from the pivot row down stays zero. This is the clause the row-echelon loop invariant carries about the columns LEFT of its cursor, and it is what lets a pivot step extend that range by one column instead of destroying it; nothing else in the family says anything about a column other than the pivot's. THERE IS NO FUEL BOUND, and the contrast with F:rat-clear-below-zero is the finding: that statement is about a value the sweep has to CREATE, so an exhausted sweep falsifies it, while this one is about a value the sweep PRESERVES, so the exhausted answer satisfies it directly and both the base case and the out-of-range branch close from the hypothesis rather than being refuted. Re-establishing the hypothesis at the rewritten matrix splits on Nat.beq s r, a FREE split because neither branch's conclusion mentions the tested Bool; on the rewritten row the entry is M r k + (-(...)) * M pr k and BOTH summands are zero by hypothesis, which is why Nat.Le pr r is a hypothesis rather than derived.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.clearBelow_preserves_zero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.lt x1 x5) -> ((x7 : AxNat.lt x5 x3) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.le x1 x8) -> ((x10 : AxNat.lt x8 x3) -> Eq.{1} Rat (x0 x8 x4) Rat.zero)))) -> Eq.{1} Rat (Rat.clearBelow x0 x1 x2 x3 x5 x4) Rat.zero))))))))) ; theorem Rat.clearBelowAux_preserves_zero : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : ((x6 : AxNat) -> ((x7 : AxNat) -> Rat))) -> ((x7 : AxNat) -> ((x8 : AxNat.le x0 x7) -> ((x9 : AxNat.le x7 x4) -> ((x10 : AxNat.lt x4 x2) -> ((x11 : ((x11 : AxNat) -> ((x12 : AxNat.le x0 x11) -> ((x13 : AxNat.lt x11 x2) -> Eq.{1} Rat (x6 x11 x3) Rat.zero)))) -> Eq.{1} Rat (Rat.clearBelowAux x0 x1 x2 x5 x6 x7 x4 x3) Rat.zero))))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.clearBelow_preserves_zero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-clear-below-off"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-clear-below-preserves-zero-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The wrapper's regex is anchored on `Rat.clearBelow x0 x1 x2 x3 x5 x4`, whose LAST argument is `x4` -- the arbitrary column -- and not `x2`, the pivot column: confusing the two would turn this into F:rat-clear-below-zero's statement, and the loop invariant needs both. The statement pin in `clear_below_tests.rs` additionally forbids `AxNat.add` anywhere in the type, so a copied fuel bound fails.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelow_preserves_zero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.clearBelow x0 x1 x2 x3 x5 x4\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. Reduced at `[[1,7,0],[2,0,0],[3,0,0]]` swept from pivot (1,0), where column 1 is zero at rows 1 and 2 but NOT at row 0 -- so a version whose hypothesis quantified over every row would be unusable there while this one applies -- and where the same sweep changes row 2's column-0 entry from 3 to 0, so `preserved` is shown not to mean `untouched`."
+    },
+    {
+      "id": "rat-clear-below-preserves-zero-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The wrapper's regex is anchored on `Rat.clearBelow x0 x1 x2 x3 x5 x4`, whose LAST argument is `x4` -- the arbitrary column -- and not `x2`, the pivot column: confusing the two would turn this into F:rat-clear-below-zero's statement, and the loop invariant needs both. The statement pin in `clear_below_tests.rs` additionally forbids `AxNat.add` anywhere in the type, so a copied fuel bound fails.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelowAux_preserves_zero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.clearBelowAux x0 x1 x2 x5 x6 x7 x4 x3\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. Reduced at `[[1,7,0],[2,0,0],[3,0,0]]` swept from pivot (1,0), where column 1 is zero at rows 1 and 2 but NOT at row 0 -- so a version whose hypothesis quantified over every row would be unusable there while this one applies -- and where the same sweep changes row 2's column-0 entry from 3 to 0, so `preserved` is shown not to mean `untouched`."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/clear_below.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about a column that is zero only BELOW the pivot row and nonzero at it. The hypothesis quantifies from `pr` inclusive because the sweep adds a multiple of the PIVOT row into each row it rewrites, so the pivot row's own entry in that column has to be zero too. It is not a strengthening of F:rat-clear-below-zero and does not imply it."
+}

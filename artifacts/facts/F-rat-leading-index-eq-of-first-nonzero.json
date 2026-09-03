@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-leading-index-eq-of-first-nonzero",
+  "title": "A row zero left of a nonzero entry has that entry's column as its leading index",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every row r, column count cols and column j, IF Nat.Lt j cols and (for all k, Nat.Lt k j implies Eq Rat (M r k) Rat.zero) and Not (Eq Rat (M r j) Rat.zero) THEN Eq Nat (Rat.leadingIndex M r cols) j -- and the same for the fuelled Rat.leadingIndexAux from an arbitrary start c under Nat.Le c j and the fuel bound Nat.Lt j (Nat.add c fuel). Rat.leadingIndex is a fuelled scan and echelon.rs supplies only its defining unfolding; this is the CONVERSE direction, which is what every consumer wants: given what the row looks like, what does the scan return? It is exactly the shape a freshly-pivoted row satisfies -- zero left of the pivot column (the clause the elimination loop maintains) and nonzero AT it (F:rat-pivot-search-ne-zero) -- so it is the piece that turns a pivot step into a statement about leading indices, which is what Rat.isEchelon and Rat.rank both read. The isZeroB = false leaf is the one that CLOSES here (the scan stopped where it should have) and the two exhaustion leaves are refuted from the range hypotheses.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.leadingIndex_eq_of_first_nonzero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x2) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.lt x5 x3) -> Eq.{1} Rat (x0 x1 x5) Rat.zero))) -> ((x6 : Not (Eq.{1} Rat (x0 x1 x3) Rat.zero)) -> Eq.{1} AxNat (Rat.leadingIndex x0 x1 x2) x3))))))) ; theorem Rat.leadingIndexAux_eq_of_first_nonzero : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.le x5 x3) -> ((x7 : AxNat.lt x3 x2) -> ((x8 : AxNat.lt x3 (AxNat.add x5 x4)) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat.le x5 x9) -> ((x11 : AxNat.lt x9 x3) -> Eq.{1} Rat (x0 x1 x9) Rat.zero)))) -> ((x10 : Not (Eq.{1} Rat (x0 x1 x3) Rat.zero)) -> Eq.{1} AxNat (Rat.leadingIndexAux x0 x1 x2 x4 x5) x3)))))))))))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.leadingIndex_eq_of_first_nonzero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-pivot-search-ne-zero",
+    "F:nat-zero-add",
+    "F:nat-zero-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-leading-index-eq-of-first-nonzero-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. Each regex is anchored on an EQUATION `Eq.{1} AxNat (Rat.leadingIndex x0 x1 x2) x3`, not a bound: a version concluding `AxNat.le` would be true and useless, because it would not pin the pivot column, and it would not match. The `x3` on the right is the same variable the nonzero hypothesis is about, so a version concluding about a different column fails too.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndex_eq_of_first_nonzero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndex x0 x1 x2\\) x3\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The scan itself is reduced against hand-computed answers at `[[1,2,3],[0,0,5],[0,0,0]]` -- a leading entry at column 0, one at the LAST column so the scan skips two zeroes first -- with a control that must not be `def_eq`. A characterization theorem that agreed with a WRONG scan would be useless, and only reduction distinguishes the two."
+    },
+    {
+      "id": "rat-leading-index-eq-of-first-nonzero-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. Each regex is anchored on an EQUATION `Eq.{1} AxNat (Rat.leadingIndex x0 x1 x2) x3`, not a bound: a version concluding `AxNat.le` would be true and useless, because it would not pin the pivot column, and it would not match. The `x3` on the right is the same variable the nonzero hypothesis is about, so a version concluding about a different column fails too.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndexAux_eq_of_first_nonzero[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndexAux x0 x1 x2 x4 x5\\) x3\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The scan itself is reduced against hand-computed answers at `[[1,2,3],[0,0,5],[0,0,0]]` -- a leading entry at column 0, one at the LAST column so the scan skips two zeroes first -- with a control that must not be `def_eq`. A characterization theorem that agreed with a WRONG scan would be useless, and only reduction distinguishes the two."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/leading_index.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about a row with no nonzero entry at all, which is F:rat-leading-index-eq-cols-of-zero-row. It does not by itself say that any particular row of `Rat.rowEchelon` satisfies its hypotheses -- that is the loop invariant, which is NOT proved (ADR-1571 section 3) -- so it does not give `Rat.rowEchelon_isEchelon` and does not discharge ADR-1562's pivot section."
+}

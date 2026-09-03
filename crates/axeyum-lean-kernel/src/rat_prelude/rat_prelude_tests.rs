@@ -339,6 +339,34 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ),
         ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero),
         ("pivotSearch_ne_zero", p.pivot_search_ne_zero),
+        ("add_neg_div_mul_cancel", p.add_neg_div_mul_cancel),
+        ("clearBelowAux_off", p.clear_below_aux_off),
+        ("clearBelow_off", p.clear_below_off),
+        ("clearBelowAux_zero", p.clear_below_aux_zero),
+        ("clearBelow_zero", p.clear_below_zero),
+        (
+            "clearBelowAux_preserves_zero",
+            p.clear_below_aux_preserves_zero,
+        ),
+        ("clearBelow_preserves_zero", p.clear_below_preserves_zero),
+        ("pivotSearchAux_column_zero", p.pivot_search_aux_column_zero),
+        ("pivotSearch_column_zero", p.pivot_search_column_zero),
+        (
+            "leadingIndexAux_eq_of_first_nonzero",
+            p.leading_index_aux_eq_of_first_nonzero,
+        ),
+        (
+            "leadingIndex_eq_of_first_nonzero",
+            p.leading_index_eq_of_first_nonzero,
+        ),
+        (
+            "leadingIndexAux_eq_cols_of_zero",
+            p.leading_index_aux_eq_cols_of_zero,
+        ),
+        (
+            "leadingIndex_eq_cols_of_zero_row",
+            p.leading_index_eq_cols_of_zero_row,
+        ),
     ]
 }
 
@@ -7095,6 +7123,47 @@ fn the_determinant_toolkit_is_axiom_free() {
         ),
         ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero, true),
         ("pivotSearch_ne_zero", p.pivot_search_ne_zero, true),
+        ("add_neg_div_mul_cancel", p.add_neg_div_mul_cancel, true),
+        ("clearBelowAux_off", p.clear_below_aux_off, true),
+        ("clearBelow_off", p.clear_below_off, true),
+        ("clearBelowAux_zero", p.clear_below_aux_zero, true),
+        ("clearBelow_zero", p.clear_below_zero, true),
+        (
+            "clearBelowAux_preserves_zero",
+            p.clear_below_aux_preserves_zero,
+            true,
+        ),
+        (
+            "clearBelow_preserves_zero",
+            p.clear_below_preserves_zero,
+            true,
+        ),
+        (
+            "pivotSearchAux_column_zero",
+            p.pivot_search_aux_column_zero,
+            true,
+        ),
+        ("pivotSearch_column_zero", p.pivot_search_column_zero, true),
+        (
+            "leadingIndexAux_eq_of_first_nonzero",
+            p.leading_index_aux_eq_of_first_nonzero,
+            true,
+        ),
+        (
+            "leadingIndex_eq_of_first_nonzero",
+            p.leading_index_eq_of_first_nonzero,
+            true,
+        ),
+        (
+            "leadingIndexAux_eq_cols_of_zero",
+            p.leading_index_aux_eq_cols_of_zero,
+            true,
+        ),
+        (
+            "leadingIndex_eq_cols_of_zero_row",
+            p.leading_index_eq_cols_of_zero_row,
+            true,
+        ),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-add-neg-div-mul-cancel",
+  "title": "The arithmetic core of Gaussian elimination's clearing step over the rationals",
+  "statement": "For all rationals a and b, IF Not (Eq Rat b Rat.zero) THEN Eq Rat (Rat.add a (Rat.mul (Rat.neg (Rat.div a b)) b)) Rat.zero. In words: subtracting (a/b) times b from a leaves zero, whenever b is nonzero. This is the arithmetic core ADR-1554 names for obligation 3, stated at the exact shape Rat.clearBelowAux produces -- the multiplier is on the LEFT, because the row operation is rowAddMul r pr (neg (div (M r pc) (M pr pc))) M, and Rat.mul_neg is stated with the negation on the right, so the first two steps of the proof are the two Rat.mul_comm applications that move it across. Rat.div is a Definition that unfolds to a * inv b, so Rat.mul_assoc applies to the quotient without a rewrite, and the nonzero hypothesis is spent exactly once, in Rat.mul_inv_cancel_of_ne_zero. The hypothesis is load-bearing rather than defensive: Rat.inv Rat.zero is Rat.zero, so at b = 0 the whole correction term vanishes and the expression reduces to a.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.add_neg_div_mul_cancel : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : Not (Eq.{1} Rat x1 Rat.zero)) -> Eq.{1} Rat (Rat.add x0 (Rat.mul (Rat.neg (Rat.div x0 x1)) x1)) Rat.zero)))",
+    "fragment": "Rat",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.add_neg_div_mul_cancel"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:rat-add-neg", "F:rat-mul-assoc", "F:rat-mul-comm", "F:rat-mul-inv-cancel-of-ne-zero", "F:rat-mul-neg", "F:rat-mul-one"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-add-neg-div-mul-cancel-1",
+      "kind": "kernel-term",
+      "supports": "The theorem is checked and axiom-free in all FOUR preludes that build the rationals, and the checker requires exactly four rows. The regex pins the whole left-hand side `Rat.add x0 (Rat.mul (Rat.neg (Rat.div x0 x1)) x1)`, which is the part most easily got wrong: the multiplier is on the LEFT of the product because that is the shape `Rat.clearBelowAux` produces, and a version stated with `Rat.mul x1 (Rat.neg …)` -- the shape `Rat.mul_neg` hands you -- would be true but would not apply where it is needed, and would not match.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.add_neg_div_mul_cancel[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.add x0 \\(Rat\\.mul \\(Rat\\.neg \\(Rat\\.div x0 x1\\)\\) x1\\)\\) Rat\\.zero\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: exactly four rows match, mutation-checked by `scripts/new-fact.py`. The hypothesis is shown load-bearing by REDUCTION rather than by assertion in `the_arithmetic_core_computes_and_its_hypothesis_is_load_bearing` (`rat_prelude/clear_below_tests.rs`): the expression reduces to 0 at (a,b) = (3,2) and to 3 at (3,0)."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/clear_below.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is the registered evaluation test named in the evidence notes. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about `Rat.clearBelow` itself -- this is one equation about four field operations. It also does not hold without its hypothesis: `Rat.inv Rat.zero` is `Rat.zero`, so at b = 0 the correction term vanishes and the value is `a`, which the registered test checks by reduction."
+}

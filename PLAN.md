@@ -221,6 +221,12 @@ now. Nothing was deleted.
 | 2026-09-02 | dev-partition-all-manifests | grandfathered `authoritative-mathlib-nat-bit-constructor-family-v1` (ADR-1570 authority, both re-derived properties hold); gate PASSes with the fixed loader |
 | 2026-09-02 | dev-partition-all-manifests | two new tests + one mutation control pin the multi-manifest read in `test_development_partition.py` / `mutation_controls.py` |
 | 2026-09-02 | dev-partition-all-manifests | `test_check_autogenesis_holdout_isolation.py`'s pinned `held_out=206` replaced with a re-derived count (`committed_held_out_ids`) plus a floor and a live-movement test |
+| 2026-09-02 | echelon-invariant | `Nat.lt_of_ble_eq_false`: the strict false-side `ble` bridge, promoted into `nat_prelude` |
+| 2026-09-02 | echelon-invariant | ADR-1554 obligation 3 closed — `Rat.clearBelow_off`/`_zero` + `Rat.add_neg_div_mul_cancel` |
+| 2026-09-02 | echelon-invariant | Obligation 2 completed — `Rat.pivotSearch_column_zero`, the exhaustion disjunct |
+| 2026-09-02 | echelon-invariant | `Rat.leadingIndex` characterized in both directions (first-nonzero, zero row) |
+| 2026-09-02 | echelon-invariant | `Rat.clearBelow_preserves_zero` — a zero column survives the sweep, with no fuel bound |
+| 2026-09-02 | echelon-invariant | ADR-1571; eight facts; the dominance document's "no `rank`" row corrected |
 | 2026-09-02 | `rat_prelude/sum_maps.rs` | `Rat.prodRange` and `Rat.sumMaps` — the finite product over a range and the sum indexed by the FUNCTION SPACE `[0,m) → [0,n)`, both measured absent over ℚ by `shape_search` against a fresh 2,048-declaration index with three same-kind positive controls. Ported from `int_prelude/prod.rs` and `int_prelude/sum_maps.rs`; three things differ and each cost a base case — this prelude has no `Rat.one_mul` and no `Rat.zero_mul`, so the left identity and the left absorbing zero are derived inline from `mul_comm`; right distributivity is `Rat.right_distrib`, not `Int.add_mul`; and `Rat.mul_sumRange` states the left pull the wrong way round for the induction. `Rat.sumMaps_mul_right` has no `Int` counterpart and is not a convenience: `Rat.det_row_selection` puts `det B n` on the RIGHT of every summand. Thirteen declarations, all axiom-free, with an evaluation-test module (cardinality `n^m` at seven `(m,n)` including both empty cases; the full product separated from its diagonal; `prodRange`'s exclusive bound separated in both directions). One negative control was replaced because it was vacuous: the two `mul` pulls are `def_eq` at any concrete instance and had to be separated at their general types. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | `Rat.matSetRow` and `Rat.matSubstRows` plus their four equations — the row surgery the Cauchy–Binet cursor substitutes with, needed as TERMS because `Rat.det_row_smul`/`det_row_replaced` take the reference matrix as an argument rather than a hypothesis. `matSubstRows` peels the OUTERMOST row first, which is what makes `matSubstRows B (succ j) s (cons k g) M` and `matSubstRows B j (succ s) g (matSetRow s (B k) M)` the same term up to ι and η and removes the commutation lemma the default order would need; `matSetRow` selects on `Nat.beq` (`Rat.matId`'s encoding) rather than recursing, turning both of its equations from inductions into single rewrites; the cursor's row is `Nat.add s i`, offset LEFT, so `add s 0` ι-reduces and the whole arithmetic cost is one `Nat.succ_add`. Evaluation tests over a 3×3 with pairwise distinct entries and a non-monotone `g`, with the absolute-index and copy-row-`s+i` defects both asserted apart. ADR-1543. |
 | 2026-09-02 | `rat_prelude/det_mul.rs` | **`Rat.det_matMul : ∀ n A B, det (matMul A B n) n = det A n * det B n`** — ADR-1120's last open law, axiom-free at symbolic `n`, together with `Rat.det_matMul_expand` (ADR-1440's **obligation 1**, the expansion over the function space of index maps) and `Rat.sumMaps_congr_mapsInto` (the congruence restricted to maps into the range, which is what carries `Rat.det_row_selection`'s `MapsInto` hypothesis through the sum; its successor step needs `sumRange_congr_lt`, not `sumRange_congr`, and its base case needs no `0 < n`). The assembly uses the expansion TWICE — at `B` and at `matId` — so the coefficient `prodRange (fun i => A i (g i)) n` is never evaluated. `rat_prelude::` 169 passed / 0 failed; `rat` prelude build 1.68/1.66/1.64 s against 1.66/1.63/1.65 s at the merge base, within noise. Facts `F:rat-det-mat-mul`, `F:rat-det-mat-mul-expand`. The dominance document's §4.3 determinant row is corrected in place. ADR-1543. |
@@ -38568,6 +38574,67 @@ python orphans). `validate-facts.py`: 2682 facts, 0 errors, unaffected.
 
 Did not run: no `cargo` gate (none expected for this Python-only change; not
 touched). Did not push (not requested).
+
+**echelon-invariant (`DONE, with one deliverable explicitly NOT landed`,
+2026-09-02).** Fourteen axiom-free declarations (thirteen `Rat`, one `Nat`),
+eight commits, eight facts, ADR-1571.
+
+**Landed.** `Nat.lt_of_ble_eq_false` — the STRICT false-side `ble` bridge three
+consumers were owed (ADR-1558 §4, ADR-1562 §4), promoted into `nat_prelude` and
+spent exactly once. **ADR-1554 obligation 3 CLOSED**: `Rat.clearBelow_off`,
+`Rat.clearBelow_zero` and the arithmetic core `Rat.add_neg_div_mul_cancel`, with
+the fuelled form of each. **Obligation 2 COMPLETE**: `Rat.pivotSearch_column_zero`
+is the exhaustion disjunct ADR-1562 recorded open, and with the range half
+(ADR-1558) and the value half (ADR-1562) that obligation is now the first of the
+four to close outright. Three of obligation 4's four prerequisites:
+`Rat.leadingIndex_eq_of_first_nonzero`, `Rat.leadingIndex_eq_cols_of_zero_row`
+and `Rat.clearBelow_preserves_zero`.
+
+**NOT landed, and this is the deliverable the brief led with.**
+`Rat.rowEchelon_isEchelon` is not proved, the pivot section is not derived, and
+therefore ADR-1562's bridge is still conditional: `Rat.rank_eq_rankCols`,
+`Rat.rank_le_cols` and the row-form rank-nullity remain `_of_pivotSection`, and
+rank invariance under the elementary row operations was not attempted. **The
+next lane's exact starting point** is ADR-1571 §3's table: one prerequisite is
+still missing (`Rat.rowSwap` preserving a zero range over `[pr, rows)`, which
+the pivot step needs because the swap happens BEFORE the sweep and between two
+rows both in that range), and after it the invariant `Prop` and two inductions —
+the fuel induction that preserves it and the exit derivation over
+`isEchelonAux`'s own fuel. The sizing correction worth carrying: ADR-1554 called
+obligation 4 "the loop invariant", and the loop invariant is only the last two
+rows of that table; the four rows above it are separate lemmas about three
+different functions and none was visible in the original sizing.
+
+**Two findings that generalise.** (1) A fuelled recursion's postcondition needs
+a fuel bound **iff its conclusion is false of the recursion's exhaustion
+answer**. `clearBelow_zero` and `clearBelow_preserves_zero` are the same
+function one hypothesis apart, and which way the conclusion points is the only
+difference — the first needs `Lt q (r + fuel)` and refutes its exhaustion
+branches, the second needs nothing and closes them from the hypothesis. (2) The
+lambda that BUILDS a `Not (…)` must bind its argument at the equation, not at
+the negation; binding at `Not (…)` gives `Not (Not (…))` and the kernel answers
+with a bare `TypeMismatch` between two consecutive `ExprId`s, naming nothing.
+One `eprintln` per `declare_*` call found it in a single rebuild.
+
+**The dominance document's "no `rank` function at all" row is corrected in
+place** (`docs/formalized-math-2026-08/09-*.md` §4.3), following ADR-1543's
+precedent for the determinant. Measured on a fresh index (2,201 declarations),
+`shape_search --ns Rat --name-contains rank` returns 14. What a referee should
+check is not an absence but "built, with one open equation between its two
+forms".
+
+**Cost.** `rat` prelude 1.683–1.705 s (`prelude_build_timing`, four runs)
+against 1.653–1.660 s measured on the same host three commits earlier, so this
+IS a delta and not merely a level: the fourteen declarations cost ~30–45 ms. The
+family is now marginally above the ~1.65 s it was told to watch and inside the
+~1.7 s band. Final sweeps: `rat_prelude::` 225 passed, `nat_prelude::` 408
+passed (both NONZERO counts, `--release`, `--test-threads=4`); of those,
+`clear_below_tests` 9, `leading_index_tests` 4, `pivot_content_tests` 5.
+
+**Did not run.** No workspace sweep, no `just check`, no `check.sh`, no push.
+Clippy was run as `-p axeyum-lean-kernel --all-targets -- -D warnings` and is
+clean; nothing wider was attempted, so this lane makes no claim about the
+aggregate gate.
 
 **Both of Euclid's missing ingredients are in; `F:nat-exists-prime-gt` is one
 slice from closing** (`WIP`, nat-prime-divisor, 2026-08-17).

@@ -1065,6 +1065,18 @@ pub struct NatPrelude {
     /// `Nat.not_le_of_not_ble_eq_true :
     ///   ∀ (n m : Nat), Not (ble n m = true) → Not (Le n m)`.
     pub not_le_of_not_ble_eq_true: NameId,
+    /// `Nat.lt_of_ble_eq_false : ∀ (n m : Nat), ble n m = false → Lt m n`.
+    ///
+    /// The false-side twin of [`le_of_ble_eq_true`](Self::le_of_ble_eq_true),
+    /// in the STRICT form. Three consumers wanted it before it existed
+    /// (ADR-1558 §4, ADR-1562 §4): `ipc_soundness.rs` declared the non-strict
+    /// statement under a non-`Nat` name, `rat_prelude/pivot_bound.rs` inlined
+    /// the non-strict form through `le_total`, and the echelon searches need
+    /// the strict one, because `Nat.ble rows r = false` is the only place a row
+    /// index is known to be IN RANGE and the counting law's `MapsInto`
+    /// hypothesis demands `Lt`. The strict form implies the non-strict one
+    /// (`le_of_lt`) and not conversely, so this is the statement to promote.
+    pub lt_of_ble_eq_false: NameId,
 
     // --- Euclidean division -------------------------------------------------
     /// `Nat.divMod d n q r := n = d*q+r ∧ r<d`.
@@ -6355,6 +6367,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             ble_eq_true_of_le: kernel.name_str(nat, "ble_eq_true_of_le"),
             le_of_ble_eq_true: kernel.name_str(nat, "le_of_ble_eq_true"),
             not_le_of_not_ble_eq_true: kernel.name_str(nat, "not_le_of_not_ble_eq_true"),
+            lt_of_ble_eq_false: kernel.name_str(nat, "lt_of_ble_eq_false"),
             div_mod: kernel.name_str(nat, "divMod"),
             div_mod_exists: kernel.name_str(nat, "div_mod_exists"),
             div_mod_unique: kernel.name_str(nat, "div_mod_unique"),
