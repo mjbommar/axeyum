@@ -1861,6 +1861,216 @@ fn declare_sum_union_disjoint(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// Summing over sets that agree.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.sum_congr_of_beq : ∀ s t f, Eq Bool (beq s t) true →
+/// Eq Nat (sum s f) (sum t f)`.
+///
+/// This kernel has no `funext`, so there is no "`s` and `t` are equal sets"
+/// hypothesis to take: the premise is the DECIDED pointwise agreement `beq`,
+/// and the proof reads it back with [`declare_all_below_laws`]'s reflection
+/// lemma. That is `Nat.sumRangeIf_congr_lt`'s shape one level up — bounded
+/// agreement of the predicates, bounded agreement of the summands (here
+/// `Eq.refl`, since the summand is shared) — and it is the reason the reflection
+/// direction had to exist before this statement could be made at all.
+///
+/// The per-index step is a nested `Bool` decision: `memB s i = true` collapses
+/// `beq`'s guard to `memB t i`, which the premise then forces to `true`; at
+/// `memB s i = false` the inner guard is reached, and its `memB t i = true`
+/// branch is `false` — contradicting the premise — while its `false` branch
+/// closes. Three leaves, one of them a refutation.
+fn declare_sum_congr_of_beq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fty = fun_ty(d);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let bs = fs_bound(d, &p, s);
+    let bt = fs_bound(d, &p, t);
+    let width = d.add(bs, bt);
+
+    let hyp_ty = {
+        let decided = d.const_app(p.finset_beq, &[s, t]);
+        let tr = d.bool_true();
+        d.bool_eq(decided, tr)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // `beq`'s loop body, as a function: the pointwise biconditional.
+    let agreement = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let msi = fs_mem(d, &p, s, i);
+        let mti = fs_mem(d, &p, t, i);
+        let tr = d.bool_true();
+        let fa = d.bool_false();
+        let neither = bool_select_bool(d, &p, mti, fa, tr);
+        let body = bool_select_bool(d, &p, msi, mti, neither);
+        d.lam_fv(i_fv, nat, body)
+    };
+    let pointwise = d.lemma(p.finset_all_below_true_at, &[agreement, width, h]);
+
+    // `∀ i, Lt i width → memB s i = memB t i`.
+    let members_agree = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, width);
+        let hi = d.kernel().fvar(hi_fv);
+        let msi = fs_mem(d, &p, s, i);
+        let mti = fs_mem(d, &p, t, i);
+        let tr = d.bool_true();
+        let fa = d.bool_false();
+        let neither = bool_select_bool(d, &p, mti, fa, tr);
+        let guard = bool_select_bool(d, &p, msi, mti, neither);
+        let answered = d.apply(pointwise, &[i, hi]);
+        let goal = d.bool_eq(msi, mti);
+
+        let outer = super::ops::bool_true_or_false(d, &p, msi);
+        let outer_left_ty = d.bool_eq(msi, tr);
+        let outer_right_ty = d.bool_eq(msi, fa);
+
+        // `memB s i = true`: the guard is `memB t i`, which the premise makes
+        // `true`, and both sides are then `true`.
+        let outer_left = {
+            let hms_fv = d.fresh_fvar();
+            let hms = d.kernel().fvar(hms_fv);
+            let collapse = select_bool_true(d, &p, msi, mti, neither, hms);
+            let back = d.bool_symm(guard, mti, collapse);
+            let t_true = d.bool_trans(mti, guard, tr, back, answered);
+            let back_t = d.bool_symm(mti, tr, t_true);
+            let step = d.bool_trans(msi, tr, mti, hms, back_t);
+            d.lam_fv(hms_fv, outer_left_ty, step)
+        };
+
+        // `memB s i = false`: the guard is the inner biconditional branch.
+        let outer_right = {
+            let hms_fv = d.fresh_fvar();
+            let hms = d.kernel().fvar(hms_fv);
+            let collapse = select_bool_false(d, &p, msi, mti, neither, hms);
+            let back = d.bool_symm(guard, neither, collapse);
+            let inner_true = d.bool_trans(neither, guard, tr, back, answered);
+
+            let inner = super::ops::bool_true_or_false(d, &p, mti);
+            let inner_left_ty = d.bool_eq(mti, tr);
+            let inner_right_ty = d.bool_eq(mti, fa);
+
+            // `memB t i = true` here would make the branch `false`, which
+            // contradicts the premise. This is the leaf that makes `beq` a
+            // BICONDITIONAL rather than a one-sided inclusion.
+            let inner_left = {
+                let hmt_fv = d.fresh_fvar();
+                let hmt = d.kernel().fvar(hmt_fv);
+                let is_false = select_bool_true(d, &p, mti, fa, tr, hmt);
+                let back_inner = d.bool_symm(neither, fa, is_false);
+                let impossible = d.bool_trans(fa, neither, tr, back_inner, inner_true);
+                let absurd = d.false_true_elim(goal, impossible);
+                d.lam_fv(hmt_fv, inner_left_ty, absurd)
+            };
+            let inner_right = {
+                let hmt_fv = d.fresh_fvar();
+                let hmt = d.kernel().fvar(hmt_fv);
+                let back_t = d.bool_symm(mti, fa, hmt);
+                let step = d.bool_trans(msi, fa, mti, hms, back_t);
+                d.lam_fv(hmt_fv, inner_right_ty, step)
+            };
+            let decided_inner = or_elim(
+                d,
+                &p,
+                inner_left_ty,
+                inner_right_ty,
+                goal,
+                inner_left,
+                inner_right,
+                inner,
+            );
+            d.lam_fv(hms_fv, outer_right_ty, decided_inner)
+        };
+
+        let decided = or_elim(
+            d,
+            &p,
+            outer_left_ty,
+            outer_right_ty,
+            goal,
+            outer_left,
+            outer_right,
+            outer,
+        );
+        let with_hi = d.lam_fv(hi_fv, hi_ty, decided);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    let summands_agree = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, width);
+        let fi = d.apply(f, &[i]);
+        let step = d.refl(fi);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, step);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+    let folds_agree = d.lemma(
+        p.sum_range_if_congr_lt,
+        &[ms, mt, f, f, width, members_agree, summands_agree],
+    );
+
+    let h_sum_s = d.lemma(p.finset_sum_eq_sum_range_if_add, &[s, bt, f]);
+    let h_sum_t = {
+        let comm = d.lemma(p.add_comm, &[bs, bt]);
+        let swapped = d.add(bt, bs);
+        let move_bound = d.congr(width, swapped, comm, &|d, x| {
+            let mt_inner = fs_mem_fn(d, &p, t);
+            sum_range_if(d, &p, mt_inner, f, x)
+        });
+        let collapse = d.lemma(p.finset_sum_eq_sum_range_if_add, &[t, bs, f]);
+        let lhs = sum_range_if(d, &p, mt, f, width);
+        let midpoint = sum_range_if(d, &p, mt, f, swapped);
+        let sum_t = d.const_app(p.finset_sum, &[t, f]);
+        d.trans(lhs, midpoint, sum_t, move_bound, collapse)
+    };
+
+    let fold_s = sum_range_if(d, &p, ms, f, width);
+    let fold_t = sum_range_if(d, &p, mt, f, width);
+    let sum_s = d.const_app(p.finset_sum, &[s, f]);
+    let sum_t = d.const_app(p.finset_sum, &[t, f]);
+
+    let open_s = d.symm(fold_s, sum_s, h_sum_s);
+    let (_, proof) = d.chain(
+        sum_s,
+        &[(fold_s, open_s), (fold_t, folds_agree), (sum_t, h_sum_t)],
+    );
+
+    let concl = d.eq(sum_s, sum_t);
+    let ty = {
+        let with_h = d.arrow(hyp_ty, concl);
+        let with_f = d.pi_fv(f_fv, fty, with_h);
+        let with_t = d.pi_fv(t_fv, fs, with_f);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_f = d.lam_fv(f_fv, fty, with_h);
+        let with_t = d.lam_fv(t_fv, fs, with_f);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_sum_congr_of_beq, ty, value)?;
+    Ok(())
+}
+
 /// Every `Nat.Finset` declaration, in dependency order.
 ///
 /// # Errors
@@ -1877,5 +2087,6 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_card_le_of_subset_b(d, p)?;
     declare_sum_eq_sum_range_if_add(d, p)?;
     declare_sum_union_disjoint(d, p)?;
+    declare_sum_congr_of_beq(d, p)?;
     Ok(())
 }

@@ -462,6 +462,7 @@ fn every_finset_declaration_is_present_and_axiom_free() {
         ("card_le_of_subsetB", p.finset_card_le_of_subset_b),
         ("sum_eq_sumRangeIf_add", p.finset_sum_eq_sum_range_if_add),
         ("sum_union_disjoint", p.finset_sum_union_disjoint),
+        ("sum_congr_of_beq", p.finset_sum_congr_of_beq),
     ];
     for (label, name) in names {
         assert!(
@@ -761,5 +762,112 @@ fn sum_union_disjoint_instantiates_and_its_hypothesis_is_load_bearing() {
     assert!(
         f.k.infer(closed).is_ok(),
         "sum_union_disjoint must infer at free set and summand variables"
+    );
+}
+
+/// `Nat.Finset.sum_congr_of_beq`, instantiated where the `beq` decision
+/// computes, and its hypothesis shown to be LOAD-BEARING.
+///
+/// `range 3` and `{0,1,2}` are the same set with different REPRESENTATIONS: the
+/// bounds are `3` and `6` and the stored predicates are unrelated terms, so
+/// `sum` folds over ranges of different lengths on the two sides and the two
+/// sums are equal for a reason, not by being the same term. `beq` decides them
+/// equal, so the witness is `Eq.refl true`.
+///
+/// The load-bearing check is `range 3` against `range 4`, where `beq` is `false`
+/// and the two sums are `3` and `6`: a `sum_congr` stated without the hypothesis
+/// would be false there.
+#[test]
+fn sum_congr_of_beq_instantiates_and_its_hypothesis_is_load_bearing() {
+    let mut f = Fixture::new();
+    let name = f.p.finset_sum_congr_of_beq;
+
+    // The two representations really are different: bounds 3 and 9.
+    let r3 = f.range(3);
+    let listed = f.of(&[0, 1, 2]);
+    let bound_name = f.p.finset_bound;
+    let b1 = f.const_app(bound_name, &[r3]);
+    let b2 = f.const_app(bound_name, &[listed]);
+    let three = f.num(3);
+    // `{0,1,2}` is `union (union (singleton 0) (singleton 1)) (singleton 2)`,
+    // and `union` takes the SUM of its operands' bounds: (1 + 2) + 3 = 6.
+    let six_bound = f.num(6);
+    assert!(f.k.def_eq(b1, three), "bound (range 3) must be 3");
+    assert!(f.k.def_eq(b2, six_bound), "bound {{0,1,2}} must be 6");
+    assert!(
+        !f.k.def_eq(b1, b2),
+        "the two representations must have DIFFERENT bounds, or this instance \
+         checks nothing"
+    );
+
+    let id = f.identity();
+    let witness = {
+        let t = f.bool_true();
+        f.bool_refl(t)
+    };
+    let applied = f.const_app(name, &[r3, listed, id, witness]);
+    let ty =
+        f.k.infer(applied)
+            .expect("sum_congr_of_beq must instantiate where beq computes to true");
+    let three_a = f.num(3);
+    let three_b = f.num(3);
+    let expected = f.eq(three_a, three_b);
+    assert!(
+        f.k.def_eq(ty, expected),
+        "at (range 3, {{0,1,2}}) with id the conclusion must be 3 = 3, got {}",
+        f.k.render_lean(ty)
+    );
+    let six = f.num(6);
+    let wrong = {
+        let a = f.num(3);
+        f.eq(a, six)
+    };
+    assert!(
+        !f.k.def_eq(ty, wrong),
+        "negative control: the conclusion must NOT be 3 = 6"
+    );
+
+    // The hypothesis is load-bearing: at a pair `beq` rejects, the sums differ.
+    let r3b = f.range(3);
+    let r4 = f.range(4);
+    let beq_name = f.p.finset_beq;
+    let decided = f.const_app(beq_name, &[r3b, r4]);
+    let fa = f.bool_false();
+    assert!(
+        f.k.def_eq(decided, fa),
+        "beq (range 3) (range 4) must be false"
+    );
+    let id2 = f.identity();
+    let s3 = f.sum(r3b, id2);
+    let id3 = f.identity();
+    let s4 = f.sum(r4, id3);
+    let three_c = f.num(3);
+    let six_b = f.num(6);
+    assert!(f.k.def_eq(s3, three_c), "sum (range 3) id must be 3");
+    assert!(f.k.def_eq(s4, six_b), "sum (range 4) id must be 6");
+    assert!(
+        !f.k.def_eq(s3, s4),
+        "the `beq` hypothesis is LOAD-BEARING: 3 != 6 at a rejected pair"
+    );
+
+    // Symbolic: free sets and a free summand.
+    let fs = f.k.const_(f.p.finset, vec![]);
+    let nat = f.nat_ty();
+    let fn_ty = f.arrow(nat, nat);
+    let s_fv = f.fresh_fvar();
+    let s = f.k.fvar(s_fv);
+    let t_fv = f.fresh_fvar();
+    let tv = f.k.fvar(t_fv);
+    let g_fv = f.fresh_fvar();
+    let g = f.k.fvar(g_fv);
+    let at_free = f.const_app(name, &[s, tv, g]);
+    let closed = {
+        let inner = f.lam_fv(g_fv, fn_ty, at_free);
+        let mid = f.lam_fv(t_fv, fs, inner);
+        f.lam_fv(s_fv, fs, mid)
+    };
+    assert!(
+        f.k.infer(closed).is_ok(),
+        "sum_congr_of_beq must infer at free set and summand variables"
     );
 }
