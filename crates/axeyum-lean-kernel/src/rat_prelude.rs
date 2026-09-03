@@ -64,6 +64,7 @@ mod det_mul;
 mod diagonal;
 mod echelon;
 mod echelon_invariant;
+mod echelon_section;
 mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
@@ -3062,6 +3063,57 @@ pub struct RatPrelude {
     /// **obligation 4, unconditional.** Gaussian elimination produces a matrix
     /// in row-echelon form.
     pub row_echelon_is_echelon: NameId,
+    /// `Rat.lt_of_echelonStepOk : ∀ l1 l2 cols,
+    /// Eq Bool (echelonStepOk l1 l2 cols) true → Lt l2 cols → Lt l1 l2` —
+    /// decoding the test: a second row leading strictly inside the width forces
+    /// the FIRST disjunct, because the second requires `Le cols l2`.
+    pub lt_of_echelon_step_ok: NameId,
+    /// `Rat.pairs_of_isEchelonAux : ∀ E rows cols q fuel r, Le r q →
+    /// Lt (succ q) rows → Lt q (Nat.add r fuel) →
+    /// Eq Bool (isEchelonAux E rows cols fuel r) true →
+    /// Eq Bool (echelonStepOk (leadingIndex E q cols)
+    ///          (leadingIndex E (succ q) cols) cols) true`.
+    pub pairs_of_is_echelon_aux: NameId,
+    /// `Rat.pairs_of_isEchelon : ∀ E rows cols,
+    /// Eq Bool (isEchelon E rows cols) true → ∀ q, Lt (succ q) rows →
+    /// Eq Bool (echelonStepOk (leadingIndex E q cols)
+    ///          (leadingIndex E (succ q) cols) cols) true` — the converse of
+    /// [`Self::is_echelon_of_pairs`], which unlike it DOES need a fuel bound in
+    /// the `…Aux` form (ADR-1571 §2's rule, in the other direction).
+    pub pairs_of_is_echelon: NameId,
+    /// `Rat.leadingIndex_strict_below : ∀ E rows cols, (the pair condition) →
+    /// ∀ r, Lt r rows → Lt (leadingIndex E r cols) cols →
+    /// ∀ q, Lt q r → Lt (leadingIndex E q cols) (leadingIndex E r cols)` —
+    /// *adjacent strict increase, extended to distance*, by induction on the
+    /// UPPER row so no arithmetic on indices is ever formed.
+    pub leading_index_strict_below: NameId,
+    /// `Rat.pivotRowSearchAux_eq_of_first : ∀ E rows cols j r fuel start,
+    /// Le start r → Lt r rows → Lt r (Nat.add start fuel) →
+    /// (∀ q, Le start q → Lt q r → Not (Eq Nat (leadingIndex E q cols) j)) →
+    /// Eq Nat (leadingIndex E r cols) j →
+    /// Eq Nat (pivotRowSearchAux E rows cols j fuel start) r`.
+    pub pivot_row_search_aux_eq_of_first: NameId,
+    /// `Rat.pivotRowOfCol_eq_of_first : ∀ E rows cols j r, Lt r rows →
+    /// (∀ q, Lt q r → Not (Eq Nat (leadingIndex E q cols) j)) →
+    /// Eq Nat (leadingIndex E r cols) j →
+    /// Eq Nat (pivotRowOfCol E rows cols j) r`.
+    pub pivot_row_of_col_eq_of_first: NameId,
+    /// `Rat.pivotSection_of_isEchelon : ∀ E rows cols,
+    /// Eq Bool (isEchelon E rows cols) true → (the pivot section at E)` — the
+    /// implication ADR-1562 §2 identified and ADR-1574 made derivable.
+    pub pivot_section_of_is_echelon: NameId,
+    /// `Rat.rank_eq_rankCols : ∀ M rows cols,
+    /// Eq Nat (rank M rows cols) (rankCols M rows cols)` — **unconditional**,
+    /// [`Self::rank_eq_rank_cols_of_pivot_section`] with its hypothesis
+    /// discharged.
+    pub rank_eq_rank_cols: NameId,
+    /// `Rat.rank_le_cols : ∀ M rows cols, Le (rank M rows cols) cols` —
+    /// **unconditional**, the bound ADR-1555 stated as open.
+    pub rank_le_cols: NameId,
+    /// `Rat.rank_nullity_rows : ∀ M rows cols,
+    /// Eq Nat (Nat.add (rank M rows cols) (nullity M rows cols)) cols` —
+    /// **rank-nullity in the ROW form, unconditional.**
+    pub rank_nullity_rows: NameId,
 }
 
 impl RatPrelude {
@@ -3604,6 +3656,16 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         echelon_step_ok_both_cols: child(kernel, "echelonStepOk_both_cols"),
         echelon_aux_is_echelon: child(kernel, "echelonAux_isEchelon"),
         row_echelon_is_echelon: child(kernel, "rowEchelon_isEchelon"),
+        lt_of_echelon_step_ok: child(kernel, "lt_of_echelonStepOk"),
+        pairs_of_is_echelon_aux: child(kernel, "pairs_of_isEchelonAux"),
+        pairs_of_is_echelon: child(kernel, "pairs_of_isEchelon"),
+        leading_index_strict_below: child(kernel, "leadingIndex_strict_below"),
+        pivot_row_search_aux_eq_of_first: child(kernel, "pivotRowSearchAux_eq_of_first"),
+        pivot_row_of_col_eq_of_first: child(kernel, "pivotRowOfCol_eq_of_first"),
+        pivot_section_of_is_echelon: child(kernel, "pivotSection_of_isEchelon"),
+        rank_eq_rank_cols: child(kernel, "rank_eq_rankCols"),
+        rank_le_cols: child(kernel, "rank_le_cols"),
+        rank_nullity_rows: child(kernel, "rank_nullity_rows"),
     }
 }
 
@@ -3673,6 +3735,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         clear_below::declare_clear_below_post(&mut d, prelude)?;
         leading_index::declare_leading_index_facts(&mut d, prelude)?;
         echelon_invariant::declare_echelon_invariant(&mut d, prelude)?;
+        echelon_section::declare_echelon_section(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3720,6 +3783,9 @@ mod leading_index_tests;
 
 #[cfg(test)]
 mod echelon_invariant_tests;
+
+#[cfg(test)]
+mod echelon_section_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;
