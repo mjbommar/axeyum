@@ -100,6 +100,8 @@ pub(super) fn declare_clear_below_post(
     declare_clear_below_off(d, p)?;
     declare_clear_below_aux_zero(d, p)?;
     declare_clear_below_zero(d, p)?;
+    declare_clear_below_aux_preserves_zero(d, p)?;
+    declare_clear_below_preserves_zero(d, p)?;
     Ok(())
 }
 
@@ -802,4 +804,447 @@ fn declare_clear_below_zero(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), Ker
         d.lam_fv(m_fv, mty, over_pr)
     };
     d.declare_theorem(p.clear_below_zero, ty, value)
+}
+
+/// `∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero` — column `k` is zero
+/// at every row from the pivot row down.
+fn column_zero_from(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    m: ExprId,
+    pr: ExprId,
+    rows: ExprId,
+    k: ExprId,
+) -> ExprId {
+    let nat = d.nat_ty();
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let lower = NatOps::le(d, pr, s);
+    let upper = NatOps::lt(d, s, rows);
+    let entry = d.apply(m, &[s, k]);
+    let zero_r = rzero(d, p);
+    let concl = req(d, entry, zero_r);
+    let inner = d.arrow(upper, concl);
+    let body = d.arrow(lower, inner);
+    d.pi_fv(s_fv, nat, body)
+}
+
+/// Admit `Rat.clearBelowAux_preserves_zero : ∀ pr pc rows k M r q, Le pr r →
+/// Le r q → Lt q rows → (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+/// Eq Rat (clearBelowAux pr pc rows fuel M r q k) Rat.zero`.
+///
+/// *A column that is already zero from the pivot row down STAYS zero.* This is
+/// the clause the loop invariant carries about the columns to the left of the
+/// cursor, and it is what makes a pivot step extend that range by one column
+/// rather than destroying it.
+///
+/// **There is no fuel bound here**, and the contrast with
+/// [`declare_clear_below_aux_zero`] is the point. That one needs `Lt q (r +
+/// fuel)` because an exhausted sweep returns `M` untouched and the conclusion
+/// is about a value the sweep was supposed to CREATE. Here the conclusion is
+/// about a value the sweep is supposed to PRESERVE, so the exhausted answer
+/// satisfies it directly — the base case and the out-of-range branch both close
+/// from the hypothesis rather than being refuted.
+///
+/// Re-establishing the hypothesis at the rewritten matrix is the only work in
+/// the step, and it splits on `Nat.beq s r` — a FREE split, because neither
+/// branch's conclusion mentions the tested `Bool` (ADR-1562 §3). Off the
+/// rewritten row `Rat.rowAddMul_off` applies; on it the entry is
+/// `M r k + (-(…)) * M pr k`, and BOTH summands are zero by hypothesis, which
+/// is why `Le pr r` is required rather than derived.
+fn declare_clear_below_aux_preserves_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let pr_fv = d.fresh_fvar();
+    let pr = d.kernel().fvar(pr_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let fuel_fv = d.fresh_fvar();
+    let fuel = d.kernel().fvar(fuel_fv);
+
+    let hyps = |d: &mut IntDev<'_>, m: ExprId, r: ExprId| -> [ExprId; 4] {
+        let h1 = NatOps::le(d, pr, r);
+        let h2 = NatOps::le(d, r, q);
+        let h3 = NatOps::lt(d, q, rows);
+        let h4 = column_zero_from(d, p, m, pr, rows, k);
+        [h1, h2, h3, h4]
+    };
+
+    let motive = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let swept = d.const_app(p.clear_below_aux, &[pr, pc, rows, x, m, r]);
+        let lhs = d.apply(swept, &[q, k]);
+        let zero_r = rzero(d, p);
+        let concl = req(d, lhs, zero_r);
+        let [h1, h2, h3, h4] = hyps(d, m, r);
+        let after4 = d.arrow(h4, concl);
+        let after3 = d.arrow(h3, after4);
+        let after2 = d.arrow(h2, after3);
+        let body = d.arrow(h1, after2);
+        let over_r = d.pi_fv(r_fv, nat, body);
+        d.pi_fv(m_fv, mty, over_r)
+    };
+    let stmt = motive(d, fuel);
+
+    let bind_hyps = |d: &mut IntDev<'_>,
+                     m: ExprId,
+                     r: ExprId,
+                     body: &dyn Fn(&mut IntDev<'_>, [ExprId; 4]) -> ExprId|
+     -> ExprId {
+        let [t1, t2, t3, t4] = hyps(d, m, r);
+        let f1 = d.fresh_fvar();
+        let f2 = d.fresh_fvar();
+        let f3 = d.fresh_fvar();
+        let f4 = d.fresh_fvar();
+        let v1 = d.kernel().fvar(f1);
+        let v2 = d.kernel().fvar(f2);
+        let v3 = d.kernel().fvar(f3);
+        let v4 = d.kernel().fvar(f4);
+        let inner = body(d, [v1, v2, v3, v4]);
+        let l4 = d.lam_fv(f4, t4, inner);
+        let l3 = d.lam_fv(f3, t3, l4);
+        let l2 = d.lam_fv(f2, t2, l3);
+        d.lam_fv(f1, t1, l2)
+    };
+
+    // The hypothesis, read at the target row `q`: `Le pr q` comes from
+    // `Le pr r` and `Le r q`.
+    let at_target = |d: &mut IntDev<'_>, hs: [ExprId; 4], r: ExprId| -> ExprId {
+        let le_trans = d.prelude().le_trans;
+        let pr_le_q = d.lemma(le_trans, &[pr, r, q, hs[0], hs[1]]);
+        d.apply(hs[3], &[q, pr_le_q, hs[2]])
+    };
+
+    let base = |d: &mut IntDev<'_>| -> ExprId {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+        let body = bind_hyps(d, m, r, &|d, hs| at_target(d, hs, r));
+        let over_r = d.lam_fv(r_fv, nat, body);
+        d.lam_fv(m_fv, mty, over_r)
+    };
+
+    let step = |d: &mut IntDev<'_>, n: ExprId, ih: ExprId| -> ExprId {
+        let m_fv = d.fresh_fvar();
+        let m = d.kernel().fvar(m_fv);
+        let r_fv = d.fresh_fvar();
+        let r = d.kernel().fvar(r_fv);
+
+        let body = bind_hyps(d, m, r, &|d, hs| {
+            let here = d.apply(m, &[r, pc]);
+            let pivot = d.apply(m, &[pr, pc]);
+            let ratio = rdiv(d, p, here, pivot);
+            let factor = rneg(d, ratio);
+            let updated = rrow_add_mul(d, p, r, pr, factor, m);
+            let sr = d.succ(r);
+            let recursed = d.const_app(p.clear_below_aux, &[pr, pc, rows, n, updated, sr]);
+            let oor = NatOps::ble(d, rows, r);
+            let zero_r = rzero(d, p);
+
+            let shape = |d: &mut IntDev<'_>, x: ExprId| -> ExprId {
+                let sel = bool_select_at(d, mty, x, m, recursed);
+                let lhs = d.apply(sel, &[q, k]);
+                let zero_r = rzero(d, p);
+                req(d, lhs, zero_r)
+            };
+            let goal = shape(d, oor);
+
+            let true_ = d.bool_true();
+            let false_ = d.bool_false();
+            let h_true_ty = d.bool_eq(oor, true_);
+            let h_false_ty = d.bool_eq(oor, false_);
+
+            // The sweep stopped: the answer is `M q k`, which the hypothesis
+            // already says is zero. Nothing to refute.
+            let left_minor = {
+                let ht_fv = d.fresh_fvar();
+                let ht = d.kernel().fvar(ht_fv);
+                let refl_case = at_target(d, hs, r);
+                let motive_x = d.bool_eq_motive(true_, &shape);
+                let ht_sym = d.bool_symm(oor, true_, ht);
+                let inner = d.bool_transport(true_, motive_x, refl_case, oor, ht_sym);
+                d.lam_fv(ht_fv, h_true_ty, inner)
+            };
+
+            let right_minor = {
+                let hf_fv = d.fresh_fvar();
+                let hf = d.kernel().fvar(hf_fv);
+
+                // `r` and `pr` are both strictly inside the row count.
+                let lt_of_le_of_lt = d.prelude().lt_of_le_of_lt;
+                let r_lt_rows = d.lemma(lt_of_le_of_lt, &[r, q, rows, hs[1], hs[2]]);
+                let pr_lt_rows = d.lemma(lt_of_le_of_lt, &[pr, r, rows, hs[0], r_lt_rows]);
+
+                // The rewritten row is still zero in column `k`, because both
+                // summands are.
+                let rewritten_row_zero = {
+                    let le_refl = d.prelude().le_refl_thm;
+                    let pr_le_pr = d.lemma(le_refl, &[pr]);
+                    let row_zero = d.apply(hs[3], &[r, hs[0], r_lt_rows]);
+                    let pivot_row_zero = d.apply(hs[3], &[pr, pr_le_pr, pr_lt_rows]);
+                    let at_r = d.lemma(p.row_add_mul_at, &[r, pr, factor, m, k]);
+                    let here_k = d.apply(m, &[r, k]);
+                    let pivot_k = d.apply(m, &[pr, k]);
+                    let scaled = rmul(d, factor, pivot_k);
+                    let sum = radd(d, here_k, scaled);
+                    let scaled_zero = rmul(d, factor, zero_r);
+                    let sum_zeroed = radd(d, zero_r, scaled_zero);
+                    let left_step = rcongr(d, here_k, zero_r, row_zero, &|d, t| {
+                        let pivot_k_inner = d.apply(m, &[pr, k]);
+                        let scaled_inner = rmul(d, factor, pivot_k_inner);
+                        radd(d, t, scaled_inner)
+                    });
+                    let right_step = rcongr(d, pivot_k, zero_r, pivot_row_zero, &|d, t| {
+                        let scaled_inner = rmul(d, factor, t);
+                        radd(d, zero_r, scaled_inner)
+                    });
+                    let sum_partly = radd(d, zero_r, scaled);
+                    let mul_zero = d.lemma(p.mul_zero, &[factor]);
+                    let collapse =
+                        rcongr(d, scaled_zero, zero_r, mul_zero, &|d, t| radd(d, zero_r, t));
+                    let sum_final = radd(d, zero_r, zero_r);
+                    let add_zero = d.lemma(p.add_zero, &[zero_r]);
+                    let updated_at_r = d.apply(updated, &[r, k]);
+                    let (_, chained) = rchain(
+                        d,
+                        updated_at_r,
+                        &[
+                            (sum, at_r),
+                            (sum_partly, left_step),
+                            (sum_zeroed, right_step),
+                            (sum_final, collapse),
+                            (zero_r, add_zero),
+                        ],
+                    );
+                    chained
+                };
+
+                // ... and every OTHER row in range is untouched, so the whole
+                // hypothesis is re-established at the rewritten matrix.
+                let carried = {
+                    let s_fv = d.fresh_fvar();
+                    let s = d.kernel().fvar(s_fv);
+                    let lower = NatOps::le(d, pr, s);
+                    let upper = NatOps::lt(d, s, rows);
+                    let hs1_fv = d.fresh_fvar();
+                    let hs1 = d.kernel().fvar(hs1_fv);
+                    let hs2_fv = d.fresh_fvar();
+                    let hs2 = d.kernel().fvar(hs2_fv);
+
+                    let updated_at_s = d.apply(updated, &[s, k]);
+                    let target = req(d, updated_at_s, zero_r);
+
+                    let test = NatOps::beq(d, s, r);
+                    let is_true = d.bool_eq(test, true_);
+                    let is_false = d.bool_eq(test, false_);
+
+                    let on_true = {
+                        let hb_fv = d.fresh_fvar();
+                        let hb = d.kernel().fvar(hb_fv);
+                        let eq_of_beq = d.prelude().eq_of_beq_eq_true;
+                        let s_eq_r = d.lemma(eq_of_beq, &[s, r, hb]);
+                        let back = NatOps::symm(d, s, r, s_eq_r);
+                        let moved = nat_rewrite_prop(d, r, s, back, rewritten_row_zero, &|d, t| {
+                            let at_t = d.apply(updated, &[t, k]);
+                            let zero_inner = rzero(d, p);
+                            req(d, at_t, zero_inner)
+                        });
+                        d.lam_fv(hb_fv, is_true, moved)
+                    };
+                    let on_false = {
+                        let hb_fv = d.fresh_fvar();
+                        let hb = d.kernel().fvar(hb_fv);
+                        let off = d.lemma(p.row_add_mul_off, &[r, pr, factor, m, s, hb, k]);
+                        let original = d.apply(hs[3], &[s, hs1, hs2]);
+                        let at_s = d.apply(m, &[s, k]);
+                        let joined = rtrans(d, updated_at_s, at_s, zero_r, off, original);
+                        d.lam_fv(hb_fv, is_false, joined)
+                    };
+
+                    let split = bool_cases(d, test);
+                    let chosen = or_cases(d, is_true, is_false, target, on_true, on_false, split);
+                    let with_hs2 = d.lam_fv(hs2_fv, upper, chosen);
+                    let with_hs1 = d.lam_fv(hs1_fv, lower, with_hs2);
+                    d.lam_fv(s_fv, nat, with_hs1)
+                };
+
+                let false_goal = shape(d, false_);
+                let lt_or_eq_of_le = d.prelude().lt_or_eq_of_le;
+                let split = d.lemma(lt_or_eq_of_le, &[r, q, hs[1]]);
+                let lt_ty = NatOps::lt(d, r, q);
+                let eq_ty = d.eq(r, q);
+
+                let below = {
+                    let hlt_fv = d.fresh_fvar();
+                    let hlt = d.kernel().fvar(hlt_fv);
+                    let le_trans = d.prelude().le_trans;
+                    let le_succ = d.prelude().le_succ;
+                    let up = d.lemma(le_succ, &[r]);
+                    let a1 = d.lemma(le_trans, &[pr, r, sr, hs[0], up]);
+                    let applied = d.apply(ih, &[updated, sr, a1, hlt, hs[2], carried]);
+                    d.lam_fv(hlt_fv, lt_ty, applied)
+                };
+                let here_row = {
+                    let he_fv = d.fresh_fvar();
+                    let he = d.kernel().fvar(he_fv);
+                    let lt_succ_self = d.prelude().lt_succ_self;
+                    let stays = d.lemma(lt_succ_self, &[r]);
+                    let off = d.lemma(
+                        p.clear_below_aux_off,
+                        &[pr, pc, rows, r, k, n, updated, sr, stays],
+                    );
+                    let recursed_at_r = d.apply(recursed, &[r, k]);
+                    let updated_at_r = d.apply(updated, &[r, k]);
+                    let joined = rtrans(
+                        d,
+                        recursed_at_r,
+                        updated_at_r,
+                        zero_r,
+                        off,
+                        rewritten_row_zero,
+                    );
+                    let moved = nat_rewrite_prop(d, r, q, he, joined, &|d, t| {
+                        let lhs = d.apply(recursed, &[t, k]);
+                        let zero_inner = rzero(d, p);
+                        req(d, lhs, zero_inner)
+                    });
+                    d.lam_fv(he_fv, eq_ty, moved)
+                };
+
+                let refl_case = or_cases(d, lt_ty, eq_ty, false_goal, below, here_row, split);
+                let motive_x = d.bool_eq_motive(false_, &shape);
+                let hf_sym = d.bool_symm(oor, false_, hf);
+                let inner = d.bool_transport(false_, motive_x, refl_case, oor, hf_sym);
+                d.lam_fv(hf_fv, h_false_ty, inner)
+            };
+
+            let bool_split = bool_cases(d, oor);
+            or_cases(
+                d,
+                h_true_ty,
+                h_false_ty,
+                goal,
+                left_minor,
+                right_minor,
+                bool_split,
+            )
+        });
+
+        let over_r = d.lam_fv(r_fv, nat, body);
+        d.lam_fv(m_fv, mty, over_r)
+    };
+
+    let proof = d.induct(&motive, &base, &step, fuel);
+
+    let ty = {
+        let over_fuel = d.pi_fv(fuel_fv, nat, stmt);
+        let over_q = d.pi_fv(q_fv, nat, over_fuel);
+        let over_k = d.pi_fv(k_fv, nat, over_q);
+        let over_rows = d.pi_fv(rows_fv, nat, over_k);
+        let over_pc = d.pi_fv(pc_fv, nat, over_rows);
+        d.pi_fv(pr_fv, nat, over_pc)
+    };
+    let value = {
+        let over_fuel = d.lam_fv(fuel_fv, nat, proof);
+        let over_q = d.lam_fv(q_fv, nat, over_fuel);
+        let over_k = d.lam_fv(k_fv, nat, over_q);
+        let over_rows = d.lam_fv(rows_fv, nat, over_k);
+        let over_pc = d.lam_fv(pc_fv, nat, over_rows);
+        d.lam_fv(pr_fv, nat, over_pc)
+    };
+    d.declare_theorem(p.clear_below_aux_preserves_zero, ty, value)
+}
+
+/// Admit `Rat.clearBelow_preserves_zero : ∀ M pr pc rows k q, Lt pr q →
+/// Lt q rows → (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+/// Eq Rat (clearBelow M pr pc rows q k) Rat.zero`.
+///
+/// [`declare_clear_below_aux_preserves_zero`] at the cursor `succ pr`, where
+/// `Le pr (succ pr)` is `Nat.le_succ` and `Le (succ pr) q` is the hypothesis
+/// `Lt pr q`. No fuel bound is needed, so unlike
+/// [`declare_clear_below_zero`] this wrapper spends no arithmetic at all.
+fn declare_clear_below_preserves_zero(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let pr_fv = d.fresh_fvar();
+    let pr = d.kernel().fvar(pr_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let t1 = NatOps::lt(d, pr, q);
+    let t2 = NatOps::lt(d, q, rows);
+    let t3 = column_zero_from(d, p, m, pr, rows, k);
+
+    let swept = d.const_app(p.clear_below, &[m, pr, pc, rows]);
+    let lhs = d.apply(swept, &[q, k]);
+    let zero_r = rzero(d, p);
+    let concl = req(d, lhs, zero_r);
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    let spr = d.succ(pr);
+    let le_succ = d.prelude().le_succ;
+    let a1 = d.lemma(le_succ, &[pr]);
+    let aux = d.lemma(
+        p.clear_below_aux_preserves_zero,
+        &[pr, pc, rows, k, q, rows, m, spr],
+    );
+    let body = d.apply(aux, &[a1, h1, h2, h3]);
+    let proof = {
+        let l3 = d.lam_fv(h3_fv, t3, body);
+        let l2 = d.lam_fv(h2_fv, t2, l3);
+        d.lam_fv(h1_fv, t1, l2)
+    };
+
+    let ty = {
+        let f3 = d.pi_fv(h3_fv, t3, concl);
+        let f2 = d.pi_fv(h2_fv, t2, f3);
+        let f1 = d.pi_fv(h1_fv, t1, f2);
+        let over_q = d.pi_fv(q_fv, nat, f1);
+        let over_k = d.pi_fv(k_fv, nat, over_q);
+        let over_rows = d.pi_fv(rows_fv, nat, over_k);
+        let over_pc = d.pi_fv(pc_fv, nat, over_rows);
+        let over_pr = d.pi_fv(pr_fv, nat, over_pc);
+        d.pi_fv(m_fv, mty, over_pr)
+    };
+    let value = {
+        let over_q = d.lam_fv(q_fv, nat, proof);
+        let over_k = d.lam_fv(k_fv, nat, over_q);
+        let over_rows = d.lam_fv(rows_fv, nat, over_k);
+        let over_pc = d.lam_fv(pc_fv, nat, over_rows);
+        let over_pr = d.lam_fv(pr_fv, nat, over_pc);
+        d.lam_fv(m_fv, mty, over_pr)
+    };
+    d.declare_theorem(p.clear_below_preserves_zero, ty, value)
 }

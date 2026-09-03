@@ -2960,6 +2960,20 @@ pub struct RatPrelude {
     /// the statement ADR-1554 asks for. Spends obligation 2's value half
     /// ([`Self::pivot_search_ne_zero`]) through the nonzero-pivot hypothesis.
     pub clear_below_zero: NameId,
+    /// `Rat.clearBelowAux_preserves_zero : ∀ pr pc rows k q fuel M r,
+    /// Le pr r → Le r q → Lt q rows →
+    /// (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+    /// Eq Rat (clearBelowAux pr pc rows fuel M r q k) Rat.zero`.
+    pub clear_below_aux_preserves_zero: NameId,
+    /// `Rat.clearBelow_preserves_zero : ∀ M pr pc rows k q, Lt pr q →
+    /// Lt q rows → (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+    /// Eq Rat (clearBelow M pr pc rows q k) Rat.zero` — *a column already zero
+    /// from the pivot row down STAYS zero.*
+    ///
+    /// Unlike [`Self::clear_below_zero`] this needs NO fuel bound: its
+    /// conclusion is about a value the sweep PRESERVES rather than one it
+    /// creates, so the exhausted answer satisfies it directly.
+    pub clear_below_preserves_zero: NameId,
 }
 
 impl RatPrelude {
@@ -3488,6 +3502,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         clear_below_off: child(kernel, "clearBelow_off"),
         clear_below_aux_zero: child(kernel, "clearBelowAux_zero"),
         clear_below_zero: child(kernel, "clearBelow_zero"),
+        clear_below_aux_preserves_zero: child(kernel, "clearBelowAux_preserves_zero"),
+        clear_below_preserves_zero: child(kernel, "clearBelow_preserves_zero"),
     }
 }
 

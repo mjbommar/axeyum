@@ -344,6 +344,11 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("clearBelow_off", p.clear_below_off),
         ("clearBelowAux_zero", p.clear_below_aux_zero),
         ("clearBelow_zero", p.clear_below_zero),
+        (
+            "clearBelowAux_preserves_zero",
+            p.clear_below_aux_preserves_zero,
+        ),
+        ("clearBelow_preserves_zero", p.clear_below_preserves_zero),
         ("pivotSearchAux_column_zero", p.pivot_search_aux_column_zero),
         ("pivotSearch_column_zero", p.pivot_search_column_zero),
         (
@@ -7123,6 +7128,16 @@ fn the_determinant_toolkit_is_axiom_free() {
         ("clearBelow_off", p.clear_below_off, true),
         ("clearBelowAux_zero", p.clear_below_aux_zero, true),
         ("clearBelow_zero", p.clear_below_zero, true),
+        (
+            "clearBelowAux_preserves_zero",
+            p.clear_below_aux_preserves_zero,
+            true,
+        ),
+        (
+            "clearBelow_preserves_zero",
+            p.clear_below_preserves_zero,
+            true,
+        ),
         (
             "pivotSearchAux_column_zero",
             p.pivot_search_aux_column_zero,

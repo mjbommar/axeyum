@@ -300,6 +300,8 @@ fn the_obligation_three_family_is_axiom_free() {
         p.clear_below_off,
         p.clear_below_aux_zero,
         p.clear_below_zero,
+        p.clear_below_aux_preserves_zero,
+        p.clear_below_preserves_zero,
     ] {
         assert!(
             kernel.axiom_footprint(name).is_empty(),
@@ -374,5 +376,172 @@ fn the_obligation_three_statements_say_what_they_claim() {
         !zero.contains("AxNat.le x1 x4"),
         "clearBelow_zero must NOT be stated with `Le pr q` -- at pr = q it is \
          false: {zero}"
+    );
+
+    // The preservation half is the one most likely to be copied wrong: it
+    // needs NO fuel bound, because its conclusion is about a value the sweep
+    // PRESERVES rather than one it creates.
+    let preserved = rendered(p.clear_below_preserves_zero);
+    assert!(
+        preserved.contains("Eq.{1} Rat (Rat.clearBelow x0 x1 x2 x3 x5 x4) Rat.zero"),
+        "clearBelow_preserves_zero must conclude about the ARBITRARY column \
+         x4, not the pivot column x2: {preserved}"
+    );
+    assert!(
+        !preserved.contains("AxNat.add"),
+        "the preservation half must carry NO fuel bound -- an `add` in its \
+         type means someone copied clearBelow_zero's hypothesis: {preserved}"
+    );
+}
+
+/// The preservation half computes, and its hypothesis really is "from the
+/// pivot row DOWN" rather than "everywhere".
+///
+/// `[[1,7,0],[2,0,0],[3,0,0]]` swept from pivot `(1,0)`: column `1` is zero at
+/// rows 1 and 2 but NOT at row 0, so a version whose hypothesis quantified over
+/// every row would be unusable here while this one applies. After the sweep row
+/// 2 is `row2 - (3/2)*row1`, and its column-`1` entry is still zero.
+#[test]
+fn clear_below_preserves_a_column_that_is_zero_from_the_pivot_row_down() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let m = rect_matrix(&mut d, p, 3, 3, &[1, 7, 0, 2, 0, 0, 3, 0, 0]);
+    let zero_n = d.num(0);
+    let one_n = d.num(1);
+    let two_n = d.num(2);
+    let three_n = d.num(3);
+    let rat_zero = rzero(&mut d, p);
+
+    // The hypothesis holds from row 1 down and FAILS at row 0.
+    for row in [one_n, two_n] {
+        let entry = d.apply(m, &[row, one_n]);
+        assert!(
+            d.kernel().def_eq(entry, rat_zero),
+            "column 1 must be zero from the pivot row down"
+        );
+    }
+    let above = d.apply(m, &[zero_n, one_n]);
+    assert!(
+        !d.kernel().def_eq(above, rat_zero),
+        "column 1 must be NONZERO above the pivot row -- otherwise the \
+         `from pr down` shape of the hypothesis is untested"
+    );
+
+    // ... and the sweep keeps it zero at the row it rewrites.
+    let swept = rclear_below(&mut d, p, m, one_n, zero_n, three_n);
+    let preserved = d.apply(swept, &[two_n, one_n]);
+    assert!(
+        d.kernel().def_eq(preserved, rat_zero),
+        "the sweep must leave column 1 zero at row 2"
+    );
+
+    // The control: the sweep DID do something to row 2 -- its column-0 entry
+    // was 3 and is now 0, so "preserved" is not "untouched".
+    let cleared = d.apply(swept, &[two_n, zero_n]);
+    assert!(
+        d.kernel().def_eq(cleared, rat_zero),
+        "the sweep must clear column 0 at row 2"
+    );
+    let original = d.apply(m, &[two_n, zero_n]);
+    assert!(
+        !d.kernel().def_eq(original, rat_zero),
+        "row 2 column 0 started nonzero, so the sweep really rewrote the row"
+    );
+}
+
+/// The preservation half applies at fully free arguments, and its statement
+/// carries NO fuel bound — which is the difference from `clearBelow_zero` and
+/// the thing most likely to be copied wrong.
+#[test]
+fn clear_below_preserves_zero_applies_at_free_variables_and_needs_no_fuel_bound() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let anon = d.anon_name();
+    let nat = d.nat_ty();
+    let mty = mat_ty(&mut d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let pr_fv = d.fresh_fvar();
+    let pr = d.kernel().fvar(pr_fv);
+    let pc_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(pc_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let t1 = NatOps::lt(&mut d, pr, q);
+    let t2 = NatOps::lt(&mut d, q, rows);
+    let t3 = {
+        let s_fv = d.fresh_fvar();
+        let s = d.kernel().fvar(s_fv);
+        let lower = NatOps::le(&mut d, pr, s);
+        let upper = NatOps::lt(&mut d, s, rows);
+        let entry = d.apply(m, &[s, k]);
+        let rat_zero = rzero(&mut d, p);
+        let concl = req(&mut d, entry, rat_zero);
+        let inner = d.arrow(upper, concl);
+        let body = d.arrow(lower, inner);
+        d.pi_fv(s_fv, nat, body)
+    };
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let h3_fv = d.fresh_fvar();
+    let h3 = d.kernel().fvar(h3_fv);
+
+    let mut ctx = LocalContext::new();
+    for (fvar, ty) in [
+        (m_fv, mty),
+        (pr_fv, nat),
+        (pc_fv, nat),
+        (rows_fv, nat),
+        (k_fv, nat),
+        (q_fv, nat),
+        (h1_fv, t1),
+        (h2_fv, t2),
+        (h3_fv, t3),
+    ] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = d.const_app(
+        p.clear_below_preserves_zero,
+        &[m, pr, pc, rows, k, q, h1, h2, h3],
+    );
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .expect("Rat.clearBelow_preserves_zero must apply at free variables");
+
+    let swept = d.const_app(p.clear_below, &[m, pr, pc, rows]);
+    let entry = d.apply(swept, &[q, k]);
+    let rat_zero = rzero(&mut d, p);
+    let want = req(&mut d, entry, rat_zero);
+    assert!(
+        d.kernel().def_eq(inferred, want),
+        "the conclusion must be about the swept matrix at (q, k)"
+    );
+
+    // The control: the conclusion is about the ARBITRARY column `k`, not the
+    // pivot column -- that is `clearBelow_zero`'s statement, and confusing the
+    // two would make the loop invariant unprovable.
+    let pivot_column = d.apply(swept, &[q, pc]);
+    let control = req(&mut d, pivot_column, rat_zero);
+    assert!(
+        !d.kernel().def_eq(inferred, control),
+        "negative control: this is NOT clearBelow_zero's pivot-column statement"
     );
 }
