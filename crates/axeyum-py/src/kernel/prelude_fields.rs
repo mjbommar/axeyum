@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1178 names,
+/// The `NatPrelude` field table (1180 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 84 of the names come from ADR-1512 per-module registries and
+/// 86 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1632,6 +1632,14 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("structures_s_extra.sub_self", p.structures_s_extra.sub_self),
             ("structures_s_extra.neg_neg", p.structures_s_extra.neg_neg),
             ("structures_s_extra.mul_zero", p.structures_s_extra.mul_zero),
+            (
+                "structures_s_extra.mul_neg_one",
+                p.structures_s_extra.mul_neg_one,
+            ),
+            (
+                "structures_s_extra.add_left_cancel",
+                p.structures_s_extra.add_left_cancel,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -3755,7 +3763,7 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (128 names,
+/// The `ComplexPrelude` field table (129 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -3902,6 +3910,7 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
             ("abs_add_le", p.abs_add_le),
             ("abs_neg", p.abs_neg),
             ("abs_le_add_abs_sub", p.abs_le_add_abs_sub),
+            ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),
     }

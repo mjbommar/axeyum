@@ -13,7 +13,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "external_status": "unknown",
-  "depends_on": ["F:eq-symm"],
+  "depends_on": ["F:eq-symm", "F:algs-mul-zero"],
   "axiom_footprint": [],
   "evidence": [
     {

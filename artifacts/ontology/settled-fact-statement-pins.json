@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2243,
+    "min_identity_bound": 2245,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -806,6 +806,20 @@
       "statement_sha256": "e7886eac565f780b39bbbd291ee1aa0f82c3143d08a771c6e6d5a902d66c3831",
       "prose_sha256": "2a590a80ef9202a5edd26257dc33242267a339174cbf8330bf409bd8947df676",
       "kernel_theorem": "Alg.sub_self"
+    },
+    {
+      "fact_id": "F:algs-add-left-cancel",
+      "language": "lean4",
+      "statement_sha256": "974522fa9647952b077cf4f6f834379dd459fb6397a9cc90f5d310d9bae73639",
+      "prose_sha256": "c26246258afd660660fc9123abcef65d749931f513628c7f324addc746eb8fc8",
+      "kernel_theorem": "AlgS.add_left_cancel"
+    },
+    {
+      "fact_id": "F:algs-mul-neg-one",
+      "language": "lean4",
+      "statement_sha256": "9a18138f6e0b9b593904eabd7c1df1d1973924c2dabd72568100277efa1c22d7",
+      "prose_sha256": "9a281ced098c4ddd20a22b1e6e85a3195298e070f119f1f821d889278ad86567",
+      "kernel_theorem": "AlgS.mul_neg_one"
     },
     {
       "fact_id": "F:algs-mul-zero",
