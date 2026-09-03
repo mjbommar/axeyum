@@ -58,6 +58,7 @@ mod complex;
 mod creal;
 mod creal_model;
 mod creal_point;
+pub mod decide;
 mod env;
 mod expr;
 mod inductive;
