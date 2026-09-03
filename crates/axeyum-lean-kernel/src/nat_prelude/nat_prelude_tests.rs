@@ -630,11 +630,34 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.multiset_card,
         p.multiset_eq_below,
         p.multiset_beq,
+        // `finset-role` lane: `finset.rs` (ADR-1577). `Nat.Finset` itself and
+        // `Nat.Finset.mk`/`Nat.Finset.rec` are omitted for the same reason the
+        // `Nat.Multiset` trio is -- an `Inductive`/`Constructor`/`Recursor` has
+        // no proof term for `axiom_footprint` to inspect.
+        p.finset_pred,
+        p.finset_bound,
+        p.finset_mem_b,
+        p.finset_card,
+        p.finset_sum,
+        p.finset_union,
+        p.finset_inter,
+        p.finset_sdiff,
+        p.finset_filter,
+        p.finset_range,
+        p.finset_singleton,
+        p.finset_all_below,
+        p.finset_subset_b,
+        p.finset_beq,
     ]
 }
 
 fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
     vec![
+        // `finset-role` lane: `finset.rs` (ADR-1577).
+        p.finset_mem_b_of_lt,
+        p.finset_mem_b_of_bound_le,
+        p.finset_card_eq_count_range_add,
+        p.finset_card_union_add_card_inter,
         // `nat-factorization` lane: `factorization_multiset.rs`.
         p.prod_range_eq_one_of_below,
         p.multiset_count_singleton_self,

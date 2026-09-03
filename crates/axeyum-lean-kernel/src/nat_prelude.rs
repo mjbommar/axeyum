@@ -197,6 +197,7 @@ mod fibonacci;
 mod find_greatest;
 mod finite;
 mod finite_set;
+mod finset;
 mod floor_count;
 mod gauss_fold_sum;
 mod gauss_lemma;
@@ -391,6 +392,7 @@ use finite::{
     declare_restrict_maps_into, declare_succ_pred_of_pos,
 };
 use finite_set::declare_finite_set_all;
+use finset::declare_finset_all;
 use floor_count::declare_floor_count_all;
 use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
@@ -6140,6 +6142,115 @@ pub struct NatPrelude {
     /// rather than [`count_range_bij`](Self::count_range_bij)'s five, and none
     /// of them mentions injectivity. Derived, not re-proved.
     pub count_range_bij_of_inverse: NameId,
+
+    // --- `Nat.Finset` (`finset.rs`, ADR-1577) ---------------------------------
+    /// `Nat.Finset : Type 0` — a decidable membership predicate together with a
+    /// bound past which nothing is a member. The computed finite-set carrier;
+    /// ADR-1520's `Nat.Multiset` shape (one constructor, a function field, a
+    /// `Nat` bound, truncation INSIDE the observable projection) applied to
+    /// sets. See `finset.rs`'s module doc for what it deliberately does not
+    /// provide (no `List`, no `Finset.image`, no polymorphism).
+    pub finset: NameId,
+    /// `Nat.Finset.mk : (Nat -> Bool) -> Nat -> Nat.Finset`.
+    pub finset_mk: NameId,
+    /// `Nat.Finset.rec` — the kernel-generated recursor both projections go
+    /// through.
+    pub finset_rec: NameId,
+    /// `Nat.Finset.pred : Nat.Finset -> Nat -> Bool` — the stored predicate,
+    /// NOT truncated at the bound. Use [`finset_mem_b`](Self::finset_mem_b)
+    /// unless you specifically mean the untruncated function.
+    pub finset_pred: NameId,
+    /// `Nat.Finset.bound : Nat.Finset -> Nat`.
+    pub finset_bound: NameId,
+    /// `Nat.Finset.memB s i := if i < bound s then pred s i else false` —
+    /// decided membership. Truncating here rather than carrying a
+    /// well-formedness hypothesis is what makes
+    /// [`finset_mem_b_of_bound_le`](Self::finset_mem_b_of_bound_le) a theorem
+    /// about EVERY `Nat.Finset` with no side condition.
+    pub finset_mem_b: NameId,
+    /// `Nat.Finset.card s := countRange (memB s) (bound s)`.
+    pub finset_card: NameId,
+    /// `Nat.Finset.sum s f := sumRangeIf (memB s) f (bound s)` — the sum of `f`
+    /// over an ARBITRARY finite set, which before this carrier could only be
+    /// spelled as `sumRange` over `[0,n)` or an ad hoc `sumRangeIf`.
+    pub finset_sum: NameId,
+    /// `Nat.Finset.union s t := mk (setUnion (memB s) (memB t))
+    /// (bound s + bound t)`. The bound is the SUM, not the maximum, for
+    /// ADR-1520 §"Consequences"'s reason: `Nat.max`'s comparison lemmas live in
+    /// the `Max` namespace and `Nat.add` needs none of them, while
+    /// [`count_range_split`](Self::count_range_split) applies to `add a b`
+    /// LITERALLY, with no `Le`-to-`Exists` step.
+    pub finset_union: NameId,
+    /// `Nat.Finset.inter s t := mk (setInter (memB s) (memB t))
+    /// (bound s + bound t)` — the same bound as
+    /// [`finset_union`](Self::finset_union), so inclusion-exclusion never has
+    /// to reconcile two ranges.
+    pub finset_inter: NameId,
+    /// `Nat.Finset.sdiff s t := mk (setDiff (memB s) (memB t)) (bound s)`.
+    pub finset_sdiff: NameId,
+    /// `Nat.Finset.filter q s := mk (setInter (memB s) q) (bound s)` — the
+    /// predicate comes FIRST, matching `Nat.countRange`'s argument order.
+    pub finset_filter: NameId,
+    /// `Nat.Finset.range n := mk (fun _ => true) n`.
+    pub finset_range: NameId,
+    /// `Nat.Finset.singleton a := mk (fun k => beq k a) (succ a)`.
+    pub finset_singleton: NameId,
+    /// `Nat.Finset.allBelow : (Nat -> Bool) -> Nat -> Bool` — the bounded loop
+    /// `∀ i < n, f i`, as a `Bool`. The `Bool`-valued bounded universal this
+    /// prelude did not have; `Nat.Multiset.eqBelow` is the same shape
+    /// specialised to equality of two `Nat` functions, and carries no
+    /// reflection lemma.
+    pub finset_all_below: NameId,
+    /// `Nat.Finset.subsetB s t := allBelow (fun i => if memB s i then memB t i
+    /// else true) (bound s)`.
+    pub finset_subset_b: NameId,
+    /// `Nat.Finset.beq s t := allBelow (fun i => memB s i ↔ memB t i)
+    /// (bound s + bound t)` — extensional agreement below both bounds.
+    pub finset_beq: NameId,
+    /// `Nat.Finset.memB_of_lt : ∀ s i, Lt i (bound s) →
+    /// Eq Bool (memB s i) (pred s i)`.
+    pub finset_mem_b_of_lt: NameId,
+    /// `Nat.Finset.memB_of_bound_le : ∀ s i, Le (bound s) i →
+    /// Eq Bool (memB s i) Bool.false` — no well-formedness hypothesis, because
+    /// [`finset_mem_b`](Self::finset_mem_b) truncates in its own definition.
+    pub finset_mem_b_of_bound_le: NameId,
+    /// `Nat.Finset.card_eq_countRange_add : ∀ s j,
+    /// Eq Nat (countRange (memB s) (add (bound s) j)) (card s)` — counting over
+    /// a LONGER range than the set's own bound changes nothing. The workhorse:
+    /// every two-set law folds both sets over the common bound
+    /// `bound s + bound t` and comes back through this.
+    pub finset_card_eq_count_range_add: NameId,
+    /// `Nat.Finset.card_union_add_card_inter : ∀ s t,
+    /// Eq Nat (add (card (union s t)) (card (inter s t)))
+    ///        (add (card s) (card t))` — inclusion-exclusion, stated ADDITIVELY
+    /// (`Nat.sub` is truncated). The carrier-level lift of
+    /// [`count_range_union_add_inter`](Self::count_range_union_add_inter).
+    pub finset_card_union_add_card_inter: NameId,
+    /// `Nat.Finset.allBelow_of_all_true : ∀ f n, (∀ i, Lt i n →
+    /// Eq Bool (f i) Bool.true) → Eq Bool (allBelow f n) Bool.true`.
+    pub finset_all_below_of_all_true: NameId,
+    /// `Nat.Finset.allBelow_true_at : ∀ f n, Eq Bool (allBelow f n) Bool.true →
+    /// ∀ i, Lt i n → Eq Bool (f i) Bool.true` — the REFLECTION half, the one
+    /// `Nat.Multiset.beq` deliberately does not claim about `eqBelow`.
+    pub finset_all_below_true_at: NameId,
+    /// `Nat.Finset.card_le_of_subsetB : ∀ s t,
+    /// Eq Bool (subsetB s t) Bool.true → Le (card s) (card t)`.
+    pub finset_card_le_of_subset_b: NameId,
+    /// `Nat.Finset.sum_union_disjoint : ∀ s t f,
+    /// (∀ i, Eq Bool (setInter (memB s) (memB t) i) Bool.false) →
+    /// Eq Nat (sum (union s t) f) (add (sum s f) (sum t f))`.
+    pub finset_sum_union_disjoint: NameId,
+    /// `Nat.Finset.sum_congr_of_beq : ∀ s t f, Eq Bool (beq s t) Bool.true →
+    /// Eq Nat (sum s f) (sum t f)` — this kernel has no `funext`, so the
+    /// hypothesis is the pointwise `beq`, decided below both bounds.
+    pub finset_sum_congr_of_beq: NameId,
+    /// `Nat.Finset.exists_duplicate_of_card_lt : ∀ s t g,
+    /// (∀ i, Lt i (bound s) → Eq Bool (memB s i) Bool.true →
+    ///        And (Lt (g i) (bound t)) (Eq Bool (memB t (g i)) Bool.true)) →
+    /// Lt (card t) (card s) → ∃ a b, ...` — the pigeonhole principle, stated
+    /// CONSTRUCTIVELY as an explicit colliding pair rather than as a refutation
+    /// of injectivity.
+    pub finset_exists_duplicate_of_card_lt: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6189,6 +6300,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let fin = kernel.name_str(nat, "Fin");
         let pair = kernel.name_str(nat, "Pair");
         let multiset = kernel.name_str(nat, "Multiset");
+        let finset = kernel.name_str(nat, "Finset");
         let primrec = kernel.name_str(nat, "Primrec");
         let cases_on_uparam_name = {
             let anon = kernel.anon();
@@ -7062,6 +7174,34 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "countRange_eq_zero_of_all_false"),
             count_range_bij: kernel.name_str(nat, "countRange_bij"),
             count_range_bij_of_inverse: kernel.name_str(nat, "countRange_bij_of_inverse"),
+            finset,
+            finset_mk: kernel.name_str(finset, "mk"),
+            finset_rec: kernel.name_str(finset, "rec"),
+            finset_pred: kernel.name_str(finset, "pred"),
+            finset_bound: kernel.name_str(finset, "bound"),
+            finset_mem_b: kernel.name_str(finset, "memB"),
+            finset_card: kernel.name_str(finset, "card"),
+            finset_sum: kernel.name_str(finset, "sum"),
+            finset_union: kernel.name_str(finset, "union"),
+            finset_inter: kernel.name_str(finset, "inter"),
+            finset_sdiff: kernel.name_str(finset, "sdiff"),
+            finset_filter: kernel.name_str(finset, "filter"),
+            finset_range: kernel.name_str(finset, "range"),
+            finset_singleton: kernel.name_str(finset, "singleton"),
+            finset_all_below: kernel.name_str(finset, "allBelow"),
+            finset_subset_b: kernel.name_str(finset, "subsetB"),
+            finset_beq: kernel.name_str(finset, "beq"),
+            finset_mem_b_of_lt: kernel.name_str(finset, "memB_of_lt"),
+            finset_mem_b_of_bound_le: kernel.name_str(finset, "memB_of_bound_le"),
+            finset_card_eq_count_range_add: kernel.name_str(finset, "card_eq_countRange_add"),
+            finset_card_union_add_card_inter: kernel.name_str(finset, "card_union_add_card_inter"),
+            finset_all_below_of_all_true: kernel.name_str(finset, "allBelow_of_all_true"),
+            finset_all_below_true_at: kernel.name_str(finset, "allBelow_true_at"),
+            finset_card_le_of_subset_b: kernel.name_str(finset, "card_le_of_subsetB"),
+            finset_sum_union_disjoint: kernel.name_str(finset, "sum_union_disjoint"),
+            finset_sum_congr_of_beq: kernel.name_str(finset, "sum_congr_of_beq"),
+            finset_exists_duplicate_of_card_lt: kernel
+                .name_str(finset, "exists_duplicate_of_card_lt"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -8439,6 +8579,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // (for `Nat.Multiset.prod_add`), `Nat.div_lt_self` and
         // `Nat.div_mul_cancel_of_dvd`. Nothing needs it, so it goes last.
         declare_factorization_multiset_all(&mut d, &p)?;
+        // `Nat.Finset` -- the computed finite-set carrier (`finset.rs`,
+        // ADR-1577). Needs `Nat.countRange` and `countRange_split`/
+        // `countRange_congr_lt`/`countRange_eq_zero_of_all_false`
+        // (`totient.rs`, `count_range_permute.rs`), `Nat.setUnion`/`setInter`/
+        // `setDiff` and `Nat.countRange_union_add_inter` (`finite_set.rs`),
+        // `Nat.sumRangeIf` (`subset_sum.rs`), and the `ble`/`le` bridges
+        // `ble_eq_true_of_le`/`ble_eq_false_of_lt`/`succ_le_succ`/
+        // `le_add_right`. Nothing needs it, so it goes last.
+        declare_finset_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -8548,6 +8697,9 @@ mod asc_factorial_div_tests;
 
 #[cfg(test)]
 mod add_factorial_le_tests;
+
+#[cfg(test)]
+mod finset_tests;
 
 #[cfg(test)]
 mod multiset_tests;
