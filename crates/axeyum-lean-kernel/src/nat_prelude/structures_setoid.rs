@@ -2062,4 +2062,127 @@ mod structures_setoid_tests {
             "AlgS.CommRing.ofAlg(Int.commRing).mulComm's type must be def_eq to Int.mul_comm's own type"
         );
     }
+
+    /// Deliverable 5: `AlgS.mul_zero` instantiated at ℤ THROUGH `ofAlg`
+    /// (`AlgS.Ring.ofAlg(Int.ring)`), concrete (`Int.zero`) AND symbolic (a
+    /// closed universally-quantified lambda, the same "close over a bound
+    /// `a` via `lam_over`" technique `rat_prelude::algebra_instances`'s own
+    /// `ring_mul_zero_applies_at_int_and_rat_instances` uses) -- and,
+    /// symbolically, `def_eq` to `Int.mul_zero`'s own type.
+    #[test]
+    fn mul_zero_instantiated_at_int_through_ofalg_concrete_and_symbolic() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_000;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_ring_alg = k.const_(rp.algebra.int_ring, vec![]);
+        let ring_ofalg = k.const_(extra.ring_ofalg, vec![]);
+        let int_ring_s = k.app(ring_ofalg, int_ring_alg);
+        let mul_zero_c = k.const_(extra.mul_zero, vec![]);
+        let applied = k.app(mul_zero_c, int_ring_s);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        // Concrete: at Int.zero.
+        let zero_c = k.const_(rp.int.zero, vec![]);
+        let applied_zero = k.app(applied, zero_c);
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.mul_zero applied at Int's Ring projection must infer a type at Int.zero"
+        );
+
+        // Symbolic: closed over a bound `a`.
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed = lam_over(&mut k, A_FV, int_ty, applied_a);
+        let ty = k
+            .infer(closed)
+            .expect("AlgS.mul_zero closed at Int's Ring projection must infer a type");
+
+        let int_mul_zero = k.const_(rp.int.mul_zero, vec![]);
+        let int_mul_zero_closed = {
+            let a2 = k.fvar(A_FV);
+            let applied2 = k.app(int_mul_zero, a2);
+            lam_over(&mut k, A_FV, int_ty, applied2)
+        };
+        let int_mul_zero_ty = k
+            .infer(int_mul_zero_closed)
+            .expect("Int.mul_zero closed must infer a type");
+        assert!(
+            k.def_eq(ty, int_mul_zero_ty),
+            "AlgS.mul_zero(AlgS.Ring.ofAlg(Int.ring)) must be def_eq to Int.mul_zero at a free `a`"
+        );
+    }
+
+    /// Deliverable 5: `AlgS.neg_neg` instantiated at ℤ through `ofAlg`,
+    /// concrete and symbolic. Int has no named `neg_neg` theorem (ADR-1587
+    /// §4: only a private helper in `int_prelude/gcd.rs`), so this test
+    /// confirms only well-typedness, like `CReal`'s own.
+    #[test]
+    fn neg_neg_instantiated_at_int_through_ofalg_concrete_and_symbolic() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_010;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_ring_alg = k.const_(rp.algebra.int_ring, vec![]);
+        let ring_ofalg = k.const_(extra.ring_ofalg, vec![]);
+        let int_ring_s = k.app(ring_ofalg, int_ring_alg);
+        let neg_neg_c = k.const_(extra.neg_neg, vec![]);
+        let applied = k.app(neg_neg_c, int_ring_s);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let zero_c = k.const_(rp.int.zero, vec![]);
+        let applied_zero = k.app(applied, zero_c);
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.neg_neg applied at Int's Ring projection must infer a type at Int.zero"
+        );
+
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed = lam_over(&mut k, A_FV, int_ty, applied_a);
+        assert!(
+            k.infer(closed).is_ok(),
+            "AlgS.neg_neg closed at Int's Ring projection must infer a type"
+        );
+    }
+
+    /// Deliverable 5: `AlgS.sub_self` instantiated at ℤ through `ofAlg`,
+    /// concrete and symbolic.
+    #[test]
+    fn sub_self_instantiated_at_int_through_ofalg_concrete_and_symbolic() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_020;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_ring_alg = k.const_(rp.algebra.int_ring, vec![]);
+        let ring_ofalg = k.const_(extra.ring_ofalg, vec![]);
+        let int_ring_s = k.app(ring_ofalg, int_ring_alg);
+        let sub_self_c = k.const_(extra.sub_self, vec![]);
+        let applied = k.app(sub_self_c, int_ring_s);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let zero_c = k.const_(rp.int.zero, vec![]);
+        let applied_zero = k.app(applied, zero_c);
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.sub_self applied at Int's Ring projection must infer a type at Int.zero"
+        );
+
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed = lam_over(&mut k, A_FV, int_ty, applied_a);
+        assert!(
+            k.infer(closed).is_ok(),
+            "AlgS.sub_self closed at Int's Ring projection must infer a type"
+        );
+    }
 }
