@@ -82,6 +82,7 @@ mod matrix_transpose;
 mod model;
 mod nullity;
 pub(crate) mod ops;
+pub mod ordered_ring_ext;
 mod pivot_bound;
 mod pivot_content;
 mod polynomial;
@@ -103,6 +104,7 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
+use ordered_ring_ext::OrderedRingExtNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
 /// the order, the inverse, the structural characterisation of the normalised
@@ -3129,6 +3131,11 @@ pub struct RatPrelude {
     /// cross-carrier generic theorems, and `Alg.OrderedRing`. See
     /// [`algebra_ext`].
     pub algebra_ext: AlgebraExtNames,
+
+    /// ADR-1585: `Alg.ofNat` and its two laws, plus three derived order
+    /// lemmas `linarith::generic`'s emitter cites. See
+    /// [`ordered_ring_ext`].
+    pub ordered_ring_ext: OrderedRingExtNames,
 }
 
 impl RatPrelude {
@@ -3683,6 +3690,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_nullity_rows: child(kernel, "rank_nullity_rows"),
         algebra: algebra_instances::intern_algebra_instances(kernel),
         algebra_ext: algebra_ext::intern_algebra_ext(kernel),
+        ordered_ring_ext: ordered_ring_ext::intern_ordered_ring_ext(kernel),
     }
 }
 
@@ -3768,6 +3776,13 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude.int.nat.structures,
             &prelude.algebra,
             &prelude.algebra_ext,
+        )?;
+        ordered_ring_ext::declare_ordered_ring_ext_all(
+            d.kernel(),
+            &prelude.int.nat.logic,
+            &prelude,
+            &prelude.int.nat.structures,
+            &prelude.ordered_ring_ext,
         )?;
         Ok(())
     })();

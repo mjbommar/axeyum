@@ -871,7 +871,7 @@ fn build_mul_neg_one(
 
 /// `Nat.rec.{0} motive base step target`, a `Prop`-valued induction.
 #[allow(clippy::too_many_arguments)]
-fn nat_rec_prop(
+pub(crate) fn nat_rec_prop(
     k: &mut Kernel,
     nat_rec: NameId,
     nat_ty: ExprId,
