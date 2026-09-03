@@ -18,8 +18,9 @@
 use std::time::{Duration, Instant};
 
 use crate::expr::ExprId;
+use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::{NatDev, NatOps};
-use crate::{Kernel, build_nat_prelude};
+use crate::{Kernel, build_int_prelude, build_nat_prelude, build_rat_prelude};
 
 /// One measured goal shape.
 #[derive(Clone, Debug)]
@@ -134,5 +135,144 @@ pub fn measure(repeats: u32) -> Vec<Row> {
                 d.eq(lhs, rhs)
             },
         ),
+    ]
+}
+
+/// Time `repeats` emissions of one ℤ goal shape.
+fn time_int(
+    label: &str,
+    repeats: u32,
+    arity: usize,
+    build: &dyn Fn(&mut IntDev<'_>, &[ExprId]) -> ExprId,
+) -> Row {
+    let mut kernel = Kernel::new();
+    let prelude = build_int_prelude(&mut kernel).expect("the Int prelude must build");
+    let mut d = IntDev::new(&mut kernel, prelude);
+    let int_ty = d.int_ty();
+
+    let anon = d.kernel().anon();
+    let root = d.kernel().name_str(anon, "ring_cost");
+    let warm = d.kernel().name_str(root, "warm");
+    super::int::theorem(&mut d, &prelude, warm, arity, build).expect("the warm-up must succeed");
+
+    let mut search = Duration::ZERO;
+    let start = Instant::now();
+    for i in 0..repeats {
+        let name = d.kernel().name_str(root, format!("t{i}"));
+        let fvs: Vec<u64> = (0..arity).map(|_| d.fresh_fvar()).collect();
+        let vars: Vec<ExprId> = fvs.iter().map(|&v| d.kernel().fvar(v)).collect();
+        let concl = build(&mut d, &vars);
+        let t0 = Instant::now();
+        let proof = super::int::prove(&mut d, &prelude, concl).expect("the goal is provable");
+        search += t0.elapsed();
+
+        let mut ty = concl;
+        let mut value = proof;
+        for &fv in fvs.iter().rev() {
+            ty = d.pi_fv(fv, int_ty, ty);
+            value = d.lam_fv(fv, int_ty, value);
+        }
+        d.declare_theorem(name, ty, value)
+            .expect("the kernel must accept the emitted term");
+    }
+    row(label, repeats, start.elapsed(), search)
+}
+
+/// Time `repeats` emissions of one ℚ goal shape.
+fn time_rat(
+    label: &str,
+    repeats: u32,
+    arity: usize,
+    build: &dyn Fn(&mut IntDev<'_>, &[ExprId]) -> ExprId,
+) -> Row {
+    let mut kernel = Kernel::new();
+    let prelude = build_rat_prelude(&mut kernel).expect("the Rat prelude must build");
+    let mut d = IntDev::new(&mut kernel, prelude.int);
+    let rat_ty = crate::rat_prelude::ops::rat_ty(&mut d);
+
+    let anon = d.kernel().anon();
+    let root = d.kernel().name_str(anon, "ring_cost");
+    let warm = d.kernel().name_str(root, "warm");
+    super::rat::theorem(&mut d, &prelude, warm, arity, build).expect("the warm-up must succeed");
+
+    let mut search = Duration::ZERO;
+    let start = Instant::now();
+    for i in 0..repeats {
+        let name = d.kernel().name_str(root, format!("t{i}"));
+        let fvs: Vec<u64> = (0..arity).map(|_| d.fresh_fvar()).collect();
+        let vars: Vec<ExprId> = fvs.iter().map(|&v| d.kernel().fvar(v)).collect();
+        let concl = build(&mut d, &vars);
+        let t0 = Instant::now();
+        let proof = super::rat::prove(&mut d, &prelude, concl).expect("the goal is provable");
+        search += t0.elapsed();
+
+        let mut ty = concl;
+        let mut value = proof;
+        for &fv in fvs.iter().rev() {
+            ty = d.pi_fv(fv, rat_ty, ty);
+            value = d.lam_fv(fv, rat_ty, value);
+        }
+        d.declare_theorem(name, ty, value)
+            .expect("the kernel must accept the emitted term");
+    }
+    row(label, repeats, start.elapsed(), search)
+}
+
+/// Measure every ℤ shape, `repeats` emissions each — beside [`measure`]'s ℕ
+/// figures. Call from a `--release` binary; see the module docs.
+#[must_use]
+pub fn measure_int(repeats: u32) -> Vec<Row> {
+    vec![
+        time_int(
+            "Int  A*mp + neg(A*mn) = A*(mp+neg mn)",
+            repeats,
+            3,
+            &|d, v| {
+                let (a, mp, mn) = (v[0], v[1], v[2]);
+                let bp = d.imul(a, mp);
+                let q = d.imul(a, mn);
+                let neg_q = d.ineg(q);
+                let lhs = d.iadd(bp, neg_q);
+                let neg_mn = d.ineg(mn);
+                let u0 = d.iadd(mp, neg_mn);
+                let rhs = d.imul(a, u0);
+                d.ieq(lhs, rhs)
+            },
+        ),
+        time_int("Int  (a-1)*(a+1) = a*a - 1", repeats, 1, &|d, v| {
+            let a = v[0];
+            let one = d.ione();
+            let sub_a1 = d.isub(a, one);
+            let add_a1 = d.iadd(a, one);
+            let lhs = d.imul(sub_a1, add_a1);
+            let aa = d.imul(a, a);
+            let rhs = d.isub(aa, one);
+            d.ieq(lhs, rhs)
+        }),
+    ]
+}
+
+/// Measure every ℚ shape, `repeats` emissions each — beside [`measure`]'s ℕ
+/// figures. Call from a `--release` binary; see the module docs.
+#[must_use]
+pub fn measure_rat(repeats: u32) -> Vec<Row> {
+    vec![
+        time_rat("Rat  w*(x*y) = x*(w*y)", repeats, 3, &|d, v| {
+            let (w, x, y) = (v[0], v[1], v[2]);
+            let xy = crate::rat_prelude::ops::rmul(d, x, y);
+            let lhs = crate::rat_prelude::ops::rmul(d, w, xy);
+            let wy = crate::rat_prelude::ops::rmul(d, w, y);
+            let rhs = crate::rat_prelude::ops::rmul(d, x, wy);
+            crate::rat_prelude::ops::req(d, lhs, rhs)
+        }),
+        time_rat("Rat  (a*w)*(a*w) = (a*a)*(w*w)", repeats, 2, &|d, v| {
+            let (a, w) = (v[0], v[1]);
+            let aw = crate::rat_prelude::ops::rmul(d, a, w);
+            let lhs = crate::rat_prelude::ops::rmul(d, aw, aw);
+            let aa = crate::rat_prelude::ops::rmul(d, a, a);
+            let ww = crate::rat_prelude::ops::rmul(d, w, w);
+            let rhs = crate::rat_prelude::ops::rmul(d, aa, ww);
+            crate::rat_prelude::ops::req(d, lhs, rhs)
+        }),
     ]
 }

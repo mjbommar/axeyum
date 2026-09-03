@@ -25,9 +25,9 @@
 //!    off by one, an extra constant, and a swapped variable. A positive
 //!    control (the same route, an actually-true identity) sits beside them,
 //!    and a fourth test keeps the procedure's own check honest.
-//! 4. **The fragment's boundary.** `div`/`mod`/`sub` decline `NonRing`; a
-//!    sized negative records what this normalizer's lack of intra-monomial
-//!    sorting costs (`x*y = y*x`, true but declined).
+//! 4. **The fragment's boundary.** `div`/`mod`/`sub` decline `NonRing`;
+//!    `x*y = y*x` is now proved (`sort_factors`, ring-tactic-2), with a
+//!    negative control over the same factor set (`x*y = x*x`).
 
 #![allow(clippy::many_single_char_names, clippy::similar_names)]
 
@@ -426,16 +426,32 @@ fn a_goal_containing_truncated_sub_declines_nonring() {
 }
 
 #[test]
-fn commuting_two_products_is_a_sized_negative() {
+fn commuting_two_products_is_now_an_identity() {
     on_a_deep_stack(|| {
-        // `x*y = y*x` is TRUE, but this normalizer does not sort factors
-        // *within* a monomial (see the module docs) — a genuine, documented
-        // incompleteness, not a bug. The decline is the honest answer, and
-        // this is the "first stuck term" this lane reports.
+        // `x*y = y*x`. Formerly declined `NotAnIdentity` (this normalizer
+        // did not sort factors *within* a monomial) — fixed by
+        // `sort_factors`, `sort_items`'s multiplicative twin. See the
+        // negative control below: a genuinely false claim over the SAME
+        // factor set still declines.
         let got = attempt(&|d, v| {
             let xy = d.mul(v[0], v[1]);
             let yx = d.mul(v[1], v[0]);
             d.eq(xy, yx)
+        });
+        assert!(got.is_ok(), "x*y = y*x must now be proved: {got:?}");
+    });
+}
+
+#[test]
+fn a_wrong_intra_monomial_factor_declines() {
+    on_a_deep_stack(|| {
+        // The negative control `commuting_two_products_is_now_an_identity`
+        // needs: `x*y = x*x` is false (same shape, wrong factor), and
+        // `sort_factors` must not paper over that.
+        let got = attempt(&|d, v| {
+            let xy = d.mul(v[0], v[1]);
+            let xx = d.mul(v[0], v[0]);
+            d.eq(xy, xx)
         });
         assert_eq!(got, Err(Decline::NotAnIdentity));
     });

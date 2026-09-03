@@ -1927,57 +1927,27 @@ fn declare_variance_eq(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelEr
 /// [`sub_sq_expand`] uses. Five `mul_assoc`/`mul_comm` steps — private:
 /// [`declare_variance_smul`] uses it for both the squared-deviation summand
 /// and the squared mean.
+/// `(a*w)*(a*w) = (a*a)*(w*w)`, by `ring::rat::prove_eq_at` (ring-tactic-2,
+/// ADR-1582) rather than the hand five-step `mul_assoc`/`mul_comm` chain
+/// this file used to carry — like `middle_swap`, needs the ring producer's
+/// intra-monomial factor sorting (`sort_factors`) to see both sides as the
+/// same four-factor monomial.
 fn scale_sq(d: &mut IntDev<'_>, p: RatPrelude, a: ExprId, w: ExprId) -> (ExprId, ExprId, ExprId) {
     let aw = rmul(d, a, w);
     let start = rmul(d, aw, aw);
-
-    // (a*w)*(a*w) = a*(w*(a*w))                              [mul_assoc a w aw]
-    let w_aw = rmul(d, w, aw);
-    let mid1 = rmul(d, a, w_aw);
-    let step1 = d.lemma(p.mul_assoc, &[a, w, aw]);
-
-    // w*(a*w) = (w*a)*w, i.e. reverse of mul_assoc w a w
-    let wa = rmul(d, w, a);
-    let wa_w = rmul(d, wa, w);
-    let h2 = d.lemma(p.mul_assoc, &[w, a, w]); // Eq(wa_w, w_aw)
-    let h2rev = rsymm(d, wa_w, w_aw, h2); // Eq(w_aw, wa_w)
-    let mid2 = rmul(d, a, wa_w);
-    let step2 = rcongr(d, w_aw, wa_w, h2rev, &|d, t| rmul(d, a, t));
-
-    // w*a = a*w                                                      [mul_comm]
-    let aw2 = rmul(d, a, w);
-    let aw2_w = rmul(d, aw2, w);
-    let h3 = d.lemma(p.mul_comm, &[w, a]); // Eq(wa, aw2)
-    let mid3 = rmul(d, a, aw2_w);
-    let step3 = rcongr(d, wa, aw2, h3, &|d, t| {
-        let inner = rmul(d, t, w);
-        rmul(d, a, inner)
-    });
-
-    // (a*w)*w = a*(w*w)                                         [mul_assoc a w w]
-    let ww = rmul(d, w, w);
-    let a_ww = rmul(d, a, ww);
-    let h4 = d.lemma(p.mul_assoc, &[a, w, w]); // Eq(aw2_w, a_ww)
-    let mid4 = rmul(d, a, a_ww);
-    let step4 = rcongr(d, aw2_w, a_ww, h4, &|d, t| rmul(d, a, t));
-
-    // (a*a)*(w*w) = a*(a*(w*w)), reversed
     let aa = rmul(d, a, a);
+    let ww = rmul(d, w, w);
     let target = rmul(d, aa, ww);
-    let h5 = d.lemma(p.mul_assoc, &[a, a, ww]); // Eq(target, mid4)
-    let h5rev = rsymm(d, target, mid4, h5); // Eq(mid4, target)
-
-    let (_e, proof) = rchain(
-        d,
-        start,
-        &[
-            (mid1, step1),
-            (mid2, step2),
-            (mid3, step3),
-            (mid4, step4),
-            (target, h5rev),
-        ],
-    );
+    let proof = crate::ring::rat::prove_eq_at(d, &p, &[a, w], &|d, v| {
+        let (a, w) = (v[0], v[1]);
+        let aw = rmul(d, a, w);
+        let lhs = rmul(d, aw, aw);
+        let aa = rmul(d, a, a);
+        let ww = rmul(d, w, w);
+        let rhs = rmul(d, aa, ww);
+        (lhs, rhs)
+    })
+    .expect("scale_sq: (a*w)*(a*w) = (a*a)*(w*w) is a ring identity");
     (start, target, proof)
 }
 

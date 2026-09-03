@@ -930,68 +930,21 @@ pub(super) fn declare_gcd_eq_one_of_gcd_mul_right_eq_one(
 /// concrete literal `1`, no case split needed since neither reduction depends
 /// on a variable), and from there `neg (neg x) = (-1)*(-1)*x = 1*x = x` by
 /// `neg_one_mul`/`mul_assoc`/`one_mul` alone.
+/// `Eq Int (neg (neg x)) x`, by `ring::int::prove_eq_at` (ring-tactic-2,
+/// ADR-1582) rather than the hand `neg_one_mul`/`mul_assoc`/`one_mul` chain
+/// this file used to carry — `int_prelude/fibonacci.rs::neg_neg` is an
+/// independent hand-written copy of the exact same identity; both retire
+/// through the ring producer's `target_neg_neg_duplicated_in_gcd_and_fibonacci`
+/// test.
 pub(super) fn neg_neg(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
     let p = d.int();
-    let one_c = d.ione();
-    let neg_one = d.ineg(one_c);
-    let neg_x = d.ineg(x);
-    let neg_neg_x = d.ineg(neg_x);
-
-    // step1 : neg (neg x) = neg_one * neg_x
-    let step1 = {
-        let fwd = d.const_app(p.neg_one_mul, &[neg_x]); // (neg_one*neg_x) = neg(neg x)
-        let mul_negone_negx = d.imul(neg_one, neg_x);
-        d.isymm(mul_negone_negx, neg_neg_x, fwd)
-    };
-    let mul_negone_negx = d.imul(neg_one, neg_x);
-
-    // step2 : neg_one * neg_x = neg_one * (neg_one * x)
-    let inner = d.imul(neg_one, x);
-    let step2 = {
-        let negx_eq = {
-            let fwd = d.const_app(p.neg_one_mul, &[x]); // neg_one*x = neg x
-            d.isymm(inner, neg_x, fwd)
-        };
-        d.icongr(neg_x, inner, negx_eq, &|d, y| d.imul(neg_one, y))
-    };
-    let mul_negone_inner = d.imul(neg_one, inner);
-
-    // step3 : neg_one * (neg_one * x) = (neg_one * neg_one) * x
-    let negone_sq = d.imul(neg_one, neg_one);
-    let step3 = {
-        let fwd = d.const_app(p.mul_assoc, &[neg_one, neg_one, x]);
-        let lhs = d.imul(negone_sq, x);
-        d.isymm(lhs, mul_negone_inner, fwd)
-    };
-    let negone_sq_x = d.imul(negone_sq, x);
-
-    // negone_sq = one
-    let negone_sq_eq_one = {
-        let fwd = d.const_app(p.neg_one_mul, &[neg_one]); // negone_sq = neg neg_one
-        let neg_neg_one = d.ineg(neg_one);
-        // neg (neg one) = one, by rfl.
-        let neg_neg_one_pf = d.irefl(one_c);
-        d.itrans(negone_sq, neg_neg_one, one_c, fwd, neg_neg_one_pf)
-    };
-
-    // step5 : (neg_one*neg_one)*x = one*x
-    let step5 = d.icongr(negone_sq, one_c, negone_sq_eq_one, &|d, y| d.imul(y, x));
-    let one_x = d.imul(one_c, x);
-
-    // step6 : one*x = x
-    let step6 = d.const_app(p.one_mul, &[x]);
-
-    let (_reached, chained) = d.ichain(
-        neg_neg_x,
-        &[
-            (mul_negone_negx, step1),
-            (mul_negone_inner, step2),
-            (negone_sq_x, step3),
-            (one_x, step5),
-            (x, step6),
-        ],
-    );
-    chained
+    crate::ring::int::prove_eq_at(d, &p, &[x], &|d, v| {
+        let x = v[0];
+        let neg_x = d.ineg(x);
+        let nn = d.ineg(neg_x);
+        (nn, x)
+    })
+    .expect("neg_neg: neg (neg x) = x is a ring identity")
 }
 
 /// `Eq Int ((neg a) * c) (neg (a*c))`, for any `a, c`.
@@ -1262,31 +1215,27 @@ fn ring_rearrange(
 /// Given `x = A_i*mp_i + neg(A_i*mn_i)` folded into a product-sum shape,
 /// factor `A_i` out: `Eq Int (bp+neg_q) (A_i * u0)` where `bp = A_i*mp_i`,
 /// `q = A_i*mn_i`, `u0 = mp_i + neg mn_i`.
+/// `Eq Int (bp + neg q) (A_i * u0)` (`bp = A_i*mp`, `q = A_i*mn`,
+/// `u0 = mp + neg mn`), by `ring::int::prove_eq_at` (ring-tactic-2,
+/// ADR-1582) rather than a hand chain — the ring producer's own
+/// `target_gcd_factor_out` test re-derives this exact statement.
 fn factor_out(d: &mut IntDev<'_>, big_a: ExprId, mp: ExprId, mn: ExprId) -> (ExprId, ExprId) {
     let p = d.int();
-    let bp = d.imul(big_a, mp);
-    let q = d.imul(big_a, mn);
     let neg_mn = d.ineg(mn);
     let u0 = d.iadd(mp, neg_mn);
-    let neg_q = d.ineg(q);
-    let bp_negq = d.iadd(bp, neg_q);
-    let a_u0 = d.imul(big_a, u0);
-
-    // neg_q = A_i * neg_mn
-    let a_negmn = d.imul(big_a, neg_mn);
-    let step_f1 = {
-        let mn_eq = mul_neg(d, big_a, mn); // A_i*neg_mn = neg (A_i*mn) = neg q
-        d.isymm(a_negmn, neg_q, mn_eq)
-    };
-    let step_f1_congr = d.icongr(neg_q, a_negmn, step_f1, &|d, y| d.iadd(bp, y));
-    let rhs = d.iadd(bp, a_negmn);
-
-    // bp + A_i*neg_mn = A_i*(mp+neg_mn) = A_i*u0
-    let ld = d.const_app(p.left_distrib, &[big_a, mp, neg_mn]); // A_i*u0 = A_i*mp + A_i*neg_mn
-    let step_f2 = d.isymm(a_u0, rhs, ld);
-
-    let (_reached, chained) = d.ichain(bp_negq, &[(rhs, step_f1_congr), (a_u0, step_f2)]);
-    (u0, chained)
+    let proof = crate::ring::int::prove_eq_at(d, &p, &[big_a, mp, mn], &|d, v| {
+        let (a, mp, mn) = (v[0], v[1], v[2]);
+        let bp = d.imul(a, mp);
+        let q = d.imul(a, mn);
+        let neg_q = d.ineg(q);
+        let lhs = d.iadd(bp, neg_q);
+        let neg_mn = d.ineg(mn);
+        let u0 = d.iadd(mp, neg_mn);
+        let rhs = d.imul(a, u0);
+        (lhs, rhs)
+    })
+    .expect("factor_out: bp + neg q = A_i * u0 is a ring identity");
+    (u0, proof)
 }
 
 /// `Or (Eq Int a (ofNat (natAbs a))) (Eq Int a (neg (ofNat (natAbs a))))`,

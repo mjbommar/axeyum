@@ -263,6 +263,83 @@ impl Problem {
         d.trans(source, regrouped, target, step1, step2)
     }
 
+    /// Sort a monomial's factor list into canonical (index) order, one
+    /// adjacent transposition per swap — [`Self::sort_items`]'s exact
+    /// pattern, ported from `+`/`add_assoc`/`add_comm` to `*`/`mul_assoc`/
+    /// `mul_comm`. This is what makes `x*y = y*x` an identity: without it,
+    /// two monomials built by multiplying the same factors in a different
+    /// order compare as different item keys and the procedure declines
+    /// (see `commuting_two_products_is_a_sized_negative`, now a positive
+    /// test — see `commuting_two_products_is_now_an_identity`).
+    fn sort_factors<D: NatOps>(&self, d: &mut D, vars: &[usize]) -> (Vec<usize>, ExprId) {
+        let source = self.fold_mul(d, vars);
+        let mut current: Vec<usize> = vars.to_vec();
+        let mut proof = d.refl(source);
+        let mut folded = source;
+        loop {
+            let mut swapped = false;
+            for k in 0..current.len().saturating_sub(1) {
+                if current[k] <= current[k + 1] {
+                    continue;
+                }
+                let x = self.atoms[current[k]];
+                let y = self.atoms[current[k + 1]];
+                let (inner_before, inner_after, base) = if k == 0 {
+                    let before = d.mul(x, y);
+                    let after = d.mul(y, x);
+                    let lemma = d.lemma(self.prelude.mul_comm, &[x, y]);
+                    (before, after, lemma)
+                } else {
+                    let prefix = self.fold_mul(d, &current[..k]);
+                    let before_inner = d.mul(prefix, x);
+                    let before = d.mul(before_inner, y);
+                    let xy = d.mul(x, y);
+                    // (prefix*x)*y = prefix*(x*y)
+                    let assoc1 = d.lemma(self.prelude.mul_assoc, &[prefix, x, y]);
+                    let mid1 = d.mul(prefix, xy);
+                    // prefix*(x*y) = prefix*(y*x)
+                    let comm = d.lemma(self.prelude.mul_comm, &[x, y]);
+                    let yx = d.mul(y, x);
+                    let step2 = d.congr(xy, yx, comm, &|d, t| d.mul(prefix, t));
+                    let mid2 = d.mul(prefix, yx);
+                    // prefix*(y*x) = (prefix*y)*x
+                    let after_inner = d.mul(prefix, y);
+                    let after = d.mul(after_inner, x);
+                    let assoc2 = d.lemma(self.prelude.mul_assoc, &[prefix, y, x]);
+                    let step3 = d.symm(after, mid2, assoc2);
+                    let (_, base) =
+                        d.chain(before, &[(mid1, assoc1), (mid2, step2), (after, step3)]);
+                    (before, after, base)
+                };
+                let tail = current[k + 2..].to_vec();
+                let step = d.congr(inner_before, inner_after, base, &|d, t| {
+                    self.fold_mul_from(d, t, &tail)
+                });
+                current.swap(k, k + 1);
+                let next = self.fold_mul(d, &current);
+                proof = d.trans(source, folded, next, proof, step);
+                folded = next;
+                swapped = true;
+            }
+            if !swapped {
+                break;
+            }
+        }
+        (current, proof)
+    }
+
+    /// [`Self::fold_mul`], starting the fold from an already-built `start`
+    /// term instead of `vars[0]` — the multiplicative twin of
+    /// [`Self::fold_from`], needed by [`Self::sort_factors`]'s tail congr.
+    fn fold_mul_from<D: NatOps>(&self, d: &mut D, start: ExprId, vars: &[usize]) -> ExprId {
+        let mut acc = start;
+        for &v in vars {
+            let t = self.atoms[v];
+            acc = d.mul(acc, t);
+        }
+        acc
+    }
+
     /// Sort `items` into canonical order, one adjacent transposition per
     /// swap. At the head this is `add_comm` directly; elsewhere it is
     /// **derived** from `add_assoc`/`add_comm` on the spot
@@ -422,13 +499,15 @@ impl Problem {
             (Item::Mono(va), Item::Mono(vb)) => {
                 let mut merged = va.clone();
                 merged.extend_from_slice(vb);
-                let target_item = Item::Mono(merged);
                 let ta = self.fold_mul(d, va);
                 let tb = self.fold_mul(d, vb);
                 let source = d.mul(ta, tb);
-                let proof = self.reassoc_mul(d, va, vb);
+                let reassoc = self.reassoc_mul(d, va, vb);
+                let merged_term = self.fold_mul(d, &merged);
+                let (sorted, sort_proof) = self.sort_factors(d, &merged);
+                let target_item = Item::Mono(sorted);
                 let target = self.item_term(d, &target_item);
-                let _ = (source, target);
+                let proof = d.trans(source, merged_term, target, reassoc, sort_proof);
                 Ok((vec![target_item], proof))
             }
         }

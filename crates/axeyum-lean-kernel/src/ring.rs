@@ -22,14 +22,13 @@
 //! encountered them**, each summand repeated as many times as its
 //! coefficient, the whole sum sorted so equal monomials become adjacent
 //! (`add_comm`/`add_right_comm`) — and the two normal forms are compared as
-//! `Vec<Item>`. A monomial's *internal* factor order is **not** re-sorted:
-//! `x*y` and `y*x` normalize to the different item keys `[x,y]` and `[y,x]`
-//! and the procedure declines rather than proving them equal. This is sound
-//! (a decline is never a false claim) and incomplete — it is why none of the
-//! ten retirement targets need commuting two *different* multiplication
-//! subterms into each other, only re-associating and re-commuting sums and
-//! distributing a sum across a product. See [`nat::tests`] for the sized
-//! negative this leaves.
+//! `Vec<Item>`. A monomial's *internal* factor order **is** re-sorted
+//! (`sort_factors`, ring-tactic-2, ADR-1582): `x*y` and `y*x` normalize to
+//! the same sorted factor-index key `[x,y]` and the procedure proves them
+//! equal — the same three-step `mul_assoc`/`mul_comm`/`symm(mul_assoc)`
+//! adjacent-transposition trick the outer sum's `sort_items` already uses,
+//! applied to a monomial's own factor list. See [`nat::tests`] for the
+//! positive test and its negative control.
 //!
 //! ## Why coefficients are additive, not `Nat.mul` by a numeral
 //!
@@ -45,7 +44,9 @@
 )]
 
 pub mod cost;
+pub mod int;
 pub mod nat;
+pub mod rat;
 
 #[cfg(test)]
 mod tests;

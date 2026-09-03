@@ -36,7 +36,9 @@
     "F:int-mul-sub",
     "F:int-neg-one-mul",
     "F:logic-iff-mp",
-    "F:logic-iff-mpr"
+    "F:logic-iff-mpr",
+    "F:int-mul-neg",
+    "F:ml430-int-add-mul-66aa025b"
   ],
   "axiom_footprint": [],
   "evidence": [

@@ -356,76 +356,24 @@ pub(super) fn prime_condition(d: &mut IntDev<'_>, magnitude: ExprId) -> ExprId {
 /// `1+a`, and finish with
 /// [`super::modeq::cancel_common_addend`]`(a*a, one, a)`, which is exactly
 /// the `(X+r)-(Y+r) = X-Y` shape the last step needs.
+/// `Eq Int ((a-1)*(a+1)) (a*a - 1)`, by `ring::int::prove_eq_at`
+/// (ring-tactic-2, ADR-1582) rather than the hand chain this file used to
+/// carry — including its own `cancel_common_addend` step, which is now
+/// `ring::int::Problem::cancel_pairs`, found the hard way retiring exactly
+/// this target (see ADR-1582).
 fn diff_of_squares(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
     let p = d.int();
-    let one_i = d.ione();
-    let aa = d.imul(a, a);
-    let sub_a1 = d.isub(a, one_i);
-    let add_a1 = d.iadd(a, one_i);
-    let diff = d.isub(aa, one_i);
-
-    let start = d.imul(sub_a1, add_a1);
-
-    // (a-1)*(a+1) = (a+1)*(a-1)
-    let t1 = d.imul(add_a1, sub_a1);
-    let p1 = d.const_app(p.mul_comm, &[sub_a1, add_a1]);
-
-    // (a+1)*(a-1) = (a+1)*a - (a+1)*1
-    let m_add_a = d.imul(add_a1, a);
-    let m_add_one = d.imul(add_a1, one_i);
-    let t2 = d.isub(m_add_a, m_add_one);
-    let p2 = d.const_app(p.mul_sub, &[add_a1, a, one_i]);
-
-    // (a+1)*a = a*(a+1)
-    let m_a_add = d.imul(a, add_a1);
-    let t3 = d.isub(m_a_add, m_add_one);
-    let p3_eq = d.const_app(p.mul_comm, &[add_a1, a]);
-    let p3 = d.icongr(m_add_a, m_a_add, p3_eq, &|d, t| d.isub(t, m_add_one));
-
-    // a*(a+1) = a*a + a*1
-    let a_one = d.imul(a, one_i);
-    let sum4 = d.iadd(aa, a_one);
-    let t4 = d.isub(sum4, m_add_one);
-    let p4_eq = d.const_app(p.left_distrib, &[a, a, one_i]);
-    let p4 = d.icongr(m_a_add, sum4, p4_eq, &|d, t| d.isub(t, m_add_one));
-
-    // a*1 = a
-    let sum5 = d.iadd(aa, a);
-    let t5 = d.isub(sum5, m_add_one);
-    let p5_eq = d.const_app(p.mul_one, &[a]);
-    let p5 = d.icongr(a_one, a, p5_eq, &|d, t| {
-        let s = d.iadd(aa, t);
-        d.isub(s, m_add_one)
-    });
-
-    // (a+1)*1 = a+1
-    let t6 = d.isub(sum5, add_a1);
-    let p6_eq = d.const_app(p.mul_one, &[add_a1]);
-    let p6 = d.icongr(m_add_one, add_a1, p6_eq, &|d, t| d.isub(sum5, t));
-
-    // a+1 = 1+a
-    let one_add_a = d.iadd(one_i, a);
-    let t7 = d.isub(sum5, one_add_a);
-    let p7_eq = d.const_app(p.add_comm, &[a, one_i]);
-    let p7 = d.icongr(add_a1, one_add_a, p7_eq, &|d, t| d.isub(sum5, t));
-
-    // (a*a+a) - (1+a) = a*a - 1
-    let p8 = super::modeq::cancel_common_addend(d, aa, one_i, a);
-
-    let (_, proof) = d.ichain(
-        start,
-        &[
-            (t1, p1),
-            (t2, p2),
-            (t3, p3),
-            (t4, p4),
-            (t5, p5),
-            (t6, p6),
-            (t7, p7),
-            (diff, p8),
-        ],
-    );
-    proof
+    crate::ring::int::prove_eq_at(d, &p, &[a], &|d, v| {
+        let a = v[0];
+        let one = d.ione();
+        let sub_a1 = d.isub(a, one);
+        let add_a1 = d.iadd(a, one);
+        let lhs = d.imul(sub_a1, add_a1);
+        let aa = d.imul(a, a);
+        let rhs = d.isub(aa, one);
+        (lhs, rhs)
+    })
+    .expect("diff_of_squares: (a-1)*(a+1) = a*a - 1 is a ring identity")
 }
 
 /// `Int.self_inverse_mod_prime :

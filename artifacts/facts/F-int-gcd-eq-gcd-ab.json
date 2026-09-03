@@ -26,7 +26,8 @@
     "F:int-mul-comm",
     "F:int-neg-one-mul",
     "F:int-one-mul",
-    "F:nat-gcd-bezout"
+    "F:nat-gcd-bezout",
+    "F:int-mul-neg"
   ],
   "axiom_footprint": [],
   "evidence": [
