@@ -226,6 +226,28 @@ pub(crate) fn congr_arg(
     transport(k, lg, lvl, ty, a, motive, refl_case, b, h)
 }
 
+/// `h : Eq ty a b`, `pa : P a` |- `P b`, for an arbitrary carrier-generic
+/// predicate `P` (a `Prop`-valued closure, not necessarily an `Eq`) — the
+/// same `Eq.rec` shape [`congr_arg`] uses, generalized so `P` need not be
+/// `Eq ty2 (f _) (f _)`. Used by ADR-1584's `OrderedRing` theorem to
+/// transport a `le` fact along a `Ring`-level equality.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn subst(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    lvl: LevelId,
+    ty: ExprId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    scratch_fv: u64,
+    pred: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
+    proof_at_a: ExprId,
+) -> ExprId {
+    let motive = eq_motive(k, lg, lvl, ty, a, scratch_fv, pred);
+    transport(k, lg, lvl, ty, a, motive, proof_at_a, b, h)
+}
+
 fn close_pi(k: &mut Kernel, fields: &[(u64, ExprId)], result: ExprId) -> ExprId {
     let mut t = result;
     for &(fv, ty) in fields.iter().rev() {
@@ -580,6 +602,145 @@ fn cond_inv_field(
 }
 
 // ---------------------------------------------------------------------------
+// ADR-1584: `OrderedRing` field specs — a `Ring` (restated, no inheritance,
+// same "third copy" pattern the rest of the spine uses) plus a relation
+// `le : alpha -> alpha -> Prop` and five order laws.
+// ---------------------------------------------------------------------------
+
+/// A caller-supplied `α -> α -> Prop`.
+fn rel_field(name: &'static str, carrier_idx: usize) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Data,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a = vals[carrier_idx];
+            let l0 = k.level_zero();
+            let prop = k.sort(l0);
+            let inner = arrow(k, a, prop);
+            arrow(k, a, inner)
+        }),
+    }
+}
+
+/// `forall a, le a a`.
+fn le_refl_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let body = app2(k, le, va, va);
+            pi_over(k, V_A, a_ty, body)
+        }),
+    }
+}
+
+/// `forall a b c, le a b -> le b c -> le a c`.
+fn le_trans_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vb = k.fvar(V_B);
+            let vc = k.fvar(V_C);
+            let hab = app2(k, le, va, vb);
+            let hbc = app2(k, le, vb, vc);
+            let hac = app2(k, le, va, vc);
+            let inner = arrow(k, hbc, hac);
+            let inner2 = arrow(k, hab, inner);
+            let t = pi_over(k, V_C, a_ty, inner2);
+            let t = pi_over(k, V_B, a_ty, t);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `forall a b, le a b -> le b a -> a = b`.
+fn le_antisymm_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, lg, l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vb = k.fvar(V_B);
+            let hab = app2(k, le, va, vb);
+            let hba = app2(k, le, vb, va);
+            let eq = eq_of(k, lg, l1, a_ty, va, vb);
+            let inner = arrow(k, hba, eq);
+            let inner2 = arrow(k, hab, inner);
+            let t = pi_over(k, V_B, a_ty, inner2);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `forall a b c, le a b -> le (add c a) (add c b)`.
+fn add_le_add_left_field(
+    name: &'static str,
+    carrier_idx: usize,
+    add_idx: usize,
+    le_idx: usize,
+) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let add = vals[add_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vb = k.fvar(V_B);
+            let vc = k.fvar(V_C);
+            let hab = app2(k, le, va, vb);
+            let ca = app2(k, add, vc, va);
+            let cb = app2(k, add, vc, vb);
+            let concl = app2(k, le, ca, cb);
+            let inner = arrow(k, hab, concl);
+            let t = pi_over(k, V_C, a_ty, inner);
+            let t = pi_over(k, V_B, a_ty, t);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `forall a b, le zero a -> le zero b -> le zero (mul a b)`.
+fn mul_nonneg_field(
+    name: &'static str,
+    carrier_idx: usize,
+    mul_idx: usize,
+    zero_idx: usize,
+    le_idx: usize,
+) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let mul = vals[mul_idx];
+            let zero = vals[zero_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vb = k.fvar(V_B);
+            let h1 = app2(k, le, zero, va);
+            let h2 = app2(k, le, zero, vb);
+            let mul_ab = app2(k, mul, va, vb);
+            let concl = app2(k, le, zero, mul_ab);
+            let inner = arrow(k, h2, concl);
+            let inner2 = arrow(k, h1, inner);
+            let t = pi_over(k, V_B, a_ty, inner2);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+// ---------------------------------------------------------------------------
 // The generic record builder.
 // ---------------------------------------------------------------------------
 
@@ -865,6 +1026,27 @@ fn field_fields() -> Vec<FieldSpec> {
     f
 }
 
+/// ADR-1584: `Ring`'s 15 fields, restated (no inheritance, same pattern
+/// every later record in the spine already uses), plus `le` and five order
+/// laws.
+fn ordered_ring_fields() -> Vec<FieldSpec> {
+    use idx::ring::{ADD, CARRIER, MUL, ZERO};
+    let mut f = ring_fields();
+    f.push(rel_field("le", CARRIER));
+    let le_idx = f.len() - 1;
+    f.push(le_refl_field("le_refl", CARRIER, le_idx));
+    f.push(le_trans_field("le_trans", CARRIER, le_idx));
+    f.push(le_antisymm_field("le_antisymm", CARRIER, le_idx));
+    f.push(add_le_add_left_field(
+        "add_le_add_left",
+        CARRIER,
+        ADD,
+        le_idx,
+    ));
+    f.push(mul_nonneg_field("mul_nonneg", CARRIER, MUL, ZERO, le_idx));
+    f
+}
+
 /// Field-index constants, one module per record, so a consumer never counts
 /// positions by hand. Mirrors the `*_fields()` functions above exactly --
 /// keep both in sync if either changes. A complete reference table:
@@ -948,6 +1130,20 @@ pub mod idx {
         pub const ONE_NE_ZERO: usize = 17;
         pub const MUL_INV: usize = 18;
     }
+    /// ADR-1584: `Ring`'s 15 fields (re-exported) plus `le` and five order
+    /// laws.
+    pub mod ordered_ring {
+        pub use super::ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, MUL, MUL_ASSOC,
+            MUL_ONE_L, MUL_ONE_R, NEG, NEG_ADD, ONE, ZERO,
+        };
+        pub const LE: usize = 15;
+        pub const LE_REFL: usize = 16;
+        pub const LE_TRANS: usize = 17;
+        pub const LE_ANTISYMM: usize = 18;
+        pub const ADD_LE_ADD_LEFT: usize = 19;
+        pub const MUL_NONNEG: usize = 20;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -967,6 +1163,8 @@ pub struct StructuresPrelude {
     pub ring: NameId,
     pub comm_ring: NameId,
     pub field: NameId,
+    /// ADR-1584.
+    pub ordered_ring: NameId,
 }
 
 /// Intern the ten record names (and nothing else) under a fresh `Alg` root,
@@ -986,6 +1184,7 @@ pub(crate) fn intern_structures_names(kernel: &mut Kernel) -> StructuresPrelude 
         ring: kernel.name_str(alg, "Ring"),
         comm_ring: kernel.name_str(alg, "CommRing"),
         field: kernel.name_str(alg, "Field"),
+        ordered_ring: kernel.name_str(alg, "OrderedRing"),
     }
 }
 
@@ -1003,6 +1202,8 @@ pub struct StructuresNames {
     pub ring: RecordNames,
     pub comm_ring: RecordNames,
     pub field: RecordNames,
+    /// ADR-1584.
+    pub ordered_ring: RecordNames,
 }
 
 /// Declare all ten records (`add_inductive` + selectors, each with a
@@ -1042,6 +1243,15 @@ pub(crate) fn declare_structures_all(
     let ring = declare_record(kernel, logic, l0, l1, l2, p.ring, &ring_fields())?;
     let comm_ring = declare_record(kernel, logic, l0, l1, l2, p.comm_ring, &comm_ring_fields())?;
     let field = declare_record(kernel, logic, l0, l1, l2, p.field, &field_fields())?;
+    let ordered_ring = declare_record(
+        kernel,
+        logic,
+        l0,
+        l1,
+        l2,
+        p.ordered_ring,
+        &ordered_ring_fields(),
+    )?;
 
     Ok(StructuresNames {
         magma,
@@ -1054,6 +1264,7 @@ pub(crate) fn declare_structures_all(
         ring,
         comm_ring,
         field,
+        ordered_ring,
     })
 }
 
@@ -1084,6 +1295,7 @@ mod structures_tests {
             ("Ring", 15),
             ("CommRing", 16),
             ("Field", 19),
+            ("OrderedRing", 21),
         ];
         let actual = [
             records.magma.field_count(),
@@ -1096,6 +1308,7 @@ mod structures_tests {
             records.ring.field_count(),
             records.comm_ring.field_count(),
             records.field.field_count(),
+            records.ordered_ring.field_count(),
         ];
         for (i, (name, want)) in expected.iter().enumerate() {
             assert_eq!(actual[i], *want, "{name} field count");
@@ -1115,6 +1328,7 @@ mod structures_tests {
             &records.ring,
             &records.comm_ring,
             &records.field,
+            &records.ordered_ring,
         ] {
             assert!(k.environment().get(rn.ind).is_some(), "inductive missing");
             assert!(k.environment().get(rn.rec).is_some(), "recursor missing");
