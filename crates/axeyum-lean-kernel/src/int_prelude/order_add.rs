@@ -28,50 +28,6 @@ use crate::nat_prelude::NatOps;
 // Shared algebraic cores
 // ---------------------------------------------------------------------------
 
-/// `Eq Int (add a (add (neg a) x)) x` — "a + (-a + x) = x", the mirror image
-/// of `modeq.rs`'s private `cancel_neg_add_left` (`-a + (a + x) = x`) with `a`
-/// and `-a` swapped. Needed because `add_le_of_le_neg_add` and
-/// `add_le_of_le_sub_left` both shift on the *left* by `a` itself, not by
-/// `-a`.
-fn add_cancel_neg_left(d: &mut IntDev<'_>, a: ExprId, x: ExprId) -> ExprId {
-    let p = d.int();
-    let neg_a = d.ineg(a);
-    let neg_a_x = d.iadd(neg_a, x);
-    let start = d.iadd(a, neg_a_x);
-
-    let a_neg_a = d.iadd(a, neg_a);
-    let mid = d.iadd(a_neg_a, x);
-    let assoc = d.const_app(p.add_assoc, &[a, neg_a, x]); // Eq(mid, start)
-    let step1 = d.isymm(mid, start, assoc); // Eq(start, mid)
-
-    let zero = d.izero();
-    let an = d.const_app(p.add_neg, &[a]); // Eq(a+(-a), 0)
-    let zero_x = d.iadd(zero, x);
-    let step2 = d.icongr(a_neg_a, zero, an, &|d, t| d.iadd(t, x)); // Eq(mid, zero_x)
-
-    let x_zero = d.iadd(x, zero);
-    let comm = d.const_app(p.add_comm, &[zero, x]); // Eq(zero_x, x_zero)
-    let az = d.const_app(p.add_zero, &[x]); // Eq(x_zero, x)
-    let step3 = d.itrans(zero_x, x_zero, x, comm, az); // Eq(zero_x, x)
-
-    let (_, proof) = d.ichain(start, &[(mid, step1), (zero_x, step2), (x, step3)]);
-    proof
-}
-
-/// From `h : le b (add (neg a) c)`, derive `le (add a b) c`.
-fn le_of_le_neg_add_core(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h: ExprId) -> ExprId {
-    let p = d.int();
-    let refl_a = d.const_app(p.le_refl, &[a]);
-    let neg_a = d.ineg(a);
-    let neg_a_c = d.iadd(neg_a, c);
-    let raw = d.const_app(p.add_le_add, &[a, a, b, neg_a_c, refl_a, h]);
-    // raw : a+b <= a+((-a)+c)
-    let eq_c = add_cancel_neg_left(d, a, c); // Eq(a+((-a)+c), c)
-    let ab = d.iadd(a, b);
-    let a_neg_a_c = d.iadd(a, neg_a_c);
-    d.int_eq_rewrite(a_neg_a_c, c, eq_c, raw, &|d, x| d.ile(ab, x))
-}
-
 /// From `h : le a (add c (neg b))`, derive `le (add a b) c`.
 fn le_of_le_sub_right_core(
     d: &mut IntDev<'_>,
@@ -351,20 +307,13 @@ pub(super) fn declare_add_le_iff_le_sub(d: &mut IntDev<'_>) -> Result<(), Kernel
 pub(super) fn declare_add_le_of_le_sub(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
 
-    d.int_theorem(p.add_le_of_le_neg_add, 3, &|d, v| {
+    linarith::declare(d, &p, p.add_le_of_le_neg_add, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
         let neg_a = d.ineg(a);
         let neg_a_c = d.iadd(neg_a, c);
         let hyp = d.ile(b, neg_a_c);
         let ab = d.iadd(a, b);
-        let concl = d.ile(ab, c);
-        let stmt = d.arrow(hyp, concl);
-
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = le_of_le_neg_add_core(d, a, b, c, h);
-        let proof = d.lam_fv(h_fv, hyp, body);
-        (stmt, proof)
+        (vec![hyp], d.ile(ab, c))
     })?;
 
     linarith::declare(d, &p, p.add_le_of_le_sub_left, 3, &|d, v| {
@@ -375,19 +324,12 @@ pub(super) fn declare_add_le_of_le_sub(d: &mut IntDev<'_>) -> Result<(), KernelE
         (vec![hyp], d.ile(ab, c))
     })?;
 
-    d.int_theorem(p.add_le_of_le_sub_right, 3, &|d, v| {
+    linarith::declare(d, &p, p.add_le_of_le_sub_right, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
         let c_sub_b = d.isub(c, b);
         let hyp = d.ile(a, c_sub_b);
         let ab = d.iadd(a, b);
-        let concl = d.ile(ab, c);
-        let stmt = d.arrow(hyp, concl);
-
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = le_of_le_sub_right_core(d, a, b, c, h);
-        let proof = d.lam_fv(h_fv, hyp, body);
-        (stmt, proof)
+        (vec![hyp], d.ile(ab, c))
     })?;
 
     Ok(())
