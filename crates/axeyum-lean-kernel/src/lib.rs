@@ -84,6 +84,7 @@ pub mod shape_index;
 pub mod simp;
 mod stack;
 mod string_prelude;
+pub mod tactic;
 mod tc;
 
 use std::collections::{BTreeMap, HashMap};
