@@ -337,6 +337,7 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
             "rank_nullity_rows_of_pivotSection",
             p.rank_nullity_rows_of_pivot_section,
         ),
+        ("rankCols_le_rank", p.rank_cols_le_rank),
         ("pivotSearchAux_ne_zero", p.pivot_search_aux_ne_zero),
         ("pivotSearch_ne_zero", p.pivot_search_ne_zero),
         ("add_neg_div_mul_cancel", p.add_neg_div_mul_cancel),
