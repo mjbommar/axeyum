@@ -654,14 +654,13 @@ fn declare_record(
         let sort1 = k.sort(l1);
         let ctl_const = k.const_(ctl_ind, vec![]);
         let ctl_ctor = close_pi(k, &ctor_fields, ctl_const);
-        match k.add_inductive(ctl_ind, &[], 0, sort1, &[(ctl_mk, ctl_ctor)]) {
-            Ok(()) => panic!(
-                "ADR-1578 universe control failed: {ctl_ind:?} (a Sort-1-carrying \
-                 record) was ACCEPTED at Sort 1 -- the ADR-1495 \
-                 ConstructorFieldUniverseTooBig guard did not fire"
-            ),
-            Err(_) => { /* expected: refused */ }
-        }
+        assert!(
+            k.add_inductive(ctl_ind, &[], 0, sort1, &[(ctl_mk, ctl_ctor)])
+                .is_err(),
+            "ADR-1578 universe control failed: {ctl_ind:?} (a Sort-1-carrying \
+             record) was ACCEPTED at Sort 1 -- the ADR-1495 \
+             ConstructorFieldUniverseTooBig guard did not fire"
+        );
     }
 
     // 2. Admit the real inductive at Sort 2.
@@ -868,7 +867,11 @@ fn field_fields() -> Vec<FieldSpec> {
 
 /// Field-index constants, one module per record, so a consumer never counts
 /// positions by hand. Mirrors the `*_fields()` functions above exactly --
-/// keep both in sync if either changes.
+/// keep both in sync if either changes. A complete reference table:
+/// `#[allow(dead_code, unused_imports)]` because not every record's every
+/// constant (or re-export, for the ones a later record inherits textually,
+/// e.g. `comm_group`'s from `group`) has a consumer yet.
+#[allow(dead_code, unused_imports)]
 pub mod idx {
     pub mod magma {
         pub const CARRIER: usize = 0;

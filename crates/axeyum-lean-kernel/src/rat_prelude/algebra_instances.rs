@@ -132,7 +132,7 @@ fn declare_instances(
 
     // --- Nat.commAddMonoid : (Nat, +, 0) -----------------------------------
     {
-        use structures::idx::comm_monoid::*;
+        use structures::idx::comm_monoid::{ASSOC, CARRIER, COMM, E, IDENT_L, IDENT_R, OP};
         let nat_ty = k.const_(np.nat, vec![]);
         let add = k.const_(np.add, vec![]);
         let zero = k.const_(np.zero, vec![]);
@@ -153,7 +153,7 @@ fn declare_instances(
 
     // --- Rat.commMulMonoid : (Rat, *, 1) -----------------------------------
     {
-        use structures::idx::comm_monoid::*;
+        use structures::idx::comm_monoid::{ASSOC, CARRIER, COMM, E, IDENT_L, IDENT_R, OP};
         let rat_ty = k.const_(p.int.rat, vec![]);
         let mul = k.const_(p.int.rat_mul, vec![]);
         let one = k.const_(p.one, vec![]);
@@ -176,7 +176,7 @@ fn declare_instances(
 
     // --- Int.addGroup : (Int, +, 0, neg) -----------------------------------
     {
-        use structures::idx::group::*;
+        use structures::idx::group::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, INV, INV_L, INV_R, OP};
         let int_ty = k.const_(ip.z, vec![]);
         let add = k.const_(ip.add, vec![]);
         let zero = k.const_(ip.zero, vec![]);
@@ -204,7 +204,7 @@ fn declare_instances(
 
     // --- Rat.addGroup : (Rat, +, 0, neg) -- every field direct -------------
     {
-        use structures::idx::group::*;
+        use structures::idx::group::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, INV, INV_L, INV_R, OP};
         let rat_ty = k.const_(p.int.rat, vec![]);
         let add = k.const_(p.int.rat_add, vec![]);
         let zero = k.const_(p.zero, vec![]);
@@ -229,7 +229,10 @@ fn declare_instances(
 
     // --- Int.ring -- every field direct ------------------------------------
     let int_ring_args = {
-        use structures::idx::ring::*;
+        use structures::idx::ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, MUL, MUL_ASSOC,
+            MUL_ONE_L, MUL_ONE_R, NEG, NEG_ADD, ONE, ZERO,
+        };
         let int_ty = k.const_(ip.z, vec![]);
         let zero = k.const_(ip.zero, vec![]);
         let one = k.const_(ip.one, vec![]);
@@ -275,7 +278,10 @@ fn declare_instances(
 
     // --- Rat.ring -- only mulOneL is derived --------------------------------
     let rat_ring_args = {
-        use structures::idx::ring::*;
+        use structures::idx::ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, MUL, MUL_ASSOC,
+            MUL_ONE_L, MUL_ONE_R, NEG, NEG_ADD, ONE, ZERO,
+        };
         let rat_ty = k.const_(p.int.rat, vec![]);
         let zero = k.const_(p.zero, vec![]);
         let one = k.const_(p.one, vec![]);
@@ -348,7 +354,7 @@ fn build_monoid_ident_unique(
     l1: LevelId,
     monoid: &RecordNames,
 ) -> (ExprId, ExprId) {
-    use structures::idx::monoid::*;
+    use structures::idx::monoid::{CARRIER, E, IDENT_L, OP};
     const M_FV: u64 = 21_000;
     const EP_FV: u64 = 21_001;
     const A_FV: u64 = 21_002;
@@ -399,7 +405,7 @@ fn build_group_inv_unique(
     l1: LevelId,
     group: &RecordNames,
 ) -> (ExprId, ExprId) {
-    use structures::idx::group::*;
+    use structures::idx::group::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, OP};
     const G_FV: u64 = 21_100;
     const A_FV: u64 = 21_101;
     const B_FV: u64 = 21_102;
@@ -433,10 +439,7 @@ fn build_group_inv_unique(
 
     // Step A: identR(b) : op b e = b ; symm -> b = op b e
     let op_b_e = app2(k, op, b, e);
-    let h_a = {
-        let c1 = k.app(ident_r, b);
-        c1
-    };
+    let h_a = k.app(ident_r, b);
     let symm_ha = symm_of(k, lg, l1, carrier, op_b_e, b, h_a); // b = op b e
 
     // Step B': congr_arg (op b .) on symm(h2) : e = op a c  =>  op b e = op b (op a c)
@@ -502,7 +505,9 @@ fn build_ring_mul_zero(
     l1: LevelId,
     ring: &RecordNames,
 ) -> (ExprId, ExprId) {
-    use structures::idx::ring::*;
+    use structures::idx::ring::{
+        ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, MUL, NEG, NEG_ADD, ZERO,
+    };
     const R_FV: u64 = 21_200;
     const A_FV: u64 = 21_201;
     const S1: u64 = 21_202;
@@ -1324,12 +1329,12 @@ mod algebra_instances_tests {
             (p.algebra.int_add_group, p.int.z, "Int"),
             (p.algebra.rat_add_group, p.int.rat, "Rat"),
         ] {
-            let thm = k.const_(p.algebra.group_inv_unique, vec![]);
-            let g = k.const_(g_name, vec![]);
-            let carrier = k.const_(carrier_const, vec![]);
             const A_FV: u64 = 30_000;
             const B_FV: u64 = 30_001;
             const C_FV: u64 = 30_002;
+            let thm = k.const_(p.algebra.group_inv_unique, vec![]);
+            let g = k.const_(g_name, vec![]);
+            let carrier = k.const_(carrier_const, vec![]);
             let closed = {
                 let a = k.fvar(A_FV);
                 let b = k.fvar(B_FV);
@@ -1364,10 +1369,11 @@ mod algebra_instances_tests {
             (p.algebra.int_ring, p.int.z, "Int"),
             (p.algebra.rat_ring, p.int.rat, "Rat"),
         ] {
+            use structures::idx::ring::{MUL, ZERO};
+            const A_FV: u64 = 30_100;
             let thm = k.const_(p.algebra.ring_mul_zero, vec![]);
             let r = k.const_(r_name, vec![]);
             let carrier = k.const_(carrier_const, vec![]);
-            const A_FV: u64 = 30_100;
             let closed_value = {
                 let a = k.fvar(A_FV);
                 let applied = {
@@ -1380,7 +1386,6 @@ mod algebra_instances_tests {
                 .infer(closed_value)
                 .unwrap_or_else(|e| panic!("{label} instantiation must type-check: {e:?}"));
 
-            use structures::idx::ring::{MUL, ZERO};
             let closed_expected_ty = {
                 let a = k.fvar(A_FV);
                 let mul = sel(&mut k, &p.int.nat.structures.ring, MUL, r);
@@ -1409,6 +1414,7 @@ mod algebra_instances_tests {
     /// no `LocalContext` is needed.
     #[test]
     fn comm_ring_det_one_instantiates_at_rat_and_the_agreement_with_rat_det_is_measured() {
+        const A_FV: u64 = 30_200;
         let mut k = Kernel::new();
         let p = build_rat_prelude(&mut k).expect("rat prelude must build");
         let thm = k.const_(p.algebra.comm_ring_det_one, vec![]);
@@ -1420,7 +1426,6 @@ mod algebra_instances_tests {
             let row_ty = arrow(&mut k, nat_ty, rat_ty);
             arrow(&mut k, nat_ty, row_ty)
         };
-        const A_FV: u64 = 30_200;
         let one_n = {
             let c = k.const_(p.int.nat.succ, vec![]);
             let zero_n = k.const_(p.int.nat.zero, vec![]);
