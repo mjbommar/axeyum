@@ -193,6 +193,84 @@ pub(crate) fn congr_of(
     transport_of(kernel, logic, level_a, ty_a, a, motive, refl_case, b, h)
 }
 
+// --- a `Bool` case split (needed by `bridge::declare_count_to_multiset`) --
+
+/// `Or (Eq Bool b true) (Eq Bool b false)` for an arbitrary `b : Bool`, by a
+/// direct `Bool.rec` split — fully constructive, no excluded middle. Mirrors
+/// `nat_prelude::ops::bool_true_or_false`, rebuilt here because that helper
+/// is `pub(super)` to `nat_prelude` and not reachable from `list_prelude`.
+pub(crate) fn bool_true_or_false_of(
+    kernel: &mut Kernel,
+    logic: &LogicPrelude,
+    one_lvl: LevelId,
+    b: ExprId,
+    x_fv: u64,
+) -> ExprId {
+    let bool_ty = kernel.const_(logic.bool_, vec![]);
+    let true_ = kernel.const_(logic.bool_true, vec![]);
+    let false_ = kernel.const_(logic.bool_false, vec![]);
+
+    let motive = {
+        let x = kernel.fvar(x_fv);
+        let is_true = eq_of(kernel, logic, one_lvl, bool_ty, x, true_);
+        let is_false = eq_of(kernel, logic, one_lvl, bool_ty, x, false_);
+        let or_c = kernel.const_(logic.or, vec![]);
+        let body = apply_all(kernel, or_c, &[is_true, is_false]);
+        lam_fvar(kernel, x_fv, bool_ty, body, BinderInfo::Default)
+    };
+    // `false`-constructor case: motive false = Or (Eq false true) (Eq false false)
+    // — the SECOND disjunct holds by `Eq.refl`, so this is `Or.inr`.
+    let case_false = {
+        let is_true = eq_of(kernel, logic, one_lvl, bool_ty, false_, true_);
+        let is_false = eq_of(kernel, logic, one_lvl, bool_ty, false_, false_);
+        let refl_false = refl_of(kernel, logic, one_lvl, bool_ty, false_);
+        let or_inr = kernel.const_(logic.or_inr, vec![]);
+        apply_all(kernel, or_inr, &[is_true, is_false, refl_false])
+    };
+    // `true`-constructor case: motive true = Or (Eq true true) (Eq true false)
+    // — the FIRST disjunct holds by `Eq.refl`, so this is `Or.inl`.
+    let case_true = {
+        let is_true = eq_of(kernel, logic, one_lvl, bool_ty, true_, true_);
+        let is_false = eq_of(kernel, logic, one_lvl, bool_ty, true_, false_);
+        let refl_true = refl_of(kernel, logic, one_lvl, bool_ty, true_);
+        let or_inl = kernel.const_(logic.or_inl, vec![]);
+        apply_all(kernel, or_inl, &[is_true, is_false, refl_true])
+    };
+    let zero = kernel.level_zero();
+    let bool_rec = kernel.const_(logic.bool_rec, vec![zero]);
+    apply_all(kernel, bool_rec, &[motive, case_false, case_true, b])
+}
+
+/// `Or.rec` into a NON-DEPENDENT `goal`: from `proof : Or left_ty right_ty`
+/// and two case functions already built as `left_ty → goal` /
+/// `right_ty → goal` lambdas (via [`lam_fvar`]), a proof of `goal`. Mirrors
+/// `nat_prelude::steps::or_cases`, rebuilt here for the same visibility
+/// reason as [`bool_true_or_false_of`].
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn or_cases_of(
+    kernel: &mut Kernel,
+    logic: &LogicPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_minor: ExprId,
+    right_minor: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let anon = kernel.anon();
+    let or_ty = {
+        let or_c = kernel.const_(logic.or, vec![]);
+        apply_all(kernel, or_c, &[left_ty, right_ty])
+    };
+    let motive = kernel.lam(anon, or_ty, goal, BinderInfo::Default);
+    let rec = kernel.const_(logic.or_rec, vec![]);
+    apply_all(
+        kernel,
+        rec,
+        &[left_ty, right_ty, motive, left_minor, right_minor, proof],
+    )
+}
+
 // --- the operations ------------------------------------------------------
 
 /// `List.length : {α : Type 0} → List α → Nat`, by `List.rec` with the

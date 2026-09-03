@@ -171,3 +171,64 @@ fn the_bridge_theorems_declare_no_axioms() {
         );
     }
 }
+
+/// `List.count_toMultiset` landed (`ListNatBridge::count_to_multiset` is
+/// `Some`, not the `None` `docs/plan/status/460-list-carrier-1.md` recorded),
+/// is axiom-free, and instantiating the general (symbolic-in-`a`/`l`) proof
+/// at concrete arguments both type-checks and matches independently
+/// evaluated `count`/`Multiset.count (toMultiset …)` values -- the negative
+/// controls are the SAME ones `list_count_matches_the_multiplicity` and
+/// `to_multiset_agrees_with_count_at_several_points` already use, since a
+/// wrong direction or a vacuous statement in `count_toMultiset` itself would
+/// not be caught by either of those alone.
+#[test]
+fn count_to_multiset_landed_axiom_free_and_matches_concretely() {
+    let mut f = Fixture::new();
+    let ctm = f
+        .bridge
+        .count_to_multiset
+        .expect("List.count_toMultiset must land (see the module doc for what unblocked it)");
+
+    let footprint = f.k.axiom_footprint(ctm);
+    assert!(
+        footprint.is_empty(),
+        "expected no axioms for List.count_toMultiset, found {footprint:?}"
+    );
+
+    let l = f.list_of(&[1, 2, 1]);
+    let one = f.num(1);
+    let three = f.num(3);
+    let two = f.num(2);
+    let zero = f.num(0);
+
+    // Instantiate the theorem at (a := 1, l := [1,2,1]) and (a := 3, l :=
+    // [1,2,1]); both must type-check (the theorem is `∀ a l, …`, so this
+    // exercises the SAME general proof concretely, not a re-derivation).
+    let ctm_const = f.k.const_(ctm, vec![]);
+    let inst_at_one = f.k.app(ctm_const, one);
+    let inst_at_one = f.k.app(inst_at_one, l);
+    f.k.infer(inst_at_one)
+        .expect("count_toMultiset applied at (1, [1,2,1]) must type-check");
+
+    let ctm_const2 = f.k.const_(ctm, vec![]);
+    let inst_at_three = f.k.app(ctm_const2, three);
+    let inst_at_three = f.k.app(inst_at_three, l);
+    f.k.infer(inst_at_three)
+        .expect("count_toMultiset applied at (3, [1,2,1]) must type-check");
+
+    // Independent evaluation: count 1 [1,2,1] = 2, count 3 [1,2,1] = 0 --
+    // matching `to_multiset_agrees_with_count_at_several_points`'s own
+    // negative-control shape (a repeat must not collapse to 1).
+    let count1 = f.count(1, l);
+    assert!(f.k.def_eq(count1, two), "count 1 [1,2,1] must be 2");
+    assert!(
+        !f.k.def_eq(count1, zero),
+        "negative control: count 1 [1,2,1] must NOT be 0"
+    );
+    let count3 = f.count(3, l);
+    assert!(f.k.def_eq(count3, zero), "count 3 [1,2,1] must be 0");
+    assert!(
+        !f.k.def_eq(count3, two),
+        "negative control: count 3 [1,2,1] must NOT be 2"
+    );
+}

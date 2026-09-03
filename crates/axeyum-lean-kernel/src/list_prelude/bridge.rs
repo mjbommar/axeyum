@@ -22,6 +22,7 @@
 
 use super::ListNames;
 use super::ops::*;
+use crate::LogicPrelude;
 use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::level::LevelId;
@@ -235,8 +236,17 @@ pub fn build_list_nat_bridge(
         name
     };
 
-    let count_to_multiset =
-        declare_count_to_multiset(kernel, &logic, &nat, &names, count, to_multiset, zero_lvl).ok();
+    let count_to_multiset = declare_count_to_multiset(
+        kernel,
+        &logic,
+        &nat,
+        &names,
+        count,
+        to_multiset,
+        zero_lvl,
+        one_lvl,
+    )
+    .ok();
 
     let _ = sum_const;
 
@@ -678,23 +688,498 @@ fn declare_sum_append(
 
 /// `∀ a l, List.count a l = Nat.Multiset.count (List.toMultiset l) a`.
 ///
-/// Attempted, not yet landed: the `cons` case needs a case split on
-/// `Nat.beq head a` (the same test `List.count`'s own fold already
-/// performs) and, in the `false` branch, a bridge from `Nat.beq head a =
-/// false` to `head ≠ a` to invoke `Nat.Multiset.count_singleton_of_ne`. See
-/// `docs/plan/status/460-list-carrier-1.md` for what is missing and where.
-#[allow(clippy::too_many_arguments, dead_code)]
+/// The blocker `docs/plan/status/460-list-carrier-1.md` recorded --
+/// "a bridge from `Nat.beq head a = false` to `head ≠ a`" -- turned out not
+/// to exist: `Nat.Multiset.count_singleton_of_ne` is already stated directly
+/// in terms of `beq` (`∀ a x, Eq Bool (beq x a) false → Eq (count (singleton
+/// a) x) 0`), not `Not (Eq _ _)`, so no `beq`-to-`≠` lemma is needed at all
+/// -- only `Nat.beq_comm` to flip the case split's own hypothesis
+/// (`beq head a = _`) into the shape `count_singleton_of_ne` expects
+/// (`beq a head = _`). `Nat.eq_of_beq_eq_true`/`Nat.beq_comm` and
+/// `Nat.Multiset.count_singleton_self`/`count_singleton_of_ne`/`count_add`/
+/// `count_eq_zero_of_bound_le` were all already declared by `nat_prelude`
+/// (`nat_prelude/defs.rs`, `nat_prelude/multiset.rs`, `nat_prelude/
+/// order_more.rs`) -- this proof consumes them, it does not add new `Nat`
+/// theorems.
+///
+/// Induction on `l`, `a` fixed throughout. The `nil` case is
+/// `Nat.Multiset.count_eq_zero_of_bound_le` at `Nat.Multiset.zero` (whose
+/// `bound` is `0` by ι alone, so `Nat.zero_le a` already has the type the
+/// lemma's hypothesis wants). The `cons` case case-splits on `Nat.beq head
+/// a` (built by a fresh `Bool.rec`-based `Or` split, ADR-1495-style, since
+/// `nat_prelude`'s own copy of this helper is not visible outside
+/// `nat_prelude`): the `true` branch transports `head = a` (`eq_of_beq_eq_true`)
+/// through `count_singleton_self`; the `false` branch flips the hypothesis
+/// via `beq_comm` and applies `count_singleton_of_ne` directly. Both branches
+/// then thread `Nat.Multiset.count_add`, `Nat.succ_add`/`Nat.zero_add` (our
+/// `Nat.add` recurses on its RIGHT argument, so `add (succ zero) y` and
+/// `add zero y` do not reduce for symbolic `y` by defeq alone), and the
+/// induction hypothesis to close the chain.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn declare_count_to_multiset(
-    _kernel: &mut Kernel,
-    _logic: &crate::LogicPrelude,
-    _nat: &NatPrelude,
-    _names: &ListNames,
+    kernel: &mut Kernel,
+    logic: &LogicPrelude,
+    nat: &NatPrelude,
+    names: &ListNames,
     count: NameId,
-    _to_multiset: NameId,
-    _zero_lvl: LevelId,
+    to_multiset: NameId,
+    zero_lvl: LevelId,
+    one_lvl: LevelId,
 ) -> Result<NameId, KernelError> {
-    // Not landed -- see the module doc; the caller `.ok()`s this.
-    Err(KernelError::PreludePackageConflict { name: count })
+    let name = kernel.name_str(names.list, "count_toMultiset");
+    let a_fv = 93_000;
+    let l_fv = 93_001;
+    let head_fv = 93_002;
+    let tail_fv = 93_003;
+    let ih_fv = 93_004;
+    let x_fv = 93_005;
+    let symm_base_fv = 93_006;
+    let split_motive_fv = 93_010;
+    let true_branch_fv = 93_011;
+    let false_branch_fv = 93_012;
+    let congr_l_true_fv = 93_020;
+    let congr_sing_fv = 93_021;
+    let congr_r1_true_fv = 93_022;
+    let congr_succ_fv = 93_023;
+    let congr_ih_fv = 93_024;
+    let congr_l_false_fv = 93_025;
+    let congr_r1_false_fv = 93_026;
+    let symm_sing_fv = 93_030;
+    let symm_succ_y_fv = 93_031;
+    let symm_y_fv = 93_032;
+    let trans_hone_fv = 93_040;
+    let trans_common_fv = 93_041;
+    let trans_true_r1_fv = 93_042;
+    let trans_true_r0_fv = 93_043;
+    let trans_true_l_fv = 93_044;
+    let trans_true_final_fv = 93_045;
+    let trans_false_comm_fv = 93_046;
+    let trans_false_r1_fv = 93_047;
+    let trans_false_r0_fv = 93_048;
+    let trans_false_l_fv = 93_049;
+    let trans_false_final_fv = 93_050;
+
+    let a = kernel.fvar(a_fv);
+    let nat_const = kernel.const_(nat.nat, vec![]);
+    let list_nat = list_of(kernel, names.list, zero_lvl, nat_const);
+    let bool_ty = kernel.const_(logic.bool_, vec![]);
+    let bool_true = kernel.const_(logic.bool_true, vec![]);
+    let bool_false = kernel.const_(logic.bool_false, vec![]);
+    let bool_rec_nat = kernel.const_(logic.bool_rec, vec![one_lvl]);
+
+    let zero_const = kernel.const_(nat.zero, vec![]);
+    let succ_const = kernel.const_(nat.succ, vec![]);
+    let add_const = kernel.const_(nat.add, vec![]);
+    let beq_const = kernel.const_(nat.beq, vec![]);
+    let one_lit = kernel.app(succ_const, zero_const);
+
+    let count_const = kernel.const_(count, vec![]);
+    let to_multiset_const = kernel.const_(to_multiset, vec![]);
+    let multiset_zero_const = kernel.const_(nat.multiset_zero, vec![]);
+    let multiset_singleton_const = kernel.const_(nat.multiset_singleton, vec![]);
+    let multiset_add_const = kernel.const_(nat.multiset_add, vec![]);
+    let multiset_count_const = kernel.const_(nat.multiset_count, vec![]);
+
+    let count_of = |k: &mut Kernel, x: ExprId| -> ExprId { apply_all(k, count_const, &[a, x]) };
+    let ms_of = |k: &mut Kernel, x: ExprId| -> ExprId { k.app(to_multiset_const, x) };
+    let ms_count_of =
+        |k: &mut Kernel, m: ExprId| -> ExprId { apply_all(k, multiset_count_const, &[m, a]) };
+
+    let p = |k: &mut Kernel, x: ExprId| -> ExprId {
+        let lhs = count_of(k, x);
+        let ms = ms_of(k, x);
+        let rhs = ms_count_of(k, ms);
+        eq_of(k, logic, one_lvl, nat_const, lhs, rhs)
+    };
+
+    // nil : Eq (count a nil) (Multiset.count (toMultiset nil) a)
+    // both sides are defeq-reduced: LHS to `zero`, RHS to
+    // `Multiset.count Multiset.zero a`; `count_eq_zero_of_bound_le` gives the
+    // reversed equation (`bound Multiset.zero` is `0` by ι, so `zero_le a`
+    // already has the type its hypothesis wants).
+    let base = |k: &mut Kernel| -> ExprId {
+        let zero_le_const = k.const_(nat.zero_le, vec![]);
+        let bound_le = k.app(zero_le_const, a);
+        let count_eq_zero_const = k.const_(nat.multiset_count_eq_zero_of_bound_le, vec![]);
+        let h = apply_all(k, count_eq_zero_const, &[multiset_zero_const, a, bound_le]);
+        let count_zero_ms_a = apply_all(k, multiset_count_const, &[multiset_zero_const, a]);
+        symm_of(
+            k,
+            logic,
+            one_lvl,
+            nat_const,
+            count_zero_ms_a,
+            zero_const,
+            h,
+            symm_base_fv,
+        )
+    };
+
+    let step = |k: &mut Kernel, head: ExprId, tail: ExprId, ih: ExprId| -> ExprId {
+        // L := count a (cons head tail), reduced: Bool.rec (fun _ => Nat)
+        //      (count a tail) (succ (count a tail)) (beq head a).
+        let count_a_tail = count_of(k, tail);
+        let succ_count_a_tail = k.app(succ_const, count_a_tail);
+        let beq_head_a = apply_all(k, beq_const, &[head, a]);
+        let motive_nat = {
+            let anon = k.anon();
+            k.lam(anon, bool_ty, nat_const, BinderInfo::Default)
+        };
+        let l_term = apply_all(
+            k,
+            bool_rec_nat,
+            &[motive_nat, count_a_tail, succ_count_a_tail, beq_head_a],
+        );
+
+        // R0 := Multiset.count (toMultiset (cons head tail)) a, reduced:
+        //      Multiset.count (Multiset.add (singleton head) (toMultiset tail)) a.
+        let toms_tail = k.app(to_multiset_const, tail);
+        let singleton_head = k.app(multiset_singleton_const, head);
+        let r0_ms = apply_all(k, multiset_add_const, &[singleton_head, toms_tail]);
+        let r0 = apply_all(k, multiset_count_const, &[r0_ms, a]);
+
+        // Common to both branches: r1 := add (count singleton_head a)
+        //   (count toms_tail a); count_add gives Eq r0 r1; the tail's count
+        // is exactly `ih`'s RHS.
+        let ms_count_sing_head_a = apply_all(k, multiset_count_const, &[singleton_head, a]);
+        let ms_count_toms_tail_a = apply_all(k, multiset_count_const, &[toms_tail, a]);
+        let r1 = apply_all(k, add_const, &[ms_count_sing_head_a, ms_count_toms_tail_a]);
+        let mca_const = k.const_(nat.multiset_count_add, vec![]);
+        let h_add = apply_all(k, mca_const, &[singleton_head, toms_tail, a]);
+
+        let add_zero_y = apply_all(k, add_const, &[zero_const, ms_count_toms_tail_a]);
+        let zero_add_const = k.const_(nat.zero_add, vec![]);
+        let hzeroadd = k.app(zero_add_const, ms_count_toms_tail_a);
+        let succ_y = k.app(succ_const, ms_count_toms_tail_a);
+        let succ_add_zero_y = k.app(succ_const, add_zero_y);
+        let succ_add_const = k.const_(nat.succ_add, vec![]);
+        let hsuccadd = apply_all(k, succ_add_const, &[zero_const, ms_count_toms_tail_a]);
+        let hcongr_succ = congr_of(
+            k,
+            logic,
+            one_lvl,
+            nat_const,
+            one_lvl,
+            nat_const,
+            add_zero_y,
+            ms_count_toms_tail_a,
+            hzeroadd,
+            congr_succ_fv,
+            &|k2, x| k2.app(succ_const, x),
+        );
+        let add_one_y = apply_all(k, add_const, &[one_lit, ms_count_toms_tail_a]);
+        let h_one_y_to_succ_y = trans_of(
+            k,
+            logic,
+            one_lvl,
+            nat_const,
+            add_one_y,
+            succ_add_zero_y,
+            succ_y,
+            hsuccadd,
+            hcongr_succ,
+            trans_common_fv,
+        );
+
+        // Split on `Nat.beq head a`.
+        let split = bool_true_or_false_of(k, logic, one_lvl, beq_head_a, split_motive_fv);
+        let left_ty = eq_of(k, logic, one_lvl, bool_ty, beq_head_a, bool_true);
+        let right_ty = eq_of(k, logic, one_lvl, bool_ty, beq_head_a, bool_false);
+        let goal = eq_of(k, logic, one_lvl, nat_const, l_term, r0);
+
+        let true_minor = {
+            let ht = k.fvar(true_branch_fv);
+            let hl_true = congr_of(
+                k,
+                logic,
+                one_lvl,
+                bool_ty,
+                one_lvl,
+                nat_const,
+                beq_head_a,
+                bool_true,
+                ht,
+                congr_l_true_fv,
+                &|k2, x| {
+                    apply_all(
+                        k2,
+                        bool_rec_nat,
+                        &[motive_nat, count_a_tail, succ_count_a_tail, x],
+                    )
+                },
+            );
+            let eq_of_beq_eq_true_const = k.const_(nat.eq_of_beq_eq_true, vec![]);
+            let heqha = apply_all(k, eq_of_beq_eq_true_const, &[head, a, ht]);
+            let css_const = k.const_(nat.multiset_count_singleton_self, vec![]);
+            let csing_head = k.app(css_const, head);
+            let hcongr_sing = congr_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                one_lvl,
+                nat_const,
+                head,
+                a,
+                heqha,
+                congr_sing_fv,
+                &|k2, x| apply_all(k2, multiset_count_const, &[singleton_head, x]),
+            );
+            let ms_count_sing_head_head =
+                apply_all(k, multiset_count_const, &[singleton_head, head]);
+            let hcongr_sing_symm = symm_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                ms_count_sing_head_head,
+                ms_count_sing_head_a,
+                hcongr_sing,
+                symm_sing_fv,
+            );
+            let hone = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                ms_count_sing_head_a,
+                ms_count_sing_head_head,
+                one_lit,
+                hcongr_sing_symm,
+                csing_head,
+                trans_hone_fv,
+            );
+            let hr1 = congr_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                one_lvl,
+                nat_const,
+                ms_count_sing_head_a,
+                one_lit,
+                hone,
+                congr_r1_true_fv,
+                &|k2, x| apply_all(k2, add_const, &[x, ms_count_toms_tail_a]),
+            );
+            let hr1_to_succ_y = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                r1,
+                add_one_y,
+                succ_y,
+                hr1,
+                h_one_y_to_succ_y,
+                trans_true_r1_fv,
+            );
+            let h_r0_to_succ_y = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                r0,
+                r1,
+                succ_y,
+                h_add,
+                hr1_to_succ_y,
+                trans_true_r0_fv,
+            );
+            let hcongr_ih = congr_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                one_lvl,
+                nat_const,
+                count_a_tail,
+                ms_count_toms_tail_a,
+                ih,
+                congr_ih_fv,
+                &|k2, x| k2.app(succ_const, x),
+            );
+            let h_l_to_succ_y = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                l_term,
+                succ_count_a_tail,
+                succ_y,
+                hl_true,
+                hcongr_ih,
+                trans_true_l_fv,
+            );
+            let h_succ_y_to_r0 = symm_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                r0,
+                succ_y,
+                h_r0_to_succ_y,
+                symm_succ_y_fv,
+            );
+            let body = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                l_term,
+                succ_y,
+                r0,
+                h_l_to_succ_y,
+                h_succ_y_to_r0,
+                trans_true_final_fv,
+            );
+            lam_fvar(k, true_branch_fv, left_ty, body, BinderInfo::Default)
+        };
+
+        let false_minor = {
+            let hf = k.fvar(false_branch_fv);
+            let hl_false = congr_of(
+                k,
+                logic,
+                one_lvl,
+                bool_ty,
+                one_lvl,
+                nat_const,
+                beq_head_a,
+                bool_false,
+                hf,
+                congr_l_false_fv,
+                &|k2, x| {
+                    apply_all(
+                        k2,
+                        bool_rec_nat,
+                        &[motive_nat, count_a_tail, succ_count_a_tail, x],
+                    )
+                },
+            );
+            let beq_comm_const = k.const_(nat.beq_comm, vec![]);
+            let hcomm = apply_all(k, beq_comm_const, &[a, head]);
+            let beq_a_head = apply_all(k, beq_const, &[a, head]);
+            let hf_flipped = trans_of(
+                k,
+                logic,
+                one_lvl,
+                bool_ty,
+                beq_a_head,
+                beq_head_a,
+                bool_false,
+                hcomm,
+                hf,
+                trans_false_comm_fv,
+            );
+            let csone_const = k.const_(nat.multiset_count_singleton_of_ne, vec![]);
+            let hzero = apply_all(k, csone_const, &[head, a, hf_flipped]);
+            let hr1f = congr_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                one_lvl,
+                nat_const,
+                ms_count_sing_head_a,
+                zero_const,
+                hzero,
+                congr_r1_false_fv,
+                &|k2, x| apply_all(k2, add_const, &[x, ms_count_toms_tail_a]),
+            );
+            let h_r1_to_y = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                r1,
+                add_zero_y,
+                ms_count_toms_tail_a,
+                hr1f,
+                hzeroadd,
+                trans_false_r1_fv,
+            );
+            let h_r0_to_y = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                r0,
+                r1,
+                ms_count_toms_tail_a,
+                h_add,
+                h_r1_to_y,
+                trans_false_r0_fv,
+            );
+            let h_l_to_y = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                l_term,
+                count_a_tail,
+                ms_count_toms_tail_a,
+                hl_false,
+                ih,
+                trans_false_l_fv,
+            );
+            let h_y_to_r0 = symm_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                r0,
+                ms_count_toms_tail_a,
+                h_r0_to_y,
+                symm_y_fv,
+            );
+            let body = trans_of(
+                k,
+                logic,
+                one_lvl,
+                nat_const,
+                l_term,
+                ms_count_toms_tail_a,
+                r0,
+                h_l_to_y,
+                h_y_to_r0,
+                trans_false_final_fv,
+            );
+            lam_fvar(k, false_branch_fv, right_ty, body, BinderInfo::Default)
+        };
+
+        or_cases_of(
+            k,
+            logic,
+            left_ty,
+            right_ty,
+            goal,
+            true_minor,
+            false_minor,
+            split,
+        )
+    };
+
+    let target = kernel.fvar(l_fv);
+    let proof = list_induct_prop(
+        kernel, names, nat_const, zero_lvl, &p, &base, &step, target, x_fv, head_fv, tail_fv, ih_fv,
+    );
+    let concl_ty = p(kernel, target);
+    let value = {
+        let with_l = lam_fvar(kernel, l_fv, list_nat, proof, BinderInfo::Default);
+        lam_fvar(kernel, a_fv, nat_const, with_l, BinderInfo::Default)
+    };
+    let ty = {
+        let with_l = pi_fvar(kernel, l_fv, list_nat, concl_ty, BinderInfo::Default);
+        pi_fvar(kernel, a_fv, nat_const, with_l, BinderInfo::Default)
+    };
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
 }
 
 #[cfg(test)]
