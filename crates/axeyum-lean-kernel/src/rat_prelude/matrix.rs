@@ -156,48 +156,39 @@ fn diff(d: &mut IntDev<'_>, x: ExprId, y: ExprId) -> ExprId {
 // --- small algebraic helpers, private to this module -----------------------
 
 /// `w*(x*y) = x*(w*y)` — swap the outer-left factor with the inner-left one.
+/// `w*(x*y) = x*(w*y)`, by `ring::rat::prove_eq_at` (ring-tactic-2,
+/// ADR-1582) rather than the hand `mul_assoc`/`mul_comm` chain this file
+/// used to carry — this identity in particular needs the ring producer's
+/// intra-monomial factor sorting (`sort_factors`): both sides normalize to
+/// the same three-factor monomial only once its factor list is sorted.
 fn middle_swap(d: &mut IntDev<'_>, p: RatPrelude, w: ExprId, x: ExprId, y: ExprId) -> ExprId {
-    let xy = rmul(d, x, y);
-    let start = rmul(d, w, xy);
-    let wx = rmul(d, w, x);
-    let flat = rmul(d, wx, y);
-    let step1 = {
-        let forward = d.lemma(p.mul_assoc, &[w, x, y]); // (w*x)*y = w*(x*y)
-        rsymm(d, flat, start, forward)
-    };
-    let xw = rmul(d, x, w);
-    let commuted = rmul(d, xw, y);
-    let step2 = {
-        let swap = d.lemma(p.mul_comm, &[w, x]); // w*x = x*w
-        rcongr(d, wx, xw, swap, &|d, t| rmul(d, t, y))
-    };
-    let wy = rmul(d, w, y);
-    let target = rmul(d, x, wy);
-    let step3 = d.lemma(p.mul_assoc, &[x, w, y]); // (x*w)*y = x*(w*y)
-    let (_, proof) = rchain(
-        d,
-        start,
-        &[(flat, step1), (commuted, step2), (target, step3)],
-    );
-    proof
+    crate::ring::rat::prove_eq_at(d, &p, &[w, x, y], &|d, v| {
+        let (w, x, y) = (v[0], v[1], v[2]);
+        let xy = rmul(d, x, y);
+        let lhs = rmul(d, w, xy);
+        let wy = rmul(d, w, y);
+        let rhs = rmul(d, x, wy);
+        (lhs, rhs)
+    })
+    .expect("middle_swap: w*(x*y) = x*(w*y) is a ring identity")
 }
 
-/// `(k*x) - (k*y) = k*(x - y)`.
+/// `(k*x) - (k*y) = k*(x - y)`, by `ring::rat::prove_eq_at` (ring-tactic-2,
+/// ADR-1582) rather than the hand `left_distrib`/`mul_neg` chain this file
+/// used to carry.
 fn mul_sub_right_rev(d: &mut IntDev<'_>, p: RatPrelude, k: ExprId, x: ExprId, y: ExprId) -> ExprId {
-    let neg_y = rneg(d, y);
-    let folded_diff = radd(d, x, neg_y); // = x - y (defeq)
-    let lhs_forward = rmul(d, k, folded_diff); // k*(x-y)
-    let distrib = d.lemma(p.left_distrib, &[k, x, neg_y]); // k*(x+(-y)) = k*x + k*(-y)
-    let kx = rmul(d, k, x);
-    let k_neg_y = rmul(d, k, neg_y);
-    let expanded = radd(d, kx, k_neg_y);
-    let ky = rmul(d, k, y);
-    let mul_neg_pf = d.lemma(p.mul_neg, &[k, y]); // k*(-y) = -(k*y)
-    let neg_ky = rneg(d, ky);
-    let step2 = rcongr(d, k_neg_y, neg_ky, mul_neg_pf, &|d, t| radd(d, kx, t));
-    let target = radd(d, kx, neg_ky); // = k*x - k*y (defeq)
-    let (_, proof_fwd) = rchain(d, lhs_forward, &[(expanded, distrib), (target, step2)]);
-    rsymm(d, lhs_forward, target, proof_fwd)
+    crate::ring::rat::prove_eq_at(d, &p, &[k, x, y], &|d, v| {
+        let (k, x, y) = (v[0], v[1], v[2]);
+        let kx = rmul(d, k, x);
+        let ky = rmul(d, k, y);
+        let neg_ky = rneg(d, ky);
+        let lhs = radd(d, kx, neg_ky);
+        let neg_y = rneg(d, y);
+        let xy = radd(d, x, neg_y);
+        let rhs = rmul(d, k, xy);
+        (lhs, rhs)
+    })
+    .expect("mul_sub_right_rev: (k*x)-(k*y) = k*(x-y) is a ring identity")
 }
 
 /// `det2 x y x y = 0` — a repeated row makes the determinant vanish.
@@ -3333,14 +3324,16 @@ pub(super) fn rdet3(
 /// `zero * x = 0`, via `mul_comm` then `mul_zero` — this development has no
 /// standalone `zero_mul` law (see `Rat.mul_zero`'s own doc comment), so every
 /// left-zero product goes through commutation first.
+/// `zero * x = zero`, by `ring::rat::prove_eq_at` (ring-tactic-2, ADR-1582)
+/// rather than the hand `mul_comm`/`mul_zero` chain this file used to carry.
 fn zero_mul(d: &mut IntDev<'_>, p: RatPrelude, x: ExprId) -> ExprId {
-    let zero = rzero(d, p);
-    let zx = rmul(d, zero, x);
-    let xz = rmul(d, x, zero);
-    let comm = d.lemma(p.mul_comm, &[zero, x]); // zero*x = x*zero
-    let mz = d.lemma(p.mul_zero, &[x]); // x*zero = zero
-    let (_, proof) = rchain(d, zx, &[(xz, comm), (zero, mz)]);
-    proof
+    crate::ring::rat::prove_eq_at(d, &p, &[x], &|d, v| {
+        let x = v[0];
+        let zero = rzero(d, p);
+        let lhs = rmul(d, zero, x);
+        (lhs, zero)
+    })
+    .expect("zero_mul: zero*x = zero is a ring identity")
 }
 
 /// `Rat.det3_id : det3 1 0 0 0 1 0 0 0 1 = 1` — the 3×3 identity matrix has
@@ -3565,6 +3558,10 @@ fn declare_det3_cofactor_row1(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), K
 /// `det2` shape `mul_sub_right_rev` was built for. Proved by reusing
 /// `mul_sub_right_rev` for the leading two terms, then one more
 /// `left_distrib` (reversed) to fold in the third.
+/// `(k*x-k*y)+k*z = k*((x-y)+z)`, by `ring::rat::prove_eq_at`
+/// (ring-tactic-2, ADR-1582) rather than the hand chain (through
+/// [`mul_sub_right_rev`] plus one more `left_distrib`) this file used to
+/// carry.
 fn factor_k_out_of_three(
     d: &mut IntDev<'_>,
     p: RatPrelude,
@@ -3573,27 +3570,21 @@ fn factor_k_out_of_three(
     y: ExprId,
     z: ExprId,
 ) -> ExprId {
-    let kx = rmul(d, k, x);
-    let ky = rmul(d, k, y);
-    let neg_ky = rneg(d, ky);
-    let kx_minus_ky = radd(d, kx, neg_ky);
-    let kz = rmul(d, k, z);
-    let start = radd(d, kx_minus_ky, kz); // (k*x - k*y) + k*z
-
-    let xy = diff(d, x, y); // = x - y (defeq to Rat.sub x y)
-    let k_xy = rmul(d, k, xy);
-    let fix1 = mul_sub_right_rev(d, p, k, x, y); // (k*x - k*y) = k*(x-y)
-    let step1 = rcongr(d, kx_minus_ky, k_xy, fix1, &|d, t| radd(d, t, kz));
-    let mid1 = radd(d, k_xy, kz);
-
-    // k*(x-y) + k*z = k*((x-y)+z), read `left_distrib` in reverse.
-    let xy_z = radd(d, xy, z);
-    let k_xyz = rmul(d, k, xy_z);
-    let distrib = d.lemma(p.left_distrib, &[k, xy, z]); // k*((x-y)+z) = k*(x-y) + k*z
-    let step2 = rsymm(d, k_xyz, mid1, distrib);
-
-    let (_, proof) = rchain(d, start, &[(mid1, step1), (k_xyz, step2)]);
-    proof
+    crate::ring::rat::prove_eq_at(d, &p, &[k, x, y, z], &|d, v| {
+        let (k, x, y, z) = (v[0], v[1], v[2], v[3]);
+        let kx = rmul(d, k, x);
+        let ky = rmul(d, k, y);
+        let neg_ky = rneg(d, ky);
+        let kx_minus_ky = radd(d, kx, neg_ky);
+        let kz = rmul(d, k, z);
+        let lhs = radd(d, kx_minus_ky, kz);
+        let neg_y = rneg(d, y);
+        let xy = radd(d, x, neg_y);
+        let xy_z = radd(d, xy, z);
+        let rhs = rmul(d, k, xy_z);
+        (lhs, rhs)
+    })
+    .expect("factor_k_out_of_three: (k*x-k*y)+k*z = k*((x-y)+z) is a ring identity")
 }
 
 /// `Rat.det3_scale_row : ∀ k a b c d e f g h i,`

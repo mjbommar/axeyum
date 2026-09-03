@@ -24,7 +24,11 @@ fn main() {
         }
         println!("ring cost, {REPEATS} emissions per shape, prelude built once per shape");
         println!("{:-<80}", "");
-        for r in cost::measure(REPEATS) {
+        for r in cost::measure(REPEATS)
+            .into_iter()
+            .chain(cost::measure_int(REPEATS))
+            .chain(cost::measure_rat(REPEATS))
+        {
             println!(
                 "{:42}  search+emit {:7.3} ms   +kernel {:7.3} ms",
                 r.label, r.search_ms, r.total_ms

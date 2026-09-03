@@ -156,6 +156,7 @@ impl Problem {
         None
     }
 
+    #[allow(dead_code)]
     fn parse_eq_goal(
         &mut self,
         d: &mut IntDev<'_>,
@@ -497,7 +498,7 @@ impl Problem {
 
                 let (result_sign, source, proof) = apply_mono_signs(
                     d,
-                    self.prelude,
+                    &self.prelude,
                     *sign_a,
                     *sign_b,
                     raw_a,
@@ -776,7 +777,7 @@ impl Problem {
 #[allow(clippy::too_many_arguments)]
 fn apply_mono_signs(
     d: &mut IntDev<'_>,
-    p: RatPrelude,
+    p: &RatPrelude,
     sign_a: bool,
     sign_b: bool,
     raw_a: ExprId,
@@ -893,10 +894,19 @@ pub(crate) fn prove_eq_at(
 
 /// Prove `goal` (`Eq Rat _ _`) from ring axioms alone, or decline.
 ///
+/// `#[allow(dead_code)]` here and on [`RingError`]/[`theorem`]/[`declare`]/
+/// `Problem::parse_eq_goal`: all five ℚ retirement targets this session are
+/// private proof-construction helpers routed through [`prove_eq_at`], not
+/// declared theorems, so nothing in production code currently reaches the
+/// `goal`-parsing / `declare_theorem`-wrapping half of this producer's API —
+/// kept anyway, matching `ring::nat`/`ring::int`'s contract, for the next
+/// declared-theorem-shaped ℚ retirement.
+///
 /// # Errors
 ///
 /// [`Decline::GoalNotAtomic`] when `goal`'s head is not `Eq` at `Rat`;
 /// otherwise as [`prove_eq`].
+#[allow(dead_code)]
 pub(crate) fn prove(
     d: &mut IntDev<'_>,
     prelude: &RatPrelude,
@@ -909,6 +919,7 @@ pub(crate) fn prove(
 
 /// Why [`theorem`] produced no declaration.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub(crate) enum RingError {
     /// The procedure declined.
     Declined(Decline),
@@ -933,6 +944,7 @@ impl core::fmt::Display for RingError {
 ///
 /// [`RingError::Declined`] when the procedure found no term, or
 /// [`RingError::Rejected`] when the kernel refused the one it found.
+#[allow(dead_code)]
 pub(crate) fn theorem(
     d: &mut IntDev<'_>,
     prelude: &RatPrelude,
@@ -965,6 +977,7 @@ pub(crate) fn theorem(
 ///
 /// The kernel's rejection when the emitted term was refused, or
 /// `UnknownConst { name }` when the search declined and no term was built.
+#[allow(dead_code)]
 pub(crate) fn declare(
     d: &mut IntDev<'_>,
     prelude: &RatPrelude,
