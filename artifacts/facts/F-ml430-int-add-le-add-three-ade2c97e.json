@@ -12,7 +12,15 @@
   "epistemic_status": "proved",
   "external_status": "proved",
   "depends_on": [
-    "F:int-add-le-add"
+    "F:int-add-le-add",
+    "F:int-add-assoc",
+    "F:int-add-comm",
+    "F:int-add-zero",
+    "F:int-le-of-nat-add",
+    "F:int-le-trans",
+    "F:ml430-int-add-le-add-iff-right-995cbaa5",
+    "F:ml430-int-add-le-add-left-4a766697",
+    "F:ml430-int-add-le-add-right-0c9ed495"
   ],
   "evidence": [
     {

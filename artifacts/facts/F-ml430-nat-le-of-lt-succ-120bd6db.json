@@ -12,7 +12,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-le-of-succ-le-succ-a180a72c"],
+  "depends_on": ["F:ml430-nat-le-of-succ-le-succ-a180a72c", "F:ml430-nat-add-assoc-8c87a1f1", "F:ml430-nat-add-comm-56a2d614", "F:nat-add-le-add-left", "F:nat-add-le-add-right", "F:nat-add-right-comm", "F:nat-le-add-right", "F:nat-le-of-add-le-add-right", "F:nat-le-trans"],
   "evidence": [
     {
       "id": "kernel-Nat.le_of_lt_succ",

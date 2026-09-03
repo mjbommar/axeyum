@@ -14,7 +14,7 @@
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
-  "depends_on": [],
+  "depends_on": ["F:nat-add-le-add-left", "F:nat-add-le-add-right", "F:nat-add-right-comm", "F:nat-le-add-right", "F:nat-le-of-add-le-add-right", "F:nat-le-trans"],
   "axiom_footprint": [],
   "evidence": [
     {

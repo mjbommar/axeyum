@@ -18,7 +18,8 @@
   "depends_on": [
     "F:int-add-assoc",
     "F:int-add-neg",
-    "F:int-add-zero"
+    "F:int-add-zero",
+    "F:int-add-comm"
   ],
   "axiom_footprint": [],
   "evidence": [

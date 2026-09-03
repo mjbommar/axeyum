@@ -16,7 +16,14 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-le-succ-succ",
-    "F:nat-zero-le"
+    "F:nat-zero-le",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-add-le-add-left",
+    "F:nat-add-le-add-right",
+    "F:nat-add-right-comm",
+    "F:nat-le-add-right",
+    "F:nat-le-of-add-le-add-right",
+    "F:nat-le-trans"
   ],
   "axiom_footprint": [],
   "evidence": [

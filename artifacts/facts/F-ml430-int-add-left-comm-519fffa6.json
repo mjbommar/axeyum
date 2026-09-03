@@ -14,7 +14,8 @@
   "external_status": "proved",
   "depends_on": [
     "F:int-add-assoc",
-    "F:int-add-comm"
+    "F:int-add-comm",
+    "F:int-add-zero"
   ],
   "evidence": [
     {
