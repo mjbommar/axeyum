@@ -152,6 +152,7 @@ pub(crate) fn nat_add_of(kernel: &mut Kernel, add: NameId, a: ExprId, b: ExprId)
 }
 
 /// `Nat.succ a : Nat`.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn nat_succ_of(kernel: &mut Kernel, succ: NameId, a: ExprId) -> ExprId {
     let c = kernel.const_(succ, vec![]);
     kernel.app(c, a)

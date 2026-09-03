@@ -66,7 +66,6 @@ impl Fixture {
             &names,
             &self.nat,
             &self.bridge,
-            &self.perm,
             alpha,
         )
     }

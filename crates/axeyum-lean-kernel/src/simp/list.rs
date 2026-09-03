@@ -82,7 +82,7 @@ use crate::list_prelude::ops::{
     append_of, cons_of, count_of, eq_of, foldr_of, lam_fvar, length_of, list_of, map_of,
     nat_add_of, nat_succ_of, nil_of, pi_fvar, refl_of, reverse_of, symm_of, trans_of,
 };
-use crate::{BinderInfo, Kernel, KernelError, ListNatBridge, ListPerm, NatPrelude};
+use crate::{BinderInfo, Kernel, KernelError, ListNatBridge, NatPrelude};
 
 use super::{Decline, MAX_STEPS, Orientation};
 
@@ -98,6 +98,7 @@ const FVAR_BASE: u64 = 700_000;
 /// holding a `ListPrelude` (a test, or `crate::tactic`) uses this to build a
 /// [`ListDev`]; `list_prelude::theorems` itself already has a `ListNames`
 /// directly (it runs BEFORE `ListPrelude` exists) and does not need this.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn names_of(p: &crate::ListPrelude) -> ListNames {
     ListNames {
         list: p.list,
@@ -127,9 +128,9 @@ pub(crate) struct ListDev<'k> {
     kernel: &'k mut Kernel,
     logic: LogicPrelude,
     names: ListNames,
+    #[cfg_attr(not(test), allow(dead_code))]
     nat: Option<NatPrelude>,
     bridge: Option<ListNatBridge>,
-    perm: Option<ListPerm>,
     alpha: ExprId,
     beta: ExprId,
     next_fvar: u64,
@@ -138,8 +139,10 @@ pub(crate) struct ListDev<'k> {
 impl<'k> ListDev<'k> {
     /// A development with only [`ListPrelude`] — everything
     /// [`list_only_rules`] needs, nothing [`default_rules`]'s
-    /// `length_append`/`count_append` rules do. `alpha`/`beta` both start at
-    /// `alpha`.
+    /// `length_append` (or `count_append`, which needs [`crate::ListPerm`]
+    /// only for its own `NameId` — see [`default_rules_with_perm`], which
+    /// takes that directly rather than through a `ListDev` field) rule
+    /// does. `alpha`/`beta` both start at `alpha`.
     pub(crate) fn new_list_only(
         kernel: &'k mut Kernel,
         logic: &LogicPrelude,
@@ -152,22 +155,23 @@ impl<'k> ListDev<'k> {
             names: *names,
             nat: None,
             bridge: None,
-            perm: None,
             alpha,
             beta: alpha,
             next_fvar: FVAR_BASE,
         }
     }
 
-    /// A development with the full stack — required for [`default_rules`]/
-    /// [`default_rules_with_perm`].
+    /// A development with [`NatPrelude`] + [`ListNatBridge`] — required for
+    /// [`default_rules`]'s `length_append` rule (and any rule set built
+    /// with [`default_rules_with_perm`], which needs only [`crate::ListPerm`]'s
+    /// own `NameId`, not a `ListDev` field).
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn new_full(
         kernel: &'k mut Kernel,
         logic: &LogicPrelude,
         names: &ListNames,
         nat: &NatPrelude,
         bridge: &ListNatBridge,
-        perm: &ListPerm,
         alpha: ExprId,
     ) -> Self {
         Self {
@@ -176,7 +180,6 @@ impl<'k> ListDev<'k> {
             names: *names,
             nat: Some(*nat),
             bridge: Some(*bridge),
-            perm: Some(*perm),
             alpha,
             beta: alpha,
             next_fvar: FVAR_BASE,
@@ -200,13 +203,9 @@ impl<'k> ListDev<'k> {
             .expect("a Nat-crossing rule needs a `new_full` ListDev")
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn nat_prelude(&self) -> NatPrelude {
         self.nat
-            .expect("a Nat-crossing rule needs a `new_full` ListDev")
-    }
-
-    pub(crate) fn perm(&self) -> ListPerm {
-        self.perm
             .expect("a Nat-crossing rule needs a `new_full` ListDev")
     }
 
@@ -310,10 +309,12 @@ impl<'k> ListDev<'k> {
         self.kernel.const_(self.logic.nat_zero, vec![])
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn nat_succ(&mut self, a: ExprId) -> ExprId {
         nat_succ_of(self.kernel, self.logic.nat_succ, a)
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn nat_add(&mut self, a: ExprId, b: ExprId) -> ExprId {
         let nat = self.nat_prelude();
         nat_add_of(self.kernel, nat.add, a, b)
@@ -416,10 +417,12 @@ impl<'k> ListDev<'k> {
         lam_fvar(self.kernel, fv, ty, body, BinderInfo::Default)
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn pi_fv(&mut self, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
         pi_fvar(self.kernel, fv, ty, body, BinderInfo::Default)
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn declare_theorem(
         &mut self,
         name: NameId,
@@ -457,6 +460,7 @@ pub(crate) enum Carrier {
     /// `Nat`.
     Nat,
     /// Bare `beta` (`foldr`'s accumulator/return type).
+    #[cfg_attr(not(test), allow(dead_code))]
     Beta,
 }
 
@@ -502,6 +506,7 @@ fn no_type_args(_d: &mut ListDev<'_>) -> Vec<ExprId> {
 fn alpha_type_args(d: &mut ListDev<'_>) -> Vec<ExprId> {
     vec![d.alpha()]
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn alpha_beta_type_args(d: &mut ListDev<'_>) -> Vec<ExprId> {
     vec![d.alpha(), d.beta()]
 }
@@ -516,6 +521,7 @@ fn r_nil_append(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     let lhs = d.append(nil, a[0]);
     (lhs, a[0])
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_append_assoc(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     let ab = d.append(a[0], a[1]);
     let lhs = d.append(ab, a[2]);
@@ -528,6 +534,7 @@ fn r_reverse_nil(d: &mut ListDev<'_>, _a: &[ExprId]) -> (ExprId, ExprId) {
     let lhs = d.reverse(nil);
     (lhs, nil)
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_reverse_reverse(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     let r = d.reverse(a[0]);
     let lhs = d.reverse(r);
@@ -539,6 +546,7 @@ fn r_length_nil(d: &mut ListDev<'_>, _a: &[ExprId]) -> (ExprId, ExprId) {
     let z = d.nat_zero();
     (lhs, z)
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_length_map(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     // a[0] : alpha -> beta, a[1] : List alpha
     let mapped = d.map(a[0], a[1]);
@@ -564,6 +572,7 @@ fn r_map_nil(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     };
     (lhs, rhs)
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_map_cons(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     // a = [f, head, tail]
     let cons_h_t = d.cons(a[1], a[2]);
@@ -579,11 +588,13 @@ fn r_map_cons(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     };
     (lhs, rhs)
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_foldr_nil(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     let nil = d.nil();
     let lhs = d.foldr(a[0], a[1], nil);
     (lhs, a[1])
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_length_append(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     let app = d.append(a[0], a[1]);
     let lhs = d.length(app);
@@ -592,6 +603,7 @@ fn r_length_append(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     let rhs = d.nat_add(l1, l2);
     (lhs, rhs)
 }
+#[cfg_attr(not(test), allow(dead_code))]
 fn r_count_append(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
     // a = [elem, l1, l2] -- monomorphic at List Nat.
     let app = d.append(a[1], a[2]);
@@ -609,6 +621,7 @@ fn r_count_append(d: &mut ListDev<'_>, a: &[ExprId]) -> (ExprId, ExprId) {
 /// `append_assoc`/`reverse_reverse`/`length_map` parameters, each a plain
 /// local variable there, not a struct field). See the module docs' two-tier
 /// explanation.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn list_only_rules(
     append_nil: NameId,
     append_assoc: NameId,
@@ -702,6 +715,7 @@ pub(crate) fn list_only_rules(
 }
 
 /// [`list_only_rules`] plus `length_append` (needs [`ListNatBridge`]).
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn default_rules(
     append_nil: NameId,
     append_assoc: NameId,
@@ -725,6 +739,7 @@ pub(crate) fn default_rules(
 /// §4 named. Split out from [`default_rules`] because `count_append` needs
 /// [`ListPerm`], built strictly after [`ListNatBridge`].
 #[allow(clippy::too_many_arguments)]
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn default_rules_with_perm(
     append_nil: NameId,
     append_assoc: NameId,
@@ -754,6 +769,7 @@ pub(crate) fn default_rules_with_perm(
 /// `List.append_assoc` in the BACKWARD direction, as a caller-supplied
 /// extra — see the module docs on why adding this alongside the (forward)
 /// default oscillates forever rather than terminating.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn rule_append_assoc_backward(append_assoc: NameId) -> Rule {
     Rule {
         name: Some(append_assoc),
@@ -952,12 +968,37 @@ fn head_const(d: &mut ListDev<'_>, e: ExprId) -> Option<NameId> {
     }
 }
 
-/// `List Nat` — the fixed carrier `List.count` operates over, independent
-/// of `d`'s current `alpha`.
-fn nat_list_ty(d: &mut ListDev<'_>) -> ExprId {
-    let nat = d.nat_ty();
-    d.set_alpha(nat);
-    d.list_ty()
+/// Set `d.alpha()`/`d.beta()` from `e`'s OWN head operator and spine (the
+/// implicit type arguments every `List` operator's application carries
+/// explicitly, per the module docs) — done UNCONDITIONALLY before either
+/// matching or descending at `e`, not only on a failed match. A rule's own
+/// pattern-`build` closure (`d.nil()`, `d.map(..)`, …) reads `self.alpha`/
+/// `self.beta` internally, so `try_rewrite_at` matching `e` against a
+/// rule's pattern needs the SAME correction `rewrite_step_descend`'s own
+/// dispatch applies before recursing — otherwise a nested heterogeneous
+/// node (`length (map f l)`: the outer `length`'s own carrier is `beta`,
+/// but its argument `map f l`'s OWN head carries the original `alpha`)
+/// inherits the WRONG ambient value from its parent and no rule matches,
+/// even though one should. Found by running the `length_map` retirement in
+/// `list_prelude::theorems`, which failed `SidesDiffer` before this fix —
+/// not by inspection.
+fn set_ambient_carrier(d: &mut ListDev<'_>, name: NameId, args: &[ExprId]) {
+    let p = d.names();
+    let alpha_only = (name == p.append && args.len() == 3)
+        || (name == p.cons && args.len() == 3)
+        || (name == p.reverse && args.len() == 2)
+        || (name == p.length && args.len() == 2);
+    if alpha_only {
+        d.set_alpha(args[0]);
+    } else if (name == p.map && args.len() == 4) || (name == p.foldr && args.len() == 5) {
+        d.set_alpha(args[0]);
+        d.set_beta(args[1]);
+    } else if d.has_bridge() && name == d.bridge().count && args.len() == 2 {
+        // `List.count` is monomorphic at `List Nat` -- independent of
+        // whatever the ambient `alpha` was inherited from a parent node.
+        let nat = d.nat_ty();
+        d.set_alpha(nat);
+    }
 }
 
 /// Outermost-first: try `e` itself, then descend into the ONE argument slot
@@ -969,65 +1010,64 @@ fn nat_list_ty(d: &mut ListDev<'_>) -> ExprId {
 /// `foldr`/`count` each recurse into their single `List`-typed argument,
 /// holding any function/accumulator argument fixed.
 ///
-/// `d.alpha()`/`d.beta()` on ENTRY must already match `e`'s own carrier(s)
-/// (the invariant every caller — [`rewrite_to_fixpoint`] at the top,
-/// this function at every recursive call — maintains); this function
-/// restores them to that entry value before returning, so a sibling
-/// subterm a caller processes next never sees a value this call changed.
+/// `d.alpha()`/`d.beta()` on ENTRY must already match whatever the CALLER's
+/// own context needs — this function itself corrects them for `e`'s own
+/// head ([`set_ambient_carrier`]) before doing anything else, and restores
+/// the entry value before returning, so a sibling subterm a caller
+/// processes next never sees a value this call changed.
 fn rewrite_step(d: &mut ListDev<'_>, rules: &[Rule], e: ExprId) -> Option<(ExprId, ExprId)> {
-    if let Some(step) = try_rewrite_at(d, rules, e) {
-        return Some(step);
-    }
     let saved_alpha = d.alpha();
     let saved_beta = d.beta();
-    let result = rewrite_step_descend(d, rules, e);
+    let (head, args) = spine(d, e);
+    let name = head_const(d, head);
+    if let Some(name) = name {
+        set_ambient_carrier(d, name, &args);
+    }
+    let result = if let Some(step) = try_rewrite_at(d, rules, e) {
+        Some(step)
+    } else {
+        name.and_then(|name| rewrite_step_descend(d, rules, name, &args))
+    };
     d.set_alpha(saved_alpha);
     d.set_beta(saved_beta);
     result
 }
 
+/// `e`'s own ambient carrier is already set by [`rewrite_step`]
+/// ([`set_ambient_carrier`]) before this runs.
 fn rewrite_step_descend(
     d: &mut ListDev<'_>,
     rules: &[Rule],
-    e: ExprId,
+    name: NameId,
+    args: &[ExprId],
 ) -> Option<(ExprId, ExprId)> {
     let p = d.names();
-    let (head, args) = spine(d, e);
-    let name = head_const(d, head)?;
 
     if name == p.append && args.len() == 3 {
-        d.set_alpha(args[0]);
         let ty = d.list_ty();
         return rewrite_binary(d, rules, ty, args[1], args[2], &|d, x, y| d.append(x, y));
     }
     if name == p.cons && args.len() == 3 {
-        d.set_alpha(args[0]);
         let ty = d.list_ty();
         let elem = args[1];
         return rewrite_unary(d, rules, ty, ty, args[2], &move |d, x| d.cons(elem, x));
     }
     if name == p.reverse && args.len() == 2 {
-        d.set_alpha(args[0]);
         let ty = d.list_ty();
         return rewrite_unary(d, rules, ty, ty, args[1], &|d, x| d.reverse(x));
     }
     if name == p.length && args.len() == 2 {
-        d.set_alpha(args[0]);
         let ty = d.list_ty();
         let nat = d.nat_ty();
         return rewrite_unary(d, rules, ty, nat, args[1], &|d, x| d.length(x));
     }
     if name == p.map && args.len() == 4 {
-        d.set_alpha(args[0]);
-        d.set_beta(args[1]);
         let ty = d.list_ty();
         let out_ty = d.list_ty_beta();
         let f = args[2];
         return rewrite_unary(d, rules, ty, out_ty, args[3], &move |d, x| d.map(f, x));
     }
     if name == p.foldr && args.len() == 5 {
-        d.set_alpha(args[0]);
-        d.set_beta(args[1]);
         let ty = d.list_ty();
         let out_ty = d.beta();
         let f = args[2];
@@ -1036,7 +1076,7 @@ fn rewrite_step_descend(
     }
     if d.has_bridge() && name == d.bridge().count && args.len() == 2 {
         let elem = args[0];
-        let ty = nat_list_ty(d);
+        let ty = d.list_ty();
         let nat = d.nat_ty();
         return rewrite_unary(d, rules, ty, nat, args[1], &move |d, x| d.count(elem, x));
     }
@@ -1153,6 +1193,7 @@ pub(crate) fn prove_eq(
 /// # Errors
 ///
 /// As [`prove_eq`], minus [`Decline::SidesDiffer`].
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn prove_eq_unverified(
     d: &mut ListDev<'_>,
     rules: &[Rule],
@@ -1163,6 +1204,7 @@ pub(crate) fn prove_eq_unverified(
     prove_eq_inner(d, rules, ty, lhs, rhs, false)
 }
 
+#[cfg_attr(not(test), allow(dead_code))]
 fn parse_eq_goal(d: &mut ListDev<'_>, e: ExprId, ty: ExprId) -> Result<(ExprId, ExprId), Decline> {
     let (head, args) = spine(d, e);
     let name = head_const(d, head).ok_or(Decline::GoalNotAtomic)?;
@@ -1179,6 +1221,7 @@ fn parse_eq_goal(d: &mut ListDev<'_>, e: ExprId, ty: ExprId) -> Result<(ExprId, 
 ///
 /// [`Decline::GoalNotAtomic`] when `goal`'s head is not `Eq ty`; otherwise
 /// as [`prove_eq`].
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn prove(
     d: &mut ListDev<'_>,
     rules: &[Rule],
