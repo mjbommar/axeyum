@@ -862,3 +862,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1574](adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md) | **`Rat.rowEchelon_isEchelon` is proved, axiom-free**, closing | accepted |
 | [1576](adr-1576-a-tactic-is-a-producer-and-its-return-is-measured-in-retired-proofs.md) | a tactic is a producer, and its return is measured in retired proofs | Accepted |
 | [1577](adr-1577-a-decidable-predicate-with-a-bound-is-a-finset-and-what-was-missing-was-an-object.md) | a decidable predicate with a bound is a `Finset`, and what was missing was an object rather than a proof | Accepted |
+| [1578](adr-1578-a-magma-to-field-record-spine-with-ml-int-q-instances.md) | ADR-1495 (2026-09-01) proved the kernel *mechanism* — a | accepted |
