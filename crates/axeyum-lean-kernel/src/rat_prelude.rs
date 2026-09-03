@@ -83,6 +83,7 @@ mod model;
 mod nullity;
 pub(crate) mod ops;
 pub mod ordered_ring_ext;
+pub mod ordered_ring_ext_s;
 mod pivot_bound;
 mod pivot_content;
 mod polynomial;
@@ -105,6 +106,7 @@ use crate::nat_prelude::NatOps;
 use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
 use ordered_ring_ext::OrderedRingExtNames;
+use ordered_ring_ext_s::OrderedRingExtSNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
 /// the order, the inverse, the structural characterisation of the normalised
@@ -3136,6 +3138,12 @@ pub struct RatPrelude {
     /// lemmas `linarith::generic`'s emitter cites. See
     /// [`ordered_ring_ext`].
     pub ordered_ring_ext: OrderedRingExtNames,
+
+    /// ADR-1592: the setoid twin of [`Self::ordered_ring_ext`] — `AlgS.
+    /// ofNat` and its two laws, three derived order lemmas, and the
+    /// `AlgS.OrderedRing` instances at `Int`/`Rat` (via `ofAlg`). See
+    /// [`ordered_ring_ext_s`].
+    pub ordered_ring_ext_s: OrderedRingExtSNames,
 }
 
 impl RatPrelude {
@@ -3691,6 +3699,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         algebra: algebra_instances::intern_algebra_instances(kernel),
         algebra_ext: algebra_ext::intern_algebra_ext(kernel),
         ordered_ring_ext: ordered_ring_ext::intern_ordered_ring_ext(kernel),
+        ordered_ring_ext_s: ordered_ring_ext_s::intern_ordered_ring_ext_s(kernel),
     }
 }
 
@@ -3783,6 +3792,12 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude,
             &prelude.int.nat.structures,
             &prelude.ordered_ring_ext,
+        )?;
+        ordered_ring_ext_s::declare_ordered_ring_ext_s_all(
+            d.kernel(),
+            &prelude,
+            &prelude.int.nat.structures_s.ordered_ring,
+            &prelude.ordered_ring_ext_s,
         )?;
         Ok(())
     })();

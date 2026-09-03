@@ -12442,6 +12442,11 @@ fn shift_regular_bound(d: &mut IntDev<'_>, p: CRealPrelude, x: ExprId, n: ExprId
 /// three times (once per function) to strip [`bnd_leg_plus_share_le`]'s
 /// extra `natDivSucc(1,idx)` slack down to a bare `bnd_leg ≤
 /// natDivSucc(K,idx)` before folding it into a larger telescope.
+///
+/// ADR-1592 retirement: was a hand `le_refl`+`add_le_add`+`add_zero`
+/// rewrite chain; now routed through `linarith::generic::prove_s` over
+/// `AlgS.Rat.orderedRingS` (`super::linarith_bridge::rat_le_add_right`) —
+/// the SAME fact, the SAME type, reached generically.
 fn le_add_nonneg_right(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -12449,15 +12454,7 @@ fn le_add_nonneg_right(
     y: ExprId,
     y_nonneg: ExprId,
 ) -> ExprId {
-    let rat = p.rat;
-    let refl_x = d.lemma(rat.le_refl, &[x]);
-    let zero = rzero(d, rat);
-    let widened = d.lemma(rat.add_le_add, &[x, x, zero, y, refl_x, y_nonneg]);
-    // widened : le (x+0) (x+y)
-    let padded = radd(d, x, zero);
-    let trim = d.lemma(rat.add_zero, &[x]);
-    let sum = radd(d, x, y);
-    rat_eq_rewrite(d, padded, x, trim, widened, &|d, t| rle(d, rat, t, sum))
+    super::linarith_bridge::rat_le_add_right(d, p, x, y, y_nonneg)
 }
 
 /// `Π i, Within (sample (add x (neg y)) i) (bound.apply i)` -- the shared-
@@ -22551,15 +22548,14 @@ fn and_ty(d: &mut IntDev<'_>, p: CRealPrelude, left: ExprId, right: ExprId) -> E
 }
 
 /// `rle a (Rat.add a b)` from `hb : rle Rat.zero b`.
+///
+/// ADR-1592 retirement: was a hand `le_refl`+`add_le_add`+`add_zero`
+/// rewrite chain (the SAME shape [`le_add_nonneg_right`] above hand-built
+/// independently, in this same file); now routed through
+/// `linarith::generic::prove_s` over `AlgS.Rat.orderedRingS`
+/// (`super::linarith_bridge::rat_le_add_right`).
 fn rle_add_right(d: &mut IntDev<'_>, p: CRealPrelude, a: ExprId, b: ExprId, hb: ExprId) -> ExprId {
-    let rat = p.rat;
-    let z = rzero(d, rat);
-    let refl_a = d.lemma(rat.le_refl, &[a]);
-    let step = d.lemma(rat.add_le_add, &[a, a, z, b, refl_a, hb]);
-    let az = radd(d, a, z);
-    let ab = radd(d, a, b);
-    let eq = d.lemma(rat.add_zero, &[a]);
-    rat_eq_rewrite(d, az, a, eq, step, &|d, t| rle(d, rat, t, ab))
+    super::linarith_bridge::rat_le_add_right(d, p, a, b, hb)
 }
 
 /// `rle b (Rat.add a b)` from `ha : rle Rat.zero a`.

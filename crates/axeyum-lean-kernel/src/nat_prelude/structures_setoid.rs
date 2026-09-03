@@ -611,6 +611,129 @@ fn comm_ring_fields_s() -> Vec<FieldSpec> {
     f
 }
 
+// ---------------------------------------------------------------------------
+// ADR-1592: `AlgS.OrderedRing` — `AlgS.CommRing`'s 23 fields restated (no
+// inheritance, same "third copy" pattern the rest of this spine and `Alg.
+// OrderedRing` both already use), plus `le`, a congruence field the setoid
+// must carry by hand (`leCongr` -- `Eq` gets this step for free, `equiv`
+// does not), and the same five order laws `Alg.OrderedRing` carries. Four
+// of the five primitive-law field BUILDERS need no `equiv` at all (`le` is
+// a plain relation and none of `le_refl`/`le_trans`/`add_le_add_left`/
+// `mul_nonneg`'s STATEMENTS mention the carrier's equality), so they are
+// reused verbatim from [`structures`] rather than duplicated; only
+// `le_antisymm` (which must conclude `equiv`, not `Eq`) and `leCongr`
+// (which has no `Eq`-flavored counterpart at all -- `Eq`'s own congruence
+// is free) are new.
+// ---------------------------------------------------------------------------
+
+/// `forall a a' b b', equiv a a' -> equiv b b' -> le a b -> le a' b'` — the
+/// congruence field a setoid must carry by hand for `le`, exactly as
+/// `binop_congr_field_s` does for an operation.
+fn le_congr_field_s(
+    name: &'static str,
+    carrier_idx: usize,
+    equiv_idx: usize,
+    le_idx: usize,
+) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let equiv = vals[equiv_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vap = k.fvar(V_AP);
+            let vb = k.fvar(V_B);
+            let vbp = k.fvar(V_BP);
+            let haa = app2(k, equiv, va, vap);
+            let hbb = app2(k, equiv, vb, vbp);
+            let hle = app2(k, le, va, vb);
+            let concl = app2(k, le, vap, vbp);
+            let inner1 = arrow(k, hle, concl);
+            let inner2 = arrow(k, hbb, inner1);
+            let inner3 = arrow(k, haa, inner2);
+            let t = pi_over(k, V_BP, a_ty, inner3);
+            let t = pi_over(k, V_B, a_ty, t);
+            let t = pi_over(k, V_AP, a_ty, t);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `forall a b, le a b -> le b a -> equiv a b` — antisymmetry CONCLUDES
+/// `equiv`, not `Eq` (the deliverable's explicit ask, and the shape
+/// `CReal.equiv_of_le_le` already has verbatim).
+fn le_antisymm_equiv_field_s(
+    name: &'static str,
+    carrier_idx: usize,
+    equiv_idx: usize,
+    le_idx: usize,
+) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let equiv = vals[equiv_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vb = k.fvar(V_B);
+            let hab = app2(k, le, va, vb);
+            let hba = app2(k, le, vb, va);
+            let concl = app2(k, equiv, va, vb);
+            let inner = arrow(k, hba, concl);
+            let inner2 = arrow(k, hab, inner);
+            let t = pi_over(k, V_B, a_ty, inner2);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `AlgS.Ring`'s 22 fields, restated, plus `le`, `leCongr`, and five order
+/// laws — 29 fields total. `rel_field`/`le_refl_field`/`le_trans_field`/
+/// `add_le_add_left_field`/`mul_nonneg_field` are reused verbatim from
+/// [`structures`] (their statements never mention `equiv`).
+///
+/// **Built over `AlgS.Ring` (22 fields), not `AlgS.CommRing` (23) --
+/// necessary, not a simplification.** `Alg.OrderedRing` (ADR-1584) is
+/// itself Ring-based (`Ring`'s 15 fields, no `mulComm`; none of the order
+/// laws or `linarith::generic`'s fragment need commutativity), and
+/// `AlgS.OrderedRing.ofAlg` (below) must select FROM an `Alg.OrderedRing`
+/// value -- which carries no `mulComm` field to select in the first place.
+/// A `CommRing`-based `AlgS.OrderedRing` would make that projection
+/// ill-typed. `Int`/`Rat`/`CReal` are all commutative anyway, so nothing
+/// downstream loses reach; only the record's own field list changes shape.
+fn ordered_ring_fields_s() -> Vec<FieldSpec> {
+    use idx::ring::{ADD, CARRIER, EQUIV, MUL, ZERO};
+    let mut f = ring_fields_s(); // 0..21 (22 fields)
+    f.push(structures::rel_field("le", CARRIER)); // 22
+    let le_idx = f.len() - 1;
+    f.push(le_congr_field_s("leCongr", CARRIER, EQUIV, le_idx)); // 23
+    f.push(structures::le_refl_field("le_refl", CARRIER, le_idx)); // 24
+    f.push(structures::le_trans_field("le_trans", CARRIER, le_idx)); // 25
+    f.push(le_antisymm_equiv_field_s(
+        "le_antisymm_equiv",
+        CARRIER,
+        EQUIV,
+        le_idx,
+    )); // 26
+    f.push(structures::add_le_add_left_field(
+        "add_le_add_left",
+        CARRIER,
+        ADD,
+        le_idx,
+    )); // 27
+    f.push(structures::mul_nonneg_field(
+        "mul_nonneg",
+        CARRIER,
+        MUL,
+        ZERO,
+        le_idx,
+    )); // 28
+    f
+}
+
 /// Field-index constants, one module per record (mirrors
 /// `super::structures::idx` exactly). `#[allow(dead_code)]` because not
 /// every record's every index has a consumer yet.
@@ -686,6 +809,20 @@ pub mod idx {
         pub use super::ring::*;
         pub const MUL_COMM: usize = 22;
     }
+    /// ADR-1592: `AlgS.OrderedRing` — `ring`'s 22 fields (NOT `comm_ring`'s
+    /// 23: no `mulComm`, matching `Alg.OrderedRing`'s own Ring-based scope
+    /// so `AlgS.OrderedRing.ofAlg` type-checks) plus `le`, `leCongr`, and
+    /// five order laws.
+    pub mod ordered_ring {
+        pub use super::ring::*;
+        pub const LE: usize = 22;
+        pub const LE_CONGR: usize = 23;
+        pub const LE_REFL: usize = 24;
+        pub const LE_TRANS: usize = 25;
+        pub const LE_ANTISYMM_EQUIV: usize = 26;
+        pub const ADD_LE_ADD_LEFT: usize = 27;
+        pub const MUL_NONNEG: usize = 28;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -704,6 +841,8 @@ pub struct StructuresSNames {
     pub semiring: NameId,
     pub ring: NameId,
     pub comm_ring: NameId,
+    /// ADR-1592.
+    pub ordered_ring: NameId,
 }
 
 /// Intern the nine record names under a fresh `AlgS` root — never `Alg`, so
@@ -722,6 +861,7 @@ pub(crate) fn intern_structures_s_names(kernel: &mut Kernel) -> StructuresSNames
         semiring: kernel.name_str(algs, "Semiring"),
         ring: kernel.name_str(algs, "Ring"),
         comm_ring: kernel.name_str(algs, "CommRing"),
+        ordered_ring: kernel.name_str(algs, "OrderedRing"),
     }
 }
 
@@ -736,6 +876,8 @@ pub struct StructuresSRecordNames {
     pub semiring: RecordNames,
     pub ring: RecordNames,
     pub comm_ring: RecordNames,
+    /// ADR-1592.
+    pub ordered_ring: RecordNames,
 }
 
 /// Declare all nine `AlgS.*` records, each with the same `Sort 1`-refused
@@ -790,6 +932,15 @@ pub(crate) fn declare_structures_s_all(
         p.comm_ring,
         &comm_ring_fields_s(),
     )?;
+    let ordered_ring = declare_record(
+        kernel,
+        logic,
+        l0,
+        l1,
+        l2,
+        p.ordered_ring,
+        &ordered_ring_fields_s(),
+    )?;
 
     Ok(StructuresSRecordNames {
         magma,
@@ -801,6 +952,7 @@ pub(crate) fn declare_structures_s_all(
         semiring,
         ring,
         comm_ring,
+        ordered_ring,
     })
 }
 
@@ -1546,6 +1698,168 @@ pub mod ofalg {
         ];
         declare_projection(k, algs_p, alg_cr, algs_cr, &args, R_FV)
     }
+
+    /// `forall a a' b b', Eq a a' -> Eq b b' -> le a b -> le a' b'`,
+    /// synthesized via two `subst` transports (`Eq.rec`-based, generalizing
+    /// [`congr_arg`]'s shape to conclude a PROP membership rather than an
+    /// operation-equality) -- the `ofAlg` counterpart of
+    /// [`build_binop_congr`] for `AlgS.OrderedRing`'s new `leCongr` field,
+    /// which has no `Eq`-flavored counterpart at all (`Eq`'s own congruence
+    /// is free, so `Alg.OrderedRing` needs no such field).
+    fn build_le_congr_ofalg(
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        lvl: LevelId,
+        carrier: ExprId,
+        le: ExprId,
+    ) -> ExprId {
+        const A: u64 = 21_150;
+        const AP: u64 = 21_151;
+        const B: u64 = 21_152;
+        const BP: u64 = 21_153;
+        const H1: u64 = 21_154;
+        const H2: u64 = 21_155;
+        const HLE: u64 = 21_156;
+        const S1: u64 = 21_157;
+        const S2: u64 = 21_158;
+        let a = k.fvar(A);
+        let ap = k.fvar(AP);
+        let b = k.fvar(B);
+        let bp = k.fvar(BP);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let hle = k.fvar(HLE);
+        let hyp1_ty = crate::nat_prelude::structures::eq_of(k, lg, lvl, carrier, a, ap);
+        let hyp2_ty = crate::nat_prelude::structures::eq_of(k, lg, lvl, carrier, b, bp);
+        let hle_ty = app2(k, le, a, b);
+
+        // step1 : le a' b, transport `hle` along h1 on (fun x => le x b).
+        let step1 = crate::nat_prelude::structures::subst(
+            k,
+            lg,
+            lvl,
+            carrier,
+            a,
+            ap,
+            h1,
+            S1,
+            &|k2, x| app2(k2, le, x, b),
+            hle,
+        );
+        // step2 : le a' b', transport step1 along h2 on (fun y => le a' y).
+        let step2 = crate::nat_prelude::structures::subst(
+            k,
+            lg,
+            lvl,
+            carrier,
+            b,
+            bp,
+            h2,
+            S2,
+            &|k2, y| app2(k2, le, ap, y),
+            step1,
+        );
+
+        let v = lam_over(k, HLE, hle_ty, step2);
+        let v = lam_over(k, H2, hyp2_ty, v);
+        let v = lam_over(k, H1, hyp1_ty, v);
+        let v = lam_over(k, BP, carrier, v);
+        let v = lam_over(k, B, carrier, v);
+        let v = lam_over(k, AP, carrier, v);
+        lam_over(k, A, carrier, v)
+    }
+
+    /// `AlgS.OrderedRing.ofAlg : Alg.OrderedRing -> AlgS.OrderedRing` --
+    /// ADR-1592. Every LAW field (including `le_antisymm_equiv`, whose
+    /// `Eq`-flavored source `le_antisymm` selector unfolds to EXACTLY
+    /// `equiv a b` once `equiv := @Eq carrier`, the same load-bearing fact
+    /// every other `ofAlg` projection in this module exploits) is the
+    /// source record's own selector, unchanged; only the four
+    /// equiv-infrastructure fields, the three inherited congruence fields
+    /// (`addCongr`/`mulCongr`/`negCongr`), and `leCongr` (synthesized via
+    /// [`build_le_congr_ofalg`] -- `le` has no `Eq`-flavored congruence
+    /// field to reuse, since `Eq` gets it for free) need a fresh proof
+    /// term.
+    #[allow(clippy::too_many_lines)]
+    pub(crate) fn declare_ordered_ring_ofalg(
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        l1: LevelId,
+        alg_or: &RecordNames,
+        algs_or: &RecordNames,
+        algs_p: NameId,
+    ) -> Result<NameId, KernelError> {
+        use crate::nat_prelude::structures::idx::ordered_ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_LE_ADD_LEFT, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, LE,
+            LE_ANTISYMM, LE_REFL, LE_TRANS, MUL, MUL_ASSOC, MUL_NONNEG, MUL_ONE_L, MUL_ONE_R, NEG,
+            NEG_ADD, ONE, ZERO,
+        };
+        const R_FV: u64 = 21_290;
+        let r = k.fvar(R_FV);
+        let carrier = sel(k, alg_or, CARRIER, r);
+        let zero = sel(k, alg_or, ZERO, r);
+        let one = sel(k, alg_or, ONE, r);
+        let add = sel(k, alg_or, ADD, r);
+        let mul = sel(k, alg_or, MUL, r);
+        let add_assoc = sel(k, alg_or, ADD_ASSOC, r);
+        let add_comm = sel(k, alg_or, ADD_COMM, r);
+        let add_zero = sel(k, alg_or, ADD_ZERO, r);
+        let mul_assoc = sel(k, alg_or, MUL_ASSOC, r);
+        let mul_one_l = sel(k, alg_or, MUL_ONE_L, r);
+        let mul_one_r = sel(k, alg_or, MUL_ONE_R, r);
+        let distrib_l = sel(k, alg_or, DISTRIB_L, r);
+        let distrib_r = sel(k, alg_or, DISTRIB_R, r);
+        let neg = sel(k, alg_or, NEG, r);
+        let neg_add = sel(k, alg_or, NEG_ADD, r);
+        let le = sel(k, alg_or, LE, r);
+        let le_refl = sel(k, alg_or, LE_REFL, r);
+        let le_trans = sel(k, alg_or, LE_TRANS, r);
+        let le_antisymm_equiv = sel(k, alg_or, LE_ANTISYMM, r);
+        let add_le_add_left = sel(k, alg_or, ADD_LE_ADD_LEFT, r);
+        let mul_nonneg = sel(k, alg_or, MUL_NONNEG, r);
+
+        let equiv = eq_partial(k, lg, l1, carrier);
+        let equiv_refl = build_equiv_refl(k, lg, l1, carrier);
+        let equiv_symm = build_equiv_symm(k, lg, l1, carrier);
+        let equiv_trans = build_equiv_trans(k, lg, l1, carrier);
+        let add_congr = build_binop_congr(k, lg, l1, carrier, add);
+        let mul_congr = build_binop_congr(k, lg, l1, carrier, mul);
+        let neg_congr = build_unop_congr(k, lg, l1, carrier, neg);
+        let le_congr = build_le_congr_ofalg(k, lg, l1, carrier, le);
+
+        let args = vec![
+            carrier,
+            equiv,
+            equiv_refl,
+            equiv_symm,
+            equiv_trans,
+            zero,
+            one,
+            add,
+            mul,
+            add_congr,
+            mul_congr,
+            add_assoc,
+            add_comm,
+            add_zero,
+            mul_assoc,
+            mul_one_l,
+            mul_one_r,
+            distrib_l,
+            distrib_r,
+            neg,
+            neg_congr,
+            neg_add,
+            le,
+            le_congr,
+            le_refl,
+            le_trans,
+            le_antisymm_equiv,
+            add_le_add_left,
+            mul_nonneg,
+        ];
+        declare_projection(k, algs_p, alg_or, algs_or, &args, R_FV)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2168,12 +2482,337 @@ pub(crate) fn declare_add_left_cancel(
 }
 
 // ---------------------------------------------------------------------------
+// `AlgS.Group`-level generic theorems (ADR-1592, closing the gap ADR-1590 §3
+// named: "AlgS has no Group-level generic theorem at all" to derive
+// `Alg.neg_neg` from). Mirrors `rat_prelude::algebra_instances::
+// build_group_inv_unique`/`rat_prelude::algebra_ext::build_neg_neg` (the
+// `Eq`-flavored spine's own Group-level pair) exactly, `Eq.trans`/`symm_of`/
+// `congr_arg` replaced by the record's own `equivTrans`/`equivSymm`/
+// `opCongr`, the same substitution `declare_add_left_cancel` above already
+// made for `Alg.mul_left_cancel`.
+// ---------------------------------------------------------------------------
+
+/// `AlgS.inv_unique : forall (G:Group)(a b c:G.carrier), G.equiv (G.op b a)
+/// G.e -> G.equiv (G.op a c) G.e -> G.equiv b c`. `b = b*e = b*(a*c) =
+/// (b*a)*c = e*c = c`, the exact shape `Alg.groupInvUnique` uses.
+#[allow(clippy::similar_names, clippy::too_many_lines)]
+fn build_group_inv_unique_s(k: &mut Kernel, group: &RecordNames) -> (ExprId, ExprId) {
+    use idx::group::{
+        ASSOC, CARRIER, E, EQUIV, EQUIV_REFL, EQUIV_SYMM, EQUIV_TRANS, IDENT_L, IDENT_R, OP,
+        OP_CONGR,
+    };
+    const G_FV: u64 = 21_520;
+    const A_FV: u64 = 21_521;
+    const B_FV: u64 = 21_522;
+    const C_FV: u64 = 21_523;
+    const H1_FV: u64 = 21_524;
+    const H2_FV: u64 = 21_525;
+
+    let group_ty = k.const_(group.ind, vec![]);
+    let g = k.fvar(G_FV);
+    let carrier = sel(k, group, CARRIER, g);
+    let equiv = sel(k, group, EQUIV, g);
+    let equiv_refl = sel(k, group, EQUIV_REFL, g);
+    let equiv_symm = sel(k, group, EQUIV_SYMM, g);
+    let equiv_trans = sel(k, group, EQUIV_TRANS, g);
+    let op = sel(k, group, OP, g);
+    let op_congr = sel(k, group, OP_CONGR, g);
+    let e = sel(k, group, E, g);
+    let ident_l = sel(k, group, IDENT_L, g);
+    let ident_r = sel(k, group, IDENT_R, g);
+    let assoc = sel(k, group, ASSOC, g);
+
+    let a = k.fvar(A_FV);
+    let b = k.fvar(B_FV);
+    let c = k.fvar(C_FV);
+
+    let op_b_a = t_app(k, op, &[b, a]);
+    let op_a_c = t_app(k, op, &[a, c]);
+    let h1_ty = app2(k, equiv, op_b_a, e); // equiv (op b a) e
+    let h2_ty = app2(k, equiv, op_a_c, e); // equiv (op a c) e
+    let h1 = k.fvar(H1_FV);
+    let h2 = k.fvar(H2_FV);
+
+    // Step A: identR(b) : equiv (op b e) b ; symm -> equiv b (op b e)
+    let op_b_e = t_app(k, op, &[b, e]);
+    let h_a = k.app(ident_r, b);
+    let symm_ha = t_app(k, equiv_symm, &[op_b_e, b, h_a]);
+
+    // Step B: symm(h2) : equiv e (op a c) ; opCongr (op b .) -> equiv (op b e)
+    // (op b (op a c))
+    let symm_h2 = t_app(k, equiv_symm, &[op_a_c, e, h2]);
+    let op_b_opac = t_app(k, op, &[b, op_a_c]);
+    let refl_b = t_app(k, equiv_refl, &[b]);
+    let step_b = t_app(k, op_congr, &[b, b, e, op_a_c, refl_b, symm_h2]);
+
+    let r1 = t_app(k, equiv_trans, &[b, op_b_e, op_b_opac, symm_ha, step_b]);
+
+    // Step C: assoc(b,a,c) : equiv (op (op b a) c) (op b (op a c)) ; symm.
+    let op_ba_c = t_app(k, op, &[op_b_a, c]);
+    let assoc_bac = t_app(k, assoc, &[b, a, c]);
+    let step_c = t_app(k, equiv_symm, &[op_ba_c, op_b_opac, assoc_bac]);
+
+    let r2 = t_app(k, equiv_trans, &[b, op_b_opac, op_ba_c, r1, step_c]);
+
+    // Step D: opCongr (. c) on h1 : equiv (op b a) e => equiv (op (op b a) c)
+    // (op e c)
+    let op_e_c = t_app(k, op, &[e, c]);
+    let refl_c = t_app(k, equiv_refl, &[c]);
+    let step_d = t_app(k, op_congr, &[op_b_a, e, c, c, h1, refl_c]);
+
+    let r3 = t_app(k, equiv_trans, &[b, op_ba_c, op_e_c, r2, step_d]);
+
+    // Step E: identL(c) : equiv (op e c) c.
+    let step_e = k.app(ident_l, c);
+
+    let r4 = t_app(k, equiv_trans, &[b, op_e_c, c, r3, step_e]);
+
+    let value = lam_over(k, H2_FV, h2_ty, r4);
+    let value = lam_over(k, H1_FV, h1_ty, value);
+    let value = lam_over(k, C_FV, carrier, value);
+    let value = lam_over(k, B_FV, carrier, value);
+    let value = lam_over(k, A_FV, carrier, value);
+    let value = lam_over(k, G_FV, group_ty, value);
+
+    let concl = app2(k, equiv, b, c);
+    let ty = pi_over(k, H2_FV, h2_ty, concl);
+    let ty = pi_over(k, H1_FV, h1_ty, ty);
+    let ty = pi_over(k, C_FV, carrier, ty);
+    let ty = pi_over(k, B_FV, carrier, ty);
+    let ty = pi_over(k, A_FV, carrier, ty);
+    let ty = pi_over(k, G_FV, group_ty, ty);
+
+    (ty, value)
+}
+
+pub(crate) fn declare_inv_unique(
+    k: &mut Kernel,
+    group: &RecordNames,
+    algs_p: NameId,
+) -> Result<NameId, KernelError> {
+    let (ty, value) = build_group_inv_unique_s(k, group);
+    let name = k.name_str(algs_p, "inv_unique");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.invInv : forall (G:Group)(a:G.carrier), G.equiv (G.inv (G.inv a))
+/// a`. A direct instantiation of `AlgS.inv_unique` at `(a := G.inv a, b :=
+/// G.inv(G.inv a), c := a)`, `h1 := invL(G.inv a)`, `h2 := invL a` -- no new
+/// proof engineering, mirroring `Alg.neg_neg`'s own proof
+/// (`rat_prelude::algebra_ext::build_neg_neg`) exactly.
+///
+/// **Named `invInv`, not `neg_neg`.** `AlgS.neg_neg` (ADR-1588) already
+/// names a DIFFERENT, `Ring`-scoped theorem (`equiv (R.neg (R.neg a)) a`,
+/// built from `negAdd`/`addComm`/`addAssoc` over `AlgS.Ring`'s additive
+/// structure); this one is stated over `AlgS.Group`'s generic `inv`, the
+/// scope `Alg.neg_neg` actually has. Reusing the name would collide with an
+/// existing, differently-typed, fact-ledger-pinned declaration
+/// (`F-algs-neg-neg.json`) -- see ADR-1592.
+pub(crate) fn declare_inv_inv(
+    k: &mut Kernel,
+    group: &RecordNames,
+    inv_unique_name: NameId,
+    algs_p: NameId,
+) -> Result<NameId, KernelError> {
+    use idx::group::{CARRIER, EQUIV, INV, INV_L};
+    const G_FV: u64 = 21_530;
+    const A_FV: u64 = 21_531;
+
+    let group_ty = k.const_(group.ind, vec![]);
+    let g = k.fvar(G_FV);
+    let carrier = sel(k, group, CARRIER, g);
+    let equiv = sel(k, group, EQUIV, g);
+    let inv = sel(k, group, INV, g);
+    let inv_l = sel(k, group, INV_L, g);
+    let a = k.fvar(A_FV);
+    let inv_a = k.app(inv, a);
+    let inv_inv_a = k.app(inv, inv_a);
+
+    let thm = k.const_(inv_unique_name, vec![]);
+    let h1 = k.app(inv_l, inv_a); // equiv (op (inv (inv a)) (inv a)) e
+    let h2 = k.app(inv_l, a); // equiv (op (inv a) a) e
+    let applied = {
+        let e1 = k.app(thm, g);
+        let e2 = k.app(e1, inv_a);
+        let e3 = k.app(e2, inv_inv_a);
+        let e4 = k.app(e3, a);
+        let e5 = k.app(e4, h1);
+        k.app(e5, h2)
+    };
+
+    let value = lam_over(k, A_FV, carrier, applied);
+    let value = lam_over(k, G_FV, group_ty, value);
+
+    let concl = app2(k, equiv, inv_inv_a, a);
+    let ty = pi_over(k, A_FV, carrier, concl);
+    let ty = pi_over(k, G_FV, group_ty, ty);
+
+    let name = k.name_str(algs_p, "invInv");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ---------------------------------------------------------------------------
+// `AlgS.CommRing.toCommGroupS` -- the additive-group forgetful projection
+// ADR-1590's own `ring_s_additive_group_value` term-builder left as an
+// un-named, `#[cfg(test)]`-gated helper ("out of scope here", ADR-1590's
+// Alternatives). This is that same construction, promoted to a real
+// declared name and widened to `CommGroup` (adding the `comm` field --
+// `addComm`, already available) rather than `Group`, matching the
+// deliverable's literal ask. `identL`/`invL` are still DERIVED from
+// `addComm`+`addZero`/`negAdd`, unchanged in substance.
+// ---------------------------------------------------------------------------
+
+pub(crate) fn declare_comm_ring_to_comm_group_s(
+    k: &mut Kernel,
+    st: &StructuresSRecordNames,
+    p: &StructuresSNames,
+) -> Result<NameId, KernelError> {
+    use idx::ring as ridx;
+    const R_FV: u64 = 21_430;
+    const A_FV: u64 = 21_431;
+    const B_FV: u64 = 21_432;
+
+    let comm_ring = &st.comm_ring;
+    let r = k.fvar(R_FV);
+    let carrier = sel(k, comm_ring, ridx::CARRIER, r);
+    let equiv = sel(k, comm_ring, ridx::EQUIV, r);
+    let equiv_refl = sel(k, comm_ring, ridx::EQUIV_REFL, r);
+    let equiv_symm = sel(k, comm_ring, ridx::EQUIV_SYMM, r);
+    let equiv_trans = sel(k, comm_ring, ridx::EQUIV_TRANS, r);
+    let add = sel(k, comm_ring, ridx::ADD, r);
+    let add_congr = sel(k, comm_ring, ridx::ADD_CONGR, r);
+    let zero = sel(k, comm_ring, ridx::ZERO, r);
+    let neg = sel(k, comm_ring, ridx::NEG, r);
+    let neg_congr = sel(k, comm_ring, ridx::NEG_CONGR, r);
+    let add_assoc = sel(k, comm_ring, ridx::ADD_ASSOC, r);
+    let add_comm = sel(k, comm_ring, ridx::ADD_COMM, r);
+    let add_zero = sel(k, comm_ring, ridx::ADD_ZERO, r); // identR
+    let neg_add = sel(k, comm_ring, ridx::NEG_ADD, r); // invR
+
+    // identL(a) : equiv (add zero a) a, via addComm(zero,a); addZero(a).
+    let a = k.fvar(A_FV);
+    let comm_za = t_app(k, add_comm, &[zero, a]);
+    let add_za = t_app(k, add, &[zero, a]);
+    let add_az = t_app(k, add, &[a, zero]);
+    let az_a = k.app(add_zero, a);
+    let ident_l_body = t_app(k, equiv_trans, &[add_za, add_az, a, comm_za, az_a]);
+    let ident_l = lam_over(k, A_FV, carrier, ident_l_body);
+
+    // invL(b) : equiv (add (neg b) b) zero, via addComm(neg b,b); negAdd(b).
+    let b = k.fvar(B_FV);
+    let nb = k.app(neg, b);
+    let comm_nb_b = t_app(k, add_comm, &[nb, b]);
+    let add_nbb = t_app(k, add, &[nb, b]);
+    let add_bnb = t_app(k, add, &[b, nb]);
+    let nb_add = k.app(neg_add, b);
+    let inv_l_body = t_app(k, equiv_trans, &[add_nbb, add_bnb, zero, comm_nb_b, nb_add]);
+    let inv_l = lam_over(k, B_FV, carrier, inv_l_body);
+
+    let value = structures::mk_instance(
+        k,
+        &st.comm_group,
+        &[
+            carrier,
+            equiv,
+            equiv_refl,
+            equiv_symm,
+            equiv_trans,
+            add,
+            add_congr,
+            zero,
+            neg,
+            neg_congr,
+            add_assoc,
+            ident_l,
+            add_zero,
+            inv_l,
+            neg_add,
+            add_comm,
+        ],
+    );
+    let comm_ring_ty0 = k.const_(comm_ring.ind, vec![]);
+    let value = lam_over(k, R_FV, comm_ring_ty0, value);
+
+    let ty = {
+        let dom = k.const_(comm_ring.ind, vec![]);
+        let cod = k.const_(st.comm_group.ind, vec![]);
+        arrow(k, dom, cod)
+    };
+
+    let name = k.name_str(p.comm_ring, "toCommGroupS");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.CommGroup.toGroupS : AlgS.CommGroup -> AlgS.Group` -- the same
+/// PREFIX-projection shape `AlgS.CommRing.toRingS` and `Alg.CommGroup.
+/// toGroup` both already use (`CommGroup`'s first 15 fields ARE `Group`'s
+/// field list verbatim), needed to reach a plain `Group` value (for
+/// `AlgS.add_left_cancel`/`AlgS.inv_unique`/`AlgS.invInv`, all stated over
+/// `Group`, not `CommGroup`) from `AlgS.CommRing.toCommGroupS`'s output.
+pub(crate) fn declare_comm_group_to_group_s(
+    k: &mut Kernel,
+    st: &StructuresSRecordNames,
+    p: &StructuresSNames,
+) -> Result<NameId, KernelError> {
+    use idx::group::INV_R;
+    const G_FV: u64 = 21_440;
+    let g = k.fvar(G_FV);
+    let mut args = Vec::with_capacity(INV_R + 1);
+    for i in 0..=INV_R {
+        args.push(sel(k, &st.comm_group, i, g));
+    }
+    let value = structures::mk_instance(k, &st.group, &args);
+    let comm_group_ty0 = k.const_(st.comm_group.ind, vec![]);
+    let value = lam_over(k, G_FV, comm_group_ty0, value);
+    let ty = {
+        let dom = k.const_(st.comm_group.ind, vec![]);
+        let cod = k.const_(st.group.ind, vec![]);
+        arrow(k, dom, cod)
+    };
+    let name = k.name_str(p.comm_group, "toGroupS");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+// ---------------------------------------------------------------------------
 // Assembly: declare everything, in build order.
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct StructuresSExtraNames {
     pub comm_ring_to_ring_s: NameId,
+    /// ADR-1592: `AlgS.CommRing.toCommGroupS`, the additive-group forgetful
+    /// projection (promotes ADR-1590's test-only `ring_s_additive_group_
+    /// value` to a real declared name, widened to `CommGroup`).
+    pub comm_ring_to_comm_group_s: NameId,
+    /// ADR-1592: `AlgS.CommGroup.toGroupS`, the prefix projection down to a
+    /// plain `Group` (needed by `add_left_cancel`/`inv_unique`/`invInv`).
+    pub comm_group_to_group_s: NameId,
     pub magma_ofalg: NameId,
     pub semigroup_ofalg: NameId,
     pub monoid_ofalg: NameId,
@@ -2189,6 +2828,17 @@ pub struct StructuresSExtraNames {
     pub mul_zero: NameId,
     pub mul_neg_one: NameId,
     pub add_left_cancel: NameId,
+    /// ADR-1592: `AlgS.inv_unique`, the `AlgS.Group`-level uniqueness
+    /// theorem (`op b a = e -> op a c = e -> b = c`), mirroring `Alg.
+    /// groupInvUnique` exactly.
+    pub inv_unique: NameId,
+    /// ADR-1592: `AlgS.invInv`, `equiv (inv (inv a)) a` over `AlgS.Group`
+    /// -- the theorem `Alg.neg_neg` (stated over `Alg.Group`) now derives
+    /// from via `ofAlg`, closing ADR-1590 §3's named scope mismatch.
+    pub inv_inv: NameId,
+    /// ADR-1592: `AlgS.OrderedRing.ofAlg : Alg.OrderedRing -> AlgS.
+    /// OrderedRing`.
+    pub ordered_ring_ofalg: NameId,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2204,6 +2854,8 @@ pub(crate) fn declare_structures_s_extra(
     let l1 = k.level_succ(l0);
 
     let comm_ring_to_ring_s = declare_comm_ring_to_ring_s(k, st, p)?;
+    let comm_ring_to_comm_group_s = declare_comm_ring_to_comm_group_s(k, st, p)?;
+    let comm_group_to_group_s = declare_comm_group_to_group_s(k, st, p)?;
 
     let magma_ofalg = ofalg::declare_magma_ofalg(k, lg, l1, &alg_st.magma, &st.magma, p.magma)?;
     let semigroup_ofalg =
@@ -2232,6 +2884,14 @@ pub(crate) fn declare_structures_s_extra(
     let ring_ofalg = ofalg::declare_ring_ofalg(k, lg, l1, &alg_st.ring, &st.ring, p.ring)?;
     let comm_ring_ofalg =
         ofalg::declare_comm_ring_ofalg(k, lg, l1, &alg_st.comm_ring, &st.comm_ring, p.comm_ring)?;
+    let ordered_ring_ofalg = ofalg::declare_ordered_ring_ofalg(
+        k,
+        lg,
+        l1,
+        &alg_st.ordered_ring,
+        &st.ordered_ring,
+        p.ordered_ring,
+    )?;
 
     let sub = declare_sub_s(k, &st.ring, p.algs)?;
     let sub_self = declare_sub_self(k, &st.ring, sub, p.algs)?;
@@ -2239,11 +2899,15 @@ pub(crate) fn declare_structures_s_extra(
     let mul_zero = declare_mul_zero(k, &st.ring, p.algs)?;
     let mul_neg_one = declare_mul_neg_one(k, &st.ring, mul_zero, p.algs)?;
     let add_left_cancel = declare_add_left_cancel(k, &st.group, p.algs)?;
+    let inv_unique = declare_inv_unique(k, &st.group, p.algs)?;
+    let inv_inv = declare_inv_inv(k, &st.group, inv_unique, p.algs)?;
 
     let _ = alg_p;
 
     Ok(StructuresSExtraNames {
         comm_ring_to_ring_s,
+        comm_ring_to_comm_group_s,
+        comm_group_to_group_s,
         magma_ofalg,
         semigroup_ofalg,
         monoid_ofalg,
@@ -2259,6 +2923,9 @@ pub(crate) fn declare_structures_s_extra(
         mul_zero,
         mul_neg_one,
         add_left_cancel,
+        inv_unique,
+        inv_inv,
+        ordered_ring_ofalg,
     })
 }
 
@@ -2299,6 +2966,7 @@ mod structures_setoid_tests {
             ("Semiring", 19),
             ("Ring", 22),
             ("CommRing", 23),
+            ("OrderedRing", 29),
         ];
         let actual = [
             st.magma.field_count(),
@@ -2310,6 +2978,7 @@ mod structures_setoid_tests {
             st.semiring.field_count(),
             st.ring.field_count(),
             st.comm_ring.field_count(),
+            st.ordered_ring.field_count(),
         ];
         for (i, (name, want)) in expected.iter().enumerate() {
             assert_eq!(actual[i], *want, "{name} field count");
@@ -2330,6 +2999,7 @@ mod structures_setoid_tests {
             &st.semiring,
             &st.ring,
             &st.comm_ring,
+            &st.ordered_ring,
         ] {
             assert!(k.environment().get(rn.ind).is_some(), "inductive missing");
             assert!(k.environment().get(rn.rec).is_some(), "recursor missing");
@@ -2350,6 +3020,8 @@ mod structures_setoid_tests {
             .expect("ofAlg projections and generic theorems must admit");
         for name in [
             extra.comm_ring_to_ring_s,
+            extra.comm_ring_to_comm_group_s,
+            extra.comm_group_to_group_s,
             extra.magma_ofalg,
             extra.semigroup_ofalg,
             extra.monoid_ofalg,
@@ -2365,6 +3037,9 @@ mod structures_setoid_tests {
             extra.mul_zero,
             extra.mul_neg_one,
             extra.add_left_cancel,
+            extra.inv_unique,
+            extra.inv_inv,
+            extra.ordered_ring_ofalg,
         ] {
             assert!(k.environment().get(name).is_some());
         }
@@ -2380,6 +3055,8 @@ mod structures_setoid_tests {
             .expect("ofAlg projections and generic theorems must admit");
         for name in [
             extra.comm_ring_to_ring_s,
+            extra.comm_ring_to_comm_group_s,
+            extra.comm_group_to_group_s,
             extra.magma_ofalg,
             extra.semigroup_ofalg,
             extra.monoid_ofalg,
@@ -2395,6 +3072,9 @@ mod structures_setoid_tests {
             extra.mul_zero,
             extra.mul_neg_one,
             extra.add_left_cancel,
+            extra.inv_unique,
+            extra.inv_inv,
+            extra.ordered_ring_ofalg,
         ] {
             assert!(
                 k.axiom_footprint(name).is_empty(),
@@ -2649,6 +3329,160 @@ mod structures_setoid_tests {
             k.def_eq(generic_ty, hand_ty),
             "AlgS.add_left_cancel(AlgS.Group.ofAlg(Int.addGroup)) closed over \
              (a,b,c) must have the SAME TYPE as Int.add_left_cancel"
+        );
+    }
+
+    /// ADR-1592 deliverable 2: `AlgS.invInv` instantiated at ℤ through
+    /// `ofAlg` (`AlgS.Group.ofAlg(Int.addGroup)`), concrete and symbolic.
+    /// `Int` has no named `neg_neg`/`invInv` theorem (ADR-1584 §3: only a
+    /// private helper in `int_prelude/gcd.rs`), so this test confirms only
+    /// well-typedness, like `AlgS.neg_neg`'s and `AlgS.mul_neg_one`'s own
+    /// Int controls.
+    #[test]
+    fn inv_inv_instantiated_at_int_through_ofalg_concrete_and_symbolic() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_050;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_add_group_alg = k.const_(rp.algebra.int_add_group, vec![]);
+        let group_ofalg = k.const_(extra.group_ofalg, vec![]);
+        let int_group_s = k.app(group_ofalg, int_add_group_alg);
+        let inv_inv_c = k.const_(extra.inv_inv, vec![]);
+        let applied = k.app(inv_inv_c, int_group_s);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let zero_c = k.const_(rp.int.zero, vec![]);
+        let applied_zero = k.app(applied, zero_c);
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.invInv applied at Int's Group projection must infer a type at Int.zero"
+        );
+
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed = lam_over(&mut k, A_FV, int_ty, applied_a);
+        assert!(
+            k.infer(closed).is_ok(),
+            "AlgS.invInv closed at Int's Group projection must infer a type"
+        );
+    }
+
+    /// ADR-1592: `AlgS.inv_unique` instantiated at ℤ through `ofAlg`,
+    /// concrete and symbolic (the uniqueness lemma `invInv` is built from).
+    #[test]
+    fn inv_unique_instantiated_at_int_through_ofalg_concrete_and_symbolic() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_060;
+        const B_FV: u64 = 24_061;
+        const C_FV: u64 = 24_062;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_add_group_alg = k.const_(rp.algebra.int_add_group, vec![]);
+        let group_ofalg = k.const_(extra.group_ofalg, vec![]);
+        let int_group_s = k.app(group_ofalg, int_add_group_alg);
+        let inv_unique_c = k.const_(extra.inv_unique, vec![]);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let zero_c = k.const_(rp.int.zero, vec![]);
+        let applied_zero = {
+            let e1 = k.app(inv_unique_c, int_group_s);
+            let e2 = k.app(e1, zero_c);
+            let e3 = k.app(e2, zero_c);
+            k.app(e3, zero_c)
+        };
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.inv_unique applied at Int's Group projection must infer a type at \
+             (Int.zero,Int.zero,Int.zero)"
+        );
+
+        let a = k.fvar(A_FV);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(inv_unique_c, int_group_s);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let closed = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, int_ty, v);
+            let v = lam_over(&mut k, B_FV, int_ty, v);
+            lam_over(&mut k, A_FV, int_ty, v)
+        };
+        assert!(
+            k.infer(closed).is_ok(),
+            "AlgS.inv_unique closed at Int's Group projection must infer a type"
+        );
+    }
+
+    /// ADR-1592: `AlgS.add_left_cancel` reached via the NEW `AlgS.CommRing.
+    /// toCommGroupS`/`AlgS.CommGroup.toGroupS` projection pair (rather than
+    /// `AlgS.Group.ofAlg` directly) must still be `def_eq` to `Int.
+    /// add_left_cancel`'s own declared type -- confirms the two new
+    /// projections compose to the SAME additive group `AlgS.Group.ofAlg`
+    /// already reaches, not merely that SOMETHING type-checks (a
+    /// projection to a wrong/opaque carrier would still type-check as a
+    /// `Group`, per `kernel-proof-engineering.md`'s warning -- `def_eq`
+    /// against a real Int theorem is the discriminating check).
+    #[test]
+    fn add_left_cancel_instantiated_at_int_through_comm_ring_to_comm_group_s_matches_int_add_left_cancel_type()
+     {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_070;
+        const B_FV: u64 = 24_071;
+        const C_FV: u64 = 24_072;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_comm_ring_alg = k.const_(rp.algebra.int_comm_ring, vec![]);
+        let comm_ring_ofalg = k.const_(extra.comm_ring_ofalg, vec![]);
+        let int_comm_ring_s = k.app(comm_ring_ofalg, int_comm_ring_alg);
+
+        let to_comm_group_s = k.const_(extra.comm_ring_to_comm_group_s, vec![]);
+        let int_comm_group_s = k.app(to_comm_group_s, int_comm_ring_s);
+        let to_group_s = k.const_(extra.comm_group_to_group_s, vec![]);
+        let int_group_s = k.app(to_group_s, int_comm_group_s);
+
+        let add_left_cancel_c = k.const_(extra.add_left_cancel, vec![]);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let a = k.fvar(A_FV);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(add_left_cancel_c, int_group_s);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let generic_closed = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, int_ty, v);
+            let v = lam_over(&mut k, B_FV, int_ty, v);
+            lam_over(&mut k, A_FV, int_ty, v)
+        };
+        let generic_ty = k.infer(generic_closed).expect(
+            "AlgS.add_left_cancel closed at Int's CommRing->CommGroupS->GroupS projection \
+             must type-check",
+        );
+
+        let hand = k.const_(rp.int.add_left_cancel, vec![]);
+        let hand_ty = k.infer(hand).expect("Int.add_left_cancel must exist");
+
+        assert!(
+            k.def_eq(generic_ty, hand_ty),
+            "AlgS.add_left_cancel via CommRing.toCommGroupS/CommGroup.toGroupS must have the \
+             SAME TYPE as Int.add_left_cancel"
         );
     }
 }

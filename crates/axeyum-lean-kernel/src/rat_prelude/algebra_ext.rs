@@ -440,18 +440,27 @@ fn declare_ordered_ring_instances(
 // `nat_prelude::build_nat_prelude_uncached`, right after the structures
 // spine itself. `declare_algebra_ext_all` below no longer declares it.
 
-/// `Alg.neg_neg : forall (G:Group)(a:G.carrier), G.inv(G.inv a)=a`. A direct
-/// instantiation of `Alg.groupInvUnique` at `(x := G.inv a, b := G.inv(G.inv
-/// a), c := a)`, `h1 := invL(G.inv a)`, `h2 := invL a` — no new proof
-/// engineering.
+/// `Alg.neg_neg : forall (G:Group)(a:G.carrier), G.inv(G.inv a)=a` --
+/// ADR-1592, DERIVED from `AlgS.invInv` (`nat_prelude::structures_setoid`)
+/// applied at `AlgS.Group.ofAlg G`, closing the scope mismatch ADR-1590 §3
+/// named ("`AlgS` has no `Group`-level generic theorem at all" to derive
+/// this from) now that one exists (mirrors `build_ring_mul_zero`'s/
+/// `build_sub_self`'s own derivation exactly).
+///
+/// `AlgS.Group.ofAlg G`'s `equiv` field is `@Eq G.carrier` and its `inv`
+/// field is `G`'s own selector, verbatim (ADR-1588 §2), so `AlgS.invInv
+/// (ofAlg G) a`'s inferred type beta/iota-reduces to EXACTLY `Eq G.carrier
+/// (G.inv (G.inv a)) a` -- this theorem's own stated `ty` below, unchanged,
+/// so the declared type stays byte-identical before and after this ADR.
 fn build_neg_neg(
     k: &mut Kernel,
     lg: &LogicPrelude,
     l1: LevelId,
     group: &RecordNames,
-    group_inv_unique: NameId,
+    group_ofalg: NameId,
+    algs_inv_inv: NameId,
 ) -> (ExprId, ExprId) {
-    use structures::idx::group::{CARRIER, INV, INV_L};
+    use structures::idx::group::{CARRIER, INV};
     const G_FV: u64 = 22_150;
     const A_FV: u64 = 22_151;
 
@@ -459,22 +468,14 @@ fn build_neg_neg(
     let g = k.fvar(G_FV);
     let carrier = sel(k, group, CARRIER, g);
     let inv = sel(k, group, INV, g);
-    let inv_l = sel(k, group, INV_L, g);
     let a = k.fvar(A_FV);
     let inv_a = k.app(inv, a);
     let inv_inv_a = k.app(inv, inv_a);
 
-    let thm = k.const_(group_inv_unique, vec![]);
-    let h1 = k.app(inv_l, inv_a); // : op (inv (inv a)) (inv a) = e
-    let h2 = k.app(inv_l, a); // : op (inv a) a = e
-    let applied = {
-        let e1 = k.app(thm, g);
-        let e2 = k.app(e1, inv_a);
-        let e3 = k.app(e2, inv_inv_a);
-        let e4 = k.app(e3, a);
-        let e5 = k.app(e4, h1);
-        k.app(e5, h2)
-    };
+    let ofalg = k.const_(group_ofalg, vec![]);
+    let gs = k.app(ofalg, g); // AlgS.Group.ofAlg G : AlgS.Group
+    let thm = k.const_(algs_inv_inv, vec![]);
+    let applied = app2(k, thm, gs, a); // : (ofAlg G).equiv ((ofAlg G).inv((ofAlg G).inv a)) a
 
     let value = lam_over(k, A_FV, carrier, applied);
     let value = lam_over(k, G_FV, ind_ty, value);
@@ -1277,7 +1278,8 @@ pub(crate) fn declare_algebra_ext_all(
     // build-position rule. `names.mul_left_cancel`'s `name_str` interning is
     // idempotent and still resolves to that earlier declaration.
     {
-        let (ty, value) = build_neg_neg(k, lg, l1, &st.group, ax.group_inv_unique);
+        let extra = &p.int.nat.structures_s_extra;
+        let (ty, value) = build_neg_neg(k, lg, l1, &st.group, extra.group_ofalg, extra.inv_inv);
         k.add_declaration(Declaration::Theorem {
             name: names.neg_neg,
             uparams: vec![],

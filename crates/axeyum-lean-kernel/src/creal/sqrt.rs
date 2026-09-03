@@ -1175,9 +1175,14 @@ fn int_right_distrib(
     whole
 }
 
-/// `Rat.le x (Rat.add x y)`, from `Rat.le Rat.zero y` — `x <= x+y` via
-/// `add_le_add x x 0 y (le_refl x) y_nonneg : x+0 <= x+y`, rewritten along
-/// `add_zero`. (`x <= x+x` is the `y := x` instance.)
+/// `Rat.le x (Rat.add x y)`, from `Rat.le Rat.zero y` — `x <= x+y`.
+/// (`x <= x+x` is the `y := x` instance.)
+///
+/// ADR-1592 retirement: was a hand `add_le_add x x 0 y (le_refl x)
+/// y_nonneg : x+0 <= x+y`, rewritten along `add_zero`; now routed through
+/// `linarith::generic::prove_s` over `AlgS.Rat.orderedRingS`
+/// (`super::linarith_bridge::rat_le_add_right`) — the SAME fact, the SAME
+/// type, reached generically.
 fn rat_le_add_nonneg(
     d: &mut IntDev<'_>,
     p: CRealPrelude,
@@ -1185,14 +1190,7 @@ fn rat_le_add_nonneg(
     y: ExprId,
     y_nonneg: ExprId,
 ) -> ExprId {
-    let rat = p.rat;
-    let zero = rzero(d, rat);
-    let refl_x = d.lemma(rat.le_refl, &[x]);
-    let step = d.lemma(rat.add_le_add, &[x, x, zero, y, refl_x, y_nonneg]);
-    let x_zero = radd(d, x, zero);
-    let xy = radd(d, x, y);
-    let az = d.lemma(rat.add_zero, &[x]);
-    rat_eq_rewrite(d, x_zero, x, az, step, &|d, t| rle(d, rat, t, xy))
+    super::linarith_bridge::rat_le_add_right(d, p, x, y, y_nonneg)
 }
 
 /// `Rat.le (Rat.add (a*a) (b*b)) ((a+b)*(a+b))`, given `0 <= a` and `0 <= b`.

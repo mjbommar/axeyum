@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-ofnat-add",
+  "title": "In an abstract Setoid-flavored ordered ring, the generic numeral builder distributes over addition (up to equiv)",
+  "statement": "For any AlgS.OrderedRing record R and naturals m n, where ofNat R is the Nat.rec numeral builder over R's own add/one/zero, equiv (ofNat R (m+n)) (add (ofNat R m) (ofNat R n)) -- the setoid twin of Alg.ofNat_add, proved by the identical induction on n with equivTrans/addCongr in place of Eq.trans/congr_arg.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.OrderedRing.ofNat_add : ((x0 : AlgS.OrderedRing) -> ((x1 : AxNat) -> ((x2 : AxNat) -> AlgS.OrderedRing.equiv x0 (AlgS.OrderedRing.ofNat x0 (AxNat.add x1 x2)) (AlgS.OrderedRing.add x0 (AlgS.OrderedRing.ofNat x0 x1) (AlgS.OrderedRing.ofNat x0 x2)))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.OrderedRing.ofNat_add"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:alg-ofnat-add"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-ofnat-add-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.OrderedRing.ofNat and AlgS.OrderedRing.ofNat_add both admit through the trusted kernel gate. AlgS.OrderedRing.ofNat R 3 reduces (def_eq) to Int.ofNat 3 at R := AlgS.Int.orderedRingS, with a discriminating negative control against Int.ofNat 4. ofNat_add is instantiated symbolically at both AlgS.Int.orderedRingS and AlgS.Rat.orderedRingS.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- ofnat_s_evaluation_at_int_discriminates ofnat_add_s_symbolic_at_int_and_rat --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 2 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-ordered-setoid, ADR-1592.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/ordered_ring_ext_s.rs (build_ofnat_s, build_ofnat_add_s); tests rat_prelude::ordered_ring_ext_s::ordered_ring_ext_s_tests::ofnat_s_evaluation_at_int_discriminates, ::ofnat_add_s_symbolic_at_int_and_rat."
+  },
+  "notes": "Part of closing ADR-1590's second named gap (no AlgS.OrderedRing at all, so linarith::generic could not reach CReal). Named AlgS.OrderedRing.ofNat_add (nested under the record's own name), not the flat AlgS.ofNat_add the Eq-flavored spine uses for Alg.ofNat_add -- a deliberate naming choice matching how this spine already names its own record-scoped projections (AlgS.CommRing.toRingS, AlgS.CommRing.toCommGroupS)."
+}

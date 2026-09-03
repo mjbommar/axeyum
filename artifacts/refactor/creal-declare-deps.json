@@ -16,6 +16,7 @@
     "add_assoc": "CReal.add_assoc",
     "add_comm": "CReal.add_comm",
     "add_congr": "CReal.add_congr",
+    "add_group_s": "CReal.addGroupS",
     "add_le_add": "CReal.add_le_add",
     "add_lt_add_of_le_of_lt": "CReal.add_lt_add_of_le_of_lt",
     "add_neg": "CReal.add_neg",
@@ -395,6 +396,7 @@
     "of_rat_sub": "CReal.ofRat_sub",
     "one": "CReal.one",
     "one_le_pow_of_one_le": "CReal.one_le_pow_of_one_le",
+    "ordered_ring_s": "CReal.orderedRingS",
     "pi.pi": "CReal.pi",
     "pi.pi_half": "CReal.piHalf",
     "pi.pi_half_coef": "CReal.piHalfCoef",
@@ -610,7 +612,7 @@
   },
   "findings": {
     "dispatch_entries_per_module": {
-      "algebra_instance": 1,
+      "algebra_instance": 3,
       "alternating": 1,
       "archimedean": 1,
       "archimedean_squeeze": 1,
@@ -663,6 +665,11 @@
     "fields_provided_by_more_than_one_step": {},
     "linear_order_is_topological": true,
     "modules_with_multiple_dispatch_entries": {
+      "algebra_instance": [
+        "algebra_instance::declare_comm_ring_s",
+        "algebra_instance::declare_ordered_ring_s",
+        "algebra_instance::declare_add_group_s"
+      ],
       "convergence": [
         "convergence::declare_convergence",
         "convergence::declare_converges_comp_eventually",
@@ -905,237 +912,242 @@
         "module": "order_extra"
       },
       {
-        "index": 22,
-        "label": "algebra_instance::declare_comm_ring_s",
+        "index": 23,
+        "label": "algebra_instance::declare_ordered_ring_s",
         "module": "algebra_instance"
       },
       {
-        "index": 35,
+        "index": 24,
+        "label": "algebra_instance::declare_add_group_s",
+        "module": "algebra_instance"
+      },
+      {
+        "index": 37,
         "label": "completeness::declare_completeness",
         "module": "completeness"
       },
       {
-        "index": 43,
+        "index": 45,
         "label": "deriv_unique::declare_deriv_unique",
         "module": "deriv_unique"
       },
       {
-        "index": 46,
+        "index": 48,
         "label": "mvt::declare_mvt",
         "module": "mvt"
       },
       {
-        "index": 53,
+        "index": 55,
         "label": "crossing::declare_crossing_close",
         "module": "crossing"
       },
       {
-        "index": 55,
+        "index": 57,
         "label": "crossing::declare_crossing_sample_pairing_close",
         "module": "crossing"
       },
       {
-        "index": 62,
+        "index": 64,
         "label": "sqrt::declare_sqrt_one",
         "module": "sqrt"
       },
       {
-        "index": 63,
+        "index": 65,
         "label": "sqrt::declare_sqrt_zero",
         "module": "sqrt"
       },
       {
-        "index": 67,
+        "index": 69,
         "label": "sqrt::declare_sqrt_mul",
         "module": "sqrt"
       },
       {
-        "index": 68,
+        "index": 70,
         "label": "sqrt::declare_le_of_sq_le",
         "module": "sqrt"
       },
       {
-        "index": 71,
+        "index": 73,
         "label": "uniform_continuity::declare_uniform_continuity_sums",
         "module": "uniform_continuity"
       },
       {
-        "index": 74,
+        "index": 76,
         "label": "integral::declare_sum_range_double",
         "module": "integral"
       },
       {
-        "index": 75,
+        "index": 77,
         "label": "integral::declare_sum_range_reblock",
         "module": "integral"
       },
       {
-        "index": 80,
+        "index": 82,
         "label": "uniform_convergence::declare_uniform_converges_add",
         "module": "uniform_convergence"
       },
       {
-        "index": 81,
+        "index": 83,
         "label": "uniform_convergence::declare_close_within_of_within",
         "module": "uniform_convergence"
       },
       {
-        "index": 82,
+        "index": 84,
         "label": "integral::declare_close_within_of_within_indexed",
         "module": "integral"
       },
       {
-        "index": 95,
+        "index": 97,
         "label": "integral::declare_sample_point_reblock",
         "module": "integral"
       },
       {
-        "index": 101,
+        "index": 103,
         "label": "integral::declare_riemann_sum_shared_accuracy_close_at",
         "module": "integral"
       },
       {
-        "index": 111,
+        "index": 113,
         "label": "integral::declare_integral_witness_independent",
         "module": "integral"
       },
       {
-        "index": 114,
+        "index": 116,
         "label": "integral::declare_integral_scale",
         "module": "integral"
       },
       {
-        "index": 115,
+        "index": 117,
         "label": "integral::declare_riemann_sum_integral_close",
         "module": "integral"
       },
       {
-        "index": 116,
+        "index": 118,
         "label": "integral::declare_riemann_sum_split_exact",
         "module": "integral"
       },
       {
-        "index": 127,
+        "index": 129,
         "label": "integral::declare_integral_by_parts",
         "module": "integral"
       },
       {
-        "index": 128,
+        "index": 130,
         "label": "derivative::declare_has_derivative_integral_const",
         "module": "derivative"
       },
       {
-        "index": 129,
+        "index": 131,
         "label": "inverse_fn::declare_order_reflect_of_pos_deriv",
         "module": "inverse_fn"
       },
       {
-        "index": 130,
+        "index": 132,
         "label": "monotone::declare_inverse_lipschitz_of_pos_deriv",
         "module": "monotone"
       },
       {
-        "index": 134,
+        "index": 136,
         "label": "derivative::declare_has_derivative_pow_two",
         "module": "derivative"
       },
       {
-        "index": 138,
+        "index": 140,
         "label": "uniform_convergence::declare_power_series_uniform_converges",
         "module": "uniform_convergence"
       },
       {
-        "index": 140,
+        "index": 142,
         "label": "uniform_convergence::declare_uniform_converges_geom",
         "module": "uniform_convergence"
       },
       {
-        "index": 146,
+        "index": 148,
         "label": "ratio_test::declare_sum_range_ratio_test",
         "module": "ratio_test"
       },
       {
-        "index": 154,
+        "index": 156,
         "label": "trig::declare_sin_trig_alternating_bounds",
         "module": "trig"
       },
       {
-        "index": 156,
+        "index": 158,
         "label": "inverse_fn::declare_ivt_exact_root_at",
         "module": "inverse_fn"
       },
       {
-        "index": 157,
+        "index": 159,
         "label": "polynomial::declare_polynomial",
         "module": "polynomial"
       },
       {
-        "index": 160,
+        "index": 162,
         "label": "extreme_value::declare_extreme_value",
         "module": "extreme_value"
       },
       {
-        "index": 161,
+        "index": 163,
         "label": "ivt_boundary::declare_ivt_boundary",
         "module": "ivt_boundary"
       },
       {
-        "index": 162,
+        "index": 164,
         "label": "lub_boundary::declare_lub_boundary",
         "module": "lub_boundary"
       },
       {
-        "index": 164,
+        "index": 166,
         "label": "trig_fn::declare_cos_fn_equiv_cos_one",
         "module": "trig_fn"
       },
       {
-        "index": 167,
+        "index": 169,
         "label": "trig_fn::declare_cos_fn_wide_uniformly_continuous",
         "module": "trig_fn"
       },
       {
-        "index": 168,
+        "index": 170,
         "label": "trig_fn::declare_cos_fn_wide_at_one",
         "module": "trig_fn"
       },
       {
-        "index": 169,
+        "index": 171,
         "label": "trig_fn::declare_has_derivative_on_restrict",
         "module": "trig_fn"
       },
       {
-        "index": 173,
+        "index": 175,
         "label": "trig_fn::declare_sin_fn_uniformly_continuous",
         "module": "trig_fn"
       },
       {
-        "index": 175,
+        "index": 177,
         "label": "trig_fn::declare_cos_fn_wide_derivative",
         "module": "trig_fn"
       },
       {
-        "index": 176,
+        "index": 178,
         "label": "trig_fn::declare_sin_fn_lower_bound",
         "module": "trig_fn"
       },
       {
-        "index": 178,
+        "index": 180,
         "label": "exp_fn::declare_exp_fn_equiv_e",
         "module": "exp_fn"
       },
       {
-        "index": 206,
+        "index": 208,
         "label": "evt_row1::declare_evt_approx_max",
         "module": "evt_row1"
       },
       {
-        "index": 210,
+        "index": 212,
         "label": "cos_sign::declare_cos_wide_nonpositive",
         "module": "cos_sign"
       },
       {
-        "index": 211,
+        "index": 213,
         "label": "pi::declare_pi_family",
         "module": "pi"
       }
@@ -1145,10 +1157,10 @@
   "produced_by": "scripts/creal-declare-deps.py",
   "schema": "creal-declare-deps/v1",
   "source": {
-    "creal_prelude_fields": 607,
-    "creal_rs_lines": 11452,
+    "creal_prelude_fields": 609,
+    "creal_rs_lines": 11480,
     "fields_in_module_registries": 69,
-    "functions_indexed": 1934,
+    "functions_indexed": 1940,
     "module_registries": {
       "completeness": "CompletenessNames",
       "cos_sign": "CosSignNames",
@@ -1165,8 +1177,8 @@
       "polynomial": "PolynomialNames",
       "ratio_test": "RatioTestNames"
     },
-    "modules_indexed": 49,
-    "steps": 212
+    "modules_indexed": 50,
+    "steps": 214
   },
   "steps": [
     {
@@ -1944,6 +1956,98 @@
     },
     {
       "declared_provides": [
+        "ordered_ring_s"
+      ],
+      "declared_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_le_add",
+        "add_neg",
+        "add_zero",
+        "creal",
+        "equiv",
+        "equiv_of_le_le",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
+        "le_congr",
+        "le_refl",
+        "le_trans",
+        "left_distrib",
+        "mul",
+        "mul_assoc",
+        "mul_comm",
+        "mul_congr",
+        "mul_nonneg",
+        "mul_one",
+        "neg",
+        "neg_congr",
+        "one",
+        "zero"
+      ],
+      "index": 23,
+      "label": "algebra_instance::declare_ordered_ring_s",
+      "measured_provides": [
+        "ordered_ring_s"
+      ],
+      "measured_requires": [
+        "add",
+        "add_assoc",
+        "add_comm",
+        "add_congr",
+        "add_le_add",
+        "add_neg",
+        "add_zero",
+        "creal",
+        "equiv",
+        "equiv_of_le_le",
+        "equiv_refl",
+        "equiv_symm",
+        "equiv_trans",
+        "le",
+        "le_congr",
+        "le_refl",
+        "le_trans",
+        "left_distrib",
+        "mul",
+        "mul_assoc",
+        "mul_comm",
+        "mul_congr",
+        "mul_nonneg",
+        "mul_one",
+        "neg",
+        "neg_congr",
+        "one",
+        "zero"
+      ],
+      "module": "algebra_instance",
+      "reachable_fns": 6,
+      "run": "algebra_instance::declare_ordered_ring_s"
+    },
+    {
+      "declared_provides": [
+        "add_group_s"
+      ],
+      "declared_requires": [
+        "comm_ring_s"
+      ],
+      "index": 24,
+      "label": "algebra_instance::declare_add_group_s",
+      "measured_provides": [
+        "add_group_s"
+      ],
+      "measured_requires": [
+        "comm_ring_s"
+      ],
+      "module": "algebra_instance",
+      "reachable_fns": 1,
+      "run": "algebra_instance::declare_add_group_s"
+    },
+    {
+      "declared_provides": [
         "apart",
         "apart_congr",
         "apart_irrefl",
@@ -1986,7 +2090,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 23,
+      "index": 25,
       "label": "field::declare_field",
       "measured_provides": [
         "apart",
@@ -2063,7 +2167,7 @@
         "seq",
         "within"
       ],
-      "index": 24,
+      "index": 26,
       "label": "inverse::declare_inverse",
       "measured_provides": [
         "inv",
@@ -2122,7 +2226,7 @@
         "seq",
         "zero"
       ],
-      "index": 25,
+      "index": 27,
       "label": "cancellation::declare_cancellation",
       "measured_provides": [
         "inv_nonneg",
@@ -2196,7 +2300,7 @@
         "seq",
         "zero"
       ],
-      "index": 26,
+      "index": 28,
       "label": "lattice::declare_lattice",
       "measured_provides": [
         "abs",
@@ -2258,7 +2362,7 @@
         "mul_shift",
         "seq"
       ],
-      "index": 27,
+      "index": 29,
       "label": "product::declare_mul_self_abs",
       "measured_provides": [
         "mul_self_abs"
@@ -2304,7 +2408,7 @@
         "of_rat",
         "zero"
       ],
-      "index": 28,
+      "index": 30,
       "label": "order_extra::declare_order_extra_abs",
       "measured_provides": [
         "abs_le_of_two_sided",
@@ -2381,7 +2485,7 @@
         "neg_sub_swap",
         "zero"
       ],
-      "index": 29,
+      "index": 31,
       "label": "lattice::declare_lattice_extra",
       "measured_provides": [
         "clamp_id",
@@ -2465,7 +2569,7 @@
         "of_rat_le",
         "zero"
       ],
-      "index": 30,
+      "index": 32,
       "label": "uniform_convergence::declare_uniform_converges_on",
       "measured_provides": [
         "uconv_mk",
@@ -2537,7 +2641,7 @@
         "seq",
         "zero"
       ],
-      "index": 31,
+      "index": 33,
       "label": "archimedean_squeeze::declare_archimedean_squeeze",
       "measured_provides": [
         "equiv_zero_of_rate",
@@ -2588,7 +2692,7 @@
         "of_rat",
         "seq"
       ],
-      "index": 32,
+      "index": 34,
       "label": "archimedean::declare_archimedean",
       "measured_provides": [
         "archimedean",
@@ -2619,7 +2723,7 @@
         "regular",
         "seq"
       ],
-      "index": 33,
+      "index": 35,
       "label": "density::declare_density",
       "measured_provides": [
         "density",
@@ -2653,7 +2757,7 @@
         "regular",
         "seq"
       ],
-      "index": 34,
+      "index": 36,
       "label": "cotransitivity::declare_cotransitivity",
       "measured_provides": [
         "apart_cotrans",
@@ -2690,7 +2794,7 @@
         "seq",
         "within"
       ],
-      "index": 35,
+      "index": 37,
       "label": "completeness::declare_completeness",
       "measured_provides": [
         "completeness.limit",
@@ -2708,7 +2812,7 @@
         "within"
       ],
       "module": "completeness",
-      "reachable_fns": 20,
+      "reachable_fns": 22,
       "run": "completeness::declare_completeness"
     },
     {
@@ -2764,7 +2868,7 @@
         "within",
         "zero"
       ],
-      "index": 36,
+      "index": 38,
       "label": "convergence::declare_convergence",
       "measured_provides": [
         "bounded",
@@ -2848,7 +2952,7 @@
         "neg_le_abs",
         "zero"
       ],
-      "index": 37,
+      "index": 39,
       "label": "uniform_continuity::declare_abs_add_le",
       "measured_provides": [
         "abs_add_le"
@@ -2937,7 +3041,7 @@
         "seq",
         "zero"
       ],
-      "index": 38,
+      "index": 40,
       "label": "uniform_continuity::declare_uniform_continuity",
       "measured_provides": [
         "bucket_clamp_lower",
@@ -3017,7 +3121,7 @@
         "uc_spec",
         "uniformly_continuous_on"
       ],
-      "index": 39,
+      "index": 41,
       "label": "uniform_continuity::declare_uniformly_continuous_on_restrict",
       "measured_provides": [
         "uniformly_continuous_on_restrict"
@@ -3084,7 +3188,7 @@
         "seq",
         "zero"
       ],
-      "index": 40,
+      "index": 42,
       "label": "crossing::declare_crossing",
       "measured_provides": [
         "crossing.crossing_index",
@@ -3158,7 +3262,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 41,
+      "index": 43,
       "label": "convergence::declare_converges_comp_eventually",
       "measured_provides": [
         "converges_comp_eventually"
@@ -3261,7 +3365,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 42,
+      "index": 44,
       "label": "derivative::declare_derivative",
       "measured_provides": [
         "abs_mul_le_of_bounds",
@@ -3393,7 +3497,7 @@
         "pos_bound_of_lt",
         "zero"
       ],
-      "index": 43,
+      "index": 45,
       "label": "deriv_unique::declare_deriv_unique",
       "measured_provides": [
         "deriv_unique.has_derivative_unique"
@@ -3501,7 +3605,7 @@
         "pos_bound_of_lt",
         "zero"
       ],
-      "index": 44,
+      "index": 46,
       "label": "fermat::declare_fermat",
       "measured_provides": [
         "fermat_interior_extremum"
@@ -3581,7 +3685,7 @@
         "neg_le_neg",
         "zero"
       ],
-      "index": 45,
+      "index": 47,
       "label": "rolle::declare_rolle",
       "measured_provides": [
         "rolle_interior_extremum"
@@ -3649,7 +3753,7 @@
         "rolle_interior_extremum",
         "zero"
       ],
-      "index": 46,
+      "index": 48,
       "label": "mvt::declare_mvt",
       "measured_provides": [
         "mvt.mvt_interior_extremum"
@@ -3746,7 +3850,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 47,
+      "index": 49,
       "label": "uniform_continuity::declare_uniform_continuity_products",
       "measured_provides": [
         "bounded_on_id_unit",
@@ -3842,7 +3946,7 @@
         "seq",
         "zero"
       ],
-      "index": 48,
+      "index": 50,
       "label": "uniform_continuity::declare_bucket_close",
       "measured_provides": [
         "bucket_close"
@@ -3911,7 +4015,7 @@
         "seq",
         "zero"
       ],
-      "index": 49,
+      "index": 51,
       "label": "uniform_continuity::declare_abs_bound_of_self",
       "measured_provides": [
         "abs_bound_of_self"
@@ -3987,7 +4091,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 50,
+      "index": 52,
       "label": "uniform_continuity::declare_bounded_of_uniformly_continuous",
       "measured_provides": [
         "bounded_of_uniformly_continuous"
@@ -4056,7 +4160,7 @@
         "within",
         "zero"
       ],
-      "index": 51,
+      "index": 53,
       "label": "mul_self_zero::declare_mul_self_zero",
       "measured_provides": [
         "eq_zero_of_mul_self_zero",
@@ -4112,7 +4216,7 @@
         "one",
         "rat_unit_eq_one"
       ],
-      "index": 52,
+      "index": 54,
       "label": "crossing::declare_crossing_sample",
       "measured_provides": [
         "crossing.crossing_sample_lower",
@@ -4182,7 +4286,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 53,
+      "index": 55,
       "label": "crossing::declare_crossing_close",
       "measured_provides": [
         "crossing.crossing_close"
@@ -4261,7 +4365,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 54,
+      "index": 56,
       "label": "crossing::declare_crossing_close_clamped",
       "measured_provides": [
         "crossing.crossing_close_clamped"
@@ -4325,7 +4429,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 55,
+      "index": 57,
       "label": "crossing::declare_crossing_sample_pairing_close",
       "measured_provides": [
         "crossing.crossing_sample_pairing_close"
@@ -4362,7 +4466,7 @@
         "creal",
         "seq"
       ],
-      "index": 56,
+      "index": 58,
       "label": "sqrt::declare_sqrt",
       "measured_provides": [
         "nat_sqrt",
@@ -4391,7 +4495,7 @@
         "regular_pred",
         "within"
       ],
-      "index": 57,
+      "index": 59,
       "label": "speedup::declare_speedup",
       "measured_provides": [
         "k_regular_pred",
@@ -4421,7 +4525,7 @@
         "sqrt_approx_sq_bracket",
         "within"
       ],
-      "index": 58,
+      "index": 60,
       "label": "sqrt::declare_sqrt_approx_kregular",
       "measured_provides": [
         "sqrt_approx_kregular"
@@ -4437,7 +4541,7 @@
         "within"
       ],
       "module": "sqrt",
-      "reachable_fns": 20,
+      "reachable_fns": 22,
       "run": "sqrt::declare_sqrt_approx_kregular"
     },
     {
@@ -4452,7 +4556,7 @@
         "sqrt_approx",
         "sqrt_approx_kregular"
       ],
-      "index": 59,
+      "index": 61,
       "label": "sqrt::declare_sqrt_ctor",
       "measured_provides": [
         "sqrt"
@@ -4485,7 +4589,7 @@
         "sqrt_approx_sq_bracket",
         "within"
       ],
-      "index": 60,
+      "index": 62,
       "label": "sqrt::declare_sqrt_congr",
       "measured_provides": [
         "sqrt_congr"
@@ -4503,7 +4607,7 @@
         "within"
       ],
       "module": "sqrt",
-      "reachable_fns": 24,
+      "reachable_fns": 26,
       "run": "sqrt::declare_sqrt_congr"
     },
     {
@@ -4520,7 +4624,7 @@
         "sqrt_approx",
         "sqrt_approx_sq_bracket"
       ],
-      "index": 61,
+      "index": 63,
       "label": "sqrt::declare_sqrt_le_sqrt",
       "measured_provides": [
         "sqrt_le_sqrt"
@@ -4536,7 +4640,7 @@
         "sqrt_approx_sq_bracket"
       ],
       "module": "sqrt",
-      "reachable_fns": 19,
+      "reachable_fns": 21,
       "run": "sqrt::declare_sqrt_le_sqrt"
     },
     {
@@ -4552,7 +4656,7 @@
         "sqrt",
         "sqrt_approx_sq_bracket"
       ],
-      "index": 62,
+      "index": 64,
       "label": "sqrt::declare_sqrt_one",
       "measured_provides": [
         "sqrt_one"
@@ -4567,7 +4671,7 @@
         "sqrt_approx_sq_bracket"
       ],
       "module": "sqrt",
-      "reachable_fns": 14,
+      "reachable_fns": 16,
       "run": "sqrt::declare_sqrt_one"
     },
     {
@@ -4584,7 +4688,7 @@
         "within",
         "zero"
       ],
-      "index": 63,
+      "index": 65,
       "label": "sqrt::declare_sqrt_zero",
       "measured_provides": [
         "sqrt_zero"
@@ -4623,7 +4727,7 @@
         "within",
         "zero"
       ],
-      "index": 64,
+      "index": 66,
       "label": "sqrt::declare_sqrt_sq",
       "measured_provides": [
         "sqrt_sq"
@@ -4661,7 +4765,7 @@
         "sqrt_approx",
         "zero"
       ],
-      "index": 65,
+      "index": 67,
       "label": "sqrt::declare_sqrt_nonneg",
       "measured_provides": [
         "sqrt_nonneg"
@@ -4701,7 +4805,7 @@
         "sqrt_approx_sq_bracket",
         "zero"
       ],
-      "index": 66,
+      "index": 68,
       "label": "sqrt::declare_mul_self_sqrt",
       "measured_provides": [
         "mul_self_sqrt"
@@ -4725,7 +4829,7 @@
         "zero"
       ],
       "module": "sqrt",
-      "reachable_fns": 21,
+      "reachable_fns": 23,
       "run": "sqrt::declare_mul_self_sqrt"
     },
     {
@@ -4751,7 +4855,7 @@
         "sqrt_sq",
         "zero"
       ],
-      "index": 67,
+      "index": 69,
       "label": "sqrt::declare_sqrt_mul",
       "measured_provides": [
         "sqrt_mul"
@@ -4793,7 +4897,7 @@
         "sqrt_sq",
         "zero"
       ],
-      "index": 68,
+      "index": 70,
       "label": "sqrt::declare_le_of_sq_le",
       "measured_provides": [
         "le_of_sq_le"
@@ -4830,7 +4934,7 @@
         "speedup_close",
         "within"
       ],
-      "index": 69,
+      "index": 71,
       "label": "convergence::declare_cauchy_convergence",
       "measured_provides": [
         "converges_of_cauchy",
@@ -4921,7 +5025,7 @@
         "within",
         "zero"
       ],
-      "index": 70,
+      "index": 72,
       "label": "series::declare_series",
       "measured_provides": [
         "abs_sum_range_le",
@@ -5013,7 +5117,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 71,
+      "index": 73,
       "label": "uniform_continuity::declare_uniform_continuity_sums",
       "measured_provides": [
         "mag_bound_le_sum_range_of_lt"
@@ -5083,7 +5187,7 @@
         "sum_range_telescope",
         "zero"
       ],
-      "index": 72,
+      "index": 74,
       "label": "monotone::declare_monotone",
       "measured_provides": [
         "has_derivative_close_of_equiv",
@@ -5190,7 +5294,7 @@
         "sum_range_le",
         "zero"
       ],
-      "index": 73,
+      "index": 75,
       "label": "integral::declare_integral",
       "measured_provides": [
         "mesh_le_of_ge",
@@ -5266,7 +5370,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 74,
+      "index": 76,
       "label": "integral::declare_sum_range_double",
       "measured_provides": [
         "sum_range_double"
@@ -5301,7 +5405,7 @@
         "sum_range_split",
         "zero"
       ],
-      "index": 75,
+      "index": 77,
       "label": "integral::declare_sum_range_reblock",
       "measured_provides": [
         "sum_range_reblock"
@@ -5332,7 +5436,7 @@
         "seq",
         "within"
       ],
-      "index": 76,
+      "index": 78,
       "label": "integral::declare_within_of_two_sided_le",
       "measured_provides": [
         "within_of_two_sided_le"
@@ -5374,7 +5478,7 @@
         "of_rat",
         "zero"
       ],
-      "index": 77,
+      "index": 79,
       "label": "integral::declare_le_add_of_abs_sub_le",
       "measured_provides": [
         "le_add_of_abs_sub_le"
@@ -5432,7 +5536,7 @@
         "of_rat",
         "zero"
       ],
-      "index": 78,
+      "index": 80,
       "label": "integral::declare_two_sided_of_abs_sub_le",
       "measured_provides": [
         "two_sided_of_abs_sub_le"
@@ -5495,7 +5599,7 @@
         "uniform_converges_on",
         "uniformly_continuous_on"
       ],
-      "index": 79,
+      "index": 81,
       "label": "uniform_convergence::declare_uniform_convergence_continuity",
       "measured_provides": [
         "uniform_limit_uniformly_continuous"
@@ -5560,7 +5664,7 @@
         "uconv_spec",
         "uniform_converges_on"
       ],
-      "index": 80,
+      "index": 82,
       "label": "uniform_convergence::declare_uniform_converges_add",
       "measured_provides": [
         "uniform_converges_add"
@@ -5619,7 +5723,7 @@
         "seq",
         "within"
       ],
-      "index": 81,
+      "index": 83,
       "label": "uniform_convergence::declare_close_within_of_within",
       "measured_provides": [
         "close_within_of_within"
@@ -5674,7 +5778,7 @@
         "seq",
         "within"
       ],
-      "index": 82,
+      "index": 84,
       "label": "integral::declare_close_within_of_within_indexed",
       "measured_provides": [
         "close_within_of_within_indexed"
@@ -5752,7 +5856,7 @@
         "uniform_converges_on",
         "within"
       ],
-      "index": 83,
+      "index": 85,
       "label": "uniform_convergence::declare_weierstrass_m_test",
       "measured_provides": [
         "weierstrass_m_test"
@@ -5820,7 +5924,7 @@
         "of_rat_add",
         "of_rat_mul"
       ],
-      "index": 84,
+      "index": 86,
       "label": "integral::declare_of_nat_hom",
       "measured_provides": [
         "of_nat_add",
@@ -5917,7 +6021,7 @@
         "sum_range_telescope_ge",
         "zero"
       ],
-      "index": 85,
+      "index": 87,
       "label": "monotone::declare_monotone_of_nonneg_deriv_all",
       "measured_provides": [
         "antitone_of_nonpos_deriv",
@@ -6041,7 +6145,7 @@
         "of_rat_le",
         "zero"
       ],
-      "index": 86,
+      "index": 88,
       "label": "derivative::declare_abs_diff_le_of_deriv_bound",
       "measured_provides": [
         "abs_diff_le_of_deriv_bound"
@@ -6128,7 +6232,7 @@
         "neg_sub_swap",
         "zero"
       ],
-      "index": 87,
+      "index": 89,
       "label": "derivative::declare_lipschitz_of_deriv_bound",
       "measured_provides": [
         "lipschitz_of_deriv_bound"
@@ -6198,7 +6302,7 @@
         "neg_sub_swap",
         "zero"
       ],
-      "index": 88,
+      "index": 90,
       "label": "derivative::declare_abs_diff_sub_le_of_deriv_bound",
       "measured_provides": [
         "abs_diff_sub_le_of_deriv_bound"
@@ -6282,7 +6386,7 @@
         "uniform_converges_on",
         "zero"
       ],
-      "index": 89,
+      "index": 91,
       "label": "uniform_convergence::declare_has_derivative_uniform_limit",
       "measured_provides": [
         "has_derivative_uniform_limit"
@@ -6381,7 +6485,7 @@
         "subdivision_point_in_bounds",
         "zero"
       ],
-      "index": 90,
+      "index": 92,
       "label": "integral::declare_fine_sample_in_bounds",
       "measured_provides": [
         "fine_sample_in_bounds"
@@ -6477,7 +6581,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 91,
+      "index": 93,
       "label": "integral::declare_fine_sample_close",
       "measured_provides": [
         "fine_sample_close"
@@ -6574,7 +6678,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 92,
+      "index": 94,
       "label": "integral::declare_fine_block_sum_close",
       "measured_provides": [
         "fine_block_sum_close"
@@ -6627,7 +6731,7 @@
       "declared_requires": [
         "add"
       ],
-      "index": 93,
+      "index": 95,
       "label": "integral::declare_mesh_reciprocal_mul",
       "measured_provides": [
         "mesh_reciprocal_mul"
@@ -6668,7 +6772,7 @@
         "of_rat_le",
         "zero"
       ],
-      "index": 94,
+      "index": 96,
       "label": "integral::declare_equiv_abs_diff_le",
       "measured_provides": [
         "equiv_abs_diff_le"
@@ -6729,7 +6833,7 @@
         "of_rat",
         "of_rat_mul"
       ],
-      "index": 95,
+      "index": 97,
       "label": "integral::declare_sample_point_reblock",
       "measured_provides": [
         "sample_point_reblock"
@@ -6802,7 +6906,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 96,
+      "index": 98,
       "label": "integral::declare_reblock_block_eq_fine_block_sum",
       "measured_provides": [
         "reblock_block_eq_fine_block_sum"
@@ -6886,7 +6990,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 97,
+      "index": 99,
       "label": "integral::declare_riemann_sum_reblock_close",
       "measured_provides": [
         "riemann_sum_reblock_close"
@@ -6964,7 +7068,7 @@
         "within_of_two_sided_le",
         "zero"
       ],
-      "index": 98,
+      "index": 100,
       "label": "integral::declare_riemann_sum_cauchy",
       "measured_provides": [
         "riemann_sum_cauchy"
@@ -7016,7 +7120,7 @@
         "seq",
         "within"
       ],
-      "index": 99,
+      "index": 101,
       "label": "integral::declare_shared_index_to_canonical",
       "measured_provides": [
         "shared_index_to_canonical"
@@ -7058,7 +7162,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 100,
+      "index": 102,
       "label": "integral::declare_riemann_sum_shared_accuracy_close",
       "measured_provides": [
         "riemann_sum_shared_accuracy_close"
@@ -7100,7 +7204,7 @@
         "shared_index_to_canonical",
         "within"
       ],
-      "index": 101,
+      "index": 103,
       "label": "integral::declare_riemann_sum_shared_accuracy_close_at",
       "measured_provides": [
         "riemann_sum_shared_accuracy_close_at"
@@ -7147,7 +7251,7 @@
         "rat_unit_eq_one",
         "seq"
       ],
-      "index": 102,
+      "index": 104,
       "label": "integral::declare_riemann_sum_total_eps_le",
       "measured_provides": [
         "riemann_sum_total_eps_le"
@@ -7208,7 +7312,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 103,
+      "index": 105,
       "label": "integral::declare_riemann_sum_deep_cauchy",
       "measured_provides": [
         "riemann_sum_deep_cauchy"
@@ -7261,7 +7365,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 104,
+      "index": 106,
       "label": "integral::declare_riemann_sum_deep_cauchy_folded",
       "measured_provides": [
         "riemann_sum_deep_cauchy_folded"
@@ -7314,7 +7418,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 105,
+      "index": 107,
       "label": "integral::declare_riemann_sum_deep_cauchy_cross",
       "measured_provides": [
         "riemann_sum_deep_cauchy_cross"
@@ -7367,7 +7471,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 106,
+      "index": 108,
       "label": "integral::declare_riemann_sum_deep_cauchy_cross_folded",
       "measured_provides": [
         "riemann_sum_deep_cauchy_cross_folded"
@@ -7423,7 +7527,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 107,
+      "index": 109,
       "label": "integral::declare_riemann_sum_add_cauchy_cross",
       "measured_provides": [
         "riemann_sum_add_cauchy_cross"
@@ -7454,7 +7558,7 @@
         "within"
       ],
       "module": "integral",
-      "reachable_fns": 42,
+      "reachable_fns": 44,
       "run": "integral::declare_riemann_sum_add_cauchy_cross"
     },
     {
@@ -7477,7 +7581,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 108,
+      "index": 110,
       "label": "integral::declare_creal_integral",
       "measured_provides": [
         "integral"
@@ -7522,7 +7626,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 109,
+      "index": 111,
       "label": "integral::declare_integral_converges",
       "measured_provides": [
         "integral_converges"
@@ -7572,7 +7676,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 110,
+      "index": 112,
       "label": "integral::declare_integral_const",
       "measured_provides": [
         "integral_const"
@@ -7625,7 +7729,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 111,
+      "index": 113,
       "label": "integral::declare_integral_witness_independent",
       "measured_provides": [
         "integral_witness_independent"
@@ -7677,7 +7781,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 112,
+      "index": 114,
       "label": "integral::declare_integral_add",
       "measured_provides": [
         "integral_add"
@@ -7738,7 +7842,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 113,
+      "index": 115,
       "label": "integral::declare_integral_le",
       "measured_provides": [
         "integral_le"
@@ -7772,7 +7876,7 @@
         "within"
       ],
       "module": "integral",
-      "reachable_fns": 36,
+      "reachable_fns": 38,
       "run": "integral::declare_integral_le"
     },
     {
@@ -7810,7 +7914,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 114,
+      "index": 116,
       "label": "integral::declare_integral_scale",
       "measured_provides": [
         "integral_scale"
@@ -7847,7 +7951,7 @@
         "within"
       ],
       "module": "integral",
-      "reachable_fns": 39,
+      "reachable_fns": 41,
       "run": "integral::declare_integral_scale"
     },
     {
@@ -7877,7 +7981,7 @@
         "uniformly_continuous_on",
         "within"
       ],
-      "index": 115,
+      "index": 117,
       "label": "integral::declare_riemann_sum_integral_close",
       "measured_provides": [
         "riemann_sum_integral_close"
@@ -7941,7 +8045,7 @@
         "sum_range_split",
         "zero"
       ],
-      "index": 116,
+      "index": 118,
       "label": "integral::declare_riemann_sum_split_exact",
       "measured_provides": [
         "riemann_sum_split_exact"
@@ -8004,7 +8108,7 @@
         "one",
         "rat_unit_eq_one"
       ],
-      "index": 117,
+      "index": 119,
       "label": "integral::declare_riemann_sum_split_scale_invariant",
       "measured_provides": [
         "riemann_sum_split_scale_invariant"
@@ -8060,7 +8164,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 118,
+      "index": 120,
       "label": "integral::declare_congr_of_uniformly_continuous",
       "measured_provides": [
         "congr_of_uniformly_continuous"
@@ -8132,7 +8236,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 119,
+      "index": 121,
       "label": "integral::declare_riemann_sum_split_exact_of_uc",
       "measured_provides": [
         "riemann_sum_split_exact_of_uc"
@@ -8227,7 +8331,7 @@
         "within",
         "zero"
       ],
-      "index": 120,
+      "index": 122,
       "label": "integral::declare_integral_split",
       "measured_provides": [
         "integral_split"
@@ -8277,7 +8381,7 @@
         "zero"
       ],
       "module": "integral",
-      "reachable_fns": 53,
+      "reachable_fns": 55,
       "run": "integral::declare_integral_split"
     },
     {
@@ -8336,7 +8440,7 @@
         "seq",
         "zero"
       ],
-      "index": 121,
+      "index": 123,
       "label": "integral::declare_split_point_approx",
       "measured_provides": [
         "split_point_approx"
@@ -8394,7 +8498,7 @@
         "zero"
       ],
       "module": "integral",
-      "reachable_fns": 50,
+      "reachable_fns": 52,
       "run": "integral::declare_split_point_approx"
     },
     {
@@ -8474,7 +8578,7 @@
         "within",
         "zero"
       ],
-      "index": 122,
+      "index": 124,
       "label": "integral::declare_integral_endpoint_close",
       "measured_provides": [
         "integral_endpoint_close"
@@ -8553,7 +8657,7 @@
         "zero"
       ],
       "module": "integral",
-      "reachable_fns": 77,
+      "reachable_fns": 79,
       "run": "integral::declare_integral_endpoint_close"
     },
     {
@@ -8616,7 +8720,7 @@
         "uniformly_continuous_on_restrict",
         "zero"
       ],
-      "index": 123,
+      "index": 125,
       "label": "integral::declare_integral_split_arbitrary",
       "measured_provides": [
         "integral_split_arbitrary"
@@ -8721,7 +8825,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 124,
+      "index": 126,
       "label": "integral::declare_integral_abs_le",
       "measured_provides": [
         "integral_abs_le"
@@ -8851,7 +8955,7 @@
         "uniformly_continuous_sub",
         "zero"
       ],
-      "index": 125,
+      "index": 127,
       "label": "integral::declare_ftc_estimates",
       "measured_provides": [
         "antiderivative",
@@ -8992,7 +9096,7 @@
         "uniformly_continuous_on_restrict",
         "zero"
       ],
-      "index": 126,
+      "index": 128,
       "label": "integral::declare_integral_eq_antideriv_diff",
       "measured_provides": [
         "integral_eq_antideriv_diff"
@@ -9077,7 +9181,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 127,
+      "index": 129,
       "label": "integral::declare_integral_by_parts",
       "measured_provides": [
         "integral_by_parts"
@@ -9154,7 +9258,7 @@
         "uniformly_continuous_const",
         "zero"
       ],
-      "index": 128,
+      "index": 130,
       "label": "derivative::declare_has_derivative_integral_const",
       "measured_provides": [
         "has_derivative_integral_const"
@@ -9217,7 +9321,7 @@
         "of_rat",
         "strict_mono_of_pos_deriv"
       ],
-      "index": 129,
+      "index": 131,
       "label": "inverse_fn::declare_order_reflect_of_pos_deriv",
       "measured_provides": [
         "inverse_fn.order_reflect_of_pos_deriv"
@@ -9277,7 +9381,7 @@
         "strict_mono_magnitude",
         "zero"
       ],
-      "index": 130,
+      "index": 132,
       "label": "monotone::declare_inverse_lipschitz_of_pos_deriv",
       "measured_provides": [
         "inverse_lipschitz_of_pos_deriv"
@@ -9387,7 +9491,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 131,
+      "index": 133,
       "label": "power::declare_power",
       "measured_provides": [
         "geom_sum_bounded",
@@ -9466,7 +9570,7 @@
         "mul",
         "pow"
       ],
-      "index": 132,
+      "index": 134,
       "label": "power::declare_power_series_term",
       "measured_provides": [
         "power_series_term"
@@ -9493,7 +9597,7 @@
         "pow_congr",
         "power_series_term"
       ],
-      "index": 133,
+      "index": 135,
       "label": "power::declare_power_series_term_congr",
       "measured_provides": [
         "power_series_term_congr"
@@ -9531,7 +9635,7 @@
         "one",
         "pow"
       ],
-      "index": 134,
+      "index": 136,
       "label": "derivative::declare_has_derivative_pow_two",
       "measured_provides": [
         "has_derivative_pow_two"
@@ -9589,7 +9693,7 @@
         "rat_unit_eq_one",
         "uniformly_continuous_id"
       ],
-      "index": 135,
+      "index": 137,
       "label": "derivative::declare_has_derivative_pow",
       "measured_provides": [
         "has_derivative_pow"
@@ -9697,7 +9801,7 @@
         "within",
         "zero"
       ],
-      "index": 136,
+      "index": 138,
       "label": "geometric::declare_geometric",
       "measured_provides": [
         "geom_pair_within",
@@ -9800,7 +9904,7 @@
         "power_series_term",
         "zero"
       ],
-      "index": 137,
+      "index": 139,
       "label": "power::declare_power_series_term_abs_le",
       "measured_provides": [
         "power_series_term_abs_le"
@@ -9852,7 +9956,7 @@
         "within",
         "zero"
       ],
-      "index": 138,
+      "index": 140,
       "label": "uniform_convergence::declare_power_series_uniform_converges",
       "measured_provides": [
         "power_series_uniform_converges"
@@ -9896,7 +10000,7 @@
         "within",
         "within_of_two_sided_le"
       ],
-      "index": 139,
+      "index": 141,
       "label": "uniform_convergence::declare_converges_of_abs_diff_le",
       "measured_provides": [
         "converges_of_abs_diff_le"
@@ -9958,7 +10062,7 @@
         "uniform_converges_on",
         "zero"
       ],
-      "index": 140,
+      "index": 142,
       "label": "uniform_convergence::declare_uniform_converges_geom",
       "measured_provides": [
         "uniform_converges_geom_half"
@@ -10045,7 +10149,7 @@
         "within",
         "zero"
       ],
-      "index": 141,
+      "index": 143,
       "label": "geometric::declare_geom_cauchy_of_lt_family",
       "measured_provides": [
         "geom_cauchy_body_16_over_25",
@@ -10147,7 +10251,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 142,
+      "index": 144,
       "label": "exponential::declare_exponential",
       "measured_provides": [
         "exp_dominant",
@@ -10251,7 +10355,7 @@
         "within",
         "zero"
       ],
-      "index": 143,
+      "index": 145,
       "label": "exponential::declare_geom_cauchy_family",
       "measured_provides": [
         "geom_cauchy",
@@ -10333,7 +10437,7 @@
         "sum_range_converges_of_dominated",
         "within"
       ],
-      "index": 144,
+      "index": 146,
       "label": "exponential::declare_exp_convergence",
       "measured_provides": [
         "cauchy_of_pointwise_equiv",
@@ -10394,7 +10498,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 145,
+      "index": 147,
       "label": "ratio_test::declare_geom_scaled_cauchy_of_lt",
       "measured_provides": [
         "ratio_test.geom_scaled_cauchy_of_lt"
@@ -10447,7 +10551,7 @@
         "sum_range_cauchy_of_dominated",
         "zero"
       ],
-      "index": 146,
+      "index": 148,
       "label": "ratio_test::declare_sum_range_ratio_test",
       "measured_provides": [
         "ratio_test.sum_range_ratio_test"
@@ -10545,7 +10649,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 147,
+      "index": 149,
       "label": "exponential::declare_e_family",
       "measured_provides": [
         "e",
@@ -10699,7 +10803,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 148,
+      "index": 150,
       "label": "trig::declare_trig",
       "measured_provides": [
         "cos_one",
@@ -10845,7 +10949,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 149,
+      "index": 151,
       "label": "trig::declare_sin_trig",
       "measured_provides": [
         "sin_one",
@@ -10937,7 +11041,7 @@
         "neg_le_neg",
         "zero"
       ],
-      "index": 150,
+      "index": 152,
       "label": "cos_sign::declare_converges_upper_bound_shift",
       "measured_provides": [
         "cos_sign.converges_upper_bound_shift"
@@ -11009,7 +11113,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 151,
+      "index": 153,
       "label": "alternating::declare_alternating",
       "measured_provides": [
         "alternating_bracket",
@@ -11089,7 +11193,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 152,
+      "index": 154,
       "label": "cos_sign::declare_alternating_upper_bound_tail",
       "measured_provides": [
         "cos_sign.alternating_upper_bound_tail"
@@ -11157,7 +11261,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 153,
+      "index": 155,
       "label": "trig::declare_trig_alternating_bounds",
       "measured_provides": [
         "cos_one_alternating_lower",
@@ -11224,7 +11328,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 154,
+      "index": 156,
       "label": "trig::declare_sin_trig_alternating_bounds",
       "measured_provides": [
         "sin_one_alternating_lower",
@@ -11356,7 +11460,7 @@
         "within_of_two_sided_le",
         "zero"
       ],
-      "index": 155,
+      "index": 157,
       "label": "ivt::declare_ivt",
       "measured_provides": [
         "abs_diff_le_of_small_image",
@@ -11488,7 +11592,7 @@
         "uniformly_continuous_sub",
         "zero"
       ],
-      "index": 156,
+      "index": 158,
       "label": "inverse_fn::declare_ivt_exact_root_at",
       "measured_provides": [
         "inverse_fn.ivt_exact_root_at"
@@ -11559,7 +11663,7 @@
         "sum_range_congr",
         "zero"
       ],
-      "index": 157,
+      "index": 159,
       "label": "polynomial::declare_polynomial",
       "measured_provides": [
         "polynomial.poly_add",
@@ -11622,7 +11726,7 @@
         "pow",
         "pow_congr"
       ],
-      "index": 158,
+      "index": 160,
       "label": "congruence::declare_congruence_extras",
       "measured_provides": [
         "mul_pow_congr"
@@ -11667,7 +11771,7 @@
         "rat_unit_eq_one",
         "zero"
       ],
-      "index": 159,
+      "index": 161,
       "label": "uniform_continuity::declare_bounded_on_id_zero_one",
       "measured_provides": [
         "bounded_on_id_zero_one"
@@ -11736,7 +11840,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 160,
+      "index": 162,
       "label": "extreme_value::declare_extreme_value",
       "measured_provides": [
         "extreme_value.evt_attained_max_decides_sign",
@@ -11845,7 +11949,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 161,
+      "index": 163,
       "label": "ivt_boundary::declare_ivt_boundary",
       "measured_provides": [
         "ivt_boundary.ivt_exact_root_decides_sign",
@@ -11929,7 +12033,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 162,
+      "index": 164,
       "label": "lub_boundary::declare_lub_boundary",
       "measured_provides": [
         "lub_boundary.lub_decides_em",
@@ -12009,7 +12113,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 163,
+      "index": 165,
       "label": "trig_fn::declare_cos_fn_family",
       "measured_provides": [
         "cos_fn",
@@ -12122,7 +12226,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 164,
+      "index": 166,
       "label": "trig_fn::declare_cos_fn_equiv_cos_one",
       "measured_provides": [
         "cos_fn_one_equiv_cos_one"
@@ -12241,7 +12345,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 165,
+      "index": 167,
       "label": "trig_fn::declare_cos_fn_wide_progress",
       "measured_provides": [
         "cos_dominant_16_over_25",
@@ -12358,7 +12462,7 @@
         "within",
         "zero"
       ],
-      "index": 166,
+      "index": 168,
       "label": "trig_fn::declare_cos_fn_wide",
       "measured_provides": [
         "cos_fn_wide",
@@ -12440,7 +12544,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 167,
+      "index": 169,
       "label": "trig_fn::declare_cos_fn_wide_uniformly_continuous",
       "measured_provides": [
         "cos_fn_wide_uniformly_continuous"
@@ -12527,7 +12631,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 168,
+      "index": 170,
       "label": "trig_fn::declare_cos_fn_wide_at_one",
       "measured_provides": [
         "cos_fn_wide_one_equiv_cos_one",
@@ -12607,7 +12711,7 @@
         "neg",
         "of_rat"
       ],
-      "index": 169,
+      "index": 171,
       "label": "trig_fn::declare_has_derivative_on_restrict",
       "measured_provides": [
         "has_derivative_on_restrict"
@@ -12672,7 +12776,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 170,
+      "index": 172,
       "label": "trig_fn::declare_sin_fn_term_family",
       "measured_provides": [
         "sin_fn_term",
@@ -12758,7 +12862,7 @@
         "within",
         "zero"
       ],
-      "index": 171,
+      "index": 173,
       "label": "trig_fn::declare_sin_fn_dominant",
       "measured_provides": [
         "sin_dominant_16_over_25",
@@ -12856,7 +12960,7 @@
         "within",
         "zero"
       ],
-      "index": 172,
+      "index": 174,
       "label": "trig_fn::declare_sin_fn",
       "measured_provides": [
         "sin_fn",
@@ -12940,7 +13044,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 173,
+      "index": 175,
       "label": "trig_fn::declare_sin_fn_uniformly_continuous",
       "measured_provides": [
         "sin_fn_uniformly_continuous"
@@ -13025,7 +13129,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 174,
+      "index": 176,
       "label": "trig_fn::declare_cos_fn_derivative",
       "measured_provides": [
         "cos_fn_partial_has_derivative",
@@ -13132,7 +13236,7 @@
         "uniform_converges_on",
         "zero"
       ],
-      "index": 175,
+      "index": 177,
       "label": "trig_fn::declare_cos_fn_wide_derivative",
       "measured_provides": [
         "cos_fn_wide_has_derivative",
@@ -13269,7 +13373,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 176,
+      "index": 178,
       "label": "trig_fn::declare_sin_fn_lower_bound",
       "measured_provides": [
         "sin_fn_lower_bound_one_to_r"
@@ -13411,7 +13515,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 177,
+      "index": 179,
       "label": "exp_fn::declare_exp_fn_family",
       "measured_provides": [
         "exp_fn.exp_fn",
@@ -13522,7 +13626,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 178,
+      "index": 180,
       "label": "exp_fn::declare_exp_fn_equiv_e",
       "measured_provides": [
         "exp_fn.exp_fn_one_equiv_e"
@@ -13601,7 +13705,7 @@
         "max",
         "mono_of_le_succ"
       ],
-      "index": 179,
+      "index": 181,
       "label": "supremum::declare_max_range",
       "measured_provides": [
         "max_range",
@@ -13640,7 +13744,7 @@
         "max_range",
         "max_range_ub"
       ],
-      "index": 180,
+      "index": 182,
       "label": "supremum::declare_max_range_transport",
       "measured_provides": [
         "max_range_transport"
@@ -13667,7 +13771,7 @@
         "mesh_level_count_zero"
       ],
       "declared_requires": [],
-      "index": 181,
+      "index": 183,
       "label": "supremum::declare_mesh_level_count",
       "measured_provides": [
         "mesh_level_count",
@@ -13692,7 +13796,7 @@
         "pow_succ",
         "pow_zero"
       ],
-      "index": 182,
+      "index": 184,
       "label": "supremum::declare_mesh_level_count_pow",
       "measured_provides": [
         "mesh_level_count_pow"
@@ -13723,7 +13827,7 @@
         "pow",
         "pow_add"
       ],
-      "index": 183,
+      "index": 185,
       "label": "supremum::declare_mesh_level_count_ge_of_size",
       "measured_provides": [
         "mesh_level_count_ge_of_size"
@@ -13755,7 +13859,7 @@
         "of_nat",
         "of_rat"
       ],
-      "index": 184,
+      "index": 186,
       "label": "supremum::declare_mesh_max",
       "measured_provides": [
         "mesh_max"
@@ -13804,7 +13908,7 @@
         "riemann_sample_in_bounds",
         "uniformly_continuous_on"
       ],
-      "index": 185,
+      "index": 187,
       "label": "supremum::declare_mesh_max_step_le",
       "measured_provides": [
         "mesh_max_step_le"
@@ -13851,7 +13955,7 @@
         "mono_of_le_succ",
         "uniformly_continuous_on"
       ],
-      "index": 186,
+      "index": 188,
       "label": "supremum::declare_mesh_max_mono",
       "measured_provides": [
         "mesh_max_mono"
@@ -13875,7 +13979,7 @@
       "declared_requires": [
         "mesh_level_count"
       ],
-      "index": 187,
+      "index": 189,
       "label": "supremum::declare_exp_of_modulus",
       "measured_provides": [
         "exp_of_modulus"
@@ -13896,7 +14000,7 @@
       "declared_requires": [
         "exp_of_modulus"
       ],
-      "index": 188,
+      "index": 190,
       "label": "supremum::declare_true_exp_of_modulus",
       "measured_provides": [
         "true_exp_of_modulus",
@@ -13918,7 +14022,7 @@
         "exp_of_modulus",
         "true_exp_of_modulus"
       ],
-      "index": 189,
+      "index": 191,
       "label": "supremum::declare_true_exp_of_modulus_step_le",
       "measured_provides": [
         "true_exp_of_modulus_step_le"
@@ -13939,7 +14043,7 @@
         "true_exp_of_modulus",
         "true_exp_of_modulus_step_le"
       ],
-      "index": 190,
+      "index": 192,
       "label": "supremum::declare_true_exp_of_modulus_mono",
       "measured_provides": [
         "true_exp_of_modulus_mono"
@@ -13962,7 +14066,7 @@
         "le_refl",
         "true_exp_of_modulus"
       ],
-      "index": 191,
+      "index": 193,
       "label": "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
       "measured_provides": [
         "exp_of_modulus_le_true_exp_of_modulus"
@@ -14015,7 +14119,7 @@
         "rat_unit_eq_one",
         "zero"
       ],
-      "index": 192,
+      "index": 194,
       "label": "supremum::declare_mesh_point_near_coarse",
       "measured_provides": [
         "mesh_point_near_coarse"
@@ -14073,7 +14177,7 @@
         "max_range",
         "max_range_ub"
       ],
-      "index": 193,
+      "index": 195,
       "label": "supremum::declare_max_range_le_add_of_exists",
       "measured_provides": [
         "max_range_le_add_of_exists"
@@ -14121,7 +14225,7 @@
         "riemann_sample_in_bounds",
         "zero"
       ],
-      "index": 194,
+      "index": 196,
       "label": "supremum::declare_mesh_max_le_add_of_step_close",
       "measured_provides": [
         "mesh_max_le_add_of_step_close"
@@ -14181,7 +14285,7 @@
         "uc_spec",
         "uniformly_continuous_on"
       ],
-      "index": 195,
+      "index": 197,
       "label": "supremum::declare_mesh_max_le_add_of_modulus",
       "measured_provides": [
         "mesh_max_le_add_of_modulus"
@@ -14239,7 +14343,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 196,
+      "index": 198,
       "label": "supremum::declare_sup_seq",
       "measured_provides": [
         "sup_level",
@@ -14299,7 +14403,7 @@
         "sup_seq_mono",
         "uniformly_continuous_on"
       ],
-      "index": 197,
+      "index": 199,
       "label": "supremum::declare_sup_seq_cauchy",
       "measured_provides": [
         "le_mesh_level_count",
@@ -14330,7 +14434,7 @@
         "uniformly_continuous_on"
       ],
       "module": "supremum",
-      "reachable_fns": 11,
+      "reachable_fns": 13,
       "run": "supremum::declare_sup_seq_cauchy"
     },
     {
@@ -14352,7 +14456,7 @@
         "sup_seq_abs_diff_le",
         "uniformly_continuous_on"
       ],
-      "index": 198,
+      "index": 200,
       "label": "supremum::declare_sup_on",
       "measured_provides": [
         "sup_on",
@@ -14400,7 +14504,7 @@
         "pos_of_pos_bound",
         "zero"
       ],
-      "index": 199,
+      "index": 201,
       "label": "sup_laws::declare_max_range_attained_approx",
       "measured_provides": [
         "max_range_attained_approx"
@@ -14446,7 +14550,7 @@
         "sup_seq_mono",
         "uniformly_continuous_on"
       ],
-      "index": 200,
+      "index": 202,
       "label": "sup_laws::declare_sup_seq_le_shift",
       "measured_provides": [
         "sup_seq_le_shift"
@@ -14504,7 +14608,7 @@
         "sup_seq_le_shift",
         "uniformly_continuous_on"
       ],
-      "index": 201,
+      "index": 203,
       "label": "sup_laws::declare_sup_on_approx_lub",
       "measured_provides": [
         "sup_on_approx_lub"
@@ -14570,7 +14674,7 @@
         "sup_seq_mono",
         "uniformly_continuous_on"
       ],
-      "index": 202,
+      "index": 204,
       "label": "sup_laws::declare_sup_on_ub_at_sup_seq_point",
       "measured_provides": [
         "sup_on_ub_at_sup_seq_point",
@@ -14621,7 +14725,7 @@
         "lt_cotrans",
         "zero"
       ],
-      "index": 203,
+      "index": 205,
       "label": "sup_laws::declare_step_family_locate",
       "measured_provides": [
         "step_family_locate"
@@ -14678,7 +14782,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 204,
+      "index": 206,
       "label": "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
       "measured_provides": [
         "mesh_max_le_sup_on_add",
@@ -14770,7 +14874,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 205,
+      "index": 207,
       "label": "sup_laws::declare_sup_on_ub",
       "measured_provides": [
         "sup_on_ub"
@@ -14846,7 +14950,7 @@
         "sup_on_ub",
         "uniformly_continuous_on"
       ],
-      "index": 206,
+      "index": 208,
       "label": "evt_row1::declare_evt_approx_max",
       "measured_provides": [
         "evt_row1.evt_approx_max"
@@ -14879,7 +14983,7 @@
         "pow",
         "pow_nonneg"
       ],
-      "index": 207,
+      "index": 209,
       "label": "cos_sign::declare_cos_wide_tail_nonneg",
       "measured_provides": [
         "cos_sign.cos_wide_tail_nonneg"
@@ -14929,7 +15033,7 @@
         "pow_add",
         "pow_nonneg"
       ],
-      "index": 208,
+      "index": 210,
       "label": "cos_sign::declare_cos_wide_tail_antitone",
       "measured_provides": [
         "cos_sign.cos_wide_tail_antitone"
@@ -14997,7 +15101,7 @@
         "uconv_spec",
         "zero"
       ],
-      "index": 209,
+      "index": 211,
       "label": "cos_sign::declare_cos_wide_series_converges",
       "measured_provides": [
         "cos_sign.cos_wide_series_converges"
@@ -15073,7 +15177,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 210,
+      "index": 212,
       "label": "cos_sign::declare_cos_wide_nonpositive",
       "measured_provides": [
         "cos_sign.cos_wide_nonpositive"
@@ -15188,7 +15292,7 @@
         "within",
         "zero"
       ],
-      "index": 211,
+      "index": 213,
       "label": "pi::declare_pi_family",
       "measured_provides": [
         "pi.pi",

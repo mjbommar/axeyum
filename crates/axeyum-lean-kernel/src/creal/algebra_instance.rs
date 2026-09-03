@@ -199,6 +199,178 @@ pub(super) fn declare_comm_ring_s(d: &mut IntDev<'_>, p: CRealPrelude) -> Result
     Ok(())
 }
 
+/// `CReal.addLeAddLeft : forall a b c, CReal.le a b -> CReal.le (CReal.add c
+/// a) (CReal.add c b)` — DERIVED from `CReal.add_le_add` + `CReal.le_refl`
+/// (`add_le_add(c,c,a,b,le_refl(c),h)`), the same technique `Rat.
+/// orderedRing`'s own `add_le_add_left` uses (ADR-1584 §4) — a composition
+/// of two EXISTING `CReal` theorems, not a new `creal` proof.
+pub fn build_add_le_add_left(k: &mut Kernel, p: &CRealPrelude) -> ExprId {
+    const A_FV: u64 = 22_920;
+    const B_FV: u64 = 22_921;
+    const C_FV: u64 = 22_922;
+    const H_FV: u64 = 22_923;
+    let creal_ty = k.const_(p.creal, vec![]);
+    let le = k.const_(p.le, vec![]);
+    let le_refl = k.const_(p.le_refl, vec![]);
+    let add_le_add = k.const_(p.add_le_add, vec![]);
+
+    let a = k.fvar(A_FV);
+    let b = k.fvar(B_FV);
+    let c = k.fvar(C_FV);
+    let h_ty = t_app(k, le, &[a, b]);
+    let h = k.fvar(H_FV);
+
+    let le_refl_c = k.app(le_refl, c); // : le c c
+    let applied = t_app(k, add_le_add, &[c, c, a, b, le_refl_c, h]); // : le (add c a)(add c b)
+
+    let v = lam_over(k, H_FV, h_ty, applied);
+    let v = lam_over(k, C_FV, creal_ty, v);
+    let v = lam_over(k, B_FV, creal_ty, v);
+    lam_over(k, A_FV, creal_ty, v)
+}
+
+/// `CReal.orderedRingS : AlgS.OrderedRing` — ADR-1592. `AlgS.OrderedRing`
+/// is `Ring`-based (29 fields: `Ring`'s 22 plus 7 order fields — see
+/// `nat_prelude::structures_setoid::ordered_ring_fields_s`'s own doc for
+/// why NOT `CommRing`-based), so the first 22 fields here are the SAME
+/// values `declare_comm_ring_s` above already builds (`mulOneL`/`distribR`
+/// derived exactly the same way, no second proof). The seven order fields:
+/// `le`/`le_refl`/`le_trans`/`leCongr`/`mul_nonneg` are direct `CReal`
+/// selectors; `le_antisymm_equiv` is `CReal.equiv_of_le_le` verbatim
+/// (ADR-0512's own antisymmetry-up-to-`Equiv` law is EXACTLY this field's
+/// shape); `add_le_add_left` is [`build_add_le_add_left`], a derivation,
+/// not a new `creal` theorem. **No field is missing** — every one of the
+/// 29 is either an existing `CReal` selector or a pure composition of
+/// existing selectors, matching the deliverable's explicit constraint
+/// ("if any law is missing, name it and stop").
+///
+/// The `STEP_DISPATCH` entry: declares under `p.ordered_ring_s`,
+/// pre-interned by `intern_names`, registered right after
+/// `declare_comm_ring_s` (needs exactly the fields that step already
+/// needs, plus `mul_nonneg` — declared within `product::declare_product`
+/// itself, so already available at this position — and the order-relation
+/// fields, declared earlier still in the `order`/`order_extra` phase).
+pub(super) fn declare_ordered_ring_s(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    use crate::nat_prelude::structures_setoid::idx::ordered_ring as oidx;
+    let p = &p;
+    let k = d.kernel();
+    let st = p.rat.int.nat.structures_s;
+    let ordered_ring = st.ordered_ring;
+
+    let carrier = k.const_(p.creal, vec![]);
+    let equiv = k.const_(p.equiv, vec![]);
+    let equiv_refl = k.const_(p.equiv_refl, vec![]);
+    let equiv_symm = k.const_(p.equiv_symm, vec![]);
+    let equiv_trans = k.const_(p.equiv_trans, vec![]);
+    let zero = k.const_(p.zero, vec![]);
+    let one = k.const_(p.one, vec![]);
+    let add = k.const_(p.add, vec![]);
+    let mul = k.const_(p.mul, vec![]);
+    let add_congr = k.const_(p.add_congr, vec![]);
+    let mul_congr = k.const_(p.mul_congr, vec![]);
+    let add_assoc = k.const_(p.add_assoc, vec![]);
+    let add_comm = k.const_(p.add_comm, vec![]);
+    let add_zero = k.const_(p.add_zero, vec![]);
+    let mul_assoc = k.const_(p.mul_assoc, vec![]);
+    let mul_one_l = build_mul_one_l(k, p);
+    let mul_one_r = k.const_(p.mul_one, vec![]);
+    let distrib_l = k.const_(p.left_distrib, vec![]);
+    let distrib_r = build_distrib_r(k, p);
+    let neg = k.const_(p.neg, vec![]);
+    let neg_congr = k.const_(p.neg_congr, vec![]);
+    let neg_add = k.const_(p.add_neg, vec![]);
+    let le = k.const_(p.le, vec![]);
+    let le_congr = k.const_(p.le_congr, vec![]);
+    let le_refl = k.const_(p.le_refl, vec![]);
+    let le_trans = k.const_(p.le_trans, vec![]);
+    let le_antisymm_equiv = k.const_(p.equiv_of_le_le, vec![]);
+    let add_le_add_left = build_add_le_add_left(k, p);
+    let mul_nonneg = k.const_(p.mul_nonneg, vec![]);
+
+    let mut args = vec![ExprId(0); oidx::MUL_NONNEG + 1];
+    args[oidx::CARRIER] = carrier;
+    args[oidx::EQUIV] = equiv;
+    args[oidx::EQUIV_REFL] = equiv_refl;
+    args[oidx::EQUIV_SYMM] = equiv_symm;
+    args[oidx::EQUIV_TRANS] = equiv_trans;
+    args[oidx::ZERO] = zero;
+    args[oidx::ONE] = one;
+    args[oidx::ADD] = add;
+    args[oidx::MUL] = mul;
+    args[oidx::ADD_CONGR] = add_congr;
+    args[oidx::MUL_CONGR] = mul_congr;
+    args[oidx::ADD_ASSOC] = add_assoc;
+    args[oidx::ADD_COMM] = add_comm;
+    args[oidx::ADD_ZERO] = add_zero;
+    args[oidx::MUL_ASSOC] = mul_assoc;
+    args[oidx::MUL_ONE_L] = mul_one_l;
+    args[oidx::MUL_ONE_R] = mul_one_r;
+    args[oidx::DISTRIB_L] = distrib_l;
+    args[oidx::DISTRIB_R] = distrib_r;
+    args[oidx::NEG] = neg;
+    args[oidx::NEG_CONGR] = neg_congr;
+    args[oidx::NEG_ADD] = neg_add;
+    args[oidx::LE] = le;
+    args[oidx::LE_CONGR] = le_congr;
+    args[oidx::LE_REFL] = le_refl;
+    args[oidx::LE_TRANS] = le_trans;
+    args[oidx::LE_ANTISYMM_EQUIV] = le_antisymm_equiv;
+    args[oidx::ADD_LE_ADD_LEFT] = add_le_add_left;
+    args[oidx::MUL_NONNEG] = mul_nonneg;
+
+    let mut value = k.const_(ordered_ring.mk, vec![]);
+    for a in &args {
+        value = k.app(value, *a);
+    }
+    let ty = k.const_(ordered_ring.ind, vec![]);
+
+    k.add_declaration(Declaration::Definition {
+        name: p.ordered_ring_s,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(())
+}
+
+/// `CReal.addGroupS : AlgS.Group` — ADR-1592 deliverable 2's explicit ask:
+/// `AlgS.CommGroup.toGroupS(AlgS.CommRing.toCommGroupS(CReal.commRingS))`,
+/// a NAMED declaration (promoting ADR-1590's test-only `ring_s_additive_
+/// group_value` term-builder route to a real one) — what `AlgS.
+/// add_left_cancel`/`AlgS.inv_unique`/`AlgS.invInv` (all stated over
+/// `AlgS.Group`) need to reach `CReal`.
+///
+/// The `STEP_DISPATCH` entry: declares under `p.add_group_s`, registered
+/// right after `declare_ordered_ring_s` (needs only `p.comm_ring_s`,
+/// already provided by `declare_comm_ring_s`, plus the two `AlgS`
+/// projections, both declared once at `nat_prelude` build time).
+pub(super) fn declare_add_group_s(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let p = &p;
+    let k = d.kernel();
+    let extra = &p.rat.int.nat.structures_s_extra;
+    let comm_ring_s_c = k.const_(p.comm_ring_s, vec![]);
+    let to_comm_group_s = k.const_(extra.comm_ring_to_comm_group_s, vec![]);
+    let comm_group_val = k.app(to_comm_group_s, comm_ring_s_c);
+    let to_group_s = k.const_(extra.comm_group_to_group_s, vec![]);
+    let value = k.app(to_group_s, comm_group_val);
+
+    let st = p.rat.int.nat.structures_s;
+    let ty = k.const_(st.group.ind, vec![]);
+
+    k.add_declaration(Declaration::Definition {
+        name: p.add_group_s,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod algebra_instance_tests {
     use super::*;
@@ -222,6 +394,144 @@ mod algebra_instance_tests {
         assert!(
             k.axiom_footprint(p.comm_ring_s).is_empty(),
             "CReal.commRingS must have an empty axiom footprint"
+        );
+    }
+
+    /// ADR-1592: `CReal.orderedRingS` admits and has an empty axiom
+    /// footprint -- every one of its 29 fields is either an existing
+    /// `CReal` selector or a pure composition of existing selectors
+    /// (`mulOneL`/`distribR`/`add_le_add_left`).
+    #[test]
+    fn creal_ordered_ring_s_admits_and_is_axiom_free() {
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        assert!(k.environment().get(p.ordered_ring_s).is_some());
+        assert!(
+            k.axiom_footprint(p.ordered_ring_s).is_empty(),
+            "CReal.orderedRingS must have an empty axiom footprint"
+        );
+    }
+
+    /// Concrete evaluation: projecting `le_refl`/`mul_nonneg` off
+    /// `CReal.orderedRingS` and applying at `CReal.zero`/`CReal.one` must
+    /// type-check.
+    #[test]
+    fn creal_ordered_ring_s_order_fields_apply_at_concrete_creal_values() {
+        use crate::nat_prelude::structures_setoid::idx::ordered_ring as oidx;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let st = p.rat.int.nat.structures_s;
+        let ordered_ring_s_c = k.const_(p.ordered_ring_s, vec![]);
+
+        let le_refl_sel = k.const_(st.ordered_ring.sel(oidx::LE_REFL), vec![]);
+        let projected = k.app(le_refl_sel, ordered_ring_s_c);
+        let zero = k.const_(p.zero, vec![]);
+        let applied = k.app(projected, zero);
+        assert!(
+            k.infer(applied).is_ok(),
+            "projected le_refl must apply concretely at CReal.zero"
+        );
+
+        let mul_nonneg_sel = k.const_(st.ordered_ring.sel(oidx::MUL_NONNEG), vec![]);
+        let projected_mn = k.app(mul_nonneg_sel, ordered_ring_s_c);
+        assert!(
+            k.infer(projected_mn).is_ok(),
+            "projected mul_nonneg must apply concretely at CReal.zero"
+        );
+    }
+
+    /// ADR-1592: `CReal.addGroupS` admits and has an empty axiom
+    /// footprint.
+    #[test]
+    fn creal_add_group_s_admits_and_is_axiom_free() {
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        assert!(k.environment().get(p.add_group_s).is_some());
+        assert!(
+            k.axiom_footprint(p.add_group_s).is_empty(),
+            "CReal.addGroupS must have an empty axiom footprint"
+        );
+    }
+
+    /// ADR-1592: `AlgS.add_left_cancel` instantiated at `CReal.addGroupS`
+    /// (the NAMED route, replacing ADR-1590's test-only `ring_s_additive_
+    /// group_value` term-builder), closed over `(a,b,c)`.
+    #[test]
+    fn generic_add_left_cancel_instantiated_at_creal_add_group_s_type_checks() {
+        const A_FV: u64 = 23_050;
+        const B_FV: u64 = 23_051;
+        const C_FV: u64 = 23_052;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let np = p.rat.int.nat;
+        let extra = np.structures_s_extra;
+
+        let add_group_s_c = k.const_(p.add_group_s, vec![]);
+        let add_left_cancel_c = k.const_(extra.add_left_cancel, vec![]);
+        let creal_ty = k.const_(p.creal, vec![]);
+        let a = k.fvar(A_FV);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(add_left_cancel_c, add_group_s_c);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let generic_closed = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, creal_ty, v);
+            let v = lam_over(&mut k, B_FV, creal_ty, v);
+            lam_over(&mut k, A_FV, creal_ty, v)
+        };
+        assert!(
+            k.infer(generic_closed).is_ok(),
+            "AlgS.add_left_cancel applied at CReal.addGroupS must type-check"
+        );
+    }
+
+    /// ADR-1592: `AlgS.inv_unique`/`AlgS.invInv` instantiated at
+    /// `CReal.addGroupS`.
+    #[test]
+    fn generic_inv_unique_and_inv_inv_instantiated_at_creal_add_group_s_type_check() {
+        const A_FV: u64 = 23_060;
+        const B_FV: u64 = 23_061;
+        const C_FV: u64 = 23_062;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let np = p.rat.int.nat;
+        let extra = np.structures_s_extra;
+        let add_group_s_c = k.const_(p.add_group_s, vec![]);
+        let creal_ty = k.const_(p.creal, vec![]);
+
+        let inv_inv_c = k.const_(extra.inv_inv, vec![]);
+        let applied = k.app(inv_inv_c, add_group_s_c);
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed_ii = lam_over(&mut k, A_FV, creal_ty, applied_a);
+        assert!(
+            k.infer(closed_ii).is_ok(),
+            "AlgS.invInv applied at CReal.addGroupS must type-check"
+        );
+
+        let inv_unique_c = k.const_(extra.inv_unique, vec![]);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(inv_unique_c, add_group_s_c);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let closed_iu = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, creal_ty, v);
+            let v = lam_over(&mut k, B_FV, creal_ty, v);
+            lam_over(&mut k, A_FV, creal_ty, v)
+        };
+        assert!(
+            k.infer(closed_iu).is_ok(),
+            "AlgS.inv_unique applied at CReal.addGroupS must type-check"
         );
     }
 

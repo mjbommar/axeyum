@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1180 names,
+/// The `NatPrelude` field table (1189 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 86 of the names come from ADR-1512 per-module registries and
+/// 95 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1555,6 +1555,10 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 "structures_s_names.comm_ring",
                 p.structures_s_names.comm_ring,
             ),
+            (
+                "structures_s_names.ordered_ring",
+                p.structures_s_names.ordered_ring,
+            ),
             ("structures_s.magma.ind", p.structures_s.magma.ind),
             ("structures_s.magma.mk", p.structures_s.magma.mk),
             ("structures_s.magma.rec", p.structures_s.magma.rec),
@@ -1589,8 +1593,28 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("structures_s.comm_ring.mk", p.structures_s.comm_ring.mk),
             ("structures_s.comm_ring.rec", p.structures_s.comm_ring.rec),
             (
+                "structures_s.ordered_ring.ind",
+                p.structures_s.ordered_ring.ind,
+            ),
+            (
+                "structures_s.ordered_ring.mk",
+                p.structures_s.ordered_ring.mk,
+            ),
+            (
+                "structures_s.ordered_ring.rec",
+                p.structures_s.ordered_ring.rec,
+            ),
+            (
                 "structures_s_extra.comm_ring_to_ring_s",
                 p.structures_s_extra.comm_ring_to_ring_s,
+            ),
+            (
+                "structures_s_extra.comm_ring_to_comm_group_s",
+                p.structures_s_extra.comm_ring_to_comm_group_s,
+            ),
+            (
+                "structures_s_extra.comm_group_to_group_s",
+                p.structures_s_extra.comm_group_to_group_s,
             ),
             (
                 "structures_s_extra.magma_ofalg",
@@ -1639,6 +1663,15 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             (
                 "structures_s_extra.add_left_cancel",
                 p.structures_s_extra.add_left_cancel,
+            ),
+            (
+                "structures_s_extra.inv_unique",
+                p.structures_s_extra.inv_unique,
+            ),
+            ("structures_s_extra.inv_inv", p.structures_s_extra.inv_inv),
+            (
+                "structures_s_extra.ordered_ring_ofalg",
+                p.structures_s_extra.ordered_ring_ofalg,
             ),
         ],
         lists: Vec::new(),
@@ -2153,10 +2186,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (545 names,
+/// The `RatPrelude` field table (553 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 39 of the names come from ADR-1512 per-module registries and
+/// 47 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -2829,6 +2862,35 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 p.ordered_ring_ext.le_of_add_le_add_right,
             ),
             ("ordered_ring_ext.add_le_add", p.ordered_ring_ext.add_le_add),
+            ("ordered_ring_ext_s.ofnat", p.ordered_ring_ext_s.ofnat),
+            (
+                "ordered_ring_ext_s.ofnat_add",
+                p.ordered_ring_ext_s.ofnat_add,
+            ),
+            (
+                "ordered_ring_ext_s.ofnat_le_ofnat_of_le",
+                p.ordered_ring_ext_s.ofnat_le_ofnat_of_le,
+            ),
+            (
+                "ordered_ring_ext_s.add_le_add_right",
+                p.ordered_ring_ext_s.add_le_add_right,
+            ),
+            (
+                "ordered_ring_ext_s.le_of_add_le_add_right",
+                p.ordered_ring_ext_s.le_of_add_le_add_right,
+            ),
+            (
+                "ordered_ring_ext_s.add_le_add",
+                p.ordered_ring_ext_s.add_le_add,
+            ),
+            (
+                "ordered_ring_ext_s.int_ordered_ring_s",
+                p.ordered_ring_ext_s.int_ordered_ring_s,
+            ),
+            (
+                "ordered_ring_ext_s.rat_ordered_ring_s",
+                p.ordered_ring_ext_s.rat_ordered_ring_s,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -2888,7 +2950,7 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (607 names,
+/// The `CRealPrelude` field table (609 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 69 of the names come from ADR-1512 per-module registries and
@@ -3735,6 +3797,8 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 p.has_derivative_uniform_limit,
             ),
             ("comm_ring_s", p.comm_ring_s),
+            ("ordered_ring_s", p.ordered_ring_s),
+            ("add_group_s", p.add_group_s),
             ("pi.pi_half_coef", p.pi.pi_half_coef),
             ("pi.pi_half_term", p.pi.pi_half_term),
             ("pi.pi_half_series_partial", p.pi.pi_half_series_partial),

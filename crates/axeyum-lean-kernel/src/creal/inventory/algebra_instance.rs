@@ -9,5 +9,9 @@
 /// declaration built by
 /// `crates/axeyum-lean-kernel/src/creal/algebra_instance.rs`.
 pub(crate) fn entries(p: crate::CRealPrelude) -> Vec<(&'static str, crate::NameId, &'static str)> {
-    vec![("CReal.commRingS", p.comm_ring_s, "def")]
+    vec![
+        ("CReal.commRingS", p.comm_ring_s, "def"),
+        ("CReal.orderedRingS", p.ordered_ring_s, "def"),
+        ("CReal.addGroupS", p.add_group_s, "def"),
+    ]
 }
