@@ -54,8 +54,18 @@ KERNEL_SRC = ROOT / "crates" / "axeyum-lean-kernel" / "src"
 TARGET = ROOT / "crates" / "axeyum-py" / "src" / "kernel" / "prelude_fields.rs"
 
 # (rust struct, source file, python kind, builder fn) in dependency order.
+#
+# `ListPrelude` (`list_prelude.rs`) added 2026-09-03: `List.{u}`'s own field
+# table (the inductive plus `length`/`append`/`map`/`foldr`/`reverse` and the
+# six pure-`List` theorems) is all plain `NameId`, so it registers cleanly.
+# `ListNatBridge`/`ListPerm` (`list_prelude/bridge.rs`, `list_prelude/perm.rs`)
+# are deliberately NOT registered here: `ListNatBridge::count_to_multiset` is
+# `Option<NameId>`, a type this generator's `collect()` does not classify (see
+# its own module doc), and teaching it optional fields is out of this lane's
+# scope.
 PRELUDES = [
     ("LogicPrelude", "prelude.rs", "logic"),
+    ("ListPrelude", "list_prelude.rs", "list"),
     ("NatPrelude", "nat_prelude.rs", "nat"),
     ("IntPrelude", "int_prelude.rs", "int"),
     ("RatPrelude", "rat_prelude.rs", "rat"),
@@ -175,8 +185,8 @@ def render() -> tuple[str, dict[str, int], dict[str, tuple[int, int]]]:
         "//! reads exactly like `that theorem does not exist`.",
         "",
         "use axeyum_lean_kernel::{",
-        "    ArithPrelude, CPointPrelude, CRealPrelude, ComplexPrelude, IntPrelude, LogicPrelude,",
-        "    NameId, NatPrelude, RatPrelude, StringPrelude,",
+        "    ArithPrelude, CPointPrelude, CRealPrelude, ComplexPrelude, IntPrelude, ListPrelude,",
+        "    LogicPrelude, NameId, NatPrelude, RatPrelude, StringPrelude,",
         "};",
         "",
         "/// One package's flattened contents: scalar names, name lists, and the",

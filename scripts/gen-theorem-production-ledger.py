@@ -70,6 +70,13 @@ COMMAND = (
 # (measured: this generator raised `coverage changed` rather than silently
 # publishing a narrower distinct count, which is the fail-closed behaviour
 # this comment block exists to keep true for the NEXT prelude too).
+#
+# `list` (`List.{u}` -- the nine pure-`List`/bridge theorems from
+# `list-carrier-1`, `List.count_toMultiset` and `List.Perm`'s four theorems
+# from `list-carrier-2`) added to `prelude_theorem_inventory` 2026-09-03 and
+# added here in the SAME commit, per the `ipc` precedent above -- this
+# ledger's `--check` was verified to raise `coverage changed` first, before
+# this line was added, confirming the gap it exists to catch.
 EXPECTED_PRELUDES: tuple[str, ...] = (
     "axreal",
     "characterization",
@@ -78,6 +85,7 @@ EXPECTED_PRELUDES: tuple[str, ...] = (
     "creal",
     "integer",
     "ipc",
+    "list",
     "logic",
     "nat",
     "rat",
