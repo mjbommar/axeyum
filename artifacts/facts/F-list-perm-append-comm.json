@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:list-perm-append-comm",
+  "title": "List.Perm is preserved by swapping an append's operands",
+  "statement": "For any two lists l1, l2 over Nat, List.Perm (List.append l1 l2) (List.append l2 l1) computes to true.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} Bool (List.Perm (List.append AxNat x0 x1) (List.append AxNat x1 x0)) Bool.true))",
+    "fragment": "List",
+    "kernel_theorem": "List.perm_append_comm"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:list-count-append", "F:ml430-nat-add-comm-56a2d614", "F:nat-beq-eq-true-of-eq"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-perm-append-comm",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.perm_append_comm",
+      "supports": "List.perm_append_comm is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.perm_append_comm 2>/dev/null | grep -Fc '((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} Bool (List.Perm (List.append AxNat x0 x1) (List.append AxNat x1 x0)) Bool.true))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check."
+    },
+    {
+      "id": "footprint-list-perm-append-comm",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::perm::perm_tests::the_perm_theorems_declare_no_axioms --test-threads=1",
+      "notes": "Asserts Kernel::axiom_footprint(name).is_empty() for this declaration, read directly from the kernel rather than asserted from a list."
+    },
+    {
+      "id": "evaluation-list-perm-append-comm",
+      "kind": "instance-pin",
+      "supports": "The List/Nat operations this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "The list_prelude:: sweep (list_prelude_tests.rs, bridge_tests.rs, perm_tests.rs) reduces List/Nat.Multiset operations to concrete numerals or nil/cons skeletons at tiny discriminating arguments and pairs positives with negative controls."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_perm",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude/perm.rs (lane list-carrier-2, ADR-1583 amending ADR-1579)."
+  },
+  "notes": "Via F:list-count-append applied twice (once each direction) plus Nat.add_comm, giving an unconditional-in-a pointwise count identity between the two appends, then Nat.Finset.allBelow_of_all_true.",
+  "external_status": "proved"
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:list-count-to-multiset",
+  "title": "A list's per-element count agrees with its computed multiset's count",
+  "statement": "For any element a and list l over Nat, the number of times a occurs in l (List.count) equals the multiplicity Nat.Multiset assigns to a in the multiset built by folding l (List.toMultiset) -- the new ordinary-inductive List carrier and the earlier function-plus-bound Nat.Multiset carrier (ADR-1520) agree on how many times a value occurs.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (AxNat.Multiset.count (List.toMultiset x1) x0)))",
+    "fragment": "List",
+    "kernel_theorem": "List.count_toMultiset"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:ml430-nat-eq-of-beq-eq-true-6ec35ee4", "F:nat-succ-add", "F:nat-zero-add", "F:nat-zero-le"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-count-to-multiset",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.count_toMultiset",
+      "supports": "List.count_toMultiset is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.count_toMultiset 2>/dev/null | grep -Fc '((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (AxNat.Multiset.count (List.toMultiset x1) x0)))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check. This theorem was recorded as NOT landed by list-carrier-1 (docs/plan/status/460-list-carrier-1.md); list-carrier-2 found the blocker it named -- a beq-to-ne bridge lemma -- was unnecessary, since Nat.Multiset.count_singleton_of_ne is already stated directly in terms of beq."
+    },
+    {
+      "id": "footprint-list-count-to-multiset",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::bridge::bridge_tests::count_to_multiset_landed_axiom_free_and_matches_concretely --test-threads=1",
+      "notes": "This test asserts ListNatBridge::count_to_multiset is Some (not the None list-carrier-1 recorded) and Kernel::axiom_footprint(name).is_empty(), read directly from the kernel."
+    },
+    {
+      "id": "evaluation-list-count-to-multiset",
+      "kind": "instance-pin",
+      "supports": "The general (a,l-symbolic) theorem, instantiated at concrete arguments, both type-checks and matches independently evaluated count/Multiset.count values, with negative controls.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "count_to_multiset_landed_axiom_free_and_matches_concretely instantiates the theorem at (a:=1, l:=[1,2,1]) and (a:=3, l:=[1,2,1]), checks Kernel::infer succeeds at both, and confirms count 1 [1,2,1] = 2 (not 0) and count 3 [1,2,1] = 0 (not 2) by def_eq."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_nat_bridge",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude/bridge.rs (lane list-carrier-2, ADR-1583 amending ADR-1579)."
+  },
+  "notes": "Induction on l, a fixed. The nil case is Nat.Multiset.count_eq_zero_of_bound_le at Nat.Multiset.zero (bound zero is 0 by iota, so Nat.zero_le a already has the type its hypothesis wants). The cons case case-splits on Nat.beq head a (a fresh Bool.rec-based Or split, since nat_prelude's own copy of that helper is not visible outside nat_prelude): the true branch transports head = a (Nat.eq_of_beq_eq_true) through Nat.Multiset.count_singleton_self; the false branch flips the hypothesis via Nat.beq_comm and applies Nat.Multiset.count_singleton_of_ne directly (which is already stated in terms of beq, not Not (Eq _ _), so no separate ne-bridge lemma was needed).",
+  "external_status": "proved"
+}

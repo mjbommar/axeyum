@@ -73,8 +73,8 @@ use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_characterization, build_complex_prelude, build_cpoint_prelude,
-    build_creal_prelude, build_int_prelude, build_logic_prelude, build_nat_prelude,
-    build_rat_prelude, build_string_prelude,
+    build_creal_prelude, build_int_prelude, build_list_nat_bridge, build_list_perm,
+    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn main() -> ExitCode {
@@ -117,6 +117,17 @@ fn run() -> ExitCode {
     // `build_rat_prelude` itself), so re-adding `rat` here is a harmless no-op
     // rather than a duplicate build.
     let _ = build_nat_prelude(&mut kernel).expect("Nat prelude must build");
+    // `List` (`list-carrier-1`/`list-carrier-2`, 2026-09-03): absent here
+    // until now, so `check-fact-depends-derived.py --fix` could not derive
+    // ANY edge among the List-family facts (e.g. `List.count_reverse`
+    // directly uses `List.count_append` in its proof term, but with `List`
+    // outside this tool's coverage that dependency was invisible) --
+    // reported `missing_edges=0` for the same reason the `Int`/`Rat`/`Str`
+    // gap above once did: a zero from a tool never pointed at the subject.
+    let (list_prelude, list_nat, list_bridge) =
+        build_list_nat_bridge(&mut kernel).expect("List/Nat bridge must build");
+    let _ = build_list_perm(&mut kernel, &list_prelude, &list_nat, &list_bridge)
+        .expect("List.Perm must build");
     let _ = build_int_prelude(&mut kernel).expect("Int prelude must build");
     let _ = build_rat_prelude(&mut kernel).expect("Rat prelude must build");
     // The string prelude needs the logic package and an alphabet size; the Nat

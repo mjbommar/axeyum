@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:list-count-reverse",
+  "title": "A list and its reversal have the same per-element counts",
+  "statement": "For any element a and list l over Nat, the number of times a occurs in l equals the number of times a occurs in the reversal of l.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (List.count x0 (List.reverse AxNat x1))))",
+    "fragment": "List",
+    "kernel_theorem": "List.count_reverse"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:list-count-append"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-count-reverse",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.count_reverse",
+      "supports": "List.count_reverse is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.count_reverse 2>/dev/null | grep -Fc '((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (List.count x0 (List.reverse AxNat x1))))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check."
+    },
+    {
+      "id": "footprint-list-count-reverse",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::perm::perm_tests::the_perm_theorems_declare_no_axioms --test-threads=1",
+      "notes": "Asserts Kernel::axiom_footprint(name).is_empty() for this declaration, read directly from the kernel rather than asserted from a list."
+    },
+    {
+      "id": "evaluation-list-count-reverse",
+      "kind": "instance-pin",
+      "supports": "The List/Nat operations this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "The list_prelude:: sweep (list_prelude_tests.rs, bridge_tests.rs, perm_tests.rs) reduces List/Nat.Multiset operations to concrete numerals or nil/cons skeletons at tiny discriminating arguments and pairs positives with negative controls."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_perm",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude/perm.rs (lane list-carrier-2, ADR-1583 amending ADR-1579)."
+  },
+  "notes": "Induction on l (a fixed). The nil case is Eq.refl (reverse nil is defeq nil). The cons case unfolds reverse (cons head tail) to append (reverse tail) (singleton head), applies List.count_append to split that count into a sum, and closes with the same beq-head-a case split (needed again because count a (cons head nil) is itself Bool.rec-shaped) plus the induction hypothesis.",
+  "external_status": "proved"
+}
