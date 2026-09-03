@@ -160,6 +160,9 @@ fn declare_add_neg_cancel_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// is no longer used here (still used elsewhere in this crate under its own
 /// name).
 fn declare_add_left_cancel(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    use crate::nat_prelude::structures::idx::group::{
+        ASSOC, CARRIER, E, IDENT_L, IDENT_R, INV, INV_L, INV_R, OP,
+    };
     let p = d.int();
     d.int_theorem(p.add_left_cancel, 3, &|d, v| {
         let (a, b, c) = (v[0], v[1], v[2]);
@@ -209,9 +212,6 @@ fn declare_add_left_cancel(d: &mut IntDev<'_>) -> Result<(), KernelError> {
             ident_l_scratch_fv,
         );
 
-        use crate::nat_prelude::structures::idx::group::{
-            ASSOC, CARRIER, E, IDENT_L, IDENT_R, INV, INV_L, INV_R, OP,
-        };
         let mut args = vec![ExprId(0); INV_R + 1];
         args[CARRIER] = int_ty;
         args[OP] = add_c;

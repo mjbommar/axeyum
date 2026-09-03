@@ -1371,9 +1371,9 @@ mod algebra_instances_tests {
     /// instantiates this theorem at `Int.ring`/`Rat.ring`, never `Nat`.
     #[test]
     fn ring_mul_zero_matches_int_and_rat_mul_zero_by_type() {
+        const A_FV: u64 = 30_500;
         let mut k = Kernel::new();
         let p = build_rat_prelude(&mut k).expect("rat prelude must build");
-        const A_FV: u64 = 30_500;
 
         for (r_name, hand_name, carrier_const, label) in [
             (p.algebra.int_ring, p.int.mul_zero, p.int.z, "Int"),

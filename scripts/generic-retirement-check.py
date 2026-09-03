@@ -77,7 +77,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -180,10 +179,6 @@ EARLY_HOOKS = {
 }
 
 EMITTER_DIRS = ["linarith", "ring", "simp"]
-
-
-def _run(cmd: list[str]) -> str:
-    return subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False).stdout
 
 
 def _carrier_declare_site(carrier_file: str, name_field: str) -> dict:
