@@ -92,7 +92,7 @@ use crate::name::NameId;
 use crate::{BinderInfo, Kernel, KernelError, PreludeKey, PreludeValue};
 
 mod bridge;
-mod ops;
+pub(crate) mod ops;
 mod perm;
 mod theorems;
 

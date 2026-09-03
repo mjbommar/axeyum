@@ -94,6 +94,7 @@
 
 pub mod cost;
 pub(crate) mod int;
+pub(crate) mod list;
 pub mod nat;
 
 #[cfg(test)]

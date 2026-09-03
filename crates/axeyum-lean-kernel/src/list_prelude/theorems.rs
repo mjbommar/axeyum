@@ -71,9 +71,28 @@ pub(super) fn declare_list_theorems(
             let rhs = apply_all(k, append_const, &[alpha, x, append_l2_l3]);
             eq_of(k, logic, one_lvl, list_alpha, lhs, rhs)
         };
+        // Retired to `simp::list` (ADR-1591): `p(nil)` is
+        // `Eq (append (append nil l2) l3) (append nil (append l2 l3))`,
+        // reachable from `nil_append` alone (a defining-equation refl rule,
+        // no `NameId` dependency, so usable even though `append_nil` etc.
+        // do not exist as declared names yet at this point in the build):
+        // LHS's inner `append nil l2` rewrites to `l2` (lifted through the
+        // outer `append _ l3`), RHS's own `append nil (append l2 l3)`
+        // rewrites directly to `append l2 l3` -- both converge.
         let base = |k: &mut Kernel| -> ExprId {
-            let append_l2_l3 = apply_all(k, append_const, &[alpha, l2, l3]);
-            refl_of(k, logic, one_lvl, list_alpha, append_l2_l3)
+            let nil = nil_of(k, names.nil, zero_lvl, alpha);
+            let lhs_lit = {
+                let inner = apply_all(k, append_const, &[alpha, nil, l2]);
+                apply_all(k, append_const, &[alpha, inner, l3])
+            };
+            let rhs_lit = {
+                let l2_l3 = apply_all(k, append_const, &[alpha, l2, l3]);
+                apply_all(k, append_const, &[alpha, nil, l2_l3])
+            };
+            let mut d = crate::simp::list::ListDev::new_list_only(k, logic, names, alpha);
+            let rules = vec![crate::simp::list::rule_nil_append()];
+            crate::simp::list::prove_eq(&mut d, &rules, list_alpha, lhs_lit, rhs_lit)
+                .unwrap_or_else(|e| panic!("append_assoc base case: simp::list declined: {e:?}"))
         };
         let step = |k: &mut Kernel, head: ExprId, tail: ExprId, ih: ExprId| -> ExprId {
             let append_tail_l2 = apply_all(k, append_const, &[alpha, tail, l2]);
@@ -148,7 +167,15 @@ pub(super) fn declare_list_theorems(
             let ax = apply_all(k, append_const, &[alpha, x, nil_alpha]);
             eq_of(k, logic, one_lvl, list_alpha, ax, x)
         };
-        let base = |k: &mut Kernel| -> ExprId { refl_of(k, logic, one_lvl, list_alpha, nil_alpha) };
+        // Retired to `simp::list` (ADR-1591): `p(nil)` is
+        // `Eq (append nil nil) nil`, one `nil_append` step.
+        let base = |k: &mut Kernel| -> ExprId {
+            let lhs_lit = apply_all(k, append_const, &[alpha, nil_alpha, nil_alpha]);
+            let mut d = crate::simp::list::ListDev::new_list_only(k, logic, names, alpha);
+            let rules = vec![crate::simp::list::rule_nil_append()];
+            crate::simp::list::prove_eq(&mut d, &rules, list_alpha, lhs_lit, nil_alpha)
+                .unwrap_or_else(|e| panic!("append_nil base case: simp::list declined: {e:?}"))
+        };
         let step = |k: &mut Kernel, head: ExprId, tail: ExprId, ih: ExprId| -> ExprId {
             let append_tail_nil = apply_all(k, append_const, &[alpha, tail, nil_alpha]);
             congr_of(
@@ -205,7 +232,6 @@ pub(super) fn declare_list_theorems(
         let ih_fv = 91_205;
         let x_fv = 91_206;
         let congr_x_fv = 91_207;
-        let symm_x_fv = 91_208;
         let trans_x_fv = 91_209;
 
         let alpha = kernel.fvar(alpha_fv);
@@ -214,7 +240,6 @@ pub(super) fn declare_list_theorems(
         let append_const = kernel.const_(names.append, vec![]);
         let cons_const = kernel.const_(names.cons, vec![zero_lvl]);
         let reverse_const = kernel.const_(names.reverse, vec![]);
-        let append_nil_const = kernel.const_(append_nil, vec![]);
         let append_assoc_const = kernel.const_(append_assoc, vec![]);
 
         let reverse_of =
@@ -231,24 +256,29 @@ pub(super) fn declare_list_theorems(
             let rhs = append_of(k, rev_b, rev_x);
             eq_of(k, logic, one_lvl, list_alpha, lhs, rhs)
         };
-        // append_nil(α, rev_b) : Eq (append rev_b nil) rev_b -- i.e. Eq B A,
-        // not Eq A B; symm_of's `a`/`b` must match h's ACTUAL direction.
+        // Retired to `simp::list` (ADR-1591): `p(nil)` is
+        // `Eq (reverse (append nil b)) (append (reverse b) (reverse nil))`.
+        // LHS: `append nil b` rewrites (`nil_append`) to `b`, lifted through
+        // the outer `reverse`. RHS: `reverse nil` rewrites (`reverse_nil`)
+        // to `nil`, then `append (reverse b) nil` rewrites (`append_nil`,
+        // NOW a declared name -- this theorem runs after it) to
+        // `reverse b`. Both converge to `reverse b`.
         let base = |k: &mut Kernel| -> ExprId {
             let rev_b = reverse_of(k, b);
-            let append_revb_nil = apply_all(k, append_nil_const, &[alpha, rev_b]);
             let nil_c = k.const_(names.nil, vec![zero_lvl]);
             let nil_alpha = k.app(nil_c, alpha);
-            let append_revb_nil_expr = append_of(k, rev_b, nil_alpha);
-            symm_of(
-                k,
-                logic,
-                one_lvl,
-                list_alpha,
-                append_revb_nil_expr,
-                rev_b,
-                append_revb_nil,
-                symm_x_fv,
-            )
+            let nil_b = append_of(k, nil_alpha, b);
+            let lhs_lit = reverse_of(k, nil_b);
+            let rev_nil = reverse_of(k, nil_alpha);
+            let rhs_lit = append_of(k, rev_b, rev_nil);
+            let mut d = crate::simp::list::ListDev::new_list_only(k, logic, names, alpha);
+            let rules = vec![
+                crate::simp::list::rule_nil_append(),
+                crate::simp::list::rule_append_nil(append_nil),
+                crate::simp::list::rule_reverse_nil(),
+            ];
+            crate::simp::list::prove_eq(&mut d, &rules, list_alpha, lhs_lit, rhs_lit)
+                .unwrap_or_else(|e| panic!("reverse_append base case: simp::list declined: {e:?}"))
         };
         // ih : reverse (append tail b) = append (reverse b) (reverse tail)
         // need: reverse (append (cons head tail) b)
@@ -362,9 +392,18 @@ pub(super) fn declare_list_theorems(
             let rr = reverse_of(k, rev_x);
             eq_of(k, logic, one_lvl, list_alpha, rr, x)
         };
+        // Retired to `simp::list` (ADR-1591): `p(nil)` is
+        // `Eq (reverse (reverse nil)) nil`, two `reverse_nil` steps (the
+        // outer `reverse` still wraps a `reverse nil` redex after the
+        // first rewrite peels the inner one).
         let base = |k: &mut Kernel| -> ExprId {
             let nil_alpha = k.app(nil_const_lvl, alpha);
-            refl_of(k, logic, one_lvl, list_alpha, nil_alpha)
+            let rev_nil = reverse_of(k, nil_alpha);
+            let lhs_lit = reverse_of(k, rev_nil);
+            let mut d = crate::simp::list::ListDev::new_list_only(k, logic, names, alpha);
+            let rules = vec![crate::simp::list::rule_reverse_nil()];
+            crate::simp::list::prove_eq(&mut d, &rules, list_alpha, lhs_lit, nil_alpha)
+                .unwrap_or_else(|e| panic!("reverse_reverse base case: simp::list declined: {e:?}"))
         };
         let step = |k: &mut Kernel, head: ExprId, tail: ExprId, ih: ExprId| -> ExprId {
             let nil_alpha = k.app(nil_const_lvl, alpha);
@@ -461,9 +500,28 @@ pub(super) fn declare_list_theorems(
             let rhs = apply_all(k, length_const, &[alpha, x]);
             eq_of(k, logic, one_lvl, nat_const, lhs, rhs)
         };
+        // Retired to `simp::list` (ADR-1591): `p(nil)` is
+        // `Eq (length (map f nil)) (length nil)`. LHS: `map f nil`
+        // rewrites (`map_nil`) to `nil` (at `beta`), lifted through the
+        // outer `length`, then `length nil` rewrites (`length_nil`) to
+        // `zero`. RHS: `length nil` rewrites (`length_nil`) to `zero`
+        // directly. `map_nil`'s result carrier is `List beta`, not `List
+        // alpha` -- `d.set_beta(beta)` before proving, since `alpha` and
+        // `beta` are genuinely different type variables here (unlike every
+        // other retirement in this file, which stays at one `alpha`).
         let base = |k: &mut Kernel| -> ExprId {
-            let zero_const = k.const_(logic.nat_zero, vec![]);
-            refl_of(k, logic, one_lvl, nat_const, zero_const)
+            let nil_alpha = nil_of(k, names.nil, zero_lvl, alpha);
+            let mapped_nil = apply_all(k, map_const, &[alpha, beta, f, nil_alpha]);
+            let lhs_lit = apply_all(k, length_const, &[beta, mapped_nil]);
+            let rhs_lit = apply_all(k, length_const, &[alpha, nil_alpha]);
+            let mut d = crate::simp::list::ListDev::new_list_only(k, logic, names, alpha);
+            d.set_beta(beta);
+            let rules = vec![
+                crate::simp::list::rule_map_nil(),
+                crate::simp::list::rule_length_nil(),
+            ];
+            crate::simp::list::prove_eq(&mut d, &rules, nat_const, lhs_lit, rhs_lit)
+                .unwrap_or_else(|e| panic!("length_map base case: simp::list declined: {e:?}"))
         };
         let step = |k: &mut Kernel, _head: ExprId, tail: ExprId, ih: ExprId| -> ExprId {
             let mapped_tail = apply_all(k, map_const, &[alpha, beta, f, tail]);

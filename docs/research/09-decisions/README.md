@@ -875,3 +875,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1588](adr-1588-a-setoid-flavored-alg-spine-for-creal.md) | a Setoid-flavored `AlgS.*` spine, so `CReal` can be an instance | accepted |
 | [1589](adr-1589-decide-and-a-then-first-combinator-close-the-tactic-layer.md) | `decide` and a `Then`/`First` combinator close the tactic layer | Accepted |
 | [1590](adr-1590-wiring-creal-and-complex-into-algs-and-deriving-alg-from-algs.md) | wiring `CReal`/`Complex` into `AlgS`, and deriving `Alg` from `AlgS` (amends ADR-1588) | accepted |
+| [1591](adr-1591-simp-over-list-and-the-tactic-layer-over-int-and-rat.md) | `simp` over `List`, and the tactic layer over ℤ and ℚ | Accepted |

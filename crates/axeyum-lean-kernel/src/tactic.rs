@@ -219,5 +219,8 @@ pub fn run<D: NatOps>(
     }
 }
 
+pub(crate) mod int;
+pub(crate) mod rat;
+
 #[cfg(test)]
 mod tests;
