@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2204,
+    "min_identity_bound": 2212,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16633,6 +16633,62 @@
       "statement_sha256": "37c0876082d26013cd35f2c31de310bc1c93a7901e8eeef91b68d1b3b3571bbd",
       "prose_sha256": "253183357bf2e41f8443b4f27d6a5e64acbcbefdc42f4c9ea7e13cad1735a0fe",
       "kernel_theorem": "Nat.Fin.val_mk"
+    },
+    {
+      "fact_id": "F:nat-finset-all-below-true-at",
+      "language": "lean4",
+      "statement_sha256": "209b0ba13fd0311172cae4e1b28b5c58b67f4b2cc400123e777549c400a55dad",
+      "prose_sha256": "ec139048f7b84e2fca72be51c43137ad3c3bf1d7031b6d37146c14a52215c080",
+      "kernel_theorem": "Nat.Finset.allBelow_true_at"
+    },
+    {
+      "fact_id": "F:nat-finset-card-eq-count-range-add",
+      "language": "lean4",
+      "statement_sha256": "b45cf14d5b9644dc4a4b8c9f217e5c52d6a89b83fbe16249634dbdc0af9c823f",
+      "prose_sha256": "ae5774dafd105d889f3f82724fce01904409fbb37045d5ffdb02ff22611e46a6",
+      "kernel_theorem": "Nat.Finset.card_eq_countRange_add"
+    },
+    {
+      "fact_id": "F:nat-finset-card-le-of-subset",
+      "language": "lean4",
+      "statement_sha256": "248e866ac4f9b6345152ce413c67cce365dc4419fbcdf147a1e20ee2cd95beb7",
+      "prose_sha256": "c19f0dc7d6393d0d476f372aa882be6d114450a5a5f061aff8141e7b06e8c369",
+      "kernel_theorem": "Nat.Finset.card_le_of_subsetB"
+    },
+    {
+      "fact_id": "F:nat-finset-card-totatives",
+      "language": "lean4",
+      "statement_sha256": "45d2e193dfc9c3a05dbd4dd59f9b822a7af0cfba630a1af8253a17bad345d2c2",
+      "prose_sha256": "94bd0fc23d5e9b79b58227053c53cb482f3f2f49b70a301ae12aa5055eedb5a7",
+      "kernel_theorem": "Nat.Finset.card_totatives"
+    },
+    {
+      "fact_id": "F:nat-finset-card-union-add-card-inter",
+      "language": "lean4",
+      "statement_sha256": "5d815d0b12bfcf666add61dfd2f4c1c3f71f909c480ef94dd88dc83aa6f94878",
+      "prose_sha256": "72dedf962d609db94fd934afddbe81e150a2cd93916f02985e85da7d4749f45a",
+      "kernel_theorem": "Nat.Finset.card_union_add_card_inter"
+    },
+    {
+      "fact_id": "F:nat-finset-sum-congr-of-beq",
+      "language": "lean4",
+      "statement_sha256": "b78b39fe6f665dc43c3dd18b37d09f704634bdf5708d7cbf491ce3b0fb6f06a6",
+      "prose_sha256": "e7fe3b41c3d969c2217c747ccb2d2fa468ff998c6c36f9b2fc1c512957a80d51",
+      "kernel_theorem": "Nat.Finset.sum_congr_of_beq"
+    },
+    {
+      "fact_id": "F:nat-finset-sum-eq-sum-range-if-add",
+      "language": "lean4",
+      "statement_sha256": "e8e6b45f6316a1bed4d075d43543b9f768094f5f1e92efd0ddc2f07a71688a3f",
+      "prose_sha256": "4b31e56bf5c49d95eb668c85c597476412b31ceb1f443c696a520dac58884f4c",
+      "kernel_theorem": "Nat.Finset.sum_eq_sumRangeIf_add"
+    },
+    {
+      "fact_id": "F:nat-finset-sum-union-disjoint",
+      "language": "lean4",
+      "statement_sha256": "974ad568755bae648e108c051444a6ba9540abe83bfb0244bca987f32116f6ee",
+      "prose_sha256": "b9a5fa1c9acac53df940fbd26ce2e127a3996837bcfb89f34bb2bbdf163baa48",
+      "kernel_theorem": "Nat.Finset.sum_union_disjoint"
     },
     {
       "fact_id": "F:nat-gauss-fold-sumrange-eq",

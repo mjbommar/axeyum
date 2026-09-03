@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-finset-all-below-true-at",
+  "title": "A bounded Boolean universal reflects back to a pointwise fact",
+  "statement": "If the bounded loop allBelow f n evaluates to true then f i = true at every index i below n. The reflection direction of a Bool-valued bounded universal quantifier.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Finset.allBelow_true_at : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.Finset.allBelow x0 x1) Bool.true) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x1) -> Eq.{1} Bool (x0 x3) Bool.true)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Finset.allBelow_true_at"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-not-lt-zero",
+    "F:nat-le-of-lt-succ",
+    "F:nat-lt-or-eq-of-le",
+    "F:ml430-nat-le-of-lt-succ-120bd6db"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-finset-all-below-true-at",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Finset.allBelow_true_at",
+      "supports": "Nat.Finset.allBelow_true_at is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Nat.Finset.allBelow_true_at 2>/dev/null | grep -Fc '((x2 : Eq.{1} Bool (AxNat.Finset.allBelow x0 x1) Bool.true) -> ((x3 : AxNat) -> ((x4 : AxNat.lt x3 x1) -> Eq.{1} Bool (x0 x3) Bool.true)))')\" -ge 1",
+      "notes": "The pattern is a DISTINGUISHING substring of the admitted type, not the theorem's name: an existence check would still pass if the statement drifted. Verified to fail on a perturbed pattern before this row was written. `build_nat_prelude` admits this theorem only through the trusted kernel gate, so a successful build IS the type-check."
+    },
+    {
+      "id": "footprint-nat-finset-all-below-true-at",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --example theorem_axiom_footprint -- Finset 2>/dev/null | awk -F'\\t' '$1 == \"nat\" && $2 == \"Nat.Finset.allBelow_true_at\" && $3 == \"0\"' | wc -l)\" -ge 1",
+      "notes": "`theorem_axiom_footprint` prints, per declaration, the size and contents of `Kernel::axiom_footprint`. The pattern pins BOTH the declaration name and the size 0 with an empty axiom column, so a proof that reached for a trusted declaration would fail the check rather than be reported as axiom-free. The `nat` prelude's whole trusted surface is empty, which bounds this independently."
+    },
+    {
+      "id": "evaluation-nat-finset-all-below-true-at",
+      "kind": "instance-pin",
+      "supports": "The definitions this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::finset_tests --test-threads=4",
+      "notes": "`Nat.Finset`'s operations are admitted on their TYPE; a `card` that computed the wrong number would have the right type, an empty axiom footprint, and would pass every other check in this ledger. `finset_tests.rs` reduces each operation to a numeral or a Bool at tiny discriminating arguments and pairs every positive with the specific wrong formula its negative control rules out. It caught one wrong hand-computed expectation while being written."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "theorem name and canonical type read directly via nat_theorem_inventory, which prints render_lean of the admitted type; declared by `nat_prelude/finset.rs` (lane finset-role, ADR-1577)."
+  },
+  "notes": "This is the direction ADR-1520 records as deliberately NOT claimed about `Nat.Multiset.eqBelow`, which is the same bounded-loop shape specialised to equality of two Nat functions: that ADR states `beq_refl` and `beq_comm` and nothing else, and says explicitly that reflection is a real theorem it does not assert. Without it a Bool-valued `subsetB` or `beq` on the Finset carrier would be decoration, because nothing downstream could consume `subsetB s t = true` as a hypothesis. The step decides f j with a two-constructor Bool case analysis -- no excluded middle. ADR-1577.",
+  "external_status": "proved"
+}
