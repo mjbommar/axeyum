@@ -1216,3 +1216,249 @@ pub(crate) fn declare_algebra_instances_all(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod algebra_instances_tests {
+    use super::*;
+    use crate::build_rat_prelude;
+
+    /// `Alg.monoidIdentUnique` applied at TWO CONCRETE carriers with fully
+    /// concrete numeral witnesses and existing lemma names as the hypothesis
+    /// -- the "instantiate concretely" half of
+    /// `docs/contributor-guide/kernel-proof-engineering.md`'s discipline.
+    /// `M` is typed `Alg.Monoid`, not `Alg.CommMonoid` -- no inheritance, so
+    /// the theorem needs a genuine `Monoid` value; built here inline from the
+    /// SAME underlying lemma constants the `CommMonoid` instances use (one
+    /// fewer field, `comm` dropped).
+    #[test]
+    fn monoid_ident_unique_applies_concretely_at_nat_add_and_rat_mul() {
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = p.int.nat;
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let thm = k.const_(p.algebra.monoid_ident_unique, vec![]);
+
+        // Nat: M := (Nat, add, 0) as a Monoid, e' := 0, h := Nat.add_zero.
+        let m = {
+            use structures::idx::monoid::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, OP};
+            let nat_ty = k.const_(np.nat, vec![]);
+            let add = k.const_(np.add, vec![]);
+            let zero = k.const_(np.zero, vec![]);
+            let assoc = k.const_(np.add_assoc, vec![]);
+            let ident_l = k.const_(np.zero_add, vec![]);
+            let ident_r = k.const_(np.add_zero, vec![]);
+            let mut args = vec![ExprId(0); IDENT_R + 1];
+            args[CARRIER] = nat_ty;
+            args[OP] = add;
+            args[E] = zero;
+            args[ASSOC] = assoc;
+            args[IDENT_L] = ident_l;
+            args[IDENT_R] = ident_r;
+            mk_instance(&mut k, &p.int.nat.structures.monoid, &args)
+        };
+        let zero = k.const_(np.zero, vec![]);
+        let h = k.const_(np.add_zero, vec![]);
+        let applied = {
+            let e1 = k.app(thm, m);
+            let e2 = k.app(e1, zero);
+            k.app(e2, h)
+        };
+        let ty = k.infer(applied).expect("nat instantiation must type-check");
+        let nat_ty = k.const_(np.nat, vec![]);
+        let expect = eq_of(&mut k, &np.logic, l1, nat_ty, zero, zero);
+        assert!(
+            k.def_eq(ty, expect),
+            "nat instantiation's type must be Eq Nat 0 0"
+        );
+
+        // Rat: M := (Rat, mul, 1) as a Monoid, e' := 1, h := Rat.mul_one.
+        let m2 = {
+            use structures::idx::monoid::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, OP};
+            let rat_ty = k.const_(p.int.rat, vec![]);
+            let mul = k.const_(p.int.rat_mul, vec![]);
+            let one = k.const_(p.one, vec![]);
+            let assoc = k.const_(p.mul_assoc, vec![]);
+            let comm = k.const_(p.mul_comm, vec![]);
+            let mul_one = k.const_(p.mul_one, vec![]);
+            let ident_l = derive_left_unit(
+                &mut k, &np.logic, l1, rat_ty, mul, one, comm, mul_one, 20_010, 20_011,
+            );
+            let mut args = vec![ExprId(0); IDENT_R + 1];
+            args[CARRIER] = rat_ty;
+            args[OP] = mul;
+            args[E] = one;
+            args[ASSOC] = assoc;
+            args[IDENT_L] = ident_l;
+            args[IDENT_R] = mul_one;
+            mk_instance(&mut k, &p.int.nat.structures.monoid, &args)
+        };
+        let one = k.const_(p.one, vec![]);
+        let h2 = k.const_(p.mul_one, vec![]);
+        let applied2 = {
+            let e1 = k.app(thm, m2);
+            let e2 = k.app(e1, one);
+            k.app(e2, h2)
+        };
+        let ty2 = k
+            .infer(applied2)
+            .expect("rat instantiation must type-check");
+        let rat_ty = k.const_(p.int.rat, vec![]);
+        let expect2 = eq_of(&mut k, &np.logic, l1, rat_ty, one, one);
+        assert!(
+            k.def_eq(ty2, expect2),
+            "rat instantiation's type must be Eq Rat 1 1"
+        );
+    }
+
+    /// `Alg.groupInvUnique` applied at TWO CONCRETE carriers (Int, Rat),
+    /// closed over symbolic elements `a b c` (`fun a b c => thm G a b c`) so
+    /// the check needs no `LocalContext` -- confirms the generic theorem
+    /// specializes and type-checks through each instance's selectors.
+    #[test]
+    fn group_inv_unique_applies_at_int_and_rat_instances() {
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+
+        for (g_name, carrier_const, label) in [
+            (p.algebra.int_add_group, p.int.z, "Int"),
+            (p.algebra.rat_add_group, p.int.rat, "Rat"),
+        ] {
+            let thm = k.const_(p.algebra.group_inv_unique, vec![]);
+            let g = k.const_(g_name, vec![]);
+            let carrier = k.const_(carrier_const, vec![]);
+            const A_FV: u64 = 30_000;
+            const B_FV: u64 = 30_001;
+            const C_FV: u64 = 30_002;
+            let closed = {
+                let a = k.fvar(A_FV);
+                let b = k.fvar(B_FV);
+                let c = k.fvar(C_FV);
+                let applied = {
+                    let e1 = k.app(thm, g);
+                    let e2 = k.app(e1, a);
+                    let e3 = k.app(e2, b);
+                    k.app(e3, c)
+                };
+                let v = lam_over(&mut k, C_FV, carrier, applied);
+                let v = lam_over(&mut k, B_FV, carrier, v);
+                lam_over(&mut k, A_FV, carrier, v)
+            };
+            k.infer(closed)
+                .unwrap_or_else(|e| panic!("{label} instantiation must type-check: {e:?}"));
+        }
+    }
+
+    /// `Alg.ringMulZero` applied at TWO CONCRETE carriers (Int, Rat), closed
+    /// over a symbolic `a`, and its type compared (also closed) against
+    /// `mul a zero = zero` with `mul`/`zero` iota-reduced through the
+    /// instance's own selectors.
+    #[test]
+    fn ring_mul_zero_applies_at_int_and_rat_instances() {
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+
+        for (r_name, carrier_const, label) in [
+            (p.algebra.int_ring, p.int.z, "Int"),
+            (p.algebra.rat_ring, p.int.rat, "Rat"),
+        ] {
+            let thm = k.const_(p.algebra.ring_mul_zero, vec![]);
+            let r = k.const_(r_name, vec![]);
+            let carrier = k.const_(carrier_const, vec![]);
+            const A_FV: u64 = 30_100;
+            let closed_value = {
+                let a = k.fvar(A_FV);
+                let applied = {
+                    let e1 = k.app(thm, r);
+                    k.app(e1, a)
+                };
+                lam_over(&mut k, A_FV, carrier, applied)
+            };
+            let ty = k
+                .infer(closed_value)
+                .unwrap_or_else(|e| panic!("{label} instantiation must type-check: {e:?}"));
+
+            use structures::idx::ring::{MUL, ZERO};
+            let closed_expected_ty = {
+                let a = k.fvar(A_FV);
+                let mul = sel(&mut k, &p.int.nat.structures.ring, MUL, r);
+                let zero = sel(&mut k, &p.int.nat.structures.ring, ZERO, r);
+                let mul_a_zero = app2(&mut k, mul, a, zero);
+                let eq = eq_of(&mut k, &p.int.nat.logic, l1, carrier, mul_a_zero, zero);
+                pi_over(&mut k, A_FV, carrier, eq)
+            };
+            assert!(
+                k.def_eq(ty, closed_expected_ty),
+                "{label}: mul a zero = zero"
+            );
+        }
+    }
+
+    /// THE PAYOFF TEST (ADR-1578). `Alg.commRingDetOne` instantiated at
+    /// `Rat.commRing` type-checks (closed over a symbolic matrix `A`);
+    /// separately, whether `detR Rat.commRing 1 A` is `def_eq` to
+    /// `Rat.det A 1` SYMBOLICALLY is measured and reported here rather than
+    /// assumed -- `detR` and `Rat.det` are two independently-built
+    /// `Nat.rec` instances (the `Nat.multichoose` boundary
+    /// `docs/contributor-guide/kernel-proof-engineering.md` names), so this
+    /// is exactly the case where "computes the same value" and "is the same
+    /// term" can come apart. Compared as `fun A => detR ... A` versus
+    /// `fun A => Rat.det A ...`, both closed over the SAME bound `A_FV`, so
+    /// no `LocalContext` is needed.
+    #[test]
+    fn comm_ring_det_one_instantiates_at_rat_and_the_agreement_with_rat_det_is_measured() {
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let thm = k.const_(p.algebra.comm_ring_det_one, vec![]);
+        let r = k.const_(p.algebra.rat_comm_ring, vec![]);
+
+        let nat_ty = k.const_(p.int.nat.nat, vec![]);
+        let rat_ty = k.const_(p.int.rat, vec![]);
+        let mat_ty = {
+            let row_ty = arrow(&mut k, nat_ty, rat_ty);
+            arrow(&mut k, nat_ty, row_ty)
+        };
+        const A_FV: u64 = 30_200;
+        let one_n = {
+            let c = k.const_(p.int.nat.succ, vec![]);
+            let zero_n = k.const_(p.int.nat.zero, vec![]);
+            k.app(c, zero_n)
+        };
+
+        let closed_applied = {
+            let a = k.fvar(A_FV);
+            let applied = {
+                let e1 = k.app(thm, r);
+                k.app(e1, a)
+            };
+            lam_over(&mut k, A_FV, mat_ty, applied)
+        };
+        k.infer(closed_applied)
+            .expect("Rat instantiation of commRingDetOne must type-check");
+
+        // Measure: is `detR R 1 A` def_eq to `Rat.det A 1` at a SYMBOLIC A?
+        let closed_det_r = {
+            let a = k.fvar(A_FV);
+            let c = k.const_(p.algebra.det_r, vec![]);
+            let e1 = k.app(c, r);
+            let e2 = k.app(e1, one_n);
+            let v = k.app(e2, a);
+            lam_over(&mut k, A_FV, mat_ty, v)
+        };
+        let closed_rat_det = {
+            let a = k.fvar(A_FV);
+            let c = k.const_(p.det, vec![]);
+            let e1 = k.app(c, a);
+            let v = k.app(e1, one_n);
+            lam_over(&mut k, A_FV, mat_ty, v)
+        };
+        let agree = k.def_eq(closed_det_r, closed_rat_det);
+        println!(
+            "ADR-1578 payoff measurement: detR(Rat.commRing, 1, A) def_eq Rat.det(A, 1) at a symbolic A = {agree}"
+        );
+        // Not asserted either way -- this is the measurement the ADR's
+        // Evidence section reports, not a pass/fail gate.
+    }
+}
