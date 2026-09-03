@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-pivot-section-of-is-echelon",
+  "title": "Row-echelon form implies the pivot section",
+  "statement": "For every matrix E : Nat -> Nat -> Rat and every rows, cols, IF Rat.isEchelon E rows cols is true THEN for every r with Nat.Lt r rows and Rat.nonzeroRowB E cols r true, Rat.pivotRowOfCol E rows cols (Rat.pivotColOfRow E cols r) equals r. This is the implication ADR-1562 section 2 identified as the residue of ADR-1554's obligation 4 -- 'the first row whose leading index is row r's is r itself' -- and which ADR-1574 made derivable by closing that obligation. Rat.nonzeroRowB E cols r = true IS Nat.ble (succ (Rat.leadingIndex E r cols)) cols = true, i.e. the row leads strictly inside the width, which is exactly the hypothesis the chain lemma needs to run down from r; every row above r then leads strictly left of it, so none can match, and the scan characterisation answers r. THE HYPOTHESIS IS A REAL CONSTRAINT: ADR-1562 exhibits [[1,0],[1,0]], two nonzero rows sharing leading index 0, where the section equation is FALSE at row 1 -- and Rat.isEchelon says false there, which is checked by reduction.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.pivotSection_of_isEchelon : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} Bool (Rat.isEchelon x0 x1 x2) Bool.true) -> ((x4 : AxNat) -> ((x5 : AxNat.lt x4 x1) -> ((x6 : Eq.{1} Bool (Rat.nonzeroRowB x0 x2 x4) Bool.true) -> Eq.{1} AxNat (Rat.pivotRowOfCol x0 x1 x2 (Rat.pivotColOfRow x0 x2 x4)) x4)))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-row-echelon-is-echelon",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:nat-lt-irrefl",
+    "F:rat-leading-index-strict-below"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-pivot-section-of-is-echelon-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex is anchored on the COMPOSITE round trip `Rat.pivotRowOfCol x0 x1 x2 (Rat.pivotColOfRow x0 x2 x4)` equalling `x4` -- the two maps in that order, with the row index recovered -- so the trivial equation between a leading index and a row index fails. It also pins the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.pivotSection_of_isEchelon[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.pivotRowOfCol x0 x1 x2 \\(Rat\\.pivotColOfRow x0 x2 x4\\)\\) x4\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. The registered evidence that the ANTECEDENT is not met by every matrix is in `rat_prelude/echelon_section_tests.rs`: ADR-1562 section 2 exhibits `[[1,0],[1,0]]` as the shape where the section equation is FALSE at row 1, and `Rat.isEchelon` reduces to `false` there while the same matrix REDUCED reduces to `true`. Without that pair the implication could be vacuous or could be deriving a false conclusion from a satisfied hypothesis."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about zero rows. The section equation is strictly weaker than echelon form -- ADR-1562 section 2 -- because it asserts nothing about zero rows sitting last, so this implication is genuinely one-way."
+}

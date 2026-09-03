@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-pivot-row-of-col-eq-of-first",
+  "title": "The pivot-row scan answers the first row with the given leading index",
+  "statement": "For every matrix E : Nat -> Nat -> Rat, every rows, cols, column index j and row r, IF Nat.Lt r rows AND no q below r has Rat.leadingIndex E q cols equal to j AND Rat.leadingIndex E r cols equals j, THEN Rat.pivotRowOfCol E rows cols j equals r -- and likewise for the fuelled form Rat.pivotRowSearchAux from any start, given the exclusion runs from that start and the fuel reaches r. This is the same shape as F:rat-leading-index-eq-of-first-nonzero: nothing before it matches, it matches, and the fuel reaches it. THE FUEL BOUND IS FORCED, because the scan's exhaustion answer is rows and r is in range, so an exhausted scan falsifies the conclusion. It is what turns a uniqueness statement about leading indices into a statement about the COMPUTED scan, which is what ADR-1562's pivot-section equation is phrased in terms of.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.pivotRowOfCol_eq_of_first : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.lt x4 x1) -> ((x6 : ((x6 : AxNat) -> ((x7 : AxNat.lt x6 x4) -> Not (Eq.{1} AxNat (Rat.leadingIndex x0 x6 x2) x3)))) -> ((x7 : Eq.{1} AxNat (Rat.leadingIndex x0 x4 x2) x3) -> Eq.{1} AxNat (Rat.pivotRowOfCol x0 x1 x2 x3) x4)))))))) ; theorem Rat.pivotRowSearchAux_eq_of_first : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat.le x6 x4) -> ((x8 : AxNat.lt x4 x1) -> ((x9 : AxNat.lt x4 (AxNat.add x6 x5)) -> ((x10 : ((x10 : AxNat) -> ((x11 : AxNat.le x6 x10) -> ((x12 : AxNat.lt x10 x4) -> Not (Eq.{1} AxNat (Rat.leadingIndex x0 x10 x2) x3))))) -> ((x11 : Eq.{1} AxNat (Rat.leadingIndex x0 x4 x2) x3) -> Eq.{1} AxNat (Rat.pivotRowSearchAux x0 x1 x2 x3 x5 x6) x4))))))))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-leading-index-eq-of-first-nonzero",
+    "F:logic-bool-false-ne-true",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:ml430-nat-le-refl-fd7d9e15",
+    "F:nat-beq-eq-true-of-eq",
+    "F:nat-le-trans",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-le-of-lt",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-succ-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-pivot-row-of-col-eq-of-first-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. Each regex pins the ANSWER `x4` -- the row the caller named -- against the scan term, so a statement concluding about `rows` (the scan's exhaustion answer) fails. They also pin the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.pivotRowSearchAux_eq_of_first[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.pivotRowSearchAux x0 x1 x2 x3 x5 x6\\) x4\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The fuel bound is forced and the failure it rules out is concrete: an exhausted scan answers `rows`, and the hypothesis `Nat.Lt r rows` says the answer must not be that. This is the same shape as F:rat-leading-index-eq-of-first-nonzero, deliberately -- the two searches in this family are characterised the same way."
+    },
+    {
+      "id": "rat-pivot-row-of-col-eq-of-first-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. Each regex pins the ANSWER `x4` -- the row the caller named -- against the scan term, so a statement concluding about `rows` (the scan's exhaustion answer) fails. They also pin the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.pivotRowOfCol_eq_of_first[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.pivotRowOfCol x0 x1 x2 x3\\) x4\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The fuel bound is forced and the failure it rules out is concrete: an exhausted scan answers `rows`, and the hypothesis `Nat.Lt r rows` says the answer must not be that. This is the same shape as F:rat-leading-index-eq-of-first-nonzero, deliberately -- the two searches in this family are characterised the same way."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about whether such an `r` exists. It is a characterisation of the scan GIVEN a witness, not an existence statement; F:rat-pivot-section-of-is-echelon is where the witness comes from."
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-leading-index-strict-below",
+  "title": "In echelon form a nonzero row's leading index beats every row above it",
+  "statement": "For every matrix E : Nat -> Nat -> Rat and every rows, cols, IF every adjacent row pair below rows passes Rat.echelonStepOk, THEN for every r with Nat.Lt r rows and Nat.Lt (Rat.leadingIndex E r cols) cols, and every q with Nat.Lt q r, Nat.Lt (Rat.leadingIndex E q cols) (Rat.leadingIndex E r cols). In words: adjacent strict increase, extended to distance. THE INDUCTION IS ON THE UPPER ROW, NOT ON THE DISTANCE BETWEEN THE TWO, and that choice is what keeps Nat.add and Nat.sub out of the statement entirely: the motive is 'for all q below r', the successor step splits Nat.Le q r' into Nat.Lt q r' (the induction hypothesis) and Eq q r' (the adjacent pair, verbatim), and no arithmetic on indices is ever formed. A distance induction would need r = q + d and then either a subtraction or an existential. The hypothesis that r leads inside the width travels DOWN the chain rather than being assumed at each level: at succ r' it plus the adjacent pair give the strict increase through F:rat-lt-of-echelon-step-ok, and that is what re-establishes it at r'.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.leadingIndex_strict_below : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt (AxNat.succ x3) x1) -> Eq.{1} Bool (Rat.echelonStepOk (Rat.leadingIndex x0 x3 x2) (Rat.leadingIndex x0 (AxNat.succ x3) x2) x2) Bool.true))) -> ((x4 : AxNat) -> ((x5 : AxNat.lt x4 x1) -> ((x6 : AxNat.lt (Rat.leadingIndex x0 x4 x2) x2) -> ((x7 : AxNat) -> ((x8 : AxNat.lt x7 x4) -> AxNat.lt (Rat.leadingIndex x0 x7 x2) (Rat.leadingIndex x0 x4 x2))))))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-lt-of-echelon-step-ok",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-le-trans",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-not-succ-le-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-leading-index-strict-below-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex pins the conclusion `AxNat.lt (Rat.leadingIndex x0 x7 x2) (Rat.leadingIndex x0 x4 x2)` -- the LOWER row index on the left -- so the statement with the two rows exchanged, which is false, fails. It also pins the axiom-footprint column at 0, which matters because a distance induction would have needed subtraction.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndex_strict_below[[:space:]]+0[[:space:]].*AxNat\\.lt \\(Rat\\.leadingIndex x0 x7 x2\\) \\(Rat\\.leadingIndex x0 x4 x2\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. The registered evidence that the hypothesis is real is in `rat_prelude/echelon_section_tests.rs`: at `[[1,0],[1,0]]`, two nonzero rows sharing leading index 0, `Rat.isEchelon` reduces to `false`, so the pair condition this lemma consumes does not hold there and the conclusion (which is false there) is not claimed."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing when row `r` is a ZERO row, whose leading index is `cols` by convention. `Nat.Lt (Rat.leadingIndex E r cols) cols` excludes that, and it must: below the last pivot every row reads `cols` and the strict increase genuinely stops."
+}

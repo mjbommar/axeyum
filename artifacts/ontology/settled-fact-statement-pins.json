@@ -21207,6 +21207,12 @@
       "kernel_theorem": "Rat.leadingIndex_pivotRowOfCol"
     },
     {
+      "fact_id": "F:rat-leading-index-strict-below",
+      "language": "lean4",
+      "statement_sha256": "97f666d750bf066aab2e727bc5e2ef0c528447602440ac3e78f347ed583b6d33",
+      "prose_sha256": "663477f72258cf7ae958f65354e81fdb18f1cebbf62308866d4117190a730812"
+    },
+    {
       "fact_id": "F:rat-left-distrib",
       "language": "lean4",
       "statement_sha256": "d664ef3c35dafa3d8ae2dfb7edfcddc546e6652804c15e4ce2aba9a9e088fd83",
@@ -21233,6 +21239,12 @@
           "prose_sha256": "25095f9d64fbfcc7bc761effb75f1ec0e374bdb8e6bc14e0b9458b28fcd91cda"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-lt-of-echelon-step-ok",
+      "language": "lean4",
+      "statement_sha256": "2924eda247c1b1ed723561725b8c9fbbd8c70f5b184efbd9db356c334651bf95",
+      "prose_sha256": "a56a56aba19d7414b60075ff567fc10ea2e099465cd15cc5cfd7e6c92653f61a"
     },
     {
       "fact_id": "F:rat-lt-of-le-of-lt",
@@ -22245,6 +22257,18 @@
       "kernel_theorem": "Rat.one_ne_zero"
     },
     {
+      "fact_id": "F:rat-pairs-of-is-echelon",
+      "language": "lean4",
+      "statement_sha256": "c8ee790d9c3633bfcb09cb7de1f3cb7492a0a12f724da60cd8626be627874f29",
+      "prose_sha256": "9d4d7821d84401cd226be60a8f8f577554ae89717c51d5d86dccce08eecf1c17"
+    },
+    {
+      "fact_id": "F:rat-pivot-row-of-col-eq-of-first",
+      "language": "lean4",
+      "statement_sha256": "2c2759b2ef0d1ed3e683c5febff5e96871342a9ae0467e76c91ea8295cf25944",
+      "prose_sha256": "b5f3b4dcb6772079a9ce69df48460439d27d51239a8c0c5bd4fe750fea682a38"
+    },
+    {
       "fact_id": "F:rat-pivot-row-of-col-lt-rows",
       "language": "lean4",
       "statement_sha256": "d3ef459aff14e732a7a96640ae8882a2a9931f851a4911c204032e6db77ee48e",
@@ -22277,6 +22301,12 @@
       "statement_sha256": "27b66fd66a54c0065eafee767035ee8fc1c04c707794c6d31a1eeca17179e62e",
       "prose_sha256": "50b94baaaaf04e1e701b6bb91f106fea74dbc77a7ea299a76ae09b45780beabe",
       "kernel_theorem": "Rat.pivotSearch_ne_zero"
+    },
+    {
+      "fact_id": "F:rat-pivot-section-of-is-echelon",
+      "language": "lean4",
+      "statement_sha256": "1495bb303f9f3442354aae355f4617e9c46fbcfc784c67d0f5c276be110ee1c6",
+      "prose_sha256": "4a79c797bc5be204158717803fc1e6b3c23bcf3dcae456d71495321def846bcd"
     },
     {
       "fact_id": "F:rat-polyeval-add",
@@ -22391,11 +22421,23 @@
       "kernel_theorem": "Rat.rankCols_le_cols"
     },
     {
+      "fact_id": "F:rat-rank-eq-rank-cols",
+      "language": "lean4",
+      "statement_sha256": "fa92c44d861984de0ef09a6f06a3532e366b3bb7b7063dc6fced501868703b48",
+      "prose_sha256": "710d52afd45e5d76312acc02d49fec4f9ae16dc6aad689e9289612411c8973db"
+    },
+    {
       "fact_id": "F:rat-rank-eq-rank-cols-of-pivot-section",
       "language": "lean4",
       "statement_sha256": "f300467874ccbae1e4a53a633258a900495db87bea077058f013ac2407b120b8",
       "prose_sha256": "37593612d774b9bb4fee9ea3091aa5a85b89e192937d4d4517ffec3d984b0359",
       "kernel_theorem": "Rat.rank_eq_rankCols_of_pivotSection"
+    },
+    {
+      "fact_id": "F:rat-rank-le-cols",
+      "language": "lean4",
+      "statement_sha256": "fa4ef27b1ddcead555ae16f2fc277f1b009c08711d8bd546be92fcc9704db6e6",
+      "prose_sha256": "effd96610717fa77fc15efe9112c89805eabf7fea7b5aeec550f0059100b6663"
     },
     {
       "fact_id": "F:rat-rank-le-cols-of-pivot-section",
@@ -22417,6 +22459,12 @@
       "statement_sha256": "c8ed3da8d8ba0f74e13e5d388a38229a515d1dffd32d1da14b11c1501f680bb1",
       "prose_sha256": "af5e424c0f40332ee45ca8a0f58848b428a5ccf99e2a1bbe44bfddd4d6af88bf",
       "kernel_theorem": "Rat.rank_nullity"
+    },
+    {
+      "fact_id": "F:rat-rank-nullity-rows",
+      "language": "lean4",
+      "statement_sha256": "99c6cb82a2b61d6a7a2b3864e484ecd45735fb4f039bb23e9741f201908e2804",
+      "prose_sha256": "b3a8b92871caafcdf1882c320c3c02d9daf68d0ddba9799b4f13c86a60d5846c"
     },
     {
       "fact_id": "F:rat-rank-nullity-rows-of-pivot-section",

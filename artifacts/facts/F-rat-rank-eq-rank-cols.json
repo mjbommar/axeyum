@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-eq-rank-cols",
+  "title": "Row rank equals column rank over the rationals",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every rows, cols, Eq Nat (Rat.rank M rows cols) (Rat.rankCols M rows cols) -- UNCONDITIONALLY. Rat.rank counts the NONZERO ROWS of the row-echelon form over [0, rows); Rat.rankCols counts the PIVOT COLUMNS over [0, cols). ADR-1558 measured this as the open bridge; ADR-1562 discharged it modulo one hypothesis, the pivot section; ADR-1574 closed ADR-1554's obligation 4 and F:rat-pivot-section-of-is-echelon discharges the hypothesis. This is the statement whose two sides are counted over DIFFERENT index ranges, which is why it needs a cross-bound counting law rather than a reindexing, and ADR-1562's finding was that pointing that law at the COLUMNS as the left-hand count makes its injectivity hypothesis free while pointing it at the rows makes it the whole obligation.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_eq_rankCols : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (Rat.rank x0 x1 x2) (Rat.rankCols x0 x1 x2))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-pivot-section-of-is-echelon",
+    "F:rat-rank-eq-rank-cols-of-pivot-section"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-eq-rank-cols-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex requires the type to have NO hypothesis between the three binders and the conclusion, which is the whole difference from F:rat-rank-eq-rank-cols-of-pivot-section: it pins the conclusion immediately after `(x2 : AxNat) ->` with the closers of exactly three binders, so the conditional form does not match. It also pins the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.rank_eq_rankCols[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.rank x0 x1 x2\\) \\(Rat\\.rankCols x0 x1 x2\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. The registered evaluation test in `rat_prelude/echelon_section_tests.rs` reduces `Rat.rank` and `Rat.rankCols` at `[[1,2],[2,4]]` (both 1) and `[[0,1],[2,3]]` (both 2, and the reduction needs the pivot swap), each against a hand-computed numeral with a control that must NOT be `def_eq` -- so a `rank` that always answered `rows`, or always `0`, fails one of the pair. The theorem is then applied at fully free arguments with no hypothesis."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about rank being invariant under the elementary ROW operations. ADR-1555 measured that separately and found the row form needs `funext`; this fact identifies two COUNTS of one reduced matrix and says nothing about a different matrix."
+}

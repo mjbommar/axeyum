@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-lt-of-echelon-step-ok",
+  "title": "Passing the echelon step test with the lower row inside the width forces a strict increase",
+  "statement": "For all natural numbers l1, l2 and cols, IF Rat.echelonStepOk l1 l2 cols is true AND Nat.Lt l2 cols THEN Nat.Lt l1 l2. In words: the test is a disjunction, and passing it says only that ONE disjunct held; the second disjunct requires Nat.Le cols l2, so a second row whose leading index is genuinely inside the width forces the FIRST. This is the converse direction of F:rat-echelon-step-ok-of-lt and it is not free: both Bool splits have to be REFUTED rather than closed, one against Nat.Lt l2 cols and one against Bool.false_ne_true. THE SECOND HYPOTHESIS IS LOAD-BEARING: at l1 = l2 = cols the test passes by its second disjunct and the conclusion Nat.Lt cols cols is false.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.lt_of_echelonStepOk : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : Eq.{1} Bool (Rat.echelonStepOk x0 x1 x2) Bool.true) -> ((x4 : AxNat.lt x1 x2) -> AxNat.lt x0 x1)))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-echelon-step-ok-of-lt",
+    "F:logic-bool-false-ne-true",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:nat-lt-irrefl",
+    "F:nat-lt-of-lt-of-le"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-lt-of-echelon-step-ok-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex pins the conclusion `AxNat.lt x0 x1` -- the ORDER of the two leading indices -- and the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.lt_of_echelonStepOk[[:space:]]+0[[:space:]].*AxNat\\.lt x0 x1\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. Spent once, inside F:rat-leading-index-strict-below's successor step. The second hypothesis is load-bearing and its failure mode is concrete: at l1 = l2 = cols the test passes by its SECOND disjunct while the conclusion Nat.Lt cols cols is false, which is exactly the two-adjacent-zero-rows case F:rat-echelon-step-ok-both-cols covers."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing when the second row is a zero row. That is not a gap -- it is the case the second disjunct exists for, and the chain lemma only ever calls this where the row below leads inside the width."
+}

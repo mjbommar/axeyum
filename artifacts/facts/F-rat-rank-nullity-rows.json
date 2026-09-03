@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-nullity-rows",
+  "title": "Rank-nullity over the rationals, in the row form",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every rows, cols, Eq Nat (Nat.add (Rat.rank M rows cols) (Rat.nullity M rows cols)) cols -- UNCONDITIONALLY. ADR-1558 landed rank-nullity in the COLUMN form (F:rat-rank-nullity, rankCols + nullity = cols), which is a partition of the column range and needs nothing about echelon form; the ROW form is that theorem with rankCols rewritten to rank across F:rat-rank-eq-rank-cols and nothing else. The two forms are genuinely different statements: rank counts nonzero ROWS of the reduced matrix and rankCols counts pivot COLUMNS, and identifying them is the content of the bridge.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_nullity_rows : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (Rat.rank x0 x1 x2) (Rat.nullity x0 x1 x2)) x2)))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-rank-eq-rank-cols",
+    "F:rat-pivot-section-of-is-echelon",
+    "F:rat-rank-nullity-rows-of-pivot-section"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-nullity-rows-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex pins the LEFT summand as `Rat.rank` and not `Rat.rankCols` -- the column form F:rat-rank-nullity was already free and is a different statement -- and requires no hypothesis binder. It also pins the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.rank_nullity_rows[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(AxNat\\.add \\(Rat\\.rank x0 x1 x2\\) \\(Rat\\.nullity x0 x1 x2\\)\\) x2\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. Checked AT THE NUMBERS as well as symbolically in `rat_prelude/echelon_section_tests.rs`: `rank + nullity` reduces to the column count at `[[1,2],[2,4]]` (1 + 1) and at `[[0,1],[2,3]]` (2 + 0), and the free-variable application carries a control refusing the column form."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about the solution set of a linear system. `Rat.nullity` is defined as the count of NON-pivot columns, so this is a partition of the column range identified with a count of nonzero rows; connecting it to a kernel dimension is a separate construction that does not exist here."
+}

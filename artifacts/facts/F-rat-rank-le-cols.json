@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-rank-le-cols",
+  "title": "The rank of a rational matrix is at most its column count",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every rows, cols, Nat.Le (Rat.rank M rows cols) cols -- UNCONDITIONALLY. ADR-1555 recorded this as open and explained why it is not free the way Nat.Le (Rat.rank M rows cols) rows is: rank is an UNCAPPED count of nonzero rows over [0, rows), so the row bound is immediate from the counting range while the column bound is a statement about the echelon form. It is transported from the free bound on Rat.rankCols across F:rat-rank-eq-rank-cols.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rank_le_cols : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> AxNat.le (Rat.rank x0 x1 x2) x2)))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-rank-eq-rank-cols",
+    "F:rat-pivot-section-of-is-echelon",
+    "F:rat-rank-le-cols-of-pivot-section"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-rank-le-cols-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex pins `AxNat.le (Rat.rank x0 x1 x2) x2` -- the bound against the COLUMN count `x2` and not the row count `x1`, which is F:rat-rank-le-rows and was already free -- and requires no hypothesis binder, which is the difference from F:rat-rank-le-cols-of-pivot-section.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.rank_le_cols[[:space:]]+0[[:space:]].*AxNat\\.le \\(Rat\\.rank x0 x1 x2\\) x2\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. The registered test applies it at free arguments and carries an explicit control refusing the ROW bound, because the two differ by one variable and the row bound is the easy one."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_section.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_section_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about rank being ATTAINED. It is an upper bound; F:rat-rank-nullity-rows is what pins the deficit exactly."
+}

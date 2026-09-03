@@ -1,12 +1,15 @@
-# ADR-1574: obligation 4 closes — Gaussian elimination lands in row-echelon form, and the exit derivation folds into the induction
+# ADR-1574: obligation 4 closes, the ADR-1562 bridge goes unconditional, and the exit derivation folds into the induction
 
 Status: accepted
 Date: 2026-09-02
 Index-summary: **`Rat.rowEchelon_isEchelon` is proved, axiom-free**, closing
 ADR-1554's **obligation 4** — the last of its four and the one ADR-1554 sized
-as *"at least a lane on its own and probably two"*. Twelve axiom-free `Rat`
-declarations in `rat_prelude/echelon_invariant.rs`, seven facts. Four things
-are decided or measured. (1) **The exit derivation is not a second induction.**
+as *"at least a lane on its own and probably two"* — **and the ADR-1562 bridge
+is now unconditional**: `Rat.rank_eq_rankCols`, `Rat.rank_le_cols` and
+`Rat.rank_nullity_rows` (rank-nullity in the ROW form) hold with no hypothesis
+at all. Twenty-two axiom-free `Rat` declarations across
+`rat_prelude/echelon_invariant.rs` and `rat_prelude/echelon_section.rs`,
+fifteen facts. Five things are decided or measured. (1) **The exit derivation is not a second induction.**
 ADR-1571 §3 listed the invariant's preservation and the exit as two; carrying
 `isEchelon … = true` itself as the conclusion at every fuel level makes it
 **one**, because each of the three leaves that stop the loop discharges the
@@ -25,7 +28,12 @@ else, while an inline Pi in each theorem's own type cannot. Two prerequisites
 ADR-1571's table did not predict were needed and are landed:
 `Rat.leadingIndex_congr_row` (pointwise row agreement gives an equal leading
 index, so the placed prefix survives a step **without `funext`**) and
-`Rat.pivotSearch_ge_start`.
+`Rat.pivotSearch_ge_start`. (5) **The gap from `isEchelon` to ADR-1562's pivot
+section is a CHAIN, and the induction goes on the UPPER ROW rather than on the
+distance between the two rows** — which keeps `Nat.add` and `Nat.sub` out of
+`Rat.leadingIndex_strict_below` entirely, because the successor step splits
+`Le q r'` into the induction hypothesis and the adjacent pair and never forms
+an index-arithmetic term.
 Index-status: accepted
 
 Related: ADR-1554 (the row-echelon form and its four obligations), ADR-1571
@@ -197,30 +205,69 @@ positions the two sides are literally the same term. Generalisable: **when two
 sides of an equation differ only at a fixed set of positions, rewrite at those
 positions instead of case-splitting on what surrounds them.**
 
+### 6. From `isEchelon` to the pivot section: a chain, and a scan characterisation
+
+`isEchelon` checks ADJACENT pairs. ADR-1562 §2's section equation needs row
+`r`'s leading index to differ from that of EVERY row above it. Three lemmas
+close that gap and each carries its own finding.
+
+**`Rat.pairs_of_isEchelon`** reads the pair condition back out of the computed
+`Bool`. Its `…Aux` form needs a fuel bound where `Rat.isEchelon_of_pairs`
+needed none, and **that asymmetry is ADR-1571 §2's rule seen from both sides at
+once**: an exhausted scan answers `true`, which SATISFIES the forward conclusion
+and FALSIFIES this one, because this direction concludes something about a pair
+the scan may never have reached. The two facts sit in the ledger as a pair, so
+the rule is visible there and not only in prose.
+
+**`Rat.lt_of_echelonStepOk`** decodes the test. Passing it says only that ONE
+disjunct held; the second requires `Le cols l2`, so a second row leading
+strictly inside the width forces the first. Both `Bool` splits are REFUTED
+rather than closed — one against `Lt l2 cols`, one against
+`Bool.false_ne_true` — which is what makes it the expensive direction relative
+to `Rat.echelonStepOk_of_lt`.
+
+**`Rat.leadingIndex_strict_below`** is the chain, and **the induction is on the
+UPPER ROW, not on the distance between the two rows**. That is the finding worth
+carrying: the motive is `∀ q, Lt q r → …`, the successor step splits `Le q r'`
+into `Lt q r'` (the induction hypothesis) and `Eq q r'` (the adjacent pair,
+verbatim), and **no arithmetic on indices is ever formed**. A distance induction
+would need `r = q + d` and then either a `Nat.sub` or an existential, and the
+proof would carry `Nat.add` through the motive. The hypothesis
+`Lt (leadingIndex E r cols) cols` travels DOWN the chain rather than being
+assumed at each level: at `succ r'` it plus the adjacent pair give the strict
+increase, and that re-establishes it at `r'`.
+
+After those, `Rat.pivotRowOfCol_eq_of_first` turns uniqueness of the leading
+index into a statement about the COMPUTED scan. It is the same shape as
+`Rat.leadingIndexAux_eq_of_first_nonzero` — *nothing before it matches, it
+matches, and the fuel reaches it* — deliberately, because the two searches in
+this family should be characterised the same way. Its fuel bound is forced:
+the scan's exhaustion answer is `rows` and the row it must return is in range.
+
+**The antecedent is checked to be a real constraint.** ADR-1562 §2 exhibits
+`[[1,0],[1,0]]` — two nonzero rows sharing leading index `0` — where the section
+equation is false at row 1. `Rat.isEchelon` reduces to `false` there, and the
+same matrix REDUCED reduces to `true`. Without that pair the implication could
+be vacuous, or worse, could be deriving a false conclusion from a satisfied
+hypothesis.
+
 ## Consequences
 
 - **ADR-1554's obligation 4 is closed and all four obligations are now
   complete.** `Rat.rowEchelon_isEchelon : ∀ M rows cols, isEchelon (rowEchelon M
   rows cols) rows cols = true`, axiom-free in all four rational preludes, with
   no hypothesis on `M` or the dimensions.
-- **The ADR-1562 bridge is NOT yet unconditional, and this is the honest
-  statement of what remains.** `Rat.rank_eq_rankCols`, `Rat.rank_le_cols` and
-  the row-form rank-nullity are still `_of_pivotSection`. Echelon form implies
-  the section equation, but the implication is a separate statement and needs
-  two more things: a chain argument turning ADJACENT strict increase into
-  distinctness at a distance (`isEchelon` gives adjacency only), and a
-  "first index satisfying the predicate" characterisation of
-  `Rat.pivotRowSearchAux` analogous to
-  `Rat.leadingIndexAux_eq_of_first_nonzero`. **Neither is landed.** A reader who
-  wants the unconditional forms should read ADR-1562 §2 for the equation still
-  owed; what has changed is that the equation is now derivable rather than
-  blocked on an open obligation.
+- **The ADR-1562 bridge is unconditional.** `Rat.rank_eq_rankCols`,
+  `Rat.rank_le_cols` and `Rat.rank_nullity_rows` hold for every matrix and every
+  pair of dimensions, with no hypothesis. The implication `isEchelon` ⇒ the
+  section equation is `Rat.pivotSection_of_isEchelon`, and §6 records what it
+  needed.
 - **The dominance document's rank row.** ADR-1571 corrected it from "no `rank`
   function at all" to "built, with one open equation between its two forms".
-  That is still the accurate statement — obligation 4 closing does not by itself
-  close the equation — and it is left as ADR-1571 wrote it.
+  **That equation is now closed**, and a referee checking the row should read
+  `Rat.rank_eq_rankCols` — unconditional, axiom-free, four preludes.
 - **ADR-0603 grading for everything landed here**: row 1 is the general
-  constructive form (the seven facts); row 2 is **empty by proof**, as for the
+  constructive form (the fifteen facts); row 2 is **empty by proof**, as for the
   whole family — the order on ℚ is decidable, every predicate here is total and
   `Bool`-valued, and there is no Markov-style boundary to refute; row 3 is
   `rat_prelude/echelon_invariant_tests.rs`, which reduces `Rat.isEchelon` to
@@ -239,8 +286,13 @@ positions instead of case-splitting on what surrounds them.**
   section still needs the leading indices of the placed rows to be pairwise
   distinct, which is the same invariant, and it would leave `isEchelon` —
   the predicate ADR-1554 named as the obligation and the one a referee reads —
-  unproved. Proving the stronger statement costs the two disjunct lemmas and
-  `isEchelon_of_pairs`, and nothing else.
+  unproved. What proving the stronger statement actually cost, on top of the
+  invariant, was the five lemmas of §6 and nothing else.
+- **A distance induction for the chain.** `∀ d q, … → Lt (li q) (li (q + d))` is
+  the shape the statement suggests, and it forces `Nat.add` into the motive and
+  a `Nat.sub` or an existential at the use site, since the caller has `Lt q r`
+  and not `r = q + d`. Inducting on the upper row costs nothing and keeps index
+  arithmetic out of the family entirely.
 - **Stating H1 as strict increase over all pairs of placed rows.** It is true and
   it is more than the exit needs; `isEchelon` asks only about adjacent pairs, so
   the extra strength would have to be re-derived downward at three leaves instead
