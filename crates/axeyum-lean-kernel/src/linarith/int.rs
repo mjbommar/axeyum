@@ -55,7 +55,9 @@ use crate::NatOps;
 use crate::expr::ExprId;
 use crate::int_prelude::ops::IntDev;
 
-use super::{Certificate, Coeff, Decline, LinForm, find_certificate, find_refutation};
+use super::{
+    Certificate, Coeff, Decline, LinForm, MAX_MULTIPLIER, find_certificate, find_refutation,
+};
 
 /// One summand of a canonical additive form over ℤ.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -224,8 +226,41 @@ impl Problem {
                 // docs say so.
                 return Ok(LinForm::atom(self.atom_index(e)));
             }
+            // A literal multiplier's own range check happens here; neither
+            // factor being a literal falls through to the opaque atom below.
+            if name == p.mul
+                && args.len() == 2
+                && let Some((base, k, _commuted)) = self.mul_literal(d, args[0], args[1])
+            {
+                if !(0..=MAX_MULTIPLIER).contains(&k) {
+                    // A literal multiplier outside the unrollable range:
+                    // decline rather than grow the proof term, matching
+                    // the certificate search's own reason for the bound.
+                    return Err(Decline::NonLinear);
+                }
+                let b = self.parse_term(d, base)?;
+                return b.checked_scale(k).ok_or(Decline::SearchBudget);
+            }
         }
         Ok(LinForm::atom(self.atom_index(e)))
+    }
+
+    /// If either operand of a `mul` is a literal integer, `Some((other, k,
+    /// literal_was_on_the_left))`. `None` when neither side is a literal — the
+    /// genuinely nonlinear case this fragment still abstracts to an atom.
+    fn mul_literal(
+        &self,
+        d: &mut IntDev<'_>,
+        u: ExprId,
+        v: ExprId,
+    ) -> Option<(ExprId, Coeff, bool)> {
+        if let Some(k) = self.int_numeral(d, v) {
+            return Some((u, k, false));
+        }
+        if let Some(k) = self.int_numeral(d, u) {
+            return Some((v, k, true));
+        }
+        None
     }
 
     /// Whether `e` is an atom or a literal — the two shapes `neg` distributes
@@ -395,6 +430,17 @@ impl Problem {
                 let items = vec![Item::Neg(index)];
                 return Ok((items, d.irefl(e)));
             }
+            // Mirrors `parse_term`'s mul handling: a literal outside the
+            // range declines, neither factor literal falls through to atom.
+            if name == p.mul
+                && args.len() == 2
+                && let Some((base, k, commuted)) = self.mul_literal(d, args[0], args[1])
+            {
+                if !(0..=MAX_MULTIPLIER).contains(&k) {
+                    return Err(Decline::NonLinear);
+                }
+                return self.flatten_mul_unrolled(d, base, k, commuted);
+            }
         }
         let index = self.atom_index(e);
         Ok((vec![Item::Pos(index)], d.irefl(e)))
@@ -424,6 +470,106 @@ impl Problem {
         let step3 = self.reassoc(d, &iu, &iv);
         let proof = d.itrans(source, joined, target, p12, step3);
         Ok((items, proof))
+    }
+
+    /// `Eq (mul base (ofNat (succ n))) (add (mul base (ofNat n)) base)` — the
+    /// "`mul_succ`" step this prelude does not name directly. `Int.mul` does
+    /// not ι-reduce at a literal multiplier (unlike `Nat.mul`), so this is a
+    /// real lemma chain rather than a free unfold: `ofNat (succ n)` is
+    /// definitionally `add (ofNat n) (ofNat 1)` (pure ι/δ on `Nat.add`'s
+    /// right-recursion and `Int.add`'s `ofNat`/`ofNat` case, no lemma spent),
+    /// then `left_distrib` splits the product over that sum and `mul_one`
+    /// collapses the unit factor.
+    fn mul_succ_step(&self, d: &mut IntDev<'_>, base: ExprId, n_nat: ExprId) -> ExprId {
+        let p = self.prelude;
+        let one_nat = d.num(1);
+        let one_int = d.of_nat(one_nat);
+        let n_int = d.of_nat(n_nat);
+        let succ_n_nat = d.succ(n_nat);
+        let succ_n_int = d.of_nat(succ_n_nat);
+        let n_plus_one = d.iadd(n_int, one_int);
+
+        let lhs0 = d.imul(base, succ_n_int);
+        let rhs0 = d.imul(base, n_plus_one);
+        let step0 = d.irefl(rhs0);
+
+        let mul_base_n = d.imul(base, n_int);
+        let mul_base_one = d.imul(base, one_int);
+        let joined = d.iadd(mul_base_n, mul_base_one);
+        let distrib = d.const_app(p.left_distrib, &[base, n_int, one_int]);
+
+        let one_step = d.const_app(p.mul_one, &[base]);
+        let target = d.iadd(mul_base_n, base);
+        let cong = d.icongr(mul_base_one, base, one_step, &|d, x| d.iadd(mul_base_n, x));
+
+        let step_a = d.itrans(lhs0, rhs0, joined, step0, distrib);
+        d.itrans(lhs0, joined, target, step_a, cong)
+    }
+
+    /// `mul base (ofNat count)` unrolled into repeated addition, for a
+    /// literal `count` bounded by [`MAX_MULTIPLIER`] — every copy costs a real
+    /// lemma application ([`Self::mul_succ_step`]), unlike ℕ where the same
+    /// unrolling is free by ι-reduction, which is why the bound matters here.
+    /// `commuted` says the literal was on the left in the source term
+    /// (`k * base` rather than `base * k`), needing one extra `mul_comm`.
+    fn flatten_mul_unrolled(
+        &mut self,
+        d: &mut IntDev<'_>,
+        base: ExprId,
+        count: Coeff,
+        commuted: bool,
+    ) -> Result<(Vec<Item>, ExprId), Decline> {
+        let count_u32 = u32::try_from(count).map_err(|_| Decline::NonLinear)?;
+        let (ib, pb) = self.flatten(d, base)?;
+        let fb = self.fold(d, &ib);
+
+        let zero_nat = d.num(0);
+        let zero_int = d.of_nat(zero_nat);
+        let mul_zero_term = d.imul(base, zero_int);
+        let mut current_items: Vec<Item> = vec![Item::Const(0)];
+        let mut current = self.fold(d, &current_items);
+        let mul_zero_proof = d.const_app(self.prelude.mul_zero, &[base]);
+        let bridge = d.irefl(current);
+        let mut proof = d.itrans(mul_zero_term, zero_int, current, mul_zero_proof, bridge);
+
+        for j in 0..count_u32 {
+            let j_nat = d.num(j);
+            let j_int = d.of_nat(j_nat);
+            let mul_base_j = d.imul(base, j_int);
+            let step_j = self.mul_succ_step(d, base, j_nat);
+            let succ_j_nat = d.succ(j_nat);
+            let succ_j_int = d.of_nat(succ_j_nat);
+            let mul_base_succj = d.imul(base, succ_j_int);
+
+            let joined2 = d.iadd(mul_base_j, base);
+            let widen = d.icongr(mul_base_j, current, proof, &|d, x| d.iadd(x, base));
+            let mid = d.iadd(current, base);
+            let base_step = d.icongr(base, fb, pb, &|d, x| d.iadd(current, x));
+            let mid2 = d.iadd(current, fb);
+            let p1 = d.itrans(joined2, mid, mid2, widen, base_step);
+
+            let reassoc_pf = self.reassoc(d, &current_items, &ib);
+            let mut next_items = current_items.clone();
+            next_items.extend_from_slice(&ib);
+            let next = self.fold(d, &next_items);
+            let p2 = d.itrans(joined2, mid2, next, p1, reassoc_pf);
+
+            proof = d.itrans(mul_base_succj, joined2, next, step_j, p2);
+            current = next;
+            current_items = next_items;
+        }
+
+        if !commuted {
+            return Ok((current_items, proof));
+        }
+        let p = self.prelude;
+        let count_nat = d.num(count_u32);
+        let count_int = d.of_nat(count_nat);
+        let source = d.imul(count_int, base);
+        let flipped = d.imul(base, count_int);
+        let comm = d.const_app(p.mul_comm, &[count_int, base]);
+        let full = d.itrans(source, flipped, current, comm, proof);
+        Ok((current_items, full))
     }
 
     /// `Eq (add (fold left) (fold right)) (fold (left ++ right))`.
