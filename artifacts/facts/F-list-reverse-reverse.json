@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "id": "F:list-reverse-reverse",
+  "title": "Reversing a list twice recovers the original",
+  "statement": "Reversing a list twice recovers the original list.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.reverse x0 (List.reverse x0 x1)) x1))",
+    "fragment": "List",
+    "kernel_theorem": "List.reverse_reverse"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:list-reverse-append"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-reverse-reverse",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.reverse_reverse",
+      "supports": "List.reverse_reverse is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.reverse_reverse 2>/dev/null | grep -Fc '((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.reverse x0 (List.reverse x0 x1)) x1))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check. build_list_nat_bridge admits this theorem only through the trusted kernel gate, so a successful build IS the type-check."
+    },
+    {
+      "id": "footprint-list-reverse-reverse",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::list_prelude_tests::the_list_prelude_declares_no_axioms --test-threads=1",
+      "notes": "list_prelude::list_prelude_tests::the_list_prelude_declares_no_axioms asserts Kernel::axiom_footprint(name).is_empty() for this declaration (among others in the same coverage sweep), read directly from the kernel rather than asserted from a list."
+    },
+    {
+      "id": "evaluation-list-reverse-reverse",
+      "kind": "instance-pin",
+      "supports": "The List operations this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "list_prelude_tests.rs and bridge_tests.rs reduce List.length/append/map/foldr/reverse/sum/toMultiset/count to a concrete numeral or nil/cons skeleton at tiny discriminating arguments and pair every positive with the specific wrong formula its negative control rules out."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_prelude",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude.rs/theorems.rs/bridge.rs (lane list-carrier-1, ADR-1579)."
+  },
+  "notes": "Chains reverse_append (at reverse tail, singleton) with a congr step through the outer induction hypothesis; both ends bridged by defeq collapsing `reverse (cons head nil)` to `cons head nil`. ADR-1579.",
+  "external_status": "proved"
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:list-length-append",
+  "title": "The length of an append is the sum of the two lengths",
+  "statement": "For lists of naturals, the length of the concatenation of l1 and l2 equals the sum of their individual lengths.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> Eq.{1} AxNat (List.length x0 (List.append x0 x1 x2)) (AxNat.add (List.length x0 x1) (List.length x0 x2)))))",
+    "fragment": "List",
+    "kernel_theorem": "List.length_append"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-zero-add",
+    "F:nat-succ-add"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-length-append",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.length_append",
+      "supports": "List.length_append is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.length_append 2>/dev/null | grep -Fc '((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> Eq.{1} AxNat (List.length x0 (List.append x0 x1 x2)) (AxNat.add (List.length x0 x1) (List.length x0 x2)))))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check. build_list_nat_bridge admits this theorem only through the trusted kernel gate, so a successful build IS the type-check."
+    },
+    {
+      "id": "footprint-list-length-append",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::bridge::bridge_tests::the_bridge_theorems_declare_no_axioms --test-threads=1",
+      "notes": "list_prelude::bridge::bridge_tests::the_bridge_theorems_declare_no_axioms asserts Kernel::axiom_footprint(name).is_empty() for this declaration (among others in the same coverage sweep), read directly from the kernel rather than asserted from a list."
+    },
+    {
+      "id": "evaluation-list-length-append",
+      "kind": "instance-pin",
+      "supports": "The List operations this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "list_prelude_tests.rs and bridge_tests.rs reduce List.length/append/map/foldr/reverse/sum/toMultiset/count to a concrete numeral or nil/cons skeleton at tiny discriminating arguments and pair every positive with the specific wrong formula its negative control rules out."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_nat_bridge",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude.rs/theorems.rs/bridge.rs (lane list-carrier-1, ADR-1579)."
+  },
+  "notes": "Needs Nat.zero_add (nil case) and Nat.succ_add (cons case) since this prelude's Nat.add recurses on its RIGHT argument, so `0 + x` and `succ a + x` do not reduce for symbolic x by defeq alone. Declared in the List/Nat bridge, after build_nat_prelude, for exactly this reason.",
+  "external_status": "proved"
+}
