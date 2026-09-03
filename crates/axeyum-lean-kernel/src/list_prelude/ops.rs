@@ -66,6 +66,97 @@ pub(crate) fn list_of(
     kernel.app(c, alpha)
 }
 
+/// `List.nil.{0} alpha : List alpha`.
+pub(crate) fn nil_of(kernel: &mut Kernel, nil: NameId, zero_lvl: LevelId, alpha: ExprId) -> ExprId {
+    let c = kernel.const_(nil, vec![zero_lvl]);
+    kernel.app(c, alpha)
+}
+
+/// `List.cons.{0} alpha head tail : List alpha`.
+pub(crate) fn cons_of(
+    kernel: &mut Kernel,
+    cons: NameId,
+    zero_lvl: LevelId,
+    alpha: ExprId,
+    head: ExprId,
+    tail: ExprId,
+) -> ExprId {
+    let c = kernel.const_(cons, vec![zero_lvl]);
+    apply_all(kernel, c, &[alpha, head, tail])
+}
+
+/// `List.append alpha l1 l2 : List alpha`.
+pub(crate) fn append_of(
+    kernel: &mut Kernel,
+    append: NameId,
+    alpha: ExprId,
+    l1: ExprId,
+    l2: ExprId,
+) -> ExprId {
+    let c = kernel.const_(append, vec![]);
+    apply_all(kernel, c, &[alpha, l1, l2])
+}
+
+/// `List.reverse alpha l : List alpha`.
+pub(crate) fn reverse_of(kernel: &mut Kernel, reverse: NameId, alpha: ExprId, l: ExprId) -> ExprId {
+    let c = kernel.const_(reverse, vec![]);
+    apply_all(kernel, c, &[alpha, l])
+}
+
+/// `List.length alpha l : Nat`.
+pub(crate) fn length_of(kernel: &mut Kernel, length: NameId, alpha: ExprId, l: ExprId) -> ExprId {
+    let c = kernel.const_(length, vec![]);
+    apply_all(kernel, c, &[alpha, l])
+}
+
+/// `List.map alpha beta f l : List beta`.
+pub(crate) fn map_of(
+    kernel: &mut Kernel,
+    map: NameId,
+    alpha: ExprId,
+    beta: ExprId,
+    f: ExprId,
+    l: ExprId,
+) -> ExprId {
+    let c = kernel.const_(map, vec![]);
+    apply_all(kernel, c, &[alpha, beta, f, l])
+}
+
+/// `List.foldr alpha beta f z l : beta`.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn foldr_of(
+    kernel: &mut Kernel,
+    foldr: NameId,
+    alpha: ExprId,
+    beta: ExprId,
+    f: ExprId,
+    z: ExprId,
+    l: ExprId,
+) -> ExprId {
+    let c = kernel.const_(foldr, vec![]);
+    apply_all(kernel, c, &[alpha, beta, f, z, l])
+}
+
+/// `List.count a l : Nat` — monomorphic at `List Nat` (`List.count`'s own
+/// declared type carries no `{alpha}` implicit at all, unlike every other
+/// builder in this section), see `list_prelude::perm`.
+pub(crate) fn count_of(kernel: &mut Kernel, count: NameId, a: ExprId, l: ExprId) -> ExprId {
+    let c = kernel.const_(count, vec![]);
+    apply_all(kernel, c, &[a, l])
+}
+
+/// `Nat.add a b : Nat`.
+pub(crate) fn nat_add_of(kernel: &mut Kernel, add: NameId, a: ExprId, b: ExprId) -> ExprId {
+    let c = kernel.const_(add, vec![]);
+    apply_all(kernel, c, &[a, b])
+}
+
+/// `Nat.succ a : Nat`.
+pub(crate) fn nat_succ_of(kernel: &mut Kernel, succ: NameId, a: ExprId) -> ExprId {
+    let c = kernel.const_(succ, vec![]);
+    kernel.app(c, a)
+}
+
 // --- carrier-generic `Eq` layer (ADR-1495 G4 pilot 2, generalized) -----
 
 pub(crate) fn eq_of(
@@ -661,3 +752,6 @@ pub(super) fn list_induct_prop(
         &[alpha, motive, base_term, step_term, target],
     )
 }
+
+#[cfg(test)]
+mod ops_tests;
