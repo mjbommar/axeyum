@@ -22,12 +22,16 @@ use crate::expr::ExprId;
 /// caller below only ever needs the RESULT type up to the kernel's own
 /// `def_eq` (which sees straight through the `mul`/`pow_succ` unfolds), so
 /// this is the one genuinely non-`refl` step in the whole "doubling" family.
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `zero_add`
+/// alone closes `Eq (add (add zero x) x) (add x x)`.
 fn double_eq(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
-    let p = *p;
     let zero = d.zero();
     let add_zero_x = d.add(zero, x);
-    let zero_add_x = d.lemma(p.zero_add, &[x]);
-    d.congr(add_zero_x, x, zero_add_x, &|d, y| d.add(y, x))
+    let lhs = d.add(add_zero_x, x);
+    let rhs = d.add(x, x);
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, lhs, rhs)
+        .unwrap_or_else(|e| panic!("double_eq: simp declined: {e:?}"))
 }
 
 /// `Nat.self_lt_two_pow : ∀ n, Lt n (pow 2 n)`. Induction on `n`.

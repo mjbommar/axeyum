@@ -90,22 +90,17 @@ fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> E
 }
 
 /// `Eq (add x one) (succ x)`, via `add_succ` then `add_zero`.
+///
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): the mirror
+/// direction of `one_add_eq_succ` (variable on the LEFT of `add`), closed by
+/// `add_succ` + `add_zero` alone.
 fn add_one_eq_succ(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
-    let p = *p;
-    let zero = d.zero();
-    let succ_zero = d.succ(zero);
-    let add_x_zero = d.add(x, zero);
-    let succ_add_x_zero = d.succ(add_x_zero);
-    let add_succ_eq = d.lemma(p.add_succ, &[x, zero]);
-    let add_zero_eq = d.lemma(p.add_zero, &[x]);
+    let one = d.num(1);
+    let lhs = d.add(x, one);
     let succ_x = d.succ(x);
-    let congr_step = d.congr(add_x_zero, x, add_zero_eq, &|d, y| d.succ(y));
-    let add_x_succ_zero = d.add(x, succ_zero);
-    let (_, result) = d.chain(
-        add_x_succ_zero,
-        &[(succ_add_x_zero, add_succ_eq), (succ_x, congr_step)],
-    );
-    result
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, lhs, succ_x)
+        .unwrap_or_else(|e| panic!("add_one_eq_succ: simp declined: {e:?}"))
 }
 
 /// `Eq r one`, given `r < 2` and `r ≠ 0`. From `r < 2 = succ 1`,

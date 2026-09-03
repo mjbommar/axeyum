@@ -126,16 +126,23 @@ pub(super) fn declare_catalan(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), 
 /// argument is syntactically `succ np`); the second needs the actual
 /// theorem `succ_add`, since `add (succ np) np`'s second argument is the
 /// bare variable `np`, not syntactically `succ`-shaped.
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `succ_add`
+/// alone rewrites `mid` to `m_var` (a single default-set step), and the
+/// outer `succ` wrap is one more `simp::nat::prove_eq` call over the wrapped
+/// goal directly (the engine's own outermost-first descent finds the same
+/// nested `succ_add` site under the extra `succ` and lifts it back up).
 fn two_succ_eq(d: &mut NatDev<'_>, p: &NatPrelude, np: ExprId) -> ExprId {
-    let p = *p;
     let snp = d.succ(np);
     let mid = d.add(snp, np); // add (succ np) np
     let a2 = d.add(np, np);
     let m_var = d.succ(a2); // succ (add np np)
-    let h_sa = d.lemma(p.succ_add, &[np, np]); // mid = m_var
     // Eq Nat (succ mid) (succ m_var); `succ mid` is definitionally
     // `add (succ np) (succ np)` by ι alone.
-    d.congr(mid, m_var, h_sa, &|d, x| d.succ(x))
+    let lhs = d.succ(mid);
+    let rhs = d.succ(m_var);
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, lhs, rhs)
+        .unwrap_or_else(|e| panic!("two_succ_eq: simp declined: {e:?}"))
 }
 
 /// The "opposite-of-center" ratio: `succ n * choose (add n n) (succ n) = n *

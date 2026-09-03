@@ -1145,22 +1145,17 @@ fn nat_congr_bool(
 /// `zero_add(x)`), reused here at both reflection indices `j` and `pred L -
 /// j`, and once more at `x := one` itself (`add one one = two`, in the
 /// `hyp2` fixed-point contradiction).
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `succ_add` +
+/// `zero_add` alone close `Eq (add one x) (succ x)`, and this was one of two
+/// byte-identical hand-written copies of exactly this identity (the other in
+/// `count_range_reversal.rs`).
 fn one_add_eq_succ(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
-    let p = *p;
-    let zero = d.zero();
     let one = d.num(1);
-    let add_zero_x = d.add(zero, x);
-    let succ_add_step = d.lemma(p.succ_add, &[zero, x]);
-    let zero_add_x = d.lemma(p.zero_add, &[x]);
-    let congr_succ = d.congr(add_zero_x, x, zero_add_x, &|d, y| d.succ(y));
     let one_x = d.add(one, x);
     let succ_x = d.succ(x);
-    let succ_add_zero_x = d.succ(add_zero_x);
-    let (_e, eq_final) = d.chain(
-        one_x,
-        &[(succ_add_zero_x, succ_add_step), (succ_x, congr_succ)],
-    );
-    eq_final
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, one_x, succ_x)
+        .unwrap_or_else(|e| panic!("one_add_eq_succ: simp declined: {e:?}"))
 }
 
 /// `Not (Eq n one)`, from `hn : Lt two n`. Transport `hn` along an assumed
