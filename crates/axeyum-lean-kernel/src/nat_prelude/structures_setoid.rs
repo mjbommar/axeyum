@@ -726,7 +726,7 @@ pub(crate) fn intern_structures_s_names(kernel: &mut Kernel) -> StructuresSNames
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StructuresSRecords {
+pub struct StructuresSRecordNames {
     pub magma: RecordNames,
     pub semigroup: RecordNames,
     pub monoid: RecordNames,
@@ -744,7 +744,7 @@ pub(crate) fn declare_structures_s_all(
     kernel: &mut Kernel,
     p: &StructuresSNames,
     logic: &LogicPrelude,
-) -> Result<StructuresSRecords, KernelError> {
+) -> Result<StructuresSRecordNames, KernelError> {
     let l0 = kernel.level_zero();
     let l1 = kernel.level_succ(l0);
     let l2 = kernel.level_succ(l1);
@@ -791,7 +791,7 @@ pub(crate) fn declare_structures_s_all(
         &comm_ring_fields_s(),
     )?;
 
-    Ok(StructuresSRecords {
+    Ok(StructuresSRecordNames {
         magma,
         semigroup,
         monoid,
@@ -812,7 +812,7 @@ pub(crate) fn declare_structures_s_all(
 
 pub(crate) fn declare_comm_ring_to_ring_s(
     k: &mut Kernel,
-    st: &StructuresSRecords,
+    st: &StructuresSRecordNames,
     p: &StructuresSNames,
 ) -> Result<NameId, KernelError> {
     use idx::ring::NEG_ADD;
@@ -1807,7 +1807,7 @@ pub(crate) fn declare_mul_zero(
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StructuresSExtra {
+pub struct StructuresSExtraNames {
     pub comm_ring_to_ring_s: NameId,
     pub magma_ofalg: NameId,
     pub semigroup_ofalg: NameId,
@@ -1829,10 +1829,10 @@ pub(crate) fn declare_structures_s_extra(
     k: &mut Kernel,
     lg: &LogicPrelude,
     p: &StructuresSNames,
-    st: &StructuresSRecords,
+    st: &StructuresSRecordNames,
     alg_p: &structures::StructuresPrelude,
     alg_st: &structures::StructuresNames,
-) -> Result<StructuresSExtra, KernelError> {
+) -> Result<StructuresSExtraNames, KernelError> {
     let l0 = k.level_zero();
     let l1 = k.level_succ(l0);
 
@@ -1873,7 +1873,7 @@ pub(crate) fn declare_structures_s_extra(
 
     let _ = alg_p;
 
-    Ok(StructuresSExtra {
+    Ok(StructuresSExtraNames {
         comm_ring_to_ring_s,
         magma_ofalg,
         semigroup_ofalg,
@@ -1902,7 +1902,7 @@ mod structures_setoid_tests {
     ) -> (
         LogicPrelude,
         StructuresSNames,
-        StructuresSRecords,
+        StructuresSRecordNames,
         algeq::StructuresPrelude,
         algeq::StructuresNames,
     ) {

@@ -128,7 +128,7 @@ use crate::PreludeValue;
 use crate::build_logic_prelude;
 use crate::name::NameId;
 use structures::StructuresNames;
-use structures_setoid::{StructuresSExtra, StructuresSNames, StructuresSRecords};
+use structures_setoid::{StructuresSExtraNames, StructuresSNames, StructuresSRecordNames};
 
 mod abundant_deficient;
 mod abundant_deficient_lemmas;
@@ -6285,11 +6285,11 @@ pub struct NatPrelude {
     /// instance. See [`structures_setoid`].
     pub structures_s_names: StructuresSNames,
     /// The nine declared `AlgS.*` records themselves (selectors etc.).
-    pub structures_s: StructuresSRecords,
+    pub structures_s: StructuresSRecordNames,
     /// `AlgS.CommRing.toRingS`, the nine `AlgS.<Record>.ofAlg` projections,
     /// `AlgS.sub`/`sub_self`, and the two generic theorems `AlgS.neg_neg`/
     /// `AlgS.mul_zero`.
-    pub structures_s_extra: StructuresSExtra,
+    pub structures_s_extra: StructuresSExtraNames,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
