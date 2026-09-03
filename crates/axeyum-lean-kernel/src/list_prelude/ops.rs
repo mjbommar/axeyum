@@ -193,6 +193,29 @@ pub(crate) fn congr_of(
     transport_of(kernel, logic, level_a, ty_a, a, motive, refl_case, b, h)
 }
 
+/// `h : Eq ty p q`, `px : body(p)` (`body` an arbitrary `Prop`-valued
+/// one-hole context) ⊢ `body(q)`. `symm_of`/`trans_of`/`congr_of` are all
+/// specializations of this same `Eq.rec` shape; exposed directly for a
+/// context (like `Lt a _`, needed by `perm::declare_perm_symm` to move a
+/// bound-membership hypothesis across a proven bound equality) that none of
+/// those three cover.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn transport_along(
+    kernel: &mut Kernel,
+    logic: &LogicPrelude,
+    level: LevelId,
+    ty: ExprId,
+    p: ExprId,
+    q: ExprId,
+    h: ExprId,
+    x_fv: u64,
+    px: ExprId,
+    body: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
+) -> ExprId {
+    let motive = eq_motive_of(kernel, logic, level, ty, p, x_fv, body);
+    transport_of(kernel, logic, level, ty, p, motive, px, q, h)
+}
+
 // --- a `Bool` case split (needed by `bridge::declare_count_to_multiset`) --
 
 /// `Or (Eq Bool b true) (Eq Bool b false)` for an arbitrary `b : Bool`, by a
