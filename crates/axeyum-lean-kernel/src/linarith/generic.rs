@@ -56,8 +56,8 @@ use crate::NatPrelude;
 use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
+use crate::nat_prelude::structures::sel;
 use crate::nat_prelude::structures::{self, RecordNames};
-use crate::rat_prelude::algebra_instances::sel;
 use crate::rat_prelude::ordered_ring_ext::OrderedRingExtNames;
 
 use super::{Certificate, Coeff, Decline, LinForm, find_combination};
@@ -1154,8 +1154,8 @@ pub(crate) fn emit_le_from_certificate(
 mod generic_tests {
     use super::*;
     use crate::nat_prelude::structures::lam_over;
+    use crate::nat_prelude::structures::sel;
     use crate::rat_prelude::RatPrelude;
-    use crate::rat_prelude::algebra_instances::sel;
     use crate::{Kernel, build_rat_prelude};
     use structures::idx::ordered_ring::{ADD, LE, NEG};
 

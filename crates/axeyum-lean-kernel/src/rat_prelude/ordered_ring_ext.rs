@@ -23,7 +23,6 @@
 
 use super::RatPrelude;
 use super::algebra_ext::nat_rec_prop;
-use super::algebra_instances::sel;
 use crate::BinderInfo;
 use crate::Kernel;
 use crate::KernelError;
@@ -34,6 +33,7 @@ use crate::env::ReducibilityHint;
 use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
+use crate::nat_prelude::structures::sel;
 use crate::nat_prelude::structures::{
     self, EqB, RecordNames, app2, arrow, lam_over, pi_over, symm_of,
 };
