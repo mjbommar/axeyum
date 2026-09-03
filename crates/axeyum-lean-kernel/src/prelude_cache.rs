@@ -126,8 +126,11 @@ fn slot(key: PreludeKey) -> Option<&'static Slot> {
         PreludeKey::Int => Some(&INT),
         PreludeKey::Real => Some(&REAL),
         PreludeKey::CReal => Some(&CREAL),
-        // Requires a caller-held `LogicPrelude`, so never starts pristine.
-        PreludeKey::String(_) => None,
+        // `List` has no template yet (new, marginal cost over `Logic` not
+        // measured) and `String` requires a caller-held `LogicPrelude` (so
+        // never starts pristine) -- both fall through to the ordinary build
+        // path every time.
+        PreludeKey::List | PreludeKey::String(_) => None,
     }
 }
 
@@ -145,7 +148,7 @@ fn template(key: PreludeKey) -> Option<&'static Kernel> {
                 crate::arith_prelude::build_arith_prelude_uncached(&mut kernel).is_ok()
             }
             PreludeKey::CReal => crate::creal::build_creal_prelude_uncached(&mut kernel).is_ok(),
-            PreludeKey::String(_) => false,
+            PreludeKey::List | PreludeKey::String(_) => false,
         };
         built.then_some(kernel)
     })
