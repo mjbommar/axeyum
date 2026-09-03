@@ -869,3 +869,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1582](adr-1582-the-ring-producer-over-int-and-rat-and-what-each-carrier-costs-it.md) | the ring producer over ℤ and ℚ, and what each carrier costs it | Accepted |
 | [1583](adr-1583-list-count-to-multiset-and-perm-land.md) | `List.count_toMultiset` lands, and `List.Perm` closes the sized negative ADR-1579 left open | Accepted |
 | [1584](adr-1584-forgetful-projections-cross-carrier-retirement-and-orderedring.md) | forgetful projections, more cross-carrier theorems, a retirement measurement, and `Alg.OrderedRing` (amends ADR-1578) | accepted |
+| [1587](adr-1587-the-first-checked-generic-theorem-retirement-and-what-still-blocks-the-rest.md) | the first checked generic-theorem retirement, and what still blocks the rest (amends ADR-1584) | accepted |
