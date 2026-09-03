@@ -463,6 +463,8 @@ fn every_finset_declaration_is_present_and_axiom_free() {
         ("sum_eq_sumRangeIf_add", p.finset_sum_eq_sum_range_if_add),
         ("sum_union_disjoint", p.finset_sum_union_disjoint),
         ("sum_congr_of_beq", p.finset_sum_congr_of_beq),
+        ("card_filter_range", p.finset_card_filter_range),
+        ("card_totatives", p.finset_card_totatives),
     ];
     for (label, name) in names {
         assert!(
@@ -869,5 +871,122 @@ fn sum_congr_of_beq_instantiates_and_its_hypothesis_is_load_bearing() {
     assert!(
         f.k.infer(closed).is_ok(),
         "sum_congr_of_beq must infer at free set and summand variables"
+    );
+}
+
+/// The consumer: `Nat.totient`'s ad hoc `countRange` IS a `Nat.Finset`
+/// cardinality, and the identification computes.
+///
+/// `totient.rs` defines `totient n := countRange (fun k => beq (gcd k n) 1) n`
+/// and its module doc reads that as `|{k < n : p k}|`. `card_totatives` makes
+/// the reading a theorem. The test checks the identification at `n = 6`, where
+/// `totient 6 = 2` (the totatives are `{1,5}`), and separately that the two
+/// sides both reduce to `2` — a bridge theorem whose two sides happened to be
+/// the same term would be vacuous, so the `filter`/`range` side is also
+/// evaluated on its own.
+///
+/// `9` is the negative control: `totient 9 = 6`, so a bridge that had lost the
+/// coprimality predicate and counted the whole range would land there.
+#[test]
+fn card_totatives_identifies_the_totient_with_a_finset_cardinality() {
+    let mut f = Fixture::new();
+    let name = f.p.finset_card_totatives;
+
+    let six = f.num(6);
+    let applied = f.const_app(name, &[six]);
+    let ty =
+        f.k.infer(applied)
+            .expect("card_totatives must instantiate at 6");
+
+    // Build the left-hand side independently and check it computes to 2.
+    let nat = f.nat_ty();
+    let six_b = f.num(6);
+    let totative = {
+        let k_fv = f.fresh_fvar();
+        let k = f.k.fvar(k_fv);
+        let g = f.gcd(k, six_b);
+        let one = f.num(1);
+        let body = f.beq(g, one);
+        f.lam_fv(k_fv, nat, body)
+    };
+    let six_c = f.num(6);
+    let range = f.range(6);
+    let filter_name = f.p.finset_filter;
+    let filtered = f.const_app(filter_name, &[totative, range]);
+    let card = f.card(filtered);
+    let two = f.num(2);
+    let six_d = f.num(6);
+    assert!(
+        f.k.def_eq(card, two),
+        "card (filter coprime (range 6)) must be 2 -- the totatives are {{1,5}}"
+    );
+    assert!(
+        !f.k.def_eq(card, six_d),
+        "negative control: it must NOT be 6 -- that is the whole range, i.e. a \
+         filter that lost its predicate"
+    );
+
+    // And the totient side agrees, so the theorem relates two things that are
+    // separately known to be 2 rather than one thing to itself.
+    let totient_name = f.p.totient;
+    let phi = f.const_app(totient_name, &[six_c]);
+    let two_b = f.num(2);
+    assert!(f.k.def_eq(phi, two_b), "totient 6 must be 2");
+
+    let expected = {
+        let a = f.num(2);
+        let b = f.num(2);
+        f.eq(a, b)
+    };
+    assert!(
+        f.k.def_eq(ty, expected),
+        "card_totatives 6 must state 2 = 2, got {}",
+        f.k.render_lean(ty)
+    );
+
+    // At 9 the same identification must state 6 = 6, not 2 = 2 -- so the
+    // theorem tracks `n` rather than being constant.
+    let nine = f.num(9);
+    let at_nine = f.const_app(name, &[nine]);
+    let ty9 =
+        f.k.infer(at_nine)
+            .expect("card_totatives must instantiate at 9");
+    let expected9 = {
+        let a = f.num(6);
+        let b = f.num(6);
+        f.eq(a, b)
+    };
+    assert!(
+        f.k.def_eq(ty9, expected9),
+        "card_totatives 9 must state 6 = 6, got {}",
+        f.k.render_lean(ty9)
+    );
+    let wrong9 = {
+        let a = f.num(2);
+        let b = f.num(2);
+        f.eq(a, b)
+    };
+    assert!(
+        !f.k.def_eq(ty9, wrong9),
+        "negative control: card_totatives 9 must NOT state 2 = 2"
+    );
+
+    // Symbolic: the general lemma at a free predicate and a free bound.
+    let general = f.p.finset_card_filter_range;
+    let bool_ty = f.bool_ty();
+    let nat2 = f.nat_ty();
+    let pred_ty = f.arrow(nat2, bool_ty);
+    let q_fv = f.fresh_fvar();
+    let q = f.k.fvar(q_fv);
+    let n_fv = f.fresh_fvar();
+    let n = f.k.fvar(n_fv);
+    let at_free = f.const_app(general, &[q, n]);
+    let closed = {
+        let inner = f.lam_fv(n_fv, nat2, at_free);
+        f.lam_fv(q_fv, pred_ty, inner)
+    };
+    assert!(
+        f.k.infer(closed).is_ok(),
+        "card_filter_range must infer at a free predicate and bound"
     );
 }

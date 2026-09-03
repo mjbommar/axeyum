@@ -6236,7 +6236,6 @@ pub struct NatPrelude {
     /// `Nat.Finset.card_le_of_subsetB : ∀ s t,
     /// Eq Bool (subsetB s t) Bool.true → Le (card s) (card t)`.
     pub finset_card_le_of_subset_b: NameId,
-    /// `Nat.Finset.sum_union_disjoint : ∀ s t f,
     /// `Nat.Finset.sum_eq_sumRangeIf_add : ∀ s j f,
     /// Eq Nat (sumRangeIf (memB s) f (add (bound s) j)) (sum s f)` — the
     /// additive twin of
@@ -6255,13 +6254,18 @@ pub struct NatPrelude {
     /// Eq Nat (sum s f) (sum t f)` — this kernel has no `funext`, so the
     /// hypothesis is the pointwise `beq`, decided below both bounds.
     pub finset_sum_congr_of_beq: NameId,
-    /// `Nat.Finset.exists_duplicate_of_card_lt : ∀ s t g,
-    /// (∀ i, Lt i (bound s) → Eq Bool (memB s i) Bool.true →
-    ///        And (Lt (g i) (bound t)) (Eq Bool (memB t (g i)) Bool.true)) →
-    /// Lt (card t) (card s) → ∃ a b, ...` — the pigeonhole principle, stated
-    /// CONSTRUCTIVELY as an explicit colliding pair rather than as a refutation
-    /// of injectivity.
-    pub finset_exists_duplicate_of_card_lt: NameId,
+    /// `Nat.Finset.card_filter_range : ∀ q n,
+    /// Eq Nat (card (filter q (range n))) (countRange q n)` — an ad hoc
+    /// `countRange` over a predicate IS a `Finset` cardinality.
+    pub finset_card_filter_range: NameId,
+    /// `Nat.Finset.card_totatives : ∀ n,
+    /// Eq Nat (card (filter (fun k => beq (gcd k n) 1) (range n)))
+    ///        (totient n)` — the carrier's consumer.
+    /// [`totient`](Self::totient) is DEFINED as an ad hoc `countRange` over the
+    /// coprimality predicate and `totient.rs`'s module doc reads that as
+    /// `|{k < n : p k}|`; this makes the reading a theorem, with `Nat.totient`
+    /// and everything proved about it unchanged.
+    pub finset_card_totatives: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -7212,8 +7216,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_sum_eq_sum_range_if_add: kernel.name_str(finset, "sum_eq_sumRangeIf_add"),
             finset_sum_union_disjoint: kernel.name_str(finset, "sum_union_disjoint"),
             finset_sum_congr_of_beq: kernel.name_str(finset, "sum_congr_of_beq"),
-            finset_exists_duplicate_of_card_lt: kernel
-                .name_str(finset, "exists_duplicate_of_card_lt"),
+            finset_card_filter_range: kernel.name_str(finset, "card_filter_range"),
+            finset_card_totatives: kernel.name_str(finset, "card_totatives"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),

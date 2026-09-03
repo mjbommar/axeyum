@@ -2071,6 +2071,133 @@ fn declare_sum_congr_of_beq(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// The consumer: an ad hoc `countRange` over a predicate IS a `Finset`
+// cardinality.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.card_filter_range : ∀ q n,
+/// Eq Nat (card (filter q (range n))) (countRange q n)`
+/// and its named instance
+/// `Nat.Finset.card_totatives : ∀ n,
+/// Eq Nat (card (filter (fun k => beq (gcd k n) 1) (range n))) (totient n)`.
+///
+/// This is the carrier's consumer, and it is a BRIDGE rather than a
+/// replacement — deliberately, and the survey behind that choice is worth
+/// recording because it is a finding about the tree rather than about this
+/// lane. Every site in `nat_prelude`/`int_prelude` that "fakes a finite set"
+/// with an ad hoc `countRange (fun k => …)` already has the predicate-level
+/// algebra it needs (`finite_set.rs`'s `setUnion`/`setInter`/`Subset` and their
+/// counting laws), so substituting `Nat.Finset` into one of those proofs makes
+/// none of them shorter. What was missing was not a shorter proof; it was an
+/// OBJECT — a way to say "this set" once instead of respelling a
+/// `(predicate, bound)` pair at every mention, and a way to sum over it.
+///
+/// So the consumer shows the identification instead: `Nat.totient` is defined
+/// as `countRange (fun k => beq (gcd k n) 1) n`, and `totient.rs`'s own module
+/// doc reads that as `|{k < n : p k}|`. `card_totatives` makes that reading a
+/// theorem, with `Nat.totient` and everything already proved about it
+/// UNCHANGED. Any future totient argument may now be a set argument —
+/// inclusion–exclusion, monotonicity under inclusion, a sum over the
+/// totatives — and reach `Nat.totient` through this one equation.
+///
+/// Both proofs are the same three lines: below `n`, `memB (filter q (range n))`
+/// is `setInter (memB (range n)) q`, and `memB (range n)` is `true` there, so
+/// the intersection's guard collapses to `q` itself.
+fn declare_card_filter_range(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let pty = pred_ty(d);
+
+    // The shared pointwise step, at an arbitrary predicate and bound.
+    let agreement = |d: &mut NatDev<'_>, q: ExprId, n: ExprId| -> ExprId {
+        let range = d.const_app(p.finset_range, &[n]);
+        let filtered = d.const_app(p.finset_filter, &[q, range]);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, n);
+        let hi = d.kernel().fvar(hi_fv);
+        // `memB (filter q (range n)) i = pred (filter …) i`, and the right-hand
+        // side reduces to `setInter (memB (range n)) q i` by iota.
+        let open_filter = d.lemma(p.finset_mem_b_of_lt, &[filtered, i, hi]);
+        // `memB (range n) i = pred (range n) i`, and `pred (range n)` is the
+        // constant `true` lambda, so this IS `memB (range n) i = true`.
+        let in_range = d.lemma(p.finset_mem_b_of_lt, &[range, i, hi]);
+        let mri = fs_mem(d, &p, range, i);
+        let qi = d.apply(q, &[i]);
+        let fa = d.bool_false();
+        let collapse = select_bool_true(d, &p, mri, qi, fa, in_range);
+        let mfi = fs_mem(d, &p, filtered, i);
+        let inter_at = {
+            let mr = fs_mem_fn(d, &p, range);
+            let combined = set_inter(d, &p, mr, q);
+            d.apply(combined, &[i])
+        };
+        let step = d.bool_trans(mfi, inter_at, qi, open_filter, collapse);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, step);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    // card_filter_range
+    {
+        let q_fv = d.fresh_fvar();
+        let q = d.kernel().fvar(q_fv);
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let range = d.const_app(p.finset_range, &[n]);
+        let filtered = d.const_app(p.finset_filter, &[q, range]);
+        let mf = fs_mem_fn(d, &p, filtered);
+        let pointwise = agreement(d, q, n);
+        let proof = d.lemma(p.count_range_congr_lt, &[mf, q, n, pointwise]);
+
+        let concl = {
+            let lhs = fs_card(d, &p, filtered);
+            let rhs = count_range(d, &p, q, n);
+            d.eq(lhs, rhs)
+        };
+        let ty = {
+            let with_n = d.pi_fv(n_fv, nat, concl);
+            d.pi_fv(q_fv, pty, with_n)
+        };
+        let value = {
+            let with_n = d.lam_fv(n_fv, nat, proof);
+            d.lam_fv(q_fv, pty, with_n)
+        };
+        d.declare_theorem(p.finset_card_filter_range, ty, value)?;
+    }
+
+    // card_totatives: the same lemma at `totient`'s own predicate. `Nat.totient
+    // n` delta-reduces to `countRange (fun k => beq (gcd k n) 1) n`, so the
+    // conclusion is stated at `Nat.totient` and closed by the general lemma with
+    // no bridging step.
+    {
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let totative = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let g = d.gcd(k, n);
+            let one = d.num(1);
+            let body = d.beq(g, one);
+            d.lam_fv(k_fv, nat, body)
+        };
+        let proof = d.lemma(p.finset_card_filter_range, &[totative, n]);
+        let range = d.const_app(p.finset_range, &[n]);
+        let filtered = d.const_app(p.finset_filter, &[totative, range]);
+        let concl = {
+            let lhs = fs_card(d, &p, filtered);
+            let rhs = d.const_app(p.totient, &[n]);
+            d.eq(lhs, rhs)
+        };
+        let ty = d.pi_fv(n_fv, nat, concl);
+        let value = d.lam_fv(n_fv, nat, proof);
+        d.declare_theorem(p.finset_card_totatives, ty, value)?;
+    }
+
+    Ok(())
+}
+
 /// Every `Nat.Finset` declaration, in dependency order.
 ///
 /// # Errors
@@ -2088,5 +2215,6 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_sum_eq_sum_range_if_add(d, p)?;
     declare_sum_union_disjoint(d, p)?;
     declare_sum_congr_of_beq(d, p)?;
+    declare_card_filter_range(d, p)?;
     Ok(())
 }
