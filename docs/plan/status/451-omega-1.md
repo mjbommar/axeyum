@@ -9,7 +9,8 @@ Farkas certificate), trusted checking (`Kernel::add_declaration`). ADR-1576
 records the decision, the cost datum and the two measured fragment edges.
 
 **The number.** Fifteen hand-written proofs retired — ten in `nat_prelude`, five
-in `int_prelude`, **184 source lines deleted**, 43 added. Each theorem is
+in `int_prelude`, **184 source lines deleted**, 45 added (five of those 45 are the
+`use` lines that bring the producer into scope). Each theorem is
 re-admitted at a type that `kernel_declaration_projection` shows *byte-identical*
 over all 15,887 rows (prelude / kind / name / axiom-footprint-size /
 type-constants / rendered type), and all fifteen still measure axiom footprint 0.
