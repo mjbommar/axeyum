@@ -874,3 +874,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1587](adr-1587-the-first-checked-generic-theorem-retirement-and-what-still-blocks-the-rest.md) | the first checked generic-theorem retirement, and what still blocks the rest (amends ADR-1584) | accepted |
 | [1588](adr-1588-a-setoid-flavored-alg-spine-for-creal.md) | a Setoid-flavored `AlgS.*` spine, so `CReal` can be an instance | accepted |
 | [1589](adr-1589-decide-and-a-then-first-combinator-close-the-tactic-layer.md) | `decide` and a `Then`/`First` combinator close the tactic layer | Accepted |
+| [1591](adr-1591-simp-over-list-and-the-tactic-layer-over-int-and-rat.md) | `simp` over `List`, and the tactic layer over ℤ and ℚ | Accepted |
