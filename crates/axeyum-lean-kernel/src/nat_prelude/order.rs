@@ -10,6 +10,7 @@ use crate::KernelError;
 use crate::env::Declaration;
 use crate::env::ReducibilityHint;
 use crate::expr::ExprId;
+use crate::linarith::nat as linarith;
 
 /// `Nat.le`, reducible strict order, and the checked order theorems.
 pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
@@ -480,53 +481,13 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         (stmt, proof)
     })?;
 
-    // lt_of_lt_of_le : ∀ a b c, Lt a b → Le b c → Lt a c
-    d.theorem(p.lt_of_lt_of_le, 3, &|d, v| {
-        let (a, b, c) = (v[0], v[1], v[2]);
-        let strict_ty = d.lt(a, b);
-        let strict_fv = d.fresh_fvar();
-        let strict = d.kernel().fvar(strict_fv);
-        let bound_ty = d.le(b, c);
-        let bound_fv = d.fresh_fvar();
-        let bound = d.kernel().fvar(bound_fv);
-        let sa = d.succ(a);
-        let body = d.lemma(p.le_trans, &[sa, b, c, strict, bound]);
-        let conclusion = d.lt(a, c);
-        let stmt = {
-            let with_bound = d.arrow(bound_ty, conclusion);
-            d.arrow(strict_ty, with_bound)
-        };
-        let proof = {
-            let with_bound = d.lam_fv(bound_fv, bound_ty, body);
-            d.lam_fv(strict_fv, strict_ty, with_bound)
-        };
-        (stmt, proof)
-    })?;
-
-    // lt_of_le_of_lt : ∀ a b c, Le a b → Lt b c → Lt a c
-    d.theorem(p.lt_of_le_of_lt, 3, &|d, v| {
-        let (a, b, c) = (v[0], v[1], v[2]);
-        let bound_ty = d.le(a, b);
-        let bound_fv = d.fresh_fvar();
-        let bound = d.kernel().fvar(bound_fv);
-        let strict_ty = d.lt(b, c);
-        let strict_fv = d.fresh_fvar();
-        let strict = d.kernel().fvar(strict_fv);
-        let sa = d.succ(a);
-        let sb = d.succ(b);
-        let lifted = d.lemma(p.le_succ_succ, &[a, b, bound]);
-        let body = d.lemma(p.le_trans, &[sa, sb, c, lifted, strict]);
-        let conclusion = d.lt(a, c);
-        let stmt = {
-            let with_strict = d.arrow(strict_ty, conclusion);
-            d.arrow(bound_ty, with_strict)
-        };
-        let proof = {
-            let with_strict = d.lam_fv(strict_fv, strict_ty, body);
-            d.lam_fv(bound_fv, bound_ty, with_strict)
-        };
-        (stmt, proof)
-    })?;
+    // lt_of_lt_of_le, lt_of_le_of_lt : retired to `linarith`, declared below
+    // (after `le_of_add_le_add_right`) -- the emitter's `emit_le` chain
+    // unconditionally cites `add_le_add_left`/`add_le_add_right`/
+    // `le_of_add_le_add_right`, none of which exist yet at this point in
+    // `declare_order`'s own build sequence. Nothing between here and there
+    // uses either name (checked: no `p.lt_of_lt_of_le`/`p.lt_of_le_of_lt`
+    // reference appears in this file before `le_of_add_le_add_right`).
 
     // le_total : ∀ a b, Or (Le a b) (Le b a)
     // Structural induction on both naturals; the successor/successor branch
@@ -897,6 +858,14 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
     })?;
 
     // le_intro : ∀ a b k, a+k=b → Le a b
+    //
+    // NOT retired to `linarith`: `le_of_add_le_add_left` (below) cites
+    // `p.le_intro` in its own proof, so `le_intro` must exist before that
+    // point -- but the emitter's `emit_le` chain needs
+    // `add_le_add_left`/`add_le_add_right`/`le_of_add_le_add_right`, all
+    // declared AFTER `le_of_add_le_add_left`. The two requirements are
+    // mutually exclusive at this position; see the linarith-retirement
+    // census's build-order note.
     d.theorem(p.le_intro, 3, &|d, v| {
         let (a, b, k) = (v[0], v[1], v[2]);
         let sum = d.add(a, k);
@@ -1041,21 +1010,9 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         (stmt, proof)
     })?;
 
-    // add_lt_add_left : ∀ c a b, Lt a b → Lt (c+a) (c+b)
-    d.theorem(p.add_lt_add_left, 3, &|d, v| {
-        let (c, a, b) = (v[0], v[1], v[2]);
-        let strict_ty = d.lt(a, b);
-        let strict_fv = d.fresh_fvar();
-        let strict = d.kernel().fvar(strict_fv);
-        let sa = d.succ(a);
-        let body = d.lemma(p.add_le_add_left, &[c, sa, b, strict]);
-        let ca = d.add(c, a);
-        let cb = d.add(c, b);
-        let conclusion = d.lt(ca, cb);
-        let stmt = d.arrow(strict_ty, conclusion);
-        let proof = d.lam_fv(strict_fv, strict_ty, body);
-        (stmt, proof)
-    })?;
+    // add_lt_add_left : retired to `linarith`, declared below (after
+    // `le_of_add_le_add_right`) -- same build-order reason as
+    // `lt_of_lt_of_le`/`lt_of_le_of_lt` above.
 
     // add_le_add_right : ∀ c a b, Le a b → Le (a+c) (b+c)
     d.theorem(p.add_le_add_right, 3, &|d, v| {
@@ -1151,6 +1108,36 @@ pub(super) fn declare_order(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
         let stmt = d.arrow(hyp_ty, conclusion);
         let proof = d.lam_fv(h_fv, hyp_ty, body);
         (stmt, proof)
+    })?;
+
+    // lt_of_lt_of_le, lt_of_le_of_lt, add_lt_add_left : retired to
+    // `linarith` here, now that `add_le_add_left`/`add_le_add_right`/
+    // `le_of_add_le_add_right` -- every one of `emit_le`'s chain -- are
+    // declared. See the notes at their original positions above.
+
+    // lt_of_lt_of_le : ∀ a b c, Lt a b → Le b c → Lt a c
+    linarith::declare(d, &p, p.lt_of_lt_of_le, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let strict = d.lt(a, b);
+        let bound = d.le(b, c);
+        (vec![strict, bound], d.lt(a, c))
+    })?;
+
+    // lt_of_le_of_lt : ∀ a b c, Le a b → Lt b c → Lt a c
+    linarith::declare(d, &p, p.lt_of_le_of_lt, 3, &|d, v| {
+        let (a, b, c) = (v[0], v[1], v[2]);
+        let bound = d.le(a, b);
+        let strict = d.lt(b, c);
+        (vec![bound, strict], d.lt(a, c))
+    })?;
+
+    // add_lt_add_left : ∀ c a b, Lt a b → Lt (c+a) (c+b)
+    linarith::declare(d, &p, p.add_lt_add_left, 3, &|d, v| {
+        let (c, a, b) = (v[0], v[1], v[2]);
+        let strict = d.lt(a, b);
+        let ca = d.add(c, a);
+        let cb = d.add(c, b);
+        (vec![strict], d.lt(ca, cb))
     })?;
 
     // mul_le_mul_left : ∀ c a b, Le a b → Le (mul c a) (mul c b)
