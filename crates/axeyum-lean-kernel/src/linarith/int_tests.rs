@@ -464,27 +464,31 @@ fn a_negated_goal_is_proved_by_refutation() {
 }
 
 #[test]
-fn a_strict_hypothesis_is_weakened_and_the_strictness_is_lost() {
+fn a_strict_hypothesis_keeps_its_strictness() {
     on_a_deep_stack(|| {
-        // Documented boundary, measured rather than asserted: `a < b` gives
-        // `a ≤ b` (which proves `a ≤ b`) but NOT `a + 1 ≤ b`.
+        // `a < b` gives both `a ≤ b` (weakened, via `le_of_lt` inside
+        // `le_succ_of_lt`'s own proof) and the full `a + 1 ≤ b` — the fragment
+        // edge ADR-1576 recorded as declined is now closed by
+        // `Int.le_succ_of_lt`. Declared through the kernel, not merely
+        // emitted: an `Ok` `ExprId` is not itself a claim of well-typedness.
         let weakened = attempt(2, &|d, v| {
             let hyp = d.ilt(v[0], v[1]);
             (vec![hyp], d.ile(v[0], v[1]))
         });
         assert!(weakened.is_ok(), "a < b must still give a ≤ b");
 
-        let strict = attempt(2, &|d, v| {
+        let mut env = Env::new();
+        let p = env.p;
+        let name = env.name("strict_hyp_plus_one");
+        let mut d = IntDev::new(&mut env.k, p);
+        linarith::declare(&mut d, &p, name, 2, &|d, v| {
             let hyp = d.ilt(v[0], v[1]);
             let one_nat = d.num(1);
             let one = d.of_nat(one_nat);
             let shifted = d.iadd(v[0], one);
             (vec![hyp], d.ile(shifted, v[1]))
-        });
-        assert_eq!(
-            strict.err(),
-            Some(Decline::NoCertificate),
-            "the fragment's documented edge moved: a < b now yields a + 1 ≤ b",
-        );
+        })
+        .expect("a < b must now give a + 1 ≤ b via Int.le_succ_of_lt");
+        assert!(env.k.environment().contains(name));
     });
 }

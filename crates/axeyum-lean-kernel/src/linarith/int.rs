@@ -21,28 +21,33 @@
 //!
 //! ## What this fragment does NOT do, precisely
 //!
-//! A `<` **hypothesis** contributes only `a ≤ b`, via `Int.le_of_lt`. Its
-//! strictness is dropped. Recovering it needs `lt a b → le (a + 1) b`, which
-//! this prelude does not have: `lt_dest` gives `∃ i, b = a + ofNat (i+1)` and
-//! turning that into the `+1` form is a new lemma, not a rearrangement of
-//! existing ones. So `a < b ⊢ a + 1 ≤ b` **declines**, and that is the
-//! fragment's edge rather than a bug. A `<` *goal* is fine — it goes out
-//! through `lt_ofNat_add`.
+//! A `<` **hypothesis** keeps its strictness: `Int.le_succ_of_lt` gives
+//! `le (a+1) b` directly (`lt_dest`'s witness `∃ i, b = a + ofNat (i+1)`
+//! lifted through `add_le_add_left` on `Le (ofNat 1) (ofNat (i+1))`, via
+//! `Int.lt.elim` rather than a hand-built `Exists.elim`). So
+//! `a < b ⊢ a + 1 ≤ b` is now **proved**, not declined — this closed a
+//! fragment edge ADR-1576 recorded as open. A `<` *goal* was already fine —
+//! it goes out through `lt_ofNat_add`.
 //!
 //! `Int.neg` applied to a compound term is treated as an opaque atom rather
 //! than distributed with `neg_add`. `neg` of an atom or a numeral is handled
 //! exactly.
 //!
-//! **`Int.mul` is not in this fragment at all**, not even by a literal — and
-//! that is the sharpest ℕ/ℤ asymmetry here. Over ℕ, `Nat.mul x k` at a literal
-//! `k` ι-reduces to the left-associated fold `((0 + x) + x) + …`, so the
-//! normalizer unrolls a numeral multiplier for free. `Int.mul` case-splits on
-//! both arguments, so `Int.mul x k` at a symbolic `x` is stuck no matter what
-//! `k` is, and unrolling it would need a distributivity induction the ℕ side
-//! never pays for. A product is therefore an opaque atom on both the parsing
-//! and the normalizing side — consistently, which is what matters: an
-//! inconsistency there would make the procedure decline in confusing places
-//! rather than be unsound, but it would still be a defect.
+//! **`Int.mul` is in this fragment only by a literal multiplier of magnitude
+//! at most [`super::MAX_MULTIPLIER`]**, and that bound is load-bearing in a
+//! way it is not on the ℕ side. Over ℕ, `Nat.mul x k` at a literal `k`
+//! ι-reduces to the left-associated fold `((0 + x) + x) + …` for free.
+//! `Int.mul` case-splits on both arguments, so `Int.mul x k` at a symbolic `x`
+//! never ι-reduces regardless of `k` — the unrolling is a real lemma chain
+//! (`left_distrib` + `mul_one`, one application per copy), so a literal
+//! multiplier above the bound declines [`Decline::NonLinear`] rather than
+//! growing the proof term, matching the certificate search's own reason for
+//! [`super::MAX_MULTIPLIER`]. A product of two genuinely non-constant terms —
+//! `Int.mul x y` for two atoms — is still not analysed at all: it is an
+//! opaque atom on both the parsing and the normalizing side, consistently,
+//! which is what matters: an inconsistency there would make the procedure
+//! decline in confusing places rather than be unsound, but it would still be
+//! a defect.
 
 use crate::ExprNode;
 use crate::IntPrelude;
@@ -777,14 +782,21 @@ impl Problem {
             };
             match shape {
                 Shape::Le | Shape::Lt => {
-                    // A `<` hypothesis is weakened to `≤`; see the module docs
-                    // for why the strictness cannot be recovered here.
-                    let le_proof = if shape == Shape::Lt {
-                        d.const_app(p.le_of_lt, &[lhs, rhs, proof])
+                    // A `<` hypothesis keeps its strictness: `Int.le_succ_of_lt`
+                    // gives `le (a+1) b` directly, not merely `le a b`
+                    // (`le_of_lt`). See the module docs for the fragment edge
+                    // this closed, and `super::MAX_MULTIPLIER`'s sibling test
+                    // for the case it does not (a strict goal, not hypothesis).
+                    let (left, le_proof) = if shape == Shape::Lt {
+                        let one_nat = d.num(1);
+                        let one_int = d.of_nat(one_nat);
+                        let shifted = d.iadd(lhs, one_int);
+                        let strict = d.const_app(p.le_succ_of_lt, &[lhs, rhs, proof]);
+                        (shifted, strict)
                     } else {
-                        proof
+                        (lhs, proof)
                     };
-                    let (Ok(fl), Ok(fr)) = (self.parse_term(d, lhs), self.parse_term(d, rhs))
+                    let (Ok(fl), Ok(fr)) = (self.parse_term(d, left), self.parse_term(d, rhs))
                     else {
                         continue;
                     };
@@ -792,7 +804,7 @@ impl Problem {
                         continue;
                     };
                     out.push(Hyp {
-                        lhs,
+                        lhs: left,
                         rhs,
                         form,
                         proof: le_proof,

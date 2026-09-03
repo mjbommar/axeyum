@@ -152,6 +152,64 @@ pub(super) fn declare_add_le_add_left_right(d: &mut IntDev<'_>) -> Result<(), Ke
     Ok(())
 }
 
+/// `Int.le_succ_of_lt : ∀ (a b : Int), lt a b → le (add a one) b`.
+///
+/// `linarith`'s ℤ fragment weakens a `<` hypothesis to `≤` via `le_of_lt`,
+/// dropping one unit of slack (ADR-1576). This is the bridge that recovers
+/// it, built from `Int.lt.elim` — the CPS form of `lt_dest`'s witness,
+/// declared just above by `order_coercion::declare_dest_elim` — rather than
+/// re-deriving `Exists.elim` by hand: the witness `n` gives
+/// `a + ofNat n.succ = b`, and `Le (ofNat 1) (ofNat n.succ)`
+/// (`Nat.le_succ_succ` on `Nat.zero_le n`, which is
+/// `Int.le (ofNat 1) (ofNat n.succ)` by the same defeq
+/// `le_of_ofNat_le_ofNat` documents) lifts through `add_le_add_left` and the
+/// witness equation to the goal.
+pub(super) fn declare_le_succ_of_lt(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    let nat = d.nat_ty();
+
+    d.int_theorem(p.le_succ_of_lt, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let hyp = d.ilt(a, b);
+        let one_nat = d.num(1);
+        let one_int = d.of_nat(one_nat);
+        let a1 = d.iadd(a, one_int);
+        let concl = d.ile(a1, b);
+        let stmt = d.arrow(hyp, concl);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // minor : ∀ (n : Nat), a + ofNat n.succ = b → concl.
+        let minor = {
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let sn = d.succ(n);
+            let sn_int = d.of_nat(sn);
+            let shifted = d.iadd(a, sn_int);
+            let eqn_ty = d.ieq(shifted, b);
+            let eqn_fv = d.fresh_fvar();
+            let eqn = d.kernel().fvar(eqn_fv);
+
+            let zero_nat = d.num(0);
+            let zero_le_n = d.const_app(p.nat.zero_le, &[n]);
+            let one_le_sn = d.const_app(p.nat.le_succ_succ, &[zero_nat, n, zero_le_n]);
+            let step = d.const_app(p.add_le_add_left, &[one_int, sn_int, a, one_le_sn]);
+            let motive = d.ieq_motive(shifted, &|d, t| d.ile(a1, t));
+            let rewritten = d.itransport(shifted, motive, step, b, eqn);
+            let body = d.lam_fv(eqn_fv, eqn_ty, rewritten);
+            d.lam_fv(n_fv, nat, body)
+        };
+
+        let elim = d.const_app(p.lt_elim, &[a, b, h]);
+        let applied = d.apply(elim, &[concl, minor]);
+        let proof = d.lam_fv(h_fv, hyp, applied);
+        (stmt, proof)
+    })?;
+
+    Ok(())
+}
+
 /// `Int.add_le_add_iff_left : Iff (a+b <= a+c) (b <= c)` and
 /// `Int.add_le_add_iff_right : Iff (a+c <= b+c) (a <= b)`.
 ///

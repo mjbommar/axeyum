@@ -292,6 +292,12 @@ pub struct IntPrelude {
     pub lt_of_le_of_lt: NameId,
     /// `le_of_lt : ∀ (a b : Int), lt a b → le a b`.
     pub le_of_lt: NameId,
+    /// `le_succ_of_lt : ∀ (a b : Int), lt a b → le (add a one) b` — the
+    /// strictness bridge `le_of_lt` alone does not give: a `<` hypothesis
+    /// recovers a full unit of slack, not just `≤`. Built from `lt.elim`
+    /// (the CPS form of `lt_dest`'s witness) rather than a new `Exists`
+    /// scaffold.
+    pub le_succ_of_lt: NameId,
 
     // --- additive laws -------------------------------------------------------
     /// `add_le_add : ∀ (a b c d : Int), le a b → le c d → le (add a c) (add b d)`.
@@ -1978,6 +1984,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         lt_of_lt_of_le: child(kernel, "lt_of_lt_of_le"),
         lt_of_le_of_lt: child(kernel, "lt_of_le_of_lt"),
         le_of_lt: child(kernel, "le_of_lt"),
+        le_succ_of_lt: child(kernel, "le_succ_of_lt"),
         add_le_add: child(kernel, "add_le_add"),
         add_comm: child(kernel, "add_comm"),
         add_assoc: child(kernel, "add_assoc"),
@@ -2386,6 +2393,7 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         order_coercion::declare_dest_elim(&mut d)?;
         order::declare_additive_order(&mut d)?;
         order_add::declare_add_le_add_left_right(&mut d)?;
+        order_add::declare_le_succ_of_lt(&mut d)?;
         order_add::declare_add_le_add_iff(&mut d)?;
         order_add::declare_add_le_add_three(&mut d)?;
         order_add::declare_add_le_iff_le_sub(&mut d)?;
