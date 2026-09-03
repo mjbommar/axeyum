@@ -38,8 +38,10 @@ use crate::nat_prelude::NatOps;
 use super::{Decline, Shape, head_const, is_closed, le_witness, nat_value, spine};
 
 /// Parse `goal` as `Eq Int lhs rhs`, `Int.le lhs rhs`, or `Int.lt lhs rhs`.
-#[cfg_attr(not(test), allow(dead_code))]
-fn parse_goal(d: &mut IntDev<'_>, e: ExprId) -> Option<(Shape, ExprId, ExprId)> {
+/// Shared with `crate::tactic::int`, which needs the same shapes to build
+/// its gluing motives — mirrors `crate::decide::parse_goal`'s own sharing
+/// with `crate::tactic`.
+pub(crate) fn parse_goal(d: &mut IntDev<'_>, e: ExprId) -> Option<(Shape, ExprId, ExprId)> {
     let (head, args) = spine(d, e);
     let name = head_const(d, head)?;
     let p = d.int();
