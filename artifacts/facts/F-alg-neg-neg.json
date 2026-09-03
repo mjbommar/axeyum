@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-neg-neg",
+  "title": "In an abstract group, the inverse of the inverse is the original element",
+  "statement": "For any group record G (an abstract carrier, binary op, identity e, inverse, associativity, two-sided identity and inverse laws) and element a of G's carrier, inv (inv a) = a.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.neg_neg : ((x0 : Alg.Group) -> ((x1 : Alg.Group.carrier x0) -> Eq.{1} (Alg.Group.carrier x0) (Alg.Group.inv x0 (Alg.Group.inv x0 x1)) x1))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.neg_neg"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:alg-group-inv-unique"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-neg-neg-1",
+      "kind": "kernel-term",
+      "supports": "Alg.neg_neg admits through the trusted kernel gate as a DIRECT INSTANTIATION of Alg.groupInvUnique at (x := inv a, b := inv (inv a), c := a), h1 := invL(inv a), h2 := invL a -- no new proof engineering. Instantiated CONCRETELY at Int.addGroup (a := 3) with the type checked to reduce to Eq 3 3, and SYMBOLICALLY at Rat.addGroup closed over a free a.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- neg_neg_applies_concretely_at_int_and_symbolically_at_rat --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-neg-neg-2",
+      "kind": "kernel-term",
+      "supports": "Alg.neg_neg instantiated at Rat.addGroup has the SAME TYPE as the hand-proved Rat.neg_neg -- a genuine retirement candidate. Int.addGroup has NO retirement counterpart: int_prelude/gcd.rs's `neg_neg` is a private Rust proof-term HELPER (`pub(super) fn neg_neg`), never declared as a kernel-visible theorem, so Alg.neg_neg instantiated at Int.addGroup is a NEW top-level fact for Int, not a retirement.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- retirement_rat_neg_neg --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-2, ADR-1584.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (build_neg_neg, declared as Alg.neg_neg); tests rat_prelude::algebra_ext::algebra_ext_tests::neg_neg_applies_concretely_at_int_and_symbolically_at_rat, ::retirement_rat_neg_neg."
+  },
+  "notes": "Retires Rat.neg_neg (same type). Does not retire anything at Int: int_prelude has no declared Int.neg_neg theorem, only a private helper -- so this is the first place Int's double-negation fact becomes a kernel-checkable NAME, reachable via Alg.neg_neg Int.addGroup, rather than a new one."
+}

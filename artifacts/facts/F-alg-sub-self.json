@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-sub-self",
+  "title": "In an abstract ring, a-a=0, defined generically",
+  "statement": "For any ring record R (an abstract carrier, additive/multiplicative structure, negation) with sub defined as sub a b := add a (neg b), and element x of R's carrier, sub x x = zero.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.sub_self : ((x0 : Alg.Ring) -> ((x1 : Alg.Ring.carrier x0) -> Eq.{1} (Alg.Ring.carrier x0) (Alg.sub x0 x1 x1) (Alg.Ring.zero x0)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.sub_self"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-sub-self-1",
+      "kind": "kernel-term",
+      "supports": "Alg.sub (Pi R:Ring, carrier -> carrier -> carrier := fun R a b => R.add a (R.neg b)) and Alg.sub_self (proved by R.negAdd x alone, since Alg.sub R x x unfolds by beta+delta to R.add x (R.neg x)) both admit through the trusted kernel gate. Alg.sub's own specification is confirmed by a symbolic def_eq check against R.add a (R.neg b) at Int.ring (closed over free a b), and Alg.sub_self type-checks symbolically (closed over free x) at both Int.ring and Rat.ring.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- sub_self_and_mul_neg_one_apply_symbolically_at_int_and_rat_rings --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-sub-self-2",
+      "kind": "kernel-term",
+      "supports": "Alg.sub_self instantiated at Rat.ring has the SAME TYPE as the hand-proved Rat.sub_self -- a genuine retirement candidate. Rat.sub itself is already defined as `add a (-b)` (group.rs's declare_subtraction module doc), matching Alg.sub's definition exactly, so this is not a coincidental match.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- retirement_rat_sub_self --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-2, ADR-1584.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (build_sub, build_sub_self, declared as Alg.sub / Alg.sub_self); tests rat_prelude::algebra_ext::algebra_ext_tests::alg_sub_unfolds_to_add_neg_at_int_ring, ::sub_self_and_mul_neg_one_apply_symbolically_at_int_and_rat_rings, ::retirement_rat_sub_self."
+  },
+  "notes": "Retires Rat.sub_self (same type). Int has no Int.sub_self by that name checked here (out of scope for this fact -- see F:alg-mul-neg-one for the sibling Int-side ring identity coverage)."
+}

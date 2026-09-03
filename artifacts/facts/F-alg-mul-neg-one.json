@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-mul-neg-one",
+  "title": "In an abstract ring, x*(-1)=-x",
+  "statement": "For any ring record R (an abstract carrier, additive/multiplicative structure, negation) and element x of R's carrier, mul x (neg one) = neg x.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.mul_neg_one : ((x0 : Alg.Ring) -> ((x1 : Alg.Ring.carrier x0) -> Eq.{1} (Alg.Ring.carrier x0) (Alg.Ring.mul x0 x1 (Alg.Ring.neg x0 (Alg.Ring.one x0))) (Alg.Ring.neg x0 x1)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.mul_neg_one"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:alg-ring-mul-zero", "F:alg-group-inv-unique", "F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-mul-neg-one-1",
+      "kind": "kernel-term",
+      "supports": "Alg.mul_neg_one admits through the trusted kernel gate. Built by projecting R's additive structure to a Group (Ring.toCommGroup then CommGroup.toGroup -- the payoff Alg.CommMonoid.toMonoid/etc exist for) and applying Alg.groupInvUnique there at (x, mul x (neg one), neg x), rather than deriving `mul a (neg b) = neg (mul a b)` directly. FACT1 (add (mul x (neg one)) x = zero) is derived from distribL, Alg.ringMulZero, and mulOneR; FACT2 is R.negAdd x directly. Type-checks symbolically (closed over free x) at both Int.ring and Rat.ring.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- sub_self_and_mul_neg_one_apply_symbolically_at_int_and_rat_rings --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-mul-neg-one-2",
+      "kind": "kernel-term",
+      "supports": "NO retirement target under this exact name/direction on either carrier: Int's `neg_one_mul` is the MIRRORED LEFT form ((-1)*x=-x, not x*(-1)=-x) and Rat has no `mul_neg_one`/`neg_one_mul` at all. Bridging the two directions needs mul_comm (a CommRing fact this theorem is deliberately stated without, since it is proved at the Ring level). Confirmed by a compiled reference to Int.neg_one_mul (a field that would fail to compile if renamed/removed), not by a text grep alone.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- mul_neg_one_has_no_retirement_target --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-2, ADR-1584.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (build_mul_neg_one, declared as Alg.mul_neg_one); tests rat_prelude::algebra_ext::algebra_ext_tests::sub_self_and_mul_neg_one_apply_symbolically_at_int_and_rat_rings, ::mul_neg_one_has_no_retirement_target."
+  },
+  "notes": "Not a retirement of anything: this is a NEW fact at both Int and Rat. Stated at Ring (no commutativity assumed) -- the RIGHT-multiplication direction; a symmetric LEFT-multiplication statement is a separate theorem this lane did not build."
+}

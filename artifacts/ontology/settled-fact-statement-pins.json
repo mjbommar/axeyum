@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2225,
+    "min_identity_bound": 2231,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -745,11 +745,53 @@
       "kernel_theorem": "Alg.monoidIdentUnique"
     },
     {
+      "fact_id": "F:alg-mul-le-mul-of-nonneg-left",
+      "language": "lean4",
+      "statement_sha256": "fff8a9d9248aeafe27de39cfc8f414993003283ca317643257dccd0befd11deb",
+      "prose_sha256": "d30a2d03f03dbeba404b1f248de5b472c56e5a5ca56e4ed6abeae1c072261db8",
+      "kernel_theorem": "Alg.mul_le_mul_of_nonneg_left"
+    },
+    {
+      "fact_id": "F:alg-mul-left-cancel",
+      "language": "lean4",
+      "statement_sha256": "6359d2f7888b245e4cb74cce89525167af5bbdf08e4412e92082b56299afb306",
+      "prose_sha256": "a5728b71b4f0bb367e7d84a44e1930185dc58cd435b3fc41e0f8495c387229a1",
+      "kernel_theorem": "Alg.mul_left_cancel"
+    },
+    {
+      "fact_id": "F:alg-mul-neg-one",
+      "language": "lean4",
+      "statement_sha256": "e8937ed79a4a97fb2007b80ec8a006c1c92c213c1f1faaa02651c51a7fdadaac",
+      "prose_sha256": "1f1a9ba8a7341f47a2bccff0cc2a99ba4a93c68d4e6eea31040ba6f24cb117de",
+      "kernel_theorem": "Alg.mul_neg_one"
+    },
+    {
+      "fact_id": "F:alg-neg-neg",
+      "language": "lean4",
+      "statement_sha256": "dee01b09521e6e2736d977ce6d84db8f6ec0fb1305718195a9e7eb7f1e05c266",
+      "prose_sha256": "28c69c493a3a7884f33f236df404a987055ddcd0cae49b419c51e95874094088",
+      "kernel_theorem": "Alg.neg_neg"
+    },
+    {
+      "fact_id": "F:alg-pow-add",
+      "language": "lean4",
+      "statement_sha256": "005a4ac9496d144c4ed791a6e04ab3e4fd9eb635f374de88e8db8eaa336c0b39",
+      "prose_sha256": "7f6d32c5b10a2b3e63351c482dabddb01fd91417688c789c5ccf7f451db0d726",
+      "kernel_theorem": "Alg.pow_add"
+    },
+    {
       "fact_id": "F:alg-ring-mul-zero",
       "language": "lean4",
       "statement_sha256": "b2fe2f058622e4753c56e8b9befb5470d0d4753b918351148a1c750e4c450f15",
       "prose_sha256": "668159f88abaedb6c2fee4fcada7b4be800216aacf2ca879559a541466faebad",
       "kernel_theorem": "Alg.ringMulZero"
+    },
+    {
+      "fact_id": "F:alg-sub-self",
+      "language": "lean4",
+      "statement_sha256": "e7886eac565f780b39bbbd291ee1aa0f82c3143d08a771c6e6d5a902d66c3831",
+      "prose_sha256": "2a590a80ef9202a5edd26257dc33242267a339174cbf8330bf409bd8947df676",
+      "kernel_theorem": "Alg.sub_self"
     },
     {
       "fact_id": "F:alternating-binomial-row-sum-zero",
