@@ -658,6 +658,9 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_mem_b_of_bound_le,
         p.finset_card_eq_count_range_add,
         p.finset_card_union_add_card_inter,
+        p.finset_all_below_of_all_true,
+        p.finset_all_below_true_at,
+        p.finset_card_le_of_subset_b,
         // `nat-factorization` lane: `factorization_multiset.rs`.
         p.prod_range_eq_one_of_below,
         p.multiset_count_singleton_self,

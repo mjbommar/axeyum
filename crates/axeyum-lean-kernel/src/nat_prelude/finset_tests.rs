@@ -457,6 +457,9 @@ fn every_finset_declaration_is_present_and_axiom_free() {
             "card_union_add_card_inter",
             p.finset_card_union_add_card_inter,
         ),
+        ("allBelow_of_all_true", p.finset_all_below_of_all_true),
+        ("allBelow_true_at", p.finset_all_below_true_at),
+        ("card_le_of_subsetB", p.finset_card_le_of_subset_b),
     ];
     for (label, name) in names {
         assert!(
@@ -470,4 +473,167 @@ fn every_finset_declaration_is_present_and_axiom_free() {
             footprint.len()
         );
     }
+}
+
+/// `Nat.Finset.card_union_add_card_inter` instantiates at a CONCRETE
+/// overlapping pair and states the arithmetic identity that pair satisfies.
+///
+/// Instantiating concretely is not redundant with the declaration: the theorem
+/// was admitted against free `s`/`t`, which is the symbolic half, and a
+/// concrete instance is what catches a statement whose two sides are the same
+/// term for a reason other than the one intended. The negative control is the
+/// SUBTRACTIVE form's numerals — `3` against `4` — which this additive
+/// statement deliberately does not claim.
+#[test]
+fn inclusion_exclusion_instantiates_concretely_and_symbolically() {
+    let mut f = Fixture::new();
+    let name = f.p.finset_card_union_add_card_inter;
+
+    let a = f.of(&[1, 2]);
+    let b = f.of(&[2, 3]);
+    let at_pair = f.const_app(name, &[a, b]);
+    let ty =
+        f.k.infer(at_pair)
+            .expect("card_union_add_card_inter must instantiate at {1,2}, {2,3}");
+
+    // Both sides are `4` at this pair: 3 + 1 on the left, 2 + 2 on the right.
+    let four = f.num(4);
+    let three = f.num(3);
+    let expected = f.eq(four, four);
+    assert!(
+        f.k.def_eq(ty, expected),
+        "at ({{1,2}}, {{2,3}}) the identity must reduce to 4 = 4, got {}",
+        f.k.render_lean(ty)
+    );
+    let wrong = f.eq(three, four);
+    assert!(
+        !f.k.def_eq(ty, wrong),
+        "negative control: the statement must NOT reduce to 3 = 4"
+    );
+
+    // The symbolic half: the same constant applied to two genuinely free
+    // set-valued variables, closed back into a lambda so `infer` sees it.
+    // Nothing here reduces to a numeral, which is the point -- a concrete
+    // instance can hide a defeq-shaped gap that full evaluation papers over.
+    let fs = f.k.const_(f.p.finset, vec![]);
+    let s_fv = f.fresh_fvar();
+    let s = f.k.fvar(s_fv);
+    let t_fv = f.fresh_fvar();
+    let t = f.k.fvar(t_fv);
+    let at_free = f.const_app(name, &[s, t]);
+    let closed = {
+        let inner = f.lam_fv(t_fv, fs, at_free);
+        f.lam_fv(s_fv, fs, inner)
+    };
+    assert!(
+        f.k.infer(closed).is_ok(),
+        "card_union_add_card_inter must infer at free set variables"
+    );
+}
+
+/// `Nat.Finset.card_le_of_subsetB` instantiates at a CONCRETE inclusion whose
+/// `subsetB` witness is `Eq.refl true` — the decision computes, so the
+/// hypothesis costs nothing at a closed instance — and states `2 ≤ 3`.
+///
+/// The negative control is the reversed inequality: a `card_le_of_subsetB`
+/// stated with its two `card`s swapped would type-check identically against
+/// free variables, and only a concrete instance separates them.
+#[test]
+fn card_le_of_subset_b_instantiates_concretely_and_symbolically() {
+    let mut f = Fixture::new();
+    let name = f.p.finset_card_le_of_subset_b;
+
+    let small = f.of(&[1, 2]);
+    let big = f.of(&[1, 2, 3]);
+    let witness = {
+        let t = f.bool_true();
+        f.bool_refl(t)
+    };
+    let applied = f.const_app(name, &[small, big, witness]);
+    let ty =
+        f.k.infer(applied)
+            .expect("card_le_of_subsetB must instantiate where subsetB computes to true");
+
+    let two = f.num(2);
+    let three = f.num(3);
+    let expected = f.le(two, three);
+    assert!(
+        f.k.def_eq(ty, expected),
+        "at ({{1,2}} <= {{1,2,3}}) the conclusion must be 2 <= 3, got {}",
+        f.k.render_lean(ty)
+    );
+    let wrong = f.le(three, two);
+    assert!(
+        !f.k.def_eq(ty, wrong),
+        "negative control: the conclusion must NOT be 3 <= 2 -- a statement \
+         with the two cards swapped is indistinguishable symbolically"
+    );
+
+    // Symbolic: two free sets, closed back into a lambda. The residual type is
+    // the implication `subsetB s t = true -> card s <= card t` at genuinely
+    // free arguments, where no `subsetB` decision computes.
+    let fs = f.k.const_(f.p.finset, vec![]);
+    let s_fv = f.fresh_fvar();
+    let s = f.k.fvar(s_fv);
+    let t_fv = f.fresh_fvar();
+    let t = f.k.fvar(t_fv);
+    let at_free = f.const_app(name, &[s, t]);
+    let closed = {
+        let inner = f.lam_fv(t_fv, fs, at_free);
+        f.lam_fv(s_fv, fs, inner)
+    };
+    assert!(
+        f.k.infer(closed).is_ok(),
+        "card_le_of_subsetB must infer at free set variables"
+    );
+}
+
+/// The two `allBelow` directions are genuinely different theorems, and the
+/// REFLECTION one is the direction `Nat.Multiset.eqBelow` does not carry.
+///
+/// `allBelow (fun k => ble k 4) 3` computes to `true` and
+/// `allBelow (fun k => ble k 1) 3` to `false` — the second is the case a loop
+/// that ignored its predicate, or that stopped one index early, would get
+/// wrong (`ble 2 1 = false` is the only index that separates them).
+#[test]
+fn all_below_computes_and_stops_at_the_bound() {
+    let mut f = Fixture::new();
+    let t = f.bool_true();
+    let fa = f.bool_false();
+    let name = f.p.finset_all_below;
+
+    let three = f.num(3);
+    let wide = f.le_pred(4);
+    let all = f.const_app(name, &[wide, three]);
+    assert!(
+        f.k.def_eq(all, t),
+        "allBelow (k <= 4) 3 must be true -- every index below 3 satisfies it"
+    );
+    assert!(
+        !f.k.def_eq(all, fa),
+        "negative control: allBelow (k <= 4) 3 must NOT be false"
+    );
+
+    let three_b = f.num(3);
+    let narrow = f.le_pred(1);
+    let some = f.const_app(name, &[narrow, three_b]);
+    assert!(
+        f.k.def_eq(some, fa),
+        "allBelow (k <= 1) 3 must be false -- index 2 fails"
+    );
+    assert!(
+        !f.k.def_eq(some, t),
+        "negative control: allBelow (k <= 1) 3 must NOT be true; a loop that \
+         stopped at index 1 would answer true here"
+    );
+
+    // And it does not read past its bound: at bound 2 the failing index 2 is
+    // out of range, so the same narrow predicate answers `true`.
+    let two = f.num(2);
+    let narrow2 = f.le_pred(1);
+    let stopped = f.const_app(name, &[narrow2, two]);
+    assert!(
+        f.k.def_eq(stopped, t),
+        "allBelow (k <= 1) 2 must be true -- the failing index is out of range"
+    );
 }

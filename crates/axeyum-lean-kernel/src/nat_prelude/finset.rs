@@ -980,6 +980,471 @@ fn declare_card_union_add_card_inter(
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// `allBelow` and the reflection half.
+// ---------------------------------------------------------------------------
+
+/// `False.rec` into `target` from a proof of `False`.
+fn from_false(d: &mut NatDev<'_>, p: &NatPrelude, false_proof: ExprId, target: ExprId) -> ExprId {
+    let anon = d.anon_name();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let motive = d.kernel().lam(anon, false_ty, target, BinderInfo::Default);
+    let level_zero = d.kernel().level_zero();
+    let rec = d.kernel().const_(p.logic.false_rec, vec![level_zero]);
+    d.apply(rec, &[motive, false_proof])
+}
+
+/// Non-dependent `Or.rec` into a `Prop` goal.
+#[allow(clippy::too_many_arguments)]
+fn or_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_case: ExprId,
+    right_case: ExprId,
+    or_proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_ty, right_ty, motive, left_case, right_case, or_proof],
+    )
+}
+
+/// `Nat.Finset.allBelow_of_all_true : ∀ f n,
+/// (∀ i, Lt i n → Eq Bool (f i) true) → Eq Bool (allBelow f n) true`
+/// and its converse
+/// `Nat.Finset.allBelow_true_at : ∀ f n, Eq Bool (allBelow f n) true →
+/// ∀ i, Lt i n → Eq Bool (f i) true`.
+///
+/// The REFLECTION direction (`allBelow_true_at`) is the one
+/// `Nat.Multiset.eqBelow` deliberately does not carry — ADR-1520 §2 says so
+/// explicitly — and it is what makes a `Bool`-valued `subsetB` usable as a
+/// hypothesis instead of decorative. Both are ordinary inductions on the bound
+/// whose step decides `f j` with `ops::bool_true_or_false` (two constructors,
+/// no excluded middle): at `true` the guard reduces away and the induction
+/// hypothesis carries; at `false` the whole loop is `false`, which contradicts
+/// the `= true` premise through `false_true_elim`.
+fn declare_all_below_laws(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let pty = pred_ty(d);
+
+    // allBelow_of_all_true
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+
+        // `∀ i, Lt i n → f i = true`, at an arbitrary bound.
+        let all_true_ty = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hi_ty = d.lt(i, n);
+            let fi = d.apply(f, &[i]);
+            let t = d.bool_true();
+            let concl = d.bool_eq(fi, t);
+            let with_hi = d.arrow(hi_ty, concl);
+            d.pi_fv(i_fv, nat, with_hi)
+        };
+        let motive_at = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+            let hyp = all_true_ty(d, n);
+            let loop_ = d.const_app(p.finset_all_below, &[f, n]);
+            let t = d.bool_true();
+            let concl = d.bool_eq(loop_, t);
+            d.arrow(hyp, concl)
+        };
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.induct(
+            &|d, x| motive_at(d, x),
+            &|d| {
+                // `allBelow f 0` IS `true` by iota, so the hypothesis is unused.
+                let zero = d.zero();
+                let hyp_ty = all_true_ty(d, zero);
+                let h_fv = d.fresh_fvar();
+                let t = d.bool_true();
+                let refl_true = d.bool_refl(t);
+                d.lam_fv(h_fv, hyp_ty, refl_true)
+            },
+            &|d, j, ih| {
+                let succ_j = d.succ(j);
+                let hyp_ty = all_true_ty(d, succ_j);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+
+                // `f j = true` at the new index.
+                let self_lt = d.lemma(p.lt_succ_self, &[j]);
+                let hfj = d.apply(h, &[j, self_lt]);
+
+                // The induction hypothesis needs the SHORTER premise.
+                let shorter = {
+                    let i_fv = d.fresh_fvar();
+                    let i = d.kernel().fvar(i_fv);
+                    let hi_fv = d.fresh_fvar();
+                    let hi_ty = d.lt(i, j);
+                    let hi = d.kernel().fvar(hi_fv);
+                    let succ_i = d.succ(i);
+                    // `Lt i j` is `Le (succ i) j`; `le_succ_of_le` moves it to
+                    // `Le (succ i) (succ j)`, which IS `Lt i (succ j)`.
+                    let widened = d.lemma(p.le_succ_of_le, &[succ_i, j, hi]);
+                    let step = d.apply(h, &[i, widened]);
+                    let with_hi = d.lam_fv(hi_fv, hi_ty, step);
+                    d.lam_fv(i_fv, nat, with_hi)
+                };
+                let tail = d.apply(ih, &[shorter]);
+
+                let loop_j = d.const_app(p.finset_all_below, &[f, j]);
+                let fj = d.apply(f, &[j]);
+                let false_ = d.bool_false();
+                let guard = bool_select_bool(d, &p, fj, loop_j, false_);
+                let unguard = select_bool_true(d, &p, fj, loop_j, false_, hfj);
+                let t = d.bool_true();
+                let proof = d.bool_trans(guard, loop_j, t, unguard, tail);
+                d.lam_fv(h_fv, hyp_ty, proof)
+            },
+            n,
+        );
+
+        let ty = {
+            let concl = motive_at(d, n);
+            let with_n = d.pi_fv(n_fv, nat, concl);
+            d.pi_fv(f_fv, pty, with_n)
+        };
+        let value = {
+            let with_n = d.lam_fv(n_fv, nat, body);
+            d.lam_fv(f_fv, pty, with_n)
+        };
+        d.declare_theorem(p.finset_all_below_of_all_true, ty, value)?;
+    }
+
+    // allBelow_true_at
+    {
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+
+        let all_true_ty = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+            let i_fv = d.fresh_fvar();
+            let i = d.kernel().fvar(i_fv);
+            let hi_ty = d.lt(i, n);
+            let fi = d.apply(f, &[i]);
+            let t = d.bool_true();
+            let concl = d.bool_eq(fi, t);
+            let with_hi = d.arrow(hi_ty, concl);
+            d.pi_fv(i_fv, nat, with_hi)
+        };
+        let motive_at = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+            let loop_ = d.const_app(p.finset_all_below, &[f, n]);
+            let t = d.bool_true();
+            let hyp = d.bool_eq(loop_, t);
+            let concl = all_true_ty(d, n);
+            d.arrow(hyp, concl)
+        };
+
+        let n_fv = d.fresh_fvar();
+        let n = d.kernel().fvar(n_fv);
+        let body = d.induct(
+            &|d, x| motive_at(d, x),
+            &|d| {
+                // Nothing is below `0`, so every index is refuted rather than
+                // answered.
+                let zero = d.zero();
+                let loop_ = d.const_app(p.finset_all_below, &[f, zero]);
+                let t = d.bool_true();
+                let hyp_ty = d.bool_eq(loop_, t);
+                let h_fv = d.fresh_fvar();
+                let i_fv = d.fresh_fvar();
+                let i = d.kernel().fvar(i_fv);
+                let hi_ty = d.lt(i, zero);
+                let hi_fv = d.fresh_fvar();
+                let hi = d.kernel().fvar(hi_fv);
+                let refuted = d.lemma(p.not_lt_zero, &[i, hi]);
+                let goal = {
+                    let fi = d.apply(f, &[i]);
+                    let t2 = d.bool_true();
+                    d.bool_eq(fi, t2)
+                };
+                let absurd = from_false(d, &p, refuted, goal);
+                let with_hi = d.lam_fv(hi_fv, hi_ty, absurd);
+                let with_i = d.lam_fv(i_fv, nat, with_hi);
+                d.lam_fv(h_fv, hyp_ty, with_i)
+            },
+            &|d, j, ih| {
+                let succ_j = d.succ(j);
+                let loop_succ = d.const_app(p.finset_all_below, &[f, succ_j]);
+                let t = d.bool_true();
+                let hyp_ty = d.bool_eq(loop_succ, t);
+                let h_fv = d.fresh_fvar();
+                let h = d.kernel().fvar(h_fv);
+
+                let goal = all_true_ty(d, succ_j);
+
+                let loop_j = d.const_app(p.finset_all_below, &[f, j]);
+                let fj = d.apply(f, &[j]);
+                let false_ = d.bool_false();
+                let guard = bool_select_bool(d, &p, fj, loop_j, false_);
+
+                let decided = super::ops::bool_true_or_false(d, &p, fj);
+                let left_ty = {
+                    let t2 = d.bool_true();
+                    d.bool_eq(fj, t2)
+                };
+                let right_ty = {
+                    let f2 = d.bool_false();
+                    d.bool_eq(fj, f2)
+                };
+
+                // `f j = true`: the guard reduces to the shorter loop, so the
+                // induction hypothesis applies below `j`, and the new index `j`
+                // itself is answered by the case hypothesis transported along
+                // `i = j`.
+                let left_case = {
+                    let hfj_fv = d.fresh_fvar();
+                    let hfj = d.kernel().fvar(hfj_fv);
+                    let unguard = select_bool_true(d, &p, fj, loop_j, false_, hfj);
+                    let back = d.bool_symm(guard, loop_j, unguard);
+                    let t2 = d.bool_true();
+                    let tail = d.bool_trans(loop_j, guard, t2, back, h);
+                    let below = d.apply(ih, &[tail]);
+
+                    let i_fv = d.fresh_fvar();
+                    let i = d.kernel().fvar(i_fv);
+                    let hi_fv = d.fresh_fvar();
+                    let hi_ty = d.lt(i, succ_j);
+                    let hi = d.kernel().fvar(hi_fv);
+                    let le_ij = d.lemma(p.le_of_lt_succ, &[i, j, hi]);
+                    let split = d.lemma(p.lt_or_eq_of_le, &[i, j, le_ij]);
+                    let lt_ty = d.lt(i, j);
+                    let eq_ty = d.eq(i, j);
+                    let inner_goal = {
+                        let fi = d.apply(f, &[i]);
+                        let t3 = d.bool_true();
+                        d.bool_eq(fi, t3)
+                    };
+                    let strictly_below = {
+                        let hlt_fv = d.fresh_fvar();
+                        let hlt = d.kernel().fvar(hlt_fv);
+                        let step = d.apply(below, &[i, hlt]);
+                        d.lam_fv(hlt_fv, lt_ty, step)
+                    };
+                    let at_the_top = {
+                        let heq_fv = d.fresh_fvar();
+                        let heq = d.kernel().fvar(heq_fv);
+                        let back_eq = d.symm(i, j, heq);
+                        let motive = d.eq_motive(j, &|d, x| {
+                            let fx = d.apply(f, &[x]);
+                            let t3 = d.bool_true();
+                            d.bool_eq(fx, t3)
+                        });
+                        let moved = d.transport(j, motive, hfj, i, back_eq);
+                        d.lam_fv(heq_fv, eq_ty, moved)
+                    };
+                    let answered = or_elim(
+                        d,
+                        &p,
+                        lt_ty,
+                        eq_ty,
+                        inner_goal,
+                        strictly_below,
+                        at_the_top,
+                        split,
+                    );
+                    let with_hi = d.lam_fv(hi_fv, hi_ty, answered);
+                    let with_i = d.lam_fv(i_fv, nat, with_hi);
+                    d.lam_fv(hfj_fv, left_ty, with_i)
+                };
+
+                // `f j = false`: the whole loop is `false`, contradicting `h`.
+                let right_case = {
+                    let hfj_fv = d.fresh_fvar();
+                    let hfj = d.kernel().fvar(hfj_fv);
+                    let collapse = select_bool_false(d, &p, fj, loop_j, false_, hfj);
+                    let f2 = d.bool_false();
+                    let back = d.bool_symm(guard, f2, collapse);
+                    let t2 = d.bool_true();
+                    let impossible = d.bool_trans(f2, guard, t2, back, h);
+                    let absurd = d.false_true_elim(goal, impossible);
+                    d.lam_fv(hfj_fv, right_ty, absurd)
+                };
+
+                let answered = or_elim(
+                    d, &p, left_ty, right_ty, goal, left_case, right_case, decided,
+                );
+                d.lam_fv(h_fv, hyp_ty, answered)
+            },
+            n,
+        );
+
+        let ty = {
+            let concl = motive_at(d, n);
+            let with_n = d.pi_fv(n_fv, nat, concl);
+            d.pi_fv(f_fv, pty, with_n)
+        };
+        let value = {
+            let with_n = d.lam_fv(n_fv, nat, body);
+            d.lam_fv(f_fv, pty, with_n)
+        };
+        d.declare_theorem(p.finset_all_below_true_at, ty, value)?;
+    }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Cardinality is monotone under inclusion.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.card_le_of_subsetB : ∀ s t,
+/// Eq Bool (subsetB s t) true → Le (card s) (card t)`.
+///
+/// `subsetB` ranges only over `[0, bound s)`; `Nat.countRange_le_of_subset`
+/// wants `Nat.Subset (memB s) (memB t) width` over the COMMON bound. The gap is
+/// closed without a second search: at an index at or above `bound s`,
+/// `memB_of_bound_le` says `memB s i = false`, so the `Subset` premise
+/// `memB s i = true` is refuted and the obligation is vacuous there. That is
+/// the whole content of the lift, and it is only available because `memB`
+/// truncates in its own definition.
+fn declare_card_le_of_subset_b(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let bs = fs_bound(d, &p, s);
+    let bt = fs_bound(d, &p, t);
+    let width = d.add(bs, bt);
+
+    let hyp_ty = {
+        let decided = d.const_app(p.finset_subset_b, &[s, t]);
+        let tr = d.bool_true();
+        d.bool_eq(decided, tr)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    // The `Bool`-valued implication `subsetB` loops over, as a function.
+    let implication = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let msi = fs_mem(d, &p, s, i);
+        let mti = fs_mem(d, &p, t, i);
+        let tr = d.bool_true();
+        let body = bool_select_bool(d, &p, msi, mti, tr);
+        d.lam_fv(i_fv, nat, body)
+    };
+    // `∀ i, Lt i (bound s) → implication i = true`.
+    let pointwise = d.lemma(p.finset_all_below_true_at, &[implication, bs, h]);
+
+    // `Nat.Subset (memB s) (memB t) width`, spelled out.
+    let subset = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk_ty = d.lt(k, width);
+        let hs_fv = d.fresh_fvar();
+        let hs = d.kernel().fvar(hs_fv);
+        let msk = fs_mem(d, &p, s, k);
+        let mtk = fs_mem(d, &p, t, k);
+        let tr = d.bool_true();
+        let hs_ty = d.bool_eq(msk, tr);
+        let goal = d.bool_eq(mtk, tr);
+
+        let decided = d.lemma(p.lt_or_ge, &[k, bs]);
+        let left_ty = d.lt(k, bs);
+        let right_ty = d.le(bs, k);
+
+        // Below `bound s`: the loop answered this index, and `memB s k = true`
+        // collapses the implication's guard to `memB t k`.
+        let left_case = {
+            let hlt_fv = d.fresh_fvar();
+            let hlt = d.kernel().fvar(hlt_fv);
+            let answered = d.apply(pointwise, &[k, hlt]);
+            let guard = bool_select_bool(d, &p, msk, mtk, tr);
+            let collapse = select_bool_true(d, &p, msk, mtk, tr, hs);
+            let back = d.bool_symm(guard, mtk, collapse);
+            let step = d.bool_trans(mtk, guard, tr, back, answered);
+            d.lam_fv(hlt_fv, left_ty, step)
+        };
+        // At or above `bound s`: `memB s k` is `false`, so the premise `hs` is
+        // impossible and the obligation is vacuous.
+        let right_case = {
+            let hge_fv = d.fresh_fvar();
+            let hge = d.kernel().fvar(hge_fv);
+            let vanishes = d.lemma(p.finset_mem_b_of_bound_le, &[s, k, hge]);
+            let fa = d.bool_false();
+            let back = d.bool_symm(msk, fa, vanishes);
+            let impossible = d.bool_trans(fa, msk, tr, back, hs);
+            let absurd = d.false_true_elim(goal, impossible);
+            d.lam_fv(hge_fv, right_ty, absurd)
+        };
+
+        let answered = or_elim(
+            d, &p, left_ty, right_ty, goal, left_case, right_case, decided,
+        );
+        let with_hs = d.lam_fv(hs_fv, hs_ty, answered);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, with_hs);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let counted = d.lemma(p.count_range_le_of_subset, &[ms, mt, width, subset]);
+
+    // Both sides come back to their own `card` through the workhorse; the `t`
+    // side needs `add_comm` first.
+    let h_card_s = d.lemma(p.finset_card_eq_count_range_add, &[s, bt]);
+    let h_card_t = {
+        let comm = d.lemma(p.add_comm, &[bs, bt]);
+        let swapped = d.add(bt, bs);
+        let move_bound = d.congr(width, swapped, comm, &|d, x| {
+            let mt_inner = fs_mem_fn(d, &p, t);
+            count_range(d, &p, mt_inner, x)
+        });
+        let collapse = d.lemma(p.finset_card_eq_count_range_add, &[t, bs]);
+        let lhs = count_range(d, &p, mt, width);
+        let midpoint = count_range(d, &p, mt, swapped);
+        let card_t = fs_card(d, &p, t);
+        d.trans(lhs, midpoint, card_t, move_bound, collapse)
+    };
+
+    let cr_s = count_range(d, &p, ms, width);
+    let cr_t = count_range(d, &p, mt, width);
+    let card_s = fs_card(d, &p, s);
+    let card_t = fs_card(d, &p, t);
+
+    let moved_left = {
+        let motive = d.eq_motive(cr_s, &|d, x| d.le(x, cr_t));
+        d.transport(cr_s, motive, counted, card_s, h_card_s)
+    };
+    let moved_right = {
+        let motive = d.eq_motive(cr_t, &|d, x| d.le(card_s, x));
+        d.transport(cr_t, motive, moved_left, card_t, h_card_t)
+    };
+
+    let concl = d.le(card_s, card_t);
+    let ty = {
+        let with_h = d.arrow(hyp_ty, concl);
+        let with_t = d.pi_fv(t_fv, fs, with_h);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, moved_right);
+        let with_t = d.lam_fv(t_fv, fs, with_h);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_card_le_of_subset_b, ty, value)?;
+    Ok(())
+}
+
 /// Every `Nat.Finset` declaration, in dependency order.
 ///
 /// # Errors
@@ -992,5 +1457,7 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_membership_laws(d, p)?;
     declare_card_eq_count_range_add(d, p)?;
     declare_card_union_add_card_inter(d, p)?;
+    declare_all_below_laws(d, p)?;
+    declare_card_le_of_subset_b(d, p)?;
     Ok(())
 }
