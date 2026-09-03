@@ -429,6 +429,27 @@ fn rewrite_to_fixpoint<D: NatOps>(
     Ok((current, proof, steps.len()))
 }
 
+/// Rewrite `start` to a fixed point under `rules`, returning
+/// `(final_term, proof: Eq start final_term)` — [`rewrite_to_fixpoint`]
+/// without the step count, which is all a caller needs when it does not
+/// intend to prove an `Eq` goal itself but instead wants to hand the
+/// **normalized** term to a different producer and glue the two proofs back
+/// together (`crate::tactic`'s `Then(Simp, _)`, the only caller: `simp`'s
+/// own `prove`/`prove_eq` always rewrite *both* sides of an already-`Eq`
+/// goal and never need the normal form of a single, unpaired term).
+///
+/// # Errors
+///
+/// [`Decline::BudgetExceeded`], as [`rewrite_to_fixpoint`].
+pub(crate) fn normalize<D: NatOps>(
+    d: &mut D,
+    rules: &[Rule<D>],
+    start: ExprId,
+) -> Result<(ExprId, ExprId), Decline> {
+    let (final_term, proof, _steps) = rewrite_to_fixpoint(d, rules, start)?;
+    Ok((final_term, proof))
+}
+
 // --- proving --------------------------------------------------------------
 
 fn prove_eq_inner<D: NatOps>(

@@ -711,33 +711,32 @@ fn ex_falso(d: &mut NatDev<'_>, p: &NatPrelude, target: ExprId, false_proof: Exp
 /// consistent with this codebase's existing convention for a ~20-line
 /// helper reused by three unrelated proofs).
 fn n_lt_mul_two(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId, pos: ExprId) -> ExprId {
+    // Retired to the `tactic` combinator (ADR-1589): `simp`'s default rules
+    // rewrite `mul 2 n` to `add n n` (`succ_mul` twice, `zero_mul`,
+    // `zero_add`), then `linarith` closes `Lt n (add n n)` from `pos : Lt
+    // zero n` directly (`linarith::nat` also recognizes a literal-numeral
+    // `mul` on its own -- this retirement keeps `Then(Simp, Linarith)`
+    // because that is the hand proof's own shape, a rewrite step then an
+    // order step, not because `Linarith` alone cannot reach it here).
     let p = *p;
     let zero = d.zero();
-    let add_n_zero = d.add(n, zero);
-    let add_n_n = d.add(n, n);
-    let step1 = d.lemma(p.add_lt_add_left, &[n, zero, n, pos]);
-    let eq1 = d.lemma(p.add_zero, &[n]);
-    let motive1 = d.eq_motive(add_n_zero, &|d, x| {
-        let add_n_n_inner = d.add(n, n);
-        d.lt(x, add_n_n_inner)
-    });
-    let n_lt_add_n_n = d.transport(add_n_zero, motive1, step1, n, eq1);
-
-    let one = d.num(1);
-    let succ_one = d.succ(one);
-    let mul_succ_one_n = d.mul(succ_one, n);
-    let mul_one_n = d.mul(one, n);
-    let add_mul_one_n_n = d.add(mul_one_n, n);
-    let succ_mul_eq = d.lemma(p.succ_mul, &[one, n]);
-    let one_mul_eq = d.lemma(p.one_mul, &[n]);
-    let congr_step = d.congr(mul_one_n, n, one_mul_eq, &|d, x| d.add(x, n));
-    let (_, mul_two_n_eq_add_n_n) = d.chain(
-        mul_succ_one_n,
-        &[(add_mul_one_n_n, succ_mul_eq), (add_n_n, congr_step)],
+    let two = d.num(2);
+    let mul_two_n = d.mul(two, n);
+    let goal = d.lt(n, mul_two_n);
+    let pos_ty = d.lt(zero, n);
+    let assumptions = [(pos_ty, pos)];
+    let rules = crate::simp::nat::default_rules(&p);
+    let ctx = crate::tactic::Ctx {
+        prelude: p,
+        assumptions: &assumptions,
+        rules: &rules,
+    };
+    let tactic = crate::tactic::Tactic::Then(
+        Box::new(crate::tactic::Tactic::Simp),
+        Box::new(crate::tactic::Tactic::Linarith),
     );
-    let rev_eq = d.symm(mul_succ_one_n, add_n_n, mul_two_n_eq_add_n_n);
-    let motive2 = d.eq_motive(add_n_n, &|d, x| d.lt(n, x));
-    d.transport(add_n_n, motive2, n_lt_add_n_n, mul_succ_one_n, rev_eq)
+    crate::tactic::run(d, &ctx, &tactic, goal)
+        .unwrap_or_else(|e| panic!("n_lt_mul_two: Then(Simp, Linarith) declined: {e:?}"))
 }
 
 /// `fun i => And (Eq (testBit n i) one) (∀ j, Lt i j → Eq (testBit n j)

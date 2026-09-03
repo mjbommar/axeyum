@@ -920,12 +920,18 @@ fn declare_coprime_fib_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), Ke
 
 /// `Lt (fib (succ (succ n))) (fib (succ (succ (succ n))))` — the
 /// shifted-by-two Fibonacci sequence's adjacent-step strict inequality,
-/// unconditional in `n`. `fib_add_two` at `succ n` gives `fib(n+3) =
-/// fib(n+2) + fib(n+1)`; `fib_pos_of_pos` at `succ n` (fed by
-/// `d.zero_lt_succ(n) : Lt 0 (succ n)`) gives `fib(n+1) > 0`;
-/// `add_lt_add_left` at the gap `Lt 0 (fib(n+1))` plus `add_zero` gives
-/// `fib(n+2) < fib(n+2) + fib(n+1)`, and substituting the first equation
-/// (reversed) lands on the goal.
+/// unconditional in `n`.
+///
+/// Retired to the `tactic` combinator (ADR-1589), `Tactic::Linarith` alone
+/// (no `Simp` stage): the hand proof this replaces is itself "rewrite [an
+/// equation hypothesis] then an order step" (transport `h_add2` through an
+/// `add_lt_add_left`/`add_zero` chain), and `linarith`'s own `collect`
+/// already turns an `Eq` HYPOTHESIS into both `Le` directions and searches a
+/// Farkas certificate over every hypothesis it is given — no separate
+/// rewrite stage is needed when the rewriting is of a HYPOTHESIS rather than
+/// the goal itself. `fib(...)` is an opaque atom to `linarith` either way;
+/// the certificate is `1·(fib_sssn = fib_ssn+fib_sn, "down" direction) +
+/// 1·(0 < fib_sn)`, which sums to exactly the goal.
 fn fib_add_two_lt_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let p = *p;
     let sn = d.succ(n);
@@ -939,27 +945,23 @@ fn fib_add_two_lt_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId 
     // h_add2 : fib(n+3) = fib(n+2) + fib(n+1)
     let h_add2 = d.lemma(p.fib_add_two, &[sn]);
     let fib_ssn_plus_fibsn = d.add(fib_ssn, fib_sn);
+    let h_add2_ty = d.eq(fib_sssn, fib_ssn_plus_fibsn);
 
     // h_pos : Lt zero fib(n+1)
     let h_zlt = d.zero_lt_succ(n); // Lt zero (succ n)
-    let h_pos = d.lemma(p.fib_pos_of_pos, &[sn, h_zlt]); // Lt zero fib_sn
-
-    // h_add_lt : Lt (fib_ssn + zero) (fib_ssn + fib_sn)
+    let h_pos = d.lemma(p.fib_pos_of_pos, &[sn, h_zlt]);
     let zero = d.zero();
-    let h_add_lt = d.lemma(p.add_lt_add_left, &[fib_ssn, zero, fib_sn, h_pos]);
-    let fib_ssn_plus_zero = d.add(fib_ssn, zero);
+    let h_pos_ty = d.lt(zero, fib_sn);
 
-    // h_add_zero : fib_ssn + zero = fib_ssn
-    let h_add_zero = d.lemma(p.add_zero, &[fib_ssn]);
-
-    let motive1 = d.eq_motive(fib_ssn_plus_zero, &|d, x| d.lt(x, fib_ssn_plus_fibsn));
-    let result1 = d.transport(fib_ssn_plus_zero, motive1, h_add_lt, fib_ssn, h_add_zero);
-    // result1 : Lt fib_ssn fib_ssn_plus_fibsn
-
-    let h_add2_rev = d.symm(fib_sssn, fib_ssn_plus_fibsn, h_add2); // fib_ssn_plus_fibsn = fib_sssn
-    let motive2 = d.eq_motive(fib_ssn_plus_fibsn, &|d, x| d.lt(fib_ssn, x));
-    d.transport(fib_ssn_plus_fibsn, motive2, result1, fib_sssn, h_add2_rev)
-    // : Lt fib_ssn fib_sssn
+    let goal = d.lt(fib_ssn, fib_sssn);
+    let assumptions = [(h_add2_ty, h_add2), (h_pos_ty, h_pos)];
+    let ctx = crate::tactic::Ctx {
+        prelude: p,
+        assumptions: &assumptions,
+        rules: &[],
+    };
+    crate::tactic::run(d, &ctx, &crate::tactic::Tactic::Linarith, goal)
+        .unwrap_or_else(|e| panic!("fib_add_two_lt_succ: linarith declined: {e:?}"))
 }
 
 /// `Nat.fib_add_two_strictmono : ∀ a b, Lt a b → Lt (fib (succ (succ a)))

@@ -144,24 +144,36 @@ fn false_of_lt_and_lt_rev(
     d.lemma(p.lt_irrefl, &[a, lt_a_a])
 }
 
-/// `Eq (mul 2 n) (add n n)`. `mul 2 n` is STUCK for symbolic `n` (`Nat.mul`
-/// recurses on its RIGHT argument, and `n` sits on the right here), so this
-/// is a real theorem: `mul_comm` moves the `2` to the reducing side (`mul n
-/// 2` unfolds by pure iota to `add (add zero n) n`), and `zero_add` clears
-/// the inner `zero`.
+/// `Eq (mul 2 n) (add n n)` — the fourth hand-written copy of this identity
+/// in the crate (beside `gauss_lemma.rs::two_mul_eq_add`,
+/// `parity.rs::mul_two_eq_add_self`, `eisenstein_floor_min_free.rs::
+/// two_mul`, the latter already retired to `simp` alone, ADR-1586).
+///
+/// Retired to the `tactic` combinator (ADR-1589) via `Then(Simp, Ring)`
+/// rather than bare `Simp`: `simp`'s default set alone already closes this
+/// (`succ_mul` twice, `zero_mul`, `zero_add` — no `mul_comm` needed, unlike
+/// the hand proof's own route), so `Ring`'s stage here only ever sees the
+/// trivial residual `Eq n n`; kept as `Then` for one uniform retirement
+/// shape across this file's family rather than special-casing the one site
+/// that happens not to need the second stage.
 fn two_mul_eq_add_self(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
+    let p = *p;
     let two = d.num(2);
     let mul_2_n = d.mul(two, n);
-    let mul_n_2 = d.mul(n, two);
-    let comm = d.lemma(p.mul_comm, &[two, n]); // Eq (mul 2 n) (mul n 2)
-    let zero = d.zero();
-    let add_0_n = d.add(zero, n);
-    let za = d.lemma(p.zero_add, &[n]); // Eq (add zero n) n
     let add_n_n = d.add(n, n);
-    // Eq (add (add zero n) n) (add n n); defeq `Eq mul_n_2 (add n n)` since
-    // `mul n 2` reduces by pure iota to `add (add zero n) n`.
-    let rewritten = d.congr(add_0_n, n, za, &move |d, x| d.add(x, n));
-    d.trans(mul_2_n, mul_n_2, add_n_n, comm, rewritten)
+    let goal = d.eq(mul_2_n, add_n_n);
+    let rules = crate::simp::nat::default_rules(&p);
+    let ctx = crate::tactic::Ctx {
+        prelude: p,
+        assumptions: &[],
+        rules: &rules,
+    };
+    let tactic = crate::tactic::Tactic::Then(
+        Box::new(crate::tactic::Tactic::Simp),
+        Box::new(crate::tactic::Tactic::Ring),
+    );
+    crate::tactic::run(d, &ctx, &tactic, goal)
+        .unwrap_or_else(|e| panic!("two_mul_eq_add_self: Then(Simp, Ring) declined: {e:?}"))
 }
 
 // ============================================================================

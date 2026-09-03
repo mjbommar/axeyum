@@ -24,7 +24,15 @@
     "F:nat-succ-mul",
     "F:nat-succ-pred-of-pos",
     "F:nat-zero-le",
-    "F:nat-zero-lt-of-ne-zero"
+    "F:nat-zero-lt-of-ne-zero",
+    "F:nat-add-le-add-left",
+    "F:nat-add-le-add-right",
+    "F:nat-add-right-comm",
+    "F:nat-add-succ",
+    "F:nat-le-add-right",
+    "F:nat-le-of-add-le-add-right",
+    "F:nat-le-trans",
+    "F:nat-succ-add"
   ],
   "evidence": [
     {

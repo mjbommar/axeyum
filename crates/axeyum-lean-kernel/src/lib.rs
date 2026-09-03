@@ -58,6 +58,7 @@ mod complex;
 mod creal;
 mod creal_model;
 mod creal_point;
+pub mod decide;
 mod env;
 mod expr;
 mod inductive;
@@ -83,6 +84,7 @@ pub mod shape_index;
 pub mod simp;
 mod stack;
 mod string_prelude;
+pub mod tactic;
 mod tc;
 
 use std::collections::{BTreeMap, HashMap};

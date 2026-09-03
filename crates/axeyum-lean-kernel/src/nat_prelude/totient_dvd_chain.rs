@@ -684,31 +684,31 @@ fn one_le_dichotomy(
     (two_le_ty, eq_one_ty, disj)
 }
 
-/// `Le x (mul two x)`, for ANY `x` (no positivity needed): `mul two x = add
-/// x x` (via `mul_comm` plus `mul`'s own iota unfold at the concrete literal
-/// `two`, closed by `zero_add`), and `le_add_right(x, x)` gives `Le x (add x
-/// x)` directly.
+/// `Le x (mul two x)`, for ANY `x` (no positivity needed).
+///
+/// Retired to the `tactic` combinator (ADR-1589): `simp`'s default rules
+/// rewrite `mul two x` to `add x x` (`succ_mul` twice, `zero_mul`,
+/// `zero_add`), then `linarith` closes `Le x (add x x)` with no hypotheses
+/// at all (an atom is always `≥ 0`, so `2x - x = x ≥ 0` is the trivial
+/// residual). Same statement as `eisenstein_floor_min_free::
+/// le_two_mul_self`, retired the same way.
 fn le_self_two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
     let p = *p;
-    let zero = d.zero();
     let two = d.num(2);
-
-    let comm = d.lemma(p.mul_comm, &[two, x]);
     let mul_two_x = d.mul(two, x);
-    let mul_x_two = d.mul(x, two);
-
-    let zero_x = d.add(zero, x);
-    let za = d.lemma(p.zero_add, &[x]);
-    let cong_za = d.congr(zero_x, x, za, &|d, y| d.add(y, x));
-    // `cong_za : Eq (add zero_x x) (add x x)`, and `add zero_x x` is
-    // DEFEQ to `mul_x_two` (`mul` iota-unfolds twice at the concrete `two`).
-    let add_x_x = d.add(x, x);
-    let two_mul_eq_add = d.trans(mul_two_x, mul_x_two, add_x_x, comm, cong_za);
-
-    let ladd = d.lemma(p.le_add_right, &[x, x]);
-    let two_mul_eq_add_sym = d.symm(mul_two_x, add_x_x, two_mul_eq_add);
-    let motive = d.eq_motive(add_x_x, &|d, y| d.le(x, y));
-    d.transport(add_x_x, motive, ladd, mul_two_x, two_mul_eq_add_sym)
+    let goal = d.le(x, mul_two_x);
+    let rules = crate::simp::nat::default_rules(&p);
+    let ctx = crate::tactic::Ctx {
+        prelude: p,
+        assumptions: &[],
+        rules: &rules,
+    };
+    let tactic = crate::tactic::Tactic::Then(
+        Box::new(crate::tactic::Tactic::Simp),
+        Box::new(crate::tactic::Tactic::Linarith),
+    );
+    crate::tactic::run(d, &ctx, &tactic, goal)
+        .unwrap_or_else(|e| panic!("le_self_two_mul: Then(Simp, Linarith) declined: {e:?}"))
 }
 
 /// The single-prime-step bound: `Or (Le (mul two (totient ap)) (totient (mul
