@@ -1510,6 +1510,7 @@ mod generic_tests {
     use super::*;
     use crate::nat_prelude::structures::lam_over;
     use crate::nat_prelude::structures::sel;
+    use crate::on_a_deep_stack;
     use crate::rat_prelude::RatPrelude;
     use crate::{Kernel, build_rat_prelude};
     use structures::idx::ordered_ring::{ADD, LE, NEG};
@@ -2625,192 +2626,202 @@ mod generic_tests {
 
     #[test]
     fn creal_linarith_transitivity() {
-        const A: u64 = 56_000;
-        const B: u64 = 56_001;
-        const C: u64 = 56_002;
-        const H1: u64 = 56_010;
-        const H2: u64 = 56_011;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let carrier = k.const_(p.creal, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        on_a_deep_stack(move || {
+            const A: u64 = 56_000;
+            const B: u64 = 56_001;
+            const C: u64 = 56_002;
+            const H1: u64 = 56_010;
+            const H2: u64 = 56_011;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let carrier = k.const_(p.creal, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
 
-        let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
-        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
-        let h1 = k.fvar(H1);
-        let h2 = k.fvar(H2);
-        let goal = le_of_s(&mut k, &rn, ring, a, c);
+            let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
+            let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
+            let h1 = k.fvar(H1);
+            let h2 = k.fvar(H2);
+            let goal = le_of_s(&mut k, &rn, ring, a, c);
 
-        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
-        let proof = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &assumptions,
-            goal,
-        )
-        .expect("linarith::generic (setoid) must derive transitivity over CReal.orderedRingS");
-        let _ = close_and_infer(
-            &mut k,
-            carrier,
-            &[A, B, C],
-            &[H1, H2],
-            &[h1_ty, h2_ty],
-            proof,
-        );
+            let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+            let proof = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &assumptions,
+                goal,
+            )
+            .expect("linarith::generic (setoid) must derive transitivity over CReal.orderedRingS");
+            let _ = close_and_infer(
+                &mut k,
+                carrier,
+                &[A, B, C],
+                &[H1, H2],
+                &[h1_ty, h2_ty],
+                proof,
+            );
+        });
     }
 
     #[test]
     fn creal_linarith_sum_of_nonneg() {
-        const A: u64 = 56_100;
-        const B: u64 = 56_101;
-        const H1: u64 = 56_110;
-        const H2: u64 = 56_111;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let carrier = k.const_(p.creal, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let zero = zero_of_s(&mut k, &rn, ring);
+        on_a_deep_stack(move || {
+            const A: u64 = 56_100;
+            const B: u64 = 56_101;
+            const H1: u64 = 56_110;
+            const H2: u64 = 56_111;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let carrier = k.const_(p.creal, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let zero = zero_of_s(&mut k, &rn, ring);
 
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h1_ty = le_of_s(&mut k, &rn, ring, zero, a);
-        let h2_ty = le_of_s(&mut k, &rn, ring, zero, b);
-        let h1 = k.fvar(H1);
-        let h2 = k.fvar(H2);
-        let ab = add_of_s(&mut k, &rn, ring, a, b);
-        let goal = le_of_s(&mut k, &rn, ring, zero, ab);
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h1_ty = le_of_s(&mut k, &rn, ring, zero, a);
+            let h2_ty = le_of_s(&mut k, &rn, ring, zero, b);
+            let h1 = k.fvar(H1);
+            let h2 = k.fvar(H2);
+            let ab = add_of_s(&mut k, &rn, ring, a, b);
+            let goal = le_of_s(&mut k, &rn, ring, zero, ab);
 
-        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
-        let proof = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &assumptions,
-            goal,
-        )
-        .expect("linarith::generic (setoid) must derive sum-of-nonneg over CReal.orderedRingS");
-        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+            let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+            let proof = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &assumptions,
+                goal,
+            )
+            .expect("linarith::generic (setoid) must derive sum-of-nonneg over CReal.orderedRingS");
+            let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+        });
     }
 
     #[test]
     fn creal_linarith_slack_add_one() {
-        const A: u64 = 56_200;
-        const B: u64 = 56_201;
-        const H: u64 = 56_210;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let carrier = k.const_(p.creal, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let one = one_of_s(&mut k, &rn, ring);
-        let zero_le_one = creal_zero_le_one(&mut k, &p);
+        on_a_deep_stack(move || {
+            const A: u64 = 56_200;
+            const B: u64 = 56_201;
+            const H: u64 = 56_210;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let carrier = k.const_(p.creal, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let one = one_of_s(&mut k, &rn, ring);
+            let zero_le_one = creal_zero_le_one(&mut k, &p);
 
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h = k.fvar(H);
-        let b_plus_one = add_of_s(&mut k, &rn, ring, b, one);
-        let goal = le_of_s(&mut k, &rn, ring, a, b_plus_one);
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h = k.fvar(H);
+            let b_plus_one = add_of_s(&mut k, &rn, ring, b, one);
+            let goal = le_of_s(&mut k, &rn, ring, a, b_plus_one);
 
-        let assumptions = [(h_ty, h)];
-        let proof = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            Some(zero_le_one),
-            &assumptions,
-            goal,
-        )
-        .expect("linarith::generic (setoid) must derive the slack-1 goal over CReal.orderedRingS");
-        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H], &[h_ty], proof);
+            let assumptions = [(h_ty, h)];
+            let proof = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                Some(zero_le_one),
+                &assumptions,
+                goal,
+            )
+            .expect(
+                "linarith::generic (setoid) must derive the slack-1 goal over CReal.orderedRingS",
+            );
+            let _ = close_and_infer(&mut k, carrier, &[A, B], &[H], &[h_ty], proof);
+        });
     }
 
     #[test]
     fn creal_linarith_add_le_add_three() {
-        const A: u64 = 56_300;
-        const B: u64 = 56_301;
-        const C: u64 = 56_302;
-        const D: u64 = 56_303;
-        const E: u64 = 56_304;
-        const F: u64 = 56_305;
-        const H1: u64 = 56_310;
-        const H2: u64 = 56_311;
-        const H3: u64 = 56_312;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let carrier = k.const_(p.creal, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        on_a_deep_stack(move || {
+            const A: u64 = 56_300;
+            const B: u64 = 56_301;
+            const C: u64 = 56_302;
+            const D: u64 = 56_303;
+            const E: u64 = 56_304;
+            const F: u64 = 56_305;
+            const H1: u64 = 56_310;
+            const H2: u64 = 56_311;
+            const H3: u64 = 56_312;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let carrier = k.const_(p.creal, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
 
-        let (a, b, c, d, e, f) = (
-            k.fvar(A),
-            k.fvar(B),
-            k.fvar(C),
-            k.fvar(D),
-            k.fvar(E),
-            k.fvar(F),
-        );
-        let h1_ty = le_of_s(&mut k, &rn, ring, a, d);
-        let h2_ty = le_of_s(&mut k, &rn, ring, b, e);
-        let h3_ty = le_of_s(&mut k, &rn, ring, c, f);
-        let h1 = k.fvar(H1);
-        let h2 = k.fvar(H2);
-        let h3 = k.fvar(H3);
+            let (a, b, c, d, e, f) = (
+                k.fvar(A),
+                k.fvar(B),
+                k.fvar(C),
+                k.fvar(D),
+                k.fvar(E),
+                k.fvar(F),
+            );
+            let h1_ty = le_of_s(&mut k, &rn, ring, a, d);
+            let h2_ty = le_of_s(&mut k, &rn, ring, b, e);
+            let h3_ty = le_of_s(&mut k, &rn, ring, c, f);
+            let h1 = k.fvar(H1);
+            let h2 = k.fvar(H2);
+            let h3 = k.fvar(H3);
 
-        let ab = add_of_s(&mut k, &rn, ring, a, b);
-        let abc = add_of_s(&mut k, &rn, ring, ab, c);
-        let de = add_of_s(&mut k, &rn, ring, d, e);
-        let def = add_of_s(&mut k, &rn, ring, de, f);
-        let goal = le_of_s(&mut k, &rn, ring, abc, def);
+            let ab = add_of_s(&mut k, &rn, ring, a, b);
+            let abc = add_of_s(&mut k, &rn, ring, ab, c);
+            let de = add_of_s(&mut k, &rn, ring, d, e);
+            let def = add_of_s(&mut k, &rn, ring, de, f);
+            let goal = le_of_s(&mut k, &rn, ring, abc, def);
 
-        let assumptions = [(h1_ty, h1), (h2_ty, h2), (h3_ty, h3)];
-        let proof = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &assumptions,
-            goal,
-        )
-        .expect(
-            "linarith::generic (setoid) must find a certificate for add_le_add_three over CReal",
-        );
-        let _ = close_and_infer(
-            &mut k,
-            carrier,
-            &[A, B, C, D, E, F],
-            &[H1, H2, H3],
-            &[h1_ty, h2_ty, h3_ty],
-            proof,
-        );
+            let assumptions = [(h1_ty, h1), (h2_ty, h2), (h3_ty, h3)];
+            let proof = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &assumptions,
+                goal,
+            )
+            .expect(
+                "linarith::generic (setoid) must find a certificate for add_le_add_three over CReal",
+            );
+            let _ = close_and_infer(
+                &mut k,
+                carrier,
+                &[A, B, C, D, E, F],
+                &[H1, H2, H3],
+                &[h1_ty, h2_ty, h3_ty],
+                proof,
+            );
+        });
     }
 
     /// The `Shape::Eq` conclusion route (`le_antisymm`, concluding `equiv`,
@@ -2819,293 +2830,308 @@ mod generic_tests {
     /// could (`CReal`'s carrier equality is `Equiv`, never `Eq`).
     #[test]
     fn creal_linarith_equality_by_antisymmetry() {
-        const A: u64 = 56_400;
-        const B: u64 = 56_401;
-        const H1: u64 = 56_410;
-        const H2: u64 = 56_411;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let carrier = k.const_(p.creal, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        on_a_deep_stack(move || {
+            const A: u64 = 56_400;
+            const B: u64 = 56_401;
+            const H1: u64 = 56_410;
+            const H2: u64 = 56_411;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let carrier = k.const_(p.creal, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
 
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h2_ty = le_of_s(&mut k, &rn, ring, b, a);
-        let h1 = k.fvar(H1);
-        let h2 = k.fvar(H2);
-        let goal = equiv_of_s(&mut k, &rn, ring, a, b);
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h2_ty = le_of_s(&mut k, &rn, ring, b, a);
+            let h1 = k.fvar(H1);
+            let h2 = k.fvar(H2);
+            let goal = equiv_of_s(&mut k, &rn, ring, a, b);
 
-        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
-        let proof = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &assumptions,
-            goal,
-        )
-        .expect(
-            "linarith::generic (setoid) must prove Equiv a b from a<=b, b<=a over CReal.orderedRingS",
-        );
-        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+            let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+            let proof = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &assumptions,
+                goal,
+            )
+            .expect(
+                "linarith::generic (setoid) must prove Equiv a b from a<=b, b<=a over CReal.orderedRingS",
+            );
+            let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+        });
     }
 
     // --- three false goals decline, at CReal.orderedRingS ---
 
     #[test]
     fn creal_linarith_false_goal_swap_declines() {
-        const A: u64 = 57_000;
-        const B: u64 = 57_001;
-        const H: u64 = 57_010;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h = k.fvar(H);
-        let goal = le_of_s(&mut k, &rn, ring, b, a);
-        let result = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &[(h_ty, h)],
-            goal,
-        );
-        assert!(
-            result.is_err(),
-            "a<=b does not imply b<=a over CReal -- must decline"
-        );
+        on_a_deep_stack(move || {
+            const A: u64 = 57_000;
+            const B: u64 = 57_001;
+            const H: u64 = 57_010;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h = k.fvar(H);
+            let goal = le_of_s(&mut k, &rn, ring, b, a);
+            let result = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &[(h_ty, h)],
+                goal,
+            );
+            assert!(
+                result.is_err(),
+                "a<=b does not imply b<=a over CReal -- must decline"
+            );
+        });
     }
 
     #[test]
     fn creal_linarith_false_goal_cycle_declines() {
-        const A: u64 = 57_100;
-        const B: u64 = 57_101;
-        const C: u64 = 57_102;
-        const H1: u64 = 57_110;
-        const H2: u64 = 57_111;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
-        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
-        let h1 = k.fvar(H1);
-        let h2 = k.fvar(H2);
-        let goal = le_of_s(&mut k, &rn, ring, c, a);
-        let result = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &[(h1_ty, h1), (h2_ty, h2)],
-            goal,
-        );
-        assert!(
-            result.is_err(),
-            "a<=b<=c does not imply c<=a over CReal -- must decline"
-        );
+        on_a_deep_stack(move || {
+            const A: u64 = 57_100;
+            const B: u64 = 57_101;
+            const C: u64 = 57_102;
+            const H1: u64 = 57_110;
+            const H2: u64 = 57_111;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
+            let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
+            let h1 = k.fvar(H1);
+            let h2 = k.fvar(H2);
+            let goal = le_of_s(&mut k, &rn, ring, c, a);
+            let result = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &[(h1_ty, h1), (h2_ty, h2)],
+                goal,
+            );
+            assert!(
+                result.is_err(),
+                "a<=b<=c does not imply c<=a over CReal -- must decline"
+            );
+        });
     }
 
     #[test]
     fn creal_linarith_false_goal_off_by_one_declines() {
-        const A: u64 = 57_200;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let one = one_of_s(&mut k, &rn, ring);
-        let a = k.fvar(A);
-        let a_plus_one = add_of_s(&mut k, &rn, ring, a, one);
-        let goal = le_of_s(&mut k, &rn, ring, a_plus_one, a);
-        let result = prove_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &[],
-            goal,
-        );
-        assert!(
-            result.is_err(),
-            "a+1<=a is false over CReal -- must decline"
-        );
+        on_a_deep_stack(move || {
+            const A: u64 = 57_200;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let one = one_of_s(&mut k, &rn, ring);
+            let a = k.fvar(A);
+            let a_plus_one = add_of_s(&mut k, &rn, ring, a, one);
+            let goal = le_of_s(&mut k, &rn, ring, a_plus_one, a);
+            let result = prove_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &[],
+                goal,
+            );
+            assert!(
+                result.is_err(),
+                "a+1<=a is false over CReal -- must decline"
+            );
+        });
     }
 
     // --- two corrupted certificates, rejected by the KERNEL ---
 
     #[test]
     fn creal_linarith_corrupted_certificate_wrong_multiplier_rejected() {
-        const A: u64 = 58_000;
-        const B: u64 = 58_001;
-        const H: u64 = 58_010;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h = k.fvar(H);
+        on_a_deep_stack(move || {
+            const A: u64 = 58_000;
+            const B: u64 = 58_001;
+            const H: u64 = 58_010;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h = k.fvar(H);
 
-        let cert = Certificate {
-            multipliers: vec![2], // correct is 1
-            residual: LinForm::zero(),
-        };
-        let corrupted = emit_le_from_certificate_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &[(h_ty, h)],
-            a,
-            b,
-            &cert,
-            false,
-        );
-        let Ok(term) = corrupted else { return };
-        let carrier = k.const_(p.creal, vec![]);
-        let closed = {
-            let v = lam_over(&mut k, H, h_ty, term);
-            let v = lam_over(&mut k, B, carrier, v);
-            lam_over(&mut k, A, carrier, v)
-        };
-        assert!(
-            k.infer(closed).is_err(),
-            "a wrong multiplier (setoid, CReal) must be rejected by the KERNEL"
-        );
+            let cert = Certificate {
+                multipliers: vec![2], // correct is 1
+                residual: LinForm::zero(),
+            };
+            let corrupted = emit_le_from_certificate_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &[(h_ty, h)],
+                a,
+                b,
+                &cert,
+                false,
+            );
+            let Ok(term) = corrupted else { return };
+            let carrier = k.const_(p.creal, vec![]);
+            let closed = {
+                let v = lam_over(&mut k, H, h_ty, term);
+                let v = lam_over(&mut k, B, carrier, v);
+                lam_over(&mut k, A, carrier, v)
+            };
+            assert!(
+                k.infer(closed).is_err(),
+                "a wrong multiplier (setoid, CReal) must be rejected by the KERNEL"
+            );
+        });
     }
 
     #[test]
     fn creal_linarith_corrupted_certificate_wrong_residual_rejected() {
-        const A: u64 = 58_100;
-        const B: u64 = 58_101;
-        const H: u64 = 58_110;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h = k.fvar(H);
-        let one = one_of_s(&mut k, &rn, ring);
-        let zero_le_one = creal_zero_le_one(&mut k, &p);
-        let goal_lhs = a;
-        let goal_rhs = add_of_s(&mut k, &rn, ring, b, one); // real goal needs residual 1
+        on_a_deep_stack(move || {
+            const A: u64 = 58_100;
+            const B: u64 = 58_101;
+            const H: u64 = 58_110;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h = k.fvar(H);
+            let one = one_of_s(&mut k, &rn, ring);
+            let zero_le_one = creal_zero_le_one(&mut k, &p);
+            let goal_lhs = a;
+            let goal_rhs = add_of_s(&mut k, &rn, ring, b, one); // real goal needs residual 1
 
-        // Corrupted: claim residual 0 (exact match) when 1 is required.
-        let cert = Certificate {
-            multipliers: vec![1],
-            residual: LinForm::zero(),
-        };
-        let corrupted = emit_le_from_certificate_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            Some(zero_le_one),
-            &[(h_ty, h)],
-            goal_lhs,
-            goal_rhs,
-            &cert,
-            false,
-        );
-        let Ok(term) = corrupted else { return };
-        let carrier = k.const_(p.creal, vec![]);
-        let closed = {
-            let v = lam_over(&mut k, H, h_ty, term);
-            let v = lam_over(&mut k, B, carrier, v);
-            lam_over(&mut k, A, carrier, v)
-        };
-        assert!(
-            k.infer(closed).is_err(),
-            "a wrong (too-small) residual (setoid, CReal) must be rejected by the KERNEL"
-        );
+            // Corrupted: claim residual 0 (exact match) when 1 is required.
+            let cert = Certificate {
+                multipliers: vec![1],
+                residual: LinForm::zero(),
+            };
+            let corrupted = emit_le_from_certificate_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                Some(zero_le_one),
+                &[(h_ty, h)],
+                goal_lhs,
+                goal_rhs,
+                &cert,
+                false,
+            );
+            let Ok(term) = corrupted else { return };
+            let carrier = k.const_(p.creal, vec![]);
+            let closed = {
+                let v = lam_over(&mut k, H, h_ty, term);
+                let v = lam_over(&mut k, B, carrier, v);
+                lam_over(&mut k, A, carrier, v)
+            };
+            assert!(
+                k.infer(closed).is_err(),
+                "a wrong (too-small) residual (setoid, CReal) must be rejected by the KERNEL"
+            );
+        });
     }
 
     /// Positive control for the two corrupted-certificate tests above: the
     /// SAME route with an UNCORRUPTED certificate is admitted.
     #[test]
     fn creal_linarith_uncorrupted_certificate_is_admitted() {
-        const A: u64 = 58_200;
-        const B: u64 = 58_201;
-        const H: u64 = 58_210;
-        let mut k = Kernel::new();
-        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let l0 = k.level_zero();
-        let l1 = k.level_succ(l0);
-        let ring = k.const_(p.ordered_ring_s, vec![]);
-        let carrier = k.const_(p.creal, vec![]);
-        let rn = p.rat.int.nat.structures_s.ordered_ring;
-        let (a, b) = (k.fvar(A), k.fvar(B));
-        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
-        let h = k.fvar(H);
+        on_a_deep_stack(move || {
+            const A: u64 = 58_200;
+            const B: u64 = 58_201;
+            const H: u64 = 58_210;
+            let mut k = Kernel::new();
+            let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+            let l0 = k.level_zero();
+            let l1 = k.level_succ(l0);
+            let ring = k.const_(p.ordered_ring_s, vec![]);
+            let carrier = k.const_(p.creal, vec![]);
+            let rn = p.rat.int.nat.structures_s.ordered_ring;
+            let (a, b) = (k.fvar(A), k.fvar(B));
+            let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+            let h = k.fvar(H);
 
-        let cert = Certificate {
-            multipliers: vec![1],
-            residual: LinForm::zero(),
-        };
-        let term = emit_le_from_certificate_s(
-            &mut k,
-            &p.rat.int.nat.logic,
-            l1,
-            &p.rat.int.nat.structures_s,
-            &p.rat.ordered_ring_ext_s,
-            &p.rat.int.nat,
-            ring,
-            None,
-            &[(h_ty, h)],
-            a,
-            b,
-            &cert,
-            false,
-        )
-        .expect("the uncorrupted certificate (setoid, CReal) must emit a term");
-        let closed = {
-            let v = lam_over(&mut k, H, h_ty, term);
-            let v = lam_over(&mut k, B, carrier, v);
-            lam_over(&mut k, A, carrier, v)
-        };
-        k.infer(closed)
-            .expect("an UNCORRUPTED certificate (setoid, CReal) must be admitted by the kernel");
+            let cert = Certificate {
+                multipliers: vec![1],
+                residual: LinForm::zero(),
+            };
+            let term = emit_le_from_certificate_s(
+                &mut k,
+                &p.rat.int.nat.logic,
+                l1,
+                &p.rat.int.nat.structures_s,
+                &p.rat.ordered_ring_ext_s,
+                &p.rat.int.nat,
+                ring,
+                None,
+                &[(h_ty, h)],
+                a,
+                b,
+                &cert,
+                false,
+            )
+            .expect("the uncorrupted certificate (setoid, CReal) must emit a term");
+            let closed = {
+                let v = lam_over(&mut k, H, h_ty, term);
+                let v = lam_over(&mut k, B, carrier, v);
+                lam_over(&mut k, A, carrier, v)
+            };
+            k.infer(closed).expect(
+                "an UNCORRUPTED certificate (setoid, CReal) must be admitted by the kernel",
+            );
+        });
     }
 
     /// Wall-clock cost, generic vs per-carrier, on the SAME two goal shapes
