@@ -11,7 +11,7 @@
   },
   "epistemic_status": "proved",
   "external_status": "proved",
-  "depends_on": ["F:ml430-nat-prime-one-lt-bc90cfc7", "F:nat-add-lt-add-left", "F:nat-mul-comm", "F:nat-sumdivisors-prime", "F:nat-zero-add"],
+  "depends_on": ["F:ml430-nat-prime-one-lt-bc90cfc7", "F:nat-add-lt-add-left", "F:nat-mul-comm", "F:nat-sumdivisors-prime", "F:nat-zero-add", "F:nat-one-mul", "F:nat-succ-mul"],
   "evidence": [
     {
       "id": "kernel-Nat.prime_deficient",
