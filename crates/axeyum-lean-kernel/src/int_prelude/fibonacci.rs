@@ -83,56 +83,21 @@ use crate::nat_prelude::NatOps;
 /// `neg (neg x) = (-1)*(-1)*x = 1*x = x`, with `neg (neg one) = one` closed by
 /// `Eq.refl` at the concrete literal (two `Int.rec` computations, no variable
 /// involved).
+/// `Eq Int (neg (neg x)) x`, by `ring::int::prove_eq_at` (ring-tactic-2,
+/// ADR-1582) rather than the hand `neg_one_mul`/`mul_assoc`/`one_mul` chain
+/// this file used to carry — an independent hand-written copy of the exact
+/// same identity `int_prelude/gcd.rs::neg_neg` also carried; both retire
+/// through the ring producer's `target_neg_neg_duplicated_in_gcd_and_fibonacci`
+/// test.
 fn neg_neg(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
     let p = d.int();
-    let one_c = d.ione();
-    let neg_one = d.ineg(one_c);
-    let neg_x = d.ineg(x);
-    let neg_neg_x = d.ineg(neg_x);
-
-    let mul_negone_negx = d.imul(neg_one, neg_x);
-    let step1 = {
-        let fwd = d.lemma(p.neg_one_mul, &[neg_x]); // neg_one*neg_x = neg(neg_x)
-        d.isymm(mul_negone_negx, neg_neg_x, fwd)
-    };
-
-    let inner = d.imul(neg_one, x);
-    let mul_negone_inner = d.imul(neg_one, inner);
-    let step2 = {
-        let fwd = d.lemma(p.neg_one_mul, &[x]); // neg_one*x = neg x
-        let negx_eq = d.isymm(inner, neg_x, fwd); // neg_x = inner
-        d.icongr(neg_x, inner, negx_eq, &|d, y| d.imul(neg_one, y))
-    };
-
-    let negone_sq = d.imul(neg_one, neg_one);
-    let negone_sq_x = d.imul(negone_sq, x);
-    let step3 = {
-        let fwd = d.lemma(p.mul_assoc, &[neg_one, neg_one, x]);
-        d.isymm(negone_sq_x, mul_negone_inner, fwd)
-    };
-
-    let negone_sq_eq_one = {
-        let fwd = d.lemma(p.neg_one_mul, &[neg_one]); // negone_sq = neg(neg_one)
-        let neg_neg_one = d.ineg(neg_one);
-        let refl_pf = d.irefl(one_c); // neg(neg_one) = one, by rfl
-        d.itrans(negone_sq, neg_neg_one, one_c, fwd, refl_pf)
-    };
-
-    let one_x = d.imul(one_c, x);
-    let step5 = d.icongr(negone_sq, one_c, negone_sq_eq_one, &|d, y| d.imul(y, x));
-    let step6 = d.lemma(p.one_mul, &[x]);
-
-    let (_, chained) = d.ichain(
-        neg_neg_x,
-        &[
-            (mul_negone_negx, step1),
-            (mul_negone_inner, step2),
-            (negone_sq_x, step3),
-            (one_x, step5),
-            (x, step6),
-        ],
-    );
-    chained
+    crate::ring::int::prove_eq_at(d, &p, &[x], &|d, v| {
+        let x = v[0];
+        let neg_x = d.ineg(x);
+        let nn = d.ineg(neg_x);
+        (nn, x)
+    })
+    .expect("neg_neg: neg (neg x) = x is a ring identity")
 }
 
 /// `Eq Int (neg (add a b)) (add (neg a) (neg b))`. Same technique as
@@ -2298,37 +2263,20 @@ fn eq_sub_of_add_eq_left(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h:
 /// through `mul_comm` first: `2*t = t*2 = t*(1+1) = t*1+t*1 = t+t`. The
 /// `2 ≡ 1+1` step is a pure reduction (`Int.add` on two `ofNat`s, the trick
 /// `plus_two_spelling` already uses), not a named lemma.
+/// `Eq Int (mul (ofNat 2) t) (add t t)`, by `ring::int::prove_eq_at`
+/// (ring-tactic-2, ADR-1582) rather than the hand `mul_comm`/`left_distrib`/
+/// `mul_one` chain this file used to carry.
 fn mul_two_eq_add_self(d: &mut IntDev<'_>, t: ExprId) -> ExprId {
     let p = d.int();
-    let two_nat = d.num(2);
-    let two = d.of_nat(two_nat);
-    let t_two_l = d.imul(two, t);
-    let t_two_r = d.imul(t, two);
-    let comm = d.lemma(p.mul_comm, &[two, t]); // Eq(mul two t, mul t two)
-
-    let one = d.ione();
-    let dist = d.lemma(p.left_distrib, &[t, one, one]);
-    // dist's real type: Eq(mul t (add one one), add(mul t one)(mul t one));
-    // `two` and `add one one` are defeq (both reduce to `ofNat 2`).
-    let mt1 = d.imul(t, one);
-    let sum_mt1 = d.iadd(mt1, mt1);
-
-    let mo = d.lemma(p.mul_one, &[t]); // Eq(mul t one, t)
-    let t_mt1 = d.iadd(t, mt1);
-    let after_mo1 = d.icongr(mt1, t, mo, &|d, x| d.iadd(x, mt1)); // Eq(sum_mt1, t_mt1)
-    let tt = d.iadd(t, t);
-    let after_mo2 = d.icongr(mt1, t, mo, &|d, x| d.iadd(t, x)); // Eq(t_mt1, tt)
-
-    let (_, chain) = d.ichain(
-        t_two_l,
-        &[
-            (t_two_r, comm),
-            (sum_mt1, dist),
-            (t_mt1, after_mo1),
-            (tt, after_mo2),
-        ],
-    );
-    chain
+    crate::ring::int::prove_eq_at(d, &p, &[t], &|d, v| {
+        let t = v[0];
+        let two_nat = d.num(2);
+        let two = d.of_nat(two_nat);
+        let lhs = d.imul(two, t);
+        let rhs = d.iadd(t, t);
+        (lhs, rhs)
+    })
+    .expect("mul_two_eq_add_self: 2*t = t+t is a ring identity")
 }
 
 /// `Eq Int (add (sub x y) x) (sub (add x x) y)` — `(x-y)+x = (x+x)-y`. Ring

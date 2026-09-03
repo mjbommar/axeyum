@@ -209,7 +209,7 @@ impl Problem {
     // --- term builders ----------------------------------------------------
 
     /// `0`/`1`/`ofNat k` — the canonical unsigned-numeral spelling.
-    fn build_numeral(&self, d: &mut IntDev<'_>, k: u32) -> ExprId {
+    fn build_numeral(d: &mut IntDev<'_>, k: u32) -> ExprId {
         if k == 0 {
             d.izero()
         } else if k == 1 {
@@ -220,12 +220,12 @@ impl Problem {
         }
     }
 
-    fn build_numeral_signed(&self, d: &mut IntDev<'_>, k: Coeff) -> ExprId {
+    fn build_numeral_signed(d: &mut IntDev<'_>, k: Coeff) -> ExprId {
         if k >= 0 {
-            self.build_numeral(d, u32::try_from(k).unwrap_or(0))
+            Self::build_numeral(d, u32::try_from(k).unwrap_or(0))
         } else {
             let mag = u32::try_from(-k).unwrap_or(0);
-            let base = self.build_numeral(d, mag);
+            let base = Self::build_numeral(d, mag);
             d.ineg(base)
         }
     }
@@ -236,7 +236,7 @@ impl Problem {
                 let base = self.fold_mul(d, vars);
                 if *neg { d.ineg(base) } else { base }
             }
-            Item::Num(k) => self.build_numeral_signed(d, *k),
+            Item::Num(k) => Self::build_numeral_signed(d, *k),
         }
     }
 
@@ -454,7 +454,7 @@ impl Problem {
     /// `Eq Int (neg (neg x)) x`, derived from `neg_one_mul`/`mul_assoc`/
     /// `one_mul` alone — `int_prelude/gcd.rs`'s private `neg_neg`'s exact
     /// derivation, kept here rather than depended on (see module docs).
-    fn neg_neg_lemma(&self, d: &mut IntDev<'_>, x: ExprId) -> ExprId {
+    fn neg_neg_lemma(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
         let p = d.int();
         let one_c = d.ione();
         let neg_one = d.ineg(one_c);
@@ -509,7 +509,7 @@ impl Problem {
     /// `Eq Int (mul (neg a) c) (neg (mul a c))`, derived from `mul_comm`
     /// (twice) and the public `mul_neg` — three steps, shorter than
     /// `int_prelude/gcd.rs`'s own private copy.
-    fn neg_mul_lemma(&self, d: &mut IntDev<'_>, a: ExprId, c: ExprId) -> ExprId {
+    fn neg_mul_lemma(d: &mut IntDev<'_>, a: ExprId, c: ExprId) -> ExprId {
         let p = d.int();
         let neg_a = d.ineg(a);
         let start = d.imul(neg_a, c);
@@ -576,13 +576,13 @@ impl Problem {
             Item::Mono(_, false) => d.irefl(neg_t),
             Item::Mono(vars, true) => {
                 let base = self.fold_mul(d, vars);
-                self.neg_neg_lemma(d, base)
+                Self::neg_neg_lemma(d, base)
             }
             Item::Num(k) if *k > 0 => d.irefl(neg_t),
             Item::Num(k) if *k < 0 => {
                 let mag = u32::try_from(k.unsigned_abs()).unwrap_or(0);
-                let base = self.build_numeral(d, mag);
-                self.neg_neg_lemma(d, base)
+                let base = Self::build_numeral(d, mag);
+                Self::neg_neg_lemma(d, base)
             }
             Item::Num(_) => {
                 // k == 0: `neg zero = zero`, via `neg_one_mul`/`mul_zero`.
@@ -626,12 +626,12 @@ impl Problem {
         let mut current_items: Vec<Item> = vec![item.clone()];
         let mut current = it;
         let mut proof = d.const_app(p.mul_one, &[it]);
-        let mut prev_num = self.build_numeral(d, 1);
+        let mut prev_num = Self::build_numeral(d, 1);
         let mut i: i64 = 1;
         while i < mag {
             i += 1;
             let one = d.ione();
-            let next_num = self.build_numeral(d, u32::try_from(i).unwrap_or(0));
+            let next_num = Self::build_numeral(d, u32::try_from(i).unwrap_or(0));
             let split_target = d.iadd(prev_num, one);
             let mul_it_split = d.imul(it, split_target);
             let mul_it_prev = d.imul(it, prev_num);
@@ -675,11 +675,13 @@ impl Problem {
         if count.unsigned_abs() > MAX_COEFF.unsigned_abs() {
             return Err(Decline::CoefficientTooLarge);
         }
-        let mag = count.unsigned_abs() as i64;
+        // `count.unsigned_abs() <= MAX_COEFF` (checked above) bounds `count`
+        // well inside `i64`, so `abs()` cannot panic here.
+        let mag = count.abs();
         let neg_result = count < 0;
         let it = self.item_term(d, item);
         let (mag_items, mag_proof) = self.scale_unsigned(d, item, mag);
-        let mag_num = self.build_numeral(d, u32::try_from(mag).unwrap_or(0));
+        let mag_num = Self::build_numeral(d, u32::try_from(mag).unwrap_or(0));
         let p = d.int();
 
         let (base_items, base_proof, base_lhs) = if neg_result {
@@ -757,87 +759,100 @@ impl Problem {
                 let raw_prod = d.imul(raw_a, raw_b);
                 let raw_proof = d.itrans(raw_prod, merged_term, sorted_term, reassoc, sort_proof);
 
-                let (result_sign, source, proof) = self.apply_mono_signs(
-                    d,
-                    *sign_a,
-                    *sign_b,
-                    raw_a,
-                    raw_b,
-                    raw_prod,
-                    raw_proof,
-                    sorted_term,
-                );
+                let raw = RawMerge {
+                    a: raw_a,
+                    b: raw_b,
+                    prod: raw_prod,
+                    proof: raw_proof,
+                    sorted: sorted_term,
+                };
+                let (result_sign, source, proof) = apply_mono_signs(d, *sign_a, *sign_b, raw);
                 let _ = source;
                 Ok((vec![Item::Mono(sorted, result_sign)], proof))
             }
         }
     }
+}
 
-    /// Wraps `raw_proof : Eq Int (mul raw_a raw_b) sorted_term` with each
-    /// factor's sign, returning `(result_sign, source, proof)` where `source
-    /// = mul (item_term (Mono(_,sign_a))) (item_term (Mono(_,sign_b)))` and
-    /// `proof : Eq Int source (if result_sign {neg sorted_term} else
-    /// {sorted_term})`.
-    fn apply_mono_signs(
-        &self,
-        d: &mut IntDev<'_>,
-        sign_a: bool,
-        sign_b: bool,
-        raw_a: ExprId,
-        raw_b: ExprId,
-        raw_prod: ExprId,
-        raw_proof: ExprId,
-        sorted_term: ExprId,
-    ) -> (bool, ExprId, ExprId) {
-        let p = d.int();
-        match (sign_a, sign_b) {
-            (false, false) => (false, raw_prod, raw_proof),
-            (true, false) => {
-                let neg_a = d.ineg(raw_a);
-                let source = d.imul(neg_a, raw_b);
-                let nm = self.neg_mul_lemma(d, raw_a, raw_b);
-                let neg_raw_prod = d.ineg(raw_prod);
-                let congr_r = d.icongr(raw_prod, sorted_term, raw_proof, &|d, t| d.ineg(t));
-                let target = d.ineg(sorted_term);
-                let full = d.itrans(source, neg_raw_prod, target, nm, congr_r);
-                (true, source, full)
-            }
-            (false, true) => {
-                let neg_b = d.ineg(raw_b);
-                let source = d.imul(raw_a, neg_b);
-                let mn = d.const_app(p.mul_neg, &[raw_a, raw_b]);
-                let neg_raw_prod = d.ineg(raw_prod);
-                let congr_r = d.icongr(raw_prod, sorted_term, raw_proof, &|d, t| d.ineg(t));
-                let target = d.ineg(sorted_term);
-                let full = d.itrans(source, neg_raw_prod, target, mn, congr_r);
-                (true, source, full)
-            }
-            (true, true) => {
-                let neg_a = d.ineg(raw_a);
-                let neg_b = d.ineg(raw_b);
-                let source = d.imul(neg_a, neg_b);
-                let nm = self.neg_mul_lemma(d, raw_a, neg_b);
-                let mul_a_negb = d.imul(raw_a, neg_b);
-                let neg_mul_a_negb = d.ineg(mul_a_negb);
-                let mn2 = d.const_app(p.mul_neg, &[raw_a, raw_b]);
-                let neg_raw_prod = d.ineg(raw_prod);
-                let congr2 = d.icongr(mul_a_negb, neg_raw_prod, mn2, &|d, t| d.ineg(t));
-                let neg_neg_raw_prod = d.ineg(neg_raw_prod);
-                let nn = self.neg_neg_lemma(d, raw_prod);
-                let (_, chained) = d.ichain(
-                    source,
-                    &[
-                        (neg_mul_a_negb, nm),
-                        (neg_neg_raw_prod, congr2),
-                        (raw_prod, nn),
-                    ],
-                );
-                let full = d.itrans(source, raw_prod, sorted_term, chained, raw_proof);
-                (false, source, full)
-            }
+/// The raw (unsigned) merge of two monomials' factor lists — `prod = mul a
+/// b`, `proof : Eq Int prod sorted`, `sorted` the sorted merged factor
+/// list's term. Bundled to keep [`apply_mono_signs`] under the arity lint.
+#[derive(Clone, Copy)]
+struct RawMerge {
+    a: ExprId,
+    b: ExprId,
+    prod: ExprId,
+    proof: ExprId,
+    sorted: ExprId,
+}
+
+/// Wraps a [`RawMerge`] with each original factor's sign, returning
+/// `(result_sign, source, proof)` where `source = mul (item_term
+/// (Mono(_,sign_a))) (item_term (Mono(_,sign_b)))` and `proof : Eq Int
+/// source (if result_sign {neg raw.sorted} else {raw.sorted})`.
+fn apply_mono_signs(
+    d: &mut IntDev<'_>,
+    sign_a: bool,
+    sign_b: bool,
+    raw: RawMerge,
+) -> (bool, ExprId, ExprId) {
+    let p = d.int();
+    let RawMerge {
+        a: raw_a,
+        b: raw_b,
+        prod: raw_prod,
+        proof: raw_proof,
+        sorted: sorted_term,
+    } = raw;
+    match (sign_a, sign_b) {
+        (false, false) => (false, raw_prod, raw_proof),
+        (true, false) => {
+            let neg_a = d.ineg(raw_a);
+            let source = d.imul(neg_a, raw_b);
+            let nm = Problem::neg_mul_lemma(d, raw_a, raw_b);
+            let neg_raw_prod = d.ineg(raw_prod);
+            let congr_r = d.icongr(raw_prod, sorted_term, raw_proof, &|d, t| d.ineg(t));
+            let target = d.ineg(sorted_term);
+            let full = d.itrans(source, neg_raw_prod, target, nm, congr_r);
+            (true, source, full)
+        }
+        (false, true) => {
+            let neg_b = d.ineg(raw_b);
+            let source = d.imul(raw_a, neg_b);
+            let mn = d.const_app(p.mul_neg, &[raw_a, raw_b]);
+            let neg_raw_prod = d.ineg(raw_prod);
+            let congr_r = d.icongr(raw_prod, sorted_term, raw_proof, &|d, t| d.ineg(t));
+            let target = d.ineg(sorted_term);
+            let full = d.itrans(source, neg_raw_prod, target, mn, congr_r);
+            (true, source, full)
+        }
+        (true, true) => {
+            let neg_a = d.ineg(raw_a);
+            let neg_b = d.ineg(raw_b);
+            let source = d.imul(neg_a, neg_b);
+            let nm = Problem::neg_mul_lemma(d, raw_a, neg_b);
+            let mul_a_negb = d.imul(raw_a, neg_b);
+            let neg_mul_a_negb = d.ineg(mul_a_negb);
+            let mn2 = d.const_app(p.mul_neg, &[raw_a, raw_b]);
+            let neg_raw_prod = d.ineg(raw_prod);
+            let congr2 = d.icongr(mul_a_negb, neg_raw_prod, mn2, &|d, t| d.ineg(t));
+            let neg_neg_raw_prod = d.ineg(neg_raw_prod);
+            let nn = Problem::neg_neg_lemma(d, raw_prod);
+            let (_, chained) = d.ichain(
+                source,
+                &[
+                    (neg_mul_a_negb, nm),
+                    (neg_neg_raw_prod, congr2),
+                    (raw_prod, nn),
+                ],
+            );
+            let full = d.itrans(source, raw_prod, sorted_term, chained, raw_proof);
+            (false, source, full)
         }
     }
+}
 
+impl Problem {
     /// `Eq Int (mul (item_term item) (fold iv)) (fold result)`.
     fn distribute_single(
         &mut self,
@@ -1017,7 +1032,7 @@ impl Problem {
             if name == p.neg && args.len() == 1 {
                 let y = args[0];
                 let (items, proof_y) = self.flatten(d, y)?;
-                let nn = self.neg_neg_lemma(d, y);
+                let nn = Self::neg_neg_lemma(d, y);
                 let folded = self.fold(d, &items);
                 let full = d.itrans(neg_e, y, folded, nn, proof_y);
                 return Ok((items, full));
@@ -1090,7 +1105,7 @@ impl Problem {
     /// `Eq Int (add zero a) a`, derived from `add_comm`/`add_zero` — the
     /// LEFT-zero law, not itself in `IntPrelude` (only the right-hand
     /// `add_zero` is).
-    fn zero_add_lemma(&self, d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+    fn zero_add_lemma(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
         let p = d.int();
         let zero = d.izero();
         let za = d.iadd(zero, a);
@@ -1104,7 +1119,7 @@ impl Problem {
     /// a leading `zero + …` from an additive fold.
     fn drop_leading_zero(&self, d: &mut IntDev<'_>, tail: &[Item]) -> ExprId {
         let t0 = self.item_term(d, &tail[0]);
-        let za = self.zero_add_lemma(d, t0);
+        let za = Self::zero_add_lemma(d, t0);
         let zero = d.izero();
         let start = d.iadd(zero, t0);
         let rest = &tail[1..];
@@ -1232,6 +1247,7 @@ pub(crate) fn prove_eq(
 ///
 /// As [`prove_eq`], minus [`Decline::NotAnIdentity`]. An `Ok` here is
 /// **not** a claim the term is well-typed.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn prove_eq_unverified(
     d: &mut IntDev<'_>,
     prelude: &IntPrelude,

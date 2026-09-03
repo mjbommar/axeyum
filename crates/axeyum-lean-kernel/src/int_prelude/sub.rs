@@ -123,47 +123,22 @@ pub(super) fn declare_mul_neg(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// `Int.mul_sub :
 /// ∀ a x y, Eq Int (mul a (sub x y)) (sub (mul a x) (mul a y))`.
 ///
-/// Unfolds `sub` to `add _ (neg _)`, applies `left_distrib` then `mul_neg`,
-/// and folds back — the stated type names `Int.sub`, the proof never does.
+/// By `ring::int::declare` (ring-tactic-2, ADR-1582) rather than the hand
+/// `left_distrib`/`mul_neg` chain this file used to carry.
 ///
 /// # Errors
 ///
 /// Returns the trusted gate's rejection if the constructed term does not
-/// check.
+/// check, or `UnknownConst` if the ring producer declined.
 pub(super) fn declare_mul_sub(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    d.int_theorem(p.mul_sub, 3, &|d, v| {
+    crate::ring::int::declare(d, &p, p.mul_sub, 3, &|d, v| {
         let (n, x, y) = (v[0], v[1], v[2]);
-
-        // Folded statement, over `Int.sub`.
         let sub_xy = d.isub(x, y);
         let lhs = d.imul(n, sub_xy);
         let mul_nx = d.imul(n, x);
         let mul_ny = d.imul(n, y);
         let rhs = d.isub(mul_nx, mul_ny);
-        let stmt = d.ieq(lhs, rhs);
-
-        // Unfolded proof: `mul n (add x (neg y))`, defeq to `lhs`.
-        let neg_y = d.ineg(y);
-        let unfolded_lhs = d.iadd(x, neg_y);
-        let unfolded_lhs = d.imul(n, unfolded_lhs);
-
-        let mul_n_negy = d.imul(n, neg_y);
-        let distrib_rhs = d.iadd(mul_nx, mul_n_negy);
-        let distrib_proof = d.const_app(p.left_distrib, &[n, x, neg_y]);
-
-        let neg_mul_ny = d.ineg(mul_ny);
-        let final_rhs = d.iadd(mul_nx, neg_mul_ny);
-        let mul_neg_proof = d.const_app(p.mul_neg, &[n, y]);
-        let congr_step = d.icongr(mul_n_negy, neg_mul_ny, mul_neg_proof, &|d, t| {
-            d.iadd(mul_nx, t)
-        });
-
-        let (_, proof) = d.ichain(
-            unfolded_lhs,
-            &[(distrib_rhs, distrib_proof), (final_rhs, congr_step)],
-        );
-        (stmt, proof)
-    })?;
-    Ok(())
+        d.ieq(lhs, rhs)
+    })
 }
