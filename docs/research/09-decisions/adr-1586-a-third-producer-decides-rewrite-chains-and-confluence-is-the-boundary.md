@@ -12,10 +12,14 @@ outermost-first, against a goal's own `ExprId` graph, and applied to a
 `MAX_STEPS = 32` fixed point per side — no kernel `Pi`-type introspection
 needed; a rule's pattern is a stateless `build` closure over fresh pattern
 variables, exactly `ring::nat::prove_eq_at`'s "prove generically, apply
-concretely" convention already establishes. It retired **thirteen**
-hand-written rewrite chains: ten in `nat_prelude` (two duplicated pairs —
-`one_add_eq_succ` and `two_mul_eq_add`/`mul_two_eq_add_self`, each proved
-independently at two call sites) and three in `int_prelude`
+concretely" convention already establishes. It retired **fourteen**
+hand-written rewrite chains: eleven in `nat_prelude` (a duplicated pair —
+`one_add_eq_succ`, proved independently at two call sites — and a
+TRIPLICATED shape — `two_mul_eq_add`/`mul_two_eq_add_self`/
+`eisenstein_floor_min_free::two_mul`, the same identity at three
+independent call sites, the third found and landed by re-checking a claim
+about it that turned out to be wrong rather than trusting the first
+analysis — see §3's closing note) and three in `int_prelude`
 (`add_left_neg`, `zero_mul_eq_zero`, `zero_add`). Measured `--release`,
 `--example simp_cost`, 200 emissions per shape: **0.21–0.53 ms per term
 search+emit, 0.28–0.63 ms with the kernel recheck** — the same order of
@@ -205,6 +209,26 @@ negative**, per this repository's own standing rule that a precisely-stated
 negative is a complete deliverable — not a shortfall to paper over with a
 weaker or untested claim.
 
+**A hand proof's own citation path is not evidence of what this producer
+needs, and getting that backwards nearly produced a second false negative.**
+`nat_prelude/eisenstein_floor_min_free.rs::two_mul` is a THIRD independent
+hand-written copy of `Eq (mul 2 x) (add x x)`, beside the two ℕ retirements
+in §1's summary — its own proof routes through `mul_comm` then `zero_add`,
+which by the §2/§3 argument above looked like exactly the unsafe `neg_mul`
+shape (comm needed to reach an annihilator, but the specific annihilator
+chosen leaves residue). Drafting this ADR's status note, that similarity was
+enough to write down "unsafe, not retired" without checking. It was wrong:
+`gauss_lemma.rs::two_mul_eq_add` and `parity.rs::mul_two_eq_add_self`
+already prove the SAME statement is reachable from the DEFAULT set alone —
+`succ_mul` unfolds `mul 2 x` twice (to `add (mul 1 x) x`, then `add (mul 0
+x) x`), `zero_mul` clears the innermost product, `zero_add` clears the
+result — no `add_comm`/`mul_comm` needed at all. The hand proof took one
+particular path to its statement; the producer, run against the bare goal,
+found an entirely different and confluence-safe one. Caught before this ADR
+or the retirement count were committed, by testing the specific claim rather
+than trusting the shape-based analogy — retired as the ℕ total's eleventh
+target once confirmed.
+
 ### 4. `List` was scoped, researched, and NOT built — and the reason is not merely session length
 
 Two findings, independently sufficient to defer this carrier:
@@ -281,7 +305,7 @@ single-step `1+x = succ x`), not carrier or structural depth alone.
   ADR-1510 rule 1. It is the THIRD contract born retired, and the third
   datum making the same point from a different angle: the contract system
   sizes *dispatch* against the open fact ledger and structurally cannot see
-  a *retirement* — thirteen hand proofs replaced, none of it visible to a
+  a *retirement* — fourteen hand proofs replaced, none of it visible to a
   shape predicate over open facts.
 - **`neg_mul`/`neg_mul_neg`-shaped ℤ identities remain hand-written.** This
   producer cannot reach them (§3); a future `ring::int`-style normal-form
@@ -302,7 +326,7 @@ single-step `1+x = succ x`), not carrier or structural depth alone.
   from `Nat.dist`/`Nat.lcm` could still be reached by first unfolding to
   `add`/`sub`/`div` structure). Rejected: this is a strictly different,
   strictly more powerful capability than "rewrite by named equations", it
-  has no test target in the ten/three retirements actually needed, and it
+  has no test target in the eleven/three retirements actually needed, and it
   would blur the boundary this producer and `ring` currently keep clean (a
   goal outside the fragment declines, rather than getting unfolded into
   something that might silently be).
