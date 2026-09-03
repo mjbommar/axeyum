@@ -53,6 +53,7 @@ use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
 pub(crate) mod abs;
+pub mod algebra_ext;
 pub mod algebra_instances;
 mod archimedean;
 mod bernoulli;
@@ -100,6 +101,7 @@ pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 
 use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
+use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
@@ -3122,6 +3124,11 @@ pub struct RatPrelude {
     /// `Alg.*` record spine, three generic theorems, and a generic
     /// `det_one` over an arbitrary `Alg.CommRing`. See [`algebra_instances`].
     pub algebra: AlgebraNames,
+
+    /// ADR-1584: forgetful projections between `Alg.*` records, more
+    /// cross-carrier generic theorems, and `Alg.OrderedRing`. See
+    /// [`algebra_ext`].
+    pub algebra_ext: AlgebraExtNames,
 }
 
 impl RatPrelude {
@@ -3675,6 +3682,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_le_cols: child(kernel, "rank_le_cols"),
         rank_nullity_rows: child(kernel, "rank_nullity_rows"),
         algebra: algebra_instances::intern_algebra_instances(kernel),
+        algebra_ext: algebra_ext::intern_algebra_ext(kernel),
     }
 }
 
@@ -3752,6 +3760,14 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude,
             &prelude.int.nat.structures,
             &prelude.algebra,
+        )?;
+        algebra_ext::declare_algebra_ext_all(
+            d.kernel(),
+            &prelude.int.nat.logic,
+            &prelude,
+            &prelude.int.nat.structures,
+            &prelude.algebra,
+            &prelude.algebra_ext,
         )?;
         Ok(())
     })();

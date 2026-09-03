@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1124 names,
+/// The `NatPrelude` field table (1127 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 30 of the names come from ADR-1512 per-module registries and
+/// 33 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1530,6 +1530,9 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("structures.field.ind", p.structures.field.ind),
             ("structures.field.mk", p.structures.field.mk),
             ("structures.field.rec", p.structures.field.rec),
+            ("structures.ordered_ring.ind", p.structures.ordered_ring.ind),
+            ("structures.ordered_ring.mk", p.structures.ordered_ring.mk),
+            ("structures.ordered_ring.rec", p.structures.ordered_ring.rec),
         ],
         lists: Vec::new(),
     }
@@ -2043,10 +2046,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (522 names,
+/// The `RatPrelude` field table (539 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 16 of the names come from ADR-1512 per-module registries and
+/// 33 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -2663,6 +2666,47 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
             ("algebra.alt_sign_r", p.algebra.alt_sign_r),
             ("algebra.det_r", p.algebra.det_r),
             ("algebra.comm_ring_det_one", p.algebra.comm_ring_det_one),
+            (
+                "algebra_ext.comm_monoid_to_monoid",
+                p.algebra_ext.comm_monoid_to_monoid,
+            ),
+            ("algebra_ext.group_to_monoid", p.algebra_ext.group_to_monoid),
+            (
+                "algebra_ext.comm_group_to_group",
+                p.algebra_ext.comm_group_to_group,
+            ),
+            ("algebra_ext.ring_to_monoid", p.algebra_ext.ring_to_monoid),
+            (
+                "algebra_ext.ring_to_comm_group",
+                p.algebra_ext.ring_to_comm_group,
+            ),
+            (
+                "algebra_ext.comm_ring_to_ring",
+                p.algebra_ext.comm_ring_to_ring,
+            ),
+            (
+                "algebra_ext.field_to_comm_ring",
+                p.algebra_ext.field_to_comm_ring,
+            ),
+            (
+                "algebra_ext.int_ordered_ring",
+                p.algebra_ext.int_ordered_ring,
+            ),
+            (
+                "algebra_ext.rat_ordered_ring",
+                p.algebra_ext.rat_ordered_ring,
+            ),
+            ("algebra_ext.mul_left_cancel", p.algebra_ext.mul_left_cancel),
+            ("algebra_ext.neg_neg", p.algebra_ext.neg_neg),
+            ("algebra_ext.sub", p.algebra_ext.sub),
+            ("algebra_ext.sub_self", p.algebra_ext.sub_self),
+            ("algebra_ext.mul_neg_one", p.algebra_ext.mul_neg_one),
+            ("algebra_ext.npow", p.algebra_ext.npow),
+            ("algebra_ext.pow_add", p.algebra_ext.pow_add),
+            (
+                "algebra_ext.mul_le_mul_of_nonneg_left",
+                p.algebra_ext.mul_le_mul_of_nonneg_left,
+            ),
         ],
         lists: Vec::new(),
     }

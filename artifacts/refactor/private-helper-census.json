@@ -14,18 +14,18 @@
     ]
   },
   "population": {
-    "files_scanned": 518,
-    "private_fns": 10067,
-    "private_fns_outside_tests": 8270,
-    "distinct_names": 8071,
-    "distinct_body_digests": 8946,
-    "duplicated_name_groups": 787,
-    "duplicated_body_groups": 413,
-    "sites_in_duplicated_body_groups": 1534,
-    "inline_step_fns": 6753,
-    "inline_step_name_groups": 540,
-    "inline_step_body_groups": 284,
-    "sites_in_inline_step_body_groups": 944
+    "files_scanned": 519,
+    "private_fns": 10107,
+    "private_fns_outside_tests": 8310,
+    "distinct_names": 8110,
+    "distinct_body_digests": 8985,
+    "duplicated_name_groups": 788,
+    "duplicated_body_groups": 414,
+    "sites_in_duplicated_body_groups": 1536,
+    "inline_step_fns": 6778,
+    "inline_step_name_groups": 541,
+    "inline_step_body_groups": 285,
+    "sites_in_inline_step_body_groups": 946
   },
   "by_name": [
     {
@@ -2117,7 +2117,7 @@
         "crates/axeyum-lean-kernel/src/creal.rs:6256",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1413",
         "crates/axeyum-lean-kernel/src/int_prelude.rs:1923",
-        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3163"
+        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3170"
       ]
     },
     {
@@ -4548,7 +4548,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:343",
-        "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:229",
+        "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:251",
         "crates/axeyum-lean-kernel/src/quotient.rs:641"
       ]
     },
@@ -7266,6 +7266,22 @@
       ]
     },
     {
+      "key": "alg_root",
+      "count": 2,
+      "names": [
+        "alg_root"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn alg_root(k: &mut Kernel) -> NameId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
+      ]
+    },
+    {
       "key": "all_of",
       "count": 2,
       "names": [
@@ -8016,7 +8032,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/characterization/ops.rs:353",
-        "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:237"
+        "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:259"
       ]
     },
     {
@@ -20335,6 +20351,22 @@
       ]
     },
     {
+      "key": "634201aa778710ea",
+      "count": 2,
+      "names": [
+        "alg_root"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn alg_root(k: &mut Kernel) -> NameId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
+      ]
+    },
+    {
       "key": "642ec9de1dc94365",
       "count": 2,
       "names": [
@@ -24308,7 +24340,7 @@
         "crates/axeyum-lean-kernel/src/creal.rs:6256",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1413",
         "crates/axeyum-lean-kernel/src/int_prelude.rs:1923",
-        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3163"
+        "crates/axeyum-lean-kernel/src/rat_prelude.rs:3170"
       ]
     },
     {
@@ -27755,6 +27787,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:240",
         "crates/axeyum-lean-kernel/src/nat_prelude/sum_range_permute.rs:170"
+      ]
+    },
+    {
+      "key": "alg_root",
+      "count": 2,
+      "names": [
+        "alg_root"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn alg_root(k: &mut Kernel) -> NameId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
       ]
     },
     {
@@ -36932,6 +36980,22 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/ring.rs:66",
         "crates/axeyum-lean-kernel/src/creal_point.rs:17429"
+      ]
+    },
+    {
+      "key": "634201aa778710ea",
+      "count": 2,
+      "names": [
+        "alg_root"
+      ],
+      "files": 2,
+      "carriers": [],
+      "body_lines": 4,
+      "signature": "fn alg_root(k: &mut Kernel) -> NameId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
       ]
     },
     {

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-pow-add",
+  "title": "In an abstract monoid, npow distributes over addition of exponents",
+  "statement": "For any monoid record M (an abstract carrier, binary op, identity e, associativity, two-sided identity laws), with npow defined by Nat recursion on the record's own op (npow M x 0 = e, npow M x (succ n) = op (npow M x n) x), element x of M's carrier, and naturals m n, npow M x (m+n) = op (npow M x m) (npow M x n).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.pow_add : ((x0 : Alg.Monoid) -> ((x1 : Alg.Monoid.carrier x0) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} (Alg.Monoid.carrier x0) (Alg.npow x0 x1 (AxNat.add x2 x3)) (Alg.Monoid.op x0 (Alg.npow x0 x1 x2) (Alg.npow x0 x1 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.pow_add"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-pow-add-1",
+      "kind": "kernel-term",
+      "supports": "Alg.npow (Nat.rec over the record's own op, RIGHT-multiplying: npow x (succ n) = op (npow x n) x, matching Rat.pow's/Int.pow's own recursion convention) admits axiom-free, with a concrete evaluation (x := 4 at Nat.commAddMonoid projected to Monoid: npow(M,4,0)=0, npow(M,4,1)=4, npow(M,4,2)=8, three discriminating small-magnitude points). Alg.pow_add is proved by induction on n (the argument Nat.add recurses on): the base case needs only identR, and the step needs only assoc and the induction hypothesis -- NO self-commutation lemma, because npow's RIGHT-multiplying recursion matches add's own recursion direction. Type-checks symbolically (closed over free x, m, n) at Rat.commMulMonoid projected to Monoid.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- alg_npow_evaluates_at_concrete_nat_add_monoid --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-pow-add-2",
+      "kind": "kernel-term",
+      "supports": "Alg.pow_add itself type-checks symbolically at Rat.commMulMonoid projected to Monoid.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- pow_add_applies_symbolically_at_rat_comm_mul_monoid --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-pow-add-3",
+      "kind": "kernel-term",
+      "supports": "MEASUREMENT, not a retirement claim: `Alg.npow(Rat.commMulMonoid,x,n)` IS `def_eq` to `Rat.pow(x,n)` at SYMBOLIC x,n -- unlike the ADR-1578 detR/Rat.det measurement (which agreed only at n=1), this agreement holds at the whole recursion, because both `npow`'s step (`op ih x` = `mul ih x`, once the Monoid's selectors reduce through the projection to Rat.mul) and `Rat.pow`'s own step (`mul (pow a j) a`) are the identical Nat.rec application once unfolded.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- measure_npow_vs_rat_pow_agreement_at_rat_comm_mul_monoid --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'def_eq Rat\\.pow\\(x,n\\) at symbolic x,n = true')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-2, ADR-1584.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (build_npow, build_pow_add, declared as Alg.npow / Alg.pow_add); tests rat_prelude::algebra_ext::algebra_ext_tests::alg_npow_evaluates_at_concrete_nat_add_monoid, ::pow_add_applies_symbolically_at_rat_comm_mul_monoid, ::measure_npow_vs_rat_pow_agreement_at_rat_comm_mul_monoid."
+  },
+  "notes": "Rat.pow_add is a genuine retirement CANDIDATE by type-level agreement (npow def_eq Rat.pow at symbolic x,n implies the two pow_add statements themselves are def_eq, not merely type-comparable), but this lane did not attempt the retirement itself (deleting/replacing Rat.pow_add's declaration site) -- ADR-1581's rule applies unchecked here. Not attempted at Nat.pow_add/Int.pow_add (no multiplicative Monoid instance was built at those two carriers in this lane)."
+}

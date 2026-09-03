@@ -41,13 +41,13 @@ fn alg_root(k: &mut Kernel) -> NameId {
 }
 
 /// Apply selector `i` of record `rn` to structure term `s`.
-fn sel(k: &mut Kernel, rn: &RecordNames, i: usize, s: ExprId) -> ExprId {
+pub(crate) fn sel(k: &mut Kernel, rn: &RecordNames, i: usize, s: ExprId) -> ExprId {
     let c = k.const_(rn.sel(i), vec![]);
     k.app(c, s)
 }
 
 /// `<Record>.mk arg0 arg1 ...` in field order.
-fn mk_instance(k: &mut Kernel, rn: &RecordNames, args: &[ExprId]) -> ExprId {
+pub(crate) fn mk_instance(k: &mut Kernel, rn: &RecordNames, args: &[ExprId]) -> ExprId {
     let mut v = k.const_(rn.mk, vec![]);
     for a in args {
         v = k.app(v, *a);
@@ -75,7 +75,7 @@ fn declare_instance(
 /// Builds `∀ a, op unit a = a` (a VALUE, i.e. a proof term of that type) from
 /// `comm : ∀ x y, op x y = op y x` and `right_unit : ∀ x, op x unit = x`.
 /// Reused for `Rat`'s missing `one_mul` and `Int`'s missing `zero_add`.
-fn derive_left_unit(
+pub(crate) fn derive_left_unit(
     k: &mut Kernel,
     lg: &LogicPrelude,
     l1: LevelId,

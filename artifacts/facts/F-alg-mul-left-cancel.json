@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-mul-left-cancel",
+  "title": "In an abstract group, the operation cancels on the left",
+  "statement": "For any group record G (an abstract carrier, binary op, identity e, inverse, associativity, two-sided identity and inverse laws) and elements a b c of G's carrier, if op a b = op a c then b = c.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.mul_left_cancel : ((x0 : Alg.Group) -> ((x1 : Alg.Group.carrier x0) -> ((x2 : Alg.Group.carrier x0) -> ((x3 : Alg.Group.carrier x0) -> ((x4 : Eq.{1} (Alg.Group.carrier x0) (Alg.Group.op x0 x1 x2) (Alg.Group.op x0 x1 x3)) -> Eq.{1} (Alg.Group.carrier x0) x2 x3)))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.mul_left_cancel"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-mul-left-cancel-1",
+      "kind": "kernel-term",
+      "supports": "Alg.mul_left_cancel admits through the trusted kernel gate. Instantiated CONCRETELY at Int.addGroup (a := 2, b := 3, c := 3, hypothesis Eq.refl of `2+3`) with the type checked to reduce to Eq 3 3, and SYMBOLICALLY at both Int.addGroup and Rat.addGroup, closed over free a b c and the hypothesis fvar -- the chain b = e*b = (a'*a)*b = a'*(a*b) = a'*(a*c) = (a'*a)*c = e*c = c (a' := inv a) specializes and every selector application iota-reduces through both instances.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- mul_left_cancel_applies_concretely_and_symbolically --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "Anchored on cargo's own pass/fail summary line with both counts pinned, so any TypeMismatch or assertion failure changes the pattern."
+    },
+    {
+      "id": "alg-mul-left-cancel-2",
+      "kind": "kernel-term",
+      "supports": "Alg.mul_left_cancel instantiated at Int.addGroup (op := Int.add) has the SAME TYPE as the hand-proved Int.add_left_cancel -- a genuine retirement candidate under ADR-1581's rule (a hand proof's citations are necessary, not sufficient: retirement additionally needs Int.add_left_cancel to not be cited by anything declared before this theorem's position in the build sequence, which this lane did not audit).",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- retirement_int_add_left_cancel --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-2, ADR-1584 -- proved once over the abstract Alg.Group record and instantiated at two independently-built carriers.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (build_mul_left_cancel, declared as Alg.mul_left_cancel); tests rat_prelude::algebra_ext::algebra_ext_tests::mul_left_cancel_applies_concretely_and_symbolically, ::retirement_int_add_left_cancel."
+  },
+  "notes": "A genuine retirement candidate for Int.add_left_cancel (same type, at the additive group). NOT a retirement candidate for anything named `Nat.mul_left_cancel`: Nat's multiplicative monoid has no two-sided inverse (Nat.mul_left_cancel_of_pos is the CONDITIONAL, non-group shape this theorem does not generalize -- grepped and confirmed absent under the exact name)."
+}

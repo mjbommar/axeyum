@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-mul-le-mul-of-nonneg-left",
+  "title": "In an abstract ordered ring, multiplying a nonneg-vs-le pair on the left preserves the order",
+  "statement": "For any ordered-ring record R (a ring plus le, le_refl, le_trans, le_antisymm, add_le_add_left, mul_nonneg) and elements a b c of R's carrier, if 0 <= a and b <= c then a*b <= a*c.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.mul_le_mul_of_nonneg_left : ((x0 : Alg.OrderedRing) -> ((x1 : Alg.OrderedRing.carrier x0) -> ((x2 : Alg.OrderedRing.carrier x0) -> ((x3 : Alg.OrderedRing.carrier x0) -> ((x4 : Alg.OrderedRing.le x0 (Alg.OrderedRing.zero x0) x1) -> ((x5 : Alg.OrderedRing.le x0 x2 x3) -> Alg.OrderedRing.le x0 (Alg.OrderedRing.mul x0 x1 x2) (Alg.OrderedRing.mul x0 x1 x3)))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.mul_le_mul_of_nonneg_left"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-mul-le-mul-of-nonneg-left-1",
+      "kind": "kernel-term",
+      "supports": "Alg.OrderedRing (Ring's 15 fields restated plus le and five order laws: le_refl, le_trans, le_antisymm, add_le_add_left, mul_nonneg -- 21 fields total, admits at Sort 2 with the same universe-guard control every other record in the spine carries) and Alg.mul_le_mul_of_nonneg_left both admit through the trusted kernel gate. Instantiated at Int.orderedRing and Rat.orderedRing (Rat's add_le_add_left has no primitive and is DERIVED from add_le_add + le_refl), type-checking symbolically (closed over free a b c and both hypothesis fvars) at both. Proof: d := add (neg b) c is shown >=0 (add_le_add_left + a transport along the derived add(neg b)b=zero); b+d=c (assoc + negAdd + a derived left-unit); so a*c=a*b+a*d (distribL); a*d>=0 (mul_nonneg), so a*b <= a*b+a*d = a*c (add_le_add_left again).",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- mul_le_mul_of_nonneg_left_applies_symbolically_at_int_and_rat_ordered_rings --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-mul-le-mul-of-nonneg-left-2",
+      "kind": "kernel-term",
+      "supports": "Alg.mul_le_mul_of_nonneg_left instantiated at Int.orderedRing / Rat.orderedRing has the SAME TYPE as the hand-proved Int.mul_le_mul_of_nonneg_left / Rat.mul_le_mul_of_nonneg_left, at BOTH carriers -- both genuine retirement candidates.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- retirement_mul_le_mul_of_nonneg_left_both_carriers --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-2, ADR-1584.",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs (ordered_ring_fields, the OrderedRing record); crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs (declare_ordered_ring_instances, build_mul_le_mul_of_nonneg_left); tests rat_prelude::algebra_ext::algebra_ext_tests::mul_le_mul_of_nonneg_left_applies_symbolically_at_int_and_rat_ordered_rings, ::retirement_mul_le_mul_of_nonneg_left_both_carriers."
+  },
+  "notes": "Retires BOTH Int.mul_le_mul_of_nonneg_left and Rat.mul_le_mul_of_nonneg_left by exact type match (same type, not merely def_eq of the terms). Both are named in linarith's own emitter vocabulary (int_prelude/sign_product.rs cites Int.mul_le_mul_of_nonneg_left; ADR-1581's rule that a lemma the emitter depends on cannot be retired TO the emitter applies -- this lane did not check whether linarith's own emitted proofs cite this name at a build position that would block retirement, matching ADR-1581 section 1's finding that a candidate's citations bound what the OLD proof needed, not what a retirement needs at its build position."
+}
