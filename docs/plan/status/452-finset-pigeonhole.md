@@ -79,17 +79,44 @@ population from `Kernel::environment()` and then asserts the five new names are
 AMONG them, so an empty derivation cannot pass. Both are kept; the old one is a
 subset check now.
 
-**Gates.** `nat_prelude::finset` 21 passed / 0 failed (14 pre-existing + 7 new);
+**Two gates caught real defects in this lane's own work, and both are worth
+recording because a narrower check was green over each.**
+`every_nat_declaration_is_checked_and_axiom_free` derives its population from
+the live prelude, and it named all six new `Nat` declarations as live and
+watched by nothing — while `nat_prelude::finset` was 21 green with the gap
+open. A filter cannot catch a MISSING registration by construction. And the
+ledger's own checker table found that **five of the seven `kernel-term` rows
+did not pass as written**: a `grep -F` pattern that BEGINS with `-` is parsed
+as an option, and five of the seven distinguishing substrings start with the
+arrow before a conclusion. Fixed with `grep -cF -e`; the re-run is 28 for 28
+(every row passes, every perturbed row fails). The defect ran in the safe
+direction — the rows failed rather than passing vacuously — but it was still a
+checker that had never examined its subject.
+
+**Gates.** `nat_prelude::` 441 passed / 0 failed; `rat_prelude::` 266 passed /
+0 failed; `nat_prelude::finset` 21 passed / 0 failed (14 pre-existing + 7 new);
 `rat_prelude::rank_bridge` 9 passed / 0 failed (8 + 1 new);
 `clippy -p axeyum-lean-kernel --all-targets -D warnings` clean;
 `rustfmt --edition 2024` on every touched file;
-`validate-facts.py` 2754 facts / 0 errors; every fact checker verified to hit
-zero on a perturbed pattern. `check-merge-hygiene.sh` clean. Nothing
-did-not-run.
+`validate-facts.py` 2754 facts / 0 errors; `cargo check --workspace
+--all-targets` clean (the regenerated `axeyum-py` prelude field table is the
+reason to run it); `check-merge-hygiene.sh` PASS.
+
+**Two things did NOT run, and neither is a pass.** The `finite::` filter the
+brief asked for runs **ZERO tests** — there is no `nat_prelude::finite` test
+module; `finite.rs`'s coverage lives in `nat_prelude_tests.rs`, which the full
+`nat_prelude::` sweep above does run, and this lane changed no line of
+`finite.rs`. And `check-theorem-inventory-completeness.py` is RED, on the
+`list` prelude group being absent from `cross_prelude_collision_tests`'s
+`build_groups`. That is pre-existing and not this lane's: the file is
+byte-identical to the merge base and this lane's diff does not touch any
+`build_groups`. It belongs to whoever landed the `list` prelude.
 
 <!-- plan-section: landed-changes -->
 
 | 2026-09-03 | finset-pigeonhole | open the lane (`a4cadf61d`) |
 | 2026-09-03 | finset-pigeonhole | `countRange_le_of_injOn` + `card_le_of_injOn` + `pigeonhole` (`f91ded0c2`) |
 | 2026-09-03 | finset-pigeonhole | `exists_collision`, `allBelow_false_witness`, `Rat.rankCols_le_rank`, tests (`164e4d329`) |
-| 2026-09-03 | finset-pigeonhole | ADR-1593 and seven facts |
+| 2026-09-03 | finset-pigeonhole | ADR-1593 and seven facts (`dfc9c1c1a`) |
+| 2026-09-03 | finset-pigeonhole | register the seven with both authority lists (`b04b5d1f9`) |
+| 2026-09-03 | finset-pigeonhole | fix five ledger checkers that never matched |

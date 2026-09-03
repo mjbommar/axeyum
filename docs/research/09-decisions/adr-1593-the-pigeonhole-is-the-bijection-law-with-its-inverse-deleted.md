@@ -7,8 +7,9 @@ Lane: `finset-pigeonhole`
 Index-summary: ADR-1577 landed `Nat.Finset` and measured the one thing standing
 between it and the pigeonhole principle: `countRange p n ≤ countRange q m` from
 an INJECTION between two selected sets, reported ABSENT by
-`shape_search --hyp Nat.injectiveOn --concl Nat.le`. Six theorems close it,
-every one admitted on the first attempt with `Kernel::axiom_footprint = []`.
+`shape_search --hyp Nat.injectiveOn --concl Nat.le`. Six theorems close it and
+a seventh consumes it, every one admitted on the first attempt with
+`Kernel::axiom_footprint = []`.
 The route chosen is `Nat.countRange_bij`'s own induction with the inverse `τ`
 and the two round-trip equations DELETED — the base case collapses to
 `Nat.zero_le` and the selected branch closes through `Nat.succ_le_succ` instead
@@ -313,6 +314,48 @@ names, which measures the maintainer's memory: a declaration added to
 `Kernel::environment()` and takes every declaration rendering under
 `Nat.Finset`, then asserts the five names this ADR adds are AMONG them — so a
 derivation that silently returned an empty population cannot pass.
+
+## The ledger's checkers were run before being believed, and five were broken
+
+Every one of this ADR's seven facts carries a `kernel-term` row (a
+distinguishing substring of the admitted TYPE, so a drifted statement fails
+rather than passes) and a `footprint` row (name AND size 0 pinned together, so
+a proof that reached for a trusted declaration fails rather than reads as
+axiom-free). Each was run as written, then run again with a single character
+changed inside its pattern and required to FAIL.
+
+**Five of the seven `kernel-term` rows did not pass as first written**, and the
+table is the only reason that is known:
+
+| row | as written | perturbed |
+| --- | --- | --- |
+| `kernel-nat-countrange-le-of-injon` | **fail** → pass | fail |
+| `kernel-nat-finset-lt-bound-of-memb` | **fail** → pass | fail |
+| `kernel-nat-finset-card-le-of-injon` | **fail** → pass | fail |
+| `kernel-nat-finset-pigeonhole` | pass | fail |
+| `kernel-nat-finset-all-below-false-witness` | **fail** → pass | fail |
+| `kernel-nat-finset-exists-collision` | pass | fail |
+| `kernel-rat-rank-cols-le-rank` | **fail** → pass | fail |
+| all seven `footprint-*` rows | pass | fail |
+
+The cause is worth recording because it is invisible by inspection and it
+partitions the rows exactly: **a `grep -F` pattern that BEGINS with `-` is
+parsed as an option, not as a pattern.** Five of the seven distinguishing
+substrings start with `-> ` (the arrow before a conclusion); the two that pass
+begin inside the type. The fix is `grep -cF -e '<pattern>'` on every row, so
+the form is uniform rather than accidentally correct.
+
+Note which direction the defect ran: these rows FAILED, so the ledger would
+have gone red rather than quietly green. That is the good failure mode, and it
+is still a checker that never checked its subject.
+
+The re-run is 28 for 28. It substitutes a cached copy of
+`kernel_declaration_projection`'s output for the binary in the `out=$(…)` step
+— the pattern, the `awk` fields and the `test` are verbatim from the ledger,
+and the binary is deterministic — and then runs one row LIVE and unsubstituted,
+so the command FORM is checked and not only the pattern. The cache is what
+makes 28 runs affordable: the binary rebuilds every prelude, so the first,
+uncached table took roughly fifty minutes for twenty-eight invocations.
 
 ## Consequences
 

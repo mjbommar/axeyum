@@ -26,8 +26,8 @@
       "kernel_declaration": "Rat.rankCols_le_rank",
       "supports": "Rat.rankCols_le_rank is admitted by the trusted kernel gate with the type recorded in formal.statement.",
       "check_status": "checked",
-      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cF '-> AxNat.le (Rat.rankCols x0 x1 x2) (Rat.rank x0 x1 x2))))')\" -ge 1",
-      "notes": "The pattern is a DISTINGUISHING substring of the admitted type, not the declaration's name: an existence check would still pass if the statement drifted. Verified to hit ZERO on a perturbed pattern before this row was written -- see the mutation table in ADR-1593. `kernel_declaration_projection` prints every declaration with its footprint size and its rendered type, and the prelude build admits this theorem only through the trusted gate, so a successful build IS the type-check."
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cF -e '-> AxNat.le (Rat.rankCols x0 x1 x2) (Rat.rank x0 x1 x2))))')\" -ge 1",
+      "notes": "The pattern is a DISTINGUISHING substring of the admitted type, not the declaration's name: an existence check would still pass if the statement drifted. Verified to hit ZERO on a perturbed pattern before this row was written -- see the mutation table in ADR-1593. `kernel_declaration_projection` prints every declaration with its footprint size and its rendered type, and the prelude build admits this theorem only through the trusted gate, so a successful build IS the type-check. `grep -cF -e` rather than `grep -cF`: a pattern beginning with `-` is parsed as an OPTION, and five of these seven do. The table in ADR-1593 caught that -- the rows failed as written before `-e` was added, which is why it was run at all."
     },
     {
       "id": "footprint-rat-rank-cols-le-rank",
