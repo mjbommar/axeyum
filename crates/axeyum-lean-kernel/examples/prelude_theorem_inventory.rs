@@ -79,7 +79,8 @@ use std::process::ExitCode;
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
-    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
+    build_list_nat_bridge, build_list_perm, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude,
 };
 
 /// One row: theorem name and the axioms it rests on, both display-rendered.
@@ -211,6 +212,22 @@ fn build_groups(include_constructed: bool) -> Vec<(&'static str, Vec<Row>)> {
     let mut ipc = Kernel::new();
     let _ = build_ipc_soundness_prelude(&mut ipc).expect("IPC soundness prelude must build");
     groups.push(("ipc", theorems(&ipc)));
+
+    // `List` (`list-carrier-1`/`list-carrier-2`): the nine pure-`List`/
+    // `List`-`Nat.Multiset` bridge theorems plus `List.Perm`'s four
+    // (`count_append`/`count_reverse` are `Definition`-adjacent helpers, not
+    // separately named facts, but ARE real `Declaration::Theorem`s and so
+    // are counted here like everything else). Unconditional, for the same
+    // reason as `characterization`/`ipc` above: `build_list_nat_bridge`
+    // costs no more than the already-unconditional `nat` group plus `List`
+    // itself, and `build_list_perm` adds only `Nat.Finset.allBelow` reuse
+    // on top.
+    let mut list = Kernel::new();
+    let (list_prelude, list_nat_prelude, list_bridge) =
+        build_list_nat_bridge(&mut list).expect("List/Nat bridge must build");
+    let _ = build_list_perm(&mut list, &list_prelude, &list_nat_prelude, &list_bridge)
+        .expect("List.Perm must build");
+    groups.push(("list", theorems(&list)));
 
     let mut rational = Kernel::new();
     let _ = build_rat_prelude(&mut rational).expect("Rat prelude must build");

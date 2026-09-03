@@ -7,8 +7,8 @@
 //! reads exactly like `that theorem does not exist`.
 
 use axeyum_lean_kernel::{
-    ArithPrelude, CPointPrelude, CRealPrelude, ComplexPrelude, IntPrelude, LogicPrelude, NameId,
-    NatPrelude, RatPrelude, StringPrelude,
+    ArithPrelude, CPointPrelude, CRealPrelude, ComplexPrelude, IntPrelude, ListPrelude,
+    LogicPrelude, NameId, NatPrelude, RatPrelude, StringPrelude,
 };
 
 /// One package's flattened contents: scalar names, name lists, and the
@@ -116,6 +116,34 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
             ("nat_zero", p.nat_zero),
             ("nat_succ", p.nat_succ),
             ("nat_rec", p.nat_rec),
+        ],
+        lists: Vec::new(),
+    }
+}
+
+/// The `ListPrelude` field table (16 names,
+/// 0 name lists, 0 sub-packages).
+#[must_use]
+#[allow(clippy::too_many_lines)] // a generated field table; length is the point.
+pub(super) fn list(p: &ListPrelude) -> Fields {
+    Fields {
+        names: vec![
+            ("list", p.list),
+            ("nil", p.nil),
+            ("cons", p.cons),
+            ("rec", p.rec),
+            ("u_param", p.u_param),
+            ("length", p.length),
+            ("append", p.append),
+            ("map", p.map),
+            ("foldr", p.foldr),
+            ("reverse", p.reverse),
+            ("append_nil", p.append_nil),
+            ("append_assoc", p.append_assoc),
+            ("reverse_append", p.reverse_append),
+            ("reverse_reverse", p.reverse_reverse),
+            ("length_map", p.length_map),
+            ("foldr_append", p.foldr_append),
         ],
         lists: Vec::new(),
     }

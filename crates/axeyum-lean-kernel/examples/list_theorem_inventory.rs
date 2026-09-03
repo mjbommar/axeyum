@@ -1,12 +1,14 @@
-//! Emit every theorem the `List`/`List`-`Nat`-bridge preludes admit, with its
-//! canonical type — the `List` twin of `nat_theorem_inventory` (see that
-//! file's own doc for why this exists: a fact ledger entry needs the
-//! proposition *as the kernel admitted it*, not a transcription from a doc
-//! comment).
+//! Emit every theorem the `List`/`List`-`Nat`-bridge/`List.Perm` preludes
+//! admit, with its canonical type — the `List` twin of `nat_theorem_
+//! inventory` (see that file's own doc for why this exists: a fact ledger
+//! entry needs the proposition *as the kernel admitted it*, not a
+//! transcription from a doc comment).
 //!
 //! Builds `build_list_nat_bridge` (which also builds `build_list_prelude`
-//! and `build_nat_prelude`), so the reported theorems include everything
-//! from `list_prelude.rs`/`theorems.rs`/`bridge.rs`. Filter with the first
+//! and `build_nat_prelude`) and then `build_list_perm` on top, so the
+//! reported theorems include everything from `list_prelude.rs`/`theorems.rs`
+//! /`bridge.rs`/`perm.rs` — `List.count_toMultiset` through `List.Perm`'s
+//! four theorems, added 2026-09-03 (`list-carrier-2`). Filter with the first
 //! argument (substring match); an unfiltered run lists everything.
 //!
 //! ```sh
@@ -20,7 +22,7 @@
 
 use std::process::ExitCode;
 
-use axeyum_lean_kernel::{Declaration, Kernel, build_list_nat_bridge};
+use axeyum_lean_kernel::{Declaration, Kernel, build_list_nat_bridge, build_list_perm};
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -49,7 +51,10 @@ fn main() -> ExitCode {
     }
 
     let mut kernel = Kernel::new();
-    let _ = build_list_nat_bridge(&mut kernel).expect("List/Nat bridge must build");
+    let (list_prelude, nat_prelude, bridge) =
+        build_list_nat_bridge(&mut kernel).expect("List/Nat bridge must build");
+    let _ = build_list_perm(&mut kernel, &list_prelude, &nat_prelude, &bridge)
+        .expect("List.Perm must build");
 
     let mut rows: Vec<(String, usize, String)> = kernel
         .environment()

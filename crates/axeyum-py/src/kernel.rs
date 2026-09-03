@@ -43,8 +43,8 @@ use axeyum_lean_kernel::{
     BinderInfo, Declaration, ExprId, ExprNode, Kernel, KernelError as RustKernelError,
     Lean4ExportMetadata, LevelId, Lit, LogicPrelude, NameId, NameNode, NatLit, ReducibilityHint,
     build_arith_prelude, build_complex_prelude, build_cpoint_prelude, build_creal_prelude,
-    build_int_prelude, build_logic_prelude, build_nat_prelude, build_rat_prelude,
-    build_string_prelude, prelude_cache,
+    build_int_prelude, build_list_prelude, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude, prelude_cache,
 };
 use pyo3::create_exception;
 use pyo3::exceptions::{PyAttributeError, PyKeyError, PyTypeError, PyValueError};
@@ -1522,6 +1522,34 @@ impl PyKernel {
             prelude_fields::logic(&package),
             Vec::new(),
             Some(Box::new(package)),
+        )
+    }
+
+    /// Builds the `List` prelude (`List.{u}`, `length`/`append`/`map`/
+    /// `foldr`/`reverse`, and the six pure-`List` theorems).
+    ///
+    /// Needs only [`Self::build_logic_prelude`], not `Nat`'s arithmetic —
+    /// `List Nat` only needs the `Nat` *type* from the logic prelude. The
+    /// `List`/`Nat.Multiset` bridge (`List.count`, `List.count_toMultiset`,
+    /// …) and `List.Perm` are not exposed here yet; they need
+    /// `Nat.Multiset`/`Nat.Finset` from the `Nat` prelude and have no Python
+    /// builder of their own.
+    ///
+    /// # Errors
+    ///
+    /// Raises `KernelError` if the kernel refuses any declaration in the
+    /// package.
+    fn build_list_prelude(&mut self, py: Python<'_>) -> PyResult<Py<PyPrelude>> {
+        let kernel = &mut self.inner;
+        let built = py.detach(move || build_list_prelude(kernel));
+        let package = built.map_err(|error| self.kernel_error(py, &error))?;
+        make_prelude(
+            py,
+            self.epoch,
+            "list",
+            prelude_fields::list(&package),
+            Vec::new(),
+            None,
         )
     }
 

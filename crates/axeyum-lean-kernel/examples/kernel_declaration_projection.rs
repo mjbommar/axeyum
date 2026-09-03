@@ -49,7 +49,8 @@ use std::process::ExitCode;
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
-    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
+    build_list_nat_bridge, build_list_perm, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -194,6 +195,25 @@ fn run() -> ExitCode {
         emit("nat", &nat);
     }
 
+    // `List` (`list-carrier-1`/`list-carrier-2`), and it is the reason this
+    // example was NOT a complete search surface for `List.count_toMultiset`/
+    // `List.Perm` until 2026-09-03: `shape_search`-style lookups over this
+    // projection could not have found them, which reads exactly like the
+    // declarations not existing (the "does it already exist?" trap this
+    // tool exists to prevent for every OTHER prelude). Built via the full
+    // bridge + `Perm` package, not just `build_list_prelude`, so every `List`
+    // declaration (including the `List`/`Nat.Multiset` bridge and `Perm`'s
+    // four theorems) is searchable here, matching `prelude_theorem_inventory`'s
+    // own `list` group.
+    let mut list = Kernel::new();
+    let (list_prelude, list_nat, list_bridge) =
+        build_list_nat_bridge(&mut list).expect("List/Nat bridge must build");
+    let _ = build_list_perm(&mut list, &list_prelude, &list_nat, &list_bridge)
+        .expect("List.Perm must build");
+    if unfiltered {
+        emit("list", &list);
+    }
+
     let mut axreal = Kernel::new();
     let _ = build_arith_prelude(&mut axreal).expect("AxReal prelude must build");
     if unfiltered {
@@ -279,6 +299,7 @@ fn run() -> ExitCode {
     let matches: Vec<&'static str> = [
         ("logic", &logic),
         ("nat", &nat),
+        ("list", &list),
         ("axreal", &axreal),
         ("integer", &integer),
         ("characterization", &characterization),

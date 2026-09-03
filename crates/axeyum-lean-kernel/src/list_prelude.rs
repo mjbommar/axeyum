@@ -93,9 +93,11 @@ use crate::{BinderInfo, Kernel, KernelError, PreludeKey, PreludeValue};
 
 mod bridge;
 mod ops;
+mod perm;
 mod theorems;
 
 pub use bridge::{ListNatBridge, build_list_nat_bridge};
+pub use perm::{ListPerm, build_list_perm};
 
 use ops::{declare_append, declare_foldr, declare_length, declare_map, declare_reverse};
 

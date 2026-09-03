@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:list-count-append",
+  "title": "Count distributes additively over append",
+  "statement": "For any element a and lists l1, l2 over Nat, the number of times a occurs in the concatenation of l1 and l2 equals the sum of how many times a occurs in l1 and how many times it occurs in l2.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> ((x2 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 (List.append AxNat x1 x2)) (AxNat.add (List.count x0 x1) (List.count x0 x2)))))",
+    "fragment": "List",
+    "kernel_theorem": "List.count_append"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:nat-succ-add", "F:nat-zero-add"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-count-append",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.count_append",
+      "supports": "List.count_append is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.count_append 2>/dev/null | grep -Fc '((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> ((x2 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 (List.append AxNat x1 x2)) (AxNat.add (List.count x0 x1) (List.count x0 x2)))))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check."
+    },
+    {
+      "id": "footprint-list-count-append",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::perm::perm_tests::the_perm_theorems_declare_no_axioms --test-threads=1",
+      "notes": "Asserts Kernel::axiom_footprint(name).is_empty() for this declaration, read directly from the kernel rather than asserted from a list."
+    },
+    {
+      "id": "evaluation-list-count-append",
+      "kind": "instance-pin",
+      "supports": "The List/Nat operations this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "The list_prelude:: sweep (list_prelude_tests.rs, bridge_tests.rs, perm_tests.rs) reduces List/Nat.Multiset operations to concrete numerals or nil/cons skeletons at tiny discriminating arguments and pairs positives with negative controls."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_perm",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude/perm.rs (lane list-carrier-2, ADR-1583 amending ADR-1579)."
+  },
+  "notes": "Induction on l1 (a, l2 fixed). Same shape as bridge::declare_length_append's induction, but count's cons case carries an extra Bool.rec on Nat.beq head a that length's does not, so the step needs the same Or-based case split declare_count_to_multiset already built -- unlike that proof, no Nat.beq_comm flip is needed here, because both sides of the goal split on the exact same beq head a term.",
+  "external_status": "proved"
+}
