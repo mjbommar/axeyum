@@ -43,10 +43,25 @@
 //!   witness for `lo ≤ hi` is `le_step` applied `hi − lo` times to
 //!   `le_refl lo`. `Lt a b` is definitionally `Le (succ a) b`, so the `<`
 //!   case reduces to the same construction on `succ a` and `b`.
+//!
+//! ## Two numeral representations, both peeled
+//!
+//! `whnf` does not always land on a `succ`/`zero` chain: a term built from
+//! `Bool`-selected arithmetic (`Nat.pair`'s `if a < b then … else …`, found
+//! the hard way when this producer's own retirement conversion first hit
+//! it) can reduce to the kernel's compact literal form,
+//! `ExprNode::Lit(Lit::Nat(_))`, instead — `Kernel::def_eq` already bridges
+//! the two representations (confirmed directly: `def_eq(pair 0 0, zero)` is
+//! `true` even though `whnf(pair 0 0)` is a `Lit`, not a `Const zero`), so
+//! this producer's own value-peeling has to recognise both, or it declines
+//! on perfectly good closed goals. [`nat_value`] checks for a `Lit` at every
+//! step, not only at the end, since a `succ` argument can itself whnf to one.
 
 #![allow(clippy::many_single_char_names)]
 
 use crate::ExprNode;
+use crate::Lit;
+use crate::NatLit;
 use crate::NatOps;
 use crate::NatPrelude;
 use crate::expr::ExprId;
@@ -153,9 +168,10 @@ pub(crate) fn parse_goal<D: NatOps>(
 
 // --- reduction ------------------------------------------------------------
 
-/// Peel `e` down to its unary-numeral value: `whnf`, and if the head is
-/// `succ`, recurse into the argument, counting layers up to
-/// [`MAX_MAGNITUDE`].
+/// Peel `e` down to its numeral value: `whnf`, and if the head is `succ`,
+/// recurse into the argument; if `whnf` instead landed on the kernel's
+/// compact `Lit` representation (see the module docs), finish counting from
+/// there via [`lit_value`]. Counts layers up to [`MAX_MAGNITUDE`].
 fn nat_value<D: NatOps>(d: &mut D, prelude: &NatPrelude, e: ExprId) -> Result<u32, Decline> {
     let mut cur = e;
     let mut n = 0u32;
@@ -165,6 +181,9 @@ fn nat_value<D: NatOps>(d: &mut D, prelude: &NatPrelude, e: ExprId) -> Result<u3
             && name == prelude.zero
         {
             return Ok(n);
+        }
+        if let ExprNode::Lit(Lit::Nat(lit)) = d.kernel().expr_node(w).clone() {
+            return lit_value(n, lit);
         }
         if let ExprNode::App(f, a) = d.kernel().expr_node(w).clone()
             && let ExprNode::Const(name, _) = d.kernel().expr_node(f).clone()
@@ -178,6 +197,23 @@ fn nat_value<D: NatOps>(d: &mut D, prelude: &NatPrelude, e: ExprId) -> Result<u3
             continue;
         }
         return Err(Decline::Undecidable);
+    }
+}
+
+/// Finish [`nat_value`]'s count from a `Lit` reached partway through
+/// peeling: `lit`'s own magnitude, added to the `succ` layers already
+/// counted, bounded the same way.
+fn lit_value(mut n: u32, lit: NatLit) -> Result<u32, Decline> {
+    let mut cur = lit;
+    loop {
+        if cur.is_zero() {
+            return Ok(n);
+        }
+        n += 1;
+        if n > MAX_MAGNITUDE {
+            return Err(Decline::Undecidable);
+        }
+        cur = cur.predecessor().expect("just checked `cur` is not zero");
     }
 }
 
