@@ -135,6 +135,7 @@ fn every_named_complex_declaration_is_checked_and_footprint_free() {
         ("Complex.mul_one", p.mul_one),
         ("Complex.mul_zero", p.mul_zero),
         ("Complex.left_distrib", p.left_distrib),
+        ("Complex.commRingS", p.comm_ring_s),
         ("Complex.ofReal_add", p.of_real_add),
         ("Complex.ofReal_mul", p.of_real_mul),
         ("Complex.I_sq", p.i_sq),
@@ -3007,7 +3008,7 @@ fn factor_quotient_succ_eq_matches_the_correction_term_at_a_nonzero_middle_coeff
 /// steps downstream. Recount by re-running the extraction described in
 /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md`, never
 /// by hand-editing this list to make a failure go away.
-const EXPECTED_STEP_ORDER: [&str; 91] = [
+const EXPECTED_STEP_ORDER: [&str; 92] = [
     "declare_carrier",
     "declare_projections",
     "declare_equiv",
@@ -3017,6 +3018,7 @@ const EXPECTED_STEP_ORDER: [&str; 91] = [
     "declare_congruences",
     "declare_projection_congruences",
     "declare_ring_laws",
+    "algebra_instance::declare_comm_ring_s",
     "declare_pinning",
     "declare_re_add_im",
     "declare_conj_laws",

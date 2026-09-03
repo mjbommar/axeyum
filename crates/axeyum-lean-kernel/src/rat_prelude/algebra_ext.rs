@@ -517,17 +517,26 @@ fn build_sub(k: &mut Kernel, ring: &RecordNames) -> (ExprId, ExprId) {
     (ty, value)
 }
 
-/// `Alg.sub_self : forall (R:Ring)(x:R.carrier), Alg.sub R x x=R.zero :=
-/// fun R x => R.negAdd x` — `Alg.sub R x x` unfolds (beta+delta) to `R.add x
-/// (R.neg x)`, which `negAdd x` proves directly.
+/// `Alg.sub_self : forall (R:Ring)(x:R.carrier), Alg.sub R x x=R.zero` --
+/// ADR-1590, DERIVED from `AlgS.sub_self` applied at `AlgS.Ring.ofAlg R`
+/// (mirroring `build_ring_mul_zero`'s derivation exactly, and the same
+/// discipline). `Alg.sub`/`AlgS.sub` are two independently-declared
+/// `Definition`s of the identical shape (`fun R a b => R.add a (R.neg b)`),
+/// so `Alg.sub R x x` and `AlgS.sub (ofAlg R) x x` both delta/iota-reduce to
+/// the SAME normal form `R.add x (R.neg x)` -- confirmed by the kernel's own
+/// `def_eq`, not assumed. The stated `ty` below is unchanged from the
+/// hand-proof version (`fun R x => R.negAdd x`, still `AlgS.sub_self`'s own
+/// proof body one level up), so the declared type stays byte-identical.
 fn build_sub_self(
     k: &mut Kernel,
     lg: &LogicPrelude,
     l1: LevelId,
     ring: &RecordNames,
     sub_name: NameId,
+    ring_ofalg: NameId,
+    algs_sub_self: NameId,
 ) -> (ExprId, ExprId) {
-    use structures::idx::ring::{CARRIER, NEG_ADD, ZERO};
+    use structures::idx::ring::{CARRIER, ZERO};
     const R_FV: u64 = 22_210;
     const X_FV: u64 = 22_211;
 
@@ -535,10 +544,13 @@ fn build_sub_self(
     let r = k.fvar(R_FV);
     let carrier = sel(k, ring, CARRIER, r);
     let zero = sel(k, ring, ZERO, r);
-    let neg_add = sel(k, ring, NEG_ADD, r);
     let x = k.fvar(X_FV);
 
-    let result = k.app(neg_add, x);
+    let ofalg = k.const_(ring_ofalg, vec![]);
+    let rs = k.app(ofalg, r); // AlgS.Ring.ofAlg R : AlgS.Ring
+    let algs_sub_self_c = k.const_(algs_sub_self, vec![]);
+    let result = app2(k, algs_sub_self_c, rs, x); // : (ofAlg R).equiv (AlgS.sub (ofAlg R) x x) zero
+
     let value = lam_over(k, X_FV, carrier, result);
     let value = lam_over(k, R_FV, ind_ty, value);
 
@@ -1284,7 +1296,16 @@ pub(crate) fn declare_algebra_ext_all(
         })?;
     }
     {
-        let (ty, value) = build_sub_self(k, lg, l1, &st.ring, names.sub);
+        let extra = &p.int.nat.structures_s_extra;
+        let (ty, value) = build_sub_self(
+            k,
+            lg,
+            l1,
+            &st.ring,
+            names.sub,
+            extra.ring_ofalg,
+            extra.sub_self,
+        );
         k.add_declaration(Declaration::Theorem {
             name: names.sub_self,
             uparams: vec![],

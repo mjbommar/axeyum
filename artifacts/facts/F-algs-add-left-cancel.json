@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-add-left-cancel",
+  "title": "In an abstract Setoid-flavored group, a fixed left factor can be cancelled",
+  "statement": "For any AlgS.Group record G (an abstract carrier, a caller-supplied equivalence relation equiv with a congruence field for op, and the two-sided identity/inverse laws stated over equiv rather than Eq) and any a, b, c of G's carrier, if equiv (op a b) (op a c) then equiv b c -- the setoid twin of Alg.mul_left_cancel, proved by the identical six-step chain b = e.b = (a'.a).b = a'.(a.b) = a'.(a.c) = (a'.a).c = e.c = c (a' := inv a), with equivTrans/equivSymm/opCongr in place of Eq.trans/symm_of/congr_arg.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.add_left_cancel : ((x0 : AlgS.Group) -> ((x1 : AlgS.Group.carrier x0) -> ((x2 : AlgS.Group.carrier x0) -> ((x3 : AlgS.Group.carrier x0) -> ((x4 : AlgS.Group.equiv x0 (AlgS.Group.op x0 x1 x2) (AlgS.Group.op x0 x1 x3)) -> AlgS.Group.equiv x0 x2 x3)))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.add_left_cancel"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-add-left-cancel-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.add_left_cancel admits through the trusted kernel gate, with an empty axiom footprint, and instantiated at AlgS.Group.ofAlg(Int.addGroup) closed over (a,b,c) is `def_eq` to Int.add_left_cancel's own declared type -- the same carrier theorem Alg.mul_left_cancel already retired to (ADR-1587), now reached from the setoid spine too. Also instantiated (well-typedness only, no named carrier theorem to compare against) at CReal's and Complex's additive Group, built inline from their commRingS Ring fields.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- add_left_cancel_instantiated_at_int_through_ofalg_matches_int_add_left_cancel_type generic_add_left_cancel_instantiated_at_creal_type_checks generic_add_left_cancel_instantiated_at_complex_type_checks --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 3 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned pattern requires the exact count ('3 passed; 0 failed') across all three instantiation tests. The Int test is a genuine def_eq comparison against Int.add_left_cancel's own type, not merely a type-check."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel nat_prelude::structures_setoid (declare_add_left_cancel), lane structures-unify, ADR-1590 -- the setoid twin of Alg.mul_left_cancel (ADR-1587), ported step for step, instantiated at three carriers.",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (declare_add_left_cancel, declared as AlgS.add_left_cancel; ring_s_additive_group_value, the CReal/Complex additive-Group term-builder); crates/axeyum-lean-kernel/src/creal/algebra_instance.rs and crates/axeyum-lean-kernel/src/complex/algebra_instance.rs (the CReal/Complex instantiation tests)."
+  },
+  "notes": "The Setoid-flavored twin of F:alg-mul-left-cancel (ADR-1587). CReal and Complex have no named AlgS.Group value of their own; the instantiation goes through a new un-named, #[cfg(test)]-gated term-builder (ring_s_additive_group_value) rather than a formal Ring.toCommGroupS projection, which is out of ADR-1590's scope."
+}

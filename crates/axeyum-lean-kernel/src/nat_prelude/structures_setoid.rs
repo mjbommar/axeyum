@@ -843,6 +843,94 @@ pub(crate) fn declare_comm_ring_to_ring_s(
     Ok(name)
 }
 
+/// Build an `AlgS.Group` VALUE (the additive group of a ring), from an
+/// `AlgS.Ring` value `r` -- ADR-1590, deliverable 5's plumbing for
+/// instantiating `AlgS.add_left_cancel` at a carrier whose only `AlgS`
+/// instance is a `CommRing`/`Ring` (`CReal`, `Complex`), which have no
+/// named `Group` value of their own. `identL`/`invL` are DERIVED from
+/// `addComm`+`addZero`/`negAdd`, the same technique `Alg.Ring.toCommGroup`
+/// uses on the `Eq`-flavored spine (ADR-1584), ported to `equivTrans`.
+///
+/// **Not a declared kernel name** (no `add_declaration` call) -- a
+/// reusable term-builder, the same shape `t_app`/`sel` already are, kept
+/// deliberately un-named rather than promoted to a formal `Ring.
+/// toCommGroupS` projection (out of scope here; ADR-1588 built only the
+/// ONE projection its own payoff needed, `CommRing.toRingS`).
+///
+/// `#[cfg(test)]`: every current consumer is a test in `creal::
+/// algebra_instance`/`complex::algebra_instance` (there is no non-test
+/// route that needs a `CReal`/`Complex` `Group` value yet); a `cargo
+/// clippy --lib --tests` build compiles the plain `--lib` target
+/// SEPARATELY from the cfg(test) one, and flags this `pub(crate)` fn dead
+/// in that separate artifact if it is not cfg-gated.
+#[cfg(test)]
+pub(crate) fn ring_s_additive_group_value(
+    k: &mut Kernel,
+    ring: &RecordNames,
+    group: &RecordNames,
+    r: ExprId,
+) -> ExprId {
+    use idx::ring as ridx;
+    const A_FV: u64 = 21_400;
+    const B_FV: u64 = 21_401;
+
+    let carrier = sel(k, ring, ridx::CARRIER, r);
+    let equiv = sel(k, ring, ridx::EQUIV, r);
+    let equiv_refl = sel(k, ring, ridx::EQUIV_REFL, r);
+    let equiv_symm = sel(k, ring, ridx::EQUIV_SYMM, r);
+    let equiv_trans = sel(k, ring, ridx::EQUIV_TRANS, r);
+    let add = sel(k, ring, ridx::ADD, r);
+    let add_congr = sel(k, ring, ridx::ADD_CONGR, r);
+    let zero = sel(k, ring, ridx::ZERO, r);
+    let neg = sel(k, ring, ridx::NEG, r);
+    let neg_congr = sel(k, ring, ridx::NEG_CONGR, r);
+    let add_assoc = sel(k, ring, ridx::ADD_ASSOC, r);
+    let add_comm = sel(k, ring, ridx::ADD_COMM, r);
+    let add_zero = sel(k, ring, ridx::ADD_ZERO, r); // identR
+    let neg_add = sel(k, ring, ridx::NEG_ADD, r); // invR
+
+    // identL(a) : equiv (add zero a) a, via addComm(zero,a); addZero(a).
+    let a = k.fvar(A_FV);
+    let comm_za = t_app(k, add_comm, &[zero, a]);
+    let add_za = t_app(k, add, &[zero, a]);
+    let add_az = t_app(k, add, &[a, zero]);
+    let az_a = k.app(add_zero, a);
+    let ident_l_body = t_app(k, equiv_trans, &[add_za, add_az, a, comm_za, az_a]);
+    let ident_l = lam_over(k, A_FV, carrier, ident_l_body);
+
+    // invL(b) : equiv (add (neg b) b) zero, via addComm(neg b,b); negAdd(b).
+    let b = k.fvar(B_FV);
+    let nb = k.app(neg, b);
+    let comm_nb_b = t_app(k, add_comm, &[nb, b]);
+    let add_nbb = t_app(k, add, &[nb, b]);
+    let add_bnb = t_app(k, add, &[b, nb]);
+    let na_b = k.app(neg_add, b);
+    let inv_l_body = t_app(k, equiv_trans, &[add_nbb, add_bnb, zero, comm_nb_b, na_b]);
+    let inv_l = lam_over(k, B_FV, carrier, inv_l_body);
+
+    structures::mk_instance(
+        k,
+        group,
+        &[
+            carrier,
+            equiv,
+            equiv_refl,
+            equiv_symm,
+            equiv_trans,
+            add,
+            add_congr,
+            zero,
+            neg,
+            neg_congr,
+            add_assoc,
+            ident_l,
+            add_zero,
+            inv_l,
+            neg_add,
+        ],
+    )
+}
+
 // ---------------------------------------------------------------------------
 // `ofAlg` projections: `AlgS.<Record>.ofAlg : Alg.<Record> -> AlgS.<Record>`.
 // `equiv := @Eq carrier`; `equivRefl`/`equivSymm`/`equivTrans` and every
@@ -1802,6 +1890,283 @@ pub(crate) fn declare_mul_zero(
     Ok(name)
 }
 
+/// `AlgS.mul_neg_one : forall (R:Ring)(x:R.carrier), R.equiv (R.mul x
+/// (R.neg R.one)) (R.neg x)` -- ADR-1590, over `AlgS.Ring`, the setoid twin
+/// of `Alg.mul_neg_one` (ADR-1584).
+///
+/// Proof (10 `equivTrans` steps, none using a Group-level uniqueness
+/// theorem -- `AlgS` has none over `Group`, only over `Ring`, so this stays
+/// self-contained within the ring calculus, matching `mul_zero`/`neg_neg`'s
+/// own discipline):
+///
+/// `h : equiv (add y x) zero`, where `y := mul x (neg one)`, derived from
+/// `distribL x (neg one) one` + the ALREADY-DECLARED `AlgS.mul_zero` (reused
+/// by name, not reproved) + `mulOneR x`: `mul x (add (neg one) one) ~ mul x
+/// zero ~ zero` (via `mulCongr` on `addComm(neg one,one)`+`negAdd(one)`,
+/// then `mul_zero`), and `mul x (add(neg one)one) ~ add y (mul x one)` (via
+/// `distribL`), so `add y (mul x one) ~ zero`; congr-substituting `mul x
+/// one ~> x` via `mulOneR` gives `h`.
+///
+/// Then the standard "both are additive inverses of x" chain: `y -> add y
+/// zero -> add y (add x (neg x)) -> add (add y x) (neg x) -> add zero (neg
+/// x) -> neg x`, using `h` at the third step.
+#[allow(clippy::too_many_lines)]
+pub(crate) fn declare_mul_neg_one(
+    k: &mut Kernel,
+    ring: &RecordNames,
+    mul_zero_name: NameId,
+    algs_p: NameId,
+) -> Result<NameId, KernelError> {
+    use idx::ring::{
+        ADD, ADD_ASSOC, ADD_COMM, ADD_CONGR, ADD_ZERO, CARRIER, DISTRIB_L, EQUIV, EQUIV_REFL,
+        EQUIV_SYMM, EQUIV_TRANS, MUL, MUL_CONGR, MUL_ONE_R, NEG, NEG_ADD, ONE, ZERO,
+    };
+    const R_FV: u64 = 21_350;
+    const X_FV: u64 = 21_351;
+
+    let r = k.fvar(R_FV);
+    let carrier = sel(k, ring, CARRIER, r);
+    let equiv = sel(k, ring, EQUIV, r);
+    let equiv_refl = sel(k, ring, EQUIV_REFL, r);
+    let equiv_symm = sel(k, ring, EQUIV_SYMM, r);
+    let equiv_trans = sel(k, ring, EQUIV_TRANS, r);
+    let add = sel(k, ring, ADD, r);
+    let add_assoc = sel(k, ring, ADD_ASSOC, r);
+    let add_comm = sel(k, ring, ADD_COMM, r);
+    let add_zero = sel(k, ring, ADD_ZERO, r);
+    let add_congr = sel(k, ring, ADD_CONGR, r);
+    let mul = sel(k, ring, MUL, r);
+    let mul_congr = sel(k, ring, MUL_CONGR, r);
+    let mul_one_r = sel(k, ring, MUL_ONE_R, r);
+    let distrib_l = sel(k, ring, DISTRIB_L, r);
+    let neg = sel(k, ring, NEG, r);
+    let neg_add = sel(k, ring, NEG_ADD, r);
+    let one = sel(k, ring, ONE, r);
+    let zero = sel(k, ring, ZERO, r);
+
+    let x = k.fvar(X_FV);
+    let neg_one = k.app(neg, one);
+    let neg_x = k.app(neg, x);
+    let y = t_app(k, mul, &[x, neg_one]); // y := mul x (neg one)
+
+    // stepA : equiv (add (neg one) one) zero
+    let add_no_o = t_app(k, add, &[neg_one, one]);
+    let add_o_no = t_app(k, add, &[one, neg_one]);
+    let comm_no_o = t_app(k, add_comm, &[neg_one, one]);
+    let na_one = k.app(neg_add, one); // equiv (add one (neg one)) zero
+    let step_a = t_app(
+        k,
+        equiv_trans,
+        &[add_no_o, add_o_no, zero, comm_no_o, na_one],
+    );
+
+    // h2 : equiv (mul x (add (neg one) one)) (mul x zero)
+    let refl_x = t_app(k, equiv_refl, &[x]);
+    let mul_x_addnoo = t_app(k, mul, &[x, add_no_o]);
+    let mul_x_zero = t_app(k, mul, &[x, zero]);
+    let h2 = t_app(k, mul_congr, &[x, x, add_no_o, zero, refl_x, step_a]);
+
+    // mz : equiv (mul x zero) zero  -- the already-declared AlgS.mul_zero.
+    let mul_zero_c = k.const_(mul_zero_name, vec![]);
+    let mz = t_app(k, mul_zero_c, &[r, x]);
+
+    // step_d : equiv (mul x (add (neg one) one)) zero
+    let step_d = t_app(k, equiv_trans, &[mul_x_addnoo, mul_x_zero, zero, h2, mz]);
+
+    // distrib : equiv (mul x (add (neg one) one)) (add y (mul x one))
+    let mul_x_one = t_app(k, mul, &[x, one]);
+    let add_y_mxo = t_app(k, add, &[y, mul_x_one]);
+    let distrib = t_app(k, distrib_l, &[x, neg_one, one]);
+
+    // h_raw : equiv (add y (mul x one)) zero
+    let step_f = t_app(k, equiv_symm, &[mul_x_addnoo, add_y_mxo, distrib]);
+    let h_raw = t_app(
+        k,
+        equiv_trans,
+        &[add_y_mxo, mul_x_addnoo, zero, step_f, step_d],
+    );
+
+    // h : equiv (add y x) zero
+    let mo_r = k.app(mul_one_r, x); // equiv (mul x one) x
+    let symm_mo_r = t_app(k, equiv_symm, &[mul_x_one, x, mo_r]); // equiv x (mul x one)
+    let refl_y = t_app(k, equiv_refl, &[y]);
+    let add_y_x = t_app(k, add, &[y, x]);
+    let addcongr_step = t_app(k, add_congr, &[y, y, x, mul_x_one, refl_y, symm_mo_r]); // equiv (add y x) (add y (mul x one))
+    let h = t_app(
+        k,
+        equiv_trans,
+        &[add_y_x, add_y_mxo, zero, addcongr_step, h_raw],
+    );
+
+    // Final chain: y -> add y zero -> add y (add x (neg x)) -> add (add y x) (neg x)
+    //           -> add zero (neg x) -> neg x
+    let az_y = k.app(add_zero, y); // equiv (add y zero) y
+    let add_y_zero = t_app(k, add, &[y, zero]);
+    let r0 = t_app(k, equiv_symm, &[add_y_zero, y, az_y]); // equiv y (add y zero)
+
+    let na_x = k.app(neg_add, x); // equiv (add x (neg x)) zero
+    let add_x_negx = t_app(k, add, &[x, neg_x]);
+    let symm_na_x = t_app(k, equiv_symm, &[add_x_negx, zero, na_x]); // equiv zero (add x (neg x))
+    let add_y_addxnegx = t_app(k, add, &[y, add_x_negx]);
+    let r1 = t_app(k, add_congr, &[y, y, zero, add_x_negx, refl_y, symm_na_x]); // equiv (add y zero) (add y (add x (neg x)))
+
+    let assoc_yxnegx = t_app(k, add_assoc, &[y, x, neg_x]); // equiv (add(add y x)negx)(add y(add x negx))
+    let add_addyx_negx = t_app(k, add, &[add_y_x, neg_x]);
+    let r2 = t_app(
+        k,
+        equiv_symm,
+        &[add_addyx_negx, add_y_addxnegx, assoc_yxnegx],
+    ); // equiv (add y (add x (neg x))) (add (add y x) (neg x))
+
+    let refl_negx = t_app(k, equiv_refl, &[neg_x]);
+    let add_zero_negx = t_app(k, add, &[zero, neg_x]);
+    let r3 = t_app(k, add_congr, &[add_y_x, zero, neg_x, neg_x, h, refl_negx]); // equiv (add (add y x) (neg x)) (add zero (neg x))
+
+    // r4 : equiv (add zero (neg x)) (neg x)  [addComm(zero,negx); addZero(negx)]
+    let comm_zero_negx = t_app(k, add_comm, &[zero, neg_x]);
+    let add_negx_zero = t_app(k, add, &[neg_x, zero]);
+    let az_negx = k.app(add_zero, neg_x);
+    let r4 = t_app(
+        k,
+        equiv_trans,
+        &[add_zero_negx, add_negx_zero, neg_x, comm_zero_negx, az_negx],
+    );
+
+    let c1 = t_app(k, equiv_trans, &[y, add_y_zero, add_y_addxnegx, r0, r1]);
+    let c2 = t_app(k, equiv_trans, &[y, add_y_addxnegx, add_addyx_negx, c1, r2]);
+    let c3 = t_app(k, equiv_trans, &[y, add_addyx_negx, add_zero_negx, c2, r3]);
+    let result = t_app(k, equiv_trans, &[y, add_zero_negx, neg_x, c3, r4]);
+
+    let value = result;
+    let value = lam_over(k, X_FV, carrier, value);
+    let ring_ty = k.const_(ring.ind, vec![]);
+    let value = lam_over(k, R_FV, ring_ty, value);
+
+    let concl = app2(k, equiv, y, neg_x);
+    let ty = pi_over(k, X_FV, carrier, concl);
+    let ty = pi_over(k, R_FV, ring_ty, ty);
+
+    let name = k.name_str(algs_p, "mul_neg_one");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.add_left_cancel : forall (G:Group)(a b c:G.carrier), G.equiv
+/// (G.op a b) (G.op a c) -> G.equiv b c` -- ADR-1590, the setoid twin of
+/// `nat_prelude::structures::build_mul_left_cancel_generic` (`Alg.
+/// mul_left_cancel`), over `AlgS.Group` -- ported step for step, `Eq.trans`/
+/// `symm_of`/`congr_arg` replaced by `equivTrans`/`equivSymm`/`opCongr`.
+#[allow(clippy::too_many_lines)]
+pub(crate) fn declare_add_left_cancel(
+    k: &mut Kernel,
+    group: &RecordNames,
+    algs_p: NameId,
+) -> Result<NameId, KernelError> {
+    use idx::group::{
+        ASSOC, CARRIER, E, EQUIV, EQUIV_REFL, EQUIV_SYMM, EQUIV_TRANS, IDENT_L, INV, INV_L, OP,
+        OP_CONGR,
+    };
+    const G_FV: u64 = 21_360;
+    const A_FV: u64 = 21_361;
+    const B_FV: u64 = 21_362;
+    const C_FV: u64 = 21_363;
+    const H_FV: u64 = 21_364;
+
+    let g = k.fvar(G_FV);
+    let carrier = sel(k, group, CARRIER, g);
+    let equiv = sel(k, group, EQUIV, g);
+    let equiv_refl = sel(k, group, EQUIV_REFL, g);
+    let equiv_symm = sel(k, group, EQUIV_SYMM, g);
+    let equiv_trans = sel(k, group, EQUIV_TRANS, g);
+    let op = sel(k, group, OP, g);
+    let op_congr = sel(k, group, OP_CONGR, g);
+    let e = sel(k, group, E, g);
+    let inv = sel(k, group, INV, g);
+    let ident_l = sel(k, group, IDENT_L, g);
+    let inv_l = sel(k, group, INV_L, g);
+    let assoc = sel(k, group, ASSOC, g);
+
+    let a = k.fvar(A_FV);
+    let b = k.fvar(B_FV);
+    let c = k.fvar(C_FV);
+    let inv_a = k.app(inv, a);
+
+    let op_a_b = t_app(k, op, &[a, b]);
+    let op_a_c = t_app(k, op, &[a, c]);
+    let hyp_ty = app2(k, equiv, op_a_b, op_a_c);
+    let h = k.fvar(H_FV);
+
+    // r0 : equiv b (op e b)
+    let op_e_b = t_app(k, op, &[e, b]);
+    let ident_l_b = k.app(ident_l, b); // equiv (op e b) b
+    let r0 = t_app(k, equiv_symm, &[op_e_b, b, ident_l_b]);
+
+    // r1 : equiv (op e b) (op (op inv_a a) b)
+    let inv_l_a = k.app(inv_l, a); // equiv (op inv_a a) e
+    let op_invaa = t_app(k, op, &[inv_a, a]);
+    let symm_inv_l_a = t_app(k, equiv_symm, &[op_invaa, e, inv_l_a]); // equiv e (op inv_a a)
+    let op_invaa_b = t_app(k, op, &[op_invaa, b]);
+    let refl_b = t_app(k, equiv_refl, &[b]);
+    let r1 = t_app(k, op_congr, &[e, op_invaa, b, b, symm_inv_l_a, refl_b]);
+
+    // r2 : equiv (op (op inv_a a) b) (op inv_a (op a b))
+    let op_inva_opab = t_app(k, op, &[inv_a, op_a_b]);
+    let r2 = t_app(k, assoc, &[inv_a, a, b]);
+
+    // r3 : equiv (op inv_a (op a b)) (op inv_a (op a c))
+    let op_inva_opac = t_app(k, op, &[inv_a, op_a_c]);
+    let refl_inva = t_app(k, equiv_refl, &[inv_a]);
+    let r3 = t_app(k, op_congr, &[inv_a, inv_a, op_a_b, op_a_c, refl_inva, h]);
+
+    // r4 : equiv (op inv_a (op a c)) (op (op inv_a a) c)
+    let op_invaa_c = t_app(k, op, &[op_invaa, c]);
+    let assoc_invaac = t_app(k, assoc, &[inv_a, a, c]);
+    let r4 = t_app(k, equiv_symm, &[op_invaa_c, op_inva_opac, assoc_invaac]);
+
+    // r5 : equiv (op (op inv_a a) c) (op e c)
+    let op_e_c = t_app(k, op, &[e, c]);
+    let refl_c = t_app(k, equiv_refl, &[c]);
+    let r5 = t_app(k, op_congr, &[op_invaa, e, c, c, inv_l_a, refl_c]);
+
+    // r6 : equiv (op e c) c
+    let r6 = k.app(ident_l, c);
+
+    let step1 = t_app(k, equiv_trans, &[b, op_e_b, op_invaa_b, r0, r1]);
+    let step2 = t_app(k, equiv_trans, &[b, op_invaa_b, op_inva_opab, step1, r2]);
+    let step3 = t_app(k, equiv_trans, &[b, op_inva_opab, op_inva_opac, step2, r3]);
+    let step4 = t_app(k, equiv_trans, &[b, op_inva_opac, op_invaa_c, step3, r4]);
+    let step5 = t_app(k, equiv_trans, &[b, op_invaa_c, op_e_c, step4, r5]);
+    let result = t_app(k, equiv_trans, &[b, op_e_c, c, step5, r6]);
+
+    let value = lam_over(k, H_FV, hyp_ty, result);
+    let value = lam_over(k, C_FV, carrier, value);
+    let value = lam_over(k, B_FV, carrier, value);
+    let value = lam_over(k, A_FV, carrier, value);
+    let group_ty = k.const_(group.ind, vec![]);
+    let value = lam_over(k, G_FV, group_ty, value);
+
+    let concl = app2(k, equiv, b, c);
+    let ty = pi_over(k, H_FV, hyp_ty, concl);
+    let ty = pi_over(k, C_FV, carrier, ty);
+    let ty = pi_over(k, B_FV, carrier, ty);
+    let ty = pi_over(k, A_FV, carrier, ty);
+    let ty = pi_over(k, G_FV, group_ty, ty);
+
+    let name = k.name_str(algs_p, "add_left_cancel");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
 // ---------------------------------------------------------------------------
 // Assembly: declare everything, in build order.
 // ---------------------------------------------------------------------------
@@ -1822,6 +2187,8 @@ pub struct StructuresSExtraNames {
     pub sub_self: NameId,
     pub neg_neg: NameId,
     pub mul_zero: NameId,
+    pub mul_neg_one: NameId,
+    pub add_left_cancel: NameId,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1870,6 +2237,8 @@ pub(crate) fn declare_structures_s_extra(
     let sub_self = declare_sub_self(k, &st.ring, sub, p.algs)?;
     let neg_neg = declare_neg_neg(k, &st.ring, p.algs)?;
     let mul_zero = declare_mul_zero(k, &st.ring, p.algs)?;
+    let mul_neg_one = declare_mul_neg_one(k, &st.ring, mul_zero, p.algs)?;
+    let add_left_cancel = declare_add_left_cancel(k, &st.group, p.algs)?;
 
     let _ = alg_p;
 
@@ -1888,6 +2257,8 @@ pub(crate) fn declare_structures_s_extra(
         sub_self,
         neg_neg,
         mul_zero,
+        mul_neg_one,
+        add_left_cancel,
     })
 }
 
@@ -1992,6 +2363,8 @@ mod structures_setoid_tests {
             extra.sub_self,
             extra.neg_neg,
             extra.mul_zero,
+            extra.mul_neg_one,
+            extra.add_left_cancel,
         ] {
             assert!(k.environment().get(name).is_some());
         }
@@ -2020,6 +2393,8 @@ mod structures_setoid_tests {
             extra.sub_self,
             extra.neg_neg,
             extra.mul_zero,
+            extra.mul_neg_one,
+            extra.add_left_cancel,
         ] {
             assert!(
                 k.axiom_footprint(name).is_empty(),
@@ -2183,6 +2558,97 @@ mod structures_setoid_tests {
         assert!(
             k.infer(closed).is_ok(),
             "AlgS.sub_self closed at Int's Ring projection must infer a type"
+        );
+    }
+
+    /// Deliverable 5 (ADR-1590): `AlgS.mul_neg_one` instantiated at ℤ
+    /// through `ofAlg`, concrete (`Int.zero`) and symbolic. `Int.neg_one_
+    /// mul` is the MIRRORED LEFT form (ADR-1584 §3: bridging needs
+    /// `mul_comm`, which this theorem is deliberately stated without), so
+    /// there is no retirement target here -- well-typedness only, like
+    /// `neg_neg`'s own Int control.
+    #[test]
+    fn mul_neg_one_instantiated_at_int_through_ofalg_concrete_and_symbolic() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_030;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_ring_alg = k.const_(rp.algebra.int_ring, vec![]);
+        let ring_ofalg = k.const_(extra.ring_ofalg, vec![]);
+        let int_ring_s = k.app(ring_ofalg, int_ring_alg);
+        let mul_neg_one_c = k.const_(extra.mul_neg_one, vec![]);
+        let applied = k.app(mul_neg_one_c, int_ring_s);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let zero_c = k.const_(rp.int.zero, vec![]);
+        let applied_zero = k.app(applied, zero_c);
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.mul_neg_one applied at Int's Ring projection must infer a type at Int.zero"
+        );
+
+        let a = k.fvar(A_FV);
+        let applied_a = k.app(applied, a);
+        let closed = lam_over(&mut k, A_FV, int_ty, applied_a);
+        assert!(
+            k.infer(closed).is_ok(),
+            "AlgS.mul_neg_one closed at Int's Ring projection must infer a type"
+        );
+    }
+
+    /// Deliverable 5 (ADR-1590): `AlgS.add_left_cancel` instantiated at ℤ
+    /// through `ofAlg` (`AlgS.Group.ofAlg(Int.addGroup)`), closed over
+    /// `(a,b,c)` (the hypothesis left implicit in the returned arrow type,
+    /// mirroring `retirement_int_add_left_cancel`'s own technique), is
+    /// `def_eq` to `Int.add_left_cancel`'s own declared type -- the SAME
+    /// carrier theorem `Alg.mul_left_cancel` (ADR-1587) already retired to,
+    /// now reached from the setoid spine too.
+    #[test]
+    fn add_left_cancel_instantiated_at_int_through_ofalg_matches_int_add_left_cancel_type() {
+        use crate::rat_prelude::build_rat_prelude;
+        const A_FV: u64 = 24_040;
+        const B_FV: u64 = 24_041;
+        const C_FV: u64 = 24_042;
+        let mut k = Kernel::new();
+        let rp = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let np = rp.int.nat;
+        let extra = np.structures_s_extra;
+
+        let int_add_group_alg = k.const_(rp.algebra.int_add_group, vec![]);
+        let group_ofalg = k.const_(extra.group_ofalg, vec![]);
+        let int_group_s = k.app(group_ofalg, int_add_group_alg);
+        let add_left_cancel_c = k.const_(extra.add_left_cancel, vec![]);
+        let int_ty = k.const_(rp.int.z, vec![]);
+
+        let a = k.fvar(A_FV);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(add_left_cancel_c, int_group_s);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let generic_closed = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, int_ty, v);
+            let v = lam_over(&mut k, B_FV, int_ty, v);
+            lam_over(&mut k, A_FV, int_ty, v)
+        };
+        let generic_ty = k
+            .infer(generic_closed)
+            .expect("AlgS.add_left_cancel closed at Int's Group projection must type-check");
+
+        let hand = k.const_(rp.int.add_left_cancel, vec![]);
+        let hand_ty = k.infer(hand).expect("Int.add_left_cancel must exist");
+
+        assert!(
+            k.def_eq(generic_ty, hand_ty),
+            "AlgS.add_left_cancel(AlgS.Group.ofAlg(Int.addGroup)) closed over \
+             (a,b,c) must have the SAME TYPE as Int.add_left_cancel"
         );
     }
 }

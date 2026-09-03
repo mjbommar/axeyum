@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1178 names,
+/// The `NatPrelude` field table (1180 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 84 of the names come from ADR-1512 per-module registries and
+/// 86 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1632,6 +1632,14 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("structures_s_extra.sub_self", p.structures_s_extra.sub_self),
             ("structures_s_extra.neg_neg", p.structures_s_extra.neg_neg),
             ("structures_s_extra.mul_zero", p.structures_s_extra.mul_zero),
+            (
+                "structures_s_extra.mul_neg_one",
+                p.structures_s_extra.mul_neg_one,
+            ),
+            (
+                "structures_s_extra.add_left_cancel",
+                p.structures_s_extra.add_left_cancel,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -2880,7 +2888,7 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (606 names,
+/// The `CRealPrelude` field table (607 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 69 of the names come from ADR-1512 per-module registries and
@@ -3726,6 +3734,7 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 "has_derivative_uniform_limit",
                 p.has_derivative_uniform_limit,
             ),
+            ("comm_ring_s", p.comm_ring_s),
             ("pi.pi_half_coef", p.pi.pi_half_coef),
             ("pi.pi_half_term", p.pi.pi_half_term),
             ("pi.pi_half_series_partial", p.pi.pi_half_series_partial),
@@ -3754,7 +3763,7 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (128 names,
+/// The `ComplexPrelude` field table (129 names,
 /// 0 name lists, 1 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -3901,6 +3910,7 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
             ("abs_add_le", p.abs_add_le),
             ("abs_neg", p.abs_neg),
             ("abs_le_add_abs_sub", p.abs_le_add_abs_sub),
+            ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),
     }

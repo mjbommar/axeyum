@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-mul-neg-one",
+  "title": "In an abstract Setoid-flavored ring, an element times negative one is equivalent to its negation",
+  "statement": "For any AlgS.Ring record R (an abstract carrier, a caller-supplied equivalence relation equiv with congruence fields for add/mul/neg, additive commutative group and distributive laws stated over equiv rather than Eq) and any x of R's carrier, equiv (mul x (neg one)) (neg x) -- proved self-contained in the ring calculus (no Group-level uniqueness theorem borrowed, since AlgS carries none), by deriving equiv (add (mul x (neg one)) x) zero from distribL plus the already-proved AlgS.mul_zero plus mulOneR, then chaining through the additive-group identities that both mul x (neg one) and neg x are additive inverses of x.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.mul_neg_one : ((x0 : AlgS.Ring) -> ((x1 : AlgS.Ring.carrier x0) -> AlgS.Ring.equiv x0 (AlgS.Ring.mul x0 x1 (AlgS.Ring.neg x0 (AlgS.Ring.one x0))) (AlgS.Ring.neg x0 x1)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.mul_neg_one"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:algs-mul-zero"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-mul-neg-one-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.mul_neg_one admits through the trusted kernel gate, with an empty axiom footprint, and instantiated at AlgS.Ring.ofAlg(Int.ring) (concrete at Int.zero and closed over a free `a`), at CReal.commRingS's AlgS.CommRing.toRingS projection, and at Complex.commRingS's AlgS.CommRing.toRingS projection -- each applied at a genuinely free carrier element and confirmed to type-check.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- mul_neg_one_instantiated_at_int_through_ofalg_concrete_and_symbolic generic_mul_neg_one_instantiated_at_creal_type_checks_concrete_and_symbolic generic_mul_neg_one_instantiated_at_complex_type_checks_concrete_and_symbolic --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 3 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned pattern requires the exact count ('3 passed; 0 failed') across all three instantiation tests, not merely a nonzero pass."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel nat_prelude::structures_setoid (declare_mul_neg_one), lane structures-unify, ADR-1590 -- one more Setoid-flavored generic theorem, instantiated at three carriers.",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (declare_mul_neg_one, declared as AlgS.mul_neg_one); crates/axeyum-lean-kernel/src/creal/algebra_instance.rs and crates/axeyum-lean-kernel/src/complex/algebra_instance.rs (the CReal/Complex instantiation tests)."
+  },
+  "notes": "The Setoid-flavored twin of F:alg-mul-neg-one (ADR-1584). Unlike that theorem's proof (which projects Alg.Ring down to Alg.Group and applies Alg.groupInvUnique), this one stays entirely within AlgS.Ring's own fields, since AlgS carries no Group-level generic theorem to borrow. Int has no retirement target under this name (Int.neg_one_mul is the mirrored left form); CReal/Complex have no named carrier theorem at all, so both instantiations are well-typedness measurements."
+}
