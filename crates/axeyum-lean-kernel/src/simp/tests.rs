@@ -178,6 +178,25 @@ fn target_parity_mul_two_eq_add_self() {
 }
 
 #[test]
+fn target_eisenstein_floor_min_free_two_mul() {
+    // `nat_prelude/eisenstein_floor_min_free.rs::two_mul` (lines 80-96, 17
+    // lines): a THIRD independent hand-written copy of the same identity,
+    // reached here by a different default-set-only path than its own hand
+    // proof used (`succ_mul` twice, `zero_mul`, `zero_add` -- no
+    // `mul_comm`, unlike the hand proof, which is not evidence of what the
+    // producer needs).
+    on_a_deep_stack(|| {
+        retire("eisenstein_floor_min_free_two_mul", 1, &|d, v| {
+            let x = v[0];
+            let two = d.num(2);
+            let lhs = d.mul(two, x);
+            let rhs = d.add(x, x);
+            d.eq(lhs, rhs)
+        });
+    });
+}
+
+#[test]
 fn target_bit_order_double_eq() {
     // `nat_prelude/bit_order.rs::double_eq` (lines 25-31, 7 lines): `Eq
     // (add (add zero x) x) (add x x)`, via `zero_add` alone.
