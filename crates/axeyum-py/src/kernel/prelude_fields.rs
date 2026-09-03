@@ -149,7 +149,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1180 names,
+/// The `NatPrelude` field table (1186 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 86 of the names come from ADR-1512 per-module registries and
@@ -1459,6 +1459,7 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ),
             ("count_range_bij", p.count_range_bij),
             ("count_range_bij_of_inverse", p.count_range_bij_of_inverse),
+            ("count_range_le_of_inj_on", p.count_range_le_of_inj_on),
             ("finset", p.finset),
             ("finset_mk", p.finset_mk),
             ("finset_rec", p.finset_rec),
@@ -1500,6 +1501,14 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("finset_sum_congr_of_beq", p.finset_sum_congr_of_beq),
             ("finset_card_filter_range", p.finset_card_filter_range),
             ("finset_card_totatives", p.finset_card_totatives),
+            ("finset_lt_bound_of_mem_b", p.finset_lt_bound_of_mem_b),
+            ("finset_card_le_of_inj_on", p.finset_card_le_of_inj_on),
+            ("finset_pigeonhole", p.finset_pigeonhole),
+            (
+                "finset_all_below_false_witness",
+                p.finset_all_below_false_witness,
+            ),
+            ("finset_exists_collision", p.finset_exists_collision),
             ("structures.magma.ind", p.structures.magma.ind),
             ("structures.magma.mk", p.structures.magma.mk),
             ("structures.magma.rec", p.structures.magma.rec),
@@ -2153,7 +2162,7 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (545 names,
+/// The `RatPrelude` field table (546 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 39 of the names come from ADR-1512 per-module registries and
@@ -2693,6 +2702,7 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 "rank_nullity_rows_of_pivot_section",
                 p.rank_nullity_rows_of_pivot_section,
             ),
+            ("rank_cols_le_rank", p.rank_cols_le_rank),
             ("pivot_search_aux_ne_zero", p.pivot_search_aux_ne_zero),
             ("pivot_search_ne_zero", p.pivot_search_ne_zero),
             (
