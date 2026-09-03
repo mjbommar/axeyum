@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-ofnat-add",
+  "title": "In an abstract ordered ring, the generic numeral builder distributes over addition",
+  "statement": "For any ordered-ring record R and naturals m n, where ofNat R is the Nat.rec numeral builder over R's own add/one/zero (ofNat R 0 = zero, ofNat R (succ n) = add (ofNat R n) one), ofNat R (m+n) = add (ofNat R m) (ofNat R n).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.ofNat_add : ((x0 : Alg.OrderedRing) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} (Alg.OrderedRing.carrier x0) (Alg.ofNat x0 (AxNat.add x1 x2)) (Alg.OrderedRing.add x0 (Alg.ofNat x0 x1) (Alg.ofNat x0 x2)))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.ofNat_add"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-ofnat-add-1",
+      "kind": "kernel-term",
+      "supports": "Alg.ofNat (a Nat.rec Definition over R's own add/one/zero, the constant-motive-in-n shape Alg.npow already uses) and Alg.ofNat_add both admit through the trusted kernel gate. ofNat_add is proved by induction on n (the argument Nat.add recurses on): base needs only addZero (symm'd), the step needs a congruence on the IH plus one addAssoc application. Instantiated symbolically (closed over free m, n) at both Int.orderedRing and Rat.orderedRing.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- ofnat_add_symbolic_at_int_and_rat --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    },
+    {
+      "id": "alg-ofnat-add-2",
+      "kind": "kernel-term",
+      "supports": "Alg.ofNat R 3 reduces (def_eq) to Int.ofNat 3 at R := Int.orderedRing, with a discriminating negative control against Int.ofNat 4 (a copy-paste numeral bug would pass an un-discriminating check).",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- ofnat_evaluation_at_int_discriminates --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane linarith-generic, ADR-1585.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/ordered_ring_ext.rs (build_ofnat, build_ofnat_add); tests rat_prelude::ordered_ring_ext::ordered_ring_ext_tests::ofnat_add_symbolic_at_int_and_rat, ::ofnat_evaluation_at_int_discriminates."
+  },
+  "notes": "ADR-1584 section 5 named a generic numeral builder as blocker 2 to a linarith emitter over an arbitrary OrderedRing. Alg.ofNat and this law are that builder, used by linarith::generic (ADR-1585) to embed a nonnegative constant slack term without reaching for Nat.succ/a carrier's own literal representation."
+}

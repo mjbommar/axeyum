@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2238,
+    "min_identity_bound": 2240,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -771,6 +771,20 @@
       "statement_sha256": "dee01b09521e6e2736d977ce6d84db8f6ec0fb1305718195a9e7eb7f1e05c266",
       "prose_sha256": "28c69c493a3a7884f33f236df404a987055ddcd0cae49b419c51e95874094088",
       "kernel_theorem": "Alg.neg_neg"
+    },
+    {
+      "fact_id": "F:alg-ofnat-add",
+      "language": "lean4",
+      "statement_sha256": "74e996f4adcb71fe4057db8693214dec29d7eed38afa5657ca3d4d6d4f7e8fb2",
+      "prose_sha256": "7a0500d135454eaec90843d89fa8e7a6715664d30df3dfc4abd02e9897b52cb4",
+      "kernel_theorem": "Alg.ofNat_add"
+    },
+    {
+      "fact_id": "F:alg-ofnat-le-ofnat-of-le",
+      "language": "lean4",
+      "statement_sha256": "048dc2a424c2f4a3643e19fdae5edeb1669679bde0c77486d1f6241acddeed87",
+      "prose_sha256": "2b432fc7cc72bfd7aa785ae07ca2b33e024ec45294f76412cf62fcc236bd97c6",
+      "kernel_theorem": "Alg.ofNat_le_ofNat_of_le"
     },
     {
       "fact_id": "F:alg-pow-add",

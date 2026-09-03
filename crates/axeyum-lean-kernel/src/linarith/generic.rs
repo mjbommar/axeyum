@@ -2064,4 +2064,121 @@ mod generic_tests {
         k.infer(closed)
             .expect("an UNCORRUPTED certificate must be admitted by the kernel");
     }
+
+    /// Wall-clock cost, generic vs per-carrier, on the SAME two goal shapes
+    /// (`add_le_add_three`'s three-hypothesis chain, and `add_left_comm`'s
+    /// pure equation) — the comparison ADR-1585 reports. Measure in
+    /// `--release`; the debug kernel costs up to 32x per frame
+    /// (`linarith::cost`'s own module doc). `#[ignore]`d: a report, not a
+    /// correctness gate. Run with:
+    /// `cargo test --release -p axeyum-lean-kernel --lib -- \
+    ///   linarith::generic::generic_tests::measured_ms_generic_vs_int \
+    ///   --exact --ignored --nocapture`
+    #[test]
+    #[ignore = "a timing report, not a correctness gate -- run explicitly, --release"]
+    fn measured_ms_generic_vs_int() {
+        use crate::int_prelude::ops::IntDev;
+        use crate::nat_prelude::NatOps;
+        use std::time::Instant;
+
+        const REPEATS: u32 = 200;
+
+        // --- add_le_add_three -------------------------------------------
+        {
+            const BASE: u64 = 900_000;
+            let mut k_int = Kernel::new();
+            let p_int = crate::build_int_prelude(&mut k_int).expect("int prelude must build");
+            let t0 = Instant::now();
+            for i in 0..REPEATS {
+                let mut d = IntDev::new(&mut k_int, p_int);
+                let fvs: [u64; 6] = std::array::from_fn(|j| BASE + u64::from(i) * 20 + j as u64);
+                let vars: Vec<ExprId> = fvs.iter().map(|&fv| d.kernel().fvar(fv)).collect();
+                let (a, b, c, dd, e, f) = (vars[0], vars[1], vars[2], vars[3], vars[4], vars[5]);
+                let h1_ty = d.ile(a, dd);
+                let h2_ty = d.ile(b, e);
+                let h3_ty = d.ile(c, f);
+                let hvs: [u64; 3] = [
+                    BASE + u64::from(i) * 20 + 10,
+                    BASE + u64::from(i) * 20 + 11,
+                    BASE + u64::from(i) * 20 + 12,
+                ];
+                let assumptions: Vec<(ExprId, ExprId)> =
+                    [(h1_ty, hvs[0]), (h2_ty, hvs[1]), (h3_ty, hvs[2])]
+                        .into_iter()
+                        .map(|(ty, fv)| (ty, d.kernel().fvar(fv)))
+                        .collect();
+                let ab = d.iadd(a, b);
+                let abc = d.iadd(ab, c);
+                let de = d.iadd(dd, e);
+                let def = d.iadd(de, f);
+                let goal = d.ile(abc, def);
+                let proof = crate::linarith::int::prove(&mut d, &p_int, &assumptions, goal)
+                    .expect("int route must find the certificate");
+                let _ = proof;
+            }
+            let int_search = t0.elapsed();
+            eprintln!(
+                "add_le_add_three  linarith::int      search {:.3} ms/term",
+                int_search.as_secs_f64() * 1000.0 / f64::from(REPEATS)
+            );
+        }
+        {
+            let mut k_gen = Kernel::new();
+            let p_gen = build_rat_prelude(&mut k_gen).expect("rat prelude must build");
+            let l0 = k_gen.level_zero();
+            let l1 = k_gen.level_succ(l0);
+            let ring = k_gen.const_(p_gen.algebra_ext.int_ordered_ring, vec![]);
+            let rn = p_gen.int.nat.structures.ordered_ring;
+            let t0 = Instant::now();
+            for i in 0..REPEATS {
+                const BASE: u64 = 950_000;
+                let fvs: [u64; 6] = std::array::from_fn(|j| BASE + u64::from(i) * 20 + j as u64);
+                let (a, b, c, dd, e, f) = (
+                    k_gen.fvar(fvs[0]),
+                    k_gen.fvar(fvs[1]),
+                    k_gen.fvar(fvs[2]),
+                    k_gen.fvar(fvs[3]),
+                    k_gen.fvar(fvs[4]),
+                    k_gen.fvar(fvs[5]),
+                );
+                let h1_ty = le_of(&mut k_gen, &rn, ring, a, dd);
+                let h2_ty = le_of(&mut k_gen, &rn, ring, b, e);
+                let h3_ty = le_of(&mut k_gen, &rn, ring, c, f);
+                let hvs: [u64; 3] = [
+                    BASE + u64::from(i) * 20 + 10,
+                    BASE + u64::from(i) * 20 + 11,
+                    BASE + u64::from(i) * 20 + 12,
+                ];
+                let assumptions: [(ExprId, ExprId); 3] = [
+                    (h1_ty, k_gen.fvar(hvs[0])),
+                    (h2_ty, k_gen.fvar(hvs[1])),
+                    (h3_ty, k_gen.fvar(hvs[2])),
+                ];
+                let ab = add_of(&mut k_gen, &rn, ring, a, b);
+                let abc = add_of(&mut k_gen, &rn, ring, ab, c);
+                let de = add_of(&mut k_gen, &rn, ring, dd, e);
+                let def = add_of(&mut k_gen, &rn, ring, de, f);
+                let goal = le_of(&mut k_gen, &rn, ring, abc, def);
+                let proof = prove(
+                    &mut k_gen,
+                    &p_gen.int.nat.logic,
+                    l1,
+                    &p_gen.int.nat.structures,
+                    &p_gen.ordered_ring_ext,
+                    &p_gen.int.nat,
+                    ring,
+                    None,
+                    &assumptions,
+                    goal,
+                )
+                .expect("generic route must find the certificate");
+                let _ = proof;
+            }
+            let gen_search = t0.elapsed();
+            eprintln!(
+                "add_le_add_three  linarith::generic  search {:.3} ms/term",
+                gen_search.as_secs_f64() * 1000.0 / f64::from(REPEATS)
+            );
+        }
+    }
 }

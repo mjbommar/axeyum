@@ -2046,10 +2046,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (539 names,
+/// The `RatPrelude` field table (545 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 33 of the names come from ADR-1512 per-module registries and
+/// 39 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -2707,6 +2707,21 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 "algebra_ext.mul_le_mul_of_nonneg_left",
                 p.algebra_ext.mul_le_mul_of_nonneg_left,
             ),
+            ("ordered_ring_ext.ofnat", p.ordered_ring_ext.ofnat),
+            ("ordered_ring_ext.ofnat_add", p.ordered_ring_ext.ofnat_add),
+            (
+                "ordered_ring_ext.ofnat_le_ofnat_of_le",
+                p.ordered_ring_ext.ofnat_le_ofnat_of_le,
+            ),
+            (
+                "ordered_ring_ext.add_le_add_right",
+                p.ordered_ring_ext.add_le_add_right,
+            ),
+            (
+                "ordered_ring_ext.le_of_add_le_add_right",
+                p.ordered_ring_ext.le_of_add_le_add_right,
+            ),
+            ("ordered_ring_ext.add_le_add", p.ordered_ring_ext.add_le_add),
         ],
         lists: Vec::new(),
     }
