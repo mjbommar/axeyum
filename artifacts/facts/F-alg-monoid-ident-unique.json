@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-monoid-ident-unique",
+  "title": "In an abstract monoid, the identity element is unique",
+  "statement": "For any monoid record M (an abstract carrier, binary op, identity e, associativity, and two-sided identity laws) and any e' of M's carrier, if op a e' = a for every a, then e' = e.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.monoidIdentUnique : ((x0 : Alg.Monoid) -> ((x1 : Alg.Monoid.carrier x0) -> ((x2 : ((x2 : Alg.Monoid.carrier x0) -> Eq.{1} (Alg.Monoid.carrier x0) (Alg.Monoid.op x0 x2 x1) x2)) -> Eq.{1} (Alg.Monoid.carrier x0) x1 (Alg.Monoid.e x0))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.monoidIdentUnique"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-monoid-ident-unique-1",
+      "kind": "kernel-term",
+      "supports": "Alg.monoidIdentUnique admits through the trusted kernel gate and, applied at TWO CONCRETE Alg.Monoid instances built from already-proved lemma constants ((Nat, add, 0) and (Rat, mul, 1), with genuine numeral witnesses e' := 0 / e' := 1 and existing lemmas Nat.add_zero / Rat.mul_one as the hypothesis), type-checks to Eq Nat 0 0 and Eq Rat 1 1 respectively -- the concrete half of docs/contributor-guide/kernel-proof-engineering.md's 'instantiate concretely AND check symbolically' discipline; the generic (symbolic M/e'/h) statement above is the symbolic half.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- monoid_ident_unique_applies_concretely_at_nat_add_and_rat_mul --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "The pattern is anchored on cargo's own pass/fail summary line with BOTH counts pinned ('1 passed; 0 failed'), so a panic (a TypeMismatch from the kernel, or an assertion failure) changes both numbers and the pattern stops matching. The FIRST version of this test failed with exactly this mechanism: it applied the theorem to the Alg.CommMonoid instances rather than genuine Alg.Monoid values -- this spine has no inheritance, so a CommMonoid-typed term does not apply where a Monoid is expected, and the kernel correctly refused it (TypeMismatch) until the test built real Monoid values from the same underlying lemma constants."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-1, ADR-1578 -- proved once over the abstract Alg.Monoid record and instantiated at two independently-built carriers.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs (build_monoid_ident_unique, declared as Alg.monoidIdentUnique); test rat_prelude::algebra_instances::algebra_instances_tests::monoid_ident_unique_applies_concretely_at_nat_add_and_rat_mul."
+  },
+  "notes": "Proved over Alg.Monoid, not Alg.CommMonoid -- commutativity is never used (the proof needs only the LEFT identity law applied at e' and the hypothesis applied at M.e, matching Nat.IsGroupOn's Nat.group_identity_unique shape, nat_prelude/group.rs). Does NOT say the identity is unique in a semigroup without an identity law, or that Alg.Monoid has any relation (inheritance/coercion) to Alg.CommMonoid -- ADR-1578's spine has neither."
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-group-inv-unique",
+  "title": "In an abstract group, a left inverse equals a right inverse",
+  "statement": "For any group record G (an abstract carrier, binary op, identity e, inverse, associativity, two-sided identity and inverse laws) and elements a b c of G's carrier, if op b a = e and op a c = e then b = c.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.groupInvUnique : ((x0 : Alg.Group) -> ((x1 : Alg.Group.carrier x0) -> ((x2 : Alg.Group.carrier x0) -> ((x3 : Alg.Group.carrier x0) -> ((x4 : Eq.{1} (Alg.Group.carrier x0) (Alg.Group.op x0 x2 x1) (Alg.Group.e x0)) -> ((x5 : Eq.{1} (Alg.Group.carrier x0) (Alg.Group.op x0 x1 x3) (Alg.Group.e x0)) -> Eq.{1} (Alg.Group.carrier x0) x2 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.groupInvUnique"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-group-inv-unique-1",
+      "kind": "kernel-term",
+      "supports": "Alg.groupInvUnique admits through the trusted kernel gate and, applied at TWO CONCRETE Alg.Group instances (Int.addGroup, Rat.addGroup) closed over symbolic elements a b c (fun a b c => Alg.groupInvUnique G a b c), type-checks -- confirming the generic proof's chain (b = b*e = b*(a*c) = (b*a)*c = e*c = c, the shape Nat.group_inverse_unique documents) specializes and every selector application (op/e projected off a real Group value) iota-reduces cleanly through both an Int and a Rat instance.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- group_inv_unique_applies_at_int_and_rat_instances --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "The pattern is anchored on cargo's own pass/fail summary line with BOTH counts pinned ('1 passed; 0 failed'). The FIRST version of this test used a bare free variable (Kernel::infer on an open term) and failed with UnboundFVar -- an infrastructure defect in the TEST, not the theorem; fixed by closing the application over a b c with lam_over before inferring, so the checked term is closed and needs no LocalContext."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane structures-1, ADR-1578 -- proved once over the abstract Alg.Group record and instantiated at two independently-built carriers.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs (build_group_inv_unique, declared as Alg.groupInvUnique); test rat_prelude::algebra_instances::algebra_instances_tests::group_inv_unique_applies_at_int_and_rat_instances."
+  },
+  "notes": "Proves a left inverse equals a right inverse (op b a = e, op a c = e implies b = c), NOT that inverses commute or that the group is abelian -- Alg.Group carries no commutativity field. Does not exercise fully concrete numeral witnesses (a b c stay symbolic; the CONCRETE half is the two structure instances, Int.addGroup and Rat.addGroup)."
+}
