@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-simp-rewrite-v1",
+  "title": "Rewrite-chain equalities over Nat closed by succ_add alone, kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Hand the goal to `crate::simp::nat` (`simp::nat::prove` for a goal `Eq Nat lhs rhs`, `simp::nat::prove_eq` when the caller already has `lhs`/`rhs` as terms, `simp::nat::prove_eq_at` when the caller's real arguments are compound and outside the fragment). The procedure matches an oriented rewrite set (the default identity/annihilator/defining laws, or the default plus caller-supplied extras) against the goal's own `ExprId` graph, first-order and outermost-first, and rewrites each side to a fixed point under a MAX_STEPS=32 budget; when both sides converge to the same term it EMITS a kernel proof term built only from `d.lemma(rule.name, matched_args)` applications, congr-lifted to their position and chained by `Eq.trans`/`Eq.symm` -- a producer in ADR-0601's sense, untrusted search (a bounded, terminating rewrite rather than a search over a large space) and trusted checking. The emitted term goes through `Kernel::add_declaration` exactly like a hand-written one, and the procedure's own tests require corrupted claims (a false side substituted for the true one) to be refused by the KERNEL, with the procedure's own convergence check deliberately disabled (`prove_eq_unverified`) so the trust story is not circular. This shape's representative default rule is `succ_add: add (succ a) b = succ (add a b)`; the full default set and the confluence constraint on any caller-supplied extra (ADR-1586 SS2) are documented in `crates/axeyum-lean-kernel/src/simp.rs` and `crates/axeyum-lean-kernel/src/simp/nat.rs`.",
+    "reference": "crates/axeyum-lean-kernel/src/simp/nat.rs"
+  },
+  "shape": {
+    "formal_language": [
+      "lean4-surface"
+    ],
+    "fragments": [
+      "Nat"
+    ],
+    "title_prefix": "Mathlib v4.30 source proposition Nat.succ_add"
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:ml430-nat-succ-pred-prime-4feb123f",
+      "reason": "`Nat.succ_pred_prime` shares the `Nat.succ`-prefixed naming family this contract's title_prefix targets, and even shares the SAME source module's naming convention -- a genuine near-miss by surface pattern, not a random unrelated fact. It fails the (deliberately narrower) `Nat.succ_add` prefix check exactly, and semantically it is a primality-conditioned statement about `pred`, not the unconditional `add (succ a) b = succ (add a b)` defining equation this shape names -- outside `simp::nat`'s fragment on both grounds checked, not assumed."
+    },
+    {
+      "fact_id": "F:nat-add-succ",
+      "reason": "This IS the mirror of this shape's own representative law (`Nat.add_succ`, one of `simp::nat::default_rules`'s twelve entries) -- and it fails the shape predicate on both fields checked: its title is `[generated] kernel theorem Nat.add_succ (nat prelude, axiom-free, prose not curated)`, not a `Mathlib v4.30 source proposition` import mirror, so `title_prefix` does not match; and its `epistemic_status` is already `proved` (it is one of the hand-declared defining equations `simp::nat` cites as a PRIMITIVE, never a target -- retiring it would be exactly the self-referential trap ADR-1580 SS1 records for `ring`'s `right_distrib`), so it would be excluded from `live_population` even if the title matched."
+    }
+  ],
+  "notes": "THE LIVE POPULATION IS ZERO, and -- as with `linear-arithmetic-v1` and `ring-identity-v1` beside it -- the shape is not what makes it zero. Measured 2026-09-03 over all 245 open `Mathlib v4.30 source proposition` facts: none is titled with the `Nat.succ_add`/`Nat.add_succ`/`Nat.succ_mul`/`Nat.zero_add`/`Nat.add_zero`-family naming this producer's default rule set would recognise as its own defining/identity laws (checked directly with `live_population`, not inferred from the title_prefix miss alone -- the same 169 open `Nat.*`-titled facts ADR-1580's own contract already read line by line are about `sqrt`/`gcd`/primality/`testBit`/`findGreatest`/`nth`/order, and this producer's own retirement search (ADR-1586) independently confirms the identity/defining-law layer of this development was finished FIRST, by hand, exactly the story `linarith`/`ring` already told). What this contract's shape predicate CANNOT see, because the schema has no field for it, is where `simp`'s actual return is: it retired THIRTEEN hand-written rewrite-chain proofs the day it landed -- ten in `nat_prelude` (two duplicated pairs: `one_add_eq_succ` at `count_range_reversal.rs`/`totient_lemmas.rs`, and `two_mul_eq_add`/`mul_two_eq_add_self` at `gauss_lemma.rs`/`parity.rs`) and three in `int_prelude` (`add_left_neg`, `zero_mul_eq_zero`, `zero_add`) -- each re-admitted at a kernel-checked, independently `Kernel::infer`-verified type. The contract system sizes dispatch and cannot see that; the number worth reading is the retirement count in ADR-1586, not this one. This is the THIRD producer contract born retired for the same structural reason as `linear-arithmetic-v1`/`ring-identity-v1`: the algebraic/identity core of this development was finished before a producer for it existed.",
+  "sizing": {
+    "date": "2026-09-03",
+    "ledger_sha256": "0667e02a016cc204063bc03d1a6996d3b514efbaca7f1a7d2d5ba3a4e13d16e1",
+    "matched_open_ready_count": 0,
+    "matched_open_ready_fact_ids": [],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Zero. `title_prefix` alone (`Nat.succ_add`) matches nothing in the whole 2,740-fact ledger, not merely the open subset -- checked directly with `live_population`. Measured at ledger digest 0667e02a..., 2,740 facts."
+  },
+  "retirement": {
+    "date": "2026-09-03",
+    "reason": "Born with an empty live population, per ADR-1510 rule 1: there is no open, dependency-ready, non-held-out fact in the ledger whose title names an unconditional Nat identity/defining law of the kind `simp::nat`'s default rule set discharges -- checked by executing `live_population` against the shape, not by trusting the title_prefix miss alone.",
+    "note": "Not a statement that `simp` is exhausted or unwanted -- `crate::simp::nat` and `crate::simp::int` are live, tested (31 unit tests total: 10 Nat retirement targets + 3 Int retirement targets, NoProgress/BudgetExceeded/SidesDiffer coverage for both carriers, and the corrupted-chain battery with the procedure's own check disabled), and already retired thirteen hand-written proofs the day they landed (see ADR-1586). What emptied is the DISPATCH population, because the rewrite-chain identity/defining-law layer of this development is among the parts finished FIRST, by hand -- exactly the story `linear-arithmetic-v1` and `ring-identity-v1` already told, now confirmed on a THIRD producer rather than an artifact of either predecessor. A ledger import bringing in identity-law Mathlib mirrors whose statements are genuinely bare defining-equation restatements (not wrapped in `sqrt`/`gcd`/order/primality) would revive it, and should arrive as a `-v2` rather than by editing this file."
+  }
+}
