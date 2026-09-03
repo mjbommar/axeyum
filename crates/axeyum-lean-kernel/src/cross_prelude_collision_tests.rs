@@ -54,8 +54,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
-    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
-    on_a_deep_stack,
+    build_list_nat_bridge, build_list_perm, build_logic_prelude, build_nat_prelude,
+    build_rat_prelude, build_string_prelude, on_a_deep_stack,
 };
 
 /// Every declaration name currently in `kernel`'s environment, in canonical
@@ -202,6 +202,16 @@ fn build_groups() -> Vec<Group> {
     let mut nat = Kernel::new();
     build_nat_prelude(&mut nat).expect("Nat prelude must build");
     groups.push(Group::of("nat", &nat));
+
+    // `list`: built via the full bridge + `Perm` package so the group matches
+    // `kernel_declaration_projection` and `prelude_theorem_inventory`, which
+    // `scripts/check-theorem-inventory-completeness.py` requires to agree.
+    let mut list = Kernel::new();
+    let (list_prelude, list_nat, list_bridge) =
+        build_list_nat_bridge(&mut list).expect("List/Nat bridge must build");
+    let _ = build_list_perm(&mut list, &list_prelude, &list_nat, &list_bridge)
+        .expect("List.Perm must build");
+    groups.push(Group::of("list", &list));
 
     let mut axreal = Kernel::new();
     build_arith_prelude(&mut axreal).expect("AxReal prelude must build");
