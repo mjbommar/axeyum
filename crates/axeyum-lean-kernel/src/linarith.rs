@@ -47,7 +47,15 @@
 // Renaming them to `left`/`middle`/`right` makes the correspondence with the
 // lemma statements harder to check, which is the only thing keeping these
 // terms honest before the kernel sees them.
-#![allow(clippy::many_single_char_names, clippy::similar_names)]
+// `type_complexity`: the declaration helpers take
+// `&dyn Fn(&mut D, &[ExprId]) -> (Vec<ExprId>, ExprId)` builders, the same
+// shape `NatOps`'s own helpers use; a type alias mentioning the generic `D`
+// would hide the signature rather than clarify it.
+#![allow(
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::type_complexity
+)]
 
 use std::collections::BTreeMap;
 

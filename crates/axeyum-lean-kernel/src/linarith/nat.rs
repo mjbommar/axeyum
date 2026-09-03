@@ -586,29 +586,33 @@ impl Problem {
 
     // --- emission -----------------------------------------------------------
 
-    /// `h1 : Le a b`, `h2 : Le c e ⊢ Le (a + c) (b + e)`.
+    /// Add two `≤` facts side by side.
+    ///
+    /// Each argument is a `(lhs, rhs, proof)` triple — the same shape
+    /// [`Self::combine`] carries — and the result is the triple for
+    /// `lhs₁ + lhs₂ ≤ rhs₁ + rhs₂`. This prelude has no two-sided
+    /// `add_le_add`, so it is `add_le_add_right` then `add_le_add_left`
+    /// through `le_trans`.
     fn add_le_add<D: NatOps>(
         &self,
         d: &mut D,
-        a: ExprId,
-        b: ExprId,
-        c: ExprId,
-        e: ExprId,
-        h1: ExprId,
-        h2: ExprId,
-    ) -> ExprId {
+        left: (ExprId, ExprId, ExprId),
+        right: (ExprId, ExprId, ExprId),
+    ) -> (ExprId, ExprId, ExprId) {
         let p = self.prelude;
+        let (a, b, h1) = left;
+        let (c, e, h2) = right;
         let t1 = d.lemma(p.add_le_add_right, &[c, a, b, h1]);
         let t2 = d.lemma(p.add_le_add_left, &[b, c, e, h2]);
         let ac = d.add(a, c);
         let bc = d.add(b, c);
         let be = d.add(b, e);
-        d.lemma(p.le_trans, &[ac, bc, be, t1, t2])
+        let proof = d.lemma(p.le_trans, &[ac, bc, be, t1, t2]);
+        (ac, be, proof)
     }
 
     /// `h : Le x y`, `e : Eq y z ⊢ Le x z`.
     fn le_rewrite_right<D: NatOps>(
-        &self,
         d: &mut D,
         x: ExprId,
         y: ExprId,
@@ -622,7 +626,6 @@ impl Problem {
 
     /// `h : Le y w`, `e : Eq y z ⊢ Le z w`.
     fn le_rewrite_left<D: NatOps>(
-        &self,
         d: &mut D,
         y: ExprId,
         w: ExprId,
@@ -648,32 +651,22 @@ impl Problem {
         let mut acc: Option<(ExprId, ExprId, ExprId)> = None;
         for (index, multiplier) in cert.used() {
             let h = &hyps[index];
-            let mut scaled = (h.lhs, h.rhs, h.proof);
+            let base = (h.lhs, h.rhs, h.proof);
+            let mut scaled = base;
             for _ in 1..multiplier {
-                let combined =
-                    self.add_le_add(d, scaled.0, scaled.1, h.lhs, h.rhs, scaled.2, h.proof);
-                let lhs = d.add(scaled.0, h.lhs);
-                let rhs = d.add(scaled.1, h.rhs);
-                scaled = (lhs, rhs, combined);
+                scaled = self.add_le_add(d, scaled, base);
             }
             acc = Some(match acc {
                 None => scaled,
-                Some((a, b, proof)) => {
-                    let combined = self.add_le_add(d, a, b, scaled.0, scaled.1, proof, scaled.2);
-                    let lhs = d.add(a, scaled.0);
-                    let rhs = d.add(b, scaled.1);
-                    (lhs, rhs, combined)
-                }
+                Some(running) => self.add_le_add(d, running, scaled),
             });
         }
-        match acc {
-            Some(triple) => triple,
-            None => {
-                let zero = d.num(0);
-                let refl = d.const_app(self.prelude.le_refl, &[zero]);
-                (zero, zero, refl)
-            }
+        if let Some(triple) = acc {
+            return triple;
         }
+        let zero = d.num(0);
+        let refl = d.const_app(self.prelude.le_refl, &[zero]);
+        (zero, zero, refl)
     }
 
     /// Emit `Le lhs rhs` from a certificate.
@@ -714,12 +707,12 @@ impl Problem {
 
         let ra = d.add(rhs, a_term);
         let identity = self.prove_eq(d, lbs, ra, verify)?;
-        let h3 = self.le_rewrite_right(d, las, lbs, ra, h2, identity);
+        let h3 = Self::le_rewrite_right(d, las, lbs, ra, h2, identity);
 
         let ls = d.add(lhs, slack);
         let lsa = d.add(ls, a_term);
         let shuffle = d.lemma(p.add_right_comm, &[lhs, a_term, slack]);
-        let h4 = self.le_rewrite_left(d, las, ra, lsa, h3, shuffle);
+        let h4 = Self::le_rewrite_left(d, las, ra, lsa, h3, shuffle);
 
         let h5 = d.lemma(p.le_of_add_le_add_right, &[a_term, ls, rhs, h4]);
         let h6 = d.lemma(p.le_add_right, &[lhs, slack]);
@@ -765,7 +758,7 @@ impl Problem {
         let m_num = d.num(m32);
         let base_plus_m = d.add(base, m_num);
         let identity = self.prove_eq(d, a_term, base_plus_m, true)?;
-        let h1 = self.le_rewrite_left(d, a_term, b_term, base_plus_m, hsum, identity);
+        let h1 = Self::le_rewrite_left(d, a_term, b_term, base_plus_m, hsum, identity);
 
         // `B ≤ base ≤ base + (m − 1)`.
         let pred_num = d.num(m32 - 1);
@@ -1052,4 +1045,33 @@ pub fn emit_le_from_certificate<D: NatOps>(
     let _ = problem.parse_term(d, lhs)?;
     let _ = problem.parse_term(d, rhs)?;
     problem.emit_le(d, &hyps, lhs, rhs, cert, verify)
+}
+
+/// [`theorem`], with the outcome collapsed into the prelude build's own error
+/// channel so a call site can use `?` alongside the hand-written declarations
+/// around it.
+///
+/// A **decline** at a prelude call site is not a recoverable outcome: the goal
+/// there is fixed source text, so a search that stops reaching it is a defect
+/// in the producer. Reporting it as
+/// [`KernelError::UnknownConst`](crate::KernelError::UnknownConst) is exact
+/// rather than approximate — after a decline nothing declares `name`, and every
+/// downstream reference to it fails on precisely that.
+///
+/// # Errors
+///
+/// The kernel's rejection when the emitted term was refused, or
+/// `UnknownConst { name }` when the search declined and no term was built.
+pub fn declare<D: NatOps>(
+    d: &mut D,
+    prelude: &NatPrelude,
+    name: crate::NameId,
+    arity: usize,
+    build: &dyn Fn(&mut D, &[ExprId]) -> (Vec<ExprId>, ExprId),
+) -> Result<(), crate::KernelError> {
+    match theorem(d, prelude, name, arity, build) {
+        Ok(_) => Ok(()),
+        Err(LinarithError::Rejected(e)) => Err(e),
+        Err(LinarithError::Declined(_)) => Err(crate::KernelError::UnknownConst { name }),
+    }
 }

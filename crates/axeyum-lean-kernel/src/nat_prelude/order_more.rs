@@ -19,6 +19,7 @@ use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
+use crate::linarith::nat as linarith;
 
 /// `False.rec (fun _ => target) false_proof : target` — ex falso into an
 /// arbitrary target from a proof of `False`, the same construction used
@@ -164,20 +165,12 @@ pub(super) fn declare_order_more(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     })?;
 
     // le_of_lt_add_one : ∀ a b, Lt a (add b (succ zero)) → Le a b
-    // `add b (succ zero)` is definitionally `succ b`, so this restates
-    // `le_of_lt_succ` at the `+1` spelling.
-    d.theorem(p.le_of_lt_add_one, 2, &|d, v| {
+    linarith::declare(d, &p, p.le_of_lt_add_one, 2, &|d, v| {
         let (a, b) = (v[0], v[1]);
         let one = d.num(1);
         let b1 = d.add(b, one);
-        let hyp_ty = d.lt(a, b1);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = d.lemma(p.le_of_lt_succ, &[a, b, h]);
-        let concl = d.le(a, b);
-        let stmt = d.arrow(hyp_ty, concl);
-        let proof = d.lam_fv(h_fv, hyp_ty, body);
-        (stmt, proof)
+        let hyp = d.lt(a, b1);
+        (vec![hyp], d.le(a, b))
     })?;
 
     // zero_lt_of_ne_zero : ∀ n, Not (Eq Nat n zero) → Lt zero n

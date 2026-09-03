@@ -15,95 +15,64 @@ use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::expr::ExprId;
+use crate::linarith::nat as linarith;
 
 pub(super) fn declare_order_extra(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
 
     // le_refl_thm : ∀ n, Le n n  (Nat.le_refl, the flat name for the
     // Nat.le.refl constructor `le_refl`).
-    d.theorem(p.le_refl_thm, 1, &|d, v| {
+    linarith::declare(d, &p, p.le_refl_thm, 1, &|d, v| {
         let n = v[0];
-        let stmt = d.le(n, n);
-        let proof = d.const_app(p.le_refl, &[n]);
-        (stmt, proof)
+        (vec![], d.le(n, n))
     })?;
 
     // le_succ : ∀ n, Le n (succ n)
-    d.theorem(p.le_succ, 1, &|d, v| {
+    linarith::declare(d, &p, p.le_succ, 1, &|d, v| {
         let n = v[0];
-        let refl_n = d.const_app(p.le_refl, &[n]);
-        let proof = d.const_app(p.le_step, &[n, n, refl_n]);
         let sn = d.succ(n);
-        let stmt = d.le(n, sn);
-        (stmt, proof)
+        (vec![], d.le(n, sn))
     })?;
 
     // succ_le_succ : ∀ n m, Le n m → Le (succ n) (succ m)  (Nat.succ_le_succ,
     // the Lean-core name for `le_succ_succ`).
-    d.theorem(p.succ_le_succ, 2, &|d, v| {
+    linarith::declare(d, &p, p.succ_le_succ, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
-        let hyp_ty = d.le(n, m);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = d.lemma(p.le_succ_succ, &[n, m, h]);
+        let hyp = d.le(n, m);
         let sn = d.succ(n);
         let sm = d.succ(m);
-        let concl = d.le(sn, sm);
-        let stmt = d.arrow(hyp_ty, concl);
-        let proof = d.lam_fv(h_fv, hyp_ty, body);
-        (stmt, proof)
+        (vec![hyp], d.le(sn, sm))
     })?;
 
     // le_of_lt_succ : ∀ n m, Lt n (succ m) → Le n m
-    // `Lt n (succ m)` unfolds (δ) to `Le (succ n) (succ m)`, so
-    // `le_of_succ_le_succ` applies directly.
-    d.theorem(p.le_of_lt_succ, 2, &|d, v| {
+    linarith::declare(d, &p, p.le_of_lt_succ, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
         let sm = d.succ(m);
-        let hyp_ty = d.lt(n, sm);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = d.lemma(p.le_of_succ_le_succ, &[n, m, h]);
-        let concl = d.le(n, m);
-        let stmt = d.arrow(hyp_ty, concl);
-        let proof = d.lam_fv(h_fv, hyp_ty, body);
-        (stmt, proof)
+        let hyp = d.lt(n, sm);
+        (vec![hyp], d.le(n, m))
     })?;
 
-    // lt_succ_self : ∀ n, Lt n (succ n) := Le (succ n) (succ n)
-    d.theorem(p.lt_succ_self, 1, &|d, v| {
+    // lt_succ_self : ∀ n, Lt n (succ n)
+    linarith::declare(d, &p, p.lt_succ_self, 1, &|d, v| {
         let n = v[0];
         let sn = d.succ(n);
-        let stmt = d.lt(n, sn);
-        let proof = d.const_app(p.le_refl, &[sn]);
-        (stmt, proof)
+        (vec![], d.lt(n, sn))
     })?;
 
-    // lt_succ_of_le : ∀ n m, Le n m → Lt n (succ m) := Le (succ n) (succ m)
-    d.theorem(p.lt_succ_of_le, 2, &|d, v| {
+    // lt_succ_of_le : ∀ n m, Le n m → Lt n (succ m)
+    linarith::declare(d, &p, p.lt_succ_of_le, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
-        let hyp_ty = d.le(n, m);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = d.lemma(p.le_succ_succ, &[n, m, h]);
+        let hyp = d.le(n, m);
         let sm = d.succ(m);
-        let concl = d.lt(n, sm);
-        let stmt = d.arrow(hyp_ty, concl);
-        let proof = d.lam_fv(h_fv, hyp_ty, body);
-        (stmt, proof)
+        (vec![hyp], d.lt(n, sm))
     })?;
 
     // lt_add_one : ∀ n, Lt n (add n (succ zero))
-    // `add n 1 ≡ succ n` definitionally (add's zero case is the identity, its
-    // successor case wraps in `succ`), so this is `lt_succ_self` up to δ/ι.
-    d.theorem(p.lt_add_one, 1, &|d, v| {
+    linarith::declare(d, &p, p.lt_add_one, 1, &|d, v| {
         let n = v[0];
         let one = d.num(1);
         let sum = d.add(n, one);
-        let stmt = d.lt(n, sum);
-        let sn = d.succ(n);
-        let proof = d.const_app(p.le_refl, &[sn]);
-        (stmt, proof)
+        (vec![], d.lt(n, sum))
     })?;
 
     // not_succ_le_self : ∀ n, Not (Le (succ n) n)
@@ -118,29 +87,21 @@ pub(super) fn declare_order_extra(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
         (stmt, proof)
     })?;
 
-    // le_succ_of_le : ∀ n m, Le n m → Le n (succ m)  (the `le_step`
-    // constructor under its Lean-core flat name).
-    d.theorem(p.le_succ_of_le, 2, &|d, v| {
+    // le_succ_of_le : ∀ n m, Le n m → Le n (succ m)  (the Lean-core flat name
+    // for what the `le_step` constructor gives directly).
+    linarith::declare(d, &p, p.le_succ_of_le, 2, &|d, v| {
         let (n, m) = (v[0], v[1]);
-        let hyp_ty = d.le(n, m);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
-        let body = d.const_app(p.le_step, &[n, m, h]);
+        let hyp = d.le(n, m);
         let sm = d.succ(m);
-        let concl = d.le(n, sm);
-        let stmt = d.arrow(hyp_ty, concl);
-        let proof = d.lam_fv(h_fv, hyp_ty, body);
-        (stmt, proof)
+        (vec![hyp], d.le(n, sm))
     })?;
 
     // zero_lt_succ : ∀ n, Lt zero (succ n)
-    d.theorem(p.zero_lt_succ, 1, &|d, v| {
+    linarith::declare(d, &p, p.zero_lt_succ, 1, &|d, v| {
         let n = v[0];
-        let proof = d.zero_lt_succ(n);
         let zero = d.zero();
         let sn = d.succ(n);
-        let stmt = d.lt(zero, sn);
-        (stmt, proof)
+        (vec![], d.lt(zero, sn))
     })?;
 
     // pred_le : ∀ n, Le (pred n) n
