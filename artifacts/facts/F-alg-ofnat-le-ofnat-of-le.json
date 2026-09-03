@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "id": "F:alg-ofnat-le-ofnat-of-le",
+  "title": "In an abstract ordered ring with 0<=1, the generic numeral builder is monotone",
+  "statement": "For any ordered-ring record R with a witness that zero <= one, and naturals m n with m <= n, ofNat R m <= ofNat R n.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Alg.ofNat_le_ofNat_of_le : ((x0 : Alg.OrderedRing) -> ((x1 : Alg.OrderedRing.le x0 (Alg.OrderedRing.zero x0) (Alg.OrderedRing.one x0)) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat.le x2 x3) -> Alg.OrderedRing.le x0 (Alg.ofNat x0 x2) (Alg.ofNat x0 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Alg.ofNat_le_ofNat_of_le"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:eq-symm", "F:alg-ofnat-add"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "alg-ofnat-le-ofnat-of-le-1",
+      "kind": "kernel-term",
+      "supports": "Alg.ofNat_le_ofNat_of_le admits through the trusted kernel gate. Proved by induction on the Nat.le DERIVATION (Nat.le.rec, m fixed as the recursor's parameter, the same shape nat_prelude/order.rs's le_trans uses), NOT by induction on n directly. The zero<=one hypothesis is explicit and load-bearing: it is NOT derivable from OrderedRing's five order laws alone (they say nothing about the ring unit's sign), so the theorem is stated conditionally rather than assumed to hold at every OrderedRing. Instantiated symbolically (closed over free m, n, and the Nat.le witness) at both Int.orderedRing and Rat.orderedRing, with zero<=one supplied at each from le_of_lt applied to the carrier's own zero_lt_one.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib -- ofnat_le_ofnat_of_le_symbolic_at_int_and_rat --nocapture --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\"| grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1"
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_rat_prelude, lane linarith-generic, ADR-1585.",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/ordered_ring_ext.rs (build_ofnat_le_ofnat_of_le); tests rat_prelude::ordered_ring_ext::ordered_ring_ext_tests::ofnat_le_ofnat_of_le_symbolic_at_int_and_rat."
+  },
+  "notes": "Used by linarith::generic (ADR-1585) to bridge a nonzero certificate residual (a slack constant) into the goal's own le relation, gated on an explicit zero_le_one proof the caller supplies -- without it, linarith::generic declines any goal whose exact Farkas certificate has nonzero residual (Decline::SearchBudget), rather than assuming the fact silently."
+}

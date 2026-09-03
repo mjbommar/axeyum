@@ -248,6 +248,114 @@ pub(crate) fn subst(
     transport(k, lg, lvl, ty, a, motive, proof_at_a, b, h)
 }
 
+/// ADR-1585: a small stateful wrapper around the free-function toolkit above,
+/// so a multi-step `Eq`/`le` derivation over one fixed carrier (e.g. building
+/// `linarith::generic`'s derived order lemmas, or `Alg.ofNat`'s laws) reads
+/// as a sequence of method calls rather than re-threading `lg`/`lvl`/`ty` and
+/// a fresh scratch fvar through every call by hand. Every method here is a
+/// thin forward to the matching free function; nothing new is proved.
+pub(crate) struct EqB<'a> {
+    k: &'a mut Kernel,
+    lg: LogicPrelude,
+    lvl: LevelId,
+    carrier: ExprId,
+    next_fvar: u64,
+}
+
+impl<'a> EqB<'a> {
+    /// `base` should be a range this construction (and nothing running
+    /// concurrently with it) otherwise uses — the same discipline every
+    /// fixed `_FV` constant in this file already follows; reuse across
+    /// unrelated, sequential top-level constructions is safe (each scratch
+    /// fvar is abstracted away before the call returns).
+    pub(crate) fn new(
+        k: &'a mut Kernel,
+        lg: &LogicPrelude,
+        lvl: LevelId,
+        carrier: ExprId,
+        base: u64,
+    ) -> Self {
+        Self {
+            k,
+            lg: *lg,
+            lvl,
+            carrier,
+            next_fvar: base,
+        }
+    }
+
+    pub(crate) fn kernel(&mut self) -> &mut Kernel {
+        self.k
+    }
+
+    fn fresh(&mut self) -> u64 {
+        self.next_fvar += 1;
+        self.next_fvar
+    }
+
+    pub(crate) fn symm(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
+        symm_of(self.k, &self.lg, self.lvl, self.carrier, a, b, h)
+    }
+
+    pub(crate) fn trans(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
+        let s = self.fresh();
+        trans_of(self.k, &self.lg, self.lvl, self.carrier, a, b, c, h1, h2, s)
+    }
+
+    pub(crate) fn congr(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        h: ExprId,
+        f: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
+    ) -> ExprId {
+        let s = self.fresh();
+        congr_arg(self.k, &self.lg, self.lvl, self.carrier, a, b, h, s, f)
+    }
+
+    pub(crate) fn subst(
+        &mut self,
+        a: ExprId,
+        b: ExprId,
+        h: ExprId,
+        pred: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
+        proof_at_a: ExprId,
+    ) -> ExprId {
+        let s = self.fresh();
+        subst(
+            self.k,
+            &self.lg,
+            self.lvl,
+            self.carrier,
+            a,
+            b,
+            h,
+            s,
+            pred,
+            proof_at_a,
+        )
+    }
+
+    pub(crate) fn app(&mut self, head: ExprId, args: &[ExprId]) -> ExprId {
+        let mut e = head;
+        for &a in args {
+            e = self.k.app(e, a);
+        }
+        e
+    }
+
+    pub(crate) fn app2(&mut self, f: ExprId, x: ExprId, y: ExprId) -> ExprId {
+        app2(self.k, f, x, y)
+    }
+}
+
 fn close_pi(k: &mut Kernel, fields: &[(u64, ExprId)], result: ExprId) -> ExprId {
     let mut t = result;
     for &(fv, ty) in fields.iter().rev() {

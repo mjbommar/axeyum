@@ -1078,12 +1078,12 @@
         "proof-route-only": 247
       }
     },
-    "frontier_sha256": "ab0221167e72abc188fdc60946707cad7714cfe591b4131af8d7e53912fae831"
+    "frontier_sha256": "1960e2bda0e82a978ac9704bbdd8c1e0ff04fff1c5f16b4730011f220b7bb589"
   },
   "kind": "axeyum-frontier-shape-census",
   "ledger": {
-    "fact_count": 2740,
-    "ledger_sha256": "1913816245037f23ce00e4cbda73902c02226481c98b892a0a9d3dc55f169681"
+    "fact_count": 2742,
+    "ledger_sha256": "7d5729b8d5ac49508883b4460a7fb934256eef2b499eeba445d754502f567314"
   },
   "other": [
     {
