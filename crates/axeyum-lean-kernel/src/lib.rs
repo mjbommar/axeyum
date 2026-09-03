@@ -69,6 +69,7 @@ mod ipc_soundness;
 mod lean_export;
 mod lean_pp;
 mod level;
+pub mod linarith;
 mod name;
 mod nat_prelude;
 mod prelude;
