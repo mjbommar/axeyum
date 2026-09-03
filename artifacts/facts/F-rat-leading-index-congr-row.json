@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-leading-index-congr-row",
+  "title": "The leading-index scan reads nothing but its own row",
+  "statement": "For every pair of matrices M, N : Nat -> Nat -> Rat, every pair of row indices r, r' and every column count cols, IF (for all j, Eq Rat (M r j) (N r' j)) THEN Eq Nat (Rat.leadingIndex M r cols) (Rat.leadingIndex N r' cols), and likewise for the fuelled form Rat.leadingIndexAux at every fuel and every starting column. In words: the leading-index scan reads nothing but its own row, so two matrices agreeing on one row agree on that row's leading index. THE HYPOTHESIS IS POINTWISE AND STAYS POINTWISE: nothing here equates the two matrices, so no function extensionality is used or needed. ADR-1555 recorded that the ROW form of rank invariance under an elementary operation does need funext because it must equate two matrices; this is the statement that lets the row-echelon loop invariant's clause about the ALREADY-PROCESSED prefix survive a pivot step without it, since F:rat-clear-below-row-swap-off supplies exactly a pointwise agreement on those rows. The proof spends NO Bool split: one transport moves the recursive call along the induction hypothesis and a second moves the tested entry along the row hypothesis, and the surrounding branch structure is literally the same term on both sides, so the obvious two-way case analysis on Nat.ble cols c and Rat.isZeroB is never performed.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.leadingIndex_congr_row : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : ((x5 : AxNat) -> Eq.{1} Rat (x0 x2 x5) (x1 x3 x5))) -> Eq.{1} AxNat (Rat.leadingIndex x0 x2 x4) (Rat.leadingIndex x1 x3 x4))))))) ; theorem Rat.leadingIndexAux_congr_row : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : ((x1 : AxNat) -> ((x2 : AxNat) -> Rat))) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : ((x5 : AxNat) -> Eq.{1} Rat (x0 x2 x5) (x1 x3 x5))) -> ((x6 : AxNat) -> ((x7 : AxNat) -> Eq.{1} AxNat (Rat.leadingIndexAux x0 x2 x4 x6 x7) (Rat.leadingIndexAux x1 x3 x4 x6 x7)))))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-leading-index-eq-of-first-nonzero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-leading-index-congr-row-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The two regexes are anchored on the ROW INDICES: the left scan reads `x2` of `x0` and the right reads `x3` of `x1`, so a statement that had silently used the same row index on both sides -- which is what a copied congruence lemma degenerates to -- fails the check. They also pin the axiom-footprint column at `0`, which matters here because a `funext` route would not be axiom-free in this kernel.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndexAux_congr_row[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndexAux x0 x2 x4 x6 x7\\) \\(Rat\\.leadingIndexAux x1 x3 x4 x6 x7\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered evaluation tests are in `rat_prelude/echelon_invariant_tests.rs`: at `M = [[0,0,5],[1,2,3]]` and `N = [[9,9,9],[0,0,5]]`, which agree on `M`'s row 0 and `N`'s row 1, both leading indices reduce to 2 -- and the OTHER row of each reduces to 0, so the two matrices are shown NOT to agree everywhere and the hypothesis is doing work. The theorem is then applied at fully free arguments with a control that refuses the version whose right-hand row index is `r` rather than `r'`."
+    },
+    {
+      "id": "rat-leading-index-congr-row-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The two regexes are anchored on the ROW INDICES: the left scan reads `x2` of `x0` and the right reads `x3` of `x1`, so a statement that had silently used the same row index on both sides -- which is what a copied congruence lemma degenerates to -- fails the check. They also pin the axiom-footprint column at `0`, which matters here because a `funext` route would not be axiom-free in this kernel.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.leadingIndex_congr_row[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} AxNat \\(Rat\\.leadingIndex x0 x2 x4\\) \\(Rat\\.leadingIndex x1 x3 x4\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered evaluation tests are in `rat_prelude/echelon_invariant_tests.rs`: at `M = [[0,0,5],[1,2,3]]` and `N = [[9,9,9],[0,0,5]]`, which agree on `M`'s row 0 and `N`'s row 1, both leading indices reduce to 2 -- and the OTHER row of each reduces to 0, so the two matrices are shown NOT to agree everywhere and the hypothesis is doing work. The theorem is then applied at fully free arguments with a control that refuses the version whose right-hand row index is `r` rather than `r'`."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about the two matrices being equal, nothing about any OTHER row, and nothing about the VALUE of either leading index. It is a congruence, not a characterisation; F:rat-leading-index-eq-of-first-nonzero is what says what the value is."
+}

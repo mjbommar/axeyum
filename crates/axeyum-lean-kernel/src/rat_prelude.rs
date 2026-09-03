@@ -2985,6 +2985,26 @@ pub struct RatPrelude {
     /// obligation 4. Its twin for the sweep is
     /// [`Self::clear_below_preserves_zero`].
     pub row_swap_preserves_zero_range: NameId,
+    /// `Rat.leadingIndexAux_congr_row : ∀ M N r r' cols,
+    /// (∀ j, Eq Rat (M r j) (N r' j)) → ∀ fuel c,
+    /// Eq Nat (leadingIndexAux M r cols fuel c)
+    ///        (leadingIndexAux N r' cols fuel c)`.
+    pub leading_index_aux_congr_row: NameId,
+    /// `Rat.leadingIndex_congr_row : ∀ M N r r' cols,
+    /// (∀ j, Eq Rat (M r j) (N r' j)) →
+    /// Eq Nat (leadingIndex M r cols) (leadingIndex N r' cols)` — *the scan
+    /// reads nothing but its own row.*
+    ///
+    /// Pointwise in, pointwise out: no `funext`, which is what ADR-1555 found
+    /// the ROW form of rank invariance needs. The invariant's clause about the
+    /// already-processed prefix survives a pivot step through this together
+    /// with [`Self::clear_below_row_swap_off`].
+    pub leading_index_congr_row: NameId,
+    /// `Rat.clearBelow_rowSwap_off : ∀ M pr piv pc rows r c, Lt r pr →
+    /// Le pr piv → Eq Rat (clearBelow (rowSwap pr piv M) pr pc rows r c)
+    /// (M r c)` — *one whole pivot step leaves every row above the cursor
+    /// exactly as it was.*
+    pub clear_below_row_swap_off: NameId,
 }
 
 impl RatPrelude {
@@ -3516,6 +3536,9 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         clear_below_aux_preserves_zero: child(kernel, "clearBelowAux_preserves_zero"),
         clear_below_preserves_zero: child(kernel, "clearBelow_preserves_zero"),
         row_swap_preserves_zero_range: child(kernel, "rowSwap_preserves_zero_range"),
+        leading_index_aux_congr_row: child(kernel, "leadingIndexAux_congr_row"),
+        leading_index_congr_row: child(kernel, "leadingIndex_congr_row"),
+        clear_below_row_swap_off: child(kernel, "clearBelow_rowSwap_off"),
     }
 }
 

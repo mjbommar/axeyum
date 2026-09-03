@@ -353,6 +353,9 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
             "rowSwap_preserves_zero_range",
             p.row_swap_preserves_zero_range,
         ),
+        ("leadingIndexAux_congr_row", p.leading_index_aux_congr_row),
+        ("leadingIndex_congr_row", p.leading_index_congr_row),
+        ("clearBelow_rowSwap_off", p.clear_below_row_swap_off),
         ("pivotSearchAux_column_zero", p.pivot_search_aux_column_zero),
         ("pivotSearch_column_zero", p.pivot_search_column_zero),
         (
@@ -7147,6 +7150,13 @@ fn the_determinant_toolkit_is_axiom_free() {
             p.row_swap_preserves_zero_range,
             true,
         ),
+        (
+            "leadingIndexAux_congr_row",
+            p.leading_index_aux_congr_row,
+            true,
+        ),
+        ("leadingIndex_congr_row", p.leading_index_congr_row, true),
+        ("clearBelow_rowSwap_off", p.clear_below_row_swap_off, true),
         (
             "pivotSearchAux_column_zero",
             p.pivot_search_aux_column_zero,

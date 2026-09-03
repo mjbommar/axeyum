@@ -20218,6 +20218,12 @@
       "kernel_theorem": "Rat.clearBelow_preserves_zero"
     },
     {
+      "fact_id": "F:rat-clear-below-row-swap-off",
+      "language": "lean4",
+      "statement_sha256": "f43cde4136193a38dbb3fe925959168e13bcc3ddcfa84755cc689816e448ab4f",
+      "prose_sha256": "4e69eebe3ed1ea710cdfd333d38e9027e8cf923892a4eee19ac28d2ec9557104"
+    },
+    {
       "fact_id": "F:rat-clear-below-zero",
       "language": "lean4",
       "statement_sha256": "0991ea9e1236416e52c4125ad27bb7c6139e41d63a9fe5458e2ce085a3969ca2",
@@ -21154,6 +21160,12 @@
           "prose_sha256": "7c3c9ca0ed845acd9969c5d2b5f685ccacb6ee90242319248a9a83b3bcc86fbd"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-leading-index-congr-row",
+      "language": "lean4",
+      "statement_sha256": "21b45c8f3ef1e2f2474ecb18d600a37ff7ec2349cbb3f98a590056c66d42efd4",
+      "prose_sha256": "118af7bb30316b968c8aebc8a682e6091e5b42468f0ec72a12c3d3d260fc144f"
     },
     {
       "fact_id": "F:rat-leading-index-eq-cols-of-zero-row",

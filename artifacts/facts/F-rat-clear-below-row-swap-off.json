@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-clear-below-row-swap-off",
+  "title": "A whole pivot step leaves every row above the cursor untouched",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every pivot row pr, candidate row piv, pivot column pc, row count rows, row r and column c, IF Nat.Lt r pr and Nat.Le pr piv THEN Eq Rat (Rat.clearBelow (Rat.rowSwap pr piv M) pr pc rows r c) (M r c). In words: one whole Gaussian-elimination pivot step -- swap the found pivot row into place, then clear everything below it -- leaves every row ABOVE the cursor exactly as it was, entry by entry. This is the composite of F:rat-clear-below-off and Rat.rowSwap_off, and its only content is that Nat.Lt r pr together with Nat.Le pr piv puts r strictly below BOTH rows the swap touches, which is what rowSwap_off's two Nat.beq ... = false side conditions want. Paired with F:rat-leading-index-congr-row it is what carries the row-echelon loop invariant's clause about the already-processed prefix through a step: the rows already placed do not move, so neither do their leading indices.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.clearBelow_rowSwap_off : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat) -> ((x7 : AxNat.lt x5 x1) -> ((x8 : AxNat.le x1 x2) -> Eq.{1} Rat (Rat.clearBelow (Rat.rowSwap x1 x2 x0) x1 x3 x4 x5 x6) (x0 x5 x6))))))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-clear-below-off",
+    "F:nat-beq-eq-false-of-ne",
+    "F:nat-le-trans",
+    "F:nat-lt-irrefl"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-clear-below-row-swap-off-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex is anchored on the COMPOSITE left-hand side `Rat.clearBelow (Rat.rowSwap x1 x2 x0) x1 x3 x4 x5 x6`: the swap is inside the sweep, in that order, and the right-hand side is the ORIGINAL matrix `x0 x5 x6` and not the swapped one -- which is the weaker statement `Rat.clearBelow_off` already gives and would make this fact redundant.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.clearBelow_rowSwap_off[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Rat \\(Rat\\.clearBelow \\(Rat\\.rowSwap x1 x2 x0\\) x1 x3 x4 x5 x6\\) \\(x0 x5 x6\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. The registered evaluation test is in `rat_prelude/echelon_invariant_tests.rs`: at `[[1,2],[0,3],[2,4]]` with `pr = 1`, `piv = 2`, `pc = 0`, `rows = 3` the step leaves row 0 at `[1,2]` while row 1 becomes the old row 2 and row 2's column-0 entry is cleared to 0 -- so the step is shown NOT to be the identity, which is what would make the theorem true for the wrong reason. The theorem is then applied at those same concrete arguments with both order hypotheses discharged by `Nat.le_of_ble_eq_true` at `Eq.refl`."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about rows at or below the cursor, where the step is exactly the interesting one; and `Nat.Le pr piv` is required rather than derived because without it the swap could move a row from above the cursor into it, which is the same corner F:rat-row-swap-preserves-zero-range refutes."
+}

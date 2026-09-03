@@ -322,3 +322,189 @@ fn row_swap_preserves_zero_range_needs_the_pivot_at_or_below_the_cursor() {
         "and the value it puts there is the above-cursor row's entry"
     );
 }
+
+/// `Rat.leadingIndex_congr_row` at a CONCRETE pair of matrices that share one
+/// row and differ everywhere else.
+///
+/// `M = [[0,0,5],[1,2,3]]` and `N = [[9,9,9],[0,0,5]]` agree on `M`'s row `0`
+/// and `N`'s row `1`, so both read leading index `2`. The control is the OTHER
+/// row of each: they read `0`, so the congruence is not saying every row of
+/// these two matrices agrees.
+#[test]
+fn leading_index_congr_row_reads_only_the_row_it_is_given() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let m = rect_matrix(&mut d, p, 2, 3, &[0, 0, 5, 1, 2, 3]);
+    let n = rect_matrix(&mut d, p, 2, 3, &[9, 9, 9, 0, 0, 5]);
+    let zero_n = d.num(0);
+    let one_n = d.num(1);
+    let two_n = d.num(2);
+    let three_n = d.num(3);
+
+    let li_m0 = d.const_app(p.leading_index, &[m, zero_n, three_n]);
+    let li_n1 = d.const_app(p.leading_index, &[n, one_n, three_n]);
+    assert!(
+        d.kernel().def_eq(li_m0, two_n),
+        "row 0 of [[0,0,5],[1,2,3]] leads at column 2"
+    );
+    assert!(
+        d.kernel().def_eq(li_n1, two_n),
+        "row 1 of [[9,9,9],[0,0,5]] leads at column 2"
+    );
+
+    let li_m1 = d.const_app(p.leading_index, &[m, one_n, three_n]);
+    let li_n0 = d.const_app(p.leading_index, &[n, zero_n, three_n]);
+    assert!(
+        d.kernel().def_eq(li_m1, zero_n),
+        "control: the OTHER row of M leads at column 0"
+    );
+    assert!(
+        d.kernel().def_eq(li_n0, zero_n),
+        "control: the OTHER row of N leads at column 0"
+    );
+    assert!(
+        !d.kernel().def_eq(li_m1, two_n),
+        "control: those two rows do NOT share the leading index the theorem is about"
+    );
+}
+
+/// `Rat.leadingIndex_congr_row` applies at fully free arguments, and the
+/// hypothesis it consumes is POINTWISE — no `funext`, no equation between the
+/// two matrices.
+#[test]
+fn leading_index_congr_row_applies_at_free_variables_from_a_pointwise_hypothesis() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let anon = d.anon_name();
+    let nat = d.nat_ty();
+    let mty = mat_ty(&mut d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let r2_fv = d.fresh_fvar();
+    let r2 = d.kernel().fvar(r2_fv);
+    let cols_fv = d.fresh_fvar();
+    let cols = d.kernel().fvar(cols_fv);
+
+    let hyp_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let left = d.apply(m, &[r, j]);
+        let right = d.apply(n, &[r2, j]);
+        let body = req(&mut d, left, right);
+        d.pi_fv(j_fv, nat, body)
+    };
+    let hyp_fv = d.fresh_fvar();
+    let hyp = d.kernel().fvar(hyp_fv);
+
+    let mut ctx = LocalContext::new();
+    for (fvar, ty) in [
+        (m_fv, mty),
+        (n_fv, mty),
+        (r_fv, nat),
+        (r2_fv, nat),
+        (cols_fv, nat),
+        (hyp_fv, hyp_ty),
+    ] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = d.const_app(p.leading_index_congr_row, &[m, n, r, r2, cols, hyp]);
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .expect("Rat.leadingIndex_congr_row must apply at free variables");
+
+    let left = d.const_app(p.leading_index, &[m, r, cols]);
+    let right = d.const_app(p.leading_index, &[n, r2, cols]);
+    let want = d.eq(left, right);
+    assert!(
+        d.kernel().def_eq(inferred, want),
+        "the conclusion equates the two rows' leading indices"
+    );
+
+    // The control: it is NOT an equation between the two MATRICES, which is
+    // what a `funext`-shaped statement would have produced.
+    let same_row = d.const_app(p.leading_index, &[n, r, cols]);
+    let control = d.eq(left, same_row);
+    assert!(
+        !d.kernel().def_eq(inferred, control),
+        "negative control: the right-hand row index is r', not r"
+    );
+}
+
+/// `Rat.clearBelow_rowSwap_off` at concrete arguments: a whole pivot step at
+/// `pr = 1`, `piv = 2`, `pc = 0`, `rows = 3` leaves row `0` byte for byte.
+///
+/// The matrix is chosen so the step really does something: rows 1 and 2 are
+/// swapped and then the row below the pivot is cleared, and row `0` is the only
+/// one that survives untouched.
+#[test]
+fn clear_below_row_swap_off_leaves_the_processed_prefix_alone() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let m = rect_matrix(&mut d, p, 3, 2, &[1, 2, 0, 3, 2, 4]);
+    let zero_n = d.num(0);
+    let one_n = d.num(1);
+    let two_n = d.num(2);
+    let three_n = d.num(3);
+
+    let swapped = rrow_swap(&mut d, p, one_n, two_n, m);
+    let stepped = d.const_app(p.clear_below, &[swapped, one_n, zero_n, three_n]);
+
+    for (c, want) in [(zero_n, 1i64), (one_n, 2i64)] {
+        let lhs = d.apply(stepped, &[zero_n, c]);
+        let rhs = rq(&mut d, p, want);
+        assert!(
+            d.kernel().def_eq(lhs, rhs),
+            "the pivot step must leave row 0 at {want}"
+        );
+    }
+
+    // The step is not the identity: row 1 became the old row 2, and row 2's
+    // column-0 entry was cleared.
+    let moved = d.apply(stepped, &[one_n, zero_n]);
+    let two_q = rq(&mut d, p, 2);
+    assert!(
+        d.kernel().def_eq(moved, two_q),
+        "row 1 is now the old row 2, so the step really swapped"
+    );
+    let cleared = d.apply(stepped, &[two_n, zero_n]);
+    let rat_zero = rzero(&mut d, p);
+    assert!(
+        d.kernel().def_eq(cleared, rat_zero),
+        "row 2 was cleared, so the step really swept"
+    );
+
+    // ... and the theorem applies at those concrete arguments.
+    let hlt = le_num(&mut d, 1, 1);
+    let hle = le_num(&mut d, 1, 2);
+    let applied = d.const_app(
+        p.clear_below_row_swap_off,
+        &[m, one_n, two_n, zero_n, three_n, zero_n, zero_n, hlt, hle],
+    );
+    let mut ctx = LocalContext::new();
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .expect("Rat.clearBelow_rowSwap_off must apply at concrete arguments");
+    let lhs = d.apply(stepped, &[zero_n, zero_n]);
+    let rhs = d.apply(m, &[zero_n, zero_n]);
+    let want = req(&mut d, lhs, rhs);
+    assert!(
+        d.kernel().def_eq(inferred, want),
+        "the conclusion is the entry equation at (0, 0)"
+    );
+}
