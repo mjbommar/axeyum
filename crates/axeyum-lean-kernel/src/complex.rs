@@ -91,6 +91,7 @@ use crate::nat_prelude::{NatOps, NatPrelude};
 use crate::rat_prelude::ops::{den, num, radd, rat_eq_rewrite, rle, rneg, rsymm, rzero};
 use crate::{Kernel, KernelError};
 
+pub(crate) mod algebra_instance;
 pub(crate) mod poly;
 mod ring;
 
@@ -1406,6 +1407,15 @@ pub struct ComplexPrelude {
     /// or `intern_names` -- see
     /// `docs/research/11-design-review/2026-08-27-prelude-build-spike.md` Part B.
     pub poly: poly::PolyNames,
+
+    /// `Complex.commRingS : AlgS.CommRing` (`complex/algebra_instance.rs`,
+    /// ADR-1588/ADR-1590) — every field an *existing* `Complex` theorem,
+    /// verbatim, except `mulOneL`/`distribR` (each derived by one or three
+    /// `equivTrans` applications, no new `complex` proof). Declared by
+    /// `algebra_instance::declare_comm_ring_s`, wired into `STEPS` right
+    /// after `declare_ring_laws`, the step that provides every ring law
+    /// field this declaration needs.
+    pub comm_ring_s: NameId,
 }
 
 impl ComplexPrelude {
@@ -1576,6 +1586,7 @@ fn intern_names(kernel: &mut Kernel, creal: CRealPrelude) -> ComplexPrelude {
         abs_neg: kernel.name_str(complex, "abs_neg"),
         abs_le_add_abs_sub: kernel.name_str(complex, "abs_le_add_abs_sub"),
         poly: poly::intern_names(kernel, complex),
+        comm_ring_s: kernel.name_str(complex, "commRingS"),
     }
 }
 
@@ -1871,6 +1882,34 @@ const STEPS: &[BuildStep] = &[
             |p: ComplexPrelude| p.mul_zero,
         ],
         run: declare_ring_laws,
+    },
+    BuildStep {
+        label: "algebra_instance::declare_comm_ring_s",
+        requires: &[
+            |p: ComplexPrelude| p.add,
+            |p: ComplexPrelude| p.add_assoc,
+            |p: ComplexPrelude| p.add_comm,
+            |p: ComplexPrelude| p.add_congr,
+            |p: ComplexPrelude| p.add_neg,
+            |p: ComplexPrelude| p.add_zero,
+            |p: ComplexPrelude| p.complex,
+            |p: ComplexPrelude| p.equiv,
+            |p: ComplexPrelude| p.equiv_refl,
+            |p: ComplexPrelude| p.equiv_symm,
+            |p: ComplexPrelude| p.equiv_trans,
+            |p: ComplexPrelude| p.left_distrib,
+            |p: ComplexPrelude| p.mul,
+            |p: ComplexPrelude| p.mul_assoc,
+            |p: ComplexPrelude| p.mul_comm,
+            |p: ComplexPrelude| p.mul_congr,
+            |p: ComplexPrelude| p.mul_one,
+            |p: ComplexPrelude| p.neg,
+            |p: ComplexPrelude| p.neg_congr,
+            |p: ComplexPrelude| p.one,
+            |p: ComplexPrelude| p.zero,
+        ],
+        provides: &[|p: ComplexPrelude| p.comm_ring_s],
+        run: algebra_instance::declare_comm_ring_s,
     },
     BuildStep {
         label: "declare_pinning",
