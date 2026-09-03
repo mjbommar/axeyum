@@ -87,6 +87,23 @@ That model is WRONG for this architecture, in three measured ways:
    is now ~0 tokens forever. Farkas/SOS/DRAT/Sturm strata are already
    CPU-priced. The producer-contract registry (ADR-0602) is the mechanism for
    making this the norm rather than the exception.
+
+   **Second datum, and the first on the TACTIC layer** (2026-09-03,
+   [ADR-1576](../research/09-decisions/adr-1576-a-tactic-is-a-producer-and-its-return-is-measured-in-retired-proofs.md)):
+   `crate::linarith` decides quantifier-free linear arithmetic over ℕ and ℤ and
+   emits the kernel term. Measured `--release`, **0.5 to 15 ms per term end to
+   end**, kernel recheck included — and the recheck is the *minority* of that,
+   10–45%; the emitter's own normalizer is the expensive half. It retired
+   fifteen hand-written proofs the day it landed.
+
+   That entry also exposes a hole in how this section measures. A producer
+   whose return is RETIREMENT of existing proofs scores **zero** on the
+   producer-contract system, which sizes dispatch:
+   `linear-arithmetic-v1` is born retired against an empty live population,
+   because linear arithmetic is the part of this development that was finished
+   FIRST, by hand. "Marginal cost per theorem" prices theorems the library does
+   not have yet; it says nothing about proofs the library stops writing. Both
+   are real returns and only one of them is currently counted.
 2. **Templates compound.** `alternatingBracket` was proved over an ABSTRACT
    magnitude; `cosOne`'s bounds cost five lanes of discovery, `sinOne`'s cost
    one lane of instantiation. Same for `weierstrassMTest` (every power series

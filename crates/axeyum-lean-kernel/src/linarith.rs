@@ -59,6 +59,7 @@
 
 use std::collections::BTreeMap;
 
+pub mod cost;
 pub(crate) mod int;
 pub mod nat;
 

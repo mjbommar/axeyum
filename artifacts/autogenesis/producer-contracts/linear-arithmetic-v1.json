@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "producer-contract-linear-arithmetic-v1",
+  "title": "Quantifier-free linear arithmetic over Nat and Int, kernel-lane",
+  "route": "kernel-lane",
+  "recipe": {
+    "description": "Hand the goal and the local hypotheses to `crate::linarith` (`linarith::nat::prove` over Nat, `linarith::int::prove` over Int). The procedure parses each proposition into a linear form over atoms, searches for a bounded Farkas certificate -- nonnegative multipliers on the hypotheses whose sum reaches the goal, plus the leftover slack -- and EMITS a kernel proof term for it, built only from lemmas already in the prelude. It is a producer in ADR-0601's sense: untrusted search, trusted checking. The emitted term goes through `Kernel::add_declaration` exactly like a hand-written one, and the procedure's own tests require a CORRUPTED certificate (a multiplier off by one, a residual off by one, a hypothesis slot carrying a proof of a different proposition) to be refused by the KERNEL, with the procedure's internal arithmetic check deliberately disabled so the trust story is not circular. Dischargeable goals: `t1 <= t2`, `t1 < t2`, `t1 = t2`, `Not (t1 <= t2)` over terms built from variables, numerals, addition, `Nat.succ` / `Int.neg` / `Int.sub`, and (Nat only) multiplication by a numeral.",
+    "reference": "crates/axeyum-lean-kernel/src/linarith.rs"
+  },
+  "shape": {
+    "formal_language": [
+      "lean4-surface"
+    ],
+    "fragments": [
+      "Nat",
+      "Int"
+    ],
+    "title_prefix": "Mathlib v4.30 source proposition Int.add_le"
+  },
+  "non_examples": [
+    {
+      "fact_id": "F:ml430-nat-choose-le-two-pow-ef6f7dcd",
+      "reason": "`∀ (n k : ℕ), n.choose k ≤ 2 ^ n` is `Nat`/`lean4-surface` and its conclusion is an inequality, so it looks like this family from the outside. It is excluded twice over, and both reasons matter. Structurally the shape's `title_prefix` rejects it (`Nat.choose_le_two_pow`). Semantically the procedure would abstract BOTH `n.choose k` and `2 ^ n` to opaque atoms and learn nothing about either: an atom denotes some natural, so `atom1 ≤ atom2` has no certificate and the procedure declines. It is the honest worked example of the fragment's edge -- a true inequality this producer cannot see, because seeing it needs the internal structure of `choose` and `pow`, which is exactly what a LINEAR procedure does not have."
+    },
+    {
+      "fact_id": "F:ml430-nat-lt-of-testbit-72f64ab8",
+      "reason": "`∀ {n m : ℕ} (i : ℕ), n.testBit i = false → m.testBit i = true → (∀ (j : ℕ), i < j → n.testBit j = m.testBit j) → n < m` is the only live open `Nat`/`Int` fact whose name begins `Nat.lt`, and it is a second, differently-shaped non-example: the `title_prefix` rejects it structurally, and semantically its third hypothesis is UNIVERSALLY QUANTIFIED, which puts it outside a quantifier-free fragment no matter what the atoms are. The first non-example fails on the terms; this one fails on the quantifier."
+    }
+  ],
+  "notes": "THE SHAPE LANGUAGE CANNOT EXPRESS THIS FAMILY, AND THE HONEST THING IS TO SAY SO RATHER THAN PRETEND A NAME PREFIX IS A FRAGMENT. Membership here is decided by the SYNTAX of the statement -- is every term built from variables, numerals and addition? -- and the schema's predicate offers only `formal_language`, `fragments`, `title_prefix`, `statement_contains` and `id_prefix`. None of those can separate `Nat.le_add_right` from `Nat.choose_le_two_pow`; both are `Nat`, `lean4-surface`, and contain `≤`. So `title_prefix` here is an APPROXIMATION chosen to be narrow, to sit on a family this producer demonstrably discharges (`Int.add_le_add_three` and `Int.add_le_of_le_sub_left` are two of the fifteen proofs it retired), and to overlap ZERO held-out facts. The real membership test is the recipe's parser, which declines by construction on anything it cannot see. Read the two non-examples as the definition and the prefix as a filter. Separately, and more importantly: THE LIVE POPULATION IS ZERO, and not because the shape is badly chosen. Measured 2026-09-03 over all 245 open `Mathlib v4.30 source proposition` facts by reading every name, not by running one predicate: not a single one is a quantifier-free linear-arithmetic proposition. The closest are `Int.add_one_le_of_not_le` and `Int.le_sub_one_of_not_le`, which take a NEGATED order fact as a HYPOTHESIS (this fragment handles `Not (t1 <= t2)` as a goal, never as an assumption), and `Nat.add_le_pair` / `Nat.mul_add_lt_mul_of_lt_of_lt`, which multiply two variables. That is not an accident of the ledger: linear arithmetic over the naturals and the integers is the part of this development that was finished FIRST, by hand, long before a procedure existed to do it. So this contract's value is not measured in facts dispatched. It is measured in hand-written proofs RETIRED -- fifteen of them on the day it was written (ten in `nat_prelude`, five in `int_prelude`, 184 source lines deleted), each re-admitted at a type the projection shows byte-identical to the one the hand proof carried. A producer contract cannot record that, which is itself worth knowing about the contract system: it sizes DISPATCH, and a producer whose whole return is retirement scores zero on it while being the most reusable thing the lane built. As with every producer contract this asserts dischargeability via `kernel-lane` only -- no instance is claimed attempted or proved.",
+  "sizing": {
+    "date": "2026-09-03",
+    "ledger_sha256": "a48a6de6de29bd17689b05021725b0e3d4efff82fefd7824637b2bcf33f2665e",
+    "matched_open_ready_count": 0,
+    "matched_open_ready_fact_ids": [],
+    "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
+    "note": "Zero, and the shape is not what makes it zero. The shape matches 14 facts in the ledger by title prefix -- the whole `Int.add_le*` family -- and every one of them is already proved, so the live population (open, dependency-ready, not held-out, not an outcome-blind mutation fixture) is empty. The overlap with held-out nursery population is also zero, checked against every `nursery*.json` manifest rather than one. Widening the prefix does not help: `Mathlib v4.30 source proposition Nat.le` matches 24 and lives 0, `Nat.add` 39 and lives 0, `Int.add` 35 and lives 0, `Int.le` 3 and lives 0, `Int.lt` 6 and lives 0, `Nat.lt` 7 and lives 1 -- and that one live fact is `Nat.lt_of_testBit`, which carries a universally quantified hypothesis and is a non-example above. Measured at ledger digest a48a6de6..., 2,706 facts, 265 open, 226 held-out."
+  },
+  "retirement": {
+    "date": "2026-09-03",
+    "reason": "Born with an empty live population, and retired on the same day it was written, per ADR-1510 rule 1: a capability claim over an empty population cannot be falsified by any dispatch. There is no open, dependency-ready, non-held-out fact in the ledger whose statement is quantifier-free linear arithmetic over the naturals or the integers -- checked by reading all 245 open `Mathlib v4.30 source proposition` names, not by trusting one predicate.",
+    "note": "This is NOT a statement that the producer is exhausted or unwanted, and the distinction is the whole reason to keep the record. `crate::linarith` is live, tested (52 tests), and already retired fifteen hand-written proofs. What emptied is the DISPATCH population, because linear arithmetic was the first thing this development finished by hand. Two things would revive it, and either should arrive as a `-v2` rather than by editing this file: a ledger import that brings in ordered-semiring or ordered-field mirrors whose statements are genuinely linear, or an extension of the fragment past its two measured edges -- a negated order fact usable as a HYPOTHESIS (`Int.add_one_le_of_not_le` needs exactly that), and strictness surviving an `Int` `<` hypothesis, which needs `lt a b → le (a + 1) b` and that lemma does not exist in `int_prelude` today."
+  }
+}
