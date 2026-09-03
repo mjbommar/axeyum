@@ -40,6 +40,15 @@
 //! `Alg.*` lemmas in [`ordered_ring_ext`](crate::rat_prelude::ordered_ring_ext)
 //! rather than `IntDev`/`NatDev`.
 
+// No non-test caller wires `prove` into a real `declare_*` yet (ADR-1585
+// answers whether the emitter CAN retarget generically; it does not retire
+// anything — see the module docs and ADR-1581's rule that a type match is
+// necessary, not sufficient). So the plain `--lib` build (no `#[cfg(test)]`)
+// sees every item here as dead, the same situation `structures.rs`'s `idx`
+// module documents for its own not-yet-consumed constants. Exercised by
+// `generic_tests` below, not by silence.
+#![allow(dead_code)]
+
 use crate::ExprNode;
 use crate::Kernel;
 use crate::LogicPrelude;
@@ -51,7 +60,7 @@ use crate::nat_prelude::structures::{self, RecordNames};
 use crate::rat_prelude::algebra_instances::sel;
 use crate::rat_prelude::ordered_ring_ext::OrderedRingExtNames;
 
-use super::{Certificate, Coeff, Decline, LinForm, find_certificate};
+use super::{Certificate, Coeff, Decline, LinForm, find_combination};
 
 /// One summand of a canonical additive form, exactly `linarith::int`'s
 /// `Item` (the search/normal-form shape does not depend on the carrier).
@@ -166,6 +175,7 @@ pub(crate) struct Problem {
     ring: ExprId,
     carrier: ExprId,
     zero: ExprId,
+    one: ExprId,
     le: ExprId,
     le_refl: ExprId,
     le_trans: ExprId,
@@ -175,7 +185,6 @@ pub(crate) struct Problem {
     add_zero: ExprId,
     neg_add: ExprId,
     add_le_add_left: ExprId,
-    add_le_add_right: ExprId,
     le_of_add_le_add_right: ExprId,
     add_le_add: ExprId,
     ofnat_le_ofnat_of_le_r: ExprId,
@@ -197,17 +206,19 @@ impl Problem {
         l1: LevelId,
         st: &structures::StructuresNames,
         ext: &OrderedRingExtNames,
-        nat: NatPrelude,
+        nat: &NatPrelude,
         ring: ExprId,
         zero_le_one: Option<ExprId>,
     ) -> Self {
         use structures::idx::ordered_ring::{
             ADD, ADD_ASSOC, ADD_COMM, ADD_LE_ADD_LEFT, ADD_ZERO, CARRIER, LE, LE_ANTISYMM, LE_REFL,
-            LE_TRANS, NEG, NEG_ADD, ZERO,
+            LE_TRANS, NEG, NEG_ADD, ONE, ZERO,
         };
+        let nat = *nat;
         let rn: &RecordNames = &st.ordered_ring;
         let carrier = sel(k, rn, CARRIER, ring);
         let zero = sel(k, rn, ZERO, ring);
+        let one = sel(k, rn, ONE, ring);
         let add = sel(k, rn, ADD, ring);
         let neg = sel(k, rn, NEG, ring);
         let add_assoc = sel(k, rn, ADD_ASSOC, ring);
@@ -220,10 +231,6 @@ impl Problem {
         let le_antisymm = sel(k, rn, LE_ANTISYMM, ring);
         let add_le_add_left = sel(k, rn, ADD_LE_ADD_LEFT, ring);
 
-        let add_le_add_right = {
-            let c = k.const_(ext.add_le_add_right, vec![]);
-            k.app(c, ring)
-        };
         let le_of_add_le_add_right = {
             let c = k.const_(ext.le_of_add_le_add_right, vec![]);
             k.app(c, ring)
@@ -254,6 +261,7 @@ impl Problem {
             ring,
             carrier,
             zero,
+            one,
             le,
             le_refl,
             le_trans,
@@ -263,7 +271,6 @@ impl Problem {
             add_zero,
             neg_add,
             add_le_add_left,
-            add_le_add_right,
             le_of_add_le_add_right,
             add_le_add,
             ofnat_le_ofnat_of_le_r,
@@ -294,10 +301,6 @@ impl Problem {
     // --- Eq combinators (free-function forwards, `&mut self` only for the
     // scratch counter — no persistent borrow of `self`, so recursive calls
     // like `flatten`/`reassoc` stay free to re-borrow `k`). -----------------
-
-    fn eqc_(&self, k: &mut Kernel, a: ExprId, b: ExprId) -> ExprId {
-        structures::eq_of(k, &self.lg, self.l1, self.carrier, a, b)
-    }
 
     fn refl(&self, k: &mut Kernel, a: ExprId) -> ExprId {
         structures::refl_of(k, &self.lg, self.l1, self.carrier, a)
@@ -356,7 +359,7 @@ impl Problem {
         )
     }
 
-    fn apply(&self, k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId {
+    fn apply(k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId {
         let mut e = head;
         for &a in args {
             e = k.app(e, a);
@@ -462,7 +465,20 @@ impl Problem {
         }
     }
 
+    /// `e` as a literal constant: `R.zero`/`R.one` directly (the natural way
+    /// a goal states "0"/"1" — nothing forces a caller to spell them as
+    /// `Alg.ofNat R 0`/`Alg.ofNat R 1`, and both are `ExprId`-identical to
+    /// `Problem`'s own `self.zero`/`self.one` snapshots whenever the goal
+    /// was built from the SAME `ring` term, exactly as every retirement/
+    /// new-capability test here does), or the `Alg.ofNat R k` family for
+    /// any other magnitude.
     fn ofnat_numeral(&self, k: &mut Kernel, e: ExprId) -> Option<Coeff> {
+        if e == self.zero {
+            return Some(0);
+        }
+        if e == self.one {
+            return Some(1);
+        }
         let n = Self::as_unop(k, self.ctx.ofnat, e)?;
         self.nat_numeral(k, n)
     }
@@ -527,13 +543,13 @@ impl Problem {
         let ac = self.add2(k, a, c);
         let acb = self.add2(k, ac, b);
 
-        let assoc = self.apply(k, self.add_assoc, &[a, b, c]);
-        let comm = self.apply(k, self.add_comm, &[b, c]);
+        let assoc = Self::apply(k, self.add_assoc, &[a, b, c]);
+        let comm = Self::apply(k, self.add_comm, &[b, c]);
         let under = self.congr(k, bc, cb, comm, &move |k2, t| {
             let e = k2.app(add, a);
             k2.app(e, t)
         });
-        let back = self.apply(k, self.add_assoc, &[a, c, b]);
+        let back = Self::apply(k, self.add_assoc, &[a, c, b]);
         let back = self.symm(k, acb, a_cb, back);
         let first = self.trans(k, abc, a_bc, a_cb, assoc, under);
         self.trans(k, abc, a_cb, acb, first, back)
@@ -611,7 +627,7 @@ impl Problem {
         let source = self.add2(k, fl, fr);
         let regrouped_inner = self.add2(k, fl, fi);
         let regrouped = self.add2(k, regrouped_inner, last_t);
-        let assoc = self.apply(k, self.add_assoc, &[fl, fi, last_t]);
+        let assoc = Self::apply(k, self.add_assoc, &[fl, fi, last_t]);
         let step1 = self.symm(k, regrouped, source, assoc);
 
         let inner = self.reassoc(k, left, init);
@@ -634,8 +650,8 @@ impl Problem {
         let zero = self.zero;
         let zero_head = self.add2(k, zero, head);
         let head_zero = self.add2(k, head, zero);
-        let comm = self.apply(k, self.add_comm, &[zero, head]);
-        let drop = self.apply(k, self.add_zero, &[head]);
+        let comm = Self::apply(k, self.add_comm, &[zero, head]);
+        let drop = Self::apply(k, self.add_zero, &[head]);
         let forward = self.trans(k, zero_head, head_zero, head, comm, drop);
         let back = self.symm(k, zero_head, head, forward);
         let tail = items[1..].to_vec();
@@ -732,14 +748,14 @@ impl Problem {
             let zero = self.zero;
             let near = self.add2(k, prefix, zero);
 
-            let assoc = self.apply(k, self.add_assoc, &[prefix, x, neg_x]);
-            let cancel = self.apply(k, self.neg_add, &[x]);
+            let assoc = Self::apply(k, self.add_assoc, &[prefix, x, neg_x]);
+            let cancel = Self::apply(k, self.neg_add, &[x]);
             let add = self.ctx.add;
             let under = self.congr(k, x_neg_x, zero, cancel, &move |k2, t| {
                 let e = k2.app(add, prefix);
                 k2.app(e, t)
             });
-            let drop = self.apply(k, self.add_zero, &[prefix]);
+            let drop = Self::apply(k, self.add_zero, &[prefix]);
             let to_near = self.trans(k, before, mid, near, assoc, under);
             let base = self.trans(k, before, near, prefix, to_near, drop);
 
@@ -863,7 +879,7 @@ impl Problem {
                         continue;
                     };
                     let le = self.le;
-                    let refl_a = self.apply(k, self.le_refl, &[lhs]);
+                    let refl_a = Self::apply(k, self.le_refl, &[lhs]);
                     let forward = self.substp(
                         k,
                         lhs,
@@ -875,7 +891,7 @@ impl Problem {
                         },
                         refl_a,
                     );
-                    let refl_b = self.apply(k, self.le_refl, &[lhs]);
+                    let refl_b = Self::apply(k, self.le_refl, &[lhs]);
                     let backward = self.substp(
                         k,
                         lhs,
@@ -915,7 +931,7 @@ impl Problem {
     ) -> (ExprId, ExprId, ExprId) {
         let (a, b, h1) = left;
         let (c, d, h2) = right;
-        let proof = self.apply(k, self.add_le_add, &[a, b, c, d, h1, h2]);
+        let proof = Self::apply(k, self.add_le_add, &[a, b, c, d, h1, h2]);
         let ac = self.add2(k, a, c);
         let bd = self.add2(k, b, d);
         (ac, bd, proof)
@@ -943,7 +959,7 @@ impl Problem {
             return triple;
         }
         let zero = self.zero;
-        let refl = self.apply(k, self.le_refl, &[zero]);
+        let refl = Self::apply(k, self.le_refl, &[zero]);
         (zero, zero, refl)
     }
 
@@ -965,7 +981,7 @@ impl Problem {
         }
         let slack_k = cert.residual.const_term();
         let (a_term, b_term, hsum) = self.combine(k, hyps, cert);
-        let h1 = self.apply(k, self.add_le_add_left, &[a_term, b_term, lhs, hsum]);
+        let h1 = Self::apply(k, self.add_le_add_left, &[a_term, b_term, lhs, hsum]);
         let la = self.add2(k, lhs, a_term);
         let lb = self.add2(k, lhs, b_term);
 
@@ -980,18 +996,18 @@ impl Problem {
             let zero_nat = self.nat_num(k, 0);
             let slack_nat = self.nat_num(k, slack_u32);
             let zero_le_nat_c = k.const_(self.nat.zero_le, vec![]);
-            let nat_zero_le = self.apply(k, zero_le_nat_c, &[slack_nat]);
-            let mono = self.apply(
+            let nat_zero_le = Self::apply(k, zero_le_nat_c, &[slack_nat]);
+            let mono = Self::apply(
                 k,
                 self.ofnat_le_ofnat_of_le_r,
                 &[zero_le_one, zero_nat, slack_nat, nat_zero_le],
             );
             let zero = self.zero;
             let le = self.le;
-            let grow = self.apply(k, self.add_le_add_left, &[zero, slack, lb, mono]);
+            let grow = Self::apply(k, self.add_le_add_left, &[zero, slack, lb, mono]);
             let lb_zero = self.add2(k, lb, zero);
             let lb_slack = self.add2(k, lb, slack);
-            let eqz = self.apply(k, self.add_zero, &[lb]);
+            let eqz = Self::apply(k, self.add_zero, &[lb]);
             let grow2 = self.substp(
                 k,
                 lb_zero,
@@ -1003,7 +1019,7 @@ impl Problem {
                 },
                 grow,
             );
-            let h2 = self.apply(k, self.le_trans, &[la, lb, lb_slack, h1, grow2]);
+            let h2 = Self::apply(k, self.le_trans, &[la, lb, lb_slack, h1, grow2]);
             (h2, lb_slack)
         };
 
@@ -1021,7 +1037,11 @@ impl Problem {
             },
             h2,
         );
-        Ok(self.apply(k, self.le_of_add_le_add_right, &[lhs, rhs, a_term, h3]))
+        Ok(Self::apply(
+            k,
+            self.le_of_add_le_add_right,
+            &[lhs, rhs, a_term, h3],
+        ))
     }
 
     fn prove_le(
@@ -1035,7 +1055,15 @@ impl Problem {
         let fr = self.parse_term(k, rhs)?;
         let goal_form = fr.checked_sub(&fl).ok_or(Decline::SearchBudget)?;
         let forms: Vec<LinForm> = hyps.iter().map(|h| h.form.clone()).collect();
-        let cert = find_certificate(&forms, &goal_form)?;
+        // Stricter than `find_certificate`'s shared `is_nonneg_cone`: over an
+        // arbitrary `OrderedRing` an atom is not guaranteed nonnegative (no
+        // built-in ℕ-style slack), so the residual must be a plain
+        // nonnegative CONSTANT or the search must keep looking rather than
+        // accept a smaller-weight certificate `emit_le` could not use. See
+        // `find_combination`'s doc comment.
+        let cert = find_combination(&forms, &goal_form, |r| {
+            r.is_constant() && r.const_term() >= 0
+        })?;
         self.emit_le(k, hyps, lhs, rhs, &cert, true)
     }
 
@@ -1058,7 +1086,7 @@ impl Problem {
                 let hyps = self.collect(k, assumptions);
                 let up = self.prove_le(k, &hyps, lhs, rhs)?;
                 let down = self.prove_le(k, &hyps, rhs, lhs)?;
-                Ok(self.apply(k, self.le_antisymm, &[lhs, rhs, up, down]))
+                Ok(Self::apply(k, self.le_antisymm, &[lhs, rhs, up, down]))
             }
         }
     }
@@ -1083,7 +1111,7 @@ pub(crate) fn prove(
     l1: LevelId,
     st: &structures::StructuresNames,
     ext: &OrderedRingExtNames,
-    nat: NatPrelude,
+    nat: &NatPrelude,
     ring: ExprId,
     zero_le_one: Option<ExprId>,
     assumptions: &[Assumption],
@@ -1106,7 +1134,7 @@ pub(crate) fn emit_le_from_certificate(
     l1: LevelId,
     st: &structures::StructuresNames,
     ext: &OrderedRingExtNames,
-    nat: NatPrelude,
+    nat: &NatPrelude,
     ring: ExprId,
     zero_le_one: Option<ExprId>,
     assumptions: &[Assumption],
@@ -1125,7 +1153,6 @@ pub(crate) fn emit_le_from_certificate(
 #[cfg(test)]
 mod generic_tests {
     use super::*;
-    use crate::KernelError;
     use crate::nat_prelude::structures::lam_over;
     use crate::rat_prelude::RatPrelude;
     use crate::rat_prelude::algebra_instances::sel;
@@ -1162,16 +1189,6 @@ mod generic_tests {
         y: ExprId,
     ) -> ExprId {
         structures::eq_of(k, &p.int.nat.logic, l1, carrier, x, y)
-    }
-
-    fn int_zero_le_one(k: &mut Kernel, p: &RatPrelude) -> ExprId {
-        let zlt1 = k.const_(p.int.zero_lt_one, vec![]);
-        let le_of_lt = k.const_(p.int.le_of_lt, vec![]);
-        let zero = k.const_(p.int.zero, vec![]);
-        let one = k.const_(p.int.one, vec![]);
-        let e1 = k.app(le_of_lt, zero);
-        let e2 = k.app(e1, one);
-        k.app(e2, zlt1)
     }
 
     fn rat_zero_le_one(k: &mut Kernel, p: &RatPrelude) -> ExprId {
@@ -1260,7 +1277,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &assumptions,
@@ -1335,7 +1352,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &assumptions,
@@ -1381,7 +1398,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &assumptions,
@@ -1427,7 +1444,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &assumptions,
@@ -1458,13 +1475,14 @@ mod generic_tests {
         let ring = k.const_(p.algebra_ext.int_ordered_ring, vec![]);
         let carrier = k.const_(p.int.z, vec![]);
         let rn = p.int.nat.structures.ordered_ring;
+        let carrier_sel = sel(&mut k, &rn, structures::idx::ordered_ring::CARRIER, ring);
 
         let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
         let bc = add_of(&mut k, &rn, ring, b, c);
         let start = add_of(&mut k, &rn, ring, a, bc);
         let ac = add_of(&mut k, &rn, ring, a, c);
         let fin = add_of(&mut k, &rn, ring, b, ac);
-        let goal = eq_of_carrier(&mut k, &p, l1, carrier, start, fin);
+        let goal = eq_of_carrier(&mut k, &p, l1, carrier_sel, start, fin);
 
         let proof = prove(
             &mut k,
@@ -1472,7 +1490,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[],
@@ -1500,12 +1518,13 @@ mod generic_tests {
         let ring = k.const_(p.algebra_ext.int_ordered_ring, vec![]);
         let carrier = k.const_(p.int.z, vec![]);
         let rn = p.int.nat.structures.ordered_ring;
+        let carrier_sel = sel(&mut k, &rn, structures::idx::ordered_ring::CARRIER, ring);
 
         let (a, b) = (k.fvar(A), k.fvar(B));
         let neg_a = neg_of(&mut k, &rn, ring, a);
         let neg_a_b = add_of(&mut k, &rn, ring, neg_a, b);
         let start = add_of(&mut k, &rn, ring, a, neg_a_b);
-        let goal = eq_of_carrier(&mut k, &p, l1, carrier, start, b);
+        let goal = eq_of_carrier(&mut k, &p, l1, carrier_sel, start, b);
 
         let proof = prove(
             &mut k,
@@ -1513,7 +1532,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[],
@@ -1541,12 +1560,13 @@ mod generic_tests {
         let ring = k.const_(p.algebra_ext.int_ordered_ring, vec![]);
         let carrier = k.const_(p.int.z, vec![]);
         let rn = p.int.nat.structures.ordered_ring;
+        let carrier_sel = sel(&mut k, &rn, structures::idx::ordered_ring::CARRIER, ring);
 
         let (a, b) = (k.fvar(A), k.fvar(B));
         let ab = add_of(&mut k, &rn, ring, a, b);
         let neg_b = neg_of(&mut k, &rn, ring, b);
         let start = add_of(&mut k, &rn, ring, ab, neg_b);
-        let goal = eq_of_carrier(&mut k, &p, l1, carrier, start, a);
+        let goal = eq_of_carrier(&mut k, &p, l1, carrier_sel, start, a);
 
         let proof = prove(
             &mut k,
@@ -1554,7 +1574,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[],
@@ -1604,7 +1624,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &assumptions,
@@ -1651,7 +1671,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &assumptions,
@@ -1691,7 +1711,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             Some(zero_le_one),
             &assumptions,
@@ -1719,7 +1739,7 @@ mod generic_tests {
             l1,
             &p2.int.nat.structures,
             &p2.ordered_ring_ext,
-            p2.int.nat,
+            &p2.int.nat,
             ring2,
             None,
             &[(h_ty2, h2)],
@@ -1756,7 +1776,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[(h_ty, h)],
@@ -1790,7 +1810,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[(h1_ty, h1), (h2_ty, h2)],
@@ -1821,7 +1841,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[],
@@ -1865,7 +1885,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[(h_ty, h)],
@@ -1880,32 +1900,14 @@ mod generic_tests {
             // but assert we are not silently accepting a bad witness.
             return;
         };
+        let carrier_c = k.const_(p.int.z, vec![]);
         let closed = {
             let v = lam_over(&mut k, H, h_ty, term);
-            let v = lam_over(
-                &mut k,
-                B,
-                {
-                    let c = k.const_(p.int.z, vec![]);
-                    c
-                },
-                v,
-            );
-            lam_over(
-                &mut k,
-                A,
-                {
-                    let c = k.const_(p.int.z, vec![]);
-                    c
-                },
-                v,
-            )
+            let v = lam_over(&mut k, B, carrier_c, v);
+            lam_over(&mut k, A, carrier_c, v)
         };
         assert!(
-            matches!(
-                k.infer(closed),
-                Err(KernelError::TypeMismatch { .. }) | Err(_)
-            ),
+            k.infer(closed).is_err(),
             "a wrong multiplier must be rejected by the KERNEL, not silently admitted"
         );
     }
@@ -1940,7 +1942,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             Some(zero_le_one),
             &[(h_ty, h)],
@@ -1990,7 +1992,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[(h_ty, wrong_proof)],
@@ -2044,7 +2046,7 @@ mod generic_tests {
             l1,
             &p.int.nat.structures,
             &p.ordered_ring_ext,
-            p.int.nat,
+            &p.int.nat,
             ring,
             None,
             &[(h_ty, h)],

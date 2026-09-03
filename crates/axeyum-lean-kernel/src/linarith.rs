@@ -306,7 +306,19 @@ pub fn find_refutation(hyps: &[LinForm]) -> Result<Certificate, Decline> {
 }
 
 /// The shared enumeration: find `λ ≥ 0` with `accept(goal − Σ λⱼ Fⱼ)`.
-fn find_combination(
+///
+/// `pub(crate)` (not only used through [`find_certificate`]/
+/// [`find_refutation`]'s fixed `accept` closures) because
+/// [`generic`]'s emitter needs a STRICTER acceptance than
+/// [`LinForm::is_nonneg_cone`] allows: over a carrier with no built-in
+/// nonnegativity (every `OrderedRing`, not only ℤ), a residual that still
+/// mentions an atom is not admissible slack, so the search itself must
+/// reject it — accepting it at `is_nonneg_cone` and declining downstream
+/// (as the fixed `emit_le` checks do) can return the SMALLEST-WEIGHT
+/// certificate that satisfies the looser criterion while missing a
+/// LARGER-weight one with a genuinely constant residual that the goal
+/// needs.
+pub(crate) fn find_combination(
     hyps: &[LinForm],
     goal: &LinForm,
     accept: impl Fn(&LinForm) -> bool,

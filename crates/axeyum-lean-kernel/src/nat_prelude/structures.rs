@@ -293,14 +293,6 @@ impl<'a> EqB<'a> {
         self.next_fvar
     }
 
-    pub(crate) fn eqc(&mut self, a: ExprId, b: ExprId) -> ExprId {
-        eq_of(self.k, &self.lg, self.lvl, self.carrier, a, b)
-    }
-
-    pub(crate) fn refl(&mut self, a: ExprId) -> ExprId {
-        refl_of(self.k, &self.lg, self.lvl, self.carrier, a)
-    }
-
     pub(crate) fn symm(&mut self, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
         symm_of(self.k, &self.lg, self.lvl, self.carrier, a, b, h)
     }
@@ -349,20 +341,6 @@ impl<'a> EqB<'a> {
             pred,
             proof_at_a,
         )
-    }
-
-    /// Chain `Eq start …` through `(next, step)` pairs (`step : Eq current
-    /// next`), returning the final right-hand side and the composed proof —
-    /// the same device [`super::super::int_prelude::ops::IntDev::ichain`]
-    /// uses at a fixed carrier, generalized to any `ty`.
-    pub(crate) fn chain(&mut self, start: ExprId, steps: &[(ExprId, ExprId)]) -> (ExprId, ExprId) {
-        let mut current = start;
-        let mut proof = self.refl(start);
-        for &(next, step) in steps {
-            proof = self.trans(start, current, next, proof, step);
-            current = next;
-        }
-        (current, proof)
     }
 
     pub(crate) fn app(&mut self, head: ExprId, args: &[ExprId]) -> ExprId {
