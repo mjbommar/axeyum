@@ -3,8 +3,8 @@
 <!-- plan-section: lane-status -->
 
 **echelon-invariant (`DONE, with one deliverable explicitly NOT landed`,
-2026-09-02).** Sixteen axiom-free declarations (fifteen `Rat`, one `Nat`), five
-commits, eight facts, ADR-1571.
+2026-09-02).** Fourteen axiom-free declarations (thirteen `Rat`, one `Nat`),
+eight commits, eight facts, ADR-1571.
 
 **Landed.** `Nat.lt_of_ble_eq_false` — the STRICT false-side `ble` bridge three
 consumers were owed (ADR-1558 §4, ADR-1562 §4), promoted into `nat_prelude` and
@@ -52,9 +52,10 @@ forms".
 
 **Cost.** `rat` prelude 1.683–1.705 s (`prelude_build_timing`, four runs)
 against 1.653–1.660 s measured on the same host three commits earlier, so this
-IS a delta and not merely a level: the sixteen declarations cost ~30–45 ms. The
+IS a delta and not merely a level: the fourteen declarations cost ~30–45 ms. The
 family is now marginally above the ~1.65 s it was told to watch and inside the
-~1.7 s band. `rat_prelude::` suite 217 passed before the last two commits;
+~1.7 s band. Final sweeps: `rat_prelude::` 225 passed, `nat_prelude::` 408
+passed (both NONZERO counts, `--release`, `--test-threads=4`); of those,
 `clear_below_tests` 9, `leading_index_tests` 4, `pivot_content_tests` 5.
 
 **Did not run.** No workspace sweep, no `just check`, no `check.sh`, no push.

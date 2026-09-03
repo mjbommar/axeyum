@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-02
-Index-summary: Fifteen axiom-free `Rat` declarations and one `Nat` one close
+Index-summary: Thirteen axiom-free `Rat` declarations and one `Nat` one close
 ADR-1554's **obligation 3** (`Rat.clearBelow_off` / `clearBelow_zero`, with
 `Rat.add_neg_div_mul_cancel` as the arithmetic core), complete its
 **obligation 2** (`Rat.pivotSearch_column_zero`, the exhaustion disjunct
@@ -17,11 +17,14 @@ decided or measured. (1) **A fuel lemma needs a fuel bound exactly when its
 conclusion is about a value the sweep CREATES, and needs none when the value is
 one it PRESERVES** — `clearBelow_zero` and `clearBelow_preserves_zero` are the
 same function, one hypothesis apart, and the direction of the conclusion decides
-it. (2) **`Le pr r`, not `Le pr r` weakened to `Lt`, is what keeps a hypothesis
-alive across a rewriting recursion**: the nonzero-pivot and zero-column
-hypotheses both travel INSIDE the motive and are re-established by
-`Rat.rowAddMul_off`, which needs the pivot row to be a row the step did not
-touch. (3) **ADR-1554 §3's choice of `cols` as a zero row's leading index pays a
+it. (2) **Where the pivot row sits relative to the cursor is a hypothesis, not a
+detail, and the two lemmas want OPPOSITE strictness**: `clearBelow_zero` needs
+`Lt pr r`, because the nonzero-pivot hypothesis travels inside the motive and is
+re-established by `Rat.rowAddMul_off`, which needs the pivot row to be a row the
+step did not touch; `clearBelow_preserves_zero` needs `Le pr r`, because its
+hypothesis has to COVER row `pr` — the sweep adds a multiple of the pivot row
+into each row it rewrites, so the pivot row's own entry in that column must be
+zero too. (3) **ADR-1554 §3's choice of `cols` as a zero row's leading index pays a
 second time**: in `leadingIndexAux_eq_cols_of_zero` both exhaustion leaves close
 by `Eq.refl`, because the scan's give-up answer IS the conclusion. (4)
 **Obligation 4 is re-sized from measurement rather than estimate**: what remains
@@ -173,7 +176,7 @@ separate, purely cosmetic change and this lane did not make it.
 - **Cost.** The `rat` prelude builds in **1.683–1.705 s** (`prelude_build_timing`,
   four consecutive runs) against **1.653–1.660 s** measured on the same host
   immediately after the obligation-3 commit and ADR-1562's 1.63–1.64 s. So the
-  sixteen declarations cost roughly 30–45 ms in total, and the family is now
+  fourteen declarations cost roughly 30–45 ms in total, and the family is now
   marginally above the ~1.65 s it was told to watch and inside the ~1.7 s band.
   This IS a delta and not merely a level: the intermediate measurement was taken
   on this host, in this worktree, three commits earlier.

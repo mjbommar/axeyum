@@ -857,4 +857,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1564](adr-1564-train-is-the-training-partition-not-an-evaluation-partition.md) | train is the TRAINING partition, not an evaluation partition — the list was wrong, so the list changes | accepted |
 | [1565](adr-1565-the-six-crossings-are-a-scored-evaluations-residue-and-the-nursery-gate-had-lost-the-blind-seal.md) | the six held-out crossings are a scored evaluation's residue, not a leak — the reclassification is refused, and the seal the nursery gate had quietly lost is restored | accepted |
 | [1566](adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md) | a scored evaluation's residue is an amendment class, keyed to the evaluation record and never to a fact id | accepted |
-| [1571](adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md) | Fifteen axiom-free `Rat` declarations and one `Nat` one close | accepted |
+| [1571](adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md) | Thirteen axiom-free `Rat` declarations and one `Nat` one close | accepted |
