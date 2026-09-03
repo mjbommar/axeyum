@@ -15,14 +15,14 @@
   },
   "population": {
     "files_scanned": 519,
-    "private_fns": 10107,
-    "private_fns_outside_tests": 8310,
-    "distinct_names": 8110,
-    "distinct_body_digests": 8985,
+    "private_fns": 10109,
+    "private_fns_outside_tests": 8312,
+    "distinct_names": 8112,
+    "distinct_body_digests": 8987,
     "duplicated_name_groups": 788,
     "duplicated_body_groups": 414,
     "sites_in_duplicated_body_groups": 1536,
-    "inline_step_fns": 6778,
+    "inline_step_fns": 6779,
     "inline_step_name_groups": 541,
     "inline_step_body_groups": 285,
     "sites_in_inline_step_body_groups": 946
@@ -2182,7 +2182,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:108",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs:94",
         "crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs:93",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:44"
+        "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:284"
       ]
     },
     {
@@ -7277,8 +7277,8 @@
       "signature": "fn alg_root(k: &mut Kernel) -> NameId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1192",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:39"
       ]
     },
     {
@@ -8493,7 +8493,7 @@
       "signature": "fn declare_add_basics(d: &mut IntDev<'_>) -> Result<(), KernelError>",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/add_basics.rs:232",
+        "crates/axeyum-lean-kernel/src/int_prelude/add_basics.rs:295",
         "crates/axeyum-lean-kernel/src/nat_prelude/add_basics.rs:559"
       ]
     },
@@ -20362,8 +20362,8 @@
       "signature": "fn alg_root(k: &mut Kernel) -> NameId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1192",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:39"
       ]
     },
     {
@@ -24385,7 +24385,7 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/count_range_permute.rs:108",
         "crates/axeyum-lean-kernel/src/nat_prelude/eisenstein_lattice.rs:94",
         "crates/axeyum-lean-kernel/src/nat_prelude/lattice_count.rs:93",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:44"
+        "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:284"
       ]
     },
     {
@@ -27801,8 +27801,8 @@
       "signature": "fn alg_root(k: &mut Kernel) -> NameId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1192",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:39"
       ]
     },
     {
@@ -28616,7 +28616,7 @@
       "signature": "fn declare_add_basics(d: &mut IntDev<'_>) -> Result<(), KernelError>",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/add_basics.rs:232",
+        "crates/axeyum-lean-kernel/src/int_prelude/add_basics.rs:295",
         "crates/axeyum-lean-kernel/src/nat_prelude/add_basics.rs:559"
       ]
     },
@@ -36994,8 +36994,8 @@
       "signature": "fn alg_root(k: &mut Kernel) -> NameId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1340",
-        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:38"
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_ext.rs:1192",
+        "crates/axeyum-lean-kernel/src/rat_prelude/algebra_instances.rs:39"
       ]
     },
     {
