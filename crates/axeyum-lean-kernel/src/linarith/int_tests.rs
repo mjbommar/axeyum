@@ -365,19 +365,84 @@ fn the_procedures_own_check_also_catches_a_corrupted_certificate() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn a_product_is_an_opaque_atom_even_at_a_numeral_multiplier() {
+fn a_numeral_multiplier_within_the_bound_now_unrolls() {
     on_a_deep_stack(|| {
-        // `a * 2 ≤ a + a` is TRUE, and this fragment cannot see it: `Int.mul`
-        // case-splits on both arguments, so `a * 2` does not unroll the way
-        // `Nat.mul a 2` does. It is abstracted to an atom, and an atom tells
-        // the search nothing. Measured, not asserted -- if `Int.mul` ever gains
-        // an unrolling route this test is what says the boundary moved.
-        let got = attempt(1, &|d, v| {
+        // `a * 2 ≤ a + a` is TRUE, and this fragment now sees it: `Int.mul`
+        // does not ι-reduce at a literal multiplier the way `Nat.mul a 2`
+        // does, but a small literal (`≤ MAX_MULTIPLIER`) unrolls through a
+        // real `left_distrib` + `mul_one` chain instead. This is the flip of
+        // the boundary ADR-1576 recorded as closed at "not even by a
+        // literal" — declared through the kernel, not merely emitted.
+        let mut env = Env::new();
+        let p = env.p;
+        let name = env.name("double_le_self_add_self");
+        let mut d = IntDev::new(&mut env.k, p);
+        linarith::declare(&mut d, &p, name, 1, &|d, v| {
             let two_nat = d.num(2);
             let two = d.of_nat(two_nat);
             let doubled = d.imul(v[0], two);
             let sum = d.iadd(v[0], v[0]);
             (vec![], d.ile(doubled, sum))
+        })
+        .expect("a * 2 ≤ a + a is now in the fragment");
+        assert!(env.k.environment().contains(name));
+    });
+}
+
+#[test]
+fn a_numeral_multiplier_on_the_left_unrolls_too() {
+    on_a_deep_stack(|| {
+        // `2 * a` needs one `mul_comm` before the unrolling applies (mirrors
+        // ℕ's `a_numeral_multiplier_on_the_left_is_proved_too`) -- this is
+        // what would fail if the commuted branch's bridge were wrong.
+        let mut env = Env::new();
+        let p = env.p;
+        let name = env.name("a_le_two_mul_a");
+        let mut d = IntDev::new(&mut env.k, p);
+        linarith::declare(&mut d, &p, name, 1, &|d, v| {
+            let two_nat = d.num(2);
+            let two = d.of_nat(two_nat);
+            let prod = d.imul(two, v[0]);
+            let sum = d.iadd(v[0], v[0]);
+            (vec![], d.ile(prod, sum))
+        })
+        .expect("2 * a ≤ a + a is in the fragment");
+        assert!(env.k.environment().contains(name));
+    });
+}
+
+#[test]
+fn a_literal_multiplier_beyond_the_bound_declines_nonlinear() {
+    on_a_deep_stack(|| {
+        // The control for the unrolling above: a literal multiplier past
+        // `MAX_MULTIPLIER` declines rather than growing the proof term or
+        // silently falling back to atomizing — the same "decline rather than
+        // grow" rule the certificate search itself follows.
+        let k = super::MAX_MULTIPLIER + 1;
+        let got = attempt(1, &|d, v| {
+            let k_nat = d.num(u32::try_from(k).expect("small literal"));
+            let k_int = d.of_nat(k_nat);
+            let scaled = d.imul(v[0], k_int);
+            let sum = d.iadd(v[0], v[0]);
+            (vec![], d.ile(scaled, sum))
+        });
+        assert_eq!(got.err(), Some(Decline::NonLinear));
+    });
+}
+
+#[test]
+fn a_genuine_product_of_two_atoms_is_still_not_unrolled() {
+    on_a_deep_stack(|| {
+        // The control that the new literal-multiplier route did not
+        // accidentally start reasoning about a genuinely nonlinear product:
+        // `x * y` for two atoms is still opaque, even at the top of a goal.
+        // (It stays atomized rather than declining outright -- see
+        // `a_product_atom_is_still_usable_as_an_unknown` below for why that
+        // silent-atom fallback is deliberate, not merely untested.)
+        let got = attempt(2, &|d, v| {
+            let prod = d.imul(v[0], v[1]);
+            let sum = d.iadd(v[0], v[0]);
+            (vec![], d.ile(prod, sum))
         });
         assert_eq!(got.err(), Some(Decline::NoCertificate));
     });
@@ -464,27 +529,31 @@ fn a_negated_goal_is_proved_by_refutation() {
 }
 
 #[test]
-fn a_strict_hypothesis_is_weakened_and_the_strictness_is_lost() {
+fn a_strict_hypothesis_keeps_its_strictness() {
     on_a_deep_stack(|| {
-        // Documented boundary, measured rather than asserted: `a < b` gives
-        // `a ≤ b` (which proves `a ≤ b`) but NOT `a + 1 ≤ b`.
+        // `a < b` gives both `a ≤ b` (weakened, via `le_of_lt` inside
+        // `le_succ_of_lt`'s own proof) and the full `a + 1 ≤ b` — the fragment
+        // edge ADR-1576 recorded as declined is now closed by
+        // `Int.le_succ_of_lt`. Declared through the kernel, not merely
+        // emitted: an `Ok` `ExprId` is not itself a claim of well-typedness.
         let weakened = attempt(2, &|d, v| {
             let hyp = d.ilt(v[0], v[1]);
             (vec![hyp], d.ile(v[0], v[1]))
         });
         assert!(weakened.is_ok(), "a < b must still give a ≤ b");
 
-        let strict = attempt(2, &|d, v| {
+        let mut env = Env::new();
+        let p = env.p;
+        let name = env.name("strict_hyp_plus_one");
+        let mut d = IntDev::new(&mut env.k, p);
+        linarith::declare(&mut d, &p, name, 2, &|d, v| {
             let hyp = d.ilt(v[0], v[1]);
             let one_nat = d.num(1);
             let one = d.of_nat(one_nat);
             let shifted = d.iadd(v[0], one);
             (vec![hyp], d.ile(shifted, v[1]))
-        });
-        assert_eq!(
-            strict.err(),
-            Some(Decline::NoCertificate),
-            "the fragment's documented edge moved: a < b now yields a + 1 ≤ b",
-        );
+        })
+        .expect("a < b must now give a + 1 ≤ b via Int.le_succ_of_lt");
+        assert!(env.k.environment().contains(name));
     });
 }

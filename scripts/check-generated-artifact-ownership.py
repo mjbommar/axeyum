@@ -507,6 +507,53 @@ GUARDED: tuple[Artifact, ...] = (
         ),
         reads=(),
     ),
+    Artifact(
+        path="artifacts/refactor/linarith-retirement-census.json",
+        owner=Producer(
+            "scripts/linarith-retirement-census.py",
+            (),
+            "The sole writer. Bare argv is the WRITING invocation; --check "
+            "never writes. Finds `nat_prelude`/`int_prelude` theorems whose "
+            "hand proof cites only the linarith emitter's own lemma "
+            "vocabulary (ADR-1576), so the top candidates by line count are "
+            "the next retirement targets.",
+        ),
+        required_keys=(
+            "schema_version",
+            "kind",
+            "produced_by",
+            "authority",
+            "allowed_lemmas",
+            "positive_control",
+            "already_retired",
+            "population",
+            "decline_histogram",
+            "candidates",
+            "declined",
+        ),
+        required_nested={
+            # The denominators a reader reasons from: how many call sites
+            # were examined per carrier, and how many were flagged. Without
+            # these a candidate count has no scale.
+            "population": (
+                "nat_theorem_call_sites",
+                "nat_candidates",
+                "nat_declined",
+                "int_theorem_call_sites",
+                "int_candidates",
+                "int_declined",
+            ),
+        },
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason as every artifact "
+                "above: it writes a sandbox and a perturbed copy.",
+            ),
+        ),
+        reads=(),
+    ),
 )
 
 # A call is a write if it is any of these. Used only for the READS arm, where

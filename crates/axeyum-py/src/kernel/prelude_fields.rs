@@ -1479,7 +1479,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (369 names,
+/// The `IntPrelude` field table (370 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -1537,6 +1537,7 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
             ("lt_of_lt_of_le", p.lt_of_lt_of_le),
             ("lt_of_le_of_lt", p.lt_of_le_of_lt),
             ("le_of_lt", p.le_of_lt),
+            ("le_succ_of_lt", p.le_succ_of_lt),
             ("add_le_add", p.add_le_add),
             ("add_comm", p.add_comm),
             ("add_assoc", p.add_assoc),

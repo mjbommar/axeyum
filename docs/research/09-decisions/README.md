@@ -864,3 +864,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1577](adr-1577-a-decidable-predicate-with-a-bound-is-a-finset-and-what-was-missing-was-an-object.md) | a decidable predicate with a bound is a `Finset`, and what was missing was an object rather than a proof | Accepted |
 | [1579](adr-1579-list-is-an-ordinary-inductive-no-quotient-needed.md) | `List` is an ordinary inductive — no quotient needed, unlike the concession that blocked it | Accepted |
 | [1580](adr-1580-a-second-tactic-lands-and-its-own-primitives-cannot-be-its-targets.md) | a second tactic lands, and a producer cannot retire its own primitives | Accepted |
+| [1581](adr-1581-a-hand-proofs-citations-are-necessary-not-sufficient-for-retirement.md) | a hand proof's citations are necessary, not sufficient, for retirement | Accepted |

@@ -17,7 +17,12 @@
     "F:int-add-le-add",
     "F:int-add-neg",
     "F:int-add-zero",
-    "F:int-le-refl"
+    "F:int-le-refl",
+    "F:int-le-of-nat-add",
+    "F:int-le-trans",
+    "F:ml430-int-add-le-add-iff-right-995cbaa5",
+    "F:ml430-int-add-le-add-left-4a766697",
+    "F:ml430-int-add-le-add-right-0c9ed495"
   ],
   "evidence": [
     {
