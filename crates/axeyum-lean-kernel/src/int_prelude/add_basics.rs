@@ -24,24 +24,21 @@ use crate::nat_prelude::NatOps;
 
 /// `Int.add_left_neg : ∀ (a : Int), Eq Int (add (neg a) a) zero`.
 ///
-/// `add_comm (neg a) a : Eq (neg_a + a) (a + neg_a)` chained with
-/// `add_neg a : Eq (a + neg_a) zero`.
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `add_comm`
+/// (a caller-supplied extra, ordered after the defaults so `add_neg` wins
+/// the match race once it becomes available) then `add_neg` (default).
 fn declare_add_left_neg(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
-    d.int_theorem(p.add_left_neg, 1, &|d, v| {
+    let defaults = crate::simp::int::default_rules(&p);
+    let extra = [crate::simp::int::rule_add_comm(&p)];
+    let rules = crate::simp::int::with_extra(&defaults, &extra);
+    crate::simp::int::declare(d, &rules, p.add_left_neg, 1, &|d, v| {
         let a = v[0];
         let neg_a = d.ineg(a);
-        let neg_a_a = d.iadd(neg_a, a);
-        let a_neg_a = d.iadd(a, neg_a);
+        let lhs = d.iadd(neg_a, a);
         let zero = d.izero();
-
-        let comm = d.const_app(p.add_comm, &[neg_a, a]); // Eq(neg_a_a, a_neg_a)
-        let an = d.const_app(p.add_neg, &[a]); // Eq(a_neg_a, zero)
-        let proof = d.itrans(neg_a_a, a_neg_a, zero, comm, an);
-
-        (d.ieq(neg_a_a, zero), proof)
-    })?;
-    Ok(())
+        (lhs, zero)
+    })
 }
 
 /// `Int.add_neg_eq_sub : ∀ (a b : Int), Eq Int (add a (neg b)) (sub a b)`.

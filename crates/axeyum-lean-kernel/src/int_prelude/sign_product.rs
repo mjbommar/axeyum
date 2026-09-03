@@ -76,14 +76,19 @@ fn from_eq_zero(d: &mut IntDev<'_>, x: ExprId, heq: ExprId) -> (ExprId, ExprId) 
 }
 
 /// `Eq Int (mul zero x) zero`.
+///
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `mul_comm`
+/// (extra) then `mul_zero` (default). There is no `zero_mul` law in
+/// `IntPrelude`.
 fn zero_mul_eq_zero(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
     let p = d.int();
+    let defaults = crate::simp::int::default_rules(&p);
+    let extra = [crate::simp::int::rule_mul_comm(&p)];
+    let rules = crate::simp::int::with_extra(&defaults, &extra);
     let zero = d.izero();
     let zx = d.imul(zero, x);
-    let xz = d.imul(x, zero);
-    let c1 = d.const_app(p.mul_comm, &[zero, x]); // Eq zx xz
-    let c2 = d.const_app(p.mul_zero, &[x]); // Eq xz zero
-    d.itrans(zx, xz, zero, c1, c2)
+    crate::simp::int::prove_eq(d, &rules, zx, zero)
+        .unwrap_or_else(|e| panic!("zero_mul_eq_zero: simp declined: {e:?}"))
 }
 
 /// From `heq : Eq Int zero a`, derive `Eq Int (mul a b) zero`.
