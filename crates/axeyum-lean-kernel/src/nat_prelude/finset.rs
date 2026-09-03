@@ -94,6 +94,7 @@
 //! positive with the specific wrong formula it rules out.
 
 use super::NatPrelude;
+use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps};
 use crate::BinderInfo;
 use crate::KernelError;
@@ -2499,6 +2500,674 @@ fn declare_pigeonhole(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
     d.declare_theorem(p.finset_pigeonhole, ty, value)
 }
 
+// ---------------------------------------------------------------------------
+// The EXPLICIT colliding pair (ADR-1593).
+// ---------------------------------------------------------------------------
+
+/// `Exists.{1} Nat pred`.
+fn exists_nat(d: &mut NatDev<'_>, p: &NatPrelude, pred: ExprId) -> ExprId {
+    let one = d.level_one();
+    let nat = d.nat_ty();
+    let ex = d.kernel().const_(p.logic.exists_, vec![one]);
+    d.apply(ex, &[nat, pred])
+}
+
+/// `Exists.intro.{1} Nat pred w h`.
+fn exists_intro_nat(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred: ExprId,
+    w: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let one = d.level_one();
+    let nat = d.nat_ty();
+    let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+    d.apply(intro, &[nat, pred, w, h])
+}
+
+/// `Exists.rec.{1}` into a `Prop` goal — `minor` takes the witness and its
+/// property.
+fn exists_elim_nat(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred: ExprId,
+    goal: ExprId,
+    minor: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let one = d.level_one();
+    let nat = d.nat_ty();
+    let ex_ty = exists_nat(d, p, pred);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, ex_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    d.apply(rec, &[nat, pred, motive, minor, proof])
+}
+
+/// `fun i => And (Lt i n) (Eq Bool (f i) false)` — what
+/// [`declare_all_below_false_witness`] produces a witness for.
+fn below_witness_pred(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let lt = d.lt(i, n);
+    let fi = d.apply(f, &[i]);
+    let fal = d.bool_false();
+    let is_false = d.bool_eq(fi, fal);
+    let body = d.const_app(p.logic.and, &[lt, is_false]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `Nat.Finset.allBelow_false_witness : ∀ f n, Eq Bool (allBelow f n) false →
+/// Exists (fun i => And (Lt i n) (Eq Bool (f i) false))`.
+///
+/// The SEARCH direction, and the third of `allBelow`'s three laws.
+/// `allBelow_of_all_true` builds the loop, `allBelow_true_at` reads a `true`
+/// loop back pointwise; neither can say anything at all about a `false` one,
+/// and a `false` loop is exactly what a refuted decision hands you. Nothing in
+/// the tree had this shape: `shape_search --const Nat.Finset.allBelow --concl
+/// Exists` reported ABSENT, and `Nat.lnp_decidable` — the nearest thing — needs
+/// a witness supplied as its own hypothesis, which is what is missing here.
+///
+/// An ordinary induction on the bound, and constructive: the recursion IS the
+/// search, so the witness it returns was computed rather than chosen. At
+/// `f j = false` the top index is the answer; at `f j = true` the guard reduces
+/// to the shorter loop, which is then `false`, and the induction hypothesis's
+/// witness is re-introduced at the widened bound.
+fn declare_all_below_false_witness(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let pty = pred_ty(d);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+
+    let motive_at = |d: &mut NatDev<'_>, n: ExprId| -> ExprId {
+        let loop_ = d.const_app(p.finset_all_below, &[f, n]);
+        let fal = d.bool_false();
+        let hyp = d.bool_eq(loop_, fal);
+        let pred = below_witness_pred(d, &p, f, n);
+        let concl = exists_nat(d, &p, pred);
+        d.arrow(hyp, concl)
+    };
+
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let body = d.induct(
+        &|d, x| motive_at(d, x),
+        &|d| {
+            // `allBelow f 0` IS `true`, so the premise is `Eq Bool true false`.
+            let zero = d.zero();
+            let loop_ = d.const_app(p.finset_all_below, &[f, zero]);
+            let fal = d.bool_false();
+            let hyp_ty = d.bool_eq(loop_, fal);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let pred = below_witness_pred(d, &p, f, zero);
+            let goal = exists_nat(d, &p, pred);
+            let flipped = d.bool_symm(loop_, fal, h);
+            let absurd = d.false_true_elim(goal, flipped);
+            d.lam_fv(h_fv, hyp_ty, absurd)
+        },
+        &|d, j, ih| {
+            let sj = d.succ(j);
+            let loop_succ = d.const_app(p.finset_all_below, &[f, sj]);
+            let fal = d.bool_false();
+            let tv = d.bool_true();
+            let hyp_ty = d.bool_eq(loop_succ, fal);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+
+            let pred_succ = below_witness_pred(d, &p, f, sj);
+            let goal = exists_nat(d, &p, pred_succ);
+
+            let loop_j = d.const_app(p.finset_all_below, &[f, j]);
+            let fj = d.apply(f, &[j]);
+            let guard = bool_select_bool(d, &p, fj, loop_j, fal);
+            let is_true = d.bool_eq(fj, tv);
+            let is_false = d.bool_eq(fj, fal);
+            let decided = super::ops::bool_true_or_false(d, &p, fj);
+
+            // `f j = true`: the guard IS the shorter loop, so that loop is
+            // `false` and the induction hypothesis searches below `j`.
+            let on_true = {
+                let hft_fv = d.fresh_fvar();
+                let hft = d.kernel().fvar(hft_fv);
+                let unguard = select_bool_true(d, &p, fj, loop_j, fal, hft);
+                let back = d.bool_symm(guard, loop_j, unguard);
+                let shorter = d.bool_trans(loop_j, guard, fal, back, h);
+                let found = d.apply(ih, &[shorter]);
+
+                let pred_j = below_witness_pred(d, &p, f, j);
+                let minor = {
+                    let i_fv = d.fresh_fvar();
+                    let i = d.kernel().fvar(i_fv);
+                    let hw_fv = d.fresh_fvar();
+                    let hw = d.kernel().fvar(hw_fv);
+                    let lt_ty = d.lt(i, j);
+                    let fi = d.apply(f, &[i]);
+                    let fi_false = d.bool_eq(fi, fal);
+                    let hw_ty = d.const_app(p.logic.and, &[lt_ty, fi_false]);
+
+                    let lt_pf = and_left(d, lt_ty, fi_false, hw);
+                    let val_pf = and_right(d, lt_ty, fi_false, hw);
+                    // `Lt i j` is `Le (succ i) j`; `le_succ_of_le` moves it to
+                    // `Le (succ i) (succ j)`, which IS `Lt i (succ j)`.
+                    let succ_i = d.succ(i);
+                    let widened = d.lemma(p.le_succ_of_le, &[succ_i, j, lt_pf]);
+                    let new_lt = d.lt(i, sj);
+                    let pair = d.const_app(p.logic.and_intro, &[new_lt, fi_false, widened, val_pf]);
+                    let intro = exists_intro_nat(d, &p, pred_succ, i, pair);
+                    let with_hw = d.lam_fv(hw_fv, hw_ty, intro);
+                    d.lam_fv(i_fv, nat, with_hw)
+                };
+                let body = exists_elim_nat(d, &p, pred_j, goal, minor, found);
+                d.lam_fv(hft_fv, is_true, body)
+            };
+
+            // `f j = false`: the top index IS the witness.
+            let on_false = {
+                let hff_fv = d.fresh_fvar();
+                let hff = d.kernel().fvar(hff_fv);
+                let lt_pf = d.lemma(p.lt_succ_self, &[j]);
+                let lt_ty = d.lt(j, sj);
+                let fj_false = d.bool_eq(fj, fal);
+                let pair = d.const_app(p.logic.and_intro, &[lt_ty, fj_false, lt_pf, hff]);
+                let intro = exists_intro_nat(d, &p, pred_succ, j, pair);
+                d.lam_fv(hff_fv, is_false, intro)
+            };
+
+            let answered = or_elim(d, &p, is_true, is_false, goal, on_true, on_false, decided);
+            d.lam_fv(h_fv, hyp_ty, answered)
+        },
+        n,
+    );
+
+    let ty = {
+        let concl = motive_at(d, n);
+        let with_n = d.pi_fv(n_fv, nat, concl);
+        d.pi_fv(f_fv, pty, with_n)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(f_fv, pty, with_n)
+    };
+    d.declare_theorem(p.finset_all_below_false_witness, ty, value)
+}
+
+/// `if beq (g a) (g b) then beq a b else true` — the innermost decision.
+fn collide_core(d: &mut NatDev<'_>, p: &NatPrelude, g: ExprId, a: ExprId, b: ExprId) -> ExprId {
+    let p = *p;
+    let ga = d.apply(g, &[a]);
+    let gb = d.apply(g, &[b]);
+    let beq_g = d.beq(ga, gb);
+    let beq_ab = d.beq(a, b);
+    let tv = d.bool_true();
+    bool_select_bool(d, &p, beq_g, beq_ab, tv)
+}
+
+/// `if memB s b then (if beq (g a) (g b) then beq a b else true) else true` —
+/// the body of the inner bounded loop, at a fixed `a`.
+fn collide_inner_body(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s: ExprId,
+    g: ExprId,
+    a: ExprId,
+    b: ExprId,
+) -> ExprId {
+    let p = *p;
+    let core = collide_core(d, &p, g, a, b);
+    let mem_b = fs_mem(d, &p, s, b);
+    let tv = d.bool_true();
+    bool_select_bool(d, &p, mem_b, core, tv)
+}
+
+/// `fun b => collide_inner_body s g a b`.
+fn collide_inner(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, g: ExprId, a: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let body = collide_inner_body(d, &p, s, g, a, b);
+    d.lam_fv(b_fv, nat, body)
+}
+
+/// `if memB s a then allBelow (collide_inner s g a) (bound s) else true` — the
+/// body of the outer bounded loop.
+fn collide_outer_body(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s: ExprId,
+    g: ExprId,
+    a: ExprId,
+) -> ExprId {
+    let p = *p;
+    let inner = collide_inner(d, &p, s, g, a);
+    let bs = fs_bound(d, &p, s);
+    let inner_loop = d.const_app(p.finset_all_below, &[inner, bs]);
+    let mem_a = fs_mem(d, &p, s, a);
+    let tv = d.bool_true();
+    bool_select_bool(d, &p, mem_a, inner_loop, tv)
+}
+
+/// `fun a => collide_outer_body s g a`.
+fn collide_outer(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, g: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let body = collide_outer_body(d, &p, s, g, a);
+    d.lam_fv(a_fv, nat, body)
+}
+
+/// `And (memB s a = true) (And (memB s b = true)
+///      (And (Not (Eq Nat a b)) (Eq Nat (g a) (g b))))` — what a colliding
+/// pair asserts.
+fn collision_body(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s: ExprId,
+    g: ExprId,
+    a: ExprId,
+    b: ExprId,
+) -> ExprId {
+    let p = *p;
+    let tv = d.bool_true();
+    let ga = d.apply(g, &[a]);
+    let gb = d.apply(g, &[b]);
+    let same = d.eq(ga, gb);
+    let eq_ab = d.eq(a, b);
+    let distinct = d.const_app(p.logic.not, &[eq_ab]);
+    let tail = d.const_app(p.logic.and, &[distinct, same]);
+    let mem_b = fs_mem(d, &p, s, b);
+    let sel_b = d.bool_eq(mem_b, tv);
+    let with_b = d.const_app(p.logic.and, &[sel_b, tail]);
+    let mem_a = fs_mem(d, &p, s, a);
+    let sel_a = d.bool_eq(mem_a, tv);
+    d.const_app(p.logic.and, &[sel_a, with_b])
+}
+
+/// `fun b => collision_body s g a b`.
+fn collision_pred_inner(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s: ExprId,
+    g: ExprId,
+    a: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let body = collision_body(d, &p, s, g, a, b);
+    d.lam_fv(b_fv, nat, body)
+}
+
+/// `fun a => Exists (fun b => collision_body s g a b)`.
+fn collision_pred_outer(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, g: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let inner = collision_pred_inner(d, &p, s, g, a);
+    let body = exists_nat(d, &p, inner);
+    d.lam_fv(a_fv, nat, body)
+}
+
+/// Read a `true` outer/inner decision loop back as the `Prop` injectivity
+/// hypothesis `Nat.Finset.pigeonhole` wants.
+///
+/// `htrue : allBelow (collide_outer s g) (bound s) = true`, and the result is
+/// `∀ a b, memB s a = true → memB s b = true → g a = g b → a = b`. Four
+/// collapses in sequence, each `select_bool_true` at a hypothesis already in
+/// hand: the bound comes from `lt_bound_of_memB`, the two guards from the two
+/// membership premises, and the last from `beq_eq_true_of_eq` on the collision.
+fn reflect_injectivity(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s: ExprId,
+    g: ExprId,
+    htrue: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let tv = d.bool_true();
+    let bs = fs_bound(d, &p, s);
+    let outer = collide_outer(d, &p, s, g);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let ha_fv = d.fresh_fvar();
+    let ha = d.kernel().fvar(ha_fv);
+    let hb_fv = d.fresh_fvar();
+    let hb = d.kernel().fvar(hb_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let a_lt = d.lemma(p.finset_lt_bound_of_mem_b, &[s, a, ha]);
+    let b_lt = d.lemma(p.finset_lt_bound_of_mem_b, &[s, b, hb]);
+
+    // `outer a = true`, then collapse its `memB s a` guard.
+    let outer_a_true = d.lemma(p.finset_all_below_true_at, &[outer, bs, htrue, a, a_lt]);
+    let inner = collide_inner(d, &p, s, g, a);
+    let inner_loop = d.const_app(p.finset_all_below, &[inner, bs]);
+    let mem_a = fs_mem(d, &p, s, a);
+    let outer_body = bool_select_bool(d, &p, mem_a, inner_loop, tv);
+    let unguard_a = select_bool_true(d, &p, mem_a, inner_loop, tv, ha);
+    let back_a = d.bool_symm(outer_body, inner_loop, unguard_a);
+    let inner_loop_true = d.bool_trans(inner_loop, outer_body, tv, back_a, outer_a_true);
+
+    // `inner a b = true`, then collapse its `memB s b` guard.
+    let inner_ab_true = d.lemma(
+        p.finset_all_below_true_at,
+        &[inner, bs, inner_loop_true, b, b_lt],
+    );
+    let core = collide_core(d, &p, g, a, b);
+    let mem_b = fs_mem(d, &p, s, b);
+    let inner_body = bool_select_bool(d, &p, mem_b, core, tv);
+    let unguard_b = select_bool_true(d, &p, mem_b, core, tv, hb);
+    let back_b = d.bool_symm(inner_body, core, unguard_b);
+    let core_true = d.bool_trans(core, inner_body, tv, back_b, inner_ab_true);
+
+    // Collapse the `beq (g a) (g b)` guard with the collision itself.
+    let ga = d.apply(g, &[a]);
+    let gb = d.apply(g, &[b]);
+    let beq_g = d.beq(ga, gb);
+    let beq_ab = d.beq(a, b);
+    let hbeq_g = d.lemma(p.beq_eq_true_of_eq, &[ga, gb, hg]);
+    let unguard_g = select_bool_true(d, &p, beq_g, beq_ab, tv, hbeq_g);
+    let back_g = d.bool_symm(core, beq_ab, unguard_g);
+    let beq_ab_true = d.bool_trans(beq_ab, core, tv, back_g, core_true);
+    let result = d.lemma(p.eq_of_beq_eq_true, &[a, b, beq_ab_true]);
+
+    let hg_ty = d.eq(ga, gb);
+    let with_hg = d.lam_fv(hg_fv, hg_ty, result);
+    let hb_ty = d.bool_eq(mem_b, tv);
+    let with_hb = d.lam_fv(hb_fv, hb_ty, with_hg);
+    let ha_ty = d.bool_eq(mem_a, tv);
+    let with_ha = d.lam_fv(ha_fv, ha_ty, with_hb);
+    let with_b = d.lam_fv(b_fv, nat, with_ha);
+    d.lam_fv(a_fv, nat, with_b)
+}
+
+/// `Nat.Finset.exists_collision : ∀ s t g, Lt (card t) (card s) →
+///   (∀ i, memB s i = true → memB t (g i) = true) →
+///   ∃ a b, memB s a = true ∧ memB s b = true ∧ a ≠ b ∧ g a = g b`.
+///
+/// The STRONG pigeonhole: not "`g` is not injective" but an explicit colliding
+/// pair. This kernel has no `funext`, no `propext` and no classical choice, so
+/// the witness cannot be extracted from the refutation — it has to be
+/// COMPUTED, and the computation is a bounded double search over `[0, bound s)`
+/// decided by `Nat.beq`.
+///
+/// The two directions of that search are what make the proof work, and they are
+/// used one each way:
+///
+/// - `Nat.Finset.allBelow_true_at` reads the loop's `true` back as the `Prop`
+///   injectivity that [`declare_pigeonhole`] refutes, so the `true` case is
+///   impossible;
+/// - [`declare_all_below_false_witness`] reads its `false` back as a witness,
+///   twice, and the two `Bool` guards are then peeled to give exactly the four
+///   components of the colliding pair.
+///
+/// `Nat.beq`'s two reflection lemmas do the last step in opposite directions:
+/// `eq_of_beq_eq_true` on the images and `ne_of_beq_eq_false` on the indices.
+#[allow(clippy::too_many_lines)]
+fn declare_exists_collision(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let gty = fun_ty(d);
+    let tv = d.bool_true();
+    let fal = d.bool_false();
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let card_s = fs_card(d, &p, s);
+    let card_t = fs_card(d, &p, t);
+    let hlt_ty = d.lt(card_t, card_s);
+    let hlt_fv = d.fresh_fvar();
+    let hlt = d.kernel().fvar(hlt_fv);
+
+    let hmaps_ty = maps_members_ty(d, &p, s, t, g);
+    let hmaps_fv = d.fresh_fvar();
+    let hmaps = d.kernel().fvar(hmaps_fv);
+
+    let outer_pred = collision_pred_outer(d, &p, s, g);
+    let goal = exists_nat(d, &p, outer_pred);
+
+    let bs = fs_bound(d, &p, s);
+    let outer = collide_outer(d, &p, s, g);
+    let decision = d.const_app(p.finset_all_below, &[outer, bs]);
+    let decided = super::ops::bool_true_or_false(d, &p, decision);
+    let is_true = d.bool_eq(decision, tv);
+    let is_false = d.bool_eq(decision, fal);
+
+    // `true`: the loop reflects to injectivity, which the pigeonhole refutes.
+    let on_true = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let injectivity = reflect_injectivity(d, &p, s, g, h);
+        let false_pf = d.lemma(p.finset_pigeonhole, &[s, t, g, hlt, hmaps, injectivity]);
+        let body = from_false(d, &p, false_pf, goal);
+        d.lam_fv(h_fv, is_true, body)
+    };
+
+    // `false`: search twice, then peel the three guards.
+    let on_false = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let found_outer = d.lemma(p.finset_all_below_false_witness, &[outer, bs, h]);
+        let outer_wit_pred = below_witness_pred(d, &p, outer, bs);
+
+        let minor_outer = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let hw_fv = d.fresh_fvar();
+            let hw = d.kernel().fvar(hw_fv);
+            let a_lt_ty = d.lt(a, bs);
+            let outer_a = d.apply(outer, &[a]);
+            let outer_a_false = d.bool_eq(outer_a, fal);
+            let hw_ty = d.const_app(p.logic.and, &[a_lt_ty, outer_a_false]);
+            let houter = and_right(d, a_lt_ty, outer_a_false, hw);
+
+            let inner = collide_inner(d, &p, s, g, a);
+            let inner_loop = d.const_app(p.finset_all_below, &[inner, bs]);
+            let mem_a = fs_mem(d, &p, s, a);
+            let outer_body = bool_select_bool(d, &p, mem_a, inner_loop, tv);
+            let mem_a_true = d.bool_eq(mem_a, tv);
+            let mem_a_false = d.bool_eq(mem_a, fal);
+            let decided_a = super::ops::bool_true_or_false(d, &p, mem_a);
+
+            // `a` is not a member: the outer body is `true`, contradicting it.
+            let a_not_member = {
+                let hfa_fv = d.fresh_fvar();
+                let hfa = d.kernel().fvar(hfa_fv);
+                let collapse = select_bool_false(d, &p, mem_a, inner_loop, tv, hfa);
+                let back = d.bool_symm(outer_body, fal, houter);
+                let impossible = d.bool_trans(fal, outer_body, tv, back, collapse);
+                let absurd = d.false_true_elim(goal, impossible);
+                d.lam_fv(hfa_fv, mem_a_false, absurd)
+            };
+
+            let a_member = {
+                let ha_fv = d.fresh_fvar();
+                let ha = d.kernel().fvar(ha_fv);
+                let unguard = select_bool_true(d, &p, mem_a, inner_loop, tv, ha);
+                let back = d.bool_symm(outer_body, inner_loop, unguard);
+                let inner_false = d.bool_trans(inner_loop, outer_body, fal, back, houter);
+
+                let found_inner =
+                    d.lemma(p.finset_all_below_false_witness, &[inner, bs, inner_false]);
+                let inner_wit_pred = below_witness_pred(d, &p, inner, bs);
+
+                let minor_inner = {
+                    let b_fv = d.fresh_fvar();
+                    let b = d.kernel().fvar(b_fv);
+                    let hv_fv = d.fresh_fvar();
+                    let hv = d.kernel().fvar(hv_fv);
+                    let b_lt_ty = d.lt(b, bs);
+                    let inner_b = d.apply(inner, &[b]);
+                    let inner_b_false = d.bool_eq(inner_b, fal);
+                    let hv_ty = d.const_app(p.logic.and, &[b_lt_ty, inner_b_false]);
+                    let hinner = and_right(d, b_lt_ty, inner_b_false, hv);
+
+                    let core = collide_core(d, &p, g, a, b);
+                    let mem_b = fs_mem(d, &p, s, b);
+                    let inner_body = bool_select_bool(d, &p, mem_b, core, tv);
+                    let mem_b_true = d.bool_eq(mem_b, tv);
+                    let mem_b_false = d.bool_eq(mem_b, fal);
+                    let decided_b = super::ops::bool_true_or_false(d, &p, mem_b);
+
+                    let b_not_member = {
+                        let hfb_fv = d.fresh_fvar();
+                        let hfb = d.kernel().fvar(hfb_fv);
+                        let collapse = select_bool_false(d, &p, mem_b, core, tv, hfb);
+                        let back = d.bool_symm(inner_body, fal, hinner);
+                        let impossible = d.bool_trans(fal, inner_body, tv, back, collapse);
+                        let absurd = d.false_true_elim(goal, impossible);
+                        d.lam_fv(hfb_fv, mem_b_false, absurd)
+                    };
+
+                    let b_member = {
+                        let hb_fv = d.fresh_fvar();
+                        let hb = d.kernel().fvar(hb_fv);
+                        let unguard_b = select_bool_true(d, &p, mem_b, core, tv, hb);
+                        let back_b = d.bool_symm(inner_body, core, unguard_b);
+                        let core_false = d.bool_trans(core, inner_body, fal, back_b, hinner);
+
+                        let ga = d.apply(g, &[a]);
+                        let gb = d.apply(g, &[b]);
+                        let beq_g = d.beq(ga, gb);
+                        let beq_ab = d.beq(a, b);
+                        let g_true = d.bool_eq(beq_g, tv);
+                        let g_false = d.bool_eq(beq_g, fal);
+                        let decided_g = super::ops::bool_true_or_false(d, &p, beq_g);
+
+                        // `g a ≠ g b` decided FALSE: the core is `true`, which
+                        // the search's `false` refutes.
+                        let images_differ = {
+                            let hgf_fv = d.fresh_fvar();
+                            let hgf = d.kernel().fvar(hgf_fv);
+                            let collapse = select_bool_false(d, &p, beq_g, beq_ab, tv, hgf);
+                            let back = d.bool_symm(core, fal, core_false);
+                            let impossible = d.bool_trans(fal, core, tv, back, collapse);
+                            let absurd = d.false_true_elim(goal, impossible);
+                            d.lam_fv(hgf_fv, g_false, absurd)
+                        };
+
+                        // `g a = g b`: the core IS `beq a b`, so `a ≠ b`, and
+                        // the pair is complete.
+                        let images_agree = {
+                            let hgt_fv = d.fresh_fvar();
+                            let hgt = d.kernel().fvar(hgt_fv);
+                            let unguard_g = select_bool_true(d, &p, beq_g, beq_ab, tv, hgt);
+                            let back_g = d.bool_symm(core, beq_ab, unguard_g);
+                            let beq_ab_false = d.bool_trans(beq_ab, core, fal, back_g, core_false);
+
+                            let same = d.lemma(p.eq_of_beq_eq_true, &[ga, gb, hgt]);
+                            let distinct = d.lemma(p.ne_of_beq_eq_false, &[a, b, beq_ab_false]);
+
+                            let same_ty = d.eq(ga, gb);
+                            let eq_ab = d.eq(a, b);
+                            let distinct_ty = d.const_app(p.logic.not, &[eq_ab]);
+                            let tail = d.const_app(
+                                p.logic.and_intro,
+                                &[distinct_ty, same_ty, distinct, same],
+                            );
+                            let tail_ty = d.const_app(p.logic.and, &[distinct_ty, same_ty]);
+                            let mem_b_sel = d.bool_eq(mem_b, tv);
+                            let with_b =
+                                d.const_app(p.logic.and_intro, &[mem_b_sel, tail_ty, hb, tail]);
+                            let with_b_ty = d.const_app(p.logic.and, &[mem_b_sel, tail_ty]);
+                            let mem_a_sel = d.bool_eq(mem_a, tv);
+                            let quad =
+                                d.const_app(p.logic.and_intro, &[mem_a_sel, with_b_ty, ha, with_b]);
+
+                            let inner_pred = collision_pred_inner(d, &p, s, g, a);
+                            let inner_ex = exists_intro_nat(d, &p, inner_pred, b, quad);
+                            let full = exists_intro_nat(d, &p, outer_pred, a, inner_ex);
+                            d.lam_fv(hgt_fv, g_true, full)
+                        };
+
+                        let answered = or_elim(
+                            d,
+                            &p,
+                            g_true,
+                            g_false,
+                            goal,
+                            images_agree,
+                            images_differ,
+                            decided_g,
+                        );
+                        d.lam_fv(hb_fv, mem_b_true, answered)
+                    };
+
+                    let answered = or_elim(
+                        d,
+                        &p,
+                        mem_b_true,
+                        mem_b_false,
+                        goal,
+                        b_member,
+                        b_not_member,
+                        decided_b,
+                    );
+                    let with_hv = d.lam_fv(hv_fv, hv_ty, answered);
+                    d.lam_fv(b_fv, nat, with_hv)
+                };
+
+                let body = exists_elim_nat(d, &p, inner_wit_pred, goal, minor_inner, found_inner);
+                d.lam_fv(ha_fv, mem_a_true, body)
+            };
+
+            let answered = or_elim(
+                d,
+                &p,
+                mem_a_true,
+                mem_a_false,
+                goal,
+                a_member,
+                a_not_member,
+                decided_a,
+            );
+            let with_hw = d.lam_fv(hw_fv, hw_ty, answered);
+            d.lam_fv(a_fv, nat, with_hw)
+        };
+
+        let body = exists_elim_nat(d, &p, outer_wit_pred, goal, minor_outer, found_outer);
+        d.lam_fv(h_fv, is_false, body)
+    };
+
+    let body = or_elim(d, &p, is_true, is_false, goal, on_true, on_false, decided);
+
+    let ty = {
+        let s2 = d.arrow(hmaps_ty, goal);
+        let s1 = d.arrow(hlt_ty, s2);
+        let with_g = d.pi_fv(g_fv, gty, s1);
+        let with_t = d.pi_fv(t_fv, fs, with_g);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let s2 = d.lam_fv(hmaps_fv, hmaps_ty, body);
+        let s1 = d.lam_fv(hlt_fv, hlt_ty, s2);
+        let with_g = d.lam_fv(g_fv, gty, s1);
+        let with_t = d.lam_fv(t_fv, fs, with_g);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_exists_collision, ty, value)
+}
+
 /// Every `Nat.Finset` declaration, in dependency order.
 ///
 /// # Errors
@@ -2520,5 +3189,7 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_lt_bound_of_mem_b(d, p)?;
     declare_card_le_of_inj_on(d, p)?;
     declare_pigeonhole(d, p)?;
+    declare_all_below_false_witness(d, p)?;
+    declare_exists_collision(d, p)?;
     Ok(())
 }

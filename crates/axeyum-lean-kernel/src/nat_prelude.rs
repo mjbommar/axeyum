@@ -6308,6 +6308,30 @@ pub struct NatPrelude {
     /// the REFUTATION form: a map from a bigger set into a smaller one is not
     /// injective on the members.
     pub finset_pigeonhole: NameId,
+    /// `Nat.Finset.allBelow_false_witness : ∀ f n,
+    /// Eq Bool (allBelow f n) false →
+    /// Exists (fun i => And (Lt i n) (Eq Bool (f i) false))` (ADR-1593) — the
+    /// SEARCH direction, and `allBelow`'s third law.
+    /// [`finset_all_below_of_all_true`](Self::finset_all_below_of_all_true)
+    /// builds the loop and
+    /// [`finset_all_below_true_at`](Self::finset_all_below_true_at) reads a
+    /// `true` one back pointwise; neither says anything about a `false` one,
+    /// which is what a refuted decision hands you. The recursion IS the search,
+    /// so the witness is computed rather than chosen — no choice principle.
+    pub finset_all_below_false_witness: NameId,
+    /// `Nat.Finset.exists_collision : ∀ s t g, Lt (card t) (card s) →
+    ///   (∀ i, memB s i = true → memB t (g i) = true) →
+    ///   ∃ a b, memB s a = true ∧ memB s b = true ∧ Not (Eq Nat a b) ∧
+    ///          Eq Nat (g a) (g b)` (ADR-1593) — the STRONG pigeonhole: an
+    /// explicit colliding pair, not merely the refutation
+    /// [`finset_pigeonhole`](Self::finset_pigeonhole) gives. This kernel has no
+    /// `funext`, no `propext` and no classical choice, so the pair cannot be
+    /// extracted from the refutation; it is COMPUTED by a bounded double search
+    /// over `[0, bound s)` decided by `Nat.beq`, whose `true` case reflects
+    /// back to injectivity (refuted by the pigeonhole) and whose `false` case
+    /// yields the witnesses through
+    /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness).
+    pub finset_exists_collision: NameId,
 
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
@@ -7316,6 +7340,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_lt_bound_of_mem_b: kernel.name_str(finset, "lt_bound_of_memB"),
             finset_card_le_of_inj_on: kernel.name_str(finset, "card_le_of_injOn"),
             finset_pigeonhole: kernel.name_str(finset, "pigeonhole"),
+            finset_all_below_false_witness: kernel.name_str(finset, "allBelow_false_witness"),
+            finset_exists_collision: kernel.name_str(finset, "exists_collision"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -8822,6 +8848,9 @@ mod add_factorial_le_tests;
 
 #[cfg(test)]
 mod finset_tests;
+
+#[cfg(test)]
+mod finset_pigeonhole_tests;
 
 #[cfg(test)]
 mod multiset_tests;

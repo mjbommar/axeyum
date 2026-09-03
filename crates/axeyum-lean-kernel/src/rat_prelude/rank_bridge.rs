@@ -119,6 +119,7 @@ pub(super) fn declare_rank_bridge(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(
     declare_rank_eq_rank_cols_of_pivot_section(d, p)?;
     declare_rank_le_cols_of_pivot_section(d, p)?;
     declare_rank_nullity_rows_of_pivot_section(d, p)?;
+    declare_rank_cols_le_rank(d, p)?;
     Ok(())
 }
 
@@ -1568,4 +1569,154 @@ fn declare_rank_nullity_rows_of_pivot_section(
         d.lam_fv(m_fv, mty, over_rows)
     };
     d.declare_theorem(p.rank_nullity_rows_of_pivot_section, ty, value)
+}
+
+/// Admit `Rat.rankCols_le_rank : ∀ M rows cols,
+/// Le (rankCols M rows cols) (rank M rows cols)` — **with no hypothesis at
+/// all** (ADR-1593).
+///
+/// The consumer of `Nat.countRange_le_of_injOn`, and the point of that lemma
+/// stated in one line: the bridge above needs a BIJECTION and therefore pays
+/// the section hypothesis for `σ (τ r) = r` and for the selected half of `τ`'s
+/// `MapsInto`; an INEQUALITY needs only the INJECTION, and `H1` and `H2` are
+/// exactly the two hypotheses
+/// [`declare_rank_eq_rank_cols_of_pivot_section`]'s own table records as
+/// discharged from the two SEARCHES alone, knowing nothing about echelon form.
+/// So `τ` never appears here, the section hypothesis never appears here, and
+/// the two hypotheses are re-derived verbatim from
+/// `declare_leading_index_pivot_row_of_col` and
+/// `declare_pivot_row_of_col_lt_rows`.
+///
+/// The direction is the useful one: `Rat.rankCols_le_cols` is free
+/// (`Nat.countRange_le`), so this gives `rankCols ≤ rank` unconditionally while
+/// the reverse — `rank ≤ rankCols`, which is what bounds `rank` by `cols` —
+/// still needs the section, because in that orientation injectivity of the
+/// leading index on the nonzero rows IS obligation 4. Two rows sharing a
+/// leading index really can make `rank` exceed `rankCols`; nothing can be said
+/// about that direction without the echelon property, and this lemma does not
+/// pretend to.
+fn declare_rank_cols_le_rank(d: &mut IntDev<'_>, p: RatPrelude) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let mty = mat_ty(d);
+    let true_ = d.bool_true();
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let cols_fv = d.fresh_fvar();
+    let cols = d.kernel().fvar(cols_fv);
+
+    let e = row_echelon(d, p, m, rows, cols);
+
+    let pred_cols = d.const_app(p.is_pivot_col_b, &[e, rows, cols]);
+    let pred_rows = d.const_app(p.nonzero_row_b, &[e, cols]);
+    let sigma = d.const_app(p.pivot_row_of_col, &[e, rows, cols]);
+
+    // H1: `σ` is injective on the pivot columns — apply the leading index to
+    // both sides of `σ c₁ = σ c₂`; each side is its own column.
+    let h1 = {
+        let c1_fv = d.fresh_fvar();
+        let c1 = d.kernel().fvar(c1_fv);
+        let c2_fv = d.fresh_fvar();
+        let c2 = d.kernel().fvar(c2_fv);
+
+        let lt1_ty = NatOps::lt(d, c1, cols);
+        let sel1 = d.const_app(p.is_pivot_col_b, &[e, rows, cols, c1]);
+        let sel1_ty = d.bool_eq(sel1, true_);
+        let lt2_ty = NatOps::lt(d, c2, cols);
+        let sel2 = d.const_app(p.is_pivot_col_b, &[e, rows, cols, c2]);
+        let sel2_ty = d.bool_eq(sel2, true_);
+
+        let s1 = rpivot_row_of_col(d, p, e, rows, cols, c1);
+        let s2 = rpivot_row_of_col(d, p, e, rows, cols, c2);
+        let heq_ty = d.eq(s1, s2);
+
+        let lt1_fv = d.fresh_fvar();
+        let sel1_fv = d.fresh_fvar();
+        let hp1 = d.kernel().fvar(sel1_fv);
+        let lt2_fv = d.fresh_fvar();
+        let sel2_fv = d.fresh_fvar();
+        let hp2 = d.kernel().fvar(sel2_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        let l1 = rleading_index(d, p, e, s1, cols);
+        let l2 = rleading_index(d, p, e, s2, cols);
+        let round1 = d.lemma(p.leading_index_pivot_row_of_col, &[e, rows, cols, c1, hp1]);
+        let round2 = d.lemma(p.leading_index_pivot_row_of_col, &[e, rows, cols, c2, hp2]);
+        let moved = d.congr(s1, s2, heq, &|d, x| rleading_index(d, p, e, x, cols));
+        let back1 = d.symm(l1, c1, round1);
+        let to_l2 = d.trans(c1, l1, l2, back1, moved);
+        let body = d.trans(c1, l2, c2, to_l2, round2);
+
+        let over_heq = d.lam_fv(heq_fv, heq_ty, body);
+        let over_sel2 = d.lam_fv(sel2_fv, sel2_ty, over_heq);
+        let over_lt2 = d.lam_fv(lt2_fv, lt2_ty, over_sel2);
+        let over_sel1 = d.lam_fv(sel1_fv, sel1_ty, over_lt2);
+        let over_lt1 = d.lam_fv(lt1_fv, lt1_ty, over_sel1);
+        let over_c2 = d.lam_fv(c2_fv, nat, over_lt1);
+        d.lam_fv(c1_fv, nat, over_c2)
+    };
+
+    // H2: `σ` sends a pivot column to a nonzero row.
+    let h2 = {
+        let c_fv = d.fresh_fvar();
+        let c = d.kernel().fvar(c_fv);
+        let lt_ty = NatOps::lt(d, c, cols);
+        let sel = d.const_app(p.is_pivot_col_b, &[e, rows, cols, c]);
+        let sel_ty = d.bool_eq(sel, true_);
+
+        let lt_fv = d.fresh_fvar();
+        let hlt = d.kernel().fvar(lt_fv);
+        let sel_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(sel_fv);
+
+        let s = rpivot_row_of_col(d, p, e, rows, cols, c);
+        let left_ty = NatOps::lt(d, s, rows);
+        let left = d.lemma(p.pivot_row_of_col_lt_rows, &[e, rows, cols, c, hp]);
+
+        let nonzero = d.const_app(p.nonzero_row_b, &[e, cols, s]);
+        let right_ty = d.bool_eq(nonzero, true_);
+
+        let l = rleading_index(d, p, e, s, cols);
+        let sl = d.succ(l);
+        let ble_l = NatOps::ble(d, sl, cols);
+        let unfold = d.lemma(p.nonzero_row_b_eq_ble, &[e, cols, s]);
+        let round = d.lemma(p.leading_index_pivot_row_of_col, &[e, rows, cols, c, hp]);
+        let rewritten = nat_congr_bool(d, l, c, round, &|d, x| {
+            let sx = d.succ(x);
+            NatOps::ble(d, sx, cols)
+        });
+        let sc = d.succ(c);
+        let ble_c = NatOps::ble(d, sc, cols);
+        let ble_true_name = d.prelude().ble_eq_true_of_le;
+        let ble_true = d.lemma(ble_true_name, &[sc, cols, hlt]);
+        let step1 = d.bool_trans(nonzero, ble_l, ble_c, unfold, rewritten);
+        let right = d.bool_trans(nonzero, ble_c, true_, step1, ble_true);
+
+        let pair = and_intro(d, left_ty, right_ty, left, right);
+        let over_sel = d.lam_fv(sel_fv, sel_ty, pair);
+        let over_lt = d.lam_fv(lt_fv, lt_ty, over_sel);
+        d.lam_fv(c_fv, nat, over_lt)
+    };
+
+    let le_name = d.prelude().count_range_le_of_inj_on;
+    let body = d.lemma(le_name, &[pred_cols, pred_rows, sigma, cols, rows, h1, h2]);
+
+    let rank_term = d.const_app(p.rank, &[m, rows, cols]);
+    let rank_cols_term = d.const_app(p.rank_cols, &[m, rows, cols]);
+    let concl = NatOps::le(d, rank_cols_term, rank_term);
+
+    let ty = {
+        let over_cols = d.pi_fv(cols_fv, nat, concl);
+        let over_rows = d.pi_fv(rows_fv, nat, over_cols);
+        d.pi_fv(m_fv, mty, over_rows)
+    };
+    let value = {
+        let over_cols = d.lam_fv(cols_fv, nat, body);
+        let over_rows = d.lam_fv(rows_fv, nat, over_cols);
+        d.lam_fv(m_fv, mty, over_rows)
+    };
+    d.declare_theorem(p.rank_cols_le_rank, ty, value)
 }

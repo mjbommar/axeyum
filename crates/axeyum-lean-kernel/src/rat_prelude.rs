@@ -2884,6 +2884,18 @@ pub struct RatPrelude {
     /// **rank-nullity in the ROW form**, `Rat.rank_nullity` with `rankCols`
     /// rewritten to `rank` across the bridge and nothing else.
     pub rank_nullity_rows_of_pivot_section: NameId,
+    /// `Rat.rankCols_le_rank : ∀ M rows cols,
+    /// Le (rankCols M rows cols) (rank M rows cols)` — **with no hypothesis at
+    /// all** (ADR-1593). The bridge above needs a BIJECTION and pays the
+    /// section hypothesis for the inverse's round trip; an INEQUALITY needs
+    /// only the INJECTION, and `Nat.countRange_le_of_injOn`'s two hypotheses
+    /// are exactly the two that
+    /// [`Self::rank_eq_rank_cols_of_pivot_section`] already discharges from the
+    /// two scans alone. The reverse direction — `rank ≤ rankCols`, which is
+    /// what bounds `rank` by `cols` — still needs the section, because there
+    /// injectivity of the leading index on the nonzero rows IS ADR-1554
+    /// obligation 4.
+    pub rank_cols_le_rank: NameId,
 
     // --- obligation 2's VALUE half (`rat_prelude::pivot_content`, ADR-1562) --
     /// `Rat.pivotSearchAux_ne_zero : ∀ M c rows fuel r,
@@ -3651,6 +3663,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_eq_rank_cols_of_pivot_section: child(kernel, "rank_eq_rankCols_of_pivotSection"),
         rank_le_cols_of_pivot_section: child(kernel, "rank_le_cols_of_pivotSection"),
         rank_nullity_rows_of_pivot_section: child(kernel, "rank_nullity_rows_of_pivotSection"),
+        rank_cols_le_rank: child(kernel, "rankCols_le_rank"),
         pivot_search_aux_ne_zero: child(kernel, "pivotSearchAux_ne_zero"),
         pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
         pivot_search_aux_column_zero: child(kernel, "pivotSearchAux_column_zero"),
