@@ -34,6 +34,7 @@
 //! shard (impossible with a single array, newly possible now that there are
 //! many).
 
+mod algebra_instance;
 mod alternating;
 mod archimedean;
 mod archimedean_squeeze;
@@ -88,6 +89,7 @@ pub(crate) fn all_entries(
     p: crate::CRealPrelude,
 ) -> Vec<(&'static str, crate::NameId, &'static str)> {
     let mut all = Vec::new();
+    all.extend(algebra_instance::entries(p));
     all.extend(alternating::entries(p));
     all.extend(archimedean::entries(p));
     all.extend(archimedean_squeeze::entries(p));

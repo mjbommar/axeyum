@@ -7,22 +7,22 @@
 //! See `docs/research/09-decisions/adr-1588-a-setoid-flavored-alg-spine-for-creal.md`
 //! §4 for the field-by-field table this module implements.
 //!
-//! ## Why this is not wired into `build_creal_prelude`'s `STEP_DISPATCH`
+//! ## Wired into `build_creal_prelude`'s `STEP_DISPATCH`
 //!
 //! `creal.rs`'s build is a generated `STEPS`/`STEP_DISPATCH` pair
 //! (`scripts/creal-declare-deps.py`), and every step's function signature is
 //! `fn(&mut IntDev<'_>, CRealPrelude) -> Result<(), KernelError>` writing
-//! into a NameId pre-interned by `intern_names`. Wiring `commRingS` in
-//! fully — a new `CRealPrelude` field, its interning, a `STEP_DISPATCH`
-//! entry, and a regenerated `steps_generated.rs` — is real additional
-//! integration work this lane left undone (a named, sized negative, not a
-//! silent omission): `Kernel::add_declaration` is still the trusted gate
-//! this module runs its proof term through (`declare_creal_comm_ring_s` is
-//! `pub` and exercised by five tests below, each a real admitted kernel
-//! declaration), it is simply not yet part of the ONE canonical
-//! `build_creal_prelude` call every other lane gets automatically. `#[allow
-//! (dead_code)]` below is why this compiles clean under `-D warnings`
-//! without that wiring.
+//! into a `NameId` pre-interned by `intern_names`. `declare_comm_ring_s`
+//! below is that step: it declares under `p.comm_ring_s` (interned in
+//! `intern_names` alongside every other `CReal` name) and is registered in
+//! `STEP_DISPATCH` right after `product::declare_product`, the step that
+//! provides every multiplicative law field this declaration needs
+//! (`mul`/`mul_comm`/`mul_assoc`/`mul_one`/`left_distrib`). Every additive
+//! field it needs (`add`/`add_congr`/`add_assoc`/`add_comm`/`add_zero`/
+//! `add_neg`/`neg`/`neg_congr`) is provided earlier, by
+//! `declare_negation`/`declare_addition`/`declare_additive_laws`.
+//! `scripts/creal-declare-deps.py --check --strict --self-check` measures
+//! this from source rather than trusting this comment.
 
 use crate::Kernel;
 use crate::KernelError;
@@ -30,11 +30,11 @@ use crate::creal::CRealPrelude;
 use crate::env::Declaration;
 use crate::env::ReducibilityHint;
 use crate::expr::ExprId;
-use crate::name::NameId;
+use crate::int_prelude::ops::IntDev;
+use crate::nat_prelude::NatOps;
 use crate::nat_prelude::structures_setoid::idx::comm_ring as idx;
 
 /// Apply `f` to each of `xs` in order, left-to-right.
-#[allow(dead_code)]
 pub fn t_app(k: &mut Kernel, f: ExprId, xs: &[ExprId]) -> ExprId {
     let mut e = f;
     for x in xs {
@@ -44,7 +44,6 @@ pub fn t_app(k: &mut Kernel, f: ExprId, xs: &[ExprId]) -> ExprId {
 }
 
 /// `fun (fv : ty) => body`, abstracting the free variable `fv` out of `body`.
-#[allow(dead_code)]
 pub fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
     let b = k.abstract_fvars(body, &[fv]);
     let anon = k.anon();
@@ -54,7 +53,6 @@ pub fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
 /// `CReal.mulOneL : forall a, CReal.equiv (CReal.mul CReal.one a) a` —
 /// derived from `mul_comm(one, a)` and `mul_one(a)`, one `equiv_trans`
 /// application, no new `creal` proof.
-#[allow(dead_code)]
 pub fn build_mul_one_l(k: &mut Kernel, p: &CRealPrelude) -> ExprId {
     const A_FV: u64 = 22_900;
     let creal_ty = k.const_(p.creal, vec![]);
@@ -77,7 +75,6 @@ pub fn build_mul_one_l(k: &mut Kernel, p: &CRealPrelude) -> ExprId {
 /// (CReal.add (CReal.mul a c) (CReal.mul b c))` — derived from `mul_comm`
 /// (three applications) and `left_distrib`, via `add_congr`, no new `creal`
 /// proof.
-#[allow(dead_code)]
 pub fn build_distrib_r(k: &mut Kernel, p: &CRealPrelude) -> ExprId {
     const A_FV: u64 = 22_910;
     const B_FV: u64 = 22_911;
@@ -127,8 +124,13 @@ pub fn build_distrib_r(k: &mut Kernel, p: &CRealPrelude) -> ExprId {
 
 /// `CReal.commRingS : AlgS.CommRing`. Every field is an existing `CReal`
 /// theorem, verbatim, except `mulOneL`/`distribR` (derived, §4).
-#[allow(dead_code)]
-pub fn declare_creal_comm_ring_s(k: &mut Kernel, p: &CRealPrelude) -> Result<NameId, KernelError> {
+///
+/// The `STEP_DISPATCH` entry: declares under `p.comm_ring_s`, pre-interned
+/// by `intern_names`, rather than interning a fresh name of its own -- the
+/// shape every other `declare_*` step in this build follows.
+pub(super) fn declare_comm_ring_s(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    let p = &p;
+    let k = d.kernel();
     let st = p.rat.int.nat.structures_s;
     let comm_ring = st.comm_ring;
 
@@ -187,17 +189,14 @@ pub fn declare_creal_comm_ring_s(k: &mut Kernel, p: &CRealPrelude) -> Result<Nam
     }
     let ty = k.const_(comm_ring.ind, vec![]);
 
-    let anon = k.anon();
-    let creal_root = k.name_str(anon, "CReal");
-    let name = k.name_str(creal_root, "commRingS");
     k.add_declaration(Declaration::Definition {
-        name,
+        name: p.comm_ring_s,
         uparams: vec![],
         ty,
         value,
         hint: ReducibilityHint::Regular(1),
     })?;
-    Ok(name)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -210,8 +209,7 @@ mod algebra_instance_tests {
     fn creal_comm_ring_s_admits() {
         let mut k = Kernel::new();
         let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let name = declare_creal_comm_ring_s(&mut k, &p).expect("CReal.commRingS must admit");
-        assert!(k.environment().get(name).is_some());
+        assert!(k.environment().get(p.comm_ring_s).is_some());
     }
 
     /// `CReal.commRingS`'s axiom footprint must stay empty -- every field is
@@ -221,9 +219,8 @@ mod algebra_instance_tests {
     fn creal_comm_ring_s_axiom_footprint_is_empty() {
         let mut k = Kernel::new();
         let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let name = declare_creal_comm_ring_s(&mut k, &p).expect("CReal.commRingS must admit");
         assert!(
-            k.axiom_footprint(name).is_empty(),
+            k.axiom_footprint(p.comm_ring_s).is_empty(),
             "CReal.commRingS must have an empty axiom footprint"
         );
     }
@@ -236,7 +233,7 @@ mod algebra_instance_tests {
         const A_FV: u64 = 23_000;
         let mut k = Kernel::new();
         let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let comm_ring_s = declare_creal_comm_ring_s(&mut k, &p).expect("commRingS must admit");
+        let comm_ring_s = p.comm_ring_s;
 
         let np = p.rat.int.nat;
         let extra = np.structures_s_extra;
@@ -288,7 +285,7 @@ mod algebra_instance_tests {
         const A_FV: u64 = 23_010;
         let mut k = Kernel::new();
         let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let comm_ring_s = declare_creal_comm_ring_s(&mut k, &p).expect("commRingS must admit");
+        let comm_ring_s = p.comm_ring_s;
 
         let np = p.rat.int.nat;
         let extra = np.structures_s_extra;
@@ -330,7 +327,7 @@ mod algebra_instance_tests {
     fn creal_comm_ring_s_fields_reduce_at_a_concrete_embedded_rational() {
         let mut k = Kernel::new();
         let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let comm_ring_s = declare_creal_comm_ring_s(&mut k, &p).expect("commRingS must admit");
+        let comm_ring_s = p.comm_ring_s;
 
         // Project mulComm and confirm it applies at CReal.zero / CReal.one
         // (both already-built CReal terms) without error.
@@ -356,7 +353,7 @@ mod algebra_instance_tests {
         const A_FV: u64 = 23_020;
         let mut k = Kernel::new();
         let p = build_creal_prelude(&mut k).expect("creal prelude must build");
-        let comm_ring_s = declare_creal_comm_ring_s(&mut k, &p).expect("commRingS must admit");
+        let comm_ring_s = p.comm_ring_s;
 
         let np = p.rat.int.nat;
         let extra = np.structures_s_extra;

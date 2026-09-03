@@ -6195,6 +6195,13 @@ pub struct CRealPrelude {
     /// `HasDerivativeOn`, so this applies verbatim to a power series' partial
     /// sums once those carry a per-index derivative witness.
     pub has_derivative_uniform_limit: NameId,
+    /// `CReal.commRingS : AlgS.CommRing` (`creal/algebra_instance.rs`,
+    /// ADR-1588) — every field an *existing* `CReal` theorem, verbatim,
+    /// except `mulOneL`/`distribR` (each derived by one or three
+    /// `equivTrans` applications, no new `creal` proof). Declared by
+    /// `algebra_instance::declare_comm_ring_s`, wired into `STEP_DISPATCH`
+    /// right after `product::declare_product`.
+    pub comm_ring_s: NameId,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
     /// `creal/pi.rs`'s own 14 names, moved out of this struct by
     /// ADR-1512 so that adding a declaration to that module touches
@@ -6826,6 +6833,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         lipschitz_of_deriv_bound: kernel.name_str(creal, "lipschitz_of_deriv_bound"),
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
         has_derivative_uniform_limit: kernel.name_str(creal, "hasDerivative_uniform_limit"),
+        comm_ring_s: kernel.name_str(creal, "commRingS"),
         pi: pi::PiNames::intern(kernel, creal),
     }
 }
@@ -7212,6 +7220,10 @@ const STEP_DISPATCH: &[StepDispatch] = &[
         order_extra::declare_order_extra,
     ),
     ("product::declare_product", product::declare_product),
+    (
+        "algebra_instance::declare_comm_ring_s",
+        algebra_instance::declare_comm_ring_s,
+    ),
     ("field::declare_field", field::declare_field),
     ("inverse::declare_inverse", inverse::declare_inverse),
     (

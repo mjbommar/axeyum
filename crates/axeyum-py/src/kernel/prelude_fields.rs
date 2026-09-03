@@ -2880,7 +2880,7 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (606 names,
+/// The `CRealPrelude` field table (607 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 69 of the names come from ADR-1512 per-module registries and
@@ -3726,6 +3726,7 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 "has_derivative_uniform_limit",
                 p.has_derivative_uniform_limit,
             ),
+            ("comm_ring_s", p.comm_ring_s),
             ("pi.pi_half_coef", p.pi.pi_half_coef),
             ("pi.pi_half_term", p.pi.pi_half_term),
             ("pi.pi_half_series_partial", p.pi.pi_half_series_partial),
