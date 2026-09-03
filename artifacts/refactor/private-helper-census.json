@@ -15,10 +15,10 @@
   },
   "population": {
     "files_scanned": 500,
-    "private_fns": 9724,
+    "private_fns": 9726,
     "private_fns_outside_tests": 7976,
-    "distinct_names": 7887,
-    "distinct_body_digests": 8642,
+    "distinct_names": 7889,
+    "distinct_body_digests": 8644,
     "duplicated_name_groups": 734,
     "duplicated_body_groups": 394,
     "sites_in_duplicated_body_groups": 1476,

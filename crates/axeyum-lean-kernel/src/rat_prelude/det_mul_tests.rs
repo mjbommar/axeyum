@@ -327,16 +327,57 @@ fn det_mat_mul_states_the_general_product_law() {
 /// The theorem is proved at a symbolic `n` and symbolic matrices, so these
 /// instances add nothing about the PROOF. What they add is that the two sides
 /// are the numbers they are supposed to be — a check on the statement's
-/// meaning that no amount of type-checking supplies, and the one that would
-/// catch a transposed index inside `Rat.matMul` or `Rat.det`.
+/// meaning that no amount of type-checking supplies.
 ///
-/// `A = [[1,2],[3,4]]`, `B = [[5,6],[7,8]]`: `A·B = [[19,22],[43,50]]` with
-/// determinant `19·50 − 22·43 = 4`, and `det A · det B = (−2)·(−2) = 4`. The
+/// ## The determinant alone cannot catch a transposed index, so the product's
+/// ENTRIES are checked too
+///
+/// This test used to say the `det` comparison would catch "a transposed index
+/// inside `Rat.matMul` or `Rat.det`". **It cannot, and the claim was a control
+/// that could not fail.** `det Aᵀ = det A`, so every index transposition
+/// available in `Rat.matMul`'s summand — `A i t · B j t` (which is `A·Bᵀ`),
+/// `A t i · B t j` (`Aᵀ·B`), and the double swap — leaves `det (A·B) 2` at the
+/// same `4`, and the test passed. What separates them is the product matrix
+/// itself, so its four entries are now read out directly: `A·B = [[4,3],[8,7]]`
+/// while `A·Bᵀ = [[2,4],[4,10]]` and `Aᵀ·B = [[6,4],[8,6]]`, all three distinct
+/// at entry `(0,0)`.
+///
+/// `A = [[1,2],[3,4]]`, `B = [[0,1],[2,1]]`: `A·B = [[4,3],[8,7]]` with
+/// determinant `4·7 − 3·8 = 4`, and `det A · det B = (−2)·(−2) = 4`. The
 /// SIGN is what makes this discriminating — both factors are negative, so a
 /// dropped alternating sign would give `+2 · +2` on the right and a different
 /// number on the left.
+///
+/// ## Why `B` is `[[0,1],[2,1]]` and not `[[5,6],[7,8]]`
+///
+/// Every value this test asserts is the same for both — `det A = det B = −2`,
+/// `det (A·B) = 4`, and the `+2` / `5` controls — but the WORK is not. With
+/// `[[5,6],[7,8]]` the product is `[[19,22],[43,50]]` and the determinant
+/// forms `19·50 = 950`; every `Nat` numeral this prelude builds is unary
+/// (`CLAUDE.md`, "Every `Nat` numeral this prelude builds is unary"), so cost
+/// is superlinear in the largest magnitude FORMED. Measured 2026-09-03 on s4,
+/// debug profile, this one test:
+///
+/// | `B` | largest magnitude formed | debug stack needed | debug wall |
+/// | --- | ---: | ---: | ---: |
+/// | `[[5,6],[7,8]]` | 950 | 4,194,304 (**aborts** at the 2 MiB a `#[test]` thread gets) | 181 s |
+/// | `[[0,1],[2,1]]` | 28 | 2,097,152 | 16 s |
+///
+/// 16 s is the `rat` prelude build alone (measured separately at 16.2 s), so
+/// the evaluation itself fell to noise. That abort is what refused
+/// `scripts/lane-push.sh`, whose early battery step is
+/// `cargo test --workspace --lib` in DEBUG.
+///
+/// The body still runs on [`crate::on_a_deep_stack`] because 2,097,152 is
+/// EXACTLY the default a spawned thread gets — a passing measurement with no
+/// margin, the same shape that let one `creal` declaration silently stop the
+/// axiom-freedom guard from running (`artifacts/kernel-stack-envelope.tsv`).
 #[test]
 fn det_mat_mul_computes_at_concrete_matrices() {
+    crate::on_a_deep_stack(det_mat_mul_computes_at_concrete_matrices_body);
+}
+
+fn det_mat_mul_computes_at_concrete_matrices_body() {
     use crate::rat_prelude::matrix_det::{const_matrix, rdet, rq};
     use crate::rat_prelude::ops::rmul;
 
@@ -366,7 +407,7 @@ fn det_mat_mul_computes_at_concrete_matrices() {
     // 2×2, both determinants negative.
     {
         let a = const_matrix(&mut d, p, 2, &[1, 2, 3, 4]);
-        let b = const_matrix(&mut d, p, 2, &[5, 6, 7, 8]);
+        let b = const_matrix(&mut d, p, 2, &[0, 1, 2, 1]);
         let two = d.num(2);
         let product = d.const_app(p.mat_mul, &[a, b, two]);
         let lhs = rdet(&mut d, p, product, two);
@@ -377,7 +418,7 @@ fn det_mat_mul_computes_at_concrete_matrices() {
         let four = rq(&mut d, p, 4);
         assert!(
             d.kernel().def_eq(lhs, four),
-            "det ([[1,2],[3,4]]·[[5,6],[7,8]]) 2 = 19·50 − 22·43 = 4"
+            "det ([[1,2],[3,4]]·[[0,1],[2,1]]) 2 = det [[4,3],[8,7]] = 4·7 − 3·8 = 4"
         );
         assert!(d.kernel().def_eq(rhs, four), "(−2)·(−2) = 4");
 
@@ -387,13 +428,50 @@ fn det_mat_mul_computes_at_concrete_matrices() {
             "det [[1,2],[3,4]] is −2, not +2 -- this is the sign the alternating \
              convention decides"
         );
+        assert!(
+            d.kernel().def_eq(db, minus_two),
+            "det [[0,1],[2,1]] is 0·1 − 1·2 = −2 -- asserted directly so the \
+             product 4 above cannot be reached by two POSITIVE factors"
+        );
         let plus_two = rq(&mut d, p, 2);
         assert!(
             !d.kernel().def_eq(da, plus_two),
             "if this passes the alternating sign is dropped"
         );
+        assert!(
+            !d.kernel().def_eq(db, plus_two),
+            "if this passes the alternating sign is dropped"
+        );
         let five = rq(&mut d, p, 5);
         assert!(!d.kernel().def_eq(lhs, five), "4 is not 5");
+
+        // The product matrix ENTRY BY ENTRY. This is the check the determinant
+        // cannot make: `det` is transpose-invariant, so `A·Bᵀ` and `Aᵀ·B` both
+        // still have determinant 4, while their `(0,0)` entries are 2 and 6.
+        for (i, j, want) in [(0u32, 0u32, 4_i64), (0, 1, 3), (1, 0, 8), (1, 1, 7)] {
+            let ii = d.num(i);
+            let jj = d.num(j);
+            let entry = d.const_app(p.mat_mul, &[a, b, two, ii, jj]);
+            let expected = rq(&mut d, p, want);
+            assert!(
+                d.kernel().def_eq(entry, expected),
+                "matMul A B 2 {i} {j} must be {want} -- A·B = [[4,3],[8,7]]"
+            );
+        }
+        let at_0_0 = {
+            let zero_n = d.num(0);
+            d.const_app(p.mat_mul, &[a, b, two, zero_n, zero_n])
+        };
+        let transposed_b = rq(&mut d, p, 2);
+        assert!(
+            !d.kernel().def_eq(at_0_0, transposed_b),
+            "2 is (A·Bᵀ) 0 0 -- if this passes the summand reads `B j t`"
+        );
+        let transposed_a = rq(&mut d, p, 6);
+        assert!(
+            !d.kernel().def_eq(at_0_0, transposed_a),
+            "6 is (Aᵀ·B) 0 0 -- if this passes the summand reads `A t i`"
+        );
 
         // And the instantiated THEOREM infers to exactly the equation whose two
         // sides were just computed.
@@ -417,21 +495,32 @@ fn det_mat_mul_computes_at_concrete_matrices() {
 /// At `n = 2` the expansion runs over all four maps `[0,2) -> [0,2)`. Two of
 /// them are non-injective and their `det (B∘g) 2` vanishes (two equal rows),
 /// so the total is `A 0 0 · A 1 1 · det B + A 0 1 · A 1 0 · det (B with its
-/// rows swapped)` — which for `A = [[1,2],[3,4]]`, `B = [[5,6],[7,8]]` is
+/// rows swapped)` — which for `A = [[1,2],[3,4]]`, `B = [[0,1],[2,1]]` is
 /// `1·4·(−2) + 2·3·(+2) = −8 + 12 = 4`, the same `4` as the product law. The
 /// point of computing it this way is that it exercises the ENUMERATION: an
 /// expansion that reached only the IDENTITY map would total `−8`, and one that
 /// reached only the two constant maps would total `0`. Both are asserted apart
 /// from `4` through the same `def_eq`.
+///
+/// `B` shrank from `[[5,6],[7,8]]` for the reason recorded on
+/// [`det_mat_mul_computes_at_concrete_matrices`]: it computes the SAME
+/// `det (A·B) 2`, so it aborted in debug for the same reason and was the
+/// second casualty the first test's abort hid. Every number above is
+/// unchanged — `det B = 0·1 − 1·2 = −2` and the row-swapped `[[2,1],[0,1]]`
+/// has determinant `+2`, exactly as `[[5,6],[7,8]]` and `[[7,8],[5,6]]` did.
 #[test]
 fn det_mat_mul_expand_computes_over_the_whole_function_space() {
+    crate::on_a_deep_stack(det_mat_mul_expand_computes_over_the_whole_function_space_body);
+}
+
+fn det_mat_mul_expand_computes_over_the_whole_function_space_body() {
     use crate::rat_prelude::matrix_det::{const_matrix, rdet, rq};
 
     let (mut kernel, p) = built();
     let mut d = IntDev::new(&mut kernel, p.int);
 
     let a = const_matrix(&mut d, p, 2, &[1, 2, 3, 4]);
-    let b = const_matrix(&mut d, p, 2, &[5, 6, 7, 8]);
+    let b = const_matrix(&mut d, p, 2, &[0, 1, 2, 1]);
     let one = d.num(1);
     let two = d.num(2);
 
