@@ -390,4 +390,97 @@ mod algebra_instance_tests {
             "AlgS.sub_self applied at CReal's Ring projection must infer a type at a free `a`"
         );
     }
+
+    /// Deliverable 5 (ADR-1590): `AlgS.mul_neg_one` instantiated at `CReal`
+    /// (`CReal.commRingS.toRingS`), concrete and symbolic. `CReal` has no
+    /// named `mul_neg_one` theorem -- `mul_neg_one_eq_neg` in
+    /// `creal/alternating.rs` is a private Rust proof-term helper, never
+    /// declared into the kernel environment -- so this is well-typedness
+    /// only, like the `neg_neg`/`sub_self` tests above.
+    #[test]
+    fn generic_mul_neg_one_instantiated_at_creal_type_checks_concrete_and_symbolic() {
+        const A_FV: u64 = 23_030;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+
+        let np = p.rat.int.nat;
+        let extra = np.structures_s_extra;
+
+        let comm_ring_s_c = k.const_(p.comm_ring_s, vec![]);
+        let to_ring_s = k.const_(extra.comm_ring_to_ring_s, vec![]);
+        let ring_s_val = k.app(to_ring_s, comm_ring_s_c);
+
+        let mul_neg_one_c = k.const_(extra.mul_neg_one, vec![]);
+        let applied = k.app(mul_neg_one_c, ring_s_val);
+
+        let zero = k.const_(p.zero, vec![]);
+        let applied_zero = k.app(applied, zero);
+        assert!(
+            k.infer(applied_zero).is_ok(),
+            "AlgS.mul_neg_one applied at CReal.zero must infer a type"
+        );
+
+        let a = k.fvar(A_FV);
+        let creal_ty = k.const_(p.creal, vec![]);
+        let anon = k.anon();
+        let mut ctx = crate::tc::LocalContext::new();
+        ctx.push(crate::tc::LocalDecl {
+            fvar: A_FV,
+            name: anon,
+            ty: creal_ty,
+            info: crate::BinderInfo::Default,
+        });
+        let applied_a = k.app(applied, a);
+        assert!(
+            k.infer_in(applied_a, &mut ctx).is_ok(),
+            "AlgS.mul_neg_one applied at CReal's Ring projection must infer a type at a free `a`"
+        );
+    }
+
+    /// Deliverable 5 (ADR-1590): `AlgS.add_left_cancel` instantiated at
+    /// `CReal`'s additive group, built inline from `CReal.commRingS`'s Ring
+    /// fields via `structures_setoid::ring_s_additive_group_value` --
+    /// `CReal` has no named `AlgS.Group`/`add_left_cancel` theorem of its
+    /// own -- closed over `(a,b,c)`.
+    #[test]
+    fn generic_add_left_cancel_instantiated_at_creal_type_checks() {
+        const A_FV: u64 = 23_040;
+        const B_FV: u64 = 23_041;
+        const C_FV: u64 = 23_042;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+
+        let np = p.rat.int.nat;
+        let extra = np.structures_s_extra;
+        let st = np.structures_s;
+
+        let comm_ring_s_c = k.const_(p.comm_ring_s, vec![]);
+        let to_ring_s = k.const_(extra.comm_ring_to_ring_s, vec![]);
+        let ring_s_val = k.app(to_ring_s, comm_ring_s_c);
+        let group_val = crate::nat_prelude::structures_setoid::ring_s_additive_group_value(
+            &mut k, &st.ring, &st.group, ring_s_val,
+        );
+
+        let add_left_cancel_c = k.const_(extra.add_left_cancel, vec![]);
+        let creal_ty = k.const_(p.creal, vec![]);
+        let a = k.fvar(A_FV);
+        let b = k.fvar(B_FV);
+        let c = k.fvar(C_FV);
+        let generic_applied = {
+            let e1 = k.app(add_left_cancel_c, group_val);
+            let e2 = k.app(e1, a);
+            let e3 = k.app(e2, b);
+            k.app(e3, c)
+        };
+        let generic_closed = {
+            let v = generic_applied;
+            let v = lam_over(&mut k, C_FV, creal_ty, v);
+            let v = lam_over(&mut k, B_FV, creal_ty, v);
+            lam_over(&mut k, A_FV, creal_ty, v)
+        };
+        assert!(
+            k.infer(generic_closed).is_ok(),
+            "AlgS.add_left_cancel applied at CReal's additive Group value must type-check"
+        );
+    }
 }
