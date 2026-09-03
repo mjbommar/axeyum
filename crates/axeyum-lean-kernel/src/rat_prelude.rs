@@ -67,6 +67,7 @@ mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
+mod leading_index;
 mod matrix;
 mod matrix_det;
 mod matrix_det_mul;
@@ -2904,6 +2905,33 @@ pub struct RatPrelude {
     /// (value), obligation 2 is complete.
     pub pivot_search_column_zero: NameId,
 
+    // --- what `leadingIndex` ANSWERS (`rat_prelude::leading_index`) ---------
+    /// `Rat.leadingIndexAux_eq_of_first_nonzero : ∀ M r cols j c fuel,
+    /// Le c j → Lt j cols → Lt j (Nat.add c fuel) →
+    /// (∀ k, Le c k → Lt k j → Eq Rat (M r k) Rat.zero) →
+    /// Not (Eq Rat (M r j) Rat.zero) →
+    /// Eq Nat (leadingIndexAux M r cols fuel c) j`.
+    pub leading_index_aux_eq_of_first_nonzero: NameId,
+    /// `Rat.leadingIndex_eq_of_first_nonzero : ∀ M r cols j, Lt j cols →
+    /// (∀ k, Lt k j → Eq Rat (M r k) Rat.zero) →
+    /// Not (Eq Rat (M r j) Rat.zero) → Eq Nat (leadingIndex M r cols) j`.
+    ///
+    /// The characterization a freshly-pivoted row satisfies: zero left of the
+    /// pivot column (the clause `echelonAux` maintains) and nonzero AT it
+    /// ([`Self::pivot_search_ne_zero`]).
+    pub leading_index_eq_of_first_nonzero: NameId,
+    /// `Rat.leadingIndexAux_eq_cols_of_zero : ∀ M r cols c fuel,
+    /// Le cols (Nat.add c fuel) →
+    /// (∀ k, Le c k → Lt k cols → Eq Rat (M r k) Rat.zero) →
+    /// Eq Nat (leadingIndexAux M r cols fuel c) cols`.
+    pub leading_index_aux_eq_cols_of_zero: NameId,
+    /// `Rat.leadingIndex_eq_cols_of_zero_row : ∀ M r cols,
+    /// (∀ k, Lt k cols → Eq Rat (M r k) Rat.zero) →
+    /// Eq Nat (leadingIndex M r cols) cols` — *a zero row's leading index is
+    /// `cols`*, ADR-1554 §3's design decision as a theorem rather than a
+    /// property of the definition.
+    pub leading_index_eq_cols_of_zero_row: NameId,
+
     // --- obligation 3 (`rat_prelude::clear_below`, ADR-1571) ----------------
     /// `Rat.add_neg_div_mul_cancel : ∀ a b, Not (Eq Rat b Rat.zero) →
     /// Eq Rat (Rat.add a (Rat.mul (Rat.neg (Rat.div a b)) b)) Rat.zero` — the
@@ -3451,6 +3479,10 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         pivot_search_ne_zero: child(kernel, "pivotSearch_ne_zero"),
         pivot_search_aux_column_zero: child(kernel, "pivotSearchAux_column_zero"),
         pivot_search_column_zero: child(kernel, "pivotSearch_column_zero"),
+        leading_index_aux_eq_of_first_nonzero: child(kernel, "leadingIndexAux_eq_of_first_nonzero"),
+        leading_index_eq_of_first_nonzero: child(kernel, "leadingIndex_eq_of_first_nonzero"),
+        leading_index_aux_eq_cols_of_zero: child(kernel, "leadingIndexAux_eq_cols_of_zero"),
+        leading_index_eq_cols_of_zero_row: child(kernel, "leadingIndex_eq_cols_of_zero_row"),
         add_neg_div_mul_cancel: child(kernel, "add_neg_div_mul_cancel"),
         clear_below_aux_off: child(kernel, "clearBelowAux_off"),
         clear_below_off: child(kernel, "clearBelow_off"),
@@ -3523,6 +3555,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         rank_bridge::declare_rank_bridge(&mut d, prelude)?;
         pivot_content::declare_pivot_content(&mut d, prelude)?;
         clear_below::declare_clear_below_post(&mut d, prelude)?;
+        leading_index::declare_leading_index_facts(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3564,6 +3597,9 @@ mod pivot_content_tests;
 
 #[cfg(test)]
 mod clear_below_tests;
+
+#[cfg(test)]
+mod leading_index_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

@@ -346,6 +346,22 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("clearBelow_zero", p.clear_below_zero),
         ("pivotSearchAux_column_zero", p.pivot_search_aux_column_zero),
         ("pivotSearch_column_zero", p.pivot_search_column_zero),
+        (
+            "leadingIndexAux_eq_of_first_nonzero",
+            p.leading_index_aux_eq_of_first_nonzero,
+        ),
+        (
+            "leadingIndex_eq_of_first_nonzero",
+            p.leading_index_eq_of_first_nonzero,
+        ),
+        (
+            "leadingIndexAux_eq_cols_of_zero",
+            p.leading_index_aux_eq_cols_of_zero,
+        ),
+        (
+            "leadingIndex_eq_cols_of_zero_row",
+            p.leading_index_eq_cols_of_zero_row,
+        ),
     ]
 }
 
@@ -7113,6 +7129,26 @@ fn the_determinant_toolkit_is_axiom_free() {
             true,
         ),
         ("pivotSearch_column_zero", p.pivot_search_column_zero, true),
+        (
+            "leadingIndexAux_eq_of_first_nonzero",
+            p.leading_index_aux_eq_of_first_nonzero,
+            true,
+        ),
+        (
+            "leadingIndex_eq_of_first_nonzero",
+            p.leading_index_eq_of_first_nonzero,
+            true,
+        ),
+        (
+            "leadingIndexAux_eq_cols_of_zero",
+            p.leading_index_aux_eq_cols_of_zero,
+            true,
+        ),
+        (
+            "leadingIndex_eq_cols_of_zero_row",
+            p.leading_index_eq_cols_of_zero_row,
+            true,
+        ),
     ];
     for (label, name, is_theorem) in expected {
         let declaration = kernel
