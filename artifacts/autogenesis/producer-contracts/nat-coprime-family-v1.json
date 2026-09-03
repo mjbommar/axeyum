@@ -36,6 +36,19 @@
       "F:ml430-nat-coprime-of-lt-minfac-0f79bdba"
     ],
     "frontier_query": "python3 -c \"import importlib.util;s=importlib.util.spec_from_file_location('v','scripts/validate-producer-contracts.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m);f=m.load_facts();print(m.ledger_digest(f));[print(c['id'],m.live_population(c['shape'],f)) for _p,c in m.load_contracts()]\"",
-    "note": "Measured 2026-09-01 by re-executing this contract's own shape predicate over artifacts/facts/, restricted to facts that are open, dependency-ready, NOT in a held-out nursery partition (read from every artifacts/autogenesis/nursery*.json, not just nursery-v1.json) and not an outcome-blind mutation fixture. The AUTHORING-time figure is a different number and is recorded in this contract's own `notes` (2026-08-27); it is not restated here, because a sizing block records the population the contract is answerable for NOW."
+    "note": "Measured 2026-09-01 by re-executing this contract's own shape predicate over artifacts/facts/, restricted to facts that are open, dependency-ready, NOT in a held-out nursery partition (read from every artifacts/autogenesis/nursery*.json, not just nursery-v1.json) and not an outcome-blind mutation fixture. The AUTHORING-time figure is a different number and is recorded in this contract's own `notes` (2026-08-27); it is not restated here, because a sizing block records the population the contract is answerable for NOW.",
+    "held_out_overlap_salt": "d853893bae6b8affc93e2344e6e2b18c15f94ebf66babdb79ed7fc4f7045fcd0",
+    "held_out_overlap_reviewed": [
+      {
+        "digest": "523e24ba1e6a91e9c3ef329662c4a3123e639919d3585d477626b4e0ef6ffe08",
+        "date": "2026-09-03",
+        "reason": "This shape (fragment Nat, lean4-surface, Mathlib v4.30 source proposition title, statement contains Coprime) matches one row of a HELD-OUT nursery partition, discovered pre-existing on main (`omega-1`/`ebddccf27`, ADR-1561 draw 19). The row is held-out blind evaluation population (ADR-0542): this contract does not, and by construction of `sizing.matched_open_ready_fact_ids` above never has, claimed or dispatched it. Reviewed and recorded here rather than closed, because the contract's shape is honest about the family it covers and narrowing the shape to exclude this one row would also exclude live, non-held-out members of the same family."
+      },
+      {
+        "digest": "80dd62d405735b2af58769898d3f61238021869dba1fbb408a970c2856764aae",
+        "date": "2026-09-03",
+        "reason": "Same shape overlap as the digest above, against a second HELD-OUT row (ADR-0542 blind evaluation population). Not claimed or dispatched by this contract's `sizing.matched_open_ready_fact_ids`. Reviewed for the same reason: the shape is a genuine description of the Nat.Coprime family and this row happens to also be a member of it, which is expected of any honest shape over a partition it was not authored to be blind to."
+      }
+    ]
   }
 }

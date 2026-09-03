@@ -251,6 +251,67 @@ class ContractLifecycleTests(unittest.TestCase):
             contract, self.facts, None, self.none_held_out
         )
 
+    def test_unclaimed_held_out_shape_overlap_needs_a_reviewed_digest(self) -> None:
+        # Distinct from the guard above: THIS fact is never named in
+        # `sizing.matched_open_ready_fact_ids`, so guard (a) has nothing to
+        # object to -- the contract never claimed it. The shape predicate
+        # matches it anyway, which is the overlap ADR-0542 forbids leaving
+        # unreviewed: a contract cannot silently start matching blind
+        # evaluation population, even population it never listed.
+        facts = dict(self.facts)
+        facts["F:blind-match"] = make_fact("F:blind-match")
+        held_out = frozenset({"F:blind-match"})
+        contract = make_contract()
+        with self.assertRaisesRegex(
+            contracts_module.ContractError, "held_out_overlap_reviewed"
+        ):
+            contracts_module.validate_contract(contract, facts, None, held_out)
+
+        # Control: a correctly salted, reviewed digest for exactly this
+        # overlap -- and nothing else -- clears the guard. The digest is
+        # computed from the fact id at test time, never written as a literal,
+        # so nothing in this file names the held-out id.
+        salt = "test-fixture-salt"
+        reviewed_contract = make_contract(
+            sizing={
+                **contract["sizing"],
+                "held_out_overlap_salt": salt,
+                "held_out_overlap_reviewed": [
+                    {
+                        "digest": contracts_module.digest_held_out_fact_id(
+                            "F:blind-match", salt
+                        ),
+                        "date": "2026-09-03",
+                        "reason": "synthetic fixture, reviewed for this control",
+                    }
+                ],
+            }
+        )
+        contracts_module.validate_contract(reviewed_contract, facts, None, held_out)
+
+        # And the inverse control: a digest recorded under the WRONG salt
+        # does not satisfy the guard -- confirms the check actually verifies
+        # the digest rather than merely requiring the list be non-empty.
+        wrongly_salted = make_contract(
+            sizing={
+                **contract["sizing"],
+                "held_out_overlap_salt": salt,
+                "held_out_overlap_reviewed": [
+                    {
+                        "digest": contracts_module.digest_held_out_fact_id(
+                            "F:blind-match", "a-different-salt"
+                        ),
+                        "date": "2026-09-03",
+                        "reason": "wrong salt, must not satisfy the guard",
+                    }
+                ],
+            }
+        )
+        with self.assertRaisesRegex(
+            contracts_module.ContractError, "held_out_overlap_reviewed"
+        ):
+            contracts_module.validate_contract(wrongly_salted, facts, None, held_out)
+
     def test_exhausted_contract_must_be_retired(self) -> None:
         settled = {"F:target": make_fact("F:target", status="proved")}
         settled["F:other-family"] = make_fact(
@@ -389,33 +450,34 @@ class ContractLifecycleTests(unittest.TestCase):
         )
 
 
-# Measured 2026-09-01 (lane `flywheel-restart`). `nat-coprime-family-v1`'s shape
-# matches ONE held-out fact, and it is not a mistake in the contract: the
-# contract was authored 2026-08-27 against a ledger where its matched set was
-# clean ("none held-out, checked 2026-08-27", its own `notes`), and
+# Measured 2026-09-01 (lane `flywheel-restart`), and the exact reason this
+# class no longer pins a literal id list. `nat-coprime-family-v1`'s shape
+# matched a held-out fact, and it was not a mistake in the contract: it was
+# authored 2026-08-27 against a ledger where its matched set was clean
+# ("none held-out, checked 2026-08-27", its own `notes`), and
 # `nursery-v2-extension.json` preregistered 500 further rows on 2026-08-29 --
-# one of which its shape happens to match. A contract cannot be written to
-# exclude rows that do not exist yet.
+# some of which its shape happens to match. A contract cannot be written to
+# exclude rows that do not exist yet, and the overlap will recur as the
+# nursery grows further, against contracts that do not exist yet either.
 #
-# This is a PIN on a known, dated defect, not an allowance. It fails in BOTH
-# directions: a second contamination makes the list longer, and a fix makes it
-# empty. Do not "fix" it by extending this set -- the standing rule is that a
-# stable number can be stably wrong, so every entry names its reason.
+# `omega-1` (`ebddccf27`) then found this class red on `main`: a SECOND
+# overlap had appeared (draw 19, ADR-1561) and the class's old
+# `KNOWN_HELD_OUT_SHAPE_MATCHES` -- a hand-maintained literal id list -- had
+# not moved with it. That is the "test named 'every X' must derive X from the
+# authority, not a literal" defect from
+# `docs/contributor-guide/evidence-and-checker-discipline.md`: the literal
+# measured the maintainer's memory of the last audit, not the live overlap.
 #
-# The live consequence is deliberately NOT gated here, because it is not the
-# contract's to fix: `scripts/fact-frontier.py` selected this exact fact as
-# `admissible_via_contract` / `outcome: selected`, and its own held-out screen
-# (a) reads `nursery-v1.json` literally and cannot see this row, and (b) is
-# applied only to the human-rendered queue line, never to the `--json`
-# selection every downstream reader uses. That is a selector change and wants
-# its own ADR.
-KNOWN_HELD_OUT_SHAPE_MATCHES = {
-    "producer-contract-nat-coprime-family-v1": [
-        "F:ml430-nat-coprime-factorizationlcmleft-factorizationlcmright-e7db70ce",
-    ],
-}
-
-
+# So the property this class checks no longer lives in a comparison against a
+# list here. It lives in `validate-producer-contracts.py`'s own guard (d):
+# every held-out fact a contract's shape currently matches must carry a
+# dated, reasoned entry in that contract's `sizing.held_out_overlap_reviewed`,
+# keyed by a salted digest of the fact id (ADR-1550's redaction pattern) --
+# never by the id itself, so this file, the guard's error messages, and any
+# status doc quoting them never need to name a held-out id. A NEW overlap is
+# caught the next time the validator runs, in EITHER direction: an
+# unreviewed overlap fails closed, and a stale reviewed entry left behind
+# after the overlap resolves is simply unused, never itself an error.
 class SeedContractHoldoutIsolationTests(unittest.TestCase):
     """Held-out isolation binds contract shapes exactly as it binds manual
     dispatch (ADR-0542). Checks the PARTITION, never the count -- and reads
@@ -423,23 +485,45 @@ class SeedContractHoldoutIsolationTests(unittest.TestCase):
     file is how this went wrong.
     """
 
-    def test_seed_contracts_match_no_unrecorded_held_out_fact(self) -> None:
+    def test_seed_contracts_have_every_held_out_overlap_reviewed(self) -> None:
+        # This is the production guard (`validate_contract`'s guard (d)),
+        # exercised directly rather than re-derived here, so this test and
+        # the shipped validator cannot silently disagree about what "every
+        # overlap reviewed" means. `held_out_shape_matches` and
+        # `digest_held_out_fact_id` are the same functions guard (d) calls.
         held_out = contracts_module.held_out_fact_ids()
         if not held_out:
             self.skipTest("no nursery manifest in this tree")
         facts = contracts_module.load_facts()
         for _path, contract in contracts_module.load_contracts():
-            matched_held_out = sorted(
-                fact_id
-                for fact_id, fact in facts.items()
-                if fact_id in held_out
-                and contracts_module.shape_matches(contract["shape"], fact)
+            matched_held_out = contracts_module.held_out_shape_matches(
+                contract["shape"], facts, held_out
             )
+            if not matched_held_out:
+                continue
+            salt = contract["sizing"].get("held_out_overlap_salt")
+            self.assertTrue(
+                isinstance(salt, str) and salt,
+                f"{contract['id']}: shape matches {len(matched_held_out)} HELD-OUT "
+                "fact(s) but sizing.held_out_overlap_salt is missing.",
+            )
+            reviewed_digests = {
+                entry["digest"]
+                for entry in contract["sizing"].get("held_out_overlap_reviewed") or []
+            }
+            missing = [
+                fact_id
+                for fact_id in matched_held_out
+                if contracts_module.digest_held_out_fact_id(fact_id, salt)
+                not in reviewed_digests
+            ]
             self.assertEqual(
-                matched_held_out,
-                sorted(KNOWN_HELD_OUT_SHAPE_MATCHES.get(contract["id"], [])),
-                f"{contract['id']}: shape/held-out overlap moved. Every overlap must "
-                "be recorded in KNOWN_HELD_OUT_SHAPE_MATCHES with its reason; an "
+                len(missing),
+                0,
+                f"{contract['id']}: {len(missing)} held-out shape overlap(s) with no "
+                "reviewed digest entry in sizing.held_out_overlap_reviewed. Every "
+                "overlap must be recorded there, keyed by "
+                "digest_held_out_fact_id(fact_id, sizing.held_out_overlap_salt); an "
                 "unrecorded one means a contract is claiming capability over blind "
                 "evaluation population.",
             )
@@ -451,13 +535,13 @@ class SeedContractHoldoutIsolationTests(unittest.TestCase):
 
         Put a freshly-invented held-out id in a SECOND manifest -- named and
         shaped like `nursery-v2-extension.json`, sitting beside an untouched
-        `nursery-v1.json` -- and confirm `test_seed_contracts_match_no_
-        unrecorded_held_out_fact` above would actually SEE it: a real
-        contract's shape, matched against the synthetic held-out set, must
-        surface the synthetic id. If this class ever regressed to reading
-        only `nursery-v1.json` (the exact 2026-09-01 defect), this id -- only
-        ever present in the "v2" file -- would silently vanish from the
-        matched set and this test would fail.
+        `nursery-v1.json` -- and confirm
+        `test_seed_contracts_have_every_held_out_overlap_reviewed` above
+        would actually SEE it: a real contract's shape, matched against the
+        synthetic held-out set, must surface the synthetic id. If this class
+        ever regressed to reading only `nursery-v1.json` (the exact
+        2026-09-01 defect), this id -- only ever present in the "v2" file --
+        would silently vanish from the matched set and this test would fail.
         """
         facts = contracts_module.load_facts()
         _path, contract = next(
@@ -491,9 +575,15 @@ class SeedContractHoldoutIsolationTests(unittest.TestCase):
         self.assertIn(candidate, matched_held_out)
 
     def test_the_v1_only_reader_is_the_one_that_misses_it(self) -> None:
-        # The control for the entry above: confirm the overlap is invisible to
-        # a `nursery-v1.json`-only reader and visible to the glob reader. If
-        # this ever stops discriminating, the pin above has lost its subject.
+        # The control for the class above, derived rather than pinned: at
+        # least one real contract's held-out shape overlap must depend on a
+        # manifest OTHER than `nursery-v1.json` -- i.e. a `nursery-v1.json`
+        # -only reader would miss it and the glob reader catches it. This
+        # confirms the multi-manifest read
+        # (`test_seed_contracts_have_every_held_out_overlap_reviewed`'s own
+        # subject) still has something to be right about; if every overlap
+        # ever became v1-only, this control would need a different subject
+        # and should fail loudly rather than pass for the wrong reason.
         v1_path = ROOT / "artifacts/autogenesis/nursery-v1.json"
         v2_path = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
         if not (v1_path.is_file() and v2_path.is_file()):
@@ -504,10 +594,21 @@ class SeedContractHoldoutIsolationTests(unittest.TestCase):
             if entry.get("partition") == "held-out"
         }
         all_held_out = contracts_module.held_out_fact_ids()
-        for fact_ids in KNOWN_HELD_OUT_SHAPE_MATCHES.values():
-            for fact_id in fact_ids:
-                self.assertIn(fact_id, all_held_out)
-                self.assertNotIn(fact_id, v1_held_out)
+        facts = contracts_module.load_facts()
+        non_v1_overlap_found = any(
+            fact_id not in v1_held_out
+            for _path, contract in contracts_module.load_contracts()
+            for fact_id in contracts_module.held_out_shape_matches(
+                contract["shape"], facts, all_held_out
+            )
+        )
+        self.assertTrue(
+            non_v1_overlap_found,
+            "no committed contract's held-out shape overlap depends on a "
+            "manifest other than nursery-v1.json -- the multi-manifest read "
+            "this repository standardised on (ADR-1510/ADR-1550) has no live "
+            "subject to be tested against right now.",
+        )
 
 
 if __name__ == "__main__":

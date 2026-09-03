@@ -1001,6 +1001,18 @@ SUITES: dict[str, tuple[str, "str | Unittest | Cargo", list[tuple[str, ...]]]] =
                 "    if live and retirement is not None:",
                 "    if False:",
             ),
+            # ADR-1550's redaction pattern applied to a NEW guard: a shape
+            # cannot silently start matching a HELD-OUT fact it never claimed
+            # in sizing.matched_open_ready_fact_ids. Every such overlap must
+            # carry a dated, reasoned review entry keyed by a salted digest
+            # of the fact id -- never the id itself.
+            (
+                "a held-out shape overlap with no reviewed digest must be rejected",
+                "        missing = [d for d in unreviewed if d not in reviewed_digests]\n"
+                "        if missing:",
+                "        missing = [d for d in unreviewed if d not in reviewed_digests]\n"
+                "        if False:",
+            ),
         ],
     ),
     # --------------------------------------------------------------------
