@@ -450,188 +450,49 @@ fn build_group_inv_unique(
 }
 
 /// `Alg.ringMulZero : forall (R : Ring) (a : R.carrier), R.mul a R.zero =
-/// R.zero`, from the additive-group + distributive axioms alone -- no
-/// multiplicative identity is ever used.
-#[allow(clippy::too_many_lines)]
+/// R.zero` -- ADR-1590, DERIVED from `AlgS.mul_zero` (`nat_prelude::
+/// structures_setoid`) applied at `AlgS.Ring.ofAlg R`, rather than the
+/// hand-built additive-group chain this function used to carry directly
+/// (still available, unchanged in substance, as `AlgS.mul_zero`'s own proof
+/// in `structures_setoid.rs` -- this is the ONE proof of the idea now,
+/// reached from two directions).
+///
+/// `AlgS.Ring.ofAlg R`'s `equiv` field is `@Eq R.carrier` and its `mul`/
+/// `zero` fields are `R`'s own selectors, verbatim (ADR-1588 §2), so
+/// `AlgS.mul_zero (ofAlg R) a`'s inferred type -- `(ofAlg R).equiv ((ofAlg
+/// R).mul a (ofAlg R).zero) (ofAlg R).zero` -- beta/iota-reduces to EXACTLY
+/// `Eq R.carrier (R.mul a R.zero) R.zero`, this theorem's OWN stated `ty`
+/// below (unchanged from the hand-proof version, so the declared type is
+/// byte-identical before and after this ADR). No further transport term is
+/// written; the kernel's own `def_eq` at `add_declaration` confirms the
+/// reduction, exactly as ADR-1588's `mul_zero_instantiated_at_int_through_
+/// ofalg_...` tests already measured for a CONCRETE `Int.ring` -- this is the
+/// same reduction chain over a Pi-bound, SYMBOLIC `R : Alg.Ring`.
 fn build_ring_mul_zero(
     k: &mut Kernel,
     lg: &LogicPrelude,
     l1: LevelId,
     ring: &RecordNames,
+    ring_ofalg: NameId,
+    algs_mul_zero: NameId,
 ) -> (ExprId, ExprId) {
-    use structures::idx::ring::{
-        ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, MUL, NEG, NEG_ADD, ZERO,
-    };
+    use structures::idx::ring::{CARRIER, MUL, ZERO};
     const R_FV: u64 = 21_200;
     const A_FV: u64 = 21_201;
-    const S1: u64 = 21_202;
-    const S2: u64 = 21_203;
-    const S3: u64 = 21_204;
-    const S4: u64 = 21_205;
 
     let ind_ty = k.const_(ring.ind, vec![]);
     let r = k.fvar(R_FV);
     let carrier = sel(k, ring, CARRIER, r);
     let zero = sel(k, ring, ZERO, r);
-    let add = sel(k, ring, ADD, r);
     let mul = sel(k, ring, MUL, r);
-    let add_assoc = sel(k, ring, ADD_ASSOC, r);
-    let add_comm = sel(k, ring, ADD_COMM, r);
-    let add_zero = sel(k, ring, ADD_ZERO, r);
-    let distrib_l = sel(k, ring, DISTRIB_L, r);
-    let neg = sel(k, ring, NEG, r);
-    let neg_add = sel(k, ring, NEG_ADD, r);
 
     let a = k.fvar(A_FV);
     let x = app2(k, mul, a, zero); // x := mul a zero
 
-    // EQ1 : zero = add zero zero  (symm of addZero at zero)
-    let add_zero_zero = app2(k, add, zero, zero);
-    let addzero_at_zero = k.app(add_zero, zero); // : add zero zero = zero
-    let eq1 = symm_of(k, lg, l1, carrier, add_zero_zero, zero, addzero_at_zero);
-
-    // EQ2 : x = mul a (add zero zero)   (congr via EQ1, f y = mul a y)
-    let mul_a_addzz = app2(k, mul, a, add_zero_zero);
-    let eq2 = congr_arg(
-        k,
-        lg,
-        l1,
-        carrier,
-        zero,
-        add_zero_zero,
-        eq1,
-        S1,
-        &|k2, y| app2(k2, mul, a, y),
-    );
-
-    // EQ3 : mul a (add zero zero) = add x x   (distribL a zero zero)
-    let add_x_x = app2(k, add, x, x);
-    let eq3 = {
-        let e1 = k.app(distrib_l, a);
-        let e2 = k.app(e1, zero);
-        k.app(e2, zero)
-    };
-
-    let xeq = trans_of(k, lg, l1, carrier, x, mul_a_addzz, add_x_x, eq2, eq3, S2); // x = add x x
-
-    // negAddL(x) : add (neg x) x = zero, derived from addComm + negAdd.
-    let neg_x = k.app(neg, x);
-    let add_negx_x = app2(k, add, neg_x, x);
-    let add_x_negx = app2(k, add, x, neg_x);
-    let comm_negx_x = {
-        let e1 = k.app(add_comm, neg_x);
-        k.app(e1, x)
-    }; // : add (neg x) x = add x (neg x)
-    let negadd_x = k.app(neg_add, x); // : add x (neg x) = zero
-    let neg_add_l = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        add_negx_x,
-        add_x_negx,
-        zero,
-        comm_negx_x,
-        negadd_x,
-        S3,
-    );
-
-    // R2 : zero = add (neg x) (add x x), via symm(neg_add_l) then congr on xeq.
-    let eq5 = symm_of(k, lg, l1, carrier, add_negx_x, zero, neg_add_l); // zero = add(neg x)x
-    let add_negx_addxx = app2(k, add, neg_x, add_x_x);
-    let eq6 = congr_arg(k, lg, l1, carrier, x, add_x_x, xeq, S4, &|k2, y| {
-        app2(k2, add, neg_x, y)
-    });
-    let r2 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        zero,
-        add_negx_x,
-        add_negx_addxx,
-        eq5,
-        eq6,
-        S1,
-    );
-
-    // R3 : zero = add (add (neg x) x) x, via symm(addAssoc(neg x, x, x)).
-    let add_addnegxx_x = app2(k, add, add_negx_x, x);
-    let assoc_nxx = {
-        let e1 = k.app(add_assoc, neg_x);
-        let e2 = k.app(e1, x);
-        k.app(e2, x)
-    }; // : add (add (neg x) x) x = add (neg x) (add x x)
-    let eq7 = symm_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        add_addnegxx_x,
-        add_negx_addxx,
-        assoc_nxx,
-    );
-    let r3 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        zero,
-        add_negx_addxx,
-        add_addnegxx_x,
-        r2,
-        eq7,
-        S2,
-    );
-
-    // R4 : zero = add zero x, via congr on negAddL : add(neg x)x = zero.
-    let add_zero_x = app2(k, add, zero, x);
-    let eq8 = congr_arg(
-        k,
-        lg,
-        l1,
-        carrier,
-        add_negx_x,
-        zero,
-        neg_add_l,
-        S3,
-        &|k2, y| app2(k2, add, y, x),
-    );
-    let r4 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        zero,
-        add_addnegxx_x,
-        add_zero_x,
-        r3,
-        eq8,
-        S4,
-    );
-
-    // EQ9 : add zero x = x  (addZero-left, derived from addComm + addZero).
-    let comm_zero_x = {
-        let e1 = k.app(add_comm, zero);
-        k.app(e1, x)
-    }; // : add zero x = add x zero
-    let add_zero_at_x = k.app(add_zero, x); // : add x zero = x
-    let add_x_zero = app2(k, add, x, zero);
-    let eq9 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        add_zero_x,
-        add_x_zero,
-        x,
-        comm_zero_x,
-        add_zero_at_x,
-        S1,
-    );
-
-    let r5 = trans_of(k, lg, l1, carrier, zero, add_zero_x, x, r4, eq9, S2); // zero = x
-    let result = symm_of(k, lg, l1, carrier, zero, x, r5); // x = zero
+    let ofalg = k.const_(ring_ofalg, vec![]);
+    let rs = k.app(ofalg, r); // AlgS.Ring.ofAlg R : AlgS.Ring
+    let algs_mul_zero_c = k.const_(algs_mul_zero, vec![]);
+    let result = app2(k, algs_mul_zero_c, rs, a); // : (ofAlg R).equiv (mul a zero) zero
 
     let value = lam_over(k, A_FV, carrier, result);
     let value = lam_over(k, R_FV, ind_ty, value);
@@ -1098,7 +959,9 @@ pub(crate) fn declare_algebra_instances_all(
         })?;
     }
     {
-        let (ty, value) = build_ring_mul_zero(k, lg, l1, &st.ring);
+        let extra = &p.int.nat.structures_s_extra;
+        let (ty, value) =
+            build_ring_mul_zero(k, lg, l1, &st.ring, extra.ring_ofalg, extra.mul_zero);
         k.add_declaration(Declaration::Theorem {
             name: names.ring_mul_zero,
             uparams: vec![],
