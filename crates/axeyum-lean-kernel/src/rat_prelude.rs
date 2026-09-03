@@ -3005,6 +3005,63 @@ pub struct RatPrelude {
     /// (M r c)` — *one whole pivot step leaves every row above the cursor
     /// exactly as it was.*
     pub clear_below_row_swap_off: NameId,
+    /// `Rat.pivotSearchAux_ge_start : ∀ M c rows fuel r,
+    /// Lt (pivotSearchAux M c rows fuel r) rows →
+    /// Le r (pivotSearchAux M c rows fuel r)`.
+    pub pivot_search_aux_ge_start: NameId,
+    /// `Rat.pivotSearch_ge_start : ∀ M c start rows,
+    /// Lt (pivotSearch M c start rows) rows →
+    /// Le start (pivotSearch M c start rows)` — *a pivot found IN RANGE is at
+    /// or below where the search started.*
+    ///
+    /// The hypothesis is not decoration: both exhaustion routes answer `rows`,
+    /// which is not `≥ start` when the scan began past the row count. With
+    /// [`Self::pivot_search_le_rows`] (no hypothesis needed) it pins the found
+    /// pivot to `[start, rows)`, which is what
+    /// [`Self::row_swap_preserves_zero_range`] and
+    /// [`Self::clear_below_row_swap_off`] both demand.
+    pub pivot_search_ge_start: NameId,
+    /// `Rat.isEchelonAux_of_pairs : ∀ M rows cols fuel r,
+    /// (∀ q, Le r q → Lt (succ q) rows →
+    ///   Eq Bool (echelonStepOk (leadingIndex M q cols)
+    ///            (leadingIndex M (succ q) cols) cols) true) →
+    /// Eq Bool (isEchelonAux M rows cols fuel r) true`.
+    pub is_echelon_aux_of_pairs: NameId,
+    /// `Rat.isEchelon_of_pairs : ∀ M rows cols,
+    /// (∀ q, Lt (succ q) rows →
+    ///   Eq Bool (echelonStepOk (leadingIndex M q cols)
+    ///            (leadingIndex M (succ q) cols) cols) true) →
+    /// Eq Bool (isEchelon M rows cols) true` — *the `Bool` predicate is exactly
+    /// the adjacent-pair condition.*
+    ///
+    /// No fuel bound, and ADR-1571 §2's rule forces that: `isEchelonAux`
+    /// answers `true` on exhaustion and `true` is the conclusion.
+    pub is_echelon_of_pairs: NameId,
+    /// `Rat.echelonStepOk_of_lt : ∀ l1 l2 cols, Lt l1 l2 →
+    /// Eq Bool (echelonStepOk l1 l2 cols) true` — the FIRST disjunct of the
+    /// test as a lemma.
+    pub echelon_step_ok_of_lt: NameId,
+    /// `Rat.echelonStepOk_both_cols : ∀ cols,
+    /// Eq Bool (echelonStepOk cols cols cols) true` — the SECOND disjunct at
+    /// the only pair of values that can satisfy it, i.e. two zero rows in a
+    /// row.
+    pub echelon_step_ok_both_cols: NameId,
+    /// `Rat.echelonAux_isEchelon : ∀ rows cols fuel M pr pc,
+    /// Le pc cols →
+    /// (∀ r, Lt (succ r) pr → Eq Bool (echelonStepOk (leadingIndex M r cols)
+    ///        (leadingIndex M (succ r) cols) cols) true) →
+    /// (∀ r, Lt r pr → Lt (leadingIndex M r cols) pc) →
+    /// (∀ s c, Le pr s → Lt s rows → Lt c pc → Eq Rat (M s c) Rat.zero) →
+    /// Le cols (Nat.add pc fuel) →
+    /// Eq Bool (isEchelon (echelonAux rows cols fuel M pr pc) rows cols) true`
+    /// — **ADR-1554's obligation 4**, with the exit derivation folded into the
+    /// induction so nothing has to name the final cursors.
+    pub echelon_aux_is_echelon: NameId,
+    /// `Rat.rowEchelon_isEchelon : ∀ M rows cols,
+    /// Eq Bool (isEchelon (rowEchelon M rows cols) rows cols) true` —
+    /// **obligation 4, unconditional.** Gaussian elimination produces a matrix
+    /// in row-echelon form.
+    pub row_echelon_is_echelon: NameId,
 }
 
 impl RatPrelude {
@@ -3539,6 +3596,14 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         leading_index_aux_congr_row: child(kernel, "leadingIndexAux_congr_row"),
         leading_index_congr_row: child(kernel, "leadingIndex_congr_row"),
         clear_below_row_swap_off: child(kernel, "clearBelow_rowSwap_off"),
+        pivot_search_aux_ge_start: child(kernel, "pivotSearchAux_ge_start"),
+        pivot_search_ge_start: child(kernel, "pivotSearch_ge_start"),
+        is_echelon_aux_of_pairs: child(kernel, "isEchelonAux_of_pairs"),
+        is_echelon_of_pairs: child(kernel, "isEchelon_of_pairs"),
+        echelon_step_ok_of_lt: child(kernel, "echelonStepOk_of_lt"),
+        echelon_step_ok_both_cols: child(kernel, "echelonStepOk_both_cols"),
+        echelon_aux_is_echelon: child(kernel, "echelonAux_isEchelon"),
+        row_echelon_is_echelon: child(kernel, "rowEchelon_isEchelon"),
     }
 }
 

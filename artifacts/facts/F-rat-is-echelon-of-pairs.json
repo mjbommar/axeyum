@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-is-echelon-of-pairs",
+  "title": "The row-echelon Bool predicate is exactly the adjacent-pair condition",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every rows, cols, IF for all q with Nat.Lt (Nat.succ q) rows the test Rat.echelonStepOk (Rat.leadingIndex M q cols) (Rat.leadingIndex M (Nat.succ q) cols) cols is true, THEN Rat.isEchelon M rows cols is true -- and likewise for the fuelled form Rat.isEchelonAux from any starting row, with the pair condition restricted to rows at or below that start. In words: the computed Bool predicate is discharged by checking each adjacent pair, which is what turns a loop invariant about leading indices into the predicate itself. THERE IS NO FUEL BOUND, and ADR-1571 section 2's rule forces that: isEchelonAux answers true when its fuel runs out and true is the conclusion, so the exhaustion answer satisfies the postcondition directly -- the exact opposite of F:rat-pivot-search-ge-start, whose exhaustion answer falsifies its conclusion and which therefore has to refute both exhaustion leaves.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.isEchelon_of_pairs : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat.lt (AxNat.succ x3) x1) -> Eq.{1} Bool (Rat.echelonStepOk (Rat.leadingIndex x0 x3 x2) (Rat.leadingIndex x0 (AxNat.succ x3) x2) x2) Bool.true))) -> Eq.{1} Bool (Rat.isEchelon x0 x1 x2) Bool.true)))) ; theorem Rat.isEchelonAux_of_pairs : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : ((x5 : AxNat) -> ((x6 : AxNat.le x4 x5) -> ((x7 : AxNat.lt (AxNat.succ x5) x1) -> Eq.{1} Bool (Rat.echelonStepOk (Rat.leadingIndex x0 x5 x2) (Rat.leadingIndex x0 (AxNat.succ x5) x2) x2) Bool.true)))) -> Eq.{1} Bool (Rat.isEchelonAux x0 x1 x2 x3 x4) Bool.true))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-leading-index-eq-of-first-nonzero",
+    "F:ml430-nat-le-refl-fd7d9e15",
+    "F:nat-le-trans",
+    "F:nat-lt-of-ble-eq-false"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-is-echelon-of-pairs-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The regexes are anchored on the CONCLUSION being `= Bool.true`, not merely on the predicate appearing: a statement that concluded `= Bool.false`, or that concluded about `Rat.echelonStepOk` rather than `Rat.isEchelon`, fails. They also pin the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.isEchelonAux_of_pairs[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.isEchelonAux x0 x1 x2 x3 x4\\) Bool\\.true\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered evidence that the predicate is not vacuous is in `rat_prelude/echelon_invariant_tests.rs`, where `Rat.isEchelon` reduces to `false` on `[[0,1],[2,3]]` and on `[[0,0,2],[0,3,4],[5,6,7]]` -- so an `isEchelon` that accepted everything would fail there and this fact would be worthless."
+    },
+    {
+      "id": "rat-is-echelon-of-pairs-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The regexes are anchored on the CONCLUSION being `= Bool.true`, not merely on the predicate appearing: a statement that concluded `= Bool.false`, or that concluded about `Rat.echelonStepOk` rather than `Rat.isEchelon`, fails. They also pin the axiom-footprint column at 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.isEchelon_of_pairs[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.isEchelon x0 x1 x2\\) Bool\\.true\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered evidence that the predicate is not vacuous is in `rat_prelude/echelon_invariant_tests.rs`, where `Rat.isEchelon` reduces to `false` on `[[0,1],[2,3]]` and on `[[0,0,2],[0,3,4],[5,6,7]]` -- so an `isEchelon` that accepted everything would fail there and this fact would be worthless."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about any matrix in particular. It is the bridge from a pairwise condition to the computed predicate and says nothing about which matrices satisfy the pairwise condition; F:rat-row-echelon-is-echelon is what supplies one."
+}

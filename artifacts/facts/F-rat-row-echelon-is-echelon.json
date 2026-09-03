@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-row-echelon-is-echelon",
+  "title": "Gaussian elimination lands in row-echelon form",
+  "statement": "For every matrix M : Nat -> Nat -> Rat and every rows, cols, Rat.isEchelon (Rat.rowEchelon M rows cols) rows cols is true -- UNCONDITIONALLY, with no hypothesis on M or on the dimensions. This is ADR-1554's obligation 4, which ADR-1554 itself sized as 'at least a lane on its own and probably two' and ADR-1571 section 3 re-sized from measurement as four prerequisite lemmas plus an invariant plus two inductions. The loop form is also established: for every starting matrix and cursors, Rat.echelonAux rows cols fuel M pr pc lands in echelon form given five clauses -- the column cursor is in range (Nat.Le pc cols), the rows already placed pass the adjacent-pair test, they all lead strictly left of the column cursor, every row at or below the row cursor is zero everywhere left of the column cursor, and Nat.Le cols (Nat.add pc fuel). THE EXIT DERIVATION IS FOLDED INTO THE INDUCTION rather than run after it: the conclusion carried at every fuel level is already the answer, so each of the three leaves that stop the loop discharges it from the invariant and nothing ever has to name the final cursors -- which is why this is one induction and not the two ADR-1571 predicted. Two of those leaves share one derivation because Nat.add recurses on its right argument, so Nat.Le cols (Nat.add pc 0) IS Nat.Le cols pc; writing the fuel clause as pc + fuel rather than fuel + pc is what makes that identity definitional. The entry point needs no hypothesis because rowEchelon starts both cursors at 0, where three clauses are vacuous (Nat.Lt _ 0 has no inhabitant), one is Nat.zero_le and the last is one Nat.zero_add.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rowEchelon_isEchelon : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} Bool (Rat.isEchelon (Rat.rowEchelon x0 x1 x2) x1 x2) Bool.true))) ; theorem Rat.echelonAux_isEchelon : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> ((x4 : AxNat) -> Rat))) -> ((x4 : AxNat) -> ((x5 : AxNat) -> ((x6 : AxNat.le x5 x1) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.lt (AxNat.succ x7) x4) -> Eq.{1} Bool (Rat.echelonStepOk (Rat.leadingIndex x3 x7 x1) (Rat.leadingIndex x3 (AxNat.succ x7) x1) x1) Bool.true))) -> ((x8 : ((x8 : AxNat) -> ((x9 : AxNat.lt x8 x4) -> AxNat.lt (Rat.leadingIndex x3 x8 x1) x5))) -> ((x9 : ((x9 : AxNat) -> ((x10 : AxNat) -> ((x11 : AxNat.le x4 x9) -> ((x12 : AxNat.lt x9 x0) -> ((x13 : AxNat.lt x10 x5) -> Eq.{1} Rat (x3 x9 x10) Rat.zero)))))) -> ((x10 : AxNat.le x1 (AxNat.add x5 x2)) -> Eq.{1} Bool (Rat.isEchelon (Rat.echelonAux x0 x1 x2 x3 x4 x5) x0 x1) Bool.true)))))))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-row-swap-preserves-zero-range",
+    "F:ml430-nat-le-antisymm-79dccead",
+    "F:ml430-nat-le-of-ble-eq-true-646f4e10",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:ml430-nat-le-refl-fd7d9e15",
+    "F:nat-le-trans",
+    "F:nat-lt-of-ble-eq-false",
+    "F:nat-lt-of-lt-of-le",
+    "F:nat-lt-or-eq-of-le",
+    "F:nat-lt-or-ge",
+    "F:nat-lt-succ-self",
+    "F:nat-succ-add",
+    "F:rat-clear-below-off",
+    "F:rat-clear-below-preserves-zero",
+    "F:rat-clear-below-row-swap-off",
+    "F:rat-clear-below-zero",
+    "F:rat-echelon-step-ok-both-cols",
+    "F:rat-echelon-step-ok-of-lt",
+    "F:rat-leading-index-eq-cols-of-zero-row",
+    "F:rat-leading-index-eq-of-first-nonzero",
+    "F:rat-pivot-search-column-zero",
+    "F:rat-pivot-search-le-rows",
+    "F:rat-pivot-search-ne-zero",
+    "F:rat-leading-index-congr-row",
+    "F:rat-pivot-search-ge-start",
+    "F:rat-is-echelon-of-pairs"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-row-echelon-is-echelon-1",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The wrapper's regex is anchored on the COMPOSITE `Rat.isEchelon (Rat.rowEchelon x0 x1 x2) x1 x2` -- the predicate applied to the REDUCED matrix, at the same dimensions the reduction was given -- so a statement about the input matrix, or one that reduced at different dimensions from those it tests at, fails. The loop form's regex likewise pins `Rat.echelonAux x0 x1 x2 x3 x4 x5` inside `Rat.isEchelon … x0 x1`. Both pin the axiom-footprint column at 0, which is the headline for this family: obligation 4 closes with no assumption added.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.echelonAux_isEchelon[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.isEchelon \\(Rat\\.echelonAux x0 x1 x2 x3 x4 x5\\) x0 x1\\) Bool\\.true\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered evaluation test in `rat_prelude/echelon_invariant_tests.rs` reduces `Rat.isEchelon` to `true` on the reduced matrix AND to `false` on the INPUT, at `[[0,1],[2,3]]` (whose first column is zero at row 0, so the pivot step must swap) and at `[[0,0,2],[0,3,4],[5,6,7]]` (whose row order is reversed). A `rowEchelon` that returned its argument, or an `isEchelon` that accepted everything, fails that pair -- which is the check that stops this fact from being vacuously true."
+    },
+    {
+      "id": "rat-row-echelon-is-echelon-2",
+      "kind": "kernel-term",
+      "supports": "Both forms are checked, axiom-free theorems in all four rational preludes, populations pinned separately at four. The wrapper's regex is anchored on the COMPOSITE `Rat.isEchelon (Rat.rowEchelon x0 x1 x2) x1 x2` -- the predicate applied to the REDUCED matrix, at the same dimensions the reduction was given -- so a statement about the input matrix, or one that reduced at different dimensions from those it tests at, fails. The loop form's regex likewise pins `Rat.echelonAux x0 x1 x2 x3 x4 x5` inside `Rat.isEchelon … x0 x1`. Both pin the axiom-footprint column at 0, which is the headline for this family: obligation 4 closes with no assumption added.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.rowEchelon_isEchelon[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.isEchelon \\(Rat\\.rowEchelon x0 x1 x2\\) x1 x2\\) Bool\\.true\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows each, mutation-checked by `scripts/new-fact.py`. The registered evaluation test in `rat_prelude/echelon_invariant_tests.rs` reduces `Rat.isEchelon` to `true` on the reduced matrix AND to `false` on the INPUT, at `[[0,1],[2,3]]` (whose first column is zero at row 0, so the pivot step must swap) and at `[[0,0,2],[0,3,4],[5,6,7]]` (whose row order is reversed). A `rowEchelon` that returned its argument, or an `isEchelon` that accepted everything, fails that pair -- which is the check that stops this fact from being vacuously true."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about the reduced matrix having the SAME row space, rank or solution set as the input -- `Rat.rowEchelon` is proved to land in echelon form, not to preserve anything. It is also not yet the pivot-section equation ADR-1562 identified as what the rank/rankCols bridge actually consumes; echelon form implies that equation but the implication is a separate statement."
+}

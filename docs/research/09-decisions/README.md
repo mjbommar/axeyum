@@ -859,3 +859,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1566](adr-1566-a-scored-evaluations-residue-is-an-amendment-class-keyed-to-the-evaluation-record.md) | a scored evaluation's residue is an amendment class, keyed to the evaluation record and never to a fact id | accepted |
 | [1570](adr-1570-one-operation-closed-four-sibling-facts-and-the-other-six-say-what-is-missing.md) | one operation closed four sibling facts, and the other six say exactly what is missing | accepted |
 | [1571](adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md) | Thirteen axiom-free `Rat` declarations and one `Nat` one close | accepted |
+| [1574](adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md) | **`Rat.rowEchelon_isEchelon` is proved, axiom-free**, closing | accepted |

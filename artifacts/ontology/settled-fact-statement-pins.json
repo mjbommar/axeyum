@@ -20651,6 +20651,18 @@
       "kernel_theorem": "Rat.dotN_zero"
     },
     {
+      "fact_id": "F:rat-echelon-step-ok-both-cols",
+      "language": "lean4",
+      "statement_sha256": "0c00408537b943b343ae2e13c129c3bc7f5778298a00f6278960e493bbf01cbe",
+      "prose_sha256": "9c2e97b2a9aa484cbe7e7fcabf77757ed8bad72fad0138c3955ec55787cfb720"
+    },
+    {
+      "fact_id": "F:rat-echelon-step-ok-of-lt",
+      "language": "lean4",
+      "statement_sha256": "5fcf1e1cb7cfee4754de330befce867c97a7e88258b53e1be50db9c811964e52",
+      "prose_sha256": "f823b2efa4b78aad6a9ea18ea6d37dd82568c0916809e93e084d7432e98be7b1"
+    },
+    {
       "fact_id": "F:rat-eq-of-cross",
       "language": "lean4",
       "statement_sha256": "20cebc3ab4e06c8a606de7640b18d46c751eddc64a44ee6d3f7f40f9c11230ae",
@@ -20999,6 +21011,12 @@
       "statement_sha256": "7aec5129191f78b5ef65c4a2e841537b8a0e82302f223864ebce0881c6ee0959",
       "prose_sha256": "c54d9966ec810ee924d3195d9f73336608f13d8ba48df6305e4e4bc6ad0fd5d5",
       "kernel_theorem": "Rat.inv2_top_right"
+    },
+    {
+      "fact_id": "F:rat-is-echelon-of-pairs",
+      "language": "lean4",
+      "statement_sha256": "9ca01f652dd4cd0dabd265af66d8af2dc336b11356e5a5b03a564e77ee6047c5",
+      "prose_sha256": "666b6ffa464e9f89b1b52044a30a9bed5ed83d0d9e05be3e4fbae4068d0d9f77"
     },
     {
       "fact_id": "F:rat-is-pivot-col-b-eq-ble",
@@ -22241,6 +22259,12 @@
       "kernel_theorem": "Rat.pivotSearch_column_zero"
     },
     {
+      "fact_id": "F:rat-pivot-search-ge-start",
+      "language": "lean4",
+      "statement_sha256": "941ddb56e156252efc4e2722ffe8aecc4f54575ecd4f1de55c16f89a0c35d6c2",
+      "prose_sha256": "2a38d9236cebabe0cab66d833bd8d91f8ea17b94f4bc071a98a5700d67d61096"
+    },
+    {
       "fact_id": "F:rat-pivot-search-le-rows",
       "language": "lean4",
       "statement_sha256": "6dbe6e3106b9711f6f21e836f4670b3f17c3efbc78b6b355cfd395aac65d3582",
@@ -22449,6 +22473,12 @@
       "statement_sha256": "562a6d110eae530dac12a5b91f4ef8143f055176f48ef958957189ac62f5f16c",
       "prose_sha256": "b3e733dd4ede432ddcbcc3e8fa895fa6b8c528d06dedf940494475ce96db3b13",
       "kernel_theorem": "Rat.rowAddMul_inverse"
+    },
+    {
+      "fact_id": "F:rat-row-echelon-is-echelon",
+      "language": "lean4",
+      "statement_sha256": "d92f86fbe99fa333fd044319dcc47b998915136590ee29c7ca4fb83e4f1b2c1c",
+      "prose_sha256": "1e59fb084d5c0dbbb7045185bf2c29035adb5296eeab79ef2433aeb5f0e3a420"
     },
     {
       "fact_id": "F:rat-row-scale-inverse",

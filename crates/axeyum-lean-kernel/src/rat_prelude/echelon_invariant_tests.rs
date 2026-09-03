@@ -1,26 +1,32 @@
-//! Evidence for [`super::echelon_invariant`] — the row-swap half of ADR-1554's
-//! obligation 4.
+//! Evidence for [`super::echelon_invariant`] — ADR-1554's **obligation 4**.
 //!
-//! Four things are checked, and they catch disjoint defects.
+//! Six things are checked, and they catch disjoint defects.
 //!
-//! 1. **The swap computes what the theorem talks about**, by reduction at a
-//!    3×2 instance, with a control for the row the swap must NOT touch.
-//! 2. **The theorem applies at CONCRETE dimensions** — `pr`, `piv`, `rows`,
-//!    `k` and the row `s` all numerals, the two order hypotheses discharged by
-//!    `Nat.le_of_ble_eq_true` at `Eq.refl` — and its conclusion reduces to the
-//!    equation about the entry the swap moved.
-//! 3. **The theorem applies at fully free arguments**, with a control refusing
-//!    the statement a proof that forgot to apply the swap would have.
-//! 4. **Both hypotheses on `piv` are load-bearing.** Each is dropped in turn
-//!    and the conclusion is FALSE by reduction at a matrix satisfying
+//! 1. **The swap computes what the row-swap theorem talks about**, by reduction
+//!    at a 3×2 instance, with a control at every entry.
+//! 2. **That theorem applies at CONCRETE dimensions** — every index a numeral,
+//!    both order hypotheses discharged by `Nat.le_of_ble_eq_true` at `Eq.refl`.
+//! 3. **It applies at fully free arguments**, with a control refusing the
+//!    statement a proof that forgot to apply the swap would have.
+//! 4. **Both its hypotheses on `piv` are load-bearing.** Each is dropped in
+//!    turn and the conclusion is FALSE by reduction at a matrix satisfying
 //!    everything else — a hypothesis every matrix satisfies is decoration, and
 //!    ADR-1562 §2's rule is to rule that out first.
+//! 5. **The leading-index congruence reads only its own row**, checked at two
+//!    matrices that agree on one row and disagree on the other, and the pivot
+//!    step is checked at a matrix where it really swaps AND really sweeps, so
+//!    the "leaves the prefix alone" lemma is not true by the step being the
+//!    identity.
+//! 6. **`Rat.rowEchelon_isEchelon` is not vacuous.** `Rat.isEchelon` is
+//!    reduced to `true` on the reduced matrix AND to `false` on the input, at
+//!    two matrices — a `rowEchelon` that returned its argument, or an
+//!    `isEchelon` that accepted everything, fails that pair.
 //!
 //! Every magnitude formed is a single-digit integer, so nothing here touches
 //! the unary-numeral cost `CLAUDE.md` documents.
 
 use super::RatPrelude;
-use super::echelon::rrow_swap;
+use super::echelon::{ris_echelon, rrow_echelon, rrow_swap};
 use super::echelon_invariant::column_zero_from;
 use super::matrix_det::{mat_ty, rq};
 use super::nullity_tests::rect_matrix;
@@ -506,5 +512,102 @@ fn clear_below_row_swap_off_leaves_the_processed_prefix_alone() {
     assert!(
         d.kernel().def_eq(inferred, want),
         "the conclusion is the entry equation at (0, 0)"
+    );
+}
+
+/// `Rat.rowEchelon_isEchelon` at CONCRETE matrices, with the control that
+/// decides whether the theorem says anything: the ORIGINAL matrix is not in
+/// echelon form.
+///
+/// `[[0,1],[2,3]]` forces the swap — its first column is zero at row 0 — and
+/// `[[0,0,2],[0,3,4],[5,6,7]]` reverses the row order entirely, so a
+/// `rowEchelon` that returned its argument would fail both.
+#[test]
+fn row_echelon_is_echelon_computes_and_the_input_is_not_already_echelon() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let true_v = d.bool_true();
+    let false_v = d.bool_false();
+
+    for (rows, cols, entries, label) in [
+        (2usize, 2usize, vec![0i64, 1, 2, 3], "[[0,1],[2,3]]"),
+        (
+            3,
+            3,
+            vec![0, 0, 2, 0, 3, 4, 5, 6, 7],
+            "[[0,0,2],[0,3,4],[5,6,7]]",
+        ),
+    ] {
+        let m = rect_matrix(&mut d, p, rows, cols, &entries);
+        let rows_n = d.num(u32::try_from(rows).expect("small"));
+        let cols_n = d.num(u32::try_from(cols).expect("small"));
+
+        let reduced = rrow_echelon(&mut d, p, m, rows_n, cols_n);
+        let ok = ris_echelon(&mut d, p, reduced, rows_n, cols_n);
+        assert!(
+            d.kernel().def_eq(ok, true_v),
+            "{label}: rowEchelon must land in echelon form"
+        );
+
+        // The control. Without it the theorem could be true because
+        // `isEchelon` accepts everything.
+        let raw = ris_echelon(&mut d, p, m, rows_n, cols_n);
+        assert!(
+            d.kernel().def_eq(raw, false_v),
+            "{label}: the INPUT must not already be in echelon form"
+        );
+    }
+}
+
+/// `Rat.rowEchelon_isEchelon` applies at fully free arguments and carries no
+/// hypothesis at all.
+#[test]
+fn row_echelon_is_echelon_applies_at_free_variables_with_no_hypothesis() {
+    let (mut kernel, p) = built();
+    let mut d = IntDev::new(&mut kernel, p.int);
+
+    let anon = d.anon_name();
+    let nat = d.nat_ty();
+    let mty = mat_ty(&mut d);
+
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+    let rows_fv = d.fresh_fvar();
+    let rows = d.kernel().fvar(rows_fv);
+    let cols_fv = d.fresh_fvar();
+    let cols = d.kernel().fvar(cols_fv);
+
+    let mut ctx = LocalContext::new();
+    for (fvar, ty) in [(m_fv, mty), (rows_fv, nat), (cols_fv, nat)] {
+        ctx.push(LocalDecl {
+            fvar,
+            name: anon,
+            ty,
+            info: BinderInfo::Default,
+        });
+    }
+
+    let applied = d.const_app(p.row_echelon_is_echelon, &[m, rows, cols]);
+    let inferred = d
+        .kernel()
+        .infer_in(applied, &mut ctx)
+        .expect("Rat.rowEchelon_isEchelon must apply at free variables with no hypothesis");
+
+    let reduced = rrow_echelon(&mut d, p, m, rows, cols);
+    let ok = ris_echelon(&mut d, p, reduced, rows, cols);
+    let true_v = d.bool_true();
+    let want = d.bool_eq(ok, true_v);
+    assert!(
+        d.kernel().def_eq(inferred, want),
+        "the conclusion is about the REDUCED matrix"
+    );
+
+    // The control: it is not the (false) claim about the input matrix.
+    let raw = ris_echelon(&mut d, p, m, rows, cols);
+    let control = d.bool_eq(raw, true_v);
+    assert!(
+        !d.kernel().def_eq(inferred, control),
+        "negative control: this is not a claim about the input matrix"
     );
 }

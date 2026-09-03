@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-echelon-step-ok-both-cols",
+  "title": "Two zero rows in a row pass the echelon step test",
+  "statement": "For every natural number cols, Rat.echelonStepOk cols cols cols is true. This is the SECOND disjunct of the test at the only pair of values that can satisfy it: a leading index is at most cols, so Nat.ble cols l says l = cols, and ADR-1554 records that this disjunct needs BOTH conjuncts because dropping either would accept a nonzero row sitting below a zero one. Two adjacent zero rows are the one case the strict clause cannot cover, and they are exactly what the row-echelon loop invariant produces below its last pivot.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.echelonStepOk_both_cols : ((x0 : AxNat) -> Eq.{1} Bool (Rat.echelonStepOk x0 x0 x0) Bool.true)",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-echelon-step-ok-of-lt",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e",
+    "F:ml430-nat-le-refl-fd7d9e15"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-echelon-step-ok-both-cols-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex requires all THREE arguments to be the same variable `x0`: the statement is about the diagonal, and a version quantified over two independent leading indices would be false.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.echelonStepOk_both_cols[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.echelonStepOk x0 x0 x0\\) Bool\\.true\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. This is the disjunct that accepts two adjacent zero rows, which is exactly what the row-echelon loop invariant produces below its last pivot -- every such row is zero across the full width, so F:rat-leading-index-eq-cols-of-zero-row reads `cols` for it."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about a leading index that merely EQUALS another. ADR-1554 records that the second disjunct needs both conjuncts, because dropping either would accept a nonzero row sitting below a zero one, and this fact only ever fires where both rows read `cols`."
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-echelon-step-ok-of-lt",
+  "title": "A leading entry that moved strictly right passes the echelon step test",
+  "statement": "For all natural numbers l1, l2 and cols, IF Nat.Lt l1 l2 THEN Rat.echelonStepOk l1 l2 cols is true. This is the FIRST disjunct of the test as a lemma, and it holds whatever cols is -- the strict clause does not mention it. It is what fires at the boundary of the row-echelon loop invariant, where the last placed row leads strictly left of the cursor and the row below it is the freshly placed pivot.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.echelonStepOk_of_lt : ((x0 : AxNat) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat.lt x0 x1) -> Eq.{1} Bool (Rat.echelonStepOk x0 x1 x2) Bool.true))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-leading-index-eq-of-first-nonzero",
+    "F:ml430-nat-ble-eq-true-of-le-5ce4ac2e"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-echelon-step-ok-of-lt-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four. The regex pins the conclusion at `Bool.true` and the argument order `x0 x1 x2` -- the test is NOT symmetric in its first two arguments, and swapping them turns a true statement into a false one.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.echelonStepOk_of_lt[[:space:]]+0[[:space:]].*Eq\\.\\{1\\} Bool \\(Rat\\.echelonStepOk x0 x1 x2\\) Bool\\.true\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py`. Spent at the boundary of the row-echelon loop invariant, where the last placed row leads strictly left of the column cursor and the row below it is the freshly placed pivot, whose leading index is the cursor exactly."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing when the two leading indices are equal, which is the case echelon form forbids and which no disjunct of the test accepts unless BOTH are `cols` -- that case is F:rat-echelon-step-ok-both-cols."
+}
