@@ -22453,6 +22453,12 @@
       "kernel_theorem": "Rat.rowSwap_involutive"
     },
     {
+      "fact_id": "F:rat-row-swap-preserves-zero-range",
+      "language": "lean4",
+      "statement_sha256": "4cf63b180128df95d95bb20e8648c23ba81b51f2b954bff70fd02ae75e36ae40",
+      "prose_sha256": "1ad092110102099f1941e17521f15eb3da548972b982ee9838b3ff570b4c12f6"
+    },
+    {
       "fact_id": "F:rat-self-normalize",
       "language": "lean4",
       "statement_sha256": "22c3df6aafe1d9ccd23dc57da3355e6eb83c56fc82252b420b1a4327b2035919",

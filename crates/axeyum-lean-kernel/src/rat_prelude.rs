@@ -63,6 +63,7 @@ mod defs;
 mod det_mul;
 mod diagonal;
 mod echelon;
+mod echelon_invariant;
 mod field;
 pub(crate) mod group;
 pub(crate) mod lattice;
@@ -2974,6 +2975,16 @@ pub struct RatPrelude {
     /// conclusion is about a value the sweep PRESERVES rather than one it
     /// creates, so the exhausted answer satisfies it directly.
     pub clear_below_preserves_zero: NameId,
+    /// `Rat.rowSwap_preserves_zero_range : ∀ M pr piv rows k, Le pr piv →
+    /// Lt piv rows → (∀ s, Le pr s → Lt s rows → Eq Rat (M s k) Rat.zero) →
+    /// ∀ s, Le pr s → Lt s rows → Eq Rat (rowSwap pr piv M s k) Rat.zero` —
+    /// *a column already zero from the pivot row down survives the pivot
+    /// swap.*
+    ///
+    /// The row ADR-1571 §3's table recorded as the one missing prerequisite of
+    /// obligation 4. Its twin for the sweep is
+    /// [`Self::clear_below_preserves_zero`].
+    pub row_swap_preserves_zero_range: NameId,
 }
 
 impl RatPrelude {
@@ -3504,6 +3515,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         clear_below_zero: child(kernel, "clearBelow_zero"),
         clear_below_aux_preserves_zero: child(kernel, "clearBelowAux_preserves_zero"),
         clear_below_preserves_zero: child(kernel, "clearBelow_preserves_zero"),
+        row_swap_preserves_zero_range: child(kernel, "rowSwap_preserves_zero_range"),
     }
 }
 
@@ -3572,6 +3584,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         pivot_content::declare_pivot_content(&mut d, prelude)?;
         clear_below::declare_clear_below_post(&mut d, prelude)?;
         leading_index::declare_leading_index_facts(&mut d, prelude)?;
+        echelon_invariant::declare_echelon_invariant(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
         Ok(())
     })();
@@ -3616,6 +3629,9 @@ mod clear_below_tests;
 
 #[cfg(test)]
 mod leading_index_tests;
+
+#[cfg(test)]
+mod echelon_invariant_tests;
 
 #[cfg(test)]
 mod cas_ivt_bridge_tests;

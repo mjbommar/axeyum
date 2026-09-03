@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-row-swap-preserves-zero-range",
+  "title": "The pivot swap preserves a column already zero from the pivot row down",
+  "statement": "For every matrix M : Nat -> Nat -> Rat, every pivot row pr, candidate row piv, row count rows and column k, IF Nat.Le pr piv and Nat.Lt piv rows and (for all s, Nat.Le pr s and Nat.Lt s rows imply Eq Rat (M s k) Rat.zero) THEN for all s, Nat.Le pr s and Nat.Lt s rows imply Eq Rat (Rat.rowSwap pr piv M s k) Rat.zero. In words: a column already zero from the pivot row down survives the pivot SWAP. This is the row ADR-1571 section 3's table recorded as the one missing prerequisite of ADR-1554's obligation 4: the Gaussian-elimination step swaps the found pivot row into place BEFORE it sweeps, and both rows it exchanges live inside the range the loop invariant claims is zero to the left of the cursor, so F:rat-clear-below-preserves-zero alone does not carry the invariant through one step. BOTH BOUNDS ON piv ARE LOAD-BEARING and neither is derived: rowSwap pr piv M reads row piv into position pr, so the conclusion at s = pr is a claim about M piv k, which the hypothesis covers only when pr <= piv < rows. Nat.Lt pr rows is NOT a hypothesis -- it follows from the two that are, by Nat.lt_of_le_of_lt, and is needed only in the s = piv branch where the answer is M pr k.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.rowSwap_preserves_zero_range : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Rat))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : AxNat) -> ((x5 : AxNat.le x1 x2) -> ((x6 : AxNat.lt x2 x3) -> ((x7 : ((x7 : AxNat) -> ((x8 : AxNat.le x1 x7) -> ((x9 : AxNat.lt x7 x3) -> Eq.{1} Rat (x0 x7 x4) Rat.zero)))) -> ((x8 : AxNat) -> ((x9 : AxNat.le x1 x8) -> ((x10 : AxNat.lt x8 x3) -> Eq.{1} Rat (Rat.rowSwap x1 x2 x0 x8 x4) Rat.zero)))))))))))",
+    "fragment": "Rat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": [
+    "F:rat-clear-below-preserves-zero",
+    "F:ml430-nat-eq-of-beq-eq-true-6ec35ee4",
+    "F:ml430-nat-le-refl-fd7d9e15",
+    "F:nat-lt-of-le-of-lt"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-row-swap-preserves-zero-range-1",
+      "kind": "kernel-term",
+      "supports": "A checked, axiom-free theorem in all four rational preludes, population pinned at four so a row disappearing from one prelude fails the check rather than passing on the survivors. The regex is anchored on `Rat.rowSwap x1 x2 x0 x8 x4` -- the conclusion is about the SWAPPED matrix, not `x0 x8 x4`, which is the hypothesis restated and is what a proof that forgot to apply the swap would give. It also pins the axiom-footprint column at `0`.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE '^[a-z]+[[:space:]]+theorem[[:space:]]+Rat\\.rowSwap_preserves_zero_range[[:space:]]+0[[:space:]].*-> Eq\\.\\{1\\} Rat \\(Rat\\.rowSwap x1 x2 x0 x8 x4\\) Rat\\.zero\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)\\)$')\" = 4",
+      "notes": "Run 2026-09-02: four rows, mutation-checked by `scripts/new-fact.py` (the pattern matches the real output and fails on every mutation of it). The registered evaluation tests are `rat_prelude/echelon_invariant_tests.rs`: the swap is reduced at `[[1,2],[0,3],[0,4]]` with a control at every entry, the theorem is instantiated at CONCRETE `pr = 1`, `piv = 2`, `rows = 3`, `k = 0`, `s = 1` with both order hypotheses discharged by `Nat.le_of_ble_eq_true` at `Eq.refl`, and it is applied at fully free arguments with a control refusing the unswapped statement. Two further tests DROP one hypothesis each and exhibit a matrix where the conclusion is false by reduction: `[[0,9],[0,9],[5,9]]` with `rows = 2` and `piv = 2` (no `Lt piv rows`) puts 5 at (0,0), and `[[7,9],[0,9],[0,9]]` with `pr = 1` and `piv = 0` (no `Le pr piv`) puts 7 at (1,0). So neither hypothesis is decoration."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-02",
+    "established_by": "axeyum-lean-kernel build_rat_prelude (crates/axeyum-lean-kernel/src/rat_prelude/echelon_invariant.rs)",
+    "source": "docs/research/09-decisions/adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md"
+  },
+  "notes": "ADR-0603 grading: row 1 is the general constructive form (this fact). Row 2 is EMPTY BY PROOF, as for the rest of this family -- the order on the constructed rationals is decidable and every predicate here is total and `Bool`-valued, so there is no Markov-style boundary to refute. Row 3 is `rat_prelude/echelon_invariant_tests.rs`. Row 4 is empty -- no import. WHAT THIS DOES NOT SAY: nothing about the leading indices, nothing about which row the swap should have chosen, and nothing that survives dropping either bound on `piv` -- the two negative controls exhibit a counterexample for each. It is about ONE column `k` at a time, so carrying a whole prefix of columns through a pivot step is a separate quantification the caller does, not something this fact supplies."
+}
