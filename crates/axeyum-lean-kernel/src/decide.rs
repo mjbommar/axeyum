@@ -98,7 +98,7 @@ pub enum Decline {
 /// A loose `BVar` is not treated as "not closed" here: a well-formed
 /// top-level goal never has one, and every recursive call stays under
 /// whatever binders it started under, so the check is purely about `FVar`.
-fn is_closed<D: NatOps>(d: &mut D, e: ExprId) -> bool {
+pub(crate) fn is_closed<D: NatOps>(d: &mut D, e: ExprId) -> bool {
     match d.kernel().expr_node(e).clone() {
         ExprNode::FVar(_) => false,
         ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(_, _) | ExprNode::Lit(_) => true,
@@ -124,7 +124,7 @@ pub(crate) enum Shape {
     Lt,
 }
 
-fn spine<D: NatOps>(d: &mut D, e: ExprId) -> (ExprId, Vec<ExprId>) {
+pub(crate) fn spine<D: NatOps>(d: &mut D, e: ExprId) -> (ExprId, Vec<ExprId>) {
     let mut args = Vec::new();
     let mut head = e;
     loop {
@@ -137,7 +137,7 @@ fn spine<D: NatOps>(d: &mut D, e: ExprId) -> (ExprId, Vec<ExprId>) {
     (head, args)
 }
 
-fn head_const<D: NatOps>(d: &mut D, e: ExprId) -> Option<crate::NameId> {
+pub(crate) fn head_const<D: NatOps>(d: &mut D, e: ExprId) -> Option<crate::NameId> {
     match d.kernel().expr_node(e).clone() {
         ExprNode::Const(n, _) => Some(n),
         _ => None,
@@ -172,7 +172,11 @@ pub(crate) fn parse_goal<D: NatOps>(
 /// recurse into the argument; if `whnf` instead landed on the kernel's
 /// compact `Lit` representation (see the module docs), finish counting from
 /// there via [`lit_value`]. Counts layers up to [`MAX_MAGNITUDE`].
-fn nat_value<D: NatOps>(d: &mut D, prelude: &NatPrelude, e: ExprId) -> Result<u32, Decline> {
+pub(crate) fn nat_value<D: NatOps>(
+    d: &mut D,
+    prelude: &NatPrelude,
+    e: ExprId,
+) -> Result<u32, Decline> {
     let mut cur = e;
     let mut n = 0u32;
     loop {
@@ -234,7 +238,7 @@ fn bool_value<D: NatOps>(d: &mut D, e: ExprId) -> Result<bool, Decline> {
 
 /// Build a proof of `Nat.le (num lo) (num hi)` for `lo ≤ hi`: `le_step`
 /// applied `hi − lo` times to `le_refl (num lo)`.
-fn le_witness<D: NatOps>(d: &mut D, prelude: &NatPrelude, lo: u32, hi: u32) -> ExprId {
+pub(crate) fn le_witness<D: NatOps>(d: &mut D, prelude: &NatPrelude, lo: u32, hi: u32) -> ExprId {
     let base = d.num(lo);
     let mut proof = d.lemma(prelude.le_refl, &[base]);
     let mut current = base;
@@ -306,6 +310,9 @@ pub fn run<D: NatOps>(d: &mut D, prelude: &NatPrelude, goal: ExprId) -> Result<E
         }
     }
 }
+
+pub(crate) mod int;
+pub(crate) mod rat;
 
 #[cfg(test)]
 mod tests;
