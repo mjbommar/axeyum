@@ -267,12 +267,61 @@ precedent of hand-duplicating rather than composing.
 
 ## Evidence
 
-See `docs/plan/status/453-structures-1.md` for the measured run: field counts
-per record, the ten `Sort 1`-refused/`Sort 2`-accepted control pairs, the
-instance reduction checks, the six theorem instantiations (three theorems ×
-two carriers, each checked concrete and symbolic), and the `det_one`
-instantiation result at ℚ — including the exact stuck term if the final
-`def_eq` against `Rat.det_one` does not hold outright.
+Measured 2026-09-03 on this host.
+
+**The spine.** `nat_prelude::structures::structures_tests`: all ten records
+(`Magma` 2 fields, `Semigroup` 3, `Monoid` 6, `CommMonoid` 7, `Group` 9,
+`CommGroup` 10, `Semiring` 13, `Ring` 15, `CommRing` 16, `Field` 19) admit at
+`Sort 2` with every field's `Sort 1`-refused control firing (the guard
+panics the whole suite if it does not, so ten green runs is ten fired
+controls, not a sampled subset), every inductive/recursor/selector present
+in the environment, and a positive control (an all-`Prop` record IS accepted
+at `Sort 1`, so the guard is not blanket-refusing every inductive).
+
+**Instances and theorems.** `rat_prelude::algebra_instances::
+algebra_instances_tests`, plus the full `rat_prelude::` suite once
+(`rat_prelude_is_axiom_free` and `rat_prelude_builds` both green, confirming
+the whole ℚ prelude — including every ADR-1578 declaration — is still
+axiom-free): 6/6 passed. `monoid_ident_unique` applied at fully concrete
+`(Nat.commAddMonoid, e':=0, Nat.add_zero)` and `(Rat.commMulMonoid, e':=1,
+Rat.mul_one)` — the FIRST attempt failed exactly the way it should: applying
+the theorem (typed over `Alg.Monoid`) to the `Alg.CommMonoid` instances is a
+real `TypeMismatch`, because this spine has no inheritance, and the fix was
+building genuine `Alg.Monoid` values from the same underlying lemma
+constants. `group_inv_unique` and `ring_mul_zero` each applied at two
+independently-built structure instances (`Int.addGroup`/`Rat.addGroup`,
+`Int.ring`/`Rat.ring`), closed over symbolic elements.
+
+**The payoff.** `CommRing.detOne` (as `Alg.commRingDetOne`) is declared and
+admitted, instantiated at `Rat.commRing` (a `CommRing` built independently of
+`Rat.field`, from the same `Rat.*` constants), and type-checks over a
+symbolic matrix `A`. The measurement neither this ADR's design section nor
+the task brief predicted in advance: **`detR(Rat.commRing, 1, A)` IS
+`def_eq` to `Rat.det(A, 1)` at a SYMBOLIC `A`** — `true`, not merely equal at
+every concrete instantiation. This is despite `detR` and `Rat.det` being two
+independently-built `Nat.rec` recursions (the shape
+`docs/contributor-guide/kernel-proof-engineering.md`'s `Nat.multichoose`
+entry names as usually NOT `def_eq` even when they agree on every value).
+They agree here because everything the `n=1` unfolding touches — `add`,
+`mul`, `zero`, `one` — is, through `Rat.commRing`'s own fields, literally
+`Rat.add`/`Rat.mul`/`Rat.zero`/`Rat.one`, so both sides reduce (iota + beta,
+no law needed for this part) to the identical normal form. This is a
+one-`n`-value measurement, not a claim of agreement at general `n` — nothing
+here attempts `det_mul` or reasons about the two recursions' minors.
+
+**Fact ledger.** `F:alg-monoid-ident-unique`, `F:alg-group-inv-unique`,
+`F:alg-ring-mul-zero`, `F:alg-comm-ring-det-one` — one per generic theorem,
+each `epistemic_status: proved`, `axiom_footprint: []`.
+`python3 scripts/validate-facts.py`: 2718 facts, 0 errors.
+`check-settled-fact-statements.py --write`: 2449 pins, `unpinned=0`.
+`gen-py-prelude-fields.py`: `nat=1094+30` (ten `RecordNames`' `ind`/`mk`/
+`rec`), `rat=506+16` (`AlgebraNames`' sixteen names) — both exactly the
+expected counts; `--check` confirms up to date; `cargo check -p axeyum-py`
+clean.
+
+Full detail (field-index tables, the two real bugs the test suite's own
+first run caught, and every SHA) is in
+`docs/plan/status/453-structures-1.md`.
 
 ## Consequences
 
