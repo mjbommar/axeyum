@@ -971,7 +971,7 @@ fn cond_inv_field(
 // ---------------------------------------------------------------------------
 
 /// A caller-supplied `α -> α -> Prop`.
-fn rel_field(name: &'static str, carrier_idx: usize) -> FieldSpec {
+pub(crate) fn rel_field(name: &'static str, carrier_idx: usize) -> FieldSpec {
     FieldSpec {
         suffix: name,
         kind: FieldKind::Data,
@@ -986,7 +986,7 @@ fn rel_field(name: &'static str, carrier_idx: usize) -> FieldSpec {
 }
 
 /// `forall a, le a a`.
-fn le_refl_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
+pub(crate) fn le_refl_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
     FieldSpec {
         suffix: name,
         kind: FieldKind::Law,
@@ -1001,7 +1001,7 @@ fn le_refl_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> Field
 }
 
 /// `forall a b c, le a b -> le b c -> le a c`.
-fn le_trans_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
+pub(crate) fn le_trans_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> FieldSpec {
     FieldSpec {
         suffix: name,
         kind: FieldKind::Law,
@@ -1045,7 +1045,7 @@ fn le_antisymm_field(name: &'static str, carrier_idx: usize, le_idx: usize) -> F
 }
 
 /// `forall a b c, le a b -> le (add c a) (add c b)`.
-fn add_le_add_left_field(
+pub(crate) fn add_le_add_left_field(
     name: &'static str,
     carrier_idx: usize,
     add_idx: usize,
@@ -1074,7 +1074,7 @@ fn add_le_add_left_field(
 }
 
 /// `forall a b, le zero a -> le zero b -> le zero (mul a b)`.
-fn mul_nonneg_field(
+pub(crate) fn mul_nonneg_field(
     name: &'static str,
     carrier_idx: usize,
     mul_idx: usize,
@@ -1107,11 +1107,12 @@ fn mul_nonneg_field(
 // The generic record builder.
 // ---------------------------------------------------------------------------
 
-/// The largest field count among the ten records (`Field`, 19), with
-/// headroom -- fixed so [`RecordNames`] (and therefore [`StructuresNames`]
-/// and `NatPrelude`) stays `Copy`, matching every other prelude handle in
-/// this crate.
-pub const MAX_FIELDS: usize = 24;
+/// The largest field count among the records this spine and its `AlgS`
+/// twin declare (`AlgS.OrderedRing`, ADR-1592: `AlgS.CommRing`'s 23 fields
+/// plus 7 order fields = 30), with headroom -- fixed so [`RecordNames`]
+/// (and therefore [`StructuresNames`] and `NatPrelude`) stays `Copy`,
+/// matching every other prelude handle in this crate.
+pub const MAX_FIELDS: usize = 32;
 
 /// One selector per field, in declaration order, plus the constructor/
 /// recursor names. `Copy` via a fixed-size array (`selectors[len..]` is

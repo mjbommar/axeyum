@@ -6202,6 +6202,13 @@ pub struct CRealPrelude {
     /// `algebra_instance::declare_comm_ring_s`, wired into `STEP_DISPATCH`
     /// right after `product::declare_product`.
     pub comm_ring_s: NameId,
+    /// `CReal.orderedRingS : AlgS.OrderedRing` (`creal/algebra_instance.rs`,
+    /// ADR-1592) — every field an *existing* `CReal` theorem, verbatim,
+    /// except `mulOneL`/`distribR` (as `comm_ring_s` above) and
+    /// `add_le_add_left` (derived from `add_le_add`+`le_refl`). Declared by
+    /// `algebra_instance::declare_ordered_ring_s`, wired into
+    /// `STEP_DISPATCH` right after `algebra_instance::declare_comm_ring_s`.
+    pub ordered_ring_s: NameId,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
     /// `creal/pi.rs`'s own 14 names, moved out of this struct by
     /// ADR-1512 so that adding a declaration to that module touches
@@ -6834,6 +6841,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         abs_diff_sub_le_of_deriv_bound: kernel.name_str(creal, "abs_diff_sub_le_of_deriv_bound"),
         has_derivative_uniform_limit: kernel.name_str(creal, "hasDerivative_uniform_limit"),
         comm_ring_s: kernel.name_str(creal, "commRingS"),
+        ordered_ring_s: kernel.name_str(creal, "orderedRingS"),
         pi: pi::PiNames::intern(kernel, creal),
     }
 }
@@ -7223,6 +7231,10 @@ const STEP_DISPATCH: &[StepDispatch] = &[
     (
         "algebra_instance::declare_comm_ring_s",
         algebra_instance::declare_comm_ring_s,
+    ),
+    (
+        "algebra_instance::declare_ordered_ring_s",
+        algebra_instance::declare_ordered_ring_s,
     ),
     ("field::declare_field", field::declare_field),
     ("inverse::declare_inverse", inverse::declare_inverse),

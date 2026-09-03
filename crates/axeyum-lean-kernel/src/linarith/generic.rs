@@ -58,7 +58,9 @@ use crate::level::LevelId;
 use crate::name::NameId;
 use crate::nat_prelude::structures::sel;
 use crate::nat_prelude::structures::{self, RecordNames};
+use crate::nat_prelude::structures_setoid as structures_s;
 use crate::rat_prelude::ordered_ring_ext::OrderedRingExtNames;
+use crate::rat_prelude::ordered_ring_ext_s::OrderedRingExtSNames;
 
 use super::{Certificate, Coeff, Decline, LinForm, find_combination};
 
@@ -167,6 +169,57 @@ fn fold_from_ctx(
     acc
 }
 
+/// ADR-1592: which "equality" flavor this `Problem` reasons about — the
+/// kernel's own `Eq` (over `Alg.OrderedRing`, ADR-1585's original scope) or
+/// a caller-supplied `equiv` relation (over `AlgS.OrderedRing`) with its
+/// own `equivRefl`/`equivSymm`/`equivTrans` and per-operation congruence
+/// FIELDS. There is no generic `Eq.rec`-shaped transport for an arbitrary
+/// `equiv` (ADR-1588's own point — a setoid has no free lunch for an
+/// opaque predicate), so the `Setoid` variant carries exactly the two
+/// congruence fields the normalizer's `congr`/`substp` calls need:
+/// `addCongr` (every `congr` call in this module rewrites one operand of
+/// an `add`-chain) and `leCongr` (every `substp` call rewrites one side of
+/// an `le`).
+#[derive(Clone, Copy)]
+enum Backend {
+    KernelEq,
+    Setoid {
+        equiv: ExprId,
+        equiv_refl: ExprId,
+        equiv_symm: ExprId,
+        equiv_trans: ExprId,
+        add_congr: ExprId,
+        le_congr: ExprId,
+    },
+}
+
+/// Structural description of the ADD-shaped congruence context a `congr`
+/// call rewrites under. The `KernelEq` backend ignores this (its `Eq.rec`
+/// transport already works from the closure `f` alone); the `Setoid`
+/// backend has no such generic transport and uses this instead to compose
+/// `addCongr` applications directly.
+#[derive(Clone)]
+enum AddCtx {
+    /// `fun t => add t fixed`.
+    Left(ExprId),
+    /// `fun t => add fixed t`.
+    Right(ExprId),
+    /// `fun t => fold_from(t, tail)` == `((t + tail[0]) + tail[1]) + ...`
+    /// (see [`fold_from_ctx`]).
+    FoldFrom(Vec<Item>),
+}
+
+/// Structural description of the LE-shaped substitution context a
+/// `substp` call rewrites under — `leCongr` handles both shapes directly,
+/// one field application each.
+#[derive(Clone, Copy)]
+enum LeCtx {
+    /// `fun t => le t fixed`.
+    Left(ExprId),
+    /// `fun t => le fixed t`.
+    Right(ExprId),
+}
+
 /// The parsing/emission context for one goal over one `(R : OrderedRing)`
 /// term. Every field is a `Copy` term/name snapshotted once in
 /// [`Problem::new`] — no `IntDev`/`NatDev` anywhere.
@@ -196,6 +249,7 @@ pub(crate) struct Problem {
     ctx: OpCtx,
     atoms: Vec<ExprId>,
     next_scratch: u64,
+    backend: Backend,
 }
 
 impl Problem {
@@ -282,6 +336,117 @@ impl Problem {
             ctx,
             atoms: Vec::new(),
             next_scratch: 90_000,
+            backend: Backend::KernelEq,
+        }
+    }
+
+    /// ADR-1592: the setoid twin of [`Self::new`] — over `(R : AlgS.
+    /// OrderedRing)` instead of `(R : Alg.OrderedRing)`, reading every
+    /// field/derived-lemma from `st`/`ext` (the setoid record and
+    /// [`super::super::rat_prelude::ordered_ring_ext_s::OrderedRingExtSNames`])
+    /// instead of the `Eq`-flavored spine, and additionally caching
+    /// `equiv`/`equivRefl`/`equivSymm`/`equivTrans`/`addCongr`/`leCongr` in
+    /// [`Backend::Setoid`] — the record's own congruence FIELDS, since
+    /// there is no generic `Eq.rec` transport for an arbitrary `equiv`
+    /// (ADR-1588).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn new_s(
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        l1: LevelId,
+        st: &structures_s::StructuresSRecordNames,
+        ext: &OrderedRingExtSNames,
+        nat: &NatPrelude,
+        ring: ExprId,
+        zero_le_one: Option<ExprId>,
+    ) -> Self {
+        use structures_s::idx::ordered_ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_CONGR, ADD_LE_ADD_LEFT, ADD_ZERO, CARRIER, EQUIV,
+            EQUIV_REFL, EQUIV_SYMM, EQUIV_TRANS, LE, LE_ANTISYMM_EQUIV, LE_CONGR, LE_REFL,
+            LE_TRANS, NEG, NEG_ADD, ONE, ZERO,
+        };
+        let nat = *nat;
+        let rn: &RecordNames = &st.ordered_ring;
+        let carrier = sel(k, rn, CARRIER, ring);
+        let equiv = sel(k, rn, EQUIV, ring);
+        let equiv_refl = sel(k, rn, EQUIV_REFL, ring);
+        let equiv_symm = sel(k, rn, EQUIV_SYMM, ring);
+        let equiv_trans = sel(k, rn, EQUIV_TRANS, ring);
+        let zero = sel(k, rn, ZERO, ring);
+        let one = sel(k, rn, ONE, ring);
+        let add = sel(k, rn, ADD, ring);
+        let neg = sel(k, rn, NEG, ring);
+        let add_congr = sel(k, rn, ADD_CONGR, ring);
+        let add_assoc = sel(k, rn, ADD_ASSOC, ring);
+        let add_comm = sel(k, rn, ADD_COMM, ring);
+        let add_zero = sel(k, rn, ADD_ZERO, ring);
+        let neg_add = sel(k, rn, NEG_ADD, ring);
+        let le = sel(k, rn, LE, ring);
+        let le_congr = sel(k, rn, LE_CONGR, ring);
+        let le_refl = sel(k, rn, LE_REFL, ring);
+        let le_trans = sel(k, rn, LE_TRANS, ring);
+        let le_antisymm = sel(k, rn, LE_ANTISYMM_EQUIV, ring);
+        let add_le_add_left = sel(k, rn, ADD_LE_ADD_LEFT, ring);
+
+        let le_of_add_le_add_right = {
+            let c = k.const_(ext.le_of_add_le_add_right, vec![]);
+            k.app(c, ring)
+        };
+        let add_le_add = {
+            let c = k.const_(ext.add_le_add, vec![]);
+            k.app(c, ring)
+        };
+        let ofnat = {
+            let c = k.const_(ext.ofnat, vec![]);
+            k.app(c, ring)
+        };
+        let ofnat_le_ofnat_of_le_r = {
+            let c = k.const_(ext.ofnat_le_ofnat_of_le, vec![]);
+            k.app(c, ring)
+        };
+        let eq_const = k.const_(lg.eq, vec![l1]);
+
+        let ctx = OpCtx {
+            add,
+            neg,
+            ofnat,
+            nat_zero: nat.zero,
+            nat_succ: nat.succ,
+        };
+
+        Self {
+            ring,
+            carrier,
+            zero,
+            one,
+            le,
+            le_refl,
+            le_trans,
+            le_antisymm,
+            add_assoc,
+            add_comm,
+            add_zero,
+            neg_add,
+            add_le_add_left,
+            le_of_add_le_add_right,
+            add_le_add,
+            ofnat_le_ofnat_of_le_r,
+            zero_le_one,
+            nat,
+            lg: *lg,
+            l1,
+            eq_const,
+            ctx,
+            atoms: Vec::new(),
+            next_scratch: 90_000,
+            backend: Backend::Setoid {
+                equiv,
+                equiv_refl,
+                equiv_symm,
+                equiv_trans,
+                add_congr,
+                le_congr,
+            },
         }
     }
 
@@ -303,11 +468,17 @@ impl Problem {
     // like `flatten`/`reassoc` stay free to re-borrow `k`). -----------------
 
     fn refl(&self, k: &mut Kernel, a: ExprId) -> ExprId {
-        structures::refl_of(k, &self.lg, self.l1, self.carrier, a)
+        match self.backend {
+            Backend::KernelEq => structures::refl_of(k, &self.lg, self.l1, self.carrier, a),
+            Backend::Setoid { equiv_refl, .. } => k.app(equiv_refl, a),
+        }
     }
 
     fn symm(&self, k: &mut Kernel, a: ExprId, b: ExprId, h: ExprId) -> ExprId {
-        structures::symm_of(k, &self.lg, self.l1, self.carrier, a, b, h)
+        match self.backend {
+            Backend::KernelEq => structures::symm_of(k, &self.lg, self.l1, self.carrier, a, b, h),
+            Backend::Setoid { equiv_symm, .. } => Self::apply(k, equiv_symm, &[a, b, h]),
+        }
     }
 
     fn trans(
@@ -319,44 +490,133 @@ impl Problem {
         h1: ExprId,
         h2: ExprId,
     ) -> ExprId {
-        let s = self.fresh_scratch();
-        structures::trans_of(k, &self.lg, self.l1, self.carrier, a, b, c, h1, h2, s)
+        match self.backend {
+            Backend::KernelEq => {
+                let s = self.fresh_scratch();
+                structures::trans_of(k, &self.lg, self.l1, self.carrier, a, b, c, h1, h2, s)
+            }
+            Backend::Setoid { equiv_trans, .. } => Self::apply(k, equiv_trans, &[a, b, c, h1, h2]),
+        }
     }
 
+    /// Rewrite one operand of an `add`-chain along `h : (a ~ b)` (`Eq` or
+    /// `equiv`, per backend). `shape` describes the ADD context the
+    /// `KernelEq` backend's closure `f` already builds directly (that
+    /// backend ignores `shape` and uses `f` exactly as before); the
+    /// `Setoid` backend has no generic transport for an opaque `f` and
+    /// uses `shape` to compose `addCongr` applications instead — see
+    /// [`Self::congr_add_setoid`].
     fn congr(
         &mut self,
         k: &mut Kernel,
         a: ExprId,
         b: ExprId,
         h: ExprId,
+        shape: AddCtx,
         f: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
     ) -> ExprId {
-        let s = self.fresh_scratch();
-        structures::congr_arg(k, &self.lg, self.l1, self.carrier, a, b, h, s, f)
+        match self.backend {
+            Backend::KernelEq => {
+                let s = self.fresh_scratch();
+                structures::congr_arg(k, &self.lg, self.l1, self.carrier, a, b, h, s, f)
+            }
+            Backend::Setoid { add_congr, .. } => {
+                self.congr_add_setoid(k, a, b, h, add_congr, shape)
+            }
+        }
     }
 
+    /// `h : equiv a b` |- `equiv (ctx a) (ctx b)`, `ctx` an ADD context
+    /// (see [`AddCtx`]). `Left`/`Right` are one `addCongr` application;
+    /// `FoldFrom` composes one `addCongr` per tail item, propagating the
+    /// seed's congruence outward through the SAME left-fold
+    /// [`fold_from_ctx`] itself builds.
+    fn congr_add_setoid(
+        &mut self,
+        k: &mut Kernel,
+        a: ExprId,
+        b: ExprId,
+        h: ExprId,
+        add_congr: ExprId,
+        shape: AddCtx,
+    ) -> ExprId {
+        match shape {
+            AddCtx::Left(fixed) => {
+                let refl_fixed = self.refl(k, fixed);
+                Self::apply(k, add_congr, &[a, b, fixed, fixed, h, refl_fixed])
+            }
+            AddCtx::Right(fixed) => {
+                let refl_fixed = self.refl(k, fixed);
+                Self::apply(k, add_congr, &[fixed, fixed, a, b, refl_fixed, h])
+            }
+            AddCtx::FoldFrom(tail) => {
+                let mut cur = h;
+                let mut cur_a = a;
+                let mut cur_b = b;
+                for item in tail {
+                    let t = self.item_term(k, item);
+                    let refl_t = self.refl(k, t);
+                    let next = Self::apply(k, add_congr, &[cur_a, cur_b, t, t, cur, refl_t]);
+                    cur_a = self.add2(k, cur_a, t);
+                    cur_b = self.add2(k, cur_b, t);
+                    cur = next;
+                }
+                cur
+            }
+        }
+    }
+
+    /// Transport `proof_at_a : pred a` to `pred b` along `h : (a ~ b)`.
+    /// `shape` describes the LE context (see [`LeCtx`]) the `Setoid`
+    /// backend needs (`leCongr`, a first-class field, handles either
+    /// shape in one application); the `KernelEq` backend ignores `shape`
+    /// and uses its generic `Eq.rec` `subst` exactly as before.
+    #[allow(clippy::too_many_arguments)]
     fn substp(
         &mut self,
         k: &mut Kernel,
         a: ExprId,
         b: ExprId,
         h: ExprId,
+        shape: LeCtx,
         pred: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
         proof_at_a: ExprId,
     ) -> ExprId {
-        let s = self.fresh_scratch();
-        structures::subst(
-            k,
-            &self.lg,
-            self.l1,
-            self.carrier,
-            a,
-            b,
-            h,
-            s,
-            pred,
-            proof_at_a,
-        )
+        match self.backend {
+            Backend::KernelEq => {
+                let s = self.fresh_scratch();
+                structures::subst(
+                    k,
+                    &self.lg,
+                    self.l1,
+                    self.carrier,
+                    a,
+                    b,
+                    h,
+                    s,
+                    pred,
+                    proof_at_a,
+                )
+            }
+            Backend::Setoid { le_congr, .. } => match shape {
+                LeCtx::Left(fixed) => {
+                    let refl_fixed = self.refl(k, fixed);
+                    Self::apply(
+                        k,
+                        le_congr,
+                        &[a, b, fixed, fixed, h, refl_fixed, proof_at_a],
+                    )
+                }
+                LeCtx::Right(fixed) => {
+                    let refl_fixed = self.refl(k, fixed);
+                    Self::apply(
+                        k,
+                        le_congr,
+                        &[fixed, fixed, a, b, refl_fixed, h, proof_at_a],
+                    )
+                }
+            },
+        }
     }
 
     fn apply(k: &mut Kernel, head: ExprId, args: &[ExprId]) -> ExprId {
@@ -430,20 +690,30 @@ impl Problem {
         if f == op { Some(x) } else { None }
     }
 
+    /// The `Eq`-shaped fragment's atomic proposition: kernel `Eq` at
+    /// `self.carrier` (`KernelEq` backend) or the record's own `equiv`
+    /// VALUE applied directly (`Setoid` backend — `equiv` is already a
+    /// 2-argument relation, `App(App(equiv,x),y)`, not a 3-argument
+    /// `App(App(App(Eq,ty),x),y)` the way kernel `Eq` is).
     fn as_eq(&self, k: &mut Kernel, e: ExprId) -> Option<(ExprId, ExprId)> {
-        let ExprNode::App(f3, y) = k.expr_node(e).clone() else {
-            return None;
-        };
-        let ExprNode::App(f2, x) = k.expr_node(f3).clone() else {
-            return None;
-        };
-        let ExprNode::App(f1, ty) = k.expr_node(f2).clone() else {
-            return None;
-        };
-        if f1 == self.eq_const && ty == self.carrier {
-            Some((x, y))
-        } else {
-            None
+        match self.backend {
+            Backend::KernelEq => {
+                let ExprNode::App(f3, y) = k.expr_node(e).clone() else {
+                    return None;
+                };
+                let ExprNode::App(f2, x) = k.expr_node(f3).clone() else {
+                    return None;
+                };
+                let ExprNode::App(f1, ty) = k.expr_node(f2).clone() else {
+                    return None;
+                };
+                if f1 == self.eq_const && ty == self.carrier {
+                    Some((x, y))
+                } else {
+                    None
+                }
+            }
+            Backend::Setoid { equiv, .. } => Self::as_binop(k, equiv, e),
         }
     }
 
@@ -545,7 +815,7 @@ impl Problem {
 
         let assoc = Self::apply(k, self.add_assoc, &[a, b, c]);
         let comm = Self::apply(k, self.add_comm, &[b, c]);
-        let under = self.congr(k, bc, cb, comm, &move |k2, t| {
+        let under = self.congr(k, bc, cb, comm, AddCtx::Right(a), &move |k2, t| {
             let e = k2.app(add, a);
             k2.app(e, t)
         });
@@ -595,11 +865,11 @@ impl Problem {
         let joined = self.add2(k, fu, fv);
 
         let add = self.ctx.add;
-        let step1 = self.congr(k, u, fu, pu, &move |k2, x| {
+        let step1 = self.congr(k, u, fu, pu, AddCtx::Left(v), &move |k2, x| {
             let e = k2.app(add, x);
             k2.app(e, v)
         });
-        let step2 = self.congr(k, v, fv, pv, &move |k2, x| {
+        let step2 = self.congr(k, v, fv, pv, AddCtx::Right(fu), &move |k2, x| {
             let e = k2.app(add, fu);
             k2.app(e, x)
         });
@@ -635,10 +905,17 @@ impl Problem {
         joined_items.extend_from_slice(init);
         let joined_inner = self.fold(k, &joined_items);
         let add = self.ctx.add;
-        let step2 = self.congr(k, regrouped_inner, joined_inner, inner, &move |k2, x| {
-            let e = k2.app(add, x);
-            k2.app(e, last_t)
-        });
+        let step2 = self.congr(
+            k,
+            regrouped_inner,
+            joined_inner,
+            inner,
+            AddCtx::Left(last_t),
+            &move |k2, x| {
+                let e = k2.app(add, x);
+                k2.app(e, last_t)
+            },
+        );
         let target = self.add2(k, joined_inner, last_t);
         self.trans(k, source, regrouped, target, step1, step2)
     }
@@ -655,9 +932,14 @@ impl Problem {
         let forward = self.trans(k, zero_head, head_zero, head, comm, drop);
         let back = self.symm(k, zero_head, head, forward);
         let tail = items[1..].to_vec();
-        let proof = self.congr(k, head, zero_head, back, &move |k2, t| {
-            fold_from_ctx(k2, ctx, &atoms, t, &tail)
-        });
+        let proof = self.congr(
+            k,
+            head,
+            zero_head,
+            back,
+            AddCtx::FoldFrom(tail.clone()),
+            &move |k2, t| fold_from_ctx(k2, ctx, &atoms, t, &tail),
+        );
         let mut out = vec![Item::Const(0)];
         out.extend_from_slice(items);
         (out, proof)
@@ -688,9 +970,14 @@ impl Problem {
                 let base = self.add_right_comm(k, prefix, x, y);
                 let tail = current[idx + 2..].to_vec();
                 let atoms = self.atoms.clone();
-                let step = self.congr(k, before, after, base, &move |k2, t| {
-                    fold_from_ctx(k2, ctx, &atoms, t, &tail)
-                });
+                let step = self.congr(
+                    k,
+                    before,
+                    after,
+                    base,
+                    AddCtx::FoldFrom(tail.clone()),
+                    &move |k2, t| fold_from_ctx(k2, ctx, &atoms, t, &tail),
+                );
                 current.swap(idx, idx + 1);
                 let next = self.fold(k, &current);
                 proof = self.trans(k, source, folded, next, proof, step);
@@ -716,9 +1003,14 @@ impl Problem {
             let base = self.eqc_and_prove_merge(k, before, after);
             let tail = current[2..].to_vec();
             let atoms = self.atoms.clone();
-            let step = self.congr(k, before, after, base, &move |k2, t| {
-                fold_from_ctx(k2, ctx, &atoms, t, &tail)
-            });
+            let step = self.congr(
+                k,
+                before,
+                after,
+                base,
+                AddCtx::FoldFrom(tail.clone()),
+                &move |k2, t| fold_from_ctx(k2, ctx, &atoms, t, &tail),
+            );
             current.remove(0);
             current[0] = merged;
             let next = self.fold(k, &current);
@@ -751,19 +1043,31 @@ impl Problem {
             let assoc = Self::apply(k, self.add_assoc, &[prefix, x, neg_x]);
             let cancel = Self::apply(k, self.neg_add, &[x]);
             let add = self.ctx.add;
-            let under = self.congr(k, x_neg_x, zero, cancel, &move |k2, t| {
-                let e = k2.app(add, prefix);
-                k2.app(e, t)
-            });
+            let under = self.congr(
+                k,
+                x_neg_x,
+                zero,
+                cancel,
+                AddCtx::Right(prefix),
+                &move |k2, t| {
+                    let e = k2.app(add, prefix);
+                    k2.app(e, t)
+                },
+            );
             let drop = Self::apply(k, self.add_zero, &[prefix]);
             let to_near = self.trans(k, before, mid, near, assoc, under);
             let base = self.trans(k, before, near, prefix, to_near, drop);
 
             let tail = current[idx + 2..].to_vec();
             let atoms = self.atoms.clone();
-            let step = self.congr(k, before, prefix, base, &move |k2, t| {
-                fold_from_ctx(k2, ctx, &atoms, t, &tail)
-            });
+            let step = self.congr(
+                k,
+                before,
+                prefix,
+                base,
+                AddCtx::FoldFrom(tail.clone()),
+                &move |k2, t| fold_from_ctx(k2, ctx, &atoms, t, &tail),
+            );
             current.drain(idx..=idx + 1);
             let next = self.fold(k, &current);
             proof = self.trans(k, source, folded, next, proof, step);
@@ -885,6 +1189,7 @@ impl Problem {
                         lhs,
                         rhs,
                         proof,
+                        LeCtx::Right(lhs),
                         &move |k2, t| {
                             let e = k2.app(le, lhs);
                             k2.app(e, t)
@@ -897,6 +1202,7 @@ impl Problem {
                         lhs,
                         rhs,
                         proof,
+                        LeCtx::Left(lhs),
                         &move |k2, t| {
                             let e = k2.app(le, t);
                             k2.app(e, lhs)
@@ -1013,6 +1319,7 @@ impl Problem {
                 lb_zero,
                 lb,
                 eqz,
+                LeCtx::Left(lb_slack),
                 &move |k2, x| {
                     let e = k2.app(le, x);
                     k2.app(e, lb_slack)
@@ -1031,6 +1338,7 @@ impl Problem {
             target_rhs,
             ra,
             identity,
+            LeCtx::Right(la),
             &move |k2, x| {
                 let e = k2.app(le, la);
                 k2.app(e, x)
@@ -1144,6 +1452,53 @@ pub(crate) fn emit_le_from_certificate(
     verify: bool,
 ) -> Result<ExprId, Decline> {
     let mut problem = Problem::new(k, lg, l1, st, ext, nat, ring, zero_le_one);
+    let hyps = problem.collect(k, assumptions);
+    let _ = problem.parse_term(k, lhs)?;
+    let _ = problem.parse_term(k, rhs)?;
+    problem.emit_le(k, &hyps, lhs, rhs, cert, verify)
+}
+
+/// ADR-1592: the setoid twin of [`prove`] — over `(R : AlgS.OrderedRing)`
+/// instead of `(R : Alg.OrderedRing)`, so a goal's "equality" fragment
+/// (`Shape::Eq`) is the record's own `equiv`, not the kernel's `Eq`. Same
+/// contract otherwise: `zero_le_one`, when supplied, must be a proof of
+/// `R.le R.zero R.one`; the returned term is unchecked.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn prove_s(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l1: LevelId,
+    st: &structures_s::StructuresSRecordNames,
+    ext: &OrderedRingExtSNames,
+    nat: &NatPrelude,
+    ring: ExprId,
+    zero_le_one: Option<ExprId>,
+    assumptions: &[Assumption],
+    goal: ExprId,
+) -> Result<ExprId, Decline> {
+    let mut problem = Problem::new_s(k, lg, l1, st, ext, nat, ring, zero_le_one);
+    problem.prove_goal(k, assumptions, goal)
+}
+
+/// ADR-1592: the setoid twin of [`emit_le_from_certificate`].
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn emit_le_from_certificate_s(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l1: LevelId,
+    st: &structures_s::StructuresSRecordNames,
+    ext: &OrderedRingExtSNames,
+    nat: &NatPrelude,
+    ring: ExprId,
+    zero_le_one: Option<ExprId>,
+    assumptions: &[Assumption],
+    lhs: ExprId,
+    rhs: ExprId,
+    cert: &Certificate,
+    verify: bool,
+) -> Result<ExprId, Decline> {
+    let mut problem = Problem::new_s(k, lg, l1, st, ext, nat, ring, zero_le_one);
     let hyps = problem.collect(k, assumptions);
     let _ = problem.parse_term(k, lhs)?;
     let _ = problem.parse_term(k, rhs)?;
@@ -2063,6 +2418,694 @@ mod generic_tests {
         };
         k.infer(closed)
             .expect("an UNCORRUPTED certificate must be admitted by the kernel");
+    }
+
+    // -----------------------------------------------------------------------
+    // ADR-1592: the SETOID path (`prove_s`/`emit_le_from_certificate_s`)
+    // over `AlgS.OrderedRing` — the three ℚ goals ADR-1585 built through the
+    // `Eq` spine, re-proved through `Rat.orderedRingS` (`ofAlg`), and the
+    // payoff: five goals at `CReal.orderedRingS`, a carrier `Alg.
+    // OrderedRing`/`linarith::generic`'s original `Eq`-flavored route could
+    // never reach (`CReal`'s carrier equality is `Equiv`, never `Eq`).
+    // -----------------------------------------------------------------------
+
+    use crate::creal::{CRealPrelude, build_creal_prelude};
+
+    fn le_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId, y: ExprId) -> ExprId {
+        let le = sel(k, rn, structures_s::idx::ordered_ring::LE, ring);
+        let e = k.app(le, x);
+        k.app(e, y)
+    }
+
+    fn add_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId, y: ExprId) -> ExprId {
+        let add = sel(k, rn, structures_s::idx::ordered_ring::ADD, ring);
+        let e = k.app(add, x);
+        k.app(e, y)
+    }
+
+    fn one_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId) -> ExprId {
+        sel(k, rn, structures_s::idx::ordered_ring::ONE, ring)
+    }
+
+    fn zero_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId) -> ExprId {
+        sel(k, rn, structures_s::idx::ordered_ring::ZERO, ring)
+    }
+
+    fn equiv_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId, y: ExprId) -> ExprId {
+        let equiv = sel(k, rn, structures_s::idx::ordered_ring::EQUIV, ring);
+        let e = k.app(equiv, x);
+        k.app(e, y)
+    }
+
+    fn creal_zero_le_one(k: &mut Kernel, p: &CRealPrelude) -> ExprId {
+        let zlt1 = k.const_(p.zero_lt_one, vec![]);
+        let le_of_lt = k.const_(p.le_of_lt, vec![]);
+        let zero = k.const_(p.zero, vec![]);
+        let one = k.const_(p.one, vec![]);
+        let e1 = k.app(le_of_lt, zero);
+        let e2 = k.app(e1, one);
+        k.app(e2, zlt1)
+    }
+
+    // --- three ℚ goals, re-proved through the setoid path at Rat.orderedRingS ---
+
+    #[test]
+    fn rat_new_capability_transitivity_via_algs() {
+        const A: u64 = 55_000;
+        const B: u64 = 55_001;
+        const C: u64 = 55_002;
+        const H1: u64 = 55_010;
+        const H2: u64 = 55_011;
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_ext_s.rat_ordered_ring_s, vec![]);
+        let carrier = k.const_(p.int.rat, vec![]);
+        let rn = p.int.nat.structures_s.ordered_ring;
+
+        let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
+        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let goal = le_of_s(&mut k, &rn, ring, a, c);
+
+        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+        let proof = prove_s(
+            &mut k,
+            &p.int.nat.logic,
+            l1,
+            &p.int.nat.structures_s,
+            &p.ordered_ring_ext_s,
+            &p.int.nat,
+            ring,
+            None,
+            &assumptions,
+            goal,
+        )
+        .expect("linarith::generic (setoid) must derive transitivity over Rat.orderedRingS");
+        let _ = close_and_infer(
+            &mut k,
+            carrier,
+            &[A, B, C],
+            &[H1, H2],
+            &[h1_ty, h2_ty],
+            proof,
+        );
+    }
+
+    #[test]
+    fn rat_new_capability_sum_of_nonneg_via_algs() {
+        const A: u64 = 55_100;
+        const B: u64 = 55_101;
+        const H1: u64 = 55_110;
+        const H2: u64 = 55_111;
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_ext_s.rat_ordered_ring_s, vec![]);
+        let carrier = k.const_(p.int.rat, vec![]);
+        let rn = p.int.nat.structures_s.ordered_ring;
+        let zero = zero_of_s(&mut k, &rn, ring);
+
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h1_ty = le_of_s(&mut k, &rn, ring, zero, a);
+        let h2_ty = le_of_s(&mut k, &rn, ring, zero, b);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let ab = add_of_s(&mut k, &rn, ring, a, b);
+        let goal = le_of_s(&mut k, &rn, ring, zero, ab);
+
+        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+        let proof = prove_s(
+            &mut k,
+            &p.int.nat.logic,
+            l1,
+            &p.int.nat.structures_s,
+            &p.ordered_ring_ext_s,
+            &p.int.nat,
+            ring,
+            None,
+            &assumptions,
+            goal,
+        )
+        .expect("linarith::generic (setoid) must derive sum-of-nonneg over Rat.orderedRingS");
+        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+    }
+
+    #[test]
+    fn rat_new_capability_slack_add_one_via_algs() {
+        const A: u64 = 55_200;
+        const B: u64 = 55_201;
+        const H: u64 = 55_210;
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_ext_s.rat_ordered_ring_s, vec![]);
+        let carrier = k.const_(p.int.rat, vec![]);
+        let rn = p.int.nat.structures_s.ordered_ring;
+        let one = one_of_s(&mut k, &rn, ring);
+        let zero_le_one = rat_zero_le_one(&mut k, &p);
+
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h = k.fvar(H);
+        let b_plus_one = add_of_s(&mut k, &rn, ring, b, one);
+        let goal = le_of_s(&mut k, &rn, ring, a, b_plus_one);
+
+        let assumptions = [(h_ty, h)];
+        let proof = prove_s(
+            &mut k,
+            &p.int.nat.logic,
+            l1,
+            &p.int.nat.structures_s,
+            &p.ordered_ring_ext_s,
+            &p.int.nat,
+            ring,
+            Some(zero_le_one),
+            &assumptions,
+            goal,
+        )
+        .expect("linarith::generic (setoid) must derive the slack-1 goal over Rat.orderedRingS");
+        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H], &[h_ty], proof);
+
+        // Negative control: WITHOUT `zero_le_one`, the same goal declines.
+        let mut k2 = Kernel::new();
+        let p2 = build_rat_prelude(&mut k2).expect("rat prelude must build");
+        let ring2 = k2.const_(p2.ordered_ring_ext_s.rat_ordered_ring_s, vec![]);
+        let rn2 = p2.int.nat.structures_s.ordered_ring;
+        let one2 = one_of_s(&mut k2, &rn2, ring2);
+        let (a2, b2) = (k2.fvar(A), k2.fvar(B));
+        let h_ty2 = le_of_s(&mut k2, &rn2, ring2, a2, b2);
+        let h2 = k2.fvar(H);
+        let b_plus_one2 = add_of_s(&mut k2, &rn2, ring2, b2, one2);
+        let goal2 = le_of_s(&mut k2, &rn2, ring2, a2, b_plus_one2);
+        let result = prove_s(
+            &mut k2,
+            &p2.int.nat.logic,
+            l1,
+            &p2.int.nat.structures_s,
+            &p2.ordered_ring_ext_s,
+            &p2.int.nat,
+            ring2,
+            None,
+            &[(h_ty2, h2)],
+            goal2,
+        );
+        assert!(
+            result.is_err(),
+            "the slack-1 goal (setoid) must decline when no zero_le_one witness is supplied"
+        );
+    }
+
+    // --- five goals at CReal.orderedRingS -- the payoff ---
+
+    #[test]
+    fn creal_linarith_transitivity() {
+        const A: u64 = 56_000;
+        const B: u64 = 56_001;
+        const C: u64 = 56_002;
+        const H1: u64 = 56_010;
+        const H2: u64 = 56_011;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let carrier = k.const_(p.creal, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+
+        let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
+        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let goal = le_of_s(&mut k, &rn, ring, a, c);
+
+        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+        let proof = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &assumptions,
+            goal,
+        )
+        .expect("linarith::generic (setoid) must derive transitivity over CReal.orderedRingS");
+        let _ = close_and_infer(
+            &mut k,
+            carrier,
+            &[A, B, C],
+            &[H1, H2],
+            &[h1_ty, h2_ty],
+            proof,
+        );
+    }
+
+    #[test]
+    fn creal_linarith_sum_of_nonneg() {
+        const A: u64 = 56_100;
+        const B: u64 = 56_101;
+        const H1: u64 = 56_110;
+        const H2: u64 = 56_111;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let carrier = k.const_(p.creal, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let zero = zero_of_s(&mut k, &rn, ring);
+
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h1_ty = le_of_s(&mut k, &rn, ring, zero, a);
+        let h2_ty = le_of_s(&mut k, &rn, ring, zero, b);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let ab = add_of_s(&mut k, &rn, ring, a, b);
+        let goal = le_of_s(&mut k, &rn, ring, zero, ab);
+
+        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+        let proof = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &assumptions,
+            goal,
+        )
+        .expect("linarith::generic (setoid) must derive sum-of-nonneg over CReal.orderedRingS");
+        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+    }
+
+    #[test]
+    fn creal_linarith_slack_add_one() {
+        const A: u64 = 56_200;
+        const B: u64 = 56_201;
+        const H: u64 = 56_210;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let carrier = k.const_(p.creal, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let one = one_of_s(&mut k, &rn, ring);
+        let zero_le_one = creal_zero_le_one(&mut k, &p);
+
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h = k.fvar(H);
+        let b_plus_one = add_of_s(&mut k, &rn, ring, b, one);
+        let goal = le_of_s(&mut k, &rn, ring, a, b_plus_one);
+
+        let assumptions = [(h_ty, h)];
+        let proof = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            Some(zero_le_one),
+            &assumptions,
+            goal,
+        )
+        .expect("linarith::generic (setoid) must derive the slack-1 goal over CReal.orderedRingS");
+        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H], &[h_ty], proof);
+    }
+
+    #[test]
+    fn creal_linarith_add_le_add_three() {
+        const A: u64 = 56_300;
+        const B: u64 = 56_301;
+        const C: u64 = 56_302;
+        const D: u64 = 56_303;
+        const E: u64 = 56_304;
+        const F: u64 = 56_305;
+        const H1: u64 = 56_310;
+        const H2: u64 = 56_311;
+        const H3: u64 = 56_312;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let carrier = k.const_(p.creal, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+
+        let (a, b, c, d, e, f) = (
+            k.fvar(A),
+            k.fvar(B),
+            k.fvar(C),
+            k.fvar(D),
+            k.fvar(E),
+            k.fvar(F),
+        );
+        let h1_ty = le_of_s(&mut k, &rn, ring, a, d);
+        let h2_ty = le_of_s(&mut k, &rn, ring, b, e);
+        let h3_ty = le_of_s(&mut k, &rn, ring, c, f);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let h3 = k.fvar(H3);
+
+        let ab = add_of_s(&mut k, &rn, ring, a, b);
+        let abc = add_of_s(&mut k, &rn, ring, ab, c);
+        let de = add_of_s(&mut k, &rn, ring, d, e);
+        let def = add_of_s(&mut k, &rn, ring, de, f);
+        let goal = le_of_s(&mut k, &rn, ring, abc, def);
+
+        let assumptions = [(h1_ty, h1), (h2_ty, h2), (h3_ty, h3)];
+        let proof = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &assumptions,
+            goal,
+        )
+        .expect(
+            "linarith::generic (setoid) must find a certificate for add_le_add_three over CReal",
+        );
+        let _ = close_and_infer(
+            &mut k,
+            carrier,
+            &[A, B, C, D, E, F],
+            &[H1, H2, H3],
+            &[h1_ty, h2_ty, h3_ty],
+            proof,
+        );
+    }
+
+    /// The `Shape::Eq` conclusion route (`le_antisymm`, concluding `equiv`,
+    /// not `Eq`): `a<=b, b<=a |- Equiv a b` -- a fact `linarith::generic`
+    /// reaches over `CReal` that no `Alg.OrderedRing`-flavored route ever
+    /// could (`CReal`'s carrier equality is `Equiv`, never `Eq`).
+    #[test]
+    fn creal_linarith_equality_by_antisymmetry() {
+        const A: u64 = 56_400;
+        const B: u64 = 56_401;
+        const H1: u64 = 56_410;
+        const H2: u64 = 56_411;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let carrier = k.const_(p.creal, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h2_ty = le_of_s(&mut k, &rn, ring, b, a);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let goal = equiv_of_s(&mut k, &rn, ring, a, b);
+
+        let assumptions = [(h1_ty, h1), (h2_ty, h2)];
+        let proof = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &assumptions,
+            goal,
+        )
+        .expect(
+            "linarith::generic (setoid) must prove Equiv a b from a<=b, b<=a over CReal.orderedRingS",
+        );
+        let _ = close_and_infer(&mut k, carrier, &[A, B], &[H1, H2], &[h1_ty, h2_ty], proof);
+    }
+
+    // --- three false goals decline, at CReal.orderedRingS ---
+
+    #[test]
+    fn creal_linarith_false_goal_swap_declines() {
+        const A: u64 = 57_000;
+        const B: u64 = 57_001;
+        const H: u64 = 57_010;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h = k.fvar(H);
+        let goal = le_of_s(&mut k, &rn, ring, b, a);
+        let result = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &[(h_ty, h)],
+            goal,
+        );
+        assert!(
+            result.is_err(),
+            "a<=b does not imply b<=a over CReal -- must decline"
+        );
+    }
+
+    #[test]
+    fn creal_linarith_false_goal_cycle_declines() {
+        const A: u64 = 57_100;
+        const B: u64 = 57_101;
+        const C: u64 = 57_102;
+        const H1: u64 = 57_110;
+        const H2: u64 = 57_111;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
+        let h1_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h2_ty = le_of_s(&mut k, &rn, ring, b, c);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let goal = le_of_s(&mut k, &rn, ring, c, a);
+        let result = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &[(h1_ty, h1), (h2_ty, h2)],
+            goal,
+        );
+        assert!(
+            result.is_err(),
+            "a<=b<=c does not imply c<=a over CReal -- must decline"
+        );
+    }
+
+    #[test]
+    fn creal_linarith_false_goal_off_by_one_declines() {
+        const A: u64 = 57_200;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let one = one_of_s(&mut k, &rn, ring);
+        let a = k.fvar(A);
+        let a_plus_one = add_of_s(&mut k, &rn, ring, a, one);
+        let goal = le_of_s(&mut k, &rn, ring, a_plus_one, a);
+        let result = prove_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &[],
+            goal,
+        );
+        assert!(
+            result.is_err(),
+            "a+1<=a is false over CReal -- must decline"
+        );
+    }
+
+    // --- two corrupted certificates, rejected by the KERNEL ---
+
+    #[test]
+    fn creal_linarith_corrupted_certificate_wrong_multiplier_rejected() {
+        const A: u64 = 58_000;
+        const B: u64 = 58_001;
+        const H: u64 = 58_010;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h = k.fvar(H);
+
+        let cert = Certificate {
+            multipliers: vec![2], // correct is 1
+            residual: LinForm::zero(),
+        };
+        let corrupted = emit_le_from_certificate_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &[(h_ty, h)],
+            a,
+            b,
+            &cert,
+            false,
+        );
+        let Ok(term) = corrupted else { return };
+        let carrier = k.const_(p.creal, vec![]);
+        let closed = {
+            let v = lam_over(&mut k, H, h_ty, term);
+            let v = lam_over(&mut k, B, carrier, v);
+            lam_over(&mut k, A, carrier, v)
+        };
+        assert!(
+            k.infer(closed).is_err(),
+            "a wrong multiplier (setoid, CReal) must be rejected by the KERNEL"
+        );
+    }
+
+    #[test]
+    fn creal_linarith_corrupted_certificate_wrong_residual_rejected() {
+        const A: u64 = 58_100;
+        const B: u64 = 58_101;
+        const H: u64 = 58_110;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h = k.fvar(H);
+        let one = one_of_s(&mut k, &rn, ring);
+        let zero_le_one = creal_zero_le_one(&mut k, &p);
+        let goal_lhs = a;
+        let goal_rhs = add_of_s(&mut k, &rn, ring, b, one); // real goal needs residual 1
+
+        // Corrupted: claim residual 0 (exact match) when 1 is required.
+        let cert = Certificate {
+            multipliers: vec![1],
+            residual: LinForm::zero(),
+        };
+        let corrupted = emit_le_from_certificate_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            Some(zero_le_one),
+            &[(h_ty, h)],
+            goal_lhs,
+            goal_rhs,
+            &cert,
+            false,
+        );
+        let Ok(term) = corrupted else { return };
+        let carrier = k.const_(p.creal, vec![]);
+        let closed = {
+            let v = lam_over(&mut k, H, h_ty, term);
+            let v = lam_over(&mut k, B, carrier, v);
+            lam_over(&mut k, A, carrier, v)
+        };
+        assert!(
+            k.infer(closed).is_err(),
+            "a wrong (too-small) residual (setoid, CReal) must be rejected by the KERNEL"
+        );
+    }
+
+    /// Positive control for the two corrupted-certificate tests above: the
+    /// SAME route with an UNCORRUPTED certificate is admitted.
+    #[test]
+    fn creal_linarith_uncorrupted_certificate_is_admitted() {
+        const A: u64 = 58_200;
+        const B: u64 = 58_201;
+        const H: u64 = 58_210;
+        let mut k = Kernel::new();
+        let p = build_creal_prelude(&mut k).expect("creal prelude must build");
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.ordered_ring_s, vec![]);
+        let carrier = k.const_(p.creal, vec![]);
+        let rn = p.rat.int.nat.structures_s.ordered_ring;
+        let (a, b) = (k.fvar(A), k.fvar(B));
+        let h_ty = le_of_s(&mut k, &rn, ring, a, b);
+        let h = k.fvar(H);
+
+        let cert = Certificate {
+            multipliers: vec![1],
+            residual: LinForm::zero(),
+        };
+        let term = emit_le_from_certificate_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.ordered_ring_ext_s,
+            &p.rat.int.nat,
+            ring,
+            None,
+            &[(h_ty, h)],
+            a,
+            b,
+            &cert,
+            false,
+        )
+        .expect("the uncorrupted certificate (setoid, CReal) must emit a term");
+        let closed = {
+            let v = lam_over(&mut k, H, h_ty, term);
+            let v = lam_over(&mut k, B, carrier, v);
+            lam_over(&mut k, A, carrier, v)
+        };
+        k.infer(closed)
+            .expect("an UNCORRUPTED certificate (setoid, CReal) must be admitted by the kernel");
     }
 
     /// Wall-clock cost, generic vs per-carrier, on the SAME two goal shapes

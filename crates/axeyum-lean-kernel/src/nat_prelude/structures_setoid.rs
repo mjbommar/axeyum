@@ -611,6 +611,129 @@ fn comm_ring_fields_s() -> Vec<FieldSpec> {
     f
 }
 
+// ---------------------------------------------------------------------------
+// ADR-1592: `AlgS.OrderedRing` — `AlgS.CommRing`'s 23 fields restated (no
+// inheritance, same "third copy" pattern the rest of this spine and `Alg.
+// OrderedRing` both already use), plus `le`, a congruence field the setoid
+// must carry by hand (`leCongr` -- `Eq` gets this step for free, `equiv`
+// does not), and the same five order laws `Alg.OrderedRing` carries. Four
+// of the five primitive-law field BUILDERS need no `equiv` at all (`le` is
+// a plain relation and none of `le_refl`/`le_trans`/`add_le_add_left`/
+// `mul_nonneg`'s STATEMENTS mention the carrier's equality), so they are
+// reused verbatim from [`structures`] rather than duplicated; only
+// `le_antisymm` (which must conclude `equiv`, not `Eq`) and `leCongr`
+// (which has no `Eq`-flavored counterpart at all -- `Eq`'s own congruence
+// is free) are new.
+// ---------------------------------------------------------------------------
+
+/// `forall a a' b b', equiv a a' -> equiv b b' -> le a b -> le a' b'` — the
+/// congruence field a setoid must carry by hand for `le`, exactly as
+/// `binop_congr_field_s` does for an operation.
+fn le_congr_field_s(
+    name: &'static str,
+    carrier_idx: usize,
+    equiv_idx: usize,
+    le_idx: usize,
+) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let equiv = vals[equiv_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vap = k.fvar(V_AP);
+            let vb = k.fvar(V_B);
+            let vbp = k.fvar(V_BP);
+            let haa = app2(k, equiv, va, vap);
+            let hbb = app2(k, equiv, vb, vbp);
+            let hle = app2(k, le, va, vb);
+            let concl = app2(k, le, vap, vbp);
+            let inner1 = arrow(k, hle, concl);
+            let inner2 = arrow(k, hbb, inner1);
+            let inner3 = arrow(k, haa, inner2);
+            let t = pi_over(k, V_BP, a_ty, inner3);
+            let t = pi_over(k, V_B, a_ty, t);
+            let t = pi_over(k, V_AP, a_ty, t);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `forall a b, le a b -> le b a -> equiv a b` — antisymmetry CONCLUDES
+/// `equiv`, not `Eq` (the deliverable's explicit ask, and the shape
+/// `CReal.equiv_of_le_le` already has verbatim).
+fn le_antisymm_equiv_field_s(
+    name: &'static str,
+    carrier_idx: usize,
+    equiv_idx: usize,
+    le_idx: usize,
+) -> FieldSpec {
+    FieldSpec {
+        suffix: name,
+        kind: FieldKind::Law,
+        build: Box::new(move |k, _lg, _l1, vals| {
+            let a_ty = vals[carrier_idx];
+            let equiv = vals[equiv_idx];
+            let le = vals[le_idx];
+            let va = k.fvar(V_A);
+            let vb = k.fvar(V_B);
+            let hab = app2(k, le, va, vb);
+            let hba = app2(k, le, vb, va);
+            let concl = app2(k, equiv, va, vb);
+            let inner = arrow(k, hba, concl);
+            let inner2 = arrow(k, hab, inner);
+            let t = pi_over(k, V_B, a_ty, inner2);
+            pi_over(k, V_A, a_ty, t)
+        }),
+    }
+}
+
+/// `AlgS.Ring`'s 22 fields, restated, plus `le`, `leCongr`, and five order
+/// laws — 29 fields total. `rel_field`/`le_refl_field`/`le_trans_field`/
+/// `add_le_add_left_field`/`mul_nonneg_field` are reused verbatim from
+/// [`structures`] (their statements never mention `equiv`).
+///
+/// **Built over `AlgS.Ring` (22 fields), not `AlgS.CommRing` (23) --
+/// necessary, not a simplification.** `Alg.OrderedRing` (ADR-1584) is
+/// itself Ring-based (`Ring`'s 15 fields, no `mulComm`; none of the order
+/// laws or `linarith::generic`'s fragment need commutativity), and
+/// `AlgS.OrderedRing.ofAlg` (below) must select FROM an `Alg.OrderedRing`
+/// value -- which carries no `mulComm` field to select in the first place.
+/// A `CommRing`-based `AlgS.OrderedRing` would make that projection
+/// ill-typed. `Int`/`Rat`/`CReal` are all commutative anyway, so nothing
+/// downstream loses reach; only the record's own field list changes shape.
+fn ordered_ring_fields_s() -> Vec<FieldSpec> {
+    use idx::ring::{ADD, CARRIER, EQUIV, MUL, ZERO};
+    let mut f = ring_fields_s(); // 0..21 (22 fields)
+    f.push(structures::rel_field("le", CARRIER)); // 22
+    let le_idx = f.len() - 1;
+    f.push(le_congr_field_s("leCongr", CARRIER, EQUIV, le_idx)); // 23
+    f.push(structures::le_refl_field("le_refl", CARRIER, le_idx)); // 24
+    f.push(structures::le_trans_field("le_trans", CARRIER, le_idx)); // 25
+    f.push(le_antisymm_equiv_field_s(
+        "le_antisymm_equiv",
+        CARRIER,
+        EQUIV,
+        le_idx,
+    )); // 26
+    f.push(structures::add_le_add_left_field(
+        "add_le_add_left",
+        CARRIER,
+        ADD,
+        le_idx,
+    )); // 27
+    f.push(structures::mul_nonneg_field(
+        "mul_nonneg",
+        CARRIER,
+        MUL,
+        ZERO,
+        le_idx,
+    )); // 28
+    f
+}
+
 /// Field-index constants, one module per record (mirrors
 /// `super::structures::idx` exactly). `#[allow(dead_code)]` because not
 /// every record's every index has a consumer yet.
@@ -686,6 +809,20 @@ pub mod idx {
         pub use super::ring::*;
         pub const MUL_COMM: usize = 22;
     }
+    /// ADR-1592: `AlgS.OrderedRing` — `ring`'s 22 fields (NOT `comm_ring`'s
+    /// 23: no `mulComm`, matching `Alg.OrderedRing`'s own Ring-based scope
+    /// so `AlgS.OrderedRing.ofAlg` type-checks) plus `le`, `leCongr`, and
+    /// five order laws.
+    pub mod ordered_ring {
+        pub use super::ring::*;
+        pub const LE: usize = 22;
+        pub const LE_CONGR: usize = 23;
+        pub const LE_REFL: usize = 24;
+        pub const LE_TRANS: usize = 25;
+        pub const LE_ANTISYMM_EQUIV: usize = 26;
+        pub const ADD_LE_ADD_LEFT: usize = 27;
+        pub const MUL_NONNEG: usize = 28;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -704,6 +841,8 @@ pub struct StructuresSNames {
     pub semiring: NameId,
     pub ring: NameId,
     pub comm_ring: NameId,
+    /// ADR-1592.
+    pub ordered_ring: NameId,
 }
 
 /// Intern the nine record names under a fresh `AlgS` root — never `Alg`, so
@@ -722,6 +861,7 @@ pub(crate) fn intern_structures_s_names(kernel: &mut Kernel) -> StructuresSNames
         semiring: kernel.name_str(algs, "Semiring"),
         ring: kernel.name_str(algs, "Ring"),
         comm_ring: kernel.name_str(algs, "CommRing"),
+        ordered_ring: kernel.name_str(algs, "OrderedRing"),
     }
 }
 
@@ -736,6 +876,8 @@ pub struct StructuresSRecordNames {
     pub semiring: RecordNames,
     pub ring: RecordNames,
     pub comm_ring: RecordNames,
+    /// ADR-1592.
+    pub ordered_ring: RecordNames,
 }
 
 /// Declare all nine `AlgS.*` records, each with the same `Sort 1`-refused
@@ -790,6 +932,15 @@ pub(crate) fn declare_structures_s_all(
         p.comm_ring,
         &comm_ring_fields_s(),
     )?;
+    let ordered_ring = declare_record(
+        kernel,
+        logic,
+        l0,
+        l1,
+        l2,
+        p.ordered_ring,
+        &ordered_ring_fields_s(),
+    )?;
 
     Ok(StructuresSRecordNames {
         magma,
@@ -801,6 +952,7 @@ pub(crate) fn declare_structures_s_all(
         semiring,
         ring,
         comm_ring,
+        ordered_ring,
     })
 }
 
@@ -1545,6 +1697,168 @@ pub mod ofalg {
             mul_comm,
         ];
         declare_projection(k, algs_p, alg_cr, algs_cr, &args, R_FV)
+    }
+
+    /// `forall a a' b b', Eq a a' -> Eq b b' -> le a b -> le a' b'`,
+    /// synthesized via two `subst` transports (`Eq.rec`-based, generalizing
+    /// [`congr_arg`]'s shape to conclude a PROP membership rather than an
+    /// operation-equality) -- the `ofAlg` counterpart of
+    /// [`build_binop_congr`] for `AlgS.OrderedRing`'s new `leCongr` field,
+    /// which has no `Eq`-flavored counterpart at all (`Eq`'s own congruence
+    /// is free, so `Alg.OrderedRing` needs no such field).
+    fn build_le_congr_ofalg(
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        lvl: LevelId,
+        carrier: ExprId,
+        le: ExprId,
+    ) -> ExprId {
+        const A: u64 = 21_150;
+        const AP: u64 = 21_151;
+        const B: u64 = 21_152;
+        const BP: u64 = 21_153;
+        const H1: u64 = 21_154;
+        const H2: u64 = 21_155;
+        const HLE: u64 = 21_156;
+        const S1: u64 = 21_157;
+        const S2: u64 = 21_158;
+        let a = k.fvar(A);
+        let ap = k.fvar(AP);
+        let b = k.fvar(B);
+        let bp = k.fvar(BP);
+        let h1 = k.fvar(H1);
+        let h2 = k.fvar(H2);
+        let hle = k.fvar(HLE);
+        let hyp1_ty = crate::nat_prelude::structures::eq_of(k, lg, lvl, carrier, a, ap);
+        let hyp2_ty = crate::nat_prelude::structures::eq_of(k, lg, lvl, carrier, b, bp);
+        let hle_ty = app2(k, le, a, b);
+
+        // step1 : le a' b, transport `hle` along h1 on (fun x => le x b).
+        let step1 = crate::nat_prelude::structures::subst(
+            k,
+            lg,
+            lvl,
+            carrier,
+            a,
+            ap,
+            h1,
+            S1,
+            &|k2, x| app2(k2, le, x, b),
+            hle,
+        );
+        // step2 : le a' b', transport step1 along h2 on (fun y => le a' y).
+        let step2 = crate::nat_prelude::structures::subst(
+            k,
+            lg,
+            lvl,
+            carrier,
+            b,
+            bp,
+            h2,
+            S2,
+            &|k2, y| app2(k2, le, ap, y),
+            step1,
+        );
+
+        let v = lam_over(k, HLE, hle_ty, step2);
+        let v = lam_over(k, H2, hyp2_ty, v);
+        let v = lam_over(k, H1, hyp1_ty, v);
+        let v = lam_over(k, BP, carrier, v);
+        let v = lam_over(k, B, carrier, v);
+        let v = lam_over(k, AP, carrier, v);
+        lam_over(k, A, carrier, v)
+    }
+
+    /// `AlgS.OrderedRing.ofAlg : Alg.OrderedRing -> AlgS.OrderedRing` --
+    /// ADR-1592. Every LAW field (including `le_antisymm_equiv`, whose
+    /// `Eq`-flavored source `le_antisymm` selector unfolds to EXACTLY
+    /// `equiv a b` once `equiv := @Eq carrier`, the same load-bearing fact
+    /// every other `ofAlg` projection in this module exploits) is the
+    /// source record's own selector, unchanged; only the four
+    /// equiv-infrastructure fields, the three inherited congruence fields
+    /// (`addCongr`/`mulCongr`/`negCongr`), and `leCongr` (synthesized via
+    /// [`build_le_congr_ofalg`] -- `le` has no `Eq`-flavored congruence
+    /// field to reuse, since `Eq` gets it for free) need a fresh proof
+    /// term.
+    #[allow(clippy::too_many_lines)]
+    pub(crate) fn declare_ordered_ring_ofalg(
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        l1: LevelId,
+        alg_or: &RecordNames,
+        algs_or: &RecordNames,
+        algs_p: NameId,
+    ) -> Result<NameId, KernelError> {
+        use crate::nat_prelude::structures::idx::ordered_ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_LE_ADD_LEFT, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, LE,
+            LE_ANTISYMM, LE_REFL, LE_TRANS, MUL, MUL_ASSOC, MUL_NONNEG, MUL_ONE_L, MUL_ONE_R, NEG,
+            NEG_ADD, ONE, ZERO,
+        };
+        const R_FV: u64 = 21_290;
+        let r = k.fvar(R_FV);
+        let carrier = sel(k, alg_or, CARRIER, r);
+        let zero = sel(k, alg_or, ZERO, r);
+        let one = sel(k, alg_or, ONE, r);
+        let add = sel(k, alg_or, ADD, r);
+        let mul = sel(k, alg_or, MUL, r);
+        let add_assoc = sel(k, alg_or, ADD_ASSOC, r);
+        let add_comm = sel(k, alg_or, ADD_COMM, r);
+        let add_zero = sel(k, alg_or, ADD_ZERO, r);
+        let mul_assoc = sel(k, alg_or, MUL_ASSOC, r);
+        let mul_one_l = sel(k, alg_or, MUL_ONE_L, r);
+        let mul_one_r = sel(k, alg_or, MUL_ONE_R, r);
+        let distrib_l = sel(k, alg_or, DISTRIB_L, r);
+        let distrib_r = sel(k, alg_or, DISTRIB_R, r);
+        let neg = sel(k, alg_or, NEG, r);
+        let neg_add = sel(k, alg_or, NEG_ADD, r);
+        let le = sel(k, alg_or, LE, r);
+        let le_refl = sel(k, alg_or, LE_REFL, r);
+        let le_trans = sel(k, alg_or, LE_TRANS, r);
+        let le_antisymm_equiv = sel(k, alg_or, LE_ANTISYMM, r);
+        let add_le_add_left = sel(k, alg_or, ADD_LE_ADD_LEFT, r);
+        let mul_nonneg = sel(k, alg_or, MUL_NONNEG, r);
+
+        let equiv = eq_partial(k, lg, l1, carrier);
+        let equiv_refl = build_equiv_refl(k, lg, l1, carrier);
+        let equiv_symm = build_equiv_symm(k, lg, l1, carrier);
+        let equiv_trans = build_equiv_trans(k, lg, l1, carrier);
+        let add_congr = build_binop_congr(k, lg, l1, carrier, add);
+        let mul_congr = build_binop_congr(k, lg, l1, carrier, mul);
+        let neg_congr = build_unop_congr(k, lg, l1, carrier, neg);
+        let le_congr = build_le_congr_ofalg(k, lg, l1, carrier, le);
+
+        let args = vec![
+            carrier,
+            equiv,
+            equiv_refl,
+            equiv_symm,
+            equiv_trans,
+            zero,
+            one,
+            add,
+            mul,
+            add_congr,
+            mul_congr,
+            add_assoc,
+            add_comm,
+            add_zero,
+            mul_assoc,
+            mul_one_l,
+            mul_one_r,
+            distrib_l,
+            distrib_r,
+            neg,
+            neg_congr,
+            neg_add,
+            le,
+            le_congr,
+            le_refl,
+            le_trans,
+            le_antisymm_equiv,
+            add_le_add_left,
+            mul_nonneg,
+        ];
+        declare_projection(k, algs_p, alg_or, algs_or, &args, R_FV)
     }
 }
 
@@ -2522,6 +2836,9 @@ pub struct StructuresSExtraNames {
     /// -- the theorem `Alg.neg_neg` (stated over `Alg.Group`) now derives
     /// from via `ofAlg`, closing ADR-1590 §3's named scope mismatch.
     pub inv_inv: NameId,
+    /// ADR-1592: `AlgS.OrderedRing.ofAlg : Alg.OrderedRing -> AlgS.
+    /// OrderedRing`.
+    pub ordered_ring_ofalg: NameId,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2567,6 +2884,14 @@ pub(crate) fn declare_structures_s_extra(
     let ring_ofalg = ofalg::declare_ring_ofalg(k, lg, l1, &alg_st.ring, &st.ring, p.ring)?;
     let comm_ring_ofalg =
         ofalg::declare_comm_ring_ofalg(k, lg, l1, &alg_st.comm_ring, &st.comm_ring, p.comm_ring)?;
+    let ordered_ring_ofalg = ofalg::declare_ordered_ring_ofalg(
+        k,
+        lg,
+        l1,
+        &alg_st.ordered_ring,
+        &st.ordered_ring,
+        p.ordered_ring,
+    )?;
 
     let sub = declare_sub_s(k, &st.ring, p.algs)?;
     let sub_self = declare_sub_self(k, &st.ring, sub, p.algs)?;
@@ -2600,6 +2925,7 @@ pub(crate) fn declare_structures_s_extra(
         add_left_cancel,
         inv_unique,
         inv_inv,
+        ordered_ring_ofalg,
     })
 }
 
@@ -2640,6 +2966,7 @@ mod structures_setoid_tests {
             ("Semiring", 19),
             ("Ring", 22),
             ("CommRing", 23),
+            ("OrderedRing", 29),
         ];
         let actual = [
             st.magma.field_count(),
@@ -2651,6 +2978,7 @@ mod structures_setoid_tests {
             st.semiring.field_count(),
             st.ring.field_count(),
             st.comm_ring.field_count(),
+            st.ordered_ring.field_count(),
         ];
         for (i, (name, want)) in expected.iter().enumerate() {
             assert_eq!(actual[i], *want, "{name} field count");
@@ -2671,6 +2999,7 @@ mod structures_setoid_tests {
             &st.semiring,
             &st.ring,
             &st.comm_ring,
+            &st.ordered_ring,
         ] {
             assert!(k.environment().get(rn.ind).is_some(), "inductive missing");
             assert!(k.environment().get(rn.rec).is_some(), "recursor missing");
@@ -2710,6 +3039,7 @@ mod structures_setoid_tests {
             extra.add_left_cancel,
             extra.inv_unique,
             extra.inv_inv,
+            extra.ordered_ring_ofalg,
         ] {
             assert!(k.environment().get(name).is_some());
         }
@@ -2744,6 +3074,7 @@ mod structures_setoid_tests {
             extra.add_left_cancel,
             extra.inv_unique,
             extra.inv_inv,
+            extra.ordered_ring_ofalg,
         ] {
             assert!(
                 k.axiom_footprint(name).is_empty(),
