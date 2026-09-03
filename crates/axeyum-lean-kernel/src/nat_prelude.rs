@@ -128,6 +128,7 @@ use crate::PreludeValue;
 use crate::build_logic_prelude;
 use crate::name::NameId;
 use structures::StructuresNames;
+use structures_setoid::{StructuresSExtra, StructuresSNames, StructuresSRecords};
 
 mod abundant_deficient;
 mod abundant_deficient_lemmas;
@@ -274,6 +275,7 @@ pub(crate) mod steps;
 mod stirling;
 mod stirling_lemmas;
 pub mod structures;
+pub mod structures_setoid;
 mod subset_product;
 mod subset_sum;
 mod sum_range_permute;
@@ -6275,6 +6277,19 @@ pub struct NatPrelude {
     /// name (`.sel(i)`, index documented per record's `*_fields()`
     /// function). Declared under a fresh `Alg` root, never under `Nat`.
     pub structures: StructuresNames,
+
+    /// ADR-1588: the Setoid-flavored twin of [`structures`] — `AlgS.Magma
+    /// .. AlgS.CommRing`, whose law fields are stated over a caller-supplied
+    /// `equiv` relation instead of `Eq`, built so a carrier like `CReal`
+    /// (whose equality is a *defined* relation, not `Eq`) can be an
+    /// instance. See [`structures_setoid`].
+    pub structures_s_names: StructuresSNames,
+    /// The nine declared `AlgS.*` records themselves (selectors etc.).
+    pub structures_s: StructuresSRecords,
+    /// `AlgS.CommRing.toRingS`, the nine `AlgS.<Record>.ofAlg` projections,
+    /// `AlgS.sub`/`sub_self`, and the two generic theorems `AlgS.neg_neg`/
+    /// `AlgS.mul_zero`.
+    pub structures_s_extra: StructuresSExtra,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -6333,6 +6348,22 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // before `rat_prelude`/`algebra_ext` exist) retire to it without
         // violating ADR-1581's build-position rule. See ADR-1587 §1.
         structures::declare_mul_left_cancel_early(kernel, &logic, &structures.group)?;
+
+        // ADR-1588: the Setoid-flavored `AlgS.*` twin, plus its `ofAlg`
+        // projections from the `Alg.*` spine just built and its own three
+        // generic theorems -- also needs only `logic` and the `Alg.*` spine
+        // above, so it lands here too, before any `Nat`-specific interning.
+        let structures_s_names = structures_setoid::intern_structures_s_names(kernel);
+        let structures_s =
+            structures_setoid::declare_structures_s_all(kernel, &structures_s_names, &logic)?;
+        let structures_s_extra = structures_setoid::declare_structures_s_extra(
+            kernel,
+            &logic,
+            &structures_s_names,
+            &structures_s,
+            &structures_names,
+            &structures,
+        )?;
 
         // Intern every name up front so the `NatPrelude` (which the proof scripts
         // below consult for lemma handles) exists before anything is declared.
@@ -7497,6 +7528,9 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             gauss_count_sum_even: kernel.name_str(nat, "gaussCount_sum_even"),
             gauss_count_sum_mod_eq: kernel.name_str(nat, "gaussCount_sum_modEq"),
             structures,
+            structures_s_names,
+            structures_s,
+            structures_s_extra,
         };
 
         let mut d = NatDev::new(kernel, p);
