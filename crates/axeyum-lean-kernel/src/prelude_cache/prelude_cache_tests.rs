@@ -106,6 +106,7 @@ fn assert_reuse_matches_fresh_build_body(key: PreludeKey, label: &'static str) {
         PreludeKey::CReal => {
             creal::build_creal_prelude_uncached(&mut fresh).expect("creal must build");
         }
+        PreludeKey::List => unreachable!("list preludes have no template yet"),
         PreludeKey::String(_) => unreachable!("string preludes have no template"),
     }
 

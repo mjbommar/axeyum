@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2212,
+    "min_identity_bound": 2221,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -9405,6 +9405,48 @@
       ]
     },
     {
+      "fact_id": "F:list-append-assoc",
+      "language": "lean4",
+      "statement_sha256": "9b0a8e778056fe07c86ccf4ba693b1e48238d20a8d25100173305a59fc619afa",
+      "prose_sha256": "aa06498bc71e86f4be05cd2f534212b967d2991d70ccfabce8859b7b5f6ee290",
+      "kernel_theorem": "List.append_assoc"
+    },
+    {
+      "fact_id": "F:list-append-nil",
+      "language": "lean4",
+      "statement_sha256": "8427d18cf10f29d21ca2cc6b4bdd5acfcab274a7757ed3906507b05caf65e26c",
+      "prose_sha256": "df3164d6535189aaead75d5b1cb9f2cc545ded6ec8bf28adf58d75a3ded37c0e",
+      "kernel_theorem": "List.append_nil"
+    },
+    {
+      "fact_id": "F:list-foldr-append",
+      "language": "lean4",
+      "statement_sha256": "1ff2f3eaf6864eeb664483a7d59680f2a545a8a00759e901924de85dd86b2f79",
+      "prose_sha256": "8ffd4adc0175636346e8a16676cede679d72b0308e1cae89592722027185db60",
+      "kernel_theorem": "List.foldr_append"
+    },
+    {
+      "fact_id": "F:list-length-append",
+      "language": "lean4",
+      "statement_sha256": "66723ec6989d651036d5eec7423d3fe079483251095007e91881910635c42f9b",
+      "prose_sha256": "f86d462116b925739b230cf371792130eb359ac46a1e8d285978633f165384da",
+      "kernel_theorem": "List.length_append"
+    },
+    {
+      "fact_id": "F:list-length-map",
+      "language": "lean4",
+      "statement_sha256": "9d0c41b99a3dd8ac5d0c0c79da161fbec242804a94dce94cd8cf22301d0a789c",
+      "prose_sha256": "b1c3534516c316f3ccb282be453f6599e174eaf02589f6618ed995b8fc8fda81",
+      "kernel_theorem": "List.length_map"
+    },
+    {
+      "fact_id": "F:list-length-reverse",
+      "language": "lean4",
+      "statement_sha256": "84ce1085493293f602c61fe1a8caeb7624568d8046d57fc674d104efeca12883",
+      "prose_sha256": "81691e53bb977a3ac8f8a19c148edb20d0e50ac011c6149360d3b1304b1821ec",
+      "kernel_theorem": "List.length_reverse"
+    },
+    {
       "fact_id": "F:list-nil-append",
       "language": "lean4",
       "statement_sha256": "935db04afd8e8b493340c37a50860352713b097b4d02efc40bbe58b89d6be9ac",
@@ -9415,6 +9457,27 @@
           "statement_sha256": "935db04afd8e8b493340c37a50860352713b097b4d02efc40bbe58b89d6be9ac"
         }
       ]
+    },
+    {
+      "fact_id": "F:list-reverse-append",
+      "language": "lean4",
+      "statement_sha256": "a89c59ff32937131648a92da8d45e9532d747ac88916c4d5c928d462daa25118",
+      "prose_sha256": "dc9d6a29e5a03d28b81f0900e97fbabec0f62d2ef45b388bcdf5f94186a50558",
+      "kernel_theorem": "List.reverse_append"
+    },
+    {
+      "fact_id": "F:list-reverse-reverse",
+      "language": "lean4",
+      "statement_sha256": "47a17b939ef5f1d02bd721c273df9ebb4a35890f5b9b7e02a66e40e33f494dc5",
+      "prose_sha256": "1a3059b1e762e356747233ccc61a7f8dfb98057940eee8b1bf490a30562b9258",
+      "kernel_theorem": "List.reverse_reverse"
+    },
+    {
+      "fact_id": "F:list-sum-append",
+      "language": "lean4",
+      "statement_sha256": "d8811b1795ae53b3f379887aac973c500eb9ec4a67a1f8f8f8d4e450e154fff6",
+      "prose_sha256": "9ea055df5c4b502c45e73d77deb6ef90d149612a73e116d1ae78b7d490a49072",
+      "kernel_theorem": "List.sum_append"
     },
     {
       "fact_id": "F:loadplan-hazmat-iis",

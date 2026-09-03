@@ -70,6 +70,7 @@ mod lean_export;
 mod lean_pp;
 mod level;
 pub mod linarith;
+mod list_prelude;
 mod name;
 mod nat_prelude;
 mod prelude;
@@ -121,6 +122,7 @@ pub use lean_pp::{
     shared_prelude_module_banner, split_module_banner,
 };
 pub use level::{LevelId, LevelNode};
+pub use list_prelude::{ListNatBridge, ListPrelude, build_list_nat_bridge, build_list_prelude};
 pub use name::{NameId, NameNode};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
 pub use prelude::{
@@ -145,6 +147,7 @@ const EXPR_ARENA_CHUNK_CAPACITY: usize = 1 << 18;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum PreludeKey {
     Logic,
+    List,
     Nat,
     Int,
     Real,
@@ -155,6 +158,7 @@ pub(crate) enum PreludeKey {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum PreludeValue {
     Logic(LogicPrelude),
+    List(ListPrelude),
     Nat(Box<NatPrelude>),
     Int(Box<IntPrelude>),
     Real(ArithPrelude),

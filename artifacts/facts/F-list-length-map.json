@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:list-length-map",
+  "title": "Mapping a function over a list does not change its length",
+  "statement": "Applying a function to every element of a list (List.map) never changes how many elements the list has.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Sort (1)) -> ((x1 : Sort (1)) -> ((x2 : ((x2 : x0) -> x1)) -> ((x3 : List.{0} x0) -> Eq.{1} AxNat (List.length x1 (List.map x0 x1 x2 x3)) (List.length x0 x3)))))",
+    "fragment": "List",
+    "kernel_theorem": "List.length_map"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-list-length-map",
+      "kind": "kernel-term",
+      "kernel_declaration": "List.length_map",
+      "supports": "List.length_map is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q --release -p axeyum-lean-kernel --example list_theorem_inventory -- List.length_map 2>/dev/null | grep -Fc '((x0 : Sort (1)) -> ((x1 : Sort (1)) -> ((x2 : ((x2 : x0) -> x1)) -> ((x3 : List.{0} x0) -> Eq.{1} AxNat (List.length x1 (List.map x0 x1 x2 x3)) (List.length x0 x3)))))')\" -ge 1",
+      "notes": "The pattern is the FULL admitted type (rendered by Kernel::render_lean via list_theorem_inventory), not the theorem's name -- a drifted statement would fail this check. build_list_nat_bridge admits this theorem only through the trusted kernel gate, so a successful build IS the type-check."
+    },
+    {
+      "id": "footprint-list-length-map",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude::list_prelude_tests::the_list_prelude_declares_no_axioms --test-threads=1",
+      "notes": "list_prelude::list_prelude_tests::the_list_prelude_declares_no_axioms asserts Kernel::axiom_footprint(name).is_empty() for this declaration (among others in the same coverage sweep), read directly from the kernel rather than asserted from a list."
+    },
+    {
+      "id": "evaluation-list-length-map",
+      "kind": "instance-pin",
+      "supports": "The List operations this statement is about COMPUTE the intended values, with negative controls -- the kernel cannot tell a Definition is wrong.",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- list_prelude:: --test-threads=4",
+      "notes": "list_prelude_tests.rs and bridge_tests.rs reduce List.length/append/map/foldr/reverse/sum/toMultiset/count to a concrete numeral or nil/cons skeleton at tiny discriminating arguments and pair every positive with the specific wrong formula its negative control rules out."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_list_prelude",
+    "source": "theorem name and canonical type read directly via list_theorem_inventory, which prints render_lean of the admitted type; declared by list_prelude.rs/theorems.rs/bridge.rs (lane list-carrier-1, ADR-1579)."
+  },
+  "notes": "Both cases are Eq.refl/congr through List.rec; the nil case is Eq.refl since both sides collapse to Nat.zero.",
+  "external_status": "proved"
+}
