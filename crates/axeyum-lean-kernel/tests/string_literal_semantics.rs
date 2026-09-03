@@ -62,9 +62,25 @@ fn every_bootstrap_clause_is_load_bearing() {
         kernel.infer(literal).expect("the unmutated shape types"),
         env.string_type
     );
+    assert!(
+        kernel.level_is_zero(env.list_level),
+        "the unmutated shape's `String.ofList` domain is `List.{{0}} Char`"
+    );
 
     for mutation in controls {
-        let (mut kernel, _) = lean_shaped_kernel(mutation);
+        let (mut kernel, env) = lean_shaped_kernel(mutation);
+        // `CharAtUniverseOne` is the only control that moves a universe, and it
+        // has to keep moving exactly ONE: the level `String.ofList`'s `List`
+        // argument is instantiated at. `String` itself follows `Char` up (a
+        // `Type 1` field cannot sit in a `Type 0` structure — ADR-1495), which
+        // the bootstrap never inspects, so this assertion is what stops the
+        // control from degenerating into "some other clause broke".
+        if mutation == Mutation::CharAtUniverseOne {
+            assert!(
+                !kernel.level_is_zero(env.list_level),
+                "CharAtUniverseOne must leave a NONZERO list level to reject on"
+            );
+        }
         let literal = kernel.lit(Lit::Str("ab".to_owned()));
         let error = kernel
             .infer(literal)

@@ -53,6 +53,10 @@ pub enum Mutation {
     /// `Char`'s sole constructor named `Char.make`.
     CharConstructorRenamed,
     /// `Char : Type 1`, so `String.ofList`'s domain is `List.{1} Char`.
+    ///
+    /// The whole tower moves with it: a `Type 1` field forces `String : Type 1`
+    /// in Lean and here (ADR-1495), so this mutation changes the LIST LEVEL and
+    /// nothing else the bootstrap looks at.
     CharAtUniverseOne,
 }
 
@@ -166,7 +170,27 @@ pub fn lean_shaped_kernel(mutation: Mutation) -> (Kernel, Env) {
     };
     let string_type = kernel.const_(string, vec![]);
     {
-        let string_sort = kernel.sort(one);
+        // `String` sits at the universe its sole field FORCES, which under
+        // `CharAtUniverseOne` is one higher: `Char : Type 1` makes
+        // `List.{1} Char : Type 1`, and a `Type 1` field cannot be stored in a
+        // `Type 0` structure. Lean 4.30 refuses that shape verbatim — "Invalid
+        // universe level in constructor `String.ofByteArray`: Parameter has
+        // type List Char at universe level 2 which is not less than or equal
+        // to the inductive type's resulting universe level 1" — and accepts it
+        // at `Type 1`; this kernel enforces the same constraint as
+        // `KernelError::ConstructorFieldUniverseTooBig` (ADR-1495).
+        //
+        // The mutation still measures exactly what it names. The string-literal
+        // bootstrap never inspects `String`'s own sort; it requires
+        // `String.ofList`'s domain to be `List.{0} Char` and rejects any other
+        // level (`build_string_literal_bootstrap` in `src/tc.rs`). So a
+        // `String` admitted one universe up leaves the literal rejected for the
+        // list level, which is the clause under test.
+        let string_sort = if mutation == Mutation::CharAtUniverseOne {
+            kernel.sort(two)
+        } else {
+            kernel.sort(one)
+        };
         let ctor_ty = kernel.pi(anon, list_char, string_type, BinderInfo::Default);
         kernel
             .add_inductive(string, &[], 0, string_sort, &[(string_ctor, ctor_ty)])

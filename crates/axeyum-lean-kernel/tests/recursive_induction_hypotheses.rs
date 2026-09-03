@@ -109,11 +109,42 @@ fn sort_one(kernel: &mut Kernel) -> ExprId {
     kernel.sort(one)
 }
 
+fn sort_two(kernel: &mut Kernel) -> ExprId {
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+    let two = kernel.level_succ(one);
+    kernel.sort(two)
+}
+
+/// The `type`-sorted families sit at `Sort 2`, not `Sort 1`.
+///
+/// Two of this generator's field productions build a field whose TYPE lives at
+/// `Sort 2`, so a `Sort 1` family is Lean-illegal for them:
+///
+/// - the field-dependent index production ([`run_positive_case`]) needs the
+///   preceding field to BE the index, and the index domain is `Sort 1`, so that
+///   field's declared type is `Sort 1` — which lives at `Sort 2`; and
+/// - the dependent recursive field ([`run_dependent_index_case`]) is
+///   `⦃a : Sort 1⦄ → {b : a} → I params a`, whose type is `imax 2 1 = Sort 2`.
+///
+/// Lean 4.30 refuses both under a `Type`-sorted family, verbatim: "Invalid
+/// universe level in constructor `I.mk`: Parameter `a` has type Type at
+/// universe level 2 which is not less than or equal to the inductive type's
+/// resulting universe level 1", and accepts each one verbatim once the family
+/// moves to `Type 1`. This kernel enforces the same constraint as
+/// [`KernelError::ConstructorFieldUniverseTooBig`] (ADR-1495), and this offset
+/// is the same repair ADR-1495 applied to `tests/mutual_inductive_group_grammar.rs`.
+/// `Prop` is impredicative and needs no room.
+///
+/// The offset is invisible to the pinned generated summary and its
+/// `descriptor-fnv1a64`: the descriptor records the profile, the sort LABEL,
+/// the depth, the field count, the variant, the recursive-field count and the
+/// index production — never a universe or a field domain.
 fn family_type(kernel: &mut Kernel, profile: Profile, prop: bool, binder: NameId) -> ExprId {
     let mut ty = if prop {
         kernel.sort_zero()
     } else {
-        sort_one(kernel)
+        sort_two(kernel)
     };
     if profile.num_indices() == 1 {
         let domain = sort_one(kernel);
