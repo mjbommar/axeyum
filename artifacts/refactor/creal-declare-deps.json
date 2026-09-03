@@ -1139,9 +1139,9 @@
   "schema": "creal-declare-deps/v1",
   "source": {
     "creal_prelude_fields": 606,
-    "creal_rs_lines": 11439,
+    "creal_rs_lines": 11440,
     "fields_in_module_registries": 69,
-    "functions_indexed": 1929,
+    "functions_indexed": 1934,
     "module_registries": {
       "completeness": "CompletenessNames",
       "cos_sign": "CosSignNames",
@@ -1158,7 +1158,7 @@
       "polynomial": "PolynomialNames",
       "ratio_test": "RatioTestNames"
     },
-    "modules_indexed": 48,
+    "modules_indexed": 49,
     "steps": 211
   },
   "steps": [

@@ -8951,6 +8951,7 @@ fn declare_discrimination(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), Ker
     })
 }
 
+pub mod algebra_instance;
 mod alternating;
 mod archimedean;
 mod archimedean_squeeze;

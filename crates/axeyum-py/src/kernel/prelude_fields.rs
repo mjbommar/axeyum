@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1127 names,
+/// The `NatPrelude` field table (1178 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 33 of the names come from ADR-1512 per-module registries and
+/// 84 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1533,6 +1533,105 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("structures.ordered_ring.ind", p.structures.ordered_ring.ind),
             ("structures.ordered_ring.mk", p.structures.ordered_ring.mk),
             ("structures.ordered_ring.rec", p.structures.ordered_ring.rec),
+            ("structures_s_names.algs", p.structures_s_names.algs),
+            ("structures_s_names.magma", p.structures_s_names.magma),
+            (
+                "structures_s_names.semigroup",
+                p.structures_s_names.semigroup,
+            ),
+            ("structures_s_names.monoid", p.structures_s_names.monoid),
+            (
+                "structures_s_names.comm_monoid",
+                p.structures_s_names.comm_monoid,
+            ),
+            ("structures_s_names.group", p.structures_s_names.group),
+            (
+                "structures_s_names.comm_group",
+                p.structures_s_names.comm_group,
+            ),
+            ("structures_s_names.semiring", p.structures_s_names.semiring),
+            ("structures_s_names.ring", p.structures_s_names.ring),
+            (
+                "structures_s_names.comm_ring",
+                p.structures_s_names.comm_ring,
+            ),
+            ("structures_s.magma.ind", p.structures_s.magma.ind),
+            ("structures_s.magma.mk", p.structures_s.magma.mk),
+            ("structures_s.magma.rec", p.structures_s.magma.rec),
+            ("structures_s.semigroup.ind", p.structures_s.semigroup.ind),
+            ("structures_s.semigroup.mk", p.structures_s.semigroup.mk),
+            ("structures_s.semigroup.rec", p.structures_s.semigroup.rec),
+            ("structures_s.monoid.ind", p.structures_s.monoid.ind),
+            ("structures_s.monoid.mk", p.structures_s.monoid.mk),
+            ("structures_s.monoid.rec", p.structures_s.monoid.rec),
+            (
+                "structures_s.comm_monoid.ind",
+                p.structures_s.comm_monoid.ind,
+            ),
+            ("structures_s.comm_monoid.mk", p.structures_s.comm_monoid.mk),
+            (
+                "structures_s.comm_monoid.rec",
+                p.structures_s.comm_monoid.rec,
+            ),
+            ("structures_s.group.ind", p.structures_s.group.ind),
+            ("structures_s.group.mk", p.structures_s.group.mk),
+            ("structures_s.group.rec", p.structures_s.group.rec),
+            ("structures_s.comm_group.ind", p.structures_s.comm_group.ind),
+            ("structures_s.comm_group.mk", p.structures_s.comm_group.mk),
+            ("structures_s.comm_group.rec", p.structures_s.comm_group.rec),
+            ("structures_s.semiring.ind", p.structures_s.semiring.ind),
+            ("structures_s.semiring.mk", p.structures_s.semiring.mk),
+            ("structures_s.semiring.rec", p.structures_s.semiring.rec),
+            ("structures_s.ring.ind", p.structures_s.ring.ind),
+            ("structures_s.ring.mk", p.structures_s.ring.mk),
+            ("structures_s.ring.rec", p.structures_s.ring.rec),
+            ("structures_s.comm_ring.ind", p.structures_s.comm_ring.ind),
+            ("structures_s.comm_ring.mk", p.structures_s.comm_ring.mk),
+            ("structures_s.comm_ring.rec", p.structures_s.comm_ring.rec),
+            (
+                "structures_s_extra.comm_ring_to_ring_s",
+                p.structures_s_extra.comm_ring_to_ring_s,
+            ),
+            (
+                "structures_s_extra.magma_ofalg",
+                p.structures_s_extra.magma_ofalg,
+            ),
+            (
+                "structures_s_extra.semigroup_ofalg",
+                p.structures_s_extra.semigroup_ofalg,
+            ),
+            (
+                "structures_s_extra.monoid_ofalg",
+                p.structures_s_extra.monoid_ofalg,
+            ),
+            (
+                "structures_s_extra.comm_monoid_ofalg",
+                p.structures_s_extra.comm_monoid_ofalg,
+            ),
+            (
+                "structures_s_extra.group_ofalg",
+                p.structures_s_extra.group_ofalg,
+            ),
+            (
+                "structures_s_extra.comm_group_ofalg",
+                p.structures_s_extra.comm_group_ofalg,
+            ),
+            (
+                "structures_s_extra.semiring_ofalg",
+                p.structures_s_extra.semiring_ofalg,
+            ),
+            (
+                "structures_s_extra.ring_ofalg",
+                p.structures_s_extra.ring_ofalg,
+            ),
+            (
+                "structures_s_extra.comm_ring_ofalg",
+                p.structures_s_extra.comm_ring_ofalg,
+            ),
+            ("structures_s_extra.sub", p.structures_s_extra.sub),
+            ("structures_s_extra.sub_self", p.structures_s_extra.sub_self),
+            ("structures_s_extra.neg_neg", p.structures_s_extra.neg_neg),
+            ("structures_s_extra.mul_zero", p.structures_s_extra.mul_zero),
         ],
         lists: Vec::new(),
     }

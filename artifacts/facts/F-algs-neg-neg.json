@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-neg-neg",
+  "title": "In an abstract Setoid-flavored ring, double negation is equivalent to the identity",
+  "statement": "For any AlgS.Ring record R (an abstract carrier, a caller-supplied equivalence relation equiv with congruence fields for add/mul/neg, additive commutative group and distributive laws stated over equiv rather than Eq) and any a of R's carrier, equiv (neg (neg a)) a -- the additive-group cancellation chain zero -> add zero (neg(neg a)) -> add (add a (neg a)) (neg(neg a)) -> add a (add (neg a) (neg(neg a))) -> add a zero -> a, built entirely from negAdd/addComm/addAssoc/addCongr/addZero and the record's own equivTrans/equivSymm values (no kernel Eq.rec transport is available for a defined equivalence relation).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.neg_neg : ((x0 : AlgS.Ring) -> ((x1 : AlgS.Ring.carrier x0) -> AlgS.Ring.equiv x0 (AlgS.Ring.neg x0 (AlgS.Ring.neg x0 x1)) x1))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.neg_neg"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:algs-mul-zero"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-neg-neg-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.neg_neg admits through the trusted kernel gate and type-checks fully applied at a genuinely free `a`, both instantiated at CReal.commRingS's AlgS.CommRing.toRingS projection and at AlgS.Ring.ofAlg(Int.ring) (concrete at the respective zero element and symbolic, closed via lam_over). Neither CReal nor Int has a named `neg_neg` kernel theorem to `def_eq`-compare against (grepped: CReal has none in CRealPrelude/creal/*.rs; Int's `int_prelude/gcd.rs::neg_neg` is a private, never-declared Rust proof-term helper), so this is a well-typedness measurement, not a def_eq match.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- neg_neg_instantiated_at_int_through_ofalg_concrete_and_symbolic generic_neg_neg_instantiated_at_creal_matches_creal_neg_neg_type --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 2 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned pattern requires BOTH counts ('2 passed; 0 failed') across both instantiation-site tests."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel nat_prelude::structures_setoid (declare_neg_neg), lane structures-setoid, ADR-1588.",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (declare_neg_neg, declared as AlgS.neg_neg); tests nat_prelude::structures_setoid::structures_setoid_tests::neg_neg_instantiated_at_int_through_ofalg_concrete_and_symbolic, creal::algebra_instance::algebra_instance_tests::generic_neg_neg_instantiated_at_creal_matches_creal_neg_neg_type."
+  },
+  "notes": "The Setoid-flavored analogue of Alg.neg_neg (ADR-1584), which is a direct instantiation of Alg.groupInvUnique in the Eq-flavored spine; AlgS has no equivalent InvUnique theorem, so this is proved directly by the additive-group chain rather than by instantiating a more general lemma."
+}

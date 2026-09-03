@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-sub-self",
+  "title": "In an abstract Setoid-flavored ring, an element minus itself is equivalent to zero",
+  "statement": "For any AlgS.Ring record R and any x of R's carrier, equiv (AlgS.sub R x x) zero, where AlgS.sub R a b := add a (neg b) -- proved by negAdd x alone, since AlgS.sub R x x beta+delta-unfolds to add x (neg x), exactly negAdd's own stated conclusion.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.sub_self : ((x0 : AlgS.Ring) -> ((x1 : AlgS.Ring.carrier x0) -> AlgS.Ring.equiv x0 (AlgS.sub x0 x1 x1) (AlgS.Ring.zero x0)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.sub_self"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:algs-mul-zero"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-sub-self-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.sub_self admits through the trusted kernel gate and type-checks fully applied, both instantiated at CReal.commRingS's AlgS.CommRing.toRingS projection and at AlgS.Ring.ofAlg(Int.ring) (concrete at the respective zero element and symbolic, closed via lam_over). CReal/Int have no named `sub_self` kernel theorem to compare against, so this is a well-typedness measurement.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- sub_self_instantiated_at_int_through_ofalg_concrete_and_symbolic generic_sub_self_instantiated_at_creal_type_checks_concrete_and_symbolic --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 2 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned pattern requires BOTH counts ('2 passed; 0 failed') across both instantiation-site tests."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel nat_prelude::structures_setoid (declare_sub_s, declare_sub_self), lane structures-setoid, ADR-1588.",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (declare_sub_s as AlgS.sub, declare_sub_self as AlgS.sub_self); tests nat_prelude::structures_setoid::structures_setoid_tests::sub_self_instantiated_at_int_through_ofalg_concrete_and_symbolic, creal::algebra_instance::algebra_instance_tests::generic_sub_self_instantiated_at_creal_type_checks_concrete_and_symbolic."
+  },
+  "notes": "The Setoid-flavored analogue of Alg.sub/Alg.sub_self (ADR-1584); the proof is the same beta+delta-unfold trick, unaffected by the switch from Eq to equiv since the unfold happens purely at the definitional level before the law is even consulted."
+}

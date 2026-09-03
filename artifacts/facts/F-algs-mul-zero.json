@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-mul-zero",
+  "title": "In an abstract Setoid-flavored ring, any element times zero is equivalent to zero",
+  "statement": "For any AlgS.Ring record R (an abstract carrier, a caller-supplied equivalence relation equiv with congruence fields for add/mul/neg, additive commutative group and distributive laws stated over equiv rather than Eq) and any a of R's carrier, equiv (mul a zero) zero -- derived from the additive-group and distributive axioms alone, without ever using a multiplicative identity, and using the explicit add/mul congruence fields wherever the Eq-flavored Alg.ringMulZero would have used automatic congr_arg.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.mul_zero : ((x0 : AlgS.Ring) -> ((x1 : AlgS.Ring.carrier x0) -> AlgS.Ring.equiv x0 (AlgS.Ring.mul x0 x1 (AlgS.Ring.zero x0)) (AlgS.Ring.zero x0)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.mul_zero"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "unknown",
+  "depends_on": ["F:alg-ring-mul-zero"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-mul-zero-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.mul_zero admits through the trusted kernel gate, and instantiated at CReal.commRingS's AlgS.CommRing.toRingS projection (a Setoid carrier whose equality, CReal.Equiv, is not Eq -- the exact carrier the Eq-flavored Alg.ringMulZero cannot reach, per ADR-1587's widened-search finding), applied at a genuinely free `a : CReal`, is `def_eq` to CReal.mul_zero's own rendered type.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release -- generic_mul_zero_instantiated_at_creal_matches_creal_mul_zero_type --test-threads=1 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 1 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned pattern requires BOTH counts ('1 passed; 0 failed'); the test's own assertion is a `Kernel::def_eq_in` comparison against `CReal.mul_zero`'s inferred type in a real `LocalContext`, not a string match."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel nat_prelude::structures_setoid (declare_mul_zero), lane structures-setoid, ADR-1588 -- proved once over the abstract AlgS.Ring record, closing the gap ADR-1587 measured (CReal.mul_zero structurally unreachable from the Eq-flavored Alg spine).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (declare_mul_zero, declared as AlgS.mul_zero); crates/axeyum-lean-kernel/src/creal/algebra_instance.rs (declare_creal_comm_ring_s, CReal.commRingS); test creal::algebra_instance::algebra_instance_tests::generic_mul_zero_instantiated_at_creal_matches_creal_mul_zero_type."
+  },
+  "notes": "The Setoid-flavored twin of F:alg-ring-mul-zero (ADR-1578); see ADR-1588 for the design (nine AlgS.* records, an explicit equiv relation and congruence field per operation, no coercion from the Eq-flavored spine). Instantiated at both Int (through AlgS.Ring.ofAlg, applied to Alg.Ring == Int.ring) and CReal (directly, via CReal.commRingS)."
+}

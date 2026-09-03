@@ -356,7 +356,7 @@ impl<'a> EqB<'a> {
     }
 }
 
-fn close_pi(k: &mut Kernel, fields: &[(u64, ExprId)], result: ExprId) -> ExprId {
+pub(crate) fn close_pi(k: &mut Kernel, fields: &[(u64, ExprId)], result: ExprId) -> ExprId {
     let mut t = result;
     for &(fv, ty) in fields.iter().rev() {
         t = pi_over(k, fv, ty, t);
@@ -364,7 +364,7 @@ fn close_pi(k: &mut Kernel, fields: &[(u64, ExprId)], result: ExprId) -> ExprId 
     t
 }
 
-fn close_lam(k: &mut Kernel, fields: &[(u64, ExprId)], body: ExprId) -> ExprId {
+pub(crate) fn close_lam(k: &mut Kernel, fields: &[(u64, ExprId)], body: ExprId) -> ExprId {
     let mut t = body;
     for &(fv, ty) in fields.iter().rev() {
         t = lam_over(k, fv, ty, t);
@@ -639,19 +639,19 @@ const V_A: u64 = 9_900;
 const V_B: u64 = 9_901;
 const V_C: u64 = 9_902;
 
-type Build = Box<dyn Fn(&mut Kernel, &LogicPrelude, LevelId, &[ExprId]) -> ExprId>;
+pub(crate) type Build = Box<dyn Fn(&mut Kernel, &LogicPrelude, LevelId, &[ExprId]) -> ExprId>;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum FieldKind {
+pub(crate) enum FieldKind {
     CarrierSort,
     Data,
     Law,
 }
 
-struct FieldSpec {
-    suffix: &'static str,
-    kind: FieldKind,
-    build: Build,
+pub(crate) struct FieldSpec {
+    pub(crate) suffix: &'static str,
+    pub(crate) kind: FieldKind,
+    pub(crate) build: Build,
 }
 
 fn carrier_field() -> FieldSpec {
@@ -1122,8 +1122,8 @@ pub struct RecordNames {
     pub ind: NameId,
     pub mk: NameId,
     pub rec: NameId,
-    selectors: [NameId; MAX_FIELDS],
-    len: usize,
+    pub(crate) selectors: [NameId; MAX_FIELDS],
+    pub(crate) len: usize,
 }
 
 impl RecordNames {
@@ -1141,13 +1141,13 @@ impl RecordNames {
     }
 }
 
-const CTOR_FVAR_BASE: u64 = 10_000;
-const SELECTOR_S_FV: u64 = 10_900;
+pub(crate) const CTOR_FVAR_BASE: u64 = 10_000;
+pub(crate) const SELECTOR_S_FV: u64 = 10_900;
 
 /// Declare one record: the inductive at `Sort 2` (with a `Sort 1`-refused
 /// universe control run first), then every field's selector by large
 /// elimination.
-fn declare_record(
+pub(crate) fn declare_record(
     k: &mut Kernel,
     lg: &LogicPrelude,
     l0: LevelId,
@@ -1257,7 +1257,7 @@ fn declare_record(
 /// of them (in the same order the constructor declares them) and returns the
 /// one at `index`.
 #[allow(clippy::too_many_arguments)]
-fn declare_selector(
+pub(crate) fn declare_selector(
     k: &mut Kernel,
     ind_ty: ExprId,
     rec: NameId,

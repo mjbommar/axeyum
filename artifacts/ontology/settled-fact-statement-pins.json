@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2240,
+    "min_identity_bound": 2243,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -806,6 +806,27 @@
       "statement_sha256": "e7886eac565f780b39bbbd291ee1aa0f82c3143d08a771c6e6d5a902d66c3831",
       "prose_sha256": "2a590a80ef9202a5edd26257dc33242267a339174cbf8330bf409bd8947df676",
       "kernel_theorem": "Alg.sub_self"
+    },
+    {
+      "fact_id": "F:algs-mul-zero",
+      "language": "lean4",
+      "statement_sha256": "11818fa218763520269ee642ae483c8b7ef47dce8b8ae11757b42528c345ded4",
+      "prose_sha256": "6fae07a23bc875f92eeb2418b5566ad361eb23c84bac961909d40e40eb58d859",
+      "kernel_theorem": "AlgS.mul_zero"
+    },
+    {
+      "fact_id": "F:algs-neg-neg",
+      "language": "lean4",
+      "statement_sha256": "6b617341d9addecb8331705b635e3f96afd6412e3a109c47c7ded56a93035512",
+      "prose_sha256": "5a7f64c6767dc0f6e497b4a2c3444412f35be3a92d84516e01c919b6ba8a90a3",
+      "kernel_theorem": "AlgS.neg_neg"
+    },
+    {
+      "fact_id": "F:algs-sub-self",
+      "language": "lean4",
+      "statement_sha256": "5b0edb915fe5bb261ae26650c9faa6c73ef55e6187a4ef3944ee813e37d1116a",
+      "prose_sha256": "980395c4a0c18182eb8e3ab22858f7aa4c746573cfe5ced6b75ff1528270f7d8",
+      "kernel_theorem": "AlgS.sub_self"
     },
     {
       "fact_id": "F:alternating-binomial-row-sum-zero",
