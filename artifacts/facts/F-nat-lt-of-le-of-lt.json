@@ -20,7 +20,14 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:nat-le-succ-succ",
-    "F:nat-le-trans"
+    "F:nat-le-trans",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-add-le-add-left",
+    "F:nat-add-le-add-right",
+    "F:nat-add-right-comm",
+    "F:nat-le-add-right",
+    "F:nat-le-of-add-le-add-right"
   ],
   "axiom_footprint": [],
   "evidence": [
