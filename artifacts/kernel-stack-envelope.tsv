@@ -117,6 +117,45 @@
 #   ratio anymore. The rule itself (debug/release ratio is per-term, not a
 #   constant) is reinforced, not weakened, by the ratio itself having moved.
 #
+# * 2026-09-03: `rat` outgrew its pinned budget in BOTH profiles and the
+#   `--check` gate was RED on `main` -- found by a lane chasing an unrelated
+#   debug abort, not by anyone running the gate, which is the same way the
+#   2026-08-28 `creal` row was found. Both re-derived by `--measure`, so
+#   neither is a divergent term:
+#
+#     debug   rat  1048576 -> 2097152  (2x)
+#     release rat   131072 ->  262144  (2x)
+#
+#   What grew: 84 commits touched `rat_prelude/` between 2026-08-29 and
+#   2026-09-03 -- the determinant family through to multiplicativity at
+#   symbolic `n` (ADR-1440, ADR-1543), `Rat.prodRange`/`Rat.sumMaps`, the
+#   row-echelon form and the pivot/sweep obligations (ADR-1554), and
+#   `Rat.rank` with the row-rank = column-rank bridge (ADR-1562). No single
+#   declaration did it; per this file's own rule, the attribution is to this
+#   prelude's OWN recent commits and not to a shared upstream cause.
+#
+#   AND `rat` WAS NOT THE ONLY RED ROW. Running the FULL `--check` in both
+#   profiles on the same day found four more, none of which anyone had seen,
+#   all re-derived by `--measure` (so none is a divergent term):
+#
+#     release nat        65536 ->   131072  (2x)
+#     debug   integer   262144 ->   524288  (2x)
+#     debug   cpoint  33554432 -> 67108864  (2x)
+#
+#   `DEEP_STACK_BYTES` (256 MiB) is still 4x the new `cpoint` debug row, so
+#   `on_a_deep_stack` call sites keep their headroom. The lesson is the one
+#   the 2026-08-28 entry already recorded and which held again here: nobody
+#   runs `--check`, so it goes red silently and is found by whoever trips
+#   over an abort. Growth is ordinary; an unexplained row is the defect.
+#
+#   THE DEBUG ROW IS NOW EXACTLY THE 2 MiB A SPAWNED THREAD GETS, so every
+#   `#[test]` that calls `build_rat_prelude` on its own thread has zero
+#   margin -- the same shape that let one `creal` declaration silently stop
+#   the axiom-freedom guard from running (see the 2026-08-28 entry below).
+#   `cargo test -p axeyum-lean-kernel --lib` in debug is green today at
+#   1,498 tests, but the next `rat` declaration of any depth will abort
+#   something, and the abort will name only the first casualty.
+#
 # ## When a row goes red
 #
 # Re-derive it (`--measure --profile <p> --prelude <name>`), raise the row, and
@@ -129,16 +168,16 @@
 # permanent WARN. They keep their debug rows, where they need 128-256 KiB.
 debug	logic	131072
 debug	nat	262144
-debug	integer	262144
+debug	integer	524288
 debug	axreal	131072
-debug	rat	1048576
+debug	rat	2097152
 debug	creal	16777216
-debug	cpoint	33554432
+debug	cpoint	67108864
 debug	complex	16777216
 debug	string	131072
-release	nat	65536
+release	nat	131072
 release	integer	131072
-release	rat	131072
+release	rat	262144
 release	creal	8388608
 release	cpoint	8388608
 release	complex	8388608
