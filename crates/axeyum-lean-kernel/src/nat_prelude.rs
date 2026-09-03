@@ -127,6 +127,7 @@ use crate::PreludeKey;
 use crate::PreludeValue;
 use crate::build_logic_prelude;
 use crate::name::NameId;
+use structures::StructuresNames;
 
 mod abundant_deficient;
 mod abundant_deficient_lemmas;
@@ -240,7 +241,6 @@ mod multiset;
 mod multiset_prod;
 mod no_confusion;
 mod nth;
-pub mod structures;
 mod nth_root;
 mod ops;
 mod order;
@@ -273,6 +273,7 @@ mod squarefree;
 pub(crate) mod steps;
 mod stirling;
 mod stirling_lemmas;
+pub mod structures;
 mod subset_product;
 mod subset_sum;
 mod sum_range_permute;
@@ -6273,7 +6274,7 @@ pub struct NatPrelude {
     /// a field. See [`structures`] for the field lists and every selector
     /// name (`.sel(i)`, index documented per record's `*_fields()`
     /// function). Declared under a fresh `Alg` root, never under `Nat`.
-    pub structures: structures::StructuresRecords,
+    pub structures: StructuresNames,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the

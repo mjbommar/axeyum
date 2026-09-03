@@ -53,6 +53,7 @@ use crate::name::NameId;
 use crate::{Kernel, KernelError};
 
 pub(crate) mod abs;
+pub mod algebra_instances;
 mod archimedean;
 mod bernoulli;
 mod clear_below;
@@ -98,6 +99,8 @@ mod vector;
 pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 
 use crate::int_prelude::ops::IntDev;
+use crate::nat_prelude::NatOps;
+use algebra_instances::AlgebraNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
 /// the order, the inverse, the structural characterisation of the normalised
@@ -3114,6 +3117,11 @@ pub struct RatPrelude {
     /// Eq Nat (Nat.add (rank M rows cols) (nullity M rows cols)) cols` —
     /// **rank-nullity in the ROW form, unconditional.**
     pub rank_nullity_rows: NameId,
+
+    /// ADR-1578: the ℕ/ℤ/ℚ instances of `nat_prelude::structures`'s
+    /// `Alg.*` record spine, three generic theorems, and a generic
+    /// `det_one` over an arbitrary `Alg.CommRing`. See [`algebra_instances`].
+    pub algebra: AlgebraNames,
 }
 
 impl RatPrelude {
@@ -3666,6 +3674,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         rank_eq_rank_cols: child(kernel, "rank_eq_rankCols"),
         rank_le_cols: child(kernel, "rank_le_cols"),
         rank_nullity_rows: child(kernel, "rank_nullity_rows"),
+        algebra: algebra_instances::intern_algebra_instances(kernel),
     }
 }
 
@@ -3737,6 +3746,13 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         echelon_invariant::declare_echelon_invariant(&mut d, prelude)?;
         echelon_section::declare_echelon_section(&mut d, prelude)?;
         probability::declare_probability(&mut d, prelude)?;
+        algebra_instances::declare_algebra_instances_all(
+            d.kernel(),
+            &prelude.int.nat.logic,
+            &prelude,
+            &prelude.int.nat.structures,
+            &prelude.algebra,
+        )?;
         Ok(())
     })();
     match built {

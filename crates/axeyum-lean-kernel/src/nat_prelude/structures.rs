@@ -79,13 +79,13 @@ use crate::name::NameId;
 // `bundled_structure_probe.rs`'s free functions into reusable prelude code).
 // ---------------------------------------------------------------------------
 
-fn pi_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+pub(crate) fn pi_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
     let b = k.abstract_fvars(body, &[fv]);
     let anon = k.anon();
     k.pi(anon, ty, b, BinderInfo::Default)
 }
 
-fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
+pub(crate) fn lam_over(k: &mut Kernel, fv: u64, ty: ExprId, body: ExprId) -> ExprId {
     let b = k.abstract_fvars(body, &[fv]);
     let anon = k.anon();
     k.lam(anon, ty, b, BinderInfo::Default)
@@ -96,12 +96,12 @@ pub(crate) fn arrow(k: &mut Kernel, dom: ExprId, cod: ExprId) -> ExprId {
     k.pi(anon, dom, cod, BinderInfo::Default)
 }
 
-fn app2(k: &mut Kernel, f: ExprId, x: ExprId, y: ExprId) -> ExprId {
+pub(crate) fn app2(k: &mut Kernel, f: ExprId, x: ExprId, y: ExprId) -> ExprId {
     let fx = k.app(f, x);
     k.app(fx, y)
 }
 
-fn eq_of(
+pub(crate) fn eq_of(
     k: &mut Kernel,
     lg: &LogicPrelude,
     lvl: LevelId,
@@ -115,13 +115,19 @@ fn eq_of(
     k.app(e, b)
 }
 
-fn refl_of(k: &mut Kernel, lg: &LogicPrelude, lvl: LevelId, ty: ExprId, a: ExprId) -> ExprId {
+pub(crate) fn refl_of(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    lvl: LevelId,
+    ty: ExprId,
+    a: ExprId,
+) -> ExprId {
     let c = k.const_(lg.eq_refl, vec![lvl]);
     let e = k.app(c, ty);
     k.app(e, a)
 }
 
-fn symm_of(
+pub(crate) fn symm_of(
     k: &mut Kernel,
     lg: &LogicPrelude,
     lvl: LevelId,
@@ -578,7 +584,7 @@ fn cond_inv_field(
 // ---------------------------------------------------------------------------
 
 /// The largest field count among the ten records (`Field`, 19), with
-/// headroom -- fixed so [`RecordNames`] (and therefore [`StructuresRecords`]
+/// headroom -- fixed so [`RecordNames`] (and therefore [`StructuresNames`]
 /// and `NatPrelude`) stays `Copy`, matching every other prelude handle in
 /// this crate.
 pub const MAX_FIELDS: usize = 24;
@@ -860,6 +866,87 @@ fn field_fields() -> Vec<FieldSpec> {
     f
 }
 
+/// Field-index constants, one module per record, so a consumer never counts
+/// positions by hand. Mirrors the `*_fields()` functions above exactly --
+/// keep both in sync if either changes.
+pub mod idx {
+    pub mod magma {
+        pub const CARRIER: usize = 0;
+        pub const OP: usize = 1;
+    }
+    pub mod semigroup {
+        pub const CARRIER: usize = 0;
+        pub const OP: usize = 1;
+        pub const ASSOC: usize = 2;
+    }
+    pub mod monoid {
+        pub const CARRIER: usize = 0;
+        pub const OP: usize = 1;
+        pub const E: usize = 2;
+        pub const ASSOC: usize = 3;
+        pub const IDENT_L: usize = 4;
+        pub const IDENT_R: usize = 5;
+    }
+    pub mod comm_monoid {
+        pub use super::monoid::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, OP};
+        pub const COMM: usize = 6;
+    }
+    pub mod group {
+        pub const CARRIER: usize = 0;
+        pub const OP: usize = 1;
+        pub const E: usize = 2;
+        pub const INV: usize = 3;
+        pub const ASSOC: usize = 4;
+        pub const IDENT_L: usize = 5;
+        pub const IDENT_R: usize = 6;
+        pub const INV_L: usize = 7;
+        pub const INV_R: usize = 8;
+    }
+    pub mod comm_group {
+        pub use super::group::{ASSOC, CARRIER, E, IDENT_L, IDENT_R, INV, INV_L, INV_R, OP};
+        pub const COMM: usize = 9;
+    }
+    pub mod semiring {
+        pub const CARRIER: usize = 0;
+        pub const ZERO: usize = 1;
+        pub const ONE: usize = 2;
+        pub const ADD: usize = 3;
+        pub const MUL: usize = 4;
+        pub const ADD_ASSOC: usize = 5;
+        pub const ADD_COMM: usize = 6;
+        pub const ADD_ZERO: usize = 7;
+        pub const MUL_ASSOC: usize = 8;
+        pub const MUL_ONE_L: usize = 9;
+        pub const MUL_ONE_R: usize = 10;
+        pub const DISTRIB_L: usize = 11;
+        pub const DISTRIB_R: usize = 12;
+    }
+    pub mod ring {
+        pub use super::semiring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, MUL, MUL_ASSOC,
+            MUL_ONE_L, MUL_ONE_R, ONE, ZERO,
+        };
+        pub const NEG: usize = 13;
+        pub const NEG_ADD: usize = 14;
+    }
+    pub mod comm_ring {
+        pub use super::ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, MUL, MUL_ASSOC,
+            MUL_ONE_L, MUL_ONE_R, NEG, NEG_ADD, ONE, ZERO,
+        };
+        pub const MUL_COMM: usize = 15;
+    }
+    pub mod field {
+        pub use super::comm_ring::{
+            ADD, ADD_ASSOC, ADD_COMM, ADD_ZERO, CARRIER, DISTRIB_L, DISTRIB_R, MUL, MUL_ASSOC,
+            MUL_COMM, MUL_ONE_L, MUL_ONE_R, NEG, NEG_ADD, ONE, ZERO,
+        };
+        pub const INV: usize = 16;
+        pub const ONE_NE_ZERO: usize = 17;
+        pub const MUL_INV: usize = 18;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Assembly: names, then declarations.
 // ---------------------------------------------------------------------------
@@ -902,7 +989,7 @@ pub(crate) fn intern_structures_names(kernel: &mut Kernel) -> StructuresPrelude 
 /// The declared records, keyed by [`StructuresPrelude`]'s names, holding
 /// each record's selector names in field-declaration order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StructuresRecords {
+pub struct StructuresNames {
     pub magma: RecordNames,
     pub semigroup: RecordNames,
     pub monoid: RecordNames,
@@ -921,7 +1008,7 @@ pub(crate) fn declare_structures_all(
     kernel: &mut Kernel,
     p: &StructuresPrelude,
     logic: &LogicPrelude,
-) -> Result<StructuresRecords, KernelError> {
+) -> Result<StructuresNames, KernelError> {
     let l0 = kernel.level_zero();
     let l1 = kernel.level_succ(l0);
     let l2 = kernel.level_succ(l1);
@@ -953,7 +1040,7 @@ pub(crate) fn declare_structures_all(
     let comm_ring = declare_record(kernel, logic, l0, l1, l2, p.comm_ring, &comm_ring_fields())?;
     let field = declare_record(kernel, logic, l0, l1, l2, p.field, &field_fields())?;
 
-    Ok(StructuresRecords {
+    Ok(StructuresNames {
         magma,
         semigroup,
         monoid,
