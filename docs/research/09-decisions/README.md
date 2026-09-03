@@ -877,3 +877,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1590](adr-1590-wiring-creal-and-complex-into-algs-and-deriving-alg-from-algs.md) | wiring `CReal`/`Complex` into `AlgS`, and deriving `Alg` from `AlgS` (amends ADR-1588) | accepted |
 | [1591](adr-1591-simp-over-list-and-the-tactic-layer-over-int-and-rat.md) | `simp` over `List`, and the tactic layer over ℤ and ℚ | Accepted |
 | [1592](adr-1592-algs-group-and-orderedring-close-the-gaps-adr-1590-named.md) | `AlgS.Group`-level theorems and `AlgS.OrderedRing` close the two gaps ADR-1590 named | accepted |
+| [1593](adr-1593-the-pigeonhole-is-the-bijection-law-with-its-inverse-deleted.md) | the pigeonhole principle is the bijection law with its inverse deleted, and the colliding pair is computed rather than extracted | Accepted |

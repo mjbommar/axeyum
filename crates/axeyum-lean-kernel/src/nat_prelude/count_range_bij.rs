@@ -1571,3 +1571,431 @@ pub(super) fn declare_count_range_bij_of_inverse(
     };
     d.declare_theorem(p.count_range_bij_of_inverse, ty, value)
 }
+
+// ============================================================================
+// `Nat.countRange_le_of_injOn` — the cross-bound counting INEQUALITY.
+//
+// The bijection law above needs an explicit inverse; an INJECTION alone gives
+// only `≤`, and that is the form the pigeonhole principle consumes. The proof
+// is this file's own induction with the inverse `τ` and the two round-trip
+// equations DELETED, which is why it lives here rather than in a new module:
+// every device it needs — `drop_pred` and its three equations, `weaken_inj`,
+// `sel`, `lift_lt` — already exists a few hundred lines above, and the removal
+// step is paid for by the same `Nat.countRange_point_change`.
+//
+// The two branches that change:
+//
+// - **`n = 0`** is now trivial rather than the hardest case. `countRange p 0`
+//   is `0` and `Nat.zero_le` closes; the bijection's base case had to refute
+//   every selected `j < m` through `τ`, and there is no `τ` here.
+// - **`succ n`, `p n = true`** ends at `Le (succ (countRange p n))
+//   (succ (countRange q' m))` through `Nat.succ_le_succ` rather than at an
+//   equality, and `countRange_point_change` then moves `succ (countRange q' m)`
+//   to `countRange q m`. Both `add _ (sel true) ≡ succ _` and
+//   `add _ (sel false) ≡ _` hold by ιδ, so no arithmetic lemma is needed to
+//   line the two spellings up.
+// ============================================================================
+
+/// The induction motive: `∀ q, H_inj → H_maps → Le (countRange p x)
+/// (countRange q m)`, generalized over `q` ALONE. `σ` is fixed — the step
+/// removes a point from `q`'s selected set and never touches the map — which is
+/// one binder fewer than [`bij_motive`] carries.
+fn le_motive(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pp: ExprId,
+    sigma: ExprId,
+    m: ExprId,
+    x: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+
+    let h1 = inj_sel_ty(d, pp, sigma, x);
+    let h2 = maps_sel_ty(d, &p, pp, q, sigma, x, m);
+    let lhs = count_range(d, &p, pp, x);
+    let rhs = count_range(d, &p, q, m);
+    let concl = d.le(lhs, rhs);
+    let with_h2 = d.arrow(h2, concl);
+    let body = d.arrow(h1, with_h2);
+    d.pi_fv(q_fv, pred_ty, body)
+}
+
+/// Bind `q` and the two hypotheses, then run `body` on them.
+fn with_le_context(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pp: ExprId,
+    sigma: ExprId,
+    m: ExprId,
+    x: ExprId,
+    body: &dyn Fn(&mut NatDev<'_>, ExprId, ExprId, ExprId) -> ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let h1_ty = inj_sel_ty(d, pp, sigma, x);
+    let h2_ty = maps_sel_ty(d, &p, pp, q, sigma, x, m);
+
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let term = body(d, q, h1, h2);
+    let with_h2 = d.lam_fv(h2_fv, h2_ty, term);
+    let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+    d.lam_fv(q_fv, pred_ty, with_h1)
+}
+
+/// The base case `n = 0`: `countRange p 0` is `0`, and `Nat.zero_le` closes
+/// with neither hypothesis used.
+fn le_base(d: &mut NatDev<'_>, p: &NatPrelude, pp: ExprId, sigma: ExprId, m: ExprId) -> ExprId {
+    let p = *p;
+    let zero = d.zero();
+    with_le_context(d, &p, pp, sigma, m, zero, &|d, q, _h1, _h2| {
+        let zero = d.zero();
+        let cq = count_range(d, &p, q, m);
+        let base = d.lemma(p.zero_le, &[cq]);
+        let cp0 = count_range(d, &p, pp, zero);
+        let cp0_eq_zero = d.lemma(p.count_range_zero, &[pp]);
+        let zero_eq_cp0 = d.symm(cp0, zero, cp0_eq_zero);
+        let motive = d.eq_motive(zero, &|d, x| d.le(x, cq));
+        d.transport(zero, motive, base, cp0, zero_eq_cp0)
+    })
+}
+
+/// The `p j = false` branch: the top index contributes nothing and the SAME `q`
+/// carries the induction hypothesis.
+#[allow(clippy::too_many_arguments)]
+fn le_branch_unselected(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pp: ExprId,
+    sigma: ExprId,
+    m: ExprId,
+    j: ExprId,
+    ih: ExprId,
+    q: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+    hpf: ExprId,
+) -> ExprId {
+    let p = *p;
+    let false_val = d.bool_false();
+
+    let h1p = weaken_inj(d, &p, pp, sigma, j, h1);
+    let h2p = weaken_maps(d, &p, pp, j, h2);
+    let ih_result = d.apply(ih, &[q, h1p, h2p]);
+
+    let sj = d.succ(j);
+    let start = count_range(d, &p, pp, sj);
+    let cs = d.lemma(p.count_range_succ, &[pp, j]);
+    let prior = count_range(d, &p, pp, j);
+    let pp_j = d.apply(pp, &[j]);
+    let sel_pj = sel(d, pp_j);
+    let after_succ = d.add(prior, sel_pj);
+    let sel_false = sel(d, false_val);
+    let after_false = d.add(prior, sel_false);
+    let step2 = bool_congr_nat(d, pp_j, false_val, hpf, &|d, x| {
+        let sv = sel(d, x);
+        d.add(prior, sv)
+    });
+    let (_e, eq_lhs) = d.chain(start, &[(after_succ, cs), (after_false, step2)]);
+
+    // `add prior (sel false)` IS `prior` by ιδ, so the induction hypothesis
+    // already inhabits the motive at the left endpoint.
+    let cq = count_range(d, &p, q, m);
+    let back = d.symm(start, after_false, eq_lhs);
+    let motive = d.eq_motive(after_false, &|d, x| d.le(x, cq));
+    d.transport(after_false, motive, ih_result, start, back)
+}
+
+/// The `p j = true` branch: `j0 := σ j` is removed from `q`, the induction
+/// hypothesis runs at the smaller predicate, `Nat.succ_le_succ` bumps both
+/// sides and `Nat.countRange_point_change` pays for the removal.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn le_branch_selected(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pp: ExprId,
+    sigma: ExprId,
+    m: ExprId,
+    j: ExprId,
+    ih: ExprId,
+    q: ExprId,
+    h1: ExprId,
+    h2: ExprId,
+    hpt: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let true_val = d.bool_true();
+    let false_val = d.bool_false();
+
+    let j_lt_sj = d.lemma(p.lt_succ_self, &[j]);
+    let h2_at_j = d.apply(h2, &[j, j_lt_sj, hpt]);
+    let j0 = d.apply(sigma, &[j]);
+    let bound_ty = d.lt(j0, m);
+    let q_j0 = d.apply(q, &[j0]);
+    let sel_ty = d.bool_eq(q_j0, true_val);
+    let hj0m = and_left(d, bound_ty, sel_ty, h2_at_j);
+    let hqj0 = and_right(d, bound_ty, sel_ty, h2_at_j);
+
+    let qd = drop_pred(d, q, j0);
+
+    let h1p = weaken_inj(d, &p, pp, sigma, j, h1);
+
+    // `σ` still maps `[0,j)`'s selected set into `q` MINUS `j0`: an index `i`
+    // below `j` has `σ i ≠ σ j = j0`, because `σ` is injective on the selected
+    // set and `i ≠ j`.
+    let h2p = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi = d.kernel().fvar(hi_fv);
+        let hp_fv = d.fresh_fvar();
+        let hp = d.kernel().fvar(hp_fv);
+
+        let lifted = lift_lt(d, &p, i, j, hi);
+        let applied = d.apply(h2, &[i, lifted, hp]);
+        let si = d.apply(sigma, &[i]);
+        let bound = d.lt(si, m);
+        let q_si = d.apply(q, &[si]);
+        let selected = d.bool_eq(q_si, true_val);
+        let ltm = and_left(d, bound, selected, applied);
+        let q_true = and_right(d, bound, selected, applied);
+
+        let hne_ij = ne_of_lt(d, &p, i, j, hi);
+        let hne_sig = {
+            let e_fv = d.fresh_fvar();
+            let e = d.kernel().fvar(e_fv);
+            let e_ty = d.eq(si, j0);
+            let i_eq_j = d.apply(h1, &[i, j, lifted, hp, j_lt_sj, hpt, e]);
+            let contra = d.apply(hne_ij, &[i_eq_j]);
+            d.lam_fv(e_fv, e_ty, contra)
+        };
+        let eqd = drop_eq_of_ne(d, &p, q, j0, si, hne_sig);
+        let drop_si = drop_body(d, q, j0, si);
+        let qd_true = d.bool_trans(drop_si, q_si, true_val, eqd, q_true);
+        let qd_si = d.apply(qd, &[si]);
+        let new_selected = d.bool_eq(qd_si, true_val);
+        let pair = and_intro(d, &p, bound, new_selected, ltm, qd_true);
+
+        let pi = d.apply(pp, &[i]);
+        let hp_ty = d.bool_eq(pi, true_val);
+        let with_hp = d.lam_fv(hp_fv, hp_ty, pair);
+        let hi_ty = d.lt(i, j);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hp);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+
+    let ih_result = d.apply(ih, &[qd, h1p, h2p]);
+
+    // --- pay for the removal with `countRange_point_change` ------------------
+    let below = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk = d.kernel().fvar(hk_fv);
+        let hk_ty = d.lt(k, j0);
+        let body = drop_eq_lt(d, &p, q, j0, k, hk);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, body);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+    let above = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hlo_fv = d.fresh_fvar();
+        let hlo = d.kernel().fvar(hlo_fv);
+        let hhi_fv = d.fresh_fvar();
+        let hhi_ty = d.lt(k, m);
+        let body = drop_eq_gt(d, &p, q, j0, k, hlo);
+        let with_hi = d.lam_fv(hhi_fv, hhi_ty, body);
+        let hlo_ty = d.lt(j0, k);
+        let with_lo = d.lam_fv(hlo_fv, hlo_ty, with_hi);
+        d.lam_fv(k_fv, nat, with_lo)
+    };
+    let change = d.const_app(
+        p.count_range_point_change,
+        &[qd, q, j0, m, hj0m, below, above],
+    );
+
+    let c_qd = count_range(d, &p, qd, m);
+    let c_q = count_range(d, &p, q, m);
+    let qd_j0 = d.apply(qd, &[j0]);
+    let sel_q_j0 = sel(d, q_j0);
+    let sel_qd_j0 = sel(d, qd_j0);
+    let change_lhs = d.add(c_qd, sel_q_j0);
+    let change_rhs = d.add(c_q, sel_qd_j0);
+
+    let sel_true = sel(d, true_val);
+    let sel_false = sel(d, false_val);
+    let reduced_lhs = d.add(c_qd, sel_true);
+    let reduced_rhs = d.add(c_q, sel_false);
+
+    let rewrite_lhs = bool_congr_nat(d, q_j0, true_val, hqj0, &|d, x| {
+        let sv = sel(d, x);
+        d.add(c_qd, sv)
+    });
+    let hqdj0 = drop_eq_at(d, &p, q, j0);
+    let rewrite_rhs = bool_congr_nat(d, qd_j0, false_val, hqdj0, &|d, x| {
+        let sv = sel(d, x);
+        d.add(c_q, sv)
+    });
+
+    let lhs_rev = d.symm(change_lhs, reduced_lhs, rewrite_lhs);
+    let via = d.trans(reduced_lhs, change_lhs, change_rhs, lhs_rev, change);
+    let paid = d.trans(reduced_lhs, change_rhs, reduced_rhs, via, rewrite_rhs);
+
+    // --- bump both sides, then move the right one along `paid` ---------------
+    let prior = count_range(d, &p, pp, j);
+    let bumped = d.lemma(p.succ_le_succ, &[prior, c_qd, ih_result]);
+    let succ_prior = d.succ(prior);
+    let motive_r = d.eq_motive(reduced_lhs, &|d, x| d.le(succ_prior, x));
+    let moved = d.transport(reduced_lhs, motive_r, bumped, reduced_rhs, paid);
+
+    // --- and rewrite the left endpoint back to `countRange p (succ j)` -------
+    let sj = d.succ(j);
+    let start = count_range(d, &p, pp, sj);
+    let cs = d.lemma(p.count_range_succ, &[pp, j]);
+    let pp_j = d.apply(pp, &[j]);
+    let sel_pj = sel(d, pp_j);
+    let after_succ = d.add(prior, sel_pj);
+    let after_true = d.add(prior, sel_true);
+    let step2 = bool_congr_nat(d, pp_j, true_val, hpt, &|d, x| {
+        let sv = sel(d, x);
+        d.add(prior, sv)
+    });
+    let (_e, eq_lhs) = d.chain(start, &[(after_succ, cs), (after_true, step2)]);
+    let back = d.symm(start, after_true, eq_lhs);
+    let motive_l = d.eq_motive(after_true, &|d, x| d.le(x, c_q));
+    d.transport(after_true, motive_l, moved, start, back)
+}
+
+/// The successor step: `bool_true_or_false (p j)` splits into
+/// [`le_branch_unselected`] and [`le_branch_selected`].
+fn le_step(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pp: ExprId,
+    sigma: ExprId,
+    m: ExprId,
+    j: ExprId,
+    ih: ExprId,
+) -> ExprId {
+    let p = *p;
+    let sj = d.succ(j);
+    with_le_context(d, &p, pp, sigma, m, sj, &|d, q, h1, h2| {
+        let true_val = d.bool_true();
+        let false_val = d.bool_false();
+        let pp_j = d.apply(pp, &[j]);
+        let is_true = d.bool_eq(pp_j, true_val);
+        let is_false = d.bool_eq(pp_j, false_val);
+        let disj = bool_true_or_false(d, &p, pp_j);
+
+        let sj = d.succ(j);
+        let lhs = count_range(d, &p, pp, sj);
+        let rhs = count_range(d, &p, q, m);
+        let goal = d.le(lhs, rhs);
+
+        let on_true = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = le_branch_selected(d, &p, pp, sigma, m, j, ih, q, h1, h2, h);
+            d.lam_fv(h_fv, is_true, body)
+        };
+        let on_false = {
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
+            let body = le_branch_unselected(d, &p, pp, sigma, m, j, ih, q, h1, h2, h);
+            d.lam_fv(h_fv, is_false, body)
+        };
+        or_elim(d, &p, is_true, is_false, goal, on_true, on_false, disj)
+    })
+}
+
+/// `Nat.countRange_le_of_injOn : ∀ p q σ n m,
+///   (∀ i j, Lt i n → p i = true → Lt j n → p j = true →
+///      Eq Nat (σ i) (σ j) → Eq Nat i j) →
+///   (∀ i, Lt i n → p i = true → And (Lt (σ i) m) (q (σ i) = true)) →
+///   Le (countRange p n) (countRange q m)`
+///
+/// [`declare_count_range_bij`]'s inequality: the same induction with the
+/// inverse `τ` and the two round-trip equations deleted. See the section banner
+/// above for the two branches that change.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the constructed term does not
+/// type-check.
+pub(super) fn declare_count_range_le_of_inj_on(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let bool_ty = d.bool_ty();
+    let pred_ty = d.arrow(nat, bool_ty);
+    let fn_ty = d.arrow(nat, nat);
+
+    let pp_fv = d.fresh_fvar();
+    let pp = d.kernel().fvar(pp_fv);
+    let q_fv = d.fresh_fvar();
+    let q = d.kernel().fvar(q_fv);
+    let sigma_fv = d.fresh_fvar();
+    let sigma = d.kernel().fvar(sigma_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let m_fv = d.fresh_fvar();
+    let m = d.kernel().fvar(m_fv);
+
+    let induction = d.induct(
+        &|d, x| le_motive(d, &p, pp, sigma, m, x),
+        &|d| le_base(d, &p, pp, sigma, m),
+        &|d, j, ih| le_step(d, &p, pp, sigma, m, j, ih),
+        n,
+    );
+
+    let h1_ty = inj_sel_ty(d, pp, sigma, n);
+    let h2_ty = maps_sel_ty(d, &p, pp, q, sigma, n, m);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let applied = d.apply(induction, &[q, h1, h2]);
+
+    let lhs = count_range(d, &p, pp, n);
+    let rhs = count_range(d, &p, q, m);
+    let concl = d.le(lhs, rhs);
+
+    let ty = {
+        let s2 = d.arrow(h2_ty, concl);
+        let s1 = d.arrow(h1_ty, s2);
+        let over_m = d.pi_fv(m_fv, nat, s1);
+        let over_n = d.pi_fv(n_fv, nat, over_m);
+        let over_sigma = d.pi_fv(sigma_fv, fn_ty, over_n);
+        let over_q = d.pi_fv(q_fv, pred_ty, over_sigma);
+        d.pi_fv(pp_fv, pred_ty, over_q)
+    };
+    let value = {
+        let s2 = d.lam_fv(h2_fv, h2_ty, applied);
+        let s1 = d.lam_fv(h1_fv, h1_ty, s2);
+        let over_m = d.lam_fv(m_fv, nat, s1);
+        let over_n = d.lam_fv(n_fv, nat, over_m);
+        let over_sigma = d.lam_fv(sigma_fv, fn_ty, over_n);
+        let over_q = d.lam_fv(q_fv, pred_ty, over_sigma);
+        d.lam_fv(pp_fv, pred_ty, over_q)
+    };
+    d.declare_theorem(p.count_range_le_of_inj_on, ty, value)
+}

@@ -347,7 +347,7 @@ use coprime_mul_add_mul_ne_mul::declare_coprime_mul_add_mul_ne_mul;
 use count_and_div_max_pow::declare_count_and_div_max_pow;
 use count_range_bij::{
     declare_count_range_bij, declare_count_range_bij_of_inverse,
-    declare_count_range_eq_zero_of_all_false,
+    declare_count_range_eq_zero_of_all_false, declare_count_range_le_of_inj_on,
 };
 use count_range_permute::{
     declare_count_range_congr_lt, declare_count_range_permute, declare_count_range_point_change,
@@ -6146,6 +6146,19 @@ pub struct NatPrelude {
     /// rather than [`count_range_bij`](Self::count_range_bij)'s five, and none
     /// of them mentions injectivity. Derived, not re-proved.
     pub count_range_bij_of_inverse: NameId,
+    /// `Nat.countRange_le_of_injOn : ∀ p q σ n m,
+    ///   (∀ i j, Lt i n → p i = true → Lt j n → p j = true →
+    ///      Eq Nat (σ i) (σ j) → Eq Nat i j) →
+    ///   (∀ i, Lt i n → p i = true → And (Lt (σ i) m) (q (σ i) = true)) →
+    ///   Le (countRange p n) (countRange q m)` — the cross-bound counting
+    /// INEQUALITY (`count_range_bij.rs`), and the piece ADR-1577 measured as
+    /// the one thing standing between `Nat.Finset` and the pigeonhole
+    /// principle. [`count_range_bij`](Self::count_range_bij) needs an explicit
+    /// inverse; an injection alone gives only `≤`, which is exactly what a
+    /// pigeonhole consumes. Same induction, with `τ` and the two round-trip
+    /// equations deleted: the base case becomes `Nat.zero_le` and the selected
+    /// branch closes through `Nat.succ_le_succ` instead of an equality.
+    pub count_range_le_of_inj_on: NameId,
 
     // --- `Nat.Finset` (`finset.rs`, ADR-1577) ---------------------------------
     /// `Nat.Finset : Type 0` — a decidable membership predicate together with a
@@ -6270,6 +6283,55 @@ pub struct NatPrelude {
     /// `|{k < n : p k}|`; this makes the reading a theorem, with `Nat.totient`
     /// and everything proved about it unchanged.
     pub finset_card_totatives: NameId,
+    /// `Nat.Finset.lt_bound_of_memB : ∀ s i, Eq Bool (memB s i) true →
+    /// Lt i (bound s)` (ADR-1593) — the contrapositive of
+    /// [`finset_mem_b_of_bound_le`](Self::finset_mem_b_of_bound_le), and the
+    /// reason the two statements below need no `Lt i (bound s)` premise:
+    /// membership already implies it, because `memB` truncates in its own
+    /// definition.
+    pub finset_lt_bound_of_mem_b: NameId,
+    /// `Nat.Finset.card_le_of_injOn : ∀ s t g,
+    ///   (∀ i j, memB s i = true → memB s j = true → Eq Nat (g i) (g j) →
+    ///      Eq Nat i j) →
+    ///   (∀ i, memB s i = true → memB t (g i) = true) →
+    ///   Le (card s) (card t)` (ADR-1593) — cardinality of an injection, the
+    /// carrier-level lift of
+    /// [`count_range_le_of_inj_on`](Self::count_range_le_of_inj_on). `card s`
+    /// IS `countRange (memB s) (bound s)` by δ, so the lift's whole content is
+    /// re-shaping the hypotheses.
+    pub finset_card_le_of_inj_on: NameId,
+    /// `Nat.Finset.pigeonhole : ∀ s t g, Lt (card t) (card s) →
+    ///   (∀ i, memB s i = true → memB t (g i) = true) →
+    ///   (∀ i j, memB s i = true → memB s j = true → Eq Nat (g i) (g j) →
+    ///      Eq Nat i j) →
+    ///   False` (ADR-1593) — the pigeonhole principle over `Nat.Finset`, in
+    /// the REFUTATION form: a map from a bigger set into a smaller one is not
+    /// injective on the members.
+    pub finset_pigeonhole: NameId,
+    /// `Nat.Finset.allBelow_false_witness : ∀ f n,
+    /// Eq Bool (allBelow f n) false →
+    /// Exists (fun i => And (Lt i n) (Eq Bool (f i) false))` (ADR-1593) — the
+    /// SEARCH direction, and `allBelow`'s third law.
+    /// [`finset_all_below_of_all_true`](Self::finset_all_below_of_all_true)
+    /// builds the loop and
+    /// [`finset_all_below_true_at`](Self::finset_all_below_true_at) reads a
+    /// `true` one back pointwise; neither says anything about a `false` one,
+    /// which is what a refuted decision hands you. The recursion IS the search,
+    /// so the witness is computed rather than chosen — no choice principle.
+    pub finset_all_below_false_witness: NameId,
+    /// `Nat.Finset.exists_collision : ∀ s t g, Lt (card t) (card s) →
+    ///   (∀ i, memB s i = true → memB t (g i) = true) →
+    ///   ∃ a b, memB s a = true ∧ memB s b = true ∧ Not (Eq Nat a b) ∧
+    ///          Eq Nat (g a) (g b)` (ADR-1593) — the STRONG pigeonhole: an
+    /// explicit colliding pair, not merely the refutation
+    /// [`finset_pigeonhole`](Self::finset_pigeonhole) gives. This kernel has no
+    /// `funext`, no `propext` and no classical choice, so the pair cannot be
+    /// extracted from the refutation; it is COMPUTED by a bounded double search
+    /// over `[0, bound s)` decided by `Nat.beq`, whose `true` case reflects
+    /// back to injectivity (refuted by the pigeonhole) and whose `false` case
+    /// yields the witnesses through
+    /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness).
+    pub finset_exists_collision: NameId,
 
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
@@ -7245,6 +7307,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(nat, "countRange_eq_zero_of_all_false"),
             count_range_bij: kernel.name_str(nat, "countRange_bij"),
             count_range_bij_of_inverse: kernel.name_str(nat, "countRange_bij_of_inverse"),
+            count_range_le_of_inj_on: kernel.name_str(nat, "countRange_le_of_injOn"),
             finset,
             finset_mk: kernel.name_str(finset, "mk"),
             finset_rec: kernel.name_str(finset, "rec"),
@@ -7274,6 +7337,11 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_sum_congr_of_beq: kernel.name_str(finset, "sum_congr_of_beq"),
             finset_card_filter_range: kernel.name_str(finset, "card_filter_range"),
             finset_card_totatives: kernel.name_str(finset, "card_totatives"),
+            finset_lt_bound_of_mem_b: kernel.name_str(finset, "lt_bound_of_memB"),
+            finset_card_le_of_inj_on: kernel.name_str(finset, "card_le_of_injOn"),
+            finset_pigeonhole: kernel.name_str(finset, "pigeonhole"),
+            finset_all_below_false_witness: kernel.name_str(finset, "allBelow_false_witness"),
+            finset_exists_collision: kernel.name_str(finset, "exists_collision"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7754,6 +7822,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_count_range_eq_zero_of_all_false(&mut d, &p)?;
         declare_count_range_bij(&mut d, &p)?;
         declare_count_range_bij_of_inverse(&mut d, &p)?;
+        // The INEQUALITY form (same file): needs `countRange_point_change`,
+        // `countRange_succ`, `countRange_zero`, `zero_le` and `succ_le_succ`,
+        // all long declared.
+        declare_count_range_le_of_inj_on(&mut d, &p)?;
         declare_div_mod_block(&mut d, &p)?;
         declare_transposition(&mut d, &p)?;
         declare_transposition_involutive(&mut d, &p)?;
@@ -8776,6 +8848,9 @@ mod add_factorial_le_tests;
 
 #[cfg(test)]
 mod finset_tests;
+
+#[cfg(test)]
+mod finset_pigeonhole_tests;
 
 #[cfg(test)]
 mod multiset_tests;

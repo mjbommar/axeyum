@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-finset-all-below-false-witness",
+  "title": "A false bounded loop yields an index at which the predicate fails",
+  "statement": "If the bounded loop allBelow f n evaluates to false then there is an index i below n at which f i is false.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Finset.allBelow_false_witness : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> ((x2 : Eq.{1} Bool (AxNat.Finset.allBelow x0 x1) Bool.false) -> Exists.{1} AxNat (fun (x3 : AxNat) => And (AxNat.lt x3 x1) (Eq.{1} Bool (x0 x3) Bool.false)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Finset.allBelow_false_witness"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-finset-all-below-true-at",
+    "F:nat-le-succ-of-le",
+    "F:nat-lt-succ-self"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-nat-finset-all-below-false-witness",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Finset.allBelow_false_witness",
+      "supports": "Nat.Finset.allBelow_false_witness is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cF -e '-> Exists.{1} AxNat (fun (x3 : AxNat) => And (AxNat.lt x3 x1) (Eq.{1} Bool (x0 x3) Bool.false)))))')\" -ge 1",
+      "notes": "The pattern is a DISTINGUISHING substring of the admitted type, not the declaration's name: an existence check would still pass if the statement drifted. Verified to hit ZERO on a perturbed pattern before this row was written -- see the mutation table in ADR-1593. `kernel_declaration_projection` prints every declaration with its footprint size and its rendered type, and the prelude build admits this theorem only through the trusted gate, so a successful build IS the type-check. `grep -cF -e` rather than `grep -cF`: a pattern beginning with `-` is parsed as an OPTION, and five of these seven do. The table in ADR-1593 caught that -- the rows failed as written before `-e` was added, which is why it was run at all."
+    },
+    {
+      "id": "footprint-nat-finset-all-below-false-witness",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint for this declaration, not from a maintained list",
+      "check_status": "checked",
+      "checker_command": "out=$(target/release/examples/kernel_declaration_projection 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | awk -F'\\t' '$3 == \"Nat.Finset.allBelow_false_witness\" && $4 == \"0\"' | wc -l)\" -ge 1",
+      "notes": "The pattern pins BOTH the declaration name and the footprint size 0, so a proof that reached for a trusted declaration would fail the check rather than be reported as axiom-free. A one-character name typo hits zero rows, and so does asking for any size other than 0."
+    },
+    {
+      "id": "statement-nat-finset-all-below-false-witness",
+      "kind": "instance-pin",
+      "supports": "The statement says what its name says -- checked at a concrete instance with hand-computed numerals and paired with the specific wrong statement it rules out",
+      "check_status": "checked",
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib -- nat_prelude::finset_pigeonhole_tests --test-threads=4",
+      "notes": "The trusted gate cannot tell a THEOREM's statement is not what its name says: a `card_le_of_injOn` with its two `card`s transposed, an `exists_collision` whose pair need not be DISTINCT, or a `pigeonhole` whose strict inequality points the other way would each be admitted, carry an empty axiom footprint, and pass every other row in this ledger. `nat_prelude/finset_pigeonhole_tests.rs` instantiates each statement at a concrete pair of sets whose cardinalities are computed independently, and pairs every positive with the wrong statement it rules out. Three of its controls are the sharper kind, where a hypothesis cannot be DISCHARGED (`infer` must fail) rather than a conclusion merely being false."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-03",
+    "established_by": "axeyum-lean-kernel build_nat_prelude",
+    "source": "declaration name and canonical type read directly from kernel_declaration_projection, which prints render_lean of the admitted type; lane finset-pigeonhole, ADR-1593."
+  },
+  "notes": "allBelow's third law, and the SEARCH direction. F:nat-finset-all-below-of-all-true builds the loop and F:nat-finset-all-below-true-at reads a true one back pointwise; neither says anything about a false one, which is exactly what a refuted decision hands you. The recursion IS the search, so the witness is COMPUTED rather than chosen and no choice principle appears -- at f j = false the top index is the answer, at f j = true the guard reduces to the shorter loop and the induction hypothesis's index is re-introduced at the widened bound. ADR-1593.",
+  "external_status": "proved"
+}

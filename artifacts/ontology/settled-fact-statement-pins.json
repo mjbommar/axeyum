@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2245,
+    "min_identity_bound": 2256,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -815,6 +815,20 @@
       "kernel_theorem": "AlgS.add_left_cancel"
     },
     {
+      "fact_id": "F:algs-inv-inv",
+      "language": "lean4",
+      "statement_sha256": "692dabd6b224bd92983e59ee3d2cf9747817e2155c8938da9341d773cf32d2ed",
+      "prose_sha256": "7a94ddff6576c7895ff3af03a03b3c29f9f62dbf030bae5f75b6798f6d04d8a5",
+      "kernel_theorem": "AlgS.invInv"
+    },
+    {
+      "fact_id": "F:algs-inv-unique",
+      "language": "lean4",
+      "statement_sha256": "be32541fffadb5b751ee913fc4fe20c6cb6a9f51adce8677c4197d6ad792ba28",
+      "prose_sha256": "103615fa04516b7755078d38e95b4bccb0eca4b72add3364652790565cffab0f",
+      "kernel_theorem": "AlgS.inv_unique"
+    },
+    {
       "fact_id": "F:algs-mul-neg-one",
       "language": "lean4",
       "statement_sha256": "9a18138f6e0b9b593904eabd7c1df1d1973924c2dabd72568100277efa1c22d7",
@@ -834,6 +848,20 @@
       "statement_sha256": "6b617341d9addecb8331705b635e3f96afd6412e3a109c47c7ded56a93035512",
       "prose_sha256": "5a7f64c6767dc0f6e497b4a2c3444412f35be3a92d84516e01c919b6ba8a90a3",
       "kernel_theorem": "AlgS.neg_neg"
+    },
+    {
+      "fact_id": "F:algs-ofnat-add",
+      "language": "lean4",
+      "statement_sha256": "f8055c65f914ab21c2d4d2fa8e9c7b0df6a6a762e182dccf0a99da80fcd518d9",
+      "prose_sha256": "72f03fe5cdd31060a172299d857ea2d22480abf5948ee386bf36a53406ddb057",
+      "kernel_theorem": "AlgS.OrderedRing.ofNat_add"
+    },
+    {
+      "fact_id": "F:algs-ofnat-le-ofnat-of-le",
+      "language": "lean4",
+      "statement_sha256": "201543265468cd2e5cbd5b02a4b7573663a28abb6e4caf473d8502e98bc314c1",
+      "prose_sha256": "573ba9cc4bbd03616fbf356b42b437bdfdf050f47d84b6fc11f107fcbbb8a11a",
+      "kernel_theorem": "AlgS.OrderedRing.ofNat_le_ofNat_of_le"
     },
     {
       "fact_id": "F:algs-sub-self",
@@ -16100,6 +16128,13 @@
       "kernel_theorem": "Nat.countRange_le"
     },
     {
+      "fact_id": "F:nat-countrange-le-of-injon",
+      "language": "lean4",
+      "statement_sha256": "06905d99fbfaf369b727acc03ddc0b07b83927eca4cfd44e28f589a94cb1a43b",
+      "prose_sha256": "be08ed9663866615cabebd42193c7ff11958c0b2874833fdb9022bee5d31d2a6",
+      "kernel_theorem": "Nat.countRange_le_of_injOn"
+    },
+    {
       "fact_id": "F:nat-countrange-le-of-subset",
       "language": "lean4",
       "statement_sha256": "466979b126ea02f1e5585fe81a768e89315c91be6238361283b2078dfa33a046",
@@ -16866,6 +16901,13 @@
       "kernel_theorem": "Nat.Fin.val_mk"
     },
     {
+      "fact_id": "F:nat-finset-all-below-false-witness",
+      "language": "lean4",
+      "statement_sha256": "d0493acbd9b7d43f04f6286ff7d2328d6000201aa873b7a77e9b7ebdd848c431",
+      "prose_sha256": "bc7e952160bc376a06bd0ce4d1350ed163abd1c9a0abb27bd0666b1418daf58d",
+      "kernel_theorem": "Nat.Finset.allBelow_false_witness"
+    },
+    {
       "fact_id": "F:nat-finset-all-below-true-at",
       "language": "lean4",
       "statement_sha256": "209b0ba13fd0311172cae4e1b28b5c58b67f4b2cc400123e777549c400a55dad",
@@ -16878,6 +16920,13 @@
       "statement_sha256": "b45cf14d5b9644dc4a4b8c9f217e5c52d6a89b83fbe16249634dbdc0af9c823f",
       "prose_sha256": "ae5774dafd105d889f3f82724fce01904409fbb37045d5ffdb02ff22611e46a6",
       "kernel_theorem": "Nat.Finset.card_eq_countRange_add"
+    },
+    {
+      "fact_id": "F:nat-finset-card-le-of-injon",
+      "language": "lean4",
+      "statement_sha256": "ca5d750b654d8e60d75513395cf51cd194feeef8ed372874f3f4327425e58edd",
+      "prose_sha256": "74f84c205aa27bf89a55baefaf21459173ae56040610653bea2da42ca3f966eb",
+      "kernel_theorem": "Nat.Finset.card_le_of_injOn"
     },
     {
       "fact_id": "F:nat-finset-card-le-of-subset",
@@ -16899,6 +16948,27 @@
       "statement_sha256": "5d815d0b12bfcf666add61dfd2f4c1c3f71f909c480ef94dd88dc83aa6f94878",
       "prose_sha256": "72dedf962d609db94fd934afddbe81e150a2cd93916f02985e85da7d4749f45a",
       "kernel_theorem": "Nat.Finset.card_union_add_card_inter"
+    },
+    {
+      "fact_id": "F:nat-finset-exists-collision",
+      "language": "lean4",
+      "statement_sha256": "aaa982fcd9f8e09c510a6dd0ce1ec9b7319a1c14dfadf6e3ff9be359e2aed395",
+      "prose_sha256": "1ac374bfd6cb9b5efb31aaccd93378fe0622914a966057b185e52b46aefb816b",
+      "kernel_theorem": "Nat.Finset.exists_collision"
+    },
+    {
+      "fact_id": "F:nat-finset-lt-bound-of-memb",
+      "language": "lean4",
+      "statement_sha256": "b4efde75167aa94602d7d1db614022b2140f1fc071a315712106dfe873327558",
+      "prose_sha256": "f598c60920e5e5910bd108e9b419f875454ddcf297f2fa7a339121f165c8e14c",
+      "kernel_theorem": "Nat.Finset.lt_bound_of_memB"
+    },
+    {
+      "fact_id": "F:nat-finset-pigeonhole",
+      "language": "lean4",
+      "statement_sha256": "a0f11489be23df2e9354a4ffb2031855004afeb42c91445a04281fdf685c50ab",
+      "prose_sha256": "6cb3b4381d8ab9d217f437fd5cf75835465af0ebd8c04b492bcb82796a09ebb7",
+      "kernel_theorem": "Nat.Finset.pigeonhole"
     },
     {
       "fact_id": "F:nat-finset-sum-congr-of-beq",
@@ -22706,6 +22776,13 @@
       "statement_sha256": "c881f1245fb62f48286f4dc03f501bf1ed2a7686e46d0486fb8ed9188a445f00",
       "prose_sha256": "3bae486f957702c794e606d353c8a2f4ce25a9de0aa24c6a6d7efbc7c8c49f7b",
       "kernel_theorem": "Rat.rankCols_le_cols"
+    },
+    {
+      "fact_id": "F:rat-rank-cols-le-rank",
+      "language": "lean4",
+      "statement_sha256": "055f68a8ed4cd82f557ec59ba09c371436646fdd0bf8dfb3b142680ecd527890",
+      "prose_sha256": "3bce474c3510c2ced6c90b2308e0c775058f6d0d4ff8539b79352546591d7bc6",
+      "kernel_theorem": "Rat.rankCols_le_rank"
     },
     {
       "fact_id": "F:rat-rank-eq-rank-cols",

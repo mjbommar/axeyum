@@ -411,6 +411,7 @@ fn the_bridge_theorems_are_axiom_free() {
             "rank_nullity_rows_of_pivotSection",
             p.rank_nullity_rows_of_pivot_section,
         ),
+        ("rankCols_le_rank", p.rank_cols_le_rank),
     ];
     for (label, name) in names {
         assert!(
@@ -466,4 +467,58 @@ fn the_scan_identity_separates_a_pivot_column_from_a_free_one() {
             "pivotRowOfCol at column {j} must be {want_row}"
         );
     }
+}
+
+/// `Rat.rankCols_le_rank` carries NO hypothesis, and its inequality points from
+/// the column count to the row count (ADR-1593).
+///
+/// Both halves are the check. A `rankCols_le_rank` that had quietly kept the
+/// section hypothesis would still be called that and would still be admitted,
+/// so the forbidden substring is `Rat.nonzeroRowB` — the section hypothesis
+/// cannot be stated without it, and the conclusion does not mention it. And a
+/// statement with the two counts transposed would be a different theorem, one
+/// that is NOT free: in that orientation the injectivity obligation is
+/// injectivity of the leading index on the nonzero rows, which is ADR-1554
+/// obligation 4. So the reversed spelling is required to be absent too.
+#[test]
+fn rank_cols_le_rank_is_unconditional_and_points_the_right_way() {
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.rank_cols_le_rank)
+        .expect("Rat.rankCols_le_rank must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel
+        .render_lean(ty)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    assert!(
+        rendered.contains("Nat.le (Rat.rankCols x0 x1 x2) (Rat.rank x0 x1 x2)"),
+        "the bound must be rankCols <= rank: {rendered}"
+    );
+    assert!(
+        !rendered.contains("Nat.le (Rat.rank x0 x1 x2) (Rat.rankCols x0 x1 x2)"),
+        "negative control: the transposed bound is a DIFFERENT theorem and is \
+         not free -- it needs the section hypothesis: {rendered}"
+    );
+    assert!(
+        !rendered.contains("Rat.nonzeroRowB"),
+        "negative control: no section hypothesis may survive -- it cannot be \
+         stated without Rat.nonzeroRowB: {rendered}"
+    );
+    assert!(
+        !rendered.contains("Rat.pivotRowOfCol"),
+        "negative control: the statement must not mention the pivot map at \
+         all: {rendered}"
+    );
+
+    assert!(
+        kernel.axiom_footprint(p.rank_cols_le_rank).is_empty(),
+        "Rat.rankCols_le_rank must rest on zero axioms"
+    );
 }

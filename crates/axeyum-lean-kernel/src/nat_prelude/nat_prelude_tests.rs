@@ -666,6 +666,13 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_sum_congr_of_beq,
         p.finset_card_filter_range,
         p.finset_card_totatives,
+        // `finset-pigeonhole` lane: the pigeonhole family (ADR-1593).
+        p.count_range_le_of_inj_on,
+        p.finset_lt_bound_of_mem_b,
+        p.finset_card_le_of_inj_on,
+        p.finset_pigeonhole,
+        p.finset_all_below_false_witness,
+        p.finset_exists_collision,
         // `nat-factorization` lane: `factorization_multiset.rs`.
         p.prod_range_eq_one_of_below,
         p.multiset_count_singleton_self,
