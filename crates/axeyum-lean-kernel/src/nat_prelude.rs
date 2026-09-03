@@ -6325,6 +6325,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let structures_names = structures::intern_structures_names(kernel);
         let structures = structures::declare_structures_all(kernel, &structures_names, &logic)?;
 
+        // ADR-1587: `Alg.mul_left_cancel` needs only the abstract `Group`
+        // record just declared above -- no carrier -- so it is declared
+        // here, the earliest position in the whole build, instead of at the
+        // end with the rest of `algebra_ext`. This is what lets
+        // `Int.add_left_cancel` (declared deep inside `int_prelude`, long
+        // before `rat_prelude`/`algebra_ext` exist) retire to it without
+        // violating ADR-1581's build-position rule. See ADR-1587 §1.
+        structures::declare_mul_left_cancel_early(kernel, &logic, &structures.group)?;
+
         // Intern every name up front so the `NatPrelude` (which the proof scripts
         // below consult for lemma handles) exists before anything is declared.
         let le = kernel.name_str(nat, "le");

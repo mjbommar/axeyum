@@ -25,7 +25,8 @@ use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
 use crate::nat_prelude::structures::{
-    self, RecordNames, app2, arrow, congr_arg, eq_of, lam_over, pi_over, symm_of, trans_of,
+    self, RecordNames, app2, arrow, congr_arg, derive_left_unit, eq_of, lam_over, mk_instance,
+    pi_over, sel, symm_of, trans_of,
 };
 
 // ---------------------------------------------------------------------------
@@ -40,20 +41,11 @@ fn alg_root(k: &mut Kernel) -> NameId {
     k.name_str(anon, "Alg")
 }
 
-/// Apply selector `i` of record `rn` to structure term `s`.
-pub(crate) fn sel(k: &mut Kernel, rn: &RecordNames, i: usize, s: ExprId) -> ExprId {
-    let c = k.const_(rn.sel(i), vec![]);
-    k.app(c, s)
-}
-
-/// `<Record>.mk arg0 arg1 ...` in field order.
-pub(crate) fn mk_instance(k: &mut Kernel, rn: &RecordNames, args: &[ExprId]) -> ExprId {
-    let mut v = k.const_(rn.mk, vec![]);
-    for a in args {
-        v = k.app(v, *a);
-    }
-    v
-}
+// ADR-1587: `sel`/`mk_instance`/`derive_left_unit` moved to
+// `nat_prelude::structures` (imported above) so a prelude built before
+// `rat_prelude` exists (`int_prelude`) can also build an `Alg.*` record
+// instance -- `int_prelude::add_basics`'s `Int.add_left_cancel` retirement
+// is the first consumer. Exactly one definition of each remains.
 
 fn declare_instance(
     k: &mut Kernel,
@@ -70,44 +62,6 @@ fn declare_instance(
         value,
         hint: ReducibilityHint::Regular(1),
     })
-}
-
-/// Builds `∀ a, op unit a = a` (a VALUE, i.e. a proof term of that type) from
-/// `comm : ∀ x y, op x y = op y x` and `right_unit : ∀ x, op x unit = x`.
-/// Reused for `Rat`'s missing `one_mul` and `Int`'s missing `zero_add`.
-pub(crate) fn derive_left_unit(
-    k: &mut Kernel,
-    lg: &LogicPrelude,
-    l1: LevelId,
-    carrier_ty: ExprId,
-    op: ExprId,
-    unit: ExprId,
-    comm: ExprId,
-    right_unit: ExprId,
-    a_fv: u64,
-    scratch_fv: u64,
-) -> ExprId {
-    let a = k.fvar(a_fv);
-    let op_unit_a = app2(k, op, unit, a);
-    let op_a_unit = app2(k, op, a, unit);
-    let comm_applied = {
-        let c1 = k.app(comm, unit);
-        k.app(c1, a)
-    }; // : Eq (op unit a) (op a unit)
-    let ru_applied = k.app(right_unit, a); // : Eq (op a unit) a
-    let body = trans_of(
-        k,
-        lg,
-        l1,
-        carrier_ty,
-        op_unit_a,
-        op_a_unit,
-        a,
-        comm_applied,
-        ru_applied,
-        scratch_fv,
-    );
-    lam_over(k, a_fv, carrier_ty, body)
 }
 
 // ---------------------------------------------------------------------------
@@ -1397,6 +1351,58 @@ mod algebra_instances_tests {
             assert!(
                 k.def_eq(ty, closed_expected_ty),
                 "{label}: mul a zero = zero"
+            );
+        }
+    }
+
+    /// ADR-1587 deliverable 5 (widened candidate search): `Alg.ringMulZero`
+    /// is one of ADR-1578's OWN three generic theorems, never checked
+    /// against a carrier hand proof by either ADR-1578 or ADR-1584 --
+    /// both scoped their retirement measurement to ADR-1584's six new
+    /// theorems. `Int.mul_zero`/`Rat.mul_zero` both exist as ordinary
+    /// hand-proved kernel theorems (`int_prelude/algebra.rs`,
+    /// `rat_prelude.rs`'s own `mul_zero` field) and both instances build
+    /// `Ring.mul`/`Ring.zero` as DIRECT selectors onto `Int.mul`/`Int.zero`
+    /// and `Rat.mul`/`Rat.zero` (`declare_instances`' own "every field
+    /// direct" comment for `Int.ring`), so `Alg.ringMulZero` instantiated at
+    /// either reduces to exactly their stated types. `Nat.mul_zero` is NOT a
+    /// candidate: `Alg.ringMulZero` needs a `Ring` (additive inverse), and
+    /// `Nat`'s multiplicative structure has none -- ADR-1578 itself only
+    /// instantiates this theorem at `Int.ring`/`Rat.ring`, never `Nat`.
+    #[test]
+    fn ring_mul_zero_matches_int_and_rat_mul_zero_by_type() {
+        let mut k = Kernel::new();
+        let p = build_rat_prelude(&mut k).expect("rat prelude must build");
+        const A_FV: u64 = 30_500;
+
+        for (r_name, hand_name, carrier_const, label) in [
+            (p.algebra.int_ring, p.int.mul_zero, p.int.z, "Int"),
+            (p.algebra.rat_ring, p.mul_zero, p.int.rat, "Rat"),
+        ] {
+            let thm = k.const_(p.algebra.ring_mul_zero, vec![]);
+            let r = k.const_(r_name, vec![]);
+            let carrier = k.const_(carrier_const, vec![]);
+            let a = k.fvar(A_FV);
+            let generic_applied = {
+                let e1 = k.app(thm, r);
+                k.app(e1, a)
+            };
+            let generic_closed = lam_over(&mut k, A_FV, carrier, generic_applied);
+            let generic_ty = k
+                .infer(generic_closed)
+                .unwrap_or_else(|e| panic!("{label} generic instantiation must type-check: {e:?}"));
+
+            let hand = k.const_(hand_name, vec![]);
+            let hand_ty = k
+                .infer(hand)
+                .unwrap_or_else(|e| panic!("{label}.mul_zero must exist: {e:?}"));
+
+            assert!(
+                k.def_eq(generic_ty, hand_ty),
+                "{label}: Alg.ringMulZero({label}.ring) closed over `a` must \
+                 have the SAME TYPE as {label}.mul_zero -- a genuine \
+                 retirement candidate ADR-1578/ADR-1584 never checked \
+                 (both scoped to ADR-1584's six new theorems only)."
             );
         }
     }

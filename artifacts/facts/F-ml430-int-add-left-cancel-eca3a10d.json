@@ -16,7 +16,9 @@
     "F:int-add-assoc",
     "F:int-add-neg",
     "F:int-add-comm",
-    "F:int-add-zero"
+    "F:int-add-zero",
+    "F:alg-mul-left-cancel",
+    "F:ml430-int-add-left-neg-c1bf80e1"
   ],
   "evidence": [
     {

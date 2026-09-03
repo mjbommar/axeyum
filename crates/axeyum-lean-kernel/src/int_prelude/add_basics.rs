@@ -8,14 +8,15 @@
 //! in `algebra.rs` before this file existed -- see `int_theorem_inventory`.
 //! The other seven are built here, entirely from already-derived `algebra.rs`
 //! laws (`add_comm`, `add_assoc`, `add_zero`, `add_neg`, `mul_comm`,
-//! `left_distrib`) plus `sub.rs`'s `Int.sub` definition and `modeq.rs`'s
-//! private `cancel_neg_add_left` (already widened to `pub(super)` for
-//! `order_add.rs`'s reuse) -- no `Int.rec` case split anywhere in this file.
+//! `left_distrib`) plus `sub.rs`'s `Int.sub` definition -- no `Int.rec` case
+//! split anywhere in this file. `add_left_cancel` (ADR-1587) retires to
+//! `Alg.mul_left_cancel` applied at an inline `Alg.Group` value instead of
+//! `modeq.rs`'s private `cancel_neg_add_left`, which stays `pub(super)`
+//! purely for `order_add.rs`'s own reuse now.
 //!
 //! Dispatch position: after `sub::declare_mul_sub` (so `Int.sub` exists for
 //! [`declare_add_neg_eq_sub`]) and before `order::declare_difference_lemmas`.
 
-use super::modeq::cancel_neg_add_left;
 use super::ops::IntDev;
 use crate::KernelError;
 use crate::expr::ExprId;
@@ -143,9 +144,21 @@ fn declare_add_neg_cancel_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
 /// `Int.add_left_cancel : ∀ (a b c : Int),
 /// Eq Int (add a b) (add a c) → Eq Int b c`.
 ///
-/// `modeq.rs`'s `cancel_neg_add_left(a, x) : Eq(neg_a+(a+x), x)` applied at
-/// `x := b` and `x := c`, bridged by congruence on the hypothesis:
-/// `b = neg_a+(a+b) = neg_a+(a+c) = c`.
+/// ADR-1587 retirement: `Alg.mul_left_cancel` applied at an INLINE `Alg.Group`
+/// value for `Int` (not the named `Int.addGroup`, which is declared much
+/// later by `algebra_instances::declare_instances` — an anonymous value of
+/// the same type is enough). `Alg.mul_left_cancel` is declared at the very
+/// start of the whole build (`nat_prelude::structures::
+/// declare_mul_left_cancel_early`, right after the structures spine), so it
+/// exists here; the `Group` value is built from `add`/`zero`/`neg`/
+/// `add_assoc`/`add_comm`/`add_zero` (all declared in `algebra.rs`, called
+/// before `add_basics`) and `add_left_neg` (this file, the call immediately
+/// above this one in [`declare_add_basics`]) — every field this site needs
+/// is already declared BEFORE this theorem's own position, the build-order
+/// constraint ADR-1581 found and this ADR closes for this one theorem. The
+/// hand chain through `modeq.rs`'s `cancel_neg_add_left` this replaces
+/// is no longer used here (still used elsewhere in this crate under its own
+/// name).
 fn declare_add_left_cancel(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
     d.int_theorem(p.add_left_cancel, 3, &|d, v| {
@@ -158,16 +171,66 @@ fn declare_add_left_cancel(d: &mut IntDev<'_>) -> Result<(), KernelError> {
         let h_fv = d.fresh_fvar();
         let h: ExprId = d.kernel().fvar(h_fv);
 
-        let neg_a = d.ineg(a);
-        let na_ab = d.iadd(neg_a, ab); // neg_a+(a+b)
-        let na_ac = d.iadd(neg_a, ac); // neg_a+(a+c)
+        let ident_l_fv = d.fresh_fvar();
+        let ident_l_scratch_fv = d.fresh_fvar();
 
-        let l1 = cancel_neg_add_left(d, a, b); // Eq(na_ab, b)
-        let l2 = cancel_neg_add_left(d, a, c); // Eq(na_ac, c)
-        let symm_l1 = d.isymm(na_ab, b, l1); // Eq(b, na_ab)
-        let congr_h = d.icongr(ab, ac, h, &|d, t| d.iadd(neg_a, t)); // Eq(na_ab, na_ac)
+        let group = p.nat.structures.group;
+        let logic = p.logic;
+        let l1 = {
+            let k = d.kernel();
+            let l0 = k.level_zero();
+            k.level_succ(l0)
+        };
 
-        let (_, body) = d.ichain(b, &[(na_ab, symm_l1), (na_ac, congr_h), (c, l2)]);
+        let (int_ty, add_c, zero_c, neg_c, assoc_c, comm_c, add_zero_c, add_left_neg_c, add_neg_c) = {
+            let k = d.kernel();
+            (
+                k.const_(p.z, vec![]),
+                k.const_(p.add, vec![]),
+                k.const_(p.zero, vec![]),
+                k.const_(p.neg, vec![]),
+                k.const_(p.add_assoc, vec![]),
+                k.const_(p.add_comm, vec![]),
+                k.const_(p.add_zero, vec![]),
+                k.const_(p.add_left_neg, vec![]),
+                k.const_(p.add_neg, vec![]),
+            )
+        };
+        let ident_l = crate::nat_prelude::structures::derive_left_unit(
+            d.kernel(),
+            &logic,
+            l1,
+            int_ty,
+            add_c,
+            zero_c,
+            comm_c,
+            add_zero_c,
+            ident_l_fv,
+            ident_l_scratch_fv,
+        );
+
+        use crate::nat_prelude::structures::idx::group::{
+            ASSOC, CARRIER, E, IDENT_L, IDENT_R, INV, INV_L, INV_R, OP,
+        };
+        let mut args = vec![ExprId(0); INV_R + 1];
+        args[CARRIER] = int_ty;
+        args[OP] = add_c;
+        args[E] = zero_c;
+        args[INV] = neg_c;
+        args[ASSOC] = assoc_c;
+        args[IDENT_L] = ident_l;
+        args[IDENT_R] = add_zero_c;
+        args[INV_L] = add_left_neg_c;
+        args[INV_R] = add_neg_c;
+        let group_value = crate::nat_prelude::structures::mk_instance(d.kernel(), &group, &args);
+
+        let mlc_name = {
+            let k = d.kernel();
+            let anon = k.anon();
+            let alg = k.name_str(anon, "Alg");
+            k.name_str(alg, "mul_left_cancel")
+        };
+        let body = d.const_app(mlc_name, &[group_value, a, b, c, h]);
         let proof = d.lam_fv(h_fv, hyp, body);
 
         (d.arrow(hyp, concl), proof)

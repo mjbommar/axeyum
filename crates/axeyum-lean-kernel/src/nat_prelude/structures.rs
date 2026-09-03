@@ -265,6 +265,261 @@ fn close_lam(k: &mut Kernel, fields: &[(u64, ExprId)], body: ExprId) -> ExprId {
 }
 
 // ---------------------------------------------------------------------------
+// ADR-1587: instance-construction helpers and `Alg.mul_left_cancel`, homed
+// here (not `rat_prelude/algebra_instances.rs`/`algebra_ext.rs`) so a carrier
+// prelude that is NOT `rat_prelude` (i.e. `int_prelude`, which is built
+// BEFORE `rat_prelude` even starts) can build an `Alg.*` record instance and
+// apply a generic theorem to it WITHOUT depending on `rat_prelude` --
+// `nat_prelude` is the one module every later prelude already depends on.
+// This is what makes it possible for `Int.add_left_cancel` (declared deep
+// inside `int_prelude::add_basics`, long before `rat_prelude` exists at all)
+// to retire to `Alg.mul_left_cancel` applied at an inline `Alg.Group` value:
+// both the instance-building helpers and the generic theorem itself live at
+// a point in the module graph reachable from `int_prelude`. See ADR-1587.
+// ---------------------------------------------------------------------------
+
+/// Apply selector `i` of record `rn` to structure term `s`. Mirrors (and
+/// replaces the sole prior copy of) `rat_prelude::algebra_instances::sel` --
+/// moved here, not merely duplicated, so there is exactly one definition.
+pub(crate) fn sel(k: &mut Kernel, rn: &RecordNames, i: usize, s: ExprId) -> ExprId {
+    let c = k.const_(rn.sel(i), vec![]);
+    k.app(c, s)
+}
+
+/// `<Record>.mk arg0 arg1 ...` in field order. Moved here from
+/// `rat_prelude::algebra_instances` for the same reason as [`sel`].
+pub(crate) fn mk_instance(k: &mut Kernel, rn: &RecordNames, args: &[ExprId]) -> ExprId {
+    let mut v = k.const_(rn.mk, vec![]);
+    for a in args {
+        v = k.app(v, *a);
+    }
+    v
+}
+
+/// Builds `∀ a, op unit a = a` (a VALUE, i.e. a proof term of that type) from
+/// `comm : ∀ x y, op x y = op y x` and `right_unit : ∀ x, op x unit = x`.
+/// Moved here from `rat_prelude::algebra_instances` for the same reason as
+/// [`sel`]; still used there for `Rat`'s missing `one_mul`, and here for
+/// `Int`'s missing `zero_add`.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn derive_left_unit(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l1: LevelId,
+    carrier_ty: ExprId,
+    op: ExprId,
+    unit: ExprId,
+    comm: ExprId,
+    right_unit: ExprId,
+    a_fv: u64,
+    scratch_fv: u64,
+) -> ExprId {
+    let a = k.fvar(a_fv);
+    let op_unit_a = app2(k, op, unit, a);
+    let op_a_unit = app2(k, op, a, unit);
+    let comm_applied = {
+        let c1 = k.app(comm, unit);
+        k.app(c1, a)
+    }; // : Eq (op unit a) (op a unit)
+    let ru_applied = k.app(right_unit, a); // : Eq (op a unit) a
+    let body = trans_of(
+        k,
+        lg,
+        l1,
+        carrier_ty,
+        op_unit_a,
+        op_a_unit,
+        a,
+        comm_applied,
+        ru_applied,
+        scratch_fv,
+    );
+    lam_over(k, a_fv, carrier_ty, body)
+}
+
+/// `Alg.mul_left_cancel : forall (g : Group) (a b c : g.carrier), g.op a b =
+/// g.op a c -> b = c`. Moved here (from `rat_prelude/algebra_ext.rs`'s
+/// `build_mul_left_cancel`, ADR-1584) verbatim except for using this
+/// module's own [`sel`], because this theorem needs only the abstract
+/// `Group` record -- no carrier at all -- so it can be declared at the
+/// EARLIEST possible position in the whole build: immediately after the
+/// structures spine itself. `declare_algebra_ext_all` no longer declares
+/// this name (would be a duplicate); `AlgebraExtNames.mul_left_cancel`'s own
+/// `name_str` interning is idempotent and still resolves to this
+/// declaration.
+fn build_mul_left_cancel_generic(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l1: LevelId,
+    group: &RecordNames,
+) -> (ExprId, ExprId) {
+    use idx::group::{ASSOC, CARRIER, E, IDENT_L, INV, INV_L, OP};
+    const G_FV: u64 = 22_100;
+    const A_FV: u64 = 22_101;
+    const B_FV: u64 = 22_102;
+    const C_FV: u64 = 22_103;
+    const H_FV: u64 = 22_104;
+    const S1: u64 = 22_105;
+    const S2: u64 = 22_106;
+    const S3: u64 = 22_107;
+    const S4: u64 = 22_108;
+    const S5: u64 = 22_109;
+    const S6: u64 = 22_110;
+
+    let ind_ty = k.const_(group.ind, vec![]);
+    let g = k.fvar(G_FV);
+    let carrier = sel(k, group, CARRIER, g);
+    let op = sel(k, group, OP, g);
+    let e = sel(k, group, E, g);
+    let inv = sel(k, group, INV, g);
+    let ident_l = sel(k, group, IDENT_L, g);
+    let inv_l = sel(k, group, INV_L, g);
+    let assoc = sel(k, group, ASSOC, g);
+
+    let a = k.fvar(A_FV);
+    let b = k.fvar(B_FV);
+    let c = k.fvar(C_FV);
+    let inv_a = k.app(inv, a);
+
+    let op_a_b = app2(k, op, a, b);
+    let op_a_c = app2(k, op, a, c);
+    let hyp_ty = eq_of(k, lg, l1, carrier, op_a_b, op_a_c);
+    let h = k.fvar(H_FV);
+
+    // r0 : b = op e b
+    let op_e_b = app2(k, op, e, b);
+    let ident_l_b = k.app(ident_l, b); // op e b = b
+    let r0 = symm_of(k, lg, l1, carrier, op_e_b, b, ident_l_b);
+
+    // r1 : op e b = op (op inv_a a) b
+    let inv_l_a = k.app(inv_l, a); // op inv_a a = e
+    let op_invaa = app2(k, op, inv_a, a);
+    let symm_inv_l_a = symm_of(k, lg, l1, carrier, op_invaa, e, inv_l_a); // e = op inv_a a
+    let op_invaa_b = app2(k, op, op_invaa, b);
+    let r1 = congr_arg(
+        k,
+        lg,
+        l1,
+        carrier,
+        e,
+        op_invaa,
+        symm_inv_l_a,
+        S1,
+        &|k2, w| app2(k2, op, w, b),
+    );
+
+    // r2 : op (op inv_a a) b = op inv_a (op a b)  (assoc inv_a a b)
+    let op_inva_opab = app2(k, op, inv_a, op_a_b);
+    let r2 = {
+        let e1 = k.app(assoc, inv_a);
+        let e2 = k.app(e1, a);
+        k.app(e2, b)
+    };
+
+    // r3 : op inv_a (op a b) = op inv_a (op a c)  (congr via h)
+    let op_inva_opac = app2(k, op, inv_a, op_a_c);
+    let r3 = congr_arg(k, lg, l1, carrier, op_a_b, op_a_c, h, S2, &|k2, w| {
+        app2(k2, op, inv_a, w)
+    });
+
+    // r4 : op inv_a (op a c) = op (op inv_a a) c  (symm assoc inv_a a c)
+    let op_invaa_c = app2(k, op, op_invaa, c);
+    let assoc_invaac = {
+        let e1 = k.app(assoc, inv_a);
+        let e2 = k.app(e1, a);
+        k.app(e2, c)
+    };
+    let r4 = symm_of(k, lg, l1, carrier, op_invaa_c, op_inva_opac, assoc_invaac);
+
+    // r5 : op (op inv_a a) c = op e c  (congr via inv_l_a)
+    let op_e_c = app2(k, op, e, c);
+    let r5 = congr_arg(k, lg, l1, carrier, op_invaa, e, inv_l_a, S3, &|k2, w| {
+        app2(k2, op, w, c)
+    });
+
+    // r6 : op e c = c
+    let r6 = k.app(ident_l, c);
+
+    let step1 = trans_of(k, lg, l1, carrier, b, op_e_b, op_invaa_b, r0, r1, S4);
+    let step2 = trans_of(
+        k,
+        lg,
+        l1,
+        carrier,
+        b,
+        op_invaa_b,
+        op_inva_opab,
+        step1,
+        r2,
+        S5,
+    );
+    let step3 = trans_of(
+        k,
+        lg,
+        l1,
+        carrier,
+        b,
+        op_inva_opab,
+        op_inva_opac,
+        step2,
+        r3,
+        S6,
+    );
+    let step4 = trans_of(
+        k,
+        lg,
+        l1,
+        carrier,
+        b,
+        op_inva_opac,
+        op_invaa_c,
+        step3,
+        r4,
+        S1,
+    );
+    let step5 = trans_of(k, lg, l1, carrier, b, op_invaa_c, op_e_c, step4, r5, S2);
+    let result = trans_of(k, lg, l1, carrier, b, op_e_c, c, step5, r6, S3);
+
+    let value = lam_over(k, H_FV, hyp_ty, result);
+    let value = lam_over(k, C_FV, carrier, value);
+    let value = lam_over(k, B_FV, carrier, value);
+    let value = lam_over(k, A_FV, carrier, value);
+    let value = lam_over(k, G_FV, ind_ty, value);
+
+    let concl = eq_of(k, lg, l1, carrier, b, c);
+    let ty = pi_over(k, H_FV, hyp_ty, concl);
+    let ty = pi_over(k, C_FV, carrier, ty);
+    let ty = pi_over(k, B_FV, carrier, ty);
+    let ty = pi_over(k, A_FV, carrier, ty);
+    let ty = pi_over(k, G_FV, ind_ty, ty);
+
+    (ty, value)
+}
+
+/// Declares `Alg.mul_left_cancel` at the earliest possible build position
+/// (right after [`declare_structures_all`]) and returns its `NameId`. See
+/// the module-doc block above this section and ADR-1587 §1.
+pub(crate) fn declare_mul_left_cancel_early(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    group: &RecordNames,
+) -> Result<NameId, KernelError> {
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let (ty, value) = build_mul_left_cancel_generic(k, lg, l1, group);
+    let anon = k.anon();
+    let alg = k.name_str(anon, "Alg");
+    let name = k.name_str(alg, "mul_left_cancel");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ---------------------------------------------------------------------------
 // Field-shape combinators. Each closure computes a field's TYPE from the
 // (index-selected) VALUE expressions of the earlier fields, `vals`. Reused
 // unchanged for the constructor's own field types (`vals[i]` a fresh fvar)

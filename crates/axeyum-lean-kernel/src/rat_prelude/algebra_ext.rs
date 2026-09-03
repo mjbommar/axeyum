@@ -23,7 +23,6 @@
 //! "a hand proof's citations are necessary, not sufficient").
 
 use super::RatPrelude;
-use super::algebra_instances::{derive_left_unit, mk_instance, sel};
 use crate::BinderInfo;
 use crate::Kernel;
 use crate::KernelError;
@@ -34,7 +33,8 @@ use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
 use crate::nat_prelude::structures::{
-    self, RecordNames, app2, arrow, congr_arg, eq_of, lam_over, pi_over, subst, symm_of, trans_of,
+    self, RecordNames, app2, arrow, congr_arg, derive_left_unit, eq_of, lam_over, mk_instance,
+    pi_over, sel, subst, symm_of, trans_of,
 };
 
 // ---------------------------------------------------------------------------
@@ -434,159 +434,11 @@ fn declare_ordered_ring_instances(
 // ---------------------------------------------------------------------------
 // Generic theorems (deliverable 3).
 // ---------------------------------------------------------------------------
-
-/// `Alg.mul_left_cancel : forall (G:Group)(a b c:G.carrier), G.op a b=G.op a
-/// c -> b=c`. `b = e*b = (a'*a)*b = a'*(a*b) = a'*(a*c) = (a'*a)*c = e*c = c`
-/// (`a' := inv a`).
-#[allow(clippy::too_many_lines)]
-fn build_mul_left_cancel(
-    k: &mut Kernel,
-    lg: &LogicPrelude,
-    l1: LevelId,
-    group: &RecordNames,
-) -> (ExprId, ExprId) {
-    use structures::idx::group::{ASSOC, CARRIER, E, IDENT_L, INV, INV_L, OP};
-    const G_FV: u64 = 22_100;
-    const A_FV: u64 = 22_101;
-    const B_FV: u64 = 22_102;
-    const C_FV: u64 = 22_103;
-    const H_FV: u64 = 22_104;
-    const S1: u64 = 22_105;
-    const S2: u64 = 22_106;
-    const S3: u64 = 22_107;
-    const S4: u64 = 22_108;
-    const S5: u64 = 22_109;
-    const S6: u64 = 22_110;
-
-    let ind_ty = k.const_(group.ind, vec![]);
-    let g = k.fvar(G_FV);
-    let carrier = sel(k, group, CARRIER, g);
-    let op = sel(k, group, OP, g);
-    let e = sel(k, group, E, g);
-    let inv = sel(k, group, INV, g);
-    let ident_l = sel(k, group, IDENT_L, g);
-    let inv_l = sel(k, group, INV_L, g);
-    let assoc = sel(k, group, ASSOC, g);
-
-    let a = k.fvar(A_FV);
-    let b = k.fvar(B_FV);
-    let c = k.fvar(C_FV);
-    let inv_a = k.app(inv, a);
-
-    let op_a_b = app2(k, op, a, b);
-    let op_a_c = app2(k, op, a, c);
-    let hyp_ty = eq_of(k, lg, l1, carrier, op_a_b, op_a_c);
-    let h = k.fvar(H_FV);
-
-    // r0 : b = op e b
-    let op_e_b = app2(k, op, e, b);
-    let ident_l_b = k.app(ident_l, b); // op e b = b
-    let r0 = symm_of(k, lg, l1, carrier, op_e_b, b, ident_l_b);
-
-    // r1 : op e b = op (op inv_a a) b
-    let inv_l_a = k.app(inv_l, a); // op inv_a a = e
-    let op_invaa = app2(k, op, inv_a, a);
-    let symm_inv_l_a = symm_of(k, lg, l1, carrier, op_invaa, e, inv_l_a); // e = op inv_a a
-    let op_invaa_b = app2(k, op, op_invaa, b);
-    let r1 = congr_arg(
-        k,
-        lg,
-        l1,
-        carrier,
-        e,
-        op_invaa,
-        symm_inv_l_a,
-        S1,
-        &|k2, w| app2(k2, op, w, b),
-    );
-
-    // r2 : op (op inv_a a) b = op inv_a (op a b)  (assoc inv_a a b)
-    let op_inva_opab = app2(k, op, inv_a, op_a_b);
-    let r2 = {
-        let e1 = k.app(assoc, inv_a);
-        let e2 = k.app(e1, a);
-        k.app(e2, b)
-    };
-
-    // r3 : op inv_a (op a b) = op inv_a (op a c)  (congr via h)
-    let op_inva_opac = app2(k, op, inv_a, op_a_c);
-    let r3 = congr_arg(k, lg, l1, carrier, op_a_b, op_a_c, h, S2, &|k2, w| {
-        app2(k2, op, inv_a, w)
-    });
-
-    // r4 : op inv_a (op a c) = op (op inv_a a) c  (symm assoc inv_a a c)
-    let op_invaa_c = app2(k, op, op_invaa, c);
-    let assoc_invaac = {
-        let e1 = k.app(assoc, inv_a);
-        let e2 = k.app(e1, a);
-        k.app(e2, c)
-    };
-    let r4 = symm_of(k, lg, l1, carrier, op_invaa_c, op_inva_opac, assoc_invaac);
-
-    // r5 : op (op inv_a a) c = op e c  (congr via inv_l_a)
-    let op_e_c = app2(k, op, e, c);
-    let r5 = congr_arg(k, lg, l1, carrier, op_invaa, e, inv_l_a, S3, &|k2, w| {
-        app2(k2, op, w, c)
-    });
-
-    // r6 : op e c = c
-    let r6 = k.app(ident_l, c);
-
-    let step1 = trans_of(k, lg, l1, carrier, b, op_e_b, op_invaa_b, r0, r1, S4);
-    let step2 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        b,
-        op_invaa_b,
-        op_inva_opab,
-        step1,
-        r2,
-        S5,
-    );
-    let step3 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        b,
-        op_inva_opab,
-        op_inva_opac,
-        step2,
-        r3,
-        S6,
-    );
-    let step4 = trans_of(
-        k,
-        lg,
-        l1,
-        carrier,
-        b,
-        op_inva_opac,
-        op_invaa_c,
-        step3,
-        r4,
-        S1,
-    );
-    let step5 = trans_of(k, lg, l1, carrier, b, op_invaa_c, op_e_c, step4, r5, S2);
-    let result = trans_of(k, lg, l1, carrier, b, op_e_c, c, step5, r6, S3);
-
-    let value = lam_over(k, H_FV, hyp_ty, result);
-    let value = lam_over(k, C_FV, carrier, value);
-    let value = lam_over(k, B_FV, carrier, value);
-    let value = lam_over(k, A_FV, carrier, value);
-    let value = lam_over(k, G_FV, ind_ty, value);
-
-    let concl = eq_of(k, lg, l1, carrier, b, c);
-    let ty = pi_over(k, H_FV, hyp_ty, concl);
-    let ty = pi_over(k, C_FV, carrier, ty);
-    let ty = pi_over(k, B_FV, carrier, ty);
-    let ty = pi_over(k, A_FV, carrier, ty);
-    let ty = pi_over(k, G_FV, ind_ty, ty);
-
-    (ty, value)
-}
+//
+// `Alg.mul_left_cancel` moved to `nat_prelude::structures` (ADR-1587 §1) --
+// see `declare_mul_left_cancel_early` there and its call site in
+// `nat_prelude::build_nat_prelude_uncached`, right after the structures
+// spine itself. `declare_algebra_ext_all` below no longer declares it.
 
 /// `Alg.neg_neg : forall (G:Group)(a:G.carrier), G.inv(G.inv a)=a`. A direct
 /// instantiation of `Alg.groupInvUnique` at `(x := G.inv a, b := G.inv(G.inv
@@ -1406,15 +1258,12 @@ pub(crate) fn declare_algebra_ext_all(
     declare_projections_all(k, lg, l1, st, names)?;
     declare_ordered_ring_instances(k, lg, l1, p, st, names)?;
 
-    {
-        let (ty, value) = build_mul_left_cancel(k, lg, l1, &st.group);
-        k.add_declaration(Declaration::Theorem {
-            name: names.mul_left_cancel,
-            uparams: vec![],
-            ty,
-            value,
-        })?;
-    }
+    // ADR-1587: `Alg.mul_left_cancel` is declared earlier, at the very start
+    // of the whole build (`nat_prelude::structures::declare_mul_left_cancel_early`,
+    // called right after the structures spine) -- NOT here, to let
+    // `Int.add_left_cancel` retire to it without violating ADR-1581's
+    // build-position rule. `names.mul_left_cancel`'s `name_str` interning is
+    // idempotent and still resolves to that earlier declaration.
     {
         let (ty, value) = build_neg_neg(k, lg, l1, &st.group, ax.group_inv_unique);
         k.add_declaration(Declaration::Theorem {
@@ -1965,11 +1814,14 @@ mod algebra_ext_tests {
         assert!(
             k.def_eq(generic_ty, hand_ty),
             "Alg.mul_left_cancel(Int.addGroup) closed over (a,b,c) must have \
-             the SAME TYPE as Int.add_left_cancel -- a genuine retirement \
-             candidate. NOT deleted here per ADR-1581's rule (a hand proof's \
-             citations are necessary, not sufficient): Int.add_left_cancel's \
-             own proof may be cited elsewhere in the build order this lane \
-             did not audit line-by-line."
+             the SAME TYPE as Int.add_left_cancel. ADR-1587: this candidate \
+             cleared all three of ADR-1581's checks (no emitter/instance \
+             citation, Alg.mul_left_cancel declared before this theorem's \
+             own build position, no fact names it) and IS retired -- \
+             Int.add_left_cancel's own proof (int_prelude/add_basics.rs) now \
+             applies Alg.mul_left_cancel at an inline Group value, so this \
+             assertion now exercises the retired proof itself, not merely a \
+             measured candidate."
         );
     }
 
