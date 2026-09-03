@@ -114,9 +114,16 @@ TOP_LEVEL_OPTIONAL = {"notes", "retirement"}
 RECIPE_REQUIRED = {"description"}
 RECIPE_OPTIONAL = {"reference"}
 SIZING_REQUIRED = {"date", "ledger_sha256", "matched_open_ready_count"}
-SIZING_OPTIONAL = {"matched_open_ready_fact_ids", "frontier_query", "note"}
+SIZING_OPTIONAL = {
+    "matched_open_ready_fact_ids",
+    "frontier_query",
+    "note",
+    "held_out_overlap_salt",
+    "held_out_overlap_reviewed",
+}
 RETIREMENT_REQUIRED = {"date", "reason"}
 RETIREMENT_OPTIONAL = {"superseded_by", "note"}
+HELD_OUT_REVIEW_REQUIRED = {"digest", "date", "reason"}
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 # Every nursery manifest, not one. `nursery-v2-extension.json` preregisters a
@@ -237,6 +244,39 @@ def held_out_fact_ids(directory: pathlib.Path = AUTOGENESIS) -> frozenset[str]:
     return frozenset(ids)
 
 
+def digest_held_out_fact_id(fact_id: str, salt: str) -> str:
+    """Salted digest of a held-out fact id (ADR-1550's redaction pattern).
+
+    A contract's `sizing.held_out_overlap_reviewed` entries key by this
+    digest, never by the plain id, so a `grep` for a held-out id -- or a
+    producer reading a committed contract file -- finds nothing here. The
+    salt is committed alongside the digests in `sizing.held_out_overlap_salt`;
+    committing it does not make the digest reversible, and a reviewer who
+    already holds the plain id can still confirm it produced the recorded
+    digest. Same construction as `check-partition-edges.py`'s
+    `digest_fact_id`, kept local rather than imported: the two tools redact
+    unrelated artifacts and must not come to depend on one module for it.
+    """
+    return hashlib.sha256(f"{salt}:{fact_id}".encode()).hexdigest()
+
+
+def held_out_shape_matches(
+    shape: dict[str, Any], facts: dict[str, dict], held_out: frozenset[str]
+) -> list[str]:
+    """Held-out fact ids this shape predicate CURRENTLY matches.
+
+    Derived at call time from the live ledger and the live nursery manifests
+    -- never from a literal id list -- so a contract that starts overlapping
+    a NEW held-out row is caught the next time this runs, and a contract
+    whose overlap resolves (the row proves, the shape narrows) drops out with
+    no file to edit. `fid in facts` guards a manifest entry that names a fact
+    with no ledger file yet; such a row cannot be shape-matched at all.
+    """
+    return sorted(
+        fid for fid in held_out if fid in facts and shape_matches(shape, facts[fid])
+    )
+
+
 def is_mutation_fixture(fact_id: str) -> bool:
     """An outcome-blind mutation negative control, never a target.
 
@@ -317,6 +357,34 @@ def validate_sizing(sizing: Any, label: str) -> None:
     for key in ("frontier_query", "note"):
         if key in sizing and (not isinstance(sizing[key], str) or not sizing[key]):
             raise ContractError(f"{label}.{key}: must be a non-empty string")
+    salt = sizing.get("held_out_overlap_salt")
+    if salt is not None and (not isinstance(salt, str) or not salt):
+        raise ContractError(f"{label}.held_out_overlap_salt: must be a non-empty string")
+    reviewed = sizing.get("held_out_overlap_reviewed")
+    if reviewed is not None:
+        if not isinstance(reviewed, list):
+            raise ContractError(
+                f"{label}.held_out_overlap_reviewed: must be a list of "
+                "{digest, date, reason} objects"
+            )
+        seen_digests: set[str] = set()
+        for entry in reviewed:
+            entry_label = f"{label}.held_out_overlap_reviewed[]"
+            exact_keys(entry, HELD_OUT_REVIEW_REQUIRED, set(), entry_label)
+            entry_digest = entry["digest"]
+            if not isinstance(entry_digest, str) or not SHA256_RE.match(entry_digest):
+                raise ContractError(
+                    f"{entry_label}.digest: must be a 64-character lowercase sha256 "
+                    "digest -- a salted digest of the held-out fact id (ADR-1550), "
+                    "never the plain id."
+                )
+            if entry_digest in seen_digests:
+                raise ContractError(f"{entry_label}: duplicate digest {entry_digest}")
+            seen_digests.add(entry_digest)
+            if not isinstance(entry["date"], str) or not DATE_RE.match(entry["date"]):
+                raise ContractError(f"{entry_label}.date: must be an ISO date (YYYY-MM-DD)")
+            if not isinstance(entry["reason"], str) or not entry["reason"]:
+                raise ContractError(f"{entry_label}.reason: must be a non-empty string")
 
 
 def validate_retirement(retirement: Any, label: str) -> None:
@@ -476,6 +544,48 @@ def validate_contract(
             "population emptied, so using it while real targets remain removes the "
             "claim without removing the work."
         )
+
+    # (d) A contract's shape predicate is checked against every held-out row,
+    # not only the ones it names in `matched_open_ready_fact_ids` -- (a)
+    # above catches a contract that CLAIMS a held-out fact, this catches one
+    # whose predicate happens to ALSO match one it never claimed. Every such
+    # overlap must carry a dated, reasoned entry in
+    # `sizing.held_out_overlap_reviewed`, keyed by a salted digest
+    # (`digest_held_out_fact_id`, ADR-1550's redaction pattern) so the review
+    # record itself never names the held-out id. Derived from the live ledger
+    # and the live nursery manifests every run -- never from a literal id
+    # list in this file or in a test -- so a NEW overlap is caught the first
+    # time this validator runs after it appears, and a resolved overlap drops
+    # the requirement with no file to edit.
+    held_out_matches = held_out_shape_matches(shape, facts, held_out)
+    if held_out_matches:
+        salt = contract["sizing"].get("held_out_overlap_salt")
+        if not isinstance(salt, str) or not salt:
+            raise ContractError(
+                f"{contract_id}: shape predicate matches {len(held_out_matches)} "
+                "HELD-OUT fact(s) but sizing.held_out_overlap_salt is missing -- "
+                "an overlap with blind evaluation population must be reviewed and "
+                "recorded as a salted digest in sizing.held_out_overlap_reviewed "
+                "(ADR-1550), never as a plain id."
+            )
+        reviewed_digests = {
+            entry["digest"]
+            for entry in contract["sizing"].get("held_out_overlap_reviewed") or []
+        }
+        unreviewed = sorted(
+            digest_held_out_fact_id(fact_id, salt) for fact_id in held_out_matches
+        )
+        missing = [d for d in unreviewed if d not in reviewed_digests]
+        if missing:
+            raise ContractError(
+                f"{contract_id}: shape predicate matches {len(missing)} HELD-OUT "
+                f"fact(s) with no reviewed entry in sizing.held_out_overlap_reviewed "
+                f"(salted digest(s) {missing}) -- a contract cannot silently start "
+                "matching blind evaluation population. Add a dated review entry "
+                "keyed by digest_held_out_fact_id(fact_id, sizing.held_out_overlap_salt), "
+                "naming the reason (e.g. the row is held-out and this contract is "
+                "retired/does not dispatch it) -- never by fact id."
+            )
 
 
 def load_contracts(

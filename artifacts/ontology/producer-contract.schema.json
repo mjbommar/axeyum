@@ -142,7 +142,34 @@
           "minLength": 1,
           "description": "The command that produced the count, so a referee re-takes the measurement instead of inheriting it."
         },
-        "note": { "type": "string", "minLength": 1 }
+        "note": { "type": "string", "minLength": 1 },
+        "held_out_overlap_salt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required whenever this contract's shape predicate matches any HELD-OUT nursery fact (checked live by `scripts/validate-producer-contracts.py`, not only against `matched_open_ready_fact_ids`). Salts the digests in `held_out_overlap_reviewed` (ADR-1550's redaction pattern) so a committed contract file never contains a held-out fact id in plain text, while a reviewer who already holds the id can still confirm it produced the recorded digest."
+        },
+        "held_out_overlap_reviewed": {
+          "type": "array",
+          "description": "One entry per HELD-OUT fact this contract's shape predicate is currently known to match, keyed by a salted digest of the fact id -- never the id itself. The validator re-derives the live overlap from the fact ledger and every `artifacts/autogenesis/nursery*.json` manifest on each run and rejects any match whose digest is not listed here: a contract cannot silently start matching blind evaluation population (ADR-0542). A resolved overlap (the row proves, or the shape narrows) simply drops out of the live check; a stale entry left behind is harmless.",
+          "items": {
+            "type": "object",
+            "required": ["digest", "date", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "digest": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "sha256(f\"{held_out_overlap_salt}:{fact_id}\") -- `digest_held_out_fact_id` in the validator."
+              },
+              "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Why the overlap is acceptable -- e.g. the row is held-out and this contract does not, and structurally cannot, claim or dispatch it."
+              }
+            }
+          }
+        }
       }
     },
 
