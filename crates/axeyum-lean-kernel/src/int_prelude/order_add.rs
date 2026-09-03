@@ -110,9 +110,10 @@ fn le_sub_of_add_le_core(d: &mut IntDev<'_>, a: ExprId, b: ExprId, c: ExprId, h:
 // Declarations
 // ---------------------------------------------------------------------------
 
-/// `Int.add_le_add_left : a <= b -> forall c, c+a <= c+b` and
-/// `Int.add_le_add_right : a <= b -> forall c, a+c <= b+c` — each `add_le_add`
-/// with a `le_refl` on the fixed side.
+/// `Int.add_le_add_left : forall a b c, a <= b -> c+a <= c+b` and
+/// `Int.add_le_add_right : forall a b c, a <= b -> a+c <= b+c` — all three
+/// integers bind before the hypothesis in both. Each is `add_le_add` with a
+/// `le_refl` on the fixed side.
 pub(super) fn declare_add_le_add_left_right(d: &mut IntDev<'_>) -> Result<(), KernelError> {
     let p = d.int();
 

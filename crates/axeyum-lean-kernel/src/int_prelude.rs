@@ -329,9 +329,9 @@ pub struct IntPrelude {
     /// `add_lt_add_of_le_of_lt :
     /// ∀ (a b c d : Int), le a b → lt c d → lt (add a c) (add b d)`.
     pub add_lt_add_of_le_of_lt: NameId,
-    /// `add_le_add_left : ∀ (a b : Int), le a b → ∀ (c : Int), le (add c a) (add c b)`.
+    /// `add_le_add_left : ∀ (a b c : Int), le a b → le (add c a) (add c b)`.
     pub add_le_add_left: NameId,
-    /// `add_le_add_right : ∀ (a b : Int), le a b → ∀ (c : Int), le (add a c) (add b c)`.
+    /// `add_le_add_right : ∀ (a b c : Int), le a b → le (add a c) (add b c)`.
     pub add_le_add_right: NameId,
     /// `add_le_add_iff_left : ∀ (b c a : Int), Iff (le (add a b) (add a c)) (le b c)`.
     pub add_le_add_iff_left: NameId,
