@@ -870,4 +870,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1583](adr-1583-list-count-to-multiset-and-perm-land.md) | `List.count_toMultiset` lands, and `List.Perm` closes the sized negative ADR-1579 left open | Accepted |
 | [1584](adr-1584-forgetful-projections-cross-carrier-retirement-and-orderedring.md) | forgetful projections, more cross-carrier theorems, a retirement measurement, and `Alg.OrderedRing` (amends ADR-1578) | accepted |
 | [1585](adr-1585-linarith-generic-over-an-arbitrary-orderedring.md) | `linarith::generic` — a `≤`/`=` emitter over an arbitrary `Alg.OrderedRing` | accepted |
+| [1586](adr-1586-a-third-producer-decides-rewrite-chains-and-confluence-is-the-boundary.md) | a third producer decides rewrite chains, and confluence is the boundary | Accepted |
 | [1587](adr-1587-the-first-checked-generic-theorem-retirement-and-what-still-blocks-the-rest.md) | the first checked generic-theorem retirement, and what still blocks the rest (amends ADR-1584) | accepted |

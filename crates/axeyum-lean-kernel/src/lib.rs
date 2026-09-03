@@ -80,6 +80,7 @@ mod quotient;
 mod rat_prelude;
 pub mod ring;
 pub mod shape_index;
+pub mod simp;
 mod stack;
 mod string_prelude;
 mod tc;

@@ -1326,22 +1326,17 @@ fn le_of_lt(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, y: ExprId, hlt: ExprI
 /// one) m = add (mul one m) m`) plus `one_mul`, the same route
 /// `binary_rec.rs`'s `declare_halving_arithmetic` uses inline for
 /// `lt_two_mul_of_pos`.
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `succ_mul` +
+/// `one_mul` alone close `Eq (mul 2 m) (add m m)`, and this was one of two
+/// independent hand-written copies of exactly this identity (the other in
+/// `parity.rs`'s `mul_two_eq_add_self`).
 fn two_mul_eq_add(d: &mut NatDev<'_>, p: &NatPrelude, m: ExprId) -> ExprId {
-    let p = *p;
-    let one = d.num(1);
     let two = d.num(2);
-    let mul_one_m = d.mul(one, m);
-    let add_mul_one_m_m = d.add(mul_one_m, m);
-    let succ_mul_eq = d.lemma(p.succ_mul, &[one, m]); // Eq (mul (succ one) m) add_mul_one_m_m
-    let one_mul_eq = d.lemma(p.one_mul, &[m]); // Eq mul_one_m m
-    let congr_step = d.congr(mul_one_m, m, one_mul_eq, &|d, x| d.add(x, m));
-    let mul_two_m = d.mul(two, m);
-    let add_m_m = d.add(m, m);
-    let (_e, result) = d.chain(
-        mul_two_m,
-        &[(add_mul_one_m_m, succ_mul_eq), (add_m_m, congr_step)],
-    );
-    result
+    let lhs = d.mul(two, m);
+    let rhs = d.add(m, m);
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, lhs, rhs)
+        .unwrap_or_else(|e| panic!("two_mul_eq_add: simp declined: {e:?}"))
 }
 
 /// `Lt a b ⊢ Lt zero (sub b a)` — a per-file copy of `dist_more2.rs`'s

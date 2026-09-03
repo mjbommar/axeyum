@@ -194,18 +194,18 @@ fn add_add_add_comm(
 /// `Eq (add one n) (succ n)`, returned as `(succ n, proof)`: `succ_add(zero,
 /// n)` then congr `zero_add(n)` through `succ` — exactly
 /// `totient_lemmas.rs`'s `declare_coprime_succ_self` inline device.
+///
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `succ_add` +
+/// `zero_add` alone close `Eq (add one n) (succ n)`, and this was one of two
+/// byte-identical hand-written copies of exactly this identity (the other in
+/// `totient_lemmas.rs`).
 fn one_add_eq_succ(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> (ExprId, ExprId) {
-    let p = *p;
-    let zero = d.zero();
     let one = d.num(1);
     let sum = d.add(one, n);
     let sn = d.succ(n);
-    let add_zero_n = d.add(zero, n);
-    let succ_add_step = d.lemma(p.succ_add, &[zero, n]);
-    let zero_add_n = d.lemma(p.zero_add, &[n]);
-    let congr_succ = d.congr(add_zero_n, n, zero_add_n, &|d, x| d.succ(x));
-    let succ_add_zero_n = d.succ(add_zero_n);
-    let (_e, proof) = d.chain(sum, &[(succ_add_zero_n, succ_add_step), (sn, congr_succ)]);
+    let rules = crate::simp::nat::default_rules(p);
+    let proof = crate::simp::nat::prove_eq(d, &rules, sum, sn)
+        .unwrap_or_else(|e| panic!("one_add_eq_succ: simp declined: {e:?}"));
     (sn, proof)
 }
 

@@ -362,6 +362,11 @@ fn prove_left_sum_permutation(
     proof
 }
 
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): both sides
+/// reduce to `n` under the default set alone (`mul_zero`/`zero_mul` clear
+/// every `_ * 0`/`0 * _`, `add_zero`/`zero_add` clear the resulting `+ 0`s,
+/// `mul_one` clears `n * 1`) — the deepest of the ten targets, needing the
+/// engine's nested descent on both sides rather than a single root match.
 fn prove_bezout_zero_equation(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> ExprId {
     let zero = d.zero();
     let unit = d.num(1);
@@ -376,12 +381,9 @@ fn prove_bezout_zero_equation(d: &mut NatDev<'_>, p: &NatPrelude, n: ExprId) -> 
         let zero_zero = d.mul(zero, zero);
         d.add(zero_zero, n_one)
     };
-    let left_to_n = d.refl(n);
-    let right_to_n_one = d.lemma(p.zero_add, &[n_one]);
-    let n_one_to_n = d.lemma(p.mul_one, &[n]);
-    let right_to_n = d.trans(right, n_one, n, right_to_n_one, n_one_to_n);
-    let n_to_right = d.symm(right, n, right_to_n);
-    d.trans(left, n, right, left_to_n, n_to_right)
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, left, right)
+        .unwrap_or_else(|e| panic!("prove_bezout_zero_equation: simp declined: {e:?}"))
 }
 
 #[allow(clippy::too_many_arguments)]

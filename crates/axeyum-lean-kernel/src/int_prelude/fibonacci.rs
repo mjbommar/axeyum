@@ -1211,14 +1211,18 @@ fn neg_add_cancel(d: &mut IntDev<'_>, w: ExprId) -> ExprId {
 }
 
 /// `Eq Int (add zero x) x`. The prelude has `add_zero`, not `zero_add`.
+///
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `add_comm`
+/// (extra) then `add_zero` (default).
 fn zero_add(d: &mut IntDev<'_>, x: ExprId) -> ExprId {
     let p = d.int();
+    let defaults = crate::simp::int::default_rules(&p);
+    let extra = [crate::simp::int::rule_add_comm(&p)];
+    let rules = crate::simp::int::with_extra(&defaults, &extra);
     let zero = d.izero();
     let start = d.iadd(zero, x);
-    let flipped = d.iadd(x, zero);
-    let comm = d.lemma(p.add_comm, &[zero, x]);
-    let collapse = d.lemma(p.add_zero, &[x]);
-    d.itrans(start, flipped, x, comm, collapse)
+    crate::simp::int::prove_eq(d, &rules, start, x)
+        .unwrap_or_else(|e| panic!("zero_add: simp declined: {e:?}"))
 }
 
 /// `Int.fib_rec : ∀ n, Eq Int (fib (add n (ofNat 2))) (add (fib (add n one))

@@ -32,7 +32,9 @@
     "F:nat-succ-le-succ",
     "F:nat-zero-add",
     "F:ml430-nat-add-assoc-8c87a1f1",
-    "F:ml430-nat-le-of-lt-succ-120bd6db"
+    "F:ml430-nat-le-of-lt-succ-120bd6db",
+    "F:nat-one-mul",
+    "F:nat-succ-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

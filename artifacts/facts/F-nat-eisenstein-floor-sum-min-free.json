@@ -24,7 +24,9 @@
     "F:nat-mul-comm",
     "F:nat-succ-le-succ",
     "F:nat-sumrange-congr-lt",
-    "F:nat-zero-add"
+    "F:nat-zero-add",
+    "F:nat-one-mul",
+    "F:nat-succ-mul"
   ],
   "axiom_footprint": [],
   "evidence": [

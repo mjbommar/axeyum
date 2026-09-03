@@ -88,20 +88,23 @@ fn scale_reorder(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId, c: ExprId, x: Ex
 }
 
 /// `(1+k)*x = x + k*x`, via `right_distrib` then `one_mul`.
+///
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `right_distrib`
+/// is not in the default set (its LHS pattern is one-directional but not
+/// annihilator-shaped, so it is a caller-supplied EXTRA rule here — see
+/// `simp::nat::rule_right_distrib`'s docs on why that is still safe for this
+/// goal) plus the default `one_mul`.
 fn distrib_one_plus(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId, x: ExprId) -> ExprId {
-    let p = *p;
     let one = d.num(1);
     let one_plus_k = d.add(one, k);
     let start = d.mul(one_plus_k, x);
-    let one_x = d.mul(one, x);
     let k_x = d.mul(k, x);
-    let mid1 = d.add(one_x, k_x);
-    let rd = d.lemma(p.right_distrib, &[one, k, x]);
-    let one_mul_x = d.lemma(p.one_mul, &[x]);
     let target = d.add(x, k_x);
-    let step2 = d.congr(one_x, x, one_mul_x, &|d, t| d.add(t, k_x));
-    let (_e, proof) = d.chain(start, &[(mid1, rd), (target, step2)]);
-    proof
+    let defaults = crate::simp::nat::default_rules(p);
+    let extra = [crate::simp::nat::rule_right_distrib(p)];
+    let rules = crate::simp::nat::with_extra(&defaults, &extra);
+    crate::simp::nat::prove_eq(d, &rules, start, target)
+        .unwrap_or_else(|e| panic!("distrib_one_plus: simp declined: {e:?}"))
 }
 
 /// `(a+k)+m = (a+m)+k`, via `add_assoc` twice and `add_comm` in the middle.

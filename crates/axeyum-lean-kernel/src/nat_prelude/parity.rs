@@ -530,24 +530,18 @@ fn declare_even_iff_odd_succ(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), K
 /// `Nat.divMod`'s reconstruction equation is stated in `mul divisor
 /// quotient + remainder` form. Connecting the two needs exactly this
 /// conversion, in both directions.
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `succ_mul` +
+/// `one_mul` alone close `Eq (mul 2 k) (add k k)`, and this was one of two
+/// independent hand-written copies of exactly this identity (the other in
+/// `gauss_lemma.rs`'s `two_mul_eq_add`).
 fn mul_two_eq_add_self(d: &mut NatDev<'_>, p: &NatPrelude, k: ExprId) -> ExprId {
-    let p = *p;
     let one = d.num(1);
     let succ_one = d.succ(one);
-    let mul_succ_one_k = d.mul(succ_one, k);
-    let mul_one_k = d.mul(one, k);
-    let add_mul_one_k_k = d.add(mul_one_k, k);
-    let kk = d.add(k, k);
-
-    let succ_mul_eq = d.lemma(p.succ_mul, &[one, k]);
-    let one_mul_eq = d.lemma(p.one_mul, &[k]);
-    let congr_step = d.congr(mul_one_k, k, one_mul_eq, &|d, x| d.add(x, k));
-
-    let (_, result) = d.chain(
-        mul_succ_one_k,
-        &[(add_mul_one_k_k, succ_mul_eq), (kk, congr_step)],
-    );
-    result
+    let lhs = d.mul(succ_one, k);
+    let rhs = d.add(k, k);
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, lhs, rhs)
+        .unwrap_or_else(|e| panic!("mul_two_eq_add_self: simp declined: {e:?}"))
 }
 
 /// `Eq (succ a) (add a one)` — via `add_succ` (`add a (succ zero) = succ

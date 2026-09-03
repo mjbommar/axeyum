@@ -118,33 +118,19 @@ fn lt_transport_lhs(
 /// module doc: this is the one rewrite the whole file needs because `add`
 /// recurses on its RIGHT argument, so a literal on the LEFT of a symbolic
 /// right operand is stuck, unlike a literal on the right (free by `δ/ι`).
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): `succ_add`
+/// (twice) + `zero_add` alone close `Eq (add 2 x) (succ (succ x))` — the
+/// deepest `succ`-nesting among the ten targets, exercising the engine's
+/// descent through two nested nodes on the LHS.
 fn two_add_eq_succ_succ(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> (ExprId, ExprId) {
-    let p = *p;
-    let zero = d.zero();
-    let one = d.succ(zero);
-    let two = d.succ(one);
+    let two = d.num(2);
     let add2x = d.add(two, x);
-
-    // e1 : Eq (add (succ one) x) (succ (add one x))
-    let e1 = d.lemma(p.succ_add, &[one, x]);
-    let add1x = d.add(one, x);
-    let next1 = d.succ(add1x);
-
-    // e2_inner : Eq (add (succ zero) x) (succ (add zero x))
-    let e2_inner = d.lemma(p.succ_add, &[zero, x]);
-    let addzx = d.add(zero, x);
-    let succ_addzx = d.succ(addzx);
-    let e2 = d.congr(add1x, succ_addzx, e2_inner, &|d, y| d.succ(y));
-    let next2 = d.succ(succ_addzx);
-
-    // e3_inner : Eq (add zero x) x
-    let e3_inner = d.lemma(p.zero_add, &[x]);
     let sx = d.succ(x);
-    let e3a = d.congr(addzx, x, e3_inner, &|d, y| d.succ(y)); // Eq (succ addzx) (succ x)
-    let e3 = d.congr(succ_addzx, sx, e3a, &|d, y| d.succ(y)); // Eq (succ succ_addzx) (succ succ x)
     let next3 = d.succ(sx);
-
-    d.chain(add2x, &[(next1, e1), (next2, e2), (next3, e3)])
+    let rules = crate::simp::nat::default_rules(p);
+    let proof = crate::simp::nat::prove_eq(d, &rules, add2x, next3)
+        .unwrap_or_else(|e| panic!("two_add_eq_succ_succ: simp declined: {e:?}"));
+    (next3, proof)
 }
 
 /// The `k = 0` base case: `Lt (add 2 nfact) (factorial (add 2 n))`, given

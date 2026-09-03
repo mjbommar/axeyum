@@ -77,22 +77,20 @@ fn rewrite(
 /// `mul x 2` ι-reduces to `add (add (mul x zero) x) x`, i.e. to
 /// `add (add zero x) x`, so the whole content is one `mul_comm` and one
 /// `zero_add` under a congruence.
+/// Retired to the `simp` rewrite-chain producer (ADR-1586): a THIRD hand-
+/// written copy of `Eq (mul 2 x) (add x x)`, beside `gauss_lemma.rs::
+/// two_mul_eq_add` and `parity.rs::mul_two_eq_add_self`. The original hand
+/// proof routed through `mul_comm` + `zero_add`; the producer finds a
+/// different, equally valid, default-set-only path (`succ_mul` unfolds
+/// twice, `zero_mul` then `zero_add` close it) — the hand proof's own
+/// citations are not evidence of what the producer needs.
 fn two_mul(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId) -> ExprId {
-    let p_ = *p;
     let two = d.num(2);
     let start = d.mul(two, x);
-    let flipped = d.mul(x, two);
-    let h1 = d.lemma(p_.mul_comm, &[two, x]);
-
-    let zero = d.zero();
-    let zero_add_x = d.add(zero, x);
     let target = d.add(x, x);
-    let h2 = {
-        let za = d.lemma(p_.zero_add, &[x]);
-        d.congr(zero_add_x, x, za, &|d, t| d.add(t, x))
-    };
-    let (_end, proof) = d.chain(start, &[(flipped, h1), (target, h2)]);
-    proof
+    let rules = crate::simp::nat::default_rules(p);
+    crate::simp::nat::prove_eq(d, &rules, start, target)
+        .unwrap_or_else(|e| panic!("two_mul: simp declined: {e:?}"))
 }
 
 /// `Eq (mul a (mul 2 b)) (mul b (mul 2 a))` — the two spellings of `2ab`.
