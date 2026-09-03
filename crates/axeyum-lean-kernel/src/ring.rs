@@ -44,7 +44,9 @@
 )]
 
 pub mod cost;
+pub mod int;
 pub mod nat;
+pub mod rat;
 
 #[cfg(test)]
 mod tests;
