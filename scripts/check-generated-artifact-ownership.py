@@ -554,6 +554,36 @@ GUARDED: tuple[Artifact, ...] = (
         ),
         reads=(),
     ),
+    Artifact(
+        path="artifacts/refactor/generic-retirement-check.json",
+        owner=Producer(
+            "scripts/generic-retirement-check.py",
+            (),
+            "The sole writer. Bare argv is the WRITING invocation; --check "
+            "never writes. Runs ADR-1581's build-position/emitter-citation "
+            "checks (that ADR-1584 measured six candidates for but never "
+            "ran) plus a fact-checker-command check, per carrier theorem "
+            "matching a generic `Alg.*` theorem by type (ADR-1587).",
+        ),
+        required_keys=(
+            "schema_version",
+            "kind",
+            "produced_by",
+            "authority",
+            "emitter_citation_correction",
+            "candidates",
+        ),
+        required_nested={},
+        runs=(
+            Producer(
+                SELF,
+                (),
+                "This gate itself, for the same reason as every artifact "
+                "above: it writes a sandbox and a perturbed copy.",
+            ),
+        ),
+        reads=(),
+    ),
 )
 
 # A call is a write if it is any of these. Used only for the READS arm, where

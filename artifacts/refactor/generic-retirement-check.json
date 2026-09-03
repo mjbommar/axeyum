@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "kind": "generic-theorem-retirement-check",
+  "produced_by": "scripts/generic-retirement-check.py",
+  "authority": "ADR-1581 (build-position/emitter-citation rule), ADR-1584 (the six candidates measured, none retired), ADR-1587 (this lane: the checks actually run, and the first retirement).",
+  "emitter_citation_correction": "ADR-1584 claimed Int.mul_le_mul_of_nonneg_left is 'named in linarith's own int.rs emitter vocabulary (sign_product.rs cites it directly)'. Grepped directly: linarith/int.rs never mentions mul_le_mul_of_nonneg_left at all; sign_product.rs (int_prelude/, not linarith/) cites it as an ordinary downstream hand-proof input for mul_nonneg_iff and its siblings, unaffected by a retirement that keeps the declared type byte-identical. Under this script's check (i) definition (cited by linarith/, ring/, simp/, or an instance's own proof field), Int.mul_le_mul_of_nonneg_left is NOT blocked -- see its row below. The ORIGINAL finding (Rat.neg_neg IS cited by ring/rat.rs, a real producer emitter) is confirmed and stays blocked for that reason.",
+  "candidates": [
+    {
+      "generic": "Alg.mul_left_cancel",
+      "generic_group_or_record": "Group",
+      "carrier": "Int.add_left_cancel",
+      "carrier_file": "int_prelude/add_basics.rs",
+      "carrier_name_field": "add_left_cancel",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": false,
+        "sites": []
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "int_prelude/add_basics.rs",
+          "line": 164,
+          "found": true
+        },
+        "early_hook": {
+          "hook": "declare_mul_left_cancel_early",
+          "line": 6335,
+          "before_nat_specific_interning": true
+        },
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": true
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-ml430-int-add-left-cancel-eca3a10d.json"
+        ]
+      },
+      "retirement_clears_all_checks": true
+    },
+    {
+      "generic": "Alg.neg_neg",
+      "generic_group_or_record": "Group",
+      "carrier": "Rat.neg_neg",
+      "carrier_file": "rat_prelude/group.rs",
+      "carrier_name_field": "neg_neg",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": true,
+        "sites": [
+          "ring/rat.rs:10",
+          "ring/rat.rs:55",
+          "ring/rat.rs:672",
+          "ring/rat.rs:688",
+          "ring/rat.rs:775",
+          "ring/rat.rs:822"
+        ]
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "rat_prelude/group.rs",
+          "line": 147,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-rat-neg-neg.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    },
+    {
+      "generic": "Alg.sub_self",
+      "generic_group_or_record": "Ring",
+      "carrier": "Rat.sub_self",
+      "carrier_file": "rat_prelude/group.rs",
+      "carrier_name_field": "sub_self",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": false,
+        "sites": []
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "rat_prelude/group.rs",
+          "line": 327,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-rat-sub-self.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    },
+    {
+      "generic": "Alg.mul_le_mul_of_nonneg_left",
+      "generic_group_or_record": "OrderedRing",
+      "carrier": "Int.mul_le_mul_of_nonneg_left",
+      "carrier_file": "int_prelude/algebra.rs",
+      "carrier_name_field": "mul_le_mul_of_nonneg_left",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": false,
+        "sites": []
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "int_prelude/algebra.rs",
+          "line": 947,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-int-mul-le-mul-of-nonneg-left.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    },
+    {
+      "generic": "Alg.mul_le_mul_of_nonneg_left",
+      "generic_group_or_record": "OrderedRing",
+      "carrier": "Rat.mul_le_mul_of_nonneg_left",
+      "carrier_file": "rat_prelude/scaling.rs",
+      "carrier_name_field": "mul_le_mul_of_nonneg_left",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": false,
+        "sites": []
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "rat_prelude/scaling.rs",
+          "line": 1348,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-rat-mul-le-mul-of-nonneg-left.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    },
+    {
+      "generic": "Alg.pow_add",
+      "generic_group_or_record": "Monoid",
+      "carrier": "Rat.pow_add",
+      "carrier_file": "rat_prelude/polynomial.rs",
+      "carrier_name_field": "pow_add",
+      "match_kind": "def_eq",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": false,
+        "sites": []
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "rat_prelude/polynomial.rs",
+          "line": 314,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-rat-pow-add.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    },
+    {
+      "generic": "Alg.ringMulZero",
+      "generic_group_or_record": "Ring",
+      "carrier": "Int.mul_zero",
+      "carrier_file": "int_prelude/algebra.rs",
+      "carrier_name_field": "mul_zero",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": true,
+        "sites": [
+          "linarith/int.rs:531",
+          "ring/int.rs:46",
+          "ring/int.rs:599",
+          "ring/int.rs:621"
+        ]
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "int_prelude/algebra.rs",
+          "line": 153,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-int-mul-zero.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    },
+    {
+      "generic": "Alg.ringMulZero",
+      "generic_group_or_record": "Ring",
+      "carrier": "Rat.mul_zero",
+      "carrier_file": "rat_prelude/laws.rs",
+      "carrier_name_field": "mul_zero",
+      "match_kind": "type",
+      "check_i_emitter_or_instance_citation": {
+        "cited_by_emitter_or_instance": true,
+        "sites": [
+          "ring/rat.rs:56",
+          "ring/rat.rs:432"
+        ]
+      },
+      "check_ii_build_position": {
+        "carrier_declare_site": {
+          "file": "rat_prelude/laws.rs",
+          "line": 934,
+          "found": true
+        },
+        "early_hook": null,
+        "algebra_instances_and_ext_are_last_two_calls_in_build_rat_prelude": true,
+        "generic_declared_before_carrier": false
+      },
+      "check_iii_fact_checker_command": {
+        "named_in_a_fact_checker_command": true,
+        "facts": [
+          "F-determinant-multiplicative-over-constructed-rationals.json",
+          "F-rat-mul-zero.json"
+        ]
+      },
+      "retirement_clears_all_checks": false
+    }
+  ]
+}
