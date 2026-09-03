@@ -861,3 +861,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1571](adr-1571-obligation-3-closes-obligation-2-completes-and-obligation-4-is-four-lemmas-not-one.md) | Thirteen axiom-free `Rat` declarations and one `Nat` one close | accepted |
 | [1574](adr-1574-obligation-4-closes-and-the-exit-derivation-folds-into-the-induction.md) | **`Rat.rowEchelon_isEchelon` is proved, axiom-free**, closing | accepted |
 | [1576](adr-1576-a-tactic-is-a-producer-and-its-return-is-measured-in-retired-proofs.md) | a tactic is a producer, and its return is measured in retired proofs | Accepted |
+| [1577](adr-1577-a-decidable-predicate-with-a-bound-is-a-finset-and-what-was-missing-was-an-object.md) | a decidable predicate with a bound is a `Finset`, and what was missing was an object rather than a proof | Accepted |
