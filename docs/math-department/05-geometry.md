@@ -108,7 +108,7 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
       analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. Their view: the
       library has trigonometry and it has geometry and they do not touch,
       which is the most conspicuous seam in the shelf.
-- [ ] **2. ℝⁿ as a carrier**, with the existing `CPoint` as the n = 2
+- [x] **2. ℝⁿ as a carrier** — *done 2026-09-04.*, with the existing `CPoint` as the n = 2
       instance, and the inner product and norm proved once. Prerequisite for
       almost everything else here and for classical analysis.
 - [ ] **3. Isometries of the plane**, as maps preserving `distSq`, with
@@ -127,6 +127,7 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 94 proved plane facts over `CPoint`. Stewart, Ceva, Menelaus, Ptolemy, Euler line, nine-point centre, power of a point, radical axis. No ℝⁿ, no manifolds, no varieties, no angle measure. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 2 landed** (roadmap W2-4): ℝⁿ as a coefficient function with the dimension carried by the equivalence rather than the type, 58 declarations, footprint 0. **Unsquared Cauchy–Schwarz at symbolic dimension**, whose induction step is exactly the plane's `dotLeSqrtMul` at the points `(‖u‖ₙ, uₙ)` and `(‖v‖ₙ, vₙ)` — the plane lemma became the engine of the general one, and no case split on whether the norm vanishes was needed, which is fortunate because `CReal` has no `le_total`. Minkowski, a `Metric` instance, and `CPoint` embedded as a setoid map with agreement on `dot`, `distSq` and the metric distance. Not landed: the inverse of the embedding, since two `Metric` values with different carriers admit no equality without a transport this kernel lacks. (ADR-1606.) | `d00d2a33c`; `rn::` 24 passed |
 
 ## How to re-measure
 

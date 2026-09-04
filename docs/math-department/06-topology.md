@@ -137,10 +137,10 @@ Two secondary constraints:
       generalize — at a cost of two bridge lemmas that already existed. The
       obstruction was never topological: the convergence predicates are
       phrased on rational samples rather than on the absolute value.*
-- [ ] **3. Bishop compactness — total boundedness plus completeness — on
-      intervals**, then the extreme value theorem re-derived as an instance
+- [x] **3. Bishop compactness — total boundedness plus completeness — on
+      intervals** — *done 2026-09-04, EVT re-derived as the same term.*, then the extreme value theorem re-derived as an instance
       rather than re-proved.
-- [ ] **4. Continuity as a topological notion**, with the existing
+- [x] **4. Continuity as a topological notion** — *done 2026-09-04, the bridge is definitional.*, with the existing
       `UniformlyContinuousOn` proved to imply it, so the two vocabularies are
       connected rather than parallel.
 - [ ] **5. Products and subspaces** — **[ADR-1602] split this item.** The
@@ -154,6 +154,7 @@ Two secondary constraints:
 |---|---|---|
 | 2026-09-04 | File created. Baseline: zero topology declarations, confirmed against a positive control. Three other reviewers blocked behind this file. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five items 1 and 2 both landed** (roadmap W0-3 and W2-1). The design question is answered by ADR-1602 — metric layer first, pointfree frames for topology proper when needed, open-set spaces never — and it was answered by *building* rather than deciding. 49 `Metric` declarations, all footprint 0, with ℝ and the Euclidean plane as instances and completeness generalized off ℝ. Two things the build taught that no argument would have: **nothing in the record is a subset**, so this reviewer's objection to membership predicates never arose; and the plane's **unsquared** triangle inequality landed on the first kernel run, **refuting `CPointPrelude::cauchy_schwarz`'s own doc comment** that the statement 'is not expressible, let alone provable, here' — a stale blocker predating `CReal.sqrt`. | `b7df58b7b`; `metric::` 17 passed |
+| 2026-09-04 | **Next Five items 3 and 4 landed** (roadmap W2-3, W2-2), and both were the cases that could have refuted ADR-1602. Continuity over an arbitrary pair of metric spaces, with the `CReal` bridge costing **zero estimates** because the metric distance reduces to `abs (x + -y)` and `UniformlyContinuousOn`'s modulus was already in the right shape — the two predicates are definitionally the same proposition. Bishop compactness as total boundedness plus completeness, no covers; the EVT proved over any totally bounded subset of any metric space with completeness never used, and **the interval EVT re-derived from it as the same interned term** that the direct proof produces. 44 declarations, 43 admitted first time. The reviewer's item 5 (products and subspaces) remains split: products buildable, subspaces on `Subtype`. | `5bb30b809`; `metric::` 29 passed |
 
 ## How to re-measure
 
