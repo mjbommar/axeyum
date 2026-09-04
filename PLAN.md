@@ -148,6 +148,9 @@ now. Nothing was deleted.
 | 2026-09-04 | persona-absence-audit | ADR-1605 (proposed): characterisation is a derived three-way ratcheted measurement, not a stored schema field |
 | 2026-09-04 | persona-absence-audit | `check-fact-characterisation.py` + 17-test control suite, registered in `check.sh` and the `justfile` |
 | 2026-09-04 | persona-absence-audit | re-baselined the red `count-landmark-facts.py` pin and fixed one mistitled fact |
+| 2026-09-04 | rn-carrier | `RN.*`: ℝⁿ as a setoid over `Nat → CReal` with the dimension in the relation — 58 declarations, axiom-free, unsquared Cauchy–Schwarz at symbolic dimension, Minkowski, a `Metric` instance per dimension, and the `CPoint` bridge (`b37c3e5ef`) |
+| 2026-09-04 | rn-carrier | `shape_search` and `kernel_declaration_projection` taught the `rn` group; the projection's `rn` block adds exactly 58 names to `metric`'s, all under `RN.`, and removes none |
+| 2026-09-04 | rn-carrier | ADR-1606 records the carrier design, the three rejected alternatives, what the `CPoint` agreement cost, and the mutation finding that a producer mutation here poisons the shared build rather than killing one test |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -42093,6 +42096,57 @@ carried a full curated statement of Euler's totient theorem under a "prose not
 curated" title, so both the landmark count and the new checker scored a
 characterised fact as uncharacterised; the title is corrected, and it is the
 one live violation the new `PROSE_DISAGREEMENT` guard found on its first run.
+
+**Your lane's block (`landed`, rn-carrier, 2026-09-04).** ℝⁿ landed as
+`crates/axeyum-lean-kernel/src/rn.rs`: **58 declarations in a new `RN`
+namespace, every one with an empty `Kernel::axiom_footprint`**, 24 tests green
+in ~75 s (release, `--test-threads=2`).
+
+**The design (ADR-1606).** A vector is a coefficient function `Nat → CReal`
+plus an explicit bound, and **the dimension lives in the equivalence relation,
+not in the type**: `RN.EqOn n u v := ∀ i, Nat.lt i n → CReal.Equiv (u i) (v i)`.
+So ℝⁿ is one setoid per `n` over one carrier and `RN.metric : Nat → Metric` is
+one metric space per dimension. `Fin` does not exist in this kernel and cannot
+be carved out (there is no `Subtype` and no `Sigma`); a length-indexed vector
+would fight `CReal.sumRange`, which is already `Nat.rec` on a BOUND. This is
+the shape `Rat.dotN` already uses for ℚ.
+
+**The headline result.** `RN.cauchy_schwarz : ∀ u v n, ⟨u,v⟩ₙ ≤ ‖u‖ₙ·‖v‖ₙ` —
+**unsquared, at symbolic dimension**. `Rat.dotN_cauchy_schwarz` and
+`CPoint.cauchy_schwarz` are both squared; `Metric.CPoint.dotLeSqrtMul` is
+unsquared but only on the plane. The proof *generalizes* the plane lemma
+rather than rebuilding it: the induction step at dimension `n+1` is one
+application of `dotLeSqrtMul` at the points `(‖u‖ₙ, uₙ)` and `(‖v‖ₙ, vₙ)`. No
+discriminant, no case split on whether `⟨u,u⟩` vanishes — over `CReal` that
+split is not available (no `le_total`), which is why the plane lemma had to be
+the engine.
+
+**Also landed.** Minkowski (`RN.norm_add_le`) and hence the `Metric` instance,
+so `Metric.dist_self`, `Metric.dist_quadrilateral`, `Metric.Cauchy`,
+`Metric.TendsTo` and `Metric.Complete` all read on ℝⁿ unchanged. The bridge to
+the plane: `RN.ofCPoint` with agreement on `dot`, `distSq` and
+`Metric.CPoint.dist`, and the equivalence transported in **both** directions,
+so `CPoint` is a provable instance of the n = 2 case.
+
+**What did NOT land, sized.** (1) Cauchy–Schwarz in *squared* form — it needs
+the bound at `−v`, hence `CReal.neg_add` and `CReal.mul_neg`, both of which
+exist only as unnamed inline steps inside `creal.rs`; naming them is a
+`creal.rs` edit this lane does not own, ~60 lines once they exist.
+(2) Completeness of ℝⁿ — coordinatewise from `CReal.converges_of_cauchy`,
+needing the undeclared bound `|uᵢ − vᵢ| ≤ d(u,v)`. (3) The inverse of
+`ofCPoint`, and hence a genuine isomorphism rather than the agreement lemmas.
+(4) `smul`'s vector-space laws beyond congruence — nothing consumed them.
+
+**Two notes for the next lane.** `RN.CReal.sumRangeCongrLt` (a
+**bound-restricted** finite-sum congruence) is what every `RN` congruence
+consumes: `CReal.sumRange_congr` demands agreement at every index, which an
+`EqOn n` setoid cannot supply. `Nat`, `Rat` and `Complex` all had one; `CReal`
+did not, and it costs two `sumRange_le`s closed by `equiv_of_le_le`. And
+`build_rn_prelude` runs its steps through a `declare_each!` macro that NAMES
+the refused declaration and renders both types — `DeclarationValueMismatch`
+carries two bare `ExprId`s and nothing else, so without it one rejection is a
+bisect over 55 steps at ~4 minutes a release build. It found all four defects
+in this lane directly.
 
 **The reconstruction context's carrier is now a parameter, and the constructed
 reals already satisfy it (`WIP`, agent-real-migration, 2026-08-18).**

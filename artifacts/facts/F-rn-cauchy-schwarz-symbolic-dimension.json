@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:rn-cauchy-schwarz-symbolic-dimension",
+  "title": "Cauchy-Schwarz in R^n at SYMBOLIC dimension, in its unsquared norm form",
+  "statement": "For vectors u, v of R^n and every natural number n, <u,v>_n <= ||u||_n * ||v||_n, where <u,v>_n is the sum of u_i*v_i for i < n and ||u||_n is the square root of <u,u>_n. The dimension n is a UNIVERSALLY QUANTIFIED VARIABLE, not a literal: this is one theorem about every finite-dimensional real inner-product space, not a family of theorems one per dimension. Two things distinguish it from what the library had. First the form: `Rat.dotN_cauchy_schwarz` (rationals, symbolic dimension) and `CPoint.cauchy_schwarz` (reals, dimension 2) are both SQUARED, because Q has no square root and because the plane development predates `CReal.sqrt`; the unsquared form needs a norm and hence a root. Second the dimension: `Metric.CPoint.dotLeSqrtMul` is unsquared but only on the plane. This statement is the first that is both.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem RN.cauchy_schwarz : ((x0 : RN.Vec) -> ((x1 : RN.Vec) -> ((x2 : AxNat) -> CReal.le (RN.dot x0 x1 x2) (CReal.mul (RN.norm x0 x2) (RN.norm x1 x2)))))",
+    "fragment": "RN",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "RN.cauchy_schwarz"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cpoint-cauchy-schwarz-unsquared",
+    "F:creal-sqrt-mul",
+    "F:creal-mul-self-sqrt"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-RN.cauchy_schwarz",
+      "kind": "kernel-term",
+      "supports": "RN.cauchy_schwarz is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration RN.cauchy_schwarz | grep -cE '^found[[:space:]]+rn[[:space:]]+theorem[[:space:]]+RN\\.cauchy_schwarz[[:space:]]+0$'",
+      "checker_seconds": 100,
+      "kernel_declaration": "RN.cauchy_schwarz",
+      "notes": "The exit status depends on the finding twice over: kernel_declaration_projection exits NON-ZERO when the named declaration is in no constructed prelude's environment, and grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t: in a scripted (GNU) grep \\t is a literal t, and 68 fact checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal/complex/cpoint/metric/rn, which overflow the default debug thread stack. The `rn` label did not exist in this tool before the commit of record; without it the tool is blind to the prelude, which is indistinguishable from the declaration not existing -- exactly the failure ADR-1602 recorded for `metric`."
+    },
+    {
+      "id": "rn-statement-exactness",
+      "kind": "witness-replay",
+      "supports": "that the statement is the UNSQUARED form at a bound dimension, and not a squared or fixed-dimension statement that would also typecheck",
+      "check_status": "checked",
+      "checkers": [
+        "rn_tests::cauchy_schwarz_statement_is_exact compares Kernel::render_lean of the declaration's type against the string above, verbatim",
+        "rn_tests::cauchy_schwarz_does_not_prove_its_converse requires the kernel to REFUSE the proof term against the flipped inequality, so `CReal.le` is not vacuous in this slot",
+        "rn_tests::the_statement_probe_accepts_the_real_cauchy_schwarz is the paired positive: the same probe machinery must ACCEPT the real inequality, so the refusal above is not an artefact of the probe"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rn:: -- --test-threads=2",
+      "artifact": "crates/axeyum-lean-kernel/src/rn/rn_tests.rs",
+      "notes": "24 tests, all green, ~75 s in release. Mutation-verified: substituting the real distance into the squared-distance instance control kills exactly one test, and dropping one row from the declaration list kills exactly one test."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_rn_prelude (crates/axeyum-lean-kernel/src/rn.rs)",
+    "source": "Lane `rn-carrier`, roadmap W2-4 (convergence point C7), design recorded in ADR-1606 (docs/research/09-decisions/adr-1606-rn-is-a-function-carrier-with-the-dimension-in-the-relation.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `kernel_declaration_projection`; axiom_footprint is that tool's footprint-size column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "HOW IT IS PROVED, because the route is the reusable part. Induction on the bound. At n+1, writing A = <u,u>_n, C = <v,v>_n, x = u_n, y = v_n, the target is <u,v>_n + x*y <= sqrt(A+x^2)*sqrt(C+y^2); the induction hypothesis bounds the first summand by sqrt(A)*sqrt(C), so it suffices that sqrt(A)*sqrt(C) + x*y <= sqrt((A+x^2)(C+y^2)) -- and that is EXACTLY `Metric.CPoint.dotLeSqrtMul` at the two plane points (sqrt A, x) and (sqrt C, y). So the n-dimensional inequality is the 2-dimensional one applied n times, with the norm carrying the accumulated dimensions in its first coordinate. WHAT IS NOT CLAIMED: the squared form <u,v>^2 <= <u,u><v,v> is NOT declared here, and neither is the two-sided |<u,v>| <= ||u||*||v||. Both need the bound at -v as well as at v, and `CReal` names neither `neg_add` nor `mul_neg` (they exist only as unnamed inline steps inside creal.rs). An undeclared step is not a theorem."
+}

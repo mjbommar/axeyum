@@ -888,3 +888,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1601](adr-1601-classical-logic-enters-as-a-hypothesis-not-as-an-axiom.md) | classical logic enters as a hypothesis, not as an axiom | proposed |
 | [1602](adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md) | topology is built metric-first, then pointfree; open-set topological spaces are not adopted | proposed |
 | [1605](adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md) | the ledger cannot tell "uncharacterised" from "absent" | proposed |
+| [1606](adr-1606-rn-is-a-function-carrier-with-the-dimension-in-the-relation.md) | ℝⁿ is a function carrier with the dimension in the equivalence relation, not in the type | proposed |
