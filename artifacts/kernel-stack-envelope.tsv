@@ -156,6 +156,40 @@
 #   1,498 tests, but the next `rat` declaration of any depth will abort
 #   something, and the abort will name only the first casualty.
 #
+# * 2026-09-03 (det-mul-debug-stack-2): a SECOND lane hit the zero-margin
+#   `rat` debug row the SAME DAY the first one pinned it, on a DIFFERENT
+#   test (`mat_subst_rows_replaces_the_window_by_relative_index`), never
+#   run because the first lane's abort had hidden it. Fixing it by running
+#   the WHOLE `rat_prelude::` filter (265 tests) at the default debug stack
+#   found three MORE aborting tests nobody had seen:
+#   `echelon_tests::the_row_operations_invert_at_concrete_arguments`,
+#   `rank_tests::rank_is_invariant_under_each_row_operation_at_two_by_two`,
+#   `rat_prelude_tests::det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign`.
+#   None forms a large magnitude (`CLAUDE.md`'s unary-numeral cliff) -- each
+#   is simply a large test BODY (several blocks, many locals live for the
+#   whole unoptimized function) on top of a prelude build that already
+#   consumes the full default. All four fixed the same way as the first
+#   (`crate::on_a_deep_stack`); the full 265-test `rat_prelude::` filter
+#   then passed at the default 2,097,152 with zero aborts.
+#
+#   Re-running `--check` in both profiles (not just `rat`) found the row
+#   growth was not confined to `rat`, re-derived by `--measure` (so neither
+#   is a divergent term):
+#
+#     debug   nat    262144 ->  524288  (2x)
+#     release rat    262144 ->  524288  (2x)
+#
+#   `rat` DEBUG is UNCHANGED at 2,097,152 -- still exactly the 2 MiB default,
+#   still zero margin. The next deep `rat` declaration will abort a test
+#   again; a guard that catches this from INSIDE `cargo test` rather than a
+#   separately-run script was considered and NOT implemented, because the
+#   only way to observe a stack overflow is from OUTSIDE the process (it
+#   aborts the whole binary, not just one thread) -- a `#[test]` that tries
+#   to demonstrate the margin by spawning an undersized thread reproduces
+#   the exact defect this entry fixes rather than catching it cleanly. See
+#   `docs/plan/status/500-det-mul-debug-stack-2.md` for the guard proposal
+#   this ruled out and what to do instead.
+#
 # ## When a row goes red
 #
 # Re-derive it (`--measure --profile <p> --prelude <name>`), raise the row, and
@@ -167,7 +201,7 @@
 # a pinned budget for them could not be shown to fail and would report a
 # permanent WARN. They keep their debug rows, where they need 128-256 KiB.
 debug	logic	131072
-debug	nat	262144
+debug	nat	524288
 debug	integer	524288
 debug	axreal	131072
 debug	rat	2097152
@@ -177,7 +211,7 @@ debug	complex	16777216
 debug	string	131072
 release	nat	131072
 release	integer	131072
-release	rat	262144
+release	rat	524288
 release	creal	8388608
 release	cpoint	8388608
 release	complex	8388608
