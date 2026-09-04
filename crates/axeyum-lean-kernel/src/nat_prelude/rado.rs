@@ -84,7 +84,11 @@
 //! `isRadoNumber_of_succ`, and it is the first Rado number in this repository
 //! that is a theorem rather than a certificate.
 
-#![allow(clippy::many_single_char_names, clippy::too_many_lines)]
+#![allow(
+    clippy::many_single_char_names,
+    clippy::too_many_arguments,
+    clippy::too_many_lines
+)]
 
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
@@ -1060,7 +1064,172 @@ fn declare_reductions(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelEr
 
 // ---------------------------------------------------------------------------
 // The instance: R_2(x = y + z) = 5, both halves reconstructed from search.
+//
+// The five helpers below are hoisted above their callers rather than nested
+// inside them: `clippy::items_after_statements` is denied workspace-wide, and
+// hoisting is what this repository does about it (`b339a4191`).
 // ---------------------------------------------------------------------------
+
+// The tree, built bottom-up over the 2^SCHUR_N assignments.
+//
+// `frame[i]` is the proof of `Eq (c (i+1)) colours[i]` live at this leaf.
+fn leaf(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    colours: &[u32],
+    frame: &[ExprId],
+) -> Option<ExprId> {
+    let (x, y, z) = search_witness(SCHUR_A, SCHUR_B, SCHUR_N, colours)?;
+    let a = d.num(SCHUR_A);
+    let b = d.num(SCHUR_B);
+    let n = d.num(SCHUR_N);
+    let x_e = d.num(x);
+    let y_e = d.num(y);
+    let z_e = d.num(z);
+
+    let cx = d.apply(c, &[x_e]);
+    let cy = d.apply(c, &[y_e]);
+    let cz = d.apply(c, &[z_e]);
+    let vx = d.num(colours[(x - 1) as usize]);
+    let vy = d.num(colours[(y - 1) as usize]);
+    let vz = d.num(colours[(z - 1) as usize]);
+    let hx_col = frame[(x - 1) as usize];
+    let hy_col = frame[(y - 1) as usize];
+    let hz_col = frame[(z - 1) as usize];
+
+    let hxy = {
+        let back = d.symm(cy, vy, hy_col);
+        d.trans(cx, vx, cy, hx_col, back)
+    };
+    let hyz = {
+        let back = d.symm(cz, vz, hz_col);
+        d.trans(cy, vy, cz, hy_col, back)
+    };
+
+    let rx = in_range_proof(d, p, SCHUR_N, x);
+    let ry = in_range_proof(d, p, SCHUR_N, y);
+    let rz = in_range_proof(d, p, SCHUR_N, z);
+    let sol_lhs = d.mul(a, x_e);
+    let hsol = d.refl(sol_lhs);
+
+    // Types for the `And.intro` chain, in the same right-nested shape
+    // `mono_body` builds.
+    let rx_ty = in_range(d, n, x_e);
+    let ry_ty = in_range(d, n, y_e);
+    let rz_ty = in_range(d, n, z_e);
+    let sol_ty = d.const_app(p.rado_sol, &[a, b, x_e, y_e, z_e]);
+    let exy = d.eq(cx, cy);
+    let eyz = d.eq(cy, cz);
+    let tail_ty = d.const_app(p.logic.and, &[exy, eyz]);
+    let with_sol_ty = d.const_app(p.logic.and, &[sol_ty, tail_ty]);
+    let with_z_ty = d.const_app(p.logic.and, &[rz_ty, with_sol_ty]);
+    let with_y_ty = d.const_app(p.logic.and, &[ry_ty, with_z_ty]);
+
+    let tail = d.const_app(p.logic.and_intro, &[exy, eyz, hxy, hyz]);
+    let with_sol = d.const_app(p.logic.and_intro, &[sol_ty, tail_ty, hsol, tail]);
+    let with_z = d.const_app(p.logic.and_intro, &[rz_ty, with_sol_ty, rz, with_sol]);
+    let with_y = d.const_app(p.logic.and_intro, &[ry_ty, with_z_ty, ry, with_z]);
+    let packed = d.const_app(p.logic.and_intro, &[rx_ty, with_y_ty, rx, with_y]);
+
+    let pred_z = mono_pred_z(d, p, a, b, n, c, x_e, y_e);
+    let ez = exists_intro_nat(d, p, pred_z, z_e, packed);
+    let pred_y = mono_pred_y(d, p, a, b, n, c, x_e);
+    let ey = exists_intro_nat(d, p, pred_y, y_e, ez);
+    let pred_x = mono_pred_x(d, p, a, b, n, c);
+    Some(exists_intro_nat(d, p, pred_x, x_e, ey))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn tree(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    c: ExprId,
+    hc: ExprId,
+    goal: ExprId,
+    index: u32,
+    colours: &mut Vec<u32>,
+    frame: &mut Vec<ExprId>,
+) -> Option<ExprId> {
+    if index > SCHUR_N {
+        return leaf(d, p, c, colours, frame);
+    }
+    let i_e = d.num(index);
+    let ci = d.apply(c, &[i_e]);
+    let range = in_range_proof(d, p, SCHUR_N, index);
+    let bound = d.apply(hc, &[i_e, range]);
+    let cases = d.const_app(p.lt_two_cases, &[ci, bound]);
+    let zero = d.num(0);
+    let one = d.num(1);
+    let left_ty = d.eq(ci, zero);
+    let right_ty = d.eq(ci, one);
+
+    let mut branch = |d: &mut NatDev<'_>, value: u32, hyp_ty: ExprId| {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        colours.push(value);
+        frame.push(h);
+        let sub = tree(d, p, c, hc, goal, index + 1, colours, frame);
+        frame.pop();
+        colours.pop();
+        sub.map(|body| d.lam_fv(h_fv, hyp_ty, body))
+    };
+
+    let left = branch(d, 0, left_ty)?;
+    let right = branch(d, 1, right_ty)?;
+    Some(d.const_app(
+        p.logic.or_elim,
+        &[left_ty, right_ty, goal, cases, left, right],
+    ))
+}
+
+// `g i j l` — `true` unless `(i, j, l)` is a monochromatic solution
+// inside `[1, 4]`.
+fn guard(d: &mut NatDev<'_>, col: ExprId, i: ExprId, j: ExprId, l: ExprId) -> Vec<ExprId> {
+    let one = d.num(1);
+    let a = d.num(SCHUR_A);
+    let b = d.num(SCHUR_B);
+    let c1 = d.ble(one, i);
+    let c2 = d.ble(one, j);
+    let c3 = d.ble(one, l);
+    let lhs = d.mul(a, i);
+    let aj = d.mul(a, j);
+    let bl = d.mul(b, l);
+    let rhs = d.add(aj, bl);
+    let c4 = d.beq(lhs, rhs);
+    let ci = d.apply(col, &[i]);
+    let cj = d.apply(col, &[j]);
+    let cl = d.apply(col, &[l]);
+    let c5 = d.beq(ci, cj);
+    let c6 = d.beq(cj, cl);
+    vec![c1, c2, c3, c4, c5, c6]
+}
+
+/// The `E_k` chain: `E[6]` is `Bool.false`, `E[k-1] = if c_k then E[k] else true`.
+fn chain(d: &mut NatDev<'_>, p: &NatPrelude, conds: &[ExprId]) -> Vec<ExprId> {
+    let mut out = vec![d.bool_false()];
+    for &cond in conds.iter().rev() {
+        let inner = *out.last().expect("non-empty");
+        let yes = d.bool_true();
+        let next = select_bool(d, p, cond, inner, yes);
+        out.push(next);
+    }
+    out.reverse();
+    out
+}
+
+fn g_at(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    col: ExprId,
+    i: ExprId,
+    j: ExprId,
+    l: ExprId,
+) -> ExprId {
+    let conds = guard(d, col, i, j, l);
+    let ch = chain(d, p, &conds);
+    ch[0]
+}
 
 /// The upper bound `Arrows 1 1 2 5`, as the decision tree over
 /// `Nat.lt_two_cases` that [`search_witness`] fills in leaf by leaf.
@@ -1084,119 +1253,6 @@ fn declare_schur_upper(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<bool, Kerne
     let hc_fv = d.fresh_fvar();
     let hc = d.kernel().fvar(hc_fv);
     let goal = d.const_app(p.rado_mono_sol, &[a, b, n, c]);
-
-    // The tree, built bottom-up over the 2^SCHUR_N assignments.
-    //
-    // `frame[i]` is the proof of `Eq (c (i+1)) colours[i]` live at this leaf.
-    fn leaf(
-        d: &mut NatDev<'_>,
-        p: &NatPrelude,
-        c: ExprId,
-        colours: &[u32],
-        frame: &[ExprId],
-    ) -> Option<ExprId> {
-        let (x, y, z) = search_witness(SCHUR_A, SCHUR_B, SCHUR_N, colours)?;
-        let a = d.num(SCHUR_A);
-        let b = d.num(SCHUR_B);
-        let n = d.num(SCHUR_N);
-        let x_e = d.num(x);
-        let y_e = d.num(y);
-        let z_e = d.num(z);
-
-        let cx = d.apply(c, &[x_e]);
-        let cy = d.apply(c, &[y_e]);
-        let cz = d.apply(c, &[z_e]);
-        let vx = d.num(colours[(x - 1) as usize]);
-        let vy = d.num(colours[(y - 1) as usize]);
-        let vz = d.num(colours[(z - 1) as usize]);
-        let hx_col = frame[(x - 1) as usize];
-        let hy_col = frame[(y - 1) as usize];
-        let hz_col = frame[(z - 1) as usize];
-
-        let hxy = {
-            let back = d.symm(cy, vy, hy_col);
-            d.trans(cx, vx, cy, hx_col, back)
-        };
-        let hyz = {
-            let back = d.symm(cz, vz, hz_col);
-            d.trans(cy, vy, cz, hy_col, back)
-        };
-
-        let rx = in_range_proof(d, p, SCHUR_N, x);
-        let ry = in_range_proof(d, p, SCHUR_N, y);
-        let rz = in_range_proof(d, p, SCHUR_N, z);
-        let sol_lhs = d.mul(a, x_e);
-        let hsol = d.refl(sol_lhs);
-
-        // Types for the `And.intro` chain, in the same right-nested shape
-        // `mono_body` builds.
-        let rx_ty = in_range(d, n, x_e);
-        let ry_ty = in_range(d, n, y_e);
-        let rz_ty = in_range(d, n, z_e);
-        let sol_ty = d.const_app(p.rado_sol, &[a, b, x_e, y_e, z_e]);
-        let exy = d.eq(cx, cy);
-        let eyz = d.eq(cy, cz);
-        let tail_ty = d.const_app(p.logic.and, &[exy, eyz]);
-        let with_sol_ty = d.const_app(p.logic.and, &[sol_ty, tail_ty]);
-        let with_z_ty = d.const_app(p.logic.and, &[rz_ty, with_sol_ty]);
-        let with_y_ty = d.const_app(p.logic.and, &[ry_ty, with_z_ty]);
-
-        let tail = d.const_app(p.logic.and_intro, &[exy, eyz, hxy, hyz]);
-        let with_sol = d.const_app(p.logic.and_intro, &[sol_ty, tail_ty, hsol, tail]);
-        let with_z = d.const_app(p.logic.and_intro, &[rz_ty, with_sol_ty, rz, with_sol]);
-        let with_y = d.const_app(p.logic.and_intro, &[ry_ty, with_z_ty, ry, with_z]);
-        let packed = d.const_app(p.logic.and_intro, &[rx_ty, with_y_ty, rx, with_y]);
-
-        let pred_z = mono_pred_z(d, p, a, b, n, c, x_e, y_e);
-        let ez = exists_intro_nat(d, p, pred_z, z_e, packed);
-        let pred_y = mono_pred_y(d, p, a, b, n, c, x_e);
-        let ey = exists_intro_nat(d, p, pred_y, y_e, ez);
-        let pred_x = mono_pred_x(d, p, a, b, n, c);
-        Some(exists_intro_nat(d, p, pred_x, x_e, ey))
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn tree(
-        d: &mut NatDev<'_>,
-        p: &NatPrelude,
-        c: ExprId,
-        hc: ExprId,
-        goal: ExprId,
-        index: u32,
-        colours: &mut Vec<u32>,
-        frame: &mut Vec<ExprId>,
-    ) -> Option<ExprId> {
-        if index > SCHUR_N {
-            return leaf(d, p, c, colours, frame);
-        }
-        let i_e = d.num(index);
-        let ci = d.apply(c, &[i_e]);
-        let range = in_range_proof(d, p, SCHUR_N, index);
-        let bound = d.apply(hc, &[i_e, range]);
-        let cases = d.const_app(p.lt_two_cases, &[ci, bound]);
-        let zero = d.num(0);
-        let one = d.num(1);
-        let left_ty = d.eq(ci, zero);
-        let right_ty = d.eq(ci, one);
-
-        let mut branch = |d: &mut NatDev<'_>, value: u32, hyp_ty: ExprId| {
-            let h_fv = d.fresh_fvar();
-            let h = d.kernel().fvar(h_fv);
-            colours.push(value);
-            frame.push(h);
-            let sub = tree(d, p, c, hc, goal, index + 1, colours, frame);
-            frame.pop();
-            colours.pop();
-            sub.map(|body| d.lam_fv(h_fv, hyp_ty, body))
-        };
-
-        let left = branch(d, 0, left_ty)?;
-        let right = branch(d, 1, right_ty)?;
-        Some(d.const_app(
-            p.logic.or_elim,
-            &[left_ty, right_ty, goal, cases, left, right],
-        ))
-    }
 
     let mut colours: Vec<u32> = Vec::new();
     let mut frame: Vec<ExprId> = Vec::new();
@@ -1275,54 +1331,6 @@ fn declare_schur_lower(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelE
     let h = d.kernel().fvar(h_fv);
     let h_ty = d.const_app(p.rado_arrows, &[a, b, two, four]);
     let mono = d.apply(h, &[col, hcol]);
-
-    // `g i j l` — `true` unless `(i, j, l)` is a monochromatic solution
-    // inside `[1, 4]`.
-    fn guard(d: &mut NatDev<'_>, col: ExprId, i: ExprId, j: ExprId, l: ExprId) -> Vec<ExprId> {
-        let one = d.num(1);
-        let a = d.num(SCHUR_A);
-        let b = d.num(SCHUR_B);
-        let c1 = d.ble(one, i);
-        let c2 = d.ble(one, j);
-        let c3 = d.ble(one, l);
-        let lhs = d.mul(a, i);
-        let aj = d.mul(a, j);
-        let bl = d.mul(b, l);
-        let rhs = d.add(aj, bl);
-        let c4 = d.beq(lhs, rhs);
-        let ci = d.apply(col, &[i]);
-        let cj = d.apply(col, &[j]);
-        let cl = d.apply(col, &[l]);
-        let c5 = d.beq(ci, cj);
-        let c6 = d.beq(cj, cl);
-        vec![c1, c2, c3, c4, c5, c6]
-    }
-
-    /// The `E_k` chain: `E[6]` is `Bool.false`, `E[k-1] = if c_k then E[k] else true`.
-    fn chain(d: &mut NatDev<'_>, p: &NatPrelude, conds: &[ExprId]) -> Vec<ExprId> {
-        let mut out = vec![d.bool_false()];
-        for &cond in conds.iter().rev() {
-            let inner = *out.last().expect("non-empty");
-            let yes = d.bool_true();
-            let next = select_bool(d, p, cond, inner, yes);
-            out.push(next);
-        }
-        out.reverse();
-        out
-    }
-
-    fn g_at(
-        d: &mut NatDev<'_>,
-        p: &NatPrelude,
-        col: ExprId,
-        i: ExprId,
-        j: ExprId,
-        l: ExprId,
-    ) -> ExprId {
-        let conds = guard(d, col, i, j, l);
-        let ch = chain(d, p, &conds);
-        ch[0]
-    }
 
     // The three nested loops, as the exact lambdas `allBelow_true_at` needs.
     let inner_lam = |d: &mut NatDev<'_>, i: ExprId, j: ExprId| {
@@ -1442,7 +1450,7 @@ fn declare_schur_lower(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelE
                 let ay = d.mul(a, y);
                 let bz = d.mul(b, z);
                 let rhs = d.add(ay, bz);
-                let evidence = vec![
+                let evidence = [
                     d.const_app(p.ble_eq_true_of_le, &[one, x, hx_pos]),
                     d.const_app(p.ble_eq_true_of_le, &[one, y, hy_pos]),
                     d.const_app(p.ble_eq_true_of_le, &[one, z, hz_pos]),

@@ -22,6 +22,8 @@
 //! is not modesty, it is the constraint the whole module is built around —
 //! see `rado.rs`'s "unary-numeral constraint".
 
+#![allow(clippy::too_many_arguments)]
+
 use super::ops::{NatDev, NatOps};
 use super::rado;
 use crate::env::Declaration;
