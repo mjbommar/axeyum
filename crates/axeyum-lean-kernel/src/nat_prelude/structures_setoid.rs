@@ -2800,6 +2800,1048 @@ pub(crate) fn declare_comm_group_to_group_s(
 }
 
 // ---------------------------------------------------------------------------
+// ADR-1595 / roadmap W2-8: the FIRST ISOMORPHISM THEOREM over `AlgS.Group`,
+// built by the SETOID route -- no `Quot`, no `Quot.sound`, no `funext`.
+//
+// The construction this section exists to MEASURE (see ADR-1595): a quotient
+// group is presented not as a new carrier of equivalence classes but as the
+// SAME carrier under a COARSER equivalence. `AlgS.Hom.quotient` is a genuine
+// `AlgS.Group` value whose `carrier` is `G.carrier` and whose `equiv` is
+// `fun a b => H.equiv (f a) (f b)` -- the kernel congruence. Everything a
+// real `Quot` would give for free (that the relation is an equivalence, that
+// the operations descend, that the induced map is well defined) has to be
+// supplied here as an explicit field, and the count of those fields is the
+// deliverable.
+// ---------------------------------------------------------------------------
+
+const FI_G_FV: u64 = 21_700;
+const FI_H_FV: u64 = 21_701;
+const FI_F_FV: u64 = 21_702;
+const FI_FC_FV: u64 = 21_703;
+const FI_FM_FV: u64 = 21_704;
+const FI_A_FV: u64 = 21_705;
+const FI_B_FV: u64 = 21_706;
+const FI_C_FV: u64 = 21_707;
+const FI_AP_FV: u64 = 21_708;
+const FI_BP_FV: u64 = 21_709;
+const FI_H1_FV: u64 = 21_710;
+const FI_H2_FV: u64 = 21_711;
+const FI_Y_FV: u64 = 21_712;
+
+/// Every selector of the two groups plus the homomorphism data, resolved
+/// once against the five outer free variables `G H f fCongr fMul`.
+struct HomCtx {
+    group_ty: ExprId,
+    g: ExprId,
+    h: ExprId,
+    f: ExprId,
+    fc: ExprId,
+    fm: ExprId,
+    f_ty: ExprId,
+    fc_ty: ExprId,
+    fm_ty: ExprId,
+    gc: ExprId,
+    g_op: ExprId,
+    g_e: ExprId,
+    g_inv: ExprId,
+    g_assoc: ExprId,
+    g_ident_l: ExprId,
+    g_ident_r: ExprId,
+    g_inv_l: ExprId,
+    g_inv_r: ExprId,
+    hc: ExprId,
+    h_equiv: ExprId,
+    h_refl: ExprId,
+    h_symm: ExprId,
+    h_trans: ExprId,
+    h_op: ExprId,
+    h_op_congr: ExprId,
+    h_e: ExprId,
+    h_inv: ExprId,
+    h_inv_congr: ExprId,
+    h_ident_r: ExprId,
+    h_inv_l: ExprId,
+    h_inv_r: ExprId,
+}
+
+fn hom_ctx(k: &mut Kernel, group: &RecordNames) -> HomCtx {
+    use idx::group::{
+        ASSOC, CARRIER, E, EQUIV, EQUIV_REFL, EQUIV_SYMM, EQUIV_TRANS, IDENT_L, IDENT_R, INV,
+        INV_CONGR, INV_L, INV_R, OP, OP_CONGR,
+    };
+    let group_ty = k.const_(group.ind, vec![]);
+    let g = k.fvar(FI_G_FV);
+    let h = k.fvar(FI_H_FV);
+    let f = k.fvar(FI_F_FV);
+    let fc = k.fvar(FI_FC_FV);
+    let fm = k.fvar(FI_FM_FV);
+
+    let gc = sel(k, group, CARRIER, g);
+    let g_equiv = sel(k, group, EQUIV, g);
+    let g_op = sel(k, group, OP, g);
+    let g_e = sel(k, group, E, g);
+    let g_inv = sel(k, group, INV, g);
+    let g_assoc = sel(k, group, ASSOC, g);
+    let g_ident_l = sel(k, group, IDENT_L, g);
+    let g_ident_r = sel(k, group, IDENT_R, g);
+    let g_inv_l = sel(k, group, INV_L, g);
+    let g_inv_r = sel(k, group, INV_R, g);
+
+    let hc = sel(k, group, CARRIER, h);
+    let h_equiv = sel(k, group, EQUIV, h);
+    let h_refl = sel(k, group, EQUIV_REFL, h);
+    let h_symm = sel(k, group, EQUIV_SYMM, h);
+    let h_trans = sel(k, group, EQUIV_TRANS, h);
+    let h_op = sel(k, group, OP, h);
+    let h_op_congr = sel(k, group, OP_CONGR, h);
+    let h_e = sel(k, group, E, h);
+    let h_inv = sel(k, group, INV, h);
+    let h_inv_congr = sel(k, group, INV_CONGR, h);
+    let h_ident_r = sel(k, group, IDENT_R, h);
+    let h_inv_l = sel(k, group, INV_L, h);
+    let h_inv_r = sel(k, group, INV_R, h);
+
+    // f : G.carrier -> H.carrier
+    let f_ty = arrow(k, gc, hc);
+
+    // fCongr : forall (a b : G.carrier), G.equiv a b -> H.equiv (f a) (f b)
+    let fc_ty = {
+        let a = k.fvar(FI_A_FV);
+        let b = k.fvar(FI_B_FV);
+        let hyp = app2(k, g_equiv, a, b);
+        let fa = k.app(f, a);
+        let fb = k.app(f, b);
+        let concl = app2(k, h_equiv, fa, fb);
+        let t = arrow(k, hyp, concl);
+        let t = pi_over(k, FI_B_FV, gc, t);
+        pi_over(k, FI_A_FV, gc, t)
+    };
+
+    // fMul : forall (a b : G.carrier),
+    //          H.equiv (f (G.op a b)) (H.op (f a) (f b))
+    let fm_ty = {
+        let a = k.fvar(FI_A_FV);
+        let b = k.fvar(FI_B_FV);
+        let ab = t_app(k, g_op, &[a, b]);
+        let f_ab = k.app(f, ab);
+        let fa = k.app(f, a);
+        let fb = k.app(f, b);
+        let rhs = t_app(k, h_op, &[fa, fb]);
+        let concl = app2(k, h_equiv, f_ab, rhs);
+        let t = pi_over(k, FI_B_FV, gc, concl);
+        pi_over(k, FI_A_FV, gc, t)
+    };
+
+    HomCtx {
+        group_ty,
+        g,
+        h,
+        f,
+        fc,
+        fm,
+        f_ty,
+        fc_ty,
+        fm_ty,
+        gc,
+        g_op,
+        g_e,
+        g_inv,
+        g_assoc,
+        g_ident_l,
+        g_ident_r,
+        g_inv_l,
+        g_inv_r,
+        hc,
+        h_equiv,
+        h_refl,
+        h_symm,
+        h_trans,
+        h_op,
+        h_op_congr,
+        h_e,
+        h_inv,
+        h_inv_congr,
+        h_ident_r,
+        h_inv_l,
+        h_inv_r,
+    }
+}
+
+/// Close a statement over `G H f` (the three binders every `AlgS.Hom`
+/// DEFINITION needs).
+fn close_ghf(k: &mut Kernel, c: &HomCtx, body: ExprId, lam: bool) -> ExprId {
+    let t = if lam {
+        lam_over(k, FI_F_FV, c.f_ty, body)
+    } else {
+        pi_over(k, FI_F_FV, c.f_ty, body)
+    };
+    let t = if lam {
+        lam_over(k, FI_H_FV, c.group_ty, t)
+    } else {
+        pi_over(k, FI_H_FV, c.group_ty, t)
+    };
+    if lam {
+        lam_over(k, FI_G_FV, c.group_ty, t)
+    } else {
+        pi_over(k, FI_G_FV, c.group_ty, t)
+    }
+}
+
+/// Close a statement over `G H f fCongr fMul` (the five binders every
+/// `AlgS.Hom` THEOREM needs).
+fn close_hom(k: &mut Kernel, c: &HomCtx, body: ExprId, lam: bool) -> ExprId {
+    let t = if lam {
+        lam_over(k, FI_FM_FV, c.fm_ty, body)
+    } else {
+        pi_over(k, FI_FM_FV, c.fm_ty, body)
+    };
+    let t = if lam {
+        lam_over(k, FI_FC_FV, c.fc_ty, t)
+    } else {
+        pi_over(k, FI_FC_FV, c.fc_ty, t)
+    };
+    close_ghf(k, c, t, lam)
+}
+
+// -- tiny term shorthands over the codomain group `H` -----------------------
+
+fn heq(k: &mut Kernel, c: &HomCtx, x: ExprId, y: ExprId) -> ExprId {
+    app2(k, c.h_equiv, x, y)
+}
+
+fn hsymm(k: &mut Kernel, c: &HomCtx, x: ExprId, y: ExprId, p: ExprId) -> ExprId {
+    t_app(k, c.h_symm, &[x, y, p])
+}
+
+fn htrans(
+    k: &mut Kernel,
+    c: &HomCtx,
+    x: ExprId,
+    y: ExprId,
+    z: ExprId,
+    p: ExprId,
+    q: ExprId,
+) -> ExprId {
+    t_app(k, c.h_trans, &[x, y, z, p, q])
+}
+
+/// `AlgS.Hom.ker : forall (G H : Group) (f : G.carrier -> H.carrier),
+/// G.carrier -> Prop := fun G H f a => H.equiv (f a) H.e`. The kernel of a
+/// homomorphism as a PREDICATE -- a subgroup is a predicate here, not a
+/// carrier, because this kernel has no subtypes.
+pub(crate) fn declare_hom_ker(
+    k: &mut Kernel,
+    group: &RecordNames,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let fa = k.app(c.f, a);
+    let body = heq(k, &c, fa, c.h_e);
+    let value = lam_over(k, FI_A_FV, c.gc, body);
+    let value = close_ghf(k, &c, value, true);
+
+    let l0 = k.level_zero();
+    let prop = k.sort(l0);
+    let ty = arrow(k, c.gc, prop);
+    let ty = close_ghf(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "ker");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.kerEquiv : forall G H f, G.carrier -> G.carrier -> Prop :=
+/// fun G H f a b => H.equiv (f a) (f b)`. THE induced equivalence -- what
+/// `Quot` would build a new type out of, and what the setoid route instead
+/// keeps as a relation on the ORIGINAL carrier.
+pub(crate) fn declare_hom_ker_equiv(
+    k: &mut Kernel,
+    group: &RecordNames,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let b = k.fvar(FI_B_FV);
+    let fa = k.app(c.f, a);
+    let fb = k.app(c.f, b);
+    let body = heq(k, &c, fa, fb);
+    let value = lam_over(k, FI_B_FV, c.gc, body);
+    let value = lam_over(k, FI_A_FV, c.gc, value);
+    let value = close_ghf(k, &c, value, true);
+
+    let l0 = k.level_zero();
+    let prop = k.sort(l0);
+    let ty = arrow(k, c.gc, prop);
+    let ty = arrow(k, c.gc, ty);
+    let ty = close_ghf(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "kerEquiv");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.image : forall G H f, H.carrier -> Prop := fun G H f y =>
+/// Exists G.carrier (fun a => H.equiv (f a) y)`. The image, again as a
+/// predicate on `H.carrier` rather than a carrier of its own.
+pub(crate) fn declare_hom_image(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l1: LevelId,
+    group: &RecordNames,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let y = k.fvar(FI_Y_FV);
+    let a = k.fvar(FI_A_FV);
+    let fa = k.app(c.f, a);
+    let inner = heq(k, &c, fa, y);
+    let pred = lam_over(k, FI_A_FV, c.gc, inner);
+    let ex = k.const_(lg.exists_, vec![l1]);
+    let body = t_app(k, ex, &[c.gc, pred]);
+    let value = lam_over(k, FI_Y_FV, c.hc, body);
+    let value = close_ghf(k, &c, value, true);
+
+    let l0 = k.level_zero();
+    let prop = k.sort(l0);
+    let ty = arrow(k, c.hc, prop);
+    let ty = close_ghf(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "image");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.mapOne : forall G H f fCongr fMul, H.equiv (f G.e) H.e`.
+/// `f e * f e ~ f (e * e) ~ f e ~ f e * e`, then cancel on the left.
+pub(crate) fn declare_hom_map_one(
+    k: &mut Kernel,
+    group: &RecordNames,
+    add_left_cancel: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let x = k.app(c.f, c.g_e); // x := f G.e
+    let ee = t_app(k, c.g_op, &[c.g_e, c.g_e]);
+    let f_ee = k.app(c.f, ee);
+    let xx = t_app(k, c.h_op, &[x, x]);
+    let x_he = t_app(k, c.h_op, &[x, c.h_e]);
+
+    // s1 : H.equiv (f (e*e)) (x*x)
+    let s1 = t_app(k, c.fm, &[c.g_e, c.g_e]);
+    // s3 : H.equiv (f (e*e)) x, from G.identL e : G.equiv (e*e) e
+    let ident_l_e = k.app(c.g_ident_l, c.g_e);
+    let s3 = t_app(k, c.fc, &[ee, c.g_e, ident_l_e]);
+    // s5 : H.equiv (x*x) x
+    let s4 = hsymm(k, &c, f_ee, xx, s1);
+    let s5 = htrans(k, &c, xx, f_ee, x, s4, s3);
+    // s7 : H.equiv x (x*e)
+    let s6 = k.app(c.h_ident_r, x);
+    let s7 = hsymm(k, &c, x_he, x, s6);
+    // s8 : H.equiv (x*x) (x*e)
+    let s8 = htrans(k, &c, xx, x, x_he, s5, s7);
+
+    let cancel = k.const_(add_left_cancel, vec![]);
+    let body = t_app(k, cancel, &[c.h, x, x, c.h_e, s8]);
+    let value = close_hom(k, &c, body, true);
+
+    let concl = heq(k, &c, x, c.h_e);
+    let ty = close_hom(k, &c, concl, false);
+
+    let name = k.name_str(hom_ns, "mapOne");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.mapInv : forall G H f fCongr fMul (a : G.carrier),
+/// H.equiv (f (G.inv a)) (H.inv (f a))` -- `AlgS.inv_unique` at
+/// `(f a, f (inv a), H.inv (f a))`.
+pub(crate) fn declare_hom_map_inv(
+    k: &mut Kernel,
+    group: &RecordNames,
+    inv_unique: NameId,
+    map_one: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let inv_a = k.app(c.g_inv, a);
+    let f_inv_a = k.app(c.f, inv_a);
+    let fa = k.app(c.f, a);
+    let h_inv_fa = k.app(c.h_inv, fa);
+    let f_e = k.app(c.f, c.g_e);
+
+    // t1 : H.equiv (f (inv a * a)) ((f (inv a)) * (f a))
+    let ia_a = t_app(k, c.g_op, &[inv_a, a]);
+    let f_ia_a = k.app(c.f, ia_a);
+    let prod = t_app(k, c.h_op, &[f_inv_a, fa]);
+    let t1 = t_app(k, c.fm, &[inv_a, a]);
+    let t2 = hsymm(k, &c, f_ia_a, prod, t1);
+    // t4 : H.equiv (f (inv a * a)) (f e)
+    let inv_l_a = k.app(c.g_inv_l, a);
+    let t4 = t_app(k, c.fc, &[ia_a, c.g_e, inv_l_a]);
+    // t5 : H.equiv (f e) H.e
+    let mo = k.const_(map_one, vec![]);
+    let t5 = t_app(k, mo, &[c.g, c.h, c.f, c.fc, c.fm]);
+    let t6 = htrans(k, &c, f_ia_a, f_e, c.h_e, t4, t5);
+    // h1 : H.equiv ((f (inv a)) * (f a)) H.e
+    let h1 = htrans(k, &c, prod, f_ia_a, c.h_e, t2, t6);
+    // h2 : H.equiv ((f a) * (H.inv (f a))) H.e
+    let h2 = k.app(c.h_inv_r, fa);
+
+    let iu = k.const_(inv_unique, vec![]);
+    let body = t_app(k, iu, &[c.h, fa, f_inv_a, h_inv_fa, h1, h2]);
+    let value = lam_over(k, FI_A_FV, c.gc, body);
+    let value = close_hom(k, &c, value, true);
+
+    let concl = heq(k, &c, f_inv_a, h_inv_fa);
+    let ty = pi_over(k, FI_A_FV, c.gc, concl);
+    let ty = close_hom(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "mapInv");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// **Congruence obligation 1 of 2** (the ones a real `Quot` discharges for
+/// free): `AlgS.Hom.kerEquivOpCongr : forall G H f fCongr fMul a a' b b',
+/// H.equiv (f a) (f a') -> H.equiv (f b) (f b') ->
+/// H.equiv (f (G.op a b)) (f (G.op a' b'))`. This is `AlgS.Group`'s
+/// `opCongr` field for the quotient, and nothing but this proof supplies it.
+pub(crate) fn declare_ker_equiv_op_congr(
+    k: &mut Kernel,
+    group: &RecordNames,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let ap = k.fvar(FI_AP_FV);
+    let b = k.fvar(FI_B_FV);
+    let bp = k.fvar(FI_BP_FV);
+    let fa = k.app(c.f, a);
+    let fap = k.app(c.f, ap);
+    let fb = k.app(c.f, b);
+    let fbp = k.app(c.f, bp);
+    let hyp1_ty = heq(k, &c, fa, fap);
+    let hyp2_ty = heq(k, &c, fb, fbp);
+    let h1 = k.fvar(FI_H1_FV);
+    let h2 = k.fvar(FI_H2_FV);
+
+    let ab = t_app(k, c.g_op, &[a, b]);
+    let apbp = t_app(k, c.g_op, &[ap, bp]);
+    let f_ab = k.app(c.f, ab);
+    let f_apbp = k.app(c.f, apbp);
+    let prod = t_app(k, c.h_op, &[fa, fb]);
+    let prod_p = t_app(k, c.h_op, &[fap, fbp]);
+
+    let u1 = t_app(k, c.fm, &[a, b]);
+    let u2 = t_app(k, c.h_op_congr, &[fa, fap, fb, fbp, h1, h2]);
+    let u3 = htrans(k, &c, f_ab, prod, prod_p, u1, u2);
+    let u4 = t_app(k, c.fm, &[ap, bp]);
+    let u5 = hsymm(k, &c, f_apbp, prod_p, u4);
+    let body = htrans(k, &c, f_ab, prod_p, f_apbp, u3, u5);
+
+    let value = lam_over(k, FI_H2_FV, hyp2_ty, body);
+    let value = lam_over(k, FI_H1_FV, hyp1_ty, value);
+    let value = lam_over(k, FI_BP_FV, c.gc, value);
+    let value = lam_over(k, FI_B_FV, c.gc, value);
+    let value = lam_over(k, FI_AP_FV, c.gc, value);
+    let value = lam_over(k, FI_A_FV, c.gc, value);
+    let value = close_hom(k, &c, value, true);
+
+    let concl = heq(k, &c, f_ab, f_apbp);
+    let ty = pi_over(k, FI_H2_FV, hyp2_ty, concl);
+    let ty = pi_over(k, FI_H1_FV, hyp1_ty, ty);
+    let ty = pi_over(k, FI_BP_FV, c.gc, ty);
+    let ty = pi_over(k, FI_B_FV, c.gc, ty);
+    let ty = pi_over(k, FI_AP_FV, c.gc, ty);
+    let ty = pi_over(k, FI_A_FV, c.gc, ty);
+    let ty = close_hom(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "kerEquivOpCongr");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// **Congruence obligation 2 of 2**: `AlgS.Hom.kerEquivInvCongr`, the
+/// quotient's `invCongr` field.
+pub(crate) fn declare_ker_equiv_inv_congr(
+    k: &mut Kernel,
+    group: &RecordNames,
+    map_inv: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let ap = k.fvar(FI_AP_FV);
+    let fa = k.app(c.f, a);
+    let fap = k.app(c.f, ap);
+    let hyp_ty = heq(k, &c, fa, fap);
+    let h1 = k.fvar(FI_H1_FV);
+
+    let inv_a = k.app(c.g_inv, a);
+    let inv_ap = k.app(c.g_inv, ap);
+    let f_inv_a = k.app(c.f, inv_a);
+    let f_inv_ap = k.app(c.f, inv_ap);
+    let hi_fa = k.app(c.h_inv, fa);
+    let hi_fap = k.app(c.h_inv, fap);
+
+    let mi = k.const_(map_inv, vec![]);
+    let mi_app = t_app(k, mi, &[c.g, c.h, c.f, c.fc, c.fm]);
+    let v1 = k.app(mi_app, a);
+    let v2 = t_app(k, c.h_inv_congr, &[fa, fap, h1]);
+    let v3 = htrans(k, &c, f_inv_a, hi_fa, hi_fap, v1, v2);
+    let v4 = k.app(mi_app, ap);
+    let v5 = hsymm(k, &c, f_inv_ap, hi_fap, v4);
+    let body = htrans(k, &c, f_inv_a, hi_fap, f_inv_ap, v3, v5);
+
+    let value = lam_over(k, FI_H1_FV, hyp_ty, body);
+    let value = lam_over(k, FI_AP_FV, c.gc, value);
+    let value = lam_over(k, FI_A_FV, c.gc, value);
+    let value = close_hom(k, &c, value, true);
+
+    let concl = heq(k, &c, f_inv_a, f_inv_ap);
+    let ty = pi_over(k, FI_H1_FV, hyp_ty, concl);
+    let ty = pi_over(k, FI_AP_FV, c.gc, ty);
+    let ty = pi_over(k, FI_A_FV, c.gc, ty);
+    let ty = close_hom(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "kerEquivInvCongr");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.quotient : forall G H f fCongr fMul, AlgS.Group` -- **the
+/// quotient group `G / ker f`, with no `Quot` anywhere**. Carrier is
+/// `G.carrier` UNCHANGED; the quotient happens entirely in the `equiv`
+/// field. All fifteen `AlgS.Group` fields are listed in the body so the
+/// per-field cost of the setoid route is readable off the source.
+pub(crate) fn declare_hom_quotient(
+    k: &mut Kernel,
+    group: &RecordNames,
+    op_congr_thm: NameId,
+    inv_congr_thm: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+
+    // 1 equiv := fun a b => H.equiv (f a) (f b)
+    let equiv_val = {
+        let a = k.fvar(FI_A_FV);
+        let b = k.fvar(FI_B_FV);
+        let fa = k.app(c.f, a);
+        let fb = k.app(c.f, b);
+        let body = heq(k, &c, fa, fb);
+        let t = lam_over(k, FI_B_FV, c.gc, body);
+        lam_over(k, FI_A_FV, c.gc, t)
+    };
+    // 2 equivRefl := fun a => H.equivRefl (f a)
+    let refl_val = {
+        let a = k.fvar(FI_A_FV);
+        let fa = k.app(c.f, a);
+        let body = k.app(c.h_refl, fa);
+        lam_over(k, FI_A_FV, c.gc, body)
+    };
+    // 3 equivSymm := fun a b h => H.equivSymm (f a) (f b) h
+    let symm_val = {
+        let a = k.fvar(FI_A_FV);
+        let b = k.fvar(FI_B_FV);
+        let fa = k.app(c.f, a);
+        let fb = k.app(c.f, b);
+        let hyp = heq(k, &c, fa, fb);
+        let hv = k.fvar(FI_H1_FV);
+        let body = hsymm(k, &c, fa, fb, hv);
+        let t = lam_over(k, FI_H1_FV, hyp, body);
+        let t = lam_over(k, FI_B_FV, c.gc, t);
+        lam_over(k, FI_A_FV, c.gc, t)
+    };
+    // 4 equivTrans := fun a b c h1 h2 => H.equivTrans (f a) (f b) (f c) h1 h2
+    let trans_val = {
+        let a = k.fvar(FI_A_FV);
+        let b = k.fvar(FI_B_FV);
+        let cv = k.fvar(FI_C_FV);
+        let fa = k.app(c.f, a);
+        let fb = k.app(c.f, b);
+        let fcv = k.app(c.f, cv);
+        let hyp1 = heq(k, &c, fa, fb);
+        let hyp2 = heq(k, &c, fb, fcv);
+        let h1 = k.fvar(FI_H1_FV);
+        let h2 = k.fvar(FI_H2_FV);
+        let body = htrans(k, &c, fa, fb, fcv, h1, h2);
+        let t = lam_over(k, FI_H2_FV, hyp2, body);
+        let t = lam_over(k, FI_H1_FV, hyp1, t);
+        let t = lam_over(k, FI_C_FV, c.gc, t);
+        let t = lam_over(k, FI_B_FV, c.gc, t);
+        lam_over(k, FI_A_FV, c.gc, t)
+    };
+    // 6 opCongr, 9 invCongr: the two hand-discharged congruence obligations.
+    let five = [c.g, c.h, c.f, c.fc, c.fm];
+    let op_congr_val = {
+        let t = k.const_(op_congr_thm, vec![]);
+        t_app(k, t, &five)
+    };
+    let inv_congr_val = {
+        let t = k.const_(inv_congr_thm, vec![]);
+        t_app(k, t, &five)
+    };
+
+    let a = k.fvar(FI_A_FV);
+    let b = k.fvar(FI_B_FV);
+    let cv = k.fvar(FI_C_FV);
+
+    // assoc : forall a b c, kerEquiv ((a*b)*c) (a*(b*c))
+    let assoc_val = {
+        let ab = t_app(k, c.g_op, &[a, b]);
+        let ab_c = t_app(k, c.g_op, &[ab, cv]);
+        let bc = t_app(k, c.g_op, &[b, cv]);
+        let a_bc = t_app(k, c.g_op, &[a, bc]);
+        let law = t_app(k, c.g_assoc, &[a, b, cv]);
+        let body = t_app(k, c.fc, &[ab_c, a_bc, law]);
+        let t = lam_over(k, FI_C_FV, c.gc, body);
+        let t = lam_over(k, FI_B_FV, c.gc, t);
+        lam_over(k, FI_A_FV, c.gc, t)
+    };
+    let ident_l_val = {
+        let lhs = t_app(k, c.g_op, &[c.g_e, a]);
+        let law = k.app(c.g_ident_l, a);
+        let body = t_app(k, c.fc, &[lhs, a, law]);
+        lam_over(k, FI_A_FV, c.gc, body)
+    };
+    let ident_r_val = {
+        let lhs = t_app(k, c.g_op, &[a, c.g_e]);
+        let law = k.app(c.g_ident_r, a);
+        let body = t_app(k, c.fc, &[lhs, a, law]);
+        lam_over(k, FI_A_FV, c.gc, body)
+    };
+    let inv_l_val = {
+        let ia = k.app(c.g_inv, a);
+        let lhs = t_app(k, c.g_op, &[ia, a]);
+        let law = k.app(c.g_inv_l, a);
+        let body = t_app(k, c.fc, &[lhs, c.g_e, law]);
+        lam_over(k, FI_A_FV, c.gc, body)
+    };
+    let inv_r_val = {
+        let ia = k.app(c.g_inv, a);
+        let lhs = t_app(k, c.g_op, &[a, ia]);
+        let law = k.app(c.g_inv_r, a);
+        let body = t_app(k, c.fc, &[lhs, c.g_e, law]);
+        lam_over(k, FI_A_FV, c.gc, body)
+    };
+
+    let args = [
+        c.gc,          // 0 carrier
+        equiv_val,     // 1 equiv
+        refl_val,      // 2 equivRefl
+        symm_val,      // 3 equivSymm
+        trans_val,     // 4 equivTrans
+        c.g_op,        // 5 op
+        op_congr_val,  // 6 opCongr    <- hand-discharged
+        c.g_e,         // 7 e
+        c.g_inv,       // 8 inv
+        inv_congr_val, // 9 invCongr   <- hand-discharged
+        assoc_val,     // 10 assoc
+        ident_l_val,   // 11 identL
+        ident_r_val,   // 12 identR
+        inv_l_val,     // 13 invL
+        inv_r_val,     // 14 invR
+    ];
+    let value = structures::mk_instance(k, group, &args);
+    let value = close_hom(k, &c, value, true);
+    let ty = close_hom(k, &c, c.group_ty, false);
+
+    let name = k.name_str(hom_ns, "quotient");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.quotient_equiv : forall G H f fCongr fMul a b,
+/// Iff (AlgS.Group.equiv (quotient ...) a b) (AlgS.Hom.kerEquiv G H f a b)`
+/// -- proved by `Iff.intro (fun h => h) (fun h => h)`, so it PASSES only if
+/// the record selector on the quotient instance reduces definitionally. A
+/// deliberate test, not a convenience lemma.
+pub(crate) fn declare_quotient_equiv(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    group: &RecordNames,
+    quotient: NameId,
+    ker_equiv: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    use idx::group::EQUIV;
+    let c = hom_ctx(k, group);
+    let five = [c.g, c.h, c.f, c.fc, c.fm];
+    let q = {
+        let t = k.const_(quotient, vec![]);
+        t_app(k, t, &five)
+    };
+    let q_equiv = sel(k, group, EQUIV, q);
+    let a = k.fvar(FI_A_FV);
+    let b = k.fvar(FI_B_FV);
+    let lhs = app2(k, q_equiv, a, b);
+    let rhs = {
+        let t = k.const_(ker_equiv, vec![]);
+        let t = t_app(k, t, &[c.g, c.h, c.f]);
+        app2(k, t, a, b)
+    };
+
+    let h1 = k.fvar(FI_H1_FV);
+    let mp = lam_over(k, FI_H1_FV, lhs, h1);
+    let h2 = k.fvar(FI_H2_FV);
+    let mpr = lam_over(k, FI_H2_FV, rhs, h2);
+    let intro = k.const_(lg.iff_intro, vec![]);
+    let body = t_app(k, intro, &[lhs, rhs, mp, mpr]);
+    let value = lam_over(k, FI_B_FV, c.gc, body);
+    let value = lam_over(k, FI_A_FV, c.gc, value);
+    let value = close_hom(k, &c, value, true);
+
+    let iff_c = k.const_(lg.iff, vec![]);
+    let concl = app2(k, iff_c, lhs, rhs);
+    let ty = pi_over(k, FI_B_FV, c.gc, concl);
+    let ty = pi_over(k, FI_A_FV, c.gc, ty);
+    let ty = close_hom(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "quotient_equiv");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.quotient_equiv_iff_ker : forall G H f fCongr fMul a b,
+/// Iff (H.equiv (f a) (f b)) (H.equiv (f (G.op a (G.inv b))) H.e)` --
+/// "`a ~ b` in the quotient exactly when `a * b⁻¹` is in the kernel". This
+/// is the mathematical content of the first isomorphism theorem that does
+/// NOT come for free from the setoid presentation.
+pub(crate) fn declare_quotient_equiv_iff_ker(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    group: &RecordNames,
+    inv_unique: NameId,
+    map_inv: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let b = k.fvar(FI_B_FV);
+    let fa = k.app(c.f, a);
+    let fb = k.app(c.f, b);
+    let inv_b = k.app(c.g_inv, b);
+    let f_inv_b = k.app(c.f, inv_b);
+    let hi_fb = k.app(c.h_inv, fb);
+    let a_invb = t_app(k, c.g_op, &[a, inv_b]);
+    let f_a_invb = k.app(c.f, a_invb);
+    let prod = t_app(k, c.h_op, &[fa, f_inv_b]);
+    let prod_hi = t_app(k, c.h_op, &[fa, hi_fb]);
+    let prod_bb = t_app(k, c.h_op, &[fb, hi_fb]);
+
+    let mi = k.const_(map_inv, vec![]);
+    let five = [c.g, c.h, c.f, c.fc, c.fm];
+    let mi_app = t_app(k, mi, &five);
+    let mi_b = k.app(mi_app, b); // H.equiv (f (inv b)) (H.inv (f b))
+
+    let lhs = heq(k, &c, fa, fb);
+    let rhs = heq(k, &c, f_a_invb, c.h_e);
+
+    // mp : lhs -> rhs
+    let h1 = k.fvar(FI_H1_FV);
+    let mp = {
+        let w1 = t_app(k, c.fm, &[a, inv_b]);
+        let w2 = t_app(k, c.h_op_congr, &[fa, fb, f_inv_b, hi_fb, h1, mi_b]);
+        let w12 = htrans(k, &c, f_a_invb, prod, prod_bb, w1, w2);
+        let w3 = k.app(c.h_inv_r, fb);
+        let body = htrans(k, &c, f_a_invb, prod_bb, c.h_e, w12, w3);
+        lam_over(k, FI_H1_FV, lhs, body)
+    };
+
+    // mpr : rhs -> lhs
+    let h2 = k.fvar(FI_H2_FV);
+    let mpr = {
+        let w1 = t_app(k, c.fm, &[a, inv_b]);
+        let refl_fa = k.app(c.h_refl, fa);
+        let w2 = t_app(k, c.h_op_congr, &[fa, fa, f_inv_b, hi_fb, refl_fa, mi_b]);
+        let p = htrans(k, &c, f_a_invb, prod, prod_hi, w1, w2);
+        let x1 = hsymm(k, &c, f_a_invb, prod_hi, p);
+        let x2 = htrans(k, &c, prod_hi, f_a_invb, c.h_e, x1, h2);
+        let x3 = k.app(c.h_inv_l, fb);
+        let iu = k.const_(inv_unique, vec![]);
+        let body = t_app(k, iu, &[c.h, hi_fb, fa, fb, x2, x3]);
+        lam_over(k, FI_H2_FV, rhs, body)
+    };
+
+    let intro = k.const_(lg.iff_intro, vec![]);
+    let body = t_app(k, intro, &[lhs, rhs, mp, mpr]);
+    let value = lam_over(k, FI_B_FV, c.gc, body);
+    let value = lam_over(k, FI_A_FV, c.gc, value);
+    let value = close_hom(k, &c, value, true);
+
+    let iff_c = k.const_(lg.iff, vec![]);
+    let concl = app2(k, iff_c, lhs, rhs);
+    let ty = pi_over(k, FI_B_FV, c.gc, concl);
+    let ty = pi_over(k, FI_A_FV, c.gc, ty);
+    let ty = close_hom(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "quotient_equiv_iff_ker");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `AlgS.Hom.image_mem : forall G H f fCongr fMul (a : G.carrier),
+/// AlgS.Hom.image G H f (f a)` -- the induced map is onto the image.
+/// `Exists.intro` at the witness `a` with `H.equivRefl (f a)`; this is the
+/// half of "surjective onto the image" that the setoid presentation makes
+/// nearly free, and it is reported as such.
+pub(crate) fn declare_image_mem(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l1: LevelId,
+    group: &RecordNames,
+    image: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    let c = hom_ctx(k, group);
+    let a = k.fvar(FI_A_FV);
+    let fa = k.app(c.f, a);
+
+    let pred = {
+        let w = k.fvar(FI_B_FV);
+        let fw = k.app(c.f, w);
+        let inner = heq(k, &c, fw, fa);
+        lam_over(k, FI_B_FV, c.gc, inner)
+    };
+    let refl_fa = k.app(c.h_refl, fa);
+    let intro = k.const_(lg.exists_intro, vec![l1]);
+    let body = t_app(k, intro, &[c.gc, pred, a, refl_fa]);
+    let value = lam_over(k, FI_A_FV, c.gc, body);
+    let value = close_hom(k, &c, value, true);
+
+    let img = k.const_(image, vec![]);
+    let concl = {
+        let t = t_app(k, img, &[c.g, c.h, c.f]);
+        k.app(t, fa)
+    };
+    let ty = pi_over(k, FI_A_FV, c.gc, concl);
+    let ty = close_hom(k, &c, ty, false);
+
+    let name = k.name_str(hom_ns, "image_mem");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ---------------------------------------------------------------------------
+// ADR-1595 deliverable 4: THE SAME THEOREM ASSUMING `Quot.sound`, sketched.
+//
+// This is a comment. **Nothing below is declared, and `Quot.sound` is NOT
+// added to the kernel.** It exists so the ADR's cost comparison can be
+// checked against a concrete alternative rather than against a feeling.
+//
+// The kernel already admits Lean's four-declaration package (`Quot`,
+// `Quot.mk`, `Quot.lift`, `Quot.ind` -- `src/quotient.rs`) and deliberately
+// not `Quot.sound`. With `Quot.sound` the construction would be:
+//
+//   Q            := Quot (AlgS.Hom.kerEquiv G H f)          -- a NEW type
+//   mk           := Quot.mk _                               -- G.carrier -> Q
+//   Q.op         := Quot.lift₂ (fun a b => mk (G.op a b))   -- needs a proof
+//                     ^ well-definedness side condition:
+//                       kerEquiv a a' -> kerEquiv b b'
+//                         -> Eq (mk (G.op a b)) (mk (G.op a' b'))
+//                       which is `Quot.sound` applied to exactly
+//                       `AlgS.Hom.kerEquivOpCongr`. THE PROOF DOES NOT GO
+//                       AWAY; it moves inside the lift.
+//   Q.inv        := Quot.lift (fun a => mk (G.inv a))       -- likewise, the
+//                     side condition is `AlgS.Hom.kerEquivInvCongr`.
+//   Q.assoc      := Quot.ind (fun a => Quot.ind (fun b => Quot.ind (fun c =>
+//                     Quot.sound (fCongr _ _ (G.assoc a b c)))))
+//                     ^ HARDER than the setoid route, which is one `fCongr`
+//                       application with no induction at all.
+//
+// Obligation-by-obligation against the fifteen `AlgS.Group` fields actually
+// discharged above (the table is in ADR-1595 § "What it cost"):
+//
+//   DISAPPEAR (3):  equivRefl, equivSymm, equivTrans -- `Eq.refl`/`Eq.symm`/
+//                   `Eq.trans` are primitive, so the three one-line fields
+//                   `AlgS.Hom.quotient` supplies would not be written. This
+//                   is the ENTIRE saving, and it is three lines.
+//   SURVIVE  (2):  `kerEquivOpCongr` and `kerEquivInvCongr` reappear
+//                   verbatim as `Quot.lift₂`/`Quot.lift`'s well-definedness
+//                   arguments. Same terms, same seven and six steps.
+//   GET WORSE (5): assoc, identL, identR, invL, invR each gain a `Quot.ind`
+//                   induction to return to representatives before the
+//                   `fCongr` application can be made.
+//
+// And the half `Quot.sound` does NOT reach: the classical statement is an
+// isomorphism between two GROUP OBJECTS, `G/ker f` and `Im f`. `Quot.sound`
+// supplies the first. The second needs a carrier
+// `{y : H.carrier // Exists a, H.equiv (f a) y}` -- a subtype. This kernel
+// has no `Subtype` and no `Sigma` (both verified ABSENT by `shape_search`
+// against a freshly built binary, 2026-09-04), so option (a) buys half the
+// theorem and leaves the other half needing a second kernel addition it does
+// not provide. The setoid route has no such gap: the quotient IS the image,
+// presented on `G.carrier`, which is why `AlgS.Hom.firstIso` above is
+// complete as stated.
+//
+// Footprint cost, measured rather than assumed: `Kernel::axiom_footprint`
+// (`src/lean_pp.rs`) filters the dependency closure to `Axiom | Opaque |
+// Quotient`, so a construction routed through `Quot` names FIVE trusted
+// entries (`Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind`, `Quot.sound`) on
+// every downstream fact -- not the one the algebra reviewer priced.
+// ---------------------------------------------------------------------------
+
+/// `AlgS.Hom.firstIso : forall G H f fCongr fMul,
+///   And (forall a b, Iff (Q.equiv a b) (ker (G.op a (G.inv b))))
+///       (And (forall a b, H.equiv (f (Q.op a b)) (H.op (f a) (f b)))
+///            (forall a, image (f a)))`
+/// -- the first isomorphism theorem, assembled. `Q := AlgS.Hom.quotient`.
+/// Read: the quotient setoid's equivalence IS the kernel congruence, the
+/// induced map is a homomorphism out of it, and it is onto the image; its
+/// injectivity is the `mpr` of the first component, which is why no fourth
+/// conjunct appears.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn declare_first_iso(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    group: &RecordNames,
+    quotient: NameId,
+    ker: NameId,
+    image: NameId,
+    iff_ker: NameId,
+    image_mem: NameId,
+    hom_ns: NameId,
+) -> Result<NameId, KernelError> {
+    use idx::group::{EQUIV, OP};
+    let c = hom_ctx(k, group);
+    let five = [c.g, c.h, c.f, c.fc, c.fm];
+    let q = {
+        let t = k.const_(quotient, vec![]);
+        t_app(k, t, &five)
+    };
+    let q_equiv = sel(k, group, EQUIV, q);
+    let q_op = sel(k, group, OP, q);
+
+    let a = k.fvar(FI_A_FV);
+    let b = k.fvar(FI_B_FV);
+
+    // c1 : forall a b, Iff (Q.equiv a b) (ker G H f (G.op a (G.inv b)))
+    let c1_ty = {
+        let lhs = app2(k, q_equiv, a, b);
+        let inv_b = k.app(c.g_inv, b);
+        let a_invb = t_app(k, c.g_op, &[a, inv_b]);
+        let kc = k.const_(ker, vec![]);
+        let kc = t_app(k, kc, &[c.g, c.h, c.f]);
+        let rhs = k.app(kc, a_invb);
+        let iff_c = k.const_(lg.iff, vec![]);
+        let body = app2(k, iff_c, lhs, rhs);
+        let t = pi_over(k, FI_B_FV, c.gc, body);
+        pi_over(k, FI_A_FV, c.gc, t)
+    };
+    let c1_val = {
+        let t = k.const_(iff_ker, vec![]);
+        t_app(k, t, &five)
+    };
+
+    // c2 : forall a b, H.equiv (f (Q.op a b)) (H.op (f a) (f b))
+    let c2_ty = {
+        let ab = app2(k, q_op, a, b);
+        let f_ab = k.app(c.f, ab);
+        let fa = k.app(c.f, a);
+        let fb = k.app(c.f, b);
+        let rhs = t_app(k, c.h_op, &[fa, fb]);
+        let body = heq(k, &c, f_ab, rhs);
+        let t = pi_over(k, FI_B_FV, c.gc, body);
+        pi_over(k, FI_A_FV, c.gc, t)
+    };
+    let c2_val = c.fm;
+
+    // c3 : forall a, image G H f (f a)
+    let c3_ty = {
+        let fa = k.app(c.f, a);
+        let img = k.const_(image, vec![]);
+        let t = t_app(k, img, &[c.g, c.h, c.f]);
+        let body = k.app(t, fa);
+        pi_over(k, FI_A_FV, c.gc, body)
+    };
+    let c3_val = {
+        let t = k.const_(image_mem, vec![]);
+        t_app(k, t, &five)
+    };
+
+    let and_c = k.const_(lg.and, vec![]);
+    let inner_ty = app2(k, and_c, c2_ty, c3_ty);
+    let outer_ty = app2(k, and_c, c1_ty, inner_ty);
+    let and_intro = k.const_(lg.and_intro, vec![]);
+    let inner_val = t_app(k, and_intro, &[c2_ty, c3_ty, c2_val, c3_val]);
+    let outer_val = t_app(k, and_intro, &[c1_ty, inner_ty, c1_val, inner_val]);
+
+    let value = close_hom(k, &c, outer_val, true);
+    let ty = close_hom(k, &c, outer_ty, false);
+
+    let name = k.name_str(hom_ns, "firstIso");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+// ---------------------------------------------------------------------------
 // Assembly: declare everything, in build order.
 // ---------------------------------------------------------------------------
 
@@ -2839,6 +3881,38 @@ pub struct StructuresSExtraNames {
     /// ADR-1592: `AlgS.OrderedRing.ofAlg : Alg.OrderedRing -> AlgS.
     /// OrderedRing`.
     pub ordered_ring_ofalg: NameId,
+
+    // -- ADR-1595 / roadmap W2-8: the first isomorphism theorem over
+    // `AlgS.Group`, by the setoid route (no `Quot`, no `Quot.sound`). --
+    /// `AlgS.Hom.ker` — the kernel of a homomorphism, as a PREDICATE.
+    pub hom_ker: NameId,
+    /// `AlgS.Hom.kerEquiv` — the induced equivalence on `G.carrier`.
+    pub hom_ker_equiv: NameId,
+    /// `AlgS.Hom.image` — the image, as a predicate on `H.carrier`.
+    pub hom_image: NameId,
+    /// `AlgS.Hom.mapOne` — `H.equiv (f G.e) H.e`.
+    pub hom_map_one: NameId,
+    /// `AlgS.Hom.mapInv` — `H.equiv (f (G.inv a)) (H.inv (f a))`.
+    pub hom_map_inv: NameId,
+    /// `AlgS.Hom.kerEquivOpCongr` — congruence obligation 1 of 2, the
+    /// quotient's `opCongr` field. A real `Quot` gives this for free.
+    pub hom_ker_equiv_op_congr: NameId,
+    /// `AlgS.Hom.kerEquivInvCongr` — congruence obligation 2 of 2, the
+    /// quotient's `invCongr` field.
+    pub hom_ker_equiv_inv_congr: NameId,
+    /// `AlgS.Hom.quotient : ... -> AlgS.Group` — the quotient group,
+    /// carried as a setoid over the ORIGINAL carrier.
+    pub hom_quotient: NameId,
+    /// `AlgS.Hom.quotient_equiv` — the quotient's `equiv` selector reduces
+    /// to `AlgS.Hom.kerEquiv`, proved by `Iff.intro id id`.
+    pub hom_quotient_equiv: NameId,
+    /// `AlgS.Hom.quotient_equiv_iff_ker` — `a ~ b` in the quotient exactly
+    /// when `a * b⁻¹` is in the kernel.
+    pub hom_quotient_equiv_iff_ker: NameId,
+    /// `AlgS.Hom.image_mem` — every `f a` is in the image.
+    pub hom_image_mem: NameId,
+    /// `AlgS.Hom.firstIso` — the assembled first isomorphism theorem.
+    pub hom_first_iso: NameId,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2902,6 +3976,39 @@ pub(crate) fn declare_structures_s_extra(
     let inv_unique = declare_inv_unique(k, &st.group, p.algs)?;
     let inv_inv = declare_inv_inv(k, &st.group, inv_unique, p.algs)?;
 
+    // ADR-1595 / W2-8: the first isomorphism theorem, setoid route.
+    let hom_ns = k.name_str(p.algs, "Hom");
+    let hom_ker = declare_hom_ker(k, &st.group, hom_ns)?;
+    let hom_ker_equiv = declare_hom_ker_equiv(k, &st.group, hom_ns)?;
+    let hom_image = declare_hom_image(k, lg, l1, &st.group, hom_ns)?;
+    let hom_map_one = declare_hom_map_one(k, &st.group, add_left_cancel, hom_ns)?;
+    let hom_map_inv = declare_hom_map_inv(k, &st.group, inv_unique, hom_map_one, hom_ns)?;
+    let hom_ker_equiv_op_congr = declare_ker_equiv_op_congr(k, &st.group, hom_ns)?;
+    let hom_ker_equiv_inv_congr = declare_ker_equiv_inv_congr(k, &st.group, hom_map_inv, hom_ns)?;
+    let hom_quotient = declare_hom_quotient(
+        k,
+        &st.group,
+        hom_ker_equiv_op_congr,
+        hom_ker_equiv_inv_congr,
+        hom_ns,
+    )?;
+    let hom_quotient_equiv =
+        declare_quotient_equiv(k, lg, &st.group, hom_quotient, hom_ker_equiv, hom_ns)?;
+    let hom_quotient_equiv_iff_ker =
+        declare_quotient_equiv_iff_ker(k, lg, &st.group, inv_unique, hom_map_inv, hom_ns)?;
+    let hom_image_mem = declare_image_mem(k, lg, l1, &st.group, hom_image, hom_ns)?;
+    let hom_first_iso = declare_first_iso(
+        k,
+        lg,
+        &st.group,
+        hom_quotient,
+        hom_ker,
+        hom_image,
+        hom_quotient_equiv_iff_ker,
+        hom_image_mem,
+        hom_ns,
+    )?;
+
     let _ = alg_p;
 
     Ok(StructuresSExtraNames {
@@ -2926,6 +4033,18 @@ pub(crate) fn declare_structures_s_extra(
         inv_unique,
         inv_inv,
         ordered_ring_ofalg,
+        hom_ker,
+        hom_ker_equiv,
+        hom_image,
+        hom_map_one,
+        hom_map_inv,
+        hom_ker_equiv_op_congr,
+        hom_ker_equiv_inv_congr,
+        hom_quotient,
+        hom_quotient_equiv,
+        hom_quotient_equiv_iff_ker,
+        hom_image_mem,
+        hom_first_iso,
     })
 }
 
@@ -3484,5 +4603,287 @@ mod structures_setoid_tests {
             "AlgS.add_left_cancel via CommRing.toCommGroupS/CommGroup.toGroupS must have the \
              SAME TYPE as Int.add_left_cancel"
         );
+    }
+}
+
+/// ADR-1595 / roadmap W2-8. The measurement suite for the first isomorphism
+/// theorem built by the SETOID route. Every assertion here reads the KERNEL,
+/// never a rendered name or a source comment.
+#[cfg(test)]
+mod first_iso_tests {
+    use super::*;
+    use crate::build_logic_prelude;
+    use crate::nat_prelude::structures as algeq;
+
+    fn build_extra(k: &mut Kernel) -> StructuresSExtraNames {
+        let logic = build_logic_prelude(k).expect("logic prelude must build");
+        let alg_p = algeq::intern_structures_names(k);
+        let alg_st = algeq::declare_structures_all(k, &alg_p, &logic).expect("Alg spine builds");
+        let p = intern_structures_s_names(k);
+        let st = declare_structures_s_all(k, &p, &logic).expect("AlgS spine builds");
+        declare_structures_s_extra(k, &logic, &p, &st, &alg_p, &alg_st)
+            .expect("AlgS extras + the first isomorphism theorem must admit")
+    }
+
+    /// The twelve `AlgS.Hom.*` declarations, in dependency order. Derived
+    /// from the names struct, not from a literal list of strings, so a
+    /// renamed or dropped declaration breaks the test rather than the test's
+    /// idea of what exists.
+    fn first_iso_names(extra: &StructuresSExtraNames) -> [NameId; 12] {
+        [
+            extra.hom_ker,
+            extra.hom_ker_equiv,
+            extra.hom_image,
+            extra.hom_map_one,
+            extra.hom_map_inv,
+            extra.hom_ker_equiv_op_congr,
+            extra.hom_ker_equiv_inv_congr,
+            extra.hom_quotient,
+            extra.hom_quotient_equiv,
+            extra.hom_quotient_equiv_iff_ker,
+            extra.hom_image_mem,
+            extra.hom_first_iso,
+        ]
+    }
+
+    #[test]
+    fn first_isomorphism_theorem_admits_by_the_setoid_route() {
+        let mut k = Kernel::new();
+        let extra = build_extra(&mut k);
+        for name in first_iso_names(&extra) {
+            assert!(
+                k.environment().get(name).is_some(),
+                "declaration missing from the environment"
+            );
+        }
+    }
+
+    /// **The headline claim.** Read from `Kernel::axiom_footprint`, which is
+    /// the transitive axiom closure of the checked declaration -- not from a
+    /// name, a doc comment, or the absence of an `Axiom` in this file.
+    #[test]
+    fn first_isomorphism_theorem_is_axiom_free() {
+        let mut k = Kernel::new();
+        let extra = build_extra(&mut k);
+        for name in first_iso_names(&extra) {
+            let footprint = k.axiom_footprint(name);
+            assert!(
+                footprint.is_empty(),
+                "axiom footprint must be empty, got {} entries",
+                footprint.len()
+            );
+        }
+    }
+
+    /// The quotient is a genuine `AlgS.Group` VALUE, and its `equiv` field
+    /// is the kernel congruence. `AlgS.Hom.quotient_equiv` is proved by
+    /// `Iff.intro (fun h => h) (fun h => h)`, so its admission is exactly
+    /// the statement that the record selector on the quotient instance
+    /// reduces definitionally to `AlgS.Hom.kerEquiv`. The assertion here is
+    /// that the declaration is a `Theorem` (i.e. the kernel checked that
+    /// proof), so the test cannot pass on a stub.
+    #[test]
+    fn the_quotients_equiv_reduces_to_the_kernel_congruence() {
+        let mut k = Kernel::new();
+        let extra = build_extra(&mut k);
+        let decl = k
+            .environment()
+            .get(extra.hom_quotient_equiv)
+            .expect("quotient_equiv must exist")
+            .clone();
+        assert!(
+            matches!(decl, Declaration::Theorem { .. }),
+            "quotient_equiv must be a checked Theorem"
+        );
+        let q = k
+            .environment()
+            .get(extra.hom_quotient)
+            .expect("quotient must exist")
+            .clone();
+        assert!(
+            matches!(q, Declaration::Definition { .. }),
+            "the quotient must be a Definition producing an AlgS.Group"
+        );
+    }
+
+    /// **Negative control for the congruence obligation.** Rebuild the
+    /// quotient instance with field 6 (`opCongr`) supplied by the SOURCE
+    /// group's own `opCongr` -- the congruence for `G.equiv`, not for the
+    /// coarser kernel congruence. The kernel must REJECT it. If this
+    /// admitted, `AlgS.Hom.kerEquivOpCongr` would not be load-bearing and
+    /// the "two hand-discharged congruence obligations" measurement in
+    /// ADR-1595 would be wrong.
+    #[test]
+    fn the_quotient_is_rejected_without_the_kernel_congruence_proof() {
+        use idx::group::OP_CONGR;
+        let mut k = Kernel::new();
+        let logic = build_logic_prelude(&mut k).expect("logic prelude must build");
+        let alg_p = algeq::intern_structures_names(&mut k);
+        let alg_st =
+            algeq::declare_structures_all(&mut k, &alg_p, &logic).expect("Alg spine builds");
+        let p = intern_structures_s_names(&mut k);
+        let st = declare_structures_s_all(&mut k, &p, &logic).expect("AlgS spine builds");
+        let extra = declare_structures_s_extra(&mut k, &logic, &p, &st, &alg_p, &alg_st)
+            .expect("extras must admit");
+
+        let group = &st.group;
+        let c = hom_ctx(&mut k, group);
+        // Rebuild the honest quotient's fields, then swap slot 6.
+        let equiv_val = {
+            let a = k.fvar(FI_A_FV);
+            let b = k.fvar(FI_B_FV);
+            let fa = k.app(c.f, a);
+            let fb = k.app(c.f, b);
+            let body = heq(&mut k, &c, fa, fb);
+            let t = lam_over(&mut k, FI_B_FV, c.gc, body);
+            lam_over(&mut k, FI_A_FV, c.gc, t)
+        };
+        let refl_val = {
+            let a = k.fvar(FI_A_FV);
+            let fa = k.app(c.f, a);
+            let body = k.app(c.h_refl, fa);
+            lam_over(&mut k, FI_A_FV, c.gc, body)
+        };
+        let symm_val = {
+            let a = k.fvar(FI_A_FV);
+            let b = k.fvar(FI_B_FV);
+            let fa = k.app(c.f, a);
+            let fb = k.app(c.f, b);
+            let hyp = heq(&mut k, &c, fa, fb);
+            let hv = k.fvar(FI_H1_FV);
+            let body = hsymm(&mut k, &c, fa, fb, hv);
+            let t = lam_over(&mut k, FI_H1_FV, hyp, body);
+            let t = lam_over(&mut k, FI_B_FV, c.gc, t);
+            lam_over(&mut k, FI_A_FV, c.gc, t)
+        };
+        let trans_val = {
+            let a = k.fvar(FI_A_FV);
+            let b = k.fvar(FI_B_FV);
+            let cv = k.fvar(FI_C_FV);
+            let fa = k.app(c.f, a);
+            let fb = k.app(c.f, b);
+            let fcv = k.app(c.f, cv);
+            let hyp1 = heq(&mut k, &c, fa, fb);
+            let hyp2 = heq(&mut k, &c, fb, fcv);
+            let h1 = k.fvar(FI_H1_FV);
+            let h2 = k.fvar(FI_H2_FV);
+            let body = htrans(&mut k, &c, fa, fb, fcv, h1, h2);
+            let t = lam_over(&mut k, FI_H2_FV, hyp2, body);
+            let t = lam_over(&mut k, FI_H1_FV, hyp1, t);
+            let t = lam_over(&mut k, FI_C_FV, c.gc, t);
+            let t = lam_over(&mut k, FI_B_FV, c.gc, t);
+            lam_over(&mut k, FI_A_FV, c.gc, t)
+        };
+        let five = [c.g, c.h, c.f, c.fc, c.fm];
+        let inv_congr_val = {
+            let t = k.const_(extra.hom_ker_equiv_inv_congr, vec![]);
+            t_app(&mut k, t, &five)
+        };
+        // THE MUTATION: `G.opCongr`, which proves congruence for `G.equiv`,
+        // in the slot that needs congruence for the kernel congruence.
+        let bogus_op_congr = sel(&mut k, group, OP_CONGR, c.g);
+
+        let a = k.fvar(FI_A_FV);
+        let b = k.fvar(FI_B_FV);
+        let cv = k.fvar(FI_C_FV);
+        let assoc_val = {
+            let ab = t_app(&mut k, c.g_op, &[a, b]);
+            let ab_c = t_app(&mut k, c.g_op, &[ab, cv]);
+            let bc = t_app(&mut k, c.g_op, &[b, cv]);
+            let a_bc = t_app(&mut k, c.g_op, &[a, bc]);
+            let law = t_app(&mut k, c.g_assoc, &[a, b, cv]);
+            let body = t_app(&mut k, c.fc, &[ab_c, a_bc, law]);
+            let t = lam_over(&mut k, FI_C_FV, c.gc, body);
+            let t = lam_over(&mut k, FI_B_FV, c.gc, t);
+            lam_over(&mut k, FI_A_FV, c.gc, t)
+        };
+        let ident_l_val = {
+            let lhs = t_app(&mut k, c.g_op, &[c.g_e, a]);
+            let law = k.app(c.g_ident_l, a);
+            let body = t_app(&mut k, c.fc, &[lhs, a, law]);
+            lam_over(&mut k, FI_A_FV, c.gc, body)
+        };
+        let ident_r_val = {
+            let lhs = t_app(&mut k, c.g_op, &[a, c.g_e]);
+            let law = k.app(c.g_ident_r, a);
+            let body = t_app(&mut k, c.fc, &[lhs, a, law]);
+            lam_over(&mut k, FI_A_FV, c.gc, body)
+        };
+        let inv_l_val = {
+            let ia = k.app(c.g_inv, a);
+            let lhs = t_app(&mut k, c.g_op, &[ia, a]);
+            let law = k.app(c.g_inv_l, a);
+            let body = t_app(&mut k, c.fc, &[lhs, c.g_e, law]);
+            lam_over(&mut k, FI_A_FV, c.gc, body)
+        };
+        let inv_r_val = {
+            let ia = k.app(c.g_inv, a);
+            let lhs = t_app(&mut k, c.g_op, &[a, ia]);
+            let law = k.app(c.g_inv_r, a);
+            let body = t_app(&mut k, c.fc, &[lhs, c.g_e, law]);
+            lam_over(&mut k, FI_A_FV, c.gc, body)
+        };
+
+        let args = [
+            c.gc,
+            equiv_val,
+            refl_val,
+            symm_val,
+            trans_val,
+            c.g_op,
+            bogus_op_congr, // <- the mutation
+            c.g_e,
+            c.g_inv,
+            inv_congr_val,
+            assoc_val,
+            ident_l_val,
+            ident_r_val,
+            inv_l_val,
+            inv_r_val,
+        ];
+        let value = structures::mk_instance(&mut k, group, &args);
+        let value = close_hom(&mut k, &c, value, true);
+        let ty = close_hom(&mut k, &c, c.group_ty, false);
+        let name = k.name_str(p.algs, "HomQuotientMutant");
+        let outcome = k.add_declaration(Declaration::Definition {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(1),
+        });
+        assert!(
+            outcome.is_err(),
+            "the quotient must NOT admit with the source group's own opCongr \
+             in the kernel-congruence slot -- if it does, \
+             AlgS.Hom.kerEquivOpCongr is not load-bearing"
+        );
+    }
+
+    /// Print the rendered types of every `AlgS.Hom.*` declaration. Run with
+    /// `--nocapture` to read them; the assertion is that each type actually
+    /// mentions the `AlgS.Group` record, so the test cannot pass vacuously
+    /// on an empty render.
+    #[test]
+    fn first_isomorphism_theorem_types_render() {
+        let mut k = Kernel::new();
+        let extra = build_extra(&mut k);
+        for name in first_iso_names(&extra) {
+            let decl = k
+                .environment()
+                .get(name)
+                .expect("declaration must exist")
+                .clone();
+            let ty = match &decl {
+                Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+                _ => panic!("unexpected declaration kind"),
+            };
+            let rendered = k.render_lean(ty);
+            println!("decl {name:?} :\n  {rendered}\n");
+            assert!(
+                rendered.contains("AlgS.Group"),
+                "rendered type must mention AlgS.Group"
+            );
+        }
     }
 }

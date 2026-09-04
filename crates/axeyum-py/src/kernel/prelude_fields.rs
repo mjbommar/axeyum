@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1195 names,
+/// The `NatPrelude` field table (1207 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 95 of the names come from ADR-1512 per-module registries and
+/// 107 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1681,6 +1681,51 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             (
                 "structures_s_extra.ordered_ring_ofalg",
                 p.structures_s_extra.ordered_ring_ofalg,
+            ),
+            ("structures_s_extra.hom_ker", p.structures_s_extra.hom_ker),
+            (
+                "structures_s_extra.hom_ker_equiv",
+                p.structures_s_extra.hom_ker_equiv,
+            ),
+            (
+                "structures_s_extra.hom_image",
+                p.structures_s_extra.hom_image,
+            ),
+            (
+                "structures_s_extra.hom_map_one",
+                p.structures_s_extra.hom_map_one,
+            ),
+            (
+                "structures_s_extra.hom_map_inv",
+                p.structures_s_extra.hom_map_inv,
+            ),
+            (
+                "structures_s_extra.hom_ker_equiv_op_congr",
+                p.structures_s_extra.hom_ker_equiv_op_congr,
+            ),
+            (
+                "structures_s_extra.hom_ker_equiv_inv_congr",
+                p.structures_s_extra.hom_ker_equiv_inv_congr,
+            ),
+            (
+                "structures_s_extra.hom_quotient",
+                p.structures_s_extra.hom_quotient,
+            ),
+            (
+                "structures_s_extra.hom_quotient_equiv",
+                p.structures_s_extra.hom_quotient_equiv,
+            ),
+            (
+                "structures_s_extra.hom_quotient_equiv_iff_ker",
+                p.structures_s_extra.hom_quotient_equiv_iff_ker,
+            ),
+            (
+                "structures_s_extra.hom_image_mem",
+                p.structures_s_extra.hom_image_mem,
+            ),
+            (
+                "structures_s_extra.hom_first_iso",
+                p.structures_s_extra.hom_first_iso,
             ),
         ],
         lists: Vec::new(),

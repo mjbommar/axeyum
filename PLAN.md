@@ -121,6 +121,8 @@ now. Nothing was deleted.
 | 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |
 | 2026-09-04 | metatheory-and-landmarks | `90940d7bb` ADR-1600: kernel trusted-core size (5,526 lines, re-derived), what it admits, four mutation-tested guards (3 clean, 1 found redundant), a fresh full `check-lean-gate.sh` run reproducing the known-red `max-to-imax` mutant, and what a relative soundness proof would require |
 | 2026-09-04 | metatheory-and-landmarks | `adc3eda38` `scripts/count-landmark-facts.py` + baseline + `scripts/tests/test_count_landmark_facts.py` (9 guards) + `check.sh`/`justfile` registration: 1,432 landmark facts of 2,487 proved (57.6%) |
+| 2026-09-04 | quotient-decision | W2-8 landed: the first isomorphism theorem over `AlgS.Group` by the setoid route, 12 declarations, empty axiom footprint |
+| 2026-09-04 | quotient-decision | ADR-1595 (proposed): quotients stay setoids; `Quot.sound` stays out — decided by the W2-8 measurement, not by argument |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -41219,6 +41221,77 @@ host; that broader scope is outside this lane's brief. `just check` /
 `./scripts/check.sh` in full: not run (out of scope for a
 docs-plus-one-script lane; the specific steps this lane added were verified
 directly instead).
+
+**Your lane's block (`DONE`, quotient-decision, 2026-09-04).** Roadmap W0-1
+(convergence C1: reviewers 04.1, 09.3, 12.1) is decided **by measurement**, and
+the measurement is roadmap W2-8 — the first isomorphism theorem over
+`AlgS.Group` — which **landed by the setoid route with an empty axiom
+footprint**.
+
+Twelve declarations in a new `AlgS.Hom.*` namespace
+(`nat_prelude/structures_setoid.rs`, `5337d192b`): `ker`, `kerEquiv`, `image`,
+`mapOne`, `mapInv`, `kerEquivOpCongr`, `kerEquivInvCongr`, `quotient`,
+`quotient_equiv`, `quotient_equiv_iff_ker`, `image_mem`, `firstIso`. The
+construction: a quotient group is the SAME carrier under a COARSER
+equivalence — `AlgS.Hom.quotient : ... -> AlgS.Group` has `carrier :=
+G.carrier` and `equiv := fun a b => H.equiv (f a) (f b)`. No `Quot`, no
+`Quot.sound`, no `funext`.
+
+Cost: 1,061 lines of term-building Rust plus 281 of tests; 12 declarations
+(`shape_search` 2674 → **2686**, exactly +12); `first_iso_tests` 0.44 s;
+whole `structures_setoid` suite 16.41 s, 18 passed.
+
+**The number the experiment existed to produce: 3.** Of `AlgS.Group`'s
+fifteen fields, exactly three (`equivRefl`, `equivSymm`, `equivTrans`, one
+line each) were discharged by hand and would have been free under
+`Quot` + `Eq`. The two real congruence proofs (`kerEquivOpCongr` 7 steps,
+`kerEquivInvCongr` 6 steps) do **not** go away under `Quot.sound` — they
+reappear as `Quot.lift₂`/`Quot.lift`'s well-definedness side conditions — and
+the five group laws are *cheaper* on the setoid route (one `fCongr`
+application each vs a `Quot.ind` induction).
+
+Two measurements nobody asked for that decide it:
+
+1. **`Quot.sound` is five footprint entries, not one.**
+   `Kernel::axiom_footprint` filters the dependency closure to
+   `Axiom | Opaque | Quotient`, so anything routed through `Quot` names
+   `Quot`, `.mk`, `.lift`, `.ind` and `.sound`. Today `quot=0` in every
+   constructed prelude and `add_quotient_package` is called only by the Lean
+   importer and the kernel's own differential tests.
+2. **`Quot.sound` does not unlock the classical statement.** The image side
+   needs a subtype; `Subtype` and `Sigma` are both ABSENT (`shape_search`,
+   fresh binary, positive control `any-kind=2686`). The setoid route has no
+   such gap because the quotient *is* the image.
+
+Recommendation in ADR-1595 (`Status: proposed`): **option (b), commit to
+setoid quotients**, reversible on evidence — a *named, attempted* theorem
+shown unreachable over setoids, with the obstruction stated as a specific
+obligation the kernel could not discharge.
+
+Downstream: **W2-8 is landed.** W3-3 (categories) has no remaining
+foundational blocker — morphism equality is an explicit `equiv` field, and
+`funext` is a separate question this ADR does not answer. W2-9 and W3-2
+proceed over `AlgS.CommRing` (W3-2 additionally wants an `AlgS.Field`, which
+needs `Apart` — ADR-1588 stopped short of `Field` for that reason; a distinct
+open question). Reviewers 04 and 09 have their stated triggers met; 12's
+W0-2 is still open.
+
+ℝ, sized not attempted: migrating `CReal` to `Quot CReal.Equiv` would restate
+**209** declaration types (of **610** `CReal.*` declarations), rework the
+proofs beneath them, retire the 233-declaration `AlgS` spine that exists to
+serve it, and put the 5-name quotient footprint on the entire real-analysis
+shelf. **Do not migrate.**
+
+Gates run (all green, nonzero counts): `--lib first_iso_tests` 5 passed;
+`--lib structures_setoid` 18 passed; `--lib linarith` 99 passed / 1 ignored;
+`cargo check --workspace --all-targets` clean; `clippy -p axeyum-lean-kernel
+--all-targets -D warnings` clean; `rustfmt --edition 2024` on the one touched
+Rust file; `gen-py-prelude-fields.py` regenerated (total=3211) after the
+twelve new `StructuresSExtraNames` fields.
+
+Next lane: the ADR is `Status: proposed` and needs the coordinator or the
+user to accept it. Nothing in this lane depends on that acceptance — the
+theorem is landed and axiom-free either way.
 
 **ℕ-induction is in dispatch; the front door now decides 4 of the 12 corpus
 instances where it decided 1** (`WIP`, induction-dispatch, 2026-08-17).
