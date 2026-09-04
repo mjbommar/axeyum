@@ -17,8 +17,9 @@ declarations** in a new `Metric` namespace, every one with an empty
 an arbitrary metric space and `Metric.creal_complete` proves ℝ satisfies it;
 the entire cost of generalizing `CReal.converges_of_cauchy` off ℝ was two
 already-landed bridge lemmas and three `Exists.rec`s. So the roadmap's
-`W2-1 → W0-3` dependency is **measured false** and should be deleted, and the
-three-way question is not a choice but an order. **Recommendation: build the
+`W2-1 → W0-3` dependency is **measured false** and should be deleted — the
+table's own W2-21 row already said as much and the two rows disagreed — and
+the three-way question is not a choice but an order. **Recommendation: build the
 metric/uniform layer first (it carries W2-2, W2-3 and W2-10 on its own);
 adopt POINTFREE (frames/locales) for topology proper when a
 non-metrizable space is actually needed; do NOT adopt open-set topological
@@ -49,6 +50,15 @@ The reviewer's own framing, and the roadmap's:
 The roadmap encodes that as W0-3 ("Constructive topology design ADR: open
 sets, apartness spaces, or locales — determines whether the analysis shelf
 ever generalizes") with **W2-1 and W2-2 depending on it**.
+
+**The roadmap already contradicts itself on this point, and the contradiction
+is worth naming before the measurement rather than after.** W2-21's own
+dependency note reads: "W0-3 (distinct from W2-1: *a metric carrier needs no
+topology decision*, a topological one **is** the decision)". So the table's
+W2-1 row and the W2-21 row disagree about whether a metric carrier is behind
+W0-3, and nobody had built one to find out. What follows resolves that
+disagreement in favour of the parenthetical — which makes this less a
+refutation of the roadmap than a decision between two things it says.
 
 [ADR-1595](adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md),
 landed the same day, settled a structurally identical question — three
@@ -88,7 +98,7 @@ primitive `Eq` (ADR-0512):
 
 Bishop's axioms (*Constructive Analysis*, §4.1) verbatim, with the identity of
 indiscernibles as **two separate one-directional fields** rather than one
-`Iff` — see §"What the build taught" below for why that is not cosmetic.
+`Iff` — see §5 below for why that split is not cosmetic.
 
 Two instances:
 
@@ -268,6 +278,39 @@ slot and requires a refusal. Classically this is one biconditional; here it is
 two fields with different proofs and different costs. Any future carrier
 (uniform space, apartness space, locale) has to keep that split.
 
+### 6. The mutation table
+
+Seven of the seventeen tests are negative controls, and a negative control
+that cannot fail is worse than no control. Each row below applies **one small
+edit**, rebuilds, runs the whole `metric::` suite, and records which tests die.
+Run in this lane's own isolated worktree, which has its own 1.5 GB `target/`;
+nothing in the shared checkout was mutated.
+
+| # | mutation | tests killed |
+|---|---|---|
+| MUT-0 | none (baseline) | **0 of 17** — 17 passed in 56.4 s |
+| MUT-A | `the_triangle_field_is_load_bearing` is handed the **correct** `distTriangle` proof instead of the wrong-typed `distComm` | **exactly 1** — itself |
+| MUT-B | `the_two_identity_directions_are_not_interchangeable` is handed the **correct** `distSelf` proof instead of `distEquiv` | **exactly 1** — itself |
+| MUT-C | `the_planes_squared_distance_is_refused_as_the_dist_field` is handed the **correct** `Metric.CPoint.dist` instead of the raw `CPoint.distSq` | **exactly 1** — itself |
+| MUT-D | the reals reduction probe's `swapped` flag is ignored, so `the_reduction_probe_is_not_vacuous` asks the same question as the positive probe | **exactly 1** — itself |
+| MUT-E | the RECORD's `distTriangle` field is weakened from `d(a,c) ≤ d(a,b)+d(b,c)` to `d(a,b) ≤ d(a,b)+d(b,c)` — one token in `metric.rs` | **17 of 17** |
+
+MUT-A through MUT-D each kill exactly one test and it is the intended one, so
+those four controls discriminate: they distinguish the right proof from a
+wrong one at the same slot, and they would not survive being handed the right
+answer.
+
+**MUT-E is reported as what it is: not discriminating.** Weakening a *field of
+the record* stops `Metric.CReal.distTriangle` from fitting the constructor, so
+`build_metric_prelude` fails and every test that touches the memoised prelude
+dies with it — all seventeen. That is a real fact (the field is load-bearing
+at build time, and the `Sort 2` record cannot be assembled without a proof of
+exactly this shape) but it attributes nothing, because **one bad declaration
+poisons the shared build and the failure count then says nothing about how
+many things are broken**. Any future mutation testing against this record has
+to mutate the *instances or the tests*, not the record's field shapes, or it
+will keep measuring the same 17.
+
 ## Decision
 
 **Adopt a metric/uniform layer as the library's topology for the foreseeable
@@ -332,7 +375,7 @@ subtype-carved — so this is the established idiom, not a new one.
 | item | before | after |
 |---|---|---|
 | **W0-3** | open decision, blocking W2-1 and W2-2 | **closed by this ADR** |
-| **W2-1** | not started, depends on W0-3 | **landed** (`e43a8105c`, `b34e2dbd7`); the W0-3 dependency was false |
+| **W2-1** | not started, depends on W0-3 | **landed** (`e43a8105c`, `b34e2dbd7`); the W0-3 dependency was false, and W2-21's own row already said so |
 | **W2-2** — continuity as a topological notion; `UniformlyContinuousOn` implies it | depends on W0-3, W2-1 | depends on **W2-1 only**. Restate as: `Metric.UniformlyContinuous M N f` with an explicit modulus, `Metric.Continuous` pointwise, then `CReal.UniformlyContinuousOn F a b → Metric.UniformlyContinuous` relativized to the interval predicate. No opens. |
 | **W2-3** — Bishop compactness on intervals, EVT as an instance | depends on W2-1 | unchanged, and now unblocked. `Metric.Complete` exists; `Metric.TotallyBounded` is the remaining definition. |
 | **W2-10** — products and subspaces | depends on W2-1 | **split.** The *product* is buildable today (`CReal.max` or `CReal.add` on the two distances; both exist, and the triangle inequality follows from `max_le`/`add_le_add`). The *subspace* is blocked on `Subtype` and should be relativized instead — see above. Do not size these as one task. |
@@ -355,7 +398,11 @@ subtype-carved — so this is the established idiom, not a new one.
   second such refutation in two days (ADR-1595 refuted the claim that the
   quotient shelf needed `Quot.sound`) and the pattern is worth naming: **a
   "blocked on X" in a roadmap is a claim about one route, and this repository's
-  are reliably pessimistic.**
+  are reliably pessimistic.** The sharper version here: the roadmap contained
+  *both* answers, in two rows written by different reviewers, and the
+  disagreement survived because nobody had built the thing. When two entries
+  disagree about a dependency, build the cheaper side rather than arbitrating
+  the prose.
 - **Revisit this ADR** if a measured theorem is shown to be unreachable
   through the metric layer — the honest trigger is a *specific statement* that
   a frame or an apartness space would deliver and `Metric` cannot, not a

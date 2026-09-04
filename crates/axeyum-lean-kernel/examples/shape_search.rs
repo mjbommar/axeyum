@@ -102,9 +102,8 @@ use axeyum_lean_kernel::shape_index::{
 use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
-    build_metric_prelude,
-    build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
-    on_a_deep_stack,
+    build_logic_prelude, build_metric_prelude, build_nat_prelude, build_rat_prelude,
+    build_string_prelude, on_a_deep_stack,
 };
 
 const USAGE: &str = "\
