@@ -236,12 +236,12 @@ mod modeq_add_cancel;
 mod modeq_add_le_of_lt;
 mod modeq_cancel_div_gcd;
 mod modular;
-mod mul_order_lemmas;
-mod multichoose;
-mod multiset;
 /// ADR-1609 / roadmap W3-2: `AlgS.Module.*`, modules over an abstract
 /// `AlgS.CommRing`, with `R` over itself and `R[X]` as the first instances.
 pub mod module_setoid;
+mod mul_order_lemmas;
+mod multichoose;
+mod multiset;
 mod multiset_prod;
 mod no_confusion;
 mod nth;
