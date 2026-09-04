@@ -139,6 +139,7 @@ the project's own stated thesis.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: proof-producing SAT with DRAT checking, full SMT stack, 79k-line CAS, five kernel-emitting producers, 67 hand proofs retired in one week. Rado numbers and SOS/Gröbner results `computed` but not connected to kernel statements. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 2 landed** (roadmap W1-5): `ring::generic` extended with the same `Backend` shape `linarith` used, reaching `Alg.CommRing` and `AlgS.CommRing`; six goal shapes proved at `CReal.commRingS`, with a corrupted-certificate battery in which the **kernel** refuses the emitted term while the producer's own check is disabled. `decide` **cannot** reach ℝ and the reason is measured, not assumed: the real relations are quantifier-headed and no apartness-witness definition exists to give a decidable fragment — that definition is now a named next step. **Zero retirements**, and the reason is the lane's most useful output: wiring the producer into `creal/ring_helpers.rs` produced a genuine `Decline::NotAnIdentity` inside the prelude build, invisible to the unit tests, and the lane reverted rather than ship it. (ADR-1599.) | `a3f4f528c`; `ring::` 74, `decide::` 47 passed |
 
 ## How to re-measure
 

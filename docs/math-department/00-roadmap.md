@@ -87,7 +87,7 @@ Everything here can start today. Ordered by convergence count, then by yield.
 | W1-2 | Fundamental theorem of calculus | 02.1 | **landed** `182d0dd7d` | **The item was based on a false absence: both directions were proved 2026-08-27**, before the review that asked for them. What landed is the `_of_uc` pair with the redundant boundedness witness removed (arity 7→5 and 9→7), and the finding that **W2-20 is not a prerequisite** — FTC-II routes through `constant_of_zero_deriv` and the modulus's uniformity replaces the MVT's asserted point. Root cause of the false absence: ADR-1605. |
 | W1-3 | Name the universal properties already proved | 09.1 | not started | Nearly free. `Int.Characterization.categorical` as an initial-object property, Peano as a natural-numbers object. |
 | W1-4 | Landmark count beside the total | 12.3 | **landed** `8b4f277d4` | `scripts/count-landmark-facts.py`, registered in `check.sh` and the justfile with its own control suite. **2,487 proved, 1,432 landmark (57.6%).** Rule: proved, and the title is not `[generated]`. |
-| W1-5 | Extend `ring` and `decide` to ℝ | 11.2 | not started | The `linarith`-over-`AlgS.OrderedRing` generalization, repeated. Every producer reaching a carrier retires hand proofs above it. |
+| W1-5 | Extend `ring` and `decide` to ℝ | 11.2 | **landed** `a3f4f528c` | `ring::generic` extended (not forked) with the same `Backend` shape `linarith` used; **six goal shapes proved at `CReal.commRingS`** that were unreachable before, plus a corrupted-certificate battery where the *kernel* refuses with the producer's own check disabled. **`decide` cannot reach ℝ**, and the reason is measured: `CReal.Equiv`/`le`/`lt` are quantifier-headed, and no apartness-witness definition exists to give it a decidable fragment. **Zero retirements**: wiring it into `creal/ring_helpers.rs` produced a real `Decline::NotAnIdentity` in the prelude build and the lane reverted rather than ship it — the "a producer cannot retire its own primitives" trap, confirmed at cost (ADR-1599). |
 | W1-6 | A graph carrier | 07.2 | not started | Decidable adjacency on a bounded vertex range, sibling of `Nat.Finset`. Gate on most of combinatorics. |
 | W1-7 | Structure of (ℤ/n)\* and primitive roots | 01.1 | **landed** `a9ef9465d` | 11 declarations in `int_prelude/mult_order.rs`, footprint 0: multiplicative order, order divides the totient, `pow ≡ 1 ↔ order ∣ k`, primitive roots, power injectivity (ADR-1598). **Existence mod a prime did not land**, and the obstruction is named: `∑_{d∣n} φ(d) = n` needs a divisor-set aggregate and the `d ↦ n/d` reindexing of a predicate-restricted sum, which does not exist. |
 | W1-8 | Angle measure; laws of sines and cosines | 05.1 | not started | Connect analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. The library has trigonometry and geometry and they do not touch. |
@@ -164,19 +164,23 @@ One row per wave. Update when something lands, then append to the history log.
 | wave | items | not started | in progress | landed |
 |---|---|---|---|---|
 | W0 — decisions | 4 | 0 | 2 | **2** |
-| W1 — unblocked | 13 | 8 | 2 | **3** |
+| W1 — unblocked | 13 | 8 | 1 | **4** |
 | W2 — carriers | 21 | 20 | 1 | **1** ⁽ᵃ⁾ |
 | W3 — large shelves | 13 | 13 | 0 | 0 |
-| **total** | **51** | **41** | **5** | **6** |
+| **total** | **51** | **41** | **4** | **6** |
 
 ⁽ᵃ⁾ W2-1 is in progress inside the W0-3 lane, which builds the metric carrier
 to decide the topology design.
 
 In progress, 2026-09-04: W0-2 with W1-9 (classical-axiom policy, decided by
 extending the reverse-mathematics map), W0-3 with W2-1 (topology design,
-decided by building a metric carrier), W1-1 (Rado), W1-5 (producers to ℝ).
-Also running: an audit of every absence claim in the twelve persona files,
-after two were shown false.
+decided by building a metric carrier), W1-1 (Rado). Also running: an audit of
+every absence claim in the twelve persona files, after two were shown false.
+
+**A new W1 item the W1-5 lane's failure identified:** a `CReal` apartness or
+witnessed-separation definition, without which `decide` has no decidable
+fragment over ℝ at all. Not yet numbered; it is new mathematics, not a
+producer change.
 
 **A standing correction to how this roadmap is read.** Two of the sixty source
 items were premised on things that already existed — the probability shelf and
@@ -218,6 +222,7 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `a3f4f528c` | **W1-5 landed.** `ring` reaches `CReal.commRingS` (6 goal shapes, kernel-refused corruptions); `decide` cannot, with the reason measured; zero retirements after a real prelude-build decline was reverted rather than shipped. `ring::` 74, `decide::` 47, `creal::creal_tests` 140 passed. |
 | 2026-09-04 | `182d0dd7d` | **W1-2 landed, and the item was based on a false absence.** The FTC was proved 2026-08-27. The `_of_uc` forms landed; W2-20 is not its prerequisite. `creal::` 230 passed. Root cause measured at 38% of the ledger; ADR-1605 proposes the fix and an audit of all twelve files is running. |
 
 ## How to update this file

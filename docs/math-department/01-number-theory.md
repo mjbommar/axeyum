@@ -100,7 +100,7 @@ great deal of that left.
 
 ## Next five, in their priority order
 
-- [ ] **1. The structure of (ℤ/n)\* and primitive roots.** Elementary,
+- [x] **1. The structure of (ℤ/n)\* and primitive roots.** *Landed 2026-09-04 except existence mod a prime; see the progress log.* Elementary,
       self-contained, reachable with the existing `ModEq` machinery, and the
       natural companion to Fermat and Euler. Their view: the most conspicuous
       hole in an otherwise complete elementary shelf.
