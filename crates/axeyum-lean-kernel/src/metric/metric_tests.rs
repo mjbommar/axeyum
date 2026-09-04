@@ -106,6 +106,9 @@ fn all_declarations(p: MetricPrelude) -> Vec<(String, crate::name::NameId)> {
     for (label, name) in p.compactness.all() {
         out.push((label.to_string(), name));
     }
+    for (label, name) in p.interval.all() {
+        out.push((label.to_string(), name));
+    }
     out
 }
 
@@ -171,6 +174,17 @@ fn the_compactness_names_are_distinct_and_counted() {
     assert_eq!(distinct.len(), all.len(), "two compactness names collided");
 }
 
+/// The same, for the interval instance.
+#[test]
+fn the_interval_names_are_distinct_and_counted() {
+    let (_kernel, p) = built();
+    let all = p.interval.all();
+    assert_eq!(all.len(), 10, "update this count deliberately");
+    let distinct: std::collections::BTreeSet<crate::name::NameId> =
+        all.iter().map(|(_, n)| *n).collect();
+    assert_eq!(distinct.len(), all.len(), "two interval names collided");
+}
+
 /// Everything declared here is present, and nothing is an `Axiom` or an
 /// `Opaque`.
 #[test]
@@ -179,7 +193,7 @@ fn every_metric_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        37 + FIELD_COUNT + 15 + 19,
+        37 + FIELD_COUNT + 15 + 19 + 10,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
@@ -1356,4 +1370,82 @@ fn w2_3_compactness_types_render() {
         _ => panic!("Metric.Compact must be a definition"),
     };
     println!("Metric.Compact : {}", kernel.render_lean(ty));
+}
+
+// ---------------------------------------------------------------------------
+// The instance claim, as a measurement.
+// ---------------------------------------------------------------------------
+
+/// **`CReal.evt_approx_max` IS an instance of `Metric.evt_approx_max`.**
+///
+/// `Metric.creal_evt_approx_max` reaches the statement through `CReal.supOn`
+/// (it is `CReal.evt_approx_max` plus `And` bookkeeping);
+/// `Metric.creal_evt_approx_max_via_metric` reaches the same statement through
+/// the general metric theorem, applied to
+/// `Metric.creal_totallyBoundedOn_interval` and
+/// `Metric.creal_uniformly_continuous_on`. Their `ty` fields are built
+/// independently in two different modules, so asserting the kernel holds one
+/// and the same `ExprId` for both is the whole claim: not "two similar
+/// statements", one statement with two proofs.
+#[test]
+fn the_interval_evt_is_the_metric_evt_at_one_type() {
+    let (kernel, p) = built();
+    let ty_of = |name| match kernel.environment().get(name) {
+        Some(Declaration::Theorem { ty, .. }) => *ty,
+        _ => panic!("expected a theorem"),
+    };
+    let direct = ty_of(p.compactness.creal_evt_approx_max);
+    let via = ty_of(p.interval.creal_evt_approx_max_via_metric);
+    println!(
+        "Metric.creal_evt_approx_max : {}",
+        kernel.render_lean(direct)
+    );
+    assert_eq!(
+        direct,
+        via,
+        "the two EVT routes do not land on the same statement:\n  direct: {}\n  via:    {}",
+        kernel.render_lean(direct),
+        kernel.render_lean(via)
+    );
+
+    // Control: the assertion above is not vacuous, i.e. `ExprId` equality is
+    // a real discrimination between two theorems in this environment.
+    let other = ty_of(p.compactness.evt_approx_max);
+    assert_ne!(
+        direct, other,
+        "control: the general and the interval EVT must NOT share a type"
+    );
+}
+
+/// The interval statements, rendered.
+#[test]
+fn w2_3_interval_types_render() {
+    let (kernel, p) = built();
+    for (label, name) in p.interval.all() {
+        let decl = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{label} must be declared"));
+        let ty = match decl {
+            Declaration::Theorem { ty, .. } | Declaration::Definition { ty, .. } => *ty,
+            _ => panic!("{label} is not a term declaration"),
+        };
+        println!("{label} : {}", kernel.render_lean(ty));
+    }
+
+    let compact = kernel
+        .environment()
+        .get(p.interval.creal_compact_on_interval)
+        .expect("declared");
+    let ty = match compact {
+        Declaration::Theorem { ty, .. } => *ty,
+        _ => panic!("Metric.creal_compactOn_interval must be a theorem"),
+    };
+    let rendered = kernel.render_lean(ty);
+    for needle in ["Metric.CompactOn", "Metric.creal", "Metric.Interval"] {
+        assert!(
+            rendered.contains(needle),
+            "Metric.creal_compactOn_interval's type must mention {needle}: {rendered}"
+        );
+    }
 }

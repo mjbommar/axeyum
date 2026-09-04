@@ -86,9 +86,11 @@ use crate::nat_prelude::structures::{
 
 pub mod compactness;
 pub mod continuity;
+pub mod interval;
 
 pub use compactness::CompactnessNames;
 pub use continuity::ContinuityNames;
+pub use interval::IntervalNames;
 
 // ---------------------------------------------------------------------------
 // Field indices. Fixed across the record; index a field through these, never
@@ -519,6 +521,8 @@ pub struct MetricPrelude {
     pub continuity: ContinuityNames,
     /// The W2-3 compactness layer (`metric/compactness.rs`).
     pub compactness: CompactnessNames,
+    /// The W2-3 interval instance (`metric/interval.rs`).
+    pub interval: IntervalNames,
 }
 
 // ---------------------------------------------------------------------------
@@ -601,6 +605,7 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
         cpoint_dist_reduces: kernel.name_str(metric, "cpoint_dist"),
         continuity: continuity::intern(kernel, metric),
         compactness: compactness::intern(kernel, metric),
+        interval: interval::intern(kernel, metric),
     }
 }
 
@@ -690,6 +695,7 @@ pub fn build_metric_prelude(kernel: &mut Kernel) -> Result<MetricPrelude, Kernel
 
     continuity::declare_all(&mut d, creal, p)?;
     compactness::declare_all(&mut d, creal, p)?;
+    interval::declare_all(&mut d, creal, p)?;
 
     Ok(p)
 }
