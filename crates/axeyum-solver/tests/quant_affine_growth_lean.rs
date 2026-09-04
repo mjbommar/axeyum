@@ -83,7 +83,7 @@ fn repair_const_nterm_reconstructs_and_routes() {
     // "permutation or not" in one command, far cheaper than the bisect the
     // delta invites -- and three runs first, since a same-length hash change
     // is also what a nondeterministic render would produce.
-    lean_golden::assert_golden_module("affine-growth", &source, (206_098, 0x5461_2084_4696_0550));
+    lean_golden::assert_golden_module("affine-growth", &source, (279_531, 0x191f_62fa_207f_ea53));
     assert!(source.contains("theorem axeyum_refutation : False"));
     assert!(source.contains("euclidean_decomposition"));
     assert!(!source.contains("sorryAx"));

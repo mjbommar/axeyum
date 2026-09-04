@@ -102,7 +102,7 @@ fn two_x_eq_one_reconstructs_to_false() {
     // Worth knowing for the next mover: a `+0 bytes` delta on this pin is the
     // signature of a reordering, not an edit. Diff two dumps before assuming a
     // proof changed; `sort | cmp` answers "permutation or not" in one command.
-    lean_golden::assert_golden_module("diophantine", &source, (232_150, 0xa19c_c777_e9d8_eddb));
+    lean_golden::assert_golden_module("diophantine", &source, (271_840, 0x9ff8_fb93_82fa_fe8d));
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
         ProofFragment::Diophantine

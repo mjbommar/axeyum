@@ -94,7 +94,7 @@ fn committed_clock_rows_reconstruct_and_route() {
             lean_golden::assert_golden_module(
                 "euclidean-residue",
                 &source,
-                (123_639, 0xbaa1_9475_52ff_e45b),
+                (197_072, 0x498f_6e96_a8fa_6066),
             );
         }
         assert!(source.contains("theorem axeyum_refutation : False"));
