@@ -72,6 +72,7 @@ mod lean_pp;
 mod level;
 pub mod linarith;
 mod list_prelude;
+mod metric;
 mod name;
 mod nat_prelude;
 mod prelude;
@@ -128,6 +129,14 @@ pub use level::{LevelId, LevelNode};
 pub use list_prelude::{
     ListNatBridge, ListPerm, ListPrelude, build_list_nat_bridge, build_list_perm,
     build_list_prelude,
+};
+pub use metric::{
+    CARRIER as METRIC_CARRIER, DIST as METRIC_DIST, DIST_COMM as METRIC_DIST_COMM,
+    DIST_CONGR as METRIC_DIST_CONGR, DIST_EQUIV as METRIC_DIST_EQUIV,
+    DIST_NONNEG as METRIC_DIST_NONNEG, DIST_SELF as METRIC_DIST_SELF,
+    DIST_TRIANGLE as METRIC_DIST_TRIANGLE, EQUIV as METRIC_EQUIV, EQUIV_REFL as METRIC_EQUIV_REFL,
+    EQUIV_SYMM as METRIC_EQUIV_SYMM, EQUIV_TRANS as METRIC_EQUIV_TRANS,
+    FIELD_COUNT as METRIC_FIELD_COUNT, MetricPrelude, build_metric_prelude,
 };
 pub use name::{NameId, NameNode};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
