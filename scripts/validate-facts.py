@@ -80,6 +80,12 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # instances), declared under a fresh `Metric` root -- added 2026-09-04 and
 # verified against `kernel_declaration_projection`'s new `metric` label, which
 # reports `found metric theorem Metric.creal_complete 0`.
+# `IntSpace` is ADR-1612's constructive pre-integration space (a sixteen-field
+# record whose `integral` field takes a `Sort 1` integrability datum, plus the
+# `IntSpace.CReal.*` statements its instances buy back on the reals and the
+# `IntSpace.Triv` integrability datum of the finite and Dirac instances),
+# declared under a fresh `IntSpace` root -- added 2026-09-04 and verified
+# against `kernel_declaration_projection`'s new `intspace` label.
 #
 # The logic prelude also declares undotted names (bare identifiers), allowed
 # by a separate LOGIC_UNDOTTED set. Widening to accept any bare identifier
@@ -88,7 +94,7 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # declarations the kernel admits.
 KERNEL_THEOREM_RE = re.compile(
     r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|AlgS|"
-    r"And|Decidable|Eq|Iff|Or|Metric|"
+    r"And|Decidable|Eq|Iff|Or|Metric|IntSpace|"
     r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )

@@ -160,6 +160,9 @@ now. Nothing was deleted.
 | 2026-09-04 | computability | ADR-1611: the model choice, the rejected register-machine front end and deferred `Nat.Partrec.Code`, and the Cantor-connection attempt that did not land as a literal function call (`d7ddb833e`) |
 | 2026-09-04 | computability | `F:nat-rm-self-halting-not-decidable` fact registered, curated; `frontier-shape-census.py` re-run (`e942c9aee`) |
 | 2026-09-04 | universal-properties | `Nat.Peano.initial` / `Int.Characterization.initial` added, 34 axiom-free entries, 24 mutation-verified defects, ADR-1610, template doc, 2 curated facts |
+| 2026-09-04 | integration-space | `IntSpace` record (16 fields), generic layer, measure layer, convergence graded family, `crealInterval` + `crealFinite` instances — `63c9a000d` |
+| 2026-09-04 | integration-space | detachable subsets, counting measure, the Dirac probability space — `9d47af7e4` |
+| 2026-09-04 | integration-space | ADR-1612, three facts, `IntSpace.CReal.uniformly_continuous_abs`, `shape_search`/`kernel_declaration_projection`/`validate-facts` taught the `intspace` group |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -42325,6 +42328,75 @@ pre-existing, unrelated host gap: `axeyum-py` fails to link for
 15 allowlisted groups, no new unadjudicated one; `gen-adr-index.py` and
 `gen-plan.py` regenerated and committed; `check-merge-hygiene.sh` clean
 after regenerating PLAN.md and the production-provenance ledger.
+
+**Your lane's block (`landed`, integration-space, 2026-09-04).** W3-1 tested by
+building it. **70 declarations** in a new `IntSpace` namespace, every axiom
+footprint empty, 14 tests green in 79 s.
+[ADR-1612](docs/research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md),
+Proposed.
+
+**The brief's own deciding metric returns a small number, and the ADR says so.**
+It asked how many existing `CReal.integral` theorems become instances of a
+general statement rather than needing reproof. Partitioning all 63 declarations
+in `creal/integral.rs`: **5 became the record's AXIOMS**, **1 was re-derived**
+(`integral_witness_independent`, verified by a test that renders both types and
+requires them EQUAL), 3 are blocked on two more fields, 14 relate several
+integration spaces at once or vary the endpoint, and 40 are Riemann-sum
+construction. **1 of 63 — but 1 of 6**, six being the declarations that are
+statements about the integral as a linear functional at all. A record whose
+axioms are taken from what a development proves cannot then re-derive what it
+took.
+
+**What justifies integral-first is the other direction**: three instances
+sharing no machinery (`crealInterval` the Riemann integral, `crealFinite`
+`CReal.sumRange` over a finite index set, `crealDirac` a probability space with
+`total = 1`); five theorems that are NEW on ℝ, the head of them a congruence
+`CReal.integral_le` never got; the same five landing on `CReal.sumRange` at zero
+marginal cost; and measure defined from the integral with its two bounds proved
+generically.
+
+**Predicativity is adopted as a fourth design constraint** beside setoids
+(ADR-1595), hypotheses-not-axioms (ADR-1601) and metric-first (ADR-1602). What
+was built is a Petrakis–Zeuner *pre-integration space* (arXiv:2207.08684), not a
+Bishop–Cheng integration space — reached by the "axioms from what the integral
+proves" discipline before the paper was read, so the switching cost was **zero**.
+
+**Three findings for whoever takes W3-1 next.**
+
+1. **L¹ is blocked on `Sigma`, not on measure theory.** The L¹ pseudometric
+   would be a `Metric` instance and would reuse all five of `Metric`'s
+   completion statements — except `Metric.dist` is total and integrability is
+   `Sort 1` data that `Sigma`'s absence forbids bundling into the carrier. That
+   is the **third** independent shelf blocked by that one absence (quotients in
+   ADR-1595, bundling an integrable set here, now L¹). Reuse of the completion
+   CONSTRUCTION is 0/78 regardless: this kernel has no completion functor, so
+   `CReal` is the only completion and it is hand-built.
+2. **A blocker this lane wrote down was refuted by its own tool.**
+   `uniformly_continuous_abs` has no NAME in the 542-entry `CRealPrelude` field
+   list, and a draft of the ADR called it the one lemma blocking L¹.
+   `shape_search --concl CReal.UniformlyContinuousOn` found
+   `uniformly_continuous_max` and `_min` in `creal/ivt_boundary.rs`; `CReal.abs`
+   is `max x (neg x)` by definition; the composition is now
+   `IntSpace.CReal.uniformly_continuous_abs`. Search for the STEP.
+3. **A handle-derived declaration list is still not the authority.**
+   `all_declarations` was derived from `IntSpacePrelude` and `RecordNames` and
+   still missed `IntSpace.Triv.rec`, an auto-generated recursor —
+   `shape_search --ns IntSpace` said 70 against the list's 69. Fixed by
+   `every_live_intspace_declaration_is_listed`, which enumerates
+   `kernel.environment()`.
+
+**Not landed, and named rather than hidden**: the ADR-0603 boundary refutation
+for monotone convergence (needs a pointwise-`Equiv` congruence for
+`CReal.Converges`, absent); dominated convergence; `|·|` and negation on the
+carrier, which would move the three `integral_abs_le*` theorems from "blocked"
+to "instance" and needs `CReal.neg (mul x y) ~ mul (neg x) y`, absent under any
+name; and the ℚ↔ℝ probability bridge (`Rat.expectation` is normalised,
+`crealFinite`'s integral is not).
+
+**Reviewer 03 should stay "unmoved" until the completion lands**, and the ADR
+says so. Reviewer 08 is unblocked now: a finite index set is an integration
+space, a point mass is one, and a detachable subset of a finite index set is an
+integrable set.
 
 **ADR-0512 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
 now reconstructs over `CReal`, and the closed `False` rests on ZERO carrier

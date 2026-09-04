@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "id": "F:intspace-monotone-convergence-on-a-hypothesis",
+  "title": "Monotone convergence of integrals, with the classical principle as an explicit hypothesis",
+  "statement": "For any integration space S: if every bounded monotone sequence of reals converges (`IntSpace.RealMonotoneConvergence`, taken as a HYPOTHESIS and never asserted), then the integrals of a monotone sequence of integrable functions bounded above by an integrable function converge. This is the classical member of an ADR-0603 graded statement family. The constructive members are proved outright and unconditionally: `IntSpace.integral_mono_step` (the integrals increase) and `IntSpace.integral_seq_le` (they are bounded by the integral of the dominating function), each one application of the record's integralLe field. The whole gap between the constructive and classical members is a statement about the reals and not about integration -- a bounded monotone real sequence need not converge, which is of LPO strength -- so the principle enters ADR-1601's way, as a binder in the type, keeping the axiom footprint empty. Measured cost of carrying it: ONE binder and one argument position, no new obligation, matching ADR-1601's own ten-theorem measurement. The family's boundary member -- that unrestricted monotone convergence on a space of total mass one IMPLIES the real principle -- is NOT proved, and its obstruction is named rather than hidden: transporting CReal.Converges along a POINTWISE Equiv between two sequences needs a congruence the real prelude does not have (converges_of_equiv is about a fixed target, converges_of_close about raw samples, converges_unique about two limits of one sequence).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem IntSpace.monotone_convergence_of_real : ((x0 : IntSpace) -> ((x1 : IntSpace.RealMonotoneConvergence) -> IntSpace.MonotoneConvergence x0))",
+    "fragment": "IntSpace",
+    "kernel_theorem": "IntSpace.monotone_convergence_of_real",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:intspace-integral-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-IntSpace.monotone_convergence_of_real",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.monotone_convergence_of_real",
+      "supports": "The classical member is admitted with an EMPTY axiom footprint, which is the whole point of the hypothesis route: the principle is a Prop in the type, not an axiom in the environment. IntSpace.RealMonotoneConvergence is itself in the same footprint sweep and is likewise a Definition, never an Axiom.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_intspace_declaration_is_axiom_free 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "The companion test every_intspace_declaration_is_present_and_derived additionally refuses any Axiom or Opaque declaration in the namespace, so RealMonotoneConvergence cannot be quietly promoted to an axiom later without a red gate."
+    },
+    {
+      "id": "the-hypothesis-is-in-the-type",
+      "kind": "kernel-term",
+      "supports": "The classical principle is carried in the STATEMENT, checkably: the rendered type of monotone_convergence_of_real is asserted to contain IntSpace.RealMonotoneConvergence. A version that had discharged the principle silently, or asserted it elsewhere, would fail this.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::intspace_headline_types_render"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::intspace_headline_types_render 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "This is the check that distinguishes ADR-1601's route from an axiom: the cost has to be visible in the type of every consumer, and here it is asserted rather than described."
+    },
+    {
+      "id": "the-constructive-members-are-unconditional",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.integral_mono_step",
+      "supports": "The two constructive members of the graded family carry no hypothesis about the reals at all and are admitted with empty footprints, so the family really is graded rather than uniformly classical.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_intspace_declaration_is_present_and_derived 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "integral_mono_step and integral_seq_le are both in the pinned declaration list, whose size (54 + FIELD_COUNT) is asserted, so dropping either is a failure and not a smaller sweep."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel intspace::convergence module (integration-space lane, roadmap W3-1)",
+    "source": "The two constructive halves come from the IntSpace record's integralLe field; the classical member feeds them to the hypothesis. See docs/research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md and ADR-1601 for the route."
+  },
+  "notes": "WHY THIS FACT EXISTS. Reviewer 03 asks for the convergence theorems and reaches for excluded middle without noticing; reviewer 08 needs the limit theorems. This is the first convergence theorem about integrals in the library, and it is graded rather than either refused or silently classicalised. NOT CLAIMED: dominated convergence, which needs a dominating-function apparatus this record does not carry; and the boundary refutation, whose obstruction is one missing CReal lemma named in the module documentation and the ADR. Recording an unfinished family member as unfinished is the ADR-0603 discipline."
+}

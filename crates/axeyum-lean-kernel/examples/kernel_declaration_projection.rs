@@ -39,7 +39,7 @@
 //!   -- --require-declaration CReal.integral --require-kind definition
 //! ```
 //!
-//! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`/`metric`,
+//! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`/`metric`/`intspace`,
 //! which recurse deep enough to overflow the default debug thread stack (the
 //! deep-stack worker in `main` below covers the MAIN thread's frame, not
 //! debug-vs-release per-frame size).
@@ -48,9 +48,9 @@ use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
-    build_list_nat_bridge, build_list_perm, build_logic_prelude, build_metric_prelude,
-    build_nat_prelude, build_rat_prelude, build_string_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_intspace_prelude,
+    build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm, build_logic_prelude,
+    build_metric_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -272,8 +272,13 @@ fn run() -> ExitCode {
     // confident "no declaration named ..." for all 49 of them.
     let mut metric = Kernel::new();
     let _ = build_metric_prelude(&mut metric).expect("Metric prelude must build");
+    // `IntSpace.*` (ADR-1612), the pre-integration space, its three instances
+    // and the measure layer derived from the integral.
+    let mut intspace = Kernel::new();
+    let _ = build_intspace_prelude(&mut intspace).expect("IntSpace prelude must build");
     if unfiltered {
         emit("metric", &metric);
+        emit("intspace", &intspace);
     }
 
     // The IPC package, and it is the reason this example is not "every prelude"
@@ -321,6 +326,7 @@ fn run() -> ExitCode {
         ("complex", &complex),
         ("cpoint", &cpoint),
         ("metric", &metric),
+        ("intspace", &intspace),
         ("ipc", &ipc),
     ]
     .into_iter()

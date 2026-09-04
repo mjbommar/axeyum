@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2284,
+    "min_identity_bound": 2287,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -9824,6 +9824,27 @@
       "statement_sha256": "bc0177b3e98c5010978863be8bf81399a0b59cee3eb1dcff57630dbf15ff8074",
       "prose_sha256": "0a77d5b6273e6ca2dca74f4e6878fb89bfd209c9fe13fa9c2d1ae4ad36a2fc09",
       "kernel_theorem": "Int.zero_subNatNat"
+    },
+    {
+      "fact_id": "F:intspace-integral-congr",
+      "language": "lean4",
+      "statement_sha256": "c8f8b595329c76d6fbd8ab1e8dc8a7d5d3aea5bdf60576b3dc9b8efe05697a92",
+      "prose_sha256": "49530d2a4342d0d3f1a9fa9eaa41b79fb33d0a276953893af1a8389c52b70904",
+      "kernel_theorem": "IntSpace.integral_congr"
+    },
+    {
+      "fact_id": "F:intspace-measure-derived-from-integral",
+      "language": "lean4",
+      "statement_sha256": "1ded3ca6ec7d2bf80d37795702aa5fc5d22d4b186d082067ba204ced5409fd0a",
+      "prose_sha256": "361f88e2381c214e18a2266a8548ce5f4b68e9c020c2ddf8741fd1d43bd457e9",
+      "kernel_theorem": "IntSpace.measure_nonneg"
+    },
+    {
+      "fact_id": "F:intspace-monotone-convergence-on-a-hypothesis",
+      "language": "lean4",
+      "statement_sha256": "c4fd24ced8f94285987c1186844a7e8ab1ba0c5560c298d43eaca380ba76004f",
+      "prose_sha256": "9362a67d4ba499f469e046dd3564df5eb3170ac882f0d9e2cd407af0affe0903",
+      "kernel_theorem": "IntSpace.monotone_convergence_of_real"
     },
     {
       "fact_id": "F:ivt-mathlib-import-intermediate-value-icc",

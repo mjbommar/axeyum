@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:intspace-measure-derived-from-integral",
+  "title": "Measure is derived from the integral, and its two bounds hold in every integration space",
+  "statement": "The measure of a set is DEFINED as the integral of its indicator, where that indicator is integrable: `IntSpace.measure S chi h := S.integral chi h`, with h the set-indexed integrability datum. There is no sigma-algebra, no measurable-set predicate and no measure as primitive data anywhere in the development. The two bounds a measure must satisfy are then theorems rather than axioms: `0 <= mu(A)` and `mu(A) <= mu(whole space)`, each from the generic monotonicity of the integral. `IntSpace.Indicator S chi` is the LOCATED condition `0 <= chi <= 1`, deliberately not idempotence `chi*chi ~ chi`: over the constructive reals a vanishing product does not decide which factor vanished, so idempotence does not deliver a two-valued function and would claim more than it gives. Because the integrability datum lives in Sort 1 (CReal.UniformlyContinuousOn is a Type whose modulus the integral consumes) and this kernel has no Sigma or Subtype, an integrable set is carried as a datum plus a Prop side condition rather than bundled into one object; the measured cost is one extra binder per theorem. A third theorem, `measure_witness_independent`, is what makes `the measure of the set` well defined at all: the value does not depend on WHICH integrability datum witnesses it. On a classical development that is not even a statement.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem IntSpace.measure_nonneg : ((x0 : IntSpace) -> ((x1 : IntSpace.carrier x0) -> ((x2 : IntSpace.Integrable x0 x1) -> ((x3 : IntSpace.Indicator x0 x1) -> CReal.le CReal.zero (IntSpace.measure x0 x1 x2)))))",
+    "fragment": "IntSpace",
+    "kernel_theorem": "IntSpace.measure_nonneg",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:intspace-integral-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-IntSpace.measure_nonneg",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.measure_nonneg",
+      "supports": "The measure layer -- measure, Indicator, measure_nonneg, measure_le_total, measure_witness_independent, measure_const, indicator_univ, measure_univ -- is admitted with empty axiom footprints.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_intspace_declaration_is_axiom_free 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "The declaration list is derived from the IntSpacePrelude handle, so the sweep cannot silently omit a member of the measure layer."
+    },
+    {
+      "id": "measure-really-unfolds-to-the-integral",
+      "kind": "kernel-term",
+      "supports": "The definitional claim is checked rather than described: a Check theorem whose type is `Equiv (measure S chi h) (S.integral chi h)` at SYMBOLIC S, chi and h is admitted by CReal.Equiv.refl, so `measure` unfolds to the integral and to nothing else.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::measure_unfolds_to_the_integral"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::measure_unfolds_to_the_integral 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "Stated on symbolic arguments deliberately. A concrete-numeral probe on CReal is vacuous because numerals compute, so it would pass whatever the definition said."
+    },
+    {
+      "id": "measure-direction-is-load-bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "The direction of the bound is load-bearing: `0 <= integral f` is admitted and the REVERSED conclusion `integral f <= 0` from the same proof term is REFUSED, both in one test.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::integral_nonneg_direction_is_load_bearing"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::integral_nonneg_direction_is_load_bearing 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "measure_nonneg is integral_nonneg composed with And.left, so the control on integral_nonneg's direction is the control on this fact's direction."
+    },
+    {
+      "id": "measure-has-non-trivial-sets-detachable",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.detachable_is_indicator",
+      "supports": "The measure layer is not vacuous: EVERY detachable subset of a finite index set (a Nat -> Bool) is an integrable set of IntSpace.crealFinite, with IntSpace.Triv.mk as its datum, and the Dirac measure of one computes by CReal.Equiv.refl. Without this the Indicator predicate could have been satisfied only by constants.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::detachable_and_dirac_types_render",
+        "intspace_tests::bool_indicator_evaluates_and_the_crossed_pairing_is_refused"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::bool_indicator_evaluates_and_the_crossed_pairing_is_refused 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "The evaluation test checks BOTH branches of boolIndicator AND both crossed pairings in one test, so it cannot pass vacuously through a branch that always returns the same value."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel intspace::measure and intspace::detachable modules (integration-space lane, roadmap W3-1)",
+    "source": "Derived from the IntSpace record's integralLe and integralConst fields. Design, and the predicativity constraint it is built under, in docs/research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md."
+  },
+  "notes": "WHY THIS FACT EXISTS. W3-1 (measure and the Lebesgue integral) is the department's largest shelf and reviewers 03 and 08 are blocked behind it. This is the inversion that shelf is being built on: measure is derived, not primitive. The honest boundary is recorded in ADR-1612 and not here: the integrable sets of the INTERVAL instance are trivial, because an integrable set there needs a uniformly continuous indicator and a uniformly continuous two-valued function on a connected interval is constant. The non-trivial content lives on the finite and Dirac instances until L1 -- the completion -- exists, and the two things blocking that completion are measured in the ADR (Sigma/Subtype, and a generic metric-completion construction)."
+}

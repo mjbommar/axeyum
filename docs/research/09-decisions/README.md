@@ -892,3 +892,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1609](adr-1609-polynomials-modules-and-subgroups-over-the-setoid-spine.md) | polynomial rings, modules and subgroups over the setoid spine | proposed |
 | [1610](adr-1610-name-the-universal-properties.md) | name the universal properties, do not build a category theory library | accepted |
 | [1611](adr-1611-a-computability-layer-and-the-halting-problem.md) | a computability layer, and connecting Cantor to undecidability | accepted |
+| [1612](adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md) | the integral is primitive and measure is derived, on a predicative pre-integration space | proposed |

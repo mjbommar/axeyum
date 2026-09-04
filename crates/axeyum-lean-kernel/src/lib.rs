@@ -63,6 +63,7 @@ mod env;
 mod expr;
 mod inductive;
 mod int_prelude;
+mod intspace;
 mod ipc_eval;
 mod ipc_heyting;
 mod ipc_provable;
@@ -113,6 +114,16 @@ pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
+pub use intspace::{
+    CARRIER as INTSPACE_CARRIER, CONST_INTEGRABLE as INTSPACE_CONST_INTEGRABLE,
+    CONST_MONO as INTSPACE_CONST_MONO, FADD as INTSPACE_FADD, FCONST as INTSPACE_FCONST,
+    FIELD_COUNT as INTSPACE_FIELD_COUNT, FLE as INTSPACE_FLE, FLE_REFL as INTSPACE_FLE_REFL,
+    FLE_TRANS as INTSPACE_FLE_TRANS, FSCALE as INTSPACE_FSCALE, INTEGRABLE as INTSPACE_INTEGRABLE,
+    INTEGRAL as INTSPACE_INTEGRAL, INTEGRAL_ADD as INTSPACE_INTEGRAL_ADD,
+    INTEGRAL_CONST as INTSPACE_INTEGRAL_CONST, INTEGRAL_LE as INTSPACE_INTEGRAL_LE,
+    INTEGRAL_SCALE as INTSPACE_INTEGRAL_SCALE, IntSpacePrelude, TOTAL as INTSPACE_TOTAL,
+    build_intspace_prelude,
+};
 pub use ipc_eval::{IpcEvalPrelude, build_ipc_eval_prelude};
 pub use ipc_heyting::{
     IpcHeytingPrelude, NatPreludeHandle, build_ipc_heyting_prelude, pem_instance,
