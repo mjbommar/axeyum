@@ -82,3 +82,4 @@ Lean's. Not decided here; `check-lean-gate.sh` is not in the push hook.
 | 2026-09-03 | coordinator | `.cargo/config.toml` sizes every test thread at 16 MiB; the debug `rat_prelude::` sweep no longer aborts (273 passed) |
 | 2026-09-03 | coordinator | `lean-toolchain` -> v4.34.0-rc1 (ADR-1594); seven suites read the pin instead of a literal; ADR-0517 amended: the elaborator refuses the `def` spelling too, on both Leans |
 | 2026-09-04 | coordinator | `docs/math-department/`: twelve persona reviews of the library, one per field, each with a measured baseline, a Next Five and a progress log |
+| 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |

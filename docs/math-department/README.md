@@ -27,6 +27,11 @@ field who has just read the ledger and the kernel's axiom footprints. They
 are allowed to be harsh. A file whose verdict is entirely favourable is
 probably not doing its job.
 
+**Start with [the roadmap](00-roadmap.md)** if you want the synthesis: the
+sixty Next Five items across all twelve files, collapsed to 51 distinct items
+in four waves, with the seven convergence points where independent reviewers
+asked for the same thing, a status board, and a history log.
+
 ## The reviewers
 
 | # | File | Field | Verdict, 2026-09-04 |
