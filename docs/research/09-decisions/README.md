@@ -880,4 +880,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1593](adr-1593-the-pigeonhole-is-the-bijection-law-with-its-inverse-deleted.md) | the pigeonhole principle is the bijection law with its inverse deleted, and the colliding pair is computed rather than extracted | Accepted |
 | [1594](adr-1594-the-crosscheck-pin-moves-to-lean-4-34-0-rc1-and-follows-the-pin-file.md) | the crosscheck pin moves to Lean 4.34.0-rc1, and the suites follow the pin file instead of carrying literals | Accepted |
 | [1595](adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md) | quotients stay setoids; `Quot.sound` stays out of the kernel | proposed |
+| [1598](adr-1598-the-multiplicative-order-is-a-predicate-picked-out-by-bounded-search.md) | The multiplicative order is a predicate picked out by bounded search, not a computed function | accepted |
 | [1600](adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md) | the kernel's metatheoretic status — what is trusted, what is checked, and what is not | accepted |

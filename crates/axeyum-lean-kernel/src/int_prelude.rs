@@ -111,6 +111,7 @@ mod modeq;
 mod modeq_cancel_div_gcd;
 mod modeq_family;
 mod modinv;
+mod mult_order;
 mod nat_abs;
 mod nat_abs_mirrors;
 pub(crate) mod ops;
@@ -1915,6 +1916,58 @@ pub struct IntPrelude {
     /// ModEq (ofNat n) (pow a (totient n)) one` -- Euler's totient theorem
     /// (`euler_assembly.rs`).
     pub euler_totient_theorem: NameId,
+
+    // --- the multiplicative order and primitive roots (`mult_order.rs`) -----
+    // Roadmap item W1-7 / ADR-1598. Nothing here needs a quotient carrier:
+    // `Int.ModEq` is an explicit relation and the order is a `Nat` picked out
+    // by `Nat.lnp_bounded_search`.
+    /// `Int.one_pow : ∀ (k : Nat), Eq Int (pow one k) one` -- the one
+    /// `Int.pow` law the order development needed and did not find.
+    pub one_pow: NameId,
+    /// `Int.IsOrder : Int -> Int -> Nat -> Prop :=
+    /// fun n a k => 0 < k ∧ (ModEq n (pow a k) one ∧
+    ///   ∀ j, 0 < j -> j < k -> ¬ ModEq n (pow a j) one)` -- "`k` is *the*
+    /// multiplicative order of `a` mod `n`".
+    pub is_order: NameId,
+    /// `Int.pow_modeq_one_of_dvd : ∀ n a k m, 0 < n ->
+    /// ModEq n (pow a k) one -> Nat.dvd k m -> ModEq n (pow a m) one` -- the
+    /// forward half of the order characterization, stated without minimality
+    /// because this direction never uses it.
+    pub pow_modeq_one_of_dvd: NameId,
+    /// `Int.order_dvd_of_pow_modeq_one : ∀ n a k m, 0 < n -> IsOrder n a k ->
+    /// ModEq n (pow a m) one -> Nat.dvd k m` -- the backward half, by the
+    /// division algorithm against minimality.
+    pub order_dvd_of_pow_modeq_one: NameId,
+    /// `Int.pow_modeq_one_iff_order_dvd : ∀ n a k m, 0 < n -> IsOrder n a k ->
+    /// Iff (ModEq n (pow a m) one) (Nat.dvd k m)` -- the characterization that
+    /// makes the order usable.
+    pub pow_modeq_one_iff_order_dvd: NameId,
+    /// `Int.order_unique : ∀ n a k k', IsOrder n a k -> IsOrder n a k' ->
+    /// Eq Nat k k'` -- minimality both ways; needs no positivity hypothesis.
+    pub order_unique: NameId,
+    /// `Int.order_exists : ∀ (n : Nat) (a : Int), 0 < n ->
+    /// Coprime a (ofNat n) -> ∃ k, IsOrder (ofNat n) a k` -- every unit has an
+    /// order, by bounded search below `Nat.totient n`.
+    pub order_exists: NameId,
+    /// `Int.order_dvd_totient : ∀ (n : Nat) (a : Int) (k : Nat), 0 < n ->
+    /// Coprime a (ofNat n) -> IsOrder (ofNat n) a k -> Nat.dvd k (totient n)`
+    /// -- Lagrange's theorem in the concrete case.
+    pub order_dvd_totient: NameId,
+    /// `Int.IsPrimitiveRoot : Nat -> Int -> Prop :=
+    /// fun n a => IsOrder (ofNat n) a (totient n)`.
+    pub is_primitive_root: NameId,
+    /// `Int.order_pow_eq_of_le : ∀ (n a : Int) (t i j : Nat), 0 < n ->
+    /// IsOrder n a t -> Nat.le i j -> Nat.lt j t ->
+    /// ModEq n (pow a i) (pow a j) -> Eq Nat i j` -- the one-sided half of
+    /// pairwise incongruence, from which
+    /// [`Self::primitive_root_pow_injective`] follows by `Nat.le_total`.
+    pub order_pow_eq_of_le: NameId,
+    /// `Int.primitive_root_pow_injective : ∀ (n : Nat) (a : Int) (i j : Nat),
+    /// 0 < n -> IsPrimitiveRoot n a -> i < totient n -> j < totient n ->
+    /// ModEq (ofNat n) (pow a i) (pow a j) -> Eq Nat i j` -- the powers of a
+    /// primitive root are pairwise incongruent, i.e. they enumerate the
+    /// `totient n` units without repetition.
+    pub primitive_root_pow_injective: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2267,6 +2320,17 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         prod_range_if_factor_const_left: child(kernel, "prodRangeIf_factor_const_left"),
         prod_range_if_modeq: child(kernel, "prodRangeIf_modeq"),
         euler_totient_theorem: child(kernel, "euler_totient_theorem"),
+        one_pow: child(kernel, "one_pow"),
+        is_order: child(kernel, "IsOrder"),
+        pow_modeq_one_of_dvd: child(kernel, "pow_modeq_one_of_dvd"),
+        order_dvd_of_pow_modeq_one: child(kernel, "order_dvd_of_pow_modeq_one"),
+        pow_modeq_one_iff_order_dvd: child(kernel, "pow_modeq_one_iff_order_dvd"),
+        order_unique: child(kernel, "order_unique"),
+        order_exists: child(kernel, "order_exists"),
+        order_dvd_totient: child(kernel, "order_dvd_totient"),
+        is_primitive_root: child(kernel, "IsPrimitiveRoot"),
+        order_pow_eq_of_le: child(kernel, "order_pow_eq_of_le"),
+        primitive_root_pow_injective: child(kernel, "primitive_root_pow_injective"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
         fib: child(kernel, "fib"),
@@ -2706,6 +2770,12 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         prime_dvd_mul_mirrors::declare_not_prime_of_int_mul(&mut d)?;
         prime_dvd_mul_mirrors::declare_gcd_ne_one_iff_gcd_mul_right_ne_one(&mut d)?;
         prime_dvd_mul_mirrors::declare_succ_dvd_or_succ_dvd_of_succ_sum_dvd_mul(&mut d)?;
+        // `primitive-roots` lane (W1-7, ADR-1598): the multiplicative order and
+        // primitive roots. Placed last -- it composes `Int.pow_mul`/`pow_add`
+        // (`ring.rs`), the whole `modeq.rs` family, `Int.euler_totient_theorem`
+        // (`euler_assembly.rs`) and `Nat.lnp_bounded_search`/`Nat.div_mod_exists`
+        // from the Nat prelude.
+        mult_order::declare_all(&mut d)?;
         Ok(prelude)
     })();
     match built {
@@ -2732,3 +2802,6 @@ mod sum_maps_tests;
 
 #[cfg(test)]
 mod quadratic_reciprocity_tests;
+
+#[cfg(test)]
+mod mult_order_tests;

@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:int-pow-modeq-one-iff-order-dvd",
+  "title": "a^m is 1 mod n exactly when the order divides m (Int.pow_modeq_one_iff_order_dvd)",
+  "statement": "For n a : Int with 0 < n and k : Nat an order of a mod n (`Int.IsOrder n a k`), and for every m : Nat, `a^m = 1 (mod n)` if and only if k divides m. This is the characterization that makes the order usable: it converts a congruence about an arbitrary exponent into a divisibility about naturals. The forward direction is the one that needs minimality -- it runs the division algorithm (`Nat.div_mod_exists`, m = k*q + r with r < k), splits a^m as a^(k*q) * a^r via `Int.pow_add`, kills the first factor, and refutes a positive remainder against the minimality conjunct. The backward direction never uses minimality and is therefore stated separately and more generally as `Int.pow_modeq_one_of_dvd`, whose only hypothesis about k is that a^k = 1. What this does NOT claim: the hypothesis 0 < n is load-bearing (the cancellation and power congruences it composes both require it), and no claim is made that an order exists -- that is `Int.order_exists`.",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : Int) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Int.lt Int.zero x0) -> ((x5 : Int.IsOrder x0 x1 x2) -> Iff (Int.ModEq x0 (Int.pow x1 x3) Int.one) (AxNat.dvd x2 x3)))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "Int.pow_modeq_one_iff_order_dvd"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.pow_modeq_one_iff_order_dvd",
+      "kind": "kernel-term",
+      "supports": "Int.pow_modeq_one_iff_order_dvd is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.pow_modeq_one_iff_order_dvd 2>/dev/null | grep -cE '^Int\\.pow_modeq_one_iff_order_dvd[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.pow_modeq_one_iff_order_dvd",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.pow_modeq_one_iff_order_dvd",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude admits no Axiom, Opaque or Quotient declaration, which bounds Int.pow_modeq_one_iff_order_dvd.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it. The per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    },
+    {
+      "id": "concrete-Int.pow_modeq_one_iff_order_dvd",
+      "kind": "instance-pin",
+      "supports": "The definitions this statement is about compute the intended values at concrete small arguments, and the discriminating negative cases FAIL: ord_8(3) = 2 (not phi(8) = 4), ord_7(3) = 6, and 3 is refutably NOT a primitive root mod 8.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude::mult_order_tests"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib int_prelude::mult_order_tests -- --test-threads=4",
+      "checker_seconds": 20,
+      "notes": "The trusted gate cannot tell you a Definition is wrong -- it type-checks either way -- so Int.IsOrder and Int.IsPrimitiveRoot are pinned by reduction at concrete small arguments. Each battery asserts BOTH what must hold and what must fail, so no run can be vacuous: three_mod_eight_is_killed_by_exactly_the_even_exponents requires hits at m in {0,2,4} and misses at {1,3,5} (the misses are the negative control for Int.pow_modeq_one_of_dvd); is_order_unfolds_to_the_intended_conjunction requires the definition to be def_eq to the intended conjunction and NOT def_eq to the variant with the positivity comparison transposed; three_has_multiplicative_order_two_mod_eight builds a witness for IsOrder 8 3 2 and a REFUTATION of IsOrder 8 3 4, which only the minimality conjunct separates. Confirm a NONZERO test count (6)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs)",
+    "source": "formal.statement is Kernel::render_lean of the declared type, taken verbatim from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`; axiom_footprint is that same row's footprint column, measured 0. The prose statement and the \"what this does NOT claim\" clause are hand-written by the `primitive-roots` lane and are NOT generator output. Design record: ADR-1598.",
+    "prior_art": "Classical; Gauss, Disquisitiones Arithmeticae (1801), art. 48. Stated here over this kernel's own `Int.ModEq` and `Nat.dvd`."
+  },
+  "notes": "Roadmap item W1-7 (docs/math-department/00-roadmap.md), the number theorist's first Next Five entry. ADR-1598 records why the order is a PREDICATE picked out by bounded search rather than a Nat-valued function, and what did not land: existence of a primitive root modulo a prime, whose measured obstruction is that the standard counting route needs sum over d | n of phi(d) = n and neither prelude has a divisor-set aggregate."
+}

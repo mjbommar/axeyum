@@ -1738,7 +1738,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (370 names,
+/// The `IntPrelude` field table (381 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2226,6 +2226,20 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
             ),
             ("prod_range_if_modeq", p.prod_range_if_modeq),
             ("euler_totient_theorem", p.euler_totient_theorem),
+            ("one_pow", p.one_pow),
+            ("is_order", p.is_order),
+            ("pow_modeq_one_of_dvd", p.pow_modeq_one_of_dvd),
+            ("order_dvd_of_pow_modeq_one", p.order_dvd_of_pow_modeq_one),
+            ("pow_modeq_one_iff_order_dvd", p.pow_modeq_one_iff_order_dvd),
+            ("order_unique", p.order_unique),
+            ("order_exists", p.order_exists),
+            ("order_dvd_totient", p.order_dvd_totient),
+            ("is_primitive_root", p.is_primitive_root),
+            ("order_pow_eq_of_le", p.order_pow_eq_of_le),
+            (
+                "primitive_root_pow_injective",
+                p.primitive_root_pow_injective,
+            ),
         ],
         lists: Vec::new(),
     }

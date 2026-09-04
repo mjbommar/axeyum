@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "F:int-order-dvd-totient",
+  "title": "The multiplicative order divides the totient (Int.order_dvd_totient)",
+  "statement": "For every n : Nat with 0 < n, every a : Int coprime to n, and every k with `Int.IsOrder (ofNat n) a k`, k divides `Nat.totient n`. This is Lagrange's theorem in the concrete case -- the order of an element divides the order of the group -- stated without a group carrier, because this kernel has no quotient construction and therefore no (Z/n)* as an object. The proof is Euler's theorem (`Int.euler_totient_theorem` supplies a^phi(n) = 1 mod n) fed to the order characterization `Int.order_dvd_of_pow_modeq_one`, which says the order divides EVERY exponent that kills a. What this does NOT claim: nothing about which divisors of phi(n) are realized as orders, and in particular no existence of an element of order phi(n) -- that is the primitive-root existence theorem and it is NOT established here (ADR-1598 records the measured obstruction).",
+  "formal": {
+    "language": "lean4",
+    "statement": "((x0 : AxNat) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x0) -> ((x4 : Int.Coprime x1 (Int.ofNat x0)) -> ((x5 : Int.IsOrder (Int.ofNat x0) x1 x2) -> AxNat.dvd x2 (AxNat.totient x0)))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ],
+    "kernel_theorem": "Int.order_dvd_totient"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-euler-totient-theorem"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.order_dvd_totient",
+      "kind": "kernel-term",
+      "supports": "Int.order_dvd_totient is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "theorem_dependency_inventory re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- Int.order_dvd_totient 2>/dev/null | grep -cE '^Int\\.order_dvd_totient[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.order_dvd_totient",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+    },
+    {
+      "id": "footprint-Int.order_dvd_totient",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude admits no Axiom, Opaque or Quotient declaration, which bounds Int.order_dvd_totient.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty integer surface bounds every declaration in it. The per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row."
+    },
+    {
+      "id": "concrete-Int.order_dvd_totient",
+      "kind": "instance-pin",
+      "supports": "The definitions this statement is about compute the intended values at concrete small arguments, and the discriminating negative cases FAIL: ord_8(3) = 2 (not phi(8) = 4), ord_7(3) = 6, and 3 is refutably NOT a primitive root mod 8.",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude::mult_order_tests"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib int_prelude::mult_order_tests -- --test-threads=4",
+      "checker_seconds": 20,
+      "notes": "The trusted gate cannot tell you a Definition is wrong -- it type-checks either way -- so Int.IsOrder and Int.IsPrimitiveRoot are pinned by reduction at concrete small arguments. Each battery asserts BOTH what must hold and what must fail, so no run can be vacuous: three_mod_eight_is_killed_by_exactly_the_even_exponents requires hits at m in {0,2,4} and misses at {1,3,5} (the misses are the negative control for Int.pow_modeq_one_of_dvd); is_order_unfolds_to_the_intended_conjunction requires the definition to be def_eq to the intended conjunction and NOT def_eq to the variant with the positivity comparison transposed; three_has_multiplicative_order_two_mod_eight builds a witness for IsOrder 8 3 2 and a REFUTATION of IsOrder 8 3 4, which only the minimality conjunct separates. Confirm a NONZERO test count (6)."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_int_prelude (crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs)",
+    "source": "formal.statement is Kernel::render_lean of the declared type, taken verbatim from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`; axiom_footprint is that same row's footprint column, measured 0. The prose statement and the \"what this does NOT claim\" clause are hand-written by the `primitive-roots` lane and are NOT generator output. Design record: ADR-1598.",
+    "prior_art": "Classical; Euler (1763) and Lagrange. The group-theoretic statement is Lagrange's theorem; this is its concrete instance for the unit group mod n, stated over this kernel's `Int.ModEq` and `Nat.totient` rather than over a quotient carrier."
+  },
+  "notes": "Roadmap item W1-7 (docs/math-department/00-roadmap.md), the number theorist's first Next Five entry. ADR-1598 records why the order is a PREDICATE picked out by bounded search rather than a Nat-valued function, and what did not land: existence of a primitive root modulo a prime, whose measured obstruction is that the standard counting route needs sum over d | n of phi(d) = n and neither prelude has a divisor-set aggregate."
+}
