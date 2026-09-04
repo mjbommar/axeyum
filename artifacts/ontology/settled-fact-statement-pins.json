@@ -713,6 +713,134 @@
       "to_sha256": "64a7355ea9d2949253357d81263b9f774b89f5748434e6b50a1e16dc7f082c95",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was byte-for-byte the kernel's own `canonical_type` for Int.wilson (`Kernel::render_lean(declaration.ty())`, read from `kernel_declaration_projection --release`), and is now that same string behind `theorem Int.wilson : `. The proposition is untouched; what changes is that `check-settled-fact-statements.py`'s structural bind can now check the statement against the declaration this fact claims, instead of exempting it. The fact became visible to that check only when `366f11a91` supplied its `formal.kernel_theorem`; it was headerless before and after, and no ceiling was raised to accommodate it.",
       "recorded_by": "statement-headers"
+    },
+    {
+      "fact_id": "F:list-append-assoc",
+      "date": "2026-09-03",
+      "from_sha256": "9b0a8e778056fe07c86ccf4ba693b1e48238d20a8d25100173305a59fc619afa",
+      "to_sha256": "e58cdc7228d32c07acf2e7358b7d06ea7463d2683848eb95c35a716aed2a4795",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.append_assoc and is now that same string behind `theorem List.append_assoc : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-append-nil",
+      "date": "2026-09-03",
+      "from_sha256": "8427d18cf10f29d21ca2cc6b4bdd5acfcab274a7757ed3906507b05caf65e26c",
+      "to_sha256": "a4d01ea3d9ed40e1fa7bdd63d90a292d099968f47e0053018ca1e334f2a6974e",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.append_nil and is now that same string behind `theorem List.append_nil : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-count-append",
+      "date": "2026-09-03",
+      "from_sha256": "eba60bb56b7c9e5b316efb9b6a4b4285f1cea432c3faf8eaf1e4ce1e3bb5b180",
+      "to_sha256": "04ad4eaf130e3d93bded489113e0623c4b4166bfb7a8f9a021df7b9cbbb56c77",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.count_append and is now that same string behind `theorem List.count_append : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-count-reverse",
+      "date": "2026-09-03",
+      "from_sha256": "a3a0ab4ccebe36c15be01365a196424eb0f5d32c99bb0b4c80776744002cb407",
+      "to_sha256": "2181b134218977d08ea6cf0606d46af591929cdc2f67c4891e1d5847103cfc22",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.count_reverse and is now that same string behind `theorem List.count_reverse : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-count-to-multiset",
+      "date": "2026-09-03",
+      "from_sha256": "1c98654293e2ee24662d8fd6f2777e06a083ad24e80c1141290bd6915a6c83e0",
+      "to_sha256": "38fbe9de9649d52908f6a521a0af20e43f9c61a7620fe32170070997badf2867",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.count_toMultiset and is now that same string behind `theorem List.count_toMultiset : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-foldr-append",
+      "date": "2026-09-03",
+      "from_sha256": "1ff2f3eaf6864eeb664483a7d59680f2a545a8a00759e901924de85dd86b2f79",
+      "to_sha256": "4c31ec097ef2d6341fea8b4f0b7b07a5dbed2a8b1879fd4da898b1f566bf6961",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.foldr_append and is now that same string behind `theorem List.foldr_append : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-length-append",
+      "date": "2026-09-03",
+      "from_sha256": "66723ec6989d651036d5eec7423d3fe079483251095007e91881910635c42f9b",
+      "to_sha256": "c724903b9f12ddd09c83b32bf9f0b548a6ce6f31cae58c94c40b430fbd50b643",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.length_append and is now that same string behind `theorem List.length_append : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-length-map",
+      "date": "2026-09-03",
+      "from_sha256": "9d0c41b99a3dd8ac5d0c0c79da161fbec242804a94dce94cd8cf22301d0a789c",
+      "to_sha256": "edc1fef4d34885e426b084406c0dda494497a7c4eeec893d0ec2a0d50a56fec5",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.length_map and is now that same string behind `theorem List.length_map : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-length-reverse",
+      "date": "2026-09-03",
+      "from_sha256": "84ce1085493293f602c61fe1a8caeb7624568d8046d57fc674d104efeca12883",
+      "to_sha256": "2d4dd6c4667fe2957d70d341d6e085204802b3a68a90aa66149eec8b4b7c7bea",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.length_reverse and is now that same string behind `theorem List.length_reverse : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-perm-append-comm",
+      "date": "2026-09-03",
+      "from_sha256": "0ca1f65f0a649d7087b48206dd1649718d7ea0c1aa9a1436b5b5a3e23c5bbc6a",
+      "to_sha256": "b77cd5b8ad5ffb533a240e13af86b0036a8b2c41d473bb04514cc93c167d52b1",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.perm_append_comm and is now that same string behind `theorem List.perm_append_comm : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-perm-refl",
+      "date": "2026-09-03",
+      "from_sha256": "28144932529c316e68a879e6b6c422976d8722c5b33cf15ef8440cd88da87679",
+      "to_sha256": "65c2bf996625fab61043854479da9db1a266767a078413f10240bce443a38cdf",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.perm_refl and is now that same string behind `theorem List.perm_refl : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-perm-reverse",
+      "date": "2026-09-03",
+      "from_sha256": "3a9e2b81508dc173882208218bea022897f7ddf3670a8410f1ecea7570db7935",
+      "to_sha256": "5c8bdce24b2c9a46035ee9d1a9f91692268e51c894234b93a8b4f232a32587e4",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.perm_reverse and is now that same string behind `theorem List.perm_reverse : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-perm-symm",
+      "date": "2026-09-03",
+      "from_sha256": "479c643016a7f7362c303cfa52783dceb1fa41db5011176fc9c1d2d838289d5b",
+      "to_sha256": "1af7055b684db2daf066562836e3c6a0996b4fa99943a056535e83e1d0a2934d",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.perm_symm and is now that same string behind `theorem List.perm_symm : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-reverse-append",
+      "date": "2026-09-03",
+      "from_sha256": "a89c59ff32937131648a92da8d45e9532d747ac88916c4d5c928d462daa25118",
+      "to_sha256": "faf360a0ea259883cb92e0edf7980606a0128dc2aab919518f64069011824cd3",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.reverse_append and is now that same string behind `theorem List.reverse_append : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-reverse-reverse",
+      "date": "2026-09-03",
+      "from_sha256": "47a17b939ef5f1d02bd721c273df9ebb4a35890f5b9b7e02a66e40e33f494dc5",
+      "to_sha256": "1d17b6df399b8e23d327912fc98d47f54e5d53aefdb1b5868c426aa6d5fd1d8a",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.reverse_reverse and is now that same string behind `theorem List.reverse_reverse : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:list-sum-append",
+      "date": "2026-09-03",
+      "from_sha256": "d8811b1795ae53b3f379887aac973c500eb9ec4a67a1f8f8f8d4e450e154fff6",
+      "to_sha256": "d6640d210a6491b18ecd8da3fb451d86085c84e898b4252d61b189efac208c6b",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.sum_append and is now that same string behind `theorem List.sum_append : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
     }
   ],
   "pins": [
@@ -9554,65 +9682,137 @@
     {
       "fact_id": "F:list-append-assoc",
       "language": "lean4",
-      "statement_sha256": "9b0a8e778056fe07c86ccf4ba693b1e48238d20a8d25100173305a59fc619afa",
+      "statement_sha256": "e58cdc7228d32c07acf2e7358b7d06ea7463d2683848eb95c35a716aed2a4795",
       "prose_sha256": "aa06498bc71e86f4be05cd2f534212b967d2991d70ccfabce8859b7b5f6ee290",
-      "kernel_theorem": "List.append_assoc"
+      "kernel_theorem": "List.append_assoc",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "9b0a8e778056fe07c86ccf4ba693b1e48238d20a8d25100173305a59fc619afa",
+          "prose_sha256": "aa06498bc71e86f4be05cd2f534212b967d2991d70ccfabce8859b7b5f6ee290",
+          "kernel_theorem": "List.append_assoc"
+        }
+      ]
     },
     {
       "fact_id": "F:list-append-nil",
       "language": "lean4",
-      "statement_sha256": "8427d18cf10f29d21ca2cc6b4bdd5acfcab274a7757ed3906507b05caf65e26c",
+      "statement_sha256": "a4d01ea3d9ed40e1fa7bdd63d90a292d099968f47e0053018ca1e334f2a6974e",
       "prose_sha256": "df3164d6535189aaead75d5b1cb9f2cc545ded6ec8bf28adf58d75a3ded37c0e",
-      "kernel_theorem": "List.append_nil"
+      "kernel_theorem": "List.append_nil",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "8427d18cf10f29d21ca2cc6b4bdd5acfcab274a7757ed3906507b05caf65e26c",
+          "prose_sha256": "df3164d6535189aaead75d5b1cb9f2cc545ded6ec8bf28adf58d75a3ded37c0e",
+          "kernel_theorem": "List.append_nil"
+        }
+      ]
     },
     {
       "fact_id": "F:list-count-append",
       "language": "lean4",
-      "statement_sha256": "eba60bb56b7c9e5b316efb9b6a4b4285f1cea432c3faf8eaf1e4ce1e3bb5b180",
+      "statement_sha256": "04ad4eaf130e3d93bded489113e0623c4b4166bfb7a8f9a021df7b9cbbb56c77",
       "prose_sha256": "f539f8e35ceb74f885fe32e031d5d98a1b5bac3632188c6a7c2159c4cd213002",
-      "kernel_theorem": "List.count_append"
+      "kernel_theorem": "List.count_append",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "eba60bb56b7c9e5b316efb9b6a4b4285f1cea432c3faf8eaf1e4ce1e3bb5b180",
+          "prose_sha256": "f539f8e35ceb74f885fe32e031d5d98a1b5bac3632188c6a7c2159c4cd213002",
+          "kernel_theorem": "List.count_append"
+        }
+      ]
     },
     {
       "fact_id": "F:list-count-reverse",
       "language": "lean4",
-      "statement_sha256": "a3a0ab4ccebe36c15be01365a196424eb0f5d32c99bb0b4c80776744002cb407",
+      "statement_sha256": "2181b134218977d08ea6cf0606d46af591929cdc2f67c4891e1d5847103cfc22",
       "prose_sha256": "5969dc2ba5d42401ede88dfd2ca3f675bff8c7ba7b9cd72bbee3e281cd1f4f00",
-      "kernel_theorem": "List.count_reverse"
+      "kernel_theorem": "List.count_reverse",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "a3a0ab4ccebe36c15be01365a196424eb0f5d32c99bb0b4c80776744002cb407",
+          "prose_sha256": "5969dc2ba5d42401ede88dfd2ca3f675bff8c7ba7b9cd72bbee3e281cd1f4f00",
+          "kernel_theorem": "List.count_reverse"
+        }
+      ]
     },
     {
       "fact_id": "F:list-count-to-multiset",
       "language": "lean4",
-      "statement_sha256": "1c98654293e2ee24662d8fd6f2777e06a083ad24e80c1141290bd6915a6c83e0",
+      "statement_sha256": "38fbe9de9649d52908f6a521a0af20e43f9c61a7620fe32170070997badf2867",
       "prose_sha256": "25a88aae464e93cc4dce726dd4319db7fef1234993272ca3d2ccbf2786a25e85",
-      "kernel_theorem": "List.count_toMultiset"
+      "kernel_theorem": "List.count_toMultiset",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "1c98654293e2ee24662d8fd6f2777e06a083ad24e80c1141290bd6915a6c83e0",
+          "prose_sha256": "25a88aae464e93cc4dce726dd4319db7fef1234993272ca3d2ccbf2786a25e85",
+          "kernel_theorem": "List.count_toMultiset"
+        }
+      ]
     },
     {
       "fact_id": "F:list-foldr-append",
       "language": "lean4",
-      "statement_sha256": "1ff2f3eaf6864eeb664483a7d59680f2a545a8a00759e901924de85dd86b2f79",
+      "statement_sha256": "4c31ec097ef2d6341fea8b4f0b7b07a5dbed2a8b1879fd4da898b1f566bf6961",
       "prose_sha256": "8ffd4adc0175636346e8a16676cede679d72b0308e1cae89592722027185db60",
-      "kernel_theorem": "List.foldr_append"
+      "kernel_theorem": "List.foldr_append",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "1ff2f3eaf6864eeb664483a7d59680f2a545a8a00759e901924de85dd86b2f79",
+          "prose_sha256": "8ffd4adc0175636346e8a16676cede679d72b0308e1cae89592722027185db60",
+          "kernel_theorem": "List.foldr_append"
+        }
+      ]
     },
     {
       "fact_id": "F:list-length-append",
       "language": "lean4",
-      "statement_sha256": "66723ec6989d651036d5eec7423d3fe079483251095007e91881910635c42f9b",
+      "statement_sha256": "c724903b9f12ddd09c83b32bf9f0b548a6ce6f31cae58c94c40b430fbd50b643",
       "prose_sha256": "f86d462116b925739b230cf371792130eb359ac46a1e8d285978633f165384da",
-      "kernel_theorem": "List.length_append"
+      "kernel_theorem": "List.length_append",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "66723ec6989d651036d5eec7423d3fe079483251095007e91881910635c42f9b",
+          "prose_sha256": "f86d462116b925739b230cf371792130eb359ac46a1e8d285978633f165384da",
+          "kernel_theorem": "List.length_append"
+        }
+      ]
     },
     {
       "fact_id": "F:list-length-map",
       "language": "lean4",
-      "statement_sha256": "9d0c41b99a3dd8ac5d0c0c79da161fbec242804a94dce94cd8cf22301d0a789c",
+      "statement_sha256": "edc1fef4d34885e426b084406c0dda494497a7c4eeec893d0ec2a0d50a56fec5",
       "prose_sha256": "b1c3534516c316f3ccb282be453f6599e174eaf02589f6618ed995b8fc8fda81",
-      "kernel_theorem": "List.length_map"
+      "kernel_theorem": "List.length_map",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "9d0c41b99a3dd8ac5d0c0c79da161fbec242804a94dce94cd8cf22301d0a789c",
+          "prose_sha256": "b1c3534516c316f3ccb282be453f6599e174eaf02589f6618ed995b8fc8fda81",
+          "kernel_theorem": "List.length_map"
+        }
+      ]
     },
     {
       "fact_id": "F:list-length-reverse",
       "language": "lean4",
-      "statement_sha256": "84ce1085493293f602c61fe1a8caeb7624568d8046d57fc674d104efeca12883",
+      "statement_sha256": "2d4dd6c4667fe2957d70d341d6e085204802b3a68a90aa66149eec8b4b7c7bea",
       "prose_sha256": "81691e53bb977a3ac8f8a19c148edb20d0e50ac011c6149360d3b1304b1821ec",
-      "kernel_theorem": "List.length_reverse"
+      "kernel_theorem": "List.length_reverse",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "84ce1085493293f602c61fe1a8caeb7624568d8046d57fc674d104efeca12883",
+          "prose_sha256": "81691e53bb977a3ac8f8a19c148edb20d0e50ac011c6149360d3b1304b1821ec",
+          "kernel_theorem": "List.length_reverse"
+        }
+      ]
     },
     {
       "fact_id": "F:list-nil-append",
@@ -9629,51 +9829,107 @@
     {
       "fact_id": "F:list-perm-append-comm",
       "language": "lean4",
-      "statement_sha256": "0ca1f65f0a649d7087b48206dd1649718d7ea0c1aa9a1436b5b5a3e23c5bbc6a",
+      "statement_sha256": "b77cd5b8ad5ffb533a240e13af86b0036a8b2c41d473bb04514cc93c167d52b1",
       "prose_sha256": "154ad7aa2a6bc7f02304f2dbf84c37a5cf2c722a9fc7168b0b3f09f0711d4dbf",
-      "kernel_theorem": "List.perm_append_comm"
+      "kernel_theorem": "List.perm_append_comm",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "0ca1f65f0a649d7087b48206dd1649718d7ea0c1aa9a1436b5b5a3e23c5bbc6a",
+          "prose_sha256": "154ad7aa2a6bc7f02304f2dbf84c37a5cf2c722a9fc7168b0b3f09f0711d4dbf",
+          "kernel_theorem": "List.perm_append_comm"
+        }
+      ]
     },
     {
       "fact_id": "F:list-perm-refl",
       "language": "lean4",
-      "statement_sha256": "28144932529c316e68a879e6b6c422976d8722c5b33cf15ef8440cd88da87679",
+      "statement_sha256": "65c2bf996625fab61043854479da9db1a266767a078413f10240bce443a38cdf",
       "prose_sha256": "ade1a73505a153b0e7780a049ef69bfedf8ee58716a632f419191162defc9e1f",
-      "kernel_theorem": "List.perm_refl"
+      "kernel_theorem": "List.perm_refl",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "28144932529c316e68a879e6b6c422976d8722c5b33cf15ef8440cd88da87679",
+          "prose_sha256": "ade1a73505a153b0e7780a049ef69bfedf8ee58716a632f419191162defc9e1f",
+          "kernel_theorem": "List.perm_refl"
+        }
+      ]
     },
     {
       "fact_id": "F:list-perm-reverse",
       "language": "lean4",
-      "statement_sha256": "3a9e2b81508dc173882208218bea022897f7ddf3670a8410f1ecea7570db7935",
+      "statement_sha256": "5c8bdce24b2c9a46035ee9d1a9f91692268e51c894234b93a8b4f232a32587e4",
       "prose_sha256": "4298198bddf7d56b22f3da5052672a9c42c4b9ee8f7970e2eab96e95e2bc8d9f",
-      "kernel_theorem": "List.perm_reverse"
+      "kernel_theorem": "List.perm_reverse",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "3a9e2b81508dc173882208218bea022897f7ddf3670a8410f1ecea7570db7935",
+          "prose_sha256": "4298198bddf7d56b22f3da5052672a9c42c4b9ee8f7970e2eab96e95e2bc8d9f",
+          "kernel_theorem": "List.perm_reverse"
+        }
+      ]
     },
     {
       "fact_id": "F:list-perm-symm",
       "language": "lean4",
-      "statement_sha256": "479c643016a7f7362c303cfa52783dceb1fa41db5011176fc9c1d2d838289d5b",
+      "statement_sha256": "1af7055b684db2daf066562836e3c6a0996b4fa99943a056535e83e1d0a2934d",
       "prose_sha256": "add7855867d7d27f3c4f1e2170c18b0ef09fe73c1c21063b27f73cb5079de801",
-      "kernel_theorem": "List.perm_symm"
+      "kernel_theorem": "List.perm_symm",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "479c643016a7f7362c303cfa52783dceb1fa41db5011176fc9c1d2d838289d5b",
+          "prose_sha256": "add7855867d7d27f3c4f1e2170c18b0ef09fe73c1c21063b27f73cb5079de801",
+          "kernel_theorem": "List.perm_symm"
+        }
+      ]
     },
     {
       "fact_id": "F:list-reverse-append",
       "language": "lean4",
-      "statement_sha256": "a89c59ff32937131648a92da8d45e9532d747ac88916c4d5c928d462daa25118",
+      "statement_sha256": "faf360a0ea259883cb92e0edf7980606a0128dc2aab919518f64069011824cd3",
       "prose_sha256": "dc9d6a29e5a03d28b81f0900e97fbabec0f62d2ef45b388bcdf5f94186a50558",
-      "kernel_theorem": "List.reverse_append"
+      "kernel_theorem": "List.reverse_append",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "a89c59ff32937131648a92da8d45e9532d747ac88916c4d5c928d462daa25118",
+          "prose_sha256": "dc9d6a29e5a03d28b81f0900e97fbabec0f62d2ef45b388bcdf5f94186a50558",
+          "kernel_theorem": "List.reverse_append"
+        }
+      ]
     },
     {
       "fact_id": "F:list-reverse-reverse",
       "language": "lean4",
-      "statement_sha256": "47a17b939ef5f1d02bd721c273df9ebb4a35890f5b9b7e02a66e40e33f494dc5",
+      "statement_sha256": "1d17b6df399b8e23d327912fc98d47f54e5d53aefdb1b5868c426aa6d5fd1d8a",
       "prose_sha256": "1a3059b1e762e356747233ccc61a7f8dfb98057940eee8b1bf490a30562b9258",
-      "kernel_theorem": "List.reverse_reverse"
+      "kernel_theorem": "List.reverse_reverse",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "47a17b939ef5f1d02bd721c273df9ebb4a35890f5b9b7e02a66e40e33f494dc5",
+          "prose_sha256": "1a3059b1e762e356747233ccc61a7f8dfb98057940eee8b1bf490a30562b9258",
+          "kernel_theorem": "List.reverse_reverse"
+        }
+      ]
     },
     {
       "fact_id": "F:list-sum-append",
       "language": "lean4",
-      "statement_sha256": "d8811b1795ae53b3f379887aac973c500eb9ec4a67a1f8f8f8d4e450e154fff6",
+      "statement_sha256": "d6640d210a6491b18ecd8da3fb451d86085c84e898b4252d61b189efac208c6b",
       "prose_sha256": "9ea055df5c4b502c45e73d77deb6ef90d149612a73e116d1ae78b7d490a49072",
-      "kernel_theorem": "List.sum_append"
+      "kernel_theorem": "List.sum_append",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "d8811b1795ae53b3f379887aac973c500eb9ec4a67a1f8f8f8d4e450e154fff6",
+          "prose_sha256": "9ea055df5c4b502c45e73d77deb6ef90d149612a73e116d1ae78b7d490a49072",
+          "kernel_theorem": "List.sum_append"
+        }
+      ]
     },
     {
       "fact_id": "F:loadplan-hazmat-iis",

@@ -5,7 +5,7 @@
   "statement": "For lists of naturals, the sum of the elements of the concatenation of l1 and l2 equals the sum of the elements of l1 plus the sum of the elements of l2.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.sum (List.append AxNat x0 x1)) (AxNat.add (List.sum x0) (List.sum x1))))",
+    "statement": "theorem List.sum_append : ((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.sum (List.append AxNat x0 x1)) (AxNat.add (List.sum x0) (List.sum x1))))",
     "fragment": "List",
     "kernel_theorem": "List.sum_append"
   },

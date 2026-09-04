@@ -5,7 +5,7 @@
   "statement": "Reversing a list of naturals does not change its length.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> Eq.{1} AxNat (List.length x0 (List.reverse x0 x1)) (List.length x0 x1)))",
+    "statement": "theorem List.length_reverse : ((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> Eq.{1} AxNat (List.length x0 (List.reverse x0 x1)) (List.length x0 x1)))",
     "fragment": "List",
     "kernel_theorem": "List.length_reverse"
   },

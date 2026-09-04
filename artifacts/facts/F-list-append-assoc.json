@@ -5,7 +5,7 @@
   "statement": "For any three lists a, b, c over a common element type, appending (a then b) then c gives the same list as appending a then (b then c) -- List.append is associative.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> ((x3 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.append x0 (List.append x0 x1 x2) x3) (List.append x0 x1 (List.append x0 x2 x3))))))",
+    "statement": "theorem List.append_assoc : ((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> ((x3 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.append x0 (List.append x0 x1 x2) x3) (List.append x0 x1 (List.append x0 x2 x3))))))",
     "fragment": "List",
     "kernel_theorem": "List.append_assoc"
   },

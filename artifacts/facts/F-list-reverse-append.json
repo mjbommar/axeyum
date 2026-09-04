@@ -5,7 +5,7 @@
   "statement": "Reversing the concatenation of two lists a and b equals concatenating the reverse of b with the reverse of a (in that order).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.reverse x0 (List.append x0 x1 x2)) (List.append x0 (List.reverse x0 x2) (List.reverse x0 x1)))))",
+    "statement": "theorem List.reverse_append : ((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.reverse x0 (List.append x0 x1 x2)) (List.append x0 (List.reverse x0 x2) (List.reverse x0 x1)))))",
     "fragment": "List",
     "kernel_theorem": "List.reverse_append"
   },

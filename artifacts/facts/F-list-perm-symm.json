@@ -5,7 +5,7 @@
   "statement": "For any two lists l1, l2 over Nat, if List.Perm l1 l2 computes to true then List.Perm l2 l1 also computes to true.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> ((x2 : Eq.{1} Bool (List.Perm x0 x1) Bool.true) -> Eq.{1} Bool (List.Perm x1 x0) Bool.true)))",
+    "statement": "theorem List.perm_symm : ((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> ((x2 : Eq.{1} Bool (List.Perm x0 x1) Bool.true) -> Eq.{1} Bool (List.Perm x1 x0) Bool.true)))",
     "fragment": "List",
     "kernel_theorem": "List.perm_symm"
   },

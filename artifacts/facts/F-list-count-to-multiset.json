@@ -5,7 +5,7 @@
   "statement": "For any element a and list l over Nat, the number of times a occurs in l (List.count) equals the multiplicity Nat.Multiset assigns to a in the multiset built by folding l (List.toMultiset) -- the new ordinary-inductive List carrier and the earlier function-plus-bound Nat.Multiset carrier (ADR-1520) agree on how many times a value occurs.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (AxNat.Multiset.count (List.toMultiset x1) x0)))",
+    "statement": "theorem List.count_toMultiset : ((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 x1) (AxNat.Multiset.count (List.toMultiset x1) x0)))",
     "fragment": "List",
     "kernel_theorem": "List.count_toMultiset"
   },

@@ -5,7 +5,7 @@
   "statement": "Reversing a list twice recovers the original list.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.reverse x0 (List.reverse x0 x1)) x1))",
+    "statement": "theorem List.reverse_reverse : ((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> Eq.{1} (List.{0} x0) (List.reverse x0 (List.reverse x0 x1)) x1))",
     "fragment": "List",
     "kernel_theorem": "List.reverse_reverse"
   },

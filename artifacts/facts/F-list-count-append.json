@@ -5,7 +5,7 @@
   "statement": "For any element a and lists l1, l2 over Nat, the number of times a occurs in the concatenation of l1 and l2 equals the sum of how many times a occurs in l1 and how many times it occurs in l2.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> ((x2 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 (List.append AxNat x1 x2)) (AxNat.add (List.count x0 x1) (List.count x0 x2)))))",
+    "statement": "theorem List.count_append : ((x0 : AxNat) -> ((x1 : List.{0} AxNat) -> ((x2 : List.{0} AxNat) -> Eq.{1} AxNat (List.count x0 (List.append AxNat x1 x2)) (AxNat.add (List.count x0 x1) (List.count x0 x2)))))",
     "fragment": "List",
     "kernel_theorem": "List.count_append"
   },

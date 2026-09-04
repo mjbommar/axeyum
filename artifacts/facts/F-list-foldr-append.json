@@ -5,7 +5,7 @@
   "statement": "Folding a binary operation from the right over the concatenation of two lists l1 and l2 equals folding first over l2 (to get the seed for the second fold) and then over l1.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Sort (1)) -> ((x1 : Sort (1)) -> ((x2 : ((x2 : x0) -> ((x3 : x1) -> x1))) -> ((x3 : x1) -> ((x4 : List.{0} x0) -> ((x5 : List.{0} x0) -> Eq.{1} x1 (List.foldr x0 x1 x2 x3 (List.append x0 x4 x5)) (List.foldr x0 x1 x2 (List.foldr x0 x1 x2 x3 x5) x4)))))))",
+    "statement": "theorem List.foldr_append : ((x0 : Sort (1)) -> ((x1 : Sort (1)) -> ((x2 : ((x2 : x0) -> ((x3 : x1) -> x1))) -> ((x3 : x1) -> ((x4 : List.{0} x0) -> ((x5 : List.{0} x0) -> Eq.{1} x1 (List.foldr x0 x1 x2 x3 (List.append x0 x4 x5)) (List.foldr x0 x1 x2 (List.foldr x0 x1 x2 x3 x5) x4)))))))",
     "fragment": "List",
     "kernel_theorem": "List.foldr_append"
   },

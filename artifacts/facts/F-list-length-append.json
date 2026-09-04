@@ -5,7 +5,7 @@
   "statement": "For lists of naturals, the length of the concatenation of l1 and l2 equals the sum of their individual lengths.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> Eq.{1} AxNat (List.length x0 (List.append x0 x1 x2)) (AxNat.add (List.length x0 x1) (List.length x0 x2)))))",
+    "statement": "theorem List.length_append : ((x0 : Sort (1)) -> ((x1 : List.{0} x0) -> ((x2 : List.{0} x0) -> Eq.{1} AxNat (List.length x0 (List.append x0 x1 x2)) (AxNat.add (List.length x0 x1) (List.length x0 x2)))))",
     "fragment": "List",
     "kernel_theorem": "List.length_append"
   },

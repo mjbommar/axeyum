@@ -5,7 +5,7 @@
   "statement": "For any two lists l1, l2 over Nat, List.Perm (List.append l1 l2) (List.append l2 l1) computes to true.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} Bool (List.Perm (List.append AxNat x0 x1) (List.append AxNat x1 x0)) Bool.true))",
+    "statement": "theorem List.perm_append_comm : ((x0 : List.{0} AxNat) -> ((x1 : List.{0} AxNat) -> Eq.{1} Bool (List.Perm (List.append AxNat x0 x1) (List.append AxNat x1 x0)) Bool.true))",
     "fragment": "List",
     "kernel_theorem": "List.perm_append_comm"
   },
