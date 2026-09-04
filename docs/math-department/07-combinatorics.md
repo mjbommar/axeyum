@@ -120,18 +120,18 @@ Two real constraints:
 
 ## Next five, in their priority order
 
-- [ ] **1. Define Rado numbers over `Nat.Finset` and connect the computed
-      results to a kernel statement.** Their view: you already have the two
+- [x] **1. Define Rado numbers over `Nat.Finset` and connect the computed
+      results to a kernel statement.** *Done 2026-09-04: Schur's `R_2(x=y+z)=5` both halves from search.* Their view: you already have the two
       hardest halves and they are not joined. This is also the clearest
       demonstration anywhere in the library of the untrusted-search /
       trusted-checking thesis on a *research-level* result.
-- [ ] **2. A graph carrier.** A decidable adjacency relation on a bounded
+- [x] **2. A graph carrier.** *Done 2026-09-04, `Nat.Graph`.* A decidable adjacency relation on a bounded
       vertex range, with degree, walks, and connectivity. The gate on most of
       the subject and a natural sibling of `Nat.Finset`.
-- [ ] **3. Ramsey's theorem for two colours**, by induction from the
+- [x] **3. Ramsey's theorem for two colours** — *`R(3,3) = 6` both directions, 2026-09-04.*, by induction from the
       pigeonhole principle that just landed. The canonical first theorem of
       the subject and directly downstream of existing work.
-- [ ] **4. Hall's marriage theorem**, over `Nat.Finset` with the existing
+- [~] **4. Hall's marriage theorem** — *necessity done 2026-09-04; sufficiency blocked on computing the critical subfamily without choice.*, over `Nat.Finset` with the existing
       `card_le_of_injOn`. Finite, constructive, and the standard test of
       whether a finite-set library is usable.
 - [ ] **5. General inclusion-exclusion**, generalizing
@@ -144,6 +144,7 @@ Two real constraints:
 |---|---|---|
 | 2026-09-04 | File created. Baseline: `Nat.Multiset`, `Nat.Finset`, pigeonhole in both forms, binomial coefficients with Pascal, `List.Perm`. Two four-colour Rado numbers `computed` and not connected to any kernel statement. No graphs. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 1 landed** (roadmap W1-1), and it is the flagship: `nat_prelude/rado.rs`, 17 declarations with empty footprints, and **Schur's number `R_2(x = y + z) = 5` proved in-kernel with both halves discharged from search** — the upper bound by a case tree over 2⁵ colourings, the lower by reflection over a `Nat.Finset` colouring the search picked. `Nat.Finset` is shown to *be* a 2-colouring with no side condition. **The unary-numeral worry in this file was wrong**: `IsRadoNumber 5 3 4 625` type-checks, because a `Prop` that mentions a numeral never reduces it. The real residue is combinatorial — the four-colour proof term ranges over 4⁶²⁵ colourings, which are functions and not enumerable in-kernel — so both `computed` facts correctly stay `computed`. [AUDIT] Stirling numbers were already present. | `de0cd02da`; `nat_prelude::` 460 passed |
+| 2026-09-04 | **Next Five items 2, 3 and half of 4 landed** (roadmap W1-6, W2-11, W2-12). `Nat.Graph`, 39 declarations, footprint 0, with symmetry and irreflexivity **forced inside the adjacency function by conjunction** so a malformed table under-counts rather than over-counts. **`R(3,3) = 6` proved in both directions**: the upper bound as a 32-leaf case tree, because a graph is a function and the kernel cannot enumerate all graphs; the lower bound from a search over the 2¹⁰ five-vertex graphs, the five-cycle, re-checked by reflection. Hall's theorem: necessity in one line from `card_le_of_injOn`; **sufficiency stopped** at computing the critical subfamily without choice, a bounded search over `2^(bound s)` subsets with no existing model. Cost worth knowing: the ℕ sweep went from ~18 s to 35–76 s, all Ramsey proof terms; `R(3,4)` needs the Ramsey recurrence over the degree counting this lane landed, not a bigger tree. (ADR-1608.) | `0a499a6d8`; `nat_prelude::` 495 passed |
 
 ## How to re-measure
 

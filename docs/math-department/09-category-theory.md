@@ -108,17 +108,17 @@ that are already proved does not need any of this.
 
 ## Next five, in their priority order
 
-- [ ] **1. Name the universal properties already proved.** State
+- [x] **1. Name the universal properties already proved.** *Done 2026-09-04.* State
       `Int.Characterization.categorical` as an initial-object property and the
       Peano results as a natural-numbers-object property, in the library's own
       vocabulary, with the uniqueness of the mediating map explicit. Their
       view: nearly free, and it turns two isolated results into a pattern the
       next carrier can follow.
-- [ ] **2. A universal-property template for new carriers.** When ℝ, ℂ, or a
+- [x] **2. A universal-property template for new carriers.** *Done 2026-09-04.* When ℝ, ℂ, or a
       future carrier is constructed, state what it is *the* solution to. This
       is the answer to "which construction?" and it is the question a second
       real-number construction will force.
-- [ ] **3. Decide the morphism-equality discipline** — setoid-enriched or
+- [x] **3. Decide the morphism-equality discipline** — *answered by ADR-1595: setoid-enriched.* — setoid-enriched or
       `funext` — in the same ADR that settles the quotient question. The two
       decisions are the same decision.
 - [ ] **4. Categories, functors, and natural transformations** over that
@@ -135,6 +135,7 @@ that are already proved does not need any of this.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: zero categorical declarations. ℤ categoricity, ℕ Peano uniqueness, Cantor's fixed-point theorem, and the forgetful projections all present as concrete one-offs. Blocked on the same `funext`/`Quot.sound` fork as algebra. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 3 answered** by roadmap W0-1: the morphism-equality discipline is setoid-enriched, not `funext` (ADR-1595, decided by measurement rather than preference). Items 4 and 5 are now scoped rather than blocked. The first isomorphism theorem that settled it is itself a universal-property result stated without naming one — which is item 1's point, unchanged. | `2a640c9b6` |
+| 2026-09-04 | **Next Five items 1 and 2 landed** (roadmap W1-3, W3-13), and the reviewer's "nearly free" estimate was right: `Nat.Peano.initial` (ℕ initial in pointed unary algebras with **no hypothesis on the target at all**) and `Int.Characterization.initial` (ℤ initial among ℤ-structures, needing only the two mutual-inverse laws), both direct applications of already-checked theorems with no new induction, both footprint 0. Uniqueness is stated pointwise up to the carrier's own equivalence, per ADR-1595 — no `funext`. Two mutation defects that drop the uniqueness hypothesis to `True` are refused by the kernel at the declaration. The four-part template for the next carrier is at `docs/research/08-planning/universal-property-template.md`. Categories, functors and natural transformations (item 4) deliberately stay out; ADR-1610 says why. | `c64893719`; characterization tests 10 passed |
 
 ## How to re-measure
 

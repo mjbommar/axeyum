@@ -136,12 +136,12 @@ before anyone starts.
 
 ## Next five, in their priority order
 
-- [ ] **1. Extend the reverse-mathematics map.** Add LPO, Markov's principle,
+- [x] **1. Extend the reverse-mathematics map.** *Done 2026-09-04: LPO, WLPO, Markov, LLPO.* Add LPO, Markov's principle,
       and the limited principle of omniscience alongside the existing EM/LNP
       equivalence, each as a hypothesis rather than an axiom. Their view: you
       have one calibration point and the technique to make it a map, and this
       is the most distinctive mathematics in the library.
-- [ ] **2. A computability layer.** A register machine or μ-recursive
+- [x] **2. A computability layer.** *Done 2026-09-04, scoped precisely.* A register machine or μ-recursive
       functions over ℕ, the halting problem via the existing
       `cantor_no_fixed_point` diagonalization, and undecidability of
       first-order validity — which is already `open` in the ledger.
@@ -152,7 +152,7 @@ before anyone starts.
 - [ ] **4. Arithmetization of syntax, toward Gödel I.** Large, well-mapped,
       and the single result whose presence would most change how the library
       is read. Their view: worth starting even if it takes a year.
-- [ ] **5. Write down the kernel's own metatheoretic status.** What is assumed
+- [x] **5. Write down the kernel's own metatheoretic status.** *Done 2026-09-04, ADR-1600.* What is assumed
       about this type theory, what has been checked (the Lean kernel
       cross-check, the guard suites, the divergence in ADR-0517), and what
       would be needed for a relative consistency result. An ADR, not code.
@@ -164,6 +164,7 @@ before anyone starts.
 | 2026-09-04 | File created. Baseline: kernel with strict positivity, universe guards, well-founded recursion, quotient package without `Quot.sound`, no funext/propext/choice. Metatheory: IPC EM-unprovability with audited encoding, EM ↔ unrestricted LNP, ℕ and ℤ categoricity, Cantor. 2,487 proved facts, empty footprint. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 5 landed** (roadmap W0-4): ADR-1600 records the kernel's metatheoretic status. Trusted base measured at 5,526 function-body lines across 9 files by call-graph closure from the four admission gates. Three soundness guards demonstrated firing in an isolated copy; a fourth, the nested-inductive phantom-parameter domain check, kills zero tests and is recorded as an open finding. No consistency or normalization result, and the ADR says why none can be internal. | `8b4f277d4` |
 | 2026-09-04 | **Next Five item 1 landed** (roadmap W1-9): the reverse-mathematics map now carries LPO, WLPO, Markov's principle and LLPO over ℕ with six proved implications, including the converse half `WLPO ∧ MP → LPO`, all with empty footprints and every principle spelled inline so no new `Definition` was needed. Four order theorems over ℝ on an explicit `OrderDecision` hypothesis prove conclusions `creal.rs`'s own field docs record as unavailable. Every **separation** is cited rather than claimed, because a separation needs a model of the kernel and not a term in it — which is exactly what ADR-1600 said about this kernel's metatheory. | `80aa8e52c`; `omniscience` 14 passed, `creal::` 236 |
+| 2026-09-04 | **Next Five item 2 landed** (roadmap W2-14): a step-function register machine over ℕ and `Nat.RM.self_halting_not_decidable` — no total `H : Nat → Bool` is correct in both directions about whether `diagStep H` halts from `1`. Footprint 0. **Scoped exactly as this reviewer would demand**: a genuine constructive refutation for the lane's own machine, explicitly *not* Turing's theorem for a fixed universal machine, since there is no program-as-data encoding, no s-m-n, no recursion theorem. The brief asked to route the contradiction through `Nat.cantor_no_fixed_point`; the lane built that route, found the two cases are Π₁- and Σ₁-shaped so the shared fixed point is decorative rather than load-bearing, and shipped a direct proof while **saying so in ADR-1611 instead of claiming reuse**. Undecidability of first-order validity correctly stays `open`. | `e15d807c8`; `nat_prelude::` 478 passed pre-merge |
 
 ## How to re-measure
 
