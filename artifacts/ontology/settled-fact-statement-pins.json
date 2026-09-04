@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2281,
+    "min_identity_bound": 2284,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1024,11 +1024,32 @@
       "kernel_theorem": "AlgS.OrderedRing.ofNat_le_ofNat_of_le"
     },
     {
+      "fact_id": "F:algs-poly-distrib-l",
+      "language": "lean4",
+      "statement_sha256": "3b0566fa15ee06d0d1eee1c04c096a6aef03802ad6bc3f366c50e1f0656136e9",
+      "prose_sha256": "11e42dedf8830cb129a56364dc95979a452a24517e8c4ea7eaa0786867ab3989",
+      "kernel_theorem": "AlgS.Poly.distribL"
+    },
+    {
+      "fact_id": "F:algs-poly-module",
+      "language": "lean4",
+      "statement_sha256": "778a03c3d49f9795ac2d4684a314c7444f9c78ddb2c6d5dda85e84745db02082",
+      "prose_sha256": "372f33586e41751cf443d868c451d23861c09b3b8f7cfabfcb85e1b4a98da04c",
+      "kernel_theorem": "AlgS.Module.polyModule"
+    },
+    {
       "fact_id": "F:algs-sub-self",
       "language": "lean4",
       "statement_sha256": "5b0edb915fe5bb261ae26650c9faa6c73ef55e6187a4ef3944ee813e37d1116a",
       "prose_sha256": "980395c4a0c18182eb8e3ab22858f7aa4c746573cfe5ced6b75ff1528270f7d8",
       "kernel_theorem": "AlgS.sub_self"
+    },
+    {
+      "fact_id": "F:algs-subgroup-ker",
+      "language": "lean4",
+      "statement_sha256": "0a45cb2bac0cb52002893db7b4db607ea824cc3f02b8b867f3929dba3b64c6c0",
+      "prose_sha256": "66333e45cc4acd078df35afaf0412a976a464bba9129bc39e345e3f3e7686845",
+      "kernel_theorem": "AlgS.Subgroup.ker_isSub"
     },
     {
       "fact_id": "F:alternating-binomial-row-sum-zero",

@@ -239,6 +239,9 @@ mod modeq_add_cancel;
 mod modeq_add_le_of_lt;
 mod modeq_cancel_div_gcd;
 mod modular;
+/// ADR-1609 / roadmap W3-2: `AlgS.Module.*`, modules over an abstract
+/// `AlgS.CommRing`, with `R` over itself and `R[X]` as the first instances.
+pub mod module_setoid;
 mod mul_order_lemmas;
 mod multichoose;
 mod multiset;
@@ -255,6 +258,10 @@ mod parity;
 mod parity_div;
 mod perfect;
 mod permutation;
+/// ADR-1609 / roadmap W2-9: `AlgS.Poly.*`, the polynomial ring over an
+/// abstract `AlgS.CommRing`. Declared at the `AlgS` build position, so it
+/// sees only `LogicPrelude` (`Nat`, `Nat.zero`, `Nat.succ`, `Nat.rec`).
+pub mod polynomial_setoid;
 mod pow_add_prime;
 mod powsq;
 mod prime_char;
@@ -282,6 +289,9 @@ mod stirling;
 mod stirling_lemmas;
 pub mod structures;
 pub mod structures_setoid;
+/// ADR-1609 / roadmap W1-11 (subobject half): `AlgS.Subgroup.*`, subgroups of
+/// an abstract `AlgS.Group` and the meet-semilattice they form.
+pub mod subgroup_setoid;
 mod subset_product;
 mod subset_sum;
 mod sum_range_permute;
@@ -6695,6 +6705,59 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             &structures_s,
             &structures_names,
             &structures,
+        )?;
+
+        // ADR-1609 / roadmap W2-9: `AlgS.Poly.*`, the polynomial ring over an
+        // abstract `AlgS.CommRing`. Same build position and same dependency
+        // set as the spine above (`logic` plus the `AlgS` records), so it
+        // lands here. Its names are DELIBERATELY not threaded into
+        // `NatPrelude`: nothing later in this prelude consumes them, and
+        // widening `StructuresSExtraNames` would change a struct that
+        // `axeyum-py`'s generated field registry mirrors. Tests reach the
+        // declarations the same way `first_iso_tests` does -- by calling
+        // `declare_poly_setoid` against their own kernel.
+        let poly_s = polynomial_setoid::declare_poly_setoid(
+            kernel,
+            &logic,
+            &structures_s.comm_ring,
+            &structures_s.comm_group,
+            structures_s_names.algs,
+        )?;
+
+        // ADR-1609 / roadmap W3-2: `AlgS.Module.*`. Needs the `AlgS` records,
+        // three of `declare_structures_s_extra`'s own results, and the
+        // polynomial ring above (`R[X]` is the second module instance).
+        let _module_s = module_setoid::declare_module_setoid(
+            kernel,
+            &logic,
+            &structures_s.comm_ring,
+            &structures_s.comm_group,
+            &structures_s.group,
+            module_setoid::ModuleDeps {
+                add_left_cancel: structures_s_extra.add_left_cancel,
+                inv_unique: structures_s_extra.inv_unique,
+                comm_ring_to_comm_group_s: structures_s_extra.comm_ring_to_comm_group_s,
+                comm_group_to_group_s: structures_s_extra.comm_group_to_group_s,
+                poly_comm_group: poly_s.comm_group,
+                poly_smul: poly_s.ops.smul,
+                poly_equiv: poly_s.ops.equiv,
+            },
+            structures_s_names.algs,
+        )?;
+
+        // ADR-1609 / roadmap W1-11's subobject half: `AlgS.Subgroup.*`. Needs
+        // the `AlgS.Group` record and three of the `AlgS.Hom.*` names, so it
+        // lands here too.
+        let _subgroup_s = subgroup_setoid::declare_subgroup_setoid(
+            kernel,
+            &logic,
+            &structures_s.group,
+            subgroup_setoid::SubgroupDeps {
+                hom_ker: structures_s_extra.hom_ker,
+                hom_map_one: structures_s_extra.hom_map_one,
+                hom_map_inv: structures_s_extra.hom_map_inv,
+            },
+            structures_s_names.algs,
         )?;
 
         // Intern every name up front so the `NatPrelude` (which the proof scripts
