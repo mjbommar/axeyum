@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-extreme-value-theorem-over-a-metric-space",
+  "title": "The Extreme Value Theorem, in its constructive approximate form, over an arbitrary metric space",
+  "statement": "For every metric space M, every predicate P on its carrier that is TOTALLY BOUNDED, and every real-valued function F that is uniformly continuous on P, and for every accuracy n, there is a point x satisfying P at which F comes within 1/(n+1) of dominating F everywhere on P. This is Bishop's constructive substitute for the Extreme Value Theorem: an approximate maximum with an explicit error bound, never an attained one -- `CReal.evt_attained_max_decides_sign` proves that an exact maximiser would decide the sign of an arbitrary real, and nothing here narrows that. Before this, the library's EVT (`CReal.evt_approx_max`) was proved on real intervals through `CReal.supOn` and generalized to nothing. Two things about the hypothesis are worth stating precisely. First, it is total boundedness ALONE: completeness is never used in the proof, so the theorem is strictly stronger than the Bishop-compact form (`Metric.evt_approx_max_of_compact`, which is one `And.left` on top of it) and a test asserts its rendered type mentions neither `Metric.CompleteOn` nor `Metric.CompactOn`. Second, no non-emptiness hypothesis is needed, because `Metric.NetIn` already forces the net's index-0 point to satisfy P.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.evt_approx_max : ((x0 : Metric) -> ((x1 : ((x1 : Metric.carrier x0) -> Prop)) -> ((x2 : ((x2 : Metric.carrier x0) -> CReal)) -> ((x3 : Metric.TotallyBoundedOn x0 x1) -> ((x4 : Metric.UniformlyContinuousOn x0 Metric.creal x1 x2) -> ((x5 : AxNat) -> Exists.{1} (Metric.carrier x0) (fun (x6 : Metric.carrier x0) => And (x1 x6) (((x7 : Metric.carrier x0) -> ((x8 : x1 x7) -> CReal.le (x2 x7) (CReal.add (x2 x6) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))))))))))",
+    "fragment": "Metric",
+    "free_symbols": [],
+    "kernel_theorem": "Metric.evt_approx_max"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:metric-space-completeness-of-the-real-line"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.evt_approx_max",
+      "kind": "kernel-term",
+      "supports": "Metric.evt_approx_max is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.evt_approx_max | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.evt_approx_max[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.evt_approx_max",
+      "notes": "kernel_declaration_projection exits non-zero when the named declaration is in no constructed prelude's environment -- asking and finding none is a failure there, not an empty answer -- and grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t (a scripted GNU grep reads \\t as a literal t). --release is mandatory: this binary builds the creal/cpoint/metric preludes, which overflow the default debug thread stack."
+    },
+    {
+      "id": "suite-w2_3_compactness_types_render",
+      "kind": "exhaustive-enumeration",
+      "supports": "The rendered type of Metric.evt_approx_max mentions Metric.TotallyBoundedOn and Metric.UniformlyContinuousOn and does NOT mention Metric.CompleteOn or Metric.CompactOn -- i.e. the claim that completeness is not assumed is read off the kernel's own type rather than from the source or a comment.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests::w2_3_compactness_types_render, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::w2_3_compactness_types_render --test-threads=1 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 90,
+      "notes": "The `1 passed` is load-bearing: a filter that matches nothing runs zero tests and exits 0. The test's negative half (assert the type does NOT contain CompleteOn/CompactOn) is what makes it a claim about the hypothesis rather than a spelling check; its positive half in the same test is the twin that would catch a rendering that had gone blank."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric/compactness.rs)",
+    "source": "Lane `metric-compactness`, roadmap W2-3, recorded in ADR-1607 (docs/research/09-decisions/adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from metric_tests::w2_3_compactness_types_render's printed output."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. The witness x MOVES with n and is never claimed to converge, so this is not an attained maximum and does not touch `CReal.evt_attained_max_decides_sign`'s boundary. Uniform continuity is a hypothesis with the modulus carried inside an `Exists` over `Nat -> Nat`; it is not derived from pointwise continuity, and it cannot be here -- that derivation is Heine-Cantor, whose usual proof is a finite subcover argument this library deliberately does not have (ADR-1602). The dual statement (an approximate MINIMUM) is not proved; it would follow from this one applied to the negation of F, but that composition is not in tree."
+}

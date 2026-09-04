@@ -1,98 +1,155 @@
 [
   {
-    "names": ["Int.Characterization.zero_lt_one", "Int.zero_lt_one"],
+    "names": [
+      "Int.Characterization.zero_lt_one",
+      "Int.zero_lt_one"
+    ],
     "reason": "characterization.rs re-exports Int.zero_lt_one's own proof term verbatim as part of the Peano/order-pinning categoricity bundle (crates/axeyum-lean-kernel/src/characterization/int.rs). One proof term, two names.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
   },
   {
-    "names": ["Rat.chebyshev_sampleMean_uncorrelated", "Rat.weak_law_of_large_numbers"],
+    "names": [
+      "Rat.chebyshev_sampleMean_uncorrelated",
+      "Rat.weak_law_of_large_numbers"
+    ],
     "reason": "weak_law_of_large_numbers is a documented discoverability alias for readers searching by the law's common name; its body forwards to chebyshev_sample_mean_uncorrelated's proof term unchanged (rat_prelude/probability.rs:5352). Same statement, same proof, one extra entry point.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
   },
   {
-    "names": ["CPoint.apollonius_from_stewart", "CPoint.apollonius_median"],
+    "names": [
+      "CPoint.apollonius_from_stewart",
+      "CPoint.apollonius_median"
+    ],
     "reason": "Intentional cross-check, not an accident: two genuinely independent proof routes (Stewart's-median doubling vs. the direct coordinate route) for the identical Apollonius statement, landed deliberately beside each other as a bridge (creal_point.rs module doc says so explicitly). Deleting either would remove the cross-check that is the point.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#group-3--apollonius-intentional-a"
   },
   {
-    "names": ["CReal.rat_approx_upper", "CReal.sampleUpperBound"],
+    "names": [
+      "CReal.rat_approx_upper",
+      "CReal.sampleUpperBound"
+    ],
     "reason": "Fixed 2026-08-27 (dup-ratchet lane), was accidental: sampleUpperBound (uniform_continuity.rs, 2026-08-26) now forwards to rat_approx_upper's proof term instead of re-deriving the same estimate independently. rat_approx_upper (density.rs, 2026-08-22) stays the canonical name -- not because it is older, but because density::declare_density runs before uniform_continuity::declare_uniform_continuity in CRealPrelude's build order, so only that direction of alias can reference an already-admitted name.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-4--5--rat_approxupperlower--sampleupperlowerbound-the-predicted-case-confirmed"
   },
   {
-    "names": ["CReal.rat_approx_lower", "CReal.sampleLowerBound"],
+    "names": [
+      "CReal.rat_approx_lower",
+      "CReal.sampleLowerBound"
+    ],
     "reason": "Mirror of the rat_approx_upper/sampleUpperBound entry above -- same fix, same build-order reason, opposite bound direction.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-4--5--rat_approxupperlower--sampleupperlowerbound-the-predicted-case-confirmed"
   },
   {
-    "names": ["Int.Characterization.le_total", "Int.le_total"],
+    "names": [
+      "Int.Characterization.le_total",
+      "Int.le_total"
+    ],
     "reason": "characterization.rs re-exports Int.le_total's own proof term verbatim as part of the Peano/order-pinning categoricity bundle (crates/axeyum-lean-kernel/src/characterization/int.rs). One proof term, two names.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
   },
   {
-    "names": ["Int.Characterization.discrete", "Int.no_int_between"],
+    "names": [
+      "Int.Characterization.discrete",
+      "Int.no_int_between"
+    ],
     "reason": "characterization.rs re-exports Int.no_int_between's own proof term verbatim as part of the Peano/order-pinning categoricity bundle (crates/axeyum-lean-kernel/src/characterization/int.rs). One proof term, two names.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
   },
   {
-    "names": ["Nat.succ_sub_succ", "Nat.succ_sub_succ_eq_sub"],
+    "names": [
+      "Nat.succ_sub_succ",
+      "Nat.succ_sub_succ_eq_sub"
+    ],
     "reason": "Fixed in the prior dedup pass (2026-08-27), was accidental: succ_sub_succ_eq_sub (nat_prelude/order_extra.rs) now forwards to succ_sub_succ's proof term (nat_prelude/algebra.rs) instead of an independent re-derivation, matching this file's own established alias pattern (see succ_le_succ below). shape_search still reports the pair after the fix because it compares admitted TYPES, not proof terms -- the statement is unchanged, only the proof is now shared.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#group-8--natsucc_sub_succnatsucc_sub_succ_eq_sub-accidental-and-fixed-this-pass"
   },
   {
-    "names": ["Nat.Peano.succ_injective", "Nat.succ_injective"],
+    "names": [
+      "Nat.Peano.succ_injective",
+      "Nat.succ_injective"
+    ],
     "reason": "characterization.rs re-exports Nat.succ_injective's own proof term verbatim as part of the Peano-categoricity bundle (crates/axeyum-lean-kernel/src/characterization/nat.rs:176). One proof term, two names.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
   },
   {
-    "names": ["Nat.le_succ_succ", "Nat.succ_le_succ"],
+    "names": [
+      "Nat.le_succ_succ",
+      "Nat.succ_le_succ"
+    ],
     "reason": "Corpus-name alias, by design: nat_prelude/order_extra.rs restates a fixed list of lemmas (F:nat-order-lemma-census) under Lean-core's exact flat names, because an imported corpus's proofs resolve against Lean-core spelling. succ_le_succ's body is a one-line forward to le_succ_succ's proof term.",
     "adjudicated": "2026-08-27",
     "source": "docs/research/11-design-review/2026-08-27-shape-search-duplicates-adjudicated.md#groups-1-6-7-9-characterizationrs-deliberate-b"
   },
   {
-    "names": ["Int.add_mul", "Rat.int_right_distrib"],
+    "names": [
+      "Int.add_mul",
+      "Rat.int_right_distrib"
+    ],
     "reason": "Fixed 2026-08-31 (retrieval-gate lane), was accidental: two independent re-derivations of right-distributivity over Int, in two preludes, running the SAME mul_comm-thrice-plus-left_distrib chain -- Int.add_mul in int_prelude/add_basics.rs and Rat.int_right_distrib in rat_prelude/laws.rs. int_right_distrib keeps its name (20 call sites across rat_prelude/ and creal/sqrt.rs) but its body is now d.lemma(int.add_mul, ...). One proof term, two names. Verified: cargo test -p axeyum-lean-kernel --lib rat_prelude:: 151 passed, 0 failed.",
     "adjudicated": "2026-08-31",
     "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
   },
   {
-    "names": ["Nat.dvd_of_dvd_mul_left", "Nat.gauss_lemma"],
+    "names": [
+      "Nat.dvd_of_dvd_mul_left",
+      "Nat.gauss_lemma"
+    ],
     "reason": "Mathlib-name alias, by design: nat_prelude/coprime_lemmas.rs declares Nat.dvd_of_dvd_mul_left (Mathlib spells it Nat.Coprime.dvd_of_dvd_mul_left) whose body is a one-line forward to Nat.gauss_lemma's proof term -- verified by reading declare_dvd_of_dvd_mul_left, whose whole result is d.lemma(p.gauss_lemma, &[k, m, n, cop_hyp, dvd_hyp]). One proof term, two names.",
     "adjudicated": "2026-08-31",
     "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
   },
   {
-    "names": ["Nat.coprime_dvd_left", "Nat.coprime_of_dvd_left"],
+    "names": [
+      "Nat.coprime_dvd_left",
+      "Nat.coprime_of_dvd_left"
+    ],
     "reason": "Mathlib-name alias, by design: nat_prelude/coprime_lemmas.rs declares Nat.coprime_dvd_left (Mathlib spells it Nat.Coprime.coprime_dvd_left) forwarding to primes.rs's Nat.coprime_of_dvd_left, which carries the real gcd_dvd_left/dvd_trans/dvd_gcd/eq_one_of_dvd_one argument. One proof term, two names.",
     "adjudicated": "2026-08-31",
     "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
   },
   {
-    "names": ["Nat.clog_mono_right", "Nat.clog_monotone"],
+    "names": [
+      "Nat.clog_mono_right",
+      "Nat.clog_monotone"
+    ],
     "reason": "Monotone-mirror alias, by design: Mathlib's Nat.clog_monotone is stated as Monotone (clog b), and Monotone f is Mathlib's own definition of the pointwise form, so the core rendering of the two statements coincides. declare_clog_monotone's body forwards to p.clog_mono_right. Same treatment as Nat.choose_mono. One proof term, two names.",
     "adjudicated": "2026-08-31",
     "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
   },
   {
-    "names": ["Nat.log_mono_right", "Nat.log_monotone"],
+    "names": [
+      "Nat.log_mono_right",
+      "Nat.log_monotone"
+    ],
     "reason": "Mirror of the clog_mono_right/clog_monotone entry above -- same Monotone-unfolds-to-pointwise reason, same forwarding body (declare_log_monotone calls d.lemma(p.log_mono_right, ...)), floor log instead of ceiling log.",
     "adjudicated": "2026-08-31",
     "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
   },
   {
-    "names": ["CReal.integral_witness_independent", "IntSpace.CReal.integral_witness_independent"],
+    "names": [
+      "CReal.integral_witness_independent",
+      "IntSpace.CReal.integral_witness_independent"
+    ],
     "reason": "DELIBERATE, and the duplication IS the deliverable. ADR-1612's deciding measurement is how many CReal.integral theorems the generic integration space RE-DERIVES rather than assumes, and the only way to make that checkable rather than rhetorical is to declare the same proposition a second time with a proof that is IntSpace.integral_witness_independent applied to IntSpace.crealInterval and nothing else. The two proof terms are genuinely independent: CReal's own route is a converges_unique argument over Riemann sums (creal/integral.rs), the IntSpace route is monotonicity plus CReal.equiv_of_le_le with no Riemann sum anywhere. Aliasing one to the other would destroy the measurement. intspace_tests::the_rederived_statement_equals_creals_own asserts the two rendered types are EQUAL, so this group is not merely tolerated -- it is required to exist and required to stay identical.",
     "adjudicated": "2026-09-04",
     "source": "docs/research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md"
+  },
+  {
+    "names": [
+      "Metric.creal_evt_approx_max",
+      "Metric.creal_evt_approx_max_via_metric"
+    ],
+    "reason": "Intentional cross-check, and the point of ADR-1607: the SAME statement proved two ways, once through CReal.supOn (metric/compactness.rs, via CReal.evt_approx_max plus And-reassociation) and once through the general metric EVT applied to Metric.creal_totallyBoundedOn_interval and Metric.creal_uniformly_continuous_on (metric/interval.rs). The duplication IS the evidence that the interval EVT is an instance of the metric one -- metric_tests::the_interval_evt_is_the_metric_evt_at_one_type asserts the kernel holds one interned ExprId for both types, with Metric.evt_approx_max's own type as the non-vacuity control. Making either a forwarding alias would delete exactly the fact being claimed. Same shape as the Apollonius entry above.",
+    "adjudicated": "2026-09-04",
+    "source": "docs/research/09-decisions/adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md"
   }
 ]

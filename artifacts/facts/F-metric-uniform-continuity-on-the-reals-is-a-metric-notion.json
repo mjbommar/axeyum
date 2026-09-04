@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-uniform-continuity-on-the-reals-is-a-metric-notion",
+  "title": "Uniform continuity on a real interval implies continuity as a notion of the metric layer",
+  "statement": "Continuity is now stated over an ARBITRARY pair of metric spaces rather than only for functions of one real variable: `Metric.UniformlyContinuous M N F` says some modulus mu makes `d(x,y) <= 1/(mu n + 1)` force `d(F x, F y) <= 1/(n+1)`, `Metric.Continuous M N F` says the same pointwise with the modulus allowed to depend on the point, and each has a twin relativized to a predicate on the source carrier (this kernel has no `Subtype`, so a subspace is a predicate -- ADR-1602). `Metric.continuous_of_uniformly_continuous` proves uniform implies pointwise by handing the single modulus back unchanged at every point. `Metric.creal_continuous_on` connects that to what the library already had: a witness of `CReal.UniformlyContinuousOn F a b` yields `Metric.ContinuousOn Metric.creal Metric.creal (Metric.Interval a b) F`. The cost of the bridge is the measurement: its modulus is `CReal.UniformlyContinuousOn.modulus F a b u` verbatim and its proof is that witness's `spec` field applied to four `And` projections, with no estimate anywhere, because both sides already spell every rate as `1/(k+1)` and `Metric.dist Metric.creal x y` reduces definitionally to `CReal.abs (x + -y)`.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.creal_continuous_on : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.UniformlyContinuousOn x0 x1 x2) -> Metric.ContinuousOn Metric.creal Metric.creal (Metric.Interval x1 x2) x0))))    -- Metric.ContinuousOn M N P F := forall x, P x -> Exists (fun k => forall n y, P y -> CReal.le (Metric.dist M x y) (CReal.ofRat (Rat.natDivSucc 1 (k n))) -> CReal.le (Metric.dist N (F x) (F y)) (CReal.ofRat (Rat.natDivSucc 1 n)))",
+    "fragment": "Metric",
+    "free_symbols": [],
+    "kernel_theorem": "Metric.creal_continuous_on"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:metric-space-completeness-of-the-real-line"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.creal_continuous_on",
+      "kind": "kernel-term",
+      "supports": "Metric.creal_continuous_on is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.creal_continuous_on | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.creal_continuous_on[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.creal_continuous_on",
+      "notes": "kernel_declaration_projection exits non-zero when the named declaration is in no constructed prelude's environment, and grep -c exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t. --release is mandatory."
+    },
+    {
+      "id": "suite-the_bridges_modulus_is_load_bearing",
+      "kind": "instance-pin",
+      "supports": "The bridge's witness is the uniform-continuity modulus and nothing weaker: rebuilding its proof with `fun n => n` in the modulus slot -- every other argument untouched -- is REFUSED by Kernel::add_declaration, while the same construction with CReal.UniformlyContinuousOn.modulus in that slot is admitted in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests::the_bridges_modulus_is_load_bearing"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::the_bridges_modulus_is_load_bearing metric::metric_tests::uniform_to_pointwise_does_not_transpose_its_points --test-threads=1 2>&1 | grep -cE '^test result: ok\\. 2 passed'",
+      "checker_seconds": 95,
+      "notes": "Both named tests carry a POSITIVE TWIN in the same body, built by the same helper with one flag flipped, so a refusal cannot be attributed to the helper being broken. The second one pins that the uniform witness is read at the fixed point in the right order: d(x,y) and d(y,x) are equal only propositionally here (Metric.distComm is a field, not a reduction), so transposing the two arguments is refused. The `2 passed` count is required because a filter matching nothing runs zero tests and exits 0."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric/continuity.rs)",
+    "source": "Lane `metric-compactness`, roadmap W2-2, recorded in ADR-1607 (docs/research/09-decisions/adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md). formal.statement is Kernel::render_lean of the declaration's type, printed by metric_tests::w2_2_continuity_types_render."
+  },
+  "notes": "WHAT THIS DOES NOT SAY, AND WHY THE ARROW IS ONE-WAY. The converse -- pointwise continuity implies uniform continuity, even on a compact set -- is NOT proved and is deliberately absent rather than merely unfinished. Pointwise continuity supplies some modulus per point with no claim that one modulus serves all points, and extracting one is Heine-Cantor, whose usual proof is the finite subcover argument this library declines (ADR-1602). Bishop's own development makes uniform continuity on a compact set the primitive notion for exactly this reason. This fact also does not connect to `CReal.ContinuousAt`, which is SEQUENTIAL continuity phrased through CReal.Converges; that is a third vocabulary and nothing here relates it to either of the two above."
+}

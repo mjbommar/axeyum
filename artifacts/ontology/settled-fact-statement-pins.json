@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2287,
+    "min_identity_bound": 2291,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -10321,6 +10321,27 @@
       ]
     },
     {
+      "fact_id": "F:metric-bishop-compactness-of-a-closed-real-interval",
+      "language": "lean4",
+      "statement_sha256": "6fa3c573c8f89c50fff09e8f457ab4c4b8c215b2a8e910fc6b6c074976e7a47e",
+      "prose_sha256": "8abe3bb599b9906db458a4b593fc8bfe0d3a704ae29a35247fdf1b4c1546860a",
+      "kernel_theorem": "Metric.creal_compactOn_interval"
+    },
+    {
+      "fact_id": "F:metric-extreme-value-theorem-over-a-metric-space",
+      "language": "lean4",
+      "statement_sha256": "a69fdfd5d6ed3618ba99a54f728e62856cae9e1bc1bfbfe079516aec20ea66fb",
+      "prose_sha256": "45d1f67704ab8029be29efa4c337736caf9e7c6c730b0d83f8d339fbb468397d",
+      "kernel_theorem": "Metric.evt_approx_max"
+    },
+    {
+      "fact_id": "F:metric-interval-evt-is-an-instance-of-the-metric-evt",
+      "language": "lean4",
+      "statement_sha256": "a9b162614637fb20fbfb2d12df21d980657d8e0d69de0e2c3c5a45a1bb3bc682",
+      "prose_sha256": "10a7e60c2e34a41ebe0b7e923a7d90268bfac53e95f399aa7d4e2d11444a08f8",
+      "kernel_theorem": "Metric.creal_evt_approx_max_via_metric"
+    },
+    {
       "fact_id": "F:metric-space-completeness-of-the-real-line",
       "language": "lean4",
       "statement_sha256": "a5ffd34e8a8d4dd2c74f204092e5e05231ee3f3af600207057366d29ebe8f46f",
@@ -10333,6 +10354,13 @@
       "statement_sha256": "a3fc902fc54ee0fef07f28e8aded0608bd751781ab27ca53c952226d49efa77c",
       "prose_sha256": "da1666902992fc39eacba5ebba8a2454fadc7e10fad9df380c30ddb449a1e93d",
       "kernel_theorem": "Metric.dist_quadrilateral"
+    },
+    {
+      "fact_id": "F:metric-uniform-continuity-on-the-reals-is-a-metric-notion",
+      "language": "lean4",
+      "statement_sha256": "ed769afd8c2169b24dd7433eda30d9e75371c298106c0f355b265d916c8bbb6a",
+      "prose_sha256": "aff3b5a979c5b279717e3519b217325f58f6da7a9daddf415ba42d8a6575d3c8",
+      "kernel_theorem": "Metric.creal_continuous_on"
     },
     {
       "fact_id": "F:ml430-int-add-assoc-749cb0ff",
