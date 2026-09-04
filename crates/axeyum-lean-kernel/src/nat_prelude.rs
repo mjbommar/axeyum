@@ -400,7 +400,6 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use finset::declare_finset_all;
-use rado::declare_rado_all;
 use floor_count::declare_floor_count_all;
 use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
@@ -482,6 +481,7 @@ use primes::{
 };
 use primrec::declare_primrec_all;
 use quadratic_reciprocity_count::declare_quadratic_reciprocity_count_all;
+use rado::declare_rado_all;
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
     declare_land_le_left_all, declare_land_le_right_all, declare_land_zero_propagation_all,
