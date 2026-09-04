@@ -4727,6 +4727,31 @@ pub struct CRealPrelude {
     /// extra congruence lemma. See `creal/integral.rs`'s
     /// `declare_integral_by_parts`.
     pub integral_by_parts: NameId,
+    /// `CReal.hasDerivative_antiderivative_of_uc : ∀ (F : CReal → CReal)
+    /// (a b : CReal) (hab : le a b) (u : UniformlyContinuousOn F a b),
+    /// HasDerivativeOn (antiderivative F a b hab u) F a b`.
+    ///
+    /// **FTC-I with no side condition beyond uniform continuity** — the
+    /// statement a textbook writes. [`Self::has_derivative_antiderivative`]
+    /// applied at the `K` that [`Self::bounded_of_uniformly_continuous`]
+    /// COMPUTES from the `u` and `hab` already in scope, so the `(kb : Nat)`
+    /// and `BoundedOn F a b kb` that theorem asks of its caller are
+    /// discharged rather than assumed. No estimate is repeated and the
+    /// modulus is unchanged: the proof term IS the stronger-hypothesis
+    /// theorem applied. See `creal/integral.rs`'s `declare_ftc_of_uc`.
+    pub has_derivative_antiderivative_of_uc: NameId,
+    /// `CReal.integral_eq_antideriv_diff_of_uc : ∀ (F G : CReal → CReal)
+    /// (a b : CReal) (hab : le a b) (u : UniformlyContinuousOn F a b),
+    /// HasDerivativeOn G F a b →
+    /// Equiv (integral F a b hab u) (add (G b) (neg (G a)))`.
+    ///
+    /// **FTC-II with no side condition beyond uniform continuity** — *if
+    /// `G' = F` on `[a, b]` and `F` is uniformly continuous there, then
+    /// `∫ₐᵇ F = G(b) − G(a)`.* [`Self::integral_eq_antideriv_diff`] applied
+    /// at [`Self::bounded_of_uniformly_continuous`]'s computed `K`, exactly
+    /// as [`Self::has_derivative_antiderivative_of_uc`] does for FTC-I. See
+    /// `creal/integral.rs`'s `declare_ftc_of_uc`.
+    pub integral_eq_antideriv_diff_of_uc: NameId,
     /// `CReal.integral_abs_le : ∀ F a b (k : Nat) (hab : le a b)
     /// (u : UniformlyContinuousOn F a b), BoundedOn F a b k →
     /// le (abs (integral F a b hab u))
@@ -6715,6 +6740,10 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         has_derivative_antiderivative: kernel.name_str(creal, "hasDerivative_antiderivative"),
         integral_eq_antideriv_diff: kernel.name_str(creal, "integral_eq_antideriv_diff"),
         integral_by_parts: kernel.name_str(creal, "integral_by_parts"),
+        has_derivative_antiderivative_of_uc: kernel
+            .name_str(creal, "hasDerivative_antiderivative_of_uc"),
+        integral_eq_antideriv_diff_of_uc: kernel
+            .name_str(creal, "integral_eq_antideriv_diff_of_uc"),
         integral_abs_le: kernel.name_str(creal, "integral_abs_le"),
         integral_abs_le_of_bound: kernel.name_str(creal, "integral_abs_le_of_bound"),
         integral_sub_linear_le: kernel.name_str(creal, "integral_sub_linear_le"),
@@ -7602,6 +7631,7 @@ const STEP_DISPATCH: &[StepDispatch] = &[
         "integral::declare_integral_by_parts",
         integral::declare_integral_by_parts,
     ),
+    ("integral::declare_ftc_of_uc", integral::declare_ftc_of_uc),
     (
         "derivative::declare_has_derivative_integral_const",
         derivative::declare_has_derivative_integral_const,

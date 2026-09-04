@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2256,
+    "min_identity_bound": 2262,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -4614,6 +4614,13 @@
       "kernel_theorem": "CReal.hasDerivative_antiderivative"
     },
     {
+      "fact_id": "F:creal-hasderivative-antiderivative-of-uc",
+      "language": "lean4",
+      "statement_sha256": "83290976084bea48110d83efe385fea523d028fbba4897a5200157fc8fb9a151",
+      "prose_sha256": "2532db7d9bc49abcb4f1c1a34c7acb3c89f3fbabde4609704a90af3688ad5a36",
+      "kernel_theorem": "CReal.hasDerivative_antiderivative_of_uc"
+    },
+    {
       "fact_id": "F:creal-hasderivative-chain",
       "language": "lean4",
       "statement_sha256": "2791ff3feef55687651fc2fac68cf8aaa14b0d159f66d1394218d3bb5551bb65",
@@ -4808,6 +4815,13 @@
       "statement_sha256": "05c71add59b949dbf560a9fb8e57c9b03b935c054b6978fe13e63740b1c2cb75",
       "prose_sha256": "aec336f431be736bde0fa89a67177b16f8803002b01d909c70fb2fc991023d84",
       "kernel_theorem": "CReal.integral_eq_antideriv_diff"
+    },
+    {
+      "fact_id": "F:creal-integral-eq-antideriv-diff-of-uc",
+      "language": "lean4",
+      "statement_sha256": "fb0dc4349fddbf334a0f9fb46de9769d670844cd34fc491fa7c29b81f38cdc3e",
+      "prose_sha256": "dc696e80efeebdd25e9db3bf6bebb59713affa422bc81af52639735a3ed45b04",
+      "kernel_theorem": "CReal.integral_eq_antideriv_diff_of_uc"
     },
     {
       "fact_id": "F:creal-integral-le",
@@ -8948,6 +8962,13 @@
       ]
     },
     {
+      "fact_id": "F:int-multiplicative-order-exists",
+      "language": "lean4",
+      "statement_sha256": "859511bc6c7e7cd6d483ac2d22dd3fb79fc225e627e9d7d58666e43682313c01",
+      "prose_sha256": "0fd806b5d7becbde403f377a51477f530ae1ccf1b4d97100388c4221106f2ade",
+      "kernel_theorem": "Int.order_exists"
+    },
+    {
       "fact_id": "F:int-nat-abs-dvd-nat-abs-of-dvd",
       "language": "lean4",
       "statement_sha256": "1046e14f29dbd8cc722eb6d4e9ac2ce7a856a1456c228ff78c7ba30f6ec8aafe",
@@ -9169,11 +9190,25 @@
       ]
     },
     {
+      "fact_id": "F:int-order-dvd-totient",
+      "language": "lean4",
+      "statement_sha256": "1e7d3ed6abb4f125570400b5213da4dd43470cbb3123e1a29ccf22e10aa677ec",
+      "prose_sha256": "3056055124410c7159dd4397e8df7dec5b3deae88bef3071010c1bf9b4bddc98",
+      "kernel_theorem": "Int.order_dvd_totient"
+    },
+    {
       "fact_id": "F:int-pow-add",
       "language": "lean4",
       "statement_sha256": "f7f2a52dc4093815ae3eddd86d5fda47cd5a9636564b817adbd0586d8a5bacda",
       "prose_sha256": "79fa5fb8243e58f2de8973fb11f071acc2a4cef933f139bb0a322963242d375f",
       "kernel_theorem": "Int.pow_add"
+    },
+    {
+      "fact_id": "F:int-pow-modeq-one-iff-order-dvd",
+      "language": "lean4",
+      "statement_sha256": "4a9535e854ac1f17bc7552e7ae9778352fdb52f8c0922285c21987fb3a00c2e8",
+      "prose_sha256": "e16be64b2bdc3d1267928b1fe245f82f98b10b73e8dd76b2a90643337a5d40af",
+      "kernel_theorem": "Int.pow_modeq_one_iff_order_dvd"
     },
     {
       "fact_id": "F:int-pow-mul",
@@ -9230,6 +9265,13 @@
           "prose_sha256": "c61341a4e51827063f8483134447766fecaf6facd3d03d840debbf377c417de4"
         }
       ]
+    },
+    {
+      "fact_id": "F:int-primitive-root-pow-injective",
+      "language": "lean4",
+      "statement_sha256": "7bd874226adbb7515f5e3064669e3ea95624434779c8e296d55b5405859778cd",
+      "prose_sha256": "92ea85b16562cfb9ffe7b379dca58396d736b32c6db7662e9f7db36740128b93",
+      "kernel_theorem": "Int.primitive_root_pow_injective"
     },
     {
       "fact_id": "F:int-prod-range-pairing-collapse",

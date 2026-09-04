@@ -1,0 +1,68 @@
+{
+ "schema_version": 1,
+ "id": "F:creal-integral-eq-antideriv-diff-of-uc",
+ "title": "Fundamental theorem of calculus, part II (evaluation rule), for a uniformly continuous integrand",
+ "statement": "THE FUNDAMENTAL THEOREM OF CALCULUS, PART II -- THE EVALUATION RULE -- in the form a textbook states it: if G has derivative F on [a, b] (uniformly, in Bishop's sense) and F is uniformly continuous there, then the integral of F over [a, b] is equivalent to G(b) - G(a). The conclusion is CReal.Equiv, the Bishop-setoid equality on regular sequences, not Eq. G is ANY antiderivative, not the canonical CReal.antiderivative. NO side condition beyond uniform continuity: the (kb : Nat) and BoundedOn F a b kb that CReal.integral_eq_antideriv_diff demands of its caller are discharged from the uniform-continuity witness via CReal.bounded_of_uniformly_continuous, whose kb is COMPUTED, not obtained by Exists-elimination.",
+ "formal": {
+  "language": "lean4",
+  "statement": "theorem CReal.integral_eq_antideriv_diff_of_uc : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : ((x1 : CReal) -> CReal)) -> ((x2 : CReal) -> ((x3 : CReal) -> ((x4 : CReal.le x2 x3) -> ((x5 : CReal.UniformlyContinuousOn x0 x2 x3) -> ((x6 : CReal.HasDerivativeOn x1 x0 x2 x3) -> CReal.Equiv (CReal.integral x0 x2 x3 x4 x5) (CReal.add (x1 x3) (CReal.neg (x1 x2))))))))))",
+  "fragment": "CReal",
+  "free_symbols": [],
+  "kernel_theorem": "CReal.integral_eq_antideriv_diff_of_uc"
+ },
+ "epistemic_status": "proved",
+ "proof_route": "kernel-lean",
+ "depends_on": [
+  "F:creal-integral-eq-antideriv-diff",
+  "F:creal-bounded-of-uniformly-continuous"
+ ],
+ "axiom_footprint": [],
+ "evidence": [
+  {
+   "id": "kernel-CReal.integral_eq_antideriv_diff_of_uc",
+   "kind": "kernel-term",
+   "supports": "CReal.integral_eq_antideriv_diff_of_uc is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+   "check_status": "checked",
+   "checkers": [
+    "producing-build (Kernel::add_declaration)",
+    "theorem_dependency_inventory re-list"
+   ],
+   "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.integral_eq_antideriv_diff_of_uc 2>/dev/null | grep -cE '^CReal\\.integral_eq_antideriv_diff_of_uc[[:space:]]'",
+   "checker_seconds": 12,
+   "kernel_declaration": "CReal.integral_eq_antideriv_diff_of_uc",
+   "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never a backslash-t -- in a scripted (GNU) grep that is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+  },
+  {
+   "id": "footprint-CReal.integral_eq_antideriv_diff_of_uc",
+   "kind": "exhaustive-enumeration",
+   "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.integral_eq_antideriv_diff_of_uc.",
+   "check_status": "checked",
+   "checkers": [
+    "Kernel::axiom_footprint",
+    "environment-wide trusted-surface enumeration"
+   ],
+   "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+   "checker_seconds": 14,
+   "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. Measured 2026-09-04: 'ok: creal trusted surface = 0'. The per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row the same day."
+  },
+  {
+   "id": "test-CReal.integral_eq_antideriv_diff_of_uc-no-bound",
+   "kind": "instance-pin",
+   "supports": "The theorem applies at fully symbolic F, G, a, b, hab, u, hg with NO BoundedOn witness anywhere in the local context -- the entire content of this fact over CReal.integral_eq_antideriv_diff.",
+   "check_status": "checked",
+   "checkers": [
+    "creal::integral::ftc_tests::ftc_of_uc_applies_without_a_bounded_witness"
+   ],
+   "checker_command": "RUST_MIN_STACK=1073741824 cargo test --release -p axeyum-lean-kernel --lib -- ftc_of_uc --test-threads=4 2>&1 | grep -cE '^test result: ok[.] 1 passed'",
+   "checker_seconds": 130,
+   "notes": "Mutation-verified 2026-09-04 against the full creal:: suite (230 tests). Mutant M2 restores the (kb : Nat) + BoundedOn binders to this declaration: 229 passed, 1 failed, and the one failure is this test. The test's negative control for this direction states the evaluation term as G a - G b instead of G b - G a, which at F := id on [0, 1] asserts 1/2 = -1/2; the kernel must reject it."
+  }
+ ],
+ "provenance": {
+  "date": "2026-09-04",
+  "curation": "curated",
+  "established_by": "axeyum-lean-kernel build_creal_prelude, step integral::declare_ftc_of_uc (crates/axeyum-lean-kernel/src/creal/integral.rs)",
+  "source": "Hand-written by lane ftc (roadmap W1-2, ADR-1597). formal.statement is the final field of this declaration's row in the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, transcribed verbatim; axiom_footprint is that row's footprint column, cross-checked by the whole-prelude nat_axiom_inventory run in the second evidence row. The prose in `statement` and `notes` is authored, not generated."
+ },
+ "notes": "WHAT THIS ADDS, PRECISELY. CReal.integral_eq_antideriv_diff (landed 2026-08-27) already proves FTC-II; this fact is a STRENGTHENING OF ITS STATEMENT, arity 9 to arity 7, discharging a hypothesis that was always derivable from one already present.\n\nNO MEAN VALUE THEOREM IS USED, AND THAT IS THE CONSTRUCTIVE POINT. The classical proof of the evaluation rule runs through the MVT, which is an existence statement and is not constructively available in that form (it is a separate roadmap item, W2-20). The route here avoids it entirely: G and the canonical antiderivative A are both antiderivatives of F, so G - A has derivative zero; CReal.constant_of_zero_deriv gives G a - A a = G b - A b; and A a = 0, A b = the integral, are both instances of the same degenerate-interval fact. What replaces the MVT is the UNIFORMITY of CReal.HasDerivativeOn: because the modulus is global on [a, b], the constancy of a zero-derivative function follows from a uniform estimate rather than from a point whose existence must be asserted.\n\nWHAT IT DOES NOT SAY. It does not assert that an antiderivative EXISTS for an arbitrary F -- that is FTC-I (F:creal-hasderivative-antiderivative-of-uc), and it needs the uniform continuity hypothesis. It says nothing about improper integrals, unbounded intervals, or integrands that are merely pointwise continuous."
+}
