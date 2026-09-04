@@ -582,6 +582,12 @@ facts:
     # curated (non-`[generated]`) title, against a committed baseline.
     python3 -m unittest scripts.tests.test_count_landmark_facts
     python3 scripts/count-landmark-facts.py --check
+    # How much of the ledger CHARACTERISES itself (ADR-1605): a three-way split
+    # (curated / [generated] / "Mathlib v4.30 source proposition"), a
+    # title-vs-statement agreement guard, and a per-fragment RATCHET on the
+    # curated count rather than an exact pin.
+    python3 -m unittest scripts.tests.test_check_fact_characterisation
+    python3 scripts/check-fact-characterisation.py --check
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence

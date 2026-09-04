@@ -121,11 +121,33 @@ now. Nothing was deleted.
 | 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |
 | 2026-09-04 | metatheory-and-landmarks | `90940d7bb` ADR-1600: kernel trusted-core size (5,526 lines, re-derived), what it admits, four mutation-tested guards (3 clean, 1 found redundant), a fresh full `check-lean-gate.sh` run reproducing the known-red `max-to-imax` mutant, and what a relative soundness proof would require |
 | 2026-09-04 | metatheory-and-landmarks | `adc3eda38` `scripts/count-landmark-facts.py` + baseline + `scripts/tests/test_count_landmark_facts.py` (9 guards) + `check.sh`/`justfile` registration: 1,432 landmark facts of 2,487 proved (57.6%) |
+| 2026-09-04 | producers-to-real | status stub |
+| 2026-09-04 | producers-to-real | `ring/generic.rs` (new): `ring::generic` over `Alg.CommRing`/`AlgS.CommRing`, `Backend`-extended from `linarith::generic`; 12 tests, 121/121 `ring::`+`decide::` green |
+| 2026-09-04 | producers-to-real | `decide/setoid_boundary.rs` (new): measured negative for `decide` over `CReal.Equiv`/`.le`/`.lt`, positive control via `decide::rat` |
+| 2026-09-04 | producers-to-real | ADR-1599; retirement of `creal/ring_helpers.rs` attempted and reverted (count 0, real bug found in production usage, named for next lane) |
 | 2026-09-04 | quotient-decision | W2-8 landed: the first isomorphism theorem over `AlgS.Group` by the setoid route, 12 declarations, empty axiom footprint |
 | 2026-09-04 | quotient-decision | ADR-1595 (proposed): quotients stay setoids; `Quot.sound` stays out — decided by the W2-8 measurement, not by argument |
+| 2026-09-04 | rado-in-kernel | `Nat.Rado`: 17 axiom-free declarations defining Rado numbers; `schur_two : IsRadoNumber 1 1 2 5` reconstructed from search on both halves; ADR-1596 |
+| 2026-09-04 | rado-in-kernel | measured: `IsRadoNumber 5 3 4 625` type-checks — the residue against the ledger's `computed` rows is the PROOF term, not the unary numeral |
+| 2026-09-04 | rado-in-kernel | new fact `F:rado-r2-schur-two` (`proved`, `kernel-lean`, empty footprint); `F:rado-r4-a5-b3`/`-b4` stay `computed` with the residue recorded |
+| 2026-09-04 | classical-axiom-policy | W1-9 landed: LPO, WLPO, Markov's principle and LLPO over ℕ as explicit hypotheses, six implications, empty footprint |
+| 2026-09-04 | classical-axiom-policy | W0-2's deciding measurement: four classical `CReal` order theorems the field docs record as unavailable, on an explicit hypothesis, empty footprint |
+| 2026-09-04 | classical-axiom-policy | ADR-1601 (proposed): classical logic enters as a hypothesis, not as an axiom — 11 binders, 14 arguments, zero obligations |
+| 2026-09-04 | primitive-roots | `Int.IsOrder` and the divisibility characterization (`f04f3eaf4`) |
+| 2026-09-04 | primitive-roots | `Int.order_exists`/`order_unique`/`order_dvd_totient`, `Int.IsPrimitiveRoot`, `Int.primitive_root_pow_injective` |
+| 2026-09-04 | primitive-roots | `mult_order_tests.rs`: the `ord_8(3)=2` / `ord_7(3)=6` evaluation batteries and the `IsPrimitiveRoot 8 3` refutation |
+| 2026-09-04 | primitive-roots | ADR-1598, and four curated facts for the named results |
+| 2026-09-04 | ftc | `CReal.hasDerivative_antiderivative_of_uc` and `CReal.integral_eq_antideriv_diff_of_uc`: the FTC with the redundant `BoundedOn` side condition discharged (arity 7→5, 9→7) |
+| 2026-09-04 | ftc | `ftc_of_uc_applies_without_a_bounded_witness` + two small-term negative controls; mutation-verified, each mutant kills exactly one test |
+| 2026-09-04 | ftc | Two CURATED facts for the new forms — the first `CReal` FTC facts whose prose says what the theorem asserts |
+| 2026-09-04 | ftc | ADR-1597: the FTC was already proved 2026-08-27, and 64% of `CReal` facts carry prose that refuses to characterise them |
 | 2026-09-04 | topology-decision | `Metric` carrier + ℝ instance + completeness generalized off `CReal.converges_of_cauchy` (`e43a8105c`) |
 | 2026-09-04 | topology-decision | Euclidean plane instance with the UNSQUARED triangle inequality and unsquared Cauchy–Schwarz (`b34e2dbd7`) |
 | 2026-09-04 | topology-decision | ADR-1602 closes W0-3; four curated facts; `shape_search` and `kernel_declaration_projection` taught to index the new prelude (`0e78494cc`) |
+| 2026-09-04 | persona-absence-audit | `AUDIT-2026-09-04.md`: 76 absence claims checked, 11 false, 12 partial, 51 confirmed, 2 did-not-run |
+| 2026-09-04 | persona-absence-audit | ADR-1605 (proposed): characterisation is a derived three-way ratcheted measurement, not a stored schema field |
+| 2026-09-04 | persona-absence-audit | `check-fact-characterisation.py` + 17-test control suite, registered in `check.sh` and the `justfile` |
+| 2026-09-04 | persona-absence-audit | re-baselined the red `count-landmark-facts.py` pin and fixed one mistitled fact |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -41225,6 +41247,81 @@ host; that broader scope is outside this lane's brief. `just check` /
 docs-plus-one-script lane; the specific steps this lane added were verified
 directly instead).
 
+**Your lane's block (`DONE`, producers-to-real, 2026-09-04).** W1-5: extend
+`ring` (and `decide` if meaningful) to the setoid carriers, repeating
+`linarith::generic`'s move (ADR-1585/ADR-1592) for a second producer. See
+ADR-1599 for the full design and evidence; this is the terse pulse.
+
+`ring::generic` (`crates/axeyum-lean-kernel/src/ring/generic.rs`, new file,
+~2000 lines incl. tests) EXTENDS `linarith::generic`'s exact `Backend` shape:
+a `Backend::{KernelEq, Setoid}` enum threaded through six wrapper methods
+(`refl`/`symm`/`trans`/`congr_add`/`congr_mul`/`congr_neg`) and one parser
+(`as_eq`), reaching `Alg.CommRing` (`Int.commRing`/`Rat.commRing`) and
+`AlgS.CommRing` (`CReal.commRingS`; `Complex.commRingS` reachable the same
+way, not exercised by a test this session). The fragment is `ring::rat`'s
+exact shape (sorted sum of sorted monomials, coefficients capped at
+magnitude 1) generalized off selectors instead of a fixed `RatPrelude`.
+Three facts not primitive on `CommRing` (`mul_zero`, `mul_neg_one`,
+`neg_neg`) are reused from already-generic `Ring`-level theorems rather than
+re-derived; `mul_neg`/`neg_mul` are derived LOCALLY per `Problem`. `neg`
+does NOT distribute over `add` generically (named scope restriction) — a
+`neg (add u v)` source subterm is a sound but un-simplified atom.
+
+`decide/setoid_boundary.rs` (new file): a MEASURED negative.
+`CReal.Equiv`/`.le`/`.lt` are `∀`/`∃`-headed, refused by `decide::parse_goal`
+on the outer constant alone (no reduction attempted) — confirmed for the
+friendliest possible instance. `decide::rat`'s existing fragment DOES reach
+the concrete-rational LEAVES a `creal` proof needs (positive control). No
+`CReal.apart`/witnessed-separation definition exists to give `decide` a
+setoid-flavored fragment; building one is new mathematics, out of scope.
+
+**Retirement: attempted, reverted, count 0.** Wired `creal/ring_helpers.rs`'s
+`right_distrib`/`add4_comm` (30+ real call sites across `power.rs`/
+`series.rs`/`derivative.rs`) through `ring::generic::prove_eq_s`; the
+isolated `ring::generic` suite (12/12, including the exact shapes with
+repeated arguments matching real call sites) stayed green, but
+`creal::creal_tests::creal_prelude_builds` itself broke with
+`Decline::NotAnIdentity` on some real call this session could not isolate
+in time. Reverted via `git checkout --`; `creal::` confirmed green at HEAD
+after the revert. Named as the next lane's concrete starting point in
+ADR-1599 section 4, not silently dropped.
+
+**Two real bugs this session's own verification caught (not the retirement
+bug — both fixed, both in the isolated engine):** (1) `mul_neg_proof`'s
+`mul_assoc` symm call had its endpoints swapped relative to `mul_assoc`'s
+actual direction, caught by `int_mul_neg_one_shape_via_generic`
+(`TypeMismatch`). (2) The test harness used the WRONG (`Eq`-flavored)
+field-index module for `AlgS.CommRing`'s RecordNames, silently selecting
+`equivRefl`/`equivSymm`/etc. instead of `add`/`mul`/`neg` — caught because a
+`neg`-free goal (`mul_comm`) failed too, ruling out a `neg`-only
+explanation. Both are exactly the class of defect this repository's own
+"verify before reporting" discipline exists to catch.
+
+**Gates run, all confirmed nonzero and green:**
+- Step 0: `shape_search --include-constructed`, `declarations=3550`,
+  positive control `Int.mul_comm` `FOUND 1`.
+- `cargo test -p axeyum-lean-kernel --release --lib -- ring:: decide::
+  --test-threads=4`: **121 passed, 0 failed** (71 `ring::` + 47 `decide::`).
+- `cargo test -p axeyum-lean-kernel --release --lib -- creal::creal_tests::
+  creal_prelude_builds creal::creal_tests::every_creal_declaration_is_
+  checked_and_axiom_free --test-threads=1`: **2 passed, 0 failed** (post-revert
+  baseline confirmed clean).
+- `cargo clippy -p axeyum-lean-kernel --lib --tests -- -D warnings`: clean.
+- `cargo check --workspace --all-targets`: clean.
+- `rustfmt --edition 2024` on every touched file.
+- `python3 scripts/check-fact-depends-derived.py --fix`: `nothing to fix`.
+- `python3 scripts/validate-facts.py`: `2758 facts checked, 0 errors`.
+- `python3 scripts/gen-adr-index.py`: `rows=805` (pre-existing
+  `duplicate_numbers=0166,0167` unrelated to this lane, not introduced here).
+- `python3 scripts/gen-plan.py`: run at session close.
+- `scripts/check-merge-hygiene.sh`: run before final commit.
+
+**Did not run / not attempted:** `just check`/full aggregate gate (out of
+scope, time budget); `kernel_declaration_projection` on a retired
+declaration (there is none — see above); `Complex.commRingS` exercised by a
+test (reachability is structural/by-construction, matching `CReal.
+commRingS`'s field shape, but not measured with its own test this session).
+
 **Your lane's block (`DONE`, quotient-decision, 2026-09-04).** Roadmap W0-1
 (convergence C1: reviewers 04.1, 09.3, 12.1) is decided **by measurement**, and
 the measurement is roadmap W2-8 — the first isomorphism theorem over
@@ -41296,6 +41393,229 @@ Next lane: the ADR is `Status: proposed` and needs the coordinator or the
 user to accept it. Nothing in this lane depends on that acceptance — the
 theorem is landed and axiom-free either way.
 
+**Your lane's block (`landed`, rado-in-kernel, 2026-09-04).** Roadmap item W1-1,
+the C2 convergence (07.1, 11.1, 12.4). `Nat.Rado` now defines the object the
+ledger's two `computed` four-colour Rado numbers are values of, and
+`R_2(x = y + z) = 5` is closed end to end from search. ADR-1596.
+
+**Seventeen declarations, every one admitted on the first attempt with an empty
+`Kernel::axiom_footprint`.** Definitions: `Sol a b x y z := a*x = a*y + b*z`
+(subtraction-free — see below), `IsColouring`, `MonoSol`, `Arrows`,
+`IsRadoNumber`, `ofFinset`, `schurSet`. Theorems: `Nat.boolSelect_lt`,
+`isColouring_ofFinset`, `inRange_of_le`, `isColouring_of_le`, `monoSol_of_le`,
+`arrows_of_le`, `isRadoNumber_of_succ`, `schur_arrows_five`,
+`schur_not_arrows_four`, `schur_two`.
+
+**The finding, and it reverses the assumption the roadmap carried in.** W1-1's
+note says "unary numerals, so the constant 625 cannot be *formed*". Measured:
+`Nat.Rado.IsRadoNumber 5 3 4 625` **type-checks**, in the same test fixture and
+the same budget as everything else in `rado_tests.rs` (16 tests, 1.62 s total).
+The superlinear cost this repository documents is a cost of REDUCTION — that is
+why `decide`'s `MAX_MAGNITUDE` is 30 — and a `Prop` that merely mentions a
+numeral neither reduces it nor unfolds anything. So the ledger's two results are
+stateable in this kernel today, verbatim. **The residue is the proof term, and
+it is combinatorial, not numeric:** `Arrows 5 3 4 625` needs a term ranging over
+`4^625` colourings, and colourings are *functions*, so they are not enumerable
+in-kernel at all — the `Nat.lt_two_cases` tree that works at `k = 2` has `k^n`
+leaves. The lower half at 624 is the reachable frontier: the same
+`Nat.Finset.allBelow` reflection route, `2.4e8` triples, polynomial.
+
+**What a future certificate has to hand over is named exactly.**
+`isRadoNumber_of_succ : Arrows a b k (succ m) → (Arrows a b k m → False) →
+IsRadoNumber a b k (succ m)`, with `m` a variable throughout. Those two
+hypotheses are the two halves a Rado search already produces.
+
+**The next increment, unblocked and cheap:** Chang–De Loera–Wesley's Lemma 4.1
+(`R_k ≥ a^k` by the `a`-adic valuation colouring, for `gcd(a,b) = 1`) is a
+*parameterized* statement whose proof forms no constant at all, and it would
+back the lower half of `F:rado-r4-a5-b3` as a theorem rather than a replay.
+
+**Gates, each with its count.**
+
+| gate | result |
+|---|---|
+| `cargo test --release -p axeyum-lean-kernel --lib nat_prelude::` | 460 passed / 0 failed (was 441 before the finset-pigeonhole merge) |
+| `… --lib nat_prelude::rado` | 16 passed / 0 failed, 1.62 s |
+| `cargo clippy -p axeyum-lean-kernel --all-targets --all-features -- -D warnings` | exit 0 |
+| `cargo check --workspace --all-targets` | exit 0 (a prelude-struct change is not a kernel-local change; `axeyum-py`'s generated `prelude_fields.rs` is regenerated) |
+| `python3 scripts/gen-py-prelude-fields.py --check` | `nat=1212`, OK up to date |
+| `python3 scripts/validate-facts.py` | 2759 facts, **0 errors** |
+| `kernel_declaration_projection`, before vs after | **153 rows added, 0 removed, 0 added rows that are not this lane's** (17 declarations × 9 prelude groups), every footprint column `0` |
+| `rustfmt --edition 2024` on both new files | clean |
+| `scripts/check-merge-hygiene.sh` | ran; the three generated artifacts it named stale are regenerated in this lane's last commit |
+
+**Build cost, measured PAIRED rather than before-and-after.** The unpaired
+figures were badly misleading: `shape_search`'s `build=` read 4.6–5.6 s before
+the module and 8.0–18.5 s after, which looks like a 3x prelude regression and is
+not one. Two binaries (with and without `declare_rado_all`) run **interleaved**,
+six rounds each, load 13–18: min 5.4 s WITHOUT, min 5.4 s WITH. The module's
+cost is not resolvable above this box's noise floor. This is the
+frontier-ratchet reference-frame lesson applied to a build time.
+
+**Mutation controls** (`scripts/tests/mutation_controls.py rado-in-kernel`, six
+mutations, all `killed N`, no survivors and nothing unmeasured):
+
+| mutation | killed |
+|---|---|
+| `ofFinset` is the indicator and not its swap | 13 |
+| `Sol` reads the `b` coefficient | 2 |
+| `Sol` reads the `a` coefficient on the middle term | 2 |
+| the search's own solution predicate reads `b` | **1** |
+| the `schurSet` membership chain is not branch-swapped | 13 |
+| `boolSelect_lt` hands `Bool.rec` its minors in (false, true) order | 13 |
+
+The killed-sets have **two shapes, and that is the reading**. A corrupted
+DEFINITION still type-checks — the prelude builds, the footprint stays empty,
+and only the specific test that evaluates it dies (rows 2, 3, 4). A corrupted
+CERTIFICATE is refused by `Kernel::add_declaration`, `build_nat_prelude` fails,
+and all 13 tests that construct a kernel die at once (rows 1, 5, 6); the 3 that
+survive are exactly the pure-search tests, which build no kernel. So the guard
+on the certificate is the trusted gate itself and it fires before any assertion
+does.
+
+Two rows share a killed-set (`Sol`'s `a` and `b` coefficients kill the same two
+tests), so the pair is load-bearing but does not separate *which* coefficient
+was dropped. Recorded rather than papered over.
+
+**Owned files:** `crates/axeyum-lean-kernel/src/nat_prelude/rado.rs`,
+`rado_tests.rs`, the `Nat.Rado` block of `nat_prelude.rs`,
+`artifacts/facts/F-rado-r2-schur-two.json`, ADR-1596, and the
+`rado-in-kernel` suite in `scripts/tests/mutation_controls.py`.
+
+**Did not run:** `just check` / `./scripts/check.sh` in full, and the workspace
+test sweep. `nat_prelude::` is the suite this lane's change can break and it is
+green at 460; the workspace `check --all-targets` covers the generated-consumer
+hazard a prelude-struct change carries.
+
+**Your lane's block (`DONE`, classical-axiom-policy, 2026-09-04).** Roadmap
+W0-2 (convergence C4: reviewers 03.1, 12.2) and W1-9 (reviewer 10.1) are one
+task, and both are decided **by measurement**: the reverse-mathematics map
+*is* the evidence for the policy. **No axiom was added to the kernel.**
+
+**Ten new theorems, all with an EMPTY `Kernel::axiom_footprint`**, read from
+`Kernel::axiom_footprint` and confirmed by the
+`kernel_declaration_projection` footprint-size column (0 on all ten), never
+from a rendered name.
+
+`nat_prelude/omniscience.rs` (`a56074fef`) — the map, six edges, no new
+`Definition`, every principle spelled out INLINE in every type:
+
+| declaration | edge |
+|---|---|
+| `Nat.em_implies_lpo` | EM → LPO |
+| `Nat.lpo_implies_wlpo` | LPO → WLPO |
+| `Nat.lpo_implies_markov` | LPO → MP |
+| `Nat.lpo_implies_llpo` | LPO → LLPO |
+| `Nat.wlpo_and_markov_imply_lpo` | **WLPO ∧ MP → LPO** — the converse half |
+| `Nat.lnp_unrestricted_implies_lpo` | joins `least_number.rs`'s calibration point |
+
+`creal/omniscience.rs` (`68b583fec`) — the deciding measurement, on
+`OrderDecision := ∀ x y : CReal, Or (lt x y) (le y x)`. **All four
+conclusions are statements `creal.rs`'s own field documentation records as
+unavailable:** `CReal.le_total_of_order_decision` ("no `le_total` over ℝ to
+recover it from"), `CReal.trichotomy_of_order_decision` (absent; only
+`Rat.lt_trichotomy` exists), `CReal.apart_of_not_equiv_of_order_decision`
+("the converse is Markov's principle and is neither proved nor assumed
+here"), `CReal.abs_cases_of_order_decision` ("a decision on the sign of a
+real and is **not** available"). Two of the four are depth-2 nodes — they
+consume another theorem of the family rather than the hypothesis directly —
+because W0-2 asks what CARRYING a hypothesis costs and a depth-1 family
+cannot answer that.
+
+**The number the experiment existed to produce: 11 binders, 14 argument
+positions, ZERO obligations.** A classical hypothesis is not something you
+discharge, it is something you carry; carrying it costs one binder in the
+type and one argument at each use, and the cost does not grow with depth (the
+two depth-2 theorems cost exactly what the depth-1 ones cost). Contrast
+ADR-1595, where the setoid route cost three real one-line obligations — there
+is **no analogue here**.
+
+Three measurements nobody asked for that decide it (ADR-1601, `13bfb5f4a`,
+`Status: proposed`):
+
+1. **The axiom option is not one name.** Reviewer 03's blocker names EM,
+   countable choice AND `funext`; `funext` was explicitly not granted by
+   ADR-1595 and has never been priced. Pricing a classical addition at "one
+   axiom" has now been wrong twice in this repository, measured both times.
+2. **It retroactively devalues three existing row-2 certificates**
+   (`lub_decides_em`, `ivt_exact_root_decides_sign`,
+   `evt_attained_max_decides_sign`), whose entire content is that a classical
+   conclusion COSTS a decision principle.
+3. **It kills three environment-scan gates that currently pass**, each with a
+   same-scan positive control. They cannot be repaired, only deleted.
+
+**Recommendation: option (b), classical principles stay hypotheses.**
+Reversible on evidence — a named, attempted theorem shown unreachable this
+way. The number to watch is hypothesis-uses per theorem, **14 / 10 = 1.4**
+here; re-open above roughly 3.
+
+Downstream, and stated honestly: **(b) does not give reviewer 03 what it
+asked for** — it cannot write classical analysis the way an analyst writes
+it. What it gets is W3-1 unblocked with a stated shape and a measured
+per-theorem cost. **W2-7 (the weak law) is gated on W1-10, not on this ADR**,
+so W0-2 is removed as a blocker there and none is added. W3-6's completeness
+carries its choice principle as a hypothesis, which is the standard
+reverse-mathematics treatment and is what reviewer 10.3 called "a good test
+of the classical-axiom policy". Reviewer 12's second trigger is met: W0-1 and
+W0-2 are both written.
+
+**Mutation table** (run in this isolated worktree, tree verified clean before
+and after each; every restore checked with `git status --porcelain`):
+
+| mutation | outcome |
+|---|---|
+| MU1 — drop `declare_lpo_implies_markov` from the ℕ build order | **killed 2** — exactly the two tests naming it; the other six pass |
+| MU2 — drop `declare_apart_of_not_equiv` from the `CReal` build order | **killed 4** — its two tests plus `every_creal_declaration_is_checked_and_axiom_free` and `steps_table_matches_recorded_extraction`, so the inventory shard is load-bearing |
+| MU3 — weaken LLPO's premise in the TYPE builder only (`And (Hits f) (Hits g)` → `And (Hits f) (Hits f)`) | **killed 8** — `Kernel::add_declaration` REJECTED the mutant, so `build_nat_prelude` errs and the whole suite dies |
+
+**The structural finding MU3 records, and it is worth carrying forward:** for
+a kernel prelude declaration, "exactly one test dies" is not an achievable
+criterion for a *statement* mutation. A wrong statement is caught by the
+trusted gate, and one bad declaration poisons the shared build — so the whole
+suite dies, not one test. The criterion that does apply, and that every test
+in these two files satisfies, is that each negative control is demonstrated
+non-vacuous **by a positive twin in the same test using the same machinery**:
+the theorem is applied at genuinely FREE variables of the advertised
+hypothesis type and the inferred conclusion is pinned against an
+independently rebuilt term, and only then is the wrong term required to be
+rejected. Drop-mutations (MU1, MU2) are the ones that measure test coverage,
+and both killed exactly the tests that name their subject.
+
+**What did NOT run / was not built.** The reduction `OrderDecision → LPO over
+ℕ` is **not** proved and is cited, not claimed: it needs a real built from a
+`Bool` sequence (`∑ 2⁻ⁿ [f n = true]`) plus the summability estimate. It is
+the natural next declaration. Every separation in the standard picture (LPO
+not constructively derivable; LLPO ⇏ LPO; WLPO ⇏ LPO; MP ⇏ WLPO) is likewise
+cited — each needs a model of the kernel rather than a term in it, per
+ADR-1600. The `Nat.lpo_bounded` non-vacuity anchor was scoped out: the
+bounded forms are already theorems (`Nat.lnp_bounded_search`,
+`Nat.lnp_decidable`) and serve the same purpose.
+
+**A tool hazard measured on the way, for the next lane.** `shape_search` run
+while a build held the flock reported `declarations=1963` and a **false
+UNANSWERABLE** for the `AlgS` namespace, which does exist; the same query on
+an idle box reported `declarations=2686` and found all twelve `AlgS.Hom.*`
+declarations. Check `declarations=` against a known-good figure before
+believing any absence. Separately, `scripts/creal-declare-deps.py` requires
+the registry struct to be named EXACTLY as the `CRealPrelude` field's type —
+an alias on the re-export is not enough, and it exits non-zero with
+"registry X has no NameId fields".
+
+Gates (all green, nonzero counts): `--lib nat_prelude::omniscience` **8
+passed** in 2.30 s; `--lib creal::omniscience` **6 passed** in 51.80 s; whole
+`--lib creal::` **235 passed** in 169 s (measured during MU2's baseline);
+`clippy -p axeyum-lean-kernel --all-targets --all-features -D warnings` exit
+0; `cargo check --workspace --all-targets` exit 0, 0 errors; `cargo check -p
+axeyum-py --all-targets` exit 0 after `gen-py-prelude-fields.py`
+(total 3211 → **3221**); `rustfmt --edition 2024` on every touched Rust file;
+`validate-facts.py` **2,768 facts, 0 errors** (2,497 proved; 2,397
+kernel-lean of which **2,395 axiom-free**); `creal-declare-deps.py` steps
+214 → **215**, fields 609 → **613**; `gen-adr-index.py` rows=807.
+
+Next lane: ADR-1601 is `Status: proposed` and needs the coordinator or the
+user to accept it. Nothing here depends on that acceptance — the ten theorems
+are landed and axiom-free either way.
+
 **ℕ-induction is in dispatch; the front door now decides 4 of the 12 corpus
 instances where it decided 1** (`WIP`, induction-dispatch, 2026-08-17).
 `prove_by_nat_induction` had been built, exported, and deliberately kept out of
@@ -41348,6 +41668,82 @@ yet; that is the gap to close.
 Not done, and deliberately: the `real` rows are a different case (their carrier
 is genuinely opaque), and `nat_axiom_inventory`'s doc header still cites a stale
 `integer=1` — owned by another lane.
+
+**Your lane's block (`WIP`, primitive-roots, 2026-09-04).** Roadmap item W1-7,
+the number theorist's first Next Five entry
+(`docs/math-department/01-number-theory.md`). ADR-1598 records the design.
+
+**Landed, all eleven admitted by `Kernel::add_declaration` with an empty
+`axiom_footprint`** (read from the kernel, not from source text):
+
+| declaration | what it is |
+|---|---|
+| `Int.one_pow` | `∀ k, pow one k = one` — the one `Int.pow` law that did not exist |
+| `Int.IsOrder` | `0 < k ∧ (a^k ≡ 1 [n] ∧ ∀ j, 0<j → j<k → ¬ a^j ≡ 1 [n])` |
+| `Int.pow_modeq_one_of_dvd` | `k ∣ m` and `a^k ≡ 1` give `a^m ≡ 1` |
+| `Int.order_dvd_of_pow_modeq_one` | the converse, by `Nat.div_mod_exists` against minimality |
+| `Int.pow_modeq_one_iff_order_dvd` | **deliverable 3**, the two as one `Iff` |
+| `Int.order_unique` | two orders of one unit are equal |
+| `Int.order_exists` | **deliverable 1**, by `Nat.lnp_bounded_search` below `φ(n)` |
+| `Int.order_dvd_totient` | **deliverable 2**, Lagrange in the concrete case |
+| `Int.IsPrimitiveRoot` | **deliverable 4**, a unit whose order is `φ(n)` |
+| `Int.order_pow_eq_of_le` | the one-sided half of pairwise incongruence |
+| `Int.primitive_root_pow_injective` | **deliverable 4**, the powers enumerate the units |
+
+**Where this stopped, and exactly why.** Deliverable 5 — existence of a
+primitive root modulo a prime — did **not** land, and it is not blocked on a
+decision. The standard route counts elements of each order using
+`∑_{d|n} φ(d) = n`. The obstruction is that identity's left-hand side: it sums
+over the **divisor set** of `n`, and no divisor-set aggregate exists in either
+prelude. `Nat.sumRange` folds a contiguous `[0,n)`; `Nat.countRange` counts a
+`Bool` predicate over a contiguous range; `Int.prodRangeIf` folds a product
+over a predicate-restricted contiguous range. The sum can be *expressed* as
+`sumRange (fun d => if d ∣ n then φ(d) else 0) (succ n)`, but every step of the
+standard proof then needs the divisor-pairing reindexing `d ↦ n/d` of that
+restricted sum — and `int_prelude/euler_totient.rs`'s own module doc records
+that the analogous restricted-**product** reindexing needed a
+remove-one-element induction built from scratch. That is a slice of comparable
+size to everything above. It is the honest next task for W1-7.
+
+**Retrieval (step 0).** Fresh `shape_search` build, `declarations=2674`,
+positive control `Nat.Finset.pigeonhole` (landed the same day at `f91ded0c2`).
+ABSENT for `--name-like primitiveroot`, `--name-like multorder`,
+`--name-like ordn`; `--name-like order` returns only the `Alg.OrderedRing`
+family, which is *order* in the relational sense. Nothing here is a
+re-derivation, and nothing here needed a new `Nat` lemma — every ingredient
+existed (`Int.pow_add`/`pow_mul`, the 38-declaration `Int.ModEq` family,
+`Int.euler_totient_theorem`, `Nat.lnp_bounded_search`, `Nat.div_mod_exists`,
+`Nat.zero_or_succ`, `Nat.le_dest`, `Nat.le_of_dvd`, and
+`euler_totient.rs`'s already-`pub(super)` `coprime_of_modeq_inverse`).
+
+**Two design notes worth carrying forward.** (1) The search predicate is
+`Q j := a^(succ j) ≡ 1`, not `a^j ≡ 1` — at `j = 0` the latter is true for
+every `a`, so the search would always answer `0`. (2) `Coprime (a^i) n` came
+out of the order relation itself: `t = i + f` makes `a^f` a modular inverse of
+`a^i`, and the Bézout extraction is already a named helper. No
+`Coprime`-is-multiplicative lemma was needed.
+
+**Mutation table.** Measured, not predicted; each row is a real build.
+
+| id | mutation | predicted | measured |
+|---|---|---|---|
+| MUT-A | `three_mod_eight_is_killed_by_exactly_the_even_exponents`: move `m = 3` from the miss list to the hit list | that test alone dies | **that test alone died** |
+| MUT-B | `three_has_multiplicative_order_two_mod_eight`: change the refuted claim from `IsOrder 8 3 4` to `IsOrder 8 3 2` (which is TRUE) | that test alone dies | **that test alone died** |
+| MUT-C | `declare_is_order`: transpose the positivity conjunct, `Lt 0 k` -> `Lt k 0` | ? | **all 6 die, at `build_int_prelude`** — every failure reads `Int prelude must build: TypeMismatch` |
+
+MUT-A and MUT-B were applied together in one run: 4 of 6 passed and exactly
+the two mutated tests failed, so neither mutation leaks into a test it does not
+target.
+
+MUT-C is the informative one and its answer is not "exactly one test". A
+`Definition` this development's own proofs consume cannot be mutated past
+`Kernel::add_declaration`: `Int.order_exists` supplies `Nat.zero_lt_succ` for
+the positivity conjunct, so transposing it makes the prelude itself refuse to
+build and every test that constructs a kernel dies at line 1. **The trusted
+gate, not the test suite, is the guard against a mutated `IsOrder`.** What the
+gate cannot see is whether the definition says the intended thing about
+concrete values — and that residual is exactly what MUT-A and MUT-B show the
+batteries do cover.
 
 **The ℕ side is closed; the ℤ side is half-closed, and the half that is missing
 is named (`DONE`/`PARTIAL`, agent-characterization, 2026-08-17).** The gap was
@@ -41523,6 +41919,61 @@ whether the rewrite fired, and the nine names agree exactly.
 
 Detail moved to [`../notes/59-r4-model.md`](docs/plan/notes/59-r4-model.md).
 
+**Lane `ftc` (`DONE`, 2026-09-04, ADR-1597).** W1-2 asked for the FTC "both
+directions over the existing Riemann integral". **Both directions were
+already proved**, admitted 2026-08-27: `CReal.hasDerivative_antiderivative`
+(FTC-I, `1b91195d0`) and `CReal.integral_eq_antideriv_diff` (FTC-II,
+`d1bdae9e7`), plus `CReal.integral_by_parts`, all with empty axiom
+footprints and registered `proved` facts. The roadmap item and
+`docs/math-department/02-constructive-analysis.md` are both wrong on this
+point.
+
+The measured reason the survey missed them: **307 of the 476 `CReal` facts
+(64%), and 1054 of 2758 ledger-wide (38%), carry the fact generator's prose,
+which opens "MECHANICALLY GENERATED, UNREVIEWED PROSE — this sentence
+deliberately makes NO mathematical characterisation of the theorem."** The
+generator's refusal is correct; the defect is that nothing distinguishes "no
+prose written" from "nothing here", so the ledger answers *is X proved?* and
+cannot answer *what do we have?* — which is the question a roadmap is built
+from.
+
+What was genuinely missing is the STATEMENT. Both existing theorems demand a
+`(kb : Nat)` and a `BoundedOn F a b kb` from the caller, and both are
+redundant: `CReal.bounded_of_uniformly_continuous` COMPUTES such a `kb` (no
+`Exists`-elimination) from the `UniformlyContinuousOn` witness both theorems
+already take. Two new theorems discharge it, arity 7→5 and 9→7:
+
+- `CReal.hasDerivative_antiderivative_of_uc : ∀ F a b (hab : le a b) (u : UniformlyContinuousOn F a b), HasDerivativeOn (antiderivative F a b hab u) F a b`
+- `CReal.integral_eq_antideriv_diff_of_uc : ∀ F G a b (hab : le a b) (u : UniformlyContinuousOn F a b), HasDerivativeOn G F a b → Equiv (integral F a b hab u) (add (G b) (neg (G a)))`
+
+Modulus, unchanged from FTC-I: `E ↦ modulus_of_uc(F, a, b, u)(2E + 1)`.
+`HasDerivativeOn` is Bishop's UNIFORM differentiability with the modulus as a
+`Type`-valued data field, so this is stronger than the pointwise statement,
+and FTC-II's conclusion is `Equiv`, not `Eq`.
+
+**No mean value theorem is needed and W2-20 should not be sequenced as a
+prerequisite.** FTC-II routes through `constant_of_zero_deriv`; the
+uniformity of the modulus is what replaces the MVT's asserted point.
+
+Gates, all run on this tree: `creal::` **230 passed / 0 failed** in 300 s
+(baseline 229); `kernel_declaration_projection` before/after diff is exactly
+6 added rows (the two theorems × `creal`/`complex`/`cpoint`, footprint 0
+each) and nothing else; `nat_axiom_inventory --require-axiom-free creal` →
+`ok: creal trusted surface = 0`; `validate-facts.py` 2760 facts, 0 errors,
+exit 0; clippy `-D warnings` clean; `check-links.sh` ok;
+`check-merge-hygiene.sh` clean. Mutation table: restoring the `BoundedOn`
+binders to either declaration kills **exactly one** test (229 passed, 1
+failed) and nothing else.
+
+**Next lane, the two things this one could not do.** (1)
+`docs/math-department/` is out of this lane's scope and now carries a false
+absence in its flagship strand — W1-2 is closed and
+`02-constructive-analysis.md`'s "what they would say is missing" item 1 is
+wrong; items 2–5 were not checked here and must not be assumed either way on
+this lane's authority. (2) The ledger-wide fix — 1054 generated-prose facts,
+or a `characterisation_status` axis the validator reports on — is a schema
+change needing its own ADR.
+
 **Round 4: `restore_nested_inductive_group` now has adversarial coverage, and
 the reason it did not was a defect in the instrument, not a property of Lean
 (`DONE`, agent-nested-gate, 2026-08-18).** Round 3 left the fourth admission
@@ -41587,7 +42038,61 @@ a third option because a metric supplies it.
 **Gates run.** `metric::` suite 17 passed / 0 failed in 64 s (`--release`,
 `--test-threads=4`); `validate-facts.py` 2762 facts / 0 errors;
 `check-links.sh` all links ok; both `validate-facts` control suites green
-after the allowlist widening. Mutation table in ADR-1602's companion notes.
+after the allowlist widening. Mutation table in ADR-1602 §6: four of five mutations kill EXACTLY one test each; the fifth (weakening a record FIELD) poisons the shared prelude build and kills all 17, which is reported as non-discriminating rather than as five-for-five.
+
+**Your lane's block (`DONE`, persona-absence-audit, 2026-09-04).** Every claim
+of absence in `docs/math-department/`'s twelve persona files was re-checked
+against a freshly rebuilt kernel index (`declarations=3575`, positive control
+`AlgS.Hom.firstIso`, which landed the same day). **76 claims checked: 11 are
+FALSE — the thing is proved — 12 more overstate the gap, 51 are confirmed
+absent, and 2 could not be settled by search and are recorded as did-not-run.**
+Findings in [`docs/math-department/AUDIT-2026-09-04.md`](docs/math-department/AUDIT-2026-09-04.md),
+worst-first, each row carrying the evidence command, the declaration name, and
+the landing commit. The twelve persona files and `00-roadmap.md` are NOT
+touched; the coordinator applies the findings.
+
+The worst false absences are the reviewers' own number-one items: `02`'s FTC
+(both directions, `1b91195d0`/`d1bdae9e7`, 2026-08-27), `08`'s weak law of
+large numbers (`Rat.weak_law_of_large_numbers`, `54592604a`, 2026-08-24),
+`02`'s uniform convergence with both interchange theorems (`edb2feb7b`,
+2026-08-27), `01`'s primitive roots (`f04f3eaf4`, the same day the file was
+written), `01`'s unique factorization as a multiset identity (`340dd568d`),
+`07`'s "no Stirling numbers" against ten proved theorems (`33cae3575`), `01`'s
+"totient multiplicativity is not general" against `Nat.totient_mul_of_coprime`
+(`05ad19d54`), `02`'s constructive Rolle/MVT (`db7c56936`/`3a7f3d1e8`), and
+`04`'s "no kernels or images" against twelve `AlgS.Hom.*` declarations
+(`5337d192b`). **Seven of the eleven landed on 2026-08-27**, one week before
+the reviews.
+
+Root cause, re-measured independently of lane `ftc` and decided in
+[ADR-1605](docs/research/09-decisions/adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md):
+the ledger cannot distinguish "no prose has been written" from "there is
+nothing here". 1,054 of 2,764 facts carry the generator's `[generated]` title
+(64.2% of the `CReal` shelf), and a class nobody had counted — 499 proved facts
+titled "Mathlib v4.30 source proposition `<Name>`", which the landmark rule
+scores as characterised and where the Stirling false absence hid. Together
+**1,553 of 2,493 proved facts (62.3%) carry no characterisation of their own.**
+A second, larger axis nobody had measured: **430 kernel theorems and 762 of 789
+definitions have no ledger fact at all**, including `AlgS.Hom.firstIso`.
+
+Implemented rather than left proposed: `scripts/check-fact-characterisation.py`
+(three-way split, two hard guards, and a per-fragment RATCHET on the curated
+count rather than the exact pin next door), its 17-test control suite with a
+full mutation table in the ADR, and registration in both `scripts/check.sh` and
+the `justfile`. Deliberately NOT done: a `characterisation_status` schema field
+(derivable, would drift, 1,054 file edits against a gated schema) — the ADR
+argues that alternative down. The kernel-vs-ledger coverage gate is sized at
+half a day in the ADR and left proposed; it needs a committed declaration index
+and a staleness guard, which is the load-bearing part.
+
+**Two off-lane findings.** (1) `scripts/count-landmark-facts.py --check` was
+RED on `main` at `182d0dd7d` — `baseline=2758 measured=2764` — because two
+lanes landed six facts on 2026-09-04 and neither bumped the generated baseline;
+re-baselined here. (2) `artifacts/facts/F-int-euler-totient-theorem.json`
+carried a full curated statement of Euler's totient theorem under a "prose not
+curated" title, so both the landmark count and the new checker scored a
+characterised fact as uncharacterised; the title is corrected, and it is the
+one live violation the new `PROSE_DISAGREEMENT` guard found on its first run.
 
 **The reconstruction context's carrier is now a parameter, and the constructed
 reals already satisfy it (`WIP`, agent-real-migration, 2026-08-18).**

@@ -243,6 +243,7 @@ mod multiset_prod;
 mod no_confusion;
 mod nth;
 mod nth_root;
+mod omniscience;
 mod ops;
 mod order;
 mod order_extra;
@@ -260,6 +261,7 @@ mod prime_dvd_mirrors;
 mod primes;
 mod primrec;
 mod quadratic_reciprocity_count;
+mod rado;
 mod rec_agreement;
 mod rectangle;
 mod rel_prime;
@@ -297,6 +299,7 @@ mod xor_order;
 mod xor_parity;
 mod xor_trichotomy;
 
+pub use omniscience::OmniscienceNames;
 pub use ops::{NatDev, NatOps, NatState};
 
 use abundant_deficient::declare_abundant_deficient_all;
@@ -397,6 +400,7 @@ use finite::{
 };
 use finite_set::declare_finite_set_all;
 use finset::declare_finset_all;
+use rado::declare_rado_all;
 use floor_count::declare_floor_count_all;
 use gauss_fold_sum::declare_gauss_fold_sum_all;
 use gauss_lemma::declare_gauss_lemma_all;
@@ -5173,6 +5177,14 @@ pub struct NatPrelude {
     /// `creal/extreme_value.rs`) reach. See `least_number.rs`.
     pub lnp_unrestricted_implies_em: NameId,
 
+    /// The reverse-mathematics map's omniscience principles
+    /// (`nat_prelude/omniscience.rs`, roadmap W1-9): LPO, WLPO, Markov's
+    /// principle and LLPO over `Nat`, each carried as an explicit HYPOTHESIS
+    /// so the axiom footprint stays empty. Reached as
+    /// `p.omniscience.em_implies_lpo` and documented in [`OmniscienceNames`]
+    /// rather than here, so the map costs this struct one field.
+    pub omniscience: OmniscienceNames,
+
     // -- `draw11-theorems` lane: `and_or_distrib.rs` --
     /// `Nat.and_or_distrib_left : ∀ x y z, Eq (land x (lor y z)) (lor (land
     /// x y) (land x z))` — `F:ml430-nat-and-or-distrib-left-fe131f64`. Via
@@ -6333,6 +6345,67 @@ pub struct NatPrelude {
     /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness).
     pub finset_exists_collision: NameId,
 
+    /// `Nat.Rado.Sol a b x y z := a * x = a * y + b * z` — the equation
+    /// `a(x - y) = bz` written subtraction-free, so truncating `Nat`
+    /// subtraction cannot manufacture a degenerate solution (ADR-1596).
+    pub rado_sol: NameId,
+    /// `Nat.Rado.IsColouring k n c := ∀ i, 1 <= i <= n → c i < k`.
+    pub rado_is_colouring: NameId,
+    /// `Nat.Rado.MonoSol a b n c` — a monochromatic solution inside `[1,n]`.
+    pub rado_mono_sol: NameId,
+    /// `Nat.Rado.Arrows a b k n := ∀ c, IsColouring k n c → MonoSol a b n c`
+    /// — the "`n` arrows `a(x-y)=bz` over `k` colours" relation.
+    pub rado_arrows: NameId,
+    /// `Nat.Rado.IsRadoNumber a b k n := Arrows a b k n ∧ ∀ m < n,
+    /// ¬ Arrows a b k m` — leastness, and the object the fact ledger's two
+    /// `computed` Rado numbers are values of.
+    pub rado_is_rado_number: NameId,
+    /// `Nat.Rado.ofFinset s i` — the indicator 2-colouring of a
+    /// `Nat.Finset`, `1` on members and `0` off them.
+    pub rado_of_finset: NameId,
+    /// `Nat.boolSelect_lt : ∀ t f k b, t < k → f < k →
+    /// Bool.rec (fun _ => Nat) f t b < k` — a `Bool`-selected value is below
+    /// any bound both branches are below.
+    pub bool_select_lt: NameId,
+    /// `Nat.Rado.isColouring_ofFinset : ∀ n s, IsColouring 2 n (ofFinset s)`
+    /// — every finite set is a valid two-colouring of every range, with no
+    /// side condition.
+    pub rado_is_colouring_of_finset: NameId,
+    /// `Nat.Rado.inRange_of_le : ∀ m n i, Le m n → 1<=i<=m → 1<=i<=n`.
+    pub rado_in_range_of_le: NameId,
+    /// `Nat.Rado.isColouring_of_le : ∀ k m n c, Le m n →
+    /// IsColouring k n c → IsColouring k m c` — a colouring restricts.
+    pub rado_is_colouring_of_le: NameId,
+    /// `Nat.Rado.monoSol_of_le : ∀ a b m n c, Le m n →
+    /// MonoSol a b m c → MonoSol a b n c` — a witness inside the smaller
+    /// range is still inside the larger one.
+    pub rado_mono_sol_of_le: NameId,
+    /// `Nat.Rado.arrows_of_le : ∀ a b k m n, Le m n →
+    /// Arrows a b k m → Arrows a b k n` — the arrow relation is monotone in
+    /// the bound, which is what makes "least" and "not at the predecessor"
+    /// the same statement.
+    pub rado_arrows_of_le: NameId,
+    /// `Nat.Rado.isRadoNumber_of_succ : ∀ a b k m, Arrows a b k (succ m) →
+    /// (Arrows a b k m → False) → IsRadoNumber a b k (succ m)` — THE
+    /// reduction a search certificate needs: the upper bound at `succ m` and
+    /// the refutation at `m` are exactly the two halves a search produces,
+    /// and `m` stays a variable, so no large numeral is ever formed.
+    pub rado_is_rado_number_of_succ: NameId,
+    /// `Nat.Rado.schurSet : Nat.Finset` — the lower-bound certificate for
+    /// `R_2(x = y+z)`, found by [`rado`]'s own search over the `2^4` subsets
+    /// of `[1,4]`: `{2,3}`, i.e. the partition `{1,4} / {2,3}`.
+    pub rado_schur_set: NameId,
+    /// `Nat.Rado.schur_arrows_five : Arrows 1 1 2 5` — every 2-colouring of
+    /// `[1,5]` has a monochromatic `x = y + z`. Reconstructed from a search
+    /// over the `2^5` colour assignments.
+    pub rado_schur_arrows_five: NameId,
+    /// `Nat.Rado.schur_not_arrows_four : Arrows 1 1 2 4 → False` — the
+    /// lower bound, refuted by reflection against `schurSet`.
+    pub rado_schur_not_arrows_four: NameId,
+    /// `Nat.Rado.schur_two : IsRadoNumber 1 1 2 5` — the first Rado number
+    /// in this repository that is a theorem rather than a certificate.
+    pub rado_schur_two: NameId,
+
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
     /// a field. See [`structures`] for the field lists and every selector
@@ -6433,6 +6506,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let fin = kernel.name_str(nat, "Fin");
         let pair = kernel.name_str(nat, "Pair");
         let multiset = kernel.name_str(nat, "Multiset");
+        let rado = kernel.name_str(nat, "Rado");
         let finset = kernel.name_str(nat, "Finset");
         let primrec = kernel.name_str(nat, "Primrec");
         let cases_on_uparam_name = {
@@ -7342,6 +7416,23 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_pigeonhole: kernel.name_str(finset, "pigeonhole"),
             finset_all_below_false_witness: kernel.name_str(finset, "allBelow_false_witness"),
             finset_exists_collision: kernel.name_str(finset, "exists_collision"),
+            rado_sol: kernel.name_str(rado, "Sol"),
+            rado_is_colouring: kernel.name_str(rado, "IsColouring"),
+            rado_mono_sol: kernel.name_str(rado, "MonoSol"),
+            rado_arrows: kernel.name_str(rado, "Arrows"),
+            rado_is_rado_number: kernel.name_str(rado, "IsRadoNumber"),
+            rado_of_finset: kernel.name_str(rado, "ofFinset"),
+            bool_select_lt: kernel.name_str(nat, "boolSelect_lt"),
+            rado_is_colouring_of_finset: kernel.name_str(rado, "isColouring_ofFinset"),
+            rado_in_range_of_le: kernel.name_str(rado, "inRange_of_le"),
+            rado_is_colouring_of_le: kernel.name_str(rado, "isColouring_of_le"),
+            rado_mono_sol_of_le: kernel.name_str(rado, "monoSol_of_le"),
+            rado_arrows_of_le: kernel.name_str(rado, "arrows_of_le"),
+            rado_is_rado_number_of_succ: kernel.name_str(rado, "isRadoNumber_of_succ"),
+            rado_schur_set: kernel.name_str(rado, "schurSet"),
+            rado_schur_arrows_five: kernel.name_str(rado, "schur_arrows_five"),
+            rado_schur_not_arrows_four: kernel.name_str(rado, "schur_not_arrows_four"),
+            rado_schur_two: kernel.name_str(rado, "schur_two"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -7453,6 +7544,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
             em_implies_lnp: kernel.name_str(nat, "em_implies_lnp"),
             lnp_unrestricted_implies_em: kernel.name_str(nat, "lnp_unrestricted_implies_em"),
+            omniscience: omniscience::OmniscienceNames::intern(kernel, nat),
             and_or_distrib_left: kernel.name_str(nat, "and_or_distrib_left"),
             and_or_distrib_right: kernel.name_str(nat, "and_or_distrib_right"),
             coprime_dvd_mul_left: kernel.name_str(nat, "coprime_dvd_mul_left"),
@@ -8496,6 +8588,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `lt_of_lt_of_le`, `succ_ne_zero`, all far above) and the logic
         // prelude. Nothing needs it, so it goes last.
         declare_least_number_all(&mut d, &p)?;
+        // `omniscience.rs`: needs `least_number.rs` (for
+        // `Nat.lnp_unrestricted_implies_em`) and the logic prelude's `Bool`
+        // discriminators. Nothing needs it, so it goes right after.
+        omniscience::declare_omniscience_all(&mut d, &p)?;
         declare_injective_on_or_duplicate(&mut d, &p)?;
         // `Nat.nthRootAux`/`Nat.nthRoot` (`nth_root.rs`): needs only
         // `Nat.pow`/`Nat.ble`/`Nat.beq`/`Nat.succ`/`bool_select_nat`, all far
@@ -8736,6 +8832,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `ble_eq_true_of_le`/`ble_eq_false_of_lt`/`succ_le_succ`/
         // `le_add_right`. Nothing needs it, so it goes last.
         declare_finset_all(&mut d, &p)?;
+        declare_rado_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -8759,6 +8856,11 @@ mod nat_prelude_tests;
 
 #[cfg(test)]
 mod abundant_deficient_tests;
+
+/// Tests for `nat_prelude/omniscience.rs` (roadmap W1-9: LPO, WLPO,
+/// Markov's principle and LLPO as explicit hypotheses).
+#[cfg(test)]
+mod omniscience_tests;
 
 #[cfg(test)]
 mod find_greatest_tests;
@@ -8851,6 +8953,9 @@ mod finset_tests;
 
 #[cfg(test)]
 mod finset_pigeonhole_tests;
+
+#[cfg(test)]
+mod rado_tests;
 
 #[cfg(test)]
 mod multiset_tests;

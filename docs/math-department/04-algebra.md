@@ -12,6 +12,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > cost three lines more than it would have with `Quot.sound`. I withdraw the
 > objection to the method. The shelf is still nearly empty."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Works with quotients constantly and without thinking about it: quotient
@@ -112,8 +120,10 @@ libraries manage. It is a workaround, and it is a good one.
 Everything. In dependency order:
 
 - **Quotient structures** — the gate on all of it.
-- **Homomorphisms as a first-class notion**, with kernels and images, and the
-  isomorphism theorems.
+- ~~**Homomorphisms as a first-class notion**, with kernels and images, and the
+  isomorphism theorems.~~ **[AUDIT] present as of 2026-09-04**: twelve
+  `AlgS.Hom.*` declarations including `firstIso` (audit row A9). The second
+  and third isomorphism theorems remain absent.
 - **Subobjects**: subgroups, subrings, ideals, submodules, and the lattice
   structure on them.
 - **Group actions**, orbits, stabilizers, the orbit-stabilizer theorem,
@@ -195,8 +205,9 @@ taken.**
 - [x] **2. The first isomorphism theorem over `AlgS.Group`.** *Done 2026-09-04, `AlgS.Hom.firstIso`, footprint empty.* Original framing:, by whichever
       route (1) selects. This is the empirical test: if it lands at acceptable
       cost over setoids, the whole subject is reachable without an axiom.
-- [ ] **3. Homomorphisms, kernels, images, and subgroups** as a reusable
-      layer over the existing spine. Prerequisite for everything and useful
+- [x] **3. Homomorphisms, kernels, images, and subgroups** — **[AUDIT] the
+      homomorphism, kernel and image layer landed with item 2**; subgroups as
+      a lattice remain absent. Original framing: Prerequisite for everything and useful
       even before quotients exist.
 - [ ] **4. Polynomial rings as a structure**, with the existing ℚ and ℂ
       coefficient arithmetic as instances, then irreducibility and division.

@@ -7,6 +7,35 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > "Almost nobody builds this. You have a working constructive real line with
 > integration on it and no choice anywhere. Where is the fundamental theorem
 > of calculus?"
+>
+> **Answered 2026-09-04: it was already there, and the reviewer had missed it.**
+> Both directions were admitted 2026-08-27, a week before this file was
+> written.
+
+**Correction, recorded 2026-09-04.** The first version of this review said the
+fundamental theorem of calculus was missing and made it the reviewer's
+number-one item. That was **false**. `CReal.hasDerivative_antiderivative`
+(`1b91195d0`) and `CReal.integral_eq_antideriv_diff` (`d1bdae9e7`) were both
+admitted on 2026-08-27, with empty axiom footprints and registered facts.
+
+The cause was measured rather than guessed, and it is systemic: **307 of the
+476 `CReal` facts (64%), and 1,054 of 2,764 ledger-wide (38%), carry
+`gen-kernel-facts.py`'s mechanically-generated prose**, which opens by stating
+that it deliberately makes no mathematical characterisation of the theorem.
+The generator's refusal is correct and is part of why the ledger is
+trustworthy. The defect is that nothing distinguishes *no prose has been
+written* from *there is nothing here* — so the ledger answers "is X proved?"
+and cannot answer "what do we have?", which is the question a review is built
+from. ADR-1605 proposes the fix. Every other absence claim in this folder is
+under audit for the same reason (`AUDIT-2026-09-04.md`).
+
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
 
 ## The persona
 
@@ -38,6 +67,7 @@ rather than as a negation.
 | transcendentals | `exp` with dominant-term bounds, `cosOneConverges`, π with `twoLePi` and the half-term bounds, `sqrt` with `sqrt_mul` |
 | algebra of the line | `left_distrib`, `pow_le_pow_of_one_le`, `pow_nonneg`, `pow_le_one`, `eq_zero_of_mul_self_zero` |
 | the theorems | intermediate value (`ivt_bisect_approx`, by bisection with an explicit modulus), extreme value |
+| **the FTC, both directions** | `hasDerivative_antiderivative` and `integral_eq_antideriv_diff` (2026-08-27), plus `integral_by_parts`; and from 2026-09-04 the `_of_uc` forms that drop the redundant boundedness witness, since `bounded_of_uniformly_continuous` *computes* it from the continuity witness the caller already supplies |
 | structure | `CReal.commRingS`, `CReal.orderedRingS`, `CReal.addGroupS` over the setoid algebra spine |
 
 The IVT is proved the way this reviewer would want it proved: by bisection,
@@ -64,21 +94,21 @@ Bishop's book.
 Riemann sums over an interval-relative mesh, with refinement and additivity
 proved, is real work and it is the foundation everything analytic needs.
 
-Their reservations are about reach rather than method. The fundamental theorem
-of calculus is not there, which is startling given that both halves of it are
-nearly in hand. And the transcendental functions are developed pointwise and
-somewhat ad hoc — `cosOne` converges, π has bounds — rather than as a general
-theory of power series with a radius of convergence.
+Their reservations are about reach rather than method. The transcendental
+functions are developed pointwise and somewhat ad hoc — `cosOne` converges, π
+has bounds — rather than as a general theory of power series with a radius of
+convergence. (The FTC reservation in the first draft of this review was the
+reviewer's own error, not the library's; see the correction above.)
 
 ## What they would say is missing
 
-- **The fundamental theorem of calculus**, both directions. The single largest
-  omission relative to what is already built.
-- **A general power series theory.** Radius of convergence, term-by-term
-  differentiation, and the standard functions defined *from* it rather than
-  each by hand.
-- **Uniform convergence as a first-class notion**, with the interchange
-  theorems that make analysis composable.
+- ~~**A general power series theory.**~~ **[AUDIT] present** — a power-series
+  layer landed 2026-08-27 (audit row A10); the verdict prose calling the
+  transcendentals ad hoc was wrong.
+- ~~**Uniform convergence as a first-class notion**, with the interchange
+  theorems.~~ **[AUDIT] present**: `CReal.UniformConvergesOn` as a carrier,
+  `uniform_limit_uniformly_continuous`, `hasDerivative_uniform_limit`, and
+  `weierstrassMTest`, all 2026-08-27 (audit row A3).
 - **Constructive metric spaces.** The line is complete; there is no notion of
   a complete metric space, so nothing generalizes off ℝ.
 - **The Bishop compactness apparatus.** Total boundedness, located subsets,
@@ -104,22 +134,27 @@ make this systematic; before it, congruence was rediscovered per lemma.
 
 ## Next five, in their priority order
 
-- [ ] **1. The fundamental theorem of calculus.** Both directions, over the
-      existing Riemann integral, with an explicit modulus. Their view: you are
-      one theorem away from being able to say you have calculus, and you have
-      not said it.
-- [ ] **2. Power series with a radius of convergence**, and `exp`, `sin`, `cos`
+- [x] **1. The fundamental theorem of calculus.** ~~Both directions, over the
+      existing Riemann integral, with an explicit modulus.~~ **Already proved
+      2026-08-27; the item was the reviewer's error.** What did land on
+      2026-09-04 is the pair of `_of_uc` forms with the redundant boundedness
+      witness removed, and the finding that the constructive MVT is *not* a
+      prerequisite: FTC-II routes through `constant_of_zero_deriv`, and the
+      uniformity of the modulus replaces the MVT's asserted point.
+- [~] **2. Power series with a radius of convergence** — **[AUDIT] a layer exists** (row A10); what remains is redefining `exp`/`sin`/`cos` *from* it. Original framing:, and `exp`, `sin`, `cos`
       redefined from it with their functional equations derived rather than
       hand-proved. Consolidates the ad-hoc transcendental work into a theory.
-- [ ] **3. Uniform convergence and the interchange theorems.** Limits with
-      integrals, limits with derivatives. Without these, every analytic
-      argument stays local and hand-built.
+- [x] **3. Uniform convergence and the interchange theorems.** **[AUDIT]
+      Already proved 2026-08-27**, including the Weierstrass M-test. Audit row
+      A3.
 - [ ] **4. A constructive metric-space carrier**, with completeness and
       Bishop-style total boundedness, so that ℝ becomes an instance rather
       than the whole subject. The obvious second instance is `CPoint`, which
       already exists.
-- [ ] **5. Differentiability on an interval, with the mean value theorem in
-      its constructive form.** The MVT is classically an existence statement
+- [x] **5. Differentiability on an interval, with the mean value theorem in
+      its constructive form.** **[AUDIT] Already proved 2026-08-27**:
+      `fermat_interiorExtremum`, `rolle_interiorExtremum`,
+      `mvt_interiorExtremum`. Audit row A8. Original framing: The MVT is classically an existence statement
       and constructively needs care; getting the right statement is itself the
       contribution, and it is what unlocks Taylor with remainder.
 
@@ -127,7 +162,8 @@ make this systematic; before it, congruence was rediscovered per lemma.
 
 | date | change | evidence |
 |---|---|---|
-| 2026-09-04 | File created. Baseline: 476 proved ℝ facts, zero open. Riemann integration, IVT by bisection, EVT, uniform continuity, suprema, exp/cos/π/sqrt, `CReal.orderedRingS`. No FTC. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | File created. Baseline: 476 proved ℝ facts, zero open. Riemann integration, IVT by bisection, EVT, uniform continuity, suprema, exp/cos/π/sqrt, `CReal.orderedRingS`. **Claimed no FTC — this was false.** | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Correction.** The FTC was proved 2026-08-27, before this file existed. Cause measured: 64% of `CReal` facts carry generated prose that makes no mathematical claim. Lane `ftc` added `hasDerivative_antiderivative_of_uc` and `integral_eq_antideriv_diff_of_uc` (arity 5 and 7, down from 7 and 9), each footprint 0, and established that the constructive MVT is not a prerequisite. `creal::` 230 passed. Next Five items 2–5 are **not** re-verified and are under audit. | `182d0dd7d`; ADR-1597 |
 
 ## How to re-measure
 

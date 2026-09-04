@@ -7,6 +7,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > "Everyone else is reviewing your theorems. I am reviewing your kernel, and
 > your kernel is the paper."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Cares about which axioms a theorem needs, what a proof system can and cannot
@@ -155,6 +163,7 @@ before anyone starts.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: kernel with strict positivity, universe guards, well-founded recursion, quotient package without `Quot.sound`, no funext/propext/choice. Metatheory: IPC EM-unprovability with audited encoding, EM ↔ unrestricted LNP, ℕ and ℤ categoricity, Cantor. 2,487 proved facts, empty footprint. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 5 landed** (roadmap W0-4): ADR-1600 records the kernel's metatheoretic status. Trusted base measured at 5,526 function-body lines across 9 files by call-graph closure from the four admission gates. Three soundness guards demonstrated firing in an isolated copy; a fourth, the nested-inductive phantom-parameter domain check, kills zero tests and is recorded as an open finding. No consistency or normalization result, and the ADR says why none can be internal. | `8b4f277d4` |
+| 2026-09-04 | **Next Five item 1 landed** (roadmap W1-9): the reverse-mathematics map now carries LPO, WLPO, Markov's principle and LLPO over ℕ with six proved implications, including the converse half `WLPO ∧ MP → LPO`, all with empty footprints and every principle spelled inline so no new `Definition` was needed. Four order theorems over ℝ on an explicit `OrderDecision` hypothesis prove conclusions `creal.rs`'s own field docs record as unavailable. Every **separation** is cited rather than claimed, because a separation needs a model of the kernel and not a term in it — which is exactly what ADR-1600 said about this kernel's metatheory. | `80aa8e52c`; `omniscience` 14 passed, `creal::` 236 |
 
 ## How to re-measure
 

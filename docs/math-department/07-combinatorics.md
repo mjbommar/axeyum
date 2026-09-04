@@ -8,6 +8,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > Rado number. Those are not adjacent shelves. The second one is why I am
 > still reading."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Counts things, bounds things, and finds structure in large enough
@@ -82,7 +90,10 @@ combinatorics.
 - **Inclusion-exclusion in general form.** The two-set case exists
   (`countRange_union_add_inter`); the n-set version needs sums over subsets.
 - **Enumerative identities.** The binomial theorem as an identity in a
-  commutative ring, Vandermonde, hockey-stick, and Stirling numbers.
+  commutative ring, Vandermonde, hockey-stick. **[AUDIT] Stirling numbers ARE
+  present** — `Nat.stirlingFirst` and `Nat.stirlingSecond` with their
+  recurrences and ten proved theorems, landed `33cae3575` 2026-08-31 (audit
+  row A6). Stirling's *approximation* is a different item and is absent.
 - **Extremal results.** No Turán, no Dilworth, no Hall's marriage theorem —
   the last of which is reachable now, since it is pigeonhole with structure.
 - **Asymptotics.** No O-notation, no Stirling's approximation, nothing
@@ -132,6 +143,7 @@ Two real constraints:
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: `Nat.Multiset`, `Nat.Finset`, pigeonhole in both forms, binomial coefficients with Pascal, `List.Perm`. Two four-colour Rado numbers `computed` and not connected to any kernel statement. No graphs. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 1 landed** (roadmap W1-1), and it is the flagship: `nat_prelude/rado.rs`, 17 declarations with empty footprints, and **Schur's number `R_2(x = y + z) = 5` proved in-kernel with both halves discharged from search** — the upper bound by a case tree over 2⁵ colourings, the lower by reflection over a `Nat.Finset` colouring the search picked. `Nat.Finset` is shown to *be* a 2-colouring with no side condition. **The unary-numeral worry in this file was wrong**: `IsRadoNumber 5 3 4 625` type-checks, because a `Prop` that mentions a numeral never reduces it. The real residue is combinatorial — the four-colour proof term ranges over 4⁶²⁵ colourings, which are functions and not enumerable in-kernel — so both `computed` facts correctly stay `computed`. [AUDIT] Stirling numbers were already present. | `de0cd02da`; `nat_prelude::` 460 passed |
 
 ## How to re-measure
 

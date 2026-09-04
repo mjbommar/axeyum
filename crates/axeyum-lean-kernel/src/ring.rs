@@ -44,6 +44,7 @@
 )]
 
 pub mod cost;
+pub(crate) mod generic;
 pub mod int;
 pub mod nat;
 pub mod rat;

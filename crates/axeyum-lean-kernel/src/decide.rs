@@ -317,3 +317,6 @@ pub(crate) mod rat;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod setoid_boundary;

@@ -17,6 +17,14 @@ failure mode the contributor guide warns about: *search for the step, not the
 name*, and an empty result from a tool never pointed at your subject is
 indistinguishable from a strong negative.
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Works with measure-theoretic probability: probability spaces, random variables
@@ -74,9 +82,9 @@ Everything above it is behind the same door.
 
 - **Measure theory.** σ-algebras, measures, the Lebesgue integral. See
   [03-classical-analysis.md](03-classical-analysis.md).
-- **The limit theorems.** WLLN, SLLN, CLT. The WLLN is the closest: the
-  Chebyshev bound exists, and it needs convergence in probability, which needs
-  a limit over ℝ that the constructive analysis shelf can supply.
+- **The limit theorems.** ~~WLLN~~, SLLN, CLT. **[AUDIT] The WLLN is proved**
+  (`Rat.weak_law_of_large_numbers`, 2026-08-24). The strong law and the
+  central limit theorem are confirmed absent.
 - **Independence proper**, and the relationship between independence,
   uncorrelatedness, and the existing hypotheses.
 - **Named distributions.** Bernoulli and binomial are within reach over the
@@ -109,11 +117,10 @@ statement of Markov and Chebyshev plausible.
 
 ## Next five, in their priority order
 
-- [ ] **1. The weak law of large numbers.** Take the existing
-      `variance_sampleMean_uncorrelated` and Chebyshev bound, define
-      convergence in probability using `CReal`'s limit machinery, and prove
-      it. Their view: you are one limit away from a named theorem and you do
-      not have it.
+- [x] **1. The weak law of large numbers.** **[AUDIT] Already proved:
+      `Rat.weak_law_of_large_numbers`, landed `54592604a` on 2026-08-24, ten
+      days before this review claimed it was one limit away.** The reviewer's
+      error, not the library's; see the audit row A2.
 - [ ] **2. Generalize the finite probability layer over `AlgS.OrderedRing`**,
       so expectation, variance, Markov and Chebyshev hold over ℚ and ℝ at
       once. Prerequisite for (1) being stated cleanly rather than bridged by
@@ -121,9 +128,10 @@ statement of Markov and Chebyshev plausible.
 - [ ] **3. Independence as a definition**, with the theorem that independence
       implies uncorrelatedness, so the existing hypotheses are recognizable to
       a reader from the field.
-- [ ] **4. Bernoulli and binomial distributions** over the finite carrier,
+- [ ] **4. ~~Bernoulli~~ and binomial distributions** over the finite carrier,
       with mean and variance, and Hoeffding's inequality if it is reachable.
-      These are what the statistician actually uses.
+      **[AUDIT] Bernoulli is present** (audit row A11); the binomial
+      distribution and Hoeffding are confirmed absent.
 - [ ] **5. Measure and the Lebesgue integral**, once
       [06-topology.md](06-topology.md) and
       [03-classical-analysis.md](03-classical-analysis.md) settle their design

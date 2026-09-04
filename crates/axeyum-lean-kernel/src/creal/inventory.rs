@@ -66,6 +66,7 @@ mod lub_boundary;
 mod monotone;
 mod mul_self_zero;
 mod mvt;
+mod omniscience;
 mod order_extra;
 mod pi;
 mod polynomial;
@@ -119,6 +120,7 @@ pub(crate) fn all_entries(
     all.extend(lattice::entries(p));
     all.extend(lub_boundary::entries(p));
     all.extend(monotone::entries(p));
+    all.extend(omniscience::entries(p));
     all.extend(mul_self_zero::entries(p));
     all.extend(mvt::entries(p));
     all.extend(order_extra::entries(p));

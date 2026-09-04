@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2256,
+    "min_identity_bound": 2273,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -3330,6 +3330,13 @@
       "kernel_theorem": "CReal.abs_add_le"
     },
     {
+      "fact_id": "F:creal-abs-cases-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "d0014720f31c1a376fedc4eaf8281b85d339fa17f5e353432d65a1ca3984e772",
+      "prose_sha256": "b1379ae9ecf44dacca3edbf55a69ab93a35d3322c0f7e20d9da5f59eed1c5a6f",
+      "kernel_theorem": "CReal.abs_cases_of_order_decision"
+    },
+    {
       "fact_id": "F:creal-abs-congr",
       "language": "lean4",
       "statement_sha256": "c696850dcbc2c1c3f565f8b2e94502f639e22218297fe073261493544ccffdbc",
@@ -3603,6 +3610,13 @@
       "statement_sha256": "29b8ee4d439cae666f363918fa94df37301f518d7826c42cd417f74529465abc",
       "prose_sha256": "de9eaf85b8dca64b82d89199355af95ce99977aceb6598931b7a5edc25a64c23",
       "kernel_theorem": "CReal.apart_irrefl"
+    },
+    {
+      "fact_id": "F:creal-apart-of-not-equiv-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "d2eff9b453e55f0b47b274dca897a9dce02234820563091ba37aceeec25a51d2",
+      "prose_sha256": "02e379e53ab32a91611d4335788c44aad750f952a08a413d6fa128dc1290966f",
+      "kernel_theorem": "CReal.apart_of_not_equiv_of_order_decision"
     },
     {
       "fact_id": "F:creal-apart-symm",
@@ -4614,6 +4628,13 @@
       "kernel_theorem": "CReal.hasDerivative_antiderivative"
     },
     {
+      "fact_id": "F:creal-hasderivative-antiderivative-of-uc",
+      "language": "lean4",
+      "statement_sha256": "83290976084bea48110d83efe385fea523d028fbba4897a5200157fc8fb9a151",
+      "prose_sha256": "2532db7d9bc49abcb4f1c1a34c7acb3c89f3fbabde4609704a90af3688ad5a36",
+      "kernel_theorem": "CReal.hasDerivative_antiderivative_of_uc"
+    },
+    {
       "fact_id": "F:creal-hasderivative-chain",
       "language": "lean4",
       "statement_sha256": "2791ff3feef55687651fc2fac68cf8aaa14b0d159f66d1394218d3bb5551bb65",
@@ -4808,6 +4829,13 @@
       "statement_sha256": "05c71add59b949dbf560a9fb8e57c9b03b935c054b6978fe13e63740b1c2cb75",
       "prose_sha256": "aec336f431be736bde0fa89a67177b16f8803002b01d909c70fb2fc991023d84",
       "kernel_theorem": "CReal.integral_eq_antideriv_diff"
+    },
+    {
+      "fact_id": "F:creal-integral-eq-antideriv-diff-of-uc",
+      "language": "lean4",
+      "statement_sha256": "fb0dc4349fddbf334a0f9fb46de9769d670844cd34fc491fa7c29b81f38cdc3e",
+      "prose_sha256": "dc696e80efeebdd25e9db3bf6bebb59713affa422bc81af52639735a3ed45b04",
+      "kernel_theorem": "CReal.integral_eq_antideriv_diff_of_uc"
     },
     {
       "fact_id": "F:creal-integral-le",
@@ -5116,6 +5144,13 @@
           "prose_sha256": "875a9cd18d19e369e16a2b8da75e3ff86db8e0a057fbe447f99dccd1c04778c3"
         }
       ]
+    },
+    {
+      "fact_id": "F:creal-le-total-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "9135ee8d6636294288e2db09f82b65889ba604d16e8f06d480ab74f1bcd67633",
+      "prose_sha256": "f910a64d54821ba7b5085cf68956f7471ea0c44b1edff3178a44a8f3f32c04d5",
+      "kernel_theorem": "CReal.le_total_of_order_decision"
     },
     {
       "fact_id": "F:creal-le-trans",
@@ -6899,6 +6934,13 @@
       "statement_sha256": "9fffd9572fb35a005bfd5627dfb54213b8b8d34ed2f929e79aca25015c4e60ad",
       "prose_sha256": "89d4ef80c9ea9c92d6f6b968cfbdc642c9731787ae8bc377f53f4e0fef0ee23e",
       "kernel_theorem": "CReal.threeLePi"
+    },
+    {
+      "fact_id": "F:creal-trichotomy-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "ecd89ee918fa0a1a2dfc69f0502e64b05f7985d8ea5dfc3f317a8c575d738b39",
+      "prose_sha256": "62e1fd9b5596311d6c1ae02d6848dbd4ffb0d8e4887ccc130cbfdf4c7c655eaf",
+      "kernel_theorem": "CReal.trichotomy_of_order_decision"
     },
     {
       "fact_id": "F:creal-trueexpofmodulus-mono",
@@ -8948,6 +8990,13 @@
       ]
     },
     {
+      "fact_id": "F:int-multiplicative-order-exists",
+      "language": "lean4",
+      "statement_sha256": "859511bc6c7e7cd6d483ac2d22dd3fb79fc225e627e9d7d58666e43682313c01",
+      "prose_sha256": "0fd806b5d7becbde403f377a51477f530ae1ccf1b4d97100388c4221106f2ade",
+      "kernel_theorem": "Int.order_exists"
+    },
+    {
       "fact_id": "F:int-nat-abs-dvd-nat-abs-of-dvd",
       "language": "lean4",
       "statement_sha256": "1046e14f29dbd8cc722eb6d4e9ac2ce7a856a1456c228ff78c7ba30f6ec8aafe",
@@ -9169,11 +9218,25 @@
       ]
     },
     {
+      "fact_id": "F:int-order-dvd-totient",
+      "language": "lean4",
+      "statement_sha256": "1e7d3ed6abb4f125570400b5213da4dd43470cbb3123e1a29ccf22e10aa677ec",
+      "prose_sha256": "3056055124410c7159dd4397e8df7dec5b3deae88bef3071010c1bf9b4bddc98",
+      "kernel_theorem": "Int.order_dvd_totient"
+    },
+    {
       "fact_id": "F:int-pow-add",
       "language": "lean4",
       "statement_sha256": "f7f2a52dc4093815ae3eddd86d5fda47cd5a9636564b817adbd0586d8a5bacda",
       "prose_sha256": "79fa5fb8243e58f2de8973fb11f071acc2a4cef933f139bb0a322963242d375f",
       "kernel_theorem": "Int.pow_add"
+    },
+    {
+      "fact_id": "F:int-pow-modeq-one-iff-order-dvd",
+      "language": "lean4",
+      "statement_sha256": "4a9535e854ac1f17bc7552e7ae9778352fdb52f8c0922285c21987fb3a00c2e8",
+      "prose_sha256": "e16be64b2bdc3d1267928b1fe245f82f98b10b73e8dd76b2a90643337a5d40af",
+      "kernel_theorem": "Int.pow_modeq_one_iff_order_dvd"
     },
     {
       "fact_id": "F:int-pow-mul",
@@ -9230,6 +9293,13 @@
           "prose_sha256": "c61341a4e51827063f8483134447766fecaf6facd3d03d840debbf377c417de4"
         }
       ]
+    },
+    {
+      "fact_id": "F:int-primitive-root-pow-injective",
+      "language": "lean4",
+      "statement_sha256": "7bd874226adbb7515f5e3064669e3ea95624434779c8e296d55b5405859778cd",
+      "prose_sha256": "92ea85b16562cfb9ffe7b379dca58396d736b32c6db7662e9f7db36740128b93",
+      "kernel_theorem": "Int.primitive_root_pow_injective"
     },
     {
       "fact_id": "F:int-prod-range-pairing-collapse",
@@ -16925,6 +16995,13 @@
       "kernel_theorem": "Nat.eisenstein_lemma_modEq"
     },
     {
+      "fact_id": "F:nat-em-implies-lpo",
+      "language": "lean4",
+      "statement_sha256": "5a3a71501c1fc3b0fa3e647e3cc7e037765dd026eaaac982342bdd2c8276837e",
+      "prose_sha256": "ec670242343a81890e0f085d7b0a9a641e1a128392d0923ff7d51a1ceecc2670",
+      "kernel_theorem": "Nat.em_implies_lpo"
+    },
+    {
       "fact_id": "F:nat-eq-equivalence-on",
       "language": "lean4",
       "statement_sha256": "7fc8833168bc85181457efb5874d0cdefe1f7c6e639661f49c07895ecdbd24d8",
@@ -17986,6 +18063,13 @@
       "kernel_theorem": "Nat.lnp_unrestricted_implies_em"
     },
     {
+      "fact_id": "F:nat-lnp-unrestricted-implies-lpo",
+      "language": "lean4",
+      "statement_sha256": "8a1b776e35b5d4f493712b3c1b487d164021a80627fc812c25406247e547d714",
+      "prose_sha256": "3b0b3f2d14707ddb1289473ca90f669abe16c63d888e0e51895a9a22169389c1",
+      "kernel_theorem": "Nat.lnp_unrestricted_implies_lpo"
+    },
+    {
       "fact_id": "F:nat-log-le-self",
       "language": "lean4",
       "statement_sha256": "94359d0e6228f863b9eb644c90623cc9ec784eced3a0f4c06d52aaefb04ae922",
@@ -18184,6 +18268,27 @@
           "prose_sha256": "c3328e213ba20067b4982b9343d55e5f05a0e066a1a92330ed99948bb03c6fb6"
         }
       ]
+    },
+    {
+      "fact_id": "F:nat-lpo-implies-llpo",
+      "language": "lean4",
+      "statement_sha256": "0adcfc3ad61be2fcd788e2c8a31a7090c72d4d8c9dc828bdc4a75b5c42616c06",
+      "prose_sha256": "c6b3e7c4b79b172ed3b7236770efb9ac74db8224f589167ed22d806bc94a5d9b",
+      "kernel_theorem": "Nat.lpo_implies_llpo"
+    },
+    {
+      "fact_id": "F:nat-lpo-implies-markov",
+      "language": "lean4",
+      "statement_sha256": "f1ba4e406ac22e0b1a94330460f3647be2a4645eaacdcf20a0cbd5633da01d41",
+      "prose_sha256": "16bc68361cfeded31942ffe37797bb877b18a31675355ebd685dca50911529b8",
+      "kernel_theorem": "Nat.lpo_implies_markov"
+    },
+    {
+      "fact_id": "F:nat-lpo-implies-wlpo",
+      "language": "lean4",
+      "statement_sha256": "0b7f345c54c676af6a09d2865afd9e55da6d9959cf500269f822f0acf0b757bc",
+      "prose_sha256": "4e92db3d90899e72d1f62d01c8bfd7632833a3e89697cd9e70d3c04407a9b5c1",
+      "kernel_theorem": "Nat.lpo_implies_wlpo"
     },
     {
       "fact_id": "F:nat-lt-add-one",
@@ -20092,6 +20197,13 @@
       "kernel_theorem": "Nat.valuation_at_two_mul_sq"
     },
     {
+      "fact_id": "F:nat-wlpo-and-markov-imply-lpo",
+      "language": "lean4",
+      "statement_sha256": "96ffed18400b3fa9b23e10cec97f9c657691a9bfef5b18ab91db33043a6e03d6",
+      "prose_sha256": "fee8303b2606a50355a406cd4ef90a0a4705f2695c6f96aa4a4d2dd05eda2b80",
+      "kernel_theorem": "Nat.wlpo_and_markov_imply_lpo"
+    },
+    {
       "fact_id": "F:nat-xor-assoc",
       "language": "lean4",
       "statement_sha256": "e554a82717e86ec7464701ebd0ddff82855d568b43fe9e4938accf419db90fc3",
@@ -20471,6 +20583,13 @@
           "statement_sha256": "d0d3499ec9c31b8c60e7e413ea88a4998dfe463972fde079526c88ebdc245d9b"
         }
       ]
+    },
+    {
+      "fact_id": "F:rado-r2-schur-two",
+      "language": "lean4",
+      "statement_sha256": "87b5c8bc9a8311ad637bddfc0c447bd923d6df2699b7bb4d07e492bc42f93fec",
+      "prose_sha256": "19259a65019e7a49d1ec233ec3d7ccc4c7d23771887b7772e68d6d5978ae88b5",
+      "kernel_theorem": "Nat.Rado.schur_two"
     },
     {
       "fact_id": "F:rado-r4-a5-b3",

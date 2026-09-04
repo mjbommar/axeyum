@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-lpo-implies-wlpo",
+  "title": "Nat.lpo_implies_wlpo: the limited principle of omniscience yields its weak form",
+  "statement": "Written over a Bool-valued sequence f : Nat -> Bool, which is Bishop's formulation: Hits f := exists n, f n = true (\"f fires somewhere\") and Misses f := forall n, f n = false (\"f never fires\"). LPO is forall f, Or (Hits f) (Misses f); WLPO is forall f, Or (Misses f) (Not (Misses f)); Markov's principle (MP) is forall f, Not (Misses f) -> Hits f; LLPO is forall f g, Not (And (Hits f) (Hits g)) -> Or (Misses f) (Misses g); EM is forall (P : Prop), Or P (Not P). LPO returns a WITNESS when the sequence fires; WLPO returns only a DECISION about whether it never fires. This edge is the forgetful direction, and it is the cheap one: the Hits branch refutes Misses pointwise at the witness through Bool.false_ne_true. The interesting content is that the converse is NOT this edge reversed -- see F:nat-wlpo-and-markov-imply-lpo, where recovering LPO from WLPO needs Markov's principle as a second hypothesis. THE PRINCIPLE IS A HYPOTHESIS, NOT AN AXIOM. It is spelled out inline in the type -- never behind a Definition -- so a reader of the rendered statement sees the whole assumption and nothing about the conclusion can be smuggled into an abbreviation. That is why axiom_footprint is empty. ADR-1601 (roadmap W0-2) decides this policy and prices it: across the ten theorems of this family the hypothesis route costs 11 binders and 14 argument positions and ZERO proof obligations. WHAT THIS FACT DOES NOT CLAIM: it does not claim the principle in its hypothesis is true, false, or independent. The SEPARATIONS in the standard picture -- LPO is not constructively derivable, LLPO does not give LPO, WLPO does not give LPO, MP does not give WLPO -- are CITED here (Bishop, Constructive Analysis ch. 1) and are not proved: each needs a model of this kernel rather than a term in it, and ADR-1600 records why an internal metatheorem about this kernel is unavailable.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.lpo_implies_wlpo : ((x0 : ((x0 : ((x0 : AxNat) -> Bool)) -> Or (Exists.{1} AxNat (fun (x1 : AxNat) => Eq.{1} Bool (x0 x1) Bool.true)) (((x1 : AxNat) -> Eq.{1} Bool (x0 x1) Bool.false)))) -> ((x1 : ((x1 : AxNat) -> Bool)) -> Or (((x2 : AxNat) -> Eq.{1} Bool (x1 x2) Bool.false)) (Not (((x2 : AxNat) -> Eq.{1} Bool (x1 x2) Bool.false)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.lpo_implies_wlpo"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:nat-em-implies-lpo",
+    "F:logic-bool-false-ne-true"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.lpo_implies_wlpo",
+      "kind": "kernel-term",
+      "supports": "Nat.lpo_implies_wlpo is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Nat.lpo_implies_wlpo --require-kind theorem",
+      "checker_seconds": 90,
+      "kernel_declaration": "Nat.lpo_implies_wlpo",
+      "notes": "--require-declaration exits non-zero when the name is absent from every constructed prelude, and --require-kind exits non-zero when it is present with the wrong kind, so the exit status depends on the finding rather than on the run completing. --release is MANDATORY: this binary builds creal/complex/cpoint, which overflow the default debug thread stack.",
+      "verified_at": "2026-09-04"
+    },
+    {
+      "id": "footprint-Nat.lpo_implies_wlpo",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the classical principle enters as a HYPOTHESIS and nothing is assumed. Read from Kernel::axiom_footprint, never from a rendered name.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "per-declaration footprint assertion in the suite below"
+      ],
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib nat_prelude::omniscience -- --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 8 passed'",
+      "checker_seconds": 120,
+      "notes": "The suite's own footprint test reads Kernel::axiom_footprint for every declaration in the family and fails on a non-empty result. The grep -c count is what makes the command discriminating: a fabricated or renamed filter makes cargo print a different passed-count and exit 0, and the anchored pattern then matches nothing, so grep -c prints 0 and exits 1. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Anchored with [[:space:]]-free literals, never \\t -- in a scripted (GNU) grep \\t is a literal t."
+    },
+    {
+      "id": "discrimination-Nat.lpo_implies_wlpo",
+      "kind": "instance-pin",
+      "supports": "The statement is the one advertised, not a weaker or stronger one: the theorem is applied at GENUINELY FREE variables of the hypothesis type and the inferred conclusion is pinned against an independently rebuilt term, and a negative control in the hypothesis slot is REQUIRED TO BE REJECTED.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test -p axeyum-lean-kernel --lib",
+        "Kernel::infer_in against a free-variable LocalContext"
+      ],
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib lpo_implies_wlpo_lands_on_the_decision_and_rejects_wlpo_in_its_own_slot -- --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 120,
+      "notes": "Numerals reduce and hide definitional-equality gaps, so nothing in this test instantiates a sequence or a real concretely. The builders in the test file are a SECOND, independent implementation of every principle: if they called the module's own private helpers, the check would be comparing a term with itself and could not fail."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/omniscience.rs)",
+    "source": "formal.statement is the Kernel::render_lean(declaration.ty()) column of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, verbatim; axiom_footprint is its footprint-size column (0). No type was hand-transcribed. Prose is hand-written."
+  },
+  "notes": "The negative control is the one that carries the weight: WLPO itself must NOT discharge LPO's hypothesis slot. The two types differ in ONE subterm -- `Hits f` against `Misses f` in the left disjunct -- which is exactly the distinction the whole map turns on. Source: crates/axeyum-lean-kernel/src/nat_prelude/omniscience.rs."
+}

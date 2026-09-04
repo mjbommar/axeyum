@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1207 names,
+/// The `NatPrelude` field table (1230 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 107 of the names come from ADR-1512 per-module registries and
+/// 113 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1185,6 +1185,27 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("lnp_decidable", p.lnp_decidable),
             ("em_implies_lnp", p.em_implies_lnp),
             ("lnp_unrestricted_implies_em", p.lnp_unrestricted_implies_em),
+            ("omniscience.em_implies_lpo", p.omniscience.em_implies_lpo),
+            (
+                "omniscience.lpo_implies_wlpo",
+                p.omniscience.lpo_implies_wlpo,
+            ),
+            (
+                "omniscience.lpo_implies_markov",
+                p.omniscience.lpo_implies_markov,
+            ),
+            (
+                "omniscience.lpo_implies_llpo",
+                p.omniscience.lpo_implies_llpo,
+            ),
+            (
+                "omniscience.wlpo_and_markov_imply_lpo",
+                p.omniscience.wlpo_and_markov_imply_lpo,
+            ),
+            (
+                "omniscience.lnp_unrestricted_implies_lpo",
+                p.omniscience.lnp_unrestricted_implies_lpo,
+            ),
             ("and_or_distrib_left", p.and_or_distrib_left),
             ("and_or_distrib_right", p.and_or_distrib_right),
             ("coprime_dvd_mul_left", p.coprime_dvd_mul_left),
@@ -1509,6 +1530,23 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 p.finset_all_below_false_witness,
             ),
             ("finset_exists_collision", p.finset_exists_collision),
+            ("rado_sol", p.rado_sol),
+            ("rado_is_colouring", p.rado_is_colouring),
+            ("rado_mono_sol", p.rado_mono_sol),
+            ("rado_arrows", p.rado_arrows),
+            ("rado_is_rado_number", p.rado_is_rado_number),
+            ("rado_of_finset", p.rado_of_finset),
+            ("bool_select_lt", p.bool_select_lt),
+            ("rado_is_colouring_of_finset", p.rado_is_colouring_of_finset),
+            ("rado_in_range_of_le", p.rado_in_range_of_le),
+            ("rado_is_colouring_of_le", p.rado_is_colouring_of_le),
+            ("rado_mono_sol_of_le", p.rado_mono_sol_of_le),
+            ("rado_arrows_of_le", p.rado_arrows_of_le),
+            ("rado_is_rado_number_of_succ", p.rado_is_rado_number_of_succ),
+            ("rado_schur_set", p.rado_schur_set),
+            ("rado_schur_arrows_five", p.rado_schur_arrows_five),
+            ("rado_schur_not_arrows_four", p.rado_schur_not_arrows_four),
+            ("rado_schur_two", p.rado_schur_two),
             ("structures.magma.ind", p.structures.magma.ind),
             ("structures.magma.mk", p.structures.magma.mk),
             ("structures.magma.rec", p.structures.magma.rec),
@@ -1738,7 +1776,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (370 names,
+/// The `IntPrelude` field table (381 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2226,6 +2264,20 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
             ),
             ("prod_range_if_modeq", p.prod_range_if_modeq),
             ("euler_totient_theorem", p.euler_totient_theorem),
+            ("one_pow", p.one_pow),
+            ("is_order", p.is_order),
+            ("pow_modeq_one_of_dvd", p.pow_modeq_one_of_dvd),
+            ("order_dvd_of_pow_modeq_one", p.order_dvd_of_pow_modeq_one),
+            ("pow_modeq_one_iff_order_dvd", p.pow_modeq_one_iff_order_dvd),
+            ("order_unique", p.order_unique),
+            ("order_exists", p.order_exists),
+            ("order_dvd_totient", p.order_dvd_totient),
+            ("is_primitive_root", p.is_primitive_root),
+            ("order_pow_eq_of_le", p.order_pow_eq_of_le),
+            (
+                "primitive_root_pow_injective",
+                p.primitive_root_pow_injective,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -3005,10 +3057,10 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (609 names,
+/// The `CRealPrelude` field table (615 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 69 of the names come from ADR-1512 per-module registries and
+/// 73 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `CRealPrelude` itself.
 #[must_use]
@@ -3599,6 +3651,14 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ),
             ("integral_eq_antideriv_diff", p.integral_eq_antideriv_diff),
             ("integral_by_parts", p.integral_by_parts),
+            (
+                "has_derivative_antiderivative_of_uc",
+                p.has_derivative_antiderivative_of_uc,
+            ),
+            (
+                "integral_eq_antideriv_diff_of_uc",
+                p.integral_eq_antideriv_diff_of_uc,
+            ),
             ("integral_abs_le", p.integral_abs_le),
             ("integral_abs_le_of_bound", p.integral_abs_le_of_bound),
             ("integral_sub_linear_le", p.integral_sub_linear_le),
@@ -3728,6 +3788,22 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 p.lub_boundary.lub_set_bounded,
             ),
             ("lub_boundary.lub_decides_em", p.lub_boundary.lub_decides_em),
+            (
+                "omniscience.le_total_of_order_decision",
+                p.omniscience.le_total_of_order_decision,
+            ),
+            (
+                "omniscience.trichotomy_of_order_decision",
+                p.omniscience.trichotomy_of_order_decision,
+            ),
+            (
+                "omniscience.apart_of_not_equiv_of_order_decision",
+                p.omniscience.apart_of_not_equiv_of_order_decision,
+            ),
+            (
+                "omniscience.abs_cases_of_order_decision",
+                p.omniscience.abs_cases_of_order_decision,
+            ),
             ("cos_fn_term", p.cos_fn_term),
             ("cos_fn_term_abs_le", p.cos_fn_term_abs_le),
             ("cos_fn_term_congr", p.cos_fn_term_congr),

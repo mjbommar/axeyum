@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "F:int-euler-totient-theorem",
-  "title": "[generated] kernel theorem Int.euler_totient_theorem (integer prelude, axiom-free, prose not curated)",
+  "title": "Euler's totient theorem over the constructed integers (Int.euler_totient_theorem)",
   "statement": "Euler's totient theorem, over the constructed integers: for every n : Nat with 0 < n and every a : Int coprime to n, a raised to the totient of n is congruent to 1 modulo n. The totient is NOT imported or axiomatised -- it is this kernel's own `AxNat.countRange (fun k => AxNat.beq (AxNat.gcd k n) 1) n`, the count of k in [0,n) coprime to n, so the statement is self-contained in the constructed naturals and integers. (At n = 1 that count is 1, since gcd(0,1) = 1; at n > 1 the k = 0 term is excluded because gcd(0,n) = n.) Established here rather than imported: `proof_route` is `kernel-lean` and `Kernel::axiom_footprint` for this declaration is EMPTY, measured by `theorem_axiom_footprint` as `integer Int.euler_totient_theorem 0`, in a prelude whose 1054 theorems are all axiom-free with 0 trusted declarations. What this does NOT claim: no statement about efficiency, no decision procedure, and no converse -- the hypothesis 0 < n and the coprimality hypothesis are both load-bearing and neither is discharged here.",
   "formal": {
     "language": "lean4",

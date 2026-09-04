@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "id": "F:rado-r2-schur-two",
+  "title": "The two-colour Rado number of x - y = z is 5, as a kernel theorem",
+  "statement": "Every 2-colouring of {1,...,5} contains a monochromatic solution of x = y + z, and some 2-colouring of {1,...,4} avoids one -- the partition {1,4} / {2,3}. So R_2(x-y=z) = 5. This is the two-colour Schur number in Rado form (a = b = 1), and it is the first Rado number in this repository that is a kernel theorem rather than a search certificate: both halves are reconstructed from search into terms `Kernel::add_declaration` accepted, with an empty axiom footprint.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Rado.schur_two : Nat.Rado.IsRadoNumber 1 1 2 5",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Rado.schur_two",
+    "kernel_statement": "Nat.Rado.IsRadoNumber a b k n := And (Nat.Rado.Arrows a b k n) (forall m, Nat.lt m n -> Nat.Rado.Arrows a b k m -> False), instantiated at a = b = 1, k = 2, n = 5"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.Rado.schur_two",
+      "kind": "kernel-term",
+      "supports": "R_2(x-y=z) = 5, both halves, as one kernel term of type Nat.Rado.IsRadoNumber 1 1 2 5",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::rado_tests::schur_two_is_leastness_at_five_and_not_at_four",
+        "nat_prelude::rado_tests::every_rado_declaration_is_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::rado -- --test-threads=4",
+      "notes": "`Nat.Rado.schur_arrows_five` (the upper half) is the `Nat.lt_two_cases` decision tree over the 2^5 colour assignments, with the monochromatic triple the search found at each of the 32 leaves; a leaf with no triple makes the builder return `None` and NOTHING is declared. `Nat.Rado.schur_not_arrows_four` (the lower half) refutes `Arrows 1 1 2 4` by reflection against `Nat.Rado.schurSet` = {2,3}: a Bool triple loop over `Nat.Finset.allBelow` that the kernel's own conversion check reduces to `true`, read back at the three existential witnesses by `allBelow_true_at`. The two are joined by `Nat.Rado.isRadoNumber_of_succ` at m = 4. ADR-1596."
+    },
+    {
+      "id": "shape-Nat.Rado.schur_two",
+      "kind": "exhaustive-enumeration",
+      "supports": "the declaration exists under this exact name and states IsRadoNumber, not something weaker",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.Rado.schur_two --expect 1"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.Rado.schur_two --kind theorem --expect 1",
+      "notes": "`shape_search` exits 1 when the count differs and 3 when the query is unanswerable, so a stale index cannot pass for a present declaration."
+    },
+    {
+      "id": "search-bounds-schur-two",
+      "kind": "exhaustive-enumeration",
+      "supports": "5 is LEAST: the 2^4 subsets of [1,4] contain an avoiding colouring and the 2^5 assignments to [1,5] contain none",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::rado_tests::the_search_bounds_the_two_colour_schur_number_at_five",
+        "nat_prelude::rado_tests::the_witness_search_is_total_at_five_and_partial_at_four"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::rado_tests::the_search -- --test-threads=4",
+      "notes": "The untrusted half, pinned independently of the kernel term it produced. The `None` at n = 5 is the load-bearing assertion; the test also re-checks the returned set with the witness search and requires that adding the excluded member 1 to it CREATES a monochromatic solution, so a set that merely looked avoiding fails."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:rado-number",
+      "relation": "instance-of",
+      "resolved": true
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `rado-in-kernel`, roadmap item W1-1: search in `nat_prelude/rado.rs` produced both certificates and the reconstruction emitted the kernel terms; `Kernel::add_declaration` admitted all 17 declarations on the first attempt",
+    "source": "the two-colour Schur number, classical (Schur 1916); a = b = 1 in the Chang-De Loera-Wesley family a(x-y) = bz",
+    "prior_art": [
+      {
+        "citation": "Schur, 1916",
+        "establishes": "S(2) = 4 in the sum-free-partition convention, i.e. R_2(x-y=z) = 5"
+      }
+    ]
+  },
+  "notes": "`external_status: proved` and `epistemic_status: proved` agree here on purpose: this fact is not a new result, it is the DEMONSTRATION that the computed-to-proved route for a Rado number exists. Its value is the route, not the number.\n\nWhat it does NOT do is close `F:rado-r4-a5-b3` or `F:rado-r4-a5-b4`, which stay `computed`. ADR-1596 measures why: the statement `Nat.Rado.IsRadoNumber 5 3 4 625` type-checks in this kernel today (unary numerals are FORMED cheaply; the superlinear cost is in reduction, which a Prop mentioning a numeral does not do), so the residue is the proof term, not the numeral. The upper half at 625 would need a term ranging over 4^625 colourings; the lower half at 624 is the reachable frontier at 2.4e8 triples of the same reflection route used here."
+}

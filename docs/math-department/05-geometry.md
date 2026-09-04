@@ -7,6 +7,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > "The nine-point centre on the Euler line, machine-checked over constructive
 > reals. That is a lovely thing to find. Now show me a manifold."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Three people in one seat, because the department seats them together and they
