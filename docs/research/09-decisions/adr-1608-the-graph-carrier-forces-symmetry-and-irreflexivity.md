@@ -248,10 +248,10 @@ the bridge consumes — it is simply a second lane's worth of proof terms, and
 ## Consequences
 
 **What this costs.** The `Nat` prelude's own test sweep went from roughly 18 s
-to 35-55 s wall (`--release`, `--test-threads=4`; two runs on the same commit
-gave 55 s under load 22 and 35 s under load 15, so read the spread rather than
-either number, per the reference-frame rule), and essentially all of the
-increase is the Ramsey proof terms — the 32-leaf case
+to 35-76 s wall (`--release`, `--test-threads=4`; three runs gave 55 s at
+load 22, 35 s at load 15 and 76 s at load 13 after the merge added four tests,
+so read the spread rather than any one number, per the reference-frame rule),
+and essentially all of the increase is the Ramsey proof terms — the 32-leaf case
 tree and the two `noClique3B` reductions (125 triples each, twice, once through
 `compl`). That is a real tax on every lane's gate and it should be watched: a
 `R(3,4)` or `R(4,4)` attempt by the same method would multiply the tree, and the
@@ -288,7 +288,10 @@ the pure *value* choices no theorem constrains.
 
 ## Verification
 
-- `nat_prelude::` — 491 passed, 0 failed (`--release`, `--test-threads=4`).
+- `nat_prelude::` — 491 passed, 0 failed at the implementation commit, and
+  495 passed, 0 failed after merging `main` (`--release`,
+  `--test-threads=4`); the four extra tests are the universal-properties
+  lane's, not this one's.
 - `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free` derives
   its subject from the live environment, not from a literal, and it FAILED on
   the first honest run against this diff, naming all 22 new `Nat.Graph`
