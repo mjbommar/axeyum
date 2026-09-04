@@ -2541,6 +2541,68 @@ def main(argv: list[str]) -> int:
     return failed
 
 
+# --------------------------------------------------------------------------
+# `rado-in-kernel` — the Rado-number definitions and the R_2(x=y+z)=5 instance
+# (ADR-1596, `crates/axeyum-lean-kernel/src/nat_prelude/rado.rs`).
+#
+# Two kinds of guard live in this module and they fail differently, which is
+# the reason the table below is worth reading rather than just counting.
+#
+# The DEFINITIONS are guarded by tests, because the kernel cannot tell a
+# `Definition` is wrong: `Nat.Rado.Sol` with the `b` coefficient dropped, or
+# `ofFinset` with its indicator swapped, still type-checks, still has an empty
+# axiom footprint, and still builds the whole prelude. Those mutations kill a
+# small, named set of tests and nothing else.
+#
+# The CERTIFICATE is guarded by the trusted gate itself. A mutation that
+# corrupts the lower-bound colouring or the `Bool.rec` minor order does not
+# produce a wrong theorem — `Kernel::add_declaration` refuses the term and
+# `build_nat_prelude` fails, so every test in the module dies at once. That is
+# a `killed 14`, not a `killed 1`, and it is the correct outcome: the guard
+# there is the kernel, and it fires before any assertion does.
+# --------------------------------------------------------------------------
+
+SUITES["rado-in-kernel"] = (
+    "crates/axeyum-lean-kernel/src/nat_prelude/rado.rs",
+    Cargo(
+        ("--release", "-p", "axeyum-lean-kernel", "--lib", "nat_prelude::rado"),
+        "rado-in-kernel",
+    ),
+    [
+        (
+            "ofFinset is the indicator and not its swap",
+            "    d.bool_select_nat(mem, one, zero)",
+            "    d.bool_select_nat(mem, zero, one)",
+        ),
+        (
+            "Sol reads the b coefficient",
+            "        let lhs = d.mul(a, x);\n        let ay = d.mul(a, y);\n        let bz = d.mul(b, z);",
+            "        let lhs = d.mul(a, x);\n        let ay = d.mul(a, y);\n        let bz = d.mul(a, z);",
+        ),
+        (
+            "Sol reads the a coefficient on the middle term",
+            "        let lhs = d.mul(a, x);\n        let ay = d.mul(a, y);\n        let bz = d.mul(b, z);",
+            "        let lhs = d.mul(a, x);\n        let ay = d.mul(b, y);\n        let bz = d.mul(b, z);",
+        ),
+        (
+            "the search's own solution predicate reads b",
+            "    a * x == a * y + b * z",
+            "    a * x == a * y + z",
+        ),
+        (
+            "the schurSet membership chain is not branch-swapped",
+            "        body = select_bool(d, &p, hit, yes, body);",
+            "        body = select_bool(d, &p, hit, body, yes);",
+        ),
+        (
+            "boolSelect_lt hands Bool.rec its minors in (false, true) order",
+            "        let body = d.apply(rec, &[motive, hf, ht, b]);",
+            "        let body = d.apply(rec, &[motive, ht, hf, b]);",
+        ),
+    ],
+)
+
+
 SUITES["mobility-census"] = (
     "scripts/check-mobility-census.py",
     "scripts.tests.test_check_mobility_census",

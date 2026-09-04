@@ -109,7 +109,7 @@ const SCHUR_N: u32 = 5;
 // ---------------------------------------------------------------------------
 
 /// Does `(x, y, z)` solve `a * x = a * y + b * z`?
-fn is_solution(a: u32, b: u32, x: u32, y: u32, z: u32) -> bool {
+pub(super) fn is_solution(a: u32, b: u32, x: u32, y: u32, z: u32) -> bool {
     a * x == a * y + b * z
 }
 
@@ -117,7 +117,7 @@ fn is_solution(a: u32, b: u32, x: u32, y: u32, z: u32) -> bool {
 /// `colours[i - 1]`, or `None` if this assignment avoids one.
 ///
 /// Enumerated in a fixed order so the emitted proof term is deterministic.
-fn search_witness(a: u32, b: u32, n: u32, colours: &[u32]) -> Option<(u32, u32, u32)> {
+pub(super) fn search_witness(a: u32, b: u32, n: u32, colours: &[u32]) -> Option<(u32, u32, u32)> {
     for x in 1..=n {
         for y in 1..=n {
             for z in 1..=n {
@@ -144,7 +144,7 @@ fn assignment(n: u32, bits: u32) -> Vec<u32> {
 ///
 /// Returned as the sorted member list, which is what the `Nat.Finset`
 /// transcription needs.
-fn search_avoiding_set(a: u32, b: u32, n: u32) -> Option<Vec<u32>> {
+pub(super) fn search_avoiding_set(a: u32, b: u32, n: u32) -> Option<Vec<u32>> {
     for bits in 0..(1u32 << n) {
         let colours = assignment(n, bits);
         if search_witness(a, b, n, &colours).is_none() {

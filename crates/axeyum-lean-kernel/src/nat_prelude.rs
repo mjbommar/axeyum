@@ -8935,6 +8935,9 @@ mod finset_tests;
 mod finset_pigeonhole_tests;
 
 #[cfg(test)]
+mod rado_tests;
+
+#[cfg(test)]
 mod multiset_tests;
 
 #[cfg(test)]
