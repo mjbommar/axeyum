@@ -148,6 +148,7 @@ now. Nothing was deleted.
 | 2026-09-04 | persona-absence-audit | ADR-1605 (proposed): characterisation is a derived three-way ratcheted measurement, not a stored schema field |
 | 2026-09-04 | persona-absence-audit | `check-fact-characterisation.py` + 17-test control suite, registered in `check.sh` and the `justfile` |
 | 2026-09-04 | persona-absence-audit | re-baselined the red `count-landmark-facts.py` pin and fixed one mistitled fact |
+| 2026-09-04 | universal-properties | `Nat.Peano.initial` / `Int.Characterization.initial` added, 34 axiom-free entries, 24 mutation-verified defects, ADR-1610, template doc, 2 curated facts |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -42126,6 +42127,37 @@ five fixtures: footprint 0, 39 setoid binders, 30 of 30 non-slot binder types,
 caught three broken intra-doc links nothing else did).
 
 Detail moved to [`../notes/61-real-migration.md`](docs/plan/notes/61-real-migration.md).
+
+**Your lane's block (`done`, universal-properties, 2026-09-04).** Landed
+`Nat.Peano.initial` and `Int.Characterization.initial` in a new
+`crates/axeyum-lean-kernel/src/characterization/universal_property.rs`,
+naming the initial-object / natural-numbers-object universal property that
+`Nat.Peano.categorical` and `Int.Characterization.categorical` already prove
+but never state under that name. Both are built entirely from already-proved
+theorems (`iter_zero`/`iter_succ`/`iter_pred`/`iter_unique`/`rec_unique`) —
+no new induction, no new axioms. `entries.len()` is now 34 (was 32);
+`Weakening::defects()` now 24 (was 22), two new mutation-verified negative
+controls (`NatInitialDropUniqueZero`, `IntInitialDropUniqueZero`) confirmed
+rejected by the kernel, each targeting the packaged theorem's own uniqueness
+clause rather than an upstream dependency. Non-vacuity test instantiates
+both at their own carrier (`Nat`, `Int`), the latter discharging the two
+inverse-law hypotheses via the ring laws exactly as `categorical_at_int`
+does. Curated facts `F:nat-peano-initial` / `F:int-characterization-initial`
+added; ADR-1610 records the vocabulary and why `Category`/`Functor` stays
+out (roadmap W3-3, separate and not unblocked by this lane). A
+`docs/research/08-planning/universal-property-template.md` records the
+four-part shape for a future carrier (e.g. a second ℝ construction).
+
+Gates run: `cargo fmt --all --check` clean; full-workspace
+`check-clippy-complete.sh` 769/769 targets, 0 diagnostics; `int_prelude::`
+87 passed, `nat_prelude::` 473 passed (both via `cargo-serialized.sh test -p
+axeyum-lean-kernel`, since the repo-wide `check-workspace-tests.sh` hits a
+pre-existing, unrelated host gap: `axeyum-py` fails to link for
+`-lpython3.14`, not present on this host); `validate-facts.py` 2781 checked,
+0 errors; `frontier-shape-census.py` exit 0; `check-shape-duplicates.py`
+15 allowlisted groups, no new unadjudicated one; `gen-adr-index.py` and
+`gen-plan.py` regenerated and committed; `check-merge-hygiene.sh` clean
+after regenerating PLAN.md and the production-provenance ledger.
 
 **ADR-0512 phase R4 reaches the reconstruction route: a Farkas/SOS refutation
 now reconstructs over `CReal`, and the closed `False` rests on ZERO carrier
