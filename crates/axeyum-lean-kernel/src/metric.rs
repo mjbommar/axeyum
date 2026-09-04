@@ -55,6 +55,21 @@
 //! See ADR-1602 for the measurement and for why those two bridges are the
 //! whole cost.
 
+// `MetricPrelude` is a `Copy` handle carrying `CPointPrelude` (itself the
+// whole `CRealPrelude`) plus the record's fixed-size selector array, so it is
+// 15 kB and every `declare_*` below trips `large_types_passed_by_value`. Same
+// shape, same suppression, and the same reason as `creal.rs`, `complex.rs`,
+// `int_prelude.rs` and `characterization/ops.rs`: these are long, straight-line
+// term constructions and the handle is a `Copy` snapshot by design.
+#![allow(
+    clippy::doc_markdown,
+    clippy::large_types_passed_by_value,
+    clippy::many_single_char_names,
+    clippy::similar_names,
+    clippy::too_many_arguments,
+    clippy::too_many_lines
+)]
+
 use crate::CPointPrelude;
 use crate::CRealPrelude;
 use crate::Kernel;
@@ -582,6 +597,16 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
 /// # Errors
 ///
 /// Returns the trusted kernel gate's typed rejection.
+///
+/// # Panics
+///
+/// Panics if the field-shape list has drifted from [`FIELD_COUNT`], or if
+/// [`declare_record`] returns selectors under names other than the ones
+/// [`intern`] pre-computed. Both are internal-consistency assertions between
+/// this file's two descriptions of the same record -- the `FIELD_SUFFIXES`
+/// array that names the selectors and the `metric_fields` list that types
+/// them -- and a drift between them would otherwise surface as a `Metric.*`
+/// handle silently pointing at a declaration that does not exist.
 pub fn build_metric_prelude(kernel: &mut Kernel) -> Result<MetricPrelude, KernelError> {
     let cpoint = crate::build_cpoint_prelude(kernel)?;
     let creal = cpoint.creal;
