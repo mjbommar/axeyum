@@ -143,7 +143,7 @@ fn lean_literal(payload: &str) -> String {
 }
 
 #[test]
-fn string_literal_expansions_agree_with_lean_4_30() {
+fn string_literal_expansions_agree_with_pinned_lean() {
     let Some(lean) = lean_probe::lean_bin_or_skip("string-literal", 2) else {
         return;
     };
@@ -156,10 +156,7 @@ fn string_literal_expansions_agree_with_lean_4_30() {
         String::from_utf8_lossy(&version.stdout),
         String::from_utf8_lossy(&version.stderr)
     );
-    assert!(
-        version_text.contains("4.30.0"),
-        "this comparison requires pinned Lean 4.30.0, got: {version_text}"
-    );
+    lean_probe::assert_pinned_version("string-literal", &version_text);
 
     let (mut kernel, env) = lean_shaped_kernel(Mutation::None);
     let mut source = String::from("set_option maxRecDepth 10000\n");

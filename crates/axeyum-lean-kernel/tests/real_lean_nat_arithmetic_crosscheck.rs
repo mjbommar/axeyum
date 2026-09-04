@@ -180,7 +180,7 @@ fn our_answer(kernel: &mut Kernel, env: &Env, segment: &str, a: &str, b: &str) -
 }
 
 #[test]
-fn literal_arithmetic_answers_agree_with_lean_4_30() {
+fn literal_arithmetic_answers_agree_with_pinned_lean() {
     let Some(lean) = lean_probe::lean_bin_or_skip("nat-arithmetic", 2) else {
         return;
     };
@@ -193,10 +193,7 @@ fn literal_arithmetic_answers_agree_with_lean_4_30() {
         String::from_utf8_lossy(&version.stdout),
         String::from_utf8_lossy(&version.stderr)
     );
-    assert!(
-        version_text.contains("4.30.0"),
-        "this comparison requires pinned Lean 4.30.0, got: {version_text}"
-    );
+    lean_probe::assert_pinned_version("nat-arithmetic", &version_text);
 
     let (mut kernel, env) = lean_shaped_kernel();
     let mut source = String::from("set_option maxRecDepth 10000\n");

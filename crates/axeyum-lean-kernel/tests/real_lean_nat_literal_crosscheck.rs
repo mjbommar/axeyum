@@ -15,7 +15,7 @@ fn run_lean(lean: &PathBuf, file: &std::path::Path) -> Output {
 }
 
 #[test]
-fn constructor_offset_recursor_and_false_controls_agree_with_lean_4_30() {
+fn constructor_offset_recursor_and_false_controls_agree_with_pinned_lean() {
     // `--version` pin probe, the positive control, and the negative control.
     let Some(lean) = lean_probe::lean_bin_or_skip("nat-literal", 3) else {
         return;
@@ -31,10 +31,7 @@ fn constructor_offset_recursor_and_false_controls_agree_with_lean_4_30() {
         String::from_utf8_lossy(&version.stderr)
     );
     assert!(version.status.success(), "{version_text}");
-    assert!(
-        version_text.contains("4.30.0"),
-        "TL2.7 comparison requires pinned Lean 4.30.0, got: {version_text}"
-    );
+    lean_probe::assert_pinned_version("nat-literal", &version_text);
 
     let directory = std::env::temp_dir().join(format!(
         "axeyum_nat_literal_crosscheck_{}",

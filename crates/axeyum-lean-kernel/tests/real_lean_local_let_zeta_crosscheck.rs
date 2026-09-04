@@ -83,14 +83,11 @@ fn require_pinned_version(lean: &PathBuf) {
         String::from_utf8_lossy(&version.stdout),
         String::from_utf8_lossy(&version.stderr)
     );
-    assert!(
-        version_text.contains("4.30.0"),
-        "this comparison requires pinned Lean 4.30.0, got: {version_text}"
-    );
+    lean_probe::assert_pinned_version("local-let-zeta", &version_text);
 }
 
 #[test]
-fn local_let_zeta_verdicts_agree_with_lean_4_30() {
+fn local_let_zeta_verdicts_agree_with_pinned_lean() {
     let Some(lean) = lean_probe::lean_bin_or_skip("local-let-zeta", 2) else {
         return;
     };

@@ -43,12 +43,17 @@
 //! | --- | --- | --- |
 //! | `Nat.mod 4 2 = 0` (structural recursion) | elaborator | accepted |
 //! | `Nat.gcd 2 4 = 2` (well-founded recursion) | elaborator | **REJECTED** |
-//! | the same gcd module, every `theorem` re-spelled `def` | elaborator | accepted |
+//! | the same gcd module, every `theorem` re-spelled `def` | elaborator | **REJECTED** (same mismatch) |
 //! | the development as NDJSON | **kernel** | accepted |
 //!
-//! Row 3 isolates the mechanism to a single token per line: the terms are
-//! byte-identical, only the keyword changes, and that is the whole difference
-//! between refused and accepted. Row 1 rules out "closed arithmetic is too
+//! Row 3 was WRITTEN on 2026-08-18 as "accepted", isolating the mechanism to a
+//! single token per line. Measured on 2026-09-03 against both Lean 4.30.0 and
+//! 4.34.0-rc1, it is refused with the same type mismatch: the keyword is not
+//! the mechanism. The elaborator's reducer does not take the `WellFounded.fix`
+//! step through `Acc.rec` at default transparency at all, and the kernel does
+//! (row 4). The residue is therefore keyword-independent -- any declaration
+//! whose type-checking must reduce through `Acc.rec` -- which is a stronger
+//! statement of the same boundary, and ADR-0517 records the correction. Row 1 rules out "closed arithmetic is too
 //! expensive" — `Nat.mod` is the recursive step of the very Euclidean descent
 //! `gcd` runs. Measured the same way on 2026-08-18: `Nat.gcd 0 3 = 3` (the base
 //! case, no recursive step) is *accepted*, every `gcd` needing at least one
@@ -60,8 +65,8 @@
 //! * The elaborator ACCEPTS the `theorem` spelling — a newer Lean closed the
 //!   gap, or the prelude stopped defining `gcd` this way. The residue recorded
 //!   in ADR-0517 shrank and the ADR is stale.
-//! * The elaborator REJECTS the `def` spelling — the mechanism is not the one
-//!   named here and ADR-0517's account of it is wrong.
+//! * The elaborator ACCEPTS the `def` spelling — a newer Lean reduces through
+//!   `Acc.rec` at default transparency; re-measure the residue.
 //! * The kernel REJECTS either probe — that is explanation (1) or (2) after
 //!   all, and it is a soundness-relevant defect rather than a routing note.
 //!
@@ -335,11 +340,28 @@ fn leans_kernel_unfolds_a_theorem_while_reducing_and_leans_elaborator_does_not()
     //    per line is the entire difference, which is what makes the mechanism a
     //    measurement rather than a story.
     let (accepted, report) = elaborate(&lean, &gcd_as_defs, "AxeyumGcdProbeAsDefs");
+    // MEASURED 2026-09-03, on BOTH Lean 4.30.0 (d024af09) and 4.34.0-rc1
+    // (3447a668): the elaborator refuses this module too, with the SAME type
+    // mismatch at the same `Eq.refl`. So the mechanism is NOT the opacity of
+    // `theorem`: `Meta.whnf` does not take the `WellFounded.fix` step through
+    // `Acc.rec` at default transparency whatever keyword the proofs carry,
+    // while the kernel (step 4) does. ADR-0517's "one token per line" story
+    // was written from the CReal-carrier measurement and never had this row
+    // run against a real binary: this suite was not in any gate until
+    // 2026-09-03 and had asserted `accepted` here since 2026-08-18. The ADR
+    // carries the correction. What the row now pins is that the refusal is
+    // keyword-independent, which is the stronger statement of the residue.
     assert!(
-        accepted,
-        "Lean's elaborator refused the module even with every proof spelled `def`, \
-         so the divergence is NOT the opacity of `theorem` and ADR-0517's account \
-         of it is wrong:\n{report}"
+        !accepted,
+        "Lean's elaborator now ACCEPTS the well-founded reduction with every proof \
+         spelled `def`, so a newer Lean unfolds through `Acc.rec` at default \
+         transparency and ADR-0517's residue has shrunk. Re-measure the `theorem` \
+         spelling and the CReal carrier, then update the ADR:\n{report}"
+    );
+    assert!(
+        report.contains("Type mismatch") || report.contains("type mismatch"),
+        "the `def` spelling must be refused with the SAME type mismatch as the \
+         `theorem` spelling -- any other refusal is a different defect:\n{report}"
     );
 
     // 4. Lean's KERNEL, over the same two theorems: accepted. This is the half

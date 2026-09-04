@@ -57,9 +57,27 @@ is open. `Complex` has no order. The broader creal retirement census (2,212
 order-lemma call sites) beyond the 5 named is unstarted. `are_we_done` reads
 `no`.
 
+**Open after the pin move: `real_lean_wire_differential` is red on one mutant,
+and it is not the pin.** Mutant `level.max-kind:1322:max-to-imax` rewrites
+`DecidablePred`'s declared `Sort (max u 1)` as `Sort (imax u 1)`. Our kernel
+admits it; Lean's kernel refuses it on the wire under BOTH 4.30.0 and
+4.34.0-rc1, yet both accept `def T (α : Sort u) : Sort (imax u 1) := α → Prop`
+from source. The two levels are equal for every `u` (`imax u (succ _)` is
+`max u (succ _)`); Lean's C++ `normalize` rewrites the `imax` branch to an
+unsorted `max u 1` while the `max` branch sorts to `max 1 u`, so `is_equivalent`
+compares two spellings of one level and says no, and the elaborator hides this
+from source by normalizing first. The mutant surfaced today because the
+exported stream grew and the sampler landed on this line; the same stream is
+refused by 4.30.0, so the suite would be red at this morning's commit too.
+The decision needed is whether to record a named, controlled exemption (our
+kernel is complete where Lean's is not; a fixture asserting Lean still refuses
+it keeps the exemption honest) or to make our level check as incomplete as
+Lean's. Not decided here; `check-lean-gate.sh` is not in the push hook.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-09-03 | coordinator | 18 lane merges landed; ADR-1576..1593; facts 2,706 → 2,758, 0 errors |
 | 2026-09-03 | coordinator | `5d85e5929` creal-backed linarith tests moved onto the deep stack |
 | 2026-09-03 | coordinator | collision sweep gains the `list` group; inventory-completeness gate green (12 labels agree) |
 | 2026-09-03 | coordinator | `.cargo/config.toml` sizes every test thread at 16 MiB; the debug `rat_prelude::` sweep no longer aborts (273 passed) |
+| 2026-09-03 | coordinator | `lean-toolchain` -> v4.34.0-rc1 (ADR-1594); seven suites read the pin instead of a literal; ADR-0517 amended: the elaborator refuses the `def` spelling too, on both Leans |

@@ -189,6 +189,21 @@ fn elan_directory_name(toolchain: &str) -> String {
     toolchain.replace('/', "--").replace(':', "---")
 }
 
+/// Assert that a `lean --version` line names the PINNED version (from
+/// `lean-toolchain`), so a suite measured against the pin cannot silently run
+/// against another toolchain. Before 2026-09-03 every crosscheck carried its
+/// own literal (`"4.30.0"`), so moving the pin meant editing seven suites and
+/// missing one meant a suite that could never pass; now the pin file is the
+/// single authority and the suites follow it.
+pub fn assert_pinned_version(tag: &str, version_text: &str) {
+    let pinned = pinned_version()
+        .unwrap_or_else(|| panic!("{tag}: lean-toolchain does not name a `:v<version>` pin"));
+    assert!(
+        version_text.contains(&format!("version {pinned},")),
+        "{tag}: this comparison requires the pinned Lean {pinned}, got: {version_text}"
+    );
+}
+
 /// `lean --version`'s first line, or `None` if the binary does not run.
 #[must_use]
 pub fn version_line(bin: &Path) -> Option<String> {
@@ -442,7 +457,7 @@ pub fn lean_bin_or_skip(tag: &str, not_checked: usize) -> Option<PathBuf> {
     println!(
         "{SKIPPED_MARKER} {tag} not_checked={not_checked} -- SKIPPED, this is NOT a pass. Install \
          the pinned toolchain (`elan toolchain install {}`) or set AXEYUM_LEAN_BIN. Resolution: {}",
-        pinned_toolchain().unwrap_or_else(|| "leanprover/lean4:v4.30.0".to_owned()),
+        pinned_toolchain().unwrap_or_else(|| "<the toolchain named in lean-toolchain>".to_owned()),
         discovery_report()
     );
     None

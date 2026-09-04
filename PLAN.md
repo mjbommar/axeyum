@@ -225,6 +225,7 @@ now. Nothing was deleted.
 | 2026-09-03 | coordinator | `5d85e5929` creal-backed linarith tests moved onto the deep stack |
 | 2026-09-03 | coordinator | collision sweep gains the `list` group; inventory-completeness gate green (12 labels agree) |
 | 2026-09-03 | coordinator | `.cargo/config.toml` sizes every test thread at 16 MiB; the debug `rat_prelude::` sweep no longer aborts (273 passed) |
+| 2026-09-03 | coordinator | `lean-toolchain` -> v4.34.0-rc1 (ADR-1594); seven suites read the pin instead of a literal; ADR-0517 amended: the elaborator refuses the `def` spelling too, on both Leans |
 | 2026-09-03 | det-mul-debug-stack-2 | Fixed the push-blocking DEBUG stack overflow in `rat_prelude::det_mul_tests::mat_subst_rows_replaces_the_window_by_relative_index` (the casualty yesterday's `det-mul-debug-stack` fix hid) by splitting it into a `_body` fn run on `crate::on_a_deep_stack`, same remedy as yesterday -- no magnitude to shrink here, every value formed is a single digit. Then swept the whole `rat_prelude::` filter (265 tests) at the default debug stack and found three MORE aborting tests the same way: `echelon_tests::the_row_operations_invert_at_concrete_arguments`, `rank_tests::rank_is_invariant_under_each_row_operation_at_two_by_two`, `rat_prelude_tests::det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign`; all fixed identically, all measured aborting at 2,097,152 and passing at 4,194,304. No assertion weakened, no negative control removed. |
 | 2026-09-03 | det-mul-debug-stack-2 | The required push-gate run (`scripts/check-kernel-suites.sh` with `AXEYUM_CARGO=scripts/cargo-serialized.sh`) surfaced a FIFTH, unrelated casualty outside `rat`: `complex::algebra_instance::algebra_instance_tests::complex_comm_ring_s_admits`, which calls `build_complex_prelude` (debug row 16,777,216, 8x default) directly on the default `#[test]` thread. Not previously seen because `prelude_cache` (ADR-0464) can hide it when another test warms the cache first -- a scheduling accident, not a fix. All six tests in that module now run on `on_a_deep_stack`, not only the one that aborted this run. `scripts/check-kernel-suites.sh` now exits 0: 32 suites + `--lib`, 2,027 tests, all `ok`. |
 | 2026-09-03 | det-mul-debug-stack-2 | Re-ran `scripts/check-kernel-stack-envelope.sh --check` in BOTH profiles (not just `rat`) after the fixes; found and re-derived two more red rows by `--measure`: debug `nat` 262,144 -> 524,288, release `rat` 262,144 -> 524,288 (`rat` debug unchanged at 2,097,152, still zero margin). Both `--check` runs now exit 0 (6/6 release, 9/9 debug). Considered and did NOT implement the requested in-process guard for the zero-margin `rat` debug row: a stack overflow aborts the WHOLE PROCESS regardless of which thread hit it, so a `#[test]` that tries to demonstrate the margin by spawning an undersized thread reproduces the exact defect this lane fixes instead of catching it cleanly; recommended wiring `--check --profile debug` into the push gate instead, as an operational (not test-code) follow-up. |
@@ -40949,6 +40950,23 @@ on either ordered-ring record, so the strict fragment of `linarith::generic`
 is open. `Complex` has no order. The broader creal retirement census (2,212
 order-lemma call sites) beyond the 5 named is unstarted. `are_we_done` reads
 `no`.
+
+**Open after the pin move: `real_lean_wire_differential` is red on one mutant,
+and it is not the pin.** Mutant `level.max-kind:1322:max-to-imax` rewrites
+`DecidablePred`'s declared `Sort (max u 1)` as `Sort (imax u 1)`. Our kernel
+admits it; Lean's kernel refuses it on the wire under BOTH 4.30.0 and
+4.34.0-rc1, yet both accept `def T (α : Sort u) : Sort (imax u 1) := α → Prop`
+from source. The two levels are equal for every `u` (`imax u (succ _)` is
+`max u (succ _)`); Lean's C++ `normalize` rewrites the `imax` branch to an
+unsorted `max u 1` while the `max` branch sorts to `max 1 u`, so `is_equivalent`
+compares two spellings of one level and says no, and the elaborator hides this
+from source by normalizing first. The mutant surfaced today because the
+exported stream grew and the sampler landed on this line; the same stream is
+refused by 4.30.0, so the suite would be red at this morning's commit too.
+The decision needed is whether to record a named, controlled exemption (our
+kernel is complete where Lean's is not; a fixture asserting Lean still refuses
+it keeps the exemption honest) or to make our level check as incomplete as
+Lean's. Not decided here; `check-lean-gate.sh` is not in the push hook.
 
 **Both of Euclid's missing ingredients are in; `F:nat-exists-prime-gt` is one
 slice from closing** (`WIP`, nat-prime-divisor, 2026-08-17).

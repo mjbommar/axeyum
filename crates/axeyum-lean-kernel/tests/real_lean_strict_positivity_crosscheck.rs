@@ -63,7 +63,7 @@ fn combined_output(output: &Output) -> String {
 }
 
 #[test]
-fn frozen_sources_repeat_against_pinned_lean_4_30() {
+fn frozen_sources_repeat_against_pinned_lean() {
     // 4 immutable sources x 2 repetitions, plus the `--version` pin probe.
     let Some(lean) = lean_probe::lean_bin_or_skip("strict-positivity", SOURCES.len() * 2 + 1)
     else {
@@ -76,11 +76,7 @@ fn frozen_sources_repeat_against_pinned_lean_4_30() {
         .expect("query official Lean version");
     let version_text = combined_output(&version);
     assert!(version.status.success(), "{version_text}");
-    assert!(
-        version_text.contains("version 4.30.0")
-            && version_text.contains("commit d024af099ca4bf2c86f649261ebf59565dc8c622"),
-        "TL2.11 requires exact pinned Lean, got: {version_text}"
-    );
+    lean_probe::assert_pinned_version("strict-positivity", &version_text);
 
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)

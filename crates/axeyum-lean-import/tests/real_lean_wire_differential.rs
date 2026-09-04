@@ -1879,11 +1879,7 @@ fn our_kernel_admits_nothing_the_real_lean_kernel_refuses() {
         return;
     };
     let version = version_of(&lean).expect("the located lean must report a version");
-    assert!(
-        version.contains("version 4.30.0"),
-        "this differential is only meaningful against the pinned reference \
-         implementation; got: {version}"
-    );
+    lean_probe::assert_pinned_version("wire-differential", &version);
     let directory = std::env::temp_dir().join(format!("axeyum_wire_diff_{}", std::process::id()));
     std::fs::create_dir_all(&directory).expect("create mutant directory");
 

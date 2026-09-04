@@ -131,10 +131,7 @@ fn require_pinned_version(lean: &PathBuf) {
         String::from_utf8_lossy(&version.stdout),
         String::from_utf8_lossy(&version.stderr)
     );
-    assert!(
-        version_text.contains("4.30.0"),
-        "this comparison requires pinned Lean 4.30.0, got: {version_text}"
-    );
+    lean_probe::assert_pinned_version("structure-eta-recursor", &version_text);
 }
 
 /// Write `<name>.lean` under `directory` and run Lean on it, returning the
@@ -153,7 +150,7 @@ fn check_module(lean: &Path, directory: &Path, name: &str, body: &str) -> (bool,
 }
 
 #[test]
-fn structure_eta_recursor_verdicts_agree_with_lean_4_30() {
+fn structure_eta_recursor_verdicts_agree_with_pinned_lean() {
     let Some(lean) = lean_probe::lean_bin_or_skip("structure-eta-recursor", CHECKS) else {
         return;
     };

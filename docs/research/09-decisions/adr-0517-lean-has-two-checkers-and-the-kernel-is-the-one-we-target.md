@@ -189,3 +189,22 @@ soundness: the kernel already accepts everything.
 - **Declare the four unprovable / weaken them.** Rejected outright: they are
   the declarations that make `CReal.Equiv` and `CReal.le` non-total, i.e. the
   ones that stop the setoid witness being vacuous.
+
+## Amendment 2026-09-03: the residue is keyword-independent
+
+The "one token per line" row of `real_lean_wellfounded_elaborator_divergence`
+(the gcd module with every `theorem` re-spelled `def`, expected *accepted*)
+was written on 2026-08-18 from the CReal-carrier measurement and never ran
+against a real binary in any gate until 2026-09-03. Run that day against both
+Lean 4.30.0 (`d024af09`) and 4.34.0-rc1 (`3447a668`), the elaborator refuses
+the `def` spelling with the same `Type mismatch` at the same `Eq.refl` as the
+`theorem` spelling, while the kernel replay accepts the development. So the
+mechanism named above — `Meta.whnf` treating a `theorem` as opaque — is not
+what stops the source route: the elaborator's reducer does not take the
+`WellFounded.fix` step through `Acc.rec` at default transparency whatever the
+keyword, and the kernel does. The residue of the source route is therefore
+*any declaration whose type-checking must reduce through `Acc.rec`*, which
+is the same set as before (`Nat.gcd`'s recursive step, hence `Rat.normalize`,
+hence the four `CReal` discriminators) stated without the keyword
+qualification. The suite now pins the refusal of both spellings and fails if a
+newer Lean accepts the `def` one. Every other conclusion of this ADR stands.
