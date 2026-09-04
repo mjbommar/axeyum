@@ -148,6 +148,9 @@ now. Nothing was deleted.
 | 2026-09-04 | persona-absence-audit | ADR-1605 (proposed): characterisation is a derived three-way ratcheted measurement, not a stored schema field |
 | 2026-09-04 | persona-absence-audit | `check-fact-characterisation.py` + 17-test control suite, registered in `check.sh` and the `justfile` |
 | 2026-09-04 | persona-absence-audit | re-baselined the red `count-landmark-facts.py` pin and fixed one mistitled fact |
+| 2026-09-04 | computability | `nat_prelude/computability.rs`/`computability_tests.rs`: `Nat.RM.runFuel`/`diagStep`/`Halts`/`self_halting_not_decidable`, axiom-free, 5 evaluation tests with negative controls (`d7ddb833e`) |
+| 2026-09-04 | computability | ADR-1611: the model choice, the rejected register-machine front end and deferred `Nat.Partrec.Code`, and the Cantor-connection attempt that did not land as a literal function call (`d7ddb833e`) |
+| 2026-09-04 | computability | `F:nat-rm-self-halting-not-decidable` fact registered, curated; `frontier-shape-census.py` re-run (`e942c9aee`) |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -42093,6 +42096,35 @@ carried a full curated statement of Euler's totient theorem under a "prose not
 curated" title, so both the landmark count and the new checker scored a
 characterised fact as uncharacterised; the title is corrected, and it is the
 one live violation the new `PROSE_DISAGREEMENT` guard found on its first run.
+
+**Your lane's block (`DONE`, computability, 2026-09-04).** Landed a minimal
+step-function register machine (`Nat.RM.runFuel`/`diagStep`/`Halts`,
+`nat_prelude/computability.rs`) and `Nat.RM.self_halting_not_decidable`: no
+total `H : Nat → Bool` can be correct in both directions about whether
+`diagStep H` halts from the marker input `1`. Axiom-free, `Nat` prelude
+count 478 (was 474; +4 new declarations), `every_nat_declaration_is_checked_
+and_axiom_free` and `check-shape-duplicates.py` both green. ADR-1611 records
+the model choice (shallow step-function machine over an explicit
+register-machine front end and over `Nat.Partrec.Code`, both rejected/
+deferred with cost) and, in detail, the attempt to route the proof literally
+through `Nat.cantor_no_fixed_point` and why the shipped proof reuses its
+TECHNIQUE (a `Bool.rec`/`Or` case split via `bool_true_or_false`, closed by
+`Nat.succ_ne_zero`/`Bool.true_ne_false`) rather than the declared name — the
+two cases are Π₁- and Σ₁-shaped respectively and do not share a clean single
+fixed point without routing one case through `False.rec` after the
+contradiction is already in hand. Fact `F:nat-rm-self-halting-not-decidable`
+registered, curated, `validate-facts.py` 0 errors (2409 kernel_facts, 2509
+proved). `frontier-shape-census.py` re-run (unrelated shift in its counts).
+
+**What did not land, precisely.** Item 3 of the brief (undecidability of
+first-order validity) was correctly sized as out of reach this session — it
+needs an arithmetization/reduction project on the scale of the model-theory
+reviewer's own roadmap item, not a corollary of the halting result above —
+and stays `open` in the ledger with nothing behind it, per instruction. A
+full universal-machine formalization (`Nat.Partrec.Code`, reusing the
+already-built `Nat.pair`/`unpairLeft`/`unpairRight`) was scoped and named as
+the natural next step in ADR-1611 but not built: it is a multi-file project
+on the scale of `Nat.Primrec`'s own supporting-theorem stream (ADR-1240).
 
 **The reconstruction context's carrier is now a parameter, and the constructed
 reals already satisfy it (`WIP`, agent-real-migration, 2026-08-18).**
