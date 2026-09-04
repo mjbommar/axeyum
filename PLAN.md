@@ -224,6 +224,7 @@ now. Nothing was deleted.
 | 2026-09-03 | coordinator | 18 lane merges landed; ADR-1576..1593; facts 2,706 → 2,758, 0 errors |
 | 2026-09-03 | coordinator | `5d85e5929` creal-backed linarith tests moved onto the deep stack |
 | 2026-09-03 | coordinator | collision sweep gains the `list` group; inventory-completeness gate green (12 labels agree) |
+| 2026-09-03 | coordinator | `.cargo/config.toml` sizes every test thread at 16 MiB; the debug `rat_prelude::` sweep no longer aborts (273 passed) |
 | 2026-09-03 | det-mul-debug-stack-2 | Fixed the push-blocking DEBUG stack overflow in `rat_prelude::det_mul_tests::mat_subst_rows_replaces_the_window_by_relative_index` (the casualty yesterday's `det-mul-debug-stack` fix hid) by splitting it into a `_body` fn run on `crate::on_a_deep_stack`, same remedy as yesterday -- no magnitude to shrink here, every value formed is a single digit. Then swept the whole `rat_prelude::` filter (265 tests) at the default debug stack and found three MORE aborting tests the same way: `echelon_tests::the_row_operations_invert_at_concrete_arguments`, `rank_tests::rank_is_invariant_under_each_row_operation_at_two_by_two`, `rat_prelude_tests::det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign`; all fixed identically, all measured aborting at 2,097,152 and passing at 4,194,304. No assertion weakened, no negative control removed. |
 | 2026-09-03 | det-mul-debug-stack-2 | The required push-gate run (`scripts/check-kernel-suites.sh` with `AXEYUM_CARGO=scripts/cargo-serialized.sh`) surfaced a FIFTH, unrelated casualty outside `rat`: `complex::algebra_instance::algebra_instance_tests::complex_comm_ring_s_admits`, which calls `build_complex_prelude` (debug row 16,777,216, 8x default) directly on the default `#[test]` thread. Not previously seen because `prelude_cache` (ADR-0464) can hide it when another test warms the cache first -- a scheduling accident, not a fix. All six tests in that module now run on `on_a_deep_stack`, not only the one that aborted this run. `scripts/check-kernel-suites.sh` now exits 0: 32 suites + `--lib`, 2,027 tests, all `ok`. |
 | 2026-09-03 | det-mul-debug-stack-2 | Re-ran `scripts/check-kernel-stack-envelope.sh --check` in BOTH profiles (not just `rat`) after the fixes; found and re-derived two more red rows by `--measure`: debug `nat` 262,144 -> 524,288, release `rat` 262,144 -> 524,288 (`rat` debug unchanged at 2,097,152, still zero margin). Both `--check` runs now exit 0 (6/6 release, 9/9 debug). Considered and did NOT implement the requested in-process guard for the zero-margin `rat` debug row: a stack overflow aborts the WHOLE PROCESS regardless of which thread hit it, so a `#[test]` that tries to demonstrate the margin by spawning an undersized thread reproduces the exact defect this lane fixes instead of catching it cleanly; recommended wiring `--check --profile debug` into the push gate instead, as an operational (not test-code) follow-up. |
@@ -40932,10 +40933,18 @@ zero stack margin in debug; the `det-mul-debug-stack-2` lane fixed them and
 re-pinned the envelope (debug `nat` and release `rat` both 262,144 →
 524,288).
 
-**Open, sized, not built.** `rat`'s debug stack row is still exactly the 2 MiB
-default with zero margin; the recommended guard is to run
-`check-kernel-stack-envelope.sh --check` as a named push-gate step (a `#[test]`
-guard would abort the whole binary, which is the defect itself). No `lt` field
+**The zero-margin class is closed at the harness, not per test.** After the
+last two merges a seventh, never-touched test
+(`cas_geometry_mul_bridge_tests::factor_list_and_monomial_build_the_same_term`)
+aborted the debug `rat_prelude::` sweep on `main`, while the envelope still
+measured `rat` at exactly 2,097,152: the prelude fits the default test-thread
+stack and any test body on top of it does not. Twenty-seven test files build
+that prelude on the bare thread, so the fix is `.cargo/config.toml`
+`[env] RUST_MIN_STACK = "16777216"`, which sizes every libtest thread and
+leaves `check-kernel-stack-envelope.sh` untouched (its example passes an
+explicit `stack_size`). Debug `rat_prelude::` sweep after: 273 passed;
+envelope `--check --profile debug`: 9 of 9 rows green. Still recommended: run
+`check-kernel-stack-envelope.sh --check` as a named push-gate step. No `lt` field
 on either ordered-ring record, so the strict fragment of `linarith::generic`
 is open. `Complex` has no order. The broader creal retirement census (2,212
 order-lemma call sites) beyond the 5 named is unstarted. `are_we_done` reads

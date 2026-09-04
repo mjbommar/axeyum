@@ -40,10 +40,18 @@ zero stack margin in debug; the `det-mul-debug-stack-2` lane fixed them and
 re-pinned the envelope (debug `nat` and release `rat` both 262,144 →
 524,288).
 
-**Open, sized, not built.** `rat`'s debug stack row is still exactly the 2 MiB
-default with zero margin; the recommended guard is to run
-`check-kernel-stack-envelope.sh --check` as a named push-gate step (a `#[test]`
-guard would abort the whole binary, which is the defect itself). No `lt` field
+**The zero-margin class is closed at the harness, not per test.** After the
+last two merges a seventh, never-touched test
+(`cas_geometry_mul_bridge_tests::factor_list_and_monomial_build_the_same_term`)
+aborted the debug `rat_prelude::` sweep on `main`, while the envelope still
+measured `rat` at exactly 2,097,152: the prelude fits the default test-thread
+stack and any test body on top of it does not. Twenty-seven test files build
+that prelude on the bare thread, so the fix is `.cargo/config.toml`
+`[env] RUST_MIN_STACK = "16777216"`, which sizes every libtest thread and
+leaves `check-kernel-stack-envelope.sh` untouched (its example passes an
+explicit `stack_size`). Debug `rat_prelude::` sweep after: 273 passed;
+envelope `--check --profile debug`: 9 of 9 rows green. Still recommended: run
+`check-kernel-stack-envelope.sh --check` as a named push-gate step. No `lt` field
 on either ordered-ring record, so the strict fragment of `linarith::generic`
 is open. `Complex` has no order. The broader creal retirement census (2,212
 order-lemma call sites) beyond the 5 named is unstarted. `are_we_done` reads
@@ -54,3 +62,4 @@ order-lemma call sites) beyond the 5 named is unstarted. `are_we_done` reads
 | 2026-09-03 | coordinator | 18 lane merges landed; ADR-1576..1593; facts 2,706 → 2,758, 0 errors |
 | 2026-09-03 | coordinator | `5d85e5929` creal-backed linarith tests moved onto the deep stack |
 | 2026-09-03 | coordinator | collision sweep gains the `list` group; inventory-completeness gate green (12 labels agree) |
+| 2026-09-03 | coordinator | `.cargo/config.toml` sizes every test thread at 16 MiB; the debug `rat_prelude::` sweep no longer aborts (273 passed) |

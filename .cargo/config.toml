@@ -1,0 +1,26 @@
+# Workspace cargo configuration.
+#
+# `[env]` applies to every process cargo launches for this workspace: build
+# scripts, `cargo run`, and the test binaries `cargo test` executes.
+#
+# RUST_MIN_STACK: the default stack for threads spawned WITHOUT an explicit
+# size, which is what libtest gives every `#[test]`. The Rust default is
+# 2 MiB. `axeyum-lean-kernel`'s preludes are built inside tests on that
+# thread, and the `rat` prelude's DEBUG requirement reached exactly 2 MiB on
+# 2026-09-03 (artifacts/kernel-stack-envelope.tsv), so every test that built
+# it on the bare thread had zero margin: five aborted that day, and the next
+# two merges (each adding one `rat` declaration) aborted a sixth,
+# `cas_geometry_mul_bridge_tests::factor_list_and_monomial_build_the_same_term`,
+# which had never been touched. A stack overflow aborts the WHOLE test binary,
+# so one such test hides every other result in the run.
+#
+# 16 MiB is virtual reservation only (pages are committed on touch), so the
+# memory cost per test thread is what the test actually uses, unchanged.
+# `check-kernel-stack-envelope.sh` measures on a thread whose size is an
+# explicit `Builder::stack_size` argument (`examples/kernel_stack_envelope.rs`
+# says why it deliberately does NOT read this variable), so the envelope's
+# measurements are unaffected and remain the honest record of each prelude's
+# requirement. Measured 2026-09-03 with this setting in place: `rat` debug
+# still builds at 2,097,152 and aborts at 1,048,576.
+[env]
+RUST_MIN_STACK = "16777216"
