@@ -863,6 +863,19 @@ step kernel-trusted-core-controls python3 -m unittest scripts.tests.test_check_k
 # visible rather than silently re-measured every time.
 step landmark-facts python3 scripts/count-landmark-facts.py --check
 step landmark-facts-controls python3 -m unittest scripts.tests.test_count_landmark_facts
+# How much of the ledger CHARACTERISES itself (ADR-1605). The landmark rule
+# splits titles two ways; this splits them three, and the third class matters:
+# 499 proved facts are titled "Mathlib v4.30 source proposition <Name>", which
+# characterises by reference and adds nothing -- and is where one of the
+# persona-review false absences hid (ten proved Stirling-number theorems, none
+# of them findable by searching for "Stirling"). Headline: 1,553 of 2,493
+# proved facts carry no characterisation of their own. Two hard guards (a
+# title/statement disagreement about generated-ness, which found one live
+# violation; a malformed ledger, exit 2 not 1) plus a per-fragment RATCHET on
+# the curated count -- a direction, not the exact pin next door, which was red
+# on main because six facts landed and nobody bumped a generated file.
+step fact-characterisation python3 scripts/check-fact-characterisation.py --check
+step fact-characterisation-controls python3 -m unittest scripts.tests.test_check_fact_characterisation
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --

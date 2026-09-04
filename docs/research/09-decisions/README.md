@@ -883,3 +883,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1597](adr-1597-the-ftc-was-already-proved-and-the-ledger-could-not-say-so.md) | The FTC was already proved, the ledger could not say so, and the textbook form is what was missing | accepted |
 | [1598](adr-1598-the-multiplicative-order-is-a-predicate-picked-out-by-bounded-search.md) | The multiplicative order is a predicate picked out by bounded search, not a computed function | accepted |
 | [1600](adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md) | the kernel's metatheoretic status — what is trusted, what is checked, and what is not | accepted |
+| [1605](adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md) | the ledger cannot tell "uncharacterised" from "absent" | proposed |
