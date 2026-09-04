@@ -10220,6 +10220,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "extreme_value::declare_extreme_value",
     "ivt_boundary::declare_ivt_boundary",
     "lub_boundary::declare_lub_boundary",
+    "omniscience::declare_omniscience",
     "trig_fn::declare_cos_fn_family",
     "trig_fn::declare_cos_fn_equiv_cos_one",
     "trig_fn::declare_cos_fn_wide_progress",
