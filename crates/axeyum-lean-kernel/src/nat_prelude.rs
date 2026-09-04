@@ -208,8 +208,10 @@ mod gcd;
 mod gcd_dvd_mirrors;
 mod gcd_mul_right;
 mod gcd_mul_right_mirrors;
+mod graph;
 mod group;
 pub(crate) mod half_ceil_parity;
+mod hall;
 mod helpers;
 mod injective_decide;
 mod irrational;
@@ -262,6 +264,7 @@ mod primes;
 mod primrec;
 mod quadratic_reciprocity_count;
 mod rado;
+mod ramsey;
 mod rec_agreement;
 mod rectangle;
 mod rel_prime;
@@ -408,8 +411,10 @@ use gcd::{declare_executable_gcd, declare_gcd_semantics, declare_modeq_gcd_eq};
 use gcd_dvd_mirrors::declare_gcd_dvd_mirrors;
 use gcd_mul_right::declare_gcd_mul_right;
 use gcd_mul_right_mirrors::declare_gcd_mul_right_mirrors;
+use graph::declare_graph_all;
 use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
+use hall::declare_hall_all;
 use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -482,6 +487,7 @@ use primes::{
 use primrec::declare_primrec_all;
 use quadratic_reciprocity_count::declare_quadratic_reciprocity_count_all;
 use rado::declare_rado_all;
+use ramsey::declare_ramsey_all;
 use rec_agreement::{
     declare_land_assoc_all, declare_land_comm, declare_land_fuel_irrelevance_all,
     declare_land_le_left_all, declare_land_le_right_all, declare_land_zero_propagation_all,
@@ -6406,6 +6412,173 @@ pub struct NatPrelude {
     /// in this repository that is a theorem rather than a certificate.
     pub rado_schur_two: NameId,
 
+    /// `Nat.Graph` — the finite-graph carrier (ADR-1608): a stored adjacency
+    /// relation `Nat -> Nat -> Bool` together with a vertex bound, the exact
+    /// sibling of [`finset`](Self::finset). Symmetry and irreflexivity are
+    /// FORCED inside [`graph_adj_b`](Self::graph_adj_b) rather than carried as
+    /// side conditions, so `mk` applies to any relation at any bound and the
+    /// laws below hold of EVERY graph.
+    pub graph: NameId,
+    /// `Nat.Graph.mk : (Nat -> Nat -> Bool) -> Nat -> Nat.Graph`.
+    pub graph_mk: NameId,
+    /// `Nat.Graph.rec` — the carrier's recursor.
+    pub graph_rec: NameId,
+    /// `Nat.Graph.rel g : Nat -> Nat -> Bool`, the stored relation (NOT
+    /// symmetrized and NOT truncated at the order).
+    pub graph_rel: NameId,
+    /// `Nat.Graph.order g : Nat` — the vertex bound; vertices are `[0, order)`.
+    pub graph_order: NameId,
+    /// `Nat.Graph.andB a b := if a then b else false`. This prelude had no
+    /// `Bool` algebra of its own; `adjB`'s symmetry proof needs commutativity
+    /// as a NAMED lemma rather than eight inline `Bool.rec` cases.
+    pub graph_and_b: NameId,
+    /// `Nat.Graph.orB a b := if a then true else b`.
+    pub graph_or_b: NameId,
+    /// `Nat.Graph.notB b := if b then false else true`.
+    pub graph_not_b: NameId,
+    /// `Nat.Graph.neB i j := if beq i j then false else true`.
+    pub graph_ne_b: NameId,
+    /// `Nat.Graph.adjB g i j := andB (andB (i < order g) (j < order g))
+    /// (andB (neB i j) (andB (rel g i j) (rel g j i)))` — the observable
+    /// adjacency. Symmetrized by CONJUNCTION, so a one-sided entry in `rel`
+    /// is not an edge; the failure direction is fewer edges, never more.
+    pub graph_adj_b: NameId,
+    /// `Nat.Graph.neighbors g v := Nat.Finset.mk (adjB g v) (order g)` — the
+    /// neighbourhood IS a `Nat.Finset`, with no conversion.
+    pub graph_neighbors: NameId,
+    /// `Nat.Graph.degree g v := Nat.Finset.card (neighbors g v)`.
+    pub graph_degree: NameId,
+    /// `Nat.Graph.andB_comm : ∀ a b, Eq Bool (andB a b) (andB b a)`.
+    pub graph_and_b_comm: NameId,
+    /// `Nat.Graph.andB_false_right : ∀ a, Eq Bool (andB a false) false`.
+    pub graph_and_b_false_right: NameId,
+    /// `Nat.Graph.andB_intro : ∀ a b, a = true → b = true → andB a b = true`.
+    pub graph_and_b_intro: NameId,
+    /// `Nat.Graph.andB_left : ∀ a b, andB a b = true → a = true`.
+    pub graph_and_b_left: NameId,
+    /// `Nat.Graph.andB_right : ∀ a b, andB a b = true → b = true`.
+    pub graph_and_b_right: NameId,
+    /// `Nat.Graph.adjB_symm : ∀ g i j, Eq Bool (adjB g i j) (adjB g j i)` —
+    /// a theorem about EVERY graph, with no well-formedness premise.
+    pub graph_adj_b_symm: NameId,
+    /// `Nat.Graph.adjB_irrefl : ∀ g i, Eq Bool (adjB g i i) false` — likewise
+    /// side-condition-free.
+    pub graph_adj_b_irrefl: NameId,
+    /// `Nat.Graph.adjB_of_order_le : ∀ g i j, Le (order g) i →
+    /// Eq Bool (adjB g i j) false` — the truncation law, the graph twin of
+    /// [`finset_mem_b_of_bound_le`](Self::finset_mem_b_of_bound_le).
+    pub graph_adj_b_of_order_le: NameId,
+    /// `Nat.Graph.lt_order_of_adjB : ∀ g i j, adjB g i j = true →
+    /// Lt i (order g)` — adjacency already implies the vertex bound, so
+    /// downstream statements need no range premise.
+    pub graph_lt_order_of_adj_b: NameId,
+    /// `Nat.Graph.ne_of_adjB : ∀ g i j, adjB g i j = true → Eq Nat i j →
+    /// False` — an edge has distinct endpoints, so a triangle's three
+    /// vertices are automatically distinct.
+    pub graph_ne_of_adj_b: NameId,
+    /// `Nat.Graph.adjB_of_rel : ∀ g i j, Lt i (order g) → Lt j (order g) →
+    /// Eq Bool (beq i j) false → rel g i j = true → rel g j i = true →
+    /// adjB g i j = true` — the introduction rule a transcribed adjacency
+    /// table goes through.
+    pub graph_adj_b_of_rel: NameId,
+    /// `Nat.Graph.memB_neighbors : ∀ g v i,
+    /// Eq Bool (Nat.Finset.memB (neighbors g v) i) (adjB g v i)` — membership
+    /// in the neighbourhood IS adjacency, at every index, with no side
+    /// condition, because `adjB` truncates in its own definition.
+    pub graph_mem_b_neighbors: NameId,
+    /// `Nat.Graph.degree_le_order : ∀ g v, Le (degree g v) (order g)`.
+    pub graph_degree_le_order: NameId,
+    /// `Nat.Graph.compl g := mk (fun i j => notB (adjB g i j)) (order g)` —
+    /// the complement, which is how a two-colouring of edges is expressed:
+    /// one colour class is `g` and the other is `compl g` (ADR-1608).
+    pub graph_compl: NameId,
+    /// `Nat.Graph.HasClique3 g := ∃ a b c, adjB g a b ∧ adjB g b c ∧
+    /// adjB g a c`. NO range or distinctness conjuncts: adjacency already
+    /// implies both, by
+    /// [`graph_lt_order_of_adj_b`](Self::graph_lt_order_of_adj_b) and
+    /// [`graph_ne_of_adj_b`](Self::graph_ne_of_adj_b).
+    pub graph_has_clique3: NameId,
+    /// `Nat.Graph.noClique3B g n` — the `Bool` triple loop over
+    /// `Nat.Finset.allBelow` that decides "no triangle inside `[0,n)`". The
+    /// REFLECTION side of the lower bound.
+    pub graph_no_clique3_b: NameId,
+    /// `Nat.Graph.Arrows33 n := ∀ g, Le n (order g) → HasClique3 g ∨
+    /// HasClique3 (compl g)` — "`n` arrows the triangle over two colours".
+    pub graph_arrows33: NameId,
+    /// `Nat.Graph.IsRamseyNumber33 n := Arrows33 n ∧ ∀ k < n, ¬ Arrows33 k`.
+    pub graph_is_ramsey33: NameId,
+    /// `Nat.Graph.adjB_compl_of_not_adjB : ∀ g i j, Lt i (order g) →
+    /// Lt j (order g) → beq i j = false → adjB g i j = false →
+    /// adjB (compl g) i j = true`.
+    pub graph_adj_b_compl_of_not_adj_b: NameId,
+    /// `Nat.Graph.not_hasClique3_of_decide : ∀ g,
+    /// noClique3B g (order g) = true → HasClique3 g → False` — a decided loop
+    /// read back at the three existential witnesses.
+    pub graph_not_has_clique3_of_decide: NameId,
+    /// `Nat.Graph.triangle_or_indep : ∀ g v x y z, three edges at `v` and
+    /// three distinctness facts → HasClique3 g ∨ HasClique3 (compl g)` — the
+    /// four-leaf case analysis the upper bound applies 32 times.
+    pub graph_triangle_or_indep: NameId,
+    /// `Nat.Graph.antitriangle_or_indep` — the mirror image, for three
+    /// NON-neighbours of `v`; it takes the vertex bounds explicitly because
+    /// non-adjacency carries none.
+    pub graph_antitriangle_or_indep: NameId,
+    /// `Nat.Graph.arrows33_of_le : ∀ m n, Le m n → Arrows33 m → Arrows33 n` —
+    /// a larger order is a stronger hypothesis, hence a weaker statement.
+    pub graph_arrows33_of_le: NameId,
+    /// `Nat.Graph.isRamseyNumber33_of_succ : ∀ m, Arrows33 (succ m) →
+    /// (Arrows33 m → False) → IsRamseyNumber33 (succ m)` — THE reduction a
+    /// search certificate needs, with `m` left a variable.
+    pub graph_is_ramsey33_of_succ: NameId,
+    /// `Nat.Graph.ramsey33_arrows_six : Arrows33 6` — every graph on at least
+    /// six vertices has a triangle or an independent triple. A 32-leaf case
+    /// tree over the five edges at vertex `0`.
+    pub graph_ramsey33_arrows_six: NameId,
+    /// `Nat.Graph.ramsey33Witness : Nat.Graph` — the lower-bound certificate,
+    /// found by `ramsey.rs`'s own search over the `2^10` graphs on five
+    /// vertices: `{0-3, 0-4, 1-2, 1-4, 2-3}`, the five-cycle relabelled.
+    pub graph_ramsey33_witness: NameId,
+    /// `Nat.Graph.ramsey33_not_arrows_five : Arrows33 5 → False`, refuted by
+    /// reflection against
+    /// [`graph_ramsey33_witness`](Self::graph_ramsey33_witness).
+    pub graph_ramsey33_not_arrows_five: NameId,
+    /// `Nat.Graph.ramsey_three_three : IsRamseyNumber33 6` — `R(3,3) = 6`,
+    /// both halves in the kernel.
+    pub graph_ramsey_three_three: NameId,
+
+    /// `Nat.Hall.anyBelow f n := notB (allBelow (fun i => notB (f i)) n)` —
+    /// the bounded existential decision `Nat.Finset` lacked (ADR-1608). Only
+    /// its INTRODUCTION rule is proved; the elimination rule is what Hall's
+    /// sufficiency direction would need.
+    pub hall_any_below: NameId,
+    /// `Nat.Hall.unionBound nb n := sumRange (fun i => Nat.Finset.bound
+    /// (nb i)) n` — the bound `unionOver` gives its result. Sum, not max, for
+    /// ADR-1577's reason: `Nat.le_sumRange_of_lt` applies literally.
+    pub hall_union_bound: NameId,
+    /// `Nat.Hall.unionOver nb t : Nat.Finset` — the union of the family over
+    /// the index set `t`.
+    pub hall_union_over: NameId,
+    /// `Nat.Hall.IsMatching s nb f` — `f` picks a member of `nb i` for every
+    /// `i` in `s`, injectively. A system of distinct representatives.
+    pub hall_is_matching: NameId,
+    /// `Nat.Hall.HallCondition s nb := ∀ t, (∀ i, i ∈ t → i ∈ s) →
+    /// card t ≤ card (unionOver nb t)`. Inclusion is POINTWISE, not
+    /// `Nat.Finset.subsetB`, which carries no reflection lemma.
+    pub hall_condition: NameId,
+    /// `Nat.Hall.anyBelow_of_witness : ∀ f n i, Lt i n → f i = true →
+    /// anyBelow f n = true`.
+    pub hall_any_below_of_witness: NameId,
+    /// `Nat.Hall.memB_unionOver : ∀ nb t i v, memB t i = true →
+    /// memB (nb i) v = true → memB (unionOver nb t) v = true`.
+    pub hall_mem_union_over: NameId,
+    /// `Nat.Hall.hallCondition_of_isMatching : ∀ s nb f, IsMatching s nb f →
+    /// HallCondition s nb` — the NECESSITY half of Hall's marriage theorem,
+    /// one application of
+    /// [`finset_card_le_of_inj_on`](Self::finset_card_le_of_inj_on). The
+    /// sufficiency half is not proved; `hall.rs`'s module doc names the three
+    /// missing pieces.
+    pub hall_condition_of_is_matching: NameId,
+
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
     /// a field. See [`structures`] for the field lists and every selector
@@ -6507,6 +6680,8 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let pair = kernel.name_str(nat, "Pair");
         let multiset = kernel.name_str(nat, "Multiset");
         let rado = kernel.name_str(nat, "Rado");
+        let graph = kernel.name_str(nat, "Graph");
+        let hall = kernel.name_str(nat, "Hall");
         let finset = kernel.name_str(nat, "Finset");
         let primrec = kernel.name_str(nat, "Primrec");
         let cases_on_uparam_name = {
@@ -7433,6 +7608,54 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             rado_schur_arrows_five: kernel.name_str(rado, "schur_arrows_five"),
             rado_schur_not_arrows_four: kernel.name_str(rado, "schur_not_arrows_four"),
             rado_schur_two: kernel.name_str(rado, "schur_two"),
+            graph,
+            graph_mk: kernel.name_str(graph, "mk"),
+            graph_rec: kernel.name_str(graph, "rec"),
+            graph_rel: kernel.name_str(graph, "rel"),
+            graph_order: kernel.name_str(graph, "order"),
+            graph_and_b: kernel.name_str(graph, "andB"),
+            graph_or_b: kernel.name_str(graph, "orB"),
+            graph_not_b: kernel.name_str(graph, "notB"),
+            graph_ne_b: kernel.name_str(graph, "neB"),
+            graph_adj_b: kernel.name_str(graph, "adjB"),
+            graph_neighbors: kernel.name_str(graph, "neighbors"),
+            graph_degree: kernel.name_str(graph, "degree"),
+            graph_and_b_comm: kernel.name_str(graph, "andB_comm"),
+            graph_and_b_false_right: kernel.name_str(graph, "andB_false_right"),
+            graph_and_b_intro: kernel.name_str(graph, "andB_intro"),
+            graph_and_b_left: kernel.name_str(graph, "andB_left"),
+            graph_and_b_right: kernel.name_str(graph, "andB_right"),
+            graph_adj_b_symm: kernel.name_str(graph, "adjB_symm"),
+            graph_adj_b_irrefl: kernel.name_str(graph, "adjB_irrefl"),
+            graph_adj_b_of_order_le: kernel.name_str(graph, "adjB_of_order_le"),
+            graph_lt_order_of_adj_b: kernel.name_str(graph, "lt_order_of_adjB"),
+            graph_ne_of_adj_b: kernel.name_str(graph, "ne_of_adjB"),
+            graph_adj_b_of_rel: kernel.name_str(graph, "adjB_of_rel"),
+            graph_mem_b_neighbors: kernel.name_str(graph, "memB_neighbors"),
+            graph_degree_le_order: kernel.name_str(graph, "degree_le_order"),
+            graph_compl: kernel.name_str(graph, "compl"),
+            graph_has_clique3: kernel.name_str(graph, "HasClique3"),
+            graph_no_clique3_b: kernel.name_str(graph, "noClique3B"),
+            graph_arrows33: kernel.name_str(graph, "Arrows33"),
+            graph_is_ramsey33: kernel.name_str(graph, "IsRamseyNumber33"),
+            graph_adj_b_compl_of_not_adj_b: kernel.name_str(graph, "adjB_compl_of_not_adjB"),
+            graph_not_has_clique3_of_decide: kernel.name_str(graph, "not_hasClique3_of_decide"),
+            graph_triangle_or_indep: kernel.name_str(graph, "triangle_or_indep"),
+            graph_antitriangle_or_indep: kernel.name_str(graph, "antitriangle_or_indep"),
+            graph_arrows33_of_le: kernel.name_str(graph, "arrows33_of_le"),
+            graph_is_ramsey33_of_succ: kernel.name_str(graph, "isRamseyNumber33_of_succ"),
+            graph_ramsey33_arrows_six: kernel.name_str(graph, "ramsey33_arrows_six"),
+            graph_ramsey33_witness: kernel.name_str(graph, "ramsey33Witness"),
+            graph_ramsey33_not_arrows_five: kernel.name_str(graph, "ramsey33_not_arrows_five"),
+            graph_ramsey_three_three: kernel.name_str(graph, "ramsey_three_three"),
+            hall_any_below: kernel.name_str(hall, "anyBelow"),
+            hall_union_bound: kernel.name_str(hall, "unionBound"),
+            hall_union_over: kernel.name_str(hall, "unionOver"),
+            hall_is_matching: kernel.name_str(hall, "IsMatching"),
+            hall_condition: kernel.name_str(hall, "HallCondition"),
+            hall_any_below_of_witness: kernel.name_str(hall, "anyBelow_of_witness"),
+            hall_mem_union_over: kernel.name_str(hall, "memB_unionOver"),
+            hall_condition_of_is_matching: kernel.name_str(hall, "hallCondition_of_isMatching"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -8833,6 +9056,16 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `le_add_right`. Nothing needs it, so it goes last.
         declare_finset_all(&mut d, &p)?;
         declare_rado_all(&mut d, &p)?;
+        // `Nat.Graph` -- the finite-graph carrier (`graph.rs`, ADR-1608).
+        // Needs `Nat.Finset` for neighbourhoods and degrees, so it goes after
+        // `declare_finset_all`.
+        declare_graph_all(&mut d, &p)?;
+        // `R(3,3) = 6` (`ramsey.rs`, ADR-1608). Needs `Nat.Graph` and
+        // `Nat.Finset.allBelow`.
+        declare_ramsey_all(&mut d, &p)?;
+        // Hall's marriage theorem, necessity direction (`hall.rs`, ADR-1608).
+        // Needs `Nat.Finset.card_le_of_injOn` and `Nat.Graph.andB`.
+        declare_hall_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -8956,6 +9189,15 @@ mod finset_pigeonhole_tests;
 
 #[cfg(test)]
 mod rado_tests;
+
+#[cfg(test)]
+mod graph_tests;
+
+#[cfg(test)]
+mod ramsey_tests;
+
+#[cfg(test)]
+mod hall_tests;
 
 #[cfg(test)]
 mod multiset_tests;
