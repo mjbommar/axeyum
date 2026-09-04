@@ -856,6 +856,13 @@ step lra-hypothesis-binding python3 scripts/check-lra-hypothesis-binding.py
 step lra-hypothesis-binding-controls python3 -m unittest scripts.tests.test_check_lra_hypothesis_binding
 step kernel-trusted-core python3 scripts/check-kernel-trusted-core.py
 step kernel-trusted-core-controls python3 -m unittest scripts.tests.test_check_kernel_trusted_core
+# The landmark count beside the raw total (W1-4, ADR-1600): 2,487 proved facts
+# is not one number a reviewer can weigh, because a generated congruence lemma
+# and quadratic reciprocity are each one row. `landmark` = proved AND a
+# curated (non-`[generated]`) title, against a committed baseline so drift is
+# visible rather than silently re-measured every time.
+step landmark-facts python3 scripts/count-landmark-facts.py --check
+step landmark-facts-controls python3 -m unittest scripts.tests.test_count_landmark_facts
 step smt-evidence-tests python3 -m unittest scripts.tests.test_check_smt_evidence_certified
 # Every settled SMT-route fact's own evidence command tests only the VERDICT
 # (`... | tail -1` = unsat), which passes on an UNCERTIFIED refutation --

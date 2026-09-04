@@ -578,6 +578,10 @@ facts:
     # as "interop", owns `is_k_like_inductive` on the iota-reduction path.
     python3 -m unittest scripts.tests.test_check_kernel_trusted_core
     python3 scripts/check-kernel-trusted-core.py
+    # The landmark count beside the raw total (W1-4, ADR-1600): proved AND a
+    # curated (non-`[generated]`) title, against a committed baseline.
+    python3 -m unittest scripts.tests.test_count_landmark_facts
+    python3 scripts/count-landmark-facts.py --check
     # The CLAIM ledger's structural pass, which `scripts/check.sh` has always run
     # and `just check` did not -- so the fallback gate checked something the
     # preferred one skipped, which is exactly the divergence
