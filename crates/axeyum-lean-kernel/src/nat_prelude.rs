@@ -239,6 +239,9 @@ mod modular;
 mod mul_order_lemmas;
 mod multichoose;
 mod multiset;
+/// ADR-1609 / roadmap W3-2: `AlgS.Module.*`, modules over an abstract
+/// `AlgS.CommRing`, with `R` over itself and `R[X]` as the first instances.
+pub mod module_setoid;
 mod multiset_prod;
 mod no_confusion;
 mod nth;
@@ -6513,11 +6516,32 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `axeyum-py`'s generated field registry mirrors. Tests reach the
         // declarations the same way `first_iso_tests` does -- by calling
         // `declare_poly_setoid` against their own kernel.
-        let _poly_s = polynomial_setoid::declare_poly_setoid(
+        let poly_s = polynomial_setoid::declare_poly_setoid(
             kernel,
             &logic,
             &structures_s.comm_ring,
             &structures_s.comm_group,
+            structures_s_names.algs,
+        )?;
+
+        // ADR-1609 / roadmap W3-2: `AlgS.Module.*`. Needs the `AlgS` records,
+        // three of `declare_structures_s_extra`'s own results, and the
+        // polynomial ring above (`R[X]` is the second module instance).
+        let _module_s = module_setoid::declare_module_setoid(
+            kernel,
+            &logic,
+            &structures_s.comm_ring,
+            &structures_s.comm_group,
+            &structures_s.group,
+            module_setoid::ModuleDeps {
+                add_left_cancel: structures_s_extra.add_left_cancel,
+                inv_unique: structures_s_extra.inv_unique,
+                comm_ring_to_comm_group_s: structures_s_extra.comm_ring_to_comm_group_s,
+                comm_group_to_group_s: structures_s_extra.comm_group_to_group_s,
+                poly_comm_group: poly_s.comm_group,
+                poly_smul: poly_s.ops.smul,
+                poly_equiv: poly_s.ops.equiv,
+            },
             structures_s_names.algs,
         )?;
 
