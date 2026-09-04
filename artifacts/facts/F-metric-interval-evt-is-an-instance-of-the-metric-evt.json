@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-interval-evt-is-an-instance-of-the-metric-evt",
+  "title": "The real interval's Extreme Value Theorem is an instance of the metric-space one: one statement, two independent proofs",
+  "statement": "The library holds two theorems with THE SAME type. `Metric.creal_evt_approx_max` restates `CReal.evt_approx_max` -- the approximate maximum on a real interval, proved through `CReal.supOn` -- in the general theorem's shape; the reassociation costs four `And` projections and two `And.intro`s and no estimate, because `Metric.Interval a b x` reduces to `a <= x /\\ x <= b` and the only difference between the two conclusions is how the conjunctions associate and whether the two range hypotheses on y are curried. `Metric.creal_evt_approx_max_via_metric` proves the same statement instead by applying `Metric.evt_approx_max` -- the EVT over an arbitrary metric space -- to `Metric.creal_totallyBoundedOn_interval` and `Metric.creal_uniformly_continuous_on`. The two types are constructed independently, in two different modules, and the kernel holds one and the same interned `ExprId` for both. That equality, not a resemblance between two rendered statements, is what makes 'the interval EVT is an instance of the general EVT' a measurement.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.creal_evt_approx_max_via_metric : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> ((x5 : AxNat) -> Exists.{1} CReal (fun (x6 : CReal) => And (Metric.Interval x1 x2 x6) (((x7 : CReal) -> ((x8 : Metric.Interval x1 x2 x7) -> CReal.le (x0 x7) (CReal.add (x0 x6) (CReal.ofRat (Rat.natDivSucc (AxNat.succ AxNat.zero) x5)))))))))))))",
+    "fragment": "Metric",
+    "free_symbols": [],
+    "kernel_theorem": "Metric.creal_evt_approx_max_via_metric"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:metric-extreme-value-theorem-over-a-metric-space",
+    "F:metric-bishop-compactness-of-a-closed-real-interval"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.creal_evt_approx_max_via_metric",
+      "kind": "kernel-term",
+      "supports": "Metric.creal_evt_approx_max_via_metric is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.creal_evt_approx_max_via_metric | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.creal_evt_approx_max_via_metric[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.creal_evt_approx_max_via_metric",
+      "notes": "kernel_declaration_projection exits non-zero when the named declaration is in no constructed prelude's environment, and grep -c exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t. --release is mandatory (debug thread-stack overflow in the creal/cpoint/metric builds)."
+    },
+    {
+      "id": "suite-the_interval_evt_is_the_metric_evt_at_one_type",
+      "kind": "instance-pin",
+      "supports": "The `ty` fields the kernel holds for Metric.creal_evt_approx_max (proved via CReal.supOn) and Metric.creal_evt_approx_max_via_metric (proved via Metric.evt_approx_max) are the identical interned ExprId. The two are built by separate code in metric/compactness.rs and metric/interval.rs, so equality is a fact about the statements, not about shared construction.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests::the_interval_evt_is_the_metric_evt_at_one_type"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::the_interval_evt_is_the_metric_evt_at_one_type --test-threads=1 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 90,
+      "notes": "The test carries its own non-vacuity control in the same body: it also asserts the interval EVT's type is NOT equal to Metric.evt_approx_max's, so ExprId equality is shown to discriminate between two theorems of this environment rather than being trivially true. The `1 passed` count is required because a filter that matches nothing runs zero tests and exits 0."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric/interval.rs and metric/compactness.rs)",
+    "source": "Lane `metric-compactness`, roadmap W2-3, recorded in ADR-1607 (docs/research/09-decisions/adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md). formal.statement is Kernel::render_lean of the declaration's type, printed by metric_tests::w2_3_interval_types_render."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say `CReal.evt_approx_max` was deleted or rerouted -- both proofs stand, and the `supOn` route remains the cheaper one for ℝ. It does not say the metric route SUBSUMES the interval route in cost: the metric proof pays for `Metric.creal_totallyBoundedOn_interval`, which is 10 declarations including a grid induction and a `Rat.natDivSucc` scaling identity, where the `supOn` route pays nothing beyond `And` bookkeeping. What it says is that the two land on one statement, so the general theorem is genuinely general and the specific one is genuinely an instance of it."
+}

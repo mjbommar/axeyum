@@ -888,3 +888,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1601](adr-1601-classical-logic-enters-as-a-hypothesis-not-as-an-axiom.md) | classical logic enters as a hypothesis, not as an axiom | proposed |
 | [1602](adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md) | topology is built metric-first, then pointfree; open-set topological spaces are not adopted | proposed |
 | [1605](adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md) | the ledger cannot tell "uncharacterised" from "absent" | proposed |
+| [1607](adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md) | the metric layer carries W2-2 and W2-3 — continuity, Bishop compactness, and the EVT generalize off ℝ at a measured cost | proposed |

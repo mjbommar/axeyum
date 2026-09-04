@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-bishop-compactness-of-a-closed-real-interval",
+  "title": "A closed interval of the constructive reals is Bishop-compact",
+  "statement": "Bishop's definition of compactness for a metric space is COMPLETE plus TOTALLY BOUNDED -- no open sets, no covers, no finite subcover. Both halves are metric conditions and both are now stated for an arbitrary `Metric` and discharged for the closed interval `[a,b]` of the constructive reals, relativized to the predicate `Metric.Interval a b` because this kernel has no `Subtype` and a subspace here is a predicate on the ambient carrier, not a new carrier (ADR-1602). Total boundedness is the substantive half: at accuracy n the net is `g n i = CReal.min b (a + i/(n+1))` for `i <= B*(n+1)`, where B is any natural bounding `b - a` (from `CReal.archimedean`, whose `Exists` is eliminable because the conclusion is a Prop). The `min` is an obligation rather than a convenience -- `Metric.NetIn` requires every net point to satisfy the predicate, and the rational grid runs past b -- and the covering is an induction on the index bound with one `CReal.lt_cotrans` split per step. Completeness is `Metric.creal_completeOn_interval`: a Cauchy sequence inside `[a,b]` converges, and its limit is still inside `[a,b]`.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.creal_compactOn_interval : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le x0 x1) -> Metric.CompactOn Metric.creal (Metric.Interval x0 x1))))    -- Metric.CompactOn M P := And (Metric.TotallyBoundedOn M P) (Metric.CompleteOn M P); Metric.Interval a b := fun x => And (CReal.le a x) (CReal.le x b)",
+    "fragment": "Metric",
+    "free_symbols": [],
+    "kernel_theorem": "Metric.creal_compactOn_interval"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:metric-space-completeness-of-the-real-line"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.creal_compactOn_interval",
+      "kind": "kernel-term",
+      "supports": "Metric.creal_compactOn_interval is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.creal_compactOn_interval | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.creal_compactOn_interval[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.creal_compactOn_interval",
+      "notes": "The exit status depends on the finding twice over: kernel_declaration_projection exits non-zero when the named declaration is in no constructed prelude's environment, and grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]] and never \\t -- in a scripted (GNU) grep \\t is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal/complex/cpoint/metric, which overflow the default debug thread stack."
+    },
+    {
+      "id": "suite-every_metric_declaration_is_axiom_free",
+      "kind": "exhaustive-enumeration",
+      "supports": "Every declaration of the Metric namespace, including this one and the total-boundedness theorem it rests on, has an empty Kernel::axiom_footprint. The test derives its name list from the prelude handle's three name structs and the record's own RecordNames selectors, and a companion test (every_metric_namespace_declaration_is_accounted_for) walks Kernel::environment and fails if any Metric.* declaration is missing from that list -- so the subject comes from the kernel, not from a maintainer's memory.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::every_metric_declaration_is_axiom_free metric::metric_tests::every_metric_namespace_declaration_is_accounted_for --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 2 passed'",
+      "checker_seconds": 95,
+      "notes": "The `2 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when a filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric/interval.rs and metric/compactness.rs)",
+    "source": "Lane `metric-compactness`, roadmap W2-3, recorded in ADR-1607 (docs/research/09-decisions/adr-1607-the-metric-layer-carries-w2-2-and-w2-3.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from metric_tests::w2_3_interval_types_render's printed output; axiom_footprint is read from Kernel::axiom_footprint, never from a rendered name."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say the interval is compact in any cover sense -- no open-cover compactness is defined in this library and ADR-1602 declines to adopt one. It does not give the net as DATA: `Metric.TotallyBoundedOn` concludes with two nested `Exists`, which are Prop-valued, so a consumer cannot project out the net and compute with it; that is the same Prop-only-elimination boundary ADR-1595 measured, and it is why the EVT below is proved by eliminating those existentials inside a Prop goal rather than by building anything. It also does not say the Euclidean plane instance `Metric.cpoint` has any compact subsets -- nothing about that is proved."
+}

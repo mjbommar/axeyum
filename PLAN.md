@@ -149,6 +149,9 @@ now. Nothing was deleted.
 | 2026-09-04 | persona-absence-audit | `check-fact-characterisation.py` + 17-test control suite, registered in `check.sh` and the `justfile` |
 | 2026-09-04 | persona-absence-audit | re-baselined the red `count-landmark-facts.py` pin and fixed one mistitled fact |
 | 2026-09-04 | metric-compactness | lane opened: W2-3 + W2-2 on the `Metric` carrier, ADR-1607 reserved |
+| 2026-09-04 | metric-compactness | `metric/continuity.rs` + `metric/compactness.rs`: 34 declarations — continuity over an arbitrary pair of metric spaces, Bishop compactness, and the EVT over a totally bounded subset (`12fed830b`) |
+| 2026-09-04 | metric-compactness | `metric/interval.rs`: a closed real interval is Bishop-compact, and the interval EVT is the metric EVT at one interned type (`378e7cecd`) |
+| 2026-09-04 | metric-compactness | ADR-1607, four facts, and the lane close-out |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -42095,14 +42098,63 @@ curated" title, so both the landmark count and the new checker scored a
 characterised fact as uncharacterised; the title is corrected, and it is the
 one live violation the new `PROSE_DISAGREEMENT` guard found on its first run.
 
-**Your lane's block (`WIP`, metric-compactness, 2026-09-04).** Testing
-ADR-1602's bet: the `Metric` carrier landed with `Metric.Complete` general and
-`Metric.creal_complete` as ℝ's instance, but nothing yet has been *re-derived*
-through the carrier. This lane adds `Metric.TotallyBounded`, Bishop
-compactness (`TotallyBounded` + `Complete`), the interval instance,
-`Metric.UniformlyContinuous`/`Metric.Continuous`, and attempts to obtain
-`CReal.evt_approx_max` as an instance of a general metric EVT. A measured
-negative on the derivation is the deliverable if the derivation does not land.
+**Your lane's block (`DONE`, metric-compactness, 2026-09-04).** ADR-1602 bet
+that the metric carrier would carry W2-2 and W2-3 "with no further design
+decision". This lane built both and the bet holds: **44 declarations, all
+axiom-free, 43 of them admitted the first time the kernel saw them**, in
+`metric/continuity.rs` (15), `metric/compactness.rs` (19) and
+`metric/interval.rs` (10). ADR-1607 records the measurement.
+
+W2-2: continuity over an **arbitrary pair** of metric spaces, uniform and
+pointwise, each with a predicate-relativized twin, plus
+`Metric.creal_continuous_on` from `CReal.UniformlyContinuousOn`. That bridge
+costs **zero estimates** — its witness is `UniformlyContinuousOn.modulus`
+verbatim and its proof is that witness's `spec` applied to four `And`
+projections, because `uc_spec_body` was already in the `1/(k+1)` shape and
+`Metric.dist Metric.creal` reduces to `CReal.abs (x + -y)`. The uniform ⇒
+pointwise arrow is one-directional on purpose; the converse is Heine–Cantor
+and needs the finite subcover this library declines.
+
+W2-3: Bishop compactness (`TotallyBounded` + `Complete`, no covers), the
+Extreme Value Theorem over any **totally bounded** subset of any metric space
+— completeness is not used, and a test reads that off the rendered type — and
+the closed real interval as an instance: `Metric.creal_compactOn_interval`.
+
+**The instance claim is a measurement, not a reading.**
+`Metric.creal_evt_approx_max` (through `CReal.supOn`) and
+`Metric.creal_evt_approx_max_via_metric` (through the general metric EVT)
+carry the **same interned `ExprId`**, built by separate code in two modules,
+with the general EVT's own type in the same test as a non-vacuity control.
+
+**The finding worth carrying forward: the general theorems are cheap and the
+INSTANCES are where the work is.** The interval instance needed a clamp
+lemma, a grid induction, and one `Rat.natDivSucc` scaling identity — 10
+declarations for one carrier, against 34 for every carrier. Size
+"prove X generally, then instantiate" with the instantiation weighted at
+least as heavily as the theorem.
+
+**A tooling finding.** Three proof terms had `pi_fv` where they needed
+`lam_fv`. The kernel calls that `NotASort`, which names nothing, and inside a
+seventy-call straight-line `build_metric_prelude` the first symptom was a
+ten-minute typecheck growing 1 GB of RSS every 30 s on a shared box.
+`declare_all` in both new modules now runs from a `[(label, fn)]` table and,
+under `AXEYUM_METRIC_TIMING=1`, prints one line per declaration with its wall
+clock and whether the gate accepted it; that located the culprit in one run.
+Any straight-line `declare_*` sequence long enough to hide a slow member
+should carry the same table.
+
+Gates: `metric::` 29 tests green (was 17) in 88.95 s; clippy `-D warnings`
+clean on `-p axeyum-lean-kernel --all-targets --all-features`;
+`cargo fmt --all --check` clean; `validate-facts.py` 2,783 facts / 0 errors;
+census regenerated. Four new facts, four new negative controls each with a
+positive twin in the same test, and two coverage tests that derive their
+subject from `Kernel::environment` rather than from a literal.
+
+Not done, and named for whoever picks it up: the Euclidean plane
+(`Metric.cpoint`) still has no completeness theorem and no compact subsets;
+the general statements are now in place, so that work is entirely in the
+instance. The approximate **minimum** is not proved (it would be this EVT
+applied to `-F`, but that composition is not in tree).
 
 **The reconstruction context's carrier is now a parameter, and the constructed
 reals already satisfy it (`WIP`, agent-real-migration, 2026-08-18).**
