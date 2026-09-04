@@ -93,7 +93,7 @@ Everything here can start today. Ordered by convergence count, then by yield.
 | W1-8 | Angle measure; laws of sines and cosines | 05.1 | not started | Connect analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. The library has trigonometry and geometry and they do not touch. |
 | W1-9 | Extend the reverse-mathematics map | 10.1 | **landed** `80aa8e52c` | Six implications over ℕ with empty footprints — `em_implies_lpo`, `lpo_implies_wlpo`, `lpo_implies_markov`, `lpo_implies_llpo`, `wlpo_and_markov_imply_lpo` (the converse half), and `lnp_unrestricted_implies_lpo` joining the existing calibration point. Plus four order theorems over ℝ on an explicit decision hypothesis, whose conclusions the real prelude's own field docs record as unavailable. Every separation is **cited, not claimed** — a separation needs a model of the kernel, not a term in it. |
 | W1-10 | Generalize finite probability over `AlgS.OrderedRing` | 08.2 | not started | Prerequisite for stating the WLLN across ℚ and ℝ without a hand-built bridge. |
-| W1-11 | Homomorphisms, kernels, images, subgroups | 04.3 | **landed** `2a640c9b6` | The homomorphism, kernel and image layer arrived with W2-8's twelve `AlgS.Hom.*` declarations (audit row A9). **Subgroups as a lattice remain absent** and are the residue of this item. |
+| W1-11 | Homomorphisms, kernels, images, subgroups | 04.3 | **landed** `2a640c9b6`, residue `ecbf403f0` | Homomorphisms, kernels and images with W2-8; **subgroups as a meet-semilattice** with the algebra lane: `IsSub` (four conjuncts, one of them the equivalence-respecting one, which is load-bearing because `bot` is the identity's *class*), `le`, `inter`, `top`, `bot`, `ker_isSub`, and the lattice laws. Join is absent — it needs a word-closure inductive, which is also what would make a *normal* subgroup statable. |
 | W1-12 | Measure the exact-real performance envelope | 11.4 | not started | π and exp to a stated precision with the cost model. The library claims computable analysis and has never quoted a time. |
 | W1-13 | Measure and reduce the `cas-internal` residue | 11.5 | not started | The honest boundary of the trusted pipeline; should be published and falling. |
 
@@ -112,7 +112,7 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-6 | Uniform convergence and the interchange theorems | 02.3 | **already done 2026-08-27** | `CReal.UniformConvergesOn`, `uniform_limit_uniformly_continuous`, `hasDerivative_uniform_limit`, `weierstrassMTest`. Audit row A3. |
 | W2-7 | The weak law of large numbers | 08.1 | **already done 2026-08-24** | `Rat.weak_law_of_large_numbers` (`54592604a`), ten days before the review called it one limit away. Audit row A2. |
 | W2-8 | First isomorphism theorem over `AlgS.Group` | 04.2 | **landed** `2a640c9b6` | Landed early, as W0-1's deciding experiment. 12 declarations in `AlgS.Hom.*`, footprint empty. The construction: a quotient group is the **same carrier under a coarser equivalence**, not a new carrier of classes. |
-| W2-9 | Polynomial rings as a structure | 04.4 | not started | W0-1, W1-11 |
+| W2-9 | Polynomial rings as a structure | 04.4 | **landed** `ecbf403f0` | `AlgS.Poly.*`, 15 declarations over an abstract `AlgS.CommRing`: a polynomial is a coefficient function, convolution is an antidiagonal walk (because `Nat.sub` does not exist at the `AlgS` build position), with the additive `CommGroup` instance and both distributive laws. **Not yet a `CommRing` instance**: 20 of 23 fields; `mulOne`, `mulComm`, `mulAssoc` each need a reindexing lemma for the walk that is open *concretely* over ℚ too (`Rat.polyEval_mul` does not exist for the same reason). [ADR-1609](../research/09-decisions/adr-1609-polynomials-modules-and-subgroups-over-the-setoid-spine.md). |
 | W2-10 | Products and subspaces | 06.5 | not started | **should be SPLIT** (ADR-1602): the product is buildable today; the subspace is blocked on `Subtype`, which is absent from the kernel (verified case-sensitively with `Exists` as a positive control), so relativize rather than carve. |
 | W2-11 | Ramsey's theorem for two colours | 07.3 | **landed** `0a499a6d8` | **`R(3,3) = 6` in both directions.** Upper bound a 32-leaf case tree over the five edges at vertex 0 — it had to be a *proof* because a graph is a function and the kernel cannot case over all graphs; lower bound a search over the 2¹⁰ five-vertex graphs returning the five-cycle, re-checked by reflection. If the search returns `None`, nothing is declared and the prelude fails to build. Cost: the `Nat` sweep went from ~18 s to 35–76 s, all Ramsey proof terms; `R(3,4)` needs the Ramsey recurrence, not this method. |
 | W2-12 | Hall's marriage theorem | 07.4 | **necessity landed** `0a499a6d8`; sufficiency stopped | Necessity is one application of `card_le_of_injOn`. **Sufficiency is blocked on choosing the critical subfamily**: with no classical choice, the subset `t` with `card t = card (unionOver nb t)` must be *computed* by bounded search over `2^(bound s)` subsets with its own reflection lemma, and nothing of that shape exists — `allBelow_false_witness` is the one-dimensional model. Also measured: `Nat.strongInduction` does not exist; only `lt_well_founded` + `WellFounded.fix`, unwrapped. |
@@ -133,7 +133,7 @@ Each is a quarter or more of work and each is gated on Wave 0.
 | id | item | source | status | blocked by |
 |---|---|---|---|---|
 | W3-1 | Measure and the Lebesgue integral on ℝ (C5) | 03.4, 08.5 | not started | W0-2 ✔, W0-3 ✔, W2-1 ✔ — **but ADR-1602 explicitly does NOT settle this dependency** and says it needs re-examination. Reviewers 03 and 08 are weakened, not cleared. |
-| W3-2 | Vector spaces over an abstract field, bases, dimension | 04.5 | not started | W0-1, W2-9 |
+| W3-2 | Vector spaces over an abstract field, bases, dimension | 04.5 | **modules landed** `ecbf403f0`; vector spaces blocked | `AlgS.Module.*`, 23 declarations: `IsModule` as five conjuncts plus a congruence conjunct, `selfModule` and `polyModule` instances, `neg_smul`, `smul_zero`, `zero_smul`, and a basis layer (`linComb`, `spans`, `linearIndependent`, `isBasis`). **Two obstructions, both `Quot`-independent**: (a) no module *record* — `declare_record` fixes one universe level per field kind, so a record cannot hold a record, and lifting wholesale puts the carrier where a function type cannot sit; sized in ADR-1609 as a per-field level on `FieldSpec`, a change to shared `structures.rs`, its own lane. (b) dimension needs `AlgS.Field`, which needs `Apart`, the open question ADR-1588 named. The ℚ bridge's real cost is `rowEchelon_isEchelon` (ADR-1554 obligation 4); do not price it as small. |
 | W3-3 | Categories, functors, natural transformations | 09.4 | not started | W0-1 |
 | W3-4 | Products and coproducts as universal properties | 09.5 | not started | W3-3 |
 | W3-5 | Complex analysis: holomorphy, Cauchy's theorem | 03.5 | not started | W2-4, W3-1 |
@@ -167,9 +167,9 @@ One row per wave. Update when something lands, then append to the history log.
 |---|---|---|---|---|---|
 | W0 — decisions | 4 | 0 | 0 | **4** ✔ | 0 |
 | W1 — unblocked | 13 | 3 | 0 | **9** | **1** |
-| W2 — carriers | 21 | 14 | 0 | **5** | **2** |
-| W3 — large shelves | 13 | 11 | 0 | **1** | **1** |
-| **total** | **51** | **28** | **0** | **19** | **4** |
+| W2 — carriers | 21 | 13 | 0 | **6** | **2** |
+| W3 — large shelves | 13 | 10 | 0 | **2** | **1** |
+| **total** | **51** | **26** | **0** | **21** | **4** |
 
 ⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
 know.** The audit found 11 of 76 absence claims false. Four were roadmap
@@ -183,6 +183,16 @@ to decide the topology design.
 **Wave 0 is complete.** All four decisions were made on 2026-09-04, and three
 of the four came with working mathematics attached rather than only a
 document.
+
+**The setoid decision has now been tested at scale, and the finding runs
+further in its favour than ADR-1595 claimed.** The algebra lane landed 58
+declarations over the setoid spine with **one kernel rejection**, a Rust-side
+universe slip. And it found that the `Eq` route **cannot state a polynomial
+ring at all**: the carrier is a function space, so the `Eq` form of
+commutativity is an equality of two lambdas, which needs `funext` and which
+`Quot.sound` would not supply. Every construction whose carrier is a function
+type is reachable *only* on the setoid spine. Setoids are not the cheap
+option here; they are the only option.
 
 **Every decision was settled the same way**, and
 the method is now the department's default: do not weigh the arguments, build
@@ -250,6 +260,7 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `ecbf403f0` | **W2-9 landed, W3-2 half, W1-11's residue closed.** 58 setoid-spine declarations with one kernel rejection. The finding: function-space carriers are statable ONLY over setoids, since `Eq` on lambdas needs `funext`. Two `Quot`-independent obstructions named: one universe level per record field kind, and `AlgS.Field` needing `Apart`. |
 | 2026-09-04 | `e15d807c8` | **W2-14 landed.** A register machine and a precisely-scoped constructive refutation of self-halting decidability. The Cantor call did not land (Π₁ vs Σ₁ case shapes) and the ADR says so. `nat_prelude::` 478 passed pre-merge. |
 | 2026-09-04 | `0a499a6d8` | **W1-6, W2-11 landed; W2-12 half.** `Nat.Graph` (39 decls), **`R(3,3) = 6` both directions from search**, Hall necessity. Sufficiency stopped at a named obstruction: computing the critical subfamily without choice. `nat_prelude::` 495 passed. |
 | 2026-09-04 | `c64893719` | **W1-3 and W3-13 landed.** ℕ and ℤ named as initial objects from existing theorems; the universal-property template written. |

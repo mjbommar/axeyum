@@ -209,11 +209,11 @@ taken.**
       homomorphism, kernel and image layer landed with item 2**; subgroups as
       a lattice remain absent. Original framing: Prerequisite for everything and useful
       even before quotients exist.
-- [ ] **4. Polynomial rings as a structure**, with the existing ℚ and ℂ
+- [~] **4. Polynomial rings as a structure** — *ring structure landed 2026-09-04; the `CommRing` instance waits on three walk-reindexing lemmas.*, with the existing ℚ and ℂ
       coefficient arithmetic as instances, then irreducibility and division.
       `Complex.factorQuotient` already proves the degree drop, so the concrete
       half is done.
-- [ ] **5. Vector spaces over an abstract field, with bases and dimension**,
+- [~] **5. Vector spaces over an abstract field, with bases and dimension** — *modules and a basis layer landed 2026-09-04; vector spaces blocked on a field record, which needs `Apart`.*,
       and the existing ℚ rank/nullity work as the first instance. Their view:
       the fastest way to convert a large body of concrete matrix theorems into
       general ones.
@@ -224,6 +224,8 @@ taken.**
 |---|---|---|
 | 2026-09-04 | File created. Baseline: `Alg` and `AlgS` spines Magma→Field with ℕ/ℤ/ℚ/ℝ/ℂ instances; ~24 generic theorems, all elementary. No quotients, no homomorphisms, no ideals, no field extensions. `Quot.sound` absent from the kernel. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five items 1 and 2 both landed** (roadmap W0-1 and W2-8). ADR-1595 decides the quotient question by measurement: setoid quotients, `Quot.sound` stays out. `AlgS.Hom.*` adds 12 declarations including `firstIso`, all with empty footprint. The construction is that a quotient group is the same carrier under a coarser equivalence, so there is no carrier of classes and no `Quot`. Measured cost of not having the axiom on this theorem: three lines. Verdict revised. | `2a640c9b6`; `structures_setoid` 18 passed, `first_iso` 5 passed |
+| 2026-09-04 | **Next Five items 4 and 5 landed in part, and item 3's residue closed** (roadmap W2-9, W3-2, W1-11): 58 declarations, footprint 0, one kernel rejection across all of them and that one a Rust-side universe slip. Polynomial rings over an abstract `AlgS.CommRing` with the additive group instance and distributivity (not yet a `CommRing` instance — three reindexing lemmas for the convolution walk, open concretely over ℚ too); modules with self and polynomial instances and a basis layer; subgroups as a meet-semilattice with the kernel proved a subgroup. **The finding this reviewer should weigh most**: the `Eq` route cannot state a polynomial ring at all, because commutativity of coefficient functions is an equality of two lambdas and needs `funext`, which `Quot.sound` would not supply. The complaint in this file that function spaces "cannot be given their standard structure" is retired — over setoids they can, and only over setoids. Two obstructions to vector spaces, neither about quotients: one universe level per record field kind, and `AlgS.Field` needing `Apart`. (ADR-1609.) | `ecbf403f0`; poly/module/subgroup 8+8+8 passed, `rat_prelude::` 273 |
+
 
 ## How to re-measure
 
