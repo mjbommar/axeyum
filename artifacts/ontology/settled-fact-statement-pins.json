@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2273,
+    "min_identity_bound": 2277,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -840,6 +840,38 @@
       "from_sha256": "d8811b1795ae53b3f379887aac973c500eb9ec4a67a1f8f8f8d4e450e154fff6",
       "to_sha256": "d6640d210a6491b18ecd8da3fb451d86085c84e898b4252d61b189efac208c6b",
       "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for List.sum_append and is now that same string behind `theorem List.sum_append : ` (verified: the SHA-256 of the string after the prefix equals the superseded pin). The proposition is untouched; the structural bind can now check the statement against the declaration this fact claims. These 16 `List` facts landed 2026-09-03 headerless from the list-carrier lanes and were the whole `header_exempt=16` count above the allowance of 0 that refused the push.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:int-multiplicative-order-exists",
+      "date": "2026-09-04",
+      "from_sha256": "859511bc6c7e7cd6d483ac2d22dd3fb79fc225e627e9d7d58666e43682313c01",
+      "to_sha256": "71962c95b4fd0470744ce668ec63dd1654b74e9c4686e472252a975208d654e8",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for Int.order_exists and is now that same string behind `theorem Int.order_exists : `; verified by checking that the SHA-256 of the text after the prefix equals the superseded pin. Landed headerless by lane `primitive-roots` on 2026-09-04, the same class as the 16 `List` facts amended earlier that day.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:int-order-dvd-totient",
+      "date": "2026-09-04",
+      "from_sha256": "1e7d3ed6abb4f125570400b5213da4dd43470cbb3123e1a29ccf22e10aa677ec",
+      "to_sha256": "547f9a287c98e271d9fa33fda67a2079619641778aa1e25c017f9ba0448fa71c",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for Int.order_dvd_totient and is now that same string behind `theorem Int.order_dvd_totient : `; verified by checking that the SHA-256 of the text after the prefix equals the superseded pin. Landed headerless by lane `primitive-roots` on 2026-09-04, the same class as the 16 `List` facts amended earlier that day.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:int-pow-modeq-one-iff-order-dvd",
+      "date": "2026-09-04",
+      "from_sha256": "4a9535e854ac1f17bc7552e7ae9778352fdb52f8c0922285c21987fb3a00c2e8",
+      "to_sha256": "f98ebeea3093b637781b779facd11fc35197423ad718fd33f3986e21a01a9b92",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for Int.pow_modeq_one_iff_order_dvd and is now that same string behind `theorem Int.pow_modeq_one_iff_order_dvd : `; verified by checking that the SHA-256 of the text after the prefix equals the superseded pin. Landed headerless by lane `primitive-roots` on 2026-09-04, the same class as the 16 `List` facts amended earlier that day.",
+      "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:int-primitive-root-pow-injective",
+      "date": "2026-09-04",
+      "from_sha256": "7bd874226adbb7515f5e3064669e3ea95624434779c8e296d55b5405859778cd",
+      "to_sha256": "749fd67f059fa1b41a129ddbd2a983a785565e28ecb3e9e3f7a139214978c5a8",
+      "reason": "HEADER ONLY -- a pure prefix, not a content change. `formal.statement` was the kernel's rendered type for Int.primitive_root_pow_injective and is now that same string behind `theorem Int.primitive_root_pow_injective : `; verified by checking that the SHA-256 of the text after the prefix equals the superseded pin. Landed headerless by lane `primitive-roots` on 2026-09-04, the same class as the 16 `List` facts amended earlier that day.",
       "recorded_by": "coordinator"
     }
   ],
@@ -2524,6 +2556,13 @@
           "prose_sha256": "96d0b26e09dce0aaddd9c73f66911b0d3742c37a6510bb9d2842381f03e6c49a"
         }
       ]
+    },
+    {
+      "fact_id": "F:cpoint-cauchy-schwarz-unsquared",
+      "language": "lean4",
+      "statement_sha256": "40dd14562ba9e1fa55fcdb8f65c456f67f9776a589b5a1c43a171dac812b7071",
+      "prose_sha256": "035ec38b9c7d0dc9de55bfa9ea787a62c9fe7d4f1d27d4832b4c9b478e30e7d8",
+      "kernel_theorem": "Metric.CPoint.dotLeSqrtMul"
     },
     {
       "fact_id": "F:cpoint-centroid-distsq",
@@ -7243,6 +7282,13 @@
       "kernel_theorem": "Eq.symm"
     },
     {
+      "fact_id": "F:euclidean-plane-triangle-inequality-unsquared",
+      "language": "lean4",
+      "statement_sha256": "2e96b0f85da22b29120cd16b7e674b267f2d2924084ced09a216fa3cd8450e74",
+      "prose_sha256": "04c7fb970bbef80b0dc58305768c66fd889b0a6765a1e87a2f8c5215936339a3",
+      "kernel_theorem": "Metric.CPoint.distTriangle"
+    },
+    {
       "fact_id": "F:evt-mathlib-import-compact-exists-is-max-on",
       "language": "lean4",
       "statement_sha256": "af137a394273cc6b5f0869b9214702e1b884246b92835462ca9b85de4edcb5ac",
@@ -8992,9 +9038,17 @@
     {
       "fact_id": "F:int-multiplicative-order-exists",
       "language": "lean4",
-      "statement_sha256": "859511bc6c7e7cd6d483ac2d22dd3fb79fc225e627e9d7d58666e43682313c01",
+      "statement_sha256": "71962c95b4fd0470744ce668ec63dd1654b74e9c4686e472252a975208d654e8",
       "prose_sha256": "0fd806b5d7becbde403f377a51477f530ae1ccf1b4d97100388c4221106f2ade",
-      "kernel_theorem": "Int.order_exists"
+      "kernel_theorem": "Int.order_exists",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "859511bc6c7e7cd6d483ac2d22dd3fb79fc225e627e9d7d58666e43682313c01",
+          "prose_sha256": "0fd806b5d7becbde403f377a51477f530ae1ccf1b4d97100388c4221106f2ade",
+          "kernel_theorem": "Int.order_exists"
+        }
+      ]
     },
     {
       "fact_id": "F:int-nat-abs-dvd-nat-abs-of-dvd",
@@ -9220,9 +9274,17 @@
     {
       "fact_id": "F:int-order-dvd-totient",
       "language": "lean4",
-      "statement_sha256": "1e7d3ed6abb4f125570400b5213da4dd43470cbb3123e1a29ccf22e10aa677ec",
+      "statement_sha256": "547f9a287c98e271d9fa33fda67a2079619641778aa1e25c017f9ba0448fa71c",
       "prose_sha256": "3056055124410c7159dd4397e8df7dec5b3deae88bef3071010c1bf9b4bddc98",
-      "kernel_theorem": "Int.order_dvd_totient"
+      "kernel_theorem": "Int.order_dvd_totient",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "1e7d3ed6abb4f125570400b5213da4dd43470cbb3123e1a29ccf22e10aa677ec",
+          "prose_sha256": "3056055124410c7159dd4397e8df7dec5b3deae88bef3071010c1bf9b4bddc98",
+          "kernel_theorem": "Int.order_dvd_totient"
+        }
+      ]
     },
     {
       "fact_id": "F:int-pow-add",
@@ -9234,9 +9296,17 @@
     {
       "fact_id": "F:int-pow-modeq-one-iff-order-dvd",
       "language": "lean4",
-      "statement_sha256": "4a9535e854ac1f17bc7552e7ae9778352fdb52f8c0922285c21987fb3a00c2e8",
+      "statement_sha256": "f98ebeea3093b637781b779facd11fc35197423ad718fd33f3986e21a01a9b92",
       "prose_sha256": "e16be64b2bdc3d1267928b1fe245f82f98b10b73e8dd76b2a90643337a5d40af",
-      "kernel_theorem": "Int.pow_modeq_one_iff_order_dvd"
+      "kernel_theorem": "Int.pow_modeq_one_iff_order_dvd",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "4a9535e854ac1f17bc7552e7ae9778352fdb52f8c0922285c21987fb3a00c2e8",
+          "prose_sha256": "e16be64b2bdc3d1267928b1fe245f82f98b10b73e8dd76b2a90643337a5d40af",
+          "kernel_theorem": "Int.pow_modeq_one_iff_order_dvd"
+        }
+      ]
     },
     {
       "fact_id": "F:int-pow-mul",
@@ -9297,9 +9367,17 @@
     {
       "fact_id": "F:int-primitive-root-pow-injective",
       "language": "lean4",
-      "statement_sha256": "7bd874226adbb7515f5e3064669e3ea95624434779c8e296d55b5405859778cd",
+      "statement_sha256": "749fd67f059fa1b41a129ddbd2a983a785565e28ecb3e9e3f7a139214978c5a8",
       "prose_sha256": "92ea85b16562cfb9ffe7b379dca58396d736b32c6db7662e9f7db36740128b93",
-      "kernel_theorem": "Int.primitive_root_pow_injective"
+      "kernel_theorem": "Int.primitive_root_pow_injective",
+      "history": [
+        {
+          "language": "lean4",
+          "statement_sha256": "7bd874226adbb7515f5e3064669e3ea95624434779c8e296d55b5405859778cd",
+          "prose_sha256": "92ea85b16562cfb9ffe7b379dca58396d736b32c6db7662e9f7db36740128b93",
+          "kernel_theorem": "Int.primitive_root_pow_injective"
+        }
+      ]
     },
     {
       "fact_id": "F:int-prod-range-pairing-collapse",
@@ -10192,6 +10270,20 @@
           "kernel_theorem": "CPoint.menelaus_collinear_of_ratio_product"
         }
       ]
+    },
+    {
+      "fact_id": "F:metric-space-completeness-of-the-real-line",
+      "language": "lean4",
+      "statement_sha256": "a5ffd34e8a8d4dd2c74f204092e5e05231ee3f3af600207057366d29ebe8f46f",
+      "prose_sha256": "a1936609ef6c1ff735320d60cc918b37a362871bd53b94d41679faba63fff05f",
+      "kernel_theorem": "Metric.creal_complete"
+    },
+    {
+      "fact_id": "F:metric-space-four-point-inequality",
+      "language": "lean4",
+      "statement_sha256": "a3fc902fc54ee0fef07f28e8aded0608bd751781ab27ca53c952226d49efa77c",
+      "prose_sha256": "da1666902992fc39eacba5ebba8a2454fadc7e10fad9df380c30ddb449a1e93d",
+      "kernel_theorem": "Metric.dist_quadrilateral"
     },
     {
       "fact_id": "F:ml430-int-add-assoc-749cb0ff",

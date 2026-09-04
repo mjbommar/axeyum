@@ -5,7 +5,7 @@
   "statement": "For every n : Nat with 0 < n, every a : Int coprime to n, and every k with `Int.IsOrder (ofNat n) a k`, k divides `Nat.totient n`. This is Lagrange's theorem in the concrete case -- the order of an element divides the order of the group -- stated without a group carrier, because this kernel has no quotient construction and therefore no (Z/n)* as an object. The proof is Euler's theorem (`Int.euler_totient_theorem` supplies a^phi(n) = 1 mod n) fed to the order characterization `Int.order_dvd_of_pow_modeq_one`, which says the order divides EVERY exponent that kills a. What this does NOT claim: nothing about which divisors of phi(n) are realized as orders, and in particular no existence of an element of order phi(n) -- that is the primitive-root existence theorem and it is NOT established here (ADR-1598 records the measured obstruction).",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : AxNat) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x0) -> ((x4 : Int.Coprime x1 (Int.ofNat x0)) -> ((x5 : Int.IsOrder (Int.ofNat x0) x1 x2) -> AxNat.dvd x2 (AxNat.totient x0)))))))",
+    "statement": "theorem Int.order_dvd_totient : ((x0 : AxNat) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat.lt AxNat.zero x0) -> ((x4 : Int.Coprime x1 (Int.ofNat x0)) -> ((x5 : Int.IsOrder (Int.ofNat x0) x1 x2) -> AxNat.dvd x2 (AxNat.totient x0)))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",

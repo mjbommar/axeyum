@@ -5,7 +5,7 @@
   "statement": "For n a : Int with 0 < n and k : Nat an order of a mod n (`Int.IsOrder n a k`), and for every m : Nat, `a^m = 1 (mod n)` if and only if k divides m. This is the characterization that makes the order usable: it converts a congruence about an arbitrary exponent into a divisibility about naturals. The forward direction is the one that needs minimality -- it runs the division algorithm (`Nat.div_mod_exists`, m = k*q + r with r < k), splits a^m as a^(k*q) * a^r via `Int.pow_add`, kills the first factor, and refutes a positive remainder against the minimality conjunct. The backward direction never uses minimality and is therefore stated separately and more generally as `Int.pow_modeq_one_of_dvd`, whose only hypothesis about k is that a^k = 1. What this does NOT claim: the hypothesis 0 < n is load-bearing (the cancellation and power congruences it composes both require it), and no claim is made that an order exists -- that is `Int.order_exists`.",
   "formal": {
     "language": "lean4",
-    "statement": "((x0 : Int) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Int.lt Int.zero x0) -> ((x5 : Int.IsOrder x0 x1 x2) -> Iff (Int.ModEq x0 (Int.pow x1 x3) Int.one) (AxNat.dvd x2 x3)))))))",
+    "statement": "theorem Int.pow_modeq_one_iff_order_dvd : ((x0 : Int) -> ((x1 : Int) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : Int.lt Int.zero x0) -> ((x5 : Int.IsOrder x0 x1 x2) -> Iff (Int.ModEq x0 (Int.pow x1 x3) Int.one) (AxNat.dvd x2 x3)))))))",
     "fragment": "Int",
     "free_symbols": [
       "x0",
