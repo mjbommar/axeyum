@@ -132,7 +132,7 @@ Each is a quarter or more of work and each is gated on Wave 0.
 
 | id | item | source | status | blocked by |
 |---|---|---|---|---|
-| W3-1 | Measure and the Lebesgue integral on ℝ (C5) | 03.4, 08.5 | not started | W0-2 ✔, W0-3 ✔, W2-1 ✔ — **but ADR-1602 explicitly does NOT settle this dependency** and says it needs re-examination. Reviewers 03 and 08 are weakened, not cleared. |
+| W3-1 | Measure and the Lebesgue integral on ℝ (C5) | 03.4, 08.5 | **decided and opened** `3d5320f68` | **Integral-first, decided by measurement, and the brief's thesis was PARTIALLY REFUTED.** A predicative pre-integration space (`IntSpace`, 16 fields, 70 declarations, footprint 0) with three instances sharing no machinery — the interval integral, finite sums, and a Dirac space — measure *derived* as the integral of an integrable indicator with both bounds proved generically, every detachable subset of a finite index set proved integrable, and monotone convergence as an ADR-0603 graded family with the classical member on one binder. **The deciding number: 1 of 6 interval theorems re-derived, not most of them.** A record whose axioms come from what a development proves cannot re-derive what it took; the interval theorems ARE the record's axioms. What justifies integral-first instead is the three instances and five theorems new on ℝ that also land free on finite sums. Switching to Petrakis–Zeuner cost **zero** — the axioms-from-proofs discipline had already produced a predicative space. **L¹ as a completion: 0 of 78 reusable**, because `Metric.dist` is total while integrability is `Sort 1` data, and `Sigma`'s absence forbids bundling — **the third shelf today blocked by that one absence.** [ADR-1612](../research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md). |
 | W3-2 | Vector spaces over an abstract field, bases, dimension | 04.5 | **modules landed** `ecbf403f0`; vector spaces blocked | `AlgS.Module.*`, 23 declarations: `IsModule` as five conjuncts plus a congruence conjunct, `selfModule` and `polyModule` instances, `neg_smul`, `smul_zero`, `zero_smul`, and a basis layer (`linComb`, `spans`, `linearIndependent`, `isBasis`). **Two obstructions, both `Quot`-independent**: (a) no module *record* — `declare_record` fixes one universe level per field kind, so a record cannot hold a record, and lifting wholesale puts the carrier where a function type cannot sit; sized in ADR-1609 as a per-field level on `FieldSpec`, a change to shared `structures.rs`, its own lane. (b) dimension needs `AlgS.Field`, which needs `Apart`, the open question ADR-1588 named. The ℚ bridge's real cost is `rowEchelon_isEchelon` (ADR-1554 obligation 4); do not price it as small. |
 | W3-3 | Categories, functors, natural transformations | 09.4 | not started | W0-1 |
 | W3-4 | Products and coproducts as universal properties | 09.5 | not started | W3-3 |
@@ -168,8 +168,8 @@ One row per wave. Update when something lands, then append to the history log.
 | W0 — decisions | 4 | 0 | 0 | **4** ✔ | 0 |
 | W1 — unblocked | 13 | 3 | 0 | **9** | **1** |
 | W2 — carriers | 21 | 13 | 0 | **6** | **2** |
-| W3 — large shelves | 13 | 10 | 0 | **2** | **1** |
-| **total** | **51** | **26** | **0** | **21** | **4** |
+| W3 — large shelves | 13 | 9 | 0 | **3** | **1** |
+| **total** | **51** | **25** | **0** | **22** | **4** |
 
 ⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
 know.** The audit found 11 of 76 absence claims false. Four were roadmap
@@ -183,6 +183,14 @@ to decide the topology design.
 **Wave 0 is complete.** All four decisions were made on 2026-09-04, and three
 of the four came with working mathematics attached rather than only a
 document.
+
+**A new blocker has surfaced three times in one day and deserves a name:
+`Sigma` and `Subtype` are absent from the kernel.** ADR-1595 found the
+classical first-isomorphism statement needs a subtype for the image; ADR-1602
+found subspaces need `Subtype`; ADR-1612 found L¹ as a completion needs
+`Sigma` to bundle an integrability witness into a carrier. Dependent pairs are
+an ordinary inductive, not an axiom, and nothing in the setoid discipline
+forbids them. This is the next Wave 0-shaped item and it is not on the board.
 
 **The setoid decision has now been tested at scale, and the finding runs
 further in its favour than ADR-1595 claimed.** The algebra lane landed 58
@@ -260,6 +268,7 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `3d5320f68` | **W3-1 decided and opened.** Integral-first, 70 declarations, measure derived, monotone convergence as a graded family. The brief's thesis partially refuted: 1 of 6 interval theorems re-derived, because they are the record's axioms. `Sigma`'s absence blocks a third shelf. `intspace::` 14, `creal::` 236 passed pre-merge. |
 | 2026-09-04 | `ecbf403f0` | **W2-9 landed, W3-2 half, W1-11's residue closed.** 58 setoid-spine declarations with one kernel rejection. The finding: function-space carriers are statable ONLY over setoids, since `Eq` on lambdas needs `funext`. Two `Quot`-independent obstructions named: one universe level per record field kind, and `AlgS.Field` needing `Apart`. |
 | 2026-09-04 | `e15d807c8` | **W2-14 landed.** A register machine and a precisely-scoped constructive refutation of self-halting decidability. The Cantor call did not land (Π₁ vs Σ₁ case shapes) and the ADR says so. `nat_prelude::` 478 passed pre-merge. |
 | 2026-09-04 | `0a499a6d8` | **W1-6, W2-11 landed; W2-12 half.** `Nat.Graph` (39 decls), **`R(3,3) = 6` both directions from search**, Hall necessity. Sufficiency stopped at a named obstruction: computing the critical subfamily without choice. `nat_prelude::` 495 passed. |

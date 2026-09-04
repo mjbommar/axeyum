@@ -164,6 +164,7 @@ make this systematic; before it, congruence was rediscovered per lemma.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 476 proved ℝ facts, zero open. Riemann integration, IVT by bisection, EVT, uniform continuity, suprema, exp/cos/π/sqrt, `CReal.orderedRingS`. **Claimed no FTC — this was false.** | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Correction.** The FTC was proved 2026-08-27, before this file existed. Cause measured: 64% of `CReal` facts carry generated prose that makes no mathematical claim. Lane `ftc` added `hasDerivative_antiderivative_of_uc` and `integral_eq_antideriv_diff_of_uc` (arity 5 and 7, down from 7 and 9), each footprint 0, and established that the constructive MVT is not a prerequisite. `creal::` 230 passed. Next Five items 2–5 are **not** re-verified and are under audit. | `182d0dd7d`; ADR-1597 |
+| 2026-09-04 | **A finding about this shelf from roadmap W3-1**: generalizing `CReal.integral` into an integration-space record re-derived only 1 of 6 interval theorems, because the theorems this reviewer admired — linearity, monotonicity, the absolute bound — are precisely the record's axioms, not its consequences. The `Integrable` predicate had to be `Sort 1` rather than `Prop`, since `UniformlyContinuousOn` is data whose modulus the integral consumes. And a stale blocker fell: `uniformly_continuous_abs` was written into the ADR as absent, then found derivable from `uniformly_continuous_max`/`_min` because `abs` is `max x (neg x)` by definition. | `3d5320f68` |
 
 ## How to re-measure
 

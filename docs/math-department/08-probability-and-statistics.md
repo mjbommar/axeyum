@@ -143,6 +143,7 @@ statement of Markov and Chebyshev plausible.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: ~30 proved finite-probability theorems over ℚ — expectation, indicators, variance, covariance, Markov, Chebyshev, sample-mean concentration under pairwise uncorrelatedness. No measure theory, no limit theorems. **Correction:** the first review pass under-reported this shelf as a single theorem, by searching for Mathlib names instead of shapes. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 5 opened** (roadmap W3-1): the finite probability layer now has a home. A pre-integration space with `crealFinite` over `CReal.sumRange` and a Dirac space as instances, and **every detachable subset of a finite index set proved an integrable set** — the Petrakis–Zeuner base case, which is exactly this shelf. Five theorems new on ℝ land free on finite sums. The ℚ↔ℝ bridge to `Rat.expectation` did not land and is named as the next step. | `3d5320f68` |
 
 ## How to re-measure
 
