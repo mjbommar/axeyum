@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2277,
+    "min_identity_bound": 2281,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7929,6 +7929,13 @@
       "statement_sha256": "76efc2a30281fd0c2f6e494dc8b34d3f1a4962c24b4313b1f8603218e89dd986",
       "prose_sha256": "4edab7b44268665bee622e1999a67fc9a4790b8f681be149972057f1d6cf4d74",
       "kernel_theorem": "Int.Characterization.induction"
+    },
+    {
+      "fact_id": "F:int-characterization-initial",
+      "language": "lean4",
+      "statement_sha256": "b6ba91e167cd29c242e5206b5bc69f5d15383455da98937d7b19edd28b11ca9e",
+      "prose_sha256": "5bb55f63d243b3e89a7a87988317943b937d54961760857dd23ab93d39ab3d3b",
+      "kernel_theorem": "Int.Characterization.initial"
     },
     {
       "fact_id": "F:int-characterization-injective",
@@ -19200,6 +19207,13 @@
       "kernel_theorem": "Nat.Peano.induction"
     },
     {
+      "fact_id": "F:nat-peano-initial",
+      "language": "lean4",
+      "statement_sha256": "6a23e53f92bb8137bdcb479ef14ee21fe800aac059db5bb420935decefc806d2",
+      "prose_sha256": "c3290991bf2a0fb1752ba38a126271bd571966e1e52bd9f0fff464b44621d0c5",
+      "kernel_theorem": "Nat.Peano.initial"
+    },
+    {
       "fact_id": "F:nat-peano-injective",
       "language": "lean4",
       "statement_sha256": "454a6c431e24b523ef8cd3caf79900dd88db0a68deef34dcb344bdc4d14dd02f",
@@ -19561,6 +19575,13 @@
           "prose_sha256": "46a55120f7c8aaa032a2be141e18a11b632212158c4dd0d21493006664fc7de2"
         }
       ]
+    },
+    {
+      "fact_id": "F:nat-rm-self-halting-not-decidable",
+      "language": "lean4",
+      "statement_sha256": "84dc7d1321e59c83eb55e2f6529c6806351eeefc0de90d81669366fbd42dc92a",
+      "prose_sha256": "f65d3f90541206b25317e3635b6bf109042324d47e1790b1a649d08a9f2b80b5",
+      "kernel_theorem": "Nat.RM.self_halting_not_decidable"
     },
     {
       "fact_id": "F:nat-setcompl-inter",
@@ -20706,6 +20727,13 @@
           "statement_sha256": "10dec86650754553e59ba0e10549b153845e9cc1fe5980acb66beaac11514b9f"
         }
       ]
+    },
+    {
+      "fact_id": "F:ramsey-r33-six",
+      "language": "lean4",
+      "statement_sha256": "1310430dde7dab0ff176b09cabf33d7812197085b5ea01a863e6ddfbd5ce0add",
+      "prose_sha256": "ab0a88a7fd23d4165ace2145b0d02d567e070abb3286f50c6899210b6e2dd0a9",
+      "kernel_theorem": "Nat.Graph.ramsey_three_three"
     },
     {
       "fact_id": "F:rat-abs-add",

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-rm-self-halting-not-decidable",
+  "title": "Nat.RM.self_halting_not_decidable: no total decider is correct about its own self-referential halting",
+  "statement": "The machine model (nat_prelude/computability.rs, ADR-1611): a 'program' is a step function step : Nat -> Nat on a Nat-encoded configuration space; runFuel step c fuel iterates step fuel times from c (structural recursion on fuel alone); Halts step x := exists fuel, runFuel step x fuel = 0 (0 is the halted state). diagStep H c := if H c then c else 0 is the machine built from a candidate decider H : Nat -> Bool that asks H about its OWN current configuration at every step. This theorem: assume H is correct in BOTH directions about whether diagStep H halts from the fixed marker input 1 (Eq Bool (H 1) true -> Halts (diagStep H) 1, and conversely) -- then False. WHAT THIS DOES AND DOES NOT CLAIM (read before citing): H is assumed correct ONLY at the single point 1, for the single machine diagStep H -- narrower than 'H decides Halts for every step function at every input', because the proof never uses more. This is a genuine constructive refutation (the two correctness directions plus diagStep's definition are jointly inconsistent, axiom-free, no excluded middle) but it is NOT Turing's theorem for a fixed Turing-complete universal machine: there is no program-as-data encoding, no s-m-n theorem, no recursion theorem, and Halts is not shown undecidable for an ENUMERATION of machines -- only for the one self-referential instance a candidate H itself determines. The proof is built from the same technique Nat.cantor_no_fixed_point's family uses (a Bool.rec/Or case split closed by Bool/Nat disjointness facts, not excluded middle) but does NOT literally call that declared theorem -- ADR-1611 records the attempt to route through it directly and why the two proof cases (one needing a fuel-induction non-halting fact, the other needing only one step) close more directly through Nat.succ_ne_zero and Bool.true_ne_false respectively.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.RM.self_halting_not_decidable : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : ((x1 : Eq.{1} Bool (x0 (AxNat.succ AxNat.zero)) Bool.true) -> AxNat.RM.Halts (AxNat.RM.diagStep x0) (AxNat.succ AxNat.zero))) -> ((x2 : ((x2 : AxNat.RM.Halts (AxNat.RM.diagStep x0) (AxNat.succ AxNat.zero)) -> Eq.{1} Bool (x0 (AxNat.succ AxNat.zero)) Bool.true)) -> False)))",
+    "fragment": "Nat",
+    "free_symbols": ["x0", "x1", "x2"],
+    "kernel_theorem": "Nat.RM.self_halting_not_decidable"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:logic-bool-true-ne-false", "F:nat-succ-ne-zero"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.RM.self_halting_not_decidable",
+      "kind": "kernel-term",
+      "supports": "Nat.RM.self_halting_not_decidable is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Nat.RM.self_halting_not_decidable --require-kind theorem",
+      "checker_seconds": 90,
+      "kernel_declaration": "Nat.RM.self_halting_not_decidable",
+      "notes": "--require-declaration exits non-zero when the name is absent from every constructed prelude, and --require-kind exits non-zero when it is present with the wrong kind, so the exit status depends on the finding rather than on the run completing. --release is MANDATORY: this binary builds creal/complex/cpoint, which overflow the default debug thread stack. formal.statement is the SAME binary's unfiltered emit's rendered-type column, verbatim -- confirmed identical across all nine constructed preludes (nat/list/integer/characterization/rat/creal/complex/cpoint/metric/ipc), since the Nat prelude's own construction does not vary by which OTHER preludes are built alongside it.",
+      "verified_at": "2026-09-04"
+    },
+    {
+      "id": "footprint-Nat.RM.self_halting_not_decidable",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- read from Kernel::axiom_footprint, never from a rendered name. The whole nat prelude's trusted surface is empty, which bounds this theorem too.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "nat_axiom_inventory whole-prelude bound",
+        "self_halting_not_decidable_is_a_declared_axiom_free_theorem (per-declaration)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "checker_seconds": 12,
+      "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty. A declaration cannot depend on a trusted declaration the environment does not contain, so an empty nat surface bounds every declaration in it. The per-declaration figure (0) is pinned separately by computability_tests.rs::self_halting_not_decidable_is_a_declared_axiom_free_theorem, which also asserts the declaration IS a Declaration::Theorem (not silently a Definition or Axiom) -- run via: cargo test -q --release -p axeyum-lean-kernel --lib self_halting_not_decidable_is_a_declared_axiom_free_theorem -- --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'."
+    },
+    {
+      "id": "discrimination-Nat.RM.self_halting_not_decidable",
+      "kind": "instance-pin",
+      "supports": "The machine model's DEFINITIONS (diagStep/runFuel), which the theorem's soundness rests on, evaluate correctly: diagStep self-loops under a constant-true decider and halts in one step under a constant-false decider, each pinned by def_eq at concrete numerals against a negative control naming the swapped (wrong) value.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test -p axeyum-lean-kernel --lib",
+        "Kernel::def_eq at concrete numerals"
+      ],
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib nat_prelude::computability_tests -- --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 5 passed'",
+      "checker_seconds": 90,
+      "notes": "A Definition's kind-check (well-typed) cannot see a wrong VALUE -- Nat -> Nat -> Nat is Nat -> Nat -> Nat whatever it computes. Four of the five tests reduce diagStep/runFuel at concrete small numerals (1, 5, 9; fuel 0..5) against hand-computed values with a negative control naming the specific swapped case_true/case_false or mis-ordered succ-case value; the fifth confirms the theorem itself is a declared, axiom-free Theorem. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail; anchored with [[:space:]]-free literals, never \\t."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_nat_prelude (crates/axeyum-lean-kernel/src/nat_prelude/computability.rs)",
+    "source": "formal.statement is the Kernel::render_lean(declaration.ty()) column of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, verbatim; depends_on is the same row's direct-theorem-dependency column (Bool.true_ne_false, Nat.succ_ne_zero), intersected with this ledger's registered facts; axiom_footprint is the footprint-size column (0). No type was hand-transcribed. Prose is hand-written; see ADR-1611 for the full design rationale and the rejected/deferred alternatives (an explicit register-machine front end; Nat.Partrec.Code)."
+  },
+  "notes": "Read the scope boundary in `statement` before citing this as 'the halting problem is undecidable' without qualification -- it is a genuine, narrower, constructive result about ONE self-referential instance, not Turing's theorem for a fixed universal machine over an enumeration of programs. ADR-1611 names the natural next step (Nat.Primrec's sibling Nat.Partrec.Code, reusing the already-built Nat.pair/unpairLeft/unpairRight) that would close that gap. The undecidability of first-order validity, named alongside this in docs/math-department/10-logic-and-foundations.md, was NOT attempted and stays `open` in this ledger with nothing behind it. Source: crates/axeyum-lean-kernel/src/nat_prelude/computability.rs, computability_tests.rs."
+}
