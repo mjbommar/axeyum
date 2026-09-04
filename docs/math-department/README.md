@@ -38,10 +38,10 @@ asked for the same thing, a status board, and a history log.
 |---|---|---|---|
 | 01 | [Number theory](01-number-theory.md) | elementary & analytic NT | **Impressed, with a ceiling.** A real first-year-graduate elementary library, stopping where the subject turns algebraic. |
 | 02 | [Constructive analysis](02-constructive-analysis.md) | Bishop school | **Excited.** Among the most complete constructive real analyses anywhere; the FTC gap is the obvious next move. |
-| 03 | [Classical analysis](03-classical-analysis.md) | measure, functional | **Unmoved.** No measure, no topology, no function spaces. The shelf stops in 1867. |
+| 03 | [Classical analysis](03-classical-analysis.md) | measure, functional | **Weakened, not cleared, 2026-09-04.** The classical-axiom policy went against them (ADR-1601: hypotheses, not axioms) and a metric layer landed. Still no measure. |
 | 04 | [Algebra](04-algebra.md) | groups, rings, fields | **Revised 2026-09-04.** The quotient question is decided by measurement and the first isomorphism theorem is proved over setoids. A thin shelf, no longer a blocked one. |
 | 05 | [Geometry](05-geometry.md) | Euclidean, differential, algebraic | **Charmed, then bored.** Excellent classical plane geometry; nothing above it. |
-| 06 | [Topology](06-topology.md) | point-set, algebraic | **Nothing to review.** Zero declarations. The most complete absence in the department. |
+| 06 | [Topology](06-topology.md) | point-set, algebraic | **Revised 2026-09-04.** A metric layer with 49 declarations landed and ADR-1602 settles the design: metric first, pointfree later, open sets never. Still no topological space. |
 | 07 | [Combinatorics](07-combinatorics.md) | enumerative, extremal | **Week three, good foundations.** Finset and pigeonhole just landed; the carriers are right. |
 | 08 | [Probability & statistics](08-probability-and-statistics.md) | finite & measure-theoretic | **Better than first reported.** ~30 proved theorems over ℚ, up to Chebyshev on sample means; everything above it waits on measure theory. |
 | 09 | [Category theory](09-category-theory.md) | | **Absent, and philosophically opposed.** Concrete-carrier-first is the opposite of their method — but ℤ's universal property is already proved. |

@@ -1,12 +1,17 @@
 # 06 — Topology
 
 Reviewer: a topologist — point-set and algebraic
-Verdict, 2026-09-04: **nothing to review**
+Verdict, 2026-09-04 (revised same day): **there is now something to review — a metric layer with 49 declarations — and the design question is settled**
 Last measured: 2026-09-04 at `1856cdb3c`
 
 > "There is no topology here. Not a thin topology, not an unusual topology.
 > Zero declarations. I am the shortest review in the department and the one
 > that blocks the most people."
+>
+> **Revised the same day:** "You built the metric layer instead of asking me
+> which topology to build, and the answer fell out: nothing in your record is
+> a subset, so my objection to membership predicates never applied. I withdraw
+> the blocking status. I still have no topological space."
 
 > **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
 > against a freshly rebuilt kernel index. See
@@ -122,27 +127,33 @@ Two secondary constraints:
 
 ## Next five, in their priority order
 
-- [ ] **1. Choose the constructive topology and write the ADR.** Open sets,
+- [x] **1. Choose the constructive topology and write the ADR.** *Done 2026-09-04, ADR-1602: metric first, pointfree later, open sets never.* Original framing: Open sets,
       apartness spaces, or locales. Their view: this one decision is worth
       more than any five theorems, because it determines whether the analysis
       shelf ever generalizes.
-- [ ] **2. A metric-space carrier with ℝ and `CPoint` as instances**, and
-      completeness lifted from the existing `converges_of_cauchy`. The
-      cheapest possible demonstration that the choice in (1) pays.
+- [x] **2. A metric-space carrier with ℝ and `CPoint` as instances**, and
+      completeness lifted from the existing `converges_of_cauchy`. *Done
+      2026-09-04: 49 declarations, empty footprints, and completeness did
+      generalize — at a cost of two bridge lemmas that already existed. The
+      obstruction was never topological: the convergence predicates are
+      phrased on rational samples rather than on the absolute value.*
 - [ ] **3. Bishop compactness — total boundedness plus completeness — on
       intervals**, then the extreme value theorem re-derived as an instance
       rather than re-proved.
 - [ ] **4. Continuity as a topological notion**, with the existing
       `UniformlyContinuousOn` proved to imply it, so the two vocabularies are
       connected rather than parallel.
-- [ ] **5. Products and subspaces**, which is where a topology carrier either
-      composes or is revealed to be the wrong one.
+- [ ] **5. Products and subspaces** — **[ADR-1602] split this item.** The
+      product is buildable today. The subspace is blocked on `Subtype`, which
+      is absent from the kernel, so the right move is to relativize rather
+      than carve.
 
 ## Progress log
 
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: zero topology declarations, confirmed against a positive control. Three other reviewers blocked behind this file. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five items 1 and 2 both landed** (roadmap W0-3 and W2-1). The design question is answered by ADR-1602 — metric layer first, pointfree frames for topology proper when needed, open-set spaces never — and it was answered by *building* rather than deciding. 49 `Metric` declarations, all footprint 0, with ℝ and the Euclidean plane as instances and completeness generalized off ℝ. Two things the build taught that no argument would have: **nothing in the record is a subset**, so this reviewer's objection to membership predicates never arose; and the plane's **unsquared** triangle inequality landed on the first kernel run, **refuting `CPointPrelude::cauchy_schwarz`'s own doc comment** that the statement 'is not expressible, let alone provable, here' — a stale blocker predating `CReal.sqrt`. | `b7df58b7b`; `metric::` 17 passed |
 
 ## How to re-measure
 

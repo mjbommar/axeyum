@@ -69,7 +69,7 @@ current metric does not punish deferring them.
 |---|---|---|---|---|
 | W0-1 | Quotient and extensionality ADR (C1) | 04.1, 09.3, 12.1 | **landed** `2a640c9b6` | **Decided by measurement: setoid quotients; `Quot.sound` stays out.** [ADR-1595](../research/09-decisions/adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md), Proposed. Net cost of not having the axiom, measured on W2-8: **three lines**. Two findings that decided it: the footprint filter counts the whole quotient package, so it is five entries not one; and it would not reach the classical statement anyway, because `Subtype` and `Sigma` are absent. Reversible on evidence — a named theorem shown unreachable over setoids reopens it. |
 | W0-2 | Classical-axiom policy ADR (C4) | 03.1, 12.2 | **landed** `80aa8e52c` | **Decided by measurement: classical principles stay hypotheses, never axioms.** [ADR-1601](../research/09-decisions/adr-1601-classical-logic-enters-as-a-hypothesis-not-as-an-axiom.md), Proposed. Cost of the hypothesis route across ten theorems: **11 binders, 14 argument positions, zero obligations**, and it does not grow with depth. Three findings beyond the cost: the axiom option is at least *three* axioms (EM, countable choice, `funext`), never priced by the reviewer who asked; it retroactively devalues the certificates whose content is that a classical conclusion *costs* a decision principle; and it kills three environment-scan gates that pass today. **Honest caveat from the lane: this does not give reviewer 03 what they asked for.** |
-| W0-3 | Constructive topology design ADR | 06.1 | not started | Open sets, apartness spaces, or locales. Determines whether the analysis shelf ever generalizes. |
+| W0-3 | Constructive topology design ADR | 06.1 | **landed** `b7df58b7b` | **Decided by building the metric carrier: metric layer first, pointfree (frames/locales) for topology proper when needed, open-set topological spaces never.** [ADR-1602](../research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md), Proposed. Apartness is not a third option — a metric supplies it, and `CReal` already has `Apart` with its laws. What the build taught: **nothing in the record is a subset**, so the reviewer's objection to membership predicates never arose. |
 | W0-4 | Kernel metatheoretic status (C6) | 10.5, 12.5 | **landed** `8b4f277d4` | [ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md). Trusted base measured at **5,526 function-body lines across 9 files**, by call-graph closure from the four admission gates, out of 378,049 in the crate. Three soundness guards demonstrated firing in an isolated copy; **a fourth kills zero tests** and is recorded as an open finding rather than hidden. |
 
 **W0-1 and W0-3 should be written together.** The morphism-equality question
@@ -104,16 +104,16 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 
 | id | item | source | status | blocked by |
 |---|---|---|---|---|
-| W2-1 | Metric-space carrier with ℝ and `CPoint` (C3) | 02.4, 03.3, 06.2 | not started | W0-3 |
-| W2-2 | Continuity as a topological notion; `UniformlyContinuousOn` implies it | 06.4 | not started | W0-3, W2-1 |
-| W2-3 | Bishop compactness on intervals; EVT re-derived as an instance | 06.3 | not started | W2-1 |
+| W2-1 | Metric-space carrier with ℝ and `CPoint` (C3) | 02.4, 03.3, 06.2 | **landed** `b7df58b7b` | **49 declarations, every footprint empty.** A 12-field `Metric` record; `Metric.creal` with `|x−y|` and `Metric.cpoint` with `sqrt distSq`, each `dist` selector proved to reduce definitionally. **Completeness generalized off ℝ** (`Metric.Complete`, `Metric.creal_complete`) at a cost of two bridge lemmas that already existed — the obstruction was that the convergence predicates are phrased on rational samples, not any topology. The plane's **unsquared** triangle inequality landed on the first kernel run, refuting a doc comment that called that statement inexpressible. |
+| W2-2 | Continuity as a topological notion; `UniformlyContinuousOn` implies it | 06.4 | not started | **unblocked and decision-free** — W0-3 and W2-1 both landed |
+| W2-3 | Bishop compactness on intervals; EVT re-derived as an instance | 06.3 | not started | **unblocked** — W2-1 landed |
 | W2-4 | ℝⁿ as a carrier, `CPoint` as n = 2 (C7) | 05.2 | not started | — |
 | W2-5 | Power series with a radius of convergence | 02.2 | not started | — |
 | W2-6 | Uniform convergence and the interchange theorems | 02.3 | **already done 2026-08-27** | `CReal.UniformConvergesOn`, `uniform_limit_uniformly_continuous`, `hasDerivative_uniform_limit`, `weierstrassMTest`. Audit row A3. |
 | W2-7 | The weak law of large numbers | 08.1 | **already done 2026-08-24** | `Rat.weak_law_of_large_numbers` (`54592604a`), ten days before the review called it one limit away. Audit row A2. |
 | W2-8 | First isomorphism theorem over `AlgS.Group` | 04.2 | **landed** `2a640c9b6` | Landed early, as W0-1's deciding experiment. 12 declarations in `AlgS.Hom.*`, footprint empty. The construction: a quotient group is the **same carrier under a coarser equivalence**, not a new carrier of classes. |
 | W2-9 | Polynomial rings as a structure | 04.4 | not started | W0-1, W1-11 |
-| W2-10 | Products and subspaces | 06.5 | not started | W2-1 |
+| W2-10 | Products and subspaces | 06.5 | not started | **should be SPLIT** (ADR-1602): the product is buildable today; the subspace is blocked on `Subtype`, which is absent from the kernel (verified case-sensitively with `Exists` as a positive control), so relativize rather than carve. |
 | W2-11 | Ramsey's theorem for two colours | 07.3 | not started | — (pigeonhole exists) |
 | W2-12 | Hall's marriage theorem | 07.4 | not started | — (`card_le_of_injOn` exists) |
 | W2-13 | Isometries of the plane | 05.3 | not started | — |
@@ -124,7 +124,7 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-18 | Multiplicative arithmetic functions as a family | 01.2 | not started | **[AUDIT] partially present**: `Nat.totient_mul_of_coprime` proves totient multiplicativity in exactly the general form the review denied (row A7). Möbius and Dirichlet convolution are confirmed absent. |
 | W2-19 | General inclusion-exclusion | 07.5 | not started | — |
 | W2-20 | Constructive MVT and differentiability on an interval | 02.5 | **already done 2026-08-27** | `fermat_interiorExtremum`, `rolle_interiorExtremum`, `mvt_interiorExtremum`. Audit row A8. It was never a prerequisite for W1-2 either. |
-| W2-21 | A topological-space carrier, ℝ as the first instance | 03.2 | not started | W0-3 (distinct from W2-1: a metric carrier needs no topology decision, a topological one is the decision) |
+| W2-21 | A topological-space carrier, ℝ as the first instance | 03.2 | not started | **build it as a FRAME, not as open sets** (ADR-1602), and it is **off the critical path** — the metric layer serves the analysis shelf. |
 
 ## Wave 3 — the large shelves
 
@@ -132,7 +132,7 @@ Each is a quarter or more of work and each is gated on Wave 0.
 
 | id | item | source | status | blocked by |
 |---|---|---|---|---|
-| W3-1 | Measure and the Lebesgue integral on ℝ (C5) | 03.4, 08.5 | not started | W0-2, W0-3, W2-1 |
+| W3-1 | Measure and the Lebesgue integral on ℝ (C5) | 03.4, 08.5 | not started | W0-2 ✔, W0-3 ✔, W2-1 ✔ — **but ADR-1602 explicitly does NOT settle this dependency** and says it needs re-examination. Reviewers 03 and 08 are weakened, not cleared. |
 | W3-2 | Vector spaces over an abstract field, bases, dimension | 04.5 | not started | W0-1, W2-9 |
 | W3-3 | Categories, functors, natural transformations | 09.4 | not started | W0-1 |
 | W3-4 | Products and coproducts as universal properties | 09.5 | not started | W3-3 |
@@ -165,11 +165,11 @@ One row per wave. Update when something lands, then append to the history log.
 |---|---|---|---|---|
 | wave | items | not started | in progress | landed | **already done** ⁽ᵇ⁾ |
 |---|---|---|---|---|---|
-| W0 — decisions | 4 | 0 | 1 | **3** | 0 |
+| W0 — decisions | 4 | 0 | 0 | **4** ✔ | 0 |
 | W1 — unblocked | 13 | 5 | 0 | **7** | **1** |
-| W2 — carriers | 21 | 17 | 1 | **1** | **2** |
+| W2 — carriers | 21 | 17 | 0 | **2** | **2** |
 | W3 — large shelves | 13 | 12 | 0 | 0 | **1** |
-| **total** | **51** | **33** | **1** | **13** | **4** |
+| **total** | **51** | **34** | **0** | **13** | **4** |
 
 ⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
 know.** The audit found 11 of 76 absence claims false. Four were roadmap
@@ -180,10 +180,11 @@ the eleven landed on 2026-08-27, one week before the reviews.
 ⁽ᵃ⁾ W2-1 is in progress inside the W0-3 lane, which builds the metric carrier
 to decide the topology design.
 
-In progress, 2026-09-04: W0-3 with W2-1 (topology design, decided by building
-a metric carrier).
+**Wave 0 is complete.** All four decisions were made on 2026-09-04, and three
+of the four came with working mathematics attached rather than only a
+document.
 
-**Both quotient and classical-axiom decisions were settled the same way**, and
+**Every decision was settled the same way**, and
 the method is now the department's default: do not weigh the arguments, build
 the theorem the decision is about and report what it cost. W0-1 cost three
 lines; W0-2 cost eleven binders and no obligations. In both cases the
@@ -249,6 +250,7 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `b7df58b7b` | **W0-3 and W2-1 landed; Wave 0 is complete.** A `Metric` carrier with 49 declarations, both instances, completeness generalized off ℝ, and the plane's unsquared triangle inequality — which refutes a doc comment calling that statement inexpressible. Two retrieval tools were found blind to the new prelude and would have reported a confident ABSENT for all 49; both fixed. `metric::` 17, `creal_point::` 66, `creal::` 236 passed. |
 | 2026-09-04 | `80aa8e52c` | **W0-2 and W1-9 landed together.** Classical principles stay hypotheses (ADR-1601), decided by carrying one through ten theorems and measuring: 11 binders, zero obligations, no growth with depth. Ten new theorems, empty footprints. A merge-pass defect it exposed: regenerating the creal steps table during conflict resolution moved a pinned test the lane never touched; fixed and the pin rewritten from the generator (`creal::` 236 passed). |
 | 2026-09-04 | `fa18f3481` | **The audit landed.** 76 absence claims checked, 11 false, 12 overstated. Four roadmap items were already done. ADR-1605 and `check-fact-characterisation.py` address the cause. Two off-lane findings: `count-landmark-facts.py --check` was already red on main, and one fact carried a curated statement under an "uncurated" title. |
 | 2026-09-04 | `de0cd02da` | **W1-1 landed — the flagship.** Schur's `R_2(x = y + z) = 5` proved in-kernel from search in both halves, 17 declarations, footprint 0. The unary-numeral constraint in the brief was measured false: a `Prop` mentioning a numeral never reduces it. |
