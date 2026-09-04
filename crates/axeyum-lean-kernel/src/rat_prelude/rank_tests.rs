@@ -358,8 +358,22 @@ fn rank_is_zero_at_both_degenerate_dimensions() {
 /// this kernel has no `funext`, so they cannot be transported under `rank` —
 /// ADR-1555. Each case carries a control that the operation actually changed
 /// the matrix, so "the operation is the identity" cannot pass.
+///
+/// Every magnitude formed is a single digit, so this is not the unary-numeral
+/// cliff `CLAUDE.md` documents. Like `det_mul_tests.rs`'s
+/// `mat_subst_rows_replaces_the_window_by_relative_index`, the abort is the
+/// test's OWN bulk — two matrices, each run through three row operations and
+/// a `rank` reduction, all with locals live for the rest of an unoptimized
+/// function body — on top of a `rat` prelude build pinned with zero debug
+/// margin (`artifacts/kernel-stack-envelope.tsv`). Measured 2026-09-03: aborts
+/// at the default 2,097,152, passes at 4,194,304. Runs on
+/// [`crate::on_a_deep_stack`] for the same reason.
 #[test]
 fn rank_is_invariant_under_each_row_operation_at_two_by_two() {
+    crate::on_a_deep_stack(rank_is_invariant_under_each_row_operation_at_two_by_two_body);
+}
+
+fn rank_is_invariant_under_each_row_operation_at_two_by_two_body() {
     let (mut kernel, p) = built();
     let mut d = IntDev::new(&mut kernel, p.int);
 

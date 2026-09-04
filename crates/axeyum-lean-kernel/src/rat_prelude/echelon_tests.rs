@@ -228,8 +228,23 @@ fn row_add_mul_adds_a_multiple_of_another_row() {
 /// symbolic half. This is the other half: reduce both sides at a concrete
 /// matrix, and confirm each instantiated theorem infers to exactly the equation
 /// between the two values that were just computed.
+///
+/// Every magnitude formed here is a single- or two-digit integer (the largest
+/// is `26`), so this is not the unary-numeral cliff `CLAUDE.md` documents.
+/// Like `mat_subst_rows_replaces_the_window_by_relative_index`
+/// (`det_mul_tests.rs`), the abort is the test's OWN bulk on top of a `rat`
+/// prelude build pinned with zero debug margin
+/// (`artifacts/kernel-stack-envelope.tsv`): three blocks (`rowSwap`,
+/// `rowAddMul`, `rowScale`) each declare several locals that stay live for
+/// the rest of an unoptimized function body. Measured 2026-09-03,
+/// `RUST_MIN_STACK` bisected from outside the process: aborts at 2,097,152, passes at
+/// 4,194,304. Runs on [`crate::on_a_deep_stack`] for the same reason.
 #[test]
 fn the_row_operations_invert_at_concrete_arguments() {
+    crate::on_a_deep_stack(the_row_operations_invert_at_concrete_arguments_body);
+}
+
+fn the_row_operations_invert_at_concrete_arguments_body() {
     let (mut kernel, p) = built();
     let mut d = IntDev::new(&mut kernel, p.int);
 
