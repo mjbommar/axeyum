@@ -132,6 +132,7 @@ project, and it is unresolved.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: no measure, no topology, no normed spaces, no complex analysis. Riemann integration and the interval theorems only. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 1 landed, and the answer is not the one this reviewer wanted** (roadmap W0-2, ADR-1601): classical principles stay **hypotheses**, never axioms. The measurement: carrying one costs 11 binders and 14 argument positions across ten theorems, and **zero obligations**, and does not grow with depth. Three findings decided it — the axiom option is at least three axioms (EM, countable choice and `funext`, which this file's blocker named together and nobody had priced), it devalues the certificates whose content is that a classical conclusion costs a decision principle, and it kills three passing gates. Items 2–5 are unaffected in substance; measure theory unblocks with a *stated shape* rather than with classical logic available by default. | `80aa8e52c` |
 
 ## How to re-measure
 

@@ -68,7 +68,7 @@ current metric does not punish deferring them.
 | id | item | source | status | note |
 |---|---|---|---|---|
 | W0-1 | Quotient and extensionality ADR (C1) | 04.1, 09.3, 12.1 | **landed** `2a640c9b6` | **Decided by measurement: setoid quotients; `Quot.sound` stays out.** [ADR-1595](../research/09-decisions/adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md), Proposed. Net cost of not having the axiom, measured on W2-8: **three lines**. Two findings that decided it: the footprint filter counts the whole quotient package, so it is five entries not one; and it would not reach the classical statement anyway, because `Subtype` and `Sigma` are absent. Reversible on evidence — a named theorem shown unreachable over setoids reopens it. |
-| W0-2 | Classical-axiom policy ADR (C4) | 03.1, 12.2 | not started | EM as a footprint entry vs. EM as a discharged hypothesis. `Nat.em_implies_lnp` shows the second route already works. |
+| W0-2 | Classical-axiom policy ADR (C4) | 03.1, 12.2 | **landed** `80aa8e52c` | **Decided by measurement: classical principles stay hypotheses, never axioms.** [ADR-1601](../research/09-decisions/adr-1601-classical-principles-stay-hypotheses.md), Proposed. Cost of the hypothesis route across ten theorems: **11 binders, 14 argument positions, zero obligations**, and it does not grow with depth. Three findings beyond the cost: the axiom option is at least *three* axioms (EM, countable choice, `funext`), never priced by the reviewer who asked; it retroactively devalues the certificates whose content is that a classical conclusion *costs* a decision principle; and it kills three environment-scan gates that pass today. **Honest caveat from the lane: this does not give reviewer 03 what they asked for.** |
 | W0-3 | Constructive topology design ADR | 06.1 | not started | Open sets, apartness spaces, or locales. Determines whether the analysis shelf ever generalizes. |
 | W0-4 | Kernel metatheoretic status (C6) | 10.5, 12.5 | **landed** `8b4f277d4` | [ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md). Trusted base measured at **5,526 function-body lines across 9 files**, by call-graph closure from the four admission gates, out of 378,049 in the crate. Three soundness guards demonstrated firing in an isolated copy; **a fourth kills zero tests** and is recorded as an open finding rather than hidden. |
 
@@ -91,7 +91,7 @@ Everything here can start today. Ordered by convergence count, then by yield.
 | W1-6 | A graph carrier | 07.2 | not started | Decidable adjacency on a bounded vertex range, sibling of `Nat.Finset`. Gate on most of combinatorics. |
 | W1-7 | Structure of (ℤ/n)\* and primitive roots | 01.1 | **landed** `a9ef9465d` | 11 declarations in `int_prelude/mult_order.rs`, footprint 0: multiplicative order, order divides the totient, `pow ≡ 1 ↔ order ∣ k`, primitive roots, power injectivity (ADR-1598). **Existence mod a prime did not land**, and the obstruction is named: `∑_{d∣n} φ(d) = n` needs a divisor-set aggregate and the `d ↦ n/d` reindexing of a predicate-restricted sum, which does not exist. |
 | W1-8 | Angle measure; laws of sines and cosines | 05.1 | not started | Connect analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. The library has trigonometry and geometry and they do not touch. |
-| W1-9 | Extend the reverse-mathematics map | 10.1 | not started | LPO, Markov's principle, LLPO beside the existing EM ↔ LNP result. The most distinctive mathematics in the library. |
+| W1-9 | Extend the reverse-mathematics map | 10.1 | **landed** `80aa8e52c` | Six implications over ℕ with empty footprints — `em_implies_lpo`, `lpo_implies_wlpo`, `lpo_implies_markov`, `lpo_implies_llpo`, `wlpo_and_markov_imply_lpo` (the converse half), and `lnp_unrestricted_implies_lpo` joining the existing calibration point. Plus four order theorems over ℝ on an explicit decision hypothesis, whose conclusions the real prelude's own field docs record as unavailable. Every separation is **cited, not claimed** — a separation needs a model of the kernel, not a term in it. |
 | W1-10 | Generalize finite probability over `AlgS.OrderedRing` | 08.2 | not started | Prerequisite for stating the WLLN across ℚ and ℝ without a hand-built bridge. |
 | W1-11 | Homomorphisms, kernels, images, subgroups | 04.3 | **landed** `2a640c9b6` | The homomorphism, kernel and image layer arrived with W2-8's twelve `AlgS.Hom.*` declarations (audit row A9). **Subgroups as a lattice remain absent** and are the residue of this item. |
 | W1-12 | Measure the exact-real performance envelope | 11.4 | not started | π and exp to a stated precision with the cost model. The library claims computable analysis and has never quoted a time. |
@@ -165,11 +165,11 @@ One row per wave. Update when something lands, then append to the history log.
 |---|---|---|---|---|
 | wave | items | not started | in progress | landed | **already done** ⁽ᵇ⁾ |
 |---|---|---|---|---|---|
-| W0 — decisions | 4 | 0 | 2 | **2** | 0 |
-| W1 — unblocked | 13 | 6 | 0 | **6** | **1** |
+| W0 — decisions | 4 | 0 | 1 | **3** | 0 |
+| W1 — unblocked | 13 | 5 | 0 | **7** | **1** |
 | W2 — carriers | 21 | 17 | 1 | **1** | **2** |
 | W3 — large shelves | 13 | 12 | 0 | 0 | **1** |
-| **total** | **51** | **35** | **3** | **9** | **4** |
+| **total** | **51** | **33** | **1** | **13** | **4** |
 
 ⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
 know.** The audit found 11 of 76 absence claims false. Four were roadmap
@@ -180,10 +180,14 @@ the eleven landed on 2026-08-27, one week before the reviews.
 ⁽ᵃ⁾ W2-1 is in progress inside the W0-3 lane, which builds the metric carrier
 to decide the topology design.
 
-In progress, 2026-09-04: W0-2 with W1-9 (classical-axiom policy, decided by
-extending the reverse-mathematics map), W0-3 with W2-1 (topology design,
-decided by building a metric carrier), W1-1 (Rado). Also running: an audit of
-every absence claim in the twelve persona files, after two were shown false.
+In progress, 2026-09-04: W0-3 with W2-1 (topology design, decided by building
+a metric carrier).
+
+**Both quotient and classical-axiom decisions were settled the same way**, and
+the method is now the department's default: do not weigh the arguments, build
+the theorem the decision is about and report what it cost. W0-1 cost three
+lines; W0-2 cost eleven binders and no obligations. In both cases the
+measurement pointed the opposite way from the reviewer's expectation.
 
 **A new W1 item the W1-5 lane's failure identified:** a `CReal` apartness or
 witnessed-separation definition, without which `decide` has no decidable
@@ -245,6 +249,7 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `80aa8e52c` | **W0-2 and W1-9 landed together.** Classical principles stay hypotheses (ADR-1601), decided by carrying one through ten theorems and measuring: 11 binders, zero obligations, no growth with depth. Ten new theorems, empty footprints. A merge-pass defect it exposed: regenerating the creal steps table during conflict resolution moved a pinned test the lane never touched; fixed and the pin rewritten from the generator (`creal::` 236 passed). |
 | 2026-09-04 | `fa18f3481` | **The audit landed.** 76 absence claims checked, 11 false, 12 overstated. Four roadmap items were already done. ADR-1605 and `check-fact-characterisation.py` address the cause. Two off-lane findings: `count-landmark-facts.py --check` was already red on main, and one fact carried a curated statement under an "uncurated" title. |
 | 2026-09-04 | `de0cd02da` | **W1-1 landed — the flagship.** Schur's `R_2(x = y + z) = 5` proved in-kernel from search in both halves, 17 declarations, footprint 0. The unary-numeral constraint in the brief was measured false: a `Prop` mentioning a numeral never reduces it. |
 | 2026-09-04 | `a3f4f528c` | **W1-5 landed.** `ring` reaches `CReal.commRingS` (6 goal shapes, kernel-refused corruptions); `decide` cannot, with the reason measured; zero retirements after a real prelude-build decline was reverted rather than shipped. `ring::` 74, `decide::` 47, `creal::creal_tests` 140 passed. |
