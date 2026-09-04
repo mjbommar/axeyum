@@ -187,11 +187,26 @@ mod algebra_instance_tests {
     use super::*;
     use crate::complex::build_complex_prelude;
 
+    // Every test in this module builds `complex`/`creal` on its own thread via
+    // `build_complex_prelude`, and the crate's stack-envelope pin
+    // (`artifacts/kernel-stack-envelope.tsv`) shows `complex` debug needs
+    // 16,777,216 B -- 8x the 2,097,152 a `#[test]` thread gets by default. A
+    // process-wide, in-memory cache (`prelude_cache`, ADR-0464) can make this
+    // look free when some OTHER test already warmed it earlier in the same
+    // run, which is why this was not seen every time: whichever test is
+    // scheduled to build the cold cache first aborts the whole binary
+    // (`fatal runtime error: stack overflow`), and the crash names only that
+    // one test even though every test here shares the defect. Measured
+    // 2026-09-03: `complex_comm_ring_s_admits` aborted a `cargo test -p
+    // axeyum-lean-kernel --lib` run at the default stack. All six run on
+    // `crate::on_a_deep_stack` so none of them depends on cache-warming luck.
     #[test]
     fn complex_comm_ring_s_admits() {
-        let mut k = Kernel::new();
-        let p = build_complex_prelude(&mut k).expect("complex prelude must build");
-        assert!(k.environment().get(p.comm_ring_s).is_some());
+        crate::on_a_deep_stack(|| {
+            let mut k = Kernel::new();
+            let p = build_complex_prelude(&mut k).expect("complex prelude must build");
+            assert!(k.environment().get(p.comm_ring_s).is_some());
+        });
     }
 
     /// `Complex.commRingS`'s axiom footprint must stay empty -- every field
@@ -199,12 +214,14 @@ mod algebra_instance_tests {
     /// a term composed purely from such selectors (`mulOneL`/`distribR`).
     #[test]
     fn complex_comm_ring_s_axiom_footprint_is_empty() {
-        let mut k = Kernel::new();
-        let p = build_complex_prelude(&mut k).expect("complex prelude must build");
-        assert!(
-            k.axiom_footprint(p.comm_ring_s).is_empty(),
-            "Complex.commRingS must have an empty axiom footprint"
-        );
+        crate::on_a_deep_stack(|| {
+            let mut k = Kernel::new();
+            let p = build_complex_prelude(&mut k).expect("complex prelude must build");
+            assert!(
+                k.axiom_footprint(p.comm_ring_s).is_empty(),
+                "Complex.commRingS must have an empty axiom footprint"
+            );
+        });
     }
 
     /// Evaluation test (deliverable rule: every new `Definition` needs one):
@@ -213,6 +230,10 @@ mod algebra_instance_tests {
     /// reduction, not assumed from the field-index table.
     #[test]
     fn projecting_mul_comm_yields_complex_mul_comm_type() {
+        crate::on_a_deep_stack(projecting_mul_comm_yields_complex_mul_comm_type_body);
+    }
+
+    fn projecting_mul_comm_yields_complex_mul_comm_type_body() {
         const A_FV: u64 = 24_920;
         const B_FV: u64 = 24_921;
         let mut k = Kernel::new();
@@ -274,6 +295,10 @@ mod algebra_instance_tests {
     /// `Complex.one` without error.
     #[test]
     fn complex_comm_ring_s_fields_reduce_at_zero_and_one() {
+        crate::on_a_deep_stack(complex_comm_ring_s_fields_reduce_at_zero_and_one_body);
+    }
+
+    fn complex_comm_ring_s_fields_reduce_at_zero_and_one_body() {
         let mut k = Kernel::new();
         let p = build_complex_prelude(&mut k).expect("complex prelude must build");
 
@@ -305,6 +330,12 @@ mod algebra_instance_tests {
     /// this is well-typedness only.
     #[test]
     fn generic_mul_neg_one_instantiated_at_complex_type_checks_concrete_and_symbolic() {
+        crate::on_a_deep_stack(
+            generic_mul_neg_one_instantiated_at_complex_type_checks_concrete_and_symbolic_body,
+        );
+    }
+
+    fn generic_mul_neg_one_instantiated_at_complex_type_checks_concrete_and_symbolic_body() {
         const A_FV: u64 = 24_930;
         let mut k = Kernel::new();
         let p = build_complex_prelude(&mut k).expect("complex prelude must build");
@@ -350,6 +381,10 @@ mod algebra_instance_tests {
     /// own -- closed over `(a,b,c)`.
     #[test]
     fn generic_add_left_cancel_instantiated_at_complex_type_checks() {
+        crate::on_a_deep_stack(generic_add_left_cancel_instantiated_at_complex_type_checks_body);
+    }
+
+    fn generic_add_left_cancel_instantiated_at_complex_type_checks_body() {
         const A_FV: u64 = 24_940;
         const B_FV: u64 = 24_941;
         const C_FV: u64 = 24_942;
