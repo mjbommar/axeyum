@@ -285,6 +285,9 @@ mod stirling;
 mod stirling_lemmas;
 pub mod structures;
 pub mod structures_setoid;
+/// ADR-1609 / roadmap W1-11 (subobject half): `AlgS.Subgroup.*`, subgroups of
+/// an abstract `AlgS.Group` and the meet-semilattice they form.
+pub mod subgroup_setoid;
 mod subset_product;
 mod subset_sum;
 mod sum_range_permute;
@@ -6541,6 +6544,21 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 poly_comm_group: poly_s.comm_group,
                 poly_smul: poly_s.ops.smul,
                 poly_equiv: poly_s.ops.equiv,
+            },
+            structures_s_names.algs,
+        )?;
+
+        // ADR-1609 / roadmap W1-11's subobject half: `AlgS.Subgroup.*`. Needs
+        // the `AlgS.Group` record and three of the `AlgS.Hom.*` names, so it
+        // lands here too.
+        let _subgroup_s = subgroup_setoid::declare_subgroup_setoid(
+            kernel,
+            &logic,
+            &structures_s.group,
+            subgroup_setoid::SubgroupDeps {
+                hom_ker: structures_s_extra.hom_ker,
+                hom_map_one: structures_s_extra.hom_map_one,
+                hom_map_inv: structures_s_extra.hom_map_inv,
             },
             structures_s_names.algs,
         )?;
