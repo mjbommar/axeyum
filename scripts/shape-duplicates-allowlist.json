@@ -88,5 +88,11 @@
     "reason": "Mirror of the clog_mono_right/clog_monotone entry above -- same Monotone-unfolds-to-pointwise reason, same forwarding body (declare_log_monotone calls d.lemma(p.log_mono_right, ...)), floor log instead of ceiling log.",
     "adjudicated": "2026-08-31",
     "source": "docs/research/09-decisions/adr-1170-the-retrieval-gate-existed-and-ran-nowhere.md"
+  },
+  {
+    "names": ["CReal.integral_witness_independent", "IntSpace.CReal.integral_witness_independent"],
+    "reason": "DELIBERATE, and the duplication IS the deliverable. ADR-1612's deciding measurement is how many CReal.integral theorems the generic integration space RE-DERIVES rather than assumes, and the only way to make that checkable rather than rhetorical is to declare the same proposition a second time with a proof that is IntSpace.integral_witness_independent applied to IntSpace.crealInterval and nothing else. The two proof terms are genuinely independent: CReal's own route is a converges_unique argument over Riemann sums (creal/integral.rs), the IntSpace route is monotonicity plus CReal.equiv_of_le_le with no Riemann sum anywhere. Aliasing one to the other would destroy the measurement. intspace_tests::the_rederived_statement_equals_creals_own asserts the two rendered types are EQUAL, so this group is not merely tolerated -- it is required to exist and required to stay identical.",
+    "adjudicated": "2026-09-04",
+    "source": "docs/research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md"
   }
 ]
