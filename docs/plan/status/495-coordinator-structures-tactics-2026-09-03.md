@@ -81,3 +81,4 @@ Lean's. Not decided here; `check-lean-gate.sh` is not in the push hook.
 | 2026-09-03 | coordinator | collision sweep gains the `list` group; inventory-completeness gate green (12 labels agree) |
 | 2026-09-03 | coordinator | `.cargo/config.toml` sizes every test thread at 16 MiB; the debug `rat_prelude::` sweep no longer aborts (273 passed) |
 | 2026-09-03 | coordinator | `lean-toolchain` -> v4.34.0-rc1 (ADR-1594); seven suites read the pin instead of a literal; ADR-0517 amended: the elaborator refuses the `def` spelling too, on both Leans |
+| 2026-09-04 | coordinator | `docs/math-department/`: twelve persona reviews of the library, one per field, each with a measured baseline, a Next Five and a progress log |
