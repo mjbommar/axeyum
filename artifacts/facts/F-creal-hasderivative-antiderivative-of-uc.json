@@ -1,0 +1,68 @@
+{
+ "schema_version": 1,
+ "id": "F:creal-hasderivative-antiderivative-of-uc",
+ "title": "Fundamental theorem of calculus, part I, for a uniformly continuous integrand",
+ "statement": "THE FUNDAMENTAL THEOREM OF CALCULUS, PART I, in the form a textbook states it. For F uniformly continuous on the closed interval [a, b] of the constructive reals, the function G(x) = the integral of F from a to the clamped x has derivative F on [a, b], in Bishop's UNIFORM sense: CReal.HasDerivativeOn carries an explicit modulus as a data field, not an existential, and the modulus here is E |-> (modulus of uniform continuity of F)(2E + 1) -- two halves of 1/(2E+2) summing to the 1/(E+1) the specification asks for. NO side condition beyond uniform continuity: the (kb : Nat) and BoundedOn F a b kb that CReal.hasDerivative_antiderivative demands of its caller are discharged here from the uniform-continuity witness, because CReal.bounded_of_uniformly_continuous COMPUTES such a kb (one Nat expression in F, a, b, u) with no Exists-elimination. Nothing about the estimate is re-proved: the proof term IS that theorem applied.",
+ "formal": {
+  "language": "lean4",
+  "statement": "theorem CReal.hasDerivative_antiderivative_of_uc : ((x0 : ((x0 : CReal) -> CReal)) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : CReal.le x1 x2) -> ((x4 : CReal.UniformlyContinuousOn x0 x1 x2) -> CReal.HasDerivativeOn (CReal.antiderivative x0 x1 x2 x3 x4) x0 x1 x2)))))",
+  "fragment": "CReal",
+  "free_symbols": [],
+  "kernel_theorem": "CReal.hasDerivative_antiderivative_of_uc"
+ },
+ "epistemic_status": "proved",
+ "proof_route": "kernel-lean",
+ "depends_on": [
+  "F:creal-hasderivative-antiderivative",
+  "F:creal-bounded-of-uniformly-continuous"
+ ],
+ "axiom_footprint": [],
+ "evidence": [
+  {
+   "id": "kernel-CReal.hasDerivative_antiderivative_of_uc",
+   "kind": "kernel-term",
+   "supports": "CReal.hasDerivative_antiderivative_of_uc is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+   "check_status": "checked",
+   "checkers": [
+    "producing-build (Kernel::add_declaration)",
+    "theorem_dependency_inventory re-list"
+   ],
+   "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example theorem_dependency_inventory -- CReal.hasDerivative_antiderivative_of_uc 2>/dev/null | grep -cE '^CReal\\.hasDerivative_antiderivative_of_uc[[:space:]]'",
+   "checker_seconds": 12,
+   "kernel_declaration": "CReal.hasDerivative_antiderivative_of_uc",
+   "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: theorem_dependency_inventory exits non-zero when a NAMED filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]], never a backslash-t -- in a scripted (GNU) grep that is a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds creal/complex/cpoint, which overflow the default debug thread stack."
+  },
+  {
+   "id": "footprint-CReal.hasDerivative_antiderivative_of_uc",
+   "kind": "exhaustive-enumeration",
+   "supports": "axiom_footprint: [] -- the creal prelude's trusted surface is empty, which bounds CReal.hasDerivative_antiderivative_of_uc.",
+   "check_status": "checked",
+   "checkers": [
+    "Kernel::axiom_footprint",
+    "environment-wide trusted-surface enumeration"
+   ],
+   "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --include-constructed --require-axiom-free creal",
+   "checker_seconds": 14,
+   "notes": "--require-axiom-free exits non-zero when the named prelude's trusted surface (Axiom + Opaque + Quotient) is not empty, and errors rather than silently passing for a prelude the run never built. Measured 2026-09-04: 'ok: creal trusted surface = 0'. The per-declaration figure is the footprint column of kernel_declaration_projection, measured 0 for this row the same day."
+  },
+  {
+   "id": "test-CReal.hasDerivative_antiderivative_of_uc-no-bound",
+   "kind": "instance-pin",
+   "supports": "The theorem applies at fully symbolic F, a, b, hab, u with NO BoundedOn witness anywhere in the local context -- which is the entire content of this fact over CReal.hasDerivative_antiderivative.",
+   "check_status": "checked",
+   "checkers": [
+    "creal::integral::ftc_tests::ftc_of_uc_applies_without_a_bounded_witness"
+   ],
+   "checker_command": "RUST_MIN_STACK=1073741824 cargo test --release -p axeyum-lean-kernel --lib -- ftc_of_uc --test-threads=4 2>&1 | grep -cE '^test result: ok[.] 1 passed'",
+   "checker_seconds": 130,
+   "notes": "Mutation-verified 2026-09-04 against the full creal:: suite (230 tests). Mutant M1 restores the (kb : Nat) + BoundedOn binders to this declaration: 229 passed, 1 failed, and the one failure is this test. Nothing else in the suite moves, so this test is the only guard on the fact's content. The test also carries a negative control -- the derivative replaced by CReal.neg, a Const against an FVar so def_eq fails immediately -- which the kernel must reject."
+  }
+ ],
+ "provenance": {
+  "date": "2026-09-04",
+  "curation": "curated",
+  "established_by": "axeyum-lean-kernel build_creal_prelude, step integral::declare_ftc_of_uc (crates/axeyum-lean-kernel/src/creal/integral.rs)",
+  "source": "Hand-written by lane ftc (roadmap W1-2, ADR-1597). formal.statement is the final field of this declaration's row in the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, transcribed verbatim; axiom_footprint is that row's footprint column, cross-checked by the whole-prelude nat_axiom_inventory run in the second evidence row. The prose in `statement` and `notes` is authored, not generated."
+ },
+ "notes": "WHAT THIS ADDS, PRECISELY. CReal.hasDerivative_antiderivative (landed 2026-08-27) already proves FTC-I; this fact is not a new theorem about the reals but a STRENGTHENING OF ITS STATEMENT, from arity 7 to arity 5, by discharging a hypothesis that was always derivable. A reader who wants 'the fundamental theorem of calculus' can apply this one without first constructing a magnitude bound.\n\nWHAT IT DOES NOT SAY. It is not a two-sided derivative in the classical punctured-limit sense; CReal.HasDerivativeOn's spec quantifies over an UNORDERED pair x, y in [a, b] with |y - x| inside the modulus, which is the uniform (Bishop) notion and is STRONGER than pointwise differentiability. It says nothing off [a, b]. The integrand's uniform continuity is not a convenience: on a constructive line CReal.le is undecidable, so 'sup over partitions' is unavailable and a merely pointwise-continuous function cannot be integrated by this route at all.\n\nWHY THE BOUND WAS THERE AT ALL. CReal.hasDerivative_antiderivative routes through CReal.integral_abs_le_of_bound, which needs a magnitude bound on F. Taking it as a hypothesis was the cheaper thing to do at the time; discharging it costs one application of CReal.bounded_of_uniformly_continuous and a K read back off the INFERRED type of that application -- never hand-derived, because the computed K is rescale_index(3, modulus F a b u 0)-shaped and rebuilding it would force a full unfold."
+}
