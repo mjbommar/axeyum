@@ -187,7 +187,7 @@ fn int_prelude_admits_all_declarations() {
 
 /// The integer laws this development **derives** from the axiom-free `Nat`
 /// prelude. Each must be a `Theorem` with an empty axiom footprint.
-fn derived_laws(p: &IntPrelude) -> [crate::NameId; 266] {
+fn derived_laws(p: &IntPrelude) -> [crate::NameId; 270] {
     [
         p.gcd_eq_gcd_ab_witnesses,
         p.gcd_div_gcd_div_gcd,
@@ -473,6 +473,11 @@ fn derived_laws(p: &IntPrelude) -> [crate::NameId; 266] {
         p.sum_maps_congr,
         p.sum_maps_mul_left,
         p.prod_range_sum_range_expand,
+        // `primitive-roots` lane (W1-7, ADR-1598): `mult_order.rs`.
+        p.one_pow,
+        p.pow_modeq_one_of_dvd,
+        p.order_dvd_of_pow_modeq_one,
+        p.pow_modeq_one_iff_order_dvd,
     ]
 }
 
@@ -552,7 +557,7 @@ fn derived_lemmas(p: &IntPrelude) -> [crate::NameId; 48] {
 /// unlike `nat_prelude_tests.rs`, this file had no `definition_names`
 /// counterpart to `derived_laws`/`derived_lemmas` at all, so none of these
 /// twenty-two had ever had their footprint checked.
-fn definition_names(p: &IntPrelude) -> [crate::NameId; 31] {
+fn definition_names(p: &IntPrelude) -> [crate::NameId; 32] {
     [
         // `quadratic-reciprocity-2` lane (ADR-1557).
         p.legendre_sym,
@@ -586,6 +591,8 @@ fn definition_names(p: &IntPrelude) -> [crate::NameId; 31] {
         p.gcd_a,
         p.gcd_b,
         p.sum_maps,
+        // `primitive-roots` lane (W1-7, ADR-1598): `mult_order.rs`.
+        p.is_order,
     ]
 }
 
