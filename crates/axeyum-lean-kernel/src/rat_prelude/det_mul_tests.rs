@@ -120,8 +120,34 @@ fn mat_set_row_writes_exactly_one_row() {
 /// be `[1,2,3]`. Both plausible index defects are separated by that choice:
 /// using the ABSOLUTE row index would put `g 1 = 0`'s row at row 1, and
 /// copying `B`'s row `s+i` would give `[40,50,60]` then `[70,80,90]`.
+///
+/// ## The debug stack, and why no fixture shrinks this one
+///
+/// This is not the `19·50` unary-numeral cliff `det_mat_mul_computes_at_-
+/// concrete_matrices` hit (`CLAUDE.md`, "every `Nat` numeral this prelude
+/// builds is unary") — every magnitude formed here is a single digit. The
+/// abort is elsewhere: `Rat.matSubstRows` (`declare_mat_subst_rows`, ~line
+/// 387 of `det_mul.rs`) is proved by well-founded recursion on `m`, and this
+/// test's OWN frame is large (many locals live across the whole function
+/// body in an unoptimized build — the main loop, three negative controls,
+/// the empty-window loop, and the one-row-window check all declare bindings
+/// before the function returns). That caller frame sits on top of building
+/// `rat_prelude::RatPrelude` itself, whose debug row was pinned at EXACTLY
+/// 2,097,152 B by the previous lane's fix (zero margin, predicted to name
+/// the next casualty) — so THIS test's own bulk, not a numeral, is what
+/// pushes the combined depth over the default. Measured 2026-09-03,
+/// `RUST_MIN_STACK` bisected from outside the process (an abort cannot be observed
+/// in-process): aborts at 2,097,152 (checkpointed with `eprintln!` — the
+/// overflow happens inside `built()`, before the test body's own work even
+/// starts), passes at 4,194,304 and every larger power of two tried. Runs on
+/// [`crate::on_a_deep_stack`] for the same reason the other two `det_mul`
+/// tests do.
 #[test]
 fn mat_subst_rows_replaces_the_window_by_relative_index() {
+    crate::on_a_deep_stack(mat_subst_rows_replaces_the_window_by_relative_index_body);
+}
+
+fn mat_subst_rows_replaces_the_window_by_relative_index_body() {
     let (mut kernel, p) = built();
     let mut d = IntDev::new(&mut kernel, p.int);
 

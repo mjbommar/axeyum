@@ -7951,8 +7951,21 @@ fn det_row_expansion_evaluates_at_every_row_and_pins_the_sign() {
 /// What this does NOT catch: a wrong `Nat.ble` **guard order** inside
 /// `Rat.matSkip`. `det_eval_example` (value `13`) and `det_eq_det2` remain the
 /// discriminators for that, exactly as ADR-1135 said.
+///
+/// Every magnitude formed is at most two digits (`13`), so this is not the
+/// unary-numeral cliff `CLAUDE.md` documents. Like `det_mul_tests.rs`'s
+/// `mat_subst_rows_replaces_the_window_by_relative_index`, the abort is the
+/// test's OWN bulk — six blocks, each leaving locals live for the rest of an
+/// unoptimized function body — on top of a `rat` prelude build pinned with
+/// zero debug margin (`artifacts/kernel-stack-envelope.tsv`). Measured
+/// 2026-09-03: aborts at the default 2,097,152, passes at 4,194,304. Runs on
+/// [`crate::on_a_deep_stack`] for the same reason.
 #[test]
 fn det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign() {
+    crate::on_a_deep_stack(det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign_body);
+}
+
+fn det_transpose_and_the_column_expansion_evaluate_and_pin_the_sign_body() {
     use crate::int_prelude::ops::IntDev;
     use crate::nat_prelude::NatOps;
     use crate::rat_prelude::matrix_det::{
