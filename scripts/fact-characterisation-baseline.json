@@ -1,0 +1,18 @@
+{
+  "curated_proved_by_fragment": {
+    "CPoint": 32,
+    "CReal": 171,
+    "Complex": 45,
+    "Int": 90,
+    "List": 17,
+    "Logic": 24,
+    "NRA": 10,
+    "Nat": 241,
+    "QF_UF": 17,
+    "Rat": 192,
+    "none": 24
+  },
+  "curated_proved_total": 940,
+  "observed_proved": 2493,
+  "observed_uncharacterised_proved": 1553
+}

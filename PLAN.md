@@ -138,6 +138,10 @@ now. Nothing was deleted.
 | 2026-09-04 | ftc | `ftc_of_uc_applies_without_a_bounded_witness` + two small-term negative controls; mutation-verified, each mutant kills exactly one test |
 | 2026-09-04 | ftc | Two CURATED facts for the new forms — the first `CReal` FTC facts whose prose says what the theorem asserts |
 | 2026-09-04 | ftc | ADR-1597: the FTC was already proved 2026-08-27, and 64% of `CReal` facts carry prose that refuses to characterise them |
+| 2026-09-04 | persona-absence-audit | `AUDIT-2026-09-04.md`: 76 absence claims checked, 11 false, 12 partial, 51 confirmed, 2 did-not-run |
+| 2026-09-04 | persona-absence-audit | ADR-1605 (proposed): characterisation is a derived three-way ratcheted measurement, not a stored schema field |
+| 2026-09-04 | persona-absence-audit | `check-fact-characterisation.py` + 17-test control suite, registered in `check.sh` and the `justfile` |
+| 2026-09-04 | persona-absence-audit | re-baselined the red `count-landmark-facts.py` pin and fixed one mistitled fact |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -41844,6 +41848,60 @@ recursor but not the auxiliary one, so every field of an auxiliary recursor is
 a byte Lean never reads". Stopping there was right; the reading was wrong.
 
 Detail moved to [`../notes/60-nested-gate.md`](docs/plan/notes/60-nested-gate.md).
+
+**Your lane's block (`DONE`, persona-absence-audit, 2026-09-04).** Every claim
+of absence in `docs/math-department/`'s twelve persona files was re-checked
+against a freshly rebuilt kernel index (`declarations=3575`, positive control
+`AlgS.Hom.firstIso`, which landed the same day). **76 claims checked: 11 are
+FALSE — the thing is proved — 12 more overstate the gap, 51 are confirmed
+absent, and 2 could not be settled by search and are recorded as did-not-run.**
+Findings in [`docs/math-department/AUDIT-2026-09-04.md`](docs/math-department/AUDIT-2026-09-04.md),
+worst-first, each row carrying the evidence command, the declaration name, and
+the landing commit. The twelve persona files and `00-roadmap.md` are NOT
+touched; the coordinator applies the findings.
+
+The worst false absences are the reviewers' own number-one items: `02`'s FTC
+(both directions, `1b91195d0`/`d1bdae9e7`, 2026-08-27), `08`'s weak law of
+large numbers (`Rat.weak_law_of_large_numbers`, `54592604a`, 2026-08-24),
+`02`'s uniform convergence with both interchange theorems (`edb2feb7b`,
+2026-08-27), `01`'s primitive roots (`f04f3eaf4`, the same day the file was
+written), `01`'s unique factorization as a multiset identity (`340dd568d`),
+`07`'s "no Stirling numbers" against ten proved theorems (`33cae3575`), `01`'s
+"totient multiplicativity is not general" against `Nat.totient_mul_of_coprime`
+(`05ad19d54`), `02`'s constructive Rolle/MVT (`db7c56936`/`3a7f3d1e8`), and
+`04`'s "no kernels or images" against twelve `AlgS.Hom.*` declarations
+(`5337d192b`). **Seven of the eleven landed on 2026-08-27**, one week before
+the reviews.
+
+Root cause, re-measured independently of lane `ftc` and decided in
+[ADR-1605](docs/research/09-decisions/adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md):
+the ledger cannot distinguish "no prose has been written" from "there is
+nothing here". 1,054 of 2,764 facts carry the generator's `[generated]` title
+(64.2% of the `CReal` shelf), and a class nobody had counted — 499 proved facts
+titled "Mathlib v4.30 source proposition `<Name>`", which the landmark rule
+scores as characterised and where the Stirling false absence hid. Together
+**1,553 of 2,493 proved facts (62.3%) carry no characterisation of their own.**
+A second, larger axis nobody had measured: **430 kernel theorems and 762 of 789
+definitions have no ledger fact at all**, including `AlgS.Hom.firstIso`.
+
+Implemented rather than left proposed: `scripts/check-fact-characterisation.py`
+(three-way split, two hard guards, and a per-fragment RATCHET on the curated
+count rather than the exact pin next door), its 17-test control suite with a
+full mutation table in the ADR, and registration in both `scripts/check.sh` and
+the `justfile`. Deliberately NOT done: a `characterisation_status` schema field
+(derivable, would drift, 1,054 file edits against a gated schema) — the ADR
+argues that alternative down. The kernel-vs-ledger coverage gate is sized at
+half a day in the ADR and left proposed; it needs a committed declaration index
+and a staleness guard, which is the load-bearing part.
+
+**Two off-lane findings.** (1) `scripts/count-landmark-facts.py --check` was
+RED on `main` at `182d0dd7d` — `baseline=2758 measured=2764` — because two
+lanes landed six facts on 2026-09-04 and neither bumped the generated baseline;
+re-baselined here. (2) `artifacts/facts/F-int-euler-totient-theorem.json`
+carried a full curated statement of Euler's totient theorem under a "prose not
+curated" title, so both the landmark count and the new checker scored a
+characterised fact as uncharacterised; the title is corrected, and it is the
+one live violation the new `PROSE_DISAGREEMENT` guard found on its first run.
 
 **The reconstruction context's carrier is now a parameter, and the constructed
 reals already satisfy it (`WIP`, agent-real-migration, 2026-08-18).**
