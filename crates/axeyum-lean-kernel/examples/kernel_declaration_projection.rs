@@ -51,10 +51,8 @@ use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_intspace_prelude,
     build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm, build_logic_prelude,
-    build_metric_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
-    build_list_nat_bridge, build_list_perm, build_logic_prelude, build_metric_prelude,
-    build_nat_prelude, build_rat_prelude, build_rn_prelude, build_string_prelude,
+    build_metric_prelude, build_nat_prelude, build_rat_prelude, build_rn_prelude,
+    build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
