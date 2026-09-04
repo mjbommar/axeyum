@@ -79,6 +79,23 @@ fn all_declarations(p: MetricPrelude) -> Vec<(String, crate::name::NameId)> {
         ("Metric.TendsTo".into(), p.tends_to),
         ("Metric.Complete".into(), p.complete),
         ("Metric.creal_complete".into(), p.creal_complete),
+        ("Metric.CPoint.equivRefl".into(), p.cpoint_equiv_refl),
+        ("Metric.CPoint.equivSymm".into(), p.cpoint_equiv_symm),
+        ("Metric.CPoint.equivTrans".into(), p.cpoint_equiv_trans),
+        ("Metric.CPoint.subTelescope".into(), p.cpoint_sub_telescope),
+        (
+            "Metric.CPoint.dotLeSqrtMul".into(),
+            p.cpoint_dot_le_sqrt_mul,
+        ),
+        ("Metric.CPoint.dist".into(), p.cpoint_dist),
+        ("Metric.CPoint.distCongr".into(), p.cpoint_dist_congr),
+        ("Metric.CPoint.distSelf".into(), p.cpoint_dist_self),
+        ("Metric.CPoint.distEquiv".into(), p.cpoint_dist_equiv),
+        ("Metric.CPoint.distComm".into(), p.cpoint_dist_comm),
+        ("Metric.CPoint.distSqExpand".into(), p.cpoint_dist_sq_expand),
+        ("Metric.CPoint.distTriangle".into(), p.cpoint_dist_triangle),
+        ("Metric.cpoint".into(), p.cpoint_metric),
+        ("Metric.cpoint_dist".into(), p.cpoint_dist_reduces),
     ];
     for i in 0..p.record.field_count() {
         out.push((format!("Metric selector {i}"), p.record.sel(i)));
@@ -94,7 +111,7 @@ fn every_metric_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        23 + FIELD_COUNT,
+        37 + FIELD_COUNT,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
@@ -178,6 +195,9 @@ fn metric_headline_types_render() {
         ("Metric.creal_complete", p.creal_complete),
         ("Metric.creal_dist", p.creal_dist),
         ("Metric.distTriangle", p.record.sel(DIST_TRIANGLE)),
+        ("Metric.CPoint.distTriangle", p.cpoint_dist_triangle),
+        ("Metric.CPoint.dotLeSqrtMul", p.cpoint_dot_le_sqrt_mul),
+        ("Metric.cpoint_dist", p.cpoint_dist_reduces),
     ] {
         let decl = kernel.environment().get(name).expect("declared");
         let ty = match decl {
@@ -528,6 +548,191 @@ fn dist_reduction_probe(kernel: &mut Kernel, p: MetricPrelude, swapped: bool) ->
     let sum = kernel.app(sum, nr);
     let abs = kernel.const_(c.abs, vec![]);
     let rhs = kernel.app(abs, sum);
+
+    let equiv = kernel.const_(c.equiv, vec![]);
+    let ty = kernel.app(equiv, lhs);
+    let ty = kernel.app(ty, rhs);
+    let refl = kernel.const_(c.equiv_refl, vec![]);
+    let value = kernel.app(refl, rhs);
+    (ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// The Euclidean plane instance.
+// ---------------------------------------------------------------------------
+
+/// Rebuild the plane instance's twelve arguments, with `slot` (if given)
+/// replaced. `Metric.CPoint.dist` is `fun P Q => sqrt (distSq P Q)`.
+fn cpoint_instance_args(
+    kernel: &mut Kernel,
+    p: MetricPrelude,
+    swap: Option<(usize, ExprId)>,
+) -> ExprId {
+    use crate::BinderInfo;
+    let cp = p.cpoint;
+    let c = cp.creal;
+    let point = kernel.const_(cp.point, vec![]);
+    let anon = kernel.anon();
+
+    let nonneg = {
+        // `fun a b => CReal.sqrt_nonneg (CPoint.distSq a b)`
+        let a = kernel.bvar(1);
+        let b = kernel.bvar(0);
+        let dsq = kernel.const_(cp.dist_sq, vec![]);
+        let t = kernel.app(dsq, a);
+        let t = kernel.app(t, b);
+        let lemma = kernel.const_(c.sqrt_nonneg, vec![]);
+        let body = kernel.app(lemma, t);
+        let inner = kernel.lam(anon, point, body, BinderInfo::Default);
+        kernel.lam(anon, point, inner, BinderInfo::Default)
+    };
+
+    let mut args = vec![
+        point,
+        kernel.const_(cp.point_equiv, vec![]),
+        kernel.const_(p.cpoint_equiv_refl, vec![]),
+        kernel.const_(p.cpoint_equiv_symm, vec![]),
+        kernel.const_(p.cpoint_equiv_trans, vec![]),
+        kernel.const_(p.cpoint_dist, vec![]),
+        kernel.const_(p.cpoint_dist_congr, vec![]),
+        nonneg,
+        kernel.const_(p.cpoint_dist_self, vec![]),
+        kernel.const_(p.cpoint_dist_equiv, vec![]),
+        kernel.const_(p.cpoint_dist_comm, vec![]),
+        kernel.const_(p.cpoint_dist_triangle, vec![]),
+    ];
+    assert_eq!(args.len(), FIELD_COUNT);
+    if let Some((slot, replacement)) = swap {
+        args[slot] = replacement;
+    }
+    mk_instance(kernel, &p.record, &args)
+}
+
+/// Positive control: the plane instance's twelve arguments are admitted.
+#[test]
+fn the_plane_instance_is_admitted_with_every_field_in_place() {
+    let (mut kernel, p) = built();
+    let value = cpoint_instance_args(&mut kernel, p, None);
+    let ty = kernel.const_(p.record.ind, vec![]);
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "Check.metric_cpoint_rebuilt");
+    kernel
+        .add_declaration(Declaration::Definition {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: crate::env::ReducibilityHint::Regular(1),
+        })
+        .expect("the rebuilt Euclidean plane instance must be admitted");
+}
+
+/// **`CPoint.distSq` is not a metric, and the kernel says so.** The plane
+/// instance with `Metric.CPoint.dist` replaced by `CPoint.distSq` itself —
+/// the squared distance, everything else untouched — must be refused. This is
+/// the concrete answer to "can the existing `distSq` be the distance field":
+/// no, and the square root is not a stylistic choice.
+#[test]
+fn the_planes_squared_distance_is_refused_as_the_dist_field() {
+    let (mut kernel, p) = built();
+    let raw = kernel.const_(p.cpoint.dist_sq, vec![]);
+    let value = cpoint_instance_args(&mut kernel, p, Some((DIST, raw)));
+    let ty = kernel.const_(p.record.ind, vec![]);
+    let anon = kernel.anon();
+    let name = kernel.name_str(anon, "Check.metric_cpoint_raw_distsq");
+    let result = kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: crate::env::ReducibilityHint::Regular(1),
+    });
+    assert!(
+        result.is_err(),
+        "CPoint.distSq was admitted as a Metric.dist -- the record does not \
+         constrain the distance"
+    );
+}
+
+/// `Metric.dist Metric.cpoint` reduces definitionally to
+/// `fun P Q => sqrt (distSq P Q)`, at SYMBOLIC arguments (see
+/// [`the_creal_instances_dist_reduces_to_abs`] for why numerals will not do).
+#[test]
+fn the_plane_instances_dist_reduces_to_sqrt_dist_sq() {
+    use crate::BinderInfo;
+    let (mut kernel, p) = built();
+    let point = kernel.const_(p.cpoint.point, vec![]);
+    let anon = kernel.anon();
+    let (ty, value) = plane_reduction_probe(&mut kernel, p, false);
+    let ty = {
+        let inner = kernel.pi(anon, point, ty, BinderInfo::Default);
+        kernel.pi(anon, point, inner, BinderInfo::Default)
+    };
+    let value = {
+        let inner = kernel.lam(anon, point, value, BinderInfo::Default);
+        kernel.lam(anon, point, inner, BinderInfo::Default)
+    };
+    let name = kernel.name_str(anon, "Check.metric_cpoint_dist_symbolic");
+    kernel
+        .add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .expect("Metric.dist Metric.cpoint P Q must reduce to sqrt (distSq P Q)");
+}
+
+/// Negative control: the same `Equiv.refl` against `sqrt (distSq Q P)` — the
+/// swapped distance — must be refused. `distSq P Q ~ distSq Q P` is a
+/// theorem (`CPoint.distSq_comm`), not a reduction.
+#[test]
+fn the_plane_reduction_probe_is_not_vacuous() {
+    use crate::BinderInfo;
+    let (mut kernel, p) = built();
+    let point = kernel.const_(p.cpoint.point, vec![]);
+    let anon = kernel.anon();
+    let (ty, value) = plane_reduction_probe(&mut kernel, p, true);
+    let ty = {
+        let inner = kernel.pi(anon, point, ty, BinderInfo::Default);
+        kernel.pi(anon, point, inner, BinderInfo::Default)
+    };
+    let value = {
+        let inner = kernel.lam(anon, point, value, BinderInfo::Default);
+        kernel.lam(anon, point, inner, BinderInfo::Default)
+    };
+    let name = kernel.name_str(anon, "Check.metric_cpoint_dist_swapped");
+    let result = kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    });
+    assert!(
+        result.is_err(),
+        "Equiv.refl proved sqrt(distSq P Q) ~ sqrt(distSq Q P) by reduction -- \
+         the probe above is vacuous"
+    );
+}
+
+fn plane_reduction_probe(kernel: &mut Kernel, p: MetricPrelude, swapped: bool) -> (ExprId, ExprId) {
+    let cp = p.cpoint;
+    let c = cp.creal;
+    let a = kernel.bvar(1);
+    let b = kernel.bvar(0);
+
+    let selector = kernel.const_(p.record.sel(DIST), vec![]);
+    let inst = kernel.const_(p.cpoint_metric, vec![]);
+    let lhs = kernel.app(selector, inst);
+    let lhs = kernel.app(lhs, a);
+    let lhs = kernel.app(lhs, b);
+
+    let (l, r) = if swapped { (b, a) } else { (a, b) };
+    let dsq = kernel.const_(cp.dist_sq, vec![]);
+    let t = kernel.app(dsq, l);
+    let t = kernel.app(t, r);
+    let sqrt = kernel.const_(c.sqrt, vec![]);
+    let rhs = kernel.app(sqrt, t);
 
     let equiv = kernel.const_(c.equiv, vec![]);
     let ty = kernel.app(equiv, lhs);

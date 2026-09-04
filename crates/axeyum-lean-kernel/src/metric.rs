@@ -455,6 +455,41 @@ pub struct MetricPrelude {
     /// `Metric.Complete M := ∀ f, Metric.Cauchy M f →
     /// ∃ L, Metric.TendsTo M f L`.
     pub complete: NameId,
+    /// `Metric.CPoint.equivRefl : ∀ P, CPoint.Equiv P P` — the plane prelude
+    /// builds this inline and never names it.
+    pub cpoint_equiv_refl: NameId,
+    /// `Metric.CPoint.equivSymm`.
+    pub cpoint_equiv_symm: NameId,
+    /// `Metric.CPoint.equivTrans`.
+    pub cpoint_equiv_trans: NameId,
+    /// `Metric.CPoint.subTelescope : ∀ A B C,
+    /// CPoint.Equiv (sub A C) (add (sub A B) (sub B C))`.
+    pub cpoint_sub_telescope: NameId,
+    /// `Metric.CPoint.dotLeSqrtMul : ∀ U V,
+    /// CReal.le (dot U V) (CReal.sqrt (mul (dot U U) (dot V V)))` —
+    /// **unsquared Cauchy–Schwarz**, the step `CPoint.cauchy_schwarz` (which
+    /// is squared) does not give.
+    pub cpoint_dot_le_sqrt_mul: NameId,
+    /// `Metric.CPoint.dist := fun P Q => CReal.sqrt (CPoint.distSq P Q)`.
+    pub cpoint_dist: NameId,
+    /// `Metric.CPoint.distCongr`.
+    pub cpoint_dist_congr: NameId,
+    /// `Metric.CPoint.distSelf`.
+    pub cpoint_dist_self: NameId,
+    /// `Metric.CPoint.distEquiv`.
+    pub cpoint_dist_equiv: NameId,
+    /// `Metric.CPoint.distComm`.
+    pub cpoint_dist_comm: NameId,
+    /// `Metric.CPoint.distSqExpand : ∀ A B C, Equiv (distSq A C)
+    /// (add (dot U U) (add (dot U V) (add (dot U V) (dot V V))))`.
+    pub cpoint_dist_sq_expand: NameId,
+    /// `Metric.CPoint.distTriangle` — **Euclid I.20 on the UNSQUARED
+    /// distance**, which the plane prelude's own squared bounds stop short of.
+    pub cpoint_dist_triangle: NameId,
+    /// `Metric.cpoint : Metric` — the Euclidean plane.
+    pub cpoint_metric: NameId,
+    /// `Metric.cpoint_dist` — the reduction probe for the plane instance.
+    pub cpoint_dist_reduces: NameId,
     /// `Metric.creal_complete : Metric.Complete Metric.creal` — **the
     /// generalization**: `CReal.converges_of_cauchy` becomes an instance of a
     /// statement about metric spaces.
@@ -486,6 +521,7 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
     let root = kernel.anon();
     let metric = kernel.name_str(root, "Metric");
     let creal_ns = kernel.name_str(metric, "CReal");
+    let cpoint_ns = kernel.name_str(metric, "CPoint");
 
     let mk = kernel.name_str(metric, "mk");
     let rec = kernel.name_str(metric, "rec");
@@ -524,6 +560,20 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
         tends_to: kernel.name_str(metric, "TendsTo"),
         complete: kernel.name_str(metric, "Complete"),
         creal_complete: kernel.name_str(metric, "creal_complete"),
+        cpoint_equiv_refl: kernel.name_str(cpoint_ns, "equivRefl"),
+        cpoint_equiv_symm: kernel.name_str(cpoint_ns, "equivSymm"),
+        cpoint_equiv_trans: kernel.name_str(cpoint_ns, "equivTrans"),
+        cpoint_sub_telescope: kernel.name_str(cpoint_ns, "subTelescope"),
+        cpoint_dot_le_sqrt_mul: kernel.name_str(cpoint_ns, "dotLeSqrtMul"),
+        cpoint_dist: kernel.name_str(cpoint_ns, "dist"),
+        cpoint_dist_congr: kernel.name_str(cpoint_ns, "distCongr"),
+        cpoint_dist_self: kernel.name_str(cpoint_ns, "distSelf"),
+        cpoint_dist_equiv: kernel.name_str(cpoint_ns, "distEquiv"),
+        cpoint_dist_comm: kernel.name_str(cpoint_ns, "distComm"),
+        cpoint_dist_sq_expand: kernel.name_str(cpoint_ns, "distSqExpand"),
+        cpoint_dist_triangle: kernel.name_str(cpoint_ns, "distTriangle"),
+        cpoint_metric: kernel.name_str(metric, "cpoint"),
+        cpoint_dist_reduces: kernel.name_str(metric, "cpoint_dist"),
     }
 }
 
@@ -585,6 +635,21 @@ pub fn build_metric_prelude(kernel: &mut Kernel) -> Result<MetricPrelude, Kernel
     declare_tends_to(&mut d, creal, p)?;
     declare_complete(&mut d, creal, p)?;
     declare_creal_complete(&mut d, creal, p)?;
+
+    declare_cpoint_equiv_refl(&mut d, cpoint, p)?;
+    declare_cpoint_equiv_symm(&mut d, cpoint, p)?;
+    declare_cpoint_equiv_trans(&mut d, cpoint, p)?;
+    declare_cpoint_sub_telescope(&mut d, cpoint, p)?;
+    declare_cpoint_dot_le_sqrt_mul(&mut d, cpoint, p)?;
+    declare_cpoint_dist(&mut d, cpoint, p)?;
+    declare_cpoint_dist_congr(&mut d, cpoint, p)?;
+    declare_cpoint_dist_self(&mut d, cpoint, p)?;
+    declare_cpoint_dist_equiv(&mut d, cpoint, p)?;
+    declare_cpoint_dist_comm(&mut d, cpoint, p)?;
+    declare_cpoint_dist_sq_expand(&mut d, cpoint, p)?;
+    declare_cpoint_dist_triangle(&mut d, cpoint, p)?;
+    declare_cpoint_metric(&mut d, cpoint, p)?;
+    declare_cpoint_dist_reduces(&mut d, cpoint, p)?;
 
     Ok(p)
 }
@@ -1814,6 +1879,850 @@ fn declare_creal_complete(
     };
     let ty = d.const_app(p.complete, &[inst]);
     theorem(d, p.creal_complete, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// The Euclidean plane instance.
+//
+// `CPoint.distSq` is the SQUARED distance and is not a metric: `d(0,2)² = 4 >
+// 1 + 1 = d(0,1)² + d(1,2)²`. `metric_tests::a_squared_distance_is_refused_as_
+// a_metric` makes that concrete against this very record. So the instance has
+// to take a square root, and the triangle inequality has to be proved in its
+// UNSQUARED form — which `CPoint.dist_sq_triangle_sq_bound` (the squared,
+// Lagrange-derived bound) and `CPoint.cauchy_schwarz` (squared) do not give.
+//
+// The gap is exactly one lemma, `Metric.CPoint.dotLeSqrtMul` — unsquared
+// Cauchy-Schwarz, `⟨U,V⟩ ≤ sqrt(⟨U,U⟩·⟨V,V⟩)`. It needs `CReal.mul_self_abs`
+// to recover `t` from `t²` with NO sign hypothesis (the cross term `⟨U,V⟩`
+// has no known sign, and `CReal` has no `le_or_lt`); that is the same fact
+// `Complex.abs_add_le` needed, and the reason both were out of reach before
+// `mul_self_abs` landed. See `ComplexPrelude::norm_sq_add_le`'s doc for the
+// refuted attempts.
+// ---------------------------------------------------------------------------
+
+fn pty(d: &mut IntDev<'_>, cp: CPointPrelude) -> ExprId {
+    d.kernel().const_(cp.point, vec![])
+}
+fn psub(d: &mut IntDev<'_>, cp: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(cp.point_sub, &[a, b])
+}
+fn padd(d: &mut IntDev<'_>, cp: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(cp.point_add, &[a, b])
+}
+fn pdot(d: &mut IntDev<'_>, cp: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(cp.dot, &[a, b])
+}
+fn pdist_sq(d: &mut IntDev<'_>, cp: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(cp.dist_sq, &[a, b])
+}
+fn peq(d: &mut IntDev<'_>, cp: CPointPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(cp.point_equiv, &[a, b])
+}
+fn rmul(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId {
+    d.const_app(c.mul, &[a, b])
+}
+fn rsqrt(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId {
+    d.const_app(c.sqrt, &[a])
+}
+
+/// `Metric.CPoint.subTelescope : ∀ A B C,
+/// CPoint.Equiv (sub A C) (add (sub A B) (sub B C))`.
+///
+/// Coordinatewise [`declare_creal_sub_telescope`], run backwards. The plane
+/// prelude builds this same fact inline (`point_sub_telescope_fact`) but
+/// never gives it a name, so there is nothing to apply.
+fn declare_cpoint_sub_telescope(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let cc = d.kernel().fvar(c_fv);
+
+    let ac = psub(d, cp, a, cc);
+    let ab = psub(d, cp, a, b);
+    let bc = psub(d, cp, b, cc);
+    let sum = padd(d, cp, ab, bc);
+
+    let mut halves: Vec<ExprId> = Vec::with_capacity(2);
+    let mut claims: Vec<ExprId> = Vec::with_capacity(2);
+    for projection in [cp.x, cp.y] {
+        let lhs = d.const_app(projection, &[ac]);
+        let rhs = d.const_app(projection, &[sum]);
+        claims.push(req(d, c, lhs, rhs));
+        let pa = d.const_app(projection, &[a]);
+        let pb = d.const_app(projection, &[b]);
+        let pc = d.const_app(projection, &[cc]);
+        let forward = d.lemma(p.creal_sub_telescope, &[pa, pb, pc]);
+        let npb = rneg(d, c, pb);
+        let npc = rneg(d, c, pc);
+        let u = radd(d, c, pa, npb);
+        let v = radd(d, c, pb, npc);
+        let uv = radd(d, c, u, v);
+        let target = radd(d, c, pa, npc);
+        halves.push(rsymm(d, c, uv, target, forward));
+    }
+
+    let intro = c.rat.int.logic.and_intro;
+    let body = d.const_app(intro, &[claims[0], claims[1], halves[0], halves[1]]);
+
+    let value = {
+        let t = d.lam_fv(c_fv, point, body);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = peq(d, cp, ac, sum);
+        let t = d.pi_fv(c_fv, point, concl);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_sub_telescope, ty, value)
+}
+
+/// `Metric.CPoint.dotLeSqrtMul : ∀ U V,
+/// CReal.le (dot U V) (CReal.sqrt (mul (dot U U) (dot V V)))`.
+///
+/// **Unsquared Cauchy–Schwarz.** `CPoint.cauchy_schwarz` gives
+/// `⟨U,V⟩² ≤ ⟨U,U⟩⟨V,V⟩`; `sqrt_le_sqrt` carries that under the root, and the
+/// only real step is `sqrt(t·t) ~ |t|`, which is `sqrt_sq` at `|t|` composed
+/// with `mul_self_abs`. `sqrt_sq` alone will not do it: it needs `0 ≤ t`, and
+/// the cross term `⟨U,V⟩` has no known sign.
+fn declare_cpoint_dot_le_sqrt_mul(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+
+    let uu = pdot(d, cp, u, u);
+    let uv = pdot(d, cp, u, v);
+    let vv = pdot(d, cp, v, v);
+    let uv_sq = rmul(d, c, uv, uv);
+    let uu_vv = rmul(d, c, uu, vv);
+    let target = rsqrt(d, c, uu_vv);
+
+    let cs = d.lemma(cp.cauchy_schwarz, &[u, v]); // le (uv·uv) (uu·vv)
+    let s1 = d.lemma(c.sqrt_le_sqrt, &[uv_sq, uu_vv, cs]); // le (sqrt (uv·uv)) target
+
+    let abs_uv = rabs(d, c, uv);
+    let abs_sq = rmul(d, c, abs_uv, abs_uv);
+    let msa = d.lemma(c.mul_self_abs, &[uv]); // Equiv (|uv|·|uv|) (uv·uv)
+    let msa_symm = rsymm(d, c, abs_sq, uv_sq, msa);
+    let sqrt_uv_sq = rsqrt(d, c, uv_sq);
+    let sqrt_abs_sq = rsqrt(d, c, abs_sq);
+    let sc = d.lemma(c.sqrt_congr, &[uv_sq, abs_sq, msa_symm]);
+    let nonneg_abs = d.lemma(c.abs_nonneg, &[uv]);
+    let ss = d.lemma(c.sqrt_sq, &[abs_uv, nonneg_abs]); // Equiv (sqrt (|uv|·|uv|)) |uv|
+    let (_, e) = rchain(d, c, sqrt_uv_sq, &[(sqrt_abs_sq, sc), (abs_uv, ss)]);
+
+    let refl_t = rrefl(d, c, target);
+    let s2 = d.lemma(
+        c.le_congr,
+        &[sqrt_uv_sq, abs_uv, target, target, e, refl_t, s1],
+    );
+    let self_le = d.lemma(c.le_abs_self, &[uv]);
+    let body = d.lemma(c.le_trans, &[uv, abs_uv, target, self_le, s2]);
+
+    let value = {
+        let t = d.lam_fv(v_fv, point, body);
+        d.lam_fv(u_fv, point, t)
+    };
+    let ty = {
+        let concl = rle(d, c, uv, target);
+        let t = d.pi_fv(v_fv, point, concl);
+        d.pi_fv(u_fv, point, t)
+    };
+    theorem(d, p.cpoint_dot_le_sqrt_mul, ty, value)
+}
+
+/// `Metric.CPoint.dist : CPoint → CPoint → CReal
+/// := fun P Q => CReal.sqrt (CPoint.distSq P Q)`.
+fn declare_cpoint_dist(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let carrier = rty(d, c);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let dsq = pdist_sq(d, cp, a, b);
+    let body = rsqrt(d, c, dsq);
+    let value = {
+        let t = d.lam_fv(b_fv, point, body);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let inner = d.arrow(point, carrier);
+        d.arrow(point, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.cpoint_dist,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })
+}
+
+/// `Metric.CPoint.distCongr` — `distSq_congr` under `sqrt_congr`.
+fn declare_cpoint_dist_congr(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let ap_fv = d.fresh_fvar();
+    let ap = d.kernel().fvar(ap_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let bp_fv = d.fresh_fvar();
+    let bp = d.kernel().fvar(bp_fv);
+
+    let ha_ty = peq(d, cp, a, ap);
+    let ha_fv = d.fresh_fvar();
+    let ha = d.kernel().fvar(ha_fv);
+    let hb_ty = peq(d, cp, b, bp);
+    let hb_fv = d.fresh_fvar();
+    let hb = d.kernel().fvar(hb_fv);
+
+    let d1 = pdist_sq(d, cp, a, b);
+    let d2 = pdist_sq(d, cp, ap, bp);
+    let hs = d.lemma(cp.dist_sq_congr, &[a, ap, b, bp, ha, hb]);
+    let body = d.lemma(c.sqrt_congr, &[d1, d2, hs]);
+
+    let value = {
+        let t = d.lam_fv(hb_fv, hb_ty, body);
+        let t = d.lam_fv(ha_fv, ha_ty, t);
+        let t = d.lam_fv(bp_fv, point, t);
+        let t = d.lam_fv(b_fv, point, t);
+        let t = d.lam_fv(ap_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let l = rsqrt(d, c, d1);
+        let r = rsqrt(d, c, d2);
+        let concl = req(d, c, l, r);
+        let t = d.arrow(hb_ty, concl);
+        let t = d.arrow(ha_ty, t);
+        let t = d.pi_fv(bp_fv, point, t);
+        let t = d.pi_fv(b_fv, point, t);
+        let t = d.pi_fv(ap_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_congr, ty, value)
+}
+
+/// `Metric.CPoint.distSelf : ∀ A B, CPoint.Equiv A B →
+/// Equiv (sqrt (distSq A B)) zero`.
+fn declare_cpoint_dist_self(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let h_ty = peq(d, cp, a, b);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let z = rzero(d, c);
+    let dsq = pdist_sq(d, cp, a, b);
+    let sq = rsqrt(d, c, dsq);
+    let sqrt_z = rsqrt(d, c, z);
+
+    let hz = d.lemma(cp.dist_sq_eq_zero_of_equiv, &[a, b, h]); // Equiv (distSq A B) 0
+    let s1 = d.lemma(c.sqrt_congr, &[dsq, z, hz]);
+    let s2 = d.lemma(c.sqrt_zero, &[]);
+    let (_, body) = rchain(d, c, sq, &[(sqrt_z, s1), (z, s2)]);
+
+    let value = {
+        let t = d.lam_fv(h_fv, h_ty, body);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = req(d, c, sq, z);
+        let t = d.arrow(h_ty, concl);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_self, ty, value)
+}
+
+/// `Metric.CPoint.distEquiv : ∀ A B, Equiv (sqrt (distSq A B)) zero →
+/// CPoint.Equiv A B`.
+///
+/// `sqrt D ~ 0` gives `D ~ sqrt D · sqrt D ~ 0 · 0 ~ 0` (`mul_self_sqrt`
+/// backwards, then `mul_congr`, then `mul_zero`), and
+/// `CPoint.eq_zero_of_distSq_eq_zero` closes it. `mul_self_sqrt` needs
+/// `0 ≤ D`, which is `dot_self_nonneg` at `sub A B`.
+fn declare_cpoint_dist_equiv(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let z = rzero(d, c);
+    let dsq = pdist_sq(d, cp, a, b);
+    let sq = rsqrt(d, c, dsq);
+    let h_ty = req(d, c, sq, z);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ab = psub(d, cp, a, b);
+    let nonneg = d.lemma(cp.dot_self_nonneg, &[ab]); // le zero (dot (sub A B) (sub A B))
+    let sq_sq = rmul(d, c, sq, sq);
+    let ms = d.lemma(c.mul_self_sqrt, &[dsq, nonneg]); // Equiv (sqrt D · sqrt D) D
+    let ms_symm = rsymm(d, c, sq_sq, dsq, ms); // Equiv D (sqrt D · sqrt D)
+    let zz = rmul(d, c, z, z);
+    let mc = d.lemma(c.mul_congr, &[sq, z, sq, z, h, h]); // Equiv (sqrt D · sqrt D) (0·0)
+    let mz = d.lemma(c.mul_zero, &[z]); // Equiv (0·0) 0
+    let (_, dz) = rchain(d, c, dsq, &[(sq_sq, ms_symm), (zz, mc), (z, mz)]);
+    let body = d.lemma(cp.eq_zero_of_dist_sq_eq_zero, &[a, b, dz]);
+
+    let value = {
+        let t = d.lam_fv(h_fv, h_ty, body);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = peq(d, cp, a, b);
+        let t = d.arrow(h_ty, concl);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_equiv, ty, value)
+}
+
+/// `Metric.CPoint.distComm` — `distSq_comm` under `sqrt_congr`.
+fn declare_cpoint_dist_comm(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let d1 = pdist_sq(d, cp, a, b);
+    let d2 = pdist_sq(d, cp, b, a);
+    let hc = d.lemma(cp.dist_sq_comm, &[a, b]);
+    let body = d.lemma(c.sqrt_congr, &[d1, d2, hc]);
+
+    let value = {
+        let t = d.lam_fv(b_fv, point, body);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let l = rsqrt(d, c, d1);
+        let r = rsqrt(d, c, d2);
+        let concl = req(d, c, l, r);
+        let t = d.pi_fv(b_fv, point, concl);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_comm, ty, value)
+}
+
+/// `Metric.CPoint.distSqExpand : ∀ A B C,
+/// Equiv (distSq A C) (add uu (add uv (add uv vv)))`, with `U := sub A B`,
+/// `V := sub B C`. The bilinear expansion, via
+/// [`declare_cpoint_sub_telescope`] and `CPoint.dot_self_add`.
+fn declare_cpoint_dist_sq_expand(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let cc = d.kernel().fvar(c_fv);
+
+    let u = psub(d, cp, a, b);
+    let v = psub(d, cp, b, cc);
+    let ac = psub(d, cp, a, cc);
+    let uv_pt = padd(d, cp, u, v);
+    let uu = pdot(d, cp, u, u);
+    let uv = pdot(d, cp, u, v);
+    let vv = pdot(d, cp, v, v);
+    let dsq = pdist_sq(d, cp, a, cc);
+    let dot_uvuv = pdot(d, cp, uv_pt, uv_pt);
+    let inner = radd(d, c, uv, vv);
+    let mid = radd(d, c, uv, inner);
+    let expanded = radd(d, c, uu, mid);
+
+    let tel = d.lemma(p.cpoint_sub_telescope, &[a, b, cc]);
+    let s1 = d.lemma(cp.dot_congr, &[ac, uv_pt, ac, uv_pt, tel, tel]);
+    let s2 = d.lemma(cp.dot_self_add, &[u, v]);
+    let (_, body) = rchain(d, c, dsq, &[(dot_uvuv, s1), (expanded, s2)]);
+
+    let value = {
+        let t = d.lam_fv(c_fv, point, body);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = req(d, c, dsq, expanded);
+        let t = d.pi_fv(c_fv, point, concl);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_sq_expand, ty, value)
+}
+
+/// `Metric.CPoint.distTriangle : ∀ A B C,
+/// le (sqrt (distSq A C)) (add (sqrt (distSq A B)) (sqrt (distSq B C)))`.
+///
+/// **Euclid I.20 on the unsquared distance** — the statement the plane
+/// prelude's own `dist_sq_triangle_sq_bound` and `dist_sq_double_sum_bound`
+/// deliberately stop short of, because neither is expressible without a
+/// square root.
+///
+/// The route, all of it composition:
+///
+/// 1. `distSq A C ~ ⟨U,U⟩ + (⟨U,V⟩ + (⟨U,V⟩ + ⟨V,V⟩))`
+///    ([`declare_cpoint_dist_sq_expand`]);
+/// 2. `⟨U,V⟩ ≤ sqrt(⟨U,U⟩⟨V,V⟩) ~ a·c` where `a = sqrt⟨U,U⟩`, `c = sqrt⟨V,V⟩`
+///    ([`declare_cpoint_dot_le_sqrt_mul`] then `CReal.sqrt_mul`);
+/// 3. `⟨U,U⟩ ~ a·a` and `⟨V,V⟩ ~ c·c` (`mul_self_sqrt`), so the whole
+///    expansion is `≤ a·a + (a·c + (a·c + c·c))`;
+/// 4. that right-hand side `~ (a+c)·(a+c)` (two `left_distrib`s, three
+///    `mul_comm`s and one `add_assoc` — the ring step, spelled out because
+///    the reals prelude has no `sq_add`);
+/// 5. `CReal.le_of_sq_le` cancels the square, with `0 ≤ sqrt(distSq A C)` and
+///    `0 ≤ a + c` from `sqrt_nonneg`.
+fn declare_cpoint_dist_triangle(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let pa = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let pb = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let pc = d.kernel().fvar(c_fv);
+
+    let z = rzero(d, c);
+    let u = psub(d, cp, pa, pb);
+    let v = psub(d, cp, pb, pc);
+    let ac = psub(d, cp, pa, pc);
+    let uu = pdot(d, cp, u, u);
+    let uv = pdot(d, cp, u, v);
+    let vv = pdot(d, cp, v, v);
+
+    let d_ab = pdist_sq(d, cp, pa, pb);
+    let d_bc = pdist_sq(d, cp, pb, pc);
+    let d_ac = pdist_sq(d, cp, pa, pc);
+
+    // `a`, `cq` and `x` are the three unsquared distances. Note `distSq A B`
+    // and `dot U U` are the SAME term up to delta; the statement uses the
+    // `distSq` spelling and the proof the `dot` one.
+    let a = rsqrt(d, c, d_ab);
+    let cq = rsqrt(d, c, d_bc);
+    let x = rsqrt(d, c, d_ac);
+    let s = radd(d, c, a, cq);
+
+    let hu = d.lemma(cp.dot_self_nonneg, &[u]); // le zero uu
+    let hv = d.lemma(cp.dot_self_nonneg, &[v]); // le zero vv
+    let hw = d.lemma(cp.dot_self_nonneg, &[ac]); // le zero (distSq A C)
+    let hx = d.lemma(c.sqrt_nonneg, &[d_ac]);
+    let ha = d.lemma(c.sqrt_nonneg, &[d_ab]);
+    let hc = d.lemma(c.sqrt_nonneg, &[d_bc]);
+
+    // hs : le zero (a + cq)
+    let hs = {
+        let zz = radd(d, c, z, z);
+        let step = d.lemma(c.add_le_add, &[z, a, z, cq, ha, hc]); // le (0+0) (a+cq)
+        let az = d.lemma(c.add_zero, &[z]); // Equiv (0+0) 0
+        let refl_s = rrefl(d, c, s);
+        d.lemma(c.le_congr, &[zz, z, s, s, az, refl_s, step])
+    };
+
+    // e_expand : Equiv (distSq A C) E, E := uu + (uv + (uv + vv))
+    let e_expand = d.lemma(p.cpoint_dist_sq_expand, &[pa, pb, pc]);
+    let inner = radd(d, c, uv, vv);
+    let mid = radd(d, c, uv, inner);
+    let big_e = radd(d, c, uu, mid);
+
+    // cross : le uv (a·cq)
+    let uu_vv = rmul(d, c, uu, vv);
+    let sqrt_uuvv = rsqrt(d, c, uu_vv);
+    let a_cq = rmul(d, c, a, cq);
+    let cross = {
+        let raw = d.lemma(p.cpoint_dot_le_sqrt_mul, &[u, v]); // le uv (sqrt (uu·vv))
+        let split = d.lemma(c.sqrt_mul, &[uu, vv, hu, hv]); // Equiv (sqrt (uu·vv)) (a·cq)
+        let refl_uv = rrefl(d, c, uv);
+        d.lemma(c.le_congr, &[uv, uv, sqrt_uuvv, a_cq, refl_uv, split, raw])
+    };
+
+    // huu : le uu (a·a), hvv : le vv (cq·cq)
+    let a_a = rmul(d, c, a, a);
+    let cq_cq = rmul(d, c, cq, cq);
+    let huu = {
+        let ms = d.lemma(c.mul_self_sqrt, &[d_ab, hu]); // Equiv (a·a) uu
+        let sym = rsymm(d, c, a_a, uu, ms);
+        d.lemma(c.le_of_equiv, &[uu, a_a, sym])
+    };
+    let hvv = {
+        let ms = d.lemma(c.mul_self_sqrt, &[d_bc, hv]); // Equiv (cq·cq) vv
+        let sym = rsymm(d, c, cq_cq, vv, ms);
+        d.lemma(c.le_of_equiv, &[vv, cq_cq, sym])
+    };
+
+    // le E E', E' := a·a + (a·cq + (a·cq + cq·cq))
+    let inner_p = radd(d, c, a_cq, cq_cq);
+    let mid_p = radd(d, c, a_cq, inner_p);
+    let big_ep = radd(d, c, a_a, mid_p);
+    let l1 = d.lemma(c.add_le_add, &[uv, a_cq, vv, cq_cq, cross, hvv]);
+    let l2 = d.lemma(c.add_le_add, &[uv, a_cq, inner, inner_p, cross, l1]);
+    let l3 = d.lemma(c.add_le_add, &[uu, a_a, mid, mid_p, huu, l2]);
+
+    // ring : Equiv (s·s) E'
+    let s_s = rmul(d, c, s, s);
+    let s_a = rmul(d, c, s, a);
+    let s_cq = rmul(d, c, s, cq);
+    let ring = {
+        // (a+cq)·(a+cq) ~ (a+cq)·a + (a+cq)·cq
+        let d1 = d.lemma(c.left_distrib, &[s, a, cq]);
+        let split = radd(d, c, s_a, s_cq);
+
+        // (a+cq)·a ~ a·a + a·cq
+        let left = {
+            let comm = d.lemma(c.mul_comm, &[s, a]); // Equiv (s·a) (a·s)
+            let a_s = rmul(d, c, a, s);
+            let dist = d.lemma(c.left_distrib, &[a, a, cq]); // Equiv (a·s) (a·a + a·cq)
+            let sum = radd(d, c, a_a, a_cq);
+            let (_, pr) = rchain(d, c, s_a, &[(a_s, comm), (sum, dist)]);
+            (sum, pr)
+        };
+        // (a+cq)·cq ~ a·cq + cq·cq
+        let right = {
+            let comm = d.lemma(c.mul_comm, &[s, cq]); // Equiv (s·cq) (cq·s)
+            let cq_s = rmul(d, c, cq, s);
+            let dist = d.lemma(c.left_distrib, &[cq, a, cq]); // Equiv (cq·s) (cq·a + cq·cq)
+            let cq_a = rmul(d, c, cq, a);
+            let raw = radd(d, c, cq_a, cq_cq);
+            let swap = d.lemma(c.mul_comm, &[cq, a]); // Equiv (cq·a) (a·cq)
+            let refl_cc = rrefl(d, c, cq_cq);
+            let fix = d.lemma(c.add_congr, &[cq_a, a_cq, cq_cq, cq_cq, swap, refl_cc]);
+            let (_, pr) = rchain(d, c, s_cq, &[(cq_s, comm), (raw, dist), (inner_p, fix)]);
+            (inner_p, pr)
+        };
+
+        let (left_t, left_p) = left;
+        let (right_t, right_p) = right;
+        let combined = radd(d, c, left_t, right_t);
+        let cg = d.lemma(c.add_congr, &[s_a, left_t, s_cq, right_t, left_p, right_p]);
+        // (a·a + a·cq) + (a·cq + cq·cq) ~ a·a + (a·cq + (a·cq + cq·cq))
+        let assoc = d.lemma(c.add_assoc, &[a_a, a_cq, inner_p]);
+        let (_, pr) = rchain(d, c, s_s, &[(split, d1), (combined, cg), (big_ep, assoc)]);
+        pr
+    };
+
+    // le (x·x) (s·s)
+    let x_x = rmul(d, c, x, x);
+    let sq_bound = {
+        let ms = d.lemma(c.mul_self_sqrt, &[d_ac, hw]); // Equiv (x·x) (distSq A C)
+        let (_, to_e) = rchain(d, c, x_x, &[(d_ac, ms), (big_e, e_expand)]);
+        let e_to_xx = rsymm(d, c, x_x, big_e, to_e);
+        let ep_to_ss = rsymm(d, c, s_s, big_ep, ring);
+        d.lemma(
+            c.le_congr,
+            &[big_e, x_x, big_ep, s_s, e_to_xx, ep_to_ss, l3],
+        )
+    };
+
+    let body = d.lemma(c.le_of_sq_le, &[x, s, hx, hs, sq_bound]);
+
+    let value = {
+        let t = d.lam_fv(c_fv, point, body);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = rle(d, c, x, s);
+        let t = d.pi_fv(c_fv, point, concl);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_triangle, ty, value)
+}
+
+/// `Metric.cpoint : Metric` — the Euclidean plane.
+fn declare_cpoint_metric(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+
+    let equiv = d.kernel().const_(cp.point_equiv, vec![]);
+    let equiv_refl = d.kernel().const_(p.cpoint_equiv_refl, vec![]);
+    let equiv_symm = d.kernel().const_(p.cpoint_equiv_symm, vec![]);
+    let equiv_trans = d.kernel().const_(p.cpoint_equiv_trans, vec![]);
+    let dist = d.kernel().const_(p.cpoint_dist, vec![]);
+
+    let nonneg = {
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let dsq = pdist_sq(d, cp, a, b);
+        let body = d.lemma(c.sqrt_nonneg, &[dsq]);
+        let inner = d.lam_fv(b_fv, point, body);
+        d.lam_fv(a_fv, point, inner)
+    };
+
+    let dist_congr = d.kernel().const_(p.cpoint_dist_congr, vec![]);
+    let dist_self = d.kernel().const_(p.cpoint_dist_self, vec![]);
+    let dist_equiv = d.kernel().const_(p.cpoint_dist_equiv, vec![]);
+    let dist_comm = d.kernel().const_(p.cpoint_dist_comm, vec![]);
+    let dist_triangle = d.kernel().const_(p.cpoint_dist_triangle, vec![]);
+
+    let args = [
+        point,
+        equiv,
+        equiv_refl,
+        equiv_symm,
+        equiv_trans,
+        dist,
+        dist_congr,
+        nonneg,
+        dist_self,
+        dist_equiv,
+        dist_comm,
+        dist_triangle,
+    ];
+    let value = mk_instance(d.kernel(), &p.record, &args);
+    let ty = d.kernel().const_(p.record.ind, vec![]);
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.cpoint_metric,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })
+}
+
+/// `Metric.cpoint_dist : ∀ P Q,
+/// Equiv (Metric.dist Metric.cpoint P Q) (CReal.sqrt (CPoint.distSq P Q))`,
+/// by `CReal.Equiv.refl` — the same reduction probe the ℝ instance carries.
+fn declare_cpoint_dist_reduces(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+
+    let inst = d.kernel().const_(p.cpoint_metric, vec![]);
+    let selector = d.kernel().const_(p.record.sel(DIST), vec![]);
+    let lhs = d.apply(selector, &[inst, a, b]);
+    let dsq = pdist_sq(d, cp, a, b);
+    let rhs = rsqrt(d, c, dsq);
+    let body = rrefl(d, c, rhs);
+
+    let value = {
+        let t = d.lam_fv(b_fv, point, body);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = req(d, c, lhs, rhs);
+        let t = d.pi_fv(b_fv, point, concl);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_dist_reduces, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// `CPoint.Equiv`'s setoid infrastructure. The plane prelude builds
+// reflexivity inline (`point_equiv_refl`) and never names symmetry or
+// transitivity at all -- there was nothing that needed them until a record
+// asked for the three as FIELDS. Each is `And.intro` over the two
+// coordinates.
+// ---------------------------------------------------------------------------
+
+/// `Metric.CPoint.equivRefl : ∀ P, CPoint.Equiv P P`.
+fn declare_cpoint_equiv_refl(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+
+    let mut claims: Vec<ExprId> = Vec::with_capacity(2);
+    let mut proofs: Vec<ExprId> = Vec::with_capacity(2);
+    for projection in [cp.x, cp.y] {
+        let pa = d.const_app(projection, &[a]);
+        claims.push(req(d, c, pa, pa));
+        proofs.push(rrefl(d, c, pa));
+    }
+    let intro = c.rat.int.logic.and_intro;
+    let body = d.const_app(intro, &[claims[0], claims[1], proofs[0], proofs[1]]);
+
+    let value = d.lam_fv(a_fv, point, body);
+    let ty = {
+        let concl = peq(d, cp, a, a);
+        d.pi_fv(a_fv, point, concl)
+    };
+    theorem(d, p.cpoint_equiv_refl, ty, value)
+}
+
+/// `Metric.CPoint.equivSymm : ∀ P Q, CPoint.Equiv P Q → CPoint.Equiv Q P`.
+fn declare_cpoint_equiv_symm(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let h_ty = peq(d, cp, a, b);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ax = d.const_app(cp.x, &[a]);
+    let bx = d.const_app(cp.x, &[b]);
+    let ay = d.const_app(cp.y, &[a]);
+    let by = d.const_app(cp.y, &[b]);
+    let claim_x = req(d, c, ax, bx);
+    let claim_y = req(d, c, ay, by);
+    let hx = d.and_left(claim_x, claim_y, h);
+    let hy = d.and_right(claim_x, claim_y, h);
+    let px = rsymm(d, c, ax, bx, hx);
+    let py = rsymm(d, c, ay, by, hy);
+    let goal_x = req(d, c, bx, ax);
+    let goal_y = req(d, c, by, ay);
+    let intro = c.rat.int.logic.and_intro;
+    let body = d.const_app(intro, &[goal_x, goal_y, px, py]);
+
+    let value = {
+        let t = d.lam_fv(h_fv, h_ty, body);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = peq(d, cp, b, a);
+        let t = d.arrow(h_ty, concl);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_equiv_symm, ty, value)
+}
+
+/// `Metric.CPoint.equivTrans : ∀ P Q R,
+/// CPoint.Equiv P Q → CPoint.Equiv Q R → CPoint.Equiv P R`.
+fn declare_cpoint_equiv_trans(
+    d: &mut IntDev<'_>,
+    cp: CPointPrelude,
+    p: MetricPrelude,
+) -> Result<(), KernelError> {
+    let c = cp.creal;
+    let point = pty(d, cp);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let c_fv = d.fresh_fvar();
+    let cc = d.kernel().fvar(c_fv);
+
+    let h1_ty = peq(d, cp, a, b);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = peq(d, cp, b, cc);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let ax = d.const_app(cp.x, &[a]);
+    let bx = d.const_app(cp.x, &[b]);
+    let cx = d.const_app(cp.x, &[cc]);
+    let ay = d.const_app(cp.y, &[a]);
+    let by = d.const_app(cp.y, &[b]);
+    let cy = d.const_app(cp.y, &[cc]);
+
+    let ab_x = req(d, c, ax, bx);
+    let ab_y = req(d, c, ay, by);
+    let bc_x = req(d, c, bx, cx);
+    let bc_y = req(d, c, by, cy);
+
+    let h1x = d.and_left(ab_x, ab_y, h1);
+    let h1y = d.and_right(ab_x, ab_y, h1);
+    let h2x = d.and_left(bc_x, bc_y, h2);
+    let h2y = d.and_right(bc_x, bc_y, h2);
+
+    let px = rtrans(d, c, ax, bx, cx, h1x, h2x);
+    let py = rtrans(d, c, ay, by, cy, h1y, h2y);
+    let goal_x = req(d, c, ax, cx);
+    let goal_y = req(d, c, ay, cy);
+    let intro = c.rat.int.logic.and_intro;
+    let body = d.const_app(intro, &[goal_x, goal_y, px, py]);
+
+    let value = {
+        let t = d.lam_fv(h2_fv, h2_ty, body);
+        let t = d.lam_fv(h1_fv, h1_ty, t);
+        let t = d.lam_fv(c_fv, point, t);
+        let t = d.lam_fv(b_fv, point, t);
+        d.lam_fv(a_fv, point, t)
+    };
+    let ty = {
+        let concl = peq(d, cp, a, cc);
+        let t = d.arrow(h2_ty, concl);
+        let t = d.arrow(h1_ty, t);
+        let t = d.pi_fv(c_fv, point, t);
+        let t = d.pi_fv(b_fv, point, t);
+        d.pi_fv(a_fv, point, t)
+    };
+    theorem(d, p.cpoint_equiv_trans, ty, value)
 }
 
 #[cfg(test)]
