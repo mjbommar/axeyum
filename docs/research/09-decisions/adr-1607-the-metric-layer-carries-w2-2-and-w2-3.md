@@ -318,12 +318,38 @@ tests, not one. So the criterion applied here is the other one — **every
 negative control has a positive twin in the same test, built by the same
 helper with one flag flipped** — and all four new controls satisfy it:
 
-| control | mutation | positive twin |
+| control | mutation it applies | positive twin in the same test |
 |---|---|---|
 | `the_bridges_modulus_is_load_bearing` | `fun n => n` in the bridge's modulus slot | the real `uc_modulus`, admitted |
 | `uniform_to_pointwise_does_not_transpose_its_points` | `hmu n y x hd` for `hmu n x y hd` | the honest order, admitted |
 | `the_evt_error_budget_needs_the_doubled_index` | index `n` for `2n+1` in the rate split | the doubled index, admitted |
 | `the_interval_predicates_two_bounds_are_not_interchangeable` | `And.intro` given `x ≤ b` and `a ≤ x` transposed | the honest order, admitted |
+
+Since each mutation lives *inside* the test — the probe helper takes an
+`honest` flag and the test calls it both ways — the remaining question is
+whether that flag is wired at all. ADR-1602's MUT-D found exactly this
+failure once already (a `swapped` flag that was ignored, so the negative
+probe asked the same question as the positive one). So the mutation run for
+this lane neutralizes the **flags**, not the proofs:
+
+| # | mutation | tests killed |
+|---|---|---|
+| MUT-0 | none (baseline) | **0 of 29** — 29 passed in 73.79 s |
+| MUT-E | all four probe helpers rewritten to take the honest branch unconditionally (`if honest` → `if true`), four one-token edits, nothing else changed | **exactly 4 of 29** — `the_bridges_modulus_is_load_bearing`, `uniform_to_pointwise_does_not_transpose_its_points`, `the_evt_error_budget_needs_the_doubled_index`, `the_interval_predicates_two_bounds_are_not_interchangeable`, and no others |
+
+MUT-E is the row that matters: each flag is wired, each control fails when
+its mutation is neutralized, and none of the other 25 tests depends on any of
+them. Run in this lane's own isolated worktree with its own `target/`;
+nothing in the shared checkout was mutated, and the file was restored from a
+byte-for-byte copy taken before the edit (`git diff` empty afterwards).
+
+**What could NOT be mutation-tested, and why.** A mutation to any
+*declaration* — the record's fields, `Metric.approxMaxUpTo`, the EVT — kills
+all 29 tests, because `built()` memoises one shared prelude and one bad
+declaration poisons it. That is the same limit ADR-1602 recorded as its
+MUT-E, and it is a real fact (every declaration is load-bearing at build
+time) that attributes nothing. The positive-twin criterion above is what
+substitutes for it.
 
 And two coverage tests derive their subject from the authority rather than
 from a literal: `every_metric_namespace_declaration_is_accounted_for` walks
