@@ -386,6 +386,7 @@ facts:
     python3 scripts/check-cas-substance.py
     python3 -m unittest scripts.tests.test_check_cas_substance
     python3 -m unittest scripts.tests.test_settled_fact_statements
+    python3 -m unittest scripts.tests.test_check_draw7_frozen_families
     python3 scripts/check-settled-fact-statements.py
     # S1 of the trusted-library safety roadmap (ADR-0763): the exit criterion,
     # executed rather than asserted. Constructs swapped binders, a changed

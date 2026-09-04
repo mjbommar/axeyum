@@ -417,6 +417,7 @@ step spivak-cas-column-tests python3 -m unittest scripts.tests.test_check_spivak
 step cas-substance python3 scripts/check-cas-substance.py
 step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substance
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
+step draw7-frozen-families-tests python3 -m unittest scripts.tests.test_check_draw7_frozen_families
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
 # S1 of the trusted-library safety roadmap (ADR-0763): the exit criterion,
 # executed rather than asserted. Constructs swapped binders, a changed
