@@ -1956,6 +1956,12 @@ pub struct IntPrelude {
     /// `Int.IsPrimitiveRoot : Nat -> Int -> Prop :=
     /// fun n a => IsOrder (ofNat n) a (totient n)`.
     pub is_primitive_root: NameId,
+    /// `Int.order_pow_eq_of_le : ∀ (n a : Int) (t i j : Nat), 0 < n ->
+    /// IsOrder n a t -> Nat.le i j -> Nat.lt j t ->
+    /// ModEq n (pow a i) (pow a j) -> Eq Nat i j` -- the one-sided half of
+    /// pairwise incongruence, from which
+    /// [`Self::primitive_root_pow_injective`] follows by `Nat.le_total`.
+    pub order_pow_eq_of_le: NameId,
     /// `Int.primitive_root_pow_injective : ∀ (n : Nat) (a : Int) (i j : Nat),
     /// 0 < n -> IsPrimitiveRoot n a -> i < totient n -> j < totient n ->
     /// ModEq (ofNat n) (pow a i) (pow a j) -> Eq Nat i j` -- the powers of a
@@ -2323,6 +2329,7 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         order_exists: child(kernel, "order_exists"),
         order_dvd_totient: child(kernel, "order_dvd_totient"),
         is_primitive_root: child(kernel, "IsPrimitiveRoot"),
+        order_pow_eq_of_le: child(kernel, "order_pow_eq_of_le"),
         primitive_root_pow_injective: child(kernel, "primitive_root_pow_injective"),
         euler_unit_injective: child(kernel, "euler_unit_injective"),
         fib_cassini: child(kernel, "fib_cassini"),
@@ -2795,3 +2802,6 @@ mod sum_maps_tests;
 
 #[cfg(test)]
 mod quadratic_reciprocity_tests;
+
+#[cfg(test)]
+mod mult_order_tests;
