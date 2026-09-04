@@ -141,6 +141,42 @@ fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)> {
             "IntSpace.CReal.sumRange_nonneg".into(),
             p.creal_sum_range_nonneg,
         ),
+        ("IntSpace.boolIndicator".into(), p.bool_indicator),
+        (
+            "IntSpace.boolIndicator_nonneg".into(),
+            p.bool_indicator_nonneg,
+        ),
+        (
+            "IntSpace.boolIndicator_le_one".into(),
+            p.bool_indicator_le_one,
+        ),
+        (
+            "IntSpace.detachableIndicator".into(),
+            p.detachable_indicator,
+        ),
+        (
+            "IntSpace.detachable_is_indicator".into(),
+            p.detachable_is_indicator,
+        ),
+        ("IntSpace.countingMeasure".into(), p.counting_measure),
+        (
+            "IntSpace.countingMeasure_nonneg".into(),
+            p.counting_measure_nonneg,
+        ),
+        (
+            "IntSpace.countingMeasure_le_total".into(),
+            p.counting_measure_le_total,
+        ),
+        ("IntSpace.crealDirac".into(), p.creal_dirac),
+        (
+            "IntSpace.crealDirac_integral".into(),
+            p.creal_dirac_integral,
+        ),
+        ("IntSpace.crealDirac_total".into(), p.creal_dirac_total),
+        (
+            "IntSpace.dirac_measure_detachable".into(),
+            p.dirac_measure_detachable,
+        ),
     ];
     for i in 0..p.record.field_count() {
         out.push((format!("IntSpace selector {i}"), p.record.sel(i)));
@@ -156,7 +192,7 @@ fn every_intspace_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        40 + FIELD_COUNT,
+        52 + FIELD_COUNT,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
@@ -602,4 +638,115 @@ fn integral_nonneg_direction_is_load_bearing() {
              nothing"
         );
     });
+}
+
+// ---------------------------------------------------------------------------
+// The detachable / Dirac layer.
+// ---------------------------------------------------------------------------
+
+/// `IntSpace.boolIndicator` evaluates to `1` at `true` and `0` at `false`,
+/// and the CROSSED pairing is refused in the same test.
+///
+/// `boolIndicator` is the one definition here whose arguments are genuinely
+/// finite, so a concrete probe is not vacuous: `Bool.rec` iota-reduces, and
+/// `CReal.Equiv.refl` closes the goal only if the branch is the right one.
+#[test]
+fn bool_indicator_evaluates_and_the_crossed_pairing_is_refused() {
+    on_a_deep_stack(|| {
+        let (mut kernel, p) = built();
+        let c = p.creal;
+        let int = c.rat.int;
+
+        let mut outcomes = Vec::new();
+        for (cond_true, want_one, label) in [
+            (true, true, "Check.boolIndTrueIsOne"),
+            (false, false, "Check.boolIndFalseIsZero"),
+            (true, false, "Check.boolIndTrueIsZeroCrossed"),
+            (false, true, "Check.boolIndFalseIsOneCrossed"),
+        ] {
+            let mut d = IntDev::new(&mut kernel, int);
+            let cond = if cond_true {
+                d.bool_true()
+            } else {
+                d.bool_false()
+            };
+            let want = if want_one {
+                d.kernel().const_(c.one, vec![])
+            } else {
+                d.kernel().const_(c.zero, vec![])
+            };
+            let lhs = d.const_app(p.bool_indicator, &[cond]);
+            let ty = d.const_app(c.equiv, &[lhs, want]);
+            let value = d.lemma(c.equiv_refl, &[want]);
+            let anon = d.kernel().anon();
+            let name = d.kernel().name_str(anon, label);
+            let admitted = d
+                .kernel()
+                .add_declaration(Declaration::Theorem {
+                    name,
+                    uparams: vec![],
+                    ty,
+                    value,
+                })
+                .is_ok();
+            outcomes.push((label, admitted));
+        }
+        assert_eq!(
+            outcomes,
+            vec![
+                ("Check.boolIndTrueIsOne", true),
+                ("Check.boolIndFalseIsZero", true),
+                ("Check.boolIndTrueIsZeroCrossed", false),
+                ("Check.boolIndFalseIsOneCrossed", false),
+            ],
+            "boolIndicator does not distinguish its two branches"
+        );
+    });
+}
+
+/// The detachable / Dirac statements render as facts about `Bool`-indexed
+/// subsets, and the Dirac space really is a probability space.
+#[test]
+fn detachable_and_dirac_types_render() {
+    let (kernel, p) = built();
+    for (label, name) in [
+        (
+            "IntSpace.detachable_is_indicator",
+            p.detachable_is_indicator,
+        ),
+        ("IntSpace.countingMeasure", p.counting_measure),
+        (
+            "IntSpace.countingMeasure_le_total",
+            p.counting_measure_le_total,
+        ),
+        ("IntSpace.crealDirac", p.creal_dirac),
+        ("IntSpace.crealDirac_total", p.creal_dirac_total),
+        (
+            "IntSpace.dirac_measure_detachable",
+            p.dirac_measure_detachable,
+        ),
+    ] {
+        let ty = decl_ty(&kernel, name, label);
+        println!("{label} : {}", kernel.render_lean(ty));
+    }
+
+    let rendered = kernel.render_lean(decl_ty(
+        &kernel,
+        p.creal_dirac_total,
+        "IntSpace.crealDirac_total",
+    ));
+    assert!(
+        rendered.contains("CReal.one"),
+        "the Dirac space must have total mass one: {rendered}"
+    );
+
+    let rendered = kernel.render_lean(decl_ty(
+        &kernel,
+        p.detachable_is_indicator,
+        "IntSpace.detachable_is_indicator",
+    ));
+    assert!(
+        rendered.contains("Bool"),
+        "a detachable subset must be Bool-indexed: {rendered}"
+    );
 }

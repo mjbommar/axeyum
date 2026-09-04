@@ -635,6 +635,41 @@ pub struct IntSpacePrelude {
     pub creal_sum_range_congr: NameId,
     /// `IntSpace.CReal.sumRange_nonneg` — likewise.
     pub creal_sum_range_nonneg: NameId,
+
+    // --- detachable subsets, counting measure, and the Dirac space ---------
+    /// `IntSpace.boolIndicator : Bool → CReal` — `1` at `true`, `0` at
+    /// `false`. The indicator of a DETACHABLE subset is genuinely
+    /// `Bool`-valued and computes.
+    pub bool_indicator: NameId,
+    /// `IntSpace.boolIndicator_nonneg : ∀ b, CReal.le CReal.zero
+    /// (boolIndicator b)`.
+    pub bool_indicator_nonneg: NameId,
+    /// `IntSpace.boolIndicator_le_one : ∀ b,
+    /// CReal.le (boolIndicator b) CReal.one`.
+    pub bool_indicator_le_one: NameId,
+    /// `IntSpace.detachableIndicator : (Nat → Bool) → Nat → CReal`.
+    pub detachable_indicator: NameId,
+    /// `IntSpace.detachable_is_indicator : ∀ A m,
+    /// Indicator (crealFinite m) (detachableIndicator A)` — every detachable
+    /// subset of a finite index set is an integrable set.
+    pub detachable_is_indicator: NameId,
+    /// `IntSpace.countingMeasure : (Nat → Bool) → Nat → CReal`.
+    pub counting_measure: NameId,
+    /// `IntSpace.countingMeasure_nonneg`.
+    pub counting_measure_nonneg: NameId,
+    /// `IntSpace.countingMeasure_le_total`.
+    pub counting_measure_le_total: NameId,
+    /// `IntSpace.crealDirac : Nat → IntSpace` — evaluation at `k`, with
+    /// `total = 1`: a probability integration space.
+    pub creal_dirac: NameId,
+    /// `IntSpace.crealDirac_integral` — the Dirac reduction probe.
+    pub creal_dirac_integral: NameId,
+    /// `IntSpace.crealDirac_total : ∀ k,
+    /// CReal.Equiv (crealDirac k).total CReal.one`.
+    pub creal_dirac_total: NameId,
+    /// `IntSpace.dirac_measure_detachable` — the Dirac measure of a
+    /// detachable set, by `CReal.Equiv.refl`.
+    pub dirac_measure_detachable: NameId,
 }
 
 // ---------------------------------------------------------------------------
@@ -722,6 +757,18 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
         creal_integral_nonneg: kernel.name_str(creal_ns, "integral_nonneg"),
         creal_sum_range_congr: kernel.name_str(creal_ns, "sumRange_congr"),
         creal_sum_range_nonneg: kernel.name_str(creal_ns, "sumRange_nonneg"),
+        bool_indicator: kernel.name_str(ns, "boolIndicator"),
+        bool_indicator_nonneg: kernel.name_str(ns, "boolIndicator_nonneg"),
+        bool_indicator_le_one: kernel.name_str(ns, "boolIndicator_le_one"),
+        detachable_indicator: kernel.name_str(ns, "detachableIndicator"),
+        detachable_is_indicator: kernel.name_str(ns, "detachable_is_indicator"),
+        counting_measure: kernel.name_str(ns, "countingMeasure"),
+        counting_measure_nonneg: kernel.name_str(ns, "countingMeasure_nonneg"),
+        counting_measure_le_total: kernel.name_str(ns, "countingMeasure_le_total"),
+        creal_dirac: kernel.name_str(ns, "crealDirac"),
+        creal_dirac_integral: kernel.name_str(ns, "crealDirac_integral"),
+        creal_dirac_total: kernel.name_str(ns, "crealDirac_total"),
+        dirac_measure_detachable: kernel.name_str(ns, "dirac_measure_detachable"),
     }
 }
 
@@ -782,6 +829,7 @@ pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, Ke
     measure::declare_all(&mut d, p)?;
     convergence::declare_all(&mut d, p)?;
     instances::declare_all(&mut d, p)?;
+    detachable::declare_all(&mut d, p)?;
 
     Ok(p)
 }
@@ -791,6 +839,7 @@ pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, Ke
 // ---------------------------------------------------------------------------
 
 mod convergence;
+mod detachable;
 mod generic;
 mod instances;
 mod measure;
