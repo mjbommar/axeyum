@@ -7,7 +7,7 @@
     "language": "lean4",
     "statement": "theorem Nat.Peano.categorical.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : ((x2 : x0) -> x0)) -> ((x3 : ((x3 : x0) -> Not (Eq.{u} x0 x1 (x2 x3)))) -> ((x4 : ((x4 : x0) -> ((x5 : x0) -> ((x6 : Eq.{u} x0 (x2 x4) (x2 x5)) -> Eq.{u} x0 x4 x5)))) -> ((x5 : ((x5 : ((x5 : x0) -> Prop)) -> ((x6 : x5 x1) -> ((x7 : ((x7 : x0) -> ((x8 : x5 x7) -> x5 (x2 x7)))) -> ((x8 : x0) -> x5 x8))))) -> And (And (Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 AxNat.zero) x1) (((x6 : AxNat) -> Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 (AxNat.succ x6)) (x2 (AxNat.Peano.iter.{u} x0 x1 x2 x6))))) (And (((x6 : AxNat) -> ((x7 : AxNat) -> ((x8 : Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 x6) (AxNat.Peano.iter.{u} x0 x1 x2 x7)) -> Eq.{1} AxNat x6 x7)))) (((x6 : x0) -> Exists.{1} AxNat (fun (x7 : AxNat) => Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 x7) x6))))))))))",
     "fragment": "Nat",
-    "kernel_theorem": null,
+    "kernel_theorem": "Nat.Peano.categorical",
     "free_symbols": [
       "x0",
       "x1",

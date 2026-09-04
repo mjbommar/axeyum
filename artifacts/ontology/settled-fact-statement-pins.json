@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2293,
+    "min_identity_bound": 2295,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7883,10 +7883,16 @@
       "language": "lean4",
       "statement_sha256": "51a8b591b53b30490c3351a2047643dffb045a3301320e461d694e18bdbbbbb5",
       "prose_sha256": "68e7fbcee889fd9a6775516e17f8c6a01e2b3801b3c655067864430bde62888e",
+      "kernel_theorem": "Int.Characterization.categorical",
       "history": [
         {
           "language": "lean4",
           "statement_sha256": "51a8b591b53b30490c3351a2047643dffb045a3301320e461d694e18bdbbbbb5"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "51a8b591b53b30490c3351a2047643dffb045a3301320e461d694e18bdbbbbb5",
+          "prose_sha256": "68e7fbcee889fd9a6775516e17f8c6a01e2b3801b3c655067864430bde62888e"
         }
       ]
     },
@@ -19262,10 +19268,16 @@
       "language": "lean4",
       "statement_sha256": "edc77e10203f1dbbe063eccb93337e6f2a6f25a60f11b710626fba03926f3dd6",
       "prose_sha256": "e7726bcd81af0303ddf9ad6c76fb48575bf8eebae1469c113b578bad996a7343",
+      "kernel_theorem": "Nat.Peano.categorical",
       "history": [
         {
           "language": "lean4",
           "statement_sha256": "edc77e10203f1dbbe063eccb93337e6f2a6f25a60f11b710626fba03926f3dd6"
+        },
+        {
+          "language": "lean4",
+          "statement_sha256": "edc77e10203f1dbbe063eccb93337e6f2a6f25a60f11b710626fba03926f3dd6",
+          "prose_sha256": "e7726bcd81af0303ddf9ad6c76fb48575bf8eebae1469c113b578bad996a7343"
         }
       ]
     },

@@ -350,6 +350,27 @@ class SettledFactStatementControls(unittest.TestCase):
         )
         self.assertEqual(self.run_check(), 0)
 
+    def test_universe_polymorphic_header_matches_its_declaration(self):
+        """`render_lean` writes `Foo.bar.{u}` for a universe-polymorphic theorem
+        while the kernel's name is `Foo.bar`; the bind must strip the suffix.
+        Killed by removing UNIVERSE_SUFFIX from header_name."""
+        self.write_fact("F:a", "theorem Foo.bar.{u} : STMT", kernel_theorem="Foo.bar")
+        self.write_pins(
+            [self.pin("F:a", "theorem Foo.bar.{u} : STMT", kernel_theorem="Foo.bar")],
+            floor={"max_unpinned_settled": 0, "min_identity_bound": 1, "max_header_exempt": 0},
+        )
+        self.assertEqual(self.run_check(), 0)
+
+    def test_universe_polymorphic_header_of_another_declaration_is_a_violation(self):
+        """The suffix strip must not weaken the bind: a polymorphic rendering of
+        a DIFFERENT theorem is still a violation."""
+        self.write_fact("F:a", "theorem Foo.elsewhere.{u} : STMT", kernel_theorem="Foo.bar")
+        self.write_pins(
+            [self.pin("F:a", "theorem Foo.elsewhere.{u} : STMT", kernel_theorem="Foo.bar")],
+            floor={"max_unpinned_settled": 0, "min_identity_bound": 1, "max_header_exempt": 0},
+        )
+        self.assertEqual(self.run_check(), 1)
+
     # --- guard: a new headerless statement is counted, not ignored ----------
     def test_new_headerless_statement_above_allowance_is_a_violation(self):
         self.write_fact("F:a", "((x0 : AxNat) -> STMT)", kernel_theorem="Foo.bar")

@@ -115,6 +115,8 @@ SETTLED = {"proved", "computed"}
 # exempt from the name check and counted under `max_header_exempt` so a new one
 # cannot appear quietly.
 HEADER = re.compile(r"^\s*(theorem|def|axiom|opaque|abbrev|inductive)\s+(\S+)\s*:")
+# `Nat.Peano.initial.{u}` -> `Nat.Peano.initial`: the rendered universe parameters.
+UNIVERSE_SUFFIX = re.compile(r"\.\{[^}]*\}$")
 
 # How many offending ids a violation line names before truncating. A violation
 # that prints 2,000 ids is a violation nobody reads.
@@ -152,7 +154,12 @@ def read_facts() -> dict[str, dict]:
             "statement_sha256": digest(statement),
             "prose_sha256": digest(data.get("statement")),
             "kernel_theorem": formal.get("kernel_theorem"),
-            "header_name": header.group(2) if header else None,
+            # A universe-polymorphic declaration renders as `Name.{u, v}`; the
+            # kernel's own name carries no universe parameters, so the suffix is
+            # stripped before the bind. Without this, every polymorphic theorem
+            # either fails the bind or is left unbound (`kernel_theorem: null`),
+            # which is how two categoricity facts sat unbound until 2026-09-04.
+            "header_name": UNIVERSE_SUFFIX.sub("", header.group(2)) if header else None,
         }
     if not out:
         raise StatementDriftError("no settled facts read — the gate has no subject")
