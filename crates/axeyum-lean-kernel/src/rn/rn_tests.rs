@@ -611,10 +611,12 @@ fn of_cpoint_places_the_coordinates() {
 // Instance controls: a WRONG ℝⁿ must be refused.
 // ---------------------------------------------------------------------------
 
+/// The edit an [`instance_probe`] makes: given the dimension binder and the
+/// twelve field values, replace one of them.
+type FieldEdit<'a> = &'a dyn Fn(&mut IntDev<'_>, RNPrelude, ExprId, &mut [ExprId]);
+
 /// Rebuild `RN.metric` with one field replaced and report the gate's verdict.
-fn instance_probe(
-    replace: &dyn Fn(&mut IntDev<'_>, RNPrelude, ExprId, &mut [ExprId]),
-) -> Result<(), crate::KernelError> {
+fn instance_probe(replace: FieldEdit<'_>) -> Result<(), crate::KernelError> {
     let (mut kernel, p) = built();
     let int = p.metric.cpoint.creal.rat.int;
     let probe = {

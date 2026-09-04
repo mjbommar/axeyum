@@ -1607,6 +1607,12 @@ fn declare_smul(d: &mut IntDev<'_>, c: CRealPrelude, p: RNPrelude) -> Result<(),
     definition(d, p.smul, ty, value, H_OPS)
 }
 
+/// The pointwise `CReal` congruence a [`declare_binary_congr`] step supplies:
+/// given `u i`, `u' i`, `v i`, `v' i` and the two coordinate equivalences, a
+/// proof that the operation's values agree.
+type PointwiseCongr<'a> =
+    &'a dyn Fn(&mut IntDev<'_>, ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) -> ExprId;
+
 /// `RN.add_congr` / `RN.sub_congr` share this shape: four vectors, two `EqOn`
 /// hypotheses, a pointwise `CReal` congruence under the binder.
 fn declare_binary_congr(
@@ -1614,7 +1620,7 @@ fn declare_binary_congr(
     p: RNPrelude,
     name: NameId,
     op: NameId,
-    pointwise: &dyn Fn(&mut IntDev<'_>, ExprId, ExprId, ExprId, ExprId, ExprId, ExprId) -> ExprId,
+    pointwise: PointwiseCongr<'_>,
 ) -> Result<(), KernelError> {
     let nat = d.nat_ty();
     let vec = vec_ty(d, p);
