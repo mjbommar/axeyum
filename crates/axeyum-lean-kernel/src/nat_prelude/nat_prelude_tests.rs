@@ -1514,6 +1514,15 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.lnp_decidable,
         p.em_implies_lnp,
         p.lnp_unrestricted_implies_em,
+        // `classical-axiom-policy` lane, `omniscience.rs` -- roadmap W1-9,
+        // the reverse-mathematics map. Read from `p.omniscience` because the
+        // six names live in their own `OmniscienceNames` struct.
+        p.omniscience.em_implies_lpo,
+        p.omniscience.lpo_implies_wlpo,
+        p.omniscience.lpo_implies_markov,
+        p.omniscience.lpo_implies_llpo,
+        p.omniscience.wlpo_and_markov_imply_lpo,
+        p.omniscience.lnp_unrestricted_implies_lpo,
         // `draw9-second-theorems` lane (`docs/plan/status/draw9-second-theorems.md`).
         p.land_aux_self_of_fuel,
         p.land_self,

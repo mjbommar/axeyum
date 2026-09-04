@@ -243,6 +243,7 @@ mod multiset_prod;
 mod no_confusion;
 mod nth;
 mod nth_root;
+mod omniscience;
 mod ops;
 mod order;
 mod order_extra;
@@ -298,6 +299,7 @@ mod xor_order;
 mod xor_parity;
 mod xor_trichotomy;
 
+pub use omniscience::OmniscienceNames;
 pub use ops::{NatDev, NatOps, NatState};
 
 use abundant_deficient::declare_abundant_deficient_all;
@@ -5175,6 +5177,14 @@ pub struct NatPrelude {
     /// `creal/extreme_value.rs`) reach. See `least_number.rs`.
     pub lnp_unrestricted_implies_em: NameId,
 
+    /// The reverse-mathematics map's omniscience principles
+    /// (`nat_prelude/omniscience.rs`, roadmap W1-9): LPO, WLPO, Markov's
+    /// principle and LLPO over `Nat`, each carried as an explicit HYPOTHESIS
+    /// so the axiom footprint stays empty. Reached as
+    /// `p.omniscience.em_implies_lpo` and documented in [`OmniscienceNames`]
+    /// rather than here, so the map costs this struct one field.
+    pub omniscience: OmniscienceNames,
+
     // -- `draw11-theorems` lane: `and_or_distrib.rs` --
     /// `Nat.and_or_distrib_left : ∀ x y z, Eq (land x (lor y z)) (lor (land
     /// x y) (land x z))` — `F:ml430-nat-and-or-distrib-left-fe131f64`. Via
@@ -7534,6 +7544,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             lnp_decidable: kernel.name_str(nat, "lnp_decidable"),
             em_implies_lnp: kernel.name_str(nat, "em_implies_lnp"),
             lnp_unrestricted_implies_em: kernel.name_str(nat, "lnp_unrestricted_implies_em"),
+            omniscience: omniscience::OmniscienceNames::intern(kernel, nat),
             and_or_distrib_left: kernel.name_str(nat, "and_or_distrib_left"),
             and_or_distrib_right: kernel.name_str(nat, "and_or_distrib_right"),
             coprime_dvd_mul_left: kernel.name_str(nat, "coprime_dvd_mul_left"),
@@ -8577,6 +8588,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `lt_of_lt_of_le`, `succ_ne_zero`, all far above) and the logic
         // prelude. Nothing needs it, so it goes last.
         declare_least_number_all(&mut d, &p)?;
+        // `omniscience.rs`: needs `least_number.rs` (for
+        // `Nat.lnp_unrestricted_implies_em`) and the logic prelude's `Bool`
+        // discriminators. Nothing needs it, so it goes right after.
+        omniscience::declare_omniscience_all(&mut d, &p)?;
         declare_injective_on_or_duplicate(&mut d, &p)?;
         // `Nat.nthRootAux`/`Nat.nthRoot` (`nth_root.rs`): needs only
         // `Nat.pow`/`Nat.ble`/`Nat.beq`/`Nat.succ`/`bool_select_nat`, all far
@@ -8841,6 +8856,11 @@ mod nat_prelude_tests;
 
 #[cfg(test)]
 mod abundant_deficient_tests;
+
+/// Tests for `nat_prelude/omniscience.rs` (roadmap W1-9: LPO, WLPO,
+/// Markov's principle and LLPO as explicit hypotheses).
+#[cfg(test)]
+mod omniscience_tests;
 
 #[cfg(test)]
 mod find_greatest_tests;

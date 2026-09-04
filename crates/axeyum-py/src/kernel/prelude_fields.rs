@@ -149,10 +149,10 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1224 names,
+/// The `NatPrelude` field table (1230 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 107 of the names come from ADR-1512 per-module registries and
+/// 113 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `NatPrelude` itself.
 #[must_use]
@@ -1185,6 +1185,27 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("lnp_decidable", p.lnp_decidable),
             ("em_implies_lnp", p.em_implies_lnp),
             ("lnp_unrestricted_implies_em", p.lnp_unrestricted_implies_em),
+            ("omniscience.em_implies_lpo", p.omniscience.em_implies_lpo),
+            (
+                "omniscience.lpo_implies_wlpo",
+                p.omniscience.lpo_implies_wlpo,
+            ),
+            (
+                "omniscience.lpo_implies_markov",
+                p.omniscience.lpo_implies_markov,
+            ),
+            (
+                "omniscience.lpo_implies_llpo",
+                p.omniscience.lpo_implies_llpo,
+            ),
+            (
+                "omniscience.wlpo_and_markov_imply_lpo",
+                p.omniscience.wlpo_and_markov_imply_lpo,
+            ),
+            (
+                "omniscience.lnp_unrestricted_implies_lpo",
+                p.omniscience.lnp_unrestricted_implies_lpo,
+            ),
             ("and_or_distrib_left", p.and_or_distrib_left),
             ("and_or_distrib_right", p.and_or_distrib_right),
             ("coprime_dvd_mul_left", p.coprime_dvd_mul_left),
@@ -3036,10 +3057,10 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (611 names,
+/// The `CRealPrelude` field table (615 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 69 of the names come from ADR-1512 per-module registries and
+/// 73 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `CRealPrelude` itself.
 #[must_use]
@@ -3767,6 +3788,22 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
                 p.lub_boundary.lub_set_bounded,
             ),
             ("lub_boundary.lub_decides_em", p.lub_boundary.lub_decides_em),
+            (
+                "omniscience.le_total_of_order_decision",
+                p.omniscience.le_total_of_order_decision,
+            ),
+            (
+                "omniscience.trichotomy_of_order_decision",
+                p.omniscience.trichotomy_of_order_decision,
+            ),
+            (
+                "omniscience.apart_of_not_equiv_of_order_decision",
+                p.omniscience.apart_of_not_equiv_of_order_decision,
+            ),
+            (
+                "omniscience.abs_cases_of_order_decision",
+                p.omniscience.abs_cases_of_order_decision,
+            ),
             ("cos_fn_term", p.cos_fn_term),
             ("cos_fn_term_abs_le", p.cos_fn_term_abs_le),
             ("cos_fn_term_congr", p.cos_fn_term_congr),

@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-apart-of-not-equiv-of-order-decision",
+  "title": "CReal.apart_of_not_equiv_of_order_decision: Markov's principle for the reals -- non-equivalence yields apartness -- on an explicit order-decision hypothesis",
+  "statement": "The hypothesis is the ORDER DECISION on the constructed reals, OrderDecision := forall (x y : CReal), Or (CReal.lt x y) (CReal.le y x), spelled out inline in the type rather than behind a Definition. It is written strict-on-the-left deliberately: Or (le x y) (le y x) is only LLPO-strength, while the strict form is LPO-strength (applied to 0 and the real coded by a Bool sequence it decides whether the sequence ever fires), and F:creal-le-total-of-order-decision measures exactly that gap. THE CONCLUSION IS THE DIRECTION creal.rs NAMES AS MARKOV'S PRINCIPLE AND RECORDS AS NEITHER PROVED NOR ASSUMED. CReal.Apart's field documentation says: \"Apart x y is strictly stronger than Not (Equiv x y) (CReal.not_equiv_of_apart is the one direction that holds) ... The converse is Markov's principle and is neither proved nor assumed here.\" This fact is that converse, proved from the order decision. It is the DEPTH-2 node of the family: it consumes F:creal-trichotomy-of-order-decision rather than the hypothesis directly, and the entire cost of that is passing the hypothesis along as one extra argument -- which is the number roadmap W0-2 exists to produce. Apart x y unfolds to Or (lt x y) (lt y x) definitionally, so the two strict branches are the conclusion verbatim and only the Equiv branch does work. THE PRINCIPLE IS A HYPOTHESIS, NOT AN AXIOM. It is spelled out inline in the type -- never behind a Definition -- so a reader of the rendered statement sees the whole assumption and nothing about the conclusion can be smuggled into an abbreviation. That is why axiom_footprint is empty. ADR-1601 (roadmap W0-2) decides this policy and prices it: across the ten theorems of this family the hypothesis route costs 11 binders and 14 argument positions and ZERO proof obligations. WHAT THIS FACT DOES NOT CLAIM: it does not claim the principle in its hypothesis is true, false, or independent. The SEPARATIONS in the standard picture -- LPO is not constructively derivable, LLPO does not give LPO, WLPO does not give LPO, MP does not give WLPO -- are CITED here (Bishop, Constructive Analysis ch. 1) and are not proved: each needs a model of this kernel rather than a term in it, and ADR-1600 records why an internal metatheorem about this kernel is unavailable.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.apart_of_not_equiv_of_order_decision : ((x0 : ((x0 : CReal) -> ((x1 : CReal) -> Or (CReal.lt x0 x1) (CReal.le x1 x0)))) -> ((x1 : CReal) -> ((x2 : CReal) -> ((x3 : Not (CReal.Equiv x1 x2)) -> CReal.Apart x1 x2))))",
+    "fragment": "Real",
+    "kernel_theorem": "CReal.apart_of_not_equiv_of_order_decision"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-trichotomy-of-order-decision"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CReal.apart_of_not_equiv_of_order_decision",
+      "kind": "kernel-term",
+      "supports": "CReal.apart_of_not_equiv_of_order_decision is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration CReal.apart_of_not_equiv_of_order_decision --require-kind theorem",
+      "checker_seconds": 90,
+      "kernel_declaration": "CReal.apart_of_not_equiv_of_order_decision",
+      "notes": "--require-declaration exits non-zero when the name is absent from every constructed prelude, and --require-kind exits non-zero when it is present with the wrong kind, so the exit status depends on the finding rather than on the run completing. --release is MANDATORY: this binary builds creal/complex/cpoint, which overflow the default debug thread stack.",
+      "verified_at": "2026-09-04"
+    },
+    {
+      "id": "footprint-CReal.apart_of_not_equiv_of_order_decision",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the classical principle enters as a HYPOTHESIS and nothing is assumed. Read from Kernel::axiom_footprint, never from a rendered name.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "per-declaration footprint assertion in the suite below"
+      ],
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib creal::omniscience -- --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 6 passed'",
+      "checker_seconds": 120,
+      "notes": "The suite's own footprint test reads Kernel::axiom_footprint for every declaration in the family and fails on a non-empty result. The grep -c count is what makes the command discriminating: a fabricated or renamed filter makes cargo print a different passed-count and exit 0, and the anchored pattern then matches nothing, so grep -c prints 0 and exits 1. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. Anchored with [[:space:]]-free literals, never \\t -- in a scripted (GNU) grep \\t is a literal t."
+    },
+    {
+      "id": "discrimination-CReal.apart_of_not_equiv_of_order_decision",
+      "kind": "instance-pin",
+      "supports": "The statement is the one advertised, not a weaker or stronger one: the theorem is applied at GENUINELY FREE variables of the hypothesis type and the inferred conclusion is pinned against an independently rebuilt term, and a negative control in the hypothesis slot is REQUIRED TO BE REJECTED.",
+      "check_status": "checked",
+      "checkers": [
+        "cargo test -p axeyum-lean-kernel --lib",
+        "Kernel::infer_in against a free-variable LocalContext"
+      ],
+      "checker_command": "cargo test -q --release -p axeyum-lean-kernel --lib apart_of_not_equiv_lands_on_apart_and_needs_the_negated_premise -- --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 120,
+      "notes": "Numerals reduce and hide definitional-equality gaps, so nothing in this test instantiates a sequence or a real concretely. The builders in the test file are a SECOND, independent implementation of every principle: if they called the module's own private helpers, the check would be comparing a term with itself and could not fail."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_creal_prelude (crates/axeyum-lean-kernel/src/creal/omniscience.rs)",
+    "source": "formal.statement is the Kernel::render_lean(declaration.ty()) column of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`, verbatim; axiom_footprint is its footprint-size column (0). No type was hand-transcribed. Prose is hand-written."
+  },
+  "notes": "Negative control: Equiv x y must not be accepted where Not (Equiv x y) is demanded -- a one-symbol difference in the premise, and the difference between the theorem and its own negation. The companion over the naturals is F:nat-lpo-implies-markov: the same principle at a different carrier. Roadmap W0-2; decided by ADR-1601. Source: crates/axeyum-lean-kernel/src/creal/omniscience.rs."
+}

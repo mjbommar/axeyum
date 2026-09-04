@@ -885,4 +885,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1598](adr-1598-the-multiplicative-order-is-a-predicate-picked-out-by-bounded-search.md) | The multiplicative order is a predicate picked out by bounded search, not a computed function | accepted |
 | [1599](adr-1599-ring-generic-over-alg-commring-and-algs-commring.md) | `ring::generic` — the commutative-ring producer over `Alg.CommRing` and `AlgS.CommRing`, and a measured `decide` boundary | accepted |
 | [1600](adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md) | the kernel's metatheoretic status — what is trusted, what is checked, and what is not | accepted |
+| [1601](adr-1601-classical-logic-enters-as-a-hypothesis-not-as-an-axiom.md) | classical logic enters as a hypothesis, not as an axiom | proposed |
 | [1605](adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md) | the ledger cannot tell "uncharacterised" from "absent" | proposed |

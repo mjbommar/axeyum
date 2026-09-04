@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2263,
+    "min_identity_bound": 2273,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -3330,6 +3330,13 @@
       "kernel_theorem": "CReal.abs_add_le"
     },
     {
+      "fact_id": "F:creal-abs-cases-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "d0014720f31c1a376fedc4eaf8281b85d339fa17f5e353432d65a1ca3984e772",
+      "prose_sha256": "b1379ae9ecf44dacca3edbf55a69ab93a35d3322c0f7e20d9da5f59eed1c5a6f",
+      "kernel_theorem": "CReal.abs_cases_of_order_decision"
+    },
+    {
       "fact_id": "F:creal-abs-congr",
       "language": "lean4",
       "statement_sha256": "c696850dcbc2c1c3f565f8b2e94502f639e22218297fe073261493544ccffdbc",
@@ -3603,6 +3610,13 @@
       "statement_sha256": "29b8ee4d439cae666f363918fa94df37301f518d7826c42cd417f74529465abc",
       "prose_sha256": "de9eaf85b8dca64b82d89199355af95ce99977aceb6598931b7a5edc25a64c23",
       "kernel_theorem": "CReal.apart_irrefl"
+    },
+    {
+      "fact_id": "F:creal-apart-of-not-equiv-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "d2eff9b453e55f0b47b274dca897a9dce02234820563091ba37aceeec25a51d2",
+      "prose_sha256": "02e379e53ab32a91611d4335788c44aad750f952a08a413d6fa128dc1290966f",
+      "kernel_theorem": "CReal.apart_of_not_equiv_of_order_decision"
     },
     {
       "fact_id": "F:creal-apart-symm",
@@ -5130,6 +5144,13 @@
           "prose_sha256": "875a9cd18d19e369e16a2b8da75e3ff86db8e0a057fbe447f99dccd1c04778c3"
         }
       ]
+    },
+    {
+      "fact_id": "F:creal-le-total-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "9135ee8d6636294288e2db09f82b65889ba604d16e8f06d480ab74f1bcd67633",
+      "prose_sha256": "f910a64d54821ba7b5085cf68956f7471ea0c44b1edff3178a44a8f3f32c04d5",
+      "kernel_theorem": "CReal.le_total_of_order_decision"
     },
     {
       "fact_id": "F:creal-le-trans",
@@ -6913,6 +6934,13 @@
       "statement_sha256": "9fffd9572fb35a005bfd5627dfb54213b8b8d34ed2f929e79aca25015c4e60ad",
       "prose_sha256": "89d4ef80c9ea9c92d6f6b968cfbdc642c9731787ae8bc377f53f4e0fef0ee23e",
       "kernel_theorem": "CReal.threeLePi"
+    },
+    {
+      "fact_id": "F:creal-trichotomy-of-order-decision",
+      "language": "lean4",
+      "statement_sha256": "ecd89ee918fa0a1a2dfc69f0502e64b05f7985d8ea5dfc3f317a8c575d738b39",
+      "prose_sha256": "62e1fd9b5596311d6c1ae02d6848dbd4ffb0d8e4887ccc130cbfdf4c7c655eaf",
+      "kernel_theorem": "CReal.trichotomy_of_order_decision"
     },
     {
       "fact_id": "F:creal-trueexpofmodulus-mono",
@@ -16967,6 +16995,13 @@
       "kernel_theorem": "Nat.eisenstein_lemma_modEq"
     },
     {
+      "fact_id": "F:nat-em-implies-lpo",
+      "language": "lean4",
+      "statement_sha256": "5a3a71501c1fc3b0fa3e647e3cc7e037765dd026eaaac982342bdd2c8276837e",
+      "prose_sha256": "ec670242343a81890e0f085d7b0a9a641e1a128392d0923ff7d51a1ceecc2670",
+      "kernel_theorem": "Nat.em_implies_lpo"
+    },
+    {
       "fact_id": "F:nat-eq-equivalence-on",
       "language": "lean4",
       "statement_sha256": "7fc8833168bc85181457efb5874d0cdefe1f7c6e639661f49c07895ecdbd24d8",
@@ -18028,6 +18063,13 @@
       "kernel_theorem": "Nat.lnp_unrestricted_implies_em"
     },
     {
+      "fact_id": "F:nat-lnp-unrestricted-implies-lpo",
+      "language": "lean4",
+      "statement_sha256": "8a1b776e35b5d4f493712b3c1b487d164021a80627fc812c25406247e547d714",
+      "prose_sha256": "3b0b3f2d14707ddb1289473ca90f669abe16c63d888e0e51895a9a22169389c1",
+      "kernel_theorem": "Nat.lnp_unrestricted_implies_lpo"
+    },
+    {
       "fact_id": "F:nat-log-le-self",
       "language": "lean4",
       "statement_sha256": "94359d0e6228f863b9eb644c90623cc9ec784eced3a0f4c06d52aaefb04ae922",
@@ -18226,6 +18268,27 @@
           "prose_sha256": "c3328e213ba20067b4982b9343d55e5f05a0e066a1a92330ed99948bb03c6fb6"
         }
       ]
+    },
+    {
+      "fact_id": "F:nat-lpo-implies-llpo",
+      "language": "lean4",
+      "statement_sha256": "0adcfc3ad61be2fcd788e2c8a31a7090c72d4d8c9dc828bdc4a75b5c42616c06",
+      "prose_sha256": "c6b3e7c4b79b172ed3b7236770efb9ac74db8224f589167ed22d806bc94a5d9b",
+      "kernel_theorem": "Nat.lpo_implies_llpo"
+    },
+    {
+      "fact_id": "F:nat-lpo-implies-markov",
+      "language": "lean4",
+      "statement_sha256": "f1ba4e406ac22e0b1a94330460f3647be2a4645eaacdcf20a0cbd5633da01d41",
+      "prose_sha256": "16bc68361cfeded31942ffe37797bb877b18a31675355ebd685dca50911529b8",
+      "kernel_theorem": "Nat.lpo_implies_markov"
+    },
+    {
+      "fact_id": "F:nat-lpo-implies-wlpo",
+      "language": "lean4",
+      "statement_sha256": "0b7f345c54c676af6a09d2865afd9e55da6d9959cf500269f822f0acf0b757bc",
+      "prose_sha256": "4e92db3d90899e72d1f62d01c8bfd7632833a3e89697cd9e70d3c04407a9b5c1",
+      "kernel_theorem": "Nat.lpo_implies_wlpo"
     },
     {
       "fact_id": "F:nat-lt-add-one",
@@ -20132,6 +20195,13 @@
       "statement_sha256": "22b91a7330b5198d70a8917a6f688dd761b58789f6b1b082840ccae56021ce11",
       "prose_sha256": "a3808cfb5082d55842e5618336d025dace02897ba4b1988d373c39cf3f43de02",
       "kernel_theorem": "Nat.valuation_at_two_mul_sq"
+    },
+    {
+      "fact_id": "F:nat-wlpo-and-markov-imply-lpo",
+      "language": "lean4",
+      "statement_sha256": "96ffed18400b3fa9b23e10cec97f9c657691a9bfef5b18ab91db33043a6e03d6",
+      "prose_sha256": "fee8303b2606a50355a406cd4ef90a0a4705f2695c6f96aa4a4d2dd05eda2b80",
+      "kernel_theorem": "Nat.wlpo_and_markov_imply_lpo"
     },
     {
       "fact_id": "F:nat-xor-assoc",

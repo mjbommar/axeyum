@@ -101,9 +101,10 @@ pub use characterization::{
 };
 pub use complex::{ComplexPrelude, build_complex_prelude};
 pub use creal::{
-    CRealPrelude, CompletenessNames, CosSignNames, CrossingNames, DerivUniqueNames, EvtRow1Names,
-    ExpFnNames, ExtremeValueNames, InverseFnNames, IvtBoundaryNames, LubBoundaryNames, MvtNames,
-    PiNames, PolynomialNames, RatioTestNames, build_creal_prelude,
+    CRealOmniscienceNames, CRealPrelude, CompletenessNames, CosSignNames, CrossingNames,
+    DerivUniqueNames, EvtRow1Names, ExpFnNames, ExtremeValueNames, InverseFnNames,
+    IvtBoundaryNames, LubBoundaryNames, MvtNames, PiNames, PolynomialNames, RatioTestNames,
+    build_creal_prelude,
 };
 pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use creal_point::{CPointPrelude, build_cpoint_prelude};
