@@ -27,11 +27,12 @@ the authorities above.
 
 1. [Mission and scope](00-orientation/mission-and-scope.md)
 2. [North star: general reasoning, logic, and proving](00-orientation/north-star.md)
-3. [Automated reasoning foundations](01-foundations/automated-reasoning.md)
-4. [System architecture](03-architecture/system-architecture.md)
-5. [Crate boundaries](03-architecture/crate-boundaries.md)
-6. [Models, proofs, and certificates](04-data-structures/models-proofs-certificates.md)
-7. [Evidence and checking](07-verification/evidence-and-checking.md)
+3. [Computable knowledge: extending the flywheel from Mathlib to the world](00-orientation/computable-knowledge-world-graph.md)
+4. [Automated reasoning foundations](01-foundations/automated-reasoning.md)
+5. [System architecture](03-architecture/system-architecture.md)
+6. [Crate boundaries](03-architecture/crate-boundaries.md)
+7. [Models, proofs, and certificates](04-data-structures/models-proofs-certificates.md)
+8. [Evidence and checking](07-verification/evidence-and-checking.md)
 
 ### Implementation and planning
 
