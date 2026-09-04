@@ -882,4 +882,5 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1595](adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md) | quotients stay setoids; `Quot.sound` stays out of the kernel | proposed |
 | [1597](adr-1597-the-ftc-was-already-proved-and-the-ledger-could-not-say-so.md) | The FTC was already proved, the ledger could not say so, and the textbook form is what was missing | accepted |
 | [1598](adr-1598-the-multiplicative-order-is-a-predicate-picked-out-by-bounded-search.md) | The multiplicative order is a predicate picked out by bounded search, not a computed function | accepted |
+| [1599](adr-1599-ring-generic-over-alg-commring-and-algs-commring.md) | `ring::generic` — the commutative-ring producer over `Alg.CommRing` and `AlgS.CommRing`, and a measured `decide` boundary | accepted |
 | [1600](adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md) | the kernel's metatheoretic status — what is trusted, what is checked, and what is not | accepted |
