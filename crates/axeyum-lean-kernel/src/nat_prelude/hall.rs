@@ -62,11 +62,13 @@
 //!    splits on whether some proper non-empty `t ⊂ s` is *critical*
 //!    (`card t = card (unionOver nb t)`) and recurses on two strictly smaller
 //!    families. This kernel's `Nat.rec` recurses on a numeral, so the argument
-//!    needs strong induction on `card s` with the family varying — i.e. a
-//!    motive `∀ k, ∀ s nb, card s ≤ k → …`. That shape exists
-//!    (`Nat.strongInduction`) but the inner quantification is over
-//!    `Nat.Finset` and `Nat → Nat.Finset`, which no existing induction helper
-//!    in this prelude carries.
+//!    needs strong induction on `card s` with the family varying — a motive
+//!    `∀ k, ∀ s nb, card s ≤ k → …`. There is **no** `Nat.strongInduction` in
+//!    this prelude (checked, and `Nat.base_induction` is not it); the machinery
+//!    that exists is `Nat.lt_well_founded : WellFounded Nat.lt` together with
+//!    the generic `WellFounded.fix`, which is enough but has no `Nat`-specific
+//!    wrapper, and no existing helper quantifies inside the motive over
+//!    `Nat.Finset` and `Nat → Nat.Finset`.
 //! 2. **Choosing the critical subfamily.** The split needs *some* critical `t`
 //!    or a proof that none exists, which is a search over subsets of `s`. This
 //!    kernel has no classical choice, so it must be COMPUTED — a

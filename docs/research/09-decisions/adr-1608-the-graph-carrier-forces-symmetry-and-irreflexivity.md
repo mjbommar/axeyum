@@ -68,7 +68,11 @@ with **no** range conjuncts and **no** distinctness conjuncts, because
 `Nat.Graph.lt_order_of_adjB` recovers `a < order g` from an edge and
 `Nat.Graph.ne_of_adjB` recovers `a ≠ b`. Under (a) each of the three
 existentials would carry six extra conjuncts, and every proof below would have
-to pack and unpack them.
+to pack and unpack them. Only the range half is consumed here — `ne_of_adjB` is
+declared as a law of the carrier and no proof in this ADR calls it, because a
+triangle's vertices being distinct is never needed downstream of the
+existential; it is stated so that a consumer who does need it has it, and it is
+covered by the axiom-freedom sweep like everything else.
 
 **(b) Symmetrization by disjunction (the symmetric closure) instead of
 conjunction.** Rejected because it silently promotes a one-sided entry to an
@@ -200,7 +204,13 @@ they are actually new:
    (`card t = card (unionOver nb t)`) and recurses on two strictly smaller
    families. This kernel's `Nat.rec` recurses on a numeral, so the motive has to
    be `∀ k, ∀ s nb, card s ≤ k → …`, quantifying over `Nat.Finset` and
-   `Nat → Nat.Finset`. Bookkeeping over machinery that exists.
+   `Nat → Nat.Finset`. **There is no `Nat.strongInduction` here** — a
+   `shape_search --name-like` sweep for `strong`, `strong_induction` and
+   `le_induction` returns ABSENT, and `Nat.base_induction` is a different
+   statement. What exists is `Nat.lt_well_founded : WellFounded` plus the
+   generic `WellFounded.fix`, which is sufficient but unwrapped. Bookkeeping
+   over machinery that exists, then, but the wrapper is part of the
+   bookkeeping.
 2. **Deleting from a family.** Both branches build
    `fun i => Nat.Finset.sdiff (nb i) (unionOver nb t)` and a new index set, and
    must transport Hall's condition across the change. `sdiff` and the counting
@@ -258,6 +268,23 @@ and a lane unifying them would get van der Waerden's statement for free.
 result — it is the canonical first theorem of the subject and its
 `external_status` is `established`. The claim this ADR supports is about the
 library's reach, not about mathematics.
+
+## Mutation table
+
+The general finding first, because it is the useful one: **almost every mutation
+of a definition in this lane is caught by the kernel at prelude-build time, not
+by a test.** Each definition is named by at least one theorem whose proof term
+mentions its unfolding, so changing the definition makes that proof fail to
+type-check and the whole `Nat` prelude fails to build — which is why the
+evaluation tests were written for exactly the residue the kernel cannot see:
+the pure *value* choices no theorem constrains.
+
+| mutant | what happens | signal |
+|---|---|---|
+| `adjB` symmetrizes by **disjunction** instead of conjunction (`and_b(rij, rji)` → `orB`) | `Nat.Graph.adjB_symm` no longer type-checks — its proof runs on `andB_comm` and there is no `orB` counterpart — so the prelude fails to build. Run under `nat_prelude::` `--release --test-threads=4`: **40 FAILED, 0 ok** before it was stopped at 12 min (each test rebuilds the prelude, so a rejected declaration costs the whole sweep). | caught by the KERNEL, not by a test. The design choice is pinned by `adjB_symm` itself; `graph_tests::a_one_sided_relation_is_not_an_edge` is the *readable* pin, not the only one |
+| any change to `degree`, `neighbors`, `compl`, `unionOver`, `unionBound`, `anyBelow`, `neB` | each is named by a theorem (`degree_le_order`, `memB_neighbors`, `adjB_compl_of_not_adjB`, `memB_unionOver`, `anyBelow_of_witness`, `adjB_irrefl`) whose proof supplies a term at the un-mutated type | caught by the kernel |
+| a theorem's STATEMENT slid by one numeral | not visible to the kernel at all | caught by the accept/reject pairs: `ramsey_three_three` at `IsRamseyNumber33 5`, `ramsey33_arrows_six` at `Arrows33 5`, `ramsey33_not_arrows_five` at `Arrows33 6 → False`, and `hallCondition_of_isMatching` at the CONVERSE implication, are each offered to the trusted gate with the same proof term and must be REJECTED |
+| a new declaration added and left unwatched | not visible to any test that lists its own subject | caught by `nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free`, which derives its subject from the live environment. It **failed on its first honest run against this diff**, naming all 22 `Nat.Graph` declarations, and that is a real observed failure rather than a hypothetical |
 
 ## Verification
 
