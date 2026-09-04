@@ -656,6 +656,10 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.rado_is_rado_number,
         p.rado_of_finset,
         p.rado_schur_set,
+        // `computability` lane (roadmap W2-14): `computability.rs`.
+        p.rm_run_fuel,
+        p.rm_diag_step,
+        p.rm_halts,
     ]
 }
 
@@ -1670,6 +1674,8 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.sum_divisors_scale_le,
         p.abundant_mul_left,
         p.abundant_of_dvd,
+        // `computability` lane (roadmap W2-14): `computability.rs`.
+        p.rm_self_halting_not_decidable,
     ]
 }
 

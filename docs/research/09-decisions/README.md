@@ -888,3 +888,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1601](adr-1601-classical-logic-enters-as-a-hypothesis-not-as-an-axiom.md) | classical logic enters as a hypothesis, not as an axiom | proposed |
 | [1602](adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md) | topology is built metric-first, then pointfree; open-set topological spaces are not adopted | proposed |
 | [1605](adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md) | the ledger cannot tell "uncharacterised" from "absent" | proposed |
+| [1611](adr-1611-a-computability-layer-and-the-halting-problem.md) | a computability layer, and connecting Cantor to undecidability | accepted |

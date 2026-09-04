@@ -160,6 +160,7 @@ mod catalan;
 mod choose;
 mod choose_factorial_add;
 mod clog;
+mod computability;
 mod coprime_lemmas;
 mod coprime_mul_add_mul_ne_mul;
 mod count_and_div_max_pow;
@@ -345,6 +346,7 @@ use catalan::declare_catalan_all;
 use choose::declare_choose_all;
 use choose_factorial_add::declare_add_choose_mul_factorial_mul_factorial;
 use clog::declare_clog_all;
+use computability::declare_computability_all;
 use coprime_lemmas::declare_coprime_lemmas;
 use coprime_mul_add_mul_ne_mul::declare_coprime_mul_add_mul_ne_mul;
 use count_and_div_max_pow::declare_count_and_div_max_pow;
@@ -5443,6 +5445,28 @@ pub struct NatPrelude {
     /// `Nat.unpaired`-wrapped `Nat.rec` conclusion verbatim.
     pub primrec_prec: NameId,
 
+    // -- `computability` lane (roadmap W2-14): `computability.rs` --
+    // `docs/research/09-decisions/adr-1611-a-computability-layer-and-the-
+    // halting-problem.md`. A minimal machine model over Nat (a step
+    // function on a Nat-encoded configuration space) and the
+    // undecidability of its self-referential halting predicate, connected
+    // to `Nat.cantor_no_fixed_point`'s diagonalization technique.
+    /// `Nat.RM.runFuel (step : Nat -> Nat) (c fuel : Nat) : Nat` -- iterate
+    /// `step` `fuel` times from `c`, via `Nat.rec` on `fuel` alone.
+    pub rm_run_fuel: NameId,
+    /// `Nat.RM.diagStep (H : Nat -> Bool) (c : Nat) : Nat := if H c then c
+    /// else 0` -- the machine that queries `H` about its own current
+    /// configuration at every step.
+    pub rm_diag_step: NameId,
+    /// `Nat.RM.Halts (step : Nat -> Nat) (x : Nat) : Prop := Exists fuel,
+    /// Eq Nat (runFuel step x fuel) 0` -- this model's halting predicate.
+    pub rm_halts: NameId,
+    /// `Nat.RM.self_halting_not_decidable` -- no `H : Nat -> Bool` can be
+    /// correct, at the single self-referential point `1`, about whether
+    /// `Nat.RM.diagStep H` halts from `1`. See `computability.rs`'s module
+    /// doc for exactly what this does and does not claim.
+    pub rm_self_halting_not_decidable: NameId,
+
     // -- `unblock-four-families` lane: `abundant_deficient.rs` --
     // `docs/research/09-decisions/adr-1100-four-families-for-draw-14.md`
     // (ADR-1095's measured gap: the free family supply all sorts EARLY, so
@@ -6509,6 +6533,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         let rado = kernel.name_str(nat, "Rado");
         let finset = kernel.name_str(nat, "Finset");
         let primrec = kernel.name_str(nat, "Primrec");
+        let rm = kernel.name_str(nat, "RM");
         let cases_on_uparam_name = {
             let anon = kernel.anon();
             kernel.name_str(anon, "u")
@@ -7597,6 +7622,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             primrec_pair: kernel.name_str(primrec, "pair"),
             primrec_comp: kernel.name_str(primrec, "comp"),
             primrec_prec: kernel.name_str(primrec, "prec"),
+            rm_run_fuel: kernel.name_str(rm, "runFuel"),
+            rm_diag_step: kernel.name_str(rm, "diagStep"),
+            rm_halts: kernel.name_str(rm, "Halts"),
+            rm_self_halting_not_decidable: kernel.name_str(rm, "self_halting_not_decidable"),
             find_greatest: kernel.name_str(nat, "findGreatest"),
             floor_root: kernel.name_str(nat, "floorRoot"),
             ceil_root: kernel.name_str(nat, "ceilRoot"),
@@ -8055,6 +8084,13 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         declare_prime_not_prime_pow_all(&mut d, &p)?;
         declare_prime_not_coprime_iff_dvd(&mut d, &p)?;
         declare_cantor_all(&mut d, &p)?;
+        // `computability.rs`: connects `cantor_no_fixed_point`'s
+        // diagonalization technique to a genuine undecidability result over
+        // a new, minimal machine model. Needs only `p.rec`/`p.logic`
+        // (always available) and `p.succ_ne_zero` (declared far above with
+        // `Nat` core arithmetic), so it has no real ordering dependency on
+        // `cantor.rs` beyond reading as its sibling here.
+        declare_computability_all(&mut d, &p)?;
         declare_even_of_even_sq(&mut d, &p)?;
         declare_no_rational_sqrt_two(&mut d, &p)?;
         // Needs `Nat.div` (`declare_executable_division`) and `Nat.ble`
@@ -8968,3 +9004,6 @@ mod min_fac_dvd_tests;
 
 #[cfg(test)]
 mod factorization_multiset_tests;
+
+#[cfg(test)]
+mod computability_tests;
