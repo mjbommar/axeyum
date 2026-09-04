@@ -29777,4 +29777,190 @@ mod ftc_tests {
              unshifted `λ E ↦ modulus F a b u E`"
         );
     }
+
+    /// **The two `_of_uc` forms apply with NO `BoundedOn` argument, and two
+    /// negative controls, one per direction.**
+    ///
+    /// The whole content of `declare_ftc_of_uc` is that the `(kb : Nat)` and
+    /// `BoundedOn F a b kb` that `hasDerivative_antiderivative` and
+    /// `integral_eq_antideriv_diff` demand of a caller are DISCHARGEABLE from
+    /// the `UniformlyContinuousOn` witness already in scope. So the
+    /// discriminating check is that each theorem type-checks against a `ty`
+    /// whose binder list stops at `u` — everything is symbolic (`F`, `G`,
+    /// `a`, `b`, `hab`, `u`, `hg` are universally quantified free variables),
+    /// so nothing about the instance is special-cased, and no magnitude bound
+    /// is available anywhere in the context. A regression that put the bound
+    /// back would leave an unbound `kb` and fail here.
+    ///
+    /// One prelude build serves both directions and both controls; splitting
+    /// them would build the `CReal` prelude four times for no extra
+    /// discrimination.
+    ///
+    /// Each negative control differs in a **small** term and is checked in
+    /// both directions the repository's guidance demands.
+    ///
+    /// 1. **FTC-I control** replaces the derivative `F` (one free variable)
+    ///    with the constant `CReal.neg`. `def_eq` compares an `FVar` against
+    ///    a `Const` and fails on the spot, so there is no unfolding
+    ///    pathology. *Not vacuous*: the two conclusion terms are distinct,
+    ///    asserted. *Not inverted*: the variant says the antiderivative of
+    ///    `F` has derivative `x ↦ −x`, which at `F := id` on `[0, 1]` reads
+    ///    `(∫₀ˣ t dt)' = −x`, i.e. `x = −x` — false at every `x` apart from
+    ///    zero.
+    /// 2. **FTC-II control** swaps the two endpoints in the evaluation term,
+    ///    `G b − G a` becoming `G a − G b`. `def_eq` reaches `b` against `a`,
+    ///    two free variables, and fails immediately. *Not vacuous*: the two
+    ///    right-hand sides are distinct, asserted. *Not inverted*: at
+    ///    `F := id` on `[0, 1]` the true value is `∫₀¹ t dt = 1/2` and the
+    ///    variant asserts `1/2 ≃ −1/2`.
+    ///
+    /// Neither control is stated as a claim that the KERNEL refuting it makes
+    /// the variant false — a rejection is a rejection. The falsity of each is
+    /// argued above from the concrete instance, separately.
+    #[test]
+    fn ftc_of_uc_applies_without_a_bounded_witness() {
+        crate::on_a_deep_stack(ftc_of_uc_body);
+    }
+
+    fn ftc_of_uc_admit(
+        d: &mut IntDev<'_>,
+        label: &str,
+        ty: ExprId,
+        value: ExprId,
+    ) -> Result<(), KernelError> {
+        let anon = d.kernel().anon();
+        let name = d.kernel().name_str(anon, label);
+        d.kernel().add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+    }
+
+    fn ftc_of_uc_body() {
+        let mut kernel = crate::Kernel::new();
+        let p = crate::build_creal_prelude(&mut kernel).expect("CReal prelude must build");
+        let mut d = IntDev::new(&mut kernel, p.rat.int);
+        let carrier = creal_ty(&mut d, p);
+        let f_ty = fn_ty(&mut d, p);
+
+        let f_fv = d.fresh_fvar();
+        let f = d.kernel().fvar(f_fv);
+        let g_fv = d.fresh_fvar();
+        let bigg = d.kernel().fvar(g_fv);
+        let a_fv = d.fresh_fvar();
+        let a = d.kernel().fvar(a_fv);
+        let b_fv = d.fresh_fvar();
+        let b = d.kernel().fvar(b_fv);
+        let hab_ty = cle(&mut d, p, a, b);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+        let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+        let u_fv = d.fresh_fvar();
+        let u = d.kernel().fvar(u_fv);
+
+        // --- FTC-I: `HasDerivativeOn (antiderivative F a b hab u) F a b`,
+        // with only five binders. -------------------------------------------
+        let anti = d.const_app(p.antiderivative, &[f, a, b, hab, u]);
+        let concl1 = d.const_app(p.has_derivative_on, &[anti, f, a, b]);
+        let proof1 = d.lemma(p.has_derivative_antiderivative_of_uc, &[f, a, b, hab, u]);
+        let close1 = |d: &mut IntDev<'_>, concl: ExprId| {
+            let ty = {
+                let t = d.pi_fv(u_fv, u_ty, concl);
+                let t = d.pi_fv(hab_fv, hab_ty, t);
+                let t = d.pi_fv(b_fv, carrier, t);
+                let t = d.pi_fv(a_fv, carrier, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let v = d.lam_fv(u_fv, u_ty, proof1);
+                let v = d.lam_fv(hab_fv, hab_ty, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                let v = d.lam_fv(a_fv, carrier, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            (ty, value)
+        };
+        let (ty1, val1) = close1(&mut d, concl1);
+        let res1 = ftc_of_uc_admit(&mut d, "__ftcOneOfUc", ty1, val1);
+        assert!(
+            res1.is_ok(),
+            "FTC-I must apply with no `BoundedOn` argument in scope: {:?}",
+            res1.err()
+        );
+
+        // negative control 1: the derivative is `CReal.neg`, not `F`.
+        let neg_fn = d.kernel().const_(p.neg, vec![]);
+        let bad1 = d.const_app(p.has_derivative_on, &[anti, neg_fn, a, b]);
+        assert_ne!(
+            concl1, bad1,
+            "non-vacuity: the control's conclusion must differ from the real one"
+        );
+        let (bad_ty1, bad_val1) = close1(&mut d, bad1);
+        let bad_res1 = ftc_of_uc_admit(&mut d, "__ftcOneOfUcControl", bad_ty1, bad_val1);
+        assert!(
+            bad_res1.is_err(),
+            "negative control: the antiderivative of `F` must NOT type-check \
+             as having derivative `CReal.neg`"
+        );
+
+        // --- FTC-II: `Equiv (integral F a b hab u) (add (G b) (neg (G a)))`,
+        // with only seven binders. ------------------------------------------
+        let hg_ty = d.const_app(p.has_derivative_on, &[bigg, f, a, b]);
+        let hg_fv = d.fresh_fvar();
+        let hg = d.kernel().fvar(hg_fv);
+        let lhs = d.const_app(p.integral, &[f, a, b, hab, u]);
+        let gb = d.apply(bigg, &[b]);
+        let ga = d.apply(bigg, &[a]);
+        let nga = cneg(&mut d, p, ga);
+        let ngb = cneg(&mut d, p, gb);
+        let rhs = cadd(&mut d, p, gb, nga);
+        let rhs_swapped = cadd(&mut d, p, ga, ngb);
+        assert_ne!(
+            rhs, rhs_swapped,
+            "non-vacuity: `G b − G a` and `G a − G b` must be distinct terms"
+        );
+        let concl2 = equiv(&mut d, p, lhs, rhs);
+        let bad2 = equiv(&mut d, p, lhs, rhs_swapped);
+        let proof2 = d.lemma(
+            p.integral_eq_antideriv_diff_of_uc,
+            &[f, bigg, a, b, hab, u, hg],
+        );
+        let close2 = |d: &mut IntDev<'_>, concl: ExprId| {
+            let ty = {
+                let t = d.pi_fv(hg_fv, hg_ty, concl);
+                let t = d.pi_fv(u_fv, u_ty, t);
+                let t = d.pi_fv(hab_fv, hab_ty, t);
+                let t = d.pi_fv(b_fv, carrier, t);
+                let t = d.pi_fv(a_fv, carrier, t);
+                let t = d.pi_fv(g_fv, f_ty, t);
+                d.pi_fv(f_fv, f_ty, t)
+            };
+            let value = {
+                let v = d.lam_fv(hg_fv, hg_ty, proof2);
+                let v = d.lam_fv(u_fv, u_ty, v);
+                let v = d.lam_fv(hab_fv, hab_ty, v);
+                let v = d.lam_fv(b_fv, carrier, v);
+                let v = d.lam_fv(a_fv, carrier, v);
+                let v = d.lam_fv(g_fv, f_ty, v);
+                d.lam_fv(f_fv, f_ty, v)
+            };
+            (ty, value)
+        };
+        let (ty2, val2) = close2(&mut d, concl2);
+        let res2 = ftc_of_uc_admit(&mut d, "__ftcTwoOfUc", ty2, val2);
+        assert!(
+            res2.is_ok(),
+            "FTC-II must apply with no `BoundedOn` argument in scope: {:?}",
+            res2.err()
+        );
+
+        let (bad_ty2, bad_val2) = close2(&mut d, bad2);
+        let bad_res2 = ftc_of_uc_admit(&mut d, "__ftcTwoOfUcControl", bad_ty2, bad_val2);
+        assert!(
+            bad_res2.is_err(),
+            "negative control: `∫ₐᵇ F ≃ G a − G b` must NOT type-check"
+        );
+    }
 }
