@@ -3891,6 +3891,28 @@ pub(super) const STEPS: &[BuildStep] = &[
         run: super::integral::declare_integral_by_parts,
     },
     BuildStep {
+        label: "integral::declare_ftc_of_uc",
+        requires: &[
+            |p: CRealPrelude| p.add,
+            |p: CRealPrelude| p.antiderivative,
+            |p: CRealPrelude| p.bounded_of_uniformly_continuous,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.has_derivative_antiderivative,
+            |p: CRealPrelude| p.has_derivative_on,
+            |p: CRealPrelude| p.integral,
+            |p: CRealPrelude| p.integral_eq_antideriv_diff,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.neg,
+            |p: CRealPrelude| p.uniformly_continuous_on,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.has_derivative_antiderivative_of_uc,
+            |p: CRealPrelude| p.integral_eq_antideriv_diff_of_uc,
+        ],
+        run: super::integral::declare_ftc_of_uc,
+    },
+    BuildStep {
         label: "derivative::declare_has_derivative_integral_const",
         requires: &[
             |p: CRealPrelude| p.abs,

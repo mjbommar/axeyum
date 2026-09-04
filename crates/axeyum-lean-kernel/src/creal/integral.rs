@@ -29098,6 +29098,215 @@ pub(super) fn declare_integral_by_parts(
     })
 }
 
+// -----------------------------------------------------------------------------
+// The FTC in its TEXTBOOK form -- the `BoundedOn` hypothesis discharged.
+//
+// `declare_has_derivative_antiderivative` and
+// `declare_integral_eq_antideriv_diff` each take `(kb : Nat)` and a
+// `BoundedOn F a b kb` witness the CALLER must supply. Both are redundant:
+// `CReal.bounded_of_uniformly_continuous` computes such a `kb` from the
+// `UniformlyContinuousOn` witness that is ALREADY a hypothesis of both
+// theorems, with no `Exists`-elimination anywhere (the bound is one `Nat`
+// expression in `F`, `a`, `b`, `u`), so nothing about the conclusion changes
+// and no estimate is repeated.
+//
+// The two declarations below are those applications, and they are what a
+// reader looking for "the fundamental theorem of calculus" can read off
+// without first constructing a magnitude bound by hand:
+//
+//   FTC-I   `∀ F a b (hab : a ≤ b) (u : UniformlyContinuousOn F a b),
+//            HasDerivativeOn (antiderivative F a b hab u) F a b`
+//   FTC-II  `∀ F G a b (hab : a ≤ b) (u : UniformlyContinuousOn F a b),
+//            HasDerivativeOn G F a b → ∫ₐᵇ F ≃ G b − G a`
+//
+// Both reuse [`bounded_via_uc`], which reads the computed `K` back off the
+// INFERRED type of `bounded_of_uniformly_continuous F a b u hab` rather than
+// rebuilding it -- `K` is `rescale_index(3, modulus F a b u 0)`-derived and
+// hand-deriving it is exactly the "relating a definition's value to one you
+// rebuilt" cost the contributor guide warns about.
+// -----------------------------------------------------------------------------
+
+/// Admit the two `_of_uc` forms of the fundamental theorem.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+pub(super) fn declare_ftc_of_uc(d: &mut IntDev<'_>, p: CRealPrelude) -> Result<(), KernelError> {
+    declare_has_derivative_antiderivative_of_uc(d, p)?;
+    declare_integral_eq_antideriv_diff_of_uc(d, p)
+}
+
+/// `CReal.hasDerivative_antiderivative_of_uc : ∀ (F : CReal → CReal)
+/// (a b : CReal) (hab : le a b) (u : UniformlyContinuousOn F a b),
+/// HasDerivativeOn (antiderivative F a b hab u) F a b`
+///
+/// **The Fundamental Theorem of Calculus, part I, with no side condition
+/// beyond uniform continuity.** `CRealPrelude::has_derivative_antiderivative`
+/// applied at `kb := ` the `K` computed by
+/// [`CRealPrelude::bounded_of_uniformly_continuous`] from `u` and `hab`.
+/// Nothing here re-proves an estimate; the modulus is
+/// `has_derivative_antiderivative`'s own `λ E ↦ modulus F a b u (2E+1)`,
+/// unchanged, because the proof term is that theorem applied.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_has_derivative_antiderivative_of_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // Every binder is still an OPEN free variable here, so `bounded_via_uc`
+    // needs the whole list to infer in -- see its own doc comment.
+    let free_vars: Vec<(u64, ExprId)> = vec![
+        (fvar_id(d, f), f_ty),
+        (fvar_id(d, a), carrier),
+        (fvar_id(d, b), carrier),
+        (fvar_id(d, hab), hab_ty),
+        (fvar_id(d, u), u_ty),
+    ];
+    let (kb, hbnd) = bounded_via_uc(d, p, f, a, b, u, hab, &free_vars);
+
+    let g = d.const_app(p.antiderivative, &[f, a, b, hab, u]);
+    let concl = d.const_app(p.has_derivative_on, &[g, f, a, b]);
+    let body = d.lemma(
+        p.has_derivative_antiderivative,
+        &[f, a, b, hab, u, kb, hbnd],
+    );
+
+    // `concl` mentions `hab` and `u` (through `antiderivative`), and the proof
+    // term mentions them again through `kb`, so every binder is `pi_fv`/
+    // `lam_fv`, never `d.arrow` -- an `arrow` would leave them unbound.
+    let ty = {
+        let t = d.pi_fv(u_fv, u_ty, concl);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(u_fv, u_ty, body);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.has_derivative_antiderivative_of_uc,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `CReal.integral_eq_antideriv_diff_of_uc : ∀ (F G : CReal → CReal)
+/// (a b : CReal) (hab : le a b) (u : UniformlyContinuousOn F a b),
+/// HasDerivativeOn G F a b →
+/// Equiv (integral F a b hab u) (add (G b) (neg (G a)))`
+///
+/// **The Fundamental Theorem of Calculus, part II — the evaluation rule —
+/// with no side condition beyond uniform continuity.**
+/// [`CRealPrelude::integral_eq_antideriv_diff`] applied at the `K` computed by
+/// [`CRealPrelude::bounded_of_uniformly_continuous`]. This is the statement a
+/// textbook writes: *if `G' = F` on `[a, b]` and `F` is uniformly continuous
+/// there, then `∫ₐᵇ F = G(b) − G(a)`.*
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection. An `Err` from a `Theorem` here means
+/// the kernel **refused** a proof, not that a script gave up.
+fn declare_integral_eq_antideriv_diff_of_uc(
+    d: &mut IntDev<'_>,
+    p: CRealPrelude,
+) -> Result<(), KernelError> {
+    let carrier = creal_ty(d, p);
+    let f_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let bigg = d.kernel().fvar(g_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let hab_ty = cle(d, p, a, b);
+    let hab_fv = d.fresh_fvar();
+    let hab = d.kernel().fvar(hab_fv);
+    let u_ty = d.const_app(p.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hg_ty = d.const_app(p.has_derivative_on, &[bigg, f, a, b]);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let free_vars: Vec<(u64, ExprId)> = vec![
+        (fvar_id(d, f), f_ty),
+        (fvar_id(d, bigg), f_ty),
+        (fvar_id(d, a), carrier),
+        (fvar_id(d, b), carrier),
+        (fvar_id(d, hab), hab_ty),
+        (fvar_id(d, u), u_ty),
+        (fvar_id(d, hg), hg_ty),
+    ];
+    let (kb, hbnd) = bounded_via_uc(d, p, f, a, b, u, hab, &free_vars);
+
+    let lhs = d.const_app(p.integral, &[f, a, b, hab, u]);
+    let gb = d.apply(bigg, &[b]);
+    let ga = d.apply(bigg, &[a]);
+    let nga = cneg(d, p, ga);
+    let rhs = cadd(d, p, gb, nga);
+    let concl = equiv(d, p, lhs, rhs);
+    let body = d.lemma(
+        p.integral_eq_antideriv_diff,
+        &[f, bigg, a, b, hab, u, kb, hbnd, hg],
+    );
+
+    let ty = {
+        let t = d.pi_fv(hg_fv, hg_ty, concl);
+        let t = d.pi_fv(u_fv, u_ty, t);
+        let t = d.pi_fv(hab_fv, hab_ty, t);
+        let t = d.pi_fv(b_fv, carrier, t);
+        let t = d.pi_fv(a_fv, carrier, t);
+        let t = d.pi_fv(g_fv, f_ty, t);
+        d.pi_fv(f_fv, f_ty, t)
+    };
+    let value = {
+        let v = d.lam_fv(hg_fv, hg_ty, body);
+        let v = d.lam_fv(u_fv, u_ty, v);
+        let v = d.lam_fv(hab_fv, hab_ty, v);
+        let v = d.lam_fv(b_fv, carrier, v);
+        let v = d.lam_fv(a_fv, carrier, v);
+        let v = d.lam_fv(g_fv, f_ty, v);
+        d.lam_fv(f_fv, f_ty, v)
+    };
+
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.integral_eq_antideriv_diff_of_uc,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
 #[cfg(test)]
 mod ftc_tests {
     use super::super::series::neg_zero_equiv;

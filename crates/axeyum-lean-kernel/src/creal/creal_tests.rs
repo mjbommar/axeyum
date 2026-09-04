@@ -10184,6 +10184,7 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "integral::declare_ftc_estimates",
     "integral::declare_integral_eq_antideriv_diff",
     "integral::declare_integral_by_parts",
+    "integral::declare_ftc_of_uc",
     "derivative::declare_has_derivative_integral_const",
     "inverse_fn::declare_order_reflect_of_pos_deriv",
     "monotone::declare_inverse_lipschitz_of_pos_deriv",
