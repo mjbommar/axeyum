@@ -648,6 +648,14 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_all_below,
         p.finset_subset_b,
         p.finset_beq,
+        // `rado-in-kernel` lane: `rado.rs` (ADR-1596).
+        p.rado_sol,
+        p.rado_is_colouring,
+        p.rado_mono_sol,
+        p.rado_arrows,
+        p.rado_is_rado_number,
+        p.rado_of_finset,
+        p.rado_schur_set,
     ]
 }
 
@@ -673,6 +681,17 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_pigeonhole,
         p.finset_all_below_false_witness,
         p.finset_exists_collision,
+        // `rado-in-kernel` lane: `rado.rs` (ADR-1596).
+        p.bool_select_lt,
+        p.rado_is_colouring_of_finset,
+        p.rado_in_range_of_le,
+        p.rado_is_colouring_of_le,
+        p.rado_mono_sol_of_le,
+        p.rado_arrows_of_le,
+        p.rado_is_rado_number_of_succ,
+        p.rado_schur_arrows_five,
+        p.rado_schur_not_arrows_four,
+        p.rado_schur_two,
         // `nat-factorization` lane: `factorization_multiset.rs`.
         p.prod_range_eq_one_of_below,
         p.multiset_count_singleton_self,
