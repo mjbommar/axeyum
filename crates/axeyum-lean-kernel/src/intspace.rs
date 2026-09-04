@@ -527,6 +527,11 @@ pub struct IntSpacePrelude {
     pub triv: NameId,
     /// `IntSpace.Triv.mk : IntSpace.Triv`.
     pub triv_mk: NameId,
+    /// `IntSpace.Triv.rec` — the kernel-generated recursor. Named here only
+    /// so `every_live_intspace_declaration_is_listed` can see it: the
+    /// environment check found it live and unlisted, which is what an
+    /// auto-generated declaration does to a handle-derived list.
+    pub triv_rec: NameId,
 
     /// `IntSpace.integral_congr : ∀ S f g hf hg, S.fle f g → S.fle g f →
     /// CReal.Equiv (S.integral f hf) (S.integral g hg)` — the integrand
@@ -670,6 +675,22 @@ pub struct IntSpacePrelude {
     /// `IntSpace.dirac_measure_detachable` — the Dirac measure of a
     /// detachable set, by `CReal.Equiv.refl`.
     pub dirac_measure_detachable: NameId,
+
+    /// `IntSpace.CReal.uniformly_continuous_abs : ∀ F a b,
+    /// CReal.UniformlyContinuousOn F a b →
+    /// CReal.UniformlyContinuousOn (fun t => CReal.abs (F t)) a b`.
+    ///
+    /// **A blocker this lane claimed and then refuted.** `\|·\|` closure was
+    /// recorded as the missing lemma standing between `IntSpace` and a
+    /// Petrakis–Zeuner pre-integration space (whose `L` is closed under the
+    /// lattice operations) and between the interval space and the L¹
+    /// seminorm. A name search says it is absent. `shape_search
+    /// --concl CReal.UniformlyContinuousOn` says the STEP is present:
+    /// `CReal.abs` is `max x (neg x)` by definition and
+    /// `CReal.uniformly_continuous_max` and `_neg` both exist, so this is
+    /// their composition and no new estimate. Searching for the step, not the
+    /// name — the rule, applied to a blocker this lane wrote down itself.
+    pub creal_uniformly_continuous_abs: NameId,
 }
 
 // ---------------------------------------------------------------------------
@@ -722,6 +743,7 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
         record,
         triv,
         triv_mk: kernel.name_str(triv, "mk"),
+        triv_rec: kernel.name_str(triv, "rec"),
         integral_congr: kernel.name_str(ns, "integral_congr"),
         integral_witness_independent: kernel.name_str(ns, "integral_witness_independent"),
         integral_le_const: kernel.name_str(ns, "integral_le_const"),
@@ -769,6 +791,7 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
         creal_dirac_integral: kernel.name_str(ns, "crealDirac_integral"),
         creal_dirac_total: kernel.name_str(ns, "crealDirac_total"),
         dirac_measure_detachable: kernel.name_str(ns, "dirac_measure_detachable"),
+        creal_uniformly_continuous_abs: kernel.name_str(creal_ns, "uniformly_continuous_abs"),
     }
 }
 

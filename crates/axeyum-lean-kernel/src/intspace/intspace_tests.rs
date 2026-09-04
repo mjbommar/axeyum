@@ -64,6 +64,7 @@ fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)> {
         ("IntSpace.rec".into(), p.record.rec),
         ("IntSpace.Triv".into(), p.triv),
         ("IntSpace.Triv.mk".into(), p.triv_mk),
+        ("IntSpace.Triv.rec".into(), p.triv_rec),
         ("IntSpace.integral_congr".into(), p.integral_congr),
         (
             "IntSpace.integral_witness_independent".into(),
@@ -177,11 +178,49 @@ fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)> {
             "IntSpace.dirac_measure_detachable".into(),
             p.dirac_measure_detachable,
         ),
+        (
+            "IntSpace.CReal.uniformly_continuous_abs".into(),
+            p.creal_uniformly_continuous_abs,
+        ),
     ];
     for i in 0..p.record.field_count() {
         out.push((format!("IntSpace selector {i}"), p.record.sel(i)));
     }
     out
+}
+
+/// **Coverage, checked against the ENVIRONMENT rather than against the list.**
+///
+/// `all_declarations` is derived from the prelude handle plus `RecordNames`,
+/// which is better than a literal list of strings and is still not enough: a
+/// declaration the kernel generates and the handle does not name — an
+/// auto-generated recursor is exactly that — is live in the prelude and
+/// invisible to every check below. That is not hypothetical here.
+/// `shape_search --ns IntSpace` reported **70** declarations against the
+/// handle's 69, and the missing one was `IntSpace.Triv.rec`. A list cannot
+/// notice what is absent from it; this assertion can.
+#[test]
+fn every_live_intspace_declaration_is_listed() {
+    let (kernel, p) = built();
+    let listed: std::collections::BTreeSet<crate::name::NameId> = all_declarations(p)
+        .into_iter()
+        .map(|(_, name)| name)
+        .collect();
+    let declared: Vec<crate::name::NameId> =
+        kernel.environment().iter().map(|(name, _)| *name).collect();
+    let unlisted: Vec<String> = declared
+        .into_iter()
+        .map(|name| (name, kernel.display_name(name).to_string()))
+        .filter(|(name, shown)| shown.starts_with("IntSpace") && !listed.contains(name))
+        .map(|(_, shown)| shown)
+        .collect();
+    assert!(
+        unlisted.is_empty(),
+        "these `IntSpace` declarations are live in the prelude but absent \
+         from `all_declarations`, so nothing checks that they are derived and \
+         axiom-free: {unlisted:?}. Add each one -- do not delete this \
+         assertion."
+    );
 }
 
 /// Everything declared here is present, and nothing is an `Axiom` or an
@@ -192,7 +231,7 @@ fn every_intspace_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        52 + FIELD_COUNT,
+        54 + FIELD_COUNT,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {
@@ -748,5 +787,32 @@ fn detachable_and_dirac_types_render() {
     assert!(
         rendered.contains("Bool"),
         "a detachable subset must be Bool-indexed: {rendered}"
+    );
+}
+
+/// The refuted blocker, asserted rather than described: the conclusion really
+/// is about `CReal.abs`, and the hypothesis really is only uniform continuity
+/// of `F` — no boundedness witness, no modulus supplied by the caller.
+#[test]
+fn uniformly_continuous_abs_states_what_it_claims() {
+    let (kernel, p) = built();
+    let rendered = kernel.render_lean(decl_ty(
+        &kernel,
+        p.creal_uniformly_continuous_abs,
+        "IntSpace.CReal.uniformly_continuous_abs",
+    ));
+    println!("IntSpace.CReal.uniformly_continuous_abs : {rendered}");
+    assert!(
+        rendered.contains("CReal.abs"),
+        "the conclusion must be about CReal.abs: {rendered}"
+    );
+    assert!(
+        !rendered.contains("BoundedOn"),
+        "|.| needs no boundedness witness, unlike multiplication: {rendered}"
+    );
+    assert_eq!(
+        rendered.matches("CReal.UniformlyContinuousOn").count(),
+        2,
+        "exactly one hypothesis and one conclusion: {rendered}"
     );
 }

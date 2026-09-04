@@ -46,6 +46,7 @@ pub(super) fn declare_all(d: &mut IntDev<'_>, p: IntSpacePrelude) -> Result<(), 
     declare_creal_integral_nonneg(d, p)?;
     declare_creal_sum_range_congr(d, p)?;
     declare_creal_sum_range_nonneg(d, p)?;
+    declare_creal_uniformly_continuous_abs(d, p)?;
     Ok(())
 }
 
@@ -1095,4 +1096,73 @@ fn declare_creal_sum_range_nonneg(
         d.pi_fv(f_fv, carrier, t)
     };
     theorem(d, p.creal_sum_range_nonneg, ty, value)
+}
+
+/// `IntSpace.CReal.uniformly_continuous_abs : ∀ F a b,
+/// CReal.UniformlyContinuousOn F a b →
+/// CReal.UniformlyContinuousOn (fun t => CReal.abs (F t)) a b`.
+///
+/// **The blocker this lane wrote down and then refuted with its own tool.**
+/// `|·|`-closure of the integrable functions is what a Petrakis–Zeuner
+/// pre-integration space requires and what the L¹ seminorm `‖f−g‖₁ = ∫|f−g|`
+/// needs, and a search of the 542-name `CRealPrelude` field list says there
+/// is no `uniformly_continuous_abs`. There is no such NAME. The STEP is two
+/// lemmas away: `CReal.abs x` is `CReal.max x (CReal.neg x)` by definition,
+/// and `CReal.uniformly_continuous_max` and `CReal.uniformly_continuous_neg`
+/// both exist, so this is their composition with no new estimate. The
+/// composed term has type `UniformlyContinuousOn (fun r => max (F r) (neg (F
+/// r))) a b`, which is definitionally the stated conclusion — the kernel's
+/// acceptance is the proof that `abs` really does unfold that way.
+fn declare_creal_uniformly_continuous_abs(
+    d: &mut IntDev<'_>,
+    p: IntSpacePrelude,
+) -> Result<(), KernelError> {
+    let c = p.creal;
+    let r = rty(d, c);
+    let carrier = d.arrow(r, r);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let u_ty = d.const_app(c.uniformly_continuous_on, &[f, a, b]);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+
+    // `fun t => CReal.neg (F t)`.
+    let neg_f = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ft = d.apply(f, &[t]);
+        let body = rneg(d, c, ft);
+        d.lam_fv(t_fv, r, body)
+    };
+    // `fun t => CReal.abs (F t)`.
+    let abs_f = {
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let ft = d.apply(f, &[t]);
+        let body = d.const_app(c.abs, &[ft]);
+        d.lam_fv(t_fv, r, body)
+    };
+
+    let value = {
+        let un = d.lemma(c.uniformly_continuous_neg, &[f, a, b, u]);
+        let max = c.ivt_boundary.uniformly_continuous_max;
+        let body = d.lemma(max, &[f, neg_f, a, b, u, un]);
+        let t = d.lam_fv(u_fv, u_ty, body);
+        let t = d.lam_fv(b_fv, r, t);
+        let t = d.lam_fv(a_fv, r, t);
+        d.lam_fv(f_fv, carrier, t)
+    };
+    let ty = {
+        let concl = d.const_app(c.uniformly_continuous_on, &[abs_f, a, b]);
+        let t = d.arrow(u_ty, concl);
+        let t = d.pi_fv(b_fv, r, t);
+        let t = d.pi_fv(a_fv, r, t);
+        d.pi_fv(f_fv, carrier, t)
+    };
+    theorem(d, p.creal_uniformly_continuous_abs, ty, value)
 }

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "F:intspace-integral-congr",
+  "title": "Integrand congruence holds in every integration space, from monotonicity alone",
+  "statement": "In any integration space S -- a carrier of functions with a preorder `fle`, a linear structure, a set-indexed integrability family `Integrable`, and an integral that is monotone, additive, homogeneous and evaluates constants -- two integrable functions that bound each other pointwise have `CReal.Equiv` integrals. The proof consumes only monotonicity (`integralLe`) and antisymmetry of the real order (`CReal.equiv_of_le_le`); it uses no property of the space beyond the record's fields, so it holds equally of the Riemann integral on an interval, of a finite sum, and of evaluation at a point. Two consequences follow immediately and are separately declared: integral WITNESS INDEPENDENCE (the value does not depend on which integrability datum is supplied, taking f = g and `fleRefl` twice), and, at the interval instance, a statement about `CReal.integral` that the real prelude did not have -- it carried `CReal.integral_le` for eight days with no way to turn a two-sided pointwise bound into an equality of integrals.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem IntSpace.integral_congr : ((x0 : IntSpace) -> ((x1 : IntSpace.carrier x0) -> ((x2 : IntSpace.carrier x0) -> ((x3 : IntSpace.Integrable x0 x1) -> ((x4 : IntSpace.Integrable x0 x2) -> ((x5 : IntSpace.fle x0 x1 x2) -> ((x6 : IntSpace.fle x0 x2 x1) -> CReal.Equiv (IntSpace.integral x0 x1 x3) (IntSpace.integral x0 x2 x4))))))))",
+    "fragment": "IntSpace",
+    "kernel_theorem": "IntSpace.integral_congr",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-IntSpace.integral_congr",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.integral_congr",
+      "supports": "The generic congruence is admitted by Kernel::add_declaration with an empty axiom footprint, along with the other 69 IntSpace declarations.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_intspace_declaration_is_axiom_free 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "The test derives its declaration list from the IntSpacePrelude handle and the record's own RecordNames, not from a literal list of names, so a declaration cannot be added without entering the footprint sweep. It also pins the total at 54 + FIELD_COUNT, so a silent drop is a failure rather than a smaller sweep."
+    },
+    {
+      "id": "intspace-congr-instantiates-on-creal",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.CReal.integral_congr",
+      "supports": "The generic theorem produces a statement about CReal.integral alone -- no IntSpace in the type -- when applied to IntSpace.crealInterval, which is what makes the genericity claim a fact about the real prelude and not only about the record.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::intspace_headline_types_render"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::intspace_headline_types_render 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "The test asserts the rendered type of the re-derived statement CONTAINS CReal.integral and does NOT contain IntSpace; a statement that leaked the record into its own conclusion would fail."
+    },
+    {
+      "id": "intspace-congr-is-not-vacuous-two-instances",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.CReal.sumRange_congr",
+      "supports": "The theorem is not vacuously generic: the SAME generic congruence is instantiated at a second, structurally unrelated integration space (CReal.sumRange over a finite index set) and yields a statement about CReal.sumRange with no IntSpace in it. A record with one instance proves nothing about genericity.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::intspace_headline_types_render"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::intspace_headline_types_render 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "The two instances share no machinery -- one is built from Riemann sums with a modulus of continuity, the other from Nat.rec -- so the congruence holding at both is evidence about the record rather than about the interval integral."
+    },
+    {
+      "id": "intspace-fields-are-load-bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "Six one-slot mutations of IntSpace.crealInterval's constructor arguments are each REFUSED by the trusted gate, with the unmutated instance admitted as a positive twin in the same test. Without the twin, a refusal would be indistinguishable from a broken harness.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::every_swapped_interval_field_is_refused",
+        "intspace_tests::integral_nonneg_direction_is_load_bearing"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_swapped_interval_field_is_refused 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "A record field mutation poisons the shared prelude build, so it cannot be shown to kill exactly one test the usual way; the positive twin in the same test is the substitute criterion. Each swap replaces one field with another field of the record, so the term is well formed and the refusal is about the field's ROLE, not about garbage."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel intspace::generic module (integration-space lane, roadmap W3-1)",
+    "source": "Derived from the IntSpace record's integralLe field plus CReal.equiv_of_le_le. See docs/research/09-decisions/adr-1612-the-integral-is-primitive-and-measure-is-derived-predicatively.md for the design and the measurement."
+  },
+  "notes": "WHY THIS FACT EXISTS. ADR-1612's deciding measurement partitions creal/integral.rs's 63 declarations and finds that only ONE of them is re-derived as an instance of a general statement -- the brief's own proposed metric returns almost nothing, because the theorems it expected to absorb are the ones that become the record's axioms. What justifies the integration space is the other direction, and this fact is its head: a theorem that did not exist on the reals, proved once, holding of three instances. The corresponding negative is recorded in the ADR and not hidden."
+}
