@@ -50,7 +50,7 @@
 //! # Coverage is declared, and unbuilt is not absent
 //!
 //! The default index covers `logic`, `nat`, `axreal`, `integer`, `rat`,
-//! `characterization` and `string`. `--include-constructed` adds `creal`, `complex`, `cpoint` and `metric`,
+//! `characterization` and `string`. `--include-constructed` adds `creal`, `complex`, `cpoint`, `metric` and `rn`,
 //! which cost real kernel type-checking. Querying a `CReal` name without it is
 //! **unanswerable**, not absent. Every run prints the groups it covered and a
 //! per-kind census before any verdict.
@@ -103,7 +103,7 @@ use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
     build_logic_prelude, build_metric_prelude, build_nat_prelude, build_rat_prelude,
-    build_string_prelude, on_a_deep_stack,
+    build_rn_prelude, build_string_prelude, on_a_deep_stack,
 };
 
 const USAGE: &str = "\
@@ -126,7 +126,7 @@ shape_search — retrieve a declaration by the SHAPE of its type, not its name.
   --like <Name>            same hypothesis-head multiset and conclusion head
                            as this existing declaration
 
-  --include-constructed    also build creal, complex, cpoint and metric
+  --include-constructed    also build creal, complex, cpoint, metric and rn
   --index-values           also read every declaration's checked value
   --duplicates             report declarations stating the same proposition
   --list-namespaces        print the namespace census and stop
@@ -245,6 +245,7 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
             "complex".to_owned(),
             "cpoint".to_owned(),
             "metric".to_owned(),
+            "rn".to_owned(),
         ]);
     }
     let mut index = ShapeIndex::new(groups, index_values);
@@ -319,6 +320,14 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         let mut metric = Kernel::new();
         let _ = build_metric_prelude(&mut metric).expect("Metric prelude must build");
         index_kernel(&metric, "metric", &mut index, index_values);
+
+        // `RN.*` (ADR-1606, the euclidean-n carrier) sits ON TOP of `metric`,
+        // for the same reason and with the same hazard: without this call
+        // `--include-constructed` reports a confident ABSENT for every
+        // declaration of the n-dimensional inner-product space.
+        let mut rn = Kernel::new();
+        let _ = build_rn_prelude(&mut rn).expect("RN prelude must build");
+        index_kernel(&rn, "rn", &mut index, index_values);
     }
 
     index.finish();
