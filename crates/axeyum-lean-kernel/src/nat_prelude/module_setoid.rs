@@ -1784,6 +1784,32 @@ mod module_setoid_tests {
         }
     }
 
+    /// Every declaration's type renders and mentions the abstract spine.
+    /// Prints them so a referee can read the statements out of the suite.
+    #[test]
+    fn the_module_layer_types_render() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        for name in f.m.all() {
+            let decl = k
+                .environment()
+                .get(name)
+                .expect("declaration must exist")
+                .clone();
+            let ty = match &decl {
+                Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+                _ => panic!("unexpected declaration kind"),
+            };
+            let rendered = k.render_lean(ty);
+            println!("decl {name:?} :\n  {rendered}\n");
+            assert!(
+                rendered.contains("AlgS."),
+                "every declaration must be stated over the abstract AlgS \
+                 spine, got: {rendered}"
+            );
+        }
+    }
+
     /// **Evaluation test for `AlgS.Module.linComb`.** With `R`, `M`, `smul`,
     /// `c` and `v` free, the definition must reduce at concrete bounds to the
     /// hand-written fold, and NOT to the fold with the last two terms

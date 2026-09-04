@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-distrib-l",
+  "title": "Polynomial multiplication over an abstract Setoid-flavored commutative ring is left-distributive",
+  "statement": "For any AlgS.CommRing record R (an abstract carrier, a caller-supplied equivalence relation equiv with congruence fields for add/mul/neg, and every ring law stated over equiv rather than Eq) and any three coefficient functions p, q, s : Nat -> R.carrier, AlgS.Poly.equiv R (AlgS.Poly.mul R p (AlgS.Poly.add R q s)) (AlgS.Poly.add R (AlgS.Poly.mul R p q) (AlgS.Poly.mul R p s)). A polynomial is a coefficient function and AlgS.Poly.equiv is coefficientwise equivalence (forall n, R.equiv (p n) (q n)); the product is a convolution written as an antidiagonal walk (AlgS.Poly.antidiagFrom, which moves both indices in step rather than computing n - i, because Nat.sub is not declared at this build position). The proof is AlgS.Poly.antidiagFrom_add applied at the cell family fun i j => R.mul (p i) (R.add (q j) (s j)), whose per-cell hypothesis is R's own distribL and whose successor step is one addCongr followed by AlgS.add_add_add_comm.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Poly.distribL : ((x0 : AlgS.CommRing) -> ((x1 : ((x1 : AxNat) -> AlgS.CommRing.carrier x0)) -> ((x2 : ((x2 : AxNat) -> AlgS.CommRing.carrier x0)) -> ((x3 : ((x3 : AxNat) -> AlgS.CommRing.carrier x0)) -> AlgS.Poly.equiv x0 (AlgS.Poly.mul x0 x1 (AlgS.Poly.add x0 x2 x3)) (AlgS.Poly.add x0 (AlgS.Poly.mul x0 x1 x2) (AlgS.Poly.mul x0 x1 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Poly.distribL"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:algs-neg-neg"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-distrib-l-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Poly.distribL and the fourteen other AlgS.Poly.* declarations it rests on (equiv, add, zero, neg, one, smul, commGroup, antidiagFrom, mul, antidiagFrom_congr, antidiagFrom_add, mulCongr, distribR, and AlgS.add_add_add_comm) admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. The suite also pins the convolution's ORDER definitionally at indices 0, 1 and 2 against hand-written terms, each with a negative twin (swapped summands, swapped factors, left-nested sum) that must NOT be def_eq, and refuses the additive AlgS.CommGroup instance when identR's proof is supplied for identL, with the honest reconstruction admitted in the same test as the positive twin.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release poly_setoid_tests -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 8 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 8 -- admission, axiom-freedom, the checked-Theorem shapes, the abstract-CommRing type render, two evaluation tests with negative twins, and two rejection controls. A dropped test changes the count and fails the command."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::polynomial_setoid, lane algebra-structures, ADR-1609 (roadmap W2-9).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs (declare_poly_distrib_l, declared as AlgS.Poly.distribL); tests nat_prelude::polynomial_setoid::poly_setoid_tests::*."
+  },
+  "notes": "The reason this is on the AlgS spine and not on Alg is structural, not stylistic: the carrier is a FUNCTION SPACE, so Alg.CommGroup's Eq-flavored law fields would be equalities of two lambdas and would need funext, which this kernel does not have and which Quot.sound would not supply (ADR-1595, ADR-1609). AlgS.Poly is not yet a full AlgS.CommRing instance -- mulOneL/mulOneR, mulComm and mulAssoc each need a reindexing lemma for the antidiagonal walk, the same lemmas rat_prelude/diagonal.rs is still missing concretely over the rationals."
+}

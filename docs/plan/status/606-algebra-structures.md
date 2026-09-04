@@ -62,3 +62,4 @@ lane — do not price it as small.
 | 2026-09-04 | algebra-structures | `AlgS.Module.*` (W3-2): modules over an abstract `AlgS.CommRing`, with `R` and `R[X]` as instances; 23 declarations, empty footprint; `31f06cb80` |
 | 2026-09-04 | algebra-structures | `AlgS.Subgroup.*` (W1-11): subgroups as a bounded meet-semilattice, and `ker_isSub`; 20 declarations, empty footprint; `3e8363829` |
 | 2026-09-04 | algebra-structures | ADR-1609: the designs, the setoid cost per construction, and every stopping point sized |
+| 2026-09-04 | algebra-structures | three fact-ledger entries (`F:algs-poly-distrib-l`, `F:algs-poly-module`, `F:algs-subgroup-ker`), each with a checker whose exit status depends on the suite's exact pass count |

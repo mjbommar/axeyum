@@ -1545,6 +1545,33 @@ mod subgroup_setoid_tests {
         }
     }
 
+    /// Every declaration's type renders, and every one is stated over an
+    /// ABSTRACT `AlgS.Group`. Prints them so a referee can read the
+    /// statements out of the suite.
+    #[test]
+    fn the_subgroup_types_render_over_an_abstract_group() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        for name in f.sg.all() {
+            let decl = k
+                .environment()
+                .get(name)
+                .expect("declaration must exist")
+                .clone();
+            let ty = match &decl {
+                Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+                _ => panic!("unexpected declaration kind"),
+            };
+            let rendered = k.render_lean(ty);
+            println!("decl {name:?} :\n  {rendered}\n");
+            assert!(
+                rendered.contains("AlgS.Group"),
+                "every AlgS.Subgroup declaration must be stated over an \
+                 abstract AlgS.Group, got: {rendered}"
+            );
+        }
+    }
+
     /// **Evaluation test for the three lattice definitions.** With `G`, `S`,
     /// `T` and `a` free, each must reduce to the hand-written body, and the
     /// negative twins (`inter` as a disjunction-shaped pair with the sides

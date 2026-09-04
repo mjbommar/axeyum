@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-poly-module",
+  "title": "The polynomial ring over an abstract Setoid-flavored commutative ring is a module over it",
+  "statement": "For any AlgS.CommRing record R, the coefficient functions Nat -> R.carrier form a module over R: AlgS.Module.IsModule R (AlgS.Poly.commGroup R) (AlgS.Poly.smul R). AlgS.Poly.commGroup R is the full sixteen-field additive AlgS.CommGroup of R[X] -- carrier Nat -> R.carrier, equivalence coefficientwise, every law field one application of R's corresponding field at the index -- and AlgS.Poly.smul R a p = fun n => R.mul a (p n). IsModule is the conjunction of five axioms: the scalar action respects both equivalences (smulCongrP, the obligation an Eq-flavored spine would get free), a . (v + w) ~ a.v + a.w, (a + b) . v ~ a.v + b.v, (a * b) . v ~ a . (b . v), and 1 . v ~ v. Each of the five is discharged here by ONE application of R's own field at the coefficient index: mulCongr, distribL, distribR, mulAssoc, mulOneL. This is the free R-module of countable rank, presented without a subtype, a quotient, or function extensionality.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Module.polyModule : ((x0 : AlgS.CommRing) -> AlgS.Module.IsModule x0 (AlgS.Poly.commGroup x0) (AlgS.Poly.smul x0))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Module.polyModule"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": ["F:algs-poly-distrib-l"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-poly-module-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Module.polyModule and the twenty-two other AlgS.Module.* / AlgS.idem_eq_e declarations admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. The suite pins AlgS.Module.linComb and AlgS.Module.coeffAgree definitionally at bounds 0, 1 and 2 against hand-written terms, each with a negative twin (swapped summands, a bound one lower) that must NOT be def_eq; and it refuses polyModule's own proof term against the IsModule statement for the SELF module (R over itself), with the re-declaration against its own statement admitted in the same test as the positive twin.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release module_setoid_tests -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 8 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 8. The load-bearing member is the_poly_module_proof_does_not_check_against_the_self_module_statement -- without it the five coefficientwise proofs could be any well-typed module proof."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel nat_prelude::module_setoid, lane algebra-structures, ADR-1609 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/module_setoid.rs (declare_poly_module, declared as AlgS.Module.polyModule); crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs (declare_poly_comm_group, declare_poly_smul); tests nat_prelude::module_setoid::module_setoid_tests::*."
+  },
+  "notes": "A module here is carried the way AlgS.Hom.* carries a homomorphism -- data as explicit arguments, axioms as a Prop -- and NOT as a record. The obstruction to a record is a universe one and is independent of quotients: nat_prelude::structures::declare_record admits a parameterless inductive at Sort 2 with one fixed level per FieldKind, so no record can hold another record, and shifting the levels wholesale would put the module's own carrier at Sort 2 where Nat -> R.carrier can no longer sit (this kernel's Sort hierarchy is not cumulative). DIMENSION is a further step and is blocked on AlgS.Field, which needs an apartness relation -- a separate open question (ADR-1588, ADR-1595). See ADR-1609."
+}

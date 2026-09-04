@@ -1593,6 +1593,34 @@ mod poly_setoid_tests {
         }
     }
 
+    /// Every declaration's type renders, and every one of them is stated over
+    /// an ABSTRACT `AlgS.CommRing` — which is the claim W2-9 makes, and the
+    /// one a concrete-carrier development would fail. Prints the types so a
+    /// referee can read them out of the suite rather than out of a doc.
+    #[test]
+    fn the_polynomial_ring_types_render_over_an_abstract_comm_ring() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        for name in f.poly.all() {
+            let decl = k
+                .environment()
+                .get(name)
+                .expect("declaration must exist")
+                .clone();
+            let ty = match &decl {
+                Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+                _ => panic!("unexpected declaration kind"),
+            };
+            let rendered = k.render_lean(ty);
+            println!("decl {name:?} :\n  {rendered}\n");
+            assert!(
+                rendered.contains("AlgS.CommRing"),
+                "every AlgS.Poly declaration must be stated over an abstract \
+                 AlgS.CommRing, got: {rendered}"
+            );
+        }
+    }
+
     /// **Evaluation test for `AlgS.Poly.one`.** The carrier is abstract, so
     /// "evaluate at concrete arguments" means: reduce the definition at
     /// concrete INDICES and compare the result to the hand-written term. The
