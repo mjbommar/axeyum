@@ -8632,7 +8632,7 @@
       "fragment": "Nat",
       "module": "Init.Data.Nat.Simproc",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8664,7 +8664,7 @@
       "fragment": "Nat",
       "module": "Batteries.Data.Nat.Lemmas",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8692,7 +8692,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Basic",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:unconditional-equality",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8724,7 +8724,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Order.Lemmas",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:existential-witness",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8755,7 +8755,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.SuccPred",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:biconditional",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8785,7 +8785,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.SuccPred",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:biconditional",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8814,7 +8814,7 @@
       "fragment": "Nat",
       "module": "Init.SimpLemmas",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:unconditional-equality",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8846,7 +8846,7 @@
       "fragment": "Nat",
       "module": "Batteries.Data.Nat.Lemmas",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8882,7 +8882,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Digits.Defs",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:conditional-proposition",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [
@@ -8919,7 +8919,7 @@
       "fragment": "Nat",
       "module": "Mathlib.Data.Nat.Sqrt",
       "mutation_of": null,
-      "partition": "held-out",
+      "partition": "development",
       "proof_shape": "natural-elementary-bounds:existential-witness",
       "provenance_class": "external-transcribed",
       "route_hypotheses": [

@@ -121,6 +121,23 @@
       },
       "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
       "irreversible": true
+    },
+    {
+      "date": "2026-09-03",
+      "family": "natural-elementary-bounds",
+      "from": "held-out",
+      "to": "development",
+      "reason": "two of the ten rows were cited by name in a producer contract: `artifacts/autogenesis/producer-contracts/ring-identity-v1.json` (lane ring-tactic-1, commit 8177c9780, 2026-09-03 10:42) lists F:ml430-nat-add-mul-lt-mul-of-lt-of-lt-4d1d3fbc and F:ml430-nat-mul-add-lt-mul-of-lt-of-lt-3567e87f as `non_examples`, with reasons that quote their statements. Nothing was proved (all ten rows are still `open`), but the family's blind-evaluation value is spent the moment a lane reads two of its rows to decide what a producer must NOT target; scripts/check-autogenesis-holdout-isolation.py reports both as `held-out-reference` and refused the 2026-09-03 push. Per ADR-0542 the partition unit is the whole family, so all ten rows move together, recorded here rather than by deleting the citations (a deletion would hide the spend, not undo it). Detected by the push gate 2026-09-03; the merge landed at 10:42 the same day because the L0 gate runs at push, not at merge.",
+      "breach": {
+        "fact_id": "F:ml430-nat-add-mul-lt-mul-of-lt-of-lt-4d1d3fbc",
+        "proof_shape": "natural-elementary-bounds:reference-only (no proof; cited as a producer-contract non-example)",
+        "operation_id": "ring-identity-v1",
+        "registered_commit": "8177c9780",
+        "registered_date": "2026-09-03",
+        "detected_date": "2026-09-03"
+      },
+      "authority": "docs/research/09-decisions/adr-0542-held-out-partition-breach-repair.md",
+      "irreversible": true
     }
   ],
   "policy_amendments": [
