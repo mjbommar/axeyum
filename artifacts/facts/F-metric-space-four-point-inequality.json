@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-space-four-point-inequality",
+  "title": "The four-point inequality, proved once for every metric space",
+  "statement": "In any metric space M, d(a,e) <= d(a,b) + d(b,c) + d(c,e). Mathematically this is two applications of the triangle inequality and is of no interest on its own; it is recorded because of WHAT it quantifies over. Its statement begins with a bound variable M ranging over the `Metric` carrier, so it is one of the first two statements in this kernel (with `Metric.dist_self`) that hold of every metric space rather than of one specific carrier. Both instances built so far -- the reals under |x-y| and the Euclidean plane under sqrt(distSq) -- satisfy it without any further proof. That is the property a carrier exists to have, and before the `Metric` record no theorem in the analysis or geometry shelves had it: `CReal.UniformlyContinuousOn`, `CReal.converges_of_cauchy`, the intermediate and extreme value theorems and the whole `CPoint.distSq` development were each proved by hand on one carrier and generalized to nothing.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.dist_quadrilateral : ((x0 : Metric) -> ((x1 : Metric.carrier x0) -> ((x2 : Metric.carrier x0) -> ((x3 : Metric.carrier x0) -> ((x4 : Metric.carrier x0) -> CReal.le (Metric.dist x0 x1 x4) (CReal.add (Metric.dist x0 x1 x2) (CReal.add (Metric.dist x0 x2 x3) (Metric.dist x0 x3 x4))))))))",
+    "fragment": "Metric",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4"
+    ],
+    "kernel_theorem": "Metric.dist_quadrilateral"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.dist_quadrilateral",
+      "kind": "kernel-term",
+      "supports": "Metric.dist_quadrilateral is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.dist_quadrilateral | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.dist_quadrilateral[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.dist_quadrilateral",
+      "notes": "The exit status depends on the finding twice over. kernel_declaration_projection exits NON-ZERO and prints an explanatory error when the named declaration is in no constructed prelude's environment -- asking for a declaration and finding none is a failure there, not an empty answer. grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t: in a scripted (GNU) grep \\t is a literal t, and 68 fact checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal/complex/cpoint/metric, which overflow the default debug thread stack. The `metric` label did not exist in this tool before the commit of record; without it the tool was blind to the prelude, which is indistinguishable from the declaration not existing."
+    },
+    {
+      "id": "suite-the_triangle_field_is_load_bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "The triangle-inequality field this theorem consumes is checked, not decorative: rebuilding the reals instance with Metric.CReal.distComm -- a real, admitted theorem of the wrong type -- in the distTriangle slot is REFUSED by Kernel::add_declaration.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::the_triangle_field_is_load_bearing --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 90,
+      "notes": "The `1 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding. --release is mandatory (the creal/cpoint preludes overflow the debug thread stack); --test-threads=4 keeps the shared build off the OOM ceiling."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric.rs)",
+    "source": "Lane `topology-decision`, roadmap W0-3 and W2-1, decided in ADR-1602 (docs/research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `kernel_declaration_projection`; axiom_footprint is that tool's footprint-size column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "depends_on is EMPTY and that is a statement, not an omission: the proof uses only the record's own fields (distTriangle twice) plus CReal.add_le_add and CReal.le_trans, and it names no prior fact in this ledger. A reader checking whether the generalization is real should look at the free_symbols line: x0 is a bound variable of type Metric, so the theorem is not about CReal or CPoint at all."
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "F:cpoint-cauchy-schwarz-unsquared",
+  "title": "Cauchy-Schwarz on the constructed plane, in its UNSQUARED form",
+  "statement": "For plane vectors U and V, <U,V> <= sqrt(<U,U> * <V,V>). `CPoint.cauchy_schwarz` states the squared form <U,V>^2 <= <U,U><V,V>, which is what Lagrange's identity plus positive semidefiniteness deliver; carrying it under `CReal.sqrt_le_sqrt` leaves sqrt(t*t) on the left, and recovering t from that is the whole difficulty. `CReal.sqrt_sq` will not do it: it requires 0 <= t, and the cross term <U,V> has no known sign -- at U = (1,0), V = (-1,0) it is -1. Nor is a case split available: CReal has no le_or_lt, and the converse of `not_equiv_of_apart` is Markov's principle, which this development neither proves nor assumes. What closes it is `CReal.mul_self_abs` (|t|*|t| ~ t*t, UNCONDITIONAL) composed with sqrt_sq at |t|, then `CReal.le_abs_self`. That is the same obstruction and the same resolution `Complex.abs_add_le` needed, recorded at length in ComplexPrelude::norm_sq_add_le's doc comment along with the routes that were tried and refuted.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.CPoint.dotLeSqrtMul : ((x0 : CPoint) -> ((x1 : CPoint) -> CReal.le (CPoint.dot x0 x1) (CReal.sqrt (CReal.mul (CPoint.dot x0 x0) (CPoint.dot x1 x1)))))",
+    "fragment": "Metric",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "Metric.CPoint.dotLeSqrtMul"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cpoint-cauchy-schwarz",
+    "F:creal-mul-self-abs",
+    "F:creal-sqrt-sq",
+    "F:creal-le-abs-self",
+    "F:creal-sqrt-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.CPoint.dotLeSqrtMul",
+      "kind": "kernel-term",
+      "supports": "Metric.CPoint.dotLeSqrtMul is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.CPoint.dotLeSqrtMul | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.CPoint\\.dotLeSqrtMul[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.CPoint.dotLeSqrtMul",
+      "notes": "The exit status depends on the finding twice over. kernel_declaration_projection exits NON-ZERO and prints an explanatory error when the named declaration is in no constructed prelude's environment -- asking for a declaration and finding none is a failure there, not an empty answer. grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t: in a scripted (GNU) grep \\t is a literal t, and 68 fact checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal/complex/cpoint/metric, which overflow the default debug thread stack. The `metric` label did not exist in this tool before the commit of record; without it the tool was blind to the prelude, which is indistinguishable from the declaration not existing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric.rs)",
+    "source": "Lane `topology-decision`, roadmap W0-3 and W2-1, decided in ADR-1602 (docs/research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `kernel_declaration_projection`; axiom_footprint is that tool's footprint-size column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "WHAT IS NOT CLAIMED. This is the ONE-SIDED bound <U,V> <= sqrt(<U,U><V,V>), not the two-sided |<U,V>| <= ||U||*||V||. The two-sided form is reachable by the same route (the proof already passes through |<U,V>| <= sqrt(<U,U><V,V>) as an intermediate step) but was not declared, because the triangle inequality needs only the one-sided direction and an undeclared step is not a theorem. Anyone who wants the norm form should lift that intermediate step rather than assume it exists."
+}

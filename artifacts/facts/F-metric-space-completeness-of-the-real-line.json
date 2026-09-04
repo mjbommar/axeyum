@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "F:metric-space-completeness-of-the-real-line",
+  "title": "Completeness of the real line, as an instance of completeness for an arbitrary metric space",
+  "statement": "Every Cauchy sequence in a `Complete` metric space converges, and the constructive reals under d(x,y) = |x - y| are such a space. The content is that the second half is now an INSTANCE of the first: `Metric.Complete` is a predicate on an arbitrary `Metric` -- a carrier with an explicit equivalence and a `CReal`-valued distance satisfying Bishop's axioms -- and `Metric.creal_complete` discharges it for the instance `Metric.creal`. Before this, `CReal.converges_of_cauchy` proved completeness for the reals specifically and generalized to nothing. The generalization is not free but it is small: `CReal.Cauchy` and `CReal.Converges` are phrased on the rational SAMPLES of the Cauchy representation, not on `CReal.abs`, and the two bridges that cross that gap (`CReal.cauchy_of_abs_diff_le` and `CReal.close_within_of_within`) already existed, written for the intermediate-value theorem and the Weierstrass M-test respectively. Everything else is three `Exists.rec` eliminations, all into `Prop` targets, so `Exists`'s Prop-only elimination is never an obstruction here.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.creal_complete : Metric.Complete Metric.creal    -- Metric.Complete : ((x0 : Metric) -> Prop), unfolding to (forall f : Nat -> Metric.carrier M, Metric.Cauchy M f -> Exists (fun L => Metric.TendsTo M f L))",
+    "fragment": "Metric",
+    "free_symbols": [],
+    "kernel_theorem": "Metric.creal_complete"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-converges-of-cauchy",
+    "F:creal-cauchy-of-abs-diff-le",
+    "F:creal-close-within-of-within"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.creal_complete",
+      "kind": "kernel-term",
+      "supports": "Metric.creal_complete is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.creal_complete | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.creal_complete[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.creal_complete",
+      "notes": "The exit status depends on the finding twice over. kernel_declaration_projection exits NON-ZERO and prints an explanatory error when the named declaration is in no constructed prelude's environment -- asking for a declaration and finding none is a failure there, not an empty answer. grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t: in a scripted (GNU) grep \\t is a literal t, and 68 fact checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal/complex/cpoint/metric, which overflow the default debug thread stack. The `metric` label did not exist in this tool before the commit of record; without it the tool was blind to the prelude, which is indistinguishable from the declaration not existing."
+    },
+    {
+      "id": "suite-every_metric_declaration_is_axiom_free",
+      "kind": "exhaustive-enumeration",
+      "supports": "All 49 declarations of the Metric namespace, including this one, have an empty Kernel::axiom_footprint. The test derives its name list from the prelude handle and the record's own RecordNames selectors, not from a literal, so a thirteenth field or a new theorem cannot escape it.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::every_metric_declaration_is_axiom_free --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 90,
+      "notes": "The `1 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding. --release is mandatory (the creal/cpoint preludes overflow the debug thread stack); --test-threads=4 keeps the shared build off the OOM ceiling."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric.rs)",
+    "source": "Lane `topology-decision`, roadmap W0-3 and W2-1, decided in ADR-1602 (docs/research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `kernel_declaration_projection`; axiom_footprint is that tool's footprint-size column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say the reals are the only complete metric space here, and it does not say the plane instance `Metric.cpoint` is complete -- that is not proved and is the obvious next target (it needs completeness of CReal x CReal, which is not in tree). It also does not say a Cauchy sequence's limit can be EXTRACTED: `Metric.Complete` concludes with `Exists`, which is Prop-valued, so the limit is not available as data. That is a deliberate match to `CReal.converges_of_cauchy`'s own shape and it is the same Prop-only-elimination boundary ADR-1595 measured for quotients; a Type-valued completeness would need a Sigma, and this kernel has none (verified absent, with `Exists` as the positive control)."
+}

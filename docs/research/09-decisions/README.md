@@ -881,3 +881,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1594](adr-1594-the-crosscheck-pin-moves-to-lean-4-34-0-rc1-and-follows-the-pin-file.md) | the crosscheck pin moves to Lean 4.34.0-rc1, and the suites follow the pin file instead of carrying literals | Accepted |
 | [1595](adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md) | quotients stay setoids; `Quot.sound` stays out of the kernel | proposed |
 | [1600](adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md) | the kernel's metatheoretic status — what is trusted, what is checked, and what is not | accepted |
+| [1602](adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md) | topology is built metric-first, then pointfree; open-set topological spaces are not adopted | proposed |

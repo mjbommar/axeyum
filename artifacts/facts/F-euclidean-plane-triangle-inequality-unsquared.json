@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "id": "F:euclidean-plane-triangle-inequality-unsquared",
+  "title": "Euclid I.20 on the constructed Euclidean plane, in its UNSQUARED form",
+  "statement": "For points A, B, C of the constructed plane, sqrt(distSq A C) <= sqrt(distSq A B) + sqrt(distSq B C) -- the triangle inequality on the ACTUAL distance rather than on its square. This is the statement the plane development previously stopped short of, deliberately and for a stated reason: `CPoint.dist_sq_triangle_sq_bound` is squared (Lagrange-derived) and `CPoint.dist_sq_double_sum_bound` carries a factor of 2, and `CPointPrelude::cauchy_schwarz`'s doc comment recorded that the unsquared form 'is not expressible, let alone provable, here' because the kernel had `CReal.natSqrt` and no `CReal.sqrt`. That was true when written and is no longer: `CReal.sqrt`, `sqrt_sq`, `mul_self_sqrt`, `sqrt_mul` and `le_of_sq_le` landed afterwards. Squaring is not an alternative: the squared Euclidean distance is not a metric (d(0,2)^2 = 4 > 1 + 1), which the test suite establishes by putting `CPoint.distSq` itself into the `Metric` record's distance slot and requiring the kernel to refuse.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Metric.CPoint.distTriangle : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : CPoint) -> CReal.le (CReal.sqrt (CPoint.distSq x0 x2)) (CReal.add (CReal.sqrt (CPoint.distSq x0 x1)) (CReal.sqrt (CPoint.distSq x1 x2))))))",
+    "fragment": "Metric",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ],
+    "kernel_theorem": "Metric.CPoint.distTriangle"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cpoint-cauchy-schwarz-unsquared",
+    "F:cpoint-dot-self-nonneg",
+    "F:cpoint-dot-self-add",
+    "F:creal-sqrt-mul",
+    "F:creal-mul-self-sqrt",
+    "F:creal-le-of-sq-le",
+    "F:creal-sqrt-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Metric.CPoint.distTriangle",
+      "kind": "kernel-term",
+      "supports": "Metric.CPoint.distTriangle is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Metric.CPoint.distTriangle | grep -cE '^found[[:space:]]+metric[[:space:]]+theorem[[:space:]]+Metric\\.CPoint\\.distTriangle[[:space:]]+0$'",
+      "checker_seconds": 95,
+      "kernel_declaration": "Metric.CPoint.distTriangle",
+      "notes": "The exit status depends on the finding twice over. kernel_declaration_projection exits NON-ZERO and prints an explanatory error when the named declaration is in no constructed prelude's environment -- asking for a declaration and finding none is a failure there, not an empty answer. grep -c then exits 1 printing 0 if the anchored row is absent or its axiom-footprint column is not 0. Anchored with [[:space:]], never \\t: in a scripted (GNU) grep \\t is a literal t, and 68 fact checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal/complex/cpoint/metric, which overflow the default debug thread stack. The `metric` label did not exist in this tool before the commit of record; without it the tool was blind to the prelude, which is indistinguishable from the declaration not existing."
+    },
+    {
+      "id": "suite-the_planes_squared_distance_is_refused_as_the_dist_field",
+      "kind": "exhaustive-enumeration",
+      "supports": "The square root is a measured requirement, not a stylistic choice: substituting CPoint.distSq for the distance field in the plane's Metric instance -- with the other eleven arguments untouched -- is REFUSED by Kernel::add_declaration.",
+      "check_status": "checked",
+      "checkers": [
+        "metric::metric_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- metric::metric_tests::the_planes_squared_distance_is_refused_as_the_dist_field --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 90,
+      "notes": "The `1 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding. --release is mandatory (the creal/cpoint preludes overflow the debug thread stack); --test-threads=4 keeps the shared build off the OOM ceiling."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_metric_prelude (crates/axeyum-lean-kernel/src/metric.rs)",
+    "source": "Lane `topology-decision`, roadmap W0-3 and W2-1, decided in ADR-1602 (docs/research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `kernel_declaration_projection`; axiom_footprint is that tool's footprint-size column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "THE STALE BLOCKER IS THE POINT. `CPointPrelude::cauchy_schwarz`'s doc comment names this statement as out of reach for a reason that expired. Verify a named blocker before treating it as one -- a file that records obstacles accumulates stale ones by construction, and its authority is what makes them expensive. The proof is composition throughout and introduces no new epsilon estimate: the bilinear expansion of distSq A C, the unsquared Cauchy-Schwarz bound on the cross term (F:cpoint-cauchy-schwarz-unsquared), sqrt_mul to split the product, mul_self_sqrt to recover the squares, one ring expansion of (a+c)^2 spelled out because the reals prelude has no sq_add, and le_of_sq_le to cancel the square."
+}

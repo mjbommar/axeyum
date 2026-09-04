@@ -74,6 +74,12 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # explicit `equiv` relation and congruence fields in place of `Eq`), declared
 # under its own fresh `AlgS` root for the same collision-avoidance reason --
 # added 2026-09-03.
+# `Metric` is ADR-1602's constructive metric-space carrier (a twelve-field
+# record over a carrier with an explicit `equiv` and a `CReal`-valued `dist`,
+# plus the `Metric.CReal.*`/`Metric.CPoint.*` obligations of its two
+# instances), declared under a fresh `Metric` root -- added 2026-09-04 and
+# verified against `kernel_declaration_projection`'s new `metric` label, which
+# reports `found metric theorem Metric.creal_complete 0`.
 #
 # The logic prelude also declares undotted names (bare identifiers), allowed
 # by a separate LOGIC_UNDOTTED set. Widening to accept any bare identifier
@@ -82,7 +88,7 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # declarations the kernel admits.
 KERNEL_THEOREM_RE = re.compile(
     r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|AlgS|"
-    r"And|Decidable|Eq|Iff|Or|"
+    r"And|Decidable|Eq|Iff|Or|Metric|"
     r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )

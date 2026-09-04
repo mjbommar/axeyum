@@ -50,7 +50,7 @@
 //! # Coverage is declared, and unbuilt is not absent
 //!
 //! The default index covers `logic`, `nat`, `axreal`, `integer`, `rat`,
-//! `characterization` and `string`. `--include-constructed` adds `creal`, `complex` and `cpoint`,
+//! `characterization` and `string`. `--include-constructed` adds `creal`, `complex`, `cpoint` and `metric`,
 //! which cost real kernel type-checking. Querying a `CReal` name without it is
 //! **unanswerable**, not absent. Every run prints the groups it covered and a
 //! per-kind census before any verdict.
@@ -102,6 +102,7 @@ use axeyum_lean_kernel::shape_index::{
 use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
+    build_metric_prelude,
     build_logic_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
     on_a_deep_stack,
 };
@@ -126,7 +127,7 @@ shape_search — retrieve a declaration by the SHAPE of its type, not its name.
   --like <Name>            same hypothesis-head multiset and conclusion head
                            as this existing declaration
 
-  --include-constructed    also build creal, complex and cpoint
+  --include-constructed    also build creal, complex, cpoint and metric
   --index-values           also read every declaration's checked value
   --duplicates             report declarations stating the same proposition
   --list-namespaces        print the namespace census and stop
@@ -244,6 +245,7 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
             "creal".to_owned(),
             "complex".to_owned(),
             "cpoint".to_owned(),
+            "metric".to_owned(),
         ]);
     }
     let mut index = ShapeIndex::new(groups, index_values);
@@ -309,6 +311,15 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         let mut cpoint = Kernel::new();
         let _ = build_cpoint_prelude(&mut cpoint).expect("CPoint prelude must build");
         index_kernel(&cpoint, "cpoint", &mut index, index_values);
+
+        // `Metric.*` (ADR-1602) sits ON TOP of `cpoint`, so it is indexed as
+        // its own group: without this call `--include-constructed` reports a
+        // confident ABSENT for every metric/topology declaration, which is the
+        // exact "tool never pointed at your subject" failure the `coverage:`
+        // line below exists to prevent.
+        let mut metric = Kernel::new();
+        let _ = build_metric_prelude(&mut metric).expect("Metric prelude must build");
+        index_kernel(&metric, "metric", &mut index, index_values);
     }
 
     index.finish();

@@ -39,7 +39,7 @@
 //!   -- --require-declaration CReal.integral --require-kind definition
 //! ```
 //!
-//! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`,
+//! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`/`metric`,
 //! which recurse deep enough to overflow the default debug thread stack (the
 //! deep-stack worker in `main` below covers the MAIN thread's frame, not
 //! debug-vs-release per-frame size).
@@ -49,6 +49,7 @@ use std::process::ExitCode;
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
+    build_metric_prelude,
     build_list_nat_bridge, build_list_perm, build_logic_prelude, build_nat_prelude,
     build_rat_prelude, build_string_prelude,
 };
@@ -264,6 +265,18 @@ fn run() -> ExitCode {
         emit("cpoint", &cpoint);
     }
 
+    // `Metric.*` (ADR-1602), the metric-space carrier and its two instances.
+    // It sits ON TOP of `cpoint` (which transitively builds `creal`), so it
+    // needs its own label for exactly the reason the `ipc` comment below
+    // records: a prelude this tool is blind to is indistinguishable from the
+    // declaration not existing, and `--require-declaration` would report a
+    // confident "no declaration named ..." for all 49 of them.
+    let mut metric = Kernel::new();
+    let _ = build_metric_prelude(&mut metric).expect("Metric prelude must build");
+    if unfiltered {
+        emit("metric", &metric);
+    }
+
     // The IPC package, and it is the reason this example is not "every prelude"
     // by accident. `build_ipc_soundness_prelude` transitively builds
     // `provable` -> `heyting` -> `nat`, so one label covers the whole
@@ -308,6 +321,7 @@ fn run() -> ExitCode {
         ("creal", &creal),
         ("complex", &complex),
         ("cpoint", &cpoint),
+        ("metric", &metric),
         ("ipc", &ipc),
     ]
     .into_iter()
