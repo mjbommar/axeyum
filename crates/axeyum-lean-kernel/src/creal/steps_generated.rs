@@ -5295,6 +5295,31 @@ pub(super) const STEPS: &[BuildStep] = &[
         run: super::lub_boundary::declare_lub_boundary,
     },
     BuildStep {
+        label: "omniscience::declare_omniscience",
+        requires: &[
+            |p: CRealPrelude| p.abs,
+            |p: CRealPrelude| p.apart,
+            |p: CRealPrelude| p.creal,
+            |p: CRealPrelude| p.equiv,
+            |p: CRealPrelude| p.equiv_of_le_le,
+            |p: CRealPrelude| p.le,
+            |p: CRealPrelude| p.le_max_left,
+            |p: CRealPrelude| p.le_max_right,
+            |p: CRealPrelude| p.le_of_lt,
+            |p: CRealPrelude| p.le_refl,
+            |p: CRealPrelude| p.lt,
+            |p: CRealPrelude| p.max_le,
+            |p: CRealPrelude| p.neg,
+        ],
+        provides: &[
+            |p: CRealPrelude| p.omniscience.abs_cases_of_order_decision,
+            |p: CRealPrelude| p.omniscience.apart_of_not_equiv_of_order_decision,
+            |p: CRealPrelude| p.omniscience.le_total_of_order_decision,
+            |p: CRealPrelude| p.omniscience.trichotomy_of_order_decision,
+        ],
+        run: super::omniscience::declare_omniscience,
+    },
+    BuildStep {
         label: "trig_fn::declare_cos_fn_family",
         requires: &[
             |p: CRealPrelude| p.abs,

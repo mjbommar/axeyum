@@ -394,6 +394,10 @@
     "of_rat_pos": "CReal.ofRat_pos",
     "of_rat_pow": "CReal.ofRat_pow",
     "of_rat_sub": "CReal.ofRat_sub",
+    "omniscience.abs_cases_of_order_decision": "CReal.abs_cases_of_order_decision",
+    "omniscience.apart_of_not_equiv_of_order_decision": "CReal.apart_of_not_equiv_of_order_decision",
+    "omniscience.le_total_of_order_decision": "CReal.le_total_of_order_decision",
+    "omniscience.trichotomy_of_order_decision": "CReal.trichotomy_of_order_decision",
     "one": "CReal.one",
     "one_le_pow_of_one_le": "CReal.one_le_pow_of_one_le",
     "ordered_ring_s": "CReal.orderedRingS",
@@ -644,6 +648,7 @@
       "monotone": 3,
       "mul_self_zero": 1,
       "mvt": 1,
+      "omniscience": 1,
       "order_extra": 2,
       "pi": 1,
       "polynomial": 1,
@@ -1097,57 +1102,62 @@
         "module": "lub_boundary"
       },
       {
-        "index": 166,
+        "index": 165,
+        "label": "omniscience::declare_omniscience",
+        "module": "omniscience"
+      },
+      {
+        "index": 167,
         "label": "trig_fn::declare_cos_fn_equiv_cos_one",
         "module": "trig_fn"
       },
       {
-        "index": 169,
+        "index": 170,
         "label": "trig_fn::declare_cos_fn_wide_uniformly_continuous",
         "module": "trig_fn"
       },
       {
-        "index": 170,
+        "index": 171,
         "label": "trig_fn::declare_cos_fn_wide_at_one",
         "module": "trig_fn"
       },
       {
-        "index": 171,
+        "index": 172,
         "label": "trig_fn::declare_has_derivative_on_restrict",
         "module": "trig_fn"
       },
       {
-        "index": 175,
+        "index": 176,
         "label": "trig_fn::declare_sin_fn_uniformly_continuous",
         "module": "trig_fn"
       },
       {
-        "index": 177,
+        "index": 178,
         "label": "trig_fn::declare_cos_fn_wide_derivative",
         "module": "trig_fn"
       },
       {
-        "index": 178,
+        "index": 179,
         "label": "trig_fn::declare_sin_fn_lower_bound",
         "module": "trig_fn"
       },
       {
-        "index": 180,
+        "index": 181,
         "label": "exp_fn::declare_exp_fn_equiv_e",
         "module": "exp_fn"
       },
       {
-        "index": 208,
+        "index": 209,
         "label": "evt_row1::declare_evt_approx_max",
         "module": "evt_row1"
       },
       {
-        "index": 212,
+        "index": 213,
         "label": "cos_sign::declare_cos_wide_nonpositive",
         "module": "cos_sign"
       },
       {
-        "index": 213,
+        "index": 214,
         "label": "pi::declare_pi_family",
         "module": "pi"
       }
@@ -1157,10 +1167,10 @@
   "produced_by": "scripts/creal-declare-deps.py",
   "schema": "creal-declare-deps/v1",
   "source": {
-    "creal_prelude_fields": 609,
-    "creal_rs_lines": 11480,
-    "fields_in_module_registries": 69,
-    "functions_indexed": 1940,
+    "creal_prelude_fields": 613,
+    "creal_rs_lines": 11502,
+    "fields_in_module_registries": 73,
+    "functions_indexed": 1952,
     "module_registries": {
       "completeness": "CompletenessNames",
       "cos_sign": "CosSignNames",
@@ -1173,12 +1183,13 @@
       "ivt_boundary": "IvtBoundaryNames",
       "lub_boundary": "LubBoundaryNames",
       "mvt": "MvtNames",
+      "omniscience": "CRealOmniscienceNames",
       "pi": "PiNames",
       "polynomial": "PolynomialNames",
       "ratio_test": "RatioTestNames"
     },
-    "modules_indexed": 50,
-    "steps": 214
+    "modules_indexed": 51,
+    "steps": 215
   },
   "steps": [
     {
@@ -12062,6 +12073,55 @@
     },
     {
       "declared_provides": [
+        "omniscience.abs_cases_of_order_decision",
+        "omniscience.apart_of_not_equiv_of_order_decision",
+        "omniscience.le_total_of_order_decision",
+        "omniscience.trichotomy_of_order_decision"
+      ],
+      "declared_requires": [
+        "abs",
+        "apart",
+        "creal",
+        "equiv",
+        "equiv_of_le_le",
+        "le",
+        "le_max_left",
+        "le_max_right",
+        "le_of_lt",
+        "le_refl",
+        "lt",
+        "max_le",
+        "neg"
+      ],
+      "index": 165,
+      "label": "omniscience::declare_omniscience",
+      "measured_provides": [
+        "omniscience.abs_cases_of_order_decision",
+        "omniscience.apart_of_not_equiv_of_order_decision",
+        "omniscience.le_total_of_order_decision",
+        "omniscience.trichotomy_of_order_decision"
+      ],
+      "measured_requires": [
+        "abs",
+        "apart",
+        "creal",
+        "equiv",
+        "equiv_of_le_le",
+        "le",
+        "le_max_left",
+        "le_max_right",
+        "le_of_lt",
+        "le_refl",
+        "lt",
+        "max_le",
+        "neg"
+      ],
+      "module": "omniscience",
+      "reachable_fns": 14,
+      "run": "omniscience::declare_omniscience"
+    },
+    {
+      "declared_provides": [
         "cos_fn",
         "cos_fn_term",
         "cos_fn_term_abs_le",
@@ -12113,7 +12173,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 165,
+      "index": 166,
       "label": "trig_fn::declare_cos_fn_family",
       "measured_provides": [
         "cos_fn",
@@ -12226,7 +12286,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 166,
+      "index": 167,
       "label": "trig_fn::declare_cos_fn_equiv_cos_one",
       "measured_provides": [
         "cos_fn_one_equiv_cos_one"
@@ -12345,7 +12405,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 167,
+      "index": 168,
       "label": "trig_fn::declare_cos_fn_wide_progress",
       "measured_provides": [
         "cos_dominant_16_over_25",
@@ -12462,7 +12522,7 @@
         "within",
         "zero"
       ],
-      "index": 168,
+      "index": 169,
       "label": "trig_fn::declare_cos_fn_wide",
       "measured_provides": [
         "cos_fn_wide",
@@ -12544,7 +12604,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 169,
+      "index": 170,
       "label": "trig_fn::declare_cos_fn_wide_uniformly_continuous",
       "measured_provides": [
         "cos_fn_wide_uniformly_continuous"
@@ -12631,7 +12691,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 170,
+      "index": 171,
       "label": "trig_fn::declare_cos_fn_wide_at_one",
       "measured_provides": [
         "cos_fn_wide_one_equiv_cos_one",
@@ -12711,7 +12771,7 @@
         "neg",
         "of_rat"
       ],
-      "index": 171,
+      "index": 172,
       "label": "trig_fn::declare_has_derivative_on_restrict",
       "measured_provides": [
         "has_derivative_on_restrict"
@@ -12776,7 +12836,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 172,
+      "index": 173,
       "label": "trig_fn::declare_sin_fn_term_family",
       "measured_provides": [
         "sin_fn_term",
@@ -12862,7 +12922,7 @@
         "within",
         "zero"
       ],
-      "index": 173,
+      "index": 174,
       "label": "trig_fn::declare_sin_fn_dominant",
       "measured_provides": [
         "sin_dominant_16_over_25",
@@ -12960,7 +13020,7 @@
         "within",
         "zero"
       ],
-      "index": 174,
+      "index": 175,
       "label": "trig_fn::declare_sin_fn",
       "measured_provides": [
         "sin_fn",
@@ -13044,7 +13104,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 175,
+      "index": 176,
       "label": "trig_fn::declare_sin_fn_uniformly_continuous",
       "measured_provides": [
         "sin_fn_uniformly_continuous"
@@ -13129,7 +13189,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 176,
+      "index": 177,
       "label": "trig_fn::declare_cos_fn_derivative",
       "measured_provides": [
         "cos_fn_partial_has_derivative",
@@ -13236,7 +13296,7 @@
         "uniform_converges_on",
         "zero"
       ],
-      "index": 177,
+      "index": 178,
       "label": "trig_fn::declare_cos_fn_wide_derivative",
       "measured_provides": [
         "cos_fn_wide_has_derivative",
@@ -13373,7 +13433,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 178,
+      "index": 179,
       "label": "trig_fn::declare_sin_fn_lower_bound",
       "measured_provides": [
         "sin_fn_lower_bound_one_to_r"
@@ -13515,7 +13575,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 179,
+      "index": 180,
       "label": "exp_fn::declare_exp_fn_family",
       "measured_provides": [
         "exp_fn.exp_fn",
@@ -13626,7 +13686,7 @@
         "zero",
         "zero_lt_one"
       ],
-      "index": 180,
+      "index": 181,
       "label": "exp_fn::declare_exp_fn_equiv_e",
       "measured_provides": [
         "exp_fn.exp_fn_one_equiv_e"
@@ -13705,7 +13765,7 @@
         "max",
         "mono_of_le_succ"
       ],
-      "index": 181,
+      "index": 182,
       "label": "supremum::declare_max_range",
       "measured_provides": [
         "max_range",
@@ -13744,7 +13804,7 @@
         "max_range",
         "max_range_ub"
       ],
-      "index": 182,
+      "index": 183,
       "label": "supremum::declare_max_range_transport",
       "measured_provides": [
         "max_range_transport"
@@ -13771,7 +13831,7 @@
         "mesh_level_count_zero"
       ],
       "declared_requires": [],
-      "index": 183,
+      "index": 184,
       "label": "supremum::declare_mesh_level_count",
       "measured_provides": [
         "mesh_level_count",
@@ -13796,7 +13856,7 @@
         "pow_succ",
         "pow_zero"
       ],
-      "index": 184,
+      "index": 185,
       "label": "supremum::declare_mesh_level_count_pow",
       "measured_provides": [
         "mesh_level_count_pow"
@@ -13827,7 +13887,7 @@
         "pow",
         "pow_add"
       ],
-      "index": 185,
+      "index": 186,
       "label": "supremum::declare_mesh_level_count_ge_of_size",
       "measured_provides": [
         "mesh_level_count_ge_of_size"
@@ -13859,7 +13919,7 @@
         "of_nat",
         "of_rat"
       ],
-      "index": 186,
+      "index": 187,
       "label": "supremum::declare_mesh_max",
       "measured_provides": [
         "mesh_max"
@@ -13908,7 +13968,7 @@
         "riemann_sample_in_bounds",
         "uniformly_continuous_on"
       ],
-      "index": 187,
+      "index": 188,
       "label": "supremum::declare_mesh_max_step_le",
       "measured_provides": [
         "mesh_max_step_le"
@@ -13955,7 +14015,7 @@
         "mono_of_le_succ",
         "uniformly_continuous_on"
       ],
-      "index": 188,
+      "index": 189,
       "label": "supremum::declare_mesh_max_mono",
       "measured_provides": [
         "mesh_max_mono"
@@ -13979,7 +14039,7 @@
       "declared_requires": [
         "mesh_level_count"
       ],
-      "index": 189,
+      "index": 190,
       "label": "supremum::declare_exp_of_modulus",
       "measured_provides": [
         "exp_of_modulus"
@@ -14000,7 +14060,7 @@
       "declared_requires": [
         "exp_of_modulus"
       ],
-      "index": 190,
+      "index": 191,
       "label": "supremum::declare_true_exp_of_modulus",
       "measured_provides": [
         "true_exp_of_modulus",
@@ -14022,7 +14082,7 @@
         "exp_of_modulus",
         "true_exp_of_modulus"
       ],
-      "index": 191,
+      "index": 192,
       "label": "supremum::declare_true_exp_of_modulus_step_le",
       "measured_provides": [
         "true_exp_of_modulus_step_le"
@@ -14043,7 +14103,7 @@
         "true_exp_of_modulus",
         "true_exp_of_modulus_step_le"
       ],
-      "index": 192,
+      "index": 193,
       "label": "supremum::declare_true_exp_of_modulus_mono",
       "measured_provides": [
         "true_exp_of_modulus_mono"
@@ -14066,7 +14126,7 @@
         "le_refl",
         "true_exp_of_modulus"
       ],
-      "index": 193,
+      "index": 194,
       "label": "supremum::declare_exp_of_modulus_le_true_exp_of_modulus",
       "measured_provides": [
         "exp_of_modulus_le_true_exp_of_modulus"
@@ -14119,7 +14179,7 @@
         "rat_unit_eq_one",
         "zero"
       ],
-      "index": 194,
+      "index": 195,
       "label": "supremum::declare_mesh_point_near_coarse",
       "measured_provides": [
         "mesh_point_near_coarse"
@@ -14177,7 +14237,7 @@
         "max_range",
         "max_range_ub"
       ],
-      "index": 195,
+      "index": 196,
       "label": "supremum::declare_max_range_le_add_of_exists",
       "measured_provides": [
         "max_range_le_add_of_exists"
@@ -14225,7 +14285,7 @@
         "riemann_sample_in_bounds",
         "zero"
       ],
-      "index": 196,
+      "index": 197,
       "label": "supremum::declare_mesh_max_le_add_of_step_close",
       "measured_provides": [
         "mesh_max_le_add_of_step_close"
@@ -14285,7 +14345,7 @@
         "uc_spec",
         "uniformly_continuous_on"
       ],
-      "index": 197,
+      "index": 198,
       "label": "supremum::declare_mesh_max_le_add_of_modulus",
       "measured_provides": [
         "mesh_max_le_add_of_modulus"
@@ -14343,7 +14403,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 198,
+      "index": 199,
       "label": "supremum::declare_sup_seq",
       "measured_provides": [
         "sup_level",
@@ -14403,7 +14463,7 @@
         "sup_seq_mono",
         "uniformly_continuous_on"
       ],
-      "index": 199,
+      "index": 200,
       "label": "supremum::declare_sup_seq_cauchy",
       "measured_provides": [
         "le_mesh_level_count",
@@ -14456,7 +14516,7 @@
         "sup_seq_abs_diff_le",
         "uniformly_continuous_on"
       ],
-      "index": 200,
+      "index": 201,
       "label": "supremum::declare_sup_on",
       "measured_provides": [
         "sup_on",
@@ -14504,7 +14564,7 @@
         "pos_of_pos_bound",
         "zero"
       ],
-      "index": 201,
+      "index": 202,
       "label": "sup_laws::declare_max_range_attained_approx",
       "measured_provides": [
         "max_range_attained_approx"
@@ -14550,7 +14610,7 @@
         "sup_seq_mono",
         "uniformly_continuous_on"
       ],
-      "index": 202,
+      "index": 203,
       "label": "sup_laws::declare_sup_seq_le_shift",
       "measured_provides": [
         "sup_seq_le_shift"
@@ -14608,7 +14668,7 @@
         "sup_seq_le_shift",
         "uniformly_continuous_on"
       ],
-      "index": 203,
+      "index": 204,
       "label": "sup_laws::declare_sup_on_approx_lub",
       "measured_provides": [
         "sup_on_approx_lub"
@@ -14674,7 +14734,7 @@
         "sup_seq_mono",
         "uniformly_continuous_on"
       ],
-      "index": 204,
+      "index": 205,
       "label": "sup_laws::declare_sup_on_ub_at_sup_seq_point",
       "measured_provides": [
         "sup_on_ub_at_sup_seq_point",
@@ -14725,7 +14785,7 @@
         "lt_cotrans",
         "zero"
       ],
-      "index": 205,
+      "index": 206,
       "label": "sup_laws::declare_step_family_locate",
       "measured_provides": [
         "step_family_locate"
@@ -14782,7 +14842,7 @@
         "uc_modulus",
         "uniformly_continuous_on"
       ],
-      "index": 206,
+      "index": 207,
       "label": "sup_laws::declare_sup_on_ub_at_fine_mesh_point",
       "measured_provides": [
         "mesh_max_le_sup_on_add",
@@ -14874,7 +14934,7 @@
         "uniformly_continuous_on",
         "zero"
       ],
-      "index": 207,
+      "index": 208,
       "label": "sup_laws::declare_sup_on_ub",
       "measured_provides": [
         "sup_on_ub"
@@ -14950,7 +15010,7 @@
         "sup_on_ub",
         "uniformly_continuous_on"
       ],
-      "index": 208,
+      "index": 209,
       "label": "evt_row1::declare_evt_approx_max",
       "measured_provides": [
         "evt_row1.evt_approx_max"
@@ -14983,7 +15043,7 @@
         "pow",
         "pow_nonneg"
       ],
-      "index": 209,
+      "index": 210,
       "label": "cos_sign::declare_cos_wide_tail_nonneg",
       "measured_provides": [
         "cos_sign.cos_wide_tail_nonneg"
@@ -15033,7 +15093,7 @@
         "pow_add",
         "pow_nonneg"
       ],
-      "index": 210,
+      "index": 211,
       "label": "cos_sign::declare_cos_wide_tail_antitone",
       "measured_provides": [
         "cos_sign.cos_wide_tail_antitone"
@@ -15101,7 +15161,7 @@
         "uconv_spec",
         "zero"
       ],
-      "index": 211,
+      "index": 212,
       "label": "cos_sign::declare_cos_wide_series_converges",
       "measured_provides": [
         "cos_sign.cos_wide_series_converges"
@@ -15177,7 +15237,7 @@
         "sum_range",
         "zero"
       ],
-      "index": 212,
+      "index": 213,
       "label": "cos_sign::declare_cos_wide_nonpositive",
       "measured_provides": [
         "cos_sign.cos_wide_nonpositive"
@@ -15292,7 +15352,7 @@
         "within",
         "zero"
       ],
-      "index": 213,
+      "index": 214,
       "label": "pi::declare_pi_family",
       "measured_provides": [
         "pi.pi",

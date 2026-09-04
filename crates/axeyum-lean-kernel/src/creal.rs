@@ -118,6 +118,7 @@ pub use inverse_fn::InverseFnNames;
 pub use ivt_boundary::IvtBoundaryNames;
 pub use lub_boundary::LubBoundaryNames;
 pub use mvt::MvtNames;
+pub use omniscience::CRealOmniscienceNames;
 pub use pi::PiNames;
 pub use polynomial::PolynomialNames;
 pub use ratio_test::RatioTestNames;
@@ -5298,6 +5299,15 @@ pub struct CRealPrelude {
     /// cross-module rename (`scripts/creal-declare-deps.py`).
     pub lub_boundary: LubBoundaryNames,
 
+    // --- what the classical order buys, priced as a hypothesis (W0-2) --------
+    /// `creal/omniscience.rs`'s own 4 names, held in their own struct for the
+    /// same reason [`LubBoundaryNames`] is (ADR-1512): adding a declaration to
+    /// that module touches that module alone.
+    ///
+    /// Reached as `p.omniscience.le_total_of_order_decision` and documented in
+    /// [`CRealOmniscienceNames`] rather than here.
+    pub omniscience: CRealOmniscienceNames,
+
     // --- general `cos : CReal → CReal` (creal/trig_fn.rs) ---------------------
     /// `CReal.cosFnTerm : Nat → CReal → CReal := fun k x => mul (cosTerm k)
     /// (pow x (Nat.add k k))` — the `k`-th power-series term of general
@@ -6763,6 +6773,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         extreme_value: extreme_value::ExtremeValueNames::intern(kernel, creal),
         ivt_boundary: ivt_boundary::IvtBoundaryNames::intern(kernel, creal),
         lub_boundary: lub_boundary::LubBoundaryNames::intern(kernel, creal),
+        omniscience: omniscience::CRealOmniscienceNames::intern(kernel, creal),
         cos_fn_term: kernel.name_str(creal, "cosFnTerm"),
         cos_fn_term_abs_le: kernel.name_str(creal, "cosFnTermAbsLe"),
         cos_fn_term_congr: kernel.name_str(creal, "cosFnTerm_congr"),
@@ -7726,6 +7737,10 @@ const STEP_DISPATCH: &[StepDispatch] = &[
     (
         "lub_boundary::declare_lub_boundary",
         lub_boundary::declare_lub_boundary,
+    ),
+    (
+        "omniscience::declare_omniscience",
+        omniscience::declare_omniscience,
     ),
     (
         "trig_fn::declare_cos_fn_family",
@@ -9022,6 +9037,7 @@ mod lub_boundary;
 mod monotone;
 mod mul_self_zero;
 mod mvt;
+mod omniscience;
 mod order_extra;
 mod pi;
 mod polynomial;
@@ -9050,6 +9066,12 @@ mod creal_tests;
 /// `creal` lane collides on.
 #[cfg(test)]
 mod lub_boundary_tests;
+
+/// Tests for `creal/omniscience.rs` (roadmap W0-2: what the classical order
+/// on ℝ buys, priced as a hypothesis). Kept out of `creal_tests.rs` for the
+/// same reason `lub_boundary_tests` is.
+#[cfg(test)]
+mod omniscience_tests;
 
 /// Per-module declaration inventory consumed by `creal_tests`'s
 /// environment-derived coverage test. `#[cfg(test)]`: pure test scaffolding,
