@@ -252,6 +252,10 @@ mod parity;
 mod parity_div;
 mod perfect;
 mod permutation;
+/// ADR-1609 / roadmap W2-9: `AlgS.Poly.*`, the polynomial ring over an
+/// abstract `AlgS.CommRing`. Declared at the `AlgS` build position, so it
+/// sees only `LogicPrelude` (`Nat`, `Nat.zero`, `Nat.succ`, `Nat.rec`).
+pub mod polynomial_setoid;
 mod pow_add_prime;
 mod powsq;
 mod prime_char;
@@ -6498,6 +6502,23 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             &structures_s,
             &structures_names,
             &structures,
+        )?;
+
+        // ADR-1609 / roadmap W2-9: `AlgS.Poly.*`, the polynomial ring over an
+        // abstract `AlgS.CommRing`. Same build position and same dependency
+        // set as the spine above (`logic` plus the `AlgS` records), so it
+        // lands here. Its names are DELIBERATELY not threaded into
+        // `NatPrelude`: nothing later in this prelude consumes them, and
+        // widening `StructuresSExtraNames` would change a struct that
+        // `axeyum-py`'s generated field registry mirrors. Tests reach the
+        // declarations the same way `first_iso_tests` does -- by calling
+        // `declare_poly_setoid` against their own kernel.
+        let _poly_s = polynomial_setoid::declare_poly_setoid(
+            kernel,
+            &logic,
+            &structures_s.comm_ring,
+            &structures_s.comm_group,
+            structures_s_names.algs,
         )?;
 
         // Intern every name up front so the `NatPrelude` (which the proof scripts
