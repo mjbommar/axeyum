@@ -149,7 +149,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1207 names,
+/// The `NatPrelude` field table (1224 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 107 of the names come from ADR-1512 per-module registries and
@@ -1509,6 +1509,23 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
                 p.finset_all_below_false_witness,
             ),
             ("finset_exists_collision", p.finset_exists_collision),
+            ("rado_sol", p.rado_sol),
+            ("rado_is_colouring", p.rado_is_colouring),
+            ("rado_mono_sol", p.rado_mono_sol),
+            ("rado_arrows", p.rado_arrows),
+            ("rado_is_rado_number", p.rado_is_rado_number),
+            ("rado_of_finset", p.rado_of_finset),
+            ("bool_select_lt", p.bool_select_lt),
+            ("rado_is_colouring_of_finset", p.rado_is_colouring_of_finset),
+            ("rado_in_range_of_le", p.rado_in_range_of_le),
+            ("rado_is_colouring_of_le", p.rado_is_colouring_of_le),
+            ("rado_mono_sol_of_le", p.rado_mono_sol_of_le),
+            ("rado_arrows_of_le", p.rado_arrows_of_le),
+            ("rado_is_rado_number_of_succ", p.rado_is_rado_number_of_succ),
+            ("rado_schur_set", p.rado_schur_set),
+            ("rado_schur_arrows_five", p.rado_schur_arrows_five),
+            ("rado_schur_not_arrows_four", p.rado_schur_not_arrows_four),
+            ("rado_schur_two", p.rado_schur_two),
             ("structures.magma.ind", p.structures.magma.ind),
             ("structures.magma.mk", p.structures.magma.mk),
             ("structures.magma.rec", p.structures.magma.rec),

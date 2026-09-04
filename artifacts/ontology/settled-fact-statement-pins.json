@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2262,
+    "min_identity_bound": 2263,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -20513,6 +20513,13 @@
           "statement_sha256": "d0d3499ec9c31b8c60e7e413ea88a4998dfe463972fde079526c88ebdc245d9b"
         }
       ]
+    },
+    {
+      "fact_id": "F:rado-r2-schur-two",
+      "language": "lean4",
+      "statement_sha256": "87b5c8bc9a8311ad637bddfc0c447bd923d6df2699b7bb4d07e492bc42f93fec",
+      "prose_sha256": "19259a65019e7a49d1ec233ec3d7ccc4c7d23771887b7772e68d6d5978ae88b5",
+      "kernel_theorem": "Nat.Rado.schur_two"
     },
     {
       "fact_id": "F:rado-r4-a5-b3",
