@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "F:ramsey-r33-six",
+  "title": "The two-colour Ramsey number R(3,3) is 6, as a kernel theorem",
+  "statement": "Every graph on at least six vertices contains three pairwise adjacent vertices or three pairwise non-adjacent ones, and some graph on five vertices contains neither -- the five-cycle. So R(3,3) = 6. Both halves are kernel terms with an empty axiom footprint: the upper bound is the textbook pigeonhole argument encoded as a 32-leaf case tree over the five edges at one vertex, and the lower bound is a search certificate that the kernel re-checks by reflection.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Graph.ramsey_three_three : Nat.Graph.IsRamseyNumber33 6",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Graph.ramsey_three_three",
+    "kernel_statement": "Nat.Graph.IsRamseyNumber33 n := And (Nat.Graph.Arrows33 n) (forall k, Nat.lt k n -> Nat.Graph.Arrows33 k -> False), where Nat.Graph.Arrows33 n := forall g : Nat.Graph, Nat.le n (Nat.Graph.order g) -> Or (Nat.Graph.HasClique3 g) (Nat.Graph.HasClique3 (Nat.Graph.compl g)); instantiated at n = 6"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum lane `graph-carrier`, roadmap items W1-6 and W2-11: `nat_prelude/graph.rs` declares the carrier and `nat_prelude/ramsey.rs` the Ramsey family; the lower-bound search in `ramsey.rs` produced the five-vertex certificate and the reconstruction emitted the kernel terms",
+    "source": "Ramsey's theorem for two colours at (3,3); classical (Ramsey 1930, and the R(3,3) = 6 value is the standard first example)",
+    "prior_art": [
+      {
+        "citation": "Ramsey, 1930",
+        "establishes": "the general finite Ramsey theorem, of which R(3,3) = 6 is the first non-trivial diagonal value"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Graph.ramsey_three_three",
+      "kind": "kernel-term",
+      "supports": "R(3,3) = 6, both halves, as one kernel term of type Nat.Graph.IsRamseyNumber33 6",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::ramsey_tests::ramsey_three_three_is_leastness_at_six_and_not_at_five",
+        "nat_prelude::ramsey_tests::the_two_halves_sit_at_adjacent_numerals",
+        "nat_prelude::graph_tests::every_graph_hall_and_ramsey_declaration_is_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::ramsey -- --test-threads=4",
+      "notes": "`Nat.Graph.ramsey33_arrows_six` (the upper half) is a case tree over the five edges at vertex 0 -- 32 leaves, each one application of `Nat.Graph.triangle_or_indep` or `Nat.Graph.antitriangle_or_indep`, the two four-leaf case analyses proved once. The pigeonhole step is discharged by the enumeration: the builder computes the majority colour class at each leaf and a Rust assertion fires if some leaf has fewer than three on both sides. `Nat.Graph.ramsey33_not_arrows_five` (the lower half) refutes `Arrows33 5` by reflection against `Nat.Graph.ramsey33Witness`: a Bool triple loop over `Nat.Finset.allBelow` that the kernel's own conversion check reduces to `true`, read back at the three existential witnesses by `allBelow_true_at`, applied to the witness AND to its complement. The two are joined by `Nat.Graph.isRamseyNumber33_of_succ` at m = 5. ADR-1608.",
+      "checker_paired_negative": "Both halves are checked in BOTH directions: the same proof terms offered at `IsRamseyNumber33 5`, at `Arrows33 5` (for the upper bound) and at `Arrows33 6 -> False` (for the lower bound) must all be REJECTED. `Arrows33` is antimonotone, so an upper bound that also proved `Arrows33 5` would contradict the lower bound."
+    },
+    {
+      "id": "shape-Nat.Graph.ramsey_three_three",
+      "kind": "exhaustive-enumeration",
+      "supports": "the declaration exists under this exact name and is a theorem, not a definition or an axiom",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.Graph.ramsey_three_three --kind theorem --expect 1"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.Graph.ramsey_three_three --kind theorem --expect 1",
+      "notes": "`shape_search` exits 1 when the count differs and 3 when the query is unanswerable, so a stale index cannot pass for a present declaration. The same query returned ABSENT for every one of graph, edge, vertex, degree, walk, ramsey, clique and independ before this lane, which is the pre-state this row is measured against."
+    },
+    {
+      "id": "search-lower-bound-r33",
+      "kind": "exhaustive-enumeration",
+      "supports": "6 is LEAST: of the 2^10 graphs on five vertices, at least one has neither a triangle nor an independent triple",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::ramsey_tests::the_search_returns_a_graph_with_no_monochromatic_triple",
+        "nat_prelude::ramsey_tests::the_triangle_decision_fires_on_both_sides"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::ramsey_tests -- --test-threads=4",
+      "notes": "The untrusted half, pinned independently of the kernel term it produced. The test re-derives the no-monochromatic-triple property from the returned edge list rather than trusting the search's own verdict, and carries a negative control -- the empty graph, which the same predicate must reject -- so the check is not vacuous. It also pins that the witness has five edges and is 2-regular, i.e. that it is the five-cycle up to relabelling, which is the unique such graph. Separately, `noClique3B` (the decision the kernel actually runs) is checked `true` on the witness and its complement and `false` on the complete graph on three vertices, so the reflection cannot be vacuously true.",
+      "checker_paired_negative": "If the search returned None -- if every graph on five vertices had a monochromatic triple -- `ramsey.rs` declares neither the witness nor `ramsey33_not_arrows_five`, and `ramsey_three_three` then names a theorem that does not exist, so the kernel rejects it and the whole Nat prelude fails to build. There is no path on which a failed search yields a green suite."
+    }
+  ],
+  "notes": "`external_status: proved` and `epistemic_status: proved` agree here on purpose: R(3,3) = 6 is the canonical first theorem of Ramsey theory, not a new result. Its value is the ROUTE and the carrier -- before this lane the kernel had no graph at all, and the combinatorics reviewer's file called that the largest gap in the subject and the gate on most of it.\n\nWhat it does NOT do is generalise. The upper bound's method is a case tree over the edges at one vertex, so R(3,4) or R(4,4) by the same route would multiply the tree; the right response there is a genuine induction on the Ramsey recurrence R(s,t) <= R(s-1,t) + R(s,t-1), which needs the degree/neighbourhood counting this lane landed but does not itself perform. ADR-1608."
+}
