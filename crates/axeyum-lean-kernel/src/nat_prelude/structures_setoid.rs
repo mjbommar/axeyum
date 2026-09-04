@@ -3684,6 +3684,65 @@ pub(crate) fn declare_image_mem(
     Ok(name)
 }
 
+// ---------------------------------------------------------------------------
+// ADR-1595 deliverable 4: THE SAME THEOREM ASSUMING `Quot.sound`, sketched.
+//
+// This is a comment. **Nothing below is declared, and `Quot.sound` is NOT
+// added to the kernel.** It exists so the ADR's cost comparison can be
+// checked against a concrete alternative rather than against a feeling.
+//
+// The kernel already admits Lean's four-declaration package (`Quot`,
+// `Quot.mk`, `Quot.lift`, `Quot.ind` -- `src/quotient.rs`) and deliberately
+// not `Quot.sound`. With `Quot.sound` the construction would be:
+//
+//   Q            := Quot (AlgS.Hom.kerEquiv G H f)          -- a NEW type
+//   mk           := Quot.mk _                               -- G.carrier -> Q
+//   Q.op         := Quot.lift₂ (fun a b => mk (G.op a b))   -- needs a proof
+//                     ^ well-definedness side condition:
+//                       kerEquiv a a' -> kerEquiv b b'
+//                         -> Eq (mk (G.op a b)) (mk (G.op a' b'))
+//                       which is `Quot.sound` applied to exactly
+//                       `AlgS.Hom.kerEquivOpCongr`. THE PROOF DOES NOT GO
+//                       AWAY; it moves inside the lift.
+//   Q.inv        := Quot.lift (fun a => mk (G.inv a))       -- likewise, the
+//                     side condition is `AlgS.Hom.kerEquivInvCongr`.
+//   Q.assoc      := Quot.ind (fun a => Quot.ind (fun b => Quot.ind (fun c =>
+//                     Quot.sound (fCongr _ _ (G.assoc a b c)))))
+//                     ^ HARDER than the setoid route, which is one `fCongr`
+//                       application with no induction at all.
+//
+// Obligation-by-obligation against the fifteen `AlgS.Group` fields actually
+// discharged above (the table is in ADR-1595 § "What it cost"):
+//
+//   DISAPPEAR (3):  equivRefl, equivSymm, equivTrans -- `Eq.refl`/`Eq.symm`/
+//                   `Eq.trans` are primitive, so the three one-line fields
+//                   `AlgS.Hom.quotient` supplies would not be written. This
+//                   is the ENTIRE saving, and it is three lines.
+//   SURVIVE  (2):  `kerEquivOpCongr` and `kerEquivInvCongr` reappear
+//                   verbatim as `Quot.lift₂`/`Quot.lift`'s well-definedness
+//                   arguments. Same terms, same seven and six steps.
+//   GET WORSE (5): assoc, identL, identR, invL, invR each gain a `Quot.ind`
+//                   induction to return to representatives before the
+//                   `fCongr` application can be made.
+//
+// And the half `Quot.sound` does NOT reach: the classical statement is an
+// isomorphism between two GROUP OBJECTS, `G/ker f` and `Im f`. `Quot.sound`
+// supplies the first. The second needs a carrier
+// `{y : H.carrier // Exists a, H.equiv (f a) y}` -- a subtype. This kernel
+// has no `Subtype` and no `Sigma` (both verified ABSENT by `shape_search`
+// against a freshly built binary, 2026-09-04), so option (a) buys half the
+// theorem and leaves the other half needing a second kernel addition it does
+// not provide. The setoid route has no such gap: the quotient IS the image,
+// presented on `G.carrier`, which is why `AlgS.Hom.firstIso` above is
+// complete as stated.
+//
+// Footprint cost, measured rather than assumed: `Kernel::axiom_footprint`
+// (`src/lean_pp.rs`) filters the dependency closure to `Axiom | Opaque |
+// Quotient`, so a construction routed through `Quot` names FIVE trusted
+// entries (`Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind`, `Quot.sound`) on
+// every downstream fact -- not the one the algebra reviewer priced.
+// ---------------------------------------------------------------------------
+
 /// `AlgS.Hom.firstIso : forall G H f fCongr fMul,
 ///   And (forall a b, Iff (Q.equiv a b) (ker (G.op a (G.inv b))))
 ///       (And (forall a b, H.equiv (f (Q.op a b)) (H.op (f a) (f b)))

@@ -879,3 +879,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1592](adr-1592-algs-group-and-orderedring-close-the-gaps-adr-1590-named.md) | `AlgS.Group`-level theorems and `AlgS.OrderedRing` close the two gaps ADR-1590 named | accepted |
 | [1593](adr-1593-the-pigeonhole-is-the-bijection-law-with-its-inverse-deleted.md) | the pigeonhole principle is the bijection law with its inverse deleted, and the colliding pair is computed rather than extracted | Accepted |
 | [1594](adr-1594-the-crosscheck-pin-moves-to-lean-4-34-0-rc1-and-follows-the-pin-file.md) | the crosscheck pin moves to Lean 4.34.0-rc1, and the suites follow the pin file instead of carrying literals | Accepted |
+| [1595](adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md) | quotients stay setoids; `Quot.sound` stays out of the kernel | proposed |
