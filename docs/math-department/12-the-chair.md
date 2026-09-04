@@ -112,6 +112,7 @@ it.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 2,487 proved / 262 open / 4 refuted, empty footprint throughout, 67 producer retirements in one week. Department-wide finding: two unwritten ADRs block six of twelve fields. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five items 1, 3 and 5 landed.** W0-1 decided by measurement (ADR-1595, setoid quotients); the landmark count shipped as a registered checker with its own controls — 1,432 landmarks of 2,487 proved, 57.6%; ADR-1600 records the kernel's metatheoretic status. Item 2, the classical-axiom policy, remains the outstanding decision. Off-roadmap: the safety-matrix gate was found red on main since 2026-08-31 and regenerated. | `8b4f277d4`, `2a640c9b6` |
 
 ## How to re-measure
 

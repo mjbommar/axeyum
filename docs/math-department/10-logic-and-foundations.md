@@ -154,6 +154,7 @@ before anyone starts.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: kernel with strict positivity, universe guards, well-founded recursion, quotient package without `Quot.sound`, no funext/propext/choice. Metatheory: IPC EM-unprovability with audited encoding, EM ↔ unrestricted LNP, ℕ and ℤ categoricity, Cantor. 2,487 proved facts, empty footprint. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 5 landed** (roadmap W0-4): ADR-1600 records the kernel's metatheoretic status. Trusted base measured at 5,526 function-body lines across 9 files by call-graph closure from the four admission gates. Three soundness guards demonstrated firing in an isolated copy; a fourth, the nested-inductive phantom-parameter domain check, kills zero tests and is recorded as an open finding. No consistency or normalization result, and the ADR says why none can be internal. | `8b4f277d4` |
 
 ## How to re-measure
 

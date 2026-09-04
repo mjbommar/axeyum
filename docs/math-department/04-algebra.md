@@ -1,11 +1,16 @@
 # 04 — Algebra
 
 Reviewer: an algebraist — groups, rings, fields, representation theory
-Verdict, 2026-09-04: **dismissive, and correctly so**
+Verdict, 2026-09-04 (revised, same day): **the blocker is decided and the first isomorphism theorem is proved — still a thin shelf, no longer a blocked one**
 Last measured: 2026-09-04 at `1856cdb3c`
 
 > "You have written down the axioms of a group and proved that inverses are
 > unique. Come back when you can form G/N."
+>
+> **Revised the same day:** "You formed G/N without a quotient type, by keeping
+> the carrier and coarsening the equivalence, and the first isomorphism theorem
+> cost three lines more than it would have with `Quot.sound`. I withdraw the
+> objection to the method. The shelf is still nearly empty."
 
 ## The persona
 
@@ -17,7 +22,8 @@ isomorphism theorems are stated, because everything after them assumes them.
 
 ## What the library has today
 
-**A structure spine, two of them, and instances. No quotients that quotient.**
+**A structure spine, two of them, instances, and — as of 2026-09-04 — quotients
+that quotient, carried over setoids rather than over `Quot`.**
 
 The `Alg` spine is an `Eq`-based record hierarchy at `Sort 2`:
 
@@ -43,6 +49,17 @@ Theorems proved generically over the spine, roughly two dozen, including:
 - each of the above again over `AlgS`, up to equivalence
 - the 1×1 determinant over an abstract commutative ring
 
+**Added 2026-09-04 (roadmap W2-8, ADR-1595):** `AlgS.Hom.*`, twelve
+declarations, empty footprint. `AlgS.Hom.quotient` builds the quotient of a
+group by a homomorphism's kernel **with the same carrier and a coarser
+equivalence** — `equiv := fun a b => H.equiv (f a) (f b)` — so there is no
+carrier of equivalence classes and no `Quot` anywhere. `AlgS.Hom.firstIso`
+then states the first isomorphism theorem: the quotient's equivalence is
+exactly the kernel congruence, the induced map is a homomorphism out of it,
+and it is onto the image. A negative control confirms the kernel-congruence
+proof is load-bearing: substituting the source group's own `opCongr` is
+rejected.
+
 Concrete algebra that does exist, off the spine: linear algebra over ℚ
 (`rowEchelon`, `isEchelon`, `rank`, `nullity`, determinants, Cramer's rule,
 matrix row operations) and polynomial arithmetic over ℚ and ℂ (`polyEval`,
@@ -56,15 +73,21 @@ first ten minutes of a first course. Every one of them — inverses unique,
 cancellation, `x·0 = 0` — is a warm-up exercise. Nothing in the file is a
 theorem an algebraist would cite.
 
-The reason is not laziness and the reviewer would identify it immediately.
-**There are no quotients.** Not "no quotient groups yet": the construction is
-unavailable. The kernel admits Lean's quotient package — `Quot`, `Quot.mk`,
-`Quot.lift`, `Quot.ind` — but **not `Quot.sound`**, the rule that says related
-representatives become equal. You can form the type and lift a function; you
-cannot prove `Quot.mk a = Quot.mk b` from `a ~ b`. A quotient you cannot
-compute equalities in is not a quotient.
+The reason was not laziness, and the reviewer identified it immediately:
+**there were no quotients.** The kernel admits Lean's quotient package —
+`Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind` — but **not `Quot.sound`**, the rule
+that says related representatives become equal. You can form the type and lift
+a function; you cannot prove `Quot.mk a = Quot.mk b` from `a ~ b`. A quotient
+you cannot compute equalities in is not a quotient.
 
-Everything an algebraist does next therefore does not start:
+**That objection was answered on 2026-09-04, and not the way the reviewer
+expected.** The route is not to add the axiom but to stop asking for a carrier
+of classes: a quotient group is *the same carrier under a coarser
+equivalence*, which the `AlgS` spine can express because it carries `equiv` as
+a field. The first isomorphism theorem follows, with an empty footprint. The
+reviewer's revised position is at the top of this file. What remains true is
+the second half of their complaint — the shelf above the isomorphism theorem is
+still nearly empty:
 
 - G/N, and with it the three isomorphism theorems
 - R/I, ideals, prime and maximal ideals, quotient fields
@@ -104,9 +127,33 @@ Everything. In dependency order:
 - **Field extensions and Galois theory**, which is where the subject's
   landmark results are.
 
-## The blocker
+## The blocker — resolved 2026-09-04
 
-**`Quot.sound`, and it is the largest open decision in the library.**
+**Decided:
+[ADR-1595](../research/09-decisions/adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md),
+`Status: Proposed`: quotients stay setoids and `Quot.sound` stays out.** The
+decision was made by building the theorem, not by weighing the arguments below,
+and the arguments are kept because the ADR is reversible on evidence — a named
+theorem shown unreachable over setoids reopens it.
+
+**The measurement that decided it.** Of `AlgS.Group`'s fifteen fields, exactly
+**three** (`equivRefl`, `equivSymm`, `equivTrans`, one line each) were
+discharged by hand that `Quot` plus `Eq` would have given free. The two
+substantial congruence proofs do *not* disappear under `Quot.sound`; they
+reappear as the well-definedness side conditions of `Quot.lift₂` and
+`Quot.lift`. The five group laws are *cheaper* over setoids — one `fCongr`
+application each, against a `Quot.ind` induction. **Net cost of not having the
+axiom, on this theorem: three lines.**
+
+**Two findings that settled it beyond the cost.** First, `Quot.sound` is *five*
+footprint entries, not one: `Kernel::axiom_footprint` filters the dependency
+closure to `Axiom | Opaque | Quotient`, so anything routed through `Quot` names
+the whole package. Second, it would not reach the classical statement anyway —
+"`G/ker f ≅ Im f` as two group objects" needs a subtype for the image, and
+`Subtype` and `Sigma` are both absent from the kernel, while the setoid route
+has no such gap because the quotient *is* the image.
+
+The original arguments, preserved:
 
 The case for adding it:
 
@@ -133,21 +180,19 @@ The case against:
 
 A third option the reviewer would not think of but the library should: keep
 `Quot.sound` out of the kernel and carry quotient constructions **over
-setoids**, generalizing what ℝ already does — a `Setoid` carrier with
-congruence-respecting maps, and the isomorphism theorems stated up to the
-equivalence. This is the Bishop-style answer, it preserves the footprint, and
-it is more work per theorem. Whether the algebra shelf can be built this way
-at reasonable cost is an empirical question nobody has tested, and testing it
-on one nontrivial example — the first isomorphism theorem over `AlgS.Group` —
-would settle a lot.
+setoids**, generalizing what ℝ already does. This was the Bishop-style answer,
+it preserves the footprint, and it was expected to be more work per theorem.
+It was tested on exactly the example named here, the first isomorphism theorem
+over `AlgS.Group`, and it cost three lines. **This is the option that was
+taken.**
 
 ## Next five, in their priority order
 
-- [ ] **1. Resolve the quotient question in an ADR.** Add `Quot.sound`, or
+- [x] **1. Resolve the quotient question in an ADR.** *Done 2026-09-04, ADR-1595: setoid quotients.* Add `Quot.sound`, or
       commit to setoid quotients, or admit `Quot.sound` in a labelled second
       tier whose footprints are reported separately. Everything below depends
       on the answer and nothing should be built until it exists.
-- [ ] **2. The first isomorphism theorem over `AlgS.Group`**, by whichever
+- [x] **2. The first isomorphism theorem over `AlgS.Group`.** *Done 2026-09-04, `AlgS.Hom.firstIso`, footprint empty.* Original framing:, by whichever
       route (1) selects. This is the empirical test: if it lands at acceptable
       cost over setoids, the whole subject is reachable without an axiom.
 - [ ] **3. Homomorphisms, kernels, images, and subgroups** as a reusable
@@ -167,6 +212,7 @@ would settle a lot.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: `Alg` and `AlgS` spines Magma→Field with ℕ/ℤ/ℚ/ℝ/ℂ instances; ~24 generic theorems, all elementary. No quotients, no homomorphisms, no ideals, no field extensions. `Quot.sound` absent from the kernel. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five items 1 and 2 both landed** (roadmap W0-1 and W2-8). ADR-1595 decides the quotient question by measurement: setoid quotients, `Quot.sound` stays out. `AlgS.Hom.*` adds 12 declarations including `firstIso`, all with empty footprint. The construction is that a quotient group is the same carrier under a coarser equivalence, so there is no carrier of classes and no `Quot`. Measured cost of not having the axiom on this theorem: three lines. Verdict revised. | `2a640c9b6`; `structures_setoid` 18 passed, `first_iso` 5 passed |
 
 ## How to re-measure
 

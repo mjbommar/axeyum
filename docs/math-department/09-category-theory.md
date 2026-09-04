@@ -126,6 +126,7 @@ that are already proved does not need any of this.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: zero categorical declarations. ℤ categoricity, ℕ Peano uniqueness, Cantor's fixed-point theorem, and the forgetful projections all present as concrete one-offs. Blocked on the same `funext`/`Quot.sound` fork as algebra. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 3 answered** by roadmap W0-1: the morphism-equality discipline is setoid-enriched, not `funext` (ADR-1595, decided by measurement rather than preference). Items 4 and 5 are now scoped rather than blocked. The first isomorphism theorem that settled it is itself a universal-property result stated without naming one — which is item 1's point, unchanged. | `2a640c9b6` |
 
 ## How to re-measure
 

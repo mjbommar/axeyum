@@ -67,10 +67,10 @@ current metric does not punish deferring them.
 
 | id | item | source | status | note |
 |---|---|---|---|---|
-| W0-1 | Quotient and extensionality ADR (C1) | 04.1, 09.3, 12.1 | not started | Add `Quot.sound`; or commit to setoid quotients; or admit it in a labelled tier with separately reported footprints. |
+| W0-1 | Quotient and extensionality ADR (C1) | 04.1, 09.3, 12.1 | **landed** `2a640c9b6` | **Decided by measurement: setoid quotients; `Quot.sound` stays out.** [ADR-1595](../research/09-decisions/adr-1595-quotients-stay-setoids-and-quot-sound-stays-out.md), Proposed. Net cost of not having the axiom, measured on W2-8: **three lines**. Two findings that decided it: the footprint filter counts the whole quotient package, so it is five entries not one; and it would not reach the classical statement anyway, because `Subtype` and `Sigma` are absent. Reversible on evidence — a named theorem shown unreachable over setoids reopens it. |
 | W0-2 | Classical-axiom policy ADR (C4) | 03.1, 12.2 | not started | EM as a footprint entry vs. EM as a discharged hypothesis. `Nat.em_implies_lnp` shows the second route already works. |
 | W0-3 | Constructive topology design ADR | 06.1 | not started | Open sets, apartness spaces, or locales. Determines whether the analysis shelf ever generalizes. |
-| W0-4 | Kernel metatheoretic status (C6) | 10.5, 12.5 | not started | What is trusted, what is cross-checked against official Lean, what a relative consistency result would need. |
+| W0-4 | Kernel metatheoretic status (C6) | 10.5, 12.5 | **landed** `8b4f277d4` | [ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md). Trusted base measured at **5,526 function-body lines across 9 files**, by call-graph closure from the four admission gates, out of 378,049 in the crate. Three soundness guards demonstrated firing in an isolated copy; **a fourth kills zero tests** and is recorded as an open finding rather than hidden. |
 
 **W0-1 and W0-3 should be written together.** The morphism-equality question
 (09.3) and the topology-carrier question are the same fork seen from two sides:
@@ -86,7 +86,7 @@ Everything here can start today. Ordered by convergence count, then by yield.
 | W1-1 | Rado numbers in-kernel; close the computed→proved gap (C2) | 07.1, 11.1, 12.4 | not started | Flagship. Define the object over `Nat.Finset`, have the search discharge a kernel statement. Constraint: unary numerals, so the constant 625 cannot be *formed*. |
 | W1-2 | Fundamental theorem of calculus | 02.1 | not started | Both directions over the existing Riemann integral. The specialist reviewer's first item. |
 | W1-3 | Name the universal properties already proved | 09.1 | not started | Nearly free. `Int.Characterization.categorical` as an initial-object property, Peano as a natural-numbers object. |
-| W1-4 | Landmark count beside the total | 12.3 | not started | Define what counts as a named result and report both numbers. |
+| W1-4 | Landmark count beside the total | 12.3 | **landed** `8b4f277d4` | `scripts/count-landmark-facts.py`, registered in `check.sh` and the justfile with its own control suite. **2,487 proved, 1,432 landmark (57.6%).** Rule: proved, and the title is not `[generated]`. |
 | W1-5 | Extend `ring` and `decide` to ℝ | 11.2 | not started | The `linarith`-over-`AlgS.OrderedRing` generalization, repeated. Every producer reaching a carrier retires hand proofs above it. |
 | W1-6 | A graph carrier | 07.2 | not started | Decidable adjacency on a bounded vertex range, sibling of `Nat.Finset`. Gate on most of combinatorics. |
 | W1-7 | Structure of (ℤ/n)\* and primitive roots | 01.1 | not started | The most conspicuous hole in an otherwise complete elementary number theory shelf. |
@@ -111,7 +111,7 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-5 | Power series with a radius of convergence | 02.2 | not started | — |
 | W2-6 | Uniform convergence and the interchange theorems | 02.3 | not started | W2-5 |
 | W2-7 | The weak law of large numbers | 08.1 | not started | W1-10 |
-| W2-8 | First isomorphism theorem over `AlgS.Group` | 04.2 | not started | W0-1 (this item *is* the empirical test of the setoid route) |
+| W2-8 | First isomorphism theorem over `AlgS.Group` | 04.2 | **landed** `2a640c9b6` | Landed early, as W0-1's deciding experiment. 12 declarations in `AlgS.Hom.*`, footprint empty. The construction: a quotient group is the **same carrier under a coarser equivalence**, not a new carrier of classes. |
 | W2-9 | Polynomial rings as a structure | 04.4 | not started | W0-1, W1-11 |
 | W2-10 | Products and subspaces | 06.5 | not started | W2-1 |
 | W2-11 | Ramsey's theorem for two colours | 07.3 | not started | — (pigeonhole exists) |
@@ -163,11 +163,14 @@ One row per wave. Update when something lands, then append to the history log.
 
 | wave | items | not started | in progress | landed |
 |---|---|---|---|---|
-| W0 — decisions | 4 | 4 | 0 | 0 |
-| W1 — unblocked | 13 | 13 | 0 | 0 |
-| W2 — carriers | 21 | 21 | 0 | 0 |
+| W0 — decisions | 4 | 2 | 0 | **2** |
+| W1 — unblocked | 13 | 8 | 4 | **1** |
+| W2 — carriers | 21 | 20 | 0 | **1** |
 | W3 — large shelves | 13 | 13 | 0 | 0 |
-| **total** | **51** | **51** | **0** | **0** |
+| **total** | **51** | **43** | **4** | **4** |
+
+In progress, 2026-09-04: W1-1 (Rado), W1-2 (FTC), W1-5 (producers to ℝ),
+W1-7 (primitive roots).
 
 Item count is 51 rather than 60 because nine of the sixty Next Five entries are
 the same request made by a second or third reviewer; see the convergence table.
@@ -181,22 +184,25 @@ Reviewer verdicts as of the last reconciliation:
 | 01 number theory | impressed, with a ceiling | W1-7, W2-17, W2-18 land |
 | 02 constructive analysis | excited | W1-2 lands |
 | 03 classical analysis | unmoved | W0-2, W0-3, W3-1 land |
-| 04 algebra | dismissive | W0-1 is decided and W2-8 lands |
+| 04 algebra | **upgraded 2026-09-04** — the blocker is decided and the first isomorphism theorem is proved | W2-9, W3-2 land |
 | 05 geometry | charmed, then bored | W1-8, W2-4 land |
 | 06 topology | nothing to review | W0-3 is decided and W2-1 lands |
 | 07 combinatorics | week three, good foundations | W1-1, W1-6 land |
 | 08 probability | better than first reported | W2-7 lands |
-| 09 category theory | absent, opposed | W1-3 lands (cheap), W3-3 (real) |
-| 10 logic & foundations | most interested | W1-9, W0-4 land |
+| 09 category theory | absent, opposed; morphism-equality question answered by W0-1 | W1-3 lands (cheap), W3-3 (real) |
+| 10 logic & foundations | most interested; W0-4 landed | W1-9 lands |
 | 11 applied & computational | most novel object here | W1-1, W1-5 land |
-| 12 the chair | would sign the report | W0-1 and W0-2 are written |
+| 12 the chair | would sign the report; W0-1 written, W1-4 landed | W0-2 is written |
 
 ## History
 
 | date | commit | change |
 |---|---|---|
 | 2026-09-04 | `f36120646` | Twelve persona files created; sixty Next Five items recorded. |
-| 2026-09-04 | this file | Roadmap synthesized: 60 Next Five entries → 51 distinct items, 7 convergences, 4 waves. Baseline status: nothing started. |
+| 2026-09-04 | `d73328291` | Roadmap synthesized: 60 Next Five entries → 51 distinct items, 7 convergences, 4 waves. Baseline status: nothing started. |
+| 2026-09-04 | `8b4f277d4` | **W0-4 and W1-4 landed.** ADR-1600 (trusted base 5,526 lines, three guards shown firing, a fourth shown inert) and the landmark counter (1,432 of 2,487 proved). |
+| 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
+| 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 
 ## How to update this file
 
