@@ -7,6 +7,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > "This is a real library. It is also 1830s number theory, and you have built
 > it so well that the wall it hits is now unmistakable."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Works on primes, congruences, Diophantine equations, and L-functions. Values
@@ -71,10 +79,11 @@ structural rather than a matter of effort.
 - **Algebraic number theory, entirely.** No rings of integers, no ideals, no
   unique factorization in a Dedekind domain, no class group, no units theorem.
 - **Multiplicative structure.** No Möbius function, no Dirichlet convolution,
-  no multiplicativity of the totient proved as a general property, no
-  arithmetic functions as a family.
-- **Primitive roots and the structure of (ℤ/n)\*.** This is elementary, it is
-  reachable, and its absence is the most surprising one given what is present.
+  no arithmetic functions as a family. **[AUDIT] Totient multiplicativity IS
+  proved in exactly the general form this bullet denied**:
+  `Nat.totient_mul_of_coprime`, landed `05ad19d54` 2026-08-30 (audit row A7).
+- ~~**Primitive roots and the structure of (ℤ/n)\*.**~~ **[AUDIT] landed
+  2026-09-04** (roadmap W1-7), except existence modulo a prime.
 - **Analytic anything.** No prime counting, no Chebyshev bounds, no Dirichlet
   series, no L-functions, no zeta.
 - **Classical Diophantine results.** No Pell's equation, no sums of two
@@ -108,9 +117,9 @@ great deal of that left.
       divisor function, Dirichlet convolution, and multiplicativity proved
       once rather than per function. Unlocks inclusion-exclusion arguments and
       makes the existing totient work compose.
-- [ ] **3. Unique factorization as a theorem, not a construction.** State and
-      prove the fundamental theorem of arithmetic in the form "the
-      factorization multiset is unique", now that `Nat.Multiset` exists. This
+- [x] **3. Unique factorization as a theorem, not a construction.** **[AUDIT]
+      Already proved**: `Nat.Multiset.count_eq_of_prod_eq` with
+      `exists_prime_factorization` (audit row A5). Original framing: This
       is the bridge between the number theory shelf and the new combinatorics
       carriers.
 - [ ] **4. Sums of two squares, with the descent argument reusable.** A named

@@ -83,7 +83,7 @@ Everything here can start today. Ordered by convergence count, then by yield.
 
 | id | item | source | status | note |
 |---|---|---|---|---|
-| W1-1 | Rado numbers in-kernel; close the computed→proved gap (C2) | 07.1, 11.1, 12.4 | not started | Flagship. Define the object over `Nat.Finset`, have the search discharge a kernel statement. Constraint: unary numerals, so the constant 625 cannot be *formed*. |
+| W1-1 | Rado numbers in-kernel; close the computed→proved gap (C2) | 07.1, 11.1, 12.4 | **landed** `de0cd02da` | 17 declarations in `nat_prelude/rado.rs`, footprint 0, and **Schur's number `R_2(x = y + z) = 5` proved in-kernel from search in BOTH halves** — the upper by a case tree, the lower by reflection over a `Nat.Finset` colouring. `Nat.Finset` *is* a 2-colouring with no side condition. **The brief's unary-numeral constraint was wrong**: `IsRadoNumber 5 3 4 625` type-checks, because a `Prop` mentioning a numeral never reduces it; the cost is a cost of *reduction*. The real residue is combinatorial — `Arrows 5 3 4 625` needs a term over 4⁶²⁵ colourings, and colourings are functions. Both `computed` facts correctly stay `computed`. ADR-1596. |
 | W1-2 | Fundamental theorem of calculus | 02.1 | **landed** `182d0dd7d` | **The item was based on a false absence: both directions were proved 2026-08-27**, before the review that asked for them. What landed is the `_of_uc` pair with the redundant boundedness witness removed (arity 7→5 and 9→7), and the finding that **W2-20 is not a prerequisite** — FTC-II routes through `constant_of_zero_deriv` and the modulus's uniformity replaces the MVT's asserted point. Root cause of the false absence: ADR-1605. |
 | W1-3 | Name the universal properties already proved | 09.1 | not started | Nearly free. `Int.Characterization.categorical` as an initial-object property, Peano as a natural-numbers object. |
 | W1-4 | Landmark count beside the total | 12.3 | **landed** `8b4f277d4` | `scripts/count-landmark-facts.py`, registered in `check.sh` and the justfile with its own control suite. **2,487 proved, 1,432 landmark (57.6%).** Rule: proved, and the title is not `[generated]`. |
@@ -93,7 +93,7 @@ Everything here can start today. Ordered by convergence count, then by yield.
 | W1-8 | Angle measure; laws of sines and cosines | 05.1 | not started | Connect analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. The library has trigonometry and geometry and they do not touch. |
 | W1-9 | Extend the reverse-mathematics map | 10.1 | not started | LPO, Markov's principle, LLPO beside the existing EM ↔ LNP result. The most distinctive mathematics in the library. |
 | W1-10 | Generalize finite probability over `AlgS.OrderedRing` | 08.2 | not started | Prerequisite for stating the WLLN across ℚ and ℝ without a hand-built bridge. |
-| W1-11 | Homomorphisms, kernels, images, subgroups | 04.3 | not started | Useful before quotients exist, and needed however W0-1 resolves. |
+| W1-11 | Homomorphisms, kernels, images, subgroups | 04.3 | **landed** `2a640c9b6` | The homomorphism, kernel and image layer arrived with W2-8's twelve `AlgS.Hom.*` declarations (audit row A9). **Subgroups as a lattice remain absent** and are the residue of this item. |
 | W1-12 | Measure the exact-real performance envelope | 11.4 | not started | π and exp to a stated precision with the cost model. The library claims computable analysis and has never quoted a time. |
 | W1-13 | Measure and reduce the `cas-internal` residue | 11.5 | not started | The honest boundary of the trusted pipeline; should be published and falling. |
 
@@ -109,8 +109,8 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-3 | Bishop compactness on intervals; EVT re-derived as an instance | 06.3 | not started | W2-1 |
 | W2-4 | ℝⁿ as a carrier, `CPoint` as n = 2 (C7) | 05.2 | not started | — |
 | W2-5 | Power series with a radius of convergence | 02.2 | not started | — |
-| W2-6 | Uniform convergence and the interchange theorems | 02.3 | not started | W2-5 |
-| W2-7 | The weak law of large numbers | 08.1 | not started | W1-10 |
+| W2-6 | Uniform convergence and the interchange theorems | 02.3 | **already done 2026-08-27** | `CReal.UniformConvergesOn`, `uniform_limit_uniformly_continuous`, `hasDerivative_uniform_limit`, `weierstrassMTest`. Audit row A3. |
+| W2-7 | The weak law of large numbers | 08.1 | **already done 2026-08-24** | `Rat.weak_law_of_large_numbers` (`54592604a`), ten days before the review called it one limit away. Audit row A2. |
 | W2-8 | First isomorphism theorem over `AlgS.Group` | 04.2 | **landed** `2a640c9b6` | Landed early, as W0-1's deciding experiment. 12 declarations in `AlgS.Hom.*`, footprint empty. The construction: a quotient group is the **same carrier under a coarser equivalence**, not a new carrier of classes. |
 | W2-9 | Polynomial rings as a structure | 04.4 | not started | W0-1, W1-11 |
 | W2-10 | Products and subspaces | 06.5 | not started | W2-1 |
@@ -120,10 +120,10 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-14 | Computability layer: machine model, halting problem | 10.2 | not started | — (`cantor_no_fixed_point` is the diagonalization) |
 | W2-15 | Independence as a definition | 08.3 | not started | W1-10 |
 | W2-16 | Nonlinear producer with Positivstellensatz certificates | 11.3 | not started | — (SOS certificates exist, nothing reconstructs them) |
-| W2-17 | Unique factorization as a theorem over `Nat.Multiset` | 01.3 | not started | — |
-| W2-18 | Multiplicative arithmetic functions as a family | 01.2 | not started | — |
+| W2-17 | Unique factorization as a theorem over `Nat.Multiset` | 01.3 | **already done** | `Nat.Multiset.count_eq_of_prod_eq` with `exists_prime_factorization`. Audit row A5. |
+| W2-18 | Multiplicative arithmetic functions as a family | 01.2 | not started | **[AUDIT] partially present**: `Nat.totient_mul_of_coprime` proves totient multiplicativity in exactly the general form the review denied (row A7). Möbius and Dirichlet convolution are confirmed absent. |
 | W2-19 | General inclusion-exclusion | 07.5 | not started | — |
-| W2-20 | Constructive MVT and differentiability on an interval | 02.5 | not started | — (**no longer a prerequisite for W1-2**, measured 2026-09-04) |
+| W2-20 | Constructive MVT and differentiability on an interval | 02.5 | **already done 2026-08-27** | `fermat_interiorExtremum`, `rolle_interiorExtremum`, `mvt_interiorExtremum`. Audit row A8. It was never a prerequisite for W1-2 either. |
 | W2-21 | A topological-space carrier, ℝ as the first instance | 03.2 | not started | W0-3 (distinct from W2-1: a metric carrier needs no topology decision, a topological one is the decision) |
 
 ## Wave 3 — the large shelves
@@ -163,11 +163,19 @@ One row per wave. Update when something lands, then append to the history log.
 
 | wave | items | not started | in progress | landed |
 |---|---|---|---|---|
-| W0 — decisions | 4 | 0 | 2 | **2** |
-| W1 — unblocked | 13 | 8 | 1 | **4** |
-| W2 — carriers | 21 | 20 | 1 | **1** ⁽ᵃ⁾ |
-| W3 — large shelves | 13 | 13 | 0 | 0 |
-| **total** | **51** | **41** | **4** | **6** |
+| wave | items | not started | in progress | landed | **already done** ⁽ᵇ⁾ |
+|---|---|---|---|---|---|
+| W0 — decisions | 4 | 0 | 2 | **2** | 0 |
+| W1 — unblocked | 13 | 6 | 0 | **6** | **1** |
+| W2 — carriers | 21 | 17 | 1 | **1** | **2** |
+| W3 — large shelves | 13 | 12 | 0 | 0 | **1** |
+| **total** | **51** | **35** | **3** | **9** | **4** |
+
+⁽ᵇ⁾ **Already done before the roadmap was written, and the review did not
+know.** The audit found 11 of 76 absence claims false. Four were roadmap
+items: W1-2 (FTC), W2-6 (uniform convergence and the interchange theorems),
+W2-7 (the weak law of large numbers), W2-20 (the constructive MVT). Seven of
+the eleven landed on 2026-08-27, one week before the reviews.
 
 ⁽ᵃ⁾ W2-1 is in progress inside the W0-3 lane, which builds the metric carrier
 to decide the topology design.
@@ -182,13 +190,28 @@ witnessed-separation definition, without which `decide` has no decidable
 fragment over ℝ at all. Not yet numbered; it is new mathematics, not a
 producer change.
 
-**A standing correction to how this roadmap is read.** Two of the sixty source
-items were premised on things that already existed — the probability shelf and
-the FTC. Both were found by measurement, not by argument, and both had the
-same cause: 38% of the ledger carries generated prose that makes no
-mathematical claim, so the ledger cannot answer "what do we have?". Until the
-audit lands, **treat every `not started` row whose premise is an absence as
-unverified**, and re-measure before briefing a lane against it.
+**A standing correction to how this roadmap is read — now settled by
+measurement.** The audit ([AUDIT-2026-09-04.md](AUDIT-2026-09-04.md)) checked
+all 76 absence claims across the twelve files against a freshly rebuilt kernel
+index: **11 false, 12 overstated, 51 confirmed absent, 2 unsettled.** Four of
+the false ones were roadmap items and are marked *already done* above.
+
+The cause is measured and is bigger than these files. Of 2,493 proved facts,
+**1,553 (62.3%) carry no characterisation of their own** — 1,054 with the fact
+generator's `[generated]` title, plus a class nobody had counted, 499 titled
+only "Mathlib v4.30 source proposition `<Name>`". And the ledger does not
+cover the kernel at all for **430 theorems and 762 of 789 definitions**,
+including `AlgS.Hom.firstIso`, the headline result of reviewer 04. So the
+ledger answers *is X proved?* and cannot answer *what do we have?*
+[ADR-1605](../research/09-decisions/adr-1605-the-ledger-cannot-tell-uncharacterised-from-absent.md)
+decides the fix — characterisation as a derived, ratcheted measurement rather
+than a stored field — and ships `scripts/check-fact-characterisation.py` with
+a 17-test control suite. The kernel-versus-ledger coverage gate is sized and
+deferred at about half a day.
+
+**Standing rule for anyone using this roadmap:** re-measure before briefing a
+lane against an absence, with a positive control that postdates the change you
+are asking about. The audit's § E documents how.
 
 Item count is 51 rather than 60 because nine of the sixty Next Five entries are
 the same request made by a second or third reviewer; see the convergence table.
@@ -222,6 +245,8 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
 | 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `fa18f3481` | **The audit landed.** 76 absence claims checked, 11 false, 12 overstated. Four roadmap items were already done. ADR-1605 and `check-fact-characterisation.py` address the cause. Two off-lane findings: `count-landmark-facts.py --check` was already red on main, and one fact carried a curated statement under an "uncurated" title. |
+| 2026-09-04 | `de0cd02da` | **W1-1 landed — the flagship.** Schur's `R_2(x = y + z) = 5` proved in-kernel from search in both halves, 17 declarations, footprint 0. The unary-numeral constraint in the brief was measured false: a `Prop` mentioning a numeral never reduces it. |
 | 2026-09-04 | `a3f4f528c` | **W1-5 landed.** `ring` reaches `CReal.commRingS` (6 goal shapes, kernel-refused corruptions); `decide` cannot, with the reason measured; zero retirements after a real prelude-build decline was reverted rather than shipped. `ring::` 74, `decide::` 47, `creal::creal_tests` 140 passed. |
 | 2026-09-04 | `182d0dd7d` | **W1-2 landed, and the item was based on a false absence.** The FTC was proved 2026-08-27. The `_of_uc` forms landed; W2-20 is not its prerequisite. `creal::` 230 passed. Root cause measured at 38% of the ledger; ADR-1605 proposes the fix and an audit of all twelve files is running. |
 

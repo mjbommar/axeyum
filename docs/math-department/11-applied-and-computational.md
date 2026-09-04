@@ -7,6 +7,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > "Everyone upstairs is asking whether you have their theorems. I am asking
 > what produced them, and the answer is the interesting part."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Two seats. The formal-methods researcher builds and verifies solvers, cares
@@ -140,6 +148,7 @@ the project's own stated thesis.
 |---|---|---|
 | 2026-09-04 | File created. Baseline: proof-producing SAT with DRAT checking, full SMT stack, 79k-line CAS, five kernel-emitting producers, 67 hand proofs retired in one week. Rado numbers and SOS/Gröbner results `computed` but not connected to kernel statements. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 2 landed** (roadmap W1-5): `ring::generic` extended with the same `Backend` shape `linarith` used, reaching `Alg.CommRing` and `AlgS.CommRing`; six goal shapes proved at `CReal.commRingS`, with a corrupted-certificate battery in which the **kernel** refuses the emitted term while the producer's own check is disabled. `decide` **cannot** reach ℝ and the reason is measured, not assumed: the real relations are quantifier-headed and no apartness-witness definition exists to give a decidable fragment — that definition is now a named next step. **Zero retirements**, and the reason is the lane's most useful output: wiring the producer into `creal/ring_helpers.rs` produced a genuine `Decline::NotAnIdentity` inside the prelude build, invisible to the unit tests, and the lane reverted rather than ship it. (ADR-1599.) | `a3f4f528c`; `ring::` 74, `decide::` 47 passed |
+| 2026-09-04 | **Next Five item 1 landed** (roadmap W1-1): the computed→proved gap is closed on a real result. Schur's `R_2(x = y + z) = 5`, both halves from search, kernel-checked, footprint 0. The lower half is by *reflection* — a `Bool` triple loop the kernel's own conversion check reduces to `true` — which is the untrusted-search/trusted-checking thesis in its sharpest form. The four-colour results stay `computed`, and the obstruction is now named precisely and is combinatorial rather than a numeral cost. | `de0cd02da` |
 
 ## How to re-measure
 

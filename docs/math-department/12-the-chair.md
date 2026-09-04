@@ -8,6 +8,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > saying you have not written down what your kernel assumes. That is a healthy
 > report. Now: what do you claim, and can a hostile reader check it?"
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Does not do the mathematics. Reads the report, asks what is being claimed, and

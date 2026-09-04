@@ -29,6 +29,14 @@ and cannot answer "what do we have?", which is the question a review is built
 from. ADR-1605 proposes the fix. Every other absence claim in this folder is
 under audit for the same reason (`AUDIT-2026-09-04.md`).
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Works in the tradition of Bishop's *Foundations of Constructive Analysis*:
@@ -94,11 +102,13 @@ reviewer's own error, not the library's; see the correction above.)
 
 ## What they would say is missing
 
-- **A general power series theory.** Radius of convergence, term-by-term
-  differentiation, and the standard functions defined *from* it rather than
-  each by hand.
-- **Uniform convergence as a first-class notion**, with the interchange
-  theorems that make analysis composable.
+- ~~**A general power series theory.**~~ **[AUDIT] present** — a power-series
+  layer landed 2026-08-27 (audit row A10); the verdict prose calling the
+  transcendentals ad hoc was wrong.
+- ~~**Uniform convergence as a first-class notion**, with the interchange
+  theorems.~~ **[AUDIT] present**: `CReal.UniformConvergesOn` as a carrier,
+  `uniform_limit_uniformly_continuous`, `hasDerivative_uniform_limit`, and
+  `weierstrassMTest`, all 2026-08-27 (audit row A3).
 - **Constructive metric spaces.** The line is complete; there is no notion of
   a complete metric space, so nothing generalizes off ℝ.
 - **The Bishop compactness apparatus.** Total boundedness, located subsets,
@@ -131,18 +141,20 @@ make this systematic; before it, congruence was rediscovered per lemma.
       witness removed, and the finding that the constructive MVT is *not* a
       prerequisite: FTC-II routes through `constant_of_zero_deriv`, and the
       uniformity of the modulus replaces the MVT's asserted point.
-- [ ] **2. Power series with a radius of convergence**, and `exp`, `sin`, `cos`
+- [~] **2. Power series with a radius of convergence** — **[AUDIT] a layer exists** (row A10); what remains is redefining `exp`/`sin`/`cos` *from* it. Original framing:, and `exp`, `sin`, `cos`
       redefined from it with their functional equations derived rather than
       hand-proved. Consolidates the ad-hoc transcendental work into a theory.
-- [ ] **3. Uniform convergence and the interchange theorems.** Limits with
-      integrals, limits with derivatives. Without these, every analytic
-      argument stays local and hand-built.
+- [x] **3. Uniform convergence and the interchange theorems.** **[AUDIT]
+      Already proved 2026-08-27**, including the Weierstrass M-test. Audit row
+      A3.
 - [ ] **4. A constructive metric-space carrier**, with completeness and
       Bishop-style total boundedness, so that ℝ becomes an instance rather
       than the whole subject. The obvious second instance is `CPoint`, which
       already exists.
-- [ ] **5. Differentiability on an interval, with the mean value theorem in
-      its constructive form.** The MVT is classically an existence statement
+- [x] **5. Differentiability on an interval, with the mean value theorem in
+      its constructive form.** **[AUDIT] Already proved 2026-08-27**:
+      `fermat_interiorExtremum`, `rolle_interiorExtremum`,
+      `mvt_interiorExtremum`. Audit row A8. Original framing: The MVT is classically an existence statement
       and constructively needs care; getting the right statement is itself the
       contribution, and it is what unlocks Taylor with remainder.
 

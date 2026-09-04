@@ -7,6 +7,14 @@ Last measured: 2026-09-04 at `1856cdb3c`
 > "You have a very careful Riemann integral. I have not used a Riemann
 > integral since graduate school."
 
+> **AUDITED 2026-09-04.** Every absence claim in this file was re-checked
+> against a freshly rebuilt kernel index. See
+> [AUDIT-2026-09-04.md](AUDIT-2026-09-04.md) for the evidence, and the
+> corrections marked **[AUDIT]** below. Across the twelve files, 11 of 76
+> absence claims were false and 12 more overstated the gap; the cause is that
+> the ledger characterises only 38% of its proved facts and does not cover 430
+> kernel theorems at all (ADR-1605).
+
 ## The persona
 
 Works with Lebesgue integration, Banach and Hilbert spaces, and the
