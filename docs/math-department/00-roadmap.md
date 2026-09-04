@@ -84,12 +84,12 @@ Everything here can start today. Ordered by convergence count, then by yield.
 | id | item | source | status | note |
 |---|---|---|---|---|
 | W1-1 | Rado numbers in-kernel; close the computed→proved gap (C2) | 07.1, 11.1, 12.4 | not started | Flagship. Define the object over `Nat.Finset`, have the search discharge a kernel statement. Constraint: unary numerals, so the constant 625 cannot be *formed*. |
-| W1-2 | Fundamental theorem of calculus | 02.1 | not started | Both directions over the existing Riemann integral. The specialist reviewer's first item. |
+| W1-2 | Fundamental theorem of calculus | 02.1 | **landed** `182d0dd7d` | **The item was based on a false absence: both directions were proved 2026-08-27**, before the review that asked for them. What landed is the `_of_uc` pair with the redundant boundedness witness removed (arity 7→5 and 9→7), and the finding that **W2-20 is not a prerequisite** — FTC-II routes through `constant_of_zero_deriv` and the modulus's uniformity replaces the MVT's asserted point. Root cause of the false absence: ADR-1605. |
 | W1-3 | Name the universal properties already proved | 09.1 | not started | Nearly free. `Int.Characterization.categorical` as an initial-object property, Peano as a natural-numbers object. |
 | W1-4 | Landmark count beside the total | 12.3 | **landed** `8b4f277d4` | `scripts/count-landmark-facts.py`, registered in `check.sh` and the justfile with its own control suite. **2,487 proved, 1,432 landmark (57.6%).** Rule: proved, and the title is not `[generated]`. |
 | W1-5 | Extend `ring` and `decide` to ℝ | 11.2 | not started | The `linarith`-over-`AlgS.OrderedRing` generalization, repeated. Every producer reaching a carrier retires hand proofs above it. |
 | W1-6 | A graph carrier | 07.2 | not started | Decidable adjacency on a bounded vertex range, sibling of `Nat.Finset`. Gate on most of combinatorics. |
-| W1-7 | Structure of (ℤ/n)\* and primitive roots | 01.1 | not started | The most conspicuous hole in an otherwise complete elementary number theory shelf. |
+| W1-7 | Structure of (ℤ/n)\* and primitive roots | 01.1 | **landed** `a9ef9465d` | 11 declarations in `int_prelude/mult_order.rs`, footprint 0: multiplicative order, order divides the totient, `pow ≡ 1 ↔ order ∣ k`, primitive roots, power injectivity (ADR-1598). **Existence mod a prime did not land**, and the obstruction is named: `∑_{d∣n} φ(d) = n` needs a divisor-set aggregate and the `d ↦ n/d` reindexing of a predicate-restricted sum, which does not exist. |
 | W1-8 | Angle measure; laws of sines and cosines | 05.1 | not started | Connect analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. The library has trigonometry and geometry and they do not touch. |
 | W1-9 | Extend the reverse-mathematics map | 10.1 | not started | LPO, Markov's principle, LLPO beside the existing EM ↔ LNP result. The most distinctive mathematics in the library. |
 | W1-10 | Generalize finite probability over `AlgS.OrderedRing` | 08.2 | not started | Prerequisite for stating the WLLN across ℚ and ℝ without a hand-built bridge. |
@@ -123,7 +123,7 @@ something. W2-1 and W2-2 depend on W0-3; the rest do not.
 | W2-17 | Unique factorization as a theorem over `Nat.Multiset` | 01.3 | not started | — |
 | W2-18 | Multiplicative arithmetic functions as a family | 01.2 | not started | — |
 | W2-19 | General inclusion-exclusion | 07.5 | not started | — |
-| W2-20 | Constructive MVT and differentiability on an interval | 02.5 | not started | — |
+| W2-20 | Constructive MVT and differentiability on an interval | 02.5 | not started | — (**no longer a prerequisite for W1-2**, measured 2026-09-04) |
 | W2-21 | A topological-space carrier, ℝ as the first instance | 03.2 | not started | W0-3 (distinct from W2-1: a metric carrier needs no topology decision, a topological one is the decision) |
 
 ## Wave 3 — the large shelves
@@ -163,14 +163,28 @@ One row per wave. Update when something lands, then append to the history log.
 
 | wave | items | not started | in progress | landed |
 |---|---|---|---|---|
-| W0 — decisions | 4 | 2 | 0 | **2** |
-| W1 — unblocked | 13 | 8 | 4 | **1** |
-| W2 — carriers | 21 | 20 | 0 | **1** |
+| W0 — decisions | 4 | 0 | 2 | **2** |
+| W1 — unblocked | 13 | 8 | 2 | **3** |
+| W2 — carriers | 21 | 20 | 1 | **1** ⁽ᵃ⁾ |
 | W3 — large shelves | 13 | 13 | 0 | 0 |
-| **total** | **51** | **43** | **4** | **4** |
+| **total** | **51** | **41** | **5** | **6** |
 
-In progress, 2026-09-04: W1-1 (Rado), W1-2 (FTC), W1-5 (producers to ℝ),
-W1-7 (primitive roots).
+⁽ᵃ⁾ W2-1 is in progress inside the W0-3 lane, which builds the metric carrier
+to decide the topology design.
+
+In progress, 2026-09-04: W0-2 with W1-9 (classical-axiom policy, decided by
+extending the reverse-mathematics map), W0-3 with W2-1 (topology design,
+decided by building a metric carrier), W1-1 (Rado), W1-5 (producers to ℝ).
+Also running: an audit of every absence claim in the twelve persona files,
+after two were shown false.
+
+**A standing correction to how this roadmap is read.** Two of the sixty source
+items were premised on things that already existed — the probability shelf and
+the FTC. Both were found by measurement, not by argument, and both had the
+same cause: 38% of the ledger carries generated prose that makes no
+mathematical claim, so the ledger cannot answer "what do we have?". Until the
+audit lands, **treat every `not started` row whose premise is an absence as
+unverified**, and re-measure before briefing a lane against it.
 
 Item count is 51 rather than 60 because nine of the sixty Next Five entries are
 the same request made by a second or third reviewer; see the convergence table.
@@ -203,6 +217,8 @@ Reviewer verdicts as of the last reconciliation:
 | 2026-09-04 | `8b4f277d4` | **W0-4 and W1-4 landed.** ADR-1600 (trusted base 5,526 lines, three guards shown firing, a fourth shown inert) and the landmark counter (1,432 of 2,487 proved). |
 | 2026-09-04 | `2a640c9b6` | **W0-1 decided and W2-8 landed together.** The first isomorphism theorem over `AlgS.Group`, footprint empty, at a measured cost of three lines versus having `Quot.sound`. ADR-1595 recommends setoid quotients. Suites after: `structures_setoid` 18, `first_iso` 5, `linarith` 99. |
 | 2026-09-04 | (see history) | Off-roadmap: the safety-matrix gate had been red on main since 2026-08-31; regenerated, 1,823 rows in and 1,514 out. Found by the W0-4 lane and reported rather than worked around. |
+| 2026-09-04 | `a9ef9465d` | **W1-7 landed.** 11 declarations, footprint 0; existence mod a prime stopped at a named obstruction. `int_prelude::` 87 passed. |
+| 2026-09-04 | `182d0dd7d` | **W1-2 landed, and the item was based on a false absence.** The FTC was proved 2026-08-27. The `_of_uc` forms landed; W2-20 is not its prerequisite. `creal::` 230 passed. Root cause measured at 38% of the ledger; ADR-1605 proposes the fix and an audit of all twelve files is running. |
 
 ## How to update this file
 

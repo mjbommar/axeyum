@@ -128,6 +128,7 @@ great deal of that left.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 1,218 proved ℕ/ℤ facts, 257 open. Wilson, quadratic reciprocity, Fermat, Euler totient, Bézout, CRT, Euclid, √2 irrational all present and axiom-free. | ledger snapshot at `1856cdb3c` |
+| 2026-09-04 | **Next Five item 1 landed** (roadmap W1-7): `int_prelude/mult_order.rs`, 11 declarations with empty footprints — multiplicative order by bounded search, order divides the totient, `a^k ≡ 1 ↔ ord ∣ k`, primitive roots, and power injectivity (ADR-1598). **Existence of a primitive root mod a prime did not land**, and the obstruction is precise: the counting route needs `∑_{d∣n} φ(d) = n`, hence a divisor-set aggregate and the `d ↦ n/d` reindexing of a predicate-restricted sum, neither of which exists. Two design findings recorded: the search predicate must be shifted (`a^(j+1) ≡ 1`, since the unshifted form is true at j=0 for every a), and `Coprime (a^i) n` falls out of the order relation via the Bézout certificate already inside it. | `a9ef9465d`; `int_prelude::` 87 passed |
 
 ## How to re-measure
 
