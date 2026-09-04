@@ -84,6 +84,12 @@ use crate::nat_prelude::structures::{
     FieldKind, FieldSpec, RecordNames, arrow, declare_record, mk_instance, pi_over,
 };
 
+pub mod compactness;
+pub mod continuity;
+
+pub use compactness::CompactnessNames;
+pub use continuity::ContinuityNames;
+
 // ---------------------------------------------------------------------------
 // Field indices. Fixed across the record; index a field through these, never
 // with a bare integer.
@@ -509,6 +515,10 @@ pub struct MetricPrelude {
     /// generalization**: `CReal.converges_of_cauchy` becomes an instance of a
     /// statement about metric spaces.
     pub creal_complete: NameId,
+    /// The W2-2 continuity layer (`metric/continuity.rs`).
+    pub continuity: ContinuityNames,
+    /// The W2-3 compactness layer (`metric/compactness.rs`).
+    pub compactness: CompactnessNames,
 }
 
 // ---------------------------------------------------------------------------
@@ -589,6 +599,8 @@ fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> MetricPrelude {
         cpoint_dist_triangle: kernel.name_str(cpoint_ns, "distTriangle"),
         cpoint_metric: kernel.name_str(metric, "cpoint"),
         cpoint_dist_reduces: kernel.name_str(metric, "cpoint_dist"),
+        continuity: continuity::intern(kernel, metric),
+        compactness: compactness::intern(kernel, metric),
     }
 }
 
@@ -675,6 +687,9 @@ pub fn build_metric_prelude(kernel: &mut Kernel) -> Result<MetricPrelude, Kernel
     declare_cpoint_dist_triangle(&mut d, cpoint, p)?;
     declare_cpoint_metric(&mut d, cpoint, p)?;
     declare_cpoint_dist_reduces(&mut d, cpoint, p)?;
+
+    continuity::declare_all(&mut d, creal, p)?;
+    compactness::declare_all(&mut d, creal, p)?;
 
     Ok(p)
 }
