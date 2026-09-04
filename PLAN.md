@@ -119,6 +119,10 @@ now. Nothing was deleted.
 |---|---|---|
 | 2026-09-04 | coordinator | `docs/math-department/`: twelve persona reviews of the library, one per field, each with a measured baseline, a Next Five and a progress log |
 | 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |
+| 2026-09-04 | ftc | `CReal.hasDerivative_antiderivative_of_uc` and `CReal.integral_eq_antideriv_diff_of_uc`: the FTC with the redundant `BoundedOn` side condition discharged (arity 7→5, 9→7) |
+| 2026-09-04 | ftc | `ftc_of_uc_applies_without_a_bounded_witness` + two small-term negative controls; mutation-verified, each mutant kills exactly one test |
+| 2026-09-04 | ftc | Two CURATED facts for the new forms — the first `CReal` FTC facts whose prose says what the theorem asserts |
+| 2026-09-04 | ftc | ADR-1597: the FTC was already proved 2026-08-27, and 64% of `CReal` facts carry prose that refuses to characterise them |
 | 2026-09-03 | `131756de5` | Lane status stub: three kernel suites refused by ADR-1495's universe guard, under triage. |
 | 2026-09-03 | `714e58f3a` | Moved three Lean-illegal test fixtures to the universe Lean 4.30 gives them (`Sort 1` → `Sort 2` for the `type`-sorted families; `String` follows `Char` under `CharAtUniverseOne` only), verified shape-by-shape against the pinned `lean` binary. Added the two-sided `list_level` control so the string mutation cannot degenerate. Kernel guard unchanged. |
 | 2026-09-03 | det-mul-debug-stack | `40ee238ca` — the ADR-1543 concrete-matrix evaluation test aborted the DEBUG `--workspace --lib` push step (SIGABRT) while passing `--release`. Bisected from outside the process: a BOUNDED requirement, 4 MiB against the 2 MiB a `#[test]` thread gets. Bisected WITHIN the test: the single `def_eq (det (A·B) 2) 4` is the cliff, because `A·B = [[19,22],[43,50]]` forms `19·50 = 950` as a unary `succ` tower; `det A · det B` and the 1×1 case form nothing bigger than 15 and are free. `B` shrinks to `[[0,1],[2,1]]`, determinant `−2` again, so every asserted number is unchanged and the largest magnitude formed goes 950 → 28: 181 s → 16 s, which is the prelude build alone. `det_mat_mul_expand_...` was a second casualty the first abort hid and got the same change. One control that could NOT fail is replaced — `det Aᵀ = det A`, so no transposition is visible in the determinant; the product's four entries are now read out with `A·Bᵀ` and `Aᵀ·B` asserted apart at `(0,0)`. Mutation-checked: `[2,1] → [3,1]` kills exactly these two tests. |
@@ -41391,6 +41395,61 @@ nine as binder-type mismatches; this model reports `restated_over_equiv` from
 whether the rewrite fired, and the nine names agree exactly.
 
 Detail moved to [`../notes/59-r4-model.md`](docs/plan/notes/59-r4-model.md).
+
+**Lane `ftc` (`DONE`, 2026-09-04, ADR-1597).** W1-2 asked for the FTC "both
+directions over the existing Riemann integral". **Both directions were
+already proved**, admitted 2026-08-27: `CReal.hasDerivative_antiderivative`
+(FTC-I, `1b91195d0`) and `CReal.integral_eq_antideriv_diff` (FTC-II,
+`d1bdae9e7`), plus `CReal.integral_by_parts`, all with empty axiom
+footprints and registered `proved` facts. The roadmap item and
+`docs/math-department/02-constructive-analysis.md` are both wrong on this
+point.
+
+The measured reason the survey missed them: **307 of the 476 `CReal` facts
+(64%), and 1054 of 2758 ledger-wide (38%), carry the fact generator's prose,
+which opens "MECHANICALLY GENERATED, UNREVIEWED PROSE — this sentence
+deliberately makes NO mathematical characterisation of the theorem."** The
+generator's refusal is correct; the defect is that nothing distinguishes "no
+prose written" from "nothing here", so the ledger answers *is X proved?* and
+cannot answer *what do we have?* — which is the question a roadmap is built
+from.
+
+What was genuinely missing is the STATEMENT. Both existing theorems demand a
+`(kb : Nat)` and a `BoundedOn F a b kb` from the caller, and both are
+redundant: `CReal.bounded_of_uniformly_continuous` COMPUTES such a `kb` (no
+`Exists`-elimination) from the `UniformlyContinuousOn` witness both theorems
+already take. Two new theorems discharge it, arity 7→5 and 9→7:
+
+- `CReal.hasDerivative_antiderivative_of_uc : ∀ F a b (hab : le a b) (u : UniformlyContinuousOn F a b), HasDerivativeOn (antiderivative F a b hab u) F a b`
+- `CReal.integral_eq_antideriv_diff_of_uc : ∀ F G a b (hab : le a b) (u : UniformlyContinuousOn F a b), HasDerivativeOn G F a b → Equiv (integral F a b hab u) (add (G b) (neg (G a)))`
+
+Modulus, unchanged from FTC-I: `E ↦ modulus_of_uc(F, a, b, u)(2E + 1)`.
+`HasDerivativeOn` is Bishop's UNIFORM differentiability with the modulus as a
+`Type`-valued data field, so this is stronger than the pointwise statement,
+and FTC-II's conclusion is `Equiv`, not `Eq`.
+
+**No mean value theorem is needed and W2-20 should not be sequenced as a
+prerequisite.** FTC-II routes through `constant_of_zero_deriv`; the
+uniformity of the modulus is what replaces the MVT's asserted point.
+
+Gates, all run on this tree: `creal::` **230 passed / 0 failed** in 300 s
+(baseline 229); `kernel_declaration_projection` before/after diff is exactly
+6 added rows (the two theorems × `creal`/`complex`/`cpoint`, footprint 0
+each) and nothing else; `nat_axiom_inventory --require-axiom-free creal` →
+`ok: creal trusted surface = 0`; `validate-facts.py` 2760 facts, 0 errors,
+exit 0; clippy `-D warnings` clean; `check-links.sh` ok;
+`check-merge-hygiene.sh` clean. Mutation table: restoring the `BoundedOn`
+binders to either declaration kills **exactly one** test (229 passed, 1
+failed) and nothing else.
+
+**Next lane, the two things this one could not do.** (1)
+`docs/math-department/` is out of this lane's scope and now carries a false
+absence in its flagship strand — W1-2 is closed and
+`02-constructive-analysis.md`'s "what they would say is missing" item 1 is
+wrong; items 2–5 were not checked here and must not be assumed either way on
+this lane's authority. (2) The ledger-wide fix — 1054 generated-prose facts,
+or a `characterisation_status` axis the validator reports on — is a schema
+change needing its own ADR.
 
 **Round 4: `restore_nested_inductive_group` now has adversarial coverage, and
 the reason it did not was a defect in the instrument, not a property of Lean

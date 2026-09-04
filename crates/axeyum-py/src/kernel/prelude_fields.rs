@@ -2960,7 +2960,7 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (609 names,
+/// The `CRealPrelude` field table (611 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 69 of the names come from ADR-1512 per-module registries and
@@ -3554,6 +3554,14 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ),
             ("integral_eq_antideriv_diff", p.integral_eq_antideriv_diff),
             ("integral_by_parts", p.integral_by_parts),
+            (
+                "has_derivative_antiderivative_of_uc",
+                p.has_derivative_antiderivative_of_uc,
+            ),
+            (
+                "integral_eq_antideriv_diff_of_uc",
+                p.integral_eq_antideriv_diff_of_uc,
+            ),
             ("integral_abs_le", p.integral_abs_le),
             ("integral_abs_le_of_bound", p.integral_abs_le_of_bound),
             ("integral_sub_linear_le", p.integral_sub_linear_le),
