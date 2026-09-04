@@ -393,7 +393,7 @@ lemmas that happen to have been needed here.
 - [ADR-1592](adr-1592-algs-group-and-orderedring-close-the-gaps-adr-1590-named.md)
   — `AlgS.inv_unique` and `AlgS.add_left_cancel`, which `AlgS.idem_eq_e` and
   `AlgS.Module.neg_smul` are built on.
-- [ADR-1578](adr-1578-an-abstract-algebraic-structure-spine.md) — `declare_record`
+- [ADR-1578](adr-1578-a-magma-to-field-record-spine-with-ml-int-q-instances.md) — `declare_record`
   and the `FieldKind` universe rule this ADR sizes a change to.
 - [04 algebra](../../math-department/04-algebra.md) — Next Five items 4 and 5,
   and the `funext` consequence this work partly answers.
