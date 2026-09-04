@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-peano-initial",
+  "title": "The constructed Nat is initial among pointed unary algebras",
+  "statement": "For EVERY carrier N with a chosen point z and a chosen endomorphism s -- no axiom on (N, z, s) required, not even the Peano axioms -- there is a map f : Nat -> N with f(0) = z and f(n+1) = s(f(n)), and it is the UNIQUE such map: any h : Nat -> N satisfying the same two equations agrees with f at every point. This is the universal property of Nat as the initial object in the category of pointed unary algebras, stated without naming a category. It is weaker than `Nat.Peano.categorical` (F:nat-peano-categoricity), which additionally assumes the TARGET satisfies the Peano axioms and concludes the comparison map is a bijection -- categoricity, not mere initiality. Initiality needs no hypothesis on (N, z, s) at all; the mediating map's uniqueness is stated pointwise (`h n = f n` for every n), not as function equality, because this kernel has no funext (ADR-1595) to promote a pointwise agreement to one.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Peano.initial.{u} : ((x0 : Sort (u)) -> ((x1 : x0) -> ((x2 : ((x2 : x0) -> x0)) -> And (And (Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 AxNat.zero) x1) (((x3 : AxNat) -> Eq.{u} x0 (AxNat.Peano.iter.{u} x0 x1 x2 (AxNat.succ x3)) (x2 (AxNat.Peano.iter.{u} x0 x1 x2 x3))))) (((x3 : ((x3 : AxNat) -> x0)) -> ((x4 : And (Eq.{u} x0 (x3 AxNat.zero) x1) (((x4 : AxNat) -> Eq.{u} x0 (x3 (AxNat.succ x4)) (x2 (x3 x4))))) -> ((x5 : AxNat) -> Eq.{u} x0 (x3 x5) (AxNat.Peano.iter.{u} x0 x1 x2 x5))))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Peano.initial",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:nat-peano-iter-zero",
+    "F:nat-peano-iter-succ",
+    "F:nat-peano-iter-unique"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Nat.Peano.initial",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.Peano.initial",
+      "supports": "Nat admits a structure-preserving map out of it into any pointed unary algebra, and that map is the unique one -- with an empty axiom footprint.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null) && test \"$(printf '%s\\n' \"$out\" | grep -Ec '^nat-universal-property[[:space:]]+Nat[.]Peano[.]initial[[:space:]]+\\[\\][[:space:]]')\" -ge 1",
+      "notes": "The grep is anchored on the declaration name AND on an EMPTY footprint column, so neither a renamed theorem nor one that grew a dependency on a trusted declaration can satisfy it. `characterization_status` itself exits non-zero when the population changes, when any entry is not a `Declaration::Theorem`, or when any injected `Weakening` is ACCEPTED, so this command fails on a regression to the whole package as well as to this one row."
+    },
+    {
+      "id": "nat-initial-not-vacuous",
+      "kind": "kernel-term",
+      "supports": "The theorem is not vacuous: instantiated directly at (Nat, zero, succ) -- with NO hypothesis to discharge, since initiality needs none -- and pushed back through the trusted gate with an empty footprint.",
+      "check_status": "checked",
+      "checkers": [
+        "characterization_tests::initial_is_not_vacuous_it_instantiates_at_the_carrier_itself"
+      ],
+      "checker_command": "cargo test -q -p axeyum-lean-kernel --lib characterization::characterization_tests::initial_is_not_vacuous_it_instantiates_at_the_carrier_itself",
+      "notes": "Companion to categoricity's own non-vacuity check. Because initiality has no hypothesis on the target at all, this instantiation needs no ring-law discharge the way the Int-side counterpart does -- (Nat, zero, succ) is accepted immediately."
+    },
+    {
+      "id": "nat-initial-uniqueness-load-bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "Dropping the packaged uniqueness clause's `h 0 = z` hypothesis (Weakening::NatInitialDropUniqueZero) while the proof still supplies the real equation makes the kernel REFUSE Nat.Peano.initial, at the declaration itself.",
+      "check_status": "checked",
+      "checkers": [
+        "characterization_tests::every_injected_defect_is_rejected",
+        "characterization_status (runs the same sweep as a checker)"
+      ],
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example characterization_status 2>/dev/null; test $? -eq 0",
+      "notes": "The defect sweep is part of `characterization_status`'s own exit status (24/24 refused, one of which is this one), so this checker_command re-runs the mutation control on every invocation rather than trusting a stale test result."
+    },
+    {
+      "id": "nat-trusted-surface-empty",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's whole trusted surface is empty, which bounds every individual footprint by [].",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat --require-axiom-free logic",
+      "notes": "Enumerates the built Nat environment over the FULL trusted surface (Axiom/Opaque/Quotient), not `Declaration::Axiom` alone, and exits non-zero on any member."
+    }
+  ],
+  "concept_refs": [
+    {
+      "graph": "math-education",
+      "ref": "C:natural-numbers",
+      "relation": "about",
+      "resolved": false
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "axeyum-lean-kernel characterization::universal_property module (universal-properties lane)",
+    "source": "Named and proved from the already-admitted Nat.Peano.iter_zero, iter_succ and iter_unique -- see docs/research/09-decisions/adr-1610-name-the-universal-properties.md for why this is a separate, weaker theorem than Nat.Peano.categorical (F:nat-peano-categoricity) rather than a restatement of it."
+  },
+  "notes": "WHY THIS FACT EXISTS. `Nat.Peano.categorical` (F:nat-peano-categoricity) was already proved and already establishes a comparison map's existence and bijectivity, but nowhere in the kernel or the ledger was the WEAKER, unconditional half -- initiality alone, needing no axiom on the target -- named as its own claim. A reader could not previously answer 'is Nat initial in the category of pointed unary algebras' without re-deriving the answer from `categorical`'s hypothesis list by hand. This fact and its Int counterpart (F:int-characterization-initial) are the roadmap W1-3 item: naming a pattern the library already proves twice without noticing it is the same pattern. NOT A NEW PROOF: every step is an application of an already-checked theorem (iter's own computation rules, iter_unique), so a drift in any of those three underlying statements would make Nat.Peano.initial FAIL TO TYPE-CHECK rather than silently disagree with them. See docs/research/08-planning/universal-property-template.md for the four-part template both this fact and F:int-characterization-initial follow, and for what a THIRD carrier's universal-property fact should look like."
+}

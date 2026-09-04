@@ -6,9 +6,11 @@
 //! injected [`Weakening`] is **rejected**, so each hypothesis is load-bearing
 //! rather than decorative.
 
+use super::int::{iadd, ineg, ione, izero};
 use super::ops::CharDev;
 use super::{CharacterizationKind, Weakening, build_characterization_with};
 use crate::env::Declaration;
+use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
 use crate::{Kernel, build_characterization};
 
@@ -27,7 +29,7 @@ fn the_characterization_package_builds_and_every_witness_is_axiom_free() {
     let package = build_characterization(&mut kernel).expect("the characterization must build");
     assert_eq!(
         package.entries.len(),
-        32,
+        34,
         "the reported population must match the declared one"
     );
     for entry in &package.entries {
@@ -327,7 +329,7 @@ fn every_injected_defect_is_rejected() {
         .expect("the unweakened package must build");
 
     let defects = Weakening::defects();
-    assert!(defects.len() >= 22, "the defect sweep shrank");
+    assert!(defects.len() >= 24, "the defect sweep shrank");
     for &defect in defects {
         let mut kernel = Kernel::new();
         let outcome = build_characterization_with(&mut kernel, defect);
@@ -382,6 +384,137 @@ fn every_characterization_kind_is_represented() {
             package.entries.iter().any(|entry| entry.kind == kind),
             "no entry contributes {}",
             kind.label()
+        );
+    }
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn initial_is_not_vacuous_it_instantiates_at_the_carrier_itself() {
+    // Companion to `categoricity_is_not_vacuous_it_instantiates_at_nat_itself`
+    // and `the_int_hypothesis_shapes_are_satisfiable`: a universal-property
+    // theorem whose hypothesis list nothing satisfies is axiom-free and
+    // worthless. `Nat.Peano.initial` needs no hypothesis at all, so it is
+    // instantiated directly at `(Nat, zero, succ)`; `Int.Characterization.initial`
+    // needs the two inverse laws, discharged here exactly as
+    // `categorical_at_int` discharges them — by the ring laws.
+    let mut kernel = Kernel::new();
+    let package = build_characterization(&mut kernel).expect("the characterization must build");
+    let (nat_witness, int_witness) = {
+        let mut dev = CharDev::new(&mut kernel, package.int_prelude);
+        let level = dev.level_one();
+
+        let nat_witness = {
+            let nat_ty = dev.nat_ty();
+            let zero = dev.zero();
+            let succ = {
+                let name = dev.prelude().succ;
+                dev.kernel().const_(name, vec![])
+            };
+            let head = dev
+                .kernel()
+                .const_(package.nat_universal_property.initial, vec![level]);
+            let applied = dev.apply(head, &[nat_ty, zero, succ]);
+            let ty = dev
+                .kernel()
+                .infer(applied)
+                .expect("Nat.Peano.initial needs no hypothesis and must accept (Nat, zero, succ)");
+            let anon = dev.anon_name();
+            let root = dev.kernel().name_str(anon, "Characterization");
+            let name = dev.kernel().name_str(root, "initial_at_nat");
+            dev.declare_theorem_u(name, vec![], ty, applied)
+                .expect("the instantiated Nat.Peano.initial must be admitted");
+            name
+        };
+
+        let int_witness = {
+            let int_ty = dev.int_ty();
+            let prelude = dev.int_prelude();
+            let one = ione(&mut dev);
+            let zero = izero(&mut dev);
+            let minus = ineg(&mut dev, one);
+            let int_up = {
+                let t_fv = dev.fresh_fvar();
+                let t = dev.kernel().fvar(t_fv);
+                let body = iadd(&mut dev, t, one);
+                dev.lam_fv(t_fv, int_ty, body)
+            };
+            let int_down = {
+                let t_fv = dev.fresh_fvar();
+                let t = dev.kernel().fvar(t_fv);
+                let body = iadd(&mut dev, t, minus);
+                dev.lam_fv(t_fv, int_ty, body)
+            };
+            // `(x + a) + b = x` given `a + b = 0`.
+            let cancel =
+                |d: &mut CharDev<'_>, first: ExprId, second: ExprId, zero_proof: ExprId| {
+                    let x_fv = d.fresh_fvar();
+                    let x = d.kernel().fvar(x_fv);
+                    let shifted = iadd(d, x, first);
+                    let restored = iadd(d, shifted, second);
+                    let inner_sum = iadd(d, first, second);
+                    let regrouped = iadd(d, x, inner_sum);
+                    let with_zero = iadd(d, x, zero);
+                    let int_ty = d.int_ty();
+                    let assoc = d.const_app(prelude.add_assoc, &[x, first, second]);
+                    let collapsed = d.congr_at(
+                        level,
+                        int_ty,
+                        level,
+                        int_ty,
+                        inner_sum,
+                        zero,
+                        zero_proof,
+                        &|d2, z| iadd(d2, x, z),
+                    );
+                    let absorbed = d.const_app(prelude.add_zero, &[x]);
+                    let prefix = d.trans_at(
+                        level, int_ty, restored, regrouped, with_zero, assoc, collapsed,
+                    );
+                    let body = d.trans_at(level, int_ty, restored, with_zero, x, prefix, absorbed);
+                    d.lam_fv(x_fv, int_ty, body)
+                };
+            let one_minus = iadd(&mut dev, one, minus);
+            let minus_one_sum = iadd(&mut dev, minus, one);
+            let add_neg_one = dev.const_app(prelude.add_neg, &[one]);
+            let commuted = dev.const_app(prelude.add_comm, &[minus, one]);
+            let flipped = dev.trans_at(
+                level,
+                int_ty,
+                minus_one_sum,
+                one_minus,
+                zero,
+                commuted,
+                add_neg_one,
+            );
+            let left_proof = cancel(&mut dev, one, minus, add_neg_one);
+            let right_proof = cancel(&mut dev, minus, one, flipped);
+
+            let head = dev
+                .kernel()
+                .const_(package.int_universal_property.initial, vec![level]);
+            let applied = dev.apply(
+                head,
+                &[int_ty, zero, int_up, int_down, left_proof, right_proof],
+            );
+            let ty = dev.kernel().infer(applied).expect(
+                "Int.Characterization.initial's two inverse-law hypotheses must be satisfiable",
+            );
+            let anon = dev.anon_name();
+            let root = dev.kernel().name_str(anon, "Characterization");
+            let name = dev.kernel().name_str(root, "initial_at_int");
+            dev.declare_theorem_u(name, vec![], ty, applied)
+                .expect("the instantiated Int.Characterization.initial must be admitted");
+            name
+        };
+        (nat_witness, int_witness)
+    };
+    for witness in [nat_witness, int_witness] {
+        let footprint = footprint_of(&kernel, witness);
+        assert!(
+            footprint.is_empty(),
+            "{} rests on {footprint:?}",
+            kernel.display_name(witness)
         );
     }
 }

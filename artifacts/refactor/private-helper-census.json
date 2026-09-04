@@ -14,15 +14,15 @@
     ]
   },
   "population": {
-    "files_scanned": 563,
-    "private_fns": 11187,
-    "private_fns_outside_tests": 9238,
-    "distinct_names": 8864,
-    "distinct_body_digests": 9960,
-    "duplicated_name_groups": 901,
+    "files_scanned": 564,
+    "private_fns": 11191,
+    "private_fns_outside_tests": 9241,
+    "distinct_names": 8866,
+    "distinct_body_digests": 9964,
+    "duplicated_name_groups": 902,
     "duplicated_body_groups": 463,
     "sites_in_duplicated_body_groups": 1690,
-    "inline_step_fns": 7384,
+    "inline_step_fns": 7387,
     "inline_step_name_groups": 614,
     "inline_step_body_groups": 308,
     "sites_in_inline_step_body_groups": 1011
@@ -1139,6 +1139,36 @@
       ]
     },
     {
+      "key": "declare",
+      "count": 12,
+      "names": [
+        "declare"
+      ],
+      "files": 12,
+      "carriers": [
+        "CharDev",
+        "Fixture",
+        "IntDev"
+      ],
+      "body_lines": 594,
+      "signature": "fn declare( dev: &mut CharDev<'_>, weaken: Weakening, ) -> Result<IntCharacterization, KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/characterization/int.rs:130",
+        "crates/axeyum-lean-kernel/src/characterization/int_categoricity.rs:336",
+        "crates/axeyum-lean-kernel/src/characterization/nat.rs:85",
+        "crates/axeyum-lean-kernel/src/characterization/universal_property.rs:137",
+        "crates/axeyum-lean-kernel/src/linarith/int.rs:1123",
+        "crates/axeyum-lean-kernel/src/ring/int.rs:1360",
+        "crates/axeyum-lean-kernel/src/ring/rat.rs:981",
+        "crates/axeyum-lean-kernel/src/simp/int.rs:541",
+        "crates/axeyum-lean-kernel/src/string_prelude/decidable.rs:232",
+        "crates/axeyum-lean-kernel/src/tactic/int/tests.rs:65",
+        "crates/axeyum-lean-kernel/src/tactic/rat/tests.rs:89",
+        "crates/axeyum-lean-kernel/src/tactic/tests.rs:71"
+      ]
+    },
+    {
       "key": "esymm",
       "count": 12,
       "names": [
@@ -1219,35 +1249,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/subset_sum.rs:281",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient.rs:592",
         "crates/axeyum-lean-kernel/src/nat_prelude/totient_lemmas.rs:214"
-      ]
-    },
-    {
-      "key": "declare",
-      "count": 11,
-      "names": [
-        "declare"
-      ],
-      "files": 11,
-      "carriers": [
-        "CharDev",
-        "Fixture",
-        "IntDev"
-      ],
-      "body_lines": 594,
-      "signature": "fn declare( dev: &mut CharDev<'_>, weaken: Weakening, ) -> Result<IntCharacterization, KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/characterization/int.rs:130",
-        "crates/axeyum-lean-kernel/src/characterization/int_categoricity.rs:336",
-        "crates/axeyum-lean-kernel/src/characterization/nat.rs:85",
-        "crates/axeyum-lean-kernel/src/linarith/int.rs:1123",
-        "crates/axeyum-lean-kernel/src/ring/int.rs:1360",
-        "crates/axeyum-lean-kernel/src/ring/rat.rs:981",
-        "crates/axeyum-lean-kernel/src/simp/int.rs:541",
-        "crates/axeyum-lean-kernel/src/string_prelude/decidable.rs:232",
-        "crates/axeyum-lean-kernel/src/tactic/int/tests.rs:65",
-        "crates/axeyum-lean-kernel/src/tactic/rat/tests.rs:89",
-        "crates/axeyum-lean-kernel/src/tactic/tests.rs:71"
       ]
     },
     {
@@ -10477,6 +10478,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex.rs:8630",
         "crates/axeyum-lean-kernel/src/creal/power.rs:1014"
+      ]
+    },
+    {
+      "key": "declare_nat",
+      "count": 2,
+      "names": [
+        "declare_nat"
+      ],
+      "files": 2,
+      "carriers": [
+        "CharDev"
+      ],
+      "body_lines": 118,
+      "signature": "fn declare_nat( dev: &mut CharDev<'_>, nat: NatCharacterization, weaken: Weakening, ) -> Result<NatUniversalProperty, KernelError>",
+      "test_file_members": 1,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/characterization/universal_property.rs:149",
+        "crates/axeyum-lean-kernel/src/inductive/inductive_tests.rs:661"
       ]
     },
     {
@@ -26720,6 +26739,35 @@
       ]
     },
     {
+      "key": "declare",
+      "count": 11,
+      "names": [
+        "declare"
+      ],
+      "files": 11,
+      "carriers": [
+        "CharDev",
+        "Fixture",
+        "IntDev"
+      ],
+      "body_lines": 594,
+      "signature": "fn declare( dev: &mut CharDev<'_>, weaken: Weakening, ) -> Result<IntCharacterization, KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/characterization/int.rs:130",
+        "crates/axeyum-lean-kernel/src/characterization/int_categoricity.rs:336",
+        "crates/axeyum-lean-kernel/src/characterization/nat.rs:85",
+        "crates/axeyum-lean-kernel/src/characterization/universal_property.rs:137",
+        "crates/axeyum-lean-kernel/src/linarith/int.rs:1123",
+        "crates/axeyum-lean-kernel/src/ring/int.rs:1360",
+        "crates/axeyum-lean-kernel/src/ring/rat.rs:981",
+        "crates/axeyum-lean-kernel/src/simp/int.rs:541",
+        "crates/axeyum-lean-kernel/src/tactic/int/tests.rs:65",
+        "crates/axeyum-lean-kernel/src/tactic/rat/tests.rs:89",
+        "crates/axeyum-lean-kernel/src/tactic/tests.rs:71"
+      ]
+    },
+    {
       "key": "ne_of_lt",
       "count": 11,
       "names": [
@@ -26772,34 +26820,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/land_low_bit.rs:56",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability.rs:889",
         "crates/axeyum-lean-kernel/src/rat_prelude/rank_bridge.rs:471"
-      ]
-    },
-    {
-      "key": "declare",
-      "count": 10,
-      "names": [
-        "declare"
-      ],
-      "files": 10,
-      "carriers": [
-        "CharDev",
-        "Fixture",
-        "IntDev"
-      ],
-      "body_lines": 594,
-      "signature": "fn declare( dev: &mut CharDev<'_>, weaken: Weakening, ) -> Result<IntCharacterization, KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/characterization/int.rs:130",
-        "crates/axeyum-lean-kernel/src/characterization/int_categoricity.rs:336",
-        "crates/axeyum-lean-kernel/src/characterization/nat.rs:85",
-        "crates/axeyum-lean-kernel/src/linarith/int.rs:1123",
-        "crates/axeyum-lean-kernel/src/ring/int.rs:1360",
-        "crates/axeyum-lean-kernel/src/ring/rat.rs:981",
-        "crates/axeyum-lean-kernel/src/simp/int.rs:541",
-        "crates/axeyum-lean-kernel/src/tactic/int/tests.rs:65",
-        "crates/axeyum-lean-kernel/src/tactic/rat/tests.rs:89",
-        "crates/axeyum-lean-kernel/src/tactic/tests.rs:71"
       ]
     },
     {

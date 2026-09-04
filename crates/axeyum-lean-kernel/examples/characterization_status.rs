@@ -39,7 +39,7 @@ use axeyum_lean_kernel::{
 
 /// The number of characterization theorems this example expects to find.
 /// Asserted, not printed: a package that silently lost a theorem must fail.
-const EXPECTED_ENTRIES: usize = 32;
+const EXPECTED_ENTRIES: usize = 34;
 
 #[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {

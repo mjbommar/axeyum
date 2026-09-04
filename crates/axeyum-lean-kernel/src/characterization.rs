@@ -127,10 +127,12 @@ mod int;
 mod int_categoricity;
 mod nat;
 mod ops;
+mod universal_property;
 
 pub use int::IntCharacterization;
 pub use int_categoricity::IntCategoricity;
 pub use nat::NatCharacterization;
+pub use universal_property::{IntUniversalProperty, NatUniversalProperty};
 
 use crate::int_prelude::{IntPrelude, build_int_prelude};
 use crate::name::NameId;
@@ -196,6 +198,12 @@ pub enum Weakening {
     IntIsoDropGeneration,
     /// Replace `iso`'s `psi e = 0` hypothesis with `True`.
     IntIsoDropBasePoint,
+    /// Replace `Nat.Peano.initial`'s packaged uniqueness clause's `h 0 = z`
+    /// hypothesis with `True`.
+    NatInitialDropUniqueZero,
+    /// Replace `Int.Characterization.initial`'s packaged uniqueness clause's
+    /// `g 0 = e` hypothesis with `True`.
+    IntInitialDropUniqueZero,
 }
 
 impl Weakening {
@@ -240,6 +248,8 @@ impl Weakening {
             Weakening::IntIsoDropGeneration | Weakening::IntIsoDropBasePoint => {
                 Some("Int.Characterization.iso")
             }
+            Weakening::NatInitialDropUniqueZero => Some("Nat.Peano.initial"),
+            Weakening::IntInitialDropUniqueZero => Some("Int.Characterization.initial"),
         }
     }
 
@@ -284,6 +294,8 @@ impl Weakening {
             Weakening::IntIsoDropGeneration | Weakening::IntIsoDropBasePoint => {
                 Some("Int.Characterization.categorical")
             }
+            Weakening::NatInitialDropUniqueZero => Some("Int.Characterization.categorical_at_int"),
+            Weakening::IntInitialDropUniqueZero => Some("Nat.Peano.initial"),
         }
     }
 
@@ -313,6 +325,8 @@ impl Weakening {
             Weakening::IntSurjectiveDropGeneration,
             Weakening::IntIsoDropGeneration,
             Weakening::IntIsoDropBasePoint,
+            Weakening::NatInitialDropUniqueZero,
+            Weakening::IntInitialDropUniqueZero,
         ]
     }
 }
@@ -377,6 +391,10 @@ pub struct Characterization {
     pub int: IntCharacterization,
     /// The `Int` categoricity package (same namespace).
     pub int_categoricity: IntCategoricity,
+    /// `Nat` named as the initial pointed unary algebra.
+    pub nat_universal_property: NatUniversalProperty,
+    /// `Int` named as the initial `ℤ`-structure.
+    pub int_universal_property: IntUniversalProperty,
     /// Every admitted theorem, in declaration order, with its role.
     pub entries: Vec<CharacterizationEntry>,
 }
@@ -409,6 +427,8 @@ pub fn build_characterization_with(
     let nat = nat::declare(&mut dev, weakening)?;
     let int = int::declare(&mut dev, weakening)?;
     let int_categoricity = int_categoricity::declare(&mut dev, nat, int, weakening)?;
+    let (nat_universal_property, int_universal_property) =
+        universal_property::declare(&mut dev, nat, int, int_categoricity, weakening)?;
     let entries = vec![
         CharacterizationEntry {
             name: nat.zero_ne_succ,
@@ -538,12 +558,22 @@ pub fn build_characterization_with(
             name: int_categoricity.categorical_at_int,
             kind: CharacterizationKind::IntCategoricity,
         },
+        CharacterizationEntry {
+            name: nat_universal_property.initial,
+            kind: CharacterizationKind::NatUniversalProperty,
+        },
+        CharacterizationEntry {
+            name: int_universal_property.initial,
+            kind: CharacterizationKind::IntUniversalProperty,
+        },
     ];
     Ok(Characterization {
         int_prelude,
         nat,
         int,
         int_categoricity,
+        nat_universal_property,
+        int_universal_property,
         entries,
     })
 }
