@@ -173,7 +173,13 @@ fn fold_ctx(k: &mut Kernel, ctx: OpCtx, atoms: &[ExprId], items: &[Item]) -> Exp
     acc
 }
 
-fn fold_from_ctx(k: &mut Kernel, ctx: OpCtx, atoms: &[ExprId], start: ExprId, items: &[Item]) -> ExprId {
+fn fold_from_ctx(
+    k: &mut Kernel,
+    ctx: OpCtx,
+    atoms: &[ExprId],
+    start: ExprId,
+    items: &[Item],
+) -> ExprId {
     let mut acc = start;
     for item in items {
         let t = item_term_ctx(k, ctx, atoms, item);
@@ -190,7 +196,13 @@ fn fold_mul_ctx(k: &mut Kernel, ctx: OpCtx, atoms: &[ExprId], vars: &[usize]) ->
     acc
 }
 
-fn fold_mul_from_ctx(k: &mut Kernel, ctx: OpCtx, atoms: &[ExprId], start: ExprId, vars: &[usize]) -> ExprId {
+fn fold_mul_from_ctx(
+    k: &mut Kernel,
+    ctx: OpCtx,
+    atoms: &[ExprId],
+    start: ExprId,
+    vars: &[usize],
+) -> ExprId {
     let mut acc = start;
     for &v in vars {
         acc = mul2_ctx(k, ctx, acc, atoms[v]);
@@ -326,7 +338,13 @@ impl Problem {
         };
 
         let eq_const = k.const_(lg.eq, vec![l1]);
-        let ctx = OpCtx { add, mul, neg, zero, one };
+        let ctx = OpCtx {
+            add,
+            mul,
+            neg,
+            zero,
+            one,
+        };
 
         Self {
             ring,
@@ -410,7 +428,13 @@ impl Problem {
         };
 
         let eq_const = k.const_(lg.eq, vec![l1]);
-        let ctx = OpCtx { add, mul, neg, zero, one };
+        let ctx = OpCtx {
+            add,
+            mul,
+            neg,
+            zero,
+            one,
+        };
 
         Self {
             ring,
@@ -477,7 +501,15 @@ impl Problem {
         }
     }
 
-    fn trans(&mut self, k: &mut Kernel, a: ExprId, b: ExprId, c: ExprId, h1: ExprId, h2: ExprId) -> ExprId {
+    fn trans(
+        &mut self,
+        k: &mut Kernel,
+        a: ExprId,
+        b: ExprId,
+        c: ExprId,
+        h1: ExprId,
+        h2: ExprId,
+    ) -> ExprId {
         match self.backend {
             Backend::KernelEq => {
                 let s = self.fresh_scratch();
@@ -490,7 +522,12 @@ impl Problem {
     /// Chain a sequence of `(target, proof-to-target)` steps starting from
     /// `source`, folding left with [`Self::trans`] — `ring::rat::rchain`'s
     /// shape, inlined.
-    fn chain(&mut self, k: &mut Kernel, source: ExprId, steps: &[(ExprId, ExprId)]) -> (ExprId, ExprId) {
+    fn chain(
+        &mut self,
+        k: &mut Kernel,
+        source: ExprId,
+        steps: &[(ExprId, ExprId)],
+    ) -> (ExprId, ExprId) {
         let mut cur = source;
         let mut proof = self.refl(k, source);
         for &(target, step) in steps {
@@ -658,16 +695,23 @@ impl Problem {
         let mul_x_negy = self.mul2(k, x, neg_y);
         let mul_x_mulynegone = self.mul2(k, x, mul_y_negone);
         // step B : mul x (neg y) = mul x (mul y (neg one))
-        let step_b = self.congr_mul(k, neg_y, mul_y_negone, h1_symm, MulCtx::Right(x), &|k2, t| {
-            let e = k2.app(mul, x);
-            k2.app(e, t)
-        });
+        let step_b = self.congr_mul(
+            k,
+            neg_y,
+            mul_y_negone,
+            h1_symm,
+            MulCtx::Right(x),
+            &|k2, t| {
+                let e = k2.app(mul, x);
+                k2.app(e, t)
+            },
+        );
 
         // step C : mul x (mul y (neg one)) = mul (mul x y) (neg one)
         let mul_x_y = self.mul2(k, x, y);
         let mul_xy_negone = self.mul2(k, mul_x_y, neg_one);
         let assoc = Self::apply(k, self.mul_assoc, &[x, y, neg_one]); // mul(mul x y) negone = mul x (mul y negone)
-        let step_c = self.symm(k, mul_x_mulynegone, mul_xy_negone, assoc);
+        let step_c = self.symm(k, mul_xy_negone, mul_x_mulynegone, assoc);
 
         // step D : mul (mul x y) (neg one) = neg (mul x y)
         let neg_mulxy = self.neg1(k, mul_x_y);
@@ -676,7 +720,11 @@ impl Problem {
         let (_, proof) = self.chain(
             k,
             mul_x_negy,
-            &[(mul_x_mulynegone, step_b), (mul_xy_negone, step_c), (neg_mulxy, step_d)],
+            &[
+                (mul_x_mulynegone, step_b),
+                (mul_xy_negone, step_c),
+                (neg_mulxy, step_d),
+            ],
         );
         proof
     }
@@ -704,7 +752,11 @@ impl Problem {
         let (_, proof) = self.chain(
             k,
             mul_negx_y,
-            &[(mul_y_negx, step_a), (neg_mulyx, step_b), (neg_mulxy, step_c)],
+            &[
+                (mul_y_negx, step_a),
+                (neg_mulyx, step_b),
+                (neg_mulxy, step_c),
+            ],
         );
         proof
     }
@@ -733,10 +785,17 @@ impl Problem {
         let mut joined_items = left.to_vec();
         joined_items.extend_from_slice(init);
         let joined_inner = self.fold(k, &joined_items);
-        let step2 = self.congr_add(k, regrouped_inner, joined_inner, inner, AddCtx::Left(last_t), &|k2, x| {
-            let e = k2.app(add, x);
-            k2.app(e, last_t)
-        });
+        let step2 = self.congr_add(
+            k,
+            regrouped_inner,
+            joined_inner,
+            inner,
+            AddCtx::Left(last_t),
+            &|k2, x| {
+                let e = k2.app(add, x);
+                k2.app(e, last_t)
+            },
+        );
         let target = self.add2(k, joined_inner, last_t);
         self.trans(k, source, regrouped, target, step1, step2)
     }
@@ -763,10 +822,17 @@ impl Problem {
         let mut joined_vars = left.to_vec();
         joined_vars.extend_from_slice(init);
         let joined_inner = self.fold_mul(k, &joined_vars);
-        let step2 = self.congr_mul(k, regrouped_inner, joined_inner, inner, MulCtx::Left(last_t), &|k2, x| {
-            let e = k2.app(mul, x);
-            k2.app(e, last_t)
-        });
+        let step2 = self.congr_mul(
+            k,
+            regrouped_inner,
+            joined_inner,
+            inner,
+            MulCtx::Left(last_t),
+            &|k2, x| {
+                let e = k2.app(mul, x);
+                k2.app(e, last_t)
+            },
+        );
         let target = self.mul2(k, joined_inner, last_t);
         self.trans(k, source, regrouped, target, step1, step2)
     }
@@ -810,16 +876,22 @@ impl Problem {
                     let after = self.mul2(k, after_inner, x);
                     let assoc2 = Self::apply(k, self.mul_assoc, &[prefix, y, x]);
                     let step3 = self.symm(k, after, mid2, assoc2);
-                    let (_, base) = self.chain(k, before, &[(mid1, assoc1), (mid2, step2), (after, step3)]);
+                    let (_, base) =
+                        self.chain(k, before, &[(mid1, assoc1), (mid2, step2), (after, step3)]);
                     (before, after, base)
                 };
                 let tail: Vec<usize> = current[idx + 2..].to_vec();
                 let ctx = self.ctx;
                 let atoms = self.atoms.clone();
                 let tail_for_closure = tail.clone();
-                let step = self.congr_mul(k, inner_before, inner_after, base, MulCtx::FoldFrom(tail), &move |k2, t| {
-                    fold_mul_from_ctx(k2, ctx, &atoms, t, &tail_for_closure)
-                });
+                let step = self.congr_mul(
+                    k,
+                    inner_before,
+                    inner_after,
+                    base,
+                    MulCtx::FoldFrom(tail),
+                    &move |k2, t| fold_mul_from_ctx(k2, ctx, &atoms, t, &tail_for_closure),
+                );
                 current.swap(idx, idx + 1);
                 let next = self.fold_mul(k, &current);
                 proof = self.trans(k, source, folded, next, proof, step);
@@ -870,16 +942,22 @@ impl Problem {
                     let after = self.add2(k, after_inner, x);
                     let assoc2 = Self::apply(k, self.add_assoc, &[prefix, y, x]);
                     let step3 = self.symm(k, after, mid2, assoc2);
-                    let (_, base) = self.chain(k, before, &[(mid1, assoc1), (mid2, step2), (after, step3)]);
+                    let (_, base) =
+                        self.chain(k, before, &[(mid1, assoc1), (mid2, step2), (after, step3)]);
                     (before, after, base)
                 };
                 let tail: Vec<Item> = current[idx + 2..].to_vec();
                 let ctx = self.ctx;
                 let atoms = self.atoms.clone();
                 let tail_for_closure = tail.clone();
-                let step = self.congr_add(k, inner_before, inner_after, base, AddCtx::FoldFrom(tail), &move |k2, t| {
-                    fold_from_ctx(k2, ctx, &atoms, t, &tail_for_closure)
-                });
+                let step = self.congr_add(
+                    k,
+                    inner_before,
+                    inner_after,
+                    base,
+                    AddCtx::FoldFrom(tail),
+                    &move |k2, t| fold_from_ctx(k2, ctx, &atoms, t, &tail_for_closure),
+                );
                 current.swap(idx, idx + 1);
                 let next = self.fold(k, &current);
                 proof = self.trans(k, source, folded, next, proof, step);
@@ -925,7 +1003,11 @@ impl Problem {
             let commuted_lhs = self.mul2(k, numeral, it);
             let comm = Self::apply(k, self.mul_comm, &[numeral, it]);
             let target = self.fold(k, &items);
-            let (_, full) = self.chain(k, commuted_lhs, &[(uncommuted_lhs, comm), (target, base_proof)]);
+            let (_, full) = self.chain(
+                k,
+                commuted_lhs,
+                &[(uncommuted_lhs, comm), (target, base_proof)],
+            );
             Ok((items, full))
         } else {
             Ok((items, base_proof))
@@ -934,10 +1016,16 @@ impl Problem {
 
     /// `Eq (mul (item_term a) (item_term b)) (fold result)` — the
     /// `ring::rat::Problem::combine_items` twin.
-    fn combine_items(&mut self, k: &mut Kernel, a: &Item, b: &Item) -> Result<(Vec<Item>, ExprId), Decline> {
+    fn combine_items(
+        &mut self,
+        k: &mut Kernel,
+        a: &Item,
+        b: &Item,
+    ) -> Result<(Vec<Item>, ExprId), Decline> {
         match (a, b) {
             (Item::Num(x), Item::Num(y)) => {
-                if x.unsigned_abs() > MAX_RING_COEFF.unsigned_abs() || y.unsigned_abs() > MAX_RING_COEFF.unsigned_abs()
+                if x.unsigned_abs() > MAX_RING_COEFF.unsigned_abs()
+                    || y.unsigned_abs() > MAX_RING_COEFF.unsigned_abs()
                 {
                     return Err(Decline::CoefficientTooLarge);
                 }
@@ -955,10 +1043,19 @@ impl Problem {
                 let (sorted, sort_proof) = self.sort_factors(k, &merged);
                 let sorted_term = self.fold_mul(k, &sorted);
                 let raw_prod = self.mul2(k, raw_a, raw_b);
-                let raw_proof = self.trans(k, raw_prod, merged_term, sorted_term, reassoc, sort_proof);
+                let raw_proof =
+                    self.trans(k, raw_prod, merged_term, sorted_term, reassoc, sort_proof);
 
-                let (result_sign, proof) =
-                    self.combine_mono_signs(k, *sign_a, *sign_b, raw_a, raw_b, raw_prod, raw_proof, sorted_term);
+                let (result_sign, proof) = self.combine_mono_signs(
+                    k,
+                    *sign_a,
+                    *sign_b,
+                    raw_a,
+                    raw_b,
+                    raw_prod,
+                    raw_proof,
+                    sorted_term,
+                );
                 Ok((vec![Item::Mono(sorted, result_sign)], proof))
             }
         }
@@ -1017,7 +1114,11 @@ impl Problem {
                 let (_, chained) = self.chain(
                     k,
                     source,
-                    &[(neg_mul_a_negb, nm), (neg_neg_raw_prod, congr2), (raw_prod, nn)],
+                    &[
+                        (neg_mul_a_negb, nm),
+                        (neg_neg_raw_prod, congr2),
+                        (raw_prod, nn),
+                    ],
                 );
                 let full = self.trans(k, source, raw_prod, sorted_term, chained, raw_proof);
                 (false, full)
@@ -1025,7 +1126,12 @@ impl Problem {
         }
     }
 
-    fn distribute_single(&mut self, k: &mut Kernel, item: &Item, iv: &[Item]) -> Result<(Vec<Item>, ExprId), Decline> {
+    fn distribute_single(
+        &mut self,
+        k: &mut Kernel,
+        item: &Item,
+        iv: &[Item],
+    ) -> Result<(Vec<Item>, ExprId), Decline> {
         let add = self.add;
         if iv.len() == 1 {
             return self.combine_items(k, item, &iv[0]);
@@ -1046,15 +1152,29 @@ impl Problem {
         let (items_last, proof_last) = self.combine_items(k, item, &last[0])?;
         let target_init = self.fold(k, &items_init);
         let target_last = self.fold(k, &items_last);
-        let step_a = self.congr_add(k, mul_it_fi, target_init, proof_init, AddCtx::Left(mul_it_last), &|k2, t| {
-            let e = k2.app(add, t);
-            k2.app(e, mul_it_last)
-        });
+        let step_a = self.congr_add(
+            k,
+            mul_it_fi,
+            target_init,
+            proof_init,
+            AddCtx::Left(mul_it_last),
+            &|k2, t| {
+                let e = k2.app(add, t);
+                k2.app(e, mul_it_last)
+            },
+        );
         let mid2 = self.add2(k, target_init, mul_it_last);
-        let step_b = self.congr_add(k, mul_it_last, target_last, proof_last, AddCtx::Right(target_init), &|k2, t| {
-            let e = k2.app(add, target_init);
-            k2.app(e, t)
-        });
+        let step_b = self.congr_add(
+            k,
+            mul_it_last,
+            target_last,
+            proof_last,
+            AddCtx::Right(target_init),
+            &|k2, t| {
+                let e = k2.app(add, target_init);
+                k2.app(e, t)
+            },
+        );
         let mid3 = self.add2(k, target_init, target_last);
         let step_ab = self.trans(k, sum, mid2, mid3, step_a, step_b);
 
@@ -1067,7 +1187,12 @@ impl Problem {
         Ok((items, full))
     }
 
-    fn distribute(&mut self, k: &mut Kernel, iu: &[Item], iv: &[Item]) -> Result<(Vec<Item>, ExprId), Decline> {
+    fn distribute(
+        &mut self,
+        k: &mut Kernel,
+        iu: &[Item],
+        iv: &[Item],
+    ) -> Result<(Vec<Item>, ExprId), Decline> {
         let add = self.add;
         if iu.len() == 1 {
             return self.distribute_single(k, &iu[0], iv);
@@ -1088,15 +1213,29 @@ impl Problem {
         let (items_last, proof_last) = self.distribute_single(k, &last[0], iv)?;
         let target_init = self.fold(k, &items_init);
         let target_last = self.fold(k, &items_last);
-        let step_a = self.congr_add(k, mul_fi_fv, target_init, proof_init, AddCtx::Left(mul_last_fv), &|k2, t| {
-            let e = k2.app(add, t);
-            k2.app(e, mul_last_fv)
-        });
+        let step_a = self.congr_add(
+            k,
+            mul_fi_fv,
+            target_init,
+            proof_init,
+            AddCtx::Left(mul_last_fv),
+            &|k2, t| {
+                let e = k2.app(add, t);
+                k2.app(e, mul_last_fv)
+            },
+        );
         let mid2 = self.add2(k, target_init, mul_last_fv);
-        let step_b = self.congr_add(k, mul_last_fv, target_last, proof_last, AddCtx::Right(target_init), &|k2, t| {
-            let e = k2.app(add, target_init);
-            k2.app(e, t)
-        });
+        let step_b = self.congr_add(
+            k,
+            mul_last_fv,
+            target_last,
+            proof_last,
+            AddCtx::Right(target_init),
+            &|k2, t| {
+                let e = k2.app(add, target_init);
+                k2.app(e, t)
+            },
+        );
         let mid3 = self.add2(k, target_init, target_last);
         let step_ab = self.trans(k, sum, mid2, mid3, step_a, step_b);
 
@@ -1187,7 +1326,12 @@ impl Problem {
         Ok((items, proof))
     }
 
-    fn flatten_add(&mut self, k: &mut Kernel, u: ExprId, v: ExprId) -> Result<(Vec<Item>, ExprId), Decline> {
+    fn flatten_add(
+        &mut self,
+        k: &mut Kernel,
+        u: ExprId,
+        v: ExprId,
+    ) -> Result<(Vec<Item>, ExprId), Decline> {
         let add = self.add;
         let (iu, pu) = self.flatten(k, u)?;
         let (iv, pv) = self.flatten(k, v)?;
@@ -1243,7 +1387,12 @@ impl Problem {
         Ok((items, proof))
     }
 
-    fn flatten_mul(&mut self, k: &mut Kernel, u: ExprId, v: ExprId) -> Result<(Vec<Item>, ExprId), Decline> {
+    fn flatten_mul(
+        &mut self,
+        k: &mut Kernel,
+        u: ExprId,
+        v: ExprId,
+    ) -> Result<(Vec<Item>, ExprId), Decline> {
         let mul = self.mul;
         let (iu, pu) = self.flatten(k, u)?;
         let (iv, pv) = self.flatten(k, v)?;
@@ -1278,7 +1427,13 @@ impl Problem {
         Ok((sorted, proof))
     }
 
-    fn prove_eq(&mut self, k: &mut Kernel, x: ExprId, y: ExprId, verify: bool) -> Result<ExprId, Decline> {
+    fn prove_eq(
+        &mut self,
+        k: &mut Kernel,
+        x: ExprId,
+        y: ExprId,
+        verify: bool,
+    ) -> Result<ExprId, Decline> {
         let (ix, px) = self.normalize(k, x)?;
         let (iy, py) = self.normalize(k, y)?;
         if verify && ix != iy {
@@ -1343,6 +1498,7 @@ pub(crate) fn prove_eq_unverified(
 /// # Errors
 ///
 /// As [`prove_eq`].
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn prove_eq_s(
     k: &mut Kernel,
     lg: &LogicPrelude,
@@ -1362,6 +1518,7 @@ pub(crate) fn prove_eq_s(
 /// # Errors
 ///
 /// As [`prove_eq_s`], minus [`Decline::NotAnIdentity`].
+#[allow(clippy::too_many_arguments)]
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn prove_eq_s_unverified(
     k: &mut Kernel,
@@ -1384,7 +1541,14 @@ mod generic_tests {
     use crate::nat_prelude::structures::sel;
     use crate::{Kernel, build_rat_prelude};
 
-    fn eq_of_carrier(k: &mut Kernel, carrier: ExprId, l1: LevelId, lg: &LogicPrelude, x: ExprId, y: ExprId) -> ExprId {
+    fn eq_of_carrier(
+        k: &mut Kernel,
+        carrier: ExprId,
+        l1: LevelId,
+        lg: &LogicPrelude,
+        x: ExprId,
+        y: ExprId,
+    ) -> ExprId {
         structures::eq_of(k, lg, l1, carrier, x, y)
     }
 
@@ -1393,7 +1557,8 @@ mod generic_tests {
         for &fv in vars.iter().rev() {
             v = lam_over(k, fv, carrier, v);
         }
-        k.infer(v).expect("closed generic ring proof must type-check")
+        k.infer(v)
+            .expect("closed generic ring proof must type-check")
     }
 
     fn mul_of(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId, y: ExprId) -> ExprId {
@@ -1412,6 +1577,31 @@ mod generic_tests {
 
     fn neg_of(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId) -> ExprId {
         use structures::idx::comm_ring::NEG;
+        let neg = sel(k, rn, NEG, ring);
+        k.app(neg, x)
+    }
+
+    // `AlgS.CommRing`'s field indices are NOT the same numbers as `Alg.
+    // CommRing`'s (four extra equiv-infrastructure fields shift every later
+    // index) -- these three helpers read `structures_s::idx::comm_ring`,
+    // never `structures::idx::comm_ring`, and are the ones every `CReal.
+    // commRingS` test below must use.
+    fn mul_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId, y: ExprId) -> ExprId {
+        use structures_s::idx::comm_ring::MUL;
+        let mul = sel(k, rn, MUL, ring);
+        let e = k.app(mul, x);
+        k.app(e, y)
+    }
+
+    fn add_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId, y: ExprId) -> ExprId {
+        use structures_s::idx::comm_ring::ADD;
+        let add = sel(k, rn, ADD, ring);
+        let e = k.app(add, x);
+        k.app(e, y)
+    }
+
+    fn neg_of_s(k: &mut Kernel, rn: &RecordNames, ring: ExprId, x: ExprId) -> ExprId {
+        use structures_s::idx::comm_ring::NEG;
         let neg = sel(k, rn, NEG, ring);
         k.app(neg, x)
     }
@@ -1501,7 +1691,8 @@ mod generic_tests {
         let rn = p.int.nat.structures.comm_ring;
         let (a, b) = (k.fvar(A), k.fvar(B));
         let ab = mul_of(&mut k, &rn, ring, a, b);
-        let neg_one = neg_of(&mut k, &rn, ring, sel(&mut k, &rn, structures::idx::comm_ring::ONE, ring));
+        let one = sel(&mut k, &rn, structures::idx::comm_ring::ONE, ring);
+        let neg_one = neg_of(&mut k, &rn, ring, one);
         let lhs = mul_of(&mut k, &rn, ring, ab, neg_one);
         let ba = mul_of(&mut k, &rn, ring, b, a);
         let rhs = neg_of(&mut k, &rn, ring, ba);
@@ -1544,8 +1735,8 @@ mod generic_tests {
         let ring = k.const_(p.comm_ring_s, vec![]);
         let rn = creal_rn(&p);
         let (a, b) = (k.fvar(A), k.fvar(B));
-        let lhs = mul_of(&mut k, &rn, ring, a, b);
-        let rhs = mul_of(&mut k, &rn, ring, b, a);
+        let lhs = mul_of_s(&mut k, &rn, ring, a, b);
+        let rhs = mul_of_s(&mut k, &rn, ring, b, a);
         let proof = prove_eq_s(
             &mut k,
             &p.rat.int.nat.logic,
@@ -1574,11 +1765,11 @@ mod generic_tests {
         let ring = k.const_(p.comm_ring_s, vec![]);
         let rn = creal_rn(&p);
         let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
-        let bc = add_of(&mut k, &rn, ring, b, c);
-        let lhs = mul_of(&mut k, &rn, ring, a, bc);
-        let ab = mul_of(&mut k, &rn, ring, a, b);
-        let ac = mul_of(&mut k, &rn, ring, a, c);
-        let rhs = add_of(&mut k, &rn, ring, ab, ac);
+        let bc = add_of_s(&mut k, &rn, ring, b, c);
+        let lhs = mul_of_s(&mut k, &rn, ring, a, bc);
+        let ab = mul_of_s(&mut k, &rn, ring, a, b);
+        let ac = mul_of_s(&mut k, &rn, ring, a, c);
+        let rhs = add_of_s(&mut k, &rn, ring, ab, ac);
         let proof = prove_eq_s(
             &mut k,
             &p.rat.int.nat.logic,
@@ -1595,6 +1786,111 @@ mod generic_tests {
     }
 
     #[test]
+    fn creal_comm_ring_s_right_distrib_goal() {
+        // (a+b)*c = a*c + b*c -- exercises distribR (the general
+        // `distribute` branch, iu.len()>1), the exact shape `right_distrib`
+        // needs (a DIAGNOSTIC for the NotAnIdentity found wiring
+        // `creal/ring_helpers.rs` into the real prelude build).
+        const A: u64 = 62_150;
+        const B: u64 = 62_151;
+        const C: u64 = 62_152;
+        let mut k = Kernel::new();
+        let p = creal_setup(&mut k);
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.comm_ring_s, vec![]);
+        let rn = creal_rn(&p);
+        let (a, b, c) = (k.fvar(A), k.fvar(B), k.fvar(C));
+        let ab = add_of_s(&mut k, &rn, ring, a, b);
+        let lhs = mul_of_s(&mut k, &rn, ring, ab, c);
+        let ac = mul_of_s(&mut k, &rn, ring, a, c);
+        let bc = mul_of_s(&mut k, &rn, ring, b, c);
+        let rhs = add_of_s(&mut k, &rn, ring, ac, bc);
+        let proof = prove_eq_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.int.nat.structures_s_extra,
+            ring,
+            lhs,
+            rhs,
+        )
+        .expect("ring::generic (setoid) must prove (a+b)*c = a*c+b*c over CReal.commRingS");
+        let carrier = sel(&mut k, &rn, structures_s::idx::comm_ring::CARRIER, ring);
+        let _ = close_and_infer(&mut k, carrier, &[A, B, C], proof);
+    }
+
+    #[test]
+    fn creal_comm_ring_s_right_distrib_repeated_arg_goal() {
+        // (x+x)*v = x*v + x*v -- `derivative::declare_...`'s own
+        // `right_distrib(d, p, half, half, v)` shape: the SAME term used
+        // for both summands.
+        const X: u64 = 62_160;
+        const V: u64 = 62_161;
+        let mut k = Kernel::new();
+        let p = creal_setup(&mut k);
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(p.comm_ring_s, vec![]);
+        let rn = creal_rn(&p);
+        let (x, v) = (k.fvar(X), k.fvar(V));
+        let xx = add_of_s(&mut k, &rn, ring, x, x);
+        let lhs = mul_of_s(&mut k, &rn, ring, xx, v);
+        let xv1 = mul_of_s(&mut k, &rn, ring, x, v);
+        let xv2 = mul_of_s(&mut k, &rn, ring, x, v);
+        let rhs = add_of_s(&mut k, &rn, ring, xv1, xv2);
+        let proof = prove_eq_s(
+            &mut k,
+            &p.rat.int.nat.logic,
+            l1,
+            &p.rat.int.nat.structures_s,
+            &p.rat.int.nat.structures_s_extra,
+            ring,
+            lhs,
+            rhs,
+        )
+        .expect("ring::generic (setoid) must prove (x+x)*v = x*v+x*v over CReal.commRingS");
+        let carrier = sel(&mut k, &rn, structures_s::idx::comm_ring::CARRIER, ring);
+        let _ = close_and_infer(&mut k, carrier, &[X, V], proof);
+    }
+
+    #[test]
+    fn creal_comm_ring_s_add4_comm_repeated_arg_goal() {
+        // (p+p)+(q+q) = (p+q)+(p+q) -- `derivative::declare_...`'s own
+        // `add4_comm(d, p, mul_bb, mul_bb, neg_xt, neg_xt)` shape: TWO
+        // repeated-argument pairs.
+        const P: u64 = 62_170;
+        const Q: u64 = 62_171;
+        let mut k = Kernel::new();
+        let cp = creal_setup(&mut k);
+        let l0 = k.level_zero();
+        let l1 = k.level_succ(l0);
+        let ring = k.const_(cp.comm_ring_s, vec![]);
+        let rn = creal_rn(&cp);
+        let (p, q) = (k.fvar(P), k.fvar(Q));
+        let pp = add_of_s(&mut k, &rn, ring, p, p);
+        let qq = add_of_s(&mut k, &rn, ring, q, q);
+        let lhs = add_of_s(&mut k, &rn, ring, pp, qq);
+        let pq1 = add_of_s(&mut k, &rn, ring, p, q);
+        let pq2 = add_of_s(&mut k, &rn, ring, p, q);
+        let rhs = add_of_s(&mut k, &rn, ring, pq1, pq2);
+        let proof = prove_eq_s(
+            &mut k,
+            &cp.rat.int.nat.logic,
+            l1,
+            &cp.rat.int.nat.structures_s,
+            &cp.rat.int.nat.structures_s_extra,
+            ring,
+            lhs,
+            rhs,
+        )
+        .expect("ring::generic (setoid) must prove (p+p)+(q+q) = (p+q)+(p+q) over CReal.commRingS");
+        let carrier = sel(&mut k, &rn, structures_s::idx::comm_ring::CARRIER, ring);
+        let _ = close_and_infer(&mut k, carrier, &[P, Q], proof);
+    }
+
+    #[test]
     fn creal_comm_ring_s_neg_mul_goal() {
         // (neg a) * b = neg (a * b) -- exercises neg_mul_proof directly.
         const A: u64 = 62_200;
@@ -1606,10 +1902,10 @@ mod generic_tests {
         let ring = k.const_(p.comm_ring_s, vec![]);
         let rn = creal_rn(&p);
         let (a, b) = (k.fvar(A), k.fvar(B));
-        let neg_a = neg_of(&mut k, &rn, ring, a);
-        let lhs = mul_of(&mut k, &rn, ring, neg_a, b);
-        let ab = mul_of(&mut k, &rn, ring, a, b);
-        let rhs = neg_of(&mut k, &rn, ring, ab);
+        let neg_a = neg_of_s(&mut k, &rn, ring, a);
+        let lhs = mul_of_s(&mut k, &rn, ring, neg_a, b);
+        let ab = mul_of_s(&mut k, &rn, ring, a, b);
+        let rhs = neg_of_s(&mut k, &rn, ring, ab);
         let proof = prove_eq_s(
             &mut k,
             &p.rat.int.nat.logic,
@@ -1637,9 +1933,10 @@ mod generic_tests {
         let ring = k.const_(p.comm_ring_s, vec![]);
         let rn = creal_rn(&p);
         let (a, b) = (k.fvar(A), k.fvar(B));
-        let neg_neg_a = neg_of(&mut k, &rn, ring, neg_of(&mut k, &rn, ring, a));
-        let lhs = mul_of(&mut k, &rn, ring, neg_neg_a, b);
-        let rhs = mul_of(&mut k, &rn, ring, a, b);
+        let neg_a = neg_of_s(&mut k, &rn, ring, a);
+        let neg_neg_a = neg_of_s(&mut k, &rn, ring, neg_a);
+        let lhs = mul_of_s(&mut k, &rn, ring, neg_neg_a, b);
+        let rhs = mul_of_s(&mut k, &rn, ring, a, b);
         let proof = prove_eq_s(
             &mut k,
             &p.rat.int.nat.logic,
@@ -1666,8 +1963,8 @@ mod generic_tests {
         let ring = k.const_(p.comm_ring_s, vec![]);
         let rn = creal_rn(&p);
         let (a, b) = (k.fvar(A), k.fvar(B));
-        let lhs = mul_of(&mut k, &rn, ring, a, b);
-        let rhs = mul_of(&mut k, &rn, ring, a, a);
+        let lhs = mul_of_s(&mut k, &rn, ring, a, b);
+        let rhs = mul_of_s(&mut k, &rn, ring, a, a);
         let res = prove_eq_s(
             &mut k,
             &p.rat.int.nat.logic,
@@ -1700,8 +1997,8 @@ mod generic_tests {
         // FALSE claim: a*b = a*a (the procedure's own check is disabled, so
         // it happily emits a term of this type; the KERNEL must refuse it
         // against the actually-stated goal).
-        let lhs = mul_of(&mut k, &rn, ring, a, b);
-        let rhs = mul_of(&mut k, &rn, ring, a, a);
+        let lhs = mul_of_s(&mut k, &rn, ring, a, b);
+        let rhs = mul_of_s(&mut k, &rn, ring, a, a);
         let proof = prove_eq_s_unverified(
             &mut k,
             &p.rat.int.nat.logic,
@@ -1714,27 +2011,21 @@ mod generic_tests {
         )
         .expect("prove_eq_s_unverified must still emit A term (verification is what's disabled)");
         let carrier = sel(&mut k, &rn, structures_s::idx::comm_ring::CARRIER, ring);
-        // Close the proof over a and b and check it against the TRUE stated
-        // goal `equiv (mul a b) (mul a b)` (reflexivity) -- the emitted term
-        // proves a DIFFERENT proposition (equiv (mul a b) (mul a a)) so a
-        // literal-type check against the true goal must fail. We instead
-        // directly ask the kernel to `infer` the closed proof term and
-        // confirm ITS type is NOT `def_eq` to `equiv lhs lhs` (the honest
-        // reflexive goal) -- i.e. the corrupted term does not prove the
-        // trivially-true statement either, which is the point: the emitted
-        // term's OWN inferred type must be checked, and it must not be
-        // silently accepted as proving something it doesn't.
+        // Close the proof over a and b and declare it directly against the
+        // TRUE stated goal `equiv (mul a b) (mul a b)` (reflexivity) -- the
+        // emitted term actually proves a DIFFERENT (false) proposition
+        // (`equiv (mul a b) (mul a a)`, and for a genuinely non-identical
+        // pair the term is not even well-typed on its own, matching
+        // `ring::int::tests::kernel_verdict_on`'s own established pattern:
+        // go straight to `add_declaration` and require it to fail, rather
+        // than asserting anything about a separate `Kernel::infer` call --
+        // the trust anchor IS `add_declaration`, and it must reject this
+        // either by refusing to infer the value or by refusing the def_eq
+        // check against the stated type. Either way is a correct refusal.
         let mut closed = proof;
         for &fv in [A, B].iter().rev() {
             closed = lam_over(&mut k, fv, carrier, closed);
         }
-        let inferred = k
-            .infer(closed)
-            .expect("a closed term must still infer SOME type (possibly a false one)");
-        // The KERNEL-CHECKED route: attempt to `add_declaration` a theorem
-        // asserting the TRUE reflexive statement `equiv (mul a b) (mul a b)`
-        // using the corrupted proof term -- this is the actual trust-anchor
-        // check and it must be REJECTED.
         let true_goal = {
             let equiv = sel(&mut k, &rn, structures_s::idx::comm_ring::EQUIV, ring);
             let e1 = k.app(equiv, lhs);
@@ -1755,7 +2046,7 @@ mod generic_tests {
         assert!(
             result.is_err(),
             "the KERNEL must reject a corrupted ring::generic certificate proving a*b=a*a \
-             when declared against the true reflexive goal a*b=a*b; inferred={inferred:?}"
+             when declared against the true reflexive goal a*b=a*b: {result:?}"
         );
     }
 
@@ -1770,8 +2061,8 @@ mod generic_tests {
         let ring = k.const_(p.comm_ring_s, vec![]);
         let rn = creal_rn(&p);
         let (a, b) = (k.fvar(A), k.fvar(B));
-        let lhs = mul_of(&mut k, &rn, ring, a, b);
-        let rhs = mul_of(&mut k, &rn, ring, b, a);
+        let lhs = mul_of_s(&mut k, &rn, ring, a, b);
+        let rhs = mul_of_s(&mut k, &rn, ring, b, a);
         let proof = prove_eq_s_unverified(
             &mut k,
             &p.rat.int.nat.logic,
