@@ -82,6 +82,7 @@ pub mod proof_plan;
 mod quotient;
 mod rat_prelude;
 pub mod ring;
+mod rn;
 pub mod shape_index;
 pub mod simp;
 mod stack;
@@ -159,6 +160,7 @@ pub use prelude::{
 pub use rat_prelude::{
     RatModel, RatModelLaw, RatPrelude, build_rat_model_of_arith, build_rat_prelude,
 };
+pub use rn::{RNPrelude, build_rn_prelude};
 pub use stack::{DEEP_STACK_BYTES, on_a_deep_stack};
 pub use string_prelude::{
     StringLengthArithmetic, StringPrelude, StringSubstrArithmetic, build_string_length_append,

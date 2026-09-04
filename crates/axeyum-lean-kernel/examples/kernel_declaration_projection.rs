@@ -40,6 +40,7 @@
 //! ```
 //!
 //! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`/`metric`/`intspace`,
+//! `--release` is MANDATORY: this binary builds `creal`/`complex`/`cpoint`/`metric`/`rn`,
 //! which recurse deep enough to overflow the default debug thread stack (the
 //! deep-stack worker in `main` below covers the MAIN thread's frame, not
 //! debug-vs-release per-frame size).
@@ -51,6 +52,9 @@ use axeyum_lean_kernel::{
     build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_intspace_prelude,
     build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm, build_logic_prelude,
     build_metric_prelude, build_nat_prelude, build_rat_prelude, build_string_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_ipc_soundness_prelude,
+    build_list_nat_bridge, build_list_perm, build_logic_prelude, build_metric_prelude,
+    build_nat_prelude, build_rat_prelude, build_rn_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -281,6 +285,15 @@ fn run() -> ExitCode {
         emit("intspace", &intspace);
     }
 
+    // `RN.*` (ADR-1606), the n-dimensional real inner-product space. It sits ON
+    // TOP of `metric` and carries its own namespace, so it needs its own label
+    // for exactly the reason the `metric` comment above records.
+    let mut rn = Kernel::new();
+    let _ = build_rn_prelude(&mut rn).expect("RN prelude must build");
+    if unfiltered {
+        emit("rn", &rn);
+    }
+
     // The IPC package, and it is the reason this example is not "every prelude"
     // by accident. `build_ipc_soundness_prelude` transitively builds
     // `provable` -> `heyting` -> `nat`, so one label covers the whole
@@ -327,6 +340,7 @@ fn run() -> ExitCode {
         ("cpoint", &cpoint),
         ("metric", &metric),
         ("intspace", &intspace),
+        ("rn", &rn),
         ("ipc", &ipc),
     ]
     .into_iter()

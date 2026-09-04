@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "F:rn-cpoint-agreement",
+  "title": "The Euclidean plane is the n = 2 case of R^n, not a parallel construction",
+  "statement": "The map RN.ofCPoint sending a plane point P to the vector (x P, y P, y P, ...) satisfies: <ofCPoint P, ofCPoint Q>_2 ~ CPoint.dot P Q; <ofCPoint P - ofCPoint Q, ofCPoint P - ofCPoint Q>_2 ~ CPoint.distSq P Q; RN.dist 2 (ofCPoint P) (ofCPoint Q) ~ Metric.CPoint.dist P Q; and it carries the two setoid equalities into each other IN BOTH DIRECTIONS -- CPoint.Equiv P Q iff EqOn 2 (ofCPoint P) (ofCPoint Q). So the plane's inner product, its squared distance and its metric distance are the n = 2 instances of the general definitions, established rather than assumed.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem RN.ofCPoint_dist : ((x0 : CPoint) -> ((x1 : CPoint) -> CReal.Equiv (RN.dist (AxNat.succ (AxNat.succ AxNat.zero)) (RN.ofCPoint x0) (RN.ofCPoint x1)) (Metric.CPoint.dist x0 x1)))",
+    "fragment": "RN",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "RN.ofCPoint_dist"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rn-is-a-metric-space-at-every-dimension"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-RN.ofCPoint_dist",
+      "kind": "kernel-term",
+      "supports": "RN.ofCPoint_dist is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names. The three siblings RN.ofCPoint_dot, RN.ofCPoint_distSq, RN.ofCPoint_congr and RN.cpointEquiv_of_eqOn are admitted in the same build with the same empty footprint.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration RN.ofCPoint_dist | grep -cE '^found[[:space:]]+rn[[:space:]]+theorem[[:space:]]+RN\\.ofCPoint_dist[[:space:]]+0$'",
+      "checker_seconds": 100,
+      "kernel_declaration": "RN.ofCPoint_dist",
+      "notes": "Anchored with [[:space:]], never \\t. grep -c rather than grep -q. --release is MANDATORY."
+    },
+    {
+      "id": "rn-ofcpoint-coordinate-placement",
+      "kind": "witness-replay",
+      "supports": "that RN.ofCPoint puts the coordinates where the agreement lemmas assume, rather than agreeing by some coincidence of the two definitions",
+      "check_status": "checked",
+      "checkers": [
+        "rn_tests::of_cpoint_places_the_coordinates admits `Equiv (ofCPoint P i) (CPoint.x P)` at i = 0 and `... (CPoint.y P)` at i = 1 and i = 2 by Equiv.refl, at a UNIVERSALLY QUANTIFIED point P, and requires the kernel to REFUSE each swapped sibling",
+        "rn_tests::cpoint_bridge_statements_are_exact compares Kernel::render_lean of RN.ofCPoint_dot's and RN.ofCPoint_dist's types against the strings recorded here, verbatim"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rn:: -- --test-threads=2",
+      "artifact": "crates/axeyum-lean-kernel/src/rn/rn_tests.rs",
+      "notes": "The probe quantifies over the point rather than instantiating it, deliberately: a probe at a concrete CPoint.mk would reduce through the constructor and could pass for reasons that have nothing to do with the definition's shape."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_rn_prelude (crates/axeyum-lean-kernel/src/rn.rs)",
+    "source": "Lane `rn-carrier`, roadmap W2-4 (convergence point C7), design recorded in ADR-1606."
+  },
+  "notes": "WHAT IS NOT CLAIMED: an isomorphism of metric spaces. `RN.metric 2` and `Metric.cpoint` have different carriers (`RN.Vec` and `CPoint`), so no equality between the two `Metric` values is statable without a transport this kernel does not have. What is proved is the pair of agreement lemmas plus the two-directional transport of the equivalences, which is what a consumer actually needs: any statement about `Metric.CPoint.dist` can be moved to `RN.dist 2` and back. The inverse map (Vec -> CPoint, `fun u => CPoint.mk (u 0) (u 1)`) is NOT declared, so the embedding is not shown surjective; that and a round-trip lemma are the remaining pieces of a genuine isomorphism."
+}

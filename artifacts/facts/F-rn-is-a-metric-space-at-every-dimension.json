@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:rn-is-a-metric-space-at-every-dimension",
+  "title": "R^n is a constructive metric space, for every n at once",
+  "statement": "For every natural number n, the setoid (Nat -> CReal, EqOn n) under the Euclidean distance d(u,v) = ||u - v||_n satisfies all twelve fields of the `Metric` record of ADR-1602: the setoid laws, the congruence of the distance under the equivalence, nonnegativity, both directions of the identity of indiscernibles, symmetry, and the triangle inequality. The witness `RN.metric` is a FUNCTION of the dimension, so this is one instance for every finite dimension rather than one instance per dimension. The consequence that matters is not the record but what the record carries: `Metric.dist_self`, `Metric.dist_quadrilateral`, `Metric.CauchyAt`, `Metric.Cauchy`, `Metric.TendsTo` and `Metric.Complete` are all stated for an ARBITRARY metric space, so every one of them now reads on R^n with no further work.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def RN.metric : ((x0 : AxNat) -> Metric)",
+    "fragment": "RN",
+    "free_symbols": [
+      "x0"
+    ],
+    "kernel_declaration": "RN.metric"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rn-cauchy-schwarz-symbolic-dimension",
+    "F:creal-le-of-sq-le",
+    "F:creal-eq-zero-of-mul-self-zero"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-RN.metric",
+      "kind": "kernel-term",
+      "supports": "RN.metric is admitted by the trusted kernel gate as a Definition of type `Nat -> Metric`, which means every one of the record's twelve field obligations type-checked, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the instance term and so re-checks all twelve field proofs)",
+        "kernel_declaration_projection --require-declaration re-list"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration RN.metric | grep -cE '^found[[:space:]]+rn[[:space:]]+definition[[:space:]]+RN\\.metric[[:space:]]+0$'",
+      "checker_seconds": 100,
+      "kernel_declaration": "RN.metric",
+      "notes": "Anchored with [[:space:]], never \\t (in a scripted GNU grep \\t is a literal t). grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY. A `Definition` of record type is the strongest single check available here: the record is not a bag of names but a telescope, so a wrong distance cannot be substituted without one of the eleven law fields failing to typecheck against it."
+    },
+    {
+      "id": "rn-metric-negative-controls",
+      "kind": "witness-replay",
+      "supports": "that the record REFUSES plausible wrong choices of distance, so admitting the real one is a finding rather than a formality",
+      "check_status": "checked",
+      "checkers": [
+        "rn_tests::a_squared_distance_is_refused_as_a_metric rebuilds the instance with d(u,v) = <u-v,u-v>_n (the SQUARED distance, which fails only the triangle inequality: d(0,2)^2 = 4 > 1 + 1) and requires Kernel::add_declaration to refuse",
+        "rn_tests::a_negated_norm_is_refused_as_a_metric rebuilds it with -||u-v||, which is still symmetric and still zero on the diagonal but violates nonnegativity",
+        "rn_tests::a_mismatched_dimension_is_refused puts `EqOn (succ n)` beside `dist n`, which breaks the identity of indiscernibles",
+        "rn_tests::the_wrong_reflexivity_is_refused hands the record a reflexivity proof for a different relation",
+        "rn_tests::the_instance_probe_accepts_the_real_instance is the paired POSITIVE: the same rebuild with nothing replaced must be accepted, so none of the four refusals above can be an artefact of the probe",
+        "rn_tests::the_generic_metric_theorems_apply_to_rn instantiates Metric.dist_self at RN.metric n and requires it to typecheck"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rn:: -- --test-threads=2",
+      "artifact": "crates/axeyum-lean-kernel/src/rn/rn_tests.rs",
+      "notes": "Mutation-verified: substituting the REAL distance into the squared-distance control's replacement slot makes exactly one test die (a_squared_distance_is_refused_as_a_metric), so the refusal is caused by the squared distance and not by the probe machinery."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_rn_prelude (crates/axeyum-lean-kernel/src/rn.rs)",
+    "source": "Lane `rn-carrier`, roadmap W2-4 (convergence point C7), design recorded in ADR-1606. The `Metric` record it instantiates is ADR-1602's."
+  },
+  "notes": "WHAT IS NOT CLAIMED. Completeness. `Metric.Complete` is stated for an arbitrary metric space and `Metric.creal_complete` proves it for R (n = 1 in spirit, though not literally this instance); the corresponding `RN.metric n` statement is NOT declared. It should follow coordinatewise from `CReal.converges_of_cauchy` plus the bound |u_i - v_i| <= d(u,v), but that bound is itself undeclared here, and an undeclared step is not a theorem. Also not claimed: that this instance at n = 2 is EQUAL to `Metric.cpoint`. What is proved is that they measure the same distance (F:rn-cpoint-agreement); the two carriers are different types, so no equality between the instances is even statable without a transport."
+}

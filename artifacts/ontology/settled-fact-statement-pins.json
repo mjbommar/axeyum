@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2291,
+    "min_identity_bound": 2293,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -23996,6 +23996,26 @@
           "statement_sha256": "9993f2c2e4d12e6475bfa0db306d1b61d8e792a209dfbfc3e07d41a53a66dfc3"
         }
       ]
+    },
+    {
+      "fact_id": "F:rn-cauchy-schwarz-symbolic-dimension",
+      "language": "lean4",
+      "statement_sha256": "a57482f529bbad666b0c026b6e4c1bff1588a49b2ff7afa9c15421abb5d9deaa",
+      "prose_sha256": "79a5e3681d1105b57485736bf48c840b3f6ae8060e17e2fd67ec7cd0ec9a9c23",
+      "kernel_theorem": "RN.cauchy_schwarz"
+    },
+    {
+      "fact_id": "F:rn-cpoint-agreement",
+      "language": "lean4",
+      "statement_sha256": "d1824579ffb48ca4772669e0093b293fb43636ef0ca926f1597e7e8127d1bf72",
+      "prose_sha256": "21c07a48c2a2a5d4ebf0e2d11eeeb196a4751a3f9a8735767679fcc36f9a32c3",
+      "kernel_theorem": "RN.ofCPoint_dist"
+    },
+    {
+      "fact_id": "F:rn-is-a-metric-space-at-every-dimension",
+      "language": "lean4",
+      "statement_sha256": "4e9c5e8431c9992be755fd70fc3ad6e36050c010c5f2604a799ec94a39f14e20",
+      "prose_sha256": "8bc73afdd74a6d57b697e8a07e77f8532d416593d813e0fc2c84d4f647aa37d1"
     },
     {
       "fact_id": "F:roster-icu-night-iis",
