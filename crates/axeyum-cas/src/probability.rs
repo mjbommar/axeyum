@@ -9,7 +9,7 @@
 //! [`crate::laplace_transform`], [`crate::prove_wz_sum`], [`crate::equal`],
 //! [`crate::expand`]/[`crate::simplify`] — never a bespoke numeric check. A
 //! finite-support discrete quantity is decided by enumerating its (small,
-//! concrete) support, building the exact closed CasExpr sum, and deciding the
+//! concrete) support, building the exact closed `CasExpr` sum, and deciding the
 //! target identity with [`crate::equal`] after [`crate::expand`] (the
 //! **`ExpandEqual`** route below): this is *not* a weaker check than
 //! [`crate::definite_sum`]'s telescoping certificate, it is the same
@@ -182,7 +182,10 @@ impl Certificate {
 fn agree(a: &Certificate, b: &Certificate) -> bool {
     a.is_certified()
         && b.is_certified()
-        && matches!(equal(&a.claim, &b.claim), ZeroTest::Certified { equal: true, .. })
+        && matches!(
+            equal(&a.claim, &b.claim),
+            ZeroTest::Certified { equal: true, .. }
+        )
 }
 
 /// Sum a finite list of `CasExpr` terms, expand, and decide the target
@@ -284,7 +287,7 @@ impl Discrete {
                 if k < 0 || k > i128::from(*n) {
                     return CasExpr::zero();
                 }
-                #[allow(clippy::cast_sign_loss)]
+                #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
                 let kk = k as u32;
                 let coeff = ntheory::binomial(i128::from(*n), k).unwrap_or(0);
                 CasExpr::Const(Rational::integer(coeff))
@@ -295,7 +298,7 @@ impl Discrete {
                 if k < 1 {
                     return CasExpr::zero();
                 }
-                #[allow(clippy::cast_sign_loss)]
+                #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
                 let exponent = (k - 1) as u32;
                 p.clone() * (CasExpr::one() - p.clone()).pow(exponent)
             }
@@ -303,7 +306,7 @@ impl Discrete {
                 if k < 0 {
                     return CasExpr::zero();
                 }
-                #[allow(clippy::cast_sign_loss)]
+                #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
                 let kk = k as u32;
                 let Some(fact) = ntheory::factorial(k) else {
                     return CasExpr::zero();
@@ -332,10 +335,17 @@ impl Discrete {
     }
 
     /// `Σ_k pmf(k) = 1`, the distribution's total probability mass.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn total_mass(&self) -> Certificate {
         match self {
-            Discrete::Bernoulli(_) | Discrete::Binomial { .. } | Discrete::DiscreteUniform { .. } => {
+            Discrete::Bernoulli(_)
+            | Discrete::Binomial { .. }
+            | Discrete::DiscreteUniform { .. } => {
                 let (lo, hi) = self.finite_support().expect("finite by construction");
                 if matches!(self, Discrete::DiscreteUniform { .. }) {
                     let n = hi - lo + 1;
@@ -405,6 +415,11 @@ impl Discrete {
     }
 
     /// `E[X] = Σ_k k·pmf(k)`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn mean(&self) -> Certificate {
         match self {
@@ -418,7 +433,10 @@ impl Discrete {
             Discrete::Binomial { n, p } => {
                 let target = CasExpr::Const(Rational::integer(i128::from(*n))) * p.clone();
                 let terms = (0..=*n)
-                    .map(|k| CasExpr::Const(Rational::integer(i128::from(k))) * self.pmf_at(i128::from(k)))
+                    .map(|k| {
+                        CasExpr::Const(Rational::integer(i128::from(k)))
+                            * self.pmf_at(i128::from(k))
+                    })
                     .collect();
                 expand_equal_route(terms, &target)
             }
@@ -458,142 +476,66 @@ impl Discrete {
             }
             Discrete::Geometric(p) => {
                 let target = CasExpr::one() / p.clone();
-                Certificate::uncertified(target, Route::InfiniteSum, geometric_moment_decline_reason())
+                Certificate::uncertified(
+                    target,
+                    Route::InfiniteSum,
+                    geometric_moment_decline_reason(),
+                )
             }
-            Discrete::Poisson(lambda) => {
-                Certificate::uncertified(lambda.clone(), Route::InfiniteSum, poisson_decline_reason(lambda))
-            }
+            Discrete::Poisson(lambda) => Certificate::uncertified(
+                lambda.clone(),
+                Route::InfiniteSum,
+                poisson_decline_reason(lambda),
+            ),
         }
     }
 
     /// `Var[X] = E[X²] − E[X]²`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn variance(&self) -> Certificate {
         match self {
-            Discrete::Bernoulli(p) => {
-                // p(1-p), enumerated directly: E[X^2]=p (0^2,1^2 same as X), so
-                // Var = p - p^2. Verify via ExpandEqual on the defining sum.
-                let target = p.clone() * (CasExpr::one() - p.clone());
-                let terms = vec![
-                    CasExpr::int(0).pow(2) * (CasExpr::one() - p.clone()),
-                    CasExpr::int(1).pow(2) * p.clone(),
-                ];
-                // terms sum to E[X^2] = p; Var = E[X^2] - mean^2. Build the full
-                // enumerated identity Σ k^2 pmf(k) - p^2 =? p(1-p) directly.
-                let mean_sq = p.clone().pow(2);
-                let mut acc = CasExpr::zero();
-                for t in terms {
-                    acc = acc + t;
-                }
-                let lhs = acc - mean_sq;
-                let expanded = expand(&lhs).unwrap_or_else(|| lhs.clone());
-                let simplified = simplify(&expanded);
-                match equal(&simplified, &target) {
-                    ZeroTest::Certified { equal: true, .. } => {
-                        Certificate::certified(target, Route::ExpandEqual)
-                    }
-                    _ => Certificate::uncertified(
-                        simplified,
-                        Route::ExpandEqual,
-                        "expand+equal did not decide Var = p(1-p)",
-                    ),
-                }
-            }
-            Discrete::Binomial { n, p } => {
-                let n_expr = CasExpr::Const(Rational::integer(i128::from(*n)));
-                let target = n_expr.clone() * p.clone() * (CasExpr::one() - p.clone());
-                let mean_sq = (n_expr * p.clone()).pow(2);
-                let second_moment_terms: Vec<CasExpr> = (0..=*n)
-                    .map(|k| {
-                        CasExpr::Const(Rational::integer(i128::from(k) * i128::from(k)))
-                            * self.pmf_at(i128::from(k))
-                    })
-                    .collect();
-                let mut acc = CasExpr::zero();
-                for t in second_moment_terms {
-                    acc = acc + t;
-                }
-                let lhs = acc - mean_sq;
-                let expanded = expand(&lhs).unwrap_or_else(|| lhs.clone());
-                let simplified = simplify(&expanded);
-                match equal(&simplified, &target) {
-                    ZeroTest::Certified { equal: true, .. } => {
-                        Certificate::certified(target, Route::ExpandEqual)
-                    }
-                    _ => Certificate::uncertified(
-                        simplified,
-                        Route::ExpandEqual,
-                        "expand+equal did not decide Var = np(1-p)",
-                    ),
-                }
-            }
-            Discrete::DiscreteUniform { a, b } => {
-                let n = b - a + 1;
-                // Var = (n^2 - 1)/12 for a discrete uniform on n consecutive
-                // integers (shift-invariant). Verify E[(K-a)^2] via definite_sum
-                // on the shifted index j = k-a, j=0..n-1, then Var = E[j^2] -
-                // E[j]^2 (shift-invariant, E[j]=(n-1)/2).
-                let j = CasExpr::var("k");
-                let const_term = CasExpr::one() / CasExpr::Const(Rational::integer(n));
-                let sq_summand = j.clone() * j.clone() * const_term;
-                match definite_sum(&sq_summand, "k", &CasExpr::int(0), &CasExpr::int(n - 1)) {
-                    Some(second_moment) => {
-                        let mean_shifted = Rational::integer(n - 1)
-                            .checked_div(Rational::integer(2))
-                            .expect("n>=1");
-                        let target = Rational::integer(n)
-                            .checked_mul(Rational::integer(n))
-                            .and_then(|nn| nn.checked_sub(Rational::integer(1)))
-                            .and_then(|v| v.checked_div(Rational::integer(12)))
-                            .expect("small n");
-                        let lhs = second_moment - CasExpr::Const(mean_shifted).pow(2);
-                        let simplified = simplify(&expand(&lhs).unwrap_or(lhs));
-                        match equal(&simplified, &CasExpr::Const(target)) {
-                            ZeroTest::Certified { equal: true, .. } => {
-                                Certificate::certified(CasExpr::Const(target), Route::DefiniteSum)
-                            }
-                            _ => Certificate::uncertified(
-                                simplified,
-                                Route::DefiniteSum,
-                                "definite_sum's second moment did not decide Var = (n^2-1)/12",
-                            ),
-                        }
-                    }
-                    None => Certificate::uncertified(
-                        CasExpr::zero(),
-                        Route::DefiniteSum,
-                        "definite_sum declined on the discrete-uniform second-moment summand",
-                    ),
-                }
-            }
+            Discrete::Bernoulli(p) => bernoulli_variance(p),
+            Discrete::Binomial { n, p } => self.binomial_variance(*n, p),
+            Discrete::DiscreteUniform { a, b } => discrete_uniform_variance(*a, *b),
             Discrete::Geometric(p) => {
                 let q = CasExpr::one() - p.clone();
                 let target = q / p.clone().pow(2);
-                Certificate::uncertified(target, Route::InfiniteSum, geometric_moment_decline_reason())
+                Certificate::uncertified(
+                    target,
+                    Route::InfiniteSum,
+                    geometric_moment_decline_reason(),
+                )
             }
-            Discrete::Poisson(lambda) => {
-                Certificate::uncertified(lambda.clone(), Route::InfiniteSum, poisson_decline_reason(lambda))
-            }
+            Discrete::Poisson(lambda) => Certificate::uncertified(
+                lambda.clone(),
+                Route::InfiniteSum,
+                poisson_decline_reason(lambda),
+            ),
         }
     }
 
     /// `M(t) = E[e^{tX}]`, returned as a `CasExpr` in the variable named `t`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn mgf(&self, t: &str) -> Certificate {
         match self {
             Discrete::Bernoulli(p) => {
                 let e = CasExpr::var(t).exp();
-                let target = (CasExpr::one() - p.clone()) + p.clone() * e;
-                let terms = vec![
-                    CasExpr::var(t).pow(0) * (CasExpr::one() - p.clone()) * CasExpr::zero().pow(0),
-                ];
+                let target = (CasExpr::one() - p.clone()) + p.clone() * e.clone();
                 // Build directly as the enumerated sum Σ pmf(k) e^{kt}.
                 let mut acc = CasExpr::zero();
-                for k in 0..=1i128 {
-                    let e_k = CasExpr::var(t).exp().pow(u32::try_from(k).unwrap());
-                    acc = acc + self.pmf_at(k) * e_k;
+                for k in 0..=1u32 {
+                    acc = acc + self.pmf_at(i128::from(k)) * e.clone().pow(k);
                 }
-                let _ = terms;
                 let expanded = expand(&acc).unwrap_or_else(|| acc.clone());
                 let simplified = simplify(&expanded);
                 let target_expanded = simplify(&expand(&target).unwrap_or_else(|| target.clone()));
@@ -618,7 +560,8 @@ impl Discrete {
                     acc = acc + self.pmf_at(i128::from(k)) * e_k;
                 }
                 let simplified = simplify(&expand(&acc).unwrap_or_else(|| acc.clone()));
-                let target_simplified = simplify(&expand(&target).unwrap_or_else(|| target.clone()));
+                let target_simplified =
+                    simplify(&expand(&target).unwrap_or_else(|| target.clone()));
                 match equal(&simplified, &target_simplified) {
                     ZeroTest::Certified { equal: true, .. } => {
                         Certificate::certified(target_simplified, Route::ExpandEqual)
@@ -635,7 +578,7 @@ impl Discrete {
                 let n = b - a + 1;
                 let mut acc = CasExpr::zero();
                 for k in *a..=*b {
-                    #[allow(clippy::cast_sign_loss)]
+                    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
                     let shift = (k - a) as u32;
                     acc = acc + self.pmf_at(k) * e.clone().pow(shift);
                 }
@@ -646,7 +589,7 @@ impl Discrete {
                 // re-derivation: build the sum in the OPPOSITE index order).
                 let mut acc_rev = CasExpr::zero();
                 for k in (*a..=*b).rev() {
-                    #[allow(clippy::cast_sign_loss)]
+                    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
                     let shift = (k - a) as u32;
                     acc_rev = acc_rev + self.pmf_at(k) * e.clone().pow(shift);
                 }
@@ -709,6 +652,114 @@ impl Discrete {
     pub fn verify_mgf(&self, t: &str, cert: &Certificate) -> bool {
         agree(&self.mgf(t), cert)
     }
+
+    /// `Var[Binomial(n,p)] = np(1-p)`, verified via `ExpandEqual` on the
+    /// enumerated second moment.
+    fn binomial_variance(&self, n: u32, p: &CasExpr) -> Certificate {
+        let n_expr = CasExpr::Const(Rational::integer(i128::from(n)));
+        let target = n_expr.clone() * p.clone() * (CasExpr::one() - p.clone());
+        let mean_sq = (n_expr * p.clone()).pow(2);
+        let second_moment_terms: Vec<CasExpr> = (0..=n)
+            .map(|k| {
+                CasExpr::Const(Rational::integer(i128::from(k) * i128::from(k)))
+                    * self.pmf_at(i128::from(k))
+            })
+            .collect();
+        let mut acc = CasExpr::zero();
+        for t in second_moment_terms {
+            acc = acc + t;
+        }
+        let lhs = acc - mean_sq;
+        let expanded = expand(&lhs).unwrap_or_else(|| lhs.clone());
+        let simplified = simplify(&expanded);
+        match equal(&simplified, &target) {
+            ZeroTest::Certified { equal: true, .. } => {
+                Certificate::certified(target, Route::ExpandEqual)
+            }
+            _ => Certificate::uncertified(
+                simplified,
+                Route::ExpandEqual,
+                "expand+equal did not decide Var = np(1-p)",
+            ),
+        }
+    }
+}
+
+/// `Var[Bernoulli(p)] = p(1-p)`, verified via `ExpandEqual` on the enumerated
+/// second moment.
+fn bernoulli_variance(p: &CasExpr) -> Certificate {
+    // p(1-p), enumerated directly: E[X^2]=p (0^2,1^2 same as X), so
+    // Var = p - p^2. Verify via ExpandEqual on the defining sum.
+    let target = p.clone() * (CasExpr::one() - p.clone());
+    let terms = vec![
+        CasExpr::int(0).pow(2) * (CasExpr::one() - p.clone()),
+        CasExpr::int(1).pow(2) * p.clone(),
+    ];
+    let mean_sq = p.clone().pow(2);
+    let mut acc = CasExpr::zero();
+    for t in terms {
+        acc = acc + t;
+    }
+    let lhs = acc - mean_sq;
+    let expanded = expand(&lhs).unwrap_or_else(|| lhs.clone());
+    let simplified = simplify(&expanded);
+    match equal(&simplified, &target) {
+        ZeroTest::Certified { equal: true, .. } => {
+            Certificate::certified(target, Route::ExpandEqual)
+        }
+        _ => Certificate::uncertified(
+            simplified,
+            Route::ExpandEqual,
+            "expand+equal did not decide Var = p(1-p)",
+        ),
+    }
+}
+
+/// `Var[DiscreteUniform(a,b)] = (n^2-1)/12` where `n = b-a+1`, verified via
+/// [`definite_sum`] on the shifted second moment `E[(K-a)^2]`.
+///
+/// # Panics
+///
+/// Panics only on `i128` overflow building a small exact-rational constant;
+/// this does not occur for realistic `a, b`.
+fn discrete_uniform_variance(a: i128, b: i128) -> Certificate {
+    let n = b - a + 1;
+    // Var = (n^2 - 1)/12 for a discrete uniform on n consecutive integers
+    // (shift-invariant). Verify E[(K-a)^2] via definite_sum on the shifted
+    // index j = k-a, j=0..n-1, then Var = E[j^2] - E[j]^2 (shift-invariant,
+    // E[j]=(n-1)/2).
+    let j = CasExpr::var("k");
+    let const_term = CasExpr::one() / CasExpr::Const(Rational::integer(n));
+    let sq_summand = j.clone() * j.clone() * const_term;
+    match definite_sum(&sq_summand, "k", &CasExpr::int(0), &CasExpr::int(n - 1)) {
+        Some(second_moment) => {
+            let mean_shifted = Rational::integer(n - 1)
+                .checked_div(Rational::integer(2))
+                .expect("n>=1");
+            let target = Rational::integer(n)
+                .checked_mul(Rational::integer(n))
+                .and_then(|nn| nn.checked_sub(Rational::integer(1)))
+                .and_then(|v| v.checked_div(Rational::integer(12)))
+                .expect("small n");
+            let lhs = second_moment - CasExpr::Const(mean_shifted).pow(2);
+            let simplified = simplify(&expand(&lhs).unwrap_or(lhs));
+            match equal(&simplified, &CasExpr::Const(target)) {
+                ZeroTest::Certified { equal: true, .. } => {
+                    Certificate::certified(CasExpr::Const(target), Route::DefiniteSum)
+                }
+                _ => Certificate::uncertified(
+                    simplified,
+                    Route::DefiniteSum,
+                    "definite_sum's second moment did not decide Var = (n^2-1)/12",
+                ),
+            }
+        }
+        None => Certificate::uncertified(
+            CasExpr::zero(),
+            Route::DefiniteSum,
+            "definite_sum declined on the discrete-uniform second-moment summand",
+        ),
+    }
 }
 
 fn poisson_decline_reason(lambda: &CasExpr) -> String {
@@ -766,13 +817,18 @@ pub enum Continuous {
 
 impl Continuous {
     /// `∫ pdf = 1`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn total_mass(&self) -> Certificate {
         match self {
             Continuous::Uniform { a, b } => {
-                let pdf = CasExpr::one()
-                    / CasExpr::Const(b.checked_sub(*a).expect("a<b"));
-                match improper_integrate(&pdf, "x", LimitPoint::Finite(*a), LimitPoint::Finite(*b)) {
+                let pdf = CasExpr::one() / CasExpr::Const(b.checked_sub(*a).expect("a<b"));
+                match improper_integrate(&pdf, "x", LimitPoint::Finite(*a), LimitPoint::Finite(*b))
+                {
                     Some(result) => match equal(&result.value, &CasExpr::one()) {
                         ZeroTest::Certified { equal: true, .. } => {
                             Certificate::certified(CasExpr::one(), Route::ImproperIntegrate)
@@ -801,9 +857,14 @@ impl Continuous {
                     );
                 };
                 let x = CasExpr::var("x");
-                let pdf = CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x).exp();
-                match improper_integrate(&pdf, "x", LimitPoint::Finite(Rational::zero()), LimitPoint::PosInfinity)
-                {
+                let pdf =
+                    CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x).exp();
+                match improper_integrate(
+                    &pdf,
+                    "x",
+                    LimitPoint::Finite(Rational::zero()),
+                    LimitPoint::PosInfinity,
+                ) {
                     Some(result) => match equal(&result.value, &CasExpr::one()) {
                         ZeroTest::Certified { equal: true, .. } => {
                             Certificate::certified(CasExpr::one(), Route::ImproperIntegrate)
@@ -836,12 +897,21 @@ impl Continuous {
                         ),
                     }
                 }
-                None => Certificate::uncertified(CasExpr::one(), Route::ImproperIntegrate, normal_decline_reason(*variance)),
+                None => Certificate::uncertified(
+                    CasExpr::one(),
+                    Route::ImproperIntegrate,
+                    normal_decline_reason(*variance),
+                ),
             },
         }
     }
 
     /// `E[X]`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn mean(&self) -> Certificate {
         match self {
@@ -852,7 +922,12 @@ impl Continuous {
                     .checked_add(*b)
                     .and_then(|s| s.checked_div(Rational::integer(2)))
                     .expect("small a,b");
-                match improper_integrate(&(x * pdf), "x", LimitPoint::Finite(*a), LimitPoint::Finite(*b)) {
+                match improper_integrate(
+                    &(x * pdf),
+                    "x",
+                    LimitPoint::Finite(*a),
+                    LimitPoint::Finite(*b),
+                ) {
                     Some(result) => match equal(&result.value, &CasExpr::Const(target)) {
                         ZeroTest::Certified { equal: true, .. } => {
                             Certificate::certified(CasExpr::Const(target), Route::ImproperIntegrate)
@@ -879,7 +954,8 @@ impl Continuous {
                     );
                 };
                 let x = CasExpr::var("x");
-                let pdf = CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x.clone()).exp();
+                let pdf = CasExpr::Const(lam)
+                    * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x.clone()).exp();
                 let target = Rational::integer(1).checked_div(lam).expect("lam != 0");
                 match improper_integrate(
                     &(x * pdf),
@@ -921,103 +997,35 @@ impl Continuous {
                         ),
                     }
                 }
-                None => Certificate::uncertified(mu.clone(), Route::ImproperIntegrate, normal_decline_reason(*variance)),
+                None => Certificate::uncertified(
+                    mu.clone(),
+                    Route::ImproperIntegrate,
+                    normal_decline_reason(*variance),
+                ),
             },
         }
     }
 
     /// `Var[X] = E[X²] − E[X]²`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn variance(&self) -> Certificate {
         match self {
-            Continuous::Uniform { a, b } => {
-                let pdf = CasExpr::one() / CasExpr::Const(b.checked_sub(*a).expect("a<b"));
-                let x = CasExpr::var("x");
-                let width = b.checked_sub(*a).expect("a<b");
-                let target = width
-                    .checked_mul(width)
-                    .and_then(|w2| w2.checked_div(Rational::integer(12)))
-                    .expect("small a,b");
-                match improper_integrate(
-                    &(x.clone() * x * pdf),
-                    "x",
-                    LimitPoint::Finite(*a),
-                    LimitPoint::Finite(*b),
-                ) {
-                    Some(second_moment) => {
-                        let mean = a
-                            .checked_add(*b)
-                            .and_then(|s| s.checked_div(Rational::integer(2)))
-                            .expect("small a,b");
-                        let lhs = second_moment.value - CasExpr::Const(mean).pow(2);
-                        let simplified = simplify(&lhs);
-                        match equal(&simplified, &CasExpr::Const(target)) {
-                            ZeroTest::Certified { equal: true, .. } => {
-                                Certificate::certified(CasExpr::Const(target), Route::ImproperIntegrate)
-                            }
-                            _ => Certificate::uncertified(
-                                simplified,
-                                Route::ImproperIntegrate,
-                                "improper_integrate's second moment did not decide Var = (b-a)^2/12",
-                            ),
-                        }
-                    }
-                    None => Certificate::uncertified(
-                        CasExpr::Const(target),
-                        Route::ImproperIntegrate,
-                        "improper_integrate declined on the uniform second-moment integrand",
-                    ),
-                }
-            }
-            Continuous::Exponential(lambda) => {
-                let Some(lam) = as_concrete(lambda) else {
-                    return Certificate::uncertified(
-                        CasExpr::one() / lambda.clone().pow(2),
-                        Route::ImproperIntegrate,
-                        "symbolic λ: same to_univariate constraint as total_mass",
-                    );
-                };
-                let x = CasExpr::var("x");
-                let pdf = CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x.clone()).exp();
-                let target = Rational::integer(1)
-                    .checked_div(lam.checked_mul(lam).expect("lam small"))
-                    .expect("lam != 0");
-                match improper_integrate(
-                    &(x.clone() * x * pdf),
-                    "x",
-                    LimitPoint::Finite(Rational::zero()),
-                    LimitPoint::PosInfinity,
-                ) {
-                    Some(second_moment) => {
-                        let mean = Rational::integer(1).checked_div(lam).expect("lam != 0");
-                        let lhs = second_moment.value - CasExpr::Const(mean).pow(2);
-                        let simplified = simplify(&lhs);
-                        match equal(&simplified, &CasExpr::Const(target)) {
-                            ZeroTest::Certified { equal: true, .. } => {
-                                Certificate::certified(CasExpr::Const(target), Route::ImproperIntegrate)
-                            }
-                            _ => Certificate::uncertified(
-                                simplified,
-                                Route::ImproperIntegrate,
-                                "improper_integrate's second moment did not decide Var = 1/lambda^2",
-                            ),
-                        }
-                    }
-                    None => Certificate::uncertified(
-                        CasExpr::Const(target),
-                        Route::ImproperIntegrate,
-                        "improper_integrate declined on the exponential second-moment integrand",
-                    ),
-                }
-            }
+            Continuous::Uniform { a, b } => uniform_variance(*a, *b),
+            Continuous::Exponential(lambda) => exponential_variance(lambda),
             Continuous::Normal { variance, .. } => match normal_raw_moment(*variance, 2) {
                 Some(raw) => {
                     let coeff = normal_coeff(*variance);
                     let value = simplify(&(coeff * raw));
                     match equal(&value, &CasExpr::Const(*variance)) {
-                        ZeroTest::Certified { equal: true, .. } => {
-                            Certificate::certified(CasExpr::Const(*variance), Route::ImproperIntegrate)
-                        }
+                        ZeroTest::Certified { equal: true, .. } => Certificate::certified(
+                            CasExpr::Const(*variance),
+                            Route::ImproperIntegrate,
+                        ),
                         _ => Certificate::uncertified(
                             value,
                             Route::ImproperIntegrate,
@@ -1035,6 +1043,11 @@ impl Continuous {
     }
 
     /// `M(t) = E[e^{tX}]`, returned as a `CasExpr` in the variable named `t`.
+    /// # Panics
+    ///
+    /// Panics only on `i128` overflow building a small exact-rational constant
+    /// (e.g. `(a+b)/2`); this does not occur for realistic distribution
+    /// parameters.
     #[must_use]
     pub fn mgf(&self, t: &str) -> Certificate {
         match self {
@@ -1060,12 +1073,14 @@ impl Continuous {
                     );
                 };
                 let x = CasExpr::var("x");
-                let pdf = CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x).exp();
+                let pdf =
+                    CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x).exp();
                 let target = CasExpr::Const(lam) / (CasExpr::Const(lam) - CasExpr::var(t));
                 match laplace_transform(&pdf, "x", "s") {
                     Some(l) => {
                         // MGF(t) = L(s = -t): substitute s -> -t.
-                        let mgf = simplify(&l.substitute("s", &CasExpr::Neg(Box::new(CasExpr::var(t)))));
+                        let mgf =
+                            simplify(&l.substitute("s", &CasExpr::Neg(Box::new(CasExpr::var(t)))));
                         match equal(&mgf, &target) {
                             ZeroTest::Certified { equal: true, .. } => {
                                 Certificate::certified(target, Route::LaplaceTransform)
@@ -1125,6 +1140,103 @@ impl Continuous {
     }
 }
 
+/// `Var[Uniform(a,b)] = (b-a)^2/12`, via [`improper_integrate`] on the second
+/// moment.
+///
+/// # Panics
+///
+/// Panics only on `i128` overflow building a small exact-rational constant;
+/// this does not occur for realistic `a, b`.
+fn uniform_variance(a: Rational, b: Rational) -> Certificate {
+    let pdf = CasExpr::one() / CasExpr::Const(b.checked_sub(a).expect("a<b"));
+    let x = CasExpr::var("x");
+    let width = b.checked_sub(a).expect("a<b");
+    let target = width
+        .checked_mul(width)
+        .and_then(|w2| w2.checked_div(Rational::integer(12)))
+        .expect("small a,b");
+    match improper_integrate(
+        &(x.clone() * x * pdf),
+        "x",
+        LimitPoint::Finite(a),
+        LimitPoint::Finite(b),
+    ) {
+        Some(second_moment) => {
+            let mean = a
+                .checked_add(b)
+                .and_then(|s| s.checked_div(Rational::integer(2)))
+                .expect("small a,b");
+            let lhs = second_moment.value - CasExpr::Const(mean).pow(2);
+            let simplified = simplify(&lhs);
+            match equal(&simplified, &CasExpr::Const(target)) {
+                ZeroTest::Certified { equal: true, .. } => {
+                    Certificate::certified(CasExpr::Const(target), Route::ImproperIntegrate)
+                }
+                _ => Certificate::uncertified(
+                    simplified,
+                    Route::ImproperIntegrate,
+                    "improper_integrate's second moment did not decide Var = (b-a)^2/12",
+                ),
+            }
+        }
+        None => Certificate::uncertified(
+            CasExpr::Const(target),
+            Route::ImproperIntegrate,
+            "improper_integrate declined on the uniform second-moment integrand",
+        ),
+    }
+}
+
+/// `Var[Exponential(λ)] = 1/λ²` for concrete `λ`, via [`improper_integrate`]
+/// on the second moment; uncertified for symbolic `λ` (same `to_univariate`
+/// constraint as [`Continuous::total_mass`]).
+///
+/// # Panics
+///
+/// Panics only on `i128` overflow building a small exact-rational constant;
+/// this does not occur for realistic `λ`.
+fn exponential_variance(lambda: &CasExpr) -> Certificate {
+    let Some(lam) = as_concrete(lambda) else {
+        return Certificate::uncertified(
+            CasExpr::one() / lambda.clone().pow(2),
+            Route::ImproperIntegrate,
+            "symbolic λ: same to_univariate constraint as total_mass",
+        );
+    };
+    let x = CasExpr::var("x");
+    let pdf = CasExpr::Const(lam) * (CasExpr::Neg(Box::new(CasExpr::Const(lam))) * x.clone()).exp();
+    let target = Rational::integer(1)
+        .checked_div(lam.checked_mul(lam).expect("lam small"))
+        .expect("lam != 0");
+    match improper_integrate(
+        &(x.clone() * x * pdf),
+        "x",
+        LimitPoint::Finite(Rational::zero()),
+        LimitPoint::PosInfinity,
+    ) {
+        Some(second_moment) => {
+            let mean = Rational::integer(1).checked_div(lam).expect("lam != 0");
+            let lhs = second_moment.value - CasExpr::Const(mean).pow(2);
+            let simplified = simplify(&lhs);
+            match equal(&simplified, &CasExpr::Const(target)) {
+                ZeroTest::Certified { equal: true, .. } => {
+                    Certificate::certified(CasExpr::Const(target), Route::ImproperIntegrate)
+                }
+                _ => Certificate::uncertified(
+                    simplified,
+                    Route::ImproperIntegrate,
+                    "improper_integrate's second moment did not decide Var = 1/lambda^2",
+                ),
+            }
+        }
+        None => Certificate::uncertified(
+            CasExpr::Const(target),
+            Route::ImproperIntegrate,
+            "improper_integrate declined on the exponential second-moment integrand",
+        ),
+    }
+}
+
 /// The raw (unnormalized) Gaussian moment `∫_{-∞}^{∞} u^power · e^{-a u²} du`
 /// with `a = 1/(2·variance)`, via [`crate::improper_integrate`]. `None` when
 /// the erf-antiderivative finder's `√a`-rational precondition fails (or on
@@ -1137,9 +1249,18 @@ fn normal_raw_moment(variance: Rational, power: u32) -> Option<CasExpr> {
     // dispatch chain's polynomial-prefactor extraction expects either a bare
     // exponential or a genuine degree>=1 prefactor, not an un-simplified
     // `Pow(u, 0)` multiplicand.
-    let integrand = if power == 0 { base } else { u.pow(power) * base };
-    improper_integrate(&integrand, "u", LimitPoint::NegInfinity, LimitPoint::PosInfinity)
-        .map(|d| d.value)
+    let integrand = if power == 0 {
+        base
+    } else {
+        u.pow(power) * base
+    };
+    improper_integrate(
+        &integrand,
+        "u",
+        LimitPoint::NegInfinity,
+        LimitPoint::PosInfinity,
+    )
+    .map(|d| d.value)
 }
 
 /// The Normal pdf's normalizing constant `1/√(2π·variance)`.
@@ -1198,20 +1319,7 @@ pub fn convolve(x: &Discrete, y: &Discrete) -> Option<Convolution> {
         }
     }
 
-    let mut total = Rational::zero();
-    for &v in table.values() {
-        total = total.checked_add(v)?;
-    }
-    let sums_to_one = if total == Rational::integer(1) {
-        Certificate::certified(CasExpr::one(), Route::ExpandEqual)
-    } else {
-        Certificate::uncertified(
-            CasExpr::Const(total),
-            Route::ExpandEqual,
-            "the convolution table's exact rational sum is not 1",
-        )
-    };
-
+    let sums_to_one = table_sums_to_one(&table)?;
     let matches_named = named_convolution_match(x, y, &table);
 
     Some(Convolution {
@@ -1230,6 +1338,26 @@ fn concrete_pmf_table(d: &Discrete, lo: i128, hi: i128) -> Option<BTreeMap<i128,
         table.insert(k, value);
     }
     Some(table)
+}
+
+/// Whether an exact pmf table's entries sum to exactly `1`. `None` on `i128`
+/// overflow while summing. This is the actual guard [`convolve`] uses (not
+/// just a synthetic re-derivation of the same check), so it can be exercised
+/// directly with a hand-built corrupted table.
+fn table_sums_to_one(table: &BTreeMap<i128, Rational>) -> Option<Certificate> {
+    let mut total = Rational::zero();
+    for &v in table.values() {
+        total = total.checked_add(v)?;
+    }
+    Some(if total == Rational::integer(1) {
+        Certificate::certified(CasExpr::one(), Route::ExpandEqual)
+    } else {
+        Certificate::uncertified(
+            CasExpr::Const(total),
+            Route::ExpandEqual,
+            "the convolution table's exact rational sum is not 1",
+        )
+    })
 }
 
 /// Whether `x, y` are the same named family with a known convolution closed
@@ -1374,7 +1502,26 @@ pub fn markov_bound(mean: &Certificate, a: &CasExpr) -> Certificate {
             trust: Trust::Certified,
         }
     } else {
-        Certificate::uncertified(bound, Route::Derived, "built from an uncertified mean input")
+        Certificate::uncertified(
+            bound,
+            Route::Derived,
+            "built from an uncertified mean input",
+        )
+    }
+}
+
+#[cfg(test)]
+trait IntoConst {
+    fn into_const(self) -> Option<Rational>;
+}
+
+#[cfg(test)]
+impl IntoConst for CasExpr {
+    fn into_const(self) -> Option<Rational> {
+        match self {
+            CasExpr::Const(r) => Some(r),
+            _ => None,
+        }
     }
 }
 
@@ -1399,7 +1546,10 @@ mod tests {
 
         let mean = d.mean();
         assert!(mean.is_certified());
-        assert!(matches!(equal(&mean.claim, &CasExpr::var("p")), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::var("p")),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let variance = d.variance();
         assert!(variance.is_certified());
@@ -1422,16 +1572,25 @@ mod tests {
 
         let mean = d.mean();
         assert!(mean.is_certified(), "{mean:?}");
-        assert!(matches!(equal(&mean.claim, &CasExpr::int(2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::int(2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let variance = d.variance();
         assert!(variance.is_certified(), "{variance:?}");
-        assert!(matches!(equal(&variance.claim, &CasExpr::int(1)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&variance.claim, &CasExpr::int(1)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
     fn binomial_symbolic_p_all_four_quantities_certify() {
-        let d = Discrete::Binomial { n: 4, p: CasExpr::var("p") };
+        let d = Discrete::Binomial {
+            n: 4,
+            p: CasExpr::var("p"),
+        };
         assert!(d.total_mass().is_certified());
         assert!(d.mean().is_certified());
         assert!(d.variance().is_certified());
@@ -1462,8 +1621,14 @@ mod tests {
         let d = Discrete::Geometric(p(1, 3));
         let mean = d.mean();
         // The closed form is correct (1/p = 3) even though the route declined.
-        assert!(matches!(equal(&mean.claim, &CasExpr::int(3)), ZeroTest::Certified { equal: true, .. }));
-        assert!(!mean.is_certified(), "mean must be honestly uncertified: {mean:?}");
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::int(3)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(
+            !mean.is_certified(),
+            "mean must be honestly uncertified: {mean:?}"
+        );
         let Trust::Uncertified(reason) = &mean.trust else {
             panic!("expected Uncertified");
         };
@@ -1478,11 +1643,17 @@ mod tests {
     fn poisson_three_mean_and_variance_three_uncertified() {
         let d = Discrete::Poisson(CasExpr::int(3));
         let mean = d.mean();
-        assert!(matches!(equal(&mean.claim, &CasExpr::int(3)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::int(3)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         assert!(!mean.is_certified());
 
         let variance = d.variance();
-        assert!(matches!(equal(&variance.claim, &CasExpr::int(3)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&variance.claim, &CasExpr::int(3)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         assert!(!variance.is_certified());
 
         let total = d.total_mass();
@@ -1508,11 +1679,17 @@ mod tests {
 
         let mean = d.mean();
         assert!(mean.is_certified(), "{mean:?}");
-        assert!(matches!(equal(&mean.claim, &p(3, 2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &p(3, 2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let variance = d.variance();
         assert!(variance.is_certified(), "{variance:?}");
-        assert!(matches!(equal(&variance.claim, &p(5, 4)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&variance.claim, &p(5, 4)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let mgf = d.mgf("t");
         assert!(mgf.is_certified());
@@ -1524,18 +1701,27 @@ mod tests {
 
     #[test]
     fn uniform_0_1_mean_half_variance_one_twelfth() {
-        let d = Continuous::Uniform { a: Rational::zero(), b: Rational::integer(1) };
+        let d = Continuous::Uniform {
+            a: Rational::zero(),
+            b: Rational::integer(1),
+        };
         let total = d.total_mass();
         assert!(total.is_certified());
         assert!(d.verify_total_mass(&total));
 
         let mean = d.mean();
         assert!(mean.is_certified(), "{mean:?}");
-        assert!(matches!(equal(&mean.claim, &p(1, 2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &p(1, 2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let variance = d.variance();
         assert!(variance.is_certified(), "{variance:?}");
-        assert!(matches!(equal(&variance.claim, &p(1, 12)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&variance.claim, &p(1, 12)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let mgf = d.mgf("t");
         assert!(!mgf.is_certified());
@@ -1553,16 +1739,25 @@ mod tests {
 
         let mean = d.mean();
         assert!(mean.is_certified());
-        assert!(matches!(equal(&mean.claim, &p(1, 2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &p(1, 2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let variance = d.variance();
         assert!(variance.is_certified());
-        assert!(matches!(equal(&variance.claim, &p(1, 4)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&variance.claim, &p(1, 4)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let mgf = d.mgf("t");
         assert!(mgf.is_certified(), "{mgf:?}");
         let target = CasExpr::int(2) / (CasExpr::int(2) - CasExpr::var("t"));
-        assert!(matches!(equal(&mgf.claim, &target), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mgf.claim, &target),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         assert!(d.verify_mgf("t", &mgf));
     }
 
@@ -1582,8 +1777,14 @@ mod tests {
 
     #[test]
     fn normal_0_1_declines_honestly() {
-        let d = Continuous::Normal { mu: CasExpr::zero(), variance: Rational::integer(1) };
-        assert!(!d.total_mass().is_certified(), "Normal(0,1): a=1/2 is not a perfect square");
+        let d = Continuous::Normal {
+            mu: CasExpr::zero(),
+            variance: Rational::integer(1),
+        };
+        assert!(
+            !d.total_mass().is_certified(),
+            "Normal(0,1): a=1/2 is not a perfect square"
+        );
         assert!(!d.mean().is_certified());
         assert!(!d.variance().is_certified());
         assert!(!d.mgf("t").is_certified());
@@ -1592,18 +1793,27 @@ mod tests {
     #[test]
     fn normal_0_variance_half_certifies_total_mass_mean_variance() {
         // sigma^2 = 1/2 => a = 1/(2*1/2) = 1, a perfect square: the erf route certifies.
-        let d = Continuous::Normal { mu: CasExpr::zero(), variance: p(1, 2).into_const().unwrap() };
+        let d = Continuous::Normal {
+            mu: CasExpr::zero(),
+            variance: p(1, 2).into_const().unwrap(),
+        };
         let total = d.total_mass();
         assert!(total.is_certified(), "{total:?}");
         assert!(d.verify_total_mass(&total));
 
         let mean = d.mean();
         assert!(mean.is_certified(), "{mean:?}");
-        assert!(matches!(equal(&mean.claim, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::zero()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         let variance = d.variance();
         assert!(variance.is_certified(), "{variance:?}");
-        assert!(matches!(equal(&variance.claim, &p(1, 2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&variance.claim, &p(1, 2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
 
         // mgf still declines regardless (symbolic t, not a variance issue).
         assert!(!d.mgf("t").is_certified());
@@ -1611,10 +1821,16 @@ mod tests {
 
     #[test]
     fn normal_symbolic_mu_still_certifies_mean_via_shift() {
-        let d = Continuous::Normal { mu: CasExpr::var("mu"), variance: p(1, 2).into_const().unwrap() };
+        let d = Continuous::Normal {
+            mu: CasExpr::var("mu"),
+            variance: p(1, 2).into_const().unwrap(),
+        };
         let mean = d.mean();
         assert!(mean.is_certified(), "{mean:?}");
-        assert!(matches!(equal(&mean.claim, &CasExpr::var("mu")), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&mean.claim, &CasExpr::var("mu")),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     // ---------------------------------------------------------------
@@ -1627,14 +1843,20 @@ mod tests {
         let y = Discrete::Binomial { n: 2, p: p(1, 3) };
         let conv = convolve(&x, &y).expect("finite support");
         assert!(conv.sums_to_one.is_certified());
-        let matched = conv.matches_named.expect("Binomial+Binomial attempts a match");
+        let matched = conv
+            .matches_named
+            .expect("Binomial+Binomial attempts a match");
         assert!(matched.is_certified(), "{matched:?}");
 
         // Cross-check a specific point directly against Binomial(5, 1/3).
         let target = Discrete::Binomial { n: 5, p: p(1, 3) };
         for k in 0..=5 {
             let expected = concrete_value(&target.pmf_at(k)).unwrap();
-            assert_eq!(conv.table.get(&k).copied().unwrap_or(Rational::zero()), expected, "k={k}");
+            assert_eq!(
+                conv.table.get(&k).copied().unwrap_or(Rational::zero()),
+                expected,
+                "k={k}"
+            );
         }
     }
 
@@ -1643,9 +1865,17 @@ mod tests {
         let x = Discrete::Binomial { n: 3, p: p(1, 3) };
         let y = Discrete::Binomial { n: 2, p: p(1, 2) };
         let conv = convolve(&x, &y).expect("finite support");
-        assert!(conv.sums_to_one.is_certified(), "the table itself is still a valid distribution");
-        let matched = conv.matches_named.expect("Binomial+Binomial attempts a match");
-        assert!(!matched.is_certified(), "unequal p must be refused, not silently certified");
+        assert!(
+            conv.sums_to_one.is_certified(),
+            "the table itself is still a valid distribution"
+        );
+        let matched = conv
+            .matches_named
+            .expect("Binomial+Binomial attempts a match");
+        assert!(
+            !matched.is_certified(),
+            "unequal p must be refused, not silently certified"
+        );
         let Trust::Uncertified(reason) = &matched.trust else {
             panic!("expected Uncertified");
         };
@@ -1684,7 +1914,10 @@ mod tests {
         assert!(bound.is_certified());
         assert!(matches!(bound.route, Route::Derived));
         // variance/k^2 = 1/1 = 1.
-        assert!(matches!(equal(&bound.claim, &CasExpr::int(1)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&bound.claim, &CasExpr::int(1)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
@@ -1703,7 +1936,10 @@ mod tests {
         let bound = markov_bound(&mean, &CasExpr::int(1));
         assert!(bound.is_certified());
         assert!(matches!(bound.route, Route::Derived));
-        assert!(matches!(equal(&bound.claim, &p(1, 2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(
+            equal(&bound.claim, &p(1, 2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     // ---------------------------------------------------------------
@@ -1726,7 +1962,8 @@ mod tests {
         let d2 = Discrete::Poisson(CasExpr::int(3));
         let genuinely_uncertified = d2.mean();
         assert!(!genuinely_uncertified.is_certified());
-        let falsely_certified = Certificate::certified(genuinely_uncertified.claim.clone(), Route::InfiniteSum);
+        let falsely_certified =
+            Certificate::certified(genuinely_uncertified.claim.clone(), Route::InfiniteSum);
         // agree() requires BOTH sides certified; the fresh re-derivation is
         // (honestly) uncertified, so verify refuses even though the claim
         // value matches exactly.
@@ -1737,7 +1974,8 @@ mod tests {
         //    verify against the real (certified) one via strict equality
         //    semantics of `agree`, even though the claim values match.
         let mean = d.mean();
-        let mismatched_trust = Certificate::uncertified(mean.claim.clone(), Route::ExpandEqual, "fabricated decline");
+        let mismatched_trust =
+            Certificate::uncertified(mean.claim.clone(), Route::ExpandEqual, "fabricated decline");
         assert!(!d.verify_mean(&mismatched_trust));
     }
 
@@ -1750,31 +1988,16 @@ mod tests {
 
     #[test]
     fn convolution_table_sum_guard_catches_a_bad_table() {
-        // Directly construct a corrupted Convolution bypassing convolve()'s
-        // own arithmetic, to confirm sums_to_one's check (not just convolve's
-        // happy path) actually distinguishes a bad table from a good one.
-        let mut table = BTreeMap::new();
-        table.insert(0i128, p(1, 2).into_const().unwrap());
-        table.insert(1i128, p(1, 3).into_const().unwrap()); // sums to 5/6, not 1
-        let mut total = Rational::zero();
-        for &v in table.values() {
-            total = total.checked_add(v).unwrap();
-        }
-        assert_ne!(total, Rational::integer(1));
-    }
-}
+        // Call the REAL guard convolve() uses (table_sums_to_one), not a
+        // synthetic re-derivation, on a hand-built corrupted table.
+        let mut good = BTreeMap::new();
+        good.insert(0i128, p(1, 2).into_const().unwrap());
+        good.insert(1i128, p(1, 2).into_const().unwrap());
+        assert!(table_sums_to_one(&good).unwrap().is_certified());
 
-#[cfg(test)]
-trait IntoConst {
-    fn into_const(self) -> Option<Rational>;
-}
-
-#[cfg(test)]
-impl IntoConst for CasExpr {
-    fn into_const(self) -> Option<Rational> {
-        match self {
-            CasExpr::Const(r) => Some(r),
-            _ => None,
-        }
+        let mut bad = BTreeMap::new();
+        bad.insert(0i128, p(1, 2).into_const().unwrap());
+        bad.insert(1i128, p(1, 3).into_const().unwrap()); // sums to 5/6, not 1
+        assert!(!table_sums_to_one(&bad).unwrap().is_certified());
     }
 }
