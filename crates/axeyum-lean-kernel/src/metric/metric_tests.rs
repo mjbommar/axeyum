@@ -1575,6 +1575,56 @@ fn the_closed_interval_is_now_a_metric_space_and_not_merely_a_predicate() {
     );
 }
 
+/// `Metric.crealIntervalSpace a b` is the subspace cut out by `[a,b]` and not
+/// by `[b,a]`. Its declared type (`CReal → CReal → Metric`) is the same either
+/// way, so the type test cannot see a transposed body; this one can.
+#[test]
+fn the_interval_space_is_cut_out_by_the_bounds_in_the_order_given() {
+    let (mut kernel, p) = built();
+    let creal = p.cpoint.creal;
+    let logic = creal.rat.int.logic;
+    let zero = kernel.level_zero();
+    let one = kernel.level_succ(zero);
+
+    let a = kernel.fvar(60_920);
+    let b = kernel.fvar(60_921);
+    let space = {
+        let head = kernel.const_(p.subspace.creal_interval_space, vec![]);
+        let head = kernel.app(head, a);
+        kernel.app(head, b)
+    };
+    let carrier = {
+        let s = kernel.const_(p.record.sel(CARRIER), vec![]);
+        kernel.app(s, space)
+    };
+    let ambient_carrier = {
+        let creal_metric = kernel.const_(p.creal_metric, vec![]);
+        let s = kernel.const_(p.record.sel(CARRIER), vec![]);
+        kernel.app(s, creal_metric)
+    };
+    let subtype_over = |kernel: &mut Kernel, low, high| {
+        let interval = {
+            let head = kernel.const_(p.continuity.interval, vec![]);
+            let head = kernel.app(head, low);
+            kernel.app(head, high)
+        };
+        let head = kernel.const_(logic.sigma.subtype, vec![one]);
+        let head = kernel.app(head, ambient_carrier);
+        kernel.app(head, interval)
+    };
+    let in_order = subtype_over(&mut kernel, a, b);
+    let transposed = subtype_over(&mut kernel, b, a);
+
+    assert!(
+        kernel.def_eq(carrier, in_order),
+        "the interval space's carrier must be the subtype cut out by [a,b]"
+    );
+    assert!(
+        !kernel.def_eq(carrier, transposed),
+        "negative control: it must NOT be the one cut out by [b,a]"
+    );
+}
+
 /// The two `Eq.refl` equations render as the statements they claim to be, and
 /// `Metric.subspace` itself takes a predicate on the ambient carrier.
 #[test]

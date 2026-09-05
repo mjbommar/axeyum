@@ -954,6 +954,51 @@ fn the_integral_is_total_on_the_bundled_carrier_and_the_bundle_is_faithful() {
     );
 }
 
+/// `bundledDist` is `|∫b₁ − ∫b₂|`, checked on the stored BODY and not only on
+/// the type: its declared type is `Bundled → Bundled → CReal` however the body
+/// is wired, so the type test would pass a body that added the two integrals
+/// instead of subtracting them.
+///
+/// The check is syntactic on purpose. The obvious form — `def_eq` against a
+/// rebuilt `|∫b₁ + ∫b₂|` and requiring it to FAIL — does not terminate in
+/// useful time: refuting definitional equality of two open `CReal` terms drives
+/// both to normal form. So the body is read instead, and the query is shown to
+/// be capable of a negative answer by running it against a body that genuinely
+/// has no `CReal.neg` in it.
+#[test]
+fn the_bundled_distance_subtracts_and_the_body_says_so() {
+    let (kernel, p) = built();
+
+    let body_of = |name, label: &str| match kernel.environment().get(name) {
+        Some(Declaration::Definition { value, .. }) => kernel.render_lean(*value),
+        _ => panic!("{label} must be a definition"),
+    };
+
+    let distance = body_of(p.bundled.bundled_dist, "IntSpace.bundledDist");
+    for needle in [
+        "CReal.abs",
+        "CReal.add",
+        "CReal.neg",
+        "IntSpace.bundledIntegral",
+    ] {
+        assert!(
+            distance.contains(needle),
+            "IntSpace.bundledDist's body must mention {needle}: {distance}"
+        );
+    }
+
+    // The control that makes `contains` mean something: the same query over
+    // `bundledIntegral`, whose body genuinely has no negation in it, comes back
+    // NEGATIVE. Without this, "the body mentions CReal.neg" could be true of
+    // every body in the layer.
+    let integral = body_of(p.bundled.bundled_integral, "IntSpace.bundledIntegral");
+    assert!(
+        !integral.contains("CReal.neg"),
+        "control: IntSpace.bundledIntegral's body has no negation, so the query above can \
+         come back negative: {integral}"
+    );
+}
+
 /// The types render as claimed, and `bundledDist` really is the shape
 /// `Metric.dist` demands on the bundled carrier.
 #[test]
