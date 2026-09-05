@@ -138,7 +138,7 @@ impl Fixture {
 fn the_reference_readings_are_distinct() {
     // Divisors of 6 counted the intended way (`d ∈ [0,6]`, `d ∣ 6`, and
     // `0 ∤ 6`): {1,2,3,6} -> 4 of them, summing to 12.
-    let divisors = |n: u32| -> Vec<u32> { (1..=n).filter(|d| n % d == 0).collect() };
+    let divisors = |n: u32| -> Vec<u32> { (1..=n).filter(|d| n.is_multiple_of(*d)).collect() };
     assert_eq!(divisors(6), vec![1, 2, 3, 6]);
     assert_eq!(divisors(6).len(), 4);
     assert_eq!(divisors(6).iter().sum::<u32>(), 12);

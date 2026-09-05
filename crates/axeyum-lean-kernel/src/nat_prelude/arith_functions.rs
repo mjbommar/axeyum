@@ -90,6 +90,7 @@ const NUM_DIVISORS_HEIGHT: u16 = 6;
 // ---------------------------------------------------------------------------
 
 /// `Or.rec` at a `Prop` goal.
+#[allow(clippy::too_many_arguments)]
 fn or_elim(
     d: &mut NatDev<'_>,
     p: &NatPrelude,

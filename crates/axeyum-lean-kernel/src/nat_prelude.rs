@@ -141,6 +141,7 @@ mod add_pos;
 mod algebra;
 mod and_or_distrib;
 mod arith_functions;
+mod arith_functions_family;
 mod asc_factorial;
 mod asc_factorial_div;
 mod avg_pair;
@@ -338,6 +339,7 @@ use algebra::{
 };
 use and_or_distrib::declare_and_or_distrib_all;
 use arith_functions::declare_arith_functions_all;
+use arith_functions_family::declare_arith_functions_family_all;
 use asc_factorial::declare_asc_factorial_all;
 use asc_factorial_div::declare_asc_factorial_eq_div;
 use avg_pair::declare_avg_pair_all;
@@ -6750,6 +6752,73 @@ pub struct NatPrelude {
     /// `∑_{d∣n} φ(d) = n` stalled.
     pub sum_divisors_by_reindex: NameId,
 
+    // -- `arithmetic-functions` lane: `arith_functions_family.rs` (ADR-1619) --
+    /// `Nat.sumDivisorsBy_congr : ∀ (f g : Nat → Nat) (n : Nat),
+    /// (∀ d, Eq Bool (dvdB d n) true → Eq (f d) (g d)) →
+    /// Eq (sumDivisorsBy f n) (sumDivisorsBy g n)` — pointwise congruence
+    /// for the divisor aggregate, bounded BY DIVISIBILITY rather than by an
+    /// index bound. The facts that make two summands agree
+    /// (`n / (n / d) = d`) hold only at divisors, which the unconditional
+    /// [`sum_range_congr`](Self::sum_range_congr) cannot express.
+    pub sum_divisors_by_congr: NameId,
+    /// `Nat.IsMultiplicative (f : Nat → Nat) : Prop := ∀ a b,
+    /// Eq (gcd a b) 1 → Eq (f (mul a b)) (mul (f a) (f b))` — the
+    /// multiplicativity predicate, stated ONCE for the family rather than
+    /// re-spelled per function. Coprimality is `Eq (gcd a b) 1` because that
+    /// is what
+    /// [`totient_mul_of_coprime`](Self::totient_mul_of_coprime) already uses;
+    /// there is no `Nat.Coprime` constant in this prelude.
+    pub is_multiplicative: NameId,
+    /// `Nat.isMultiplicative_totient : IsMultiplicative totient` — the
+    /// already-proved
+    /// [`totient_mul_of_coprime`](Self::totient_mul_of_coprime), repackaged
+    /// as a member of the family.
+    pub is_multiplicative_totient: NameId,
+    /// `Nat.isMultiplicative_one : IsMultiplicative (fun _ => 1)` — the
+    /// second member, so the predicate is inhabited by more than one thing.
+    pub is_multiplicative_one: NameId,
+    /// `Nat.dirichlet : (Nat → Nat) → (Nat → Nat) → Nat → Nat` —
+    /// `dirichlet f g n := Σ_{d ∣ n} f d · g (n/d)`, the Dirichlet
+    /// convolution over [`sum_divisors_by`](Self::sum_divisors_by).
+    pub dirichlet: NameId,
+    /// `Nat.dirichlet_comm : ∀ (f g : Nat → Nat) (n : Nat), Lt zero n →
+    /// Eq (dirichlet f g n) (dirichlet g f n)` — and its proof is exactly
+    /// [`sum_divisors_by_reindex`](Self::sum_divisors_by_reindex) plus
+    /// [`div_div_self_of_dvd`](Self::div_div_self_of_dvd) plus `mul_comm`,
+    /// which is why the reindexing had to be built first.
+    pub dirichlet_comm: NameId,
+    /// `Nat.numDivisors_eq_dirichlet : ∀ n,
+    /// Eq (numDivisors n) (dirichlet (fun _ => 1) (fun _ => 1) n)` — `d = 1 ∗ 1`,
+    /// by `Eq.refl`.
+    pub num_divisors_eq_dirichlet: NameId,
+    /// `Nat.sumDivisors_eq_dirichlet : ∀ n,
+    /// Eq (sumDivisors n) (dirichlet (fun k => k) (fun _ => 1) n)` —
+    /// `σ = id ∗ 1`. NOT `Eq.refl`: `mul k 1` reduces to `add zero k`, which
+    /// is stuck at a bound `k` because `Nat.add` recurses on its RIGHT.
+    pub sum_divisors_eq_dirichlet: NameId,
+    /// `Nat.omegaCount n := Nat.Multiset.card (Nat.factorization n)` — the
+    /// number of prime factors of `n` counted WITH MULTIPLICITY (`Ω`, not
+    /// `ω`). The two agree on the squarefree numbers, which is the only place
+    /// the Möbius definitions read it.
+    pub omega_count: NameId,
+    /// `Nat.moebiusAbs n := if Squarefree n then 1 else 0` — `|μ(n)|`.
+    pub moebius_abs: NameId,
+    /// `Nat.moebiusPos n := if Squarefree n then (if Ω(n) even then 1 else 0)
+    /// else 0` — `1` exactly when `μ(n) = +1`. `μ` takes values in
+    /// `{-1,0,1}` and this carrier has no negatives, so it lands as a graded
+    /// PAIR in the ADR-0603 style.
+    pub moebius_pos: NameId,
+    /// `Nat.moebiusNeg n := if Squarefree n then (if Ω(n) even then 0 else 1)
+    /// else 0` — `1` exactly when `μ(n) = -1`.
+    pub moebius_neg: NameId,
+    /// `Nat.moebius_pos_add_neg : ∀ n,
+    /// Eq (add (moebiusPos n) (moebiusNeg n)) (moebiusAbs n)`.
+    pub moebius_pos_add_neg: NameId,
+    /// `Nat.moebius_pos_mul_neg : ∀ n,
+    /// Eq (mul (moebiusPos n) (moebiusNeg n)) zero` — at most one half of the
+    /// graded pair is nonzero, so the pair encodes one signed value.
+    pub moebius_pos_mul_neg: NameId,
+
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
     /// a field. See [`structures`] for the field lists and every selector
@@ -7913,6 +7982,20 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             divisor_flip_injective_on: kernel.name_str(nat, "divisorFlip_injectiveOn"),
             divisor_flip_maps_into: kernel.name_str(nat, "divisorFlip_mapsInto"),
             sum_divisors_by_reindex: kernel.name_str(nat, "sumDivisorsBy_reindex"),
+            sum_divisors_by_congr: kernel.name_str(nat, "sumDivisorsBy_congr"),
+            is_multiplicative: kernel.name_str(nat, "IsMultiplicative"),
+            is_multiplicative_totient: kernel.name_str(nat, "isMultiplicative_totient"),
+            is_multiplicative_one: kernel.name_str(nat, "isMultiplicative_one"),
+            dirichlet: kernel.name_str(nat, "dirichlet"),
+            dirichlet_comm: kernel.name_str(nat, "dirichlet_comm"),
+            num_divisors_eq_dirichlet: kernel.name_str(nat, "numDivisors_eq_dirichlet"),
+            sum_divisors_eq_dirichlet: kernel.name_str(nat, "sumDivisors_eq_dirichlet"),
+            omega_count: kernel.name_str(nat, "omegaCount"),
+            moebius_abs: kernel.name_str(nat, "moebiusAbs"),
+            moebius_pos: kernel.name_str(nat, "moebiusPos"),
+            moebius_neg: kernel.name_str(nat, "moebiusNeg"),
+            moebius_pos_add_neg: kernel.name_str(nat, "moebius_pos_add_neg"),
+            moebius_pos_mul_neg: kernel.name_str(nat, "moebius_pos_mul_neg"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -9352,6 +9435,14 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.one_le_of_dvd_pos`/`Nat.le_of_dvd`. Goes after
         // `declare_subset_sum_all`.
         declare_arith_functions_all(&mut d, &p)?;
+        // The family layer (`arith_functions_family.rs`, ADR-1619):
+        // `Nat.IsMultiplicative`, the Dirichlet convolution and its
+        // commutativity, and Möbius as a graded pair. Needs
+        // `declare_arith_functions_all` immediately above, plus
+        // `Nat.totient_mul_of_coprime` (`totient_mul.rs`), `Squarefree`
+        // (`squarefree.rs`) and `Nat.factorization`/`Nat.Multiset.card`
+        // (`factorization_multiset.rs`, `multiset.rs`).
+        declare_arith_functions_family_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -9413,6 +9504,9 @@ mod subset_sum_tests;
 
 #[cfg(test)]
 mod arith_functions_tests;
+
+#[cfg(test)]
+mod arith_functions_family_tests;
 
 #[cfg(test)]
 mod gauss_residue_reconcile_tests;

@@ -149,7 +149,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1310 names,
+/// The `NatPrelude` field table (1324 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1651,6 +1651,20 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("divisor_flip_injective_on", p.divisor_flip_injective_on),
             ("divisor_flip_maps_into", p.divisor_flip_maps_into),
             ("sum_divisors_by_reindex", p.sum_divisors_by_reindex),
+            ("sum_divisors_by_congr", p.sum_divisors_by_congr),
+            ("is_multiplicative", p.is_multiplicative),
+            ("is_multiplicative_totient", p.is_multiplicative_totient),
+            ("is_multiplicative_one", p.is_multiplicative_one),
+            ("dirichlet", p.dirichlet),
+            ("dirichlet_comm", p.dirichlet_comm),
+            ("num_divisors_eq_dirichlet", p.num_divisors_eq_dirichlet),
+            ("sum_divisors_eq_dirichlet", p.sum_divisors_eq_dirichlet),
+            ("omega_count", p.omega_count),
+            ("moebius_abs", p.moebius_abs),
+            ("moebius_pos", p.moebius_pos),
+            ("moebius_neg", p.moebius_neg),
+            ("moebius_pos_add_neg", p.moebius_pos_add_neg),
+            ("moebius_pos_mul_neg", p.moebius_pos_mul_neg),
             ("structures.magma.ind", p.structures.magma.ind),
             ("structures.magma.mk", p.structures.magma.mk),
             ("structures.magma.rec", p.structures.magma.rec),
