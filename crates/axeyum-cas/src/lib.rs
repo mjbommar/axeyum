@@ -79,6 +79,7 @@ pub mod gfp;
 mod gosper;
 pub mod groebner;
 pub mod groebner_cert;
+pub mod homology;
 pub mod hyperbolic;
 pub mod interval_arith;
 pub mod inverse;

@@ -396,7 +396,7 @@ fn smith_grids(a: &[Vec<i128>], rows: usize, cols: usize) -> Option<(IntGrid, In
 
 /// Certify that `product` and `target` agree in shape and, entrywise, are
 /// decidably equal via the zero-test [`equal`].
-fn certify_product_equals(product: &Matrix, target: &Matrix) -> bool {
+pub(crate) fn certify_product_equals(product: &Matrix, target: &Matrix) -> bool {
     if product.rows() != target.rows() || product.cols() != target.cols() {
         return false;
     }
@@ -420,7 +420,7 @@ fn certify_product_equals(product: &Matrix, target: &Matrix) -> bool {
 
 /// Certify that `matrix` is unimodular by confirming `det(matrix) = +/-1` via the
 /// certified [`Matrix::determinant`] and the zero-test.
-fn is_unimodular(matrix: &Matrix) -> bool {
+pub(crate) fn is_unimodular(matrix: &Matrix) -> bool {
     let Some(determinant) = matrix.determinant() else {
         return false;
     };
@@ -437,7 +437,7 @@ fn is_unimodular(matrix: &Matrix) -> bool {
 
 /// The exact integer value of one matrix entry, or `None` if it is not an
 /// integer-valued constant.
-fn int_entry(matrix: &Matrix, row: usize, col: usize) -> Option<i128> {
+pub(crate) fn int_entry(matrix: &Matrix, row: usize, col: usize) -> Option<i128> {
     match matrix.get(row, col)? {
         CasExpr::Const(value) if value.denominator() == 1 => Some(value.numerator()),
         _ => None,
@@ -514,7 +514,7 @@ fn certifies_hermite_shape(hermite: &Matrix) -> bool {
 /// - every diagonal entry is non-negative;
 /// - the nonzero invariant factors come first, with trailing zeros after;
 /// - each nonzero invariant factor divides the next.
-fn certifies_smith_shape(diagonal: &Matrix) -> bool {
+pub(crate) fn certifies_smith_shape(diagonal: &Matrix) -> bool {
     for row in 0..diagonal.rows() {
         for col in 0..diagonal.cols() {
             let Some(value) = int_entry(diagonal, row, col) else {
