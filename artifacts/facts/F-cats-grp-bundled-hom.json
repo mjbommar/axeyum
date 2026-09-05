@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-grp-bundled-hom",
+  "title": "The category of groups exists, with morphisms bundled as a subtype",
+  "statement": "CatS.grp is a CatS.CategoryLarge whose objects are AlgS.Group and whose hom-family is CatS.GrpHom G H := Subtype (G.carrier -> H.carrier) (CatS.IsGrpHom G H) -- a function TOGETHER WITH the proof that it respects both equivalences and carries G.op to H.op. Bundling is what makes the category's single congruence field provable: from g ~ g' and f ~ f' pointwise, K.equiv (g (f a)) (g' (f' a)) needs g to respect H.equiv, which an arbitrary function does not carry and a bundled morphism does. The unit and associativity laws are then reflexivity of the object's own equiv, because Subtype.val (Subtype.mk f h) iota-reduces, so both sides of each law are the same function.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def CatS.grp : CatS.CategoryLarge",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.isGrpHom_congr"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cats-initial-unique"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-grp-bundled-hom-1",
+      "kind": "kernel-term",
+      "supports": "CatS.grp, CatS.GrpHom, CatS.mon, CatS.MonHom, CatS.IsMonHom, CatS.isMonHom_id, CatS.isMonHom_comp, CatS.isMonHom_congr, CatS.isGrpHom_congr and the record CatS.FunctorLarge all admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. Two def_eq readings pin the content in BOTH directions: CatS.grp's hom-family IS the Subtype and is NOT the bare function space (which is the hom-family ADR-1620 measured as making compCongr false), and CatS.IsMonHom unfolds to congr AND (op AND unit) and NOT to congr AND op (which would be a semigroup morphism). Rejection controls with unmutated positive twins in the same test: N1 a compCongr whose conclusion names comp v u' instead of comp v' u' is refused; N2 the wrongly ordered composite of two monoid homomorphisms is refused.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 29 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 29 and is RECOUNTED from the suite's own output. The two tests that carry this fact are groups_tests::the_group_category_has_bundled_morphisms and groups_tests::a_monoid_morphism_preserves_the_unit; the two mutations are groups_tests::n1_the_congruence_concludes_about_both_replaced_morphisms and groups_tests::n2_the_composite_monoid_hom_is_ordered."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid::groups, lane group-category, ADR-1626 (roadmap W3-3 residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs (declare_bundled_hom, declare_bundled_cat); tests nat_prelude::category_setoid::groups::groups_tests::*."
+  },
+  "notes": "Subtype and not Sigma, and the levels decide it rather than taste: CatS.CategoryLarge's hom field is obj -> obj -> Sort 1, Subtype.{1} lands at Sort (max 1 1) = Sort 1, and Sigma.{u,v} lands at Sort (max u v + 1), one universe too high. The setoid cost of a bundled-hom category is ONE new proof (compCongr) plus three pointwise liftings of the object's own equiv laws; idL, idR and assoc are free."
+}

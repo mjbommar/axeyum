@@ -32,7 +32,7 @@ fn build(k: &mut Kernel) -> Fixture {
         map_one: extra.hom_map_one,
     };
     let (recs, cs, grp_recs, gs) =
-        super::super::declare_category_setoid(k, &lg, &st.monoid, &st.group, &deps)
+        super::super::declare_category_setoid(k, &lg, &st.monoid, &st.group, deps)
             .expect("the Sigma-residue layer must admit");
     Fixture {
         lg,
@@ -354,6 +354,7 @@ fn the_forgetful_projection_is_the_group_s_own_fields() {
 /// The forgetful functor's three components, read from the record.
 #[test]
 fn the_forgetful_functor_names_its_two_categories() {
+    use algs::group::CARRIER;
     use idx::functor::{MAP, OBJ as F_OBJ, SRC, TGT};
     let mut k = Kernel::new();
     let f = build(&mut k);
@@ -377,7 +378,6 @@ fn the_forgetful_functor_names_its_two_categories() {
 
     // The morphism map keeps the underlying function -- that is why the three
     // functor laws are reflexivity.
-    use algs::group::CARRIER;
     let g = k.fvar(98_030);
     let h = k.fvar(98_031);
     let gc = sel(&mut k, &f.st.group, CARRIER, g);
@@ -853,4 +853,58 @@ fn n4_initiality_is_equality_not_a_shift() {
         })
         .expect_err("initiality must NOT give med n = succ (g n)");
     println!("n4 rejection: {err:?}");
+}
+
+/// **The universe guard, measured on the fourth record.** `CatS.FunctorLarge`
+/// holds two `CatS.CategoryLarge` fields, whose type lives at level 3, so the
+/// same seven-field list at `Sort 2` is refused by ADR-1495's
+/// `ConstructorFieldUniverseTooBig` on field 0 — and the positive twin at
+/// `Sort 3` admits. This is ADR-1620's measurement 2a ("a record CAN hold a
+/// record") one level up, and it is the ONLY guard interaction in this layer:
+/// nothing here was blocked by it.
+#[test]
+fn the_functor_large_record_is_forced_up_to_sort_3() {
+    let mut k = Kernel::new();
+    let f = build(&mut k);
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let l2 = k.level_succ(l1);
+    let l3 = k.level_succ(l2);
+    let anon = k.anon();
+
+    let specs = functor_fields(f.recs.category_large);
+    let mut ctor_fields: Vec<(u64, ExprId)> = Vec::new();
+    let mut vals: Vec<ExprId> = Vec::new();
+    for (i, spec) in specs.iter().enumerate() {
+        let ty = (spec.build)(&mut k, &f.lg, l2, &vals);
+        let fv = 10_000 + i as u64;
+        ctor_fields.push((fv, ty));
+        let v = k.fvar(fv);
+        vals.push(v);
+    }
+
+    let bad = k.name_str(anon, "FunctorLargeSort2Control");
+    let bad_mk = k.name_str(bad, "mk");
+    let bad_const = k.const_(bad, vec![]);
+    let bad_ctor = crate::nat_prelude::structures::close_pi(&mut k, &ctor_fields, bad_const);
+    let sort2 = k.sort(l2);
+    let err = k
+        .add_inductive(bad, &[], 0, sort2, &[(bad_mk, bad_ctor)])
+        .expect_err("a Sort-2 FunctorLarge record must be REFUSED");
+    println!("FunctorLarge rejection at Sort 2: {err:?}");
+    assert!(
+        matches!(
+            err,
+            KernelError::ConstructorFieldUniverseTooBig { field_index: 0, .. }
+        ),
+        "expected ConstructorFieldUniverseTooBig on field 0, got {err:?}"
+    );
+
+    let good = k.name_str(anon, "FunctorLargeSort3Control");
+    let good_mk = k.name_str(good, "mk");
+    let good_const = k.const_(good, vec![]);
+    let good_ctor = crate::nat_prelude::structures::close_pi(&mut k, &ctor_fields, good_const);
+    let sort3 = k.sort(l3);
+    k.add_inductive(good, &[], 0, sort3, &[(good_mk, good_ctor)])
+        .expect("the same seven fields at Sort 3 must ADMIT");
 }

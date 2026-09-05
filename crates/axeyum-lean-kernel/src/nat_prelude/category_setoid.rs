@@ -2699,7 +2699,7 @@ pub(crate) fn declare_category_setoid(
     lg: &LogicPrelude,
     monoid: &RecordNames,
     group: &RecordNames,
-    deps: &GroupCatDeps,
+    deps: GroupCatDeps,
 ) -> Result<
     (
         CategoryRecords,
@@ -2815,16 +2815,16 @@ mod category_setoid_tests {
     fn build(k: &mut Kernel) -> Fixture {
         let lg = build_logic_prelude(k).expect("logic prelude must build");
         let alg_p = algeq::intern_structures_names(k);
-        let _alg_st = algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
+        let alg_st = algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
         let p = intern_structures_s_names(k);
         let st = declare_structures_s_all(k, &p, &lg).expect("AlgS spine builds");
-        let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &_alg_st)
+        let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &alg_st)
             .expect("the AlgS extras (AlgS.Hom.mapOne) must build");
         let deps = GroupCatDeps {
             map_one: extra.hom_map_one,
         };
         let (recs, cs, _grp_recs, _gs) =
-            declare_category_setoid(k, &lg, &st.monoid, &st.group, &deps)
+            declare_category_setoid(k, &lg, &st.monoid, &st.group, deps)
                 .expect("the setoid-enriched category layer must admit");
         Fixture { lg, st, recs, cs }
     }

@@ -87,7 +87,11 @@
 //! morphism's own zero law, and the successor case is one `congrArg` plus one
 //! `Eq.trans`. Two steps, no axioms.
 
-#![allow(clippy::too_many_arguments, clippy::similar_names)]
+#![allow(
+    clippy::too_many_arguments,
+    clippy::similar_names,
+    clippy::wildcard_imports
+)]
 
 use super::*;
 use crate::expr::BinderInfo;
@@ -1229,7 +1233,7 @@ pub(crate) fn declare_group_categories(
     is_grp_hom: NameId,
     is_grp_hom_id: NameId,
     is_grp_hom_comp: NameId,
-    deps: &GroupCatDeps,
+    deps: GroupCatDeps,
     ns: NameId,
 ) -> Result<(GroupCatRecords, GroupCatNames), KernelError> {
     let l0 = k.level_zero();
@@ -1757,6 +1761,7 @@ impl PtHomOps {
         sub_mk(k, lg, ctx.l1, a, p, v, pr)
     }
     /// The two conjuncts of `IsPtHom P Q f`, as statements.
+    #[allow(clippy::unused_self)]
     fn parts(
         &self,
         k: &mut Kernel,

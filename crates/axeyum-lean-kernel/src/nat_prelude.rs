@@ -6997,7 +6997,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             &logic,
             &structures_s.monoid,
             &structures_s.group,
-            &category_setoid::GroupCatDeps {
+            category_setoid::GroupCatDeps {
                 map_one: structures_s_extra.hom_map_one,
             },
         )?;

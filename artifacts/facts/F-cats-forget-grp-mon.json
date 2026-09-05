@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-forget-grp-mon",
+  "title": "The forgetful projection from groups to monoids is a functor",
+  "statement": "CatS.forgetGrpMon is a CatS.FunctorLarge from CatS.grp to CatS.mon whose object map is AlgS.Group.toMonoidS and whose morphism map keeps the underlying function, and CatS.forgetGrpMon_isFunctor proves its three laws (mapCongr, mapId, mapComp) as CatS.IsFunctorLarge. The object map is free: every one of the eleven monoid fields is a group selector, though it is NOT a prefix projection -- monoid field 8 is assoc where group field 8 is inv, so indices 8, 9 and 10 of the monoid come from indices 10, 11 and 12 of the group. The morphism map's only real content is the third conjunct a monoid morphism carries and a group morphism does not, unit preservation, and that is exactly AlgS.Hom.mapOne.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CatS.forgetGrpMon_isFunctor : CatS.IsFunctorLarge (CatS.FunctorLarge.src CatS.forgetGrpMon) (CatS.FunctorLarge.tgt CatS.forgetGrpMon) (CatS.FunctorLarge.obj CatS.forgetGrpMon) (CatS.FunctorLarge.map CatS.forgetGrpMon)",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.forgetGrpMon_isFunctor"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cats-grp-bundled-hom"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-forget-grp-mon-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Group.toMonoidS, CatS.FunctorLarge, CatS.IsFunctorLarge, CatS.functorLarge_isFunctor, CatS.forgetGrpMon and CatS.forgetGrpMon_isFunctor admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. Read from the kernel by def_eq in both directions: forgetGrpMon.src IS CatS.grp and is NOT CatS.mon, forgetGrpMon.tgt IS CatS.mon and is NOT CatS.grp, forgetGrpMon.obj IS AlgS.Group.toMonoidS, and the forgotten morphism's underlying function is the SAME function (not the identity). All eleven fields of AlgS.Group.toMonoidS are checked against the group's own selector, each with a DIFFERENT group as the discriminating negative twin, including the three whose index moves.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 29 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 29 and is RECOUNTED from the suite's own output. The two tests that carry this fact are groups_tests::the_forgetful_projection_is_the_group_s_own_fields and groups_tests::the_forgetful_functor_names_its_two_categories; the record's own universe is pinned at Sort 3 and refused at Sort 2 in groups_tests::the_types_render_and_pin_their_universes."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid::groups, lane group-category, ADR-1626 (roadmap W3-3 residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs (declare_to_monoid_s, declare_forget_grp_mon); tests nat_prelude::category_setoid::groups::groups_tests::*."
+  },
+  "notes": "This is item 4 of the 09 category-theory review, which ADR-1620 recorded as blocked: 'toCommGroupS is a map of OBJECTS, and a functor needs a source and target CATEGORY whose hom-families are the homomorphisms. Those hom-families are the ones that need Sigma.' CatS.FunctorLarge is a FOURTH record rather than a reuse of CatS.Functor, because CatS.Functor's src and tgt fields are CatS.Category-typed and a record's field types are fixed at declaration; it is the same seven-field list at l1 := 2, l2 := 3, which is ADR-1620's measurement 2a (a record CAN hold a record) one level up."
+}
