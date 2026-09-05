@@ -266,9 +266,10 @@ pub(super) fn declare_min_fac_prime_bridge(
             });
             let bad = d.transport(mf, motive, h_two_le_mf, one, he);
             let contradiction = d.const_app(p.not_succ_le_self, &[one, bad]);
-            let anon = d.anon_name();
-            d.kernel()
-                .lam(anon, left_prop, contradiction, crate::BinderInfo::Default)
+            // `lam_fv`, NOT `Kernel::lam`: the latter builds a binder without
+            // abstracting `he_fv`, so the hypothesis stays FREE in the body
+            // and the whole prelude fails to build with `UnboundFVar`.
+            d.lam_fv(he_fv, left_prop, contradiction)
         };
         let proof_core = d.const_app(
             p.logic.or_resolve_left,
