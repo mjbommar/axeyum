@@ -100,6 +100,7 @@ pub use lrat::{
     elaborate_drat_to_lrat_backward, elaborate_drat_to_lrat_with_limits_and_progress, parse_lrat,
     write_lrat,
 };
+pub use proof_sat::incremental::{IncrementalSolveOutcome, NativeIncrementalCdcl};
 pub use proof_sat::{
     DEFAULT_PROGRESS_CONFLICT_INTERVAL, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSearchProgress,
     ProofSolveOutcome, StreamingProofOutcome, solve_with_drat_proof,

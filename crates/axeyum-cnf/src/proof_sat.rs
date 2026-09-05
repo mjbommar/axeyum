@@ -311,7 +311,7 @@ pub fn solve_with_drat_proof_with_limits_and_progress(
     deadline: Option<Instant>,
     max_conflicts: usize,
     progress_interval: usize,
-    progress: &mut dyn FnMut(&ProofSearchProgress),
+    progress: &mut (dyn FnMut(&ProofSearchProgress) + Send),
 ) -> ProofSolveOutcome {
     let mut sink = VecProofSink::new();
     let outcome = Cdcl::new(formula, &mut sink)
@@ -339,11 +339,31 @@ pub fn solve_with_drat_proof_streaming_with_progress(
     max_conflicts: usize,
     sink: &mut impl DratSink,
     progress_interval: usize,
-    progress: &mut dyn FnMut(&ProofSearchProgress),
+    progress: &mut (dyn FnMut(&ProofSearchProgress) + Send),
 ) -> StreamingProofOutcome {
     Cdcl::new(formula, sink)
         .with_progress(progress_interval, progress)
         .solve(deadline, max_conflicts)
+}
+
+/// The internal result of one CDCL search. Distinct from the public
+/// [`StreamingProofOutcome`] in exactly one respect: it can report
+/// *unsatisfiable under the given assumptions*, which is not a refutation of
+/// the formula and therefore never emits an empty clause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SearchOutcome {
+    /// Satisfiable; the model satisfies the clause database and every assumption.
+    Sat(CnfAssignment),
+    /// Unsatisfiable outright: the empty clause was derived and emitted.
+    Unsat,
+    /// Unsatisfiable under the assumptions that were passed. The payload is the
+    /// subset of those assumptions sufficient for the contradiction (the
+    /// final-conflict core). The clause database itself may well be satisfiable.
+    UnsatUnderAssumptions(Vec<CnfLit>),
+    /// The conflict budget was exhausted (undecided).
+    ResourceOut,
+    /// The wall-clock deadline passed (undecided).
+    Interrupted,
 }
 
 fn lit_code(lit: CnfLit) -> usize {
@@ -392,9 +412,9 @@ struct ClauseHeader {
 /// `reduce_db` deletion is a direct call — no `dyn` dispatch in the search loop.
 /// The sink is *output only*: no field of this struct and no branch of the search
 /// reads it back, which is why the trajectory is identical for every `S`.
-struct Cdcl<'sink, S: DratSink> {
+struct Cdcl<'progress, S: DratSink> {
     /// Where derived clauses and deletions are emitted, in derivation order.
-    sink: &'sink mut S,
+    sink: S,
     /// Flat, cache-local arena of all clause literals (problem clauses first,
     /// learned clauses appended). A clause occupies the contiguous slice
     /// `arena[h.offset .. h.offset + h.len]` for its [`ClauseHeader`] `h`. The
@@ -414,6 +434,11 @@ struct Cdcl<'sink, S: DratSink> {
     trail_lim: Vec<usize>,
     qhead: usize,
     initial_units: Vec<CnfLit>,
+    /// `initial_unit_seen[v]` is set once variable `v` has contributed a literal
+    /// to [`Cdcl::initial_units`]. Only the incremental path writes it (see
+    /// [`Cdcl::reset_search_state`]); it keeps that path's de-duplication O(1)
+    /// instead of a linear scan per level-zero literal.
+    initial_unit_seen: Vec<bool>,
     has_empty_clause: bool,
     conflicts: usize,
     /// VSIDS activity per variable (higher ⇒ branched sooner).
@@ -464,9 +489,21 @@ struct Cdcl<'sink, S: DratSink> {
     /// rephasing / mode switching before it pays off) — mirroring the built-but-off
     /// discipline of `ADR-0059`.
     use_ema_restart: bool,
-    /// Number of original (problem) clauses; clause ids `< num_original` are
-    /// never deletable. Learned clauses are appended at id `>= num_original`.
-    num_original: usize,
+    /// Per-clause "this is a learned clause" flag, parallel to
+    /// [`Cdcl::headers`]. Only learned clauses carry activity and only learned
+    /// clauses are deletable by `reduce_db`.
+    ///
+    /// This replaced a single `num_original` boundary index. The boundary is
+    /// correct only while every problem clause precedes every learned one,
+    /// which the one-shot entry points guarantee but the incremental one does
+    /// not: `add_clause` between solves appends a problem clause *after*
+    /// learned clauses already exist, and under the old boundary that clause
+    /// would have become a `reduce_db` deletion candidate — deleting an input
+    /// clause weakens the formula and can produce a wrong `sat`. A per-clause
+    /// flag cannot express that mistake. On the one-shot path the flag is
+    /// exactly `cid >= num_original` was, so the search trajectory is
+    /// unchanged.
+    learned: Vec<bool>,
     /// Literal-block distance per clause (distinct decision levels among its
     /// literals at learning time). Meaningful for learned clauses only.
     lbd: Vec<usize>,
@@ -507,7 +544,7 @@ struct Cdcl<'sink, S: DratSink> {
     /// borrowed `dyn FnMut` (not a `Box`) so installing a sink allocates
     /// nothing here, and leaving it `None` costs one `Option` check per
     /// conflict on the hot path — no allocation, no syscall, no formatting.
-    progress: Option<&'sink mut dyn FnMut(&ProofSearchProgress)>,
+    progress: Option<&'progress mut (dyn FnMut(&ProofSearchProgress) + Send)>,
     /// Conflict-count cadence for [`Cdcl::progress`] polls.
     progress_interval: usize,
     /// Total DRAT steps emitted so far. Only maintained while a progress sink
@@ -526,8 +563,8 @@ struct Cdcl<'sink, S: DratSink> {
 /// the order heap (it has been popped by `pick_branch` and not yet re-inserted).
 const HEAP_ABSENT: usize = usize::MAX;
 
-impl<'sink, S: DratSink> Cdcl<'sink, S> {
-    fn new(formula: &CnfFormula, sink: &'sink mut S) -> Self {
+impl<'progress, S: DratSink> Cdcl<'progress, S> {
+    fn new(formula: &CnfFormula, sink: S) -> Self {
         let n = formula.variable_count();
         // Pack every clause's literals contiguously into one arena, recording a
         // `(offset, len)` header per clause. This mirrors the prior
@@ -581,6 +618,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             trail: Vec::new(),
             trail_lim: Vec::new(),
             qhead: 0,
+            initial_unit_seen: vec![false; n],
             initial_units,
             has_empty_clause,
             conflicts: 0,
@@ -600,7 +638,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
             // neutral-to-slightly-negative on the public p4dfa slice (see the field
             // doc), so it stays a selectable option, not the default.
             use_ema_restart: false,
-            num_original: num_clauses,
+            learned: vec![false; num_clauses],
             lbd: vec![0; num_clauses],
             cla_activity: vec![0.0; num_clauses],
             deleted: vec![false; num_clauses],
@@ -629,6 +667,147 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
         cdcl
     }
 
+    /// An empty solver: no variables, no clauses. The seed for the incremental
+    /// entry point; [`Cdcl::ensure_vars`] and [`Cdcl::add_input_clause`] grow it
+    /// between solves.
+    fn new_empty(sink: S) -> Self {
+        Self::new(&CnfFormula::new(0), sink)
+    }
+
+    /// Grows every per-variable table so variable indices `0 .. count` are legal.
+    /// Idempotent and monotone; never shrinks.
+    fn ensure_vars(&mut self, count: usize) {
+        if count <= self.assign.len() {
+            return;
+        }
+        self.assign.resize(count, None);
+        self.level.resize(count, 0);
+        self.reason.resize(count, None);
+        self.activity.resize(count, 0.0);
+        self.phase.resize(count, false);
+        self.best_phase.resize(count, false);
+        self.branchable.resize(count, false);
+        self.heap_pos.resize(count, HEAP_ABSENT);
+        self.initial_unit_seen.resize(count, false);
+        self.watches.resize_with(2 * count, Vec::new);
+    }
+
+    /// Registers one **problem** clause into a solver that is between solves
+    /// (nothing assigned, no decision levels). Returns the clause's [`CRef`], or
+    /// `None` for a clause that was dropped as a tautology.
+    ///
+    /// Preconditions this relies on, all guaranteed by
+    /// [`Cdcl::reset_search_state`] running before any `add_input_clause`: the
+    /// trail is empty, so watching the first two literals is correct without any
+    /// assignment-aware slot selection — exactly what [`Cdcl::new`] does for the
+    /// initial formula.
+    ///
+    /// Literals are de-duplicated and tautologies (`x` together with `not x`)
+    /// are dropped. Both are logic-preserving, and both matter here because a
+    /// duplicated literal would otherwise put two watches on the same literal
+    /// slot of one clause.
+    fn add_input_clause(&mut self, lits: &[CnfLit]) -> Option<CRef> {
+        debug_assert!(
+            self.trail.is_empty(),
+            "add_input_clause between solves only"
+        );
+        let mut normalized: Vec<CnfLit> = Vec::with_capacity(lits.len());
+        for &lit in lits {
+            if normalized.contains(&lit) {
+                continue;
+            }
+            if normalized.contains(&lit.negated()) {
+                return None; // tautology: satisfied by every assignment
+            }
+            normalized.push(lit);
+        }
+        let needed = normalized
+            .iter()
+            .map(|lit| lit.var().index() + 1)
+            .max()
+            .unwrap_or(0);
+        self.ensure_vars(needed);
+
+        let cid = self.alloc_clause(&normalized);
+        self.lbd.push(0);
+        self.cla_activity.push(0.0);
+        self.deleted.push(false);
+        self.learned.push(false);
+
+        match normalized.len() {
+            0 => self.has_empty_clause = true,
+            1 => self.initial_units.push(normalized[0]),
+            _ => {
+                let (l0, l1) = (normalized[0], normalized[1]);
+                self.watches[lit_code(l0)].push(Watch {
+                    clause: cid,
+                    blocker: l1,
+                });
+                self.watches[lit_code(l1)].push(Watch {
+                    clause: cid,
+                    blocker: l0,
+                });
+            }
+        }
+        for lit in &normalized {
+            let var = lit.var().index();
+            if !self.branchable[var] {
+                self.branchable[var] = true;
+                if !self.heap_contains(var) {
+                    self.heap_insert(var);
+                }
+            }
+        }
+        Some(cid)
+    }
+
+    /// Returns the solver to the "between solves" state: nothing assigned, no
+    /// decision levels, every branchable variable back in the order heap, and
+    /// the per-solve counters zeroed.
+    ///
+    /// What is deliberately **kept** is what makes this incremental: the clause
+    /// database including every learned clause, VSIDS activities, saved phases,
+    /// the target phase, and the clause-activity state. What is dropped is the
+    /// level-0 trail — the accumulated units are re-propagated at the start of
+    /// the next solve from [`Cdcl::initial_units`], which is cheap and removes
+    /// every ordering subtlety around adding a clause that is already falsified.
+    fn reset_search_state(&mut self) {
+        // Promote every literal implied at decision level zero to a unit in
+        // `initial_units`, so the next solve re-derives it by propagation
+        // instead of by search. Level-zero literals are entailed by the clause
+        // database alone, so this is sound; without it a *learned unit* clause
+        // (which carries no watches and is not in `initial_units`) would be
+        // silently lost at every solve boundary and the search would pay for it
+        // again. Literals above level zero are excluded: they depend on
+        // decisions, including assumptions, which do not survive the solve.
+        let level_zero = self.trail_lim.first().copied().unwrap_or(self.trail.len());
+        for index in 0..level_zero {
+            let var = self.trail[index];
+            if self.initial_unit_seen[var] {
+                continue;
+            }
+            self.initial_unit_seen[var] = true;
+            let lit = self.true_literal(var);
+            self.initial_units.push(lit);
+        }
+        for &var in &self.trail {
+            self.assign[var] = None;
+            self.reason[var] = None;
+        }
+        self.trail.clear();
+        self.trail_lim.clear();
+        self.qhead = 0;
+        self.conflicts = 0;
+        self.conflicts_since_restart = 0;
+        self.restart_count = 1;
+        self.best_trail_len = 0;
+        for var in 0..self.branchable.len() {
+            if self.branchable[var] && !self.heap_contains(var) {
+                self.heap_insert(var);
+            }
+        }
+    }
+
     /// Installs a progress callback, polled every `interval` conflicts (and
     /// once more when the search ends) with a cumulative
     /// [`ProofSearchProgress`] snapshot. `interval` is clamped to at least 1.
@@ -639,7 +818,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
     fn with_progress(
         mut self,
         interval: usize,
-        progress: &'sink mut dyn FnMut(&ProofSearchProgress),
+        progress: &'progress mut (dyn FnMut(&ProofSearchProgress) + Send),
     ) -> Self {
         self.progress = Some(progress);
         self.progress_interval = interval.max(1);
@@ -977,37 +1156,56 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
     /// [`StreamingProofOutcome::SinkFailed`]. Splitting the fallible body out
     /// keeps every emission site a plain `?` instead of a hand-written early
     /// return, so no proof step can be silently dropped on the error path.
-    fn solve(self, deadline: Option<Instant>, max_conflicts: usize) -> StreamingProofOutcome {
-        match self.run(deadline, max_conflicts) {
-            Ok(outcome) => outcome,
+    fn solve(mut self, deadline: Option<Instant>, max_conflicts: usize) -> StreamingProofOutcome {
+        match self.run(&[], deadline, max_conflicts) {
+            Ok(SearchOutcome::Sat(model)) => StreamingProofOutcome::Sat(model),
+            Ok(SearchOutcome::Unsat) => StreamingProofOutcome::Unsat,
+            Ok(SearchOutcome::ResourceOut) => StreamingProofOutcome::ResourceOut,
+            Ok(SearchOutcome::Interrupted) => StreamingProofOutcome::Interrupted,
+            // Unreachable with no assumptions: the only producer of this variant
+            // is the assumption-install branch, which `assumptions.is_empty()`
+            // never enters. Mapped to the *undecided* verdict rather than
+            // panicking or guessing, so an impossible branch can never become a
+            // wrong `sat`/`unsat`.
+            Ok(SearchOutcome::UnsatUnderAssumptions(_)) => StreamingProofOutcome::Interrupted,
             Err(error) => StreamingProofOutcome::SinkFailed(error),
         }
     }
 
+    /// Propagates the accumulated units at level 0 and runs the search under
+    /// `assumptions` (empty on every one-shot entry point).
     fn run(
-        mut self,
+        &mut self,
+        assumptions: &[CnfLit],
         deadline: Option<Instant>,
         max_conflicts: usize,
-    ) -> Result<StreamingProofOutcome, ProofSinkError> {
+    ) -> Result<SearchOutcome, ProofSinkError> {
         if self.has_empty_clause {
             self.record_proof_step(false, &[]);
             self.sink.add_clause(&[])?;
             self.report_progress();
-            return Ok(StreamingProofOutcome::Unsat);
+            return Ok(SearchOutcome::Unsat);
         }
-        for lit in std::mem::take(&mut self.initial_units) {
+        // Indexed rather than drained: the incremental core re-propagates the
+        // same units at the start of every solve, so `initial_units` must
+        // survive this loop. On the one-shot path draining and reading are
+        // indistinguishable.
+        let mut index = 0;
+        while index < self.initial_units.len() {
+            let lit = self.initial_units[index];
+            index += 1;
             match self.value(lit) {
                 Some(false) => {
                     self.record_proof_step(false, &[]);
                     self.sink.add_clause(&[])?;
                     self.report_progress();
-                    return Ok(StreamingProofOutcome::Unsat);
+                    return Ok(SearchOutcome::Unsat);
                 }
                 Some(true) => {}
                 None => self.enqueue(lit, None),
             }
         }
-        self.search_loop(deadline, max_conflicts)
+        self.search_loop(assumptions, deadline, max_conflicts)
     }
 
     /// The main CDCL loop: propagate, learn from a conflict (or restart/decide
@@ -1017,21 +1215,22 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
     /// replaced.
     fn search_loop(
         &mut self,
+        assumptions: &[CnfLit],
         deadline: Option<Instant>,
         max_conflicts: usize,
-    ) -> Result<StreamingProofOutcome, ProofSinkError> {
+    ) -> Result<SearchOutcome, ProofSinkError> {
         loop {
             if let Some(conflict) = self.propagate() {
                 if self.decision_level() == 0 {
                     self.record_proof_step(false, &[]);
                     self.sink.add_clause(&[])?;
                     self.report_progress();
-                    return Ok(StreamingProofOutcome::Unsat);
+                    return Ok(SearchOutcome::Unsat);
                 }
                 self.conflicts += 1;
                 if self.conflicts > max_conflicts {
                     self.report_progress();
-                    return Ok(StreamingProofOutcome::ResourceOut);
+                    return Ok(SearchOutcome::ResourceOut);
                 }
                 // Deterministic deadline cadence: only read the clock once every
                 // `DEADLINE_CHECK_INTERVAL` conflicts. On expiry, abandon the
@@ -1041,7 +1240,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                     && Instant::now() >= deadline
                 {
                     self.report_progress();
-                    return Ok(StreamingProofOutcome::Interrupted);
+                    return Ok(SearchOutcome::Interrupted);
                 }
                 let (learned, backjump, lbd) = self.analyze(conflict);
                 // Update the Glucose EMA restart state from this conflict — the glue
@@ -1056,7 +1255,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                 self.sink.add_clause(&learned)?;
                 if learned.is_empty() {
                     self.report_progress();
-                    return Ok(StreamingProofOutcome::Unsat);
+                    return Ok(SearchOutcome::Unsat);
                 }
                 let asserting = learned[0];
                 let clause_id = self.alloc_clause(&learned);
@@ -1074,6 +1273,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                 self.lbd.push(lbd);
                 self.cla_activity.push(0.0);
                 self.deleted.push(false);
+                self.learned.push(true);
                 self.learned_live += 1;
                 self.bump_clause(clause_id);
                 self.backtrack_to(backjump);
@@ -1115,6 +1315,39 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                     }
                     continue;
                 }
+                // Assumption installation (MiniSat's `search`): while assumption
+                // levels remain, the next decision is the next assumption rather
+                // than a VSIDS pick. Placed after the restart check and before
+                // `pick_branch`, exactly where MiniSat puts it, so a restart that
+                // backtracks to level 0 simply re-installs them. With no
+                // assumptions the guard is `0 < 0` and the whole block is dead —
+                // the one-shot trajectory is unchanged.
+                if self.decision_level() < assumptions.len() {
+                    let p = assumptions[self.decision_level()];
+                    match self.value(p) {
+                        // Already true: push an empty decision level so the level
+                        // numbering keeps matching the assumption index. No literal
+                        // is enqueued, so `propagate` finds nothing and no conflict
+                        // can be reported *at* a level like this.
+                        Some(true) => {
+                            self.trail_lim.push(self.trail.len());
+                        }
+                        // Already false: the assumption set is inconsistent with the
+                        // clause database. Report the failed-assumption core; this is
+                        // NOT a refutation of the formula, so no empty clause is
+                        // emitted and no proof step is recorded.
+                        Some(false) => {
+                            let failed = self.analyze_final(p);
+                            self.report_progress();
+                            return Ok(SearchOutcome::UnsatUnderAssumptions(failed));
+                        }
+                        None => {
+                            self.trail_lim.push(self.trail.len());
+                            self.enqueue(p, None);
+                        }
+                    }
+                    continue;
+                }
                 if let Some(var) = self.pick_branch() {
                     self.trail_lim.push(self.trail.len());
                     let positive =
@@ -1129,7 +1362,7 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
                 } else {
                     let values = self.assign.iter().map(|v| v.unwrap_or(false)).collect();
                     self.report_progress();
-                    return Ok(StreamingProofOutcome::Sat(CnfAssignment::new(values)));
+                    return Ok(SearchOutcome::Sat(CnfAssignment::new(values)));
                 }
             }
         }
@@ -1335,6 +1568,58 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
         }
     }
 
+    /// `MiniSat`'s `analyzeFinal`, specialised to the assumption case: `p` is an
+    /// assumption literal that is currently **false**, and the result is the
+    /// subset of the installed assumptions sufficient to falsify it — the
+    /// failed-assumption core.
+    ///
+    /// The walk is the standard one: seed with `p`'s variable, scan the trail
+    /// from the top down to the start of decision level 1, and for each seen
+    /// variable either record it (when it is a decision — during assumption
+    /// installation every decision *is* an assumption) or mark the rest of its
+    /// reason clause. Level-0 literals are entailed by the clause database alone
+    /// and are excluded both by the `trail_lim[0]` bound and by the explicit
+    /// `level > 0` test.
+    ///
+    /// The returned core is a *claim*, and the incremental wrapper's callers
+    /// check it: re-solving under the core alone must still be unsatisfiable.
+    fn analyze_final(&self, p: CnfLit) -> Vec<CnfLit> {
+        let mut failed = vec![p];
+        if self.decision_level() == 0 {
+            // `p` is false at level 0: the clause database alone entails `not p`,
+            // so `p` on its own is the whole core.
+            return failed;
+        }
+        let mut seen = vec![false; self.assign.len()];
+        seen[p.var().index()] = true;
+        let bound = self.trail_lim[0];
+        let mut index = self.trail.len();
+        while index > bound {
+            index -= 1;
+            let var = self.trail[index];
+            if !seen[var] {
+                continue;
+            }
+            match self.reason[var] {
+                None => failed.push(self.true_literal(var)),
+                Some(cid) => {
+                    // Slot 0 holds the implied literal; the rest are its
+                    // antecedents (the invariant `propagate` and the learned-clause
+                    // enqueue both maintain).
+                    let len = self.clause_len(cid);
+                    for slot in 1..len {
+                        let q = self.lit_at(cid, slot);
+                        if self.level[q.var().index()] > 0 {
+                            seen[q.var().index()] = true;
+                        }
+                    }
+                }
+            }
+            seen[var] = false;
+        }
+        failed
+    }
+
     /// An abstraction of a variable's decision level as a single-bit mask
     /// (`MiniSat`'s `abstractLevel`). The union of these masks over a clause's
     /// literals lets [`Self::lit_redundant`] short-circuit: a reason literal
@@ -1464,12 +1749,14 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
     /// Bumps a learned clause's activity, rescaling all clause activities (and
     /// `cla_inc`) if it overflows the cap (preserving their relative order).
     fn bump_clause(&mut self, cid: usize) {
-        if cid < self.num_original {
+        if !self.learned[cid] {
             return; // only learned clauses carry activity
         }
         self.cla_activity[cid] += self.cla_inc;
         if self.cla_activity[cid] > CLAUSE_RESCALE_LIMIT {
-            for a in &mut self.cla_activity[self.num_original..] {
+            // Rescaling problem clauses too is a no-op: they are never bumped,
+            // so their activity is 0.0 and `0.0 * CLAUSE_RESCALE == 0.0`.
+            for a in &mut self.cla_activity {
                 *a *= CLAUSE_RESCALE;
             }
             self.cla_inc *= CLAUSE_RESCALE;
@@ -1516,9 +1803,10 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
     /// abandons the search, since a proof missing its deletions would not replay.
     fn reduce_db(&mut self) -> Result<(), ProofSinkError> {
         // Candidates for deletion: live, learned, non-glue, non-locked clauses.
-        let mut candidates: Vec<CRef> = (self.num_original..self.headers.len())
+        let mut candidates: Vec<CRef> = (0..self.headers.len())
             .filter(|&cid| {
-                !self.deleted[cid]
+                self.learned[cid]
+                    && !self.deleted[cid]
                     && self.clause_len(cid) > 2
                     && self.lbd[cid] > GLUE_LBD
                     && !self.is_locked(cid)
@@ -1620,6 +1908,8 @@ impl<'sink, S: DratSink> Cdcl<'sink, S> {
         None
     }
 }
+
+pub mod incremental;
 
 #[cfg(test)]
 mod tests {
@@ -2575,6 +2865,7 @@ mod tests {
         cdcl.lbd.push(4); // distinct levels among ¬a,¬b,¬c,d (d will be @3)
         cdcl.cla_activity.push(0.0);
         cdcl.deleted.push(false);
+        cdcl.learned.push(true); // parallel to `headers`; `reduce_db` reads it
         cdcl.learned_live += 1;
         cdcl.enqueue(dlit(4), Some(cid)); // d@3, reason = cid → cid is LOCKED
         assert!(cdcl.is_locked(cid), "setup: the clause must be locked");
