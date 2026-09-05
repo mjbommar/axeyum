@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	84
+COUNT	92
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -70,12 +70,20 @@ FN	numberfield::two_squares	Option<TwoSquaresCertificate>
 FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
 FN	permgroup::PermutationGroup::cayley_table	Result<CayleyTableCertificate, PermgroupError>
 FN	permgroup::PermutationGroup::center	Result<(PermutationGroup, CenterCertificate), PermgroupError>
+FN	permgroup::PermutationGroup::conjugacy_classes	Result<ConjugacyClassCertificate, PermgroupError>
 FN	permgroup::PermutationGroup::contains	MembershipCertificate
 FN	permgroup::PermutationGroup::cosets	Result<CosetCertificate, PermgroupError>
 FN	permgroup::PermutationGroup::derived_subgroup	Result<(PermutationGroup, DerivedSubgroupCertificate), PermgroupError>
 FN	permgroup::PermutationGroup::is_abelian	AbelianCertificate
 FN	permgroup::PermutationGroup::orbit_stabilizer	Option<(PermutationGroup, OrbitStabilizerCertificate)>
 FN	permgroup::PermutationGroup::order_certificate	&OrderCertificate
+FN	permgroup_sylow::PermutationGroup::invariants	Result<InvariantsCertificate, PermgroupError>
+FN	permgroup_sylow::PermutationGroup::is_normal	Result<NormalityCertificate, PermgroupError>
+FN	permgroup_sylow::PermutationGroup::normal_closure	Result<(PermutationGroup, NormalClosureCertificate), PermgroupError>
+FN	permgroup_sylow::PermutationGroup::quotient_order	Result<QuotientOrderCertificate, PermgroupError>
+FN	permgroup_sylow::PermutationGroup::sylow_count	Result<SylowCountCertificate, PermgroupError>
+FN	permgroup_sylow::PermutationGroup::sylow_subgroup	Result<(PermutationGroup, SylowCertificate), PermgroupError>
+FN	permgroup_sylow::distinguish	Result<DistinguishCertificate, PermgroupError>
 FN	probability::Continuous::mean	Certificate
 FN	probability::Continuous::mgf	Certificate
 FN	probability::Continuous::total_mass	Certificate
@@ -119,12 +127,14 @@ VOCAB	ClosedFormReport	struct
 VOCAB	CoefficientAsymptotics	struct
 VOCAB	CompositeCertificate	struct
 VOCAB	ConicFiveCertificate	struct
+VOCAB	ConjugacyClassCertificate	struct
 VOCAB	CosetCertificate	struct
 VOCAB	CrtCertificate	enum
 VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
 VOCAB	DerivedSubgroupCertificate	struct
 VOCAB	DistancePreservingCertificate	struct
+VOCAB	DistinguishCertificate	struct
 VOCAB	DnfDecision	enum
 VOCAB	DnfRefutationCertificate	struct
 VOCAB	DnfSampleCertificate	struct
@@ -143,6 +153,7 @@ VOCAB	GosperEvidence	enum
 VOCAB	HalfDegreeParitySplitReport	struct
 VOCAB	HomologyCertificate	struct
 VOCAB	HomologyReport	struct
+VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
 VOCAB	IvtCertificate	struct
@@ -150,6 +161,8 @@ VOCAB	LyapunovCertificate	struct
 VOCAB	MembershipCertificate	enum
 VOCAB	MvtCertificate	struct
 VOCAB	NormTraceCertificate	struct
+VOCAB	NormalClosureCertificate	struct
+VOCAB	NormalityCertificate	enum
 VOCAB	OrbitStabilizerCertificate	struct
 VOCAB	OrderCertificate	struct
 VOCAB	PRecursiveCertificate	struct
@@ -157,6 +170,7 @@ VOCAB	PartialFractionCertificate	struct
 VOCAB	PrattCertificate	struct
 VOCAB	ProjectionCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
+VOCAB	QuotientOrderCertificate	struct
 VOCAB	RadiusCertificate	struct
 VOCAB	RationalGeneratingFunction	struct
 VOCAB	RationalityCertificate	struct
@@ -164,6 +178,8 @@ VOCAB	RecurrenceCertificate	struct
 VOCAB	RefutationCertificate	struct
 VOCAB	SampleCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
+VOCAB	SylowCertificate	struct
+VOCAB	SylowCountCertificate	struct
 VOCAB	SymbolicClosedFormReport	struct
 VOCAB	TaylorCertificate	struct
 VOCAB	TelescopingCertificate	struct
