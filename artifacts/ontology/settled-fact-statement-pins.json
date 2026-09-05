@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2302,
+    "min_identity_bound": 2306,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -9923,6 +9923,20 @@
       "language": "lean4",
       "statement_sha256": "210db133eb79fcc182391a6c2eebbaa908e7aa79615091479174cc92c11385a9",
       "prose_sha256": "8e10c5c025c730879904bad95905a83c12e26b56b3fa61d239997fb84e8dc76d"
+    },
+    {
+      "fact_id": "F:law-of-cosines-over-constructed-plane",
+      "language": "lean4",
+      "statement_sha256": "cea1ed43d46d8dc9a560bf34fc81faac9f8a3b9974c936c76ee1b65e26d2fa6f",
+      "prose_sha256": "f824f3fbd5f4a54cfedc015b24536d0455ac7672cf5f7916c39c902999e78e62",
+      "kernel_theorem": "CPoint.law_of_cosines"
+    },
+    {
+      "fact_id": "F:law-of-sines-over-constructed-plane",
+      "language": "lean4",
+      "statement_sha256": "91edb669ec57c2f663dbacf5ca4b40eaa01eba73ed434b84f6ef6eb4f2ea7f9b",
+      "prose_sha256": "69c47fec497bf919297d324bce598fecbc99cca58b7c62aa8a1d1f1fd588e8ae",
+      "kernel_theorem": "CPoint.law_of_sines"
     },
     {
       "fact_id": "F:lean-kernel-accepts-the-whole-constructed-real-carrier",
@@ -20805,6 +20819,13 @@
       ]
     },
     {
+      "fact_id": "F:plane-isometries-and-the-doubling-non-example",
+      "language": "lean4",
+      "statement_sha256": "de369d807a0b0247cda246328932b5fd96bb114d401edc306ef63c576739e36e",
+      "prose_sha256": "22be73e98dea47fd9330558b4cb8e199fe047c5bf1f91fe4e47ce99ed35d8df5",
+      "kernel_theorem": "CPoint.not_isometry_scale_two"
+    },
+    {
       "fact_id": "F:prodrange-collapses-under-a-fixed-point-free-involution",
       "language": "lean4",
       "statement_sha256": "88fdbfcea09ae9de7df3a96222c817a532f2405f8a19717a4fbd9f9de3980cd0",
@@ -20835,6 +20856,13 @@
           "statement_sha256": "339812f315c5b96bd62ebb514b0cabb7d6af4b145b689faefd446f72faab4581"
         }
       ]
+    },
+    {
+      "fact_id": "F:pythagorean-identity-for-the-plane-angle",
+      "language": "lean4",
+      "statement_sha256": "b4c55adc3f0072d18001f2e81535dda80245daeccfd77bf20e351e1095e45237",
+      "prose_sha256": "9545f28c1ebb23de43166b87e5fef7dd9c186453bae9adbfc353393daf9da37c",
+      "kernel_theorem": "CPoint.sin_sq_add_cos_sq"
     },
     {
       "fact_id": "F:qf-nia-univariate-unsat-is-certified",
