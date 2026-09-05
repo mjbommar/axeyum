@@ -986,7 +986,7 @@ impl Kernel {
                 continue;
             }
             if real_inductives.contains(name)
-                && let Some(block) = self.render_real_inductive(*name)
+                && let Some(block) = self.render_real_inductive(*name, at_consts)
             {
                 out.append_owned(block);
                 let _ = out.write_char('\n');
@@ -1045,7 +1045,18 @@ impl Kernel {
     /// which this writer does not emit), when its stored type does not open
     /// `num_params` parameter binders, or when a constructor type does not open
     /// the same parameter prefix.
-    fn render_real_inductive(&self, ind: NameId) -> Option<String> {
+    ///
+    /// `at_consts` is the module's `@`-application set and is threaded in for
+    /// the same reason [`Self::write_decl_command_with_at`] takes it: a
+    /// constructor *type* may itself apply a recursor whose motive Lean makes
+    /// implicit, and rendering it positionally without `@` leaves the motive as
+    /// a metavariable. Until 2026-09-05 this function used an EMPTY set, so
+    /// every such constructor was mis-rendered. Measured on the whole `creal`
+    /// carrier: `AxNat.Primrec`'s `prec` constructor applies `AxNat.rec.{1}`
+    /// inside its type, and Lean answered `Application type mismatch … in the
+    /// application rec ?m.2 ?m.3 …` (ADR-1675). No fixture reached it because
+    /// every golden inductive's constructor types are recursor-free.
+    fn render_real_inductive(&self, ind: NameId, at_consts: &BTreeSet<NameId>) -> Option<String> {
         let Some(Declaration::Inductive {
             name,
             uparams,
@@ -1065,7 +1076,6 @@ impl Kernel {
             return None;
         }
         let num_params = usize::from(num_params);
-        let no_at_consts = BTreeSet::new();
         // `I` itself is a local variable inside its own declaration block.
         let locals: BTreeSet<NameId> = std::iter::once(ind).collect();
 
@@ -1078,8 +1088,7 @@ impl Kernel {
                 _ => return None,
             };
             let binder = self.binder_name(binder_name, parameter_binders.len());
-            let rendered =
-                self.render_expr(binder_ty, &mut parameter_binders, &no_at_consts, &locals);
+            let rendered = self.render_expr(binder_ty, &mut parameter_binders, at_consts, &locals);
             let _ = write!(parameters, " ({binder} : {rendered})");
             parameter_binders.push(binder);
             result = body;
@@ -1089,12 +1098,7 @@ impl Kernel {
             self.render_name(name),
             self.render_uparams(&uparams),
             parameters,
-            self.render_expr(
-                result,
-                &mut parameter_binders.clone(),
-                &no_at_consts,
-                &locals
-            )
+            self.render_expr(result, &mut parameter_binders.clone(), at_consts, &locals)
         );
         for &ctor in &ctor_names {
             let Some(Declaration::Constructor { ty: ctor_ty, .. }) = self.environment().get(ctor)
@@ -1113,7 +1117,7 @@ impl Kernel {
                 block,
                 "\n  | {} : {}",
                 self.render_short_ctor_name(ctor),
-                self.render_expr(ctor_result, &mut binders, &no_at_consts, &locals)
+                self.render_expr(ctor_result, &mut binders, at_consts, &locals)
             );
         }
         Some(block)
@@ -2260,6 +2264,12 @@ impl Kernel {
             let _ = out.write_str(name);
             return;
         }
+        if self.sort_needs_parens(expression) {
+            let _ = out.write_char('(');
+            self.write_expr_with_shares(out, expression, binders, at_consts, view);
+            let _ = out.write_char(')');
+            return;
+        }
         match self.expr_node(expression) {
             ExprNode::BVar(_)
             | ExprNode::FVar(_)
@@ -2413,6 +2423,30 @@ impl Kernel {
         }
     }
 
+    /// Whether `expression` is a `Sort u` that renders as **two tokens** and so
+    /// must be parenthesized wherever an atom is expected.
+    ///
+    /// `Sort u` is written `Sort (u)`: the keyword and its level are separate
+    /// tokens, so `f Sort (1) g` is Lean's syntax for `f` applied to *three*
+    /// arguments, not for `f (Sort 1) g`. Measured 2026-09-05 on the whole
+    /// `creal` carrier rendered as Lean source: `CatS.PtAlg`'s body is
+    /// `Sigma.{1, 0} Sort (1) (fun …)`, which Lean rejected, and the
+    /// `Unknown identifier CatS.PtAlg` cascade behind it accounted for the
+    /// first 9 of 100 errors and every dependent of that definition
+    /// (ADR-1675). The corpus that existed before could not reach it: every
+    /// golden module's `Sort` sits in a binder or a declaration type, where it
+    /// is already delimited.
+    ///
+    /// Level 0 renders as the single token `Prop`, which needs nothing, so this
+    /// is false for it — which is also why no committed golden module's bytes
+    /// move.
+    fn sort_needs_parens(&self, expression: ExprId) -> bool {
+        match self.expr_node(expression) {
+            ExprNode::Sort(level) => self.render_level(*level) != "0",
+            _ => false,
+        }
+    }
+
     /// Render an expression, wrapping it in parentheses when it is a compound form
     /// (so it can sit as a function head or argument without re-association).
     fn render_expr_atom(
@@ -2422,6 +2456,9 @@ impl Kernel {
         at_consts: &std::collections::BTreeSet<NameId>,
         locals: &std::collections::BTreeSet<NameId>,
     ) -> String {
+        if self.sort_needs_parens(id) {
+            return format!("({})", self.render_expr(id, binders, at_consts, locals));
+        }
         match self.expr_node(id) {
             ExprNode::BVar(_)
             | ExprNode::FVar(_)
