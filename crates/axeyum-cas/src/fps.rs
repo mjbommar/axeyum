@@ -1297,15 +1297,19 @@ mod tests {
         );
     }
 
+    // The two order guards on `Inverse` are checked separately: a certificate
+    // whose *series* is off-order and one whose *inverse* is off-order. With a
+    // single test where both are off-order, either guard alone still rejects it
+    // and neither is individually falsifiable.
+
     #[test]
-    fn forged_inverse_claiming_a_lower_truncation_order_is_refused_as_order_mismatch() {
-        // The coefficients are correct; only the declared order is wrong, so
-        // nothing but the order guard can catch this.
+    fn forged_inverse_whose_series_carries_a_different_order_is_refused() {
+        // Coefficients are correct and the identity holds at the claimed order;
+        // only the series' own truncation disagrees with the claim.
         let one_minus_x = FormalPowerSeries::from_coefficients(&rats(&[1, -1]), 6);
-        let (inverse, _) = one_minus_x.inverse().expect("invertible");
         let certificate = TruncationIdentity::Inverse {
             series: one_minus_x,
-            inverse,
+            inverse: FormalPowerSeries::from_coefficients(&rats(&[1; 6]), 5),
             order: 5,
         };
         assert_eq!(
@@ -1313,6 +1317,95 @@ mod tests {
             Err(CertificateError::OrderMismatch {
                 expected: 5,
                 found: 6
+            })
+        );
+    }
+
+    #[test]
+    fn forged_inverse_whose_inverse_carries_a_different_order_is_refused() {
+        let one_minus_x = FormalPowerSeries::from_coefficients(&rats(&[1, -1]), 5);
+        let certificate = TruncationIdentity::Inverse {
+            series: one_minus_x,
+            inverse: FormalPowerSeries::from_coefficients(&rats(&[1; 7]), 6),
+            order: 5,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 5,
+                found: 6
+            })
+        );
+    }
+
+    #[test]
+    fn forged_reversion_whose_series_carries_a_different_order_is_refused() {
+        let f = FormalPowerSeries::from_coefficients(&rats(&[0, 1, -1]), 6);
+        let (g, _) = f.reversion().expect("revertible");
+        let certificate = TruncationIdentity::Reversion {
+            series: f,
+            reversion: g.truncated(5),
+            order: 5,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 5,
+                found: 6
+            })
+        );
+    }
+
+    #[test]
+    fn forged_reversion_whose_reversion_carries_a_different_order_is_refused() {
+        let f = FormalPowerSeries::from_coefficients(&rats(&[0, 1, -1]), 6);
+        let (g, _) = f.reversion().expect("revertible");
+        let certificate = TruncationIdentity::Reversion {
+            series: f.truncated(5),
+            reversion: g,
+            order: 5,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 5,
+                found: 6
+            })
+        );
+    }
+
+    #[test]
+    fn forged_rational_expansion_whose_expansion_carries_a_different_order_is_refused() {
+        // (1−x)·(1+x+x²+…) ≡ 1 over every degree the claim covers, so only the
+        // expansion's own truncation order gives this away.
+        let certificate = TruncationIdentity::RationalExpansion {
+            numerator: rats(&[1, 0, 0, 0]),
+            denominator: rats(&[1, -1]),
+            expansion: FormalPowerSeries::from_coefficients(&rats(&[1; 6]), 5),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 3,
+                found: 5
+            })
+        );
+    }
+
+    #[test]
+    fn forged_rational_expansion_with_a_denominator_past_the_truncation_is_refused() {
+        let certificate = TruncationIdentity::RationalExpansion {
+            numerator: rats(&[1, 0, 0, 0]),
+            denominator: rats(&[1, -1, 0, 0, 0]),
+            expansion: FormalPowerSeries::from_coefficients(&rats(&[1, 1, 1, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DataPastTruncation {
+                supplied: 5,
+                order: 3
             })
         );
     }
