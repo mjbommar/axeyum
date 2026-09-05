@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	76
+COUNT	78
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -32,6 +32,8 @@ FN	fps::FormalPowerSeries::reversion	Option<(FormalPowerSeries, TruncationIdenti
 FN	fps::RecurrenceCertificate::new	RecurrenceCertificate
 FN	fps::guess_linear_recurrence	Option<RecurrenceCertificate>
 FN	fps::rational_generating_function	Option<RationalGeneratingFunction>
+FN	geometry_beyond::Conic::through_five_points	Result<(Conic, ConicFiveCertificate), ConicRefusal>
+FN	geometry_beyond::certify_preserves_distance	DistancePreservingCertificate
 FN	geometry_certify::DegenerateWitness::rational	DegenerateWitness
 FN	geometry_json::from_json	Result<GeometryCertificate, String>
 FN	gf2::certify_irreducible	Result<Option<IrreducibilityCertificate>, Gf2Error>
@@ -108,11 +110,13 @@ VOCAB	CertifiedIntegral	struct
 VOCAB	CheckReport	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CompositeCertificate	struct
+VOCAB	ConicFiveCertificate	struct
 VOCAB	CosetCertificate	struct
 VOCAB	CrtCertificate	enum
 VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
 VOCAB	DerivedSubgroupCertificate	struct
+VOCAB	DistancePreservingCertificate	struct
 VOCAB	ElementMinPolyCertificate	struct
 VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
