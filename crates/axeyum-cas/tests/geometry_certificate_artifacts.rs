@@ -398,6 +398,35 @@ fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
                 ("zy", 0, 1),
             ]),
         ),
+        // `tetrahedron-medians-concurrent`, on the locus and harmless. A=(0,0,0),
+        // B=(4,0,0), C=(0,4,0), D=(2,2,0) all have z=0, so `abcd-not-coplanar`
+        // genuinely fails -- and yet the medians from A and B still meet only at
+        // the true centroid (3/2,3/2,0), so 4P = A+B+C+D holds. The committed
+        // counterexample is instead A=(1,1,0), B=(0,0,0), C=(3,0,0), D=(0,3,0),
+        // P=(5,5,0): there A is exactly the centroid of B,C,D, so the median from
+        // A degenerates to every point being "on" it, and P is free to be
+        // anything on the median from B -- which is where this configuration
+        // differs and is why it is harmless while that one is not.
+        (
+            "A=(0,0,0) B=(4,0,0) C=(0,4,0) D=(2,2,0), coplanar but still the true centroid",
+            at(&[
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("az", 0, 1),
+                ("bx", 4, 1),
+                ("by", 0, 1),
+                ("bz", 0, 1),
+                ("cx", 0, 1),
+                ("cy", 4, 1),
+                ("cz", 0, 1),
+                ("dx", 2, 1),
+                ("dy", 2, 1),
+                ("dz", 0, 1),
+                ("px", 3, 2),
+                ("py", 3, 2),
+                ("pz", 0, 1),
+            ]),
+        ),
     ]
 }
 

@@ -14,15 +14,24 @@
 //! land as new corpus entries with committed certificates:
 //!
 //! - [`tetrahedron_medians_concurrent_problem`] — the four medians of a
-//!   tetrahedron (vertex to the centroid of the opposite face) are
-//!   concurrent, stated with three-component vector collinearity
-//!   ([`collinear3`]) exactly as the plane corpus states triangle median
-//!   concurrency with [`crate::geometry_certify::collinear`]. **No
-//!   non-degeneracy condition is used** — like the plane's
-//!   `medians-concurrent`, this is the *incidence* form ("P on median from A
-//!   and from B implies P on medians from C and D"), not the *location* form
-//!   ("P is exactly the centroid"), and the incidence form is an outright
-//!   polynomial identity.
+//!   tetrahedron (vertex to the centroid of the opposite face) meet at the
+//!   centroid `(A+B+C+D)/4`, stated with three-component vector collinearity
+//!   ([`collinear3`]) and one non-degeneracy condition ([`coplanar4`]: the
+//!   four points are not coplanar). **This is measured, not assumed**: the
+//!   plane's `medians-concurrent` states the analogous *incidence* form ("P
+//!   on medians from A and B implies P on medians from C and D")
+//!   unconditionally, and the first attempt here tried the same — this
+//!   route's own search returned a genuine
+//!   [`crate::geometry_certify::ProofOutcome::NotInSaturatedIdeal`] (a
+//!   14-term nonzero remainder, 138.8 s), not a budget decline. The reason the
+//!   plane case needs nothing while space does: two **distinct** lines in a
+//!   plane always meet in exactly one point (or are parallel, admitting no
+//!   solution), but two lines in space can **coincide**, and then every point
+//!   on the shared line spuriously satisfies both median hypotheses. So this
+//!   is the *location* form instead (mirroring the plane's
+//!   `centroid-divides-medians`, which needs the analogous "triangle
+//!   non-degenerate" condition for exactly this reason), with a committed
+//!   [`DegenerateWitness`] exhibiting the coincident-median failure mode.
 //! - [`tetrahedron_circumcenter_problem`] — the six perpendicular-bisector
 //!   *planes* of a tetrahedron's edges meet at a common point: "P equidistant
 //!   from A & B, from B & C, and from C & D" already forces P equidistant from
@@ -98,17 +107,34 @@
 //!
 //! # Cost profile (ADVISORY, not a committed benchmark)
 //!
-//! The largest certified reduction here is [`conic_polar_is_tangent_problem`]:
-//! 13 coordinate variables (6 conic coefficients, 3+3 homogeneous point
-//! coordinates, 1 line parameter), 2 hypothesis generators, 1 conclusion. It
-//! certifies via direct substitution — the cofactors are the constant `1` and
-//! the linear `2t` — so no Gröbner search runs at all; wall-clock time was not
-//! separately measured beyond the crate's ordinary `--lib` test run (well
-//! under a second per `cargo test -p axeyum-cas --lib geometry_beyond::`
-//! invocation on this host). The tetrahedron theorems are smaller still (10
-//! and 12 coordinate variables respectively, 2–3 hypotheses, both settle by
-//! constant cofactors). None of the three approached
-//! [`crate::geometry_certify::geometry_limits`]'s ceilings.
+//! Measured via `cargo run -p axeyum-cas --release --example
+//! emit_geometry_certificates -- <id>` (the same emitter and timing the plane
+//! corpus's own doc comments quote):
+//!
+//! - [`tetrahedron_circumcenter_problem`] (13 coordinate variables, 3
+//!   hypotheses, 3 conclusions, no non-degeneracy): **30.2 ms**, release.
+//! - [`conic_polar_is_tangent_problem`] (13 coordinate variables — 6 conic
+//!   coefficients, 3+3 homogeneous point coordinates, 1 line parameter — 2
+//!   hypotheses, 1 conclusion, no non-degeneracy): **239.2 ms**, release. Both
+//!   settle by direct substitution (constant or linear cofactors, `1` and
+//!   `2t` for the conic case) — no Gröbner search runs at all.
+//! - [`tetrahedron_medians_concurrent_problem`] (15 coordinate variables, 6
+//!   hypotheses, 3 conclusions, 1 non-degeneracy condition): release timing
+//!   not separately captured in this pass, but well under
+//!   [`crate::geometry_certify::geometry_limits`]'s ceilings — the search
+//!   settles by constant cofactors once the coplanarity condition is
+//!   available. **The debug-mode cost is the interesting number**: the
+//!   *first* (incidence-form, ultimately abandoned) statement of this theorem
+//!   ran for over 500 s of sustained CPU under a debug `cargo test` before it
+//!   was killed and re-measured in release, where it returned in 138.8 s —
+//!   consistent with this crate's own documented debug/release gap
+//!   (`docs/contributor-guide/prelude-build-cost.md`'s "up to 32×" note is
+//!   about the Lean kernel, not this crate, but the same order of magnitude
+//!   showed up here). Use `--release` for anything beyond a quick correctness
+//!   check on a Gröbner-search-backed theorem.
+//!
+//! None of the three approached the ceilings themselves (no `Declined` on a
+//! resource reason).
 
 use std::collections::BTreeMap;
 
@@ -190,13 +216,23 @@ fn as_rational(expr: &CasExpr) -> Option<Rational> {
 
 /// Whether a [`CasExpr`] is certified equal to zero.
 fn is_certified_zero(expr: &CasExpr) -> bool {
-    matches!(equal(expr, &CasExpr::int(0)), ZeroTest::Certified { equal: true, .. })
+    matches!(
+        equal(expr, &CasExpr::int(0)),
+        ZeroTest::Certified { equal: true, .. }
+    )
 }
 
 impl Conic {
     /// The conic `a·x² + b·x·y + c·y² + d·x + e·y + f = 0`.
     #[must_use]
-    pub fn new(a: Rational, b: Rational, c: Rational, d: Rational, e: Rational, f: Rational) -> Conic {
+    pub fn new(
+        a: Rational,
+        b: Rational,
+        c: Rational,
+        d: Rational,
+        e: Rational,
+        f: Rational,
+    ) -> Conic {
         Conic { a, b, c, d, e, f }
     }
 
@@ -293,10 +329,11 @@ impl Conic {
         if is_certified_zero(&determinant) {
             return Some(ConicKind::Degenerate);
         }
-        let discriminant = self
-            .b
-            .checked_mul(self.b)?
-            .checked_sub(Rational::integer(4).checked_mul(self.a)?.checked_mul(self.c)?)?;
+        let discriminant = self.b.checked_mul(self.b)?.checked_sub(
+            Rational::integer(4)
+                .checked_mul(self.a)?
+                .checked_mul(self.c)?,
+        )?;
         Some(if discriminant.is_zero() {
             ConicKind::Parabola
         } else if discriminant.numerator() < 0 {
@@ -314,8 +351,16 @@ impl Conic {
     /// coefficients `[a,b,c,d,e,f]` pass through all five points exactly when
     /// they lie in this null space, so a unique conic (up to scale) exists
     /// exactly when the null space is one-dimensional.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ConicRefusal::Overflow`] on `i128` coefficient overflow, or
+    /// [`ConicRefusal::NotInGeneralPosition`] when the five points do not
+    /// determine a unique conic.
     #[must_use]
-    pub fn through_five_points(points: &[Point; 5]) -> Result<(Conic, ConicFiveCertificate), ConicRefusal> {
+    pub fn through_five_points(
+        points: &[Point; 5],
+    ) -> Result<(Conic, ConicFiveCertificate), ConicRefusal> {
         let mut rows = Vec::with_capacity(5);
         for point in points {
             let x = point.x();
@@ -493,7 +538,10 @@ impl Point3 {
 /// ([`join`], [`meet`]) — a plane normal from two in-plane vectors, a
 /// projective line from two points, or a projective point from two lines are
 /// all this one computation, unified here.
-fn cross3(u: (Rational, Rational, Rational), v: (Rational, Rational, Rational)) -> Option<(Rational, Rational, Rational)> {
+fn cross3(
+    u: (Rational, Rational, Rational),
+    v: (Rational, Rational, Rational),
+) -> Option<(Rational, Rational, Rational)> {
     let (u1, u2, u3) = u;
     let (v1, v2, v3) = v;
     let a = u2.checked_mul(v3)?.checked_sub(u3.checked_mul(v2)?)?;
@@ -751,15 +799,28 @@ impl Sphere {
 /// cancels, leaving a linear equation per point). `None` if the points are
 /// coplanar (no unique sphere) or on overflow.
 #[must_use]
-pub fn sphere_through_four_points(p1: &Point3, p2: &Point3, p3: &Point3, p4: &Point3) -> Option<Sphere> {
-    let norm_sq = |p: &Point3| -> Option<Rational> { p.x.checked_mul(p.x)?.checked_add(p.y.checked_mul(p.y)?)?.checked_add(p.z.checked_mul(p.z)?) };
+pub fn sphere_through_four_points(
+    p1: &Point3,
+    p2: &Point3,
+    p3: &Point3,
+    p4: &Point3,
+) -> Option<Sphere> {
+    let norm_sq = |p: &Point3| -> Option<Rational> {
+        p.x.checked_mul(p.x)?
+            .checked_add(p.y.checked_mul(p.y)?)?
+            .checked_add(p.z.checked_mul(p.z)?)
+    };
     let n1 = norm_sq(p1)?;
     let row = |p: &Point3| -> Option<Vec<CasExpr>> {
         let two = Rational::integer(2);
         let dx = two.checked_mul(p.x.checked_sub(p1.x)?)?;
         let dy = two.checked_mul(p.y.checked_sub(p1.y)?)?;
         let dz = two.checked_mul(p.z.checked_sub(p1.z)?)?;
-        Some(vec![CasExpr::Const(dx), CasExpr::Const(dy), CasExpr::Const(dz)])
+        Some(vec![
+            CasExpr::Const(dx),
+            CasExpr::Const(dy),
+            CasExpr::Const(dz),
+        ])
     };
     let rhs_value = |p: &Point3| -> Option<Rational> { norm_sq(p)?.checked_sub(n1) };
     let matrix = Matrix::from_rows(vec![row(p2)?, row(p3)?, row(p4)?])?;
@@ -996,13 +1057,30 @@ impl Isometry {
     /// The isometry `p ↦ [[m00,m01],[m10,m11]]·p + (tx,ty)`, or the reason it
     /// was refused: the linear part must be exactly orthogonal (its columns
     /// exactly orthonormal), checked by exact rational arithmetic.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IsometryRefusal::Overflow`] on `i128` overflow while checking
+    /// orthogonality, or [`IsometryRefusal::NotOrthogonal`] when the linear
+    /// part is not exactly orthogonal.
     #[must_use]
-    pub fn new(m00: Rational, m01: Rational, m10: Rational, m11: Rational, tx: Rational, ty: Rational) -> Result<Isometry, IsometryRefusal> {
+    pub fn new(
+        m00: Rational,
+        m01: Rational,
+        m10: Rational,
+        m11: Rational,
+        tx: Rational,
+        ty: Rational,
+    ) -> Result<Isometry, IsometryRefusal> {
         let orthogonal = (|| -> Option<bool> {
             let column1 = m00.checked_mul(m00)?.checked_add(m10.checked_mul(m10)?)?;
             let column2 = m01.checked_mul(m01)?.checked_add(m11.checked_mul(m11)?)?;
             let cross = m00.checked_mul(m01)?.checked_add(m10.checked_mul(m11)?)?;
-            Some(column1 == Rational::integer(1) && column2 == Rational::integer(1) && cross.is_zero())
+            Some(
+                column1 == Rational::integer(1)
+                    && column2 == Rational::integer(1)
+                    && cross.is_zero(),
+            )
         })();
         match orthogonal {
             None => Err(IsometryRefusal::Overflow),
@@ -1034,6 +1112,10 @@ impl Isometry {
     /// The rotation about the origin by the angle with `(cos, sin)`, refused
     /// unless `cos² + sin² = 1` exactly (a "Pythagorean angle" — e.g.
     /// `(3/5, 4/5)`).
+    ///
+    /// # Errors
+    ///
+    /// See [`Isometry::new`].
     #[must_use]
     pub fn rotation(cos: Rational, sin: Rational) -> Result<Isometry, IsometryRefusal> {
         let neg_sin = sin.checked_neg().ok_or(IsometryRefusal::Overflow)?;
@@ -1043,8 +1125,15 @@ impl Isometry {
     /// The reflection about the line through the origin at angle `θ/2`, where
     /// `(cos θ, sin θ)` is the given Pythagorean angle: matrix
     /// `[[cos,sin],[sin,−cos]]`, determinant `−1`.
+    ///
+    /// # Errors
+    ///
+    /// See [`Isometry::new`].
     #[must_use]
-    pub fn reflection_through_origin(cos: Rational, sin: Rational) -> Result<Isometry, IsometryRefusal> {
+    pub fn reflection_through_origin(
+        cos: Rational,
+        sin: Rational,
+    ) -> Result<Isometry, IsometryRefusal> {
         let neg_cos = cos.checked_neg().ok_or(IsometryRefusal::Overflow)?;
         Isometry::new(cos, sin, sin, neg_cos, Rational::zero(), Rational::zero())
     }
@@ -1076,14 +1165,24 @@ impl Isometry {
     /// for an orthogonal matrix). `None` on overflow.
     #[must_use]
     pub fn determinant(&self) -> Option<Rational> {
-        self.m00.checked_mul(self.m11)?.checked_sub(self.m01.checked_mul(self.m10)?)
+        self.m00
+            .checked_mul(self.m11)?
+            .checked_sub(self.m01.checked_mul(self.m10)?)
     }
 
     /// `M·p + t`, or `None` on overflow.
     #[must_use]
     pub fn apply(&self, p: &Point) -> Option<Point> {
-        let x = self.m00.checked_mul(p.x())?.checked_add(self.m01.checked_mul(p.y())?)?.checked_add(self.tx)?;
-        let y = self.m10.checked_mul(p.x())?.checked_add(self.m11.checked_mul(p.y())?)?.checked_add(self.ty)?;
+        let x = self
+            .m00
+            .checked_mul(p.x())?
+            .checked_add(self.m01.checked_mul(p.y())?)?
+            .checked_add(self.tx)?;
+        let y = self
+            .m10
+            .checked_mul(p.x())?
+            .checked_add(self.m11.checked_mul(p.y())?)?
+            .checked_add(self.ty)?;
         Some(Point::new(x, y))
     }
 
@@ -1093,12 +1192,32 @@ impl Isometry {
     /// see the module tests — but not assumed away).
     #[must_use]
     pub fn compose(&self, other: &Isometry) -> Option<Isometry> {
-        let m00 = self.m00.checked_mul(other.m00)?.checked_add(self.m01.checked_mul(other.m10)?)?;
-        let m01 = self.m00.checked_mul(other.m01)?.checked_add(self.m01.checked_mul(other.m11)?)?;
-        let m10 = self.m10.checked_mul(other.m00)?.checked_add(self.m11.checked_mul(other.m10)?)?;
-        let m11 = self.m10.checked_mul(other.m01)?.checked_add(self.m11.checked_mul(other.m11)?)?;
-        let tx = self.m00.checked_mul(other.tx)?.checked_add(self.m01.checked_mul(other.ty)?)?.checked_add(self.tx)?;
-        let ty = self.m10.checked_mul(other.tx)?.checked_add(self.m11.checked_mul(other.ty)?)?.checked_add(self.ty)?;
+        let m00 = self
+            .m00
+            .checked_mul(other.m00)?
+            .checked_add(self.m01.checked_mul(other.m10)?)?;
+        let m01 = self
+            .m00
+            .checked_mul(other.m01)?
+            .checked_add(self.m01.checked_mul(other.m11)?)?;
+        let m10 = self
+            .m10
+            .checked_mul(other.m00)?
+            .checked_add(self.m11.checked_mul(other.m10)?)?;
+        let m11 = self
+            .m10
+            .checked_mul(other.m01)?
+            .checked_add(self.m11.checked_mul(other.m11)?)?;
+        let tx = self
+            .m00
+            .checked_mul(other.tx)?
+            .checked_add(self.m01.checked_mul(other.ty)?)?
+            .checked_add(self.tx)?;
+        let ty = self
+            .m10
+            .checked_mul(other.tx)?
+            .checked_add(self.m11.checked_mul(other.ty)?)?
+            .checked_add(self.ty)?;
         Isometry::new(m00, m01, m10, m11, tx, ty).ok()
     }
 
@@ -1111,8 +1230,14 @@ impl Isometry {
         let m01 = self.m10;
         let m10 = self.m01;
         let m11 = self.m11;
-        let tx = m00.checked_mul(self.tx)?.checked_add(m01.checked_mul(self.ty)?)?.checked_neg()?;
-        let ty = m10.checked_mul(self.tx)?.checked_add(m11.checked_mul(self.ty)?)?.checked_neg()?;
+        let tx = m00
+            .checked_mul(self.tx)?
+            .checked_add(m01.checked_mul(self.ty)?)?
+            .checked_neg()?;
+        let ty = m10
+            .checked_mul(self.tx)?
+            .checked_add(m11.checked_mul(self.ty)?)?
+            .checked_neg()?;
         Isometry::new(m00, m01, m10, m11, tx, ty).ok()
     }
 
@@ -1158,10 +1283,16 @@ impl Isometry {
             let vx = as_rational(direction.get(0, 0)?)?;
             let vy = as_rational(direction.get(1, 0)?)?;
             let norm_sq = vx.checked_mul(vx)?.checked_add(vy.checked_mul(vy)?)?;
-            let along = self.tx.checked_mul(vx)?.checked_add(self.ty.checked_mul(vy)?)?;
+            let along = self
+                .tx
+                .checked_mul(vx)?
+                .checked_add(self.ty.checked_mul(vy)?)?;
             let scale = along.checked_div(norm_sq)?;
             let parallel = (scale.checked_mul(vx)?, scale.checked_mul(vy)?);
-            let perpendicular = (self.tx.checked_sub(parallel.0)?, self.ty.checked_sub(parallel.1)?);
+            let perpendicular = (
+                self.tx.checked_sub(parallel.0)?,
+                self.ty.checked_sub(parallel.1)?,
+            );
             let half = Rational::new(1, 2);
             let axis_p0 = Point::new(
                 half.checked_mul(perpendicular.0)?,
@@ -1213,14 +1344,22 @@ pub fn certify_preserves_distance(iso: &Isometry) -> DistancePreservingCertifica
     let qx = CasExpr::Var("qx".into());
     let qy = CasExpr::Var("qy".into());
     let apply = |x: &CasExpr, y: &CasExpr| -> (CasExpr, CasExpr) {
-        let ax = CasExpr::Const(iso.m00) * x.clone() + CasExpr::Const(iso.m01) * y.clone() + CasExpr::Const(iso.tx);
-        let ay = CasExpr::Const(iso.m10) * x.clone() + CasExpr::Const(iso.m11) * y.clone() + CasExpr::Const(iso.ty);
+        let ax = CasExpr::Const(iso.m00) * x.clone()
+            + CasExpr::Const(iso.m01) * y.clone()
+            + CasExpr::Const(iso.tx);
+        let ay = CasExpr::Const(iso.m10) * x.clone()
+            + CasExpr::Const(iso.m11) * y.clone()
+            + CasExpr::Const(iso.ty);
         (ax, ay)
     };
     let (apx, apy) = apply(&px, &py);
     let (aqx, aqy) = apply(&qx, &qy);
-    let dist_sq_before = (px.clone() - qx.clone()).clone() * (px - qx) + (py.clone() - qy.clone()) * (py - qy);
-    let dist_sq_after = (apx.clone() - aqx.clone()) * (apx - aqx) + (apy.clone() - aqy.clone()) * (apy - aqy);
+    let dx = px - qx;
+    let dy = py - qy;
+    let dist_sq_before = dx.clone() * dx + dy.clone() * dy;
+    let adx = apx - aqx;
+    let ady = apy - aqy;
+    let dist_sq_after = adx.clone() * adx + ady.clone() * ady;
     DistancePreservingCertificate {
         difference: dist_sq_after - dist_sq_before,
     }
@@ -1320,6 +1459,17 @@ pub fn collinear3(first: &Pt3, second: &Pt3, third: &Pt3) -> Option<[MvPoly; 3]>
     Some([cross.x, cross.y, cross.z])
 }
 
+/// `A`, `B`, `C`, `D` are coplanar: the scalar triple product
+/// `(B−A) · ((C−A) × (D−A))` vanishes. `None` on overflow.
+#[must_use]
+pub fn coplanar4(a: &Pt3, b: &Pt3, c: &Pt3, d: &Pt3) -> Option<MvPoly> {
+    let u = b.sub(a)?;
+    let v = c.sub(a)?;
+    let w = d.sub(a)?;
+    let cross = cross3_mv(&v, &w)?;
+    dot3(&u, &cross)
+}
+
 /// `|AB| = |CD|`, stated on squared distances so it stays polynomial. `None`
 /// on overflow.
 #[must_use]
@@ -1371,7 +1521,10 @@ impl HPt {
 /// The cross product of two symbolic homogeneous triples, `None` on overflow.
 /// The shared computation behind [`hjoin`] and [`hmeet`] — join and meet are
 /// the same operation, dual.
-fn cross3_mv_triple(first: (&MvPoly, &MvPoly, &MvPoly), second: (&MvPoly, &MvPoly, &MvPoly)) -> Option<(MvPoly, MvPoly, MvPoly)> {
+fn cross3_mv_triple(
+    first: (&MvPoly, &MvPoly, &MvPoly),
+    second: (&MvPoly, &MvPoly, &MvPoly),
+) -> Option<(MvPoly, MvPoly, MvPoly)> {
     let (x1, y1, z1) = first;
     let (x2, y2, z2) = second;
     let a = y1.mul(z2)?.sub(&z1.mul(y2)?)?;
@@ -1398,7 +1551,10 @@ pub fn hmeet(l: &(MvPoly, MvPoly, MvPoly), m: &(MvPoly, MvPoly, MvPoly)) -> Opti
 /// at a symbolic point. `None` on overflow.
 #[must_use]
 pub fn hincidence(line: &(MvPoly, MvPoly, MvPoly), p: &HPt) -> Option<MvPoly> {
-    line.0.mul(&p.x)?.add(&line.1.mul(&p.y)?)?.add(&line.2.mul(&p.w)?)
+    line.0
+        .mul(&p.x)?
+        .add(&line.1.mul(&p.y)?)?
+        .add(&line.2.mul(&p.w)?)
 }
 
 /// `P`, `Q`, `R` are collinear (incident to a common line): `R` is incident
@@ -1459,10 +1615,19 @@ pub fn conic_quadratic_form(conic: &SymConic, p: &HPt) -> Option<MvPoly> {
 pub fn conic_bilinear(conic: &SymConic, p: &HPt, q: &HPt) -> Option<MvPoly> {
     let half = MvPoly::constant(Rational::new(1, 2));
     let t1 = conic.a.mul(&p.x)?.mul(&q.x)?;
-    let t2 = conic.b.mul(&half)?.mul(&p.x.mul(&q.y)?.add(&p.y.mul(&q.x)?)?)?;
+    let t2 = conic
+        .b
+        .mul(&half)?
+        .mul(&p.x.mul(&q.y)?.add(&p.y.mul(&q.x)?)?)?;
     let t3 = conic.c.mul(&p.y)?.mul(&q.y)?;
-    let t4 = conic.dd.mul(&half)?.mul(&p.x.mul(&q.w)?.add(&p.w.mul(&q.x)?)?)?;
-    let t5 = conic.ee.mul(&half)?.mul(&p.y.mul(&q.w)?.add(&p.w.mul(&q.y)?)?)?;
+    let t4 = conic
+        .dd
+        .mul(&half)?
+        .mul(&p.x.mul(&q.w)?.add(&p.w.mul(&q.x)?)?)?;
+    let t5 = conic
+        .ee
+        .mul(&half)?
+        .mul(&p.y.mul(&q.w)?.add(&p.w.mul(&q.y)?)?)?;
     let t6 = conic.ff.mul(&p.w)?.mul(&q.w)?;
     t1.add(&t2)?.add(&t3)?.add(&t4)?.add(&t5)?.add(&t6)
 }
@@ -1478,7 +1643,9 @@ pub fn conic_bilinear(conic: &SymConic, p: &HPt, q: &HPt) -> Option<MvPoly> {
 fn at(entries: &[(&str, i128, i128)]) -> BTreeMap<String, Rational> {
     entries
         .iter()
-        .map(|(name, numerator, denominator)| ((*name).to_string(), Rational::new(*numerator, *denominator)))
+        .map(|(name, numerator, denominator)| {
+            ((*name).to_string(), Rational::new(*numerator, *denominator))
+        })
         .collect()
 }
 
@@ -1494,8 +1661,28 @@ fn gloss3(points: &[(&str, &str)]) -> Vec<(String, String)> {
 }
 
 /// The four medians of a tetrahedron (vertex to the centroid of the opposite
-/// face) are concurrent, stated in the incidence form. **No non-degeneracy
-/// condition is used** — see the module doc.
+/// face) meet at the centroid `(A+B+C+D)/4`, given the tetrahedron is
+/// non-degenerate.
+///
+/// **Measured, not assumed.** The natural first attempt was the *incidence*
+/// form the plane's `medians-concurrent` uses unconditionally ("P on the
+/// medians from A and B implies P on the medians from C and D", no
+/// non-degeneracy) — this route's own search over that statement returned a
+/// nonzero 14-term remainder in 138.8 s (release), a genuine
+/// [`crate::geometry_certify::ProofOutcome::NotInSaturatedIdeal`], not a
+/// budget decline. The plane case works unconditionally because two
+/// **distinct** lines in the plane always meet in exactly one point (or are
+/// parallel); in space two lines can instead **coincide**, admitting every
+/// point on the shared line as a spurious solution to both hypotheses, so the
+/// incidence form genuinely needs the tetrahedron to be non-degenerate. This
+/// is therefore the *location* form instead, mirroring the plane's
+/// `centroid-divides-medians` (which needs the analogous "triangle
+/// non-degenerate" condition for exactly the same reason).
+///
+/// # Panics
+///
+/// Panics on `i128` coefficient overflow while building the fixed, small
+/// symbolic polynomials this problem is stated with (never observed here).
 #[must_use]
 pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
     let a = Pt3::free("a");
@@ -1505,12 +1692,17 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
     let p = Pt3::free("p");
     let g_bcd = centroid3(&b, &c, &d).expect("centroid3");
     let g_acd = centroid3(&a, &c, &d).expect("centroid3");
-    let g_abd = centroid3(&a, &b, &d).expect("centroid3");
-    let g_abc = centroid3(&a, &b, &c).expect("centroid3");
     let hyp_a = collinear3(&a, &g_bcd, &p).expect("collinear3");
     let hyp_b = collinear3(&b, &g_acd, &p).expect("collinear3");
-    let concl_c = collinear3(&c, &g_abd, &p).expect("collinear3");
-    let concl_d = collinear3(&d, &g_abc, &p).expect("collinear3");
+    let not_coplanar = coplanar4(&a, &b, &c, &d).expect("coplanar4");
+    let four = MvPoly::constant(Rational::integer(4));
+    let total = a
+        .add(&b)
+        .expect("sum")
+        .add(&c)
+        .expect("sum")
+        .add(&d)
+        .expect("sum");
 
     let axis = ["x", "y", "z"];
     let mut hypotheses = Vec::with_capacity(6);
@@ -1528,45 +1720,85 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
             poly,
         ));
     }
-    let mut conclusions = Vec::with_capacity(6);
-    for (component, poly) in axis.iter().zip(concl_c) {
-        conclusions.push(Constraint::new(
-            &format!("p-on-median-from-c-{component}"),
-            "P is collinear with C and the centroid of ABD (one vector component)",
-            poly,
-        ));
-    }
-    for (component, poly) in axis.iter().zip(concl_d) {
-        conclusions.push(Constraint::new(
-            &format!("p-on-median-from-d-{component}"),
-            "P is collinear with D and the centroid of ABC (one vector component)",
-            poly,
-        ));
-    }
+    let conclusions = vec![
+        Constraint::new(
+            "centroid-x",
+            "4 P.x = A.x + B.x + C.x + D.x",
+            four.mul(&p.x)
+                .expect("product")
+                .sub(&total.x)
+                .expect("difference"),
+        ),
+        Constraint::new(
+            "centroid-y",
+            "4 P.y = A.y + B.y + C.y + D.y",
+            four.mul(&p.y)
+                .expect("product")
+                .sub(&total.y)
+                .expect("difference"),
+        ),
+        Constraint::new(
+            "centroid-z",
+            "4 P.z = A.z + B.z + C.z + D.z",
+            four.mul(&p.z)
+                .expect("product")
+                .sub(&total.z)
+                .expect("difference"),
+        ),
+    ];
 
     GeometryProblem {
         id: "tetrahedron-medians-concurrent".into(),
-        title: "the four medians of a tetrahedron are concurrent".into(),
-        statement: "Let Gbcd, Gacd, Gabd, Gabc be the centroids of the four faces of tetrahedron \
-                    ABCD opposite A, B, C, D respectively. If P is collinear with A and Gbcd, and \
-                    collinear with B and Gacd, then P is collinear with C and Gabd, and with D and \
-                    Gabc. NO non-degeneracy condition is required for this incidence form, exactly \
-                    as the plane's `medians-concurrent`: this states 'P on two medians implies P \
-                    on the other two', not 'P is the centroid (A+B+C+D)/4'."
+        title: "the medians of a tetrahedron meet at the centroid (A+B+C+D)/4".into(),
+        statement: "If A, B, C, D are NOT coplanar, and P lies on the median from A (the line \
+                    through A and the centroid of BCD) and on the median from B (through B and the \
+                    centroid of ACD), then 4P = A + B + C + D -- so P is also on the medians from C \
+                    and D. The non-degeneracy condition is essential: on a degenerate (coplanar) \
+                    tetrahedron the two median LINES can coincide, and every point on the shared \
+                    line then satisfies both hypotheses while only one of them is the true \
+                    centroid. See the function doc for the measured incidence-form attempt that \
+                    failed without this condition."
             .into(),
         coordinate_gloss: gloss3(&[("a", "A"), ("b", "B"), ("c", "C"), ("d", "D"), ("p", "P")]),
         hypotheses,
-        nondegeneracy: Vec::new(),
+        nondegeneracy: vec![Condition::new(
+            "abcd-not-coplanar",
+            "A, B, C, D are not coplanar (the tetrahedron has nonzero volume)",
+            not_coplanar,
+        )],
         conclusions,
-        degenerate_witnesses: Vec::new(),
+        degenerate_witnesses: vec![DegenerateWitness::rational(
+            "abcd-not-coplanar",
+            "A=(1,1,0), B=(0,0,0), C=(3,0,0), D=(0,3,0) are coplanar (all z=0) and A is exactly \
+             the centroid of B,C,D, so the median from A is vacuous (satisfied by every P); P = \
+             (5,5,0) then lies on the median from B (through the origin in direction (1,1,0)) \
+             while 4P = (20,20,0) but A+B+C+D = (4,4,0)",
+            at(&[
+                ("ax", 1, 1), ("ay", 1, 1), ("az", 0, 1),
+                ("bx", 0, 1), ("by", 0, 1), ("bz", 0, 1),
+                ("cx", 3, 1), ("cy", 0, 1), ("cz", 0, 1),
+                ("dx", 0, 1), ("dy", 3, 1), ("dz", 0, 1),
+                ("px", 5, 1), ("py", 5, 1), ("pz", 0, 1),
+            ]),
+        )],
         generic_witnesses: vec![GenericWitness {
             description: "A=(0,0,0), B=(4,0,0), C=(0,4,0), D=(0,0,4), centroid P=(1,1,1)".into(),
             assignment: at(&[
-                ("ax", 0, 1), ("ay", 0, 1), ("az", 0, 1),
-                ("bx", 4, 1), ("by", 0, 1), ("bz", 0, 1),
-                ("cx", 0, 1), ("cy", 4, 1), ("cz", 0, 1),
-                ("dx", 0, 1), ("dy", 0, 1), ("dz", 4, 1),
-                ("px", 1, 1), ("py", 1, 1), ("pz", 1, 1),
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("az", 0, 1),
+                ("bx", 4, 1),
+                ("by", 0, 1),
+                ("bz", 0, 1),
+                ("cx", 0, 1),
+                ("cy", 4, 1),
+                ("cz", 0, 1),
+                ("dx", 0, 1),
+                ("dy", 0, 1),
+                ("dz", 4, 1),
+                ("px", 1, 1),
+                ("py", 1, 1),
+                ("pz", 1, 1),
             ]),
         }],
     }
@@ -1577,6 +1809,11 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
 /// "consecutive" pairs forces equidistance from every other pair. **No
 /// non-degeneracy condition is used** — see the module doc (mirrors the
 /// plane's `orthocentre-altitudes-concurrent`).
+///
+/// # Panics
+///
+/// Panics on `i128` coefficient overflow while building the fixed, small
+/// symbolic polynomials this problem is stated with (never observed here).
 #[must_use]
 pub fn tetrahedron_circumcenter_problem() -> GeometryProblem {
     let a = Pt3::free("a");
@@ -1617,13 +1854,24 @@ pub fn tetrahedron_circumcenter_problem() -> GeometryProblem {
         ],
         degenerate_witnesses: Vec::new(),
         generic_witnesses: vec![GenericWitness {
-            description: "A=(0,0,0), B=(4,0,0), C=(0,4,0), D=(0,0,4), circumcenter P=(2,2,2)".into(),
+            description: "A=(0,0,0), B=(4,0,0), C=(0,4,0), D=(0,0,4), circumcenter P=(2,2,2)"
+                .into(),
             assignment: at(&[
-                ("ax", 0, 1), ("ay", 0, 1), ("az", 0, 1),
-                ("bx", 4, 1), ("by", 0, 1), ("bz", 0, 1),
-                ("cx", 0, 1), ("cy", 4, 1), ("cz", 0, 1),
-                ("dx", 0, 1), ("dy", 0, 1), ("dz", 4, 1),
-                ("px", 2, 1), ("py", 2, 1), ("pz", 2, 1),
+                ("ax", 0, 1),
+                ("ay", 0, 1),
+                ("az", 0, 1),
+                ("bx", 4, 1),
+                ("by", 0, 1),
+                ("bz", 0, 1),
+                ("cx", 0, 1),
+                ("cy", 4, 1),
+                ("cz", 0, 1),
+                ("dx", 0, 1),
+                ("dy", 0, 1),
+                ("dz", 4, 1),
+                ("px", 2, 1),
+                ("py", 2, 1),
+                ("pz", 2, 1),
             ]),
         }],
     }
@@ -1633,6 +1881,11 @@ pub fn tetrahedron_circumcenter_problem() -> GeometryProblem {
 /// algebraic signature of tangency (a double zero at `t = 0` along the polar
 /// direction) — see the module doc for the polarization-identity derivation.
 /// **No non-degeneracy condition is used.**
+///
+/// # Panics
+///
+/// Panics on `i128` coefficient overflow while building the fixed, small
+/// symbolic polynomials this problem is stated with (never observed here).
 #[must_use]
 pub fn conic_polar_is_tangent_problem() -> GeometryProblem {
     let conic = SymConic::free("q");
@@ -1738,26 +1991,18 @@ pub fn beyond_frontier() -> Vec<GeometryProblem> {
 /// enough that certifying a theorem using it (below) is left to future work —
 /// see the module doc.
 fn on_common_conic(points: &[HPt; 6]) -> Option<MvPoly> {
-    let rows: Vec<[MvPoly; 6]> = points
+    let rows: Vec<Vec<MvPoly>> = points
         .iter()
-        .map(|p| -> Option<[MvPoly; 6]> {
+        .map(|p| -> Option<Vec<MvPoly>> {
             // Affine chart (w = 1 in this frontier statement, so points here
             // are plain affine points lifted via HPt::chart -- x2, xy, y2, x, y, 1).
             let x2 = p.x.mul(&p.x)?;
             let xy = p.x.mul(&p.y)?;
             let y2 = p.y.mul(&p.y)?;
-            Some([x2, xy, y2, p.x.clone(), p.y.clone(), p.w.clone()])
+            Some(vec![x2, xy, y2, p.x.clone(), p.y.clone(), p.w.clone()])
         })
-        .collect::<Option<Vec<_>>>()?
-        .try_into()
-        .ok()?;
-    determinant6(&rows)
-}
-
-/// The determinant of a `6 × 6` matrix of [`MvPoly`] rows, by recursive
-/// cofactor expansion along the first row.
-fn determinant6(rows: &[[MvPoly; 6]; 6]) -> Option<MvPoly> {
-    determinant_n(&rows.iter().map(|row| row.to_vec()).collect::<Vec<_>>())
+        .collect::<Option<Vec<_>>>()?;
+    determinant_n(&rows)
 }
 
 /// The determinant of an `n × n` matrix of [`MvPoly`] entries (given as rows),
@@ -1785,16 +2030,31 @@ fn determinant_n(rows: &[Vec<MvPoly>]) -> Option<MvPoly> {
             .collect();
         let minor_det = determinant_n(&minor)?;
         let term = entry.mul(&minor_det)?;
-        total = if col % 2 == 0 { total.add(&term)? } else { total.sub(&term)? };
+        total = if col % 2 == 0 {
+            total.add(&term)?
+        } else {
+            total.sub(&term)?
+        };
     }
     Some(total)
 }
 
 /// Pascal's theorem, stated but not certified — see the module doc.
 fn pascal_hexagon_problem() -> GeometryProblem {
-    let pts: Vec<HPt> = ["a", "b", "c", "d", "e", "f"].iter().map(|name| HPt::free(name)).collect();
+    let pts: Vec<HPt> = ["a", "b", "c", "d", "e", "f"]
+        .iter()
+        .map(|name| HPt::free(name))
+        .collect();
     let [a, b, c, d, e, f]: [HPt; 6] = pts.try_into().expect("six points");
-    let conic = on_common_conic(&[a.clone(), b.clone(), c.clone(), d.clone(), e.clone(), f.clone()]).expect("6x6 determinant");
+    let conic = on_common_conic(&[
+        a.clone(),
+        b.clone(),
+        c.clone(),
+        d.clone(),
+        e.clone(),
+        f.clone(),
+    ])
+    .expect("6x6 determinant");
 
     let x = HPt::free("x");
     let y = HPt::free("y");
@@ -1809,7 +2069,9 @@ fn pascal_hexagon_problem() -> GeometryProblem {
 
     GeometryProblem {
         id: "pascal-hexagon".into(),
-        title: "Pascal's theorem: the diagonal points of a hexagon inscribed in a conic are collinear".into(),
+        title:
+            "Pascal's theorem: the diagonal points of a hexagon inscribed in a conic are collinear"
+                .into(),
         statement: "Let A,B,C,D,E,F lie on a common conic (the 6x6 monomial-vector determinant \
                     vanishes). Let X = AB . DE, Y = BC . EF, Z = CD . FA (the three intersection \
                     points of 'opposite' sides, homogeneous meet). Then X, Y, Z are collinear. \
@@ -1819,18 +2081,40 @@ fn pascal_hexagon_problem() -> GeometryProblem {
                     the module doc."
             .into(),
         coordinate_gloss: vec![
-            ("ax".into(), "A.X".into()), ("ay".into(), "A.Y".into()), ("aw".into(), "A.W".into()),
-            ("bx".into(), "B.X".into()), ("by".into(), "B.Y".into()), ("bw".into(), "B.W".into()),
-            ("cx".into(), "C.X".into()), ("cy".into(), "C.Y".into()), ("cw".into(), "C.W".into()),
-            ("dx".into(), "D.X".into()), ("dy".into(), "D.Y".into()), ("dw".into(), "D.W".into()),
-            ("ex".into(), "E.X".into()), ("ey".into(), "E.Y".into()), ("ew".into(), "E.W".into()),
-            ("fx".into(), "F.X".into()), ("fy".into(), "F.Y".into()), ("fw".into(), "F.W".into()),
-            ("xx".into(), "X.X".into()), ("xy".into(), "X.Y".into()), ("xw".into(), "X.W".into()),
-            ("yx".into(), "Y.X".into()), ("yy".into(), "Y.Y".into()), ("yw".into(), "Y.W".into()),
-            ("zx".into(), "Z.X".into()), ("zy".into(), "Z.Y".into()), ("zw".into(), "Z.W".into()),
+            ("ax".into(), "A.X".into()),
+            ("ay".into(), "A.Y".into()),
+            ("aw".into(), "A.W".into()),
+            ("bx".into(), "B.X".into()),
+            ("by".into(), "B.Y".into()),
+            ("bw".into(), "B.W".into()),
+            ("cx".into(), "C.X".into()),
+            ("cy".into(), "C.Y".into()),
+            ("cw".into(), "C.W".into()),
+            ("dx".into(), "D.X".into()),
+            ("dy".into(), "D.Y".into()),
+            ("dw".into(), "D.W".into()),
+            ("ex".into(), "E.X".into()),
+            ("ey".into(), "E.Y".into()),
+            ("ew".into(), "E.W".into()),
+            ("fx".into(), "F.X".into()),
+            ("fy".into(), "F.Y".into()),
+            ("fw".into(), "F.W".into()),
+            ("xx".into(), "X.X".into()),
+            ("xy".into(), "X.Y".into()),
+            ("xw".into(), "X.W".into()),
+            ("yx".into(), "Y.X".into()),
+            ("yy".into(), "Y.Y".into()),
+            ("yw".into(), "Y.W".into()),
+            ("zx".into(), "Z.X".into()),
+            ("zy".into(), "Z.Y".into()),
+            ("zw".into(), "Z.W".into()),
         ],
         hypotheses: vec![
-            Constraint::new("abcdef-on-conic", "A,B,C,D,E,F lie on a common conic", conic),
+            Constraint::new(
+                "abcdef-on-conic",
+                "A,B,C,D,E,F lie on a common conic",
+                conic,
+            ),
             Constraint::new("x-on-ab", "X is collinear with A and B", hyp_x1),
             Constraint::new("x-on-de", "X is collinear with D and E", hyp_x2),
             Constraint::new("y-on-bc", "Y is collinear with B and C", hyp_y1),
@@ -1839,7 +2123,11 @@ fn pascal_hexagon_problem() -> GeometryProblem {
             Constraint::new("z-on-fa", "Z is collinear with F and A", hyp_z2),
         ],
         nondegeneracy: Vec::new(),
-        conclusions: vec![Constraint::new("xyz-collinear", "X, Y, Z are collinear", conclusion)],
+        conclusions: vec![Constraint::new(
+            "xyz-collinear",
+            "X, Y, Z are collinear",
+            conclusion,
+        )],
         degenerate_witnesses: Vec::new(),
         generic_witnesses: vec![GenericWitness {
             description: "six points on the unit circle (w=1 chart): A=(1,0), B=(0,1), C=(-1,0), \
@@ -1856,7 +2144,9 @@ fn pascal_hexagon_problem() -> GeometryProblem {
 /// over concrete rationals (not the symbolic route), so the assignment is
 /// correct **by construction**, independent of the certifier.
 fn pascal_generic_witness() -> BTreeMap<String, Rational> {
-    let pt = |x: i128, y: i128, xd: i128, yd: i128| -> HPoint { HPoint::finite(Rational::new(x, xd), Rational::new(y, yd)) };
+    let pt = |x: i128, y: i128, xd: i128, yd: i128| -> HPoint {
+        HPoint::finite(Rational::new(x, xd), Rational::new(y, yd))
+    };
     let a = pt(1, 0, 1, 1);
     let b = pt(0, 1, 1, 1);
     let c = pt(-1, 0, 1, 1);
@@ -1867,7 +2157,17 @@ fn pascal_generic_witness() -> BTreeMap<String, Rational> {
     let y = meet(&join(&b, &c).expect("join"), &join(&e, &f).expect("join")).expect("meet");
     let z = meet(&join(&c, &d).expect("join"), &join(&f, &a).expect("join")).expect("meet");
     let mut assignment = BTreeMap::new();
-    for (name, point) in [("a", a), ("b", b), ("c", c), ("d", d), ("e", e), ("f", f), ("x", x), ("y", y), ("z", z)] {
+    for (name, point) in [
+        ("a", a),
+        ("b", b),
+        ("c", c),
+        ("d", d),
+        ("e", e),
+        ("f", f),
+        ("x", x),
+        ("y", y),
+        ("z", z),
+    ] {
         assignment.insert(format!("{name}x"), point.x);
         assignment.insert(format!("{name}y"), point.y);
         assignment.insert(format!("{name}w"), point.w);
@@ -1904,8 +2204,10 @@ fn desargues_problem() -> GeometryProblem {
 
     GeometryProblem {
         id: "desargues-perspective-triangles".into(),
-        title: "Desargues' theorem: perspective from a point implies perspective from a line".into(),
-        statement: "Let O, A, B, C, A', B', C' be projective points with O, A, A' collinear, O, B, \
+        title: "Desargues' theorem: perspective from a point implies perspective from a line"
+            .into(),
+        statement:
+            "Let O, A, B, C, A', B', C' be projective points with O, A, A' collinear, O, B, \
                     B' collinear, and O, C, C' collinear (the triangles ABC and A'B'C' are in \
                     perspective from the point O). Let X = BC . B'C', Y = CA . C'A', Z = AB . A'B' \
                     (the meets of corresponding sides). Then X, Y, Z are collinear (the triangles \
@@ -1917,9 +2219,15 @@ fn desargues_problem() -> GeometryProblem {
                     single-polynomial 'X, Y, Z are each not the coordinate origin', via sum of \
                     squares, but not the disjunctive 'the two triangles are non-degenerate and \
                     distinct' directly)."
-            .into(),
+                .into(),
         coordinate_gloss: [
-            ("o", "O"), ("a", "A"), ("b", "B"), ("c", "C"), ("a2", "A'"), ("b2", "B'"), ("c2", "C'"),
+            ("o", "O"),
+            ("a", "A"),
+            ("b", "B"),
+            ("c", "C"),
+            ("a2", "A'"),
+            ("b2", "B'"),
+            ("c2", "C'"),
         ]
         .iter()
         .flat_map(|(var, label)| {
@@ -1936,7 +2244,11 @@ fn desargues_problem() -> GeometryProblem {
             Constraint::new("o-c-c2-collinear", "O, C, C' are collinear", hyp_oc),
         ],
         nondegeneracy: Vec::new(),
-        conclusions: vec![Constraint::new("xyz-collinear", "X, Y, Z are collinear", conclusion)],
+        conclusions: vec![Constraint::new(
+            "xyz-collinear",
+            "X, Y, Z are collinear",
+            conclusion,
+        )],
         degenerate_witnesses: Vec::new(),
         generic_witnesses: vec![GenericWitness {
             description: "O=(0,0), A=(1,0), B=(0,1), C=(1,1); A'=(2,0), B'=(0,2), C'=(2,2) (each \
@@ -1957,7 +2269,12 @@ fn desargues_generic_witness() -> BTreeMap<String, Rational> {
     let a = HPoint::finite(Rational::integer(1), Rational::zero());
     let b = HPoint::finite(Rational::zero(), Rational::integer(1));
     let c = HPoint::finite(Rational::integer(1), Rational::integer(1));
-    let scale2 = |p: &HPoint| HPoint::finite(Rational::integer(2).checked_mul(p.x).expect("scale"), Rational::integer(2).checked_mul(p.y).expect("scale"));
+    let scale2 = |p: &HPoint| {
+        HPoint::finite(
+            Rational::integer(2).checked_mul(p.x).expect("scale"),
+            Rational::integer(2).checked_mul(p.y).expect("scale"),
+        )
+    };
     let a2 = scale2(&a);
     let b2 = scale2(&b);
     let c2 = scale2(&c);
@@ -1965,7 +2282,18 @@ fn desargues_generic_witness() -> BTreeMap<String, Rational> {
     let y = meet(&join(&c, &a).expect("join"), &join(&c2, &a2).expect("join")).expect("meet");
     let z = meet(&join(&a, &b).expect("join"), &join(&a2, &b2).expect("join")).expect("meet");
     let mut assignment = BTreeMap::new();
-    for (name, point) in [("o", o), ("a", a), ("b", b), ("c", c), ("a2", a2), ("b2", b2), ("c2", c2), ("x", x), ("y", y), ("z", z)] {
+    for (name, point) in [
+        ("o", o),
+        ("a", a),
+        ("b", b),
+        ("c", c),
+        ("a2", a2),
+        ("b2", b2),
+        ("c2", c2),
+        ("x", x),
+        ("y", y),
+        ("z", z),
+    ] {
         assignment.insert(format!("{name}x"), point.x);
         assignment.insert(format!("{name}y"), point.y);
         assignment.insert(format!("{name}w"), point.w);
@@ -1986,7 +2314,11 @@ mod tests {
     }
 
     fn p3(x: i128, y: i128, z: i128) -> Point3 {
-        Point3::new(Rational::integer(x), Rational::integer(y), Rational::integer(z))
+        Point3::new(
+            Rational::integer(x),
+            Rational::integer(y),
+            Rational::integer(z),
+        )
     }
 
     fn certified_equal(a: &CasExpr, b: &CasExpr) -> bool {
@@ -2012,20 +2344,54 @@ mod tests {
 
     #[test]
     fn classify_finds_ellipse_parabola_hyperbola_and_degenerate() {
-        let ellipse = Conic::new(Rational::integer(1), Rational::zero(), Rational::integer(1), Rational::zero(), Rational::zero(), Rational::integer(-1));
+        let ellipse = Conic::new(
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(-1),
+        );
         assert_eq!(ellipse.classify(), Some(ConicKind::Ellipse));
-        let parabola = Conic::new(Rational::integer(1), Rational::zero(), Rational::zero(), Rational::zero(), Rational::integer(-1), Rational::zero());
+        let parabola = Conic::new(
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(-1),
+            Rational::zero(),
+        );
         assert_eq!(parabola.classify(), Some(ConicKind::Parabola));
-        let hyperbola = Conic::new(Rational::integer(1), Rational::zero(), Rational::integer(-1), Rational::zero(), Rational::zero(), Rational::integer(-1));
+        let hyperbola = Conic::new(
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::integer(-1),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(-1),
+        );
         assert_eq!(hyperbola.classify(), Some(ConicKind::Hyperbola));
         // xy = 0: a pair of lines (the axes), degenerate.
-        let degenerate = Conic::new(Rational::zero(), Rational::integer(1), Rational::zero(), Rational::zero(), Rational::zero(), Rational::zero());
+        let degenerate = Conic::new(
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::zero(),
+        );
         assert_eq!(degenerate.classify(), Some(ConicKind::Degenerate));
     }
 
     #[test]
     fn through_five_points_recovers_the_unit_circle() {
-        let points = [p(1, 0), p(0, 1), p(-1, 0), p(0, -1), p(3, 4).midpoint(&p(3, 4))];
+        let points = [
+            p(1, 0),
+            p(0, 1),
+            p(-1, 0),
+            p(0, -1),
+            p(3, 4).midpoint(&p(3, 4)),
+        ];
         // Fifth point: pick one genuinely on the unit circle at (3/5, 4/5)
         // via a rational point, not the accidental midpoint above.
         let points = [points[0], points[1], points[2], points[3], p(0, 0)];
@@ -2047,7 +2413,8 @@ mod tests {
 
     #[test]
     fn circle_as_conic_agrees_with_circle_contains() {
-        let circle = crate::geometry::Circle::through_three(&p(1, 0), &p(0, 1), &p(-1, 0)).expect("circumcircle");
+        let circle = crate::geometry::Circle::through_three(&p(1, 0), &p(0, 1), &p(-1, 0))
+            .expect("circumcircle");
         let conic = Conic::circle_as_conic(&circle).expect("conic");
         assert!(conic.on_conic(&p(0, -1)));
         assert!(!conic.on_conic(&p(0, 0)));
@@ -2080,7 +2447,8 @@ mod tests {
 
     #[test]
     fn plane_through_three_points_contains_a_fourth_coplanar_point() {
-        let plane = Plane::through_three_points(&p3(0, 0, 0), &p3(1, 0, 0), &p3(0, 1, 0)).expect("plane");
+        let plane =
+            Plane::through_three_points(&p3(0, 0, 0), &p3(1, 0, 0), &p3(0, 1, 0)).expect("plane");
         assert!(plane.contains(&p3(5, -3, 0)));
         assert!(!plane.contains(&p3(0, 0, 1)));
         assert!(Plane::through_three_points(&p3(0, 0, 0), &p3(1, 0, 0), &p3(2, 0, 0)).is_none());
@@ -2088,7 +2456,13 @@ mod tests {
 
     #[test]
     fn distance_point_plane_of_the_xy_plane_from_a_unit_height_point() {
-        let plane = Plane::new(Rational::zero(), Rational::zero(), Rational::integer(1), Rational::zero()).expect("plane");
+        let plane = Plane::new(
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+        )
+        .expect("plane");
         let distance = distance_point_plane(&plane, &p3(0, 0, 1)).expect("distance");
         assert!(certified_equal(&distance, &CasExpr::int(1)));
     }
@@ -2096,26 +2470,50 @@ mod tests {
     #[test]
     fn intersection_line_plane_of_the_z_axis_and_the_xy_plane_is_the_origin() {
         let line = Line3::through(&p3(0, 0, -1), &p3(0, 0, 1)).expect("line");
-        let plane = Plane::new(Rational::zero(), Rational::zero(), Rational::integer(1), Rational::zero()).expect("plane");
+        let plane = Plane::new(
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+        )
+        .expect("plane");
         assert_eq!(intersection_line_plane(&line, &plane), Some(p3(0, 0, 0)));
     }
 
     #[test]
     fn intersection_line_plane_is_none_when_parallel() {
         let line = Line3::through(&p3(0, 0, 1), &p3(1, 0, 1)).expect("line");
-        let plane = Plane::new(Rational::zero(), Rational::zero(), Rational::integer(1), Rational::zero()).expect("plane");
+        let plane = Plane::new(
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+        )
+        .expect("plane");
         assert_eq!(intersection_line_plane(&line, &plane), None);
     }
 
     #[test]
     fn coplanar_detects_four_points_in_the_xy_plane_and_rejects_a_fifth_off_it() {
-        assert!(coplanar(&p3(0, 0, 0), &p3(1, 0, 0), &p3(0, 1, 0), &p3(1, 1, 0)));
-        assert!(!coplanar(&p3(0, 0, 0), &p3(1, 0, 0), &p3(0, 1, 0), &p3(0, 0, 1)));
+        assert!(coplanar(
+            &p3(0, 0, 0),
+            &p3(1, 0, 0),
+            &p3(0, 1, 0),
+            &p3(1, 1, 0)
+        ));
+        assert!(!coplanar(
+            &p3(0, 0, 0),
+            &p3(1, 0, 0),
+            &p3(0, 1, 0),
+            &p3(0, 0, 1)
+        ));
     }
 
     #[test]
     fn sphere_through_four_points_recovers_the_unit_sphere() {
-        let sphere = sphere_through_four_points(&p3(1, 0, 0), &p3(-1, 0, 0), &p3(0, 1, 0), &p3(0, 0, 1)).expect("sphere");
+        let sphere =
+            sphere_through_four_points(&p3(1, 0, 0), &p3(-1, 0, 0), &p3(0, 1, 0), &p3(0, 0, 1))
+                .expect("sphere");
         assert_eq!(sphere.center(), p3(0, 0, 0));
         assert_eq!(sphere.radius_squared(), Rational::integer(1));
         assert!(sphere.contains(&p3(0, -1, 0)));
@@ -2124,7 +2522,10 @@ mod tests {
 
     #[test]
     fn sphere_through_four_points_refuses_coplanar_points() {
-        assert!(sphere_through_four_points(&p3(0, 0, 0), &p3(1, 0, 0), &p3(0, 1, 0), &p3(1, 1, 0)).is_none());
+        assert!(
+            sphere_through_four_points(&p3(0, 0, 0), &p3(1, 0, 0), &p3(0, 1, 0), &p3(1, 1, 0))
+                .is_none()
+        );
     }
 
     #[test]
@@ -2162,8 +2563,16 @@ mod tests {
 
     #[test]
     fn meet_of_two_parallel_lines_is_a_point_at_infinity() {
-        let horizontal = join(&HPoint::finite(Rational::zero(), Rational::zero()), &HPoint::finite(Rational::integer(1), Rational::zero())).expect("join");
-        let shifted = join(&HPoint::finite(Rational::zero(), Rational::integer(1)), &HPoint::finite(Rational::integer(1), Rational::integer(1))).expect("join");
+        let horizontal = join(
+            &HPoint::finite(Rational::zero(), Rational::zero()),
+            &HPoint::finite(Rational::integer(1), Rational::zero()),
+        )
+        .expect("join");
+        let shifted = join(
+            &HPoint::finite(Rational::zero(), Rational::integer(1)),
+            &HPoint::finite(Rational::integer(1), Rational::integer(1)),
+        )
+        .expect("join");
         let at_infinity = meet(&horizontal, &shifted).expect("meet");
         assert!(at_infinity.is_infinite());
     }
@@ -2176,9 +2585,16 @@ mod tests {
 
     #[test]
     fn to_affine_divides_by_w_and_is_none_at_infinity() {
-        let point = HPoint::new(Rational::integer(4), Rational::integer(6), Rational::integer(2));
+        let point = HPoint::new(
+            Rational::integer(4),
+            Rational::integer(6),
+            Rational::integer(2),
+        );
         assert_eq!(point.to_affine(), Some(p(2, 3)));
-        assert_eq!(HPoint::at_infinity(Rational::integer(1), Rational::integer(0)).to_affine(), None);
+        assert_eq!(
+            HPoint::at_infinity(Rational::integer(1), Rational::integer(0)).to_affine(),
+            None
+        );
     }
 
     // --- Isometries ----------------------------------------------------------
@@ -2197,26 +2613,42 @@ mod tests {
     #[test]
     fn a_reflection_fixes_its_axis_and_classifies_as_reflection() {
         // Reflection about the x-axis: cos=1, sin=0.
-        let reflection = Isometry::reflection_through_origin(Rational::integer(1), Rational::zero()).expect("orthogonal");
+        let reflection =
+            Isometry::reflection_through_origin(Rational::integer(1), Rational::zero())
+                .expect("orthogonal");
         assert_eq!(reflection.apply(&p(3, 4)), Some(p(3, -4)));
         assert_eq!(reflection.apply(&p(7, 0)), Some(p(7, 0)));
-        assert!(matches!(reflection.classify(), Some(IsometryKind::Reflection(_))));
+        assert!(matches!(
+            reflection.classify(),
+            Some(IsometryKind::Reflection(_))
+        ));
     }
 
     #[test]
     fn a_reflection_composed_with_a_translation_along_its_axis_is_a_glide() {
-        let reflection = Isometry::reflection_through_origin(Rational::integer(1), Rational::zero()).expect("orthogonal");
-        let glide = reflection.translate(Rational::integer(2), Rational::zero()).expect("translate");
+        let reflection =
+            Isometry::reflection_through_origin(Rational::integer(1), Rational::zero())
+                .expect("orthogonal");
+        let glide = reflection
+            .translate(Rational::integer(2), Rational::zero())
+            .expect("translate");
         assert!(matches!(glide.classify(), Some(IsometryKind::Glide(_))));
         // A translation purely PERPENDICULAR to the axis stays a pure reflection.
-        let still_reflection = reflection.translate(Rational::zero(), Rational::integer(2)).expect("translate");
-        assert!(matches!(still_reflection.classify(), Some(IsometryKind::Reflection(_))));
+        let still_reflection = reflection
+            .translate(Rational::zero(), Rational::integer(2))
+            .expect("translate");
+        assert!(matches!(
+            still_reflection.classify(),
+            Some(IsometryKind::Reflection(_))
+        ));
     }
 
     #[test]
     fn compose_of_two_pythagorean_rotations_is_a_rotation() {
-        let first = Isometry::rotation(Rational::new(3, 5), Rational::new(4, 5)).expect("orthogonal");
-        let second = Isometry::rotation(Rational::new(3, 5), Rational::new(-4, 5)).expect("orthogonal");
+        let first =
+            Isometry::rotation(Rational::new(3, 5), Rational::new(4, 5)).expect("orthogonal");
+        let second =
+            Isometry::rotation(Rational::new(3, 5), Rational::new(-4, 5)).expect("orthogonal");
         let composed = first.compose(&second).expect("compose");
         // (3/5,4/5) composed with its conjugate is the identity rotation.
         assert_eq!(composed.classify(), Some(IsometryKind::Translation));
@@ -2225,26 +2657,41 @@ mod tests {
 
     #[test]
     fn inverse_of_a_pythagorean_rotation_undoes_it() {
-        let rotation = Isometry::rotation(Rational::new(3, 5), Rational::new(4, 5)).expect("orthogonal");
+        let rotation =
+            Isometry::rotation(Rational::new(3, 5), Rational::new(4, 5)).expect("orthogonal");
         let inverse = rotation.inverse().expect("inverse");
-        let round_trip = inverse.apply(&rotation.apply(&p(11, -2)).expect("apply")).expect("apply");
+        let round_trip = inverse
+            .apply(&rotation.apply(&p(11, -2)).expect("apply"))
+            .expect("apply");
         assert_eq!(round_trip, p(11, -2));
     }
 
     #[test]
     fn a_non_orthogonal_matrix_is_refused() {
-        let refusal = Isometry::new(Rational::integer(2), Rational::zero(), Rational::zero(), Rational::integer(1), Rational::zero(), Rational::zero())
-            .expect_err("scaling is not an isometry");
+        let refusal = Isometry::new(
+            Rational::integer(2),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::zero(),
+        )
+        .expect_err("scaling is not an isometry");
         assert_eq!(refusal, IsometryRefusal::NotOrthogonal);
     }
 
     #[test]
     fn isometry_preserves_distance_certificate_verifies_for_a_rotation_reflection_and_glide() {
-        let rotation = Isometry::rotation(Rational::new(3, 5), Rational::new(4, 5)).expect("orthogonal");
+        let rotation =
+            Isometry::rotation(Rational::new(3, 5), Rational::new(4, 5)).expect("orthogonal");
         assert!(certify_preserves_distance(&rotation).verify());
-        let reflection = Isometry::reflection_through_origin(Rational::integer(1), Rational::zero()).expect("orthogonal");
+        let reflection =
+            Isometry::reflection_through_origin(Rational::integer(1), Rational::zero())
+                .expect("orthogonal");
         assert!(certify_preserves_distance(&reflection).verify());
-        let glide = reflection.translate(Rational::integer(2), Rational::zero()).expect("translate");
+        let glide = reflection
+            .translate(Rational::integer(2), Rational::zero())
+            .expect("translate");
         assert!(certify_preserves_distance(&glide).verify());
     }
 
@@ -2256,10 +2703,13 @@ mod tests {
         let py = CasExpr::Var("py".into());
         let qx = CasExpr::Var("qx".into());
         let qy = CasExpr::Var("qy".into());
+        let dx = px.clone() - qx.clone();
+        let dy = py.clone() - qy.clone();
+        let dist_sq_before = dx.clone() * dx + dy.clone() * dy;
         let scale = CasExpr::int(2);
-        let dist_sq_before = (px.clone() - qx.clone()) * (px.clone() - qx.clone()) + (py.clone() - qy.clone()) * (py.clone() - qy.clone());
-        let dist_sq_after = ((px.clone() * scale.clone() - qx.clone() * scale.clone()) * (px * scale.clone() - qx * scale.clone()))
-            + ((py.clone() * scale.clone() - qy.clone() * scale.clone()) * (py * scale.clone() - qy * scale));
+        let sdx = (px * scale.clone()) - (qx * scale.clone());
+        let sdy = (py * scale.clone()) - (qy * scale);
+        let dist_sq_after = sdx.clone() * sdx + sdy.clone() * sdy;
         let forged = DistancePreservingCertificate {
             difference: dist_sq_after - dist_sq_before,
         };
@@ -2270,12 +2720,20 @@ mod tests {
 
     #[test]
     fn a_point_not_on_a_conic_is_refused_by_on_conic_with_a_distinct_reason_from_overflow() {
-        let conic = Conic::new(Rational::integer(1), Rational::zero(), Rational::integer(1), Rational::zero(), Rational::zero(), Rational::integer(-1));
+        let conic = Conic::new(
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(-1),
+        );
         assert!(!conic.on_conic(&p(2, 2)));
     }
 
     #[test]
-    fn a_swapped_saturation_condition_on_a_tampered_certificate_is_rejected_with_a_generator_reason() {
+    fn a_swapped_saturation_condition_on_a_tampered_certificate_is_rejected_with_a_generator_reason()
+     {
         let problem = tetrahedron_circumcenter_problem();
         let outcome = certify_any_route(&problem, geometry_limits());
         let mut certificate = match outcome {
@@ -2296,7 +2754,11 @@ mod tests {
         for witness in &problem.generic_witnesses {
             for hypothesis in &problem.hypotheses {
                 assert!(
-                    hypothesis.poly.evaluate(&witness.assignment).expect("assigned").is_zero(),
+                    hypothesis
+                        .poly
+                        .evaluate(&witness.assignment)
+                        .expect("assigned")
+                        .is_zero(),
                     "{}: generic witness violates `{}`",
                     problem.id,
                     hypothesis.id
@@ -2304,7 +2766,11 @@ mod tests {
             }
             for conclusion in &problem.conclusions {
                 assert!(
-                    conclusion.poly.evaluate(&witness.assignment).expect("assigned").is_zero(),
+                    conclusion
+                        .poly
+                        .evaluate(&witness.assignment)
+                        .expect("assigned")
+                        .is_zero(),
                     "{}: generic witness falsifies `{}`",
                     problem.id,
                     conclusion.id
@@ -2319,7 +2785,11 @@ mod tests {
         assert_eq!(entries.len(), 2);
         for problem in &entries {
             witnesses_are_consistent(problem);
-            assert!(!problem.conclusions.is_empty(), "{}: concludes nothing", problem.id);
+            assert!(
+                !problem.conclusions.is_empty(),
+                "{}: concludes nothing",
+                problem.id
+            );
         }
     }
 
