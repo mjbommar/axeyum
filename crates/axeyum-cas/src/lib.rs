@@ -2507,21 +2507,18 @@ impl BigRatFunc {
     /// `self + other = (a·d + c·b) / (b·d)`; `None` when `budget` runs out or on
     /// `u32` exponent overflow (coefficients cannot overflow here).
     fn add(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
-        Some(BigRatFunc {
-            num: self
-                .num
-                .mul_within(&other.den, budget)?
-                .add_within(&other.num.mul_within(&self.den, budget)?, budget)?,
-            den: self.den.mul_within(&other.den, budget)?,
-        })
+        let ad = self.num.mul_within(&other.den, budget)?;
+        let cb = other.num.mul_within(&self.den, budget)?;
+        let num = ad.add_within(&cb, budget)?;
+        let den = self.den.mul_within(&other.den, budget)?;
+        Some(BigRatFunc { num, den })
     }
 
     /// `self · other = (a·c) / (b·d)`.
     fn mul(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
-        Some(BigRatFunc {
-            num: self.num.mul_within(&other.num, budget)?,
-            den: self.den.mul_within(&other.den, budget)?,
-        })
+        let num = self.num.mul_within(&other.num, budget)?;
+        let den = self.den.mul_within(&other.den, budget)?;
+        Some(BigRatFunc { num, den })
     }
 
     /// `−self = (−a) / b`. Negation rewrites coefficients in place and costs no
@@ -2535,10 +2532,9 @@ impl BigRatFunc {
 
     /// `self^exp`.
     fn pow(&self, exp: u32, budget: &mut u64) -> Option<BigRatFunc> {
-        Some(BigRatFunc {
-            num: self.num.pow_within(exp, budget)?,
-            den: self.den.pow_within(exp, budget)?,
-        })
+        let num = self.num.pow_within(exp, budget)?;
+        let den = self.den.pow_within(exp, budget)?;
+        Some(BigRatFunc { num, den })
     }
 
     /// `self / other = (a·d) / (b·c)`; `None` on a division by the identically
@@ -2547,10 +2543,9 @@ impl BigRatFunc {
         if other.num.is_zero() {
             return None;
         }
-        Some(BigRatFunc {
-            num: self.num.mul_within(&other.den, budget)?,
-            den: self.den.mul_within(&other.num, budget)?,
-        })
+        let num = self.num.mul_within(&other.den, budget)?;
+        let den = self.den.mul_within(&other.num, budget)?;
+        Some(BigRatFunc { num, den })
     }
 }
 
@@ -2691,16 +2686,16 @@ fn equal_core_unbounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     // One budget for the whole test: both normal forms and the
     // cross-multiplication. See `BIG_FALLBACK_WORK_BUDGET`.
     let mut budget = BIG_FALLBACK_WORK_BUDGET;
-    let (Some(ra), Some(rb)) = (
-        normalize_rational_big_within(a, &mut budget),
-        normalize_rational_big_within(b, &mut budget),
-    ) else {
+    let Some(ra) = normalize_rational_big_within(a, &mut budget) else {
         return ZeroTest::Unknown;
     };
-    let (Some(ad), Some(cb)) = (
-        ra.num.mul_within(&rb.den, &mut budget),
-        rb.num.mul_within(&ra.den, &mut budget),
-    ) else {
+    let Some(rb) = normalize_rational_big_within(b, &mut budget) else {
+        return ZeroTest::Unknown;
+    };
+    let Some(ad) = ra.num.mul_within(&rb.den, &mut budget) else {
+        return ZeroTest::Unknown;
+    };
+    let Some(cb) = rb.num.mul_within(&ra.den, &mut budget) else {
         return ZeroTest::Unknown;
     };
     let difference = ad.sub(&cb);
