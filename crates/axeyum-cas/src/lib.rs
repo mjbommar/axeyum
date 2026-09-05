@@ -42,9 +42,19 @@
 //! zero-test is decidable and exact, so every answer here is `certified` in the
 //! sense of
 //! [decidability-map.md](../../../docs/research/10-cas/decidability-map.md):
-//! `equal` returns a re-checkable polynomial witness. Overflow of the underlying
-//! `i128` rational arithmetic is reported as an honest [`ZeroTest::Unknown`],
-//! never a wrong answer.
+//! `equal` returns a re-checkable polynomial witness.
+//!
+//! # Coefficient width
+//!
+//! [`normalize`] and [`expand`] compute in exact `i128` rationals and report an
+//! overflow as `None`; `(x+1)^132` is the first binomial power they decline.
+//! [`equal`] does **not** stop there: when the bounded normal form overflows it
+//! retries the same cross-multiplication over unbounded integers
+//! ([ADR-1670](../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md)),
+//! so `(x+1)^80·(x+1)^80 = (x+1)^160` — an identity whose inputs and answer are
+//! both small and whose intermediates are not — decides. What the fallback
+//! cannot decide it declines: an honest [`ZeroTest::Unknown`], never a wrong
+//! answer.
 
 use std::collections::{BTreeMap, BTreeSet};
 

@@ -1,4 +1,16 @@
-//! The unbounded-integer polynomial ring the multivariate GCD computes in.
+//! The unbounded-integer polynomial ring the multivariate GCD computes in —
+//! and, since [ADR-1670], the ring the zero-test retries in when its bounded
+//! normal form overflows.
+//!
+//! Both callers are the same shape of problem stated at different scales: a
+//! computation whose *inputs* and *answer* both fit `i128` while the work in
+//! between does not. For the GCD it is a pseudo-remainder sequence; for the
+//! zero-test it is the expansion of a product whose terms cancel. `BigPoly` is
+//! shared by both rather than duplicated, and `BigRatFunc` in `lib.rs` reaches
+//! rational coefficients without a rational coefficient *type* by carrying a
+//! separate integer denominator polynomial.
+//!
+//! [ADR-1670]: ../../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
 //!
 //! # Why this module exists
 //!
