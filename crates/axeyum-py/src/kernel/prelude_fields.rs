@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1382 names,
+/// The `NatPrelude` field table (1391 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1682,6 +1682,24 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             (
                 "finset_forall_subset_of_search",
                 p.finset_forall_subset_of_search,
+            ),
+            ("finset_empty", p.finset_empty),
+            ("finset_mem_b_empty", p.finset_mem_b_empty),
+            ("finset_card_empty", p.finset_card_empty),
+            ("finset_mem_b_singleton", p.finset_mem_b_singleton),
+            ("finset_mem_b_singleton_self", p.finset_mem_b_singleton_self),
+            (
+                "finset_eq_of_mem_b_singleton",
+                p.finset_eq_of_mem_b_singleton,
+            ),
+            ("finset_card_singleton", p.finset_card_singleton),
+            (
+                "finset_card_eq_zero_of_no_mem_b",
+                p.finset_card_eq_zero_of_no_mem_b,
+            ),
+            (
+                "finset_exists_mem_b_of_card_pos",
+                p.finset_exists_mem_b_of_card_pos,
             ),
             ("strong_induction", p.strong_induction),
             ("strong_induction_eq", p.strong_induction_eq),
