@@ -595,8 +595,9 @@ pub fn solve_with_native_core_timeout(
 /// `conflict_limit` is the native core's deterministic search budget, in
 /// **conflicts** — a solver-independent unit, unlike the retired adapter's
 /// private progress-check polls. Exhausting it returns [`SatResult::Unknown`],
-/// never a guessed verdict; a level-zero contradiction may still be decided
-/// without consuming a conflict.
+/// never a guessed verdict. `Some(0)` admits no search at all and therefore
+/// always returns `unknown`: that is the "encode but do not solve" contract
+/// `resource_limit = 0` carries elsewhere in the tree.
 ///
 /// # Errors
 ///
@@ -4904,8 +4905,7 @@ mod tests {
     };
     #[cfg(feature = "batsat-reference")]
     use super::{
-        RustSatBatsatSolver, rustsat_batsat_determinism, solve_with_rustsat_batsat,
-        solve_with_rustsat_batsat_limits,
+        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
     };
 
     /// A tiny formula that is satisfiable but only *after* a conflict: with the

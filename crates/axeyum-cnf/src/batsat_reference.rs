@@ -27,7 +27,7 @@ use std::time::Instant;
 use web_time::Instant;
 
 use rustsat::{
-    solvers::{Solve, SolveIncremental, SolverResult as RustSatSolverResult},
+    solvers::{Solve, SolverResult as RustSatSolverResult},
     types::{
         Clause as RustSatClause, Lit as RustSatLit, TernaryVal as RustSatTernaryVal,
         Var as RustSatVar,
@@ -266,21 +266,6 @@ fn rustsat_clause(clause: &CnfClause) -> Result<RustSatClause, SatError> {
         .copied()
         .map(rustsat_lit)
         .collect::<Result<RustSatClause, SatError>>()
-}
-
-/// Inverse of [`rustsat_lit`]: a `rustsat` literal back to a [`CnfLit`] (used to
-/// read the assumption core after an unsat solve).
-fn cnf_lit_from_rustsat(lit: RustSatLit) -> Result<CnfLit, SatError> {
-    let index = lit.var().idx();
-    let var = CnfVar::new(index).map_err(|_| SatError::VariableCountTooLarge {
-        variable_count: index + 1,
-    })?;
-    let positive = CnfLit::positive(var);
-    Ok(if lit.is_neg() {
-        positive.negated()
-    } else {
-        positive
-    })
 }
 
 fn rustsat_lit(lit: CnfLit) -> Result<RustSatLit, SatError> {

@@ -238,8 +238,11 @@ pub fn solve_with_drat_proof_within(
 ///
 /// `max_conflicts` is deterministic for a fixed formula and solver build.
 /// Exceeding it returns [`ProofSolveOutcome::ResourceOut`], never a guessed
-/// verdict. A level-zero contradiction may still be decided without consuming a
-/// conflict from this budget.
+/// verdict. A level-zero contradiction may be decided without consuming a
+/// conflict from this budget — **except** at `max_conflicts == 0`, which admits
+/// no search at all and always returns `ResourceOut` (the "encode but do not
+/// solve" contract that `resource_limit = 0` carries everywhere else in the
+/// tree).
 pub fn solve_with_drat_proof_with_limits(
     formula: &CnfFormula,
     deadline: Option<Instant>,
@@ -1180,6 +1183,17 @@ impl<'progress, S: DratSink> Cdcl<'progress, S> {
         deadline: Option<Instant>,
         max_conflicts: usize,
     ) -> Result<SearchOutcome, ProofSinkError> {
+        // A budget of zero conflicts admits no search at all, not even the
+        // level-zero propagation below. `resource_limit = 0` means "encode but
+        // do not solve" across this tree -- `SatBvBackend`'s CNF-shape
+        // diagnostics rely on it, and so does the warm engine's per-check
+        // budget test. Without this guard a formula that needs no conflict
+        // (most easy instances) would be decided in spite of the budget, which
+        // is not wrong but is not what the caller asked for.
+        if max_conflicts == 0 {
+            self.report_progress();
+            return Ok(SearchOutcome::ResourceOut);
+        }
         if self.has_empty_clause {
             self.record_proof_step(false, &[]);
             self.sink.add_clause(&[])?;

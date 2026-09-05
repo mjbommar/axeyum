@@ -67,7 +67,7 @@ fn deterministic_sat_resource_limit_is_classified_unknown() {
             .unwrap(),
         CheckResult::Unknown(reason)
             if reason.kind == UnknownKind::ResourceLimit
-                && reason.detail.contains("progress-check budget 0 exhausted")
+                && reason.detail.contains("conflict budget 0 exhausted")
     ));
 }
 
