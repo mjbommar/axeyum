@@ -1375,6 +1375,123 @@ impl MultiPoly {
         Some(reduced)
     }
 
+    /// Multiply the **constant** square-root atoms inside each monomial together:
+    /// `√a·√b → √(ab)`, then re-extract the square part. Sound for `a, b ≥ 0`
+    /// (the only radicands this crate atomizes), where both sides are the
+    /// principal real root of the same non-negative number.
+    ///
+    /// Without it every constant radical is its own independent variable and
+    /// `√2·√3 − √6` is a nonzero polynomial — which the zero-test reported as a
+    /// **refutation of a true identity**. That was the measured defect; this
+    /// fold and [`canonical_constant_sqrt_poly`] are the two halves of the fix,
+    /// and [`MultiPoly::relates_multiplicative_atoms`] declines the cases
+    /// neither can reach.
+    ///
+    /// Also finishes the even-power extraction for constants
+    /// (`√2^3 → 2·√2`), which [`MultiPoly::fold_radical`] starts, so a monomial
+    /// leaves this fold with at most one constant radical at exponent 1.
+    /// `None` on `i128` overflow.
+    fn fold_radical_products(&self) -> Option<MultiPoly> {
+        let reducible = self.terms.keys().any(|mono| {
+            let mut radicals = 0usize;
+            let mut squared = false;
+            for (var, &exp) in &mono.powers {
+                if constant_sqrt_radicand(var).is_some() {
+                    radicals += 1;
+                    squared |= exp >= 2;
+                }
+            }
+            radicals >= 2 || squared
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let mut factor = *coeff;
+            let mut product: i128 = 1;
+            let mut powers = BTreeMap::new();
+            for (var, &exp) in &mono.powers {
+                match constant_sqrt_radicand(var) {
+                    // √m^exp = m^(exp/2) · √m^(exp mod 2), and the surviving
+                    // half joins the product of this monomial's radicands.
+                    Some(radicand) => {
+                        for _ in 0..(exp / 2) {
+                            factor = factor.checked_mul(Rational::integer(radicand))?;
+                        }
+                        if exp % 2 == 1 {
+                            product = product.checked_mul(radicand)?;
+                        }
+                    }
+                    None => {
+                        powers.insert(var.clone(), exp);
+                    }
+                }
+            }
+            if product > 1 {
+                let (square, free) = square_part(product)?;
+                factor = factor.checked_mul(Rational::integer(square))?;
+                if free > 1 {
+                    powers.insert(sqrt_atom_key(free), 1);
+                }
+            } else if product == 0 {
+                continue;
+            }
+            if factor.is_zero() {
+                continue;
+            }
+            let mono = Monomial { powers };
+            let combined = match out.terms.get(&mono).copied() {
+                Some(existing) => existing.checked_add(factor)?,
+                None => factor,
+            };
+            if combined.is_zero() {
+                out.terms.remove(&mono);
+            } else {
+                out.terms.insert(mono, combined);
+            }
+        }
+        Some(out)
+    }
+
+    /// Whether any single monomial multiplies two **multiplicative** atoms, or
+    /// raises one above the power its fold can discharge.
+    ///
+    /// `√a·√b = √(ab)`, `|a|·|b| = |ab|` and `root_q(a)·root_q(b) = root_q(ab)`
+    /// all hold on this crate's domain, but the normal form carries the three
+    /// atoms as independent variables — so a *nonzero* difference over such a
+    /// product establishes nothing, and reporting one as a refutation is a wrong
+    /// answer. Measured before this guard: `√x·√y = √(xy)`, `|x|·|y| = |xy|` and
+    /// `root₃(2)·root₃(4) = 2` were all reported **refuted**.
+    ///
+    /// Constant radicals never reach here — [`MultiPoly::fold_radical_products`]
+    /// has already merged them — so what this declines is a symbolic or
+    /// unreduced product, which is a completeness cost and not a soundness one.
+    /// The equality branch is unaffected: a zero difference is zero whatever the
+    /// atoms denote.
+    fn relates_multiplicative_atoms(&self) -> bool {
+        self.terms.keys().any(|mono| {
+            let mut multiplicative = 0usize;
+            for (var, &exp) in &mono.powers {
+                // An `i128` radicand whose square part is out of
+                // `square_part`'s reach was left uncanonicalized at intake, so
+                // `√(p²)` and `p` are two names the normal form cannot see are
+                // the same number. Measured before this line: `√(1000003²)` was
+                // reported **not equal** to `1000003`.
+                if constant_sqrt_radicand(var).is_some_and(|n| square_part(n).is_none()) {
+                    return true;
+                }
+                if is_multiplicative_atom(var) {
+                    if exp >= 2 {
+                        return true;
+                    }
+                    multiplicative += 1;
+                }
+            }
+            multiplicative >= 2
+        })
+    }
+
     /// The monomial `var^exp` as a one-term polynomial (or the constant `1` when
     /// `exp == 0`).
     fn single_var_pow(var: &str, exp: u32) -> MultiPoly {
@@ -1815,6 +1932,13 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
         CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp(arg),
+        // `√` of a non-negative rational constant is canonicalized rather than
+        // atomized, so `√4`, `√8` and `√(1/2)` reduce and every spelling of one
+        // number takes one atom key. See `canonical_constant_sqrt_poly`.
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => Some(RatFunc::from_poly(
+            canonical_constant_sqrt_poly(arg)
+                .unwrap_or_else(|| MultiPoly::single_var(&atom_name("sqrt", arg))),
+        )),
         CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             &func.name(),
             arg,
@@ -2072,6 +2196,122 @@ fn parse_rational_render(text: &str) -> Option<Rational> {
     } else {
         Some(Rational::integer(text.parse().ok()?))
     }
+}
+
+/// The largest trial divisor [`square_part`] will try before giving up.
+///
+/// A radicand up to `10^10` is fully factored inside this; above it the split is
+/// abandoned rather than left half-done, because a partly-extracted square is a
+/// radical two spellings can disagree on, and a disagreement the zero-test
+/// cannot see is a wrong refutation waiting to happen.
+const SQUARE_PART_TRIAL_LIMIT: i128 = 100_000;
+
+/// Split `n ≥ 1` as `k²·m` with `m` **squarefree**, returning `(k, m)`.
+///
+/// `None` when trial division cannot finish inside
+/// [`SQUARE_PART_TRIAL_LIMIT`], or on `i128` overflow. A `None` is not a
+/// reduction the caller may quietly skip — see [`canonical_constant_sqrt`].
+///
+/// When the loop ends, `remaining` has no divisor `d` with `d² ≤ remaining`, so
+/// it is `1` or prime, and therefore squarefree.
+fn square_part(n: i128) -> Option<(i128, i128)> {
+    if n < 1 {
+        return None;
+    }
+    let mut remaining = n;
+    let mut square = 1i128;
+    let mut free = 1i128;
+    let mut divisor = 2i128;
+    while divisor.checked_mul(divisor)? <= remaining {
+        if divisor > SQUARE_PART_TRIAL_LIMIT {
+            return None;
+        }
+        if remaining % divisor == 0 {
+            let mut exponent = 0u32;
+            while remaining % divisor == 0 {
+                remaining /= divisor;
+                exponent += 1;
+            }
+            for _ in 0..(exponent / 2) {
+                square = square.checked_mul(divisor)?;
+            }
+            if exponent % 2 == 1 {
+                free = free.checked_mul(divisor)?;
+            }
+        }
+        divisor += 1;
+    }
+    Some((square, free.checked_mul(remaining)?))
+}
+
+/// `√c` for a non-negative rational constant `c`, split as `(k, m)` with
+/// `√c = k·√m`, `k` a non-negative rational and `m` a squarefree non-negative
+/// integer (`m == 1` means the radical vanishes).
+///
+/// `√(p/q) = √(p·q)/q`, so one integer split does both halves.
+///
+/// `None` for a negative radicand (not real) and whenever [`square_part`]
+/// declines. The caller must then leave the atom as it stands **and** must not
+/// refute over it: an unreduced constant radical is exactly the case where
+/// `√8` and `2·√2` take different atom keys, and a difference of two spellings
+/// of the same number is nonzero in the free algebra and zero in ℝ.
+fn canonical_constant_sqrt(value: Rational) -> Option<(Rational, i128)> {
+    if value.numerator() < 0 {
+        return None;
+    }
+    if value.is_zero() {
+        return Some((Rational::zero(), 1));
+    }
+    let radicand = value.numerator().checked_mul(value.denominator())?;
+    let (square, free) = square_part(radicand)?;
+    Some((Rational::checked_new(square, value.denominator())?, free))
+}
+
+/// The atom key a squarefree integer radicand takes, identical to what
+/// [`atom_name`] gives `√m` — so a canonicalized radical and a literally
+/// spelled one meet in one normal form.
+fn sqrt_atom_key(radicand: i128) -> String {
+    atom_name(&UnaryFunc::Sqrt.name(), &CasExpr::int(radicand))
+}
+
+/// The radicand of a `√` atom whose key names a **non-negative integer**, or
+/// `None` for a symbolic, rational-keyed or non-radical variable.
+fn constant_sqrt_radicand(var: &str) -> Option<i128> {
+    let radicand: i128 = var.strip_prefix(ATOM_SQRT)?.parse().ok()?;
+    (radicand >= 0).then_some(radicand)
+}
+
+/// Whether `var` is an atom for a head that is **multiplicative** — `√`, `|·|`,
+/// `root_q` — so that a product of two of them denotes the head applied to the
+/// product, and treating them as independent variables is not sound for
+/// refutation.
+fn is_multiplicative_atom(var: &str) -> bool {
+    var.starts_with(ATOM_SQRT) || var.starts_with(ATOM_ABS) || var.starts_with("\0root")
+}
+
+/// `√c` for a constant argument, already canonicalized, or `None` when `arg` is
+/// not a non-negative rational constant (or its square part is out of reach).
+///
+/// This is what makes `√4 = 2`, `√8 = 2√2` and `√(1/2) = √2/2` decide: without
+/// it each spelling is its own opaque atom and the *difference of two names for
+/// one number* is a nonzero polynomial, which the zero-test would report as a
+/// refutation. Measured before the fix: `√4 = 2` came back **refuted**.
+fn canonical_constant_sqrt_poly(arg: &CasExpr) -> Option<MultiPoly> {
+    let value = rational_constant_value(arg)?;
+    let (factor, radicand) = canonical_constant_sqrt(value)?;
+    if radicand == 1 {
+        return Some(MultiPoly::constant(factor));
+    }
+    MultiPoly::constant(factor).mul(&MultiPoly::single_var(&sqrt_atom_key(radicand)))
+}
+
+/// The exact rational value of `expr` when it is a constant, else `None`.
+/// Recurses only into strictly smaller expressions.
+fn rational_constant_value(expr: &CasExpr) -> Option<Rational> {
+    let ratio = normalize_rational(expr)?;
+    let numerator = multipoly_as_constant(&ratio.num)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    numerator.checked_div(denominator)
 }
 
 /// The trust tag attached to a CAS answer
@@ -2527,10 +2767,23 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 }
 
 /// The bounded (`i128`) cross-multiplication zero-test.
+///
+/// A *nonzero* difference is a refutation only when no relation the normal form
+/// is blind to could still collapse it. One class of relation is not covered by
+/// any fold and must be declined instead:
+/// [`MultiPoly::relates_multiplicative_atoms`] — a monomial multiplying two
+/// radical or absolute-value atoms, where `√a·√b = √(ab)` makes a nonzero
+/// polynomial in three independent variables prove nothing. The equality branch
+/// needs no such guard: a zero difference is zero whatever the atoms denote.
 fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match bounded_difference(a, b) {
+        Some(witness) if witness.is_zero() => ZeroTest::Certified {
+            equal: true,
+            witness,
+        },
+        Some(witness) if witness.relates_multiplicative_atoms() => ZeroTest::Unknown,
         Some(witness) => ZeroTest::Certified {
-            equal: witness.is_zero(),
+            equal: false,
             witness,
         },
         None => ZeroTest::Unknown,
@@ -2611,6 +2864,7 @@ fn bounded_difference(a: &CasExpr, b: &CasExpr) -> Option<MultiPoly> {
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
         .and_then(|w| w.fold_radical(&radicands))
+        .and_then(|w| w.fold_radical_products())
         .and_then(|w| w.fold_abs(&abs_args))
         .and_then(|w| w.fold_nth_root(&nth_roots))
         .and_then(|w| w.fold_bessel_recurrences(&bessel_recurrences))
@@ -3003,6 +3257,73 @@ impl BigQPoly {
         })
     }
 
+    /// Multiply the **constant** square-root atoms inside each monomial
+    /// together and re-extract the square part. The unbounded twin of
+    /// [`MultiPoly::fold_radical_products`], and the reason `√2·√3 = √6` decides
+    /// at overflow scale too rather than only below the wall.
+    ///
+    /// The radicands themselves stay `i128`: they come from
+    /// [`canonical_constant_sqrt`], which works on the bounded `Rational` an
+    /// atom key spells. Only the polynomial around them is unbounded.
+    fn fold_radical_products(&self, budget: &mut u64) -> Option<Self> {
+        let reducible = self.num.terms().any(|(mono, _)| {
+            let mut radicals = 0usize;
+            let mut squared = false;
+            for (var, exp) in mono.powers() {
+                if constant_sqrt_radicand(var).is_some() {
+                    radicals += 1;
+                    squared |= exp >= 2;
+                }
+            }
+            radicals >= 2 || squared
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        let mut out = BigQPoly::zero();
+        for (mono, coeff) in self.num.terms() {
+            charge(budget, 1)?;
+            let mut factor = BigInt::from(1);
+            let mut product: i128 = 1;
+            let mut powers: Vec<(String, u32)> = Vec::new();
+            for (var, exp) in mono.powers() {
+                match constant_sqrt_radicand(var) {
+                    Some(radicand) => {
+                        factor *= bigint_pow(&BigInt::from(radicand), exp / 2);
+                        if exp % 2 == 1 {
+                            product = product.checked_mul(radicand)?;
+                        }
+                    }
+                    None => powers.push((var.to_owned(), exp)),
+                }
+            }
+            if product > 1 {
+                let (square, free) = square_part(product)?;
+                factor *= BigInt::from(square);
+                if free > 1 {
+                    powers.push((sqrt_atom_key(free), 1));
+                }
+            } else if product == 0 {
+                continue;
+            }
+            let borrowed: Vec<(&str, u32)> = powers.iter().map(|(n, e)| (n.as_str(), *e)).collect();
+            out = out.add(
+                &BigQPoly::from_poly(BigPoly::term(
+                    mvpoly::Monomial::from_powers(&borrowed),
+                    coeff * factor,
+                )),
+                budget,
+            )?;
+        }
+        Some(
+            BigQPoly {
+                num: out.num,
+                den: &out.den * &self.den,
+            }
+            .reduced(),
+        )
+    }
+
     /// Reduce even powers of an `abs` atom using `|u|² = u²`. The unbounded twin
     /// of [`MultiPoly::fold_abs`].
     fn fold_abs(&self, abs_args: &BTreeMap<String, BigQPoly>, budget: &mut u64) -> Option<Self> {
@@ -3306,6 +3627,28 @@ fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<Big
         // See the doc comment: `exp` is decomposed by the bounded path, not
         // atomized, and that decomposition has no unbounded counterpart yet.
         CasExpr::Unary(UnaryFunc::Exp, _) => None,
+        // The unbounded twin of the bounded normalizer's `√`-of-a-constant
+        // canonicalization, so the two rings agree on what `√8` *is*.
+        CasExpr::Unary(UnaryFunc::Sqrt, arg)
+            if rational_constant_value(arg)
+                .and_then(canonical_constant_sqrt)
+                .is_some() =>
+        {
+            let (factor, radicand) = rational_constant_value(arg)
+                .and_then(canonical_constant_sqrt)
+                .expect("the guard just evaluated this");
+            let constant = BigRatFunc {
+                num: BigPoly::constant(BigInt::from(factor.numerator())),
+                den: BigPoly::constant(BigInt::from(factor.denominator())),
+            };
+            if radicand == 1 {
+                return Some(constant);
+            }
+            constant.mul(
+                &BigRatFunc::from_poly(BigPoly::variable(&sqrt_atom_key(radicand))),
+                budget,
+            )
+        }
         CasExpr::Unary(func, arg) => Some(BigRatFunc::from_poly(BigPoly::variable(&atom_name(
             &func.name(),
             arg,
@@ -3349,6 +3692,7 @@ fn unbounded_difference(a: &CasExpr, b: &CasExpr, budget: &mut u64) -> Option<Bi
         .fold_imaginary(budget)
         .and_then(|w| w.fold_pythagorean(budget))
         .and_then(|w| w.fold_radical(&folds.radicands, budget))
+        .and_then(|w| w.fold_radical_products(budget))
         .and_then(|w| w.fold_abs(&folds.abs_args, budget))
         .and_then(|w| w.fold_nth_root(&folds.nth_roots, budget))
         .and_then(|w| w.fold_bessel_recurrences(&folds.bessel, budget))
@@ -30707,6 +31051,196 @@ mod exact_positivity_tests {
 ///   bound also removes the implicit resource bound it was providing, so the
 ///   fallback carries an explicit one.
 ///   (`work_beyond_the_budget_declines_instead_of_expanding_without_bound`)
+/// **The wrong-refuted class the SymPy parity corpus found, and its fix.**
+///
+/// `equal(√2·√3, √6)` returned `Certified { equal: false }`: three independent
+/// atoms, a nonzero polynomial, and a label asserting a refutation the normal
+/// form had not established. Measured on the same build, so did `√4 = 2`,
+/// `√8 = 2√2`, `√12·√3 = 6`, `√(1/2)·√2 = 1`, `√x·√y = √(xy)`,
+/// `|x|·|y| = |xy|` and `root₃(2)·root₃(4) = 2` — every one of them a **true**
+/// identity reported as refuted.
+///
+/// Three parts to the repair, and this module is one test per part plus the
+/// controls that keep the repair from being vacuous:
+///
+/// 1. [`canonical_constant_sqrt_poly`] canonicalizes `√c` for a non-negative
+///    rational constant by its squarefree part, so `√8` *is* `2·√2` in the
+///    normal form rather than a different name for it.
+/// 2. [`MultiPoly::fold_radical_products`] multiplies the constant radicals
+///    inside one monomial together and re-extracts the square, so `√2·√3` and
+///    `√6` meet.
+/// 3. [`MultiPoly::relates_multiplicative_atoms`] declines a refutation whose
+///    difference still multiplies two radical / absolute-value atoms — the
+///    symbolic cases neither (1) nor (2) can reach. Declining is the honest
+///    answer there; refuting was the wrong one.
+#[cfg(test)]
+mod radical_atom_products {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    fn root(n: i128) -> CasExpr {
+        CasExpr::int(n).sqrt()
+    }
+
+    #[track_caller]
+    fn assert_certified(left: &CasExpr, right: &CasExpr, expected: bool) {
+        match equal(left, right) {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert_eq!(equal, expected, "wrong verdict for {left} = {right}");
+            }
+            ZeroTest::Unknown => panic!("{left} = {right} must decide"),
+        }
+        assert!(
+            recheck_zero_test(left, right, &equal(left, right)),
+            "the certificate for {left} = {right} must re-check"
+        );
+    }
+
+    #[track_caller]
+    fn assert_declines(left: &CasExpr, right: &CasExpr) {
+        assert!(
+            matches!(equal(left, right), ZeroTest::Unknown),
+            "{left} = {right} must decline, never refute: the normal form carries \
+             the radical atoms as independent variables"
+        );
+    }
+
+    /// The reported input.
+    #[test]
+    fn sqrt2_times_sqrt3_is_sqrt6() {
+        assert_certified(&(root(2) * root(3)), &root(6), true);
+    }
+
+    /// The negative control for it: the fix must not make every radical product
+    /// equal to every other.
+    #[test]
+    fn sqrt2_times_sqrt3_is_not_sqrt5() {
+        assert_certified(&(root(2) * root(3)), &root(5), false);
+    }
+
+    /// Square extraction at intake — `√8` and `√4` are not opaque names.
+    #[test]
+    fn constant_radicands_reduce_by_their_square_part() {
+        assert_certified(&root(4), &CasExpr::int(2), true);
+        assert_certified(&root(8), &(CasExpr::int(2) * root(2)), true);
+        assert_certified(&root(0), &CasExpr::zero(), true);
+        assert_certified(
+            &CasExpr::rat(1, 2).sqrt(),
+            &(root(2) / CasExpr::int(2)),
+            true,
+        );
+        // …and the reduction is not a licence to equate distinct surds.
+        assert_certified(&root(8), &(CasExpr::int(3) * root(2)), false);
+    }
+
+    /// The product fold, including the case where the product is a perfect
+    /// square and the radical disappears entirely.
+    #[test]
+    fn constant_radical_products_merge_and_re_extract() {
+        assert_certified(&(root(12) * root(3)), &CasExpr::int(6), true);
+        assert_certified(
+            &(CasExpr::rat(1, 2).sqrt() * root(2)),
+            &CasExpr::int(1),
+            true,
+        );
+        assert_certified(&(root(2) * root(2)), &CasExpr::int(2), true);
+        assert_certified(&(root(2) * root(3) * root(6)), &CasExpr::int(6), true);
+        assert_certified(&(root(12) * root(3)), &CasExpr::int(7), false);
+    }
+
+    /// **The guard.** A symbolic radical product is out of the fold's reach, so
+    /// the answer is `Unknown` — the choice this lane made and pinned, per the
+    /// rule that out-of-fragment declines rather than answering wrongly.
+    #[test]
+    fn symbolic_radical_products_decline_rather_than_refute() {
+        assert_declines(&(x().sqrt() * y().sqrt()), &(x() * y()).sqrt());
+        assert_declines(&(x().abs() * y().abs()), &(x() * y()).abs());
+        assert_declines(
+            &(CasExpr::int(2).nth_root(3) * CasExpr::int(4).nth_root(3)),
+            &CasExpr::int(2),
+        );
+    }
+
+    /// `√(ln x)² = ln x` is the case the two rings answer differently, and the
+    /// stronger answer wins.
+    ///
+    /// The bounded fold cannot resolve the radicand — its dictionary is built
+    /// with [`normalize`], which rejects a transcendental head — so the guard
+    /// above declines it there. The unbounded twin builds its dictionary with
+    /// [`normalize_rational_big_within`], which *atomizes* `ln x`, so
+    /// [`BigQPoly::fold_radical`] resolves it and the identity certifies. The
+    /// decline is a fallback, not a ceiling.
+    #[test]
+    fn a_transcendental_radicand_is_resolved_by_the_unbounded_fold() {
+        assert!(
+            matches!(
+                equal_core_bounded(&(x().ln().sqrt() * x().ln().sqrt()), &x().ln()),
+                ZeroTest::Unknown
+            ),
+            "the bounded fold cannot resolve a transcendental radicand"
+        );
+        assert_certified(&(x().ln().sqrt() * x().ln().sqrt()), &x().ln(), true);
+    }
+
+    /// The guard must not swallow the identities the folds *do* reach, or it
+    /// would be buying soundness with everything.
+    #[test]
+    fn the_guard_leaves_the_resolvable_radical_identities_alone() {
+        assert_certified(&(x().sqrt() * x().sqrt()), &x(), true);
+        assert_certified(&x().abs().pow(2), &x().pow(2), true);
+        assert_certified(&x().nth_root(3).pow(3), &x(), true);
+        // One radical atom per monomial is still refutable: distinct squarefree
+        // radicands are ℚ-linearly independent, and `√x` and `√y` are distinct
+        // functions of independent variables.
+        assert_certified(&root(2), &CasExpr::int(1), false);
+        assert_certified(&(root(2) + root(3)), &root(5), false);
+        assert_certified(&x().sqrt(), &y().sqrt(), false);
+    }
+
+    /// `square_part` is the arithmetic the whole repair rests on, so it is
+    /// checked directly rather than only through the zero-test — including the
+    /// bound, whose whole job is to refuse a half-done split.
+    #[test]
+    fn square_part_splits_and_refuses_rather_than_half_splitting() {
+        for (input, expected) in [
+            (1i128, (1i128, 1i128)),
+            (2, (1, 2)),
+            (4, (2, 1)),
+            (8, (2, 2)),
+            (12, (2, 3)),
+            (36, (6, 1)),
+            (72, (6, 2)),
+            (1_000_000, (1000, 1)),
+            (999_983, (1, 999_983)),
+        ] {
+            assert_eq!(square_part(input), Some(expected), "square_part({input})");
+        }
+        assert_eq!(square_part(0), None, "0 is not a positive radicand");
+        assert_eq!(square_part(-4), None, "a negative radicand is not real");
+        // Past the trial-division bound the split is abandoned, not guessed:
+        // `p²` for a prime above the limit cannot be found, and reporting the
+        // radicand as squarefree would be a false canonical form.
+        let big_prime = 1_000_003i128;
+        assert_eq!(
+            square_part(big_prime * big_prime),
+            None,
+            "a square factor past the trial bound must abandon the split"
+        );
+        // And the zero-test declines rather than refuting over such a radical.
+        assert_declines(
+            &CasExpr::int(big_prime * big_prime).sqrt(),
+            &CasExpr::int(big_prime),
+        );
+    }
+}
+
 #[cfg(test)]
 mod bignum_overflow_fallback {
     use super::*;
@@ -30943,6 +31477,17 @@ mod bignum_overflow_fallback {
         );
     }
 
+    /// `√2·√3 = √6` at overflow scale — [`BigQPoly::fold_radical_products`],
+    /// the unbounded twin of the fold that repairs the wrong-refuted radical
+    /// class (see the `radical_atom_products` module).
+    #[test]
+    fn fold_radical_products_constant_surds_at_overflow_scale_now_certify() {
+        assert_fold_ported(
+            &(CasExpr::int(2).sqrt() * CasExpr::int(3).sqrt()),
+            &CasExpr::int(6).sqrt(),
+        );
+    }
+
     /// A radicand with **rational** coefficients, which ℤ[vars] cannot spell:
     /// this is the case [`BigQPoly`]'s shared denominator exists for.
     #[test]
@@ -31095,8 +31640,7 @@ mod bignum_overflow_fallback {
             );
         }
 
-        // Forgery 4: the zero polynomial claimed as a refutation, which the flag
-        // check alone must reject.
+        // Forgery 4: the zero polynomial claimed as a refutation.
         assert!(
             !recheck_zero_test(
                 &left,
@@ -31109,6 +31653,52 @@ mod bignum_overflow_fallback {
                 },
             ),
             "a zero witness cannot certify a refutation"
+        );
+    }
+
+    /// **The flag check's own control.** The `equal` flag has to be re-checked
+    /// against the witness *before* the witness is compared to the difference,
+    /// and only one shape shows it: a pair whose difference really is zero,
+    /// carrying a zero witness, labelled `equal: false`.
+    ///
+    /// On any other pair the scale comparison already rejects a mislabelled
+    /// certificate — a zero witness fails to match a nonzero difference — which
+    /// is exactly why deleting the flag check killed no test until this one
+    /// existed. A guard nothing can kill is not a guard.
+    #[test]
+    fn a_zero_witness_labelled_not_equal_is_refused_even_when_the_pair_is_equal() {
+        let left = (x() + CasExpr::int(1)).pow(2);
+        let right = x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(1);
+        assert!(
+            matches!(
+                equal(&left, &right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "the fixture must be a TRUE identity, or the forgery is not one"
+        );
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::Certified {
+                    equal: false,
+                    witness: MultiPoly::zero(),
+                },
+            ),
+            "a zero witness cannot certify `not equal`, even about an equal pair"
+        );
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::CertifiedBig {
+                    equal: false,
+                    witness: BigWitness {
+                        poly: BigPoly::zero()
+                    },
+                },
+            ),
+            "and the same for the unbounded certificate"
         );
     }
 
