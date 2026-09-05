@@ -133,7 +133,10 @@ impl BigInterval {
 
     /// The degenerate (point) interval `[a, a]`.
     pub fn point(a: BigRational) -> BigInterval {
-        BigInterval { lo: a.clone(), hi: a }
+        BigInterval {
+            lo: a.clone(),
+            hi: a,
+        }
     }
 
     /// The interval `[c − |r|, c + |r|]`.
@@ -614,9 +617,7 @@ fn node_count(expr: &CasExpr) -> usize {
         CasExpr::Neg(inner) | CasExpr::Pow(inner, _) | CasExpr::Unary(_, inner) => {
             1 + node_count(inner)
         }
-        CasExpr::Div(numerator, denominator) => {
-            1 + node_count(numerator) + node_count(denominator)
-        }
+        CasExpr::Div(numerator, denominator) => 1 + node_count(numerator) + node_count(denominator),
     }
 }
 
@@ -712,8 +713,14 @@ fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     }
     let next = (&term * &y / bi(i64::from(order) + 1)).abs();
     let remainder = next * two.clone();
-    let mut enclosure =
-        BigInterval::center_radius(&sum, &remainder).clamp(&BigRational::zero(), &enormous());
+    // `exp` is strictly positive, so a lower endpoint the truncation pushed
+    // below zero can be raised to zero without losing the enclosure — and the
+    // squaring below needs a non-negative lower endpoint to stay monotone.
+    let candidate = BigInterval::center_radius(&sum, &remainder);
+    let mut enclosure = BigInterval {
+        lo: rmax(candidate.lo, BigRational::zero()),
+        hi: candidate.hi,
+    };
     for _ in 0..halvings {
         enclosure = BigInterval {
             lo: &enclosure.lo * &enclosure.lo,
@@ -959,9 +966,9 @@ fn eval_head_raw(
             .ok_or_else(|| DeclineReason::UnsupportedHead("arity mismatch".to_string()))
     };
     match head {
-        StepHead::Const | StepHead::Var(_) | StepHead::Root => Err(
-            DeclineReason::UnsupportedHead("leaf head has no evaluator".to_string()),
-        ),
+        StepHead::Const | StepHead::Var(_) | StepHead::Root => Err(DeclineReason::UnsupportedHead(
+            "leaf head has no evaluator".to_string(),
+        )),
         StepHead::Pi => pi_enclosure(order).ok_or(DeclineReason::ResourceLimit),
         StepHead::Add => {
             let mut acc = BigInterval::point(BigRational::zero());
@@ -1100,7 +1107,7 @@ fn build(
     tolerance: &BigRational,
     evidence: &mut Vec<Step>,
 ) -> Result<BigInterval, DeclineReason> {
-    let mut leaf = |head: StepHead, output: BigInterval, evidence: &mut Vec<Step>| {
+    let leaf = |head: StepHead, output: BigInterval, evidence: &mut Vec<Step>| {
         evidence.push(Step {
             head,
             inputs: Vec::new(),
@@ -1677,5 +1684,501 @@ pub fn enclose_constant(name: &str, precision: u32) -> Option<Enclosure> {
             precision,
         ),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A decimal literal as an exact rational — used only to state a cited
+    /// digit string, never to compute.
+    fn decimal_to_rational(text: &str) -> BigRational {
+        let (negative, body) = match text.strip_prefix('-') {
+            Some(rest) => (true, rest),
+            None => (false, text),
+        };
+        let (whole, fraction) = body.split_once('.').unwrap_or((body, ""));
+        let digits = format!("{whole}{fraction}");
+        let numerator: BigInt = digits.parse().expect("decimal digits");
+        let denominator = BigInt::from(10u32).pow(u32::try_from(fraction.len()).unwrap());
+        let value = BigRational::new(numerator, denominator);
+        if negative { -value } else { value }
+    }
+
+    /// The 30-decimal truncations, from OEIS: A000796 (pi), A001113 (e),
+    /// A002162 (ln 2), A002193 (sqrt 2). A mismatch against these means the
+    /// **enclosure** is wrong; the digit strings are the cited authority.
+    const PI_30: &str = "3.141592653589793238462643383279";
+    const E_30: &str = "2.718281828459045235360287471352";
+    const LN2_30: &str = "0.693147180559945309417232121458";
+    const SQRT2_30: &str = "1.414213562373095048801688724209";
+
+    /// The band `[d, d + 10^-30]` a value truncated to 30 decimals must lie in.
+    fn digit_band(truncated: &str) -> BigInterval {
+        let lo = decimal_to_rational(truncated);
+        let step = BigRational::new(BigInt::one(), BigInt::from(10u32).pow(30));
+        BigInterval::new(lo.clone(), lo + step).expect("band")
+    }
+
+    fn interval(lo: i128, hi: i128) -> Interval {
+        Interval::new(Rational::integer(lo), Rational::integer(hi)).expect("interval")
+    }
+
+    /// Assert that the whole enclosure sits within `10^-tolerance` of the cited
+    /// decimal — a two-sided band, so it does not depend on which way the cited
+    /// string was rounded. Fails if the enclosure is wider than the band, which
+    /// is the point: it checks the digits *and* the width at once.
+    fn assert_near(enclosure: &BigInterval, cited: &str, tolerance: u32) {
+        let centre = decimal_to_rational(cited);
+        let epsilon = BigRational::new(BigInt::one(), BigInt::from(10u32).pow(tolerance));
+        let band = BigInterval::new(&centre - &epsilon, &centre + &epsilon).expect("band");
+        assert!(
+            band.contains_interval(enclosure),
+            "enclosure {} is not within 1e-{tolerance} of {cited}",
+            enclosure.decimal(tolerance + 4)
+        );
+    }
+
+    // -- BigInterval: the enclosure property ------------------------------
+
+    #[test]
+    fn big_interval_operations_enclose_sampled_points() {
+        let a = BigInterval::new(br(-3, 2), br(5, 4)).unwrap();
+        let b = BigInterval::new(br(1, 3), bi(2)).unwrap();
+        for i in -6..=5i64 {
+            for j in 1..=6i64 {
+                let x = br(i, 4);
+                let y = br(j, 3);
+                if !a.contains(&x) || !b.contains(&y) {
+                    continue;
+                }
+                assert!(a.add(&b).contains(&(&x + &y)));
+                assert!(a.sub(&b).contains(&(&x - &y)));
+                assert!(a.mul(&b).contains(&(&x * &y)));
+                assert!(a.div(&b).unwrap().contains(&(&x / &y)));
+                assert!(a.pow(3).contains(&ratpow(&x, 3)));
+                assert!(a.pow(2).contains(&ratpow(&x, 2)));
+                assert!(a.negate().contains(&-x));
+            }
+        }
+    }
+
+    #[test]
+    fn big_interval_division_by_a_straddling_interval_is_none() {
+        let a = BigInterval::point(BigRational::one());
+        let straddling = BigInterval::new(bi(-1), bi(1)).unwrap();
+        assert!(a.div(&straddling).is_none());
+    }
+
+    #[test]
+    fn even_power_of_a_straddling_interval_has_zero_as_its_floor() {
+        let a = BigInterval::new(bi(-3), bi(2)).unwrap();
+        assert_eq!(*a.pow(2).lo(), BigRational::zero());
+        assert_eq!(*a.pow(2).hi(), bi(9));
+    }
+
+    // -- The named constants: width and digits ----------------------------
+
+    #[test]
+    fn pi_meets_its_width_bound_and_the_cited_digits() {
+        for precision in [10u32, 50, 100, 200] {
+            let e = enclose_constant("pi", precision).expect("pi enclosure");
+            assert!(
+                e.interval.width() <= pow2(-i32::try_from(precision).unwrap()),
+                "pi at precision {precision}: width {} exceeds the bound",
+                e.interval.width()
+            );
+            e.verify(&CasExpr::var("pi"), &[]).expect("pi verifies");
+        }
+        let tight = enclose_constant("pi", 130).expect("pi at 130");
+        assert!(
+            digit_band(PI_30).contains_interval(&tight.interval),
+            "pi enclosure {} is outside the cited 30 digits",
+            tight.interval.decimal(32)
+        );
+    }
+
+    #[test]
+    fn e_meets_its_width_bound_and_the_cited_digits() {
+        let expr = CasExpr::int(1).exp();
+        for precision in [10u32, 50, 100, 200] {
+            let e = enclose_constant("e", precision).expect("e enclosure");
+            assert!(e.interval.width() <= pow2(-i32::try_from(precision).unwrap()));
+            e.verify(&expr, &[]).expect("e verifies");
+        }
+        let tight = enclose_constant("e", 130).expect("e at 130");
+        assert!(
+            digit_band(E_30).contains_interval(&tight.interval),
+            "e enclosure {} is outside the cited 30 digits",
+            tight.interval.decimal(32)
+        );
+    }
+
+    #[test]
+    fn ln_two_meets_its_width_bound_and_the_cited_digits() {
+        let expr = CasExpr::int(2).ln();
+        for precision in [10u32, 50, 100, 200] {
+            let e = enclose_constant("ln2", precision).expect("ln2 enclosure");
+            assert!(e.interval.width() <= pow2(-i32::try_from(precision).unwrap()));
+            e.verify(&expr, &[]).expect("ln2 verifies");
+        }
+        let tight = enclose_constant("ln 2", 130).expect("ln2 at 130");
+        assert!(
+            digit_band(LN2_30).contains_interval(&tight.interval),
+            "ln 2 enclosure {} is outside the cited 30 digits",
+            tight.interval.decimal(32)
+        );
+    }
+
+    #[test]
+    fn sqrt_two_meets_its_width_bound_and_the_cited_digits() {
+        let p = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let isolating = (Rational::integer(1), Rational::integer(2));
+        for precision in [10u32, 50, 100, 200] {
+            let e = enclose_constant("sqrt2", precision).expect("sqrt2 enclosure");
+            assert!(e.interval.width() <= pow2(-i32::try_from(precision).unwrap()));
+            e.verify_root(&p, isolating).expect("sqrt2 verifies");
+        }
+        let tight = enclose_constant("sqrt 2", 130).expect("sqrt2 at 130");
+        assert!(
+            digit_band(SQRT2_30).contains_interval(&tight.interval),
+            "sqrt 2 enclosure {} is outside the cited 30 digits",
+            tight.interval.decimal(32)
+        );
+    }
+
+    #[test]
+    fn unknown_constant_names_decline() {
+        assert!(enclose_constant("euler-mascheroni", 10).is_none());
+    }
+
+    // -- Expression enclosures --------------------------------------------
+
+    #[test]
+    fn exp_one_contains_e() {
+        let expr = CasExpr::int(1).exp();
+        let e = enclose(&expr, &[], 120).expect("exp(1)");
+        assert!(
+            digit_band(E_30).contains_interval(&e.interval),
+            "exp(1) enclosure {} misses e",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn sin_over_a_binding_box_covers_the_whole_image() {
+        // sin is increasing on [0, 1/2], so the image is [0, sin(1/2)] and the
+        // enclosure must contain all of it. At precision 1 the width bound is
+        // 1/2, and sin(1/2) = 0.4794... fits underneath it.
+        let expr = CasExpr::var("x").sin();
+        let unit = Interval::new(Rational::zero(), Rational::new(1, 2)).expect("box");
+        let e = enclose(&expr, &[("x", unit)], 1).expect("sin enclosure");
+        assert!(*e.interval.lo() <= BigRational::zero());
+        // sin(1/2) = 0.479425538604203000...
+        let sin_half = decimal_to_rational("0.479425538604203");
+        assert!(*e.interval.hi() >= sin_half);
+        e.verify(&expr, &[("x", unit)]).expect("verifies");
+    }
+
+    #[test]
+    fn cos_zero_is_one_and_atan_one_is_a_quarter_of_pi() {
+        let cos_expr = CasExpr::int(0).cos();
+        let c = enclose(&cos_expr, &[], 60).expect("cos(0)");
+        assert!(c.interval.contains(&BigRational::one()));
+        c.verify(&cos_expr, &[]).expect("cos verifies");
+
+        let atan_expr = CasExpr::int(1).atan();
+        let a = enclose(&atan_expr, &[], 60).expect("atan(1)");
+        // atan(1) = pi/4 = 0.78539816339744830961566084582...
+        assert_near(&a.interval, "0.78539816339744830961566084582", 17);
+        a.verify(&atan_expr, &[]).expect("atan verifies");
+    }
+
+    #[test]
+    fn a_composite_expression_verifies_end_to_end() {
+        // (sqrt(2) + ln(3)) / (1 + x^2) with x bound to the point 1.
+        let expr = CasExpr::Div(
+            Box::new(CasExpr::Add(vec![
+                CasExpr::int(2).sqrt(),
+                CasExpr::int(3).ln(),
+            ])),
+            Box::new(CasExpr::Add(vec![
+                CasExpr::int(1),
+                CasExpr::Pow(Box::new(CasExpr::var("x")), 2),
+            ])),
+        );
+        let bindings = [("x", interval(1, 1))];
+        let e = enclose(&expr, &bindings, 60).expect("composite enclosure");
+        // (1.41421356237309505 + 1.09861228866810969) / 2 = 1.25641292552060237
+        assert_near(&e.interval, "1.25641292552060237", 17);
+        assert_eq!(e.evidence.len(), node_count(&expr));
+        e.verify(&expr, &bindings).expect("verifies");
+    }
+
+    #[test]
+    fn negative_arguments_and_reduction_still_enclose() {
+        let expr = CasExpr::Neg(Box::new(CasExpr::int(7))).exp();
+        let e = enclose(&expr, &[], 60).expect("exp(-7)");
+        // e^-7 = 0.000911881965554516208...
+        assert_near(&e.interval, "0.000911881965554516208", 17);
+        e.verify(&expr, &[]).expect("verifies");
+
+        let sin_expr = CasExpr::int(10).sin();
+        let s = enclose(&sin_expr, &[], 60).expect("sin(10)");
+        // sin(10) = -0.544021110889369813...
+        assert_near(&s.interval, "-0.544021110889369813", 17);
+        s.verify(&sin_expr, &[]).expect("verifies");
+    }
+
+    // -- Declines ----------------------------------------------------------
+
+    #[test]
+    fn division_by_an_interval_containing_zero_declines_with_that_reason() {
+        let expr = CasExpr::Div(Box::new(CasExpr::int(1)), Box::new(CasExpr::var("x")));
+        let bindings = [("x", interval(-1, 1))];
+        let reason = enclose_with_reason(&expr, &bindings, 10).unwrap_err();
+        assert_eq!(reason, DeclineReason::DivisorContainsZero);
+        assert!(enclose(&expr, &bindings, 10).is_none());
+    }
+
+    #[test]
+    fn an_unbound_variable_declines_by_name() {
+        let expr = CasExpr::var("y").exp();
+        let reason = enclose_with_reason(&expr, &[], 10).unwrap_err();
+        assert_eq!(reason, DeclineReason::UnboundVariable("y".to_string()));
+    }
+
+    #[test]
+    fn an_uncertified_head_declines_rather_than_approximating() {
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let reason = enclose_with_reason(&expr, &[], 10).unwrap_err();
+        assert!(matches!(reason, DeclineReason::UnsupportedHead(_)));
+    }
+
+    #[test]
+    fn ln_of_a_non_positive_interval_declines_as_a_domain_error() {
+        let expr = CasExpr::var("x").ln();
+        let bindings = [("x", interval(-1, 2))];
+        let reason = enclose_with_reason(&expr, &bindings, 10).unwrap_err();
+        assert!(matches!(reason, DeclineReason::DomainError(_)));
+    }
+
+    #[test]
+    fn a_wide_binding_box_declines_rather_than_reporting_a_false_width() {
+        // The image of exp over [0, 1] has width e − 1, so no certificate of
+        // width 2^-10 exists; the module must say so, not shrink the answer.
+        let expr = CasExpr::var("x").exp();
+        let bindings = [("x", interval(0, 1))];
+        assert_eq!(
+            enclose_with_reason(&expr, &bindings, 10).unwrap_err(),
+            DeclineReason::PrecisionUnreachable
+        );
+    }
+
+    // -- Root enclosures ---------------------------------------------------
+
+    #[test]
+    fn enclose_root_refines_a_sturm_isolating_interval() {
+        // x^3 - 2x - 5, LSB-first; the real root is near 2.0945514815.
+        let p = [
+            Rational::integer(-5),
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let isolating = crate::sturm::isolate_real_roots(&p).expect("isolation");
+        assert_eq!(isolating.len(), 1);
+        let e = enclose_root(&p, isolating[0], 60).expect("root enclosure");
+        // The real root of x^3 - 2x - 5 is 2.0945514815423265915...
+        assert_near(&e.interval, "2.0945514815423265915", 17);
+        assert!(e.interval.width() <= pow2(-60));
+        e.verify_root(&p, isolating[0]).expect("verifies");
+    }
+
+    #[test]
+    fn enclose_root_declines_a_non_isolating_interval() {
+        // x^2 - 1 has two roots in [-2, 2].
+        let p = [
+            Rational::integer(-1),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let reason =
+            enclose_root_with_reason(&p, (Rational::integer(-2), Rational::integer(2)), 10)
+                .unwrap_err();
+        assert_eq!(reason, DeclineReason::NotIsolating);
+    }
+
+    // -- Forged certificates: one guard, one death -------------------------
+
+    fn pi_certificate() -> (CasExpr, Enclosure) {
+        let expr = CasExpr::var("pi");
+        let e = enclose(&expr, &[], 40).expect("pi");
+        (expr, e)
+    }
+
+    #[test]
+    fn forged_missing_step_is_refused() {
+        let (expr, mut e) = pi_certificate();
+        e.evidence.pop();
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("nodes"),
+            "expected the step-count guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_understated_remainder_is_refused() {
+        let (expr, mut e) = pi_certificate();
+        e.evidence[0].remainder = BigRational::zero();
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("recomputed bound"),
+            "expected the remainder guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_too_small_order_is_refused() {
+        let (expr, mut e) = pi_certificate();
+        // Claim the cheapest order on the ladder, and honestly report the large
+        // remainder it produces, so only the order-adequacy guard can catch it.
+        let (_, honest) = eval_head(&StepHead::Pi, &[], ORDERS[0]).expect("re-evaluate");
+        e.evidence[0].order = ORDERS[0];
+        e.evidence[0].remainder = honest;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("per-step budget"),
+            "expected the order guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_shifted_interval_is_refused() {
+        let (expr, mut e) = pi_certificate();
+        let shifted = e.interval.add(&BigInterval::point(BigRational::one()));
+        e.evidence[0].output = shifted.clone();
+        e.interval = shifted;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("does not contain the recomputed"),
+            "expected the containment guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_too_wide_interval_for_the_claimed_precision_is_refused() {
+        let (expr, mut e) = pi_certificate();
+        // Widen consistently: the step still contains the truth and the last
+        // step still matches the enclosure, so only the width guard is left.
+        let wide = BigInterval::new(
+            e.interval.lo() - BigRational::one(),
+            e.interval.hi() + BigRational::one(),
+        )
+        .expect("wide");
+        e.evidence[0].output = wide.clone();
+        e.interval = wide;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("exceeds 2^-"),
+            "expected the width guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_head_is_refused() {
+        let (expr, mut e) = pi_certificate();
+        e.evidence[0].head = StepHead::Exp;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("records head"),
+            "expected the head guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_root_endpoint_sign_is_refused() {
+        let p = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let isolating = (Rational::integer(1), Rational::integer(2));
+        let mut e = enclose_root(&p, isolating, 30).expect("root");
+        let (lo, hi) = e.evidence[0].signs.expect("signs");
+        e.evidence[0].signs = Some((-lo, hi));
+        let message = e.verify_root(&p, isolating).unwrap_err();
+        assert!(
+            message.contains("do not match the recomputed"),
+            "expected the sign guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_root_without_a_sign_change_is_refused() {
+        let p = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let isolating = (Rational::integer(1), Rational::integer(2));
+        let mut e = enclose_root(&p, isolating, 30).expect("root");
+        // Move the interval wholly to the left of the root, where p is negative
+        // at both ends, and record those (honest) equal signs.
+        let shifted = BigInterval::new(bi(1), br(11, 10)).expect("shifted");
+        e.interval = shifted.clone();
+        e.evidence[0].output = shifted;
+        e.evidence[0].signs = Some((-1, -1));
+        let message = e.verify_root(&p, isolating).unwrap_err();
+        assert!(
+            message.contains("bracket a sign change"),
+            "expected the sign-change guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_root_outside_the_isolating_interval_is_refused() {
+        let p = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let isolating = (Rational::integer(1), Rational::integer(2));
+        let mut e = enclose_root(&p, isolating, 30).expect("root");
+        let outside = BigInterval::new(bi(5), bi(6)).expect("outside");
+        e.interval = outside.clone();
+        e.evidence[0].output = outside;
+        let message = e.verify_root(&p, isolating).unwrap_err();
+        assert!(
+            message.contains("not inside the isolating interval"),
+            "expected the containment guard, got: {message}"
+        );
+    }
+
+    // -- Cost ---------------------------------------------------------------
+
+    #[test]
+    fn cost_table_pi() {
+        // Advisory only: one unpinned run on a shared host. Printed so the
+        // module doc's cost table can be re-measured with `--nocapture`.
+        for precision in [10u32, 50, 100, 200, 500] {
+            let start = std::time::Instant::now();
+            let e = enclose_constant("pi", precision).expect("pi");
+            let produced = start.elapsed();
+            let start = std::time::Instant::now();
+            e.verify(&CasExpr::var("pi"), &[]).expect("verifies");
+            let verified = start.elapsed();
+            println!(
+                "pi precision {precision:>3}: order {:>4}  produce {produced:?}  verify {verified:?}",
+                e.evidence[0].order
+            );
+        }
     }
 }
