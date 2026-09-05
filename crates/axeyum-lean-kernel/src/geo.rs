@@ -1,7 +1,11 @@
 //! `Geo.Incidence` — **synthetic incidence geometry as a record**, with the
-//! rational coordinate plane and the real plane `CPoint` as models.
+//! rational coordinate plane as its model.
 //!
-//! Roadmap W3-8, ADR-1635.
+//! Roadmap W3-8, ADR-1635. The real plane `CPoint` is **not** a model here:
+//! the record is shaped so it can become one (that is what `apart` is for,
+//! and the field layout below says so), but no ℝ² instance is built. See
+//! [`qplane`] for the one that is, and the lane status file for the sized
+//! obstruction on the ℝ side.
 //!
 //! # Why a record, and why this shape
 //!

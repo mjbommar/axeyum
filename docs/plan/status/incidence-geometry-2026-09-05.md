@@ -58,7 +58,9 @@ verified by hand before being encoded. Distinctness is spent in exactly one
 place, `Geo.QPlane.joinNondeg`. `twoPoints` needs the case split only for the
 FIRST point: the second is the first plus the direction `(-b, a)`, whose
 incidence is one ring identity and whose apartness needs `Nondeg` alone —
-`Rat.inv` appears exactly once in the whole model, in `Geo.QPlane.basePoint`.
+`Rat.inv` appears at exactly ONE site in the whole model, inside
+`Geo.QPlane.basePoint`'s branch closure (which runs for both cases of the
+split, so the emitted term has two copies and the source has one).
 
 **Line equality is extensional and that is the load-bearing choice.** With
 `Equiv l m := ∀ P, (on P l → on P m) ∧ (on P m → on P l)`, reflexivity,
@@ -82,3 +84,5 @@ harder: `joinExists` is the same coordinate computation over `CReal.Equiv`,
 <!-- plan-section: landed-changes -->
 
 | 2026-09-05 | `7ec964eab` | `Geo.Incidence` — a 21-field incidence record over two carriers with Hilbert I.1 (split into `joinExists`/`joinUnique`, this kernel having no `ExistsUnique`), I.2 and I.3, plus `apart` and its three laws; and five theorems derived once over an arbitrary `I : Geo.Incidence` — `Collinear` (a Definition), `collinear_intro`, `collinear_perm`, `distinct_lines_meet_once` (which IS "two distinct lines meet in at most one point") and `triangle_not_collinear`. 7 tests. Every one of the 29 names is asserted present AND axiom-free with `Environment::contains` checked FIRST, and the declaration list is derived from `RecordNames::field_count` rather than a literal. |
+| 2026-09-05 | `054cb3e38` | `Geo.qplane : Geo.Incidence` — the rational plane, 46 declarations: `Geo.QPoint`/`Geo.QLine0` with their projections, `eta` and `ext`; `Geo.QLine = Subtype Geo.QLine0 Geo.QLine0.Nondeg`; extensional line equality with its three laws; `Geo.QPlane.onPivot` and `onOfProp` (the one algebraic lemma, used in BOTH branches of the nonzero split); `joinProp` (proportionality with NO non-degeneracy hypothesis); `joinNondeg`, `joinExists`, `joinUnique`, `shift`/`shiftOn`/`shiftApart`, `basePoint`, `twoPoints`, `triangle`. Plus `Geo.Rat.eqOrNe` from `Rat.lt_trichotomy` — the only place the model uses ℚ's decidability. In the same commit: two new passes in `ring::rat::Problem::cancel_pairs` with three matched tests (19 ring::rat tests pass), and `geo::qplane::congr_cross`, the two-carrier congruence `structures::congr_arg` cannot express. |
+| 2026-09-05 | `8a1ad873a` | Five more tests. `the_handle_names_every_live_geo_declaration` derives the population from `Environment::iter` and requires SET EQUALITY against the handle (measured: 75 live names, vacuity floor 70); four evaluation tests, one per definition family, each with its negative half — including the join-coefficient swap the mutation suite runs, pinned at FREE VARIABLES because a concrete point pair can make two coefficients coincide. The `geo-incidence` mutation suite is registered with the brief's two mutants. |

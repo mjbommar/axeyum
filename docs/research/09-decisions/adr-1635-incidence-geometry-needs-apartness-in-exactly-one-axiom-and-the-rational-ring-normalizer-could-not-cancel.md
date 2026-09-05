@@ -143,8 +143,10 @@ four `onOfProp` applications, one of which is where distinctness is spent
 `twoPoints` costs a case split only for the FIRST point: the second is the
 first plus the direction `(-b, a)` (`Geo.QPlane.shift`), whose incidence is one
 ring identity (the `a*b` terms cancel) and whose apartness needs `Nondeg`
-alone. `Rat.inv` and `Rat.mul_inv_cancel_of_ne_zero` appear exactly once, in
-`Geo.QPlane.basePoint`.
+alone. `Rat.inv` and `Rat.mul_inv_cancel_of_ne_zero` appear at exactly ONE
+site in the whole model, inside `Geo.QPlane.basePoint`'s branch closure — which
+runs for both cases of the split, so the emitted term has two copies and the
+source has one.
 
 ## The unbudgeted finding: `ring::rat` could prove none of these
 

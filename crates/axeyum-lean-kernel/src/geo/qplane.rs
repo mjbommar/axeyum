@@ -81,7 +81,8 @@
 //! [`Geo.QPlane.shift`]. `shiftOn` is one ring identity (the `a*b` terms
 //! cancel) and `shiftApart` needs only `Nondeg` — so the case split on which
 //! coefficient is nonzero is needed **only** to produce the first point, where
-//! `Rat.inv` and `Rat.mul_inv_cancel_of_ne_zero` do the work.
+//! `Rat.inv` and `Rat.mul_inv_cancel_of_ne_zero` do the work — at exactly one
+//! site in this file, shared by both cases of the split.
 
 #![allow(
     clippy::doc_markdown,
