@@ -243,6 +243,147 @@ fn every_theorem_here_is_axiom_free() {
         ("CPoint.scale_distSq", p.scale_dist_sq),
         ("CPoint.not_isometry_scale_two", p.not_isometry_scale_two),
         ("CPoint.isometry_preserves_dot", p.isometry_preserves_dot),
+        // --- conics (creal_point/conic.rs) ---
+        ("CPoint.Scalar.four", p.conic.four),
+        ("CPoint.Scalar.zero_lt_four", p.conic.zero_lt_four),
+        (
+            "CPoint.Scalar.neg_lt_zero_of_pos",
+            p.conic.neg_lt_zero_of_pos,
+        ),
+        ("CPoint.Conic", p.conic.conic),
+        ("CPoint.Conic.mk", p.conic.mk),
+        ("CPoint.Conic.rec", p.conic.rec),
+        ("CPoint.Conic.a", p.conic.a),
+        ("CPoint.Conic.b", p.conic.b),
+        ("CPoint.Conic.c", p.conic.c),
+        ("CPoint.Conic.d", p.conic.d),
+        ("CPoint.Conic.e", p.conic.e),
+        ("CPoint.Conic.f", p.conic.f),
+        ("CPoint.Conic.eval", p.conic.eval),
+        ("CPoint.OnConic", p.conic.on_conic),
+        ("CPoint.Conic.discriminant", p.conic.discriminant),
+        ("CPoint.IsEllipseType", p.conic.is_ellipse_type),
+        ("CPoint.IsParabolaType", p.conic.is_parabola_type),
+        ("CPoint.IsHyperbolaType", p.conic.is_hyperbola_type),
+        (
+            "CPoint.Conic.not_ellipse_and_parabola",
+            p.conic.not_ellipse_and_parabola,
+        ),
+        (
+            "CPoint.Conic.not_ellipse_and_hyperbola",
+            p.conic.not_ellipse_and_hyperbola,
+        ),
+        (
+            "CPoint.Conic.not_parabola_and_hyperbola",
+            p.conic.not_parabola_and_hyperbola,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_congr",
+            p.conic.is_ellipse_type_congr,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_congr",
+            p.conic.is_parabola_type_congr,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_congr",
+            p.conic.is_hyperbola_type_congr,
+        ),
+        ("CPoint.Conic.circle", p.conic.circle),
+        ("CPoint.onConic_circle_iff", p.conic.on_conic_circle_iff),
+        (
+            "CPoint.Conic.circle_isEllipseType",
+            p.conic.circle_is_ellipse_type,
+        ),
+        ("CPoint.Conic.rotate", p.conic.rotate),
+        ("CPoint.onConic_rotate_iff", p.conic.on_conic_rotate_iff),
+        (
+            "CPoint.Conic.discriminant_rotate",
+            p.conic.discriminant_rotate,
+        ),
+        (
+            "CPoint.Conic.discriminant_rotate_unit",
+            p.conic.discriminant_rotate_unit,
+        ),
+        ("CPoint.Conic.reflect", p.conic.reflect),
+        ("CPoint.onConic_reflect_iff", p.conic.on_conic_reflect_iff),
+        (
+            "CPoint.Conic.discriminant_reflect",
+            p.conic.discriminant_reflect,
+        ),
+        (
+            "CPoint.Conic.discriminant_reflect_unit",
+            p.conic.discriminant_reflect_unit,
+        ),
+        ("CPoint.Conic.translate", p.conic.translate),
+        (
+            "CPoint.onConic_translate_iff",
+            p.conic.on_conic_translate_iff,
+        ),
+        (
+            "CPoint.Conic.discriminant_translate",
+            p.conic.discriminant_translate,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_rotate",
+            p.conic.is_ellipse_type_rotate,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_rotate",
+            p.conic.is_parabola_type_rotate,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_rotate",
+            p.conic.is_hyperbola_type_rotate,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_reflect",
+            p.conic.is_ellipse_type_reflect,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_reflect",
+            p.conic.is_parabola_type_reflect,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_reflect",
+            p.conic.is_hyperbola_type_reflect,
+        ),
+        (
+            "CPoint.Conic.isEllipseType_translate",
+            p.conic.is_ellipse_type_translate,
+        ),
+        (
+            "CPoint.Conic.isParabolaType_translate",
+            p.conic.is_parabola_type_translate,
+        ),
+        (
+            "CPoint.Conic.isHyperbolaType_translate",
+            p.conic.is_hyperbola_type_translate,
+        ),
+        ("CPoint.Conic.ellipse", p.conic.ellipse),
+        (
+            "CPoint.Conic.ellipse_isEllipseType",
+            p.conic.ellipse_is_ellipse_type,
+        ),
+        ("CPoint.Conic.parabola", p.conic.parabola),
+        (
+            "CPoint.Conic.parabola_isParabolaType",
+            p.conic.parabola_is_parabola_type,
+        ),
+        ("CPoint.Conic.hyperbola", p.conic.hyperbola),
+        (
+            "CPoint.Conic.hyperbola_isHyperbolaType",
+            p.conic.hyperbola_is_hyperbola_type,
+        ),
+        ("CPoint.Conic.parabolaFocal", p.conic.parabola_focal),
+        (
+            "CPoint.Conic.parabolaFocal_isParabolaType",
+            p.conic.parabola_focal_is_parabola_type,
+        ),
+        (
+            "CPoint.parabola_focus_directrix",
+            p.conic.parabola_focus_directrix,
+        ),
     ];
 
     // COVERAGE, checked against the ENVIRONMENT rather than against `named`
@@ -2446,5 +2587,527 @@ fn a_theorem_here_proves_only_its_own_statement() {
             refused.is_err(),
             "the kernel ADMITTED {source_label}'s proof as a proof of {target_label}"
         );
+    }
+}
+
+// --- conics (creal_point/conic.rs) -------------------------------------------
+//
+// Two kinds of test here, and they catch disjoint defects.
+//
+// The `*_statement_is_exact` tests read the RENDERED type out of the
+// environment. They catch a theorem that admits with a weaker or differently
+// quantified statement than its name promises -- which the kernel cannot
+// notice, because a weaker statement is still a true statement.
+//
+// The `conic_*_evaluates_*` tests apply a DEFINITION to concrete, small,
+// deliberately DISTINCT arguments and check what it reduces to, each with a
+// negative control that must NOT reduce the same way. They catch the defect
+// class CLAUDE.md names first: a `Definition` computing the wrong value has
+// exactly the right type, so `add_declaration` accepts it silently. Six
+// projections onto six slots is precisely the shape where an off-by-one is
+// invisible without them.
+
+/// Six pairwise-distinct small `CReal` terms to project out of, built only
+/// from `zero`/`one`/`two`/`four` and `neg`/`add` so that `def_eq` on them is
+/// cheap. Returned in constructor order `(A, B, C, D, E, F)`.
+fn six_distinct_scalars(kernel: &mut Kernel, p: CPointPrelude) -> [crate::expr::ExprId; 6] {
+    let zero = kernel.const_(p.creal.zero, vec![]);
+    let one = kernel.const_(p.creal.one, vec![]);
+    let two = kernel.const_(p.two, vec![]);
+    let four = kernel.const_(p.conic.four, vec![]);
+    let neg = |k: &mut Kernel, x| {
+        let c = k.const_(p.creal.neg, vec![]);
+        k.app(c, x)
+    };
+    let neg_one = neg(kernel, one);
+    let neg_two = neg(kernel, two);
+    [zero, one, two, four, neg_one, neg_two]
+}
+
+/// **The six projections land on the six slots, in order.**
+///
+/// The positive half alone would pass for a `Conic.b` that returned slot 0:
+/// each negative control pins one projection against a DIFFERENT slot's
+/// value, so a swapped or off-by-one projection kills at least one assertion.
+#[test]
+fn conic_projections_evaluate_to_their_own_slot() {
+    let (mut kernel, p) = built();
+    let slots = six_distinct_scalars(&mut kernel, p);
+    let mk = kernel.const_(p.conic.mk, vec![]);
+    let mut conic = mk;
+    for slot in slots {
+        conic = kernel.app(conic, slot);
+    }
+    let projections = [
+        p.conic.a, p.conic.b, p.conic.c, p.conic.d, p.conic.e, p.conic.f,
+    ];
+    for (index, name) in projections.into_iter().enumerate() {
+        let proj = kernel.const_(name, vec![]);
+        let applied = kernel.app(proj, conic);
+        assert!(
+            kernel.def_eq(applied, slots[index]),
+            "projection {index} does not reduce to slot {index}"
+        );
+        // Negative control: the SAME projection against a neighbouring slot.
+        let other = (index + 1) % 6;
+        assert!(
+            !kernel.def_eq(applied, slots[other]),
+            "projection {index} also reduces to slot {other}, so the six \
+             scalars are not distinct and this test cannot fail"
+        );
+    }
+}
+
+/// **`Conic.discriminant` computes `B² − 4AC`, not `B² + 4AC` and not
+/// `A² − 4BC`.**
+///
+/// Evaluated at `A = 1, B = 2, C = 1` (so `B² − 4AC = 0` and
+/// `B² + 4AC = 8` -- the two candidates are `Equiv`-separated, and the
+/// controls below check the kernel agrees).
+#[test]
+fn conic_discriminant_evaluates_to_b_squared_minus_four_ac() {
+    let (mut kernel, p) = built();
+    let one = kernel.const_(p.creal.one, vec![]);
+    let two = kernel.const_(p.two, vec![]);
+    let zero = kernel.const_(p.creal.zero, vec![]);
+    let four = kernel.const_(p.conic.four, vec![]);
+    let mk = kernel.const_(p.conic.mk, vec![]);
+    let conic = {
+        let mut e = mk;
+        for arg in [one, two, one, zero, zero, zero] {
+            e = kernel.app(e, arg);
+        }
+        e
+    };
+    let disc = kernel.const_(p.conic.discriminant, vec![]);
+    let applied = kernel.app(disc, conic);
+
+    let mul = |k: &mut Kernel, x, y| {
+        let c = k.const_(p.creal.mul, vec![]);
+        let e = k.app(c, x);
+        k.app(e, y)
+    };
+    let add = |k: &mut Kernel, x, y| {
+        let c = k.const_(p.creal.add, vec![]);
+        let e = k.app(c, x);
+        k.app(e, y)
+    };
+    let negate = |k: &mut Kernel, x| {
+        let c = k.const_(p.creal.neg, vec![]);
+        k.app(c, x)
+    };
+
+    // `2*2 + -(four * (1*1))`
+    let bb = mul(&mut kernel, two, two);
+    let ac = mul(&mut kernel, one, one);
+    let four_ac = mul(&mut kernel, four, ac);
+    let neg_four_ac = negate(&mut kernel, four_ac);
+    let expected = add(&mut kernel, bb, neg_four_ac);
+    assert!(
+        kernel.def_eq(applied, expected),
+        "discriminant (mk 1 2 1 0 0 0) is not `2*2 + -(4*(1*1))`"
+    );
+
+    // Negative control 1: the `+ 4AC` mutant's value must NOT be reachable.
+    let plus = add(&mut kernel, bb, four_ac);
+    assert!(
+        !kernel.def_eq(applied, plus),
+        "`B*B - 4AC` and `B*B + 4AC` are definitionally equal here, so this \
+         test could not distinguish the sign mutant"
+    );
+    // Negative control 2: the `A² − 4BC` mutant, which at these arguments is
+    // `1 - 4*(2*1)`.
+    let aa = mul(&mut kernel, one, one);
+    let bc = mul(&mut kernel, two, one);
+    let four_bc = mul(&mut kernel, four, bc);
+    let neg_four_bc = negate(&mut kernel, four_bc);
+    let swapped = add(&mut kernel, aa, neg_four_bc);
+    assert!(
+        !kernel.def_eq(applied, swapped),
+        "`B*B - 4AC` and `A*A - 4BC` are definitionally equal here, so this \
+         test could not distinguish a slot mix-up"
+    );
+}
+
+/// **`Conic.eval` places each coefficient against the right monomial.**
+///
+/// At `(A,B,C,D,E,F) = (1,0,0,0,0,0)` and `P = mk two four` the value must be
+/// `x²`; the negative control is the same conic's value at the SWAPPED point
+/// `mk four two`, which is a different number, so an `eval` that had put `A`
+/// against `y²` would pass the positive half and die here.
+#[test]
+fn conic_eval_puts_the_leading_coefficient_on_x_squared() {
+    let (mut kernel, p) = built();
+    let zero = kernel.const_(p.creal.zero, vec![]);
+    let one = kernel.const_(p.creal.one, vec![]);
+    let two = kernel.const_(p.two, vec![]);
+    let four = kernel.const_(p.conic.four, vec![]);
+    let mk_conic = kernel.const_(p.conic.mk, vec![]);
+    let conic = {
+        let mut e = mk_conic;
+        for arg in [one, zero, zero, zero, zero, zero] {
+            e = kernel.app(e, arg);
+        }
+        e
+    };
+    let mk_point = kernel.const_(p.mk, vec![]);
+    let point = {
+        let e = kernel.app(mk_point, two);
+        kernel.app(e, four)
+    };
+    let swapped_point = {
+        let e = kernel.app(mk_point, four);
+        kernel.app(e, two)
+    };
+    let eval = kernel.const_(p.conic.eval, vec![]);
+    let here = {
+        let e = kernel.app(eval, conic);
+        kernel.app(e, point)
+    };
+    let there = {
+        let e = kernel.app(eval, conic);
+        kernel.app(e, swapped_point)
+    };
+    assert!(
+        !kernel.def_eq(here, there),
+        "`eval` of `x²` gives the same value at (2,4) and (4,2), so it is not \
+         reading the x coordinate"
+    );
+}
+
+/// **`Conic.circle` recovers the circle's coefficients**, checked slot by
+/// slot at the centre `(0, 1)` and radius-squared `1`: `A = C = 1`, `B = 0`.
+/// Together with `onConic_circle_iff` this is the "circles are the
+/// `A = C, B = 0` case" claim, split into the part the kernel can check by
+/// reduction and the part that needs a proof.
+#[test]
+fn conic_circle_has_unit_quadratic_part_and_no_cross_term() {
+    let (mut kernel, p) = built();
+    let zero = kernel.const_(p.creal.zero, vec![]);
+    let one = kernel.const_(p.creal.one, vec![]);
+    let mk_point = kernel.const_(p.mk, vec![]);
+    let centre = {
+        let e = kernel.app(mk_point, zero);
+        kernel.app(e, one)
+    };
+    let circle = kernel.const_(p.conic.circle, vec![]);
+    let shape = {
+        let e = kernel.app(circle, centre);
+        kernel.app(e, one)
+    };
+    for (name, expected, label) in [
+        (p.conic.a, one, "A"),
+        (p.conic.b, zero, "B"),
+        (p.conic.c, one, "C"),
+    ] {
+        let proj = kernel.const_(name, vec![]);
+        let applied = kernel.app(proj, shape);
+        assert!(
+            kernel.def_eq(applied, expected),
+            "Conic.circle's {label} coefficient is not what it should be"
+        );
+    }
+    // Negative control: `zero` and `one` really are distinguishable here, so
+    // the three assertions above are not all vacuously true.
+    assert!(
+        !kernel.def_eq(zero, one),
+        "CReal.zero and CReal.one are definitionally equal, so the coefficient \
+         checks above cannot fail"
+    );
+}
+
+/// **`Conic.translate` leaves the quadratic part alone.** The whole reason
+/// `discriminant_translate` is `Equiv.refl` -- checked here by reduction
+/// rather than inferred from that proof, so the two are independent.
+#[test]
+fn conic_translate_copies_the_quadratic_part() {
+    let (mut kernel, p) = built();
+    let slots = six_distinct_scalars(&mut kernel, p);
+    let mk_conic = kernel.const_(p.conic.mk, vec![]);
+    let conic = {
+        let mut e = mk_conic;
+        for slot in slots {
+            e = kernel.app(e, slot);
+        }
+        e
+    };
+    let two = kernel.const_(p.two, vec![]);
+    let mk_point = kernel.const_(p.mk, vec![]);
+    let shift = {
+        let e = kernel.app(mk_point, two);
+        kernel.app(e, two)
+    };
+    let translate = kernel.const_(p.conic.translate, vec![]);
+    let shifted = {
+        let e = kernel.app(translate, shift);
+        kernel.app(e, conic)
+    };
+    for (index, name) in [p.conic.a, p.conic.b, p.conic.c].into_iter().enumerate() {
+        let proj = kernel.const_(name, vec![]);
+        let applied = kernel.app(proj, shifted);
+        assert!(
+            kernel.def_eq(applied, slots[index]),
+            "translation changed the quadratic coefficient at slot {index}"
+        );
+    }
+    // ...but it does NOT leave the linear part alone, or the definition would
+    // be the identity and every `onConic_translate_iff` would be vacuous.
+    let proj_d = kernel.const_(p.conic.d, vec![]);
+    let shifted_d = kernel.app(proj_d, shifted);
+    assert!(
+        !kernel.def_eq(shifted_d, slots[3]),
+        "translation left D unchanged, so Conic.translate is doing nothing"
+    );
+}
+
+/// `CPoint.Conic.discriminant`'s type and value, verbatim. The value is the
+/// one place `CPoint.Scalar.four` is consumed, and the module doc's whole
+/// argument for spelling `4` out rests on it being this term and not an atom.
+#[test]
+fn conic_discriminant_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let (ty, value) = match kernel
+        .environment()
+        .get(p.conic.discriminant)
+        .expect("Conic.discriminant must be declared")
+    {
+        Declaration::Definition { ty, value, .. } => (*ty, *value),
+        other => panic!("{other:?} is not a definition"),
+    };
+    assert_eq!(kernel.render_lean(ty), "((x0 : CPoint.Conic) -> CReal)");
+    assert_eq!(
+        kernel.render_lean(value),
+        "fun (x0 : CPoint.Conic) => CReal.add (CReal.mul (CPoint.Conic.b x0) (CPoint.Conic.b \
+         x0)) (CReal.neg (CReal.mul CPoint.Scalar.four (CReal.mul (CPoint.Conic.a x0) \
+         (CPoint.Conic.c x0))))"
+    );
+}
+
+/// `CPoint.onConic_circle_iff`'s statement, verbatim: an `Iff` between
+/// `OnConic (Conic.circle O r2) P` and `OnCircle P O r2`, quantified over all
+/// three, with no side condition on `r2`.
+#[test]
+fn on_conic_circle_iff_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.conic.on_conic_circle_iff)
+        .expect("onConic_circle_iff must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert_eq!(
+        kernel.render_lean(ty),
+        "((x0 : CPoint) -> ((x1 : CReal) -> ((x2 : CPoint) -> Iff (CPoint.OnConic \
+         (CPoint.Conic.circle x0 x1) x2) (CPoint.OnCircle x2 x0 x1))))"
+    );
+}
+
+/// `CPoint.Conic.discriminant_rotate`'s statement, verbatim. **No `c² + s² ~
+/// 1` hypothesis appears**, which is the claim the module doc makes and the
+/// only way to see it is to read the type.
+#[test]
+fn discriminant_rotate_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.conic.discriminant_rotate)
+        .expect("discriminant_rotate must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert_eq!(
+        kernel.render_lean(ty),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CPoint.Conic) -> CReal.Equiv \
+         (CPoint.Conic.discriminant (CPoint.Conic.rotate x0 x1 x2)) (CReal.mul \
+         (CPoint.Conic.discriminant x2) (CReal.mul (CReal.add (CReal.mul x0 x0) (CReal.mul x1 \
+         x1)) (CReal.add (CReal.mul x0 x0) (CReal.mul x1 x1)))))))"
+    );
+}
+
+/// `CPoint.onConic_rotate_iff`'s statement, verbatim: the conic-side action
+/// and the point-side action describe the same zero set.
+#[test]
+fn on_conic_rotate_iff_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.conic.on_conic_rotate_iff)
+        .expect("onConic_rotate_iff must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert_eq!(
+        kernel.render_lean(ty),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CPoint.Conic) -> ((x3 : CPoint) -> Iff \
+         (CPoint.OnConic (CPoint.Conic.rotate x0 x1 x2) x3) (CPoint.OnConic x2 (CPoint.rotate x0 \
+         x1 x3))))))"
+    );
+}
+
+/// `CPoint.Conic.ellipse_isEllipseType`'s statement, verbatim — including
+/// **both** positivity hypotheses, which are load-bearing (at `a ~ 0` the
+/// discriminant is `~ 0`, not negative).
+#[test]
+fn ellipse_is_ellipse_type_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.conic.ellipse_is_ellipse_type)
+        .expect("ellipse_isEllipseType must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    assert_eq!(
+        kernel.render_lean(ty),
+        "((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.lt CReal.zero x0) -> ((x3 : CReal.lt \
+         CReal.zero x1) -> CPoint.IsEllipseType (CPoint.Conic.ellipse x0 x1)))))"
+    );
+}
+
+/// `CPoint.parabola_focus_directrix`'s statement, verbatim. The point of the
+/// test is the ABSENCE of `CReal.sqrt` and of any hypothesis on `p`: this is
+/// the focus–directrix property as a comparison of squares.
+#[test]
+fn parabola_focus_directrix_statement_is_exact() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let ty = match kernel
+        .environment()
+        .get(p.conic.parabola_focus_directrix)
+        .expect("parabola_focus_directrix must be declared")
+    {
+        Declaration::Theorem { ty, .. } => *ty,
+        other => panic!("{other:?} is not a theorem"),
+    };
+    let rendered = kernel.render_lean(ty);
+    assert_eq!(
+        rendered,
+        "((x0 : CReal) -> ((x1 : CPoint) -> Iff (CPoint.OnConic (CPoint.Conic.parabolaFocal x0) \
+         x1) (CReal.Equiv (CPoint.distSq x1 (CPoint.mk CReal.zero x0)) (CReal.mul (CReal.add \
+         (CPoint.y x1) x0) (CReal.add (CPoint.y x1) x0)))))"
+    );
+    assert!(
+        !rendered.contains("sqrt"),
+        "the focus-directrix statement mentions sqrt, so it is not the \
+         square-root-free form this module claims to prove"
+    );
+}
+
+/// **The classification is not vacuous and not overlapping.** Each of the
+/// three predicates is inhabited by a named instance, and the three exclusion
+/// theorems say no two of them can hold at once. Read out of the environment
+/// rather than asserted here, so a deleted exclusion kills this test.
+#[test]
+fn the_three_conic_types_are_inhabited_and_pairwise_exclusive() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    for name in [
+        p.conic.ellipse_is_ellipse_type,
+        p.conic.parabola_is_parabola_type,
+        p.conic.hyperbola_is_hyperbola_type,
+        p.conic.parabola_focal_is_parabola_type,
+        p.conic.circle_is_ellipse_type,
+        p.conic.not_ellipse_and_parabola,
+        p.conic.not_ellipse_and_hyperbola,
+        p.conic.not_parabola_and_hyperbola,
+    ] {
+        let declaration = kernel
+            .environment()
+            .get(name)
+            .unwrap_or_else(|| panic!("{} must be declared", kernel.display_name(name)));
+        assert!(
+            matches!(declaration, Declaration::Theorem { .. }),
+            "{} is not a theorem",
+            kernel.display_name(name)
+        );
+        assert!(
+            kernel.axiom_footprint(name).is_empty(),
+            "{} has a nonempty axiom footprint",
+            kernel.display_name(name)
+        );
+    }
+    // The exclusions end in `False`, not in something weaker.
+    for name in [
+        p.conic.not_ellipse_and_parabola,
+        p.conic.not_ellipse_and_hyperbola,
+        p.conic.not_parabola_and_hyperbola,
+    ] {
+        let Declaration::Theorem { ty, .. } = kernel.environment().get(name).expect("declared")
+        else {
+            unreachable!("checked above")
+        };
+        let rendered = kernel.render_lean(*ty);
+        assert!(
+            rendered.contains("-> False)"),
+            "{} does not conclude in False: {rendered}",
+            kernel.display_name(name)
+        );
+    }
+}
+
+/// **Every one of the nine invariance corollaries exists and is axiom-free**,
+/// derived from the three predicates crossed with the three isometry
+/// generators rather than from a hand-written list of nine names -- so adding
+/// a fourth generator without its three corollaries makes this test's own
+/// construction, not the maintainer's memory, the thing that has to change.
+#[test]
+fn every_predicate_is_invariant_under_every_isometry_generator() {
+    use crate::env::Declaration;
+    let (kernel, p) = built();
+    let by_generator = [
+        [
+            p.conic.is_ellipse_type_rotate,
+            p.conic.is_parabola_type_rotate,
+            p.conic.is_hyperbola_type_rotate,
+        ],
+        [
+            p.conic.is_ellipse_type_reflect,
+            p.conic.is_parabola_type_reflect,
+            p.conic.is_hyperbola_type_reflect,
+        ],
+        [
+            p.conic.is_ellipse_type_translate,
+            p.conic.is_parabola_type_translate,
+            p.conic.is_hyperbola_type_translate,
+        ],
+    ];
+    let predicates = ["IsEllipseType", "IsParabolaType", "IsHyperbolaType"];
+    for row in by_generator {
+        for (slot, name) in row.into_iter().enumerate() {
+            let declaration = kernel
+                .environment()
+                .get(name)
+                .unwrap_or_else(|| panic!("{} must be declared", kernel.display_name(name)));
+            assert!(
+                matches!(declaration, Declaration::Theorem { .. }),
+                "{} is not a theorem",
+                kernel.display_name(name)
+            );
+            let Declaration::Theorem { ty, .. } = declaration else {
+                unreachable!("checked above")
+            };
+            let rendered = kernel.render_lean(*ty);
+            assert!(
+                rendered.contains(predicates[slot]),
+                "{} does not mention {}: {rendered}",
+                kernel.display_name(name),
+                predicates[slot]
+            );
+            assert!(
+                kernel.axiom_footprint(name).is_empty(),
+                "{} has a nonempty axiom footprint",
+                kernel.display_name(name)
+            );
+        }
     }
 }

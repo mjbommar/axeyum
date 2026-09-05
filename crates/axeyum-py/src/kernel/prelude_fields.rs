@@ -4670,8 +4670,12 @@ pub(super) fn complex_sub(p: &ComplexPrelude) -> Vec<(&'static str, Sub)> {
     vec![("creal", Sub::CReal(Box::new(p.creal)))]
 }
 
-/// The `CPointPrelude` field table (149 names,
+/// The `CPointPrelude` field table (205 names,
 /// 0 name lists, 1 sub-packages).
+///
+/// 56 of the names come from ADR-1512 per-module registries and
+/// carry a dotted field name (`pi.pi_le_four`); the rest are flat
+/// fields on `CPointPrelude` itself.
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
 pub(super) fn cpoint(p: &CPointPrelude) -> Fields {
@@ -4865,6 +4869,134 @@ pub(super) fn cpoint(p: &CPointPrelude) -> Fields {
             ("scale_dist_sq", p.scale_dist_sq),
             ("not_isometry_scale_two", p.not_isometry_scale_two),
             ("isometry_preserves_dot", p.isometry_preserves_dot),
+            ("conic.four", p.conic.four),
+            ("conic.zero_lt_four", p.conic.zero_lt_four),
+            ("conic.neg_lt_zero_of_pos", p.conic.neg_lt_zero_of_pos),
+            ("conic.conic", p.conic.conic),
+            ("conic.mk", p.conic.mk),
+            ("conic.rec", p.conic.rec),
+            ("conic.a", p.conic.a),
+            ("conic.b", p.conic.b),
+            ("conic.c", p.conic.c),
+            ("conic.d", p.conic.d),
+            ("conic.e", p.conic.e),
+            ("conic.f", p.conic.f),
+            ("conic.eval", p.conic.eval),
+            ("conic.on_conic", p.conic.on_conic),
+            ("conic.discriminant", p.conic.discriminant),
+            ("conic.is_ellipse_type", p.conic.is_ellipse_type),
+            ("conic.is_parabola_type", p.conic.is_parabola_type),
+            ("conic.is_hyperbola_type", p.conic.is_hyperbola_type),
+            (
+                "conic.not_ellipse_and_parabola",
+                p.conic.not_ellipse_and_parabola,
+            ),
+            (
+                "conic.not_ellipse_and_hyperbola",
+                p.conic.not_ellipse_and_hyperbola,
+            ),
+            (
+                "conic.not_parabola_and_hyperbola",
+                p.conic.not_parabola_and_hyperbola,
+            ),
+            ("conic.is_ellipse_type_congr", p.conic.is_ellipse_type_congr),
+            (
+                "conic.is_parabola_type_congr",
+                p.conic.is_parabola_type_congr,
+            ),
+            (
+                "conic.is_hyperbola_type_congr",
+                p.conic.is_hyperbola_type_congr,
+            ),
+            ("conic.circle", p.conic.circle),
+            ("conic.on_conic_circle_iff", p.conic.on_conic_circle_iff),
+            (
+                "conic.circle_is_ellipse_type",
+                p.conic.circle_is_ellipse_type,
+            ),
+            ("conic.rotate", p.conic.rotate),
+            ("conic.on_conic_rotate_iff", p.conic.on_conic_rotate_iff),
+            ("conic.discriminant_rotate", p.conic.discriminant_rotate),
+            (
+                "conic.discriminant_rotate_unit",
+                p.conic.discriminant_rotate_unit,
+            ),
+            ("conic.reflect", p.conic.reflect),
+            ("conic.on_conic_reflect_iff", p.conic.on_conic_reflect_iff),
+            ("conic.discriminant_reflect", p.conic.discriminant_reflect),
+            (
+                "conic.discriminant_reflect_unit",
+                p.conic.discriminant_reflect_unit,
+            ),
+            ("conic.translate", p.conic.translate),
+            (
+                "conic.on_conic_translate_iff",
+                p.conic.on_conic_translate_iff,
+            ),
+            (
+                "conic.discriminant_translate",
+                p.conic.discriminant_translate,
+            ),
+            (
+                "conic.is_ellipse_type_rotate",
+                p.conic.is_ellipse_type_rotate,
+            ),
+            (
+                "conic.is_parabola_type_rotate",
+                p.conic.is_parabola_type_rotate,
+            ),
+            (
+                "conic.is_hyperbola_type_rotate",
+                p.conic.is_hyperbola_type_rotate,
+            ),
+            (
+                "conic.is_ellipse_type_reflect",
+                p.conic.is_ellipse_type_reflect,
+            ),
+            (
+                "conic.is_parabola_type_reflect",
+                p.conic.is_parabola_type_reflect,
+            ),
+            (
+                "conic.is_hyperbola_type_reflect",
+                p.conic.is_hyperbola_type_reflect,
+            ),
+            (
+                "conic.is_ellipse_type_translate",
+                p.conic.is_ellipse_type_translate,
+            ),
+            (
+                "conic.is_parabola_type_translate",
+                p.conic.is_parabola_type_translate,
+            ),
+            (
+                "conic.is_hyperbola_type_translate",
+                p.conic.is_hyperbola_type_translate,
+            ),
+            ("conic.ellipse", p.conic.ellipse),
+            (
+                "conic.ellipse_is_ellipse_type",
+                p.conic.ellipse_is_ellipse_type,
+            ),
+            ("conic.parabola", p.conic.parabola),
+            (
+                "conic.parabola_is_parabola_type",
+                p.conic.parabola_is_parabola_type,
+            ),
+            ("conic.hyperbola", p.conic.hyperbola),
+            (
+                "conic.hyperbola_is_hyperbola_type",
+                p.conic.hyperbola_is_hyperbola_type,
+            ),
+            ("conic.parabola_focal", p.conic.parabola_focal),
+            (
+                "conic.parabola_focal_is_parabola_type",
+                p.conic.parabola_focal_is_parabola_type,
+            ),
+            (
+                "conic.parabola_focus_directrix",
+                p.conic.parabola_focus_directrix,
+            ),
         ],
         lists: Vec::new(),
     }
