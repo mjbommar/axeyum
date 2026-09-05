@@ -13,7 +13,9 @@ exactly one test dies.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import sys
 import tempfile
 import unittest
@@ -340,15 +342,28 @@ class RatchetGateTests(unittest.TestCase):
         write_file(self.src_root, "widget.rs", content)
 
     def run_gate(self, extra_args=()):
-        return self.gate.main(
-            [
-                "--src-root",
-                str(self.src_root),
-                "--ratchet",
-                str(self.ratchet_path),
-                *extra_args,
-            ]
-        )
+        """Run the gate with stdout/stderr captured into a buffer.
+
+        The gate prints its own `FAIL: ...`/`OK: ...` diagnostics on the
+        exact code paths under test here, and those strings look exactly
+        like a unittest failure/error header to
+        `scripts/tests/mutation_controls.py`'s output scan. Redirecting
+        keeps this suite's real pass/fail signal -- the assertions below --
+        the only thing that reaches the runner's captured output, exactly as
+        `test_check_cas_internal_residue.py`'s own `run_gate` does.
+        """
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+            status = self.gate.main(
+                [
+                    "--src-root",
+                    str(self.src_root),
+                    "--ratchet",
+                    str(self.ratchet_path),
+                    *extra_args,
+                ]
+            )
+        return status
 
     CERTIFIED_CRATE = """
         pub struct FooCertificate {
@@ -363,14 +378,16 @@ class RatchetGateTests(unittest.TestCase):
     # -- baseline behaviour, no mutation tied to these -----------------------
 
     def test_missing_src_root_is_a_usage_error(self):
-        rc = self.gate.main(
-            [
-                "--src-root",
-                str(self.root / "does-not-exist"),
-                "--ratchet",
-                str(self.ratchet_path),
-            ]
-        )
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(buffer):
+            rc = self.gate.main(
+                [
+                    "--src-root",
+                    str(self.root / "does-not-exist"),
+                    "--ratchet",
+                    str(self.ratchet_path),
+                ]
+            )
         self.assertEqual(rc, 2)
 
     def test_write_then_check_round_trips_clean(self):
