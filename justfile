@@ -529,6 +529,15 @@ facts:
     # all. Exact, not a token screen: 362 of 374 mirrors are hash-pinned by a
     # preregistered catalog.
     python3 scripts/check-mirror-statement-fidelity.py
+    # The carrier correspondence ledger (docs/math-department/14-lean-lang.md
+    # Next Ten item 4): one row per (Axeyum carrier, Mathlib counterpart)
+    # pair, graded from a closed enum, with a witness theorem pair resolved
+    # against the live kernel projection. Before this gate, nothing recorded
+    # per-carrier whether a shared-looking theorem (CReal vs Mathlib's Real,
+    # a Bishop setoid vs a classical Cauchy quotient) is the same statement.
+    python3 -m unittest scripts.tests.test_check_carrier_correspondence
+    python3 scripts/check-carrier-correspondence.py --check
+    python3 scripts/gen-carrier-correspondence-md.py --check
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
     # "the DAG picks the next goal". 60% of facts are isolated, so proving one
     # usually unlocks nothing; the ratchet keeps that from getting worse.
