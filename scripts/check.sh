@@ -423,6 +423,15 @@ step cas-substance-tests python3 -m unittest scripts.tests.test_check_cas_substa
 # vanishing) is refused; a new cas-internal fact is not.
 step cas-internal-residue python3 scripts/check-cas-internal-residue.py --report
 step cas-internal-residue-tests python3 -m unittest scripts.tests.test_check_cas_internal_residue
+# Math-department file 13, Next Ten item 10 (first half): a per-function
+# trust registry for axeyum-cas. Distinct from cas-internal-residue above,
+# which floors the FACT LEDGER's cas-certificate classification; this
+# floors the SOURCE's own pub fn surface -- whether each function's return
+# type carries a certificate at all, ratcheted the same way (a certified
+# function reclassifying, vanishing, or the certified count falling below
+# its recorded floor is refused; a new uncertified function is not).
+step cas-trust-registry python3 scripts/check-cas-trust-registry.py --report
+step cas-trust-registry-tests python3 -m unittest scripts.tests.test_check_cas_trust_registry
 step settled-fact-statement-tests python3 -m unittest scripts.tests.test_settled_fact_statements
 step draw7-frozen-families-tests python3 -m unittest scripts.tests.test_check_draw7_frozen_families
 step settled-fact-statements python3 scripts/check-settled-fact-statements.py
