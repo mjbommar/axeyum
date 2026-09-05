@@ -87,6 +87,20 @@
 //! would not exist (ADR-1626), so there is no `Eq`-flavoured counterfactual to
 //! price against.
 
+// The same four `groups.rs` carries, for the same reasons: a term builder
+// takes one `&mut Kernel` plus every sub-expression, so the argument counts
+// are inherent; the accessor structs are `Copy` handles passed by reference to
+// keep the call sites readable; and `use super::*` is how a `category_setoid`
+// submodule reaches the shared record vocabulary. `items_after_statements` is
+// for one test-local helper `fn`, kept beside the assertions it serves.
+#![allow(
+    clippy::too_many_arguments,
+    clippy::similar_names,
+    clippy::wildcard_imports,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::items_after_statements
+)]
+
 use super::*;
 
 // ---------------------------------------------------------------------------
