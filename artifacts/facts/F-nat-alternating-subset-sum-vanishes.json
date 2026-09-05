@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-alternating-subset-sum-vanishes",
+  "title": "The alternating sum of a constant over the subsets of a NON-EMPTY ground set vanishes, and in Nat's graded form that is add_comm",
+  "statement": "For every constant c and every width n, the sum of c over the even-cardinality subsets of [0, n+1) equals the sum over the odd-cardinality subsets. Classically this is the statement that the alternating sum of the binomial coefficients of a non-empty row is zero; here Nat has no negatives, so it is stated as an equality between two Nat sums. The proof is one application of add_comm and nothing else, because the split law sends the even sum at width n+1 to (even at n) + (odd at n) and the odd sum to (odd at n) + (even at n), and a constant summand is unchanged by inserting an element. That the identity costs one lemma is the return on making the split law Eq.refl. Non-emptiness is not a side condition bolted on: the statement is over succ n, and at width 0 it is false (the only subset is empty, and it is even).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Subsets.sumSel_const : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.Subsets.sumSel (AxNat.succ x1) (fun (x2 : ((x2 : AxNat) -> Bool)) => x0) Bool.true) (AxNat.Subsets.sumSel (AxNat.succ x1) (fun (x2 : ((x2 : AxNat) -> Bool)) => x0) Bool.false)))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Subsets.sumSel_const",
+    "kernel_statement": "Nat.Subsets.sumSel n F b sums F over the subsets of [0,n) whose cardinality has parity b, with true meaning EVEN and the empty set even. The grading is a partition: Nat.Subsets.sumSel_add : forall n F, sumSel n F true + sumSel n F false = sumSubsets n F, and the total is Nat.Subsets.sumSubsets_card : forall n, sumSubsets n (fun _ => 1) = pow 2 n. Taken together the three say that a non-empty ground set has 2^(n-1) even and 2^(n-1) odd subsets."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-subset-sum-split-law",
+    "F:nat-add-comm",
+    "F:ml430-nat-add-comm-56a2d614"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `inclusion-exclusion-mobius`, roadmap item W2-19 and the W2-18 residue: `nat_prelude/subset_sums.rs`. ADR-1624.",
+    "source": "Classical: the alternating binomial row sum, (1 - 1)^n = 0 for n > 0.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.sum_pow_mul_eq_max_pow` / `Int.alternating_sum_range_choose`",
+        "establishes": "the signed form over Int; the graded Nat form is what this build position can state, and it is the one Moebius inversion consumes"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Subsets.sumSel_const",
+      "kind": "kernel-term",
+      "supports": "the even and odd sums of a constant over a non-empty ground set are equal",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example nat_theorem_inventory -- Subsets.sumSel_const",
+      "notes": "The whole proof term is `Nat.add_comm (sumSel n K true) (sumSel n K false)`, offered at a statement about `succ n`. The kernel accepts it because both sides of the goal delta-reduce to the two orders of that sum -- the split law's `Eq.refl` doing the work -- and `(fun _ => c) o insertAt n` is `fun _ => c` by beta.",
+      "checker_paired_negative": "The statement is FALSE at width 0 and the theorem is stated only at `succ n`: `sumSel 0 (fun _ => c) true = c` and `sumSel 0 (fun _ => c) false = 0`, which `nat_prelude::subset_sums_tests::sum_sel_grades_by_parity_and_the_empty_set_is_even` pins at c = 2 and c = 7. So the `succ` is load-bearing and not decoration."
+    },
+    {
+      "id": "eval-parity-halves",
+      "kind": "instance-pin",
+      "supports": "the two halves really are the even and odd subsets, at widths where both can be listed",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::subset_sums_tests::sum_sel_grades_by_parity_and_the_empty_set_is_even",
+        "nat_prelude::subset_sums_tests::sum_sel_pos_drops_the_empty_set_and_nothing_else",
+        "nat_prelude::subset_sums_tests::the_grading_partitions_and_the_exchanged_or_reparitied_statements_do_not"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_sums_tests -- --test-threads=4",
+      "notes": "At width 2 over the indicator of {0,1} the even sum is 1 (only {0,1} contains both) and the odd sum is 0; over the constant 1 restricted to non-empty subsets the even sum is 1 and the odd sum is 2, which is the 1 + 2 = 3 non-empty subsets of a two-element set split by parity.",
+      "checker_paired_negative": "Each value is asserted NOT to be the other parity's answer, so a grading that swapped the two would fail even though every algebraic law in the module would still hold under the swap."
+    }
+  ],
+  "notes": "This is the identity Moebius inversion turns on, and recording it separately is the point. `sum_{d | n} mu(d) = [n = 1]` for a squarefree n is this statement at the prime factors of n, ONCE the divisors of a squarefree n are put in bijection with the subsets of its prime multiset. That bijection did NOT land in this lane and is not implied by anything here: it needs the prime factorisation as a multiset, the product over a sub-multiset, and injectivity from unique factorisation. ADR-1624 sizes it. Do not read this fact as establishing Moebius inversion."
+}

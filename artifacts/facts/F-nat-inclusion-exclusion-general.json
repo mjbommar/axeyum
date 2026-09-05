@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-inclusion-exclusion-general",
+  "title": "General inclusion-exclusion for a finite family of decidable subsets, as two Nat sums rather than one signed one, and the two-set case is the pre-existing lemma verbatim",
+  "statement": "Let A be a family of decidable subsets of the ambient range [0,m), indexed by i < n. Write ieSumPos A n m b for the sum of the cardinalities of the intersections of the NON-EMPTY subfamilies whose index set has cardinality parity b. Then the cardinality of the union plus the even sum equals the odd sum: |union| + ieSumPos true = ieSumPos false. Nat has no negatives, so the classical alternating sum is stated as this pair of Nat sums; the ungraded form ieSum true + |union| = ieSum false + m is the same identity before the empty subfamily's contribution -- exactly m, the whole ambient range -- is cancelled off both sides. At n = 2 the theorem specialises to countRange (setUnion (A 0) (A 1)) m + countRange (setInter (A 0) (A 1)) m = countRange (A 0) m + countRange (A 1) m, which is Nat.countRange_union_add_inter's statement; that specialisation is a declared theorem, not a resemblance.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Subsets.inclusion_exclusion_pos : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.countRange (AxNat.Subsets.unionAt x0 x1) x2) (AxNat.Subsets.ieSumPos x0 x1 x2 Bool.true)) (AxNat.Subsets.ieSumPos x0 x1 x2 Bool.false))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Subsets.inclusion_exclusion_pos",
+    "kernel_statement": "Nat.Subsets.meetInd A n s v := prodRangeIf s (fun i => if A i v then 1 else 0) n; Nat.Subsets.meetCard A n s m := sumRange (fun v => meetInd A n s v) m; Nat.Subsets.unionAt A n := fun v => anyOf (fun i => A i v) n; Nat.Subsets.ieSum A n m b := sumSel n (fun s => meetCard A n s m) b; Nat.Subsets.ieSumPos A n m b := sumSelPos n (fun s => meetCard A n s m) b. The ungraded form is Nat.Subsets.inclusion_exclusion : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Bool))) -> ((x1 : AxNat) -> ((x2 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.Subsets.ieSum x0 x1 x2 Bool.true) (AxNat.countRange (AxNat.Subsets.unionAt x0 x1) x2)) (AxNat.add (AxNat.Subsets.ieSum x0 x1 x2 Bool.false) x2)))). The two-set specialisation is Nat.Subsets.inclusion_exclusion_two : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Bool))) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.add (AxNat.countRange (AxNat.setUnion (x0 AxNat.zero) (x0 (AxNat.succ AxNat.zero))) x1) (AxNat.countRange (AxNat.setInter (x0 AxNat.zero) (x0 (AxNat.succ AxNat.zero))) x1)) (AxNat.add (AxNat.countRange (x0 AxNat.zero) x1) (AxNat.countRange (x0 (AxNat.succ AxNat.zero)) x1)))). The per-element identity the proof turns on is Nat.Subsets.sumSel_meetInd : ((x0 : ((x0 : AxNat) -> ((x1 : AxNat) -> Bool))) -> ((x1 : AxNat) -> ((x2 : Bool) -> ((x3 : AxNat) -> Eq.{1} AxNat (AxNat.Subsets.sumSel x1 (fun (x4 : ((x4 : AxNat) -> Bool)) => AxNat.Subsets.meetInd x0 x1 x4 x3) x2) (AxNat.Subsets.prodPar (fun (x4 : AxNat) => x0 x4 x3) x1 x2))))), and the product expansion's alternating law is Nat.Subsets.prodPar_even : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.Subsets.prodPar x0 x1 Bool.true) (AxNat.add (AxNat.Subsets.prodPar x0 x1 Bool.false) (AxNat.Subsets.noneOf x0 x1))))."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-subset-sum-split-law",
+    "F:nat-countrange-union-add-inter",
+    "F:nat-countrange-compl",
+    "F:nat-countrange-eq-sumrange",
+    "F:nat-sumrange-add",
+    "F:nat-sumrange-congr",
+    "F:nat-prodrangeif-succ",
+    "F:nat-prodrangeif-congr-lt",
+    "F:ml430-nat-add-assoc-8c87a1f1",
+    "F:ml430-nat-add-comm-56a2d614",
+    "F:nat-add-left-cancel"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `inclusion-exclusion-mobius`, roadmap item W2-19: `nat_prelude/inclusion_exclusion.rs`. ADR-1624.",
+    "source": "Classical (da Silva / Sylvester). The constructive content here is entirely in the encoding: no negatives, no Finset quotient, and no choice.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.inclusion_exclusion_card_biUnion`",
+        "establishes": "the same theorem over an additive commutative GROUP, where the alternating sign is a ring element; this one is over Nat and therefore has to be a pair of sums, and its two-set case is the pre-existing Nat lemma"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Subsets.inclusion_exclusion_pos",
+      "kind": "kernel-term",
+      "supports": "the classical statement, over the non-empty subfamilies, admitted by the trusted gate with an empty axiom footprint",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::inclusion_exclusion_tests::the_positive_form_is_admitted_and_the_swapped_parities_are_not",
+        "nat_prelude::inclusion_exclusion_tests::inclusion_exclusion_is_admitted_and_the_exchanged_right_side_is_not",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::inclusion_exclusion_tests -- --test-threads=4",
+      "notes": "The proof is `sumSel_swap` (turning the sum over subsets of a sum over elements inside out), then `sumSel_meetInd` at each ambient element, then `prodPar_even`, then `countRange_compl` to convert the residue into m minus the union's size without writing a subtraction. The graded pair is what makes the last step possible in Nat.",
+      "checker_paired_negative": "Offered at a statement with the two parities exchanged -- the union's size added to the ODD sum -- and REJECTED. That is the one substitution that turns a true statement into a false one while keeping every type well-formed."
+    },
+    {
+      "id": "kernel-Nat.Subsets.inclusion_exclusion_two",
+      "kind": "kernel-term",
+      "supports": "the two-set case is recovered EXACTLY, and the recovery is checked by the kernel rather than asserted",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::inclusion_exclusion_tests::the_two_set_case_is_the_existing_lemma_and_a_slid_one_is_not",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::inclusion_exclusion_tests -- --test-threads=4",
+      "notes": "The test builds the statement ONCE and offers it to the trusted gate TWICE: once with the derived theorem and once with `Nat.countRange_union_add_inter` applied at `A 0` and `A 1`. Both are admitted, so the two are the same type -- not two similar-looking renderings that a reader would have to compare by eye. The specialisations the kernel performs unaided: `unionAt A 2 v` IS `setUnion (A 0) (A 1) v`, because `anyOf`'s base case is the literal `false` that collapses a one-element union.",
+      "checker_paired_negative": "A third offer, at the same statement with `A 0` replaced by `A 1` on the right, is REJECTED. Without it the double-acceptance would be consistent with a statement so weak that anything proves it."
+    },
+    {
+      "id": "eval-three-explicit-sets",
+      "kind": "instance-pin",
+      "supports": "the theorem's numbers are the right numbers at a worked three-set instance, subset by subset",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::inclusion_exclusion_tests::three_explicit_sets_are_counted_subset_by_subset",
+        "nat_prelude::inclusion_exclusion_tests::meet_ind_is_the_intersection_indicator",
+        "nat_prelude::inclusion_exclusion_tests::any_of_is_the_bounded_existential",
+        "nat_prelude::inclusion_exclusion_tests::none_of_is_the_complementary_indicator",
+        "nat_prelude::inclusion_exclusion_tests::prod_par_expands_the_product_over_subsets"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::inclusion_exclusion_tests -- --test-threads=4",
+      "notes": "A i = {i, i+1} over [0,4), so A 0 = {0,1}, A 1 = {1,2}, A 2 = {2,3}. All EIGHT subset intersections are asserted separately -- 4, 2, 2, 2, 1, 0, 1, 0 -- because a meetInd that intersected the wrong subfamily can still make the totals agree. The union has 4 elements, the odd sum is 6, the even sum is 2, and 4 + 2 = 6.",
+      "checker_paired_negative": "Every one of the eleven numeric assertions is paired with `expected + 1` (or the complementary Bool), so none of them can pass against a term that fails to reduce."
+    },
+    {
+      "id": "kernel-Nat.Subsets.prodPar_even",
+      "kind": "kernel-term",
+      "supports": "the per-element alternating identity, which is the whole argument before it is summed over the range",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::inclusion_exclusion_tests::prod_par_even_is_admitted_and_the_moved_residue_is_not",
+        "nat_prelude::inclusion_exclusion_tests::meet_card_empty_returns_the_ambient_size_not_the_width",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::inclusion_exclusion_tests -- --test-threads=4",
+      "notes": "One induction on the width and one Bool dichotomy on the new element: when it is IN, the residue is multiplied by 0 and the two graded halves exchange; when it is OUT, both halves and the residue are unchanged. No hypothesis is needed at all, because the family is Bool-valued and the indicator is 0 or 1 by construction rather than by assumption.",
+      "checker_paired_negative": "Offered with the residue moved to the EVEN side and REJECTED; and `meetCard_empty` is offered returning the family WIDTH instead of the ambient size and REJECTED, which is the confusion the four-argument `meetCard A n empty m` invites."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree: inclusion-exclusion is classical. What is not routine is the encoding. Three choices are load-bearing and each is recorded in ADR-1624: the graded PAIR instead of a signed sum (Nat has no negatives and there is no Int.sumRange toolkit at this build position); the subset as a Nat -> Bool PREDICATE instead of a Nat.Finset (two Finsets with the same members are not Eq, so the split law could not be refl); and `anyOf` as a fresh bounded existential instead of a reuse of Nat.Finset.allBelow, purely so that anyOf c 2 reduces to setUnion (c 0) (c 1) by iota and the two-set case is a corollary rather than a second argument."
+}

@@ -1446,10 +1446,13 @@ fn declare_pos_split(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErr
 
 /// `Nat.Subsets.sumSubsets_card : ∀ n, sumSubsets n (fun _ => 1) = pow 2 n`.
 ///
-/// The fold really does visit `2^n` subsets. Nothing else in this module pins
-/// the COUNT — the split law is `refl` in any enumeration that recurses on the
-/// width, including one that visited the same half twice — and `pow 2 n` is
-/// never formed here, only named.
+/// The fold really does visit `2^n` subsets, and `pow 2 n` is never formed
+/// here, only named. What this does NOT pin is that the two halves are
+/// DIFFERENT: a fold whose step read `ih F + ih F` satisfies this law too (both
+/// halves are `2^(n-1)`), and so does the split law, which is `refl` in any
+/// enumeration that recurses on the width. `sumSel_add` refutes that mutant —
+/// it ties the graded fold to this one — and so does the evaluation test
+/// `sumSubsets 2 card = 4`, which such a fold answers `0`.
 fn declare_sum_subsets_card(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     let p = *p;
     let nat = d.nat_ty();

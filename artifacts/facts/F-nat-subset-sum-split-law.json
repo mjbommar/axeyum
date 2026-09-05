@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-subset-sum-split-law",
+  "title": "A sum indexed by the subsets of [0,n+1) splits into the subsets that omit n and the subsets that contain it, and over a predicate-valued subset that split is Eq.refl",
+  "statement": "For every summand F : (Nat -> Bool) -> Nat and every width n, the sum of F over all subsets of [0, n+1) equals the sum over the subsets of [0,n) plus the sum over those same subsets with n inserted. Grading by cardinality parity, the same split holds with the parity FLIPPED on the half that gains an element, so the even and odd sums satisfy a coupled pair of recurrences. Both are Eq.refl, and that is the content of the fact rather than an incidental convenience: the enumeration is a fold over the WIDTH of a Nat -> Bool predicate, so the two halves of the split are literally the two branches of the fold's own recursion. Over the alternative enumeration -- ADR-1614's Nat.Finset.decode, which reads the subset off the bits of a code k < 2^n -- the same split has to cut the code range [0, 2^(n+1)) at 2^n and then prove testBit (2^n + k) i = testBit k i below n and testBit (2^n + k) n = 1, neither of which this prelude has. A Finset-valued enumeration cannot have a refl split law at ALL, because the carrier stores a bound and decode n k and decode (succ n) k are different terms for the same set.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Subsets.sumSubsets_succ : ((x0 : ((x0 : ((x0 : AxNat) -> Bool)) -> AxNat)) -> ((x1 : AxNat) -> Eq.{1} AxNat (AxNat.Subsets.sumSubsets (AxNat.succ x1) x0) (AxNat.add (AxNat.Subsets.sumSubsets x1 x0) (AxNat.Subsets.sumSubsets x1 (fun (x2 : ((x2 : AxNat) -> Bool)) => x0 (AxNat.Subsets.insertAt x1 x2))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Subsets.sumSubsets_succ",
+    "kernel_statement": "Nat.Subsets.empty := fun _ => false; Nat.Subsets.insertAt n s := fun i => if beq i n then true else s i; Nat.Subsets.sumSubsets 0 F = F empty and sumSubsets (succ m) F = sumSubsets m F + sumSubsets m (fun s => F (insertAt m s)); Nat.Subsets.sumSel n F b is the same fold restricted to subsets of cardinality parity b (true is EVEN, and the empty set is even), with sumSel (succ m) F b = sumSel m F b + sumSel m (fun s => F (insertAt m s)) (notB b). The graded twin is Nat.Subsets.sumSel_succ : ((x0 : ((x0 : ((x0 : AxNat) -> Bool)) -> AxNat)) -> ((x1 : AxNat) -> ((x2 : Bool) -> Eq.{1} AxNat (AxNat.Subsets.sumSel (AxNat.succ x1) x0 x2) (AxNat.add (AxNat.Subsets.sumSel x1 x0 x2) (AxNat.Subsets.sumSel x1 (fun (x3 : ((x3 : AxNat) -> Bool)) => x0 (AxNat.Subsets.insertAt x1 x3)) (AxNat.Graph.notB x2)))))). The support invariant the fold maintains is Nat.Subsets.Supported s n := forall i, Le n i -> Eq Bool (s i) false, and the lemma every width-indexed summand consumes is Nat.Subsets.sumSel_congr : ((x0 : AxNat) -> ((x1 : ((x1 : ((x1 : AxNat) -> Bool)) -> AxNat)) -> ((x2 : ((x2 : ((x2 : AxNat) -> Bool)) -> AxNat)) -> ((x3 : Bool) -> ((x4 : ((x4 : ((x4 : AxNat) -> Bool)) -> ((x5 : AxNat.Subsets.Supported x4 x0) -> Eq.{1} AxNat (x1 x4) (x2 x4)))) -> Eq.{1} AxNat (AxNat.Subsets.sumSel x0 x1 x3) (AxNat.Subsets.sumSel x0 x2 x3))))))."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-add-comm",
+    "F:nat-add-assoc",
+    "F:nat-add-zero"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `inclusion-exclusion-mobius`, roadmap item W2-19: `nat_prelude/subset_sums.rs`. ADR-1624.",
+    "source": "Elementary. In a classical development the split is `Finset.powerset_succ` and nobody writes it down, because the powerset of an inductive type is a library primitive.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.sum_powerset_insert`",
+        "establishes": "the same split over `Finset.powerset`, which needs the `Finset` quotient and a decidable-membership instance; this one is a fold over a `Nat -> Bool` predicate and closes by `Eq.refl`"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Subsets.sumSubsets_succ",
+      "kind": "kernel-term",
+      "supports": "the split law and its parity-graded twin, both admitted by the trusted gate",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::subset_sums_tests::the_split_law_is_admitted_and_the_exchanged_halves_are_not",
+        "nat_prelude::subset_sums_tests::the_graded_split_law_is_admitted_and_the_unflipped_parity_is_not",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_sums_tests -- --test-threads=4",
+      "notes": "Both laws are `Eq.refl`, so what the accept/reject pairs actually pin is the ORDER and the parity flip, neither of which `refl` can supply on its own. The split law is offered at a statement with its two halves exchanged and the graded one at a statement without the `notB`, and both must be REJECTED -- `Nat.add` recurses on its right argument, so at a symbolic `n` the two orders are different terms.",
+      "checker_paired_negative": "Each accept/reject test asserts BOTH directions: the theorem admitted at its own statement AND refused at the slid one. A test that only asserted the refusal would pass against a theorem that does not exist."
+    },
+    {
+      "id": "kernel-Nat.Subsets.sumSel_congr",
+      "kind": "kernel-term",
+      "supports": "two summands agreeing on the SUPPORTED predicates give equal graded sums -- the obligation a width-indexed summand incurs, stated rather than hidden",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::subset_sums_tests::sum_sel_congr_is_admitted_and_the_shifted_support_is_not",
+        "nat_prelude::subset_sums_tests::supported_insert_at_widens_and_the_unwidened_conclusion_is_rejected",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_sums_tests -- --test-threads=4",
+      "notes": "`sumSel n F b` only ever applies `F` to predicates that are false at every index at or above `n`, so a summand built from a width (a product over [0,n), say) is free above it. This is the whole reason the width in `meetInd A n s v` can be moved independently of the fold's own width, which is what general inclusion-exclusion's induction step does.",
+      "checker_paired_negative": "The hypothesis is offered at `succ n` and REFUSED. It is not a soundness question -- agreeing on more sets is a stronger hypothesis -- but a usability one, and the kernel refuses because the two statements are different terms."
+    },
+    {
+      "id": "eval-subset-sums-small",
+      "kind": "instance-pin",
+      "supports": "the fold visits every subset exactly once, in binary order, and grades the empty set as EVEN",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::subset_sums_tests::sum_subsets_visits_every_subset_once",
+        "nat_prelude::subset_sums_tests::sum_sel_grades_by_parity_and_the_empty_set_is_even",
+        "nat_prelude::subset_sums_tests::sum_sel_pos_drops_the_empty_set_and_nothing_else",
+        "nat_prelude::subset_sums_tests::insert_at_adds_exactly_its_index"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::subset_sums_tests -- --test-threads=4",
+      "notes": "`sumSubsets 2 card = 0 + 1 + 1 + 2 = 4`, with `3` named as the answer a fold that dropped the without-n half gives and `6` as the answer a fold that visits {0,1} twice gives; `sumSubsets n (fun _ => 1) = 2^n` at n = 0,1,2,3. `sumSel 1 (fun s => if s 0 then 7 else 2) true = 2` and `... false = 7` -- these two are what the coordinated parity-flip mutant answers backwards. Widths stay at n <= 3 because every Nat numeral here is unary and the fold visits 2^n subsets.",
+      "checker_paired_negative": "Every numeric assertion names the value a specific wrong formula would produce, and every Bool assertion is paired with `must NOT reduce to the other Bool`. `sumSubsets_card` is explicitly NOT one of these controls: a fold whose step read `ih F + ih F` satisfies `= pow 2 n` as well, and it is `sumSel_add` and the `sumSubsets 2 card = 4` instance that refute it."
+    },
+    {
+      "id": "shape-Nat.Subsets.sumSubsets",
+      "kind": "exhaustive-enumeration",
+      "supports": "nothing of this shape existed before",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.sumDivisorsBy_reindex --expect 1 (positive control, landed 2026-09-05)",
+        "shape_search --name-like sumSubsets",
+        "shape_search --name-like evenB",
+        "shape_search --name-like withTop"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.sumDivisorsBy_reindex --expect 1",
+      "notes": "Pre-state measured at declarations=3000 against a binary rebuilt at this lane's base commit, with the positive control FOUND 1 and exit 0. `--name-like` returned ABSENT for sumSubsets, subsetSum, evenB, isEven, withTop and Bool.or; it returned FOUND for testBit, setUnion, prodRangeIf and countRange_union_add_inter, which is why this module builds none of those."
+    }
+  ],
+  "notes": "The two enumerations of the subsets of [0,n) now in this prelude -- ADR-1614's `Nat.Finset.decode` by a bit code, and this fold by width -- are NOT related by any theorem. They range over the same 2^n subsets in the same binary order (`sumSubsets_card` pins the count and the tests pin the order at n <= 3), but no declaration says so, and the bridge would cost exactly the `testBit (2^n + k)` development this fact's statement says was avoided. That gap is recorded in ADR-1624 and is the honest limit of the claim."
+}

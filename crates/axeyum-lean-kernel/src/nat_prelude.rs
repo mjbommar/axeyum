@@ -6924,9 +6924,10 @@ pub struct NatPrelude {
     /// sumSel n F true = F empty + sumSelPos n F true`.
     pub subsets_sum_sel_true_split: NameId,
     /// `Nat.Subsets.sumSubsets_card : ∀ n, sumSubsets n (fun _ => 1) = pow 2 n`
-    /// -- the fold really does visit `2^n` subsets. The split law is `refl` in
-    /// any enumeration that recurses on the width, so this is what pins the
-    /// COUNT.
+    /// -- the fold visits `2^n` subsets. It does NOT pin that the two halves
+    /// are different (a step reading `ih F + ih F` satisfies it too); that is
+    /// [`subsets_sum_sel_add`](Self::subsets_sum_sel_add)'s job, and the
+    /// evaluation tests'.
     pub subsets_sum_subsets_card: NameId,
     /// `Nat.Subsets.sumSel_const : ∀ c n,
     /// sumSel (succ n) (fun _ => c) true = sumSel (succ n) (fun _ => c) false`
