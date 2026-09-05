@@ -79,8 +79,8 @@
 //! [`Route`] that produced it, and a [`Trust`] tag. [`Trust::Certified`] means
 //! an independent primitive (never a numeric spot-check, never `f64`) decided
 //! the identity. [`Trust::Uncertified`] carries the specific reason the route
-//! declined — never silently promoted to certified. [`Certificate::verify`]
-//! (via each type's `verify_*` method) independently re-derives the claim from
+//! declined — never silently promoted to certified. Each type's `verify_*`
+//! method independently re-derives the claim from
 //! the distribution's definition and re-decides equality with
 //! [`crate::equal`]; a hand-forged certificate (wrong claim, or a claimed
 //! `Certified` that the fresh re-derivation cannot reach) is refused. See
@@ -628,7 +628,7 @@ impl Discrete {
     }
 
     /// Independently re-derive [`Self::total_mass`] and confirm it agrees with
-    /// `cert` (via [`agree`]) — catches a forged claim, a falsely claimed
+    /// `cert` (via `agree`) — catches a forged claim, a falsely claimed
     /// `Certified`, or both.
     #[must_use]
     pub fn verify_total_mass(&self, cert: &Certificate) -> bool {

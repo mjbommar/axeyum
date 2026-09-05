@@ -14,6 +14,20 @@ questions: what the current evidence actually proves, what complete parity
 still means, and in what dependency order the missing system must be built and
 measured.
 
+> **Status update, 2026-09-05: historical.** This execution roadmap is
+> historical as of 2026-09-05; its ordering is superseded by ADR-0717's
+> C-series ([`library-artifact-compatibility-roadmap-2026-08-30.md`](library-artifact-compatibility-roadmap-2026-08-30.md))
+> and by the current authority,
+> [`docs/math-department/14-lean-lang.md`](../math-department/14-lean-lang.md).
+> The complete-parity **contract**
+> ([`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md))
+> and its registry ([`lean-complete-parity-v1.json`](lean-complete-parity-v1.json))
+> remain the terminal definition and are **not** superseded. The U2
+> official-execution programme this roadmap references (3,723 CTest cases,
+> 111 not-run attempts, zero credit since July) is likewise marked historical
+> here rather than resumed. See
+> [ADR-1668](../research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md).
+
 ## 1. Bounded verdict
 
 Axeyum is not close to an honest unqualified “100% Lean parity” claim. The

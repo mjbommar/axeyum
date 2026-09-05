@@ -1,4 +1,16 @@
-//! The unbounded-integer polynomial ring the multivariate GCD computes in.
+//! The unbounded-integer polynomial ring the multivariate GCD computes in —
+//! and, since [ADR-1670], the ring the zero-test retries in when its bounded
+//! normal form overflows.
+//!
+//! Both callers are the same shape of problem stated at different scales: a
+//! computation whose *inputs* and *answer* both fit `i128` while the work in
+//! between does not. For the GCD it is a pseudo-remainder sequence; for the
+//! zero-test it is the expansion of a product whose terms cancel. `BigPoly` is
+//! shared by both rather than duplicated, and `BigRatFunc` in `lib.rs` reaches
+//! rational coefficients without a rational coefficient *type* by carrying a
+//! separate integer denominator polynomial.
+//!
+//! [ADR-1670]: ../../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
 //!
 //! # Why this module exists
 //!
@@ -58,7 +70,7 @@ use axeyum_ir::Rational;
 /// stored, so structural equality is value equality and [`BigPoly::is_zero`] is
 /// exact.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub(super) struct BigPoly {
+pub(crate) struct BigPoly {
     terms: BTreeMap<Monomial, BigInt>,
 }
 
@@ -150,15 +162,86 @@ impl BigPoly {
     // --- Construction -------------------------------------------------------
 
     /// The zero polynomial.
-    fn zero() -> BigPoly {
+    pub(crate) fn zero() -> BigPoly {
         BigPoly {
             terms: BTreeMap::new(),
         }
     }
 
     /// The constant polynomial `1`.
-    fn one() -> BigPoly {
+    pub(crate) fn one() -> BigPoly {
         BigPoly::single_term(Monomial::one(), BigInt::one())
+    }
+
+    /// The constant polynomial `value` (the zero polynomial when `value` is `0`).
+    pub(crate) fn constant(value: BigInt) -> BigPoly {
+        BigPoly::single_term(Monomial::one(), value)
+    }
+
+    /// The degree-1 polynomial in a single variable.
+    pub(crate) fn variable(name: &str) -> BigPoly {
+        BigPoly::single_term(Monomial::from_powers(&[(name, 1)]), BigInt::one())
+    }
+
+    /// The `(monomial, coefficient)` pairs in ascending monomial order; every
+    /// stored coefficient is nonzero.
+    pub(crate) fn terms(&self) -> impl Iterator<Item = (&Monomial, &BigInt)> {
+        self.terms.iter()
+    }
+
+    // --- Budgeted arithmetic ------------------------------------------------
+    //
+    // The GCD's own use of this module needs no budget: its inputs are bounded
+    // by the `MvPoly`s it was handed. The zero-test fallback does, because it
+    // normalizes a caller's expression, and the bounded path's implicit budget
+    // -- it stops at the first coefficient that leaves `i128` -- is exactly what
+    // the unbounded ring removes. `(x+1)^100000` costs the bounded path 131
+    // multiplications before it declines and costs this ring the whole
+    // expansion. So these three take an explicit, caller-owned budget measured
+    // in monomial-pair products, and decline when it runs out.
+
+    /// `self · other`, charging `|self| · |other|` monomial-pair products
+    /// against `budget`; `None` when the budget cannot cover it (or on `u32`
+    /// exponent overflow). The cost is charged **before** the work is done, so
+    /// a decline is cheap.
+    pub(crate) fn mul_within(&self, other: &BigPoly, budget: &mut u64) -> Option<BigPoly> {
+        let cost = u64::try_from(self.terms.len())
+            .ok()?
+            .checked_mul(u64::try_from(other.terms.len()).ok()?)?;
+        if cost > *budget {
+            return None;
+        }
+        *budget -= cost;
+        self.mul(other)
+    }
+
+    /// `self + other`, charging `|other|` accumulations against `budget`.
+    pub(crate) fn add_within(&self, other: &BigPoly, budget: &mut u64) -> Option<BigPoly> {
+        let cost = u64::try_from(other.terms.len()).ok()?;
+        if cost > *budget {
+            return None;
+        }
+        *budget -= cost;
+        Some(self.add(other))
+    }
+
+    /// `self^exp` by binary exponentiation — `⌈log₂ exp⌉` squarings rather than
+    /// `exp` multiplications — with every product charged against `budget`.
+    /// `self^0` is `1` and costs nothing.
+    pub(crate) fn pow_within(&self, exp: u32, budget: &mut u64) -> Option<BigPoly> {
+        let mut result = BigPoly::one();
+        let mut base = self.clone();
+        let mut remaining = exp;
+        while remaining > 0 {
+            if remaining & 1 == 1 {
+                result = result.mul_within(&base, budget)?;
+            }
+            remaining >>= 1;
+            if remaining > 0 {
+                base = base.mul_within(&base, budget)?;
+            }
+        }
+        Some(result)
     }
 
     /// A single-term polynomial; the zero polynomial when `coeff` is zero.
@@ -235,7 +318,7 @@ impl BigPoly {
     // --- Accessors ----------------------------------------------------------
 
     /// Returns `true` if this is the zero polynomial.
-    fn is_zero(&self) -> bool {
+    pub(crate) fn is_zero(&self) -> bool {
         self.terms.is_empty()
     }
 
@@ -251,7 +334,7 @@ impl BigPoly {
     }
 
     /// The set of variables occurring in this polynomial.
-    fn variables(&self) -> BTreeSet<String> {
+    pub(crate) fn variables(&self) -> BTreeSet<String> {
         let mut vars = BTreeSet::new();
         for mono in self.terms.keys() {
             for (name, _) in mono.powers() {
@@ -308,8 +391,17 @@ impl BigPoly {
 
     // --- Ring operations ----------------------------------------------------
 
+    /// Exact polynomial addition.
+    pub(crate) fn add(&self, other: &BigPoly) -> BigPoly {
+        let mut out = self.clone();
+        for (mono, coeff) in &other.terms {
+            out.accumulate(mono, coeff);
+        }
+        out
+    }
+
     /// Exact polynomial subtraction.
-    fn sub(&self, other: &BigPoly) -> BigPoly {
+    pub(crate) fn sub(&self, other: &BigPoly) -> BigPoly {
         let mut out = self.clone();
         for (mono, coeff) in &other.terms {
             out.accumulate(mono, &-coeff.clone());
@@ -317,11 +409,16 @@ impl BigPoly {
         out
     }
 
+    /// Exact negation.
+    pub(crate) fn neg(&self) -> BigPoly {
+        BigPoly::zero().sub(self)
+    }
+
     /// Exact polynomial multiplication, or `None` on `u32` exponent overflow.
     ///
     /// The coefficients cannot overflow; only the exponent sum can, and only for
     /// monomials no realistic input produces.
-    fn mul(&self, other: &BigPoly) -> Option<BigPoly> {
+    pub(crate) fn mul(&self, other: &BigPoly) -> Option<BigPoly> {
         let mut out = BigPoly::zero();
         for (left_mono, left_coeff) in &self.terms {
             for (right_mono, right_coeff) in &other.terms {

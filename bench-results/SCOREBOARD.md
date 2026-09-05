@@ -541,11 +541,11 @@ Each frontier tracks how deep a single capability lever reaches: a family is sca
 
 | Lever family | Frontier | Baseline | Δ | Max knob | Budget (s) | Tracks |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| bv_reduction | 40 | 30 | +10 | 40 | 4 | QF_BV word-level reduction depth (unsat at knob N) |
-| lia_cuts | 35 | 26 | +9 | 37 | 4 | QF_LIA branch-and-cut depth (sat at knob N) |
-| nia_unsat | 40 | 40 | 0 | 40 | 4 | QF_NIA unsat-proving depth (knob N) |
-| nra_degree | 40 | 40 | 0 | 40 | 4 | QF_NRA polynomial-degree decision depth (knob N) |
-| string_bound | 40 | 8 | +32 | 40 | 4 | QF_S string-length bound (sat at knob N) |
+| bv_reduction | 34 | 30 | +4 | 37 | 7 | QF_BV word-level reduction depth (unsat at knob N) |
+| lia_cuts | 35 | 26 | +9 | 36 | 7 | QF_LIA branch-and-cut depth (sat at knob N) |
+| nia_unsat | 40 | 40 | 0 | 40 | 7 | QF_NIA unsat-proving depth (knob N) |
+| nra_degree | 40 | 40 | 0 | 40 | 7 | QF_NRA polynomial-degree decision depth (knob N) |
+| string_bound | 40 | 8 | +32 | 40 | 8 | QF_S string-length bound (sat at knob N) |
 
 ## One-line summary
 

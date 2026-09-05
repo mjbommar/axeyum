@@ -414,3 +414,74 @@ fn count_to_u64(value: f64) -> u64 {
 fn u64_to_f64(value: u64) -> f64 {
     value as f64
 }
+
+/// Named stage/counter attribution for a generic CDCL(T) theory-route search
+/// (`crate::cdclt::CdclT`) — the arithmetic/EUF/string/combined-theory
+/// counterpart to [`BvLayerStats`] for the pure bit-blast pipeline.
+///
+/// This is what the 2026-08-21 linear-arithmetic diagnosis had to reconstruct
+/// by hand from per-file TSVs (classifying ~800 files because no instrument
+/// said where a 24 s budget went): time in Boolean unit propagation vs. theory
+/// `assert`/`propagate` vs. conflict analysis, plus the search's own decision
+/// and restart counters.
+///
+/// # Collection is opt-in and off by default
+///
+/// A `CdclT` search reads no extra clock beyond its existing deadline check
+/// unless collection was enabled for the current thread (see
+/// `crate::theories::cdclt_diagnostics::TheoryLayerStatsGuard::enable`); a
+/// disabled `CdclT` leaves every field at its `Default` (all-zero) value.
+/// Times are read only at stage *boundaries* — around each
+/// `TheorySolver::assert`/`propagate`/`push`/`pop` call, around one Boolean
+/// unit-propagation pass, and around one 1-UIP conflict analysis — never per
+/// trail literal, so enabling collection adds a bounded number of
+/// `Instant::now()` pairs per search rather than one per assignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct TheoryLayerStats {
+    /// Time inside Boolean unit propagation (`CdclT::unit_propagate`).
+    pub boolean_propagate: Duration,
+    /// Time inside `TheorySolver::assert` calls.
+    pub theory_assert: Duration,
+    /// Time inside `TheorySolver::propagate` calls.
+    pub theory_propagate: Duration,
+    /// Time inside `TheorySolver::push`/`pop` calls (combined: both are
+    /// cheap bookkeeping for most theories, and the driver calls them in
+    /// strict lockstep with decisions/backjumps).
+    pub theory_push_pop: Duration,
+    /// Time inside 1-UIP conflict analysis (`CdclT::analyze_conflict`).
+    pub conflict_analysis: Duration,
+    /// Conflicts where the falsified clause traces to a theory
+    /// `assert`/`propagate` inconsistency, as opposed to a purely Boolean
+    /// (input-clause) conflict.
+    pub theory_conflicts: u64,
+    /// Literals assigned by theory propagation (mirrors the driver's
+    /// existing `theory_propagations` counter).
+    pub theory_propagations: u64,
+    /// Search decisions taken (`CdclT::pick_unassigned` choices, not implied
+    /// assignments).
+    pub decisions: u64,
+    /// Completed Luby restarts.
+    pub restarts: u64,
+    /// Simplex pivots performed by the driving theory, when it exposes a
+    /// pivot count. `None` when the `TheorySolver` trait implementation in
+    /// use does not report one — the trait
+    /// (`crate::euf_egraph::TheorySolver`) has no pivot-count method today
+    /// (2026-09-05 architecture review, D2), so this is always `None` until
+    /// a theory adapter is wired to report it explicitly.
+    pub simplex_pivots: Option<u64>,
+}
+
+impl TheoryLayerStats {
+    /// Total wall-clock time across the named stages (excludes whatever time
+    /// the search spends outside `assert`/`propagate`/`push`/`pop`/conflict
+    /// analysis — bookkeeping like VSIDS bumps, trail maintenance, and
+    /// decision selection itself).
+    #[must_use]
+    pub fn total(&self) -> Duration {
+        self.boolean_propagate
+            + self.theory_assert
+            + self.theory_propagate
+            + self.theory_push_pop
+            + self.conflict_analysis
+    }
+}

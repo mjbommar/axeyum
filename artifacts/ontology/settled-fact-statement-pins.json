@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2351,
+    "min_identity_bound": 2353,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16772,6 +16772,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-choose-two-mul-succ-le-four-pow",
+      "language": "lean4",
+      "statement_sha256": "c36f1f5b891c42629bb05f6d44cdff2789a44e887a261021156cce38b466b2c0",
+      "prose_sha256": "334120ad207b6158ddef7859b87916f31a2dc246c003b096f7502da871d0ba05",
+      "kernel_theorem": "Nat.choose_two_mul_succ_le_four_pow"
+    },
+    {
       "fact_id": "F:nat-choose-zero-right",
       "language": "lean4",
       "statement_sha256": "b54461ff65d1d4416bbdc43f3661eb28429864db11586dfcbc9290b2e0f3e74c",
@@ -18964,6 +18971,13 @@
       "kernel_theorem": "Nat.min_fac_dvd"
     },
     {
+      "fact_id": "F:nat-min-fac-eq-self-of-prime",
+      "language": "lean4",
+      "statement_sha256": "49464cc98388e98b229472661591acdd98c78bab341feebb5e0db88bf5dd4ecf",
+      "prose_sha256": "d3d6dfcb66547ac5aad7858262af932cc4ae697c655ccf6250e3c8c7d40738e5",
+      "kernel_theorem": "Nat.min_fac_eq_self_of_prime"
+    },
+    {
       "fact_id": "F:nat-min-fac-prime",
       "language": "lean4",
       "statement_sha256": "036c665400077b0390e3c96acb2e18248d4b7a85d41e3f9a3a36fae6e4252a1f",
@@ -19932,6 +19946,12 @@
       "statement_sha256": "85adf169e787d180ac87255a2d433521225fd8285cb716d70f8392d7bd52dca7",
       "prose_sha256": "9606d60d918dc656d5d0f34accc8775e79415c68769cbf491e867655e98058ee",
       "kernel_theorem": "Nat.prime_pow_dvd_of_dvd_mul_of_not_dvd"
+    },
+    {
+      "fact_id": "F:nat-primorial-construction",
+      "language": "lean4",
+      "statement_sha256": "9e9a9b2c85cc81fa9f71c8cae45b835a4dec7666521d45c4bb7d1b53a0e0ac6a",
+      "prose_sha256": "40202f7ef0c994c323b638d02ee04d1b8c8d4955d486cccdab41ad0289a83700"
     },
     {
       "fact_id": "F:nat-prod-factorization",

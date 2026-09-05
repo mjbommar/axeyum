@@ -363,22 +363,39 @@ Do not build parametric datatypes or `define-fun-rec` from A8 — they are
 capability zeros in the scored population (gap analysis §9 row 9), not part of
 this session-semantics slice.
 
-### A9 — Restore official Lean execution and shrink the prelude (`TODO`, P2)
+### A9 — Extend the Lean replay census and close the remaining Next Ten items (`TODO`, P2)
 
-**Why now.** The local host currently has neither `lean` nor `elan`; remote
-70/70 attestation remains open; seven ledger rows are already classified as
-derivable theorems.
+**Why now.** "The local host currently has neither `lean` nor `elan`" is
+false and was corrected 2026-09-05: both Lean 4.30.0 (the Mathlib corpus pin)
+and 4.34.0-rc1 (the cross-check pin, ADR-1594/ADR-1660) are installed under
+`~/.elan/toolchains/` on the fleet; `command -v lean` is empty only because
+`elan` does not touch `PATH` — resolve with
+`scripts/check-lean-gate.sh --print-toolchain`. What "Lean compatible" means
+here is now written once
+([`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md),
+[ADR-1668](docs/research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md)):
+K0 1/1, K1 6/6, K2-K6 0; the replay census, the two pins, the import tier,
+and the Lean-side tactic are all measured, not aspirational.
 
-**Next slice.** Provision the checksum-pinned Lean 4.30 executable, prove it
-runs outside the repository working directory, obtain the remote 70/70 result,
-then replace the seven derivable axioms with theorem terms in dependency order.
+**Next slice.** `14-lean-lang.md`'s Next Ten still has four open items, in
+priority order: **2** (replay every proved theorem in pinned Lean or name the
+reason — extend the `creal`-only census, `missing=0` enforced, `Type`-valued
+theorems as a typed class); **3** (publish the constructive analysis as a
+Lean library — render the `creal` prelude as `.lean` source Lean elaborates,
+packaged for Lake); **7** (the public conformance corpus and a divergence
+ledger against Lean 4's own kernel test cases); **9** (a native reader for
+the kernel-core statement rendering, render→parse→same-term gated). Item 2 is
+the precondition for the chair's headline number meaning anything to a Lean
+user and should go first.
 
-**Exit.** Kernel tests, official Lean, generated ledger counts, declaration
-order, parity docs, and mutation controls all pass; no hard-coded old count
-survives.
+**Exit.** Each item closes with its own ADR and the evidence `14-lean-lang.md`
+already asks for (a run, not a projection); the progress-log row and the
+matrix regenerate (`gen-lean-compatibility.py --check`,
+`gen-lean-complete-parity.py --check`).
 
-**Stop.** Do not widen into String literals, quotient computation, or broad
-ecosystem claims during this bounded trust-reduction slice.
+**Stop.** Do not widen into K4-K6 (workflow, runtime, ecosystem) — the C5 gate
+says those wait until the C2/C3 adapter has real use; no chair asked for them.
+Do not claim an item done from a projection or a plan; each needs a run.
 
 ### A10 — Build the SMT-LIB product surface after S1 (`TODO`, P2)
 

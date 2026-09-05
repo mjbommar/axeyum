@@ -78,10 +78,20 @@ now. Nothing was deleted.
   **eight independently checked results without Lean reconstruction**, and
   **two QF_NIA `IntPow2` proof-production errors**. Do not combine these
   denominators with the newer QF_BV-only experiment.
-- The current official-source proof-family population has a retained local
-  Lean 4.30 result of **70/70 accepted**. A corrected remote attestation and the
-  exhaustive tier remain open. Lean language, ecosystem, and complete native
-  compatibility remain far beyond the current K0/K1 slices.
+- "Lean compatible" means what the compatibility matrix measures: K0 1/1 and
+  K1 6/6 (an independent checker and a versioned import route), K2 through K6
+  at 0 — no native source, tactics, workflow, runtime, or ecosystem yet. Two
+  pins are distinct and every claim names which: `lean-toolchain`, the
+  cross-check pin (4.34.0-rc1, ADR-1594/1660), and the Mathlib corpus pin
+  (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`). Independent
+  checkability is measured by replay in pinned Lean: 4,478 proved
+  declarations, 4,394 accepted, 50 `Type`-valued theorems Lean refuses, 34
+  blocked behind them (ADR-1661). Imports are a labeled tier, never the
+  axiom-free headline (ADR-0601, ADR-1664). `by axeyum` lets Lean check
+  axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
+  identity runs through the carrier correspondence ledger (ADR-1665). Full
+  detail, the per-chair breakdown, and the open items:
+  [`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md).
 - The previous 64,345-file full-library candidate is not a result: it produced
   zero admissible raw shards. Resumable/process-free readiness work exists, but
   a representative current-main run has not been admitted or published.

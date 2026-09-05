@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	69
+COUNT	76
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -54,6 +54,13 @@ FN	ntheory_certify::certify_composite	Option<CompositeCertificate>
 FN	ntheory_certify::certify_crt	Option<CrtCertificate>
 FN	ntheory_certify::certify_factorization	Option<FactorizationCertificate>
 FN	ntheory_certify::certify_prime	Option<PrattCertificate>
+FN	numberfield::Element::inverse	Option<(Element, InverseCertificate)>
+FN	numberfield::Element::minimal_polynomial	Option<(Vec<BigRational>, ElementMinPolyCertificate)>
+FN	numberfield::Element::norm_trace	NormTraceCertificate
+FN	numberfield::GaussianInt::factor	Result<GaussianFactorizationCertificate, DeclineReason>
+FN	numberfield::QuadraticField::fundamental_unit	Result<FundamentalUnitCertificate, DeclineReason>
+FN	numberfield::QuadraticField::pell_unit	Result<FundamentalUnitCertificate, DeclineReason>
+FN	numberfield::two_squares	Option<TwoSquaresCertificate>
 FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
 FN	permgroup::PermutationGroup::cayley_table	Result<CayleyTableCertificate, PermgroupError>
 FN	permgroup::PermutationGroup::center	Result<(PermutationGroup, CenterCertificate), PermgroupError>
@@ -106,10 +113,13 @@ VOCAB	CrtCertificate	enum
 VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
 VOCAB	DerivedSubgroupCertificate	struct
+VOCAB	ElementMinPolyCertificate	struct
 VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorizationCertificate	struct
 VOCAB	ForallDecision	enum
+VOCAB	FundamentalUnitCertificate	struct
+VOCAB	GaussianFactorizationCertificate	struct
 VOCAB	GenericWitness	struct
 VOCAB	GeometryCertificate	struct
 VOCAB	GeometryReport	struct
@@ -123,6 +133,7 @@ VOCAB	IvtCertificate	struct
 VOCAB	LyapunovCertificate	struct
 VOCAB	MembershipCertificate	enum
 VOCAB	MvtCertificate	struct
+VOCAB	NormTraceCertificate	struct
 VOCAB	OrbitStabilizerCertificate	struct
 VOCAB	OrderCertificate	struct
 VOCAB	PartialFractionCertificate	struct
@@ -138,4 +149,5 @@ VOCAB	SymbolicClosedFormReport	struct
 VOCAB	TaylorCertificate	struct
 VOCAB	TelescopingCertificate	struct
 VOCAB	TruncationIdentity	enum
+VOCAB	TwoSquaresCertificate	enum
 VOCAB	ZeroTest	enum

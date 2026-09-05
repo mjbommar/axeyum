@@ -115,10 +115,20 @@ now. Nothing was deleted.
   **eight independently checked results without Lean reconstruction**, and
   **two QF_NIA `IntPow2` proof-production errors**. Do not combine these
   denominators with the newer QF_BV-only experiment.
-- The current official-source proof-family population has a retained local
-  Lean 4.30 result of **70/70 accepted**. A corrected remote attestation and the
-  exhaustive tier remain open. Lean language, ecosystem, and complete native
-  compatibility remain far beyond the current K0/K1 slices.
+- "Lean compatible" means what the compatibility matrix measures: K0 1/1 and
+  K1 6/6 (an independent checker and a versioned import route), K2 through K6
+  at 0 — no native source, tactics, workflow, runtime, or ecosystem yet. Two
+  pins are distinct and every claim names which: `lean-toolchain`, the
+  cross-check pin (4.34.0-rc1, ADR-1594/1660), and the Mathlib corpus pin
+  (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`). Independent
+  checkability is measured by replay in pinned Lean: 4,478 proved
+  declarations, 4,394 accepted, 50 `Type`-valued theorems Lean refuses, 34
+  blocked behind them (ADR-1661). Imports are a labeled tier, never the
+  axiom-free headline (ADR-0601, ADR-1664). `by axeyum` lets Lean check
+  axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
+  identity runs through the carrier correspondence ledger (ADR-1665). Full
+  detail, the per-chair breakdown, and the open items:
+  [`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md).
 - The previous 64,345-file full-library candidate is not a result: it produced
   zero admissible raw shards. Resumable/process-free readiness work exists, but
   a representative current-main run has not been admitted or published.
@@ -143,6 +153,7 @@ now. Nothing was deleted.
 | 2026-09-05 | vector-spaces-field | ℝ instantiates: `CReal.fieldS`, `CReal.mulInvEx` by `Or.elim` on the sign and `Exists.rec` on the modulus; 6 tests |
 | 2026-09-05 | vector-spaces-field | ℚ is a vector space over itself and `linComb` at ℚ is DEFINITIONALLY `Rat.sumRange`; ADR-1609's bridge item 3 measured and still blocked; 3 tests |
 | 2026-09-05 | py-prelude-fields-fix | fixed the path-qualified-field silent skip in gen-py-prelude-fields.py; regenerated prelude_fields.rs (+21 poly.* fields); added scripts/tests/test_gen_py_prelude_fields.py, registered in check.sh + justfile |
+| 2026-09-05 | perf-par2-ratchet | Timing ratchet in `progress_frontier.rs`: pinned-`N` calibrated solve time per family against a measured ceiling, enforced on the `comparable` flag, registered in `check.sh` and the `justfile`; five baselines regenerated with a `"timing"` block. |
 | 2026-09-05 | `0e5f3a3ad` | `rat_prelude/binomial_s.rs`: the Bernoulli distribution constructed over `AlgS.OrderedRing` — `bernoulliVar`, `bernoulliMass`, `bernoulliMass_nonneg`, `bernoulli_isDistribution`, `bernoulli_expectation`, `bernoulli_variance`, plus the generic ring lemmas `mul_neg` and `zero_add`. (ADR-1631) |
 | 2026-09-05 | `1898e9651` | `binomial_s_tests.rs`: nine tests. `q = 1/2` cannot separate `q(1−q)` from `q·q` (both `1/4`); `q = 1/3` can (`2/9` against `1/9`), and the suite says so in its own assertions. |
 | 2026-09-05 | `dd6a0df24` | `rat_prelude/binomial_rat.rs`: `Rat.binomial_expectation`, `Rat.binomial_variance`, `Rat.binomial_chebyshev`, and a suite that discharges the per-trial hypothesis from the GENERIC Bernoulli theorem and then computes: three Bernoulli(1/3) trials have mean `Rat.one`. |
@@ -154,6 +165,13 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
+| 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
+| 2026-09-05 | lean-claim-surface | Follow-up after merging Next Ten item 2 (ADR-1661): the paragraph's replay sentence updated in all three claim surfaces to the `everything`-carrier headline (4,478 proved, 4,394 accepted, 50 `Type`-valued, 34 blocked, ADR-1661), still byte-identical across the three and within 120 words (118); ADR-1668's quoted copy updated to match with a dated `Update` block; one progress-log row appended to `14-lean-lang.md`. |
+| 2026-09-05 | `e75b0db94` | `scripts/fetch-references.sh` pins `leanprover/lean-kernel-arena` at an exact commit plus its test tarball by SHA-256; `kernel_conformance_check` runs one case per process under the arena's own exit-code contract (0 accept / 1 reject / 2 declined / 3 error), with `--mode parse-only` as the in-tree control |
+| 2026-09-05 | `e5570f906` | merge of `main`: three conflicts resolved by identity, not by "keep both" — the `justfile` `check` list as a token union (`lean-tactic` from main kept), the ADR index regenerated rather than hand-merged, and `14-lean-lang.md`'s chair rows / Next Ten items / progress rows split by owner |
+| 2026-09-05 | `2b63883c2` | rescored after the fix (reject half 69 -> 70, floor 69 -> 70, soundness ceiling 2 -> 1), ledger D2 closed with its scope limit stated (inductives do not route through `check_declaration`) |
+| 2026-09-05 | `a24ed468b` | `Kernel::check_declaration` refuses a repeated universe binder (`KernelError::DuplicateUniverseParam`), closing ledger D2 — the arena's `tut06_bad01`; new `declaration_universe_params_must_be_distinct.rs` (3 tests, both directions); ADR-1663; progress rows in `14-lean-lang.md` and `10-logic-and-foundations.md` |
+| 2026-09-05 | `5a954d4be` | `scripts/check-kernel-conformance.py` (9 guards, `--self-test`, floors and ceilings on both halves, G6 requires the control to invert by ≥40); `scripts/check-lean-divergences.py` (5 guards, three authorities, no list of its own); `docs/plan/lean-divergences.md`; `artifacts/kernel-conformance/{results.tsv,summary.json,summary.md}`; `level_conformance_probe` example; both gates registered in `scripts/check.sh` and the `justfile` |
 | 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
 | 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
 | 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
@@ -168,6 +186,10 @@ now. Nothing was deleted.
 | 2026-09-05 | `f02c8d530` | `install-pinned-lean.sh` accepts the `-rcN` pin shape via a factored `toolchain_pin_is_valid()` + `--validate-only` mode; new `scripts/tests/test-lean-toolchain-pin-regex.sh` (8 controls, no network) registered in `scripts/check.sh` |
 | 2026-09-05 | `9752b4416` | `check-lean-official-construct-matrix.py`'s `crosscheck_pin_failures()` checks well-formedness of `lean-toolchain` instead of equality to the corpus pin; 3 new unit tests; `docs/plan/generated/lean-complete-parity.json` refreshed (unrelated stale `ci.yml` hash) |
 | 2026-09-05 | `e2218738c` | ADR-1660 names the two Lean pins and which surface is keyed to which; dated correction block appended to ADR-1594; ADR index regenerated |
+| 2026-09-05 | `defe0d742` | lane opened: status file |
+| 2026-09-05 | `f3d8b3d95` | the census over every carrier: shared harness `tests/support/replay_census.rs`, new suite `real_lean_replay_census_all` (17 carriers, one `#[test]` each), carrier list derived from `src/lib.rs`'s re-export block, `creal` floor raised 1,900 -> 3,350, `check-lean-gate.sh` `CHECK_FLOOR` 261 -> 278 with the new suite registered |
+| 2026-09-05 | (this commit) | `artifacts/measurements/lean-replay-census-2026-09-05.md`, ADR-1661, ADR index regenerated, and the four rows in `docs/math-department/14-lean-lang.md` this run moved |
+| 2026-09-05 | coordinator | sixteen nested carriers moved behind `--ignored`, `CHECK_FLOOR` 278 -> 262; the gate keeps the `everything` census only (see ADR-1661's coordinator note) |
 | 2026-09-05 | lean-tactic | ADR-1666 + `lean/axeyum-tactic` (Lake package: `Axeyum.Shim` 13 proved rows, `Axeyum.Protocol`, `Axeyum.Tactic` = `by axeyum`; `Tests/NatLinear` 11 goals accepted, `Tests/Mutations` 11 rejections + 1 control, `Tests/ShimCorrespondence` axiom census + reverse re-derivation) + `axeyum_lean_import::tactic_bridge` (goal decode, ℕ translator, name map, Lean printer, 11 unit tests) + `examples/axeyum_sidecar.rs` + `examples/axeyum_tactic_probe.rs` + `scripts/check-lean-tactic.sh` (4 floors, 3 negative controls) registered in `scripts/check.sh` and `just lean-tactic` |
 | 2026-09-05 | `9ce530f62` | `Int.IsSumOfTwoSquares` (Definition) with its intro rule, the Brahmagupta–Fibonacci identity in both conjugate groupings (both emitted by `ring::int::declare` at arity 4, first attempt), and `Int.isSumOfTwoSquares_mul`. Seven tests; one negative control found VACUOUS on its first honest run (`17 = 1²+4²` and its swap both reduce to `17`) and moved to free variables. |
 | 2026-09-05 | `c47a576b5` | `Int.sq_modEq_four_zero_or_one` and `Int.not_isSumOfTwoSquares_of_modEq_four_three` — ADR-0603's boundary-refutation grade. No new `Int` parity lemma was needed (`Int.Even` is *defined* as `Nat.Even (natAbs ·)`), no existential is opened (the witness is the definable `a / 2`), and the four leaves close by REDUCTION of `emod` at closed numerals. Ring stepping stones `Int.sq_of_two_mul`, `Int.sq_of_two_mul_add_one`. 3 tests, each with its negative half: 3, 7, 11 refute; 4, 5, 13, 17 do not. |
@@ -8020,6 +8042,74 @@ monotone::erefl;` import (removed) and getting the fully-qualified test
 names right for `cargo test --lib` filters (`creal::creal_tests::…`, not
 `creal::…` — the module nesting is easy to get wrong and silently matches
 zero tests, confirmed nonzero counts throughout).
+
+**Landed** (`WIP`, perf-par2-ratchet, 2026-09-05). Recommendation 1 of the
+[2026-09-05 SAT/SMT performance review](docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md),
+first slice: **a timing regression is now RED.** Section 2.2 item 1 of that
+review measured the hole — nothing in any gate failed when solve time regressed.
+`progress_frontier.rs` ratcheted capability at a fixed budget, the parity ledger
+ratchets decide count, the corpus sweep ratchets soundness, and
+`summary.par2_mean_s` in the 72 `bench-results/baselines/` files was compared to
+nothing.
+
+The ratchet lives inside the existing frontier sweep: each family carries a
+`TimingBaseline` (a few `N` pinned deep inside its frontier, a calibrated total,
+a measured ceiling), read out of the curve the capability sweep already
+produces, so it costs **zero extra solving** and is registered wherever
+`progress_frontier` already is — the `frontier` step in `scripts/check.sh` and
+the `frontier` recipe in the `justfile`, both now documented as running two
+ratchets.
+
+**It fires.** Demonstrated in a private snapshot (`scripts/lane-snapshot.sh`) by
+putting a 25 ms stall in `nra_even_power_refutation` — every verdict correct,
+`FRONTIER nra_degree = 40 (baseline 40)` still green — and the timing ratchet
+failed with `TIMING REGRESSION [nra_degree]: pinned N=[10, 20, 30, 40] took
+98.2 ms calibrated, over the committed ceiling of 23.0 ms`, suite exit 101. The
+same snapshot with the stall removed: `TIMING nra_degree = 10.9 ms`, exit 0 —
+and it passed at 1-minute load 25.1 having failed at load 13.8, so the verdict
+tracks the code, not the box.
+
+**It stays quiet under load.** The check is enforced only when
+`machine.comparable` is true — the same flag the capability ratchet uses, and
+mirrored as `timing.enforced` in each artifact. The committed regeneration sweep
+demonstrates it: `nia_unsat` drifted 37 % mid-sweep, so its row reads
+`"comparable": false`, `"enforced": false`, and its `TIMING` line says
+`ADVISORY, not enforced on this run`, while the other four families asserted.
+
+**Band, measured not guessed** (calibrated ms, `solve_ms / scale`), over eight
+sweeps on s4 at 1-minute load 17.9-37.8 (`scale` 1.10x-2.03x, a 16-core box at
+1-2.4x oversubscription):
+
+| family | pins | sweeps | min / median / max | ceiling |
+|---|---|---:|---|---:|
+| `bv_reduction` | 12, 15, 18 | 8 | 959.9 / 1293.1 / 1509.5 | 2264.3 |
+| `lia_cuts` | 3, 19, 20 | 8 | 238.6 / 341.9 / 393.1 | 589.6 |
+| `string_bound` | 13, 25, 33 | 8 | 387.6 / 423.5 / 646.0 | 969.1 |
+| `nra_degree` | 10, 20, 30, 40 | 8 | 6.5 / 11.2 / 15.3 | 23.0 |
+| `nia_unsat` | 1, 2, 3, 4, 5 | 7 | 30.4 / 44.3 / 77.1 | 115.6 |
+
+**What the next lane should know.**
+
+- **Five sweeps were not enough on this box.** Sweeps six and seven each landed
+  above the five-run maximum on the two cheap families. The band is now eight
+  sweeps, and `TIMING_BASELINE_MIN_RUNS = 5` is a floor a test enforces rather
+  than a count anyone may re-derive downward.
+- **The band is wide because s4 was never idle.** Calibrated totals still spread
+  1.6x-2.4x between the quietest and busiest sweep — the residual the proxy
+  kernel does not compensate. **Re-measuring on an idle machine would tighten
+  every ceiling** and is the cheapest available improvement to this gate's
+  resolution; the recipe is in the methodology note.
+- **`nia_unsat` and `nra_degree` have the least resolution**, because neither
+  family has mid-priced instances (`nra_degree` is 1-4 ms per point;
+  `nia_unsat` jumps from tens of ms at `N<=5` to ~2.7 s at `N>=6`). They still
+  catch the order-of-magnitude failure their fast paths would cause.
+- **A pre-existing flake was observed, not introduced.** In one sweep
+  `nia_unsat` `N=1` — normally ~2 ms — did not return inside `budget + 1 s`, and
+  the CAPABILITY ratchet failed with `frontier 0` against a baseline of 40. The
+  two nonlinear families use `smtlib_unsat_sweep`, which has **no retry loop**,
+  unlike `sweep`. Giving them the same `ATTEMPTS` retry is a small, separate fix.
+- **Still not covered:** the 72 PAR-2 means under `bench-results/baselines/`.
+  Extending the same calibrated-band scheme to `par2_mean_s` is the next slice.
 
 **Your lane's block (`DONE for this pass`, cas-audit, 2026-08-27).** Censused
 709 pub/pub(crate) fns across `crates/axeyum-cas/` (57 src files, excluding
@@ -45426,6 +45516,100 @@ else in `category_setoid.rs` or `groups.rs` was edited, so an additive merge
 with a concurrent `CatS.*` lane is a one-line reconciliation at each of those
 two sites.
 
+**The primorial and the sharp odd central binomial bound landed; Chebyshev's
+lower bound in the counting form did NOT, and the obstruction is a blind
+evaluation population rather than mathematics** (`WIP`, chebyshev-pi,
+2026-09-05, ADR-1637).
+
+`Nat.primorial n = prodRangeIf (fun i => beq (minFac i) i) (fun i => i)
+(succ n)` — the product of every prime `p ≤ n` — with both `Eq.refl` defining
+equations, the two-direction bridge `minFac n = n ↔ prime_condition n`, the
+prime/composite successor equations, positivity and monotonicity; and
+separately `Nat.choose_two_mul_succ_le_four_pow : ∀ m,
+choose (succ (add m m)) m ≤ 4^m`, which is STRICTLY sharper than what
+`Nat.choose_le_two_pow` gives at that row (`2^(2m+1) = 2·4^m`) and is the
+arithmetic half of Erdős's proof.
+
+**The predicate is `minFac`, not the `Nat.isPrime` already in the prelude.**
+`Nat.isPrime` is a divisor COUNT and `prime_counting.rs` declares no theorem
+about it (ADR-0653), so bridging it to `prime_condition` is a counting argument
+in its own right. `min_fac_dvd.rs` already carries `min_fac_dvd`,
+`min_fac_two_le` and `min_fac_prime`, and those three give both directions of
+the `minFac` bridge with no new induction. `minFac 1 = 1` lets `i = 1` through
+the predicate; it contributes the factor `1`, so the product is unchanged —
+pinned by the evaluation test at `1, 1, 2, 6, 6, 30, 30, 210`.
+
+**Deliverables 2 and 3 of the brief are held back on a partition check, and
+this is the finding worth carrying forward.** Both are statements about
+`Nat.primeCounting`. Five of the ten rows of the preregistered held-out family
+`discrete-step-and-counting-bounds` are exactly the `Nat.primeCounting` shelf
+(`monotone_primeCounting`, `monotone_primeCounting'`,
+`primeCounting'_eq_zero_iff`, `primeCounting_add_le`, `primeCounting'_add_le`),
+every one `partition: "held-out"`, and the family has never been scored — the
+only committed evaluation record scores `integer-absolute-value`. The isolation gate PASSES with the primorial
+shelf in the tree (`held_out=216 settled=0 references=0`); the objection is
+ADR-0653's rule that *a family may be blind only if its mathematics is
+unpublished*, and stating Chebyshev's lower bound over `Nat.primeCounting`
+publishes the whole `Nat` half of `Mathlib.NumberTheory.PrimeCounting`.
+
+**Measured, and worth the coordinator's attention: two of the ten rows are one
+existing-lemma application away from the environment as it already stands.**
+`Nat.primeCounting' = Nat.count Nat.isPrime`, `Nat.count` is definitionally
+`Nat.countRange`, and `Nat.countRange_le_of_le : ∀ f m n, Le m n →
+Le (countRange f m) (countRange f n)` has been in this prelude since the
+counting shelf landed — that IS `Monotone Nat.primeCounting'` at
+`f := Nat.isPrime`, and `Monotone Nat.primeCounting` follows through
+`primeCounting n = primeCounting' (succ n)`. Nothing was declared, so nothing
+is spent; but the family's blindness rests on nobody having written two lines,
+not on difficulty. **W3-11's headline inequality cannot be landed by any lane
+until the family is scored or amended (ADR-0542); that is a coordinator
+decision, not a lane one.**
+
+**Deliverable 3 already exists in its non-counting form.**
+`Nat.exists_prime_gt : ∀ n, ∃ p, n < p ∧ prime p` — Euclid's theorem — is
+admitted and axiom-free (`F:nat-exists-prime-gt`). Only its restatement as
+`∀ k, ∃ n, k ≤ primeCounting n` touches the held-out family, and only that
+restatement is missing.
+
+**What is still open on deliverable 1, sized.** `Nat.primorial_le_four_pow`
+did not land. Its strong induction and even step are both available; the odd
+step needs `(∏ {p prime, m+1 < p ≤ 2m+1}) ∣ choose (2m+1) m`, i.e. a
+divisibility law for a product over a predicate-restricted range with a
+coprimality side condition. `subset_product.rs`'s module doc records that
+`Nat.prodRange` has neither permutation invariance nor a swap lemma and that
+the `Int` counterparts span ~650 lines and "took three drafts to close". That
+is a lane of its own, not an addition to `primorial.rs`.
+
+**Gates, with counts and exit status.** `cargo test --release -p
+axeyum-lean-kernel --lib -- nat_prelude::primorial_tests::
+nat_prelude::central_binomial_tests:: --test-threads=4` ran **10 tests, 10
+passed, 0 failed** (both modules, 5 + 5; the count is what rules out the
+zero-test trap). `cargo clippy --workspace --all-targets --all-features --
+-D warnings` exit 0 — workspace-wide because `crates/axeyum-py/src/kernel/
+prelude_fields.rs` is a generated consumer of `NatPrelude` and a kernel-only
+clippy would not see it. `cargo fmt --all --check` exit 0.
+`nat_axiom_inventory --require-axiom-free nat` reports
+`ok: nat trusted surface = 0`, exit 0. `validate-facts.py` exit 0 with
+`missing_edges=0`; `check-settled-fact-statements.py` exit 0 with
+`settled=2587 pinned=2587 unpinned=0 drifted=0`.
+`check-merge-hygiene.sh` exit 0 after two repairs it demanded (the production
+provenance ledger and the kernel dependency projection).
+
+**Did NOT run: the mutation kill counts.** Both suites
+(`primorial-in-kernel`, four anchors; `central-binomial-in-kernel`, two) are
+REGISTERED in `scripts/tests/mutation_controls.py` and their anchors validate
+(`MUTATION_ANCHORS|suites=72|anchors=765|stale=1`, the one stale row being the
+pre-existing `creal-migrate-consumers`). The runs themselves did not finish
+inside this lane's window: each mutant is a full `--release` rebuild of
+`axeyum-lean-kernel` through `cargo-serialized.sh`, and the host was at load
+22-24 with all five slots held throughout, so the two suites were still
+building after ~30 minutes apiece. **No kill count is claimed.** Logs:
+`chebyshev-pi.mut-cb2.log` and `chebyshev-pi.mut-pr2.log` in the session
+scratchpad; the runs were left detached and their `/data0` target caches are
+warm, so a re-run is cheap.
+
+<!-- /plan-section -->
+
 **A bucket MIS-attribution is now loud, not just an unattributed one** (`COMPLETE`, classifier-fail-loud, 2026-08-31). ADR-1215.
 
 `scripts/measure-curriculum-kernel-coverage.py`'s residual counter catches a
@@ -52506,6 +52690,190 @@ binary (not cargo, so not through the serializer) each costing 3-6 minutes to
 rebuild the constructed preludes in memory. A targeted follow-up query for
 `CReal.no_total_inverse`/`CReal.mulInvEx` specifically was not run.
 
+**Next Ten item 10 is `DONE` (lean-claim-surface, 2026-09-05, ADR-1668).**
+Four claim surfaces had drifted independently from the measured tree: a July
+"70/70 accepted" figure in `docs/plan/global/10-status.md`, a false "neither
+`lean` nor `elan`" premise in action A9, an "every field `not_attempted`"
+reading of the K3 matrix row that did not distinguish "no Lean-goal credit"
+from "no native producers exist," and three July Lean documents still
+carrying an `active` status four weeks after their own tally stopped moving.
+
+1. **One paragraph, written once, reused verbatim** in
+   `docs/plan/global/10-status.md` (replacing the stale Lean paragraph),
+   `README.md` (§2, the Lean-checker section), and `docs/PROJECT-STATE.md`
+   (replacing the stale close of "Evidence and Lean"). It states the K
+   profile (K0 1/1, K1 6/6, K2-K6 0), the two pins (ADR-1594/1660), the
+   replay census as the independent-checkability measure, the import tier
+   (never headline, ADR-0601/1664), `by axeyum` (ADR-1666), and the carrier
+   correspondence ledger (ADR-1665). **Follow-up, same day:** once Next Ten
+   item 2 (ADR-1661) landed on `main` and extended the replay census from
+   `creal` alone to every carrier, the replay sentence was updated in all
+   three places (still byte-identical, still within the 120-word budget —
+   now 118) to the `everything`-carrier headline: of 4,478 proved
+   declarations pinned Lean's kernel accepts 4,394, 50 are `Type`-valued
+   theorems it refuses as theorems, and 34 are blocked behind one of those
+   (ADR-1661, superseding the ADR-0760-cited `creal`-only figure this
+   paragraph originally carried). ADR-1668's own quoted copy was updated to
+   match, with a dated `Update` block recording the change.
+2. **A9 in `docs/plan/global/20-next-actions.md` rewritten**, not patched:
+   both Lean 4.30.0 and 4.34.0-rc1 are installed under `~/.elan/toolchains/`
+   on the fleet (`command -v lean` is empty only because `elan` does not
+   touch `PATH`; `scripts/check-lean-gate.sh --print-toolchain` resolves
+   it). The action now points at `14-lean-lang.md`'s four still-open Next
+   Ten items (2, 3, 7, 9) in that file's priority order.
+3. **The K3 row's assurance fields are unchanged** — every field in
+   `planned-native-proof-profile` (`docs/plan/lean-compatibility-v1.json`)
+   stays `not_attempted`, because `admitted`/`proof_checked` there mean
+   credit toward a *Lean goal* and the native producers (`linarith`, `ring`,
+   `simp`, `decide`, the tactic combinator; 18,497 lines) do not check a
+   Lean goal — `by axeyum` does, on the separate route ADR-1666 already
+   registered. The row gains one `residual` sentence recording exactly this
+   and pointing at ADR-1666. `docs/plan/generated/lean-compatibility.md` and
+   `docs/plan/generated/lean-complete-parity.json` were regenerated.
+4. **The three July documents** — compatibility roadmap, implementation
+   plan, parity roadmap — each got a dated status block appended
+   immediately after their header metadata (their bodies are untouched):
+   historical as of 2026-09-05, ordering superseded by ADR-0717's C-series,
+   the complete-parity contract and registry explicitly **not** superseded.
+   The parity roadmap's block additionally marks the U2 official-execution
+   programme historical.
+5. **ADR-1668** records the paragraph, the claim-surface list, the K3
+   decision, and the rule that a future Lean claim on a claim surface is
+   either a verbatim quote of the paragraph or a measured update to both it
+   and the ADR together.
+6. `docs/math-department/14-lean-lang.md`: items 1 and 10 ticked `[x]` with
+   landing evidence (item 1 credits lane `lean-pin-gates`, ADR-1660, merge
+   `c1d8db1c2`; item 10 credits this lane and ADR-1668); one progress-log
+   row appended at the end. Items 2, 3, 7, 9 and every other verdict line in
+   that file are untouched.
+
+**Measured 2026-09-05, all four required checkers exit 0 on this tree:**
+`./scripts/check-links.sh` ("all links ok"), `python3
+scripts/gen-adr-index.py --check` (845 rows; the pre-existing `0166`/`0167`
+duplicate is unrelated to this lane and was not touched — confirmed against
+`git show HEAD:docs/research/09-decisions/README.md`, which already carried
+it before this lane's one-line insertion), `python3
+scripts/gen-lean-compatibility.py --check` (13 rows), `python3
+scripts/gen-lean-complete-parity.py --check` (10 populations, terminal
+claim still `false`, unchanged).
+
+`scripts/check-merge-hygiene.sh` reports `FAILED` on this tree, but only on
+`gen-plan.py --check` — expected and out of scope: this lane's brief
+explicitly says not to run `gen-plan.py` or edit `PLAN.md` (the coordinator
+regenerates it at merge from this file plus `docs/plan/global/`). No other
+merge-hygiene finding.
+
+Not run: `just check` / the full `./scripts/check.sh` aggregate, `cargo`
+anything (documentation-only lane, no `crates/` or `artifacts/` file
+touched), the real-Lean suites (require an installed pinned toolchain and
+are unrelated to this lane's four required checkers).
+
+**Next Ten item 7 of [`14-lean-lang.md`](docs/math-department/14-lean-lang.md)
+is `DONE` (lean-conformance, 2026-09-05), recorded in
+[ADR-1663](docs/research/09-decisions/adr-1663-the-public-conformance-corpus-scores-both-halves-and-the-divergence-ledger-is-gated.md).**
+
+**The corpus.** `leanprover/lean-kernel-arena` (<https://arena.lean-lang.org>),
+pinned in `scripts/fetch-references.sh` at `abc55357aee17c59dfdbf39c8a2e19739e23dd10`
+plus its published test tarball pinned by SHA-256
+(`7e396d5de90e8871c9b1d7e2931f3efaba303056cdfd93e65f9ae1de628bf326`).
+
+**The `189 / 121 / 62 / 6` figures in
+[`lean-kernel-requirements-2026-08-13.md`](docs/plan/lean-kernel-requirements-2026-08-13.md)
+§4.4 / R8.5 and in `14-lean-lang.md` are stale and were not repeated.**
+Measured from the corpus's own `results.json` at that revision: **204 tests,
+118 accept / 73 reject / 13 either**, with `parse-only` scoring 118/118 on
+accepts and **6/73** on rejects. The doc's *argument* survives the correction
+intact — which is why the control, not the accept count, is what this lane
+built the gate around.
+
+**Both halves, on the 186-case published tarball** (the 13 `either` cases are
+not in it, and upstream excludes the five cases over 10 MB — `mathlib`, `std`,
+`cslib`, `cedar`, `init`, which are the largest accepts):
+
+| mode | accept half | reject half |
+|---|---|---|
+| full | **108/113** (4 wrong, 1 no verdict) | **70/73** (1 wrong, 2 declined) |
+| `parse-only` control | 110/113 (2 wrong, 1 no verdict) | **21/73** |
+
+The control is the same reader with the trusted gate's verdict discarded
+(`census_ndjson`), so the gap is an attribution and not a rhetorical flourish:
+**21 of the reject half is earned by the reader and recursor regeneration, 49
+by the trusted gate.** (The finding run read 69/73 with 2 wrong; the second of
+those two was the defect closed below.)
+
+**What that attribution costs us, said plainly.** Five reject-half cases —
+`rec-k-lie`, `nat-rec-k-lie`, `large-elim-param`, `large-elim-prop-bool` and
+`level-imax-leq` — are rejected correctly but land in the 21, on a
+recursor-regeneration mismatch rather than on the property each was built to
+probe. `level-imax-leq` is the `nanoda_lib` `imax`-leq soundness bug that
+requirements §4.5 records as **UNKNOWN** for this kernel; we reject the stream
+at line 69 on an unrelated K-flag mismatch, so **this run does not close that
+UNKNOWN**, and the ledger says so rather than claiming the credit.
+
+**Two §4.6 "known gaps" are settled.** *"No K-like reduction"* is closed —
+`k_like_reduction` exists in `tc.rs` and both `rec-k-lie` soundness cases are
+rejected. *"No unit-like defeq"*, predicted to block *"a block of conformance
+tests"*, blocks exactly **two** (`107_unitEta1`, `108_unitEta2`), and they are
+the only two accept-half cases refused from inside the trusted gate.
+
+**The ledger.** [`docs/plan/lean-divergences.md`](docs/plan/lean-divergences.md), in
+lean4lean's shape, carrying the standing rule that an unlisted divergence is a
+bug. Ten entries, eight open, two closed. `scripts/check-lean-divergences.py`
+enforces it from three **authorities** — the conformance mismatches, the
+differential's `EXPLAINED_INCOMPLETENESS`, the replay census's
+`Representability::reason` classes — and holds no list of its own; L5 fails when
+an authority returns zero keys, because that is exactly how L2 would otherwise
+pass vacuously.
+
+**Closed in the kernel.** D2, duplicate universe binders (arena
+`bad/tutorial/019_tut06_bad01`): `Kernel::check_declaration` gained step (1a)
+and `KernelError::DuplicateUniverseParam`. `Const(c, us)` substitutes
+positionally, so `levelParams = [u, u]` gives `@c.{a, b}` two candidate
+substitutions for one name. Both existing checks are *relative* — inference and
+def-eq treat `[u, u]` exactly as `[u]` — so the repeated binder was invisible to
+everything the kernel ran, the same mechanism that left the binding list
+decorative before `declaration_universe_params_must_be_bound.rs`.
+
+**Decided, not closed.** Probe 5's `imax u (imax v w) ≡ imax (max u v) w` and
+ADR-1600's open `level.max-kind:1322:max-to-imax` mutant were **re-measured
+first-hand** (`level_conformance_probe`, with a negative *and* a positive
+control, because both findings are `true` and a degenerate `|_,_| true` prints
+the same lines) and both still diverge. They are recorded as a **sanctioned**
+divergence: the arena classifies exactly this shape as `outcome: either`
+(`tests/corner-cases/imax-right-successor.yaml`), so the reference corpus does
+not consider it a defect, and making a correct decision procedure incomplete
+inside the soundness-critical core to imitate it is the wrong trade. That
+closes the question ADR-1600 §4 left open.
+
+**Red, found and not fixed by this lane.** `good/perf/app-lam` produces **no
+verdict in 600 s at 3.0 GB peak RSS** (`/usr/bin/time -v`), while the official
+kernel checks it and our slowest passing performance case, `grind-ring-5` at
+10.2 MB, takes 8.1 s. Ledger D8. Also unfixed: the three Lean gates
+`14-lean-lang.md` lists as red today are outside this lane's scope.
+
+**Verification.** `cargo check --workspace --all-targets` exits 0 with the new
+`KernelError` variant (20 min, every crate including `axeyum-py`, which reads
+the enum off its `Debug` rendering rather than matching on it — a kernel
+invariant is not a workspace invariant, and that consumer has broken `main`
+before). `cargo clippy -p axeyum-lean-kernel -p axeyum-lean-import
+--all-targets -- -D warnings` exits 0. After merging `main`, the targeted check,
+the three-test suite and the release build were all re-run (exit 0), and the
+conformance gate re-ran **every** case live: 372 of 372 rows reproduced.
+`check-kernel-conformance.py --self-test` fires all eight
+artifact-layer guards on the fixture that names each; G9 was mutation-verified
+separately by changing one committed `class` field with the verdict unchanged,
+which fires G9 **alone**. `check-lean-divergences.py --self-test` fires L1–L5
+the same way. The kernel change is covered by
+`declaration_universe_params_must_be_distinct.rs` — 3 tests, confirmed nonzero,
+and one of the three is the control that a kernel refusing every polymorphic
+declaration would fail.
+
+**Next for this item.** D5 (unit-like defeq), D6 (dense internalization
+indices) and D8 are each bounded and named with their obstruction. When a Lean
+4.29.1 toolchain exists on a fleet host, building the corpus from source adds
+the 13 `either` cases and the five large accepts, and the floors should be
+re-derived from that run rather than nudged.
+
 **Lane block (`DONE -- ADR-1662 accepted; census published; screen shipped and
 mutation-verified`, lean-import-census, 2026-09-05).**
 
@@ -52839,6 +53207,136 @@ directly and bare, per the task's discipline). The real-Lean suites
 (`scripts/check-lean-gate.sh`, `test-lean-toolchain-policy.sh`) that
 require an installed pinned toolchain were not run on this host — did not
 run, not claimed green.
+
+Lane: `lean-replay-census-all`. Item 2 of the Next Ten in
+[`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md):
+*replay every proved theorem in pinned Lean, or name the reason*. Decision:
+[ADR-1661](docs/research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md).
+Predecessor: [ADR-0760](docs/research/09-decisions/adr-0760-independent-replay-is-graded-per-declaration-by-name.md)
+(lane `l0-s4-independent-replay`), which built the same census over `creal`
+alone.
+
+## Status
+
+Done. Every carrier the kernel builds runs ADR-0760's per-declaration replay
+census against the cross-check pin, `missing=0` enforced per carrier, and the
+two non-representable classes are named member by member rather than counted.
+
+## The measurement
+
+Published as
+[`artifacts/measurements/lean-replay-census-2026-09-05.md`](artifacts/measurements/lean-replay-census-2026-09-05.md).
+Measured 2026-09-05 at `3328d2a80` on `leanprover/lean4:v4.34.0-rc1`.
+`real_lean_replay_census_all`: `20 passed; 0 failed` in 738.79 s, 17 Lean
+invocations. `real_lean_replay_census`: `5 passed; 0 failed` in 104.18 s.
+**No carrier was skipped and none is reported as "did not run".**
+
+The sentence the chair asked for, read from the `everything` row and from no
+other (the per-carrier rows NEST and cannot be summed):
+
+> Of **4,478** proved declarations, pinned Lean's kernel accepts **4,394**;
+> **50** are `Type`-valued theorems it refuses as theorems, and **34** are
+> blocked behind one of those.
+
+| carrier | population | representable | replayed | `Type`-valued | blocked | missing |
+|---|---:|---:|---:|---:|---:|---:|
+| `logic` | 99 | 99 | 99 | 0 | 0 | 0 |
+| `axreal` | 129 | 129 | 129 | 0 | 0 | 0 |
+| `nat` | 1,990 | 1,990 | 1,990 | 0 | 0 | 0 |
+| `ipc_eval` | 2,003 | 2,003 | 2,003 | 0 | 0 | 0 |
+| `list` | 2,021 | 2,021 | 2,021 | 0 | 0 | 0 |
+| `ipc` | 2,040 | 2,040 | 2,040 | 0 | 0 | 0 |
+| `string` | 2,086 | 2,086 | 2,086 | 0 | 0 | 0 |
+| `int` | 2,391 | 2,391 | 2,391 | 0 | 0 | 0 |
+| `characterization` | 2,427 | 2,427 | 2,427 | 0 | 0 | 0 |
+| `rat` | 2,997 | 2,997 | 2,997 | 0 | 0 | 0 |
+| `creal` | 3,617 | 3,542 | 3,542 | 49 | 26 | 0 |
+| `arith_models` | 3,713 | 3,638 | 3,638 | 49 | 26 | 0 |
+| `cpoint` | 3,766 | 3,691 | 3,691 | 49 | 26 | 0 |
+| `complex` | 3,767 | 3,692 | 3,692 | 49 | 26 | 0 |
+| `metric` | 3,863 | 3,788 | 3,788 | 49 | 26 | 0 |
+| `rn` | 3,921 | 3,846 | 3,846 | 49 | 26 | 0 |
+| `intspace` | 3,961 | 3,877 | 3,877 | 50 | 34 | 0 |
+| **`everything`** | **4,478** | **4,394** | **4,394** | **50** | **34** | **0** |
+
+## Findings
+
+**1. Every `Prop`-valued theorem the kernel has proved is independently
+admitted by Lean, under its own name.** Not by family, not by carrier count —
+by membership of its own name in the constant set Lean's own kernel ended
+holding.
+
+**2. The 84 that are not are named, and 34 of them hang off five
+declarations.** `CReal.hasDerivative_add`, `CReal.hasDerivative_neg`,
+`CReal.uniformlyContinuousOn_restrict`, `CReal.uniformly_continuous_const`
+and `CReal.uniformly_continuous_add` block 26 of the 34 between them. That
+is what turns "publish the constructive analysis as a Lean library" (Next Ten
+item 3) from an open-ended job into a scoped one.
+
+**3. The `creal` floor had stopped ratcheting.** It was set at 1,900 on
+2026-08-30 against a carrier of 2,045 declarations; the carrier holds 3,617
+today, so the floor could have absorbed the silent loss of nearly half of it.
+Raised to 3,350 — the ratchet working, not a lowering.
+
+**4. The `missing` guard is sensitive to the losses that matter, and one
+mutant showed exactly where its edge is.** Dropping a *leaf* export root is
+killed (`missing=1`, naming `Subtype.mk_eta`); dropping a *non-leaf* root
+survives, because the exporter emits the dependency closure and Lean still
+ends up holding the name. Recorded in ADR-1661 as a limitation, not fixed:
+the census claims "Lean's environment holds a constant of this name", and
+that claim stays true in the surviving case.
+
+**5. Not this lane's work, but re-measured on the way past:** the three Lean
+gates `14-lean-lang.md` recorded as red on 2026-09-05 all exit 0 on a clean
+tree at `3328d2a80`, fixed the same day by lane `lean-pin-gates`
+([ADR-1660](docs/research/09-decisions/adr-1660-there-are-two-lean-pins-and-every-claim-names-which-one-it-means.md)).
+The row was updated to say so. `check-parity-freshness.py`'s Z3-ledger
+failure was NOT re-measured and is not claimed either way.
+
+## What did NOT run
+
+**The suite's cost in DEBUG was not measured.** `scripts/check-lean-gate.sh`
+runs registered suites as `cargo test -q -p … --test …`, i.e. unoptimized, and
+every number in this file is from `--release`. A debug build of
+`real_lean_replay_census_all` was queued on 2026-09-05 and sat 45 minutes in
+the host-wide `cargo-serialized.sh` flock without starting (45 queued cargo
+jobs at the time); it was cancelled rather than left to orphan. So this is
+reported as **did not run**, not as "fine".
+
+What is known rather than guessed: the already-registered
+`real_lean_replay_census` runs ONE `creal` carrier in debug and was measured
+at 240 s by ADR-0760, on a carrier that then held 2,045 declarations and now
+holds 3,617. This suite has seven `creal`-superset carriers and ten cheap
+ones. So the gate's runtime is expected to grow by tens of minutes, and that
+is an **extrapolation from one debug data point**, not a measurement. Whoever
+next runs `scripts/check-lean-gate.sh` end to end should read the real number
+off it; if the cost is unacceptable, the lever is to `#[ignore]` the seven
+constructive carriers and lower `CHECK_FLOOR` by exactly seven, which trades
+gate time for exactly the carriers most worth checking.
+
+`scripts/check-lean-gate.sh` itself was **not run end to end** by this lane
+for the same reason. `CHECK_FLOOR` was raised by exactly the seventeen
+invocations this suite makes, each of which was observed
+(`AXEYUM-LEAN-CHECKED replay-census-all checked=1`, seventeen times, in one
+run).
+
+`gen-plan.py` was **not run**: this lane was told not to. `gen-plan.py
+--check` exits 1 solely because of this new status file — verified by moving
+it aside (exit 0) and putting it back.
+
+## Where the census lives
+
+- `crates/axeyum-lean-kernel/tests/support/replay_census.rs` — the classifier,
+  the exporter call, the Lean invocation, `grade`, and `census_carrier`.
+  Included by `#[path]` into both suites so they cannot drift.
+- `crates/axeyum-lean-kernel/tests/real_lean_replay_census_all.rs` — one
+  `#[test]` per carrier, the `BUILDERS` coverage table, and the two
+  classifier controls that need no Lean.
+- `crates/axeyum-lean-kernel/tests/real_lean_replay_census.rs` — the `creal`
+  carrier, its flagship coverage pin, and the three mutation controls
+  (wrong proof, wrong goal, no inheritance).
+- `scripts/check-lean-gate.sh` — both suites registered; `CHECK_FLOOR`
+  261 → 278.
 
 **Your lane's block (`DONE` for the ℕ fragment, `lean-tactic`, 2026-09-05).**
 `docs/math-department/14-lean-lang.md` Next Ten item 6 is landed for ℕ:
@@ -57978,22 +58476,39 @@ Do not build parametric datatypes or `define-fun-rec` from A8 — they are
 capability zeros in the scored population (gap analysis §9 row 9), not part of
 this session-semantics slice.
 
-### A9 — Restore official Lean execution and shrink the prelude (`TODO`, P2)
+### A9 — Extend the Lean replay census and close the remaining Next Ten items (`TODO`, P2)
 
-**Why now.** The local host currently has neither `lean` nor `elan`; remote
-70/70 attestation remains open; seven ledger rows are already classified as
-derivable theorems.
+**Why now.** "The local host currently has neither `lean` nor `elan`" is
+false and was corrected 2026-09-05: both Lean 4.30.0 (the Mathlib corpus pin)
+and 4.34.0-rc1 (the cross-check pin, ADR-1594/ADR-1660) are installed under
+`~/.elan/toolchains/` on the fleet; `command -v lean` is empty only because
+`elan` does not touch `PATH` — resolve with
+`scripts/check-lean-gate.sh --print-toolchain`. What "Lean compatible" means
+here is now written once
+([`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md),
+[ADR-1668](docs/research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md)):
+K0 1/1, K1 6/6, K2-K6 0; the replay census, the two pins, the import tier,
+and the Lean-side tactic are all measured, not aspirational.
 
-**Next slice.** Provision the checksum-pinned Lean 4.30 executable, prove it
-runs outside the repository working directory, obtain the remote 70/70 result,
-then replace the seven derivable axioms with theorem terms in dependency order.
+**Next slice.** `14-lean-lang.md`'s Next Ten still has four open items, in
+priority order: **2** (replay every proved theorem in pinned Lean or name the
+reason — extend the `creal`-only census, `missing=0` enforced, `Type`-valued
+theorems as a typed class); **3** (publish the constructive analysis as a
+Lean library — render the `creal` prelude as `.lean` source Lean elaborates,
+packaged for Lake); **7** (the public conformance corpus and a divergence
+ledger against Lean 4's own kernel test cases); **9** (a native reader for
+the kernel-core statement rendering, render→parse→same-term gated). Item 2 is
+the precondition for the chair's headline number meaning anything to a Lean
+user and should go first.
 
-**Exit.** Kernel tests, official Lean, generated ledger counts, declaration
-order, parity docs, and mutation controls all pass; no hard-coded old count
-survives.
+**Exit.** Each item closes with its own ADR and the evidence `14-lean-lang.md`
+already asks for (a run, not a projection); the progress-log row and the
+matrix regenerate (`gen-lean-compatibility.py --check`,
+`gen-lean-complete-parity.py --check`).
 
-**Stop.** Do not widen into String literals, quotient computation, or broad
-ecosystem claims during this bounded trust-reduction slice.
+**Stop.** Do not widen into K4-K6 (workflow, runtime, ecosystem) — the C5 gate
+says those wait until the C2/C3 adapter has real use; no chair asked for them.
+Do not claim an item done from a projection or a plan; each needs a run.
 
 ### A10 — Build the SMT-LIB product surface after S1 (`TODO`, P2)
 

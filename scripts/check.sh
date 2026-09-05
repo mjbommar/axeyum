@@ -1197,6 +1197,16 @@ step autogenesis-apply-search ./scripts/check-autogenesis-apply-search.sh
 # 0 printing "running 0 tests ... ok") and cannot replay a cached test binary
 # over source it never compiled.
 step test   ./scripts/check-workspace-tests.sh
+# TWO ratchets run in this one step. `FRONTIER <family> = N` is capability at a
+# fixed budget; `TIMING <family> = <ms> calibrated` is the clock -- a committed
+# ceiling on the calibrated solve time of a few `N` pinned deep inside each
+# frontier, read out of the curve the sweep already produced (no extra solving).
+# Until 2026-09-05 nothing in any gate failed when solve time regressed: the
+# frontier gate is capability, the parity ledger is decide count, the corpus
+# sweep is soundness, and `summary.par2_mean_s` in the 72 committed baselines
+# was compared to nothing (design review 2026-09-05, section 2.2 item 1). Both
+# ratchets honour the same `comparable` verdict, so a loaded or uncomparable box
+# reports both numbers and asserts neither.
 step frontier cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 # The gate-liveness ratchet: proves the gates above still RUN something. A suite
 # emptied by a new `#![cfg(feature = ...)]` exits 0 and prints "running 0 tests
@@ -1256,6 +1266,25 @@ step lean-import-composition-footprint \
 step kernel-differential-gate-controls bash scripts/tests/test-kernel-differential-gate.sh
 step kernel-differential python3 scripts/check-kernel-differential.py
 step kernel-differential-mutants python3 scripts/check-kernel-differential-mutants.py
+# ADR-1663: the PUBLIC conformance corpus (leanprover/lean-kernel-arena, pinned
+# by scripts/fetch-references.sh), scored on BOTH halves separately -- 113
+# streams the official Lean kernel accepts and 73 it rejects. The accept half
+# alone is worthless and the corpus ships the proof: its `parse-only` control,
+# reproduced in-tree as `--mode parse-only`, scores 110/113 on accepts and
+# 21/73 on rejects. The gate's G6 requires that inversion, so a harness that
+# stopped measuring the trusted gate fails instead of reporting a perfect
+# score. The artifact layer runs everywhere; the live layer re-runs the
+# divergent cases plus a fixed sample when the corpus is present, and says so
+# by name when it does not.
+step kernel-conformance-controls python3 scripts/check-kernel-conformance.py --self-test
+step kernel-conformance python3 scripts/check-kernel-conformance.py
+# The divergence ledger: lean4lean's `divergences.md` shape, with the standing
+# rule that an unlisted divergence from Lean 4 is a bug. Derived from the
+# authorities (the differential's EXPLAINED_INCOMPLETENESS, the conformance
+# results' mismatches, the replay census's typed classes), never from a literal
+# list inside the checker.
+step lean-divergences-controls python3 scripts/check-lean-divergences.py --self-test
+step lean-divergences python3 scripts/check-lean-divergences.py
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2_test_authority
