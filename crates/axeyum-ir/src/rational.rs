@@ -160,6 +160,7 @@ impl Default for Rational {
 ///
 /// `den` must be non-zero; the caller checks that (a zero denominator is a usage
 /// error, not an overflow).
+#[inline]
 fn small_new(num: i128, den: i128) -> Option<Rational> {
     let mut num = num;
     let mut den = den;
@@ -182,39 +183,41 @@ fn small_new(num: i128, den: i128) -> Option<Rational> {
 
 /// Adds two **small** fractions over the least common denominator, or `None` on
 /// `i128` overflow. See [`Rational::checked_add`] for why the LCM form matters.
-fn small_add(a: i128, b: i128, c: i128, d: i128) -> Option<Rational> {
+#[inline]
+fn small_add(lhs_num: i128, lhs_den: i128, rhs_num: i128, rhs_den: i128) -> Option<Rational> {
     // Both operands are in lowest terms with positive denominators.
-    let g = gcd(b.unsigned_abs(), d.unsigned_abs());
+    let common = gcd(lhs_den.unsigned_abs(), rhs_den.unsigned_abs());
     #[allow(clippy::cast_possible_wrap)]
-    let g = g as i128;
-    // g divides both denominators exactly and g >= 1.
-    let b1 = b / g;
-    let d1 = d / g;
-    let ad = a.checked_mul(d1)?;
-    let cb = c.checked_mul(b1)?;
-    let num = ad.checked_add(cb)?;
-    // The least common denominator: b1 * d == lcm(b, d).
-    let den = b1.checked_mul(d)?;
+    let common = common as i128;
+    // `common` divides both denominators exactly and is >= 1.
+    let lhs_scale = lhs_den / common;
+    let rhs_scale = rhs_den / common;
+    let scaled_lhs = lhs_num.checked_mul(rhs_scale)?;
+    let scaled_rhs = rhs_num.checked_mul(lhs_scale)?;
+    let num = scaled_lhs.checked_add(scaled_rhs)?;
+    // The least common denominator: lhs_scale * rhs_den == lcm(lhs_den, rhs_den).
+    let den = lhs_scale.checked_mul(rhs_den)?;
     small_new(num, den)
 }
 
 /// Multiplies two **small** fractions with cross-cancellation, or `None` on
 /// `i128` overflow. See [`Rational::checked_mul`].
-fn small_mul(a: i128, b: i128, c: i128, d: i128) -> Option<Rational> {
-    let negative = (a < 0) != (c < 0);
-    let mut a = a.unsigned_abs();
-    let mut b = b.unsigned_abs();
-    let mut c = c.unsigned_abs();
-    let mut d = d.unsigned_abs();
-    let g1 = gcd(a, d);
-    if g1 > 1 {
-        a /= g1;
-        d /= g1;
+#[inline]
+fn small_mul(lhs_num: i128, lhs_den: i128, rhs_num: i128, rhs_den: i128) -> Option<Rational> {
+    let negative = (lhs_num < 0) != (rhs_num < 0);
+    let mut a = lhs_num.unsigned_abs();
+    let mut b = lhs_den.unsigned_abs();
+    let mut c = rhs_num.unsigned_abs();
+    let mut d = rhs_den.unsigned_abs();
+    let cross_lhs = gcd(a, d);
+    if cross_lhs > 1 {
+        a /= cross_lhs;
+        d /= cross_lhs;
     }
-    let g2 = gcd(c, b);
-    if g2 > 1 {
-        c /= g2;
-        b /= g2;
+    let cross_rhs = gcd(c, b);
+    if cross_rhs > 1 {
+        c /= cross_rhs;
+        b /= cross_rhs;
     }
     // Both operands were in lowest terms, so after cross-cancellation the
     // product is too — but `small_new` still canonicalizes the zero case.
@@ -226,22 +229,82 @@ fn small_mul(a: i128, b: i128, c: i128, d: i128) -> Option<Rational> {
 }
 
 /// Compares two **small** fractions, or `None` on `i128` overflow.
-fn small_cmp(a: i128, b: i128, c: i128, d: i128) -> Option<core::cmp::Ordering> {
+#[inline]
+fn small_cmp(
+    lhs_num: i128,
+    lhs_den: i128,
+    rhs_num: i128,
+    rhs_den: i128,
+) -> Option<core::cmp::Ordering> {
     // Cheap exact shortcuts that never multiply.
-    if b == d {
-        return Some(a.cmp(&c));
+    if lhs_den == rhs_den {
+        return Some(lhs_num.cmp(&rhs_num));
     }
-    if (a < 0) != (c < 0) {
-        return Some(a.cmp(&c));
+    if (lhs_num < 0) != (rhs_num < 0) {
+        return Some(lhs_num.cmp(&rhs_num));
     }
     // Compare over the least common denominator (both denominators are
     // positive, so the direction is preserved).
-    let g = gcd(b.unsigned_abs(), d.unsigned_abs());
+    let common = gcd(lhs_den.unsigned_abs(), rhs_den.unsigned_abs());
     #[allow(clippy::cast_possible_wrap)]
-    let g = g as i128;
-    let lhs = a.checked_mul(d / g)?;
-    let rhs = c.checked_mul(b / g)?;
+    let common = common as i128;
+    let lhs = lhs_num.checked_mul(rhs_den / common)?;
+    let rhs = rhs_num.checked_mul(lhs_den / common)?;
     Some(lhs.cmp(&rhs))
+}
+
+/// The **cold** half of every arithmetic operation: at least one operand is
+/// promoted, or the `i128` path overflowed.
+///
+/// These are deliberately `#[cold]` + `#[inline(never)]`. Inlining a body that
+/// touches `BigRational` into the hot wrapper cost **12%** on the
+/// `simplex_incremental_check_feasible_lp` benchmark (229 us -> 256 us,
+/// measured 2026-09-05 over five pinned runs each); outlining them puts the
+/// wrapper back to a pair of compares plus the unchanged `i128` arithmetic.
+mod cold {
+    use super::{BigRational, Rational};
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn add(lhs: Rational, rhs: Rational) -> BigRational {
+        lhs.to_big_rational() + rhs.to_big_rational()
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn sub(lhs: Rational, rhs: Rational) -> BigRational {
+        lhs.to_big_rational() - rhs.to_big_rational()
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn mul(lhs: Rational, rhs: Rational) -> BigRational {
+        lhs.to_big_rational() * rhs.to_big_rational()
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn div(lhs: Rational, rhs: Rational) -> BigRational {
+        lhs.to_big_rational() / rhs.to_big_rational()
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn neg(value: Rational) -> BigRational {
+        -value.to_big_rational()
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn recip(value: Rational) -> BigRational {
+        value.to_big_rational().recip()
+    }
+
+    #[cold]
+    #[inline(never)]
+    pub(super) fn cmp(lhs: Rational, rhs: Rational) -> core::cmp::Ordering {
+        lhs.to_big_rational().cmp(&rhs.to_big_rational())
+    }
 }
 
 impl Rational {
@@ -271,6 +334,7 @@ impl Rational {
     /// Demotes an arbitrary-precision value to the `i128` fast path, or `None`
     /// if it does not fit. **Never** interns, so this is the conversion the
     /// declining (`checked_*`) family uses.
+    #[inline]
     fn demote_only(value: &BigRational) -> Option<Self> {
         let (num, den) = (value.numer().to_i128()?, value.denom().to_i128()?);
         debug_assert!(den > 0, "BigRational denominator must be positive");
@@ -513,6 +577,7 @@ impl Rational {
     /// only the opt-in `wide_*` family can produce — is negated exactly and then
     /// demoted, so this still never returns a wrong value.
     #[must_use]
+    #[inline]
     pub fn checked_neg(self) -> Option<Self> {
         if self.is_small() {
             return Some(Self {
@@ -520,7 +585,7 @@ impl Rational {
                 den: self.den,
             });
         }
-        Self::demote_only(&-self.to_big_rational())
+        Self::demote_only(&cold::neg(self))
     }
 
     /// Exact addition, returning `None` on `i128` overflow.
@@ -541,7 +606,7 @@ impl Rational {
         if self.is_small() && other.is_small() {
             return small_add(self.num, self.den, other.num, other.den);
         }
-        Self::demote_only(&(self.to_big_rational() + other.to_big_rational()))
+        Self::demote_only(&cold::add(self, other))
     }
 
     /// Exact subtraction, returning `None` on `i128` overflow.
@@ -554,7 +619,7 @@ impl Rational {
         if self.is_small() && other.is_small() {
             return small_add(self.num, self.den, other.num.checked_neg()?, other.den);
         }
-        Self::demote_only(&(self.to_big_rational() - other.to_big_rational()))
+        Self::demote_only(&cold::sub(self, other))
     }
 
     /// Exact multiplication, returning `None` on `i128` overflow.
@@ -572,7 +637,7 @@ impl Rational {
         if self.is_small() && other.is_small() {
             return small_mul(self.num, self.den, other.num, other.den);
         }
-        Self::demote_only(&(self.to_big_rational() * other.to_big_rational()))
+        Self::demote_only(&cold::mul(self, other))
     }
 
     /// Exact division, returning `None` on division by zero or `i128` overflow.
@@ -592,7 +657,7 @@ impl Rational {
             let recip = small_new(other.den, other.num)?;
             return small_mul(self.num, self.den, recip.num, recip.den);
         }
-        Self::demote_only(&(self.to_big_rational() / other.to_big_rational()))
+        Self::demote_only(&cold::div(self, other))
     }
 
     /// Total ordering that returns `None` on `i128` overflow during the
@@ -632,20 +697,21 @@ impl Rational {
         {
             return Some(small);
         }
-        Self::from_big(&self.to_big_rational().recip())
+        Self::from_big(&cold::recip(self))
     }
 
     /// Exact negation, **promoting** past `i128` instead of declining.
     ///
     /// Returns `None` only if the big-rational pool is at capacity.
     #[must_use]
+    #[inline]
     pub fn wide_neg(self) -> Option<Self> {
         if self.is_small()
             && let Some(num) = self.num.checked_neg()
         {
             return Some(Self { num, den: self.den });
         }
-        Self::from_big(&-self.to_big_rational())
+        Self::from_big(&cold::neg(self))
     }
 
     /// Exact addition, **promoting** past `i128` instead of declining.
@@ -660,7 +726,7 @@ impl Rational {
         {
             return Some(small);
         }
-        Self::from_big(&(self.to_big_rational() + other.to_big_rational()))
+        Self::from_big(&cold::add(self, other))
     }
 
     /// Exact subtraction, **promoting** past `i128` instead of declining.
@@ -676,7 +742,7 @@ impl Rational {
         {
             return Some(small);
         }
-        Self::from_big(&(self.to_big_rational() - other.to_big_rational()))
+        Self::from_big(&cold::sub(self, other))
     }
 
     /// Exact multiplication, **promoting** past `i128` instead of declining.
@@ -691,7 +757,7 @@ impl Rational {
         {
             return Some(small);
         }
-        Self::from_big(&(self.to_big_rational() * other.to_big_rational()))
+        Self::from_big(&cold::mul(self, other))
     }
 
     /// Exact division, **promoting** past `i128` instead of declining.
@@ -711,7 +777,7 @@ impl Rational {
         {
             return Some(small);
         }
-        Self::from_big(&(self.to_big_rational() / other.to_big_rational()))
+        Self::from_big(&cold::div(self, other))
     }
 
     /// Total ordering that is always exact and can never decline: a comparison
@@ -726,7 +792,7 @@ impl Rational {
         {
             return ordering;
         }
-        self.to_big_rational().cmp(&other.to_big_rational())
+        cold::cmp(*self, *other)
     }
 }
 
@@ -860,6 +926,7 @@ impl core::fmt::Debug for Rational {
 }
 
 /// Greatest common divisor of two unsigned magnitudes (Euclid).
+#[inline]
 fn gcd(mut a: u128, mut b: u128) -> u128 {
     while b != 0 {
         let t = a % b;
@@ -1181,7 +1248,7 @@ mod tests {
             // `wide_new`, not `new`: the generator deliberately produces
             // `i128::MIN` numerators, which the declining constructor panics on.
             let base = Rational::wide_new(num, den).expect("pool has room");
-            if self.next() % 3 == 0 {
+            if self.next().is_multiple_of(3) {
                 base.wide_mul(base).expect("pool has room")
             } else {
                 base
