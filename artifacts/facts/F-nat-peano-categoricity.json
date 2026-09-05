@@ -20,7 +20,7 @@
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
   "external_status": "proved",
-  "depends_on": [],
+  "depends_on": ["F:nat-peano-injective", "F:nat-peano-surjective"],
   "axiom_footprint": [],
   "evidence": [
     {

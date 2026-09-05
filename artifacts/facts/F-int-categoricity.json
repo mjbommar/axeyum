@@ -24,7 +24,12 @@
   "external_status": "proved",
   "depends_on": [
     "F:int-characterization",
-    "F:nat-peano-categoricity"
+    "F:nat-peano-categoricity",
+    "F:int-characterization-injective",
+    "F:int-characterization-iter-pred",
+    "F:int-characterization-iter-succ",
+    "F:int-characterization-iter-zero",
+    "F:int-characterization-surjective"
   ],
   "axiom_footprint": [],
   "evidence": [
