@@ -117,6 +117,11 @@ use super::structures::{
 };
 use super::structures_setoid::idx as algs;
 
+pub mod groups;
+
+pub(crate) use groups::GroupCatDeps;
+pub use groups::{GroupCatNames, GroupCatRecords};
+
 // ---------------------------------------------------------------------------
 // Free-variable block, disjoint from 21_xxx..24_xxx (poly/module/subgroup) and
 // from `declare_record`'s own 10_000 / 10_900 range.
@@ -1542,6 +1547,7 @@ fn declare_is_functor(
     lg: &LogicPrelude,
     cat: &RecordNames,
     ns: NameId,
+    suffix: &str,
 ) -> Result<NameId, KernelError> {
     let cat_ty = k.const_(cat.ind, vec![]);
     let cv = k.fvar(C_FV);
@@ -1571,7 +1577,7 @@ fn declare_is_functor(
     let ty = pi_over(k, D_FV, cat_ty, ty);
     let ty = pi_over(k, C_FV, cat_ty, ty);
 
-    let name = k.name_str(ns, "IsFunctor");
+    let name = k.name_str(ns, suffix);
     k.add_declaration(Declaration::Definition {
         name,
         uparams: vec![],
@@ -1698,6 +1704,7 @@ fn declare_is_initial(
     cat: &RecordNames,
     ns: NameId,
     dual: bool,
+    suffix: &str,
 ) -> Result<NameId, KernelError> {
     let cat_ty = k.const_(cat.ind, vec![]);
     let cv = k.fvar(C_FV);
@@ -1736,7 +1743,7 @@ fn declare_is_initial(
     let ty = pi_over(k, EL_A_FV, c.obj, ty);
     let ty = pi_over(k, C_FV, cat_ty, ty);
 
-    let name = k.name_str(ns, if dual { "IsTerminal" } else { "IsInitial" });
+    let name = k.name_str(ns, suffix);
     k.add_declaration(Declaration::Definition {
         name,
         uparams: vec![],
@@ -1857,6 +1864,7 @@ fn declare_functor_is_functor(
     func: &RecordNames,
     is_functor: NameId,
     ns: NameId,
+    suffix: &str,
 ) -> Result<NameId, KernelError> {
     use idx::functor::{MAP, MAP_COMP, MAP_CONGR, MAP_ID, OBJ as F_OBJ, SRC, TGT};
     let func_ty = k.const_(func.ind, vec![]);
@@ -1884,7 +1892,7 @@ fn declare_functor_is_functor(
     let body = t_app(k, isf, &[src, tgt, fo, fm]);
     let ty = pi_over(k, FUNC_FV, func_ty, body);
 
-    thm(k, ns, "functor_isFunctor", ty, value)
+    thm(k, ns, suffix, ty, value)
 }
 
 /// `CatS.isFunctor_id : forall (C : Category), IsFunctor C C (fun a => a)
@@ -2691,7 +2699,16 @@ pub(crate) fn declare_category_setoid(
     lg: &LogicPrelude,
     monoid: &RecordNames,
     group: &RecordNames,
-) -> Result<(CategoryRecords, CategoryNames), KernelError> {
+    deps: &GroupCatDeps,
+) -> Result<
+    (
+        CategoryRecords,
+        CategoryNames,
+        GroupCatRecords,
+        GroupCatNames,
+    ),
+    KernelError,
+> {
     let anon = k.anon();
     let ns = k.name_str(anon, "CatS");
     let recs = declare_category_records(k, lg, ns)?;
@@ -2704,14 +2721,21 @@ pub(crate) fn declare_category_setoid(
     let id_functor = declare_id_functor(k, &recs.category, &recs.functor, ns)?;
     let of_monoid_hom = declare_of_monoid_hom(k, &recs.functor, monoid, of_monoid, ns)?;
 
-    let is_functor = declare_is_functor(k, lg, &recs.category, ns)?;
+    let is_functor = declare_is_functor(k, lg, &recs.category, ns, "IsFunctor")?;
     let is_nat = declare_is_nat(k, &recs.category, ns)?;
-    let is_initial = declare_is_initial(k, &recs.category, ns, false)?;
-    let is_terminal = declare_is_initial(k, &recs.category, ns, true)?;
+    let is_initial = declare_is_initial(k, &recs.category, ns, false, "IsInitial")?;
+    let is_terminal = declare_is_initial(k, &recs.category, ns, true, "IsTerminal")?;
     let is_grp_hom = declare_is_grp_hom(k, lg, group, ns)?;
 
-    let functor_is_functor =
-        declare_functor_is_functor(k, lg, &recs.category, &recs.functor, is_functor, ns)?;
+    let functor_is_functor = declare_functor_is_functor(
+        k,
+        lg,
+        &recs.category,
+        &recs.functor,
+        is_functor,
+        ns,
+        "functor_isFunctor",
+    )?;
     let is_functor_id = declare_is_functor_id(k, lg, &recs.category, is_functor, ns)?;
     let is_functor_comp = declare_is_functor_comp(k, lg, &recs.category, is_functor, ns)?;
     let is_nat_id = declare_is_nat_id(k, &recs.category, is_nat, ns)?;
@@ -2723,6 +2747,19 @@ pub(crate) fn declare_category_setoid(
         declare_indiscrete_universal(k, lg, &recs.category, indiscrete, is_terminal, ns, true)?;
     let is_grp_hom_id = declare_is_grp_hom_id(k, lg, group, is_grp_hom, ns)?;
     let is_grp_hom_comp = declare_is_grp_hom_comp(k, lg, group, is_grp_hom, ns)?;
+
+    let (grp_recs, grp_names) = groups::declare_group_categories(
+        k,
+        lg,
+        &recs,
+        monoid,
+        group,
+        is_grp_hom,
+        is_grp_hom_id,
+        is_grp_hom_comp,
+        deps,
+        ns,
+    )?;
 
     Ok((
         recs,
@@ -2749,6 +2786,8 @@ pub(crate) fn declare_category_setoid(
             is_grp_hom_id,
             is_grp_hom_comp,
         },
+        grp_recs,
+        grp_names,
     ))
 }
 
@@ -2762,7 +2801,8 @@ mod category_setoid_tests {
     use crate::build_logic_prelude;
     use crate::nat_prelude::structures as algeq;
     use crate::nat_prelude::structures_setoid::{
-        StructuresSRecordNames, declare_structures_s_all, intern_structures_s_names,
+        StructuresSRecordNames, declare_structures_s_all, declare_structures_s_extra,
+        intern_structures_s_names,
     };
 
     struct Fixture {
@@ -2770,6 +2810,8 @@ mod category_setoid_tests {
         st: StructuresSRecordNames,
         recs: CategoryRecords,
         cs: CategoryNames,
+        grp_recs: GroupCatRecords,
+        gs: GroupCatNames,
     }
 
     fn build(k: &mut Kernel) -> Fixture {
@@ -2778,9 +2820,22 @@ mod category_setoid_tests {
         let _alg_st = algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
         let p = intern_structures_s_names(k);
         let st = declare_structures_s_all(k, &p, &lg).expect("AlgS spine builds");
-        let (recs, cs) = declare_category_setoid(k, &lg, &st.monoid, &st.group)
-            .expect("the setoid-enriched category layer must admit");
-        Fixture { lg, st, recs, cs }
+        let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &_alg_st)
+            .expect("the AlgS extras (AlgS.Hom.mapOne) must build");
+        let deps = GroupCatDeps {
+            map_one: extra.hom_map_one,
+        };
+        let (recs, cs, grp_recs, gs) =
+            declare_category_setoid(k, &lg, &st.monoid, &st.group, &deps)
+                .expect("the setoid-enriched category layer must admit");
+        Fixture {
+            lg,
+            st,
+            recs,
+            cs,
+            grp_recs,
+            gs,
+        }
     }
 
     /// A `Sort 1` object type to instantiate the small category at: every
