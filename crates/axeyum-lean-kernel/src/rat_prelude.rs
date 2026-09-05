@@ -89,6 +89,7 @@ mod pivot_content;
 mod polynomial;
 mod pow_bridge;
 mod probability;
+pub mod probability_s;
 mod product;
 mod rank;
 mod rank_bridge;
@@ -107,6 +108,7 @@ use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
+use probability_s::ProbSNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
 /// the order, the inverse, the structural characterisation of the normalised
@@ -3156,6 +3158,13 @@ pub struct RatPrelude {
     /// `AlgS.OrderedRing` instances at `Int`/`Rat` (via `ofAlg`). See
     /// [`ordered_ring_ext_s`].
     pub ordered_ring_ext_s: OrderedRingExtSNames,
+
+    /// ADR-1616 (roadmap W1-10): the finite probability layer stated once
+    /// over `(R : AlgS.OrderedRing)` — `sumRange`, `IsDistribution`,
+    /// `expectation`, `variance`, `covariance`, Markov's inequality, and the
+    /// three auxiliary ring lemmas the record's field set makes necessary.
+    /// See [`probability_s`].
+    pub probability_s: ProbSNames,
 }
 
 impl RatPrelude {
@@ -3713,6 +3722,7 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         algebra_ext: algebra_ext::intern_algebra_ext(kernel),
         ordered_ring_ext: ordered_ring_ext::intern_ordered_ring_ext(kernel),
         ordered_ring_ext_s: ordered_ring_ext_s::intern_ordered_ring_ext_s(kernel),
+        probability_s: probability_s::intern_probability_s(kernel),
     }
 }
 
@@ -3812,6 +3822,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude.int.nat.structures_s.ordered_ring,
             &prelude.ordered_ring_ext_s,
         )?;
+        probability_s::declare_probability_s_all(&mut d, &prelude)?;
         Ok(())
     })();
     match built {
