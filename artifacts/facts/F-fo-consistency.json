@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-consistency",
+  "title": "Falsehood is not derivable from the empty context in the first-order calculus",
+  "statement": "There is no derivation of bottom from the empty context in the first-order natural-deduction calculus FO.Provable. Established by pushing a hypothetical derivation through soundness at a concrete model -- the natural numbers with zero, successor, addition and strict order -- where the empty context is satisfied at every valuation and bottom is satisfied at none.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.consistency : Not (FO.Provable FO.Context.nil FO.Formula.bot)",
+    "kernel_theorem": "FO.consistency",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-soundness"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.consistency",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.consistency",
+      "supports": "FO.consistency is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. Its proof term is one line: 'fun d => FO.soundness AxNat FO.natStructure FO.Context.nil FO.Formula.bot d (fun _ => AxNat.zero) True.intro'. Soundness sends the assumed derivation to satisfaction of bot at the constant-zero valuation; ctxSat of the empty context iota-reduces to True, discharged by True.intro; and sat of bot iota-reduces to False.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_soundness_inventory -- FO.consistency --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The checker FAILS on absence rather than reporting an empty set. Declared in crates/axeyum-lean-kernel/src/fo_soundness.rs by declare_consistency."
+    },
+    {
+      "id": "statement-is-the-one-claimed",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.consistency",
+      "supports": "The theorem's inferred type is rebuilt in the test module as 'Not (FO.Provable FO.Context.nil FO.Formula.bot)' and compared by Kernel::def_eq, so a theorem that landed at some weaker statement about some other context or formula fails.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_soundness::tests::consistency_states_the_underivability_of_bot --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "An unprovability claim is exactly the kind whose statement must be pinned: 'Not X' for the wrong X reads the same in prose."
+    },
+    {
+      "id": "the-model-is-not-degenerate",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "FO.natStructure",
+        "FO.nat_sat_lt_irrefl",
+        "FO.nat_sat_no_greatest"
+      ],
+      "supports": "SAME-KIND POSITIVE CONTROL. A model in which NOTHING is satisfied would refute bot just as well and would make this fact worthless. FO.natStructure satisfies two genuine sentences, each landed as an axiom-free kernel theorem and each proved by kernel reduction: 'forall x, not (x < x)' and 'forall x, exists y, x < y'. So the same structure that refutes bot does satisfy first-order sentences with quantifiers in them.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_semantics::tests::the_nat_satisfaction_theorems_are_axiom_free --test-threads=4",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint",
+        "Environment::contains"
+      ],
+      "notes": "Environment::contains is asserted BEFORE the footprint in that test, because axiom_footprint of an undeclared name is also empty -- so without it the test would pass for a theorem that failed to admit."
+    },
+    {
+      "id": "the-existential-sentence-reads-the-right-valuation-slots",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.sat",
+      "supports": "The second sentence is the discriminating one. 'all (ex (rel2 0 (var 1) (var 0)))' has two nested binders reading de Bruijn indices 1 and 0, and its satisfaction reduces to 'forall x, exists y, x < y' ONLY IF the existential clause extends the valuation with the witness on top of the one the universal clause already extended. The test rebuilds that reduced form and compares by def_eq, and asserts the SWAPPED reading -- which is what an ex clause reading the wrong slot produces -- is NOT def_eq to it.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_semantics::tests::sat_of_a_two_binder_sentence_reads_the_right_valuation_slots --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "MUTATION-VERIFIED: making FO.sat's ex clause read the outer valuation is one of the two mutations lane model-theory ran. Kill counts are in docs/plan/status/model-theory-2026-09-05.md."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_fo_soundness_prelude, lane model-theory (W3-6, ADR-1636)",
+    "source": "authored from the roadmap item; the statement is written here, not extracted",
+    "prior_art": [
+      {
+        "who": "standard",
+        "what": "consistency of first-order logic follows from soundness together with the existence of a model; the argument is the textbook one",
+        "year": 1935,
+        "where": "any first-order logic text; the route here is soundness plus one concrete structure",
+        "attribution": "standard textbook attribution; this lane did not consult a primary source"
+      }
+    ]
+  },
+  "notes": "WHY THE ℕ STRUCTURE AND NOT AN ARBITRARY ONE. An arbitrary FO.Structure M would NOT do. The argument needs a valuation AxNat -> M to exist, and M could be empty; there is no way to produce one from the structure's data, since FO.Structure carries interpretations and not an inhabitant. Using a structure whose carrier is inhabited is what makes the corollary constructive, and 'fun _ => AxNat.zero' is that inhabitant. A later lane wanting the sharper statement 'every structure with an inhabited carrier refutes bot' would add an inhabitedness hypothesis; this row does not claim it.\n\nWHAT THIS IS THE ANALOGUE OF. This is the first-order counterpart of F:excluded-middle-not-intuitionistic -- a NEGATIVE fact about a proof system obtained by pushing a derivation through a model, which is the axis a formalization that only proves theorems has no counterpart for. It is weaker than that result in one respect and stronger in another: weaker, because underivability of bot is the minimum any calculus must satisfy, while underivability of excluded middle separates two logics; stronger, because it is about a calculus with quantifiers, where the model has to be a structure rather than a finite algebra.\n\nWHAT IT DOES NOT SAY. It does not say the calculus is complete (F:fo-completeness-henkin, open), and it does not say the calculus proves everything intuitionistic first-order logic proves -- that is a meta-level adequacy judgement about the rule set, recorded in the notes of F:fo-soundness for a referee to check rather than formalized.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-soundness",
+  "title": "Soundness of first-order natural deduction with respect to Tarski satisfaction",
+  "statement": "If a formula is derivable from a context in the first-order natural-deduction calculus FO.Provable, then in every structure and at every valuation satisfying the context, the formula is satisfied. The calculus has the eleven intuitionistic propositional rules plus universal and existential introduction and elimination and reflexivity of equality; the semantics is the constructive Prop-valued Tarski definition.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.soundness : ((x0 : Sort (1)) -> ((x1 : FO.Structure x0) -> ((x2 : FO.Context) -> ((x3 : FO.Formula) -> ((x4 : FO.Provable x2 x3) -> ((x5 : ((x5 : AxNat) -> x0)) -> ((x6 : FO.ctxSat x0 x1 x2 x5) -> FO.sat x0 x1 x3 x5)))))))",
+    "kernel_theorem": "FO.soundness",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-substitution-lemma"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.soundness",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.soundness",
+      "supports": "FO.soundness is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. The proof is an application of FO.Provable.rec with one minor premise per rule -- sixteen of them -- so the prelude does not build unless every rule's case type-checks. A skipped case is not possible: the recursor's arity fixes the count.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_soundness_inventory -- FO.soundness --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The checker FAILS on absence rather than reporting an empty set: a named filter matching nothing exits 1 with 'an absent declaration is a failed check, not an empty report'. --exact matches the whole name, so this row checks FO.soundness and not the FO.sound* family. formal.statement is Kernel::render_lean of the admitted type, taken verbatim from that command's stdout. Declared in crates/axeyum-lean-kernel/src/fo_soundness.rs by declare_soundness."
+    },
+    {
+      "id": "statement-is-the-one-claimed",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.soundness",
+      "supports": "The theorem's inferred type is rebuilt in the test module from FO.Provable, FO.ctxSat and FO.sat and compared by Kernel::def_eq, so a soundness theorem that landed at a weaker-but-still-provable statement fails. The same test asserts the context-free variant -- 'Provable g p -> forall w, sat p w', which is FALSE since Provable (cons a nil) a holds for every a -- is NOT def_eq to what was proved.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_soundness::tests::soundness_states_the_theorem_it_claims --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "A theorem's statement is what the ledger claims; without this row the fact would rest on a rendered string nobody compared against a rebuilt term."
+    },
+    {
+      "id": "soundness-applies-to-a-real-derivation",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.provable_all_imp_ex",
+      "supports": "POSITIVE CONTROL. A soundness theorem quantified over an inhabited-looking but unusable family would still admit. FO.provable_all_imp_ex is a genuinely first-order derivation -- (forall x. R(x)) -> (exists x. R(x)), built from all_elim and ex_intro at the same instance term -- and pushing it through FO.soundness at the concrete ℕ structure yields a term whose inferred type is exactly the satisfaction of that implication.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_soundness::tests::soundness_applies_to_the_first_order_example_derivation --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Three example derivations are landed in fo_provable.rs and between them exercise all_intro, all_elim and ex_intro. FO.Provable is an inductive relation, so 'it type-checks' does not imply it is inhabited by anything interesting."
+    },
+    {
+      "id": "eigenvariable-condition-is-load-bearing",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Provable.all_intro",
+      "supports": "all_intro's premise is a derivation over FO.Context.shift g, not over g -- the de Bruijn form of 'the generalized variable is not free in the context'. The rule's inferred type is rebuilt in the test module and compared against the variant with the shift removed, which is the unsound rule (it derives forall y. p(y) from p(x)); the two must NOT be def_eq. ex_elim gets the same treatment on both of its shifts.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_provable::tests::all_intro_quantifies_over_the_shifted_context fo_provable::tests::ex_elim_shifts_both_the_context_and_the_conclusion --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "MUTATION-VERIFIED. See the fact notes for the measured kill counts of the two mutations lane model-theory ran: deleting the shift from all_intro, and making FO.sat's existential clause read the outer valuation."
+    },
+    {
+      "id": "ctx-sat-shift-instantiates",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.ctxSat_shift",
+      "supports": "The bridge lemma the all_intro and ex_elim cases both consume: satisfaction of a context at w gives satisfaction of the SHIFTED context at Val.cons M a w. It is a Context.rec induction with two cases, and both are exercised -- at the empty context and at a one-entry one -- rather than only the whole lemma being admitted.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_soundness::tests::ctx_sat_shift_instantiates_at_nil_and_at_a_cons --test-threads=4",
+      "checkers": [
+        "Kernel::infer"
+      ],
+      "notes": "The cons case is one application of FO.sat_shift's backward direction; the nil case is True.intro, since ctxSat of the empty context iota-reduces to True."
+    },
+    {
+      "id": "footprint-whole-fo-package",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- and not only for the headline theorem. All 76 declarations the FO package adds on top of the Nat prelude (the Term and Formula syntax with their recursors, the Structure record and its five projections, the substitution and valuation operations, the Context type, the Provable relation with its sixteen constructors and its recursor, the natStructure, and every theorem above) have an empty Kernel::axiom_footprint.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_soundness_inventory -- --require-axiom-free --expect-count 76",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list -- a declaration nobody remembered to list still appears. --expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. Measured 2026-09-05: '76 FO declarations' and 'axiom-free: yes (76 declarations checked)'."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_fo_soundness_prelude, lane model-theory (W3-6, ADR-1636)",
+    "source": "authored from the roadmap item; the statement is written here, not extracted",
+    "prior_art": [
+      {
+        "who": "Alfred Tarski; Gerhard Gentzen",
+        "what": "the satisfaction definition and the natural-deduction calculus; soundness is the textbook induction on derivations",
+        "year": 1935,
+        "where": "Tarski, 'Der Wahrheitsbegriff in den formalisierten Sprachen' (1935); Gentzen, 'Untersuchungen ueber das logische Schliessen' (1935)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "WHAT THE KERNEL CHECKS AND WHAT IT DOES NOT. The kernel checks that FO.soundness is a proof term for the stated type. It does NOT check that FO.Provable is a faithful encoding of first-order natural deduction, or that FO.sat is a faithful encoding of Tarski satisfaction -- both are meta-level judgements about the definitions, and both are where an unsound shortcut would do the most damage. Recorded so a referee can check them:\n\n(a) FO.Provable's sixteen constructors are the eleven intuitionistic propositional rules of ipc_provable.rs (ax_head + weaken for assumption, and-I, and-E1, and-E2, or-I1, or-I2, or-E, imp-I, imp-E, bot-E) plus all_intro, all_elim, ex_intro, ex_elim and eqf_refl. No classical rule is present. The Leibniz rule for equality is deliberately absent and is recorded as the next increment. Contexts are lists with no exchange or contraction rule, sound here because every use of a hypothesis goes through ax_head + weaken.\n\n(b) FO.sat's nine clauses are the Tarski definition at the kernel's own connectives: False at bot, Eq M at eqf, the structure's relation at rel1/rel2, And/Or/the kernel's own function type at and_/or_/imp, and Pi/Exists over the carrier at all/ex with the valuation extended by FO.Val.cons. It is constructive throughout -- no clause reads Not (And (Not _) (Not _)) and none is Bool-valued -- which is forced, since this kernel has no Classical.em and no propext.\n\nTHE STATEMENT IS THE OBVIOUS ONE, AND THAT IS ITSELF A FINDING. ipc_soundness.rs could not state propositional soundness as 'every valuation satisfying the context satisfies the goal': over its 3-element Heyting chain that shape carries no induction through imp_intro, and it had to run the induction on the MEET of the context with eleven chain lemmas underneath. Here the obvious statement works, because FO.sat M S (imp p q) w IS the kernel's own function type: imp_intro's minor is a lambda, imp_elim's is an application, and nine of the sixteen minors are a single And.intro / And.left / Or.inl / Or.elim / False.rec / Eq.refl. There is no algebra layer at all. Raising the semantics from a Heyting chain to Prop made the harder theorem cheaper.\n\nMUTATIONS RUN (lane model-theory, 2026-09-05). Both were applied to a scratch copy of the lane's own worktree, run, and restored byte-for-byte with git status verified clean. Kill counts are recorded in docs/plan/status/model-theory-2026-09-05.md rather than here, so this row does not repeat a number it did not measure itself.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

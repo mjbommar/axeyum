@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-substitution-lemma",
+  "title": "The substitution lemma for first-order satisfaction",
+  "statement": "A formula with a parallel substitution applied to it is satisfied at a valuation exactly when the original formula is satisfied at the valuation the substitution induces -- that is, at the valuation sending each de Bruijn index to the value of the term the substitution puts there. Stated over de Bruijn syntax with parallel substitutions, which is what makes the binder case a composition rather than a separate commutation lemma.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.sat_subst : ((x0 : Sort (1)) -> ((x1 : FO.Structure x0) -> ((x2 : FO.Formula) -> ((x3 : ((x3 : AxNat) -> FO.Term)) -> ((x4 : ((x4 : AxNat) -> x0)) -> Iff (FO.sat x0 x1 (FO.Formula.subst x2 x3) x4) (FO.sat x0 x1 x2 (fun (x5 : AxNat) => FO.Term.eval x0 x1 (x3 x5) x4)))))))",
+    "kernel_theorem": "FO.sat_subst",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "kernel-FO.sat_subst",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.sat_subst",
+      "supports": "FO.sat_subst is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. It is an application of FO.Formula.rec with one minor per constructor -- nine of them -- so the prelude does not build unless every clause of the Tarski definition is handled.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_soundness_inventory -- FO.sat_subst --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The checker FAILS on absence. --exact matters here: without it, 'FO.sat_subst' would also be a prefix of nothing, but 'FO.sat' would match five declarations. Declared in crates/axeyum-lean-kernel/src/fo_substitution.rs by declare_sat_subst."
+    },
+    {
+      "id": "statement-is-the-one-claimed",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.sat_subst",
+      "supports": "The lemma's inferred type is rebuilt in the test module from FO.sat, FO.Formula.subst and FO.Term.eval and compared by Kernel::def_eq.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_substitution::tests::sat_subst_states_the_substitution_lemma --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Rebuilt rather than read off the declaration, so a lemma that landed at a weaker-but-still-provable statement fails."
+    },
+    {
+      "id": "the-coincidence-lemmas",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "FO.Val.cons_congr",
+        "FO.Term.eval_congr",
+        "FO.sat_congr",
+        "FO.Term.eval_subst"
+      ],
+      "supports": "The four lemmas the substitution lemma is built from, each axiom-free: pointwise congruence of the extended valuation (Nat.rec, two cases), of term evaluation (Term.rec, four cases), of satisfaction (Formula.rec, nine cases, stated as an Iff), and the term half of the substitution lemma (Term.rec, four cases).",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_soundness_inventory -- FO.sat_congr --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "FO.sat_congr is stated as an Iff and not as a one-directional implication, and it has to be: FO.sat's imp clause puts a subformula in NEGATIVE position, so the forward direction at imp p q consumes the backward direction at p. A single-direction induction does not close. This is not a stylistic choice and a later lane should not try to simplify it away."
+    },
+    {
+      "id": "the-two-corollaries-soundness-consumes",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "FO.sat_shift",
+        "FO.sat_inst"
+      ],
+      "supports": "One corollary per quantifier rule. FO.sat_shift (satisfaction of a shifted formula at an extended valuation is satisfaction of the original at the original valuation) is consumed by all_intro and ex_elim; FO.sat_inst (satisfaction of an instance is satisfaction at the valuation extended by the instance term's value) by all_elim and ex_intro. Both statements are rebuilt in the test module and compared, and sat_shift's test also refutes the TRIVIAL variant -- the one a shift that did nothing would have.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_substitution::tests::sat_shift_states_the_shift_corollary fo_substitution::tests::sat_inst_states_the_instantiation_corollary --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Both proof terms are short enough that a mis-stated corollary would still admit -- sat_shift's is a SINGLE application of sat_subst -- which is exactly why the statements are pinned by rebuilding rather than by reading."
+    },
+    {
+      "id": "eta-makes-the-shift-free",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Val.cons",
+      "supports": "The measured fact the whole development's cost rests on: 'fun m => FO.Val.cons M a v (Nat.succ m)' is DEFINITIONALLY the valuation v. FO.Val.cons goes through Nat.rec, so the body iota-reduces to v m under the binder and the kernel's eta rule closes it against v. Checked at a SYMBOLIC carrier, element and valuation -- free variables, not literals, since a check at a literal valuation would pass for the wrong reason.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_semantics::tests::shifting_past_the_new_slot_is_definitionally_the_old_valuation --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "Consequences, all of them measured by the prelude building at all: FO.sat_shift's proof term is a single application of FO.sat_subst with no rewriting; the Nat.succ case of both binder keys inside sat_subst is a BARE instance of FO.Term.eval_subst; and the Nat.zero case is Eq.refl. In a kernel with no funext this is the difference between a two-line key and a separate renaming lemma with its own induction. Any later development that extends a valuation should define the extension by Nat.rec for this reason."
+    },
+    {
+      "id": "substitution-computes",
+      "kind": "kernel-term",
+      "kernel_declarations": [
+        "FO.Formula.subst",
+        "FO.Term.subst",
+        "FO.Subst.lift",
+        "FO.Subst.cons"
+      ],
+      "supports": "The substitution operations are Definitions, so kernel admission proves only that they are well-formed. Their meaning is pinned by evaluation at small discriminating arguments, including the two a copy-paste error would survive: substituting a term with a free index UNDER a binder yields the shifted index (var 5 becomes var 6, and the un-lifted answer var 5 is asserted NOT def_eq), and the bound index 0 survives untouched.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_syntax::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "The suite also asserts that all and ex substitute to terms that are not def_eq to each other, which is the check a copy-paste between the two quantifier minors would fail, and that FO.Subst.shift is NOT the identity -- the negative control that stops the identity-substitution test from passing for a subst that ignores its argument."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_fo_substitution_prelude, lane model-theory (W3-6, ADR-1636)",
+    "source": "authored from the roadmap item; the statement is written here, not extracted",
+    "prior_art": [
+      {
+        "who": "Alfred Tarski",
+        "what": "the substitution lemma is the standard companion to the satisfaction definition; the de Bruijn parallel-substitution presentation used here is due to de Bruijn (1972) and is the one modern formalizations use",
+        "year": 1972,
+        "where": "de Bruijn, 'Lambda calculus notation with nameless dummies', Indag. Math. 34 (1972)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "WHY PARALLEL SUBSTITUTION IS THE CHEAP CHOICE, NOT THE FANCY ONE. A substitution here is a total function AxNat -> FO.Term. The binder case of the lemma then COMPOSES two substitutions (Subst.lift s, applied under the binder), whereas the single-variable presentation needs an auxiliary 'substitution commutes with shifting' lemma before the binder case can even be stated. A later lane tempted to 'simplify' to single-variable substitution would be adding an induction, not removing one.\n\nWHAT THE ABSENCE OF funext COSTS. The forall case produces a satisfaction claim at 'fun n => Term.eval M S (Subst.lift s n) (Val.cons M a w)' and needs it at 'Val.cons M a (fun n => Term.eval M S (s n) w)'. Those agree at every index and are not the same term, and this kernel has no funext -- no Classical.em, no propext, no Quot.sound. FO.sat_congr is the bridge. What is NOT paid for is the shift, for the eta reason recorded in the 'eta-makes-the-shift-free' evidence row above.\n\nSIGNATURE SCOPE. FO.Term's function symbols come at arities 0, 1 and 2, each an AxNat-indexed infinite family; relation symbols at arities 1 and 2. This is a restriction on the SIGNATURE and not on the logic, and it is deliberate: the textbook 'Term.app : AxNat -> List Term -> Term' is a nested inductive, and substitution, evaluation and this lemma over it would each need a simultaneous induction over Term and over lists of Terms. Every definition and every lemma here treats the three function families uniformly, so raising the bound is one constructor and one minor premise per recursion. See ADR-1636.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

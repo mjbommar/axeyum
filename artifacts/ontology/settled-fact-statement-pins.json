@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2353,
+    "min_identity_bound": 2356,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7696,6 +7696,27 @@
           "kernel_theorem": "Nat.Finset.forallSubset_of_search"
         }
       ]
+    },
+    {
+      "fact_id": "F:fo-consistency",
+      "language": "lean4",
+      "statement_sha256": "3a39a30d75bbe4d1b93980b827fb2d422b13aba6e89a882915955b13b3f8b389",
+      "prose_sha256": "97dff384fe7debd6a9975ac2f3219b3dabdaeb8096e0d8f56b7639a0a4f57289",
+      "kernel_theorem": "FO.consistency"
+    },
+    {
+      "fact_id": "F:fo-soundness",
+      "language": "lean4",
+      "statement_sha256": "f56d95533ee4bb45d61cc50a3525d63e7b1369947c54bb6e1e95ac9099aacbdd",
+      "prose_sha256": "c675d7703da57f10b685b9bb43e88da7a60d94653bafe53021e5b19bf4a7ad11",
+      "kernel_theorem": "FO.soundness"
+    },
+    {
+      "fact_id": "F:fo-substitution-lemma",
+      "language": "lean4",
+      "statement_sha256": "482a095c87ab7cac0a9dd31846a7ff78bcb54fc65ffbd0d49c44b0ff6b6d3f5d",
+      "prose_sha256": "91a01971e4e4f15f0e7ec32ed3ff5bc00d1776644462b73b18db61c6a306cdbd",
+      "kernel_theorem": "FO.sat_subst"
     },
     {
       "fact_id": "F:fp16-add-monotone-rne",
