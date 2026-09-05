@@ -1766,11 +1766,16 @@ impl QuadraticField {
     ///
     /// # Errors
     ///
-    /// [`CertificateError::RadicandNotAdmissible`] when `d` is `0`, `±1`, not
+    /// [`CertificateError::RadicandNotAdmissible`] when `d` is `0`, `1`, not
     /// squarefree, or past the `i128` range of the reused squarefree test;
     /// and whatever [`NumberField::new`] refuses `x² − d` with.
+    ///
+    /// `d = −1` **is** admissible: `ℚ(√−1) = ℚ(i)` is a quadratic field, and
+    /// `x² + 1` is irreducible over ℚ. It was refused until 2026-09-05, which
+    /// kept `ℤ[i]` — the ring [`GaussianInt`] is about — out of every
+    /// quadratic-field route in this crate. Only `d = 1` is degenerate.
     pub fn new(radicand: &BigInt) -> Result<QuadraticField, CertificateError> {
-        if radicand.is_zero() || radicand.abs().is_one() {
+        if radicand.is_zero() || radicand.is_one() {
             return Err(CertificateError::RadicandNotAdmissible);
         }
         let small = i128::try_from(radicand).map_err(|_| CertificateError::MagnitudeOutOfRange)?;
@@ -2415,7 +2420,7 @@ mod tests {
 
     #[test]
     fn quadratic_field_refuses_a_non_squarefree_or_trivial_radicand() {
-        for bad in [0i64, 1, -1, 4, 12, -8] {
+        for bad in [0i64, 1, 4, 12, -8] {
             assert_eq!(
                 QuadraticField::new(&n(bad)).unwrap_err(),
                 CertificateError::RadicandNotAdmissible,
@@ -2424,6 +2429,12 @@ mod tests {
         }
         assert!(QuadraticField::new(&n(2)).is_ok());
         assert!(QuadraticField::new(&n(-5)).is_ok());
+        // ℚ(i) is a quadratic field; d = −1 was refused until 2026-09-05.
+        let gaussian = QuadraticField::new(&n(-1)).expect("Q(i)");
+        assert_eq!(
+            gaussian.norm_form(&BigInt::from(3), &BigInt::from(2)),
+            BigInt::from(13)
+        );
     }
 
     #[test]

@@ -782,17 +782,22 @@ impl IdealProductCertificate {
                 index: expected.len(),
             });
         }
-        // P5: the Hermite form over those products (and their ω-multiples) is
+        // P5: norms are multiplicative. Checked BEFORE the Hermite comparison
+        // on purpose: after P6 the product is pinned exactly, so no forgery
+        // could ever reach this guard if it ran second, and a guard no forgery
+        // can reach is not a guard. It is also the one check here that does
+        // not go through `hermite_normal_form`, which the producer and the
+        // checker share.
+        if self.product.norm() != self.left.norm() * self.right.norm() {
+            return Err(IdealCertificateError::ProductNormMismatch);
+        }
+        // P6: the Hermite form over those products (and their ω-multiples) is
         // the recorded product ideal.
         let recomputed = order
             .ideal_from_generators(&self.generator_products)
             .map_err(|_| IdealCertificateError::ProductHermiteMismatch)?;
         if recomputed != self.product {
             return Err(IdealCertificateError::ProductHermiteMismatch);
-        }
-        // P6: norms are multiplicative, checked independently of P5.
-        if self.product.norm() != self.left.norm() * self.right.norm() {
-            return Err(IdealCertificateError::ProductNormMismatch);
         }
         Ok(())
     }
@@ -1007,25 +1012,30 @@ impl PrimeSplittingCertificate {
             }
             _ => {}
         }
-        // S5: each factor is an ideal of this order, of the norm its type
-        // forces.
-        let wanted_norm = match self.splitting {
-            SplittingType::Inert => &self.prime * &self.prime,
-            SplittingType::Split | SplittingType::Ramified => self.prime.clone(),
-        };
-        for (index, factor) in self.factors.iter().enumerate() {
+        // S5: each factor really is an ideal of this order.
+        for factor in &self.factors {
             factor.admissible_in(&order)?;
-            if factor.norm() != wanted_norm {
-                return Err(IdealCertificateError::PrimeIdealNormMismatch { index });
-            }
         }
-        // S6: the factors multiply back to (p).
+        // S6: the factors multiply back to (p). This runs BEFORE the norm
+        // check because an ideal of norm p is *forced* to be one of the primes
+        // above p — so with the norms already pinned no forgery could reach
+        // this guard, and a guard no forgery can reach is not a guard.
         let product = product_of_ideals(&order, &self.factors)?;
         let principal = order
             .rational_ideal(&self.prime)
             .map_err(|_| IdealCertificateError::SplittingProductMismatch)?;
         if product != principal {
             return Err(IdealCertificateError::SplittingProductMismatch);
+        }
+        // S7: each factor has the norm its splitting type forces.
+        let wanted_norm = match self.splitting {
+            SplittingType::Inert => &self.prime * &self.prime,
+            SplittingType::Split | SplittingType::Ramified => self.prime.clone(),
+        };
+        for (index, factor) in self.factors.iter().enumerate() {
+            if factor.norm() != wanted_norm {
+                return Err(IdealCertificateError::PrimeIdealNormMismatch { index });
+            }
         }
         Ok(())
     }
@@ -1209,13 +1219,16 @@ impl IdealFactorizationCertificate {
                 norm *= factor.norm();
             }
         }
-        // F5: the product is the target.
-        if product != self.ideal {
-            return Err(IdealCertificateError::FactorizationProductMismatch);
-        }
-        // F6: norms are multiplicative, checked without reference to F5.
+        // F5: norms are multiplicative. Before the product comparison for the
+        // same reason as in [`IdealProductCertificate::verify`]: F6 pins the
+        // product exactly, so running the norm check second would make it
+        // unreachable by any forgery.
         if norm != self.ideal.norm() {
             return Err(IdealCertificateError::FactorizationNormMismatch);
+        }
+        // F6: the product is the target.
+        if product != self.ideal {
+            return Err(IdealCertificateError::FactorizationProductMismatch);
         }
         Ok(())
     }
@@ -2024,4 +2037,959 @@ fn build_primitive_element(
         first_in_theta: alpha.coeffs().to_vec(),
         second_in_theta: beta.coeffs().to_vec(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn order(radicand: i64) -> QuadraticOrder {
+        QuadraticOrder::new(&BigInt::from(radicand)).expect("order")
+    }
+
+    fn element(rational: i64, omega: i64) -> OrderElement {
+        OrderElement::from_i64(rational, omega)
+    }
+
+    fn ideal(a: i64, b: i64, c: i64) -> Ideal {
+        Ideal::from_i64(a, b, c)
+    }
+
+    fn poly(coefficients: &[i64]) -> Vec<BigRational> {
+        coefficients
+            .iter()
+            .map(|&value| BigRational::from_integer(BigInt::from(value)))
+            .collect()
+    }
+
+    fn ratio(numerator: i64, denominator: i64) -> BigRational {
+        BigRational::new(BigInt::from(numerator), BigInt::from(denominator))
+    }
+
+    fn factor_map(certificate: &IdealFactorizationCertificate) -> BTreeMap<Ideal, u32> {
+        certificate.factors.iter().cloned().collect()
+    }
+
+    fn merge_into(target: &mut BTreeMap<Ideal, u32>, certificate: &IdealFactorizationCertificate) {
+        for (prime, exponent) in &certificate.factors {
+            *target.entry(prime.clone()).or_insert(0) += exponent;
+        }
+    }
+
+    fn product_certificate(
+        order: &QuadraticOrder,
+        left: &Ideal,
+        right: &Ideal,
+    ) -> IdealProductCertificate {
+        order.multiply_ideals(left, right).expect("product").1
+    }
+
+    // -----------------------------------------------------------------
+    // The order itself
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn gaussian_order_has_omega_equal_to_i_and_discriminant_minus_four() {
+        let order = order(-1);
+        assert_eq!(order.omega_trace(), &BigInt::from(0));
+        assert_eq!(order.omega_constant(), &BigInt::from(-1));
+        assert_eq!(order.discriminant(), &BigInt::from(-4));
+    }
+
+    #[test]
+    fn one_mod_four_order_has_half_integer_omega_and_odd_discriminant() {
+        let order = order(5);
+        assert_eq!(order.omega_trace(), &BigInt::from(1));
+        assert_eq!(order.omega_constant(), &BigInt::from(1));
+        assert_eq!(order.discriminant(), &BigInt::from(5));
+        // ω² = ω + 1, the golden ratio relation.
+        let omega = element(0, 1);
+        assert_eq!(order.multiply(&omega, &omega), element(1, 1));
+    }
+
+    #[test]
+    fn minus_five_order_is_the_two_three_case() {
+        let order = order(-5);
+        assert_eq!(order.omega_trace(), &BigInt::from(0));
+        assert_eq!(order.omega_constant(), &BigInt::from(-5));
+        assert_eq!(order.discriminant(), &BigInt::from(-20));
+        assert_eq!(order.element_norm(&element(1, 1)), BigInt::from(6));
+    }
+
+    #[test]
+    fn ideal_norm_and_containment_are_read_off_the_hermite_basis() {
+        let order = order(-1);
+        let prime = order.principal_ideal(&element(1, 1)).expect("ideal");
+        assert_eq!(prime, ideal(2, 1, 1));
+        assert_eq!(prime.norm(), BigInt::from(2));
+        assert!(prime.contains_element(&element(1, 1)));
+        assert!(prime.contains_element(&element(2, 0)));
+        assert!(!prime.contains_element(&element(1, 0)));
+        assert!(prime.contains(&order.rational_ideal(&BigInt::from(2)).expect("two")));
+        assert!(order.unit_ideal().contains_element(&element(1, 1)));
+    }
+
+    // -----------------------------------------------------------------
+    // Ideal multiplication
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn in_the_gaussian_integers_two_is_the_square_of_one_plus_i() {
+        let order = order(-1);
+        let prime = order.principal_ideal(&element(1, 1)).expect("ideal");
+        let (square, certificate) = order.multiply_ideals(&prime, &prime).expect("square");
+        certificate.verify().expect("square verifies");
+        assert_eq!(square, order.rational_ideal(&BigInt::from(2)).expect("two"));
+        assert_eq!(square.norm(), BigInt::from(4));
+    }
+
+    #[test]
+    fn multiplying_by_the_unit_ideal_is_the_identity_and_certifies() {
+        let order = order(-5);
+        let prime = ideal(3, 1, 1);
+        let (product, certificate) = order
+            .multiply_ideals(&prime, &order.unit_ideal())
+            .expect("product");
+        certificate.verify().expect("verifies");
+        assert_eq!(product, prime);
+    }
+
+    #[test]
+    fn ideal_power_agrees_with_repeated_multiplication() {
+        let order = order(-5);
+        let prime = ideal(2, 1, 1);
+        let cube = order.ideal_power(&prime, 3).expect("cube");
+        let (square, _) = order.multiply_ideals(&prime, &prime).expect("square");
+        let (expected, _) = order.multiply_ideals(&square, &prime).expect("cube");
+        assert_eq!(cube, expected);
+    }
+
+    // -----------------------------------------------------------------
+    // Splitting of rational primes
+    // -----------------------------------------------------------------
+
+    fn splitting(radicand: i64, prime: i64) -> (Vec<Ideal>, PrimeSplittingCertificate) {
+        let order = order(radicand);
+        let result = order.split_prime(&BigInt::from(prime)).expect("splits");
+        result.1.verify().expect("splitting verifies");
+        result
+    }
+
+    #[test]
+    fn gaussian_five_splits_three_is_inert_and_two_ramifies() {
+        let (factors, certificate) = splitting(-1, 5);
+        assert_eq!(certificate.splitting, SplittingType::Split);
+        assert_eq!(factors, vec![ideal(5, 2, 1), ideal(5, 3, 1)]);
+
+        let (factors, certificate) = splitting(-1, 3);
+        assert_eq!(certificate.splitting, SplittingType::Inert);
+        assert_eq!(factors, vec![ideal(3, 0, 3)]);
+        assert_eq!(factors[0].norm(), BigInt::from(9));
+
+        let (factors, certificate) = splitting(-1, 2);
+        assert_eq!(certificate.splitting, SplittingType::Ramified);
+        assert_eq!(factors, vec![ideal(2, 1, 1), ideal(2, 1, 1)]);
+    }
+
+    #[test]
+    fn minus_five_two_ramifies_three_splits_and_eleven_is_inert() {
+        let (factors, certificate) = splitting(-5, 2);
+        assert_eq!(certificate.splitting, SplittingType::Ramified);
+        assert_eq!(factors, vec![ideal(2, 1, 1), ideal(2, 1, 1)]);
+
+        let (factors, certificate) = splitting(-5, 3);
+        assert_eq!(certificate.splitting, SplittingType::Split);
+        assert_eq!(factors, vec![ideal(3, 1, 1), ideal(3, 2, 1)]);
+
+        let (factors, certificate) = splitting(-5, 11);
+        assert_eq!(certificate.splitting, SplittingType::Inert);
+        assert_eq!(factors, vec![ideal(11, 0, 11)]);
+    }
+
+    #[test]
+    fn in_the_omega_case_five_ramifies_eleven_splits_and_two_is_inert() {
+        let (factors, certificate) = splitting(5, 5);
+        assert_eq!(certificate.splitting, SplittingType::Ramified);
+        assert_eq!(factors[0], factors[1]);
+        assert_eq!(factors[0].norm(), BigInt::from(5));
+
+        let (factors, certificate) = splitting(5, 11);
+        assert_eq!(certificate.splitting, SplittingType::Split);
+        assert_ne!(factors[0], factors[1]);
+        assert_eq!(factors[0].norm(), BigInt::from(11));
+
+        let (factors, certificate) = splitting(5, 2);
+        assert_eq!(certificate.splitting, SplittingType::Inert);
+        assert_eq!(factors[0].norm(), BigInt::from(4));
+    }
+
+    #[test]
+    fn splitting_declines_on_a_composite_and_on_an_oversized_argument() {
+        let order = order(-1);
+        assert_eq!(
+            order.split_prime(&BigInt::from(9)),
+            Err(IdealDecline::NotPrime)
+        );
+        let huge = BigInt::from(1) << 200;
+        assert_eq!(
+            order.split_prime(&huge),
+            Err(IdealDecline::MagnitudeOutOfRange)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // The standard non-unique-factorization example
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn the_prime_above_two_in_z_root_minus_five_is_not_principal() {
+        let order = order(-5);
+        let prime = ideal(2, 1, 1);
+        assert_eq!(prime.norm(), BigInt::from(2));
+        // N(u + v√−5) = u² + 5v² = 2 has no solution: v = 0 forces u² = 2 and
+        // |v| ≥ 1 forces the norm ≥ 5. The bounded sweep is exhaustive for
+        // that reason, not merely a sample.
+        for u in -3i64..=3 {
+            for v in -3i64..=3 {
+                assert_ne!(order.element_norm(&element(u, v)).abs(), BigInt::from(2));
+            }
+        }
+    }
+
+    #[test]
+    fn six_factors_as_p2_squared_times_the_two_primes_over_three() {
+        let order = order(-5);
+        let six = order.rational_ideal(&BigInt::from(6)).expect("six");
+        let certificate = order.factor_ideal(&six).expect("factors");
+        certificate.verify().expect("verifies");
+        let expected: BTreeMap<Ideal, u32> = [
+            (ideal(2, 1, 1), 2),
+            (ideal(3, 1, 1), 1),
+            (ideal(3, 2, 1), 1),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(factor_map(&certificate), expected);
+        assert_eq!(six.norm(), BigInt::from(36));
+    }
+
+    #[test]
+    fn the_two_element_factorizations_of_six_give_the_same_ideal_factorization() {
+        let order = order(-5);
+        let six = order.rational_ideal(&BigInt::from(6)).expect("six");
+        let reference = order.factor_ideal(&six).expect("factors");
+        reference.verify().expect("verifies");
+
+        // 6 = 2 · 3
+        let mut rational_route: BTreeMap<Ideal, u32> = BTreeMap::new();
+        for value in [2i64, 3] {
+            let ideal = order.rational_ideal(&BigInt::from(value)).expect("ideal");
+            let certificate = order.factor_ideal(&ideal).expect("factors");
+            certificate.verify().expect("verifies");
+            merge_into(&mut rational_route, &certificate);
+        }
+
+        // 6 = (1 + √−5)(1 − √−5)
+        let mut irrational_route: BTreeMap<Ideal, u32> = BTreeMap::new();
+        for omega in [1i64, -1] {
+            let (_, certificate) = order
+                .factor_principal_ideal(&element(1, omega))
+                .expect("factors");
+            certificate.verify().expect("verifies");
+            merge_into(&mut irrational_route, &certificate);
+        }
+
+        assert_eq!(rational_route, factor_map(&reference));
+        assert_eq!(irrational_route, factor_map(&reference));
+        // The elements really are irreducible-but-not-prime: each has exactly
+        // two prime ideals above it, neither of them principal.
+        assert_eq!(irrational_route.values().sum::<u32>(), 4);
+    }
+
+    #[test]
+    fn one_plus_root_minus_five_factors_into_two_prime_ideals() {
+        let order = order(-5);
+        let (principal, certificate) = order
+            .factor_principal_ideal(&element(1, 1))
+            .expect("factors");
+        certificate.verify().expect("verifies");
+        assert_eq!(principal.norm(), BigInt::from(6));
+        assert_eq!(
+            certificate.factors,
+            vec![(ideal(2, 1, 1), 1), (ideal(3, 1, 1), 1)]
+        );
+    }
+
+    #[test]
+    fn factoring_declines_on_the_zero_element() {
+        let order = order(-5);
+        assert_eq!(
+            order.factor_principal_ideal(&element(0, 0)),
+            Err(IdealDecline::ZeroInput)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Class numbers
+    // -----------------------------------------------------------------
+
+    fn class_number_of(discriminant: i64) -> usize {
+        let (count, certificate) = class_number(&BigInt::from(discriminant)).expect("class number");
+        certificate.verify().expect("class number verifies");
+        assert_eq!(count, certificate.class_number());
+        count
+    }
+
+    #[test]
+    fn imaginary_quadratic_class_numbers_match_the_classical_values() {
+        assert_eq!(class_number_of(-4), 1);
+        assert_eq!(class_number_of(-20), 2);
+        assert_eq!(class_number_of(-23), 3);
+        assert_eq!(class_number_of(-163), 1);
+        assert_eq!(class_number_of(-47), 5);
+    }
+
+    #[test]
+    fn the_reduced_forms_of_discriminant_minus_twenty_are_the_expected_two() {
+        let (_, certificate) = class_number(&BigInt::from(-20)).expect("class number");
+        certificate.verify().expect("verifies");
+        assert_eq!(
+            certificate.forms,
+            vec![
+                BinaryQuadraticForm::from_i64(1, 0, 5),
+                BinaryQuadraticForm::from_i64(2, 2, 3),
+            ]
+        );
+    }
+
+    #[test]
+    fn the_class_number_of_an_order_is_the_class_number_of_its_discriminant() {
+        let order = order(-5);
+        let (count, certificate) = order.class_number().expect("class number");
+        certificate.verify().expect("verifies");
+        assert_eq!(count, 2);
+        assert_eq!(certificate.discriminant, BigInt::from(-20));
+    }
+
+    #[test]
+    fn class_number_declines_outside_its_hypothesis() {
+        assert_eq!(
+            class_number(&BigInt::from(5)),
+            Err(IdealDecline::DiscriminantNotNegative)
+        );
+        assert_eq!(
+            class_number(&BigInt::from(-6)),
+            Err(IdealDecline::DiscriminantNotAdmissible)
+        );
+        assert_eq!(
+            class_number(&BigInt::from(-100_000_004i64)),
+            Err(IdealDecline::DiscriminantTooLarge {
+                bound: CLASS_NUMBER_DISCRIMINANT_BOUND
+            })
+        );
+        let order = order(5);
+        assert_eq!(
+            order.class_number(),
+            Err(IdealDecline::DiscriminantNotNegative)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Primitive elements
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn root_two_and_root_three_generate_a_quartic_with_recorded_expressions() {
+        let certificate =
+            primitive_element(&poly(&[-2, 0, 1]), &poly(&[-3, 0, 1])).expect("primitive element");
+        certificate.verify().expect("verifies");
+        assert_eq!(certificate.multiplier, BigInt::from(1));
+        assert_eq!(certificate.theta_minpoly, poly(&[1, 0, -10, 0, 1]));
+        assert_eq!(certificate.degree(), 4);
+        // √2 = (θ³ − 9θ)/2 and √3 = (11θ − θ³)/2.
+        assert_eq!(
+            certificate.first_in_theta,
+            vec![
+                BigRational::zero(),
+                ratio(-9, 2),
+                BigRational::zero(),
+                ratio(1, 2)
+            ]
+        );
+        assert_eq!(
+            certificate.second_in_theta,
+            vec![
+                BigRational::zero(),
+                ratio(11, 2),
+                BigRational::zero(),
+                ratio(-1, 2)
+            ]
+        );
+    }
+
+    #[test]
+    fn cube_root_of_two_and_root_two_generate_a_sextic() {
+        let certificate = primitive_element(&poly(&[-2, 0, 0, 1]), &poly(&[-2, 0, 1]))
+            .expect("primitive element");
+        certificate.verify().expect("verifies");
+        assert_eq!(certificate.degree(), 6);
+        assert_eq!(poly_degree(&certificate.theta_minpoly), Some(6));
+    }
+
+    #[test]
+    fn primitive_element_declines_on_a_non_monic_minimal_polynomial() {
+        assert_eq!(
+            primitive_element(&poly(&[-2, 0, 2]), &poly(&[-3, 0, 1])),
+            Err(IdealDecline::GeneratorPolynomialNotMonic)
+        );
+        assert_eq!(
+            primitive_element(&poly(&[-2, 0, 1]), &poly(&[1])),
+            Err(IdealDecline::GeneratorPolynomialNotMonic)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Guards: the Hermite normal form conditions
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn forged_ideal_with_a_non_positive_leading_coefficient_is_refused() {
+        assert_eq!(
+            ideal(0, 0, 1).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisLeadingNotPositive)
+        );
+    }
+
+    #[test]
+    fn forged_ideal_with_a_non_positive_denominator_is_refused() {
+        assert_eq!(
+            ideal(2, 0, 0).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisDenominatorNotPositive)
+        );
+    }
+
+    #[test]
+    fn forged_ideal_with_an_unreduced_off_diagonal_is_refused() {
+        assert_eq!(
+            ideal(2, 5, 1).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisOffDiagonalNotReduced)
+        );
+        assert_eq!(
+            ideal(2, -1, 1).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisOffDiagonalNotReduced)
+        );
+    }
+
+    #[test]
+    fn forged_ideal_whose_denominator_misses_the_leading_coefficient_is_refused() {
+        assert_eq!(
+            ideal(3, 0, 2).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisDenominatorDoesNotDivideLeading)
+        );
+    }
+
+    #[test]
+    fn forged_ideal_whose_denominator_misses_the_off_diagonal_is_refused() {
+        assert_eq!(
+            ideal(4, 1, 2).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisDenominatorDoesNotDivideOffDiagonal)
+        );
+    }
+
+    #[test]
+    fn forged_module_that_is_not_closed_under_omega_is_refused() {
+        // [3, ω] passes every divisibility condition but 3 ∤ N(ω) = 1.
+        assert_eq!(
+            ideal(3, 0, 1).admissible_in(&order(-1)),
+            Err(IdealCertificateError::BasisNotClosedUnderOmega)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Guards: the product certificate
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn product_certificate_with_wrong_order_parameters_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.omega_trace = BigInt::from(5);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::OrderParametersMismatch)
+        );
+    }
+
+    #[test]
+    fn product_certificate_with_a_forged_factor_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.left = ideal(0, 0, 1);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::BasisLeadingNotPositive)
+        );
+    }
+
+    #[test]
+    fn product_certificate_with_a_forged_generator_product_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.generator_products[0] = element(7, 7);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::GeneratorProductMismatch { index: 0 })
+        );
+    }
+
+    #[test]
+    fn product_certificate_missing_a_generator_product_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.generator_products.pop();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::GeneratorProductMismatch { index: 3 })
+        );
+    }
+
+    #[test]
+    fn product_certificate_with_a_wrong_norm_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.product = order.unit_ideal();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::ProductNormMismatch)
+        );
+    }
+
+    #[test]
+    fn product_certificate_with_the_right_norm_but_the_wrong_ideal_is_refused() {
+        let order = order(-5);
+        let mut certificate = product_certificate(&order, &ideal(3, 1, 1), &order.unit_ideal());
+        // (3, 2 + ω) has the same norm as (3, 1 + ω) and is a genuine ideal.
+        certificate.product = ideal(3, 2, 1);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::ProductHermiteMismatch)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Guards: the splitting certificate
+    // -----------------------------------------------------------------
+
+    fn splitting_certificate(radicand: i64, prime: i64) -> PrimeSplittingCertificate {
+        order(radicand)
+            .split_prime(&BigInt::from(prime))
+            .expect("splits")
+            .1
+    }
+
+    #[test]
+    fn splitting_certificate_about_a_composite_is_refused() {
+        let mut certificate = splitting_certificate(-5, 3);
+        certificate.prime = BigInt::from(9);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::SplittingBaseNotPrime)
+        );
+    }
+
+    #[test]
+    fn splitting_certificate_with_a_wrong_discriminant_is_refused() {
+        let mut certificate = splitting_certificate(-5, 3);
+        certificate.discriminant = BigInt::from(-24);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::OrderParametersMismatch)
+        );
+    }
+
+    #[test]
+    fn splitting_certificate_claiming_the_wrong_type_is_refused() {
+        let mut certificate = splitting_certificate(-1, 5);
+        certificate.splitting = SplittingType::Inert;
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::SplittingTypeMismatch { symbol: 1 })
+        );
+    }
+
+    #[test]
+    fn splitting_certificate_with_the_wrong_number_of_factors_is_refused() {
+        let mut certificate = splitting_certificate(-1, 5);
+        certificate.factors.pop();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::SplittingFactorCountMismatch {
+                found: 1,
+                expected: 2
+            })
+        );
+    }
+
+    #[test]
+    fn a_split_certificate_listing_one_prime_twice_is_refused() {
+        let mut certificate = splitting_certificate(-1, 5);
+        certificate.factors[1] = certificate.factors[0].clone();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::SplittingFactorDistinctnessMismatch)
+        );
+    }
+
+    #[test]
+    fn a_ramified_certificate_listing_two_different_primes_is_refused() {
+        let mut certificate = splitting_certificate(-5, 2);
+        certificate.factors[1] = ideal(3, 1, 1);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::SplittingFactorDistinctnessMismatch)
+        );
+    }
+
+    #[test]
+    fn splitting_certificate_with_a_forged_factor_basis_is_refused() {
+        let mut certificate = splitting_certificate(-5, 3);
+        certificate.factors[0] = ideal(3, 0, 2);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::BasisDenominatorDoesNotDivideLeading)
+        );
+    }
+
+    #[test]
+    fn splitting_certificate_whose_factors_do_not_multiply_back_is_refused() {
+        let mut certificate = splitting_certificate(-5, 3);
+        certificate.factors[0] = order(-5).unit_ideal();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::SplittingProductMismatch)
+        );
+    }
+
+    #[test]
+    fn splitting_certificate_with_a_factor_of_the_wrong_norm_is_refused() {
+        // (3) · (1) = (3) multiplies back correctly, but (3) has norm 9, not 3.
+        let order = order(-5);
+        let mut certificate = splitting_certificate(-5, 3);
+        certificate.factors = vec![
+            order.rational_ideal(&BigInt::from(3)).expect("three"),
+            order.unit_ideal(),
+        ];
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::PrimeIdealNormMismatch { index: 0 })
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Guards: the factorization certificate
+    // -----------------------------------------------------------------
+
+    fn factorization_certificate(radicand: i64, value: i64) -> IdealFactorizationCertificate {
+        let order = order(radicand);
+        let ideal = order.rational_ideal(&BigInt::from(value)).expect("ideal");
+        order.factor_ideal(&ideal).expect("factors")
+    }
+
+    #[test]
+    fn factorization_certificate_about_a_forged_ideal_is_refused() {
+        let mut certificate = factorization_certificate(-5, 6);
+        certificate.ideal = ideal(0, 0, 1);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::BasisLeadingNotPositive)
+        );
+    }
+
+    #[test]
+    fn factorization_certificate_with_a_zero_exponent_is_refused() {
+        let mut certificate = factorization_certificate(-5, 6);
+        certificate.factors[0].1 = 0;
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::ZeroExponent { index: 0 })
+        );
+    }
+
+    #[test]
+    fn factorization_certificate_naming_a_composite_norm_factor_is_refused() {
+        let order = order(-5);
+        let mut certificate = factorization_certificate(-5, 6);
+        // (1 + √−5) has norm 6, which is neither a prime nor a prime square.
+        certificate.factors[0].0 = order.principal_ideal(&element(1, 1)).expect("ideal");
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FactorNormNotAPrimePower { index: 0 })
+        );
+    }
+
+    #[test]
+    fn factorization_certificate_naming_a_non_prime_ideal_is_refused() {
+        let order = order(-5);
+        let mut certificate = factorization_certificate(-5, 6);
+        // (2) has norm 4 = 2², but the only prime above 2 is (2, 1 + ω).
+        certificate.factors[0].0 = order.rational_ideal(&BigInt::from(2)).expect("two");
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FactorIsNotAPrimeIdeal { index: 0 })
+        );
+    }
+
+    #[test]
+    fn factorization_certificate_missing_a_factor_is_refused_by_the_norm() {
+        let mut certificate = factorization_certificate(-5, 6);
+        certificate
+            .factors
+            .retain(|(prime, _)| prime != &ideal(3, 2, 1));
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FactorizationNormMismatch)
+        );
+    }
+
+    #[test]
+    fn factorization_certificate_with_the_right_norm_but_the_wrong_primes_is_refused() {
+        let mut certificate = factorization_certificate(-5, 6);
+        // Replace 𝔭₃ by 𝔭₃′, keeping every norm: 4 · 3 · 3 = 36 still.
+        certificate.factors = vec![(ideal(2, 1, 1), 2), (ideal(3, 1, 1), 2)];
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FactorizationProductMismatch)
+        );
+    }
+
+    #[test]
+    fn factorization_certificate_with_wrong_order_parameters_is_refused() {
+        let mut certificate = factorization_certificate(-5, 6);
+        certificate.omega_constant = BigInt::from(7);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::OrderParametersMismatch)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Guards: the class-number certificate
+    // -----------------------------------------------------------------
+
+    fn class_certificate(discriminant: i64) -> ClassNumberCertificate {
+        class_number(&BigInt::from(discriminant))
+            .expect("class number")
+            .1
+    }
+
+    #[test]
+    fn class_number_certificate_with_a_non_negative_discriminant_is_refused() {
+        let mut certificate = class_certificate(-20);
+        certificate.discriminant = BigInt::from(20);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::DiscriminantNotNegative)
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_with_an_inadmissible_discriminant_is_refused() {
+        let mut certificate = class_certificate(-20);
+        certificate.discriminant = BigInt::from(-22);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::DiscriminantNotAdmissible)
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_listing_a_form_of_another_discriminant_is_refused() {
+        let mut certificate = class_certificate(-20);
+        certificate.forms[0] = BinaryQuadraticForm::from_i64(1, 0, 6);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FormDiscriminantMismatch { index: 0 })
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_listing_an_indefinite_form_is_refused() {
+        let mut certificate = class_certificate(-20);
+        // disc(−1, 0, −5) = −4·(−1)(−5) = −20, but a < 0.
+        certificate.forms[0] = BinaryQuadraticForm::from_i64(-1, 0, -5);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FormNotPositiveDefinite { index: 0 })
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_listing_an_imprimitive_form_is_refused() {
+        let mut certificate = class_certificate(-16);
+        // (2, 0, 2) is reduced of discriminant −16, but gcd(2, 0, 2) = 2.
+        certificate
+            .forms
+            .push(BinaryQuadraticForm::from_i64(2, 0, 2));
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FormNotPrimitive { index: 1 })
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_listing_a_non_reduced_form_is_refused() {
+        let mut certificate = class_certificate(-20);
+        // (5, 0, 1) has discriminant −20 and is primitive, but 5 > 1.
+        certificate.forms[1] = BinaryQuadraticForm::from_i64(5, 0, 1);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FormNotReduced { index: 1 })
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_listing_a_form_twice_is_refused() {
+        let mut certificate = class_certificate(-20);
+        certificate.forms[1] = certificate.forms[0].clone();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::FormsNotDistinct { index: 1 })
+        );
+    }
+
+    #[test]
+    fn class_number_certificate_missing_a_form_is_refused_by_the_recount() {
+        let mut certificate = class_certificate(-23);
+        certificate.forms.pop();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::ClassNumberRecountMismatch {
+                claimed: 2,
+                recounted: 3
+            })
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Guards: the primitive-element certificate
+    // -----------------------------------------------------------------
+
+    fn primitive_certificate() -> PrimitiveElementCertificate {
+        primitive_element(&poly(&[-2, 0, 1]), &poly(&[-3, 0, 1])).expect("primitive element")
+    }
+
+    #[test]
+    fn primitive_element_certificate_with_a_non_monic_generator_is_refused() {
+        let mut certificate = primitive_certificate();
+        certificate.first_minpoly = poly(&[-2, 0, 2]);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::GeneratorPolynomialNotMonic)
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_with_a_zero_multiplier_is_refused() {
+        let mut certificate = primitive_certificate();
+        certificate.multiplier = BigInt::from(0);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::PrimitiveElementMultiplierZero)
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_of_the_wrong_degree_is_refused() {
+        let mut certificate = primitive_certificate();
+        certificate.theta_minpoly = poly(&[-2, 0, 1]);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::CompositumDegreeMismatch {
+                found: 2,
+                expected: 4
+            })
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_with_a_repeated_root_is_refused() {
+        let mut certificate = primitive_certificate();
+        // (x² − 1)² is monic of degree 4 and not squarefree.
+        certificate.theta_minpoly = poly(&[1, 0, -2, 0, 1]);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::CompositumNotSquarefree)
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_with_a_reducible_modulus_is_refused() {
+        let mut certificate = primitive_certificate();
+        // (x² − 2)(x² − 3) is monic, quartic and squarefree, but reducible.
+        certificate.theta_minpoly = poly(&[6, 0, -5, 0, 1]);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::CompositumNotIrreducible)
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_whose_alpha_does_not_satisfy_f_is_refused() {
+        let mut certificate = primitive_certificate();
+        certificate.first_in_theta = poly(&[1, 0, 0, 0]);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::AlphaDoesNotSatisfyF)
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_whose_beta_does_not_satisfy_g_is_refused() {
+        let mut certificate = primitive_certificate();
+        certificate.second_in_theta = poly(&[1, 0, 0, 0]);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::BetaDoesNotSatisfyG)
+        );
+    }
+
+    #[test]
+    fn primitive_element_certificate_whose_parts_do_not_sum_to_theta_is_refused() {
+        let mut certificate = primitive_certificate();
+        // −√3 also satisfies x² − 3, but √2 − √3 is not θ.
+        certificate.second_in_theta = certificate
+            .second_in_theta
+            .iter()
+            .map(|coefficient| -coefficient.clone())
+            .collect();
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::PrimitiveElementRelationFails)
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // Cost, ADVISORY. Run with `--ignored --nocapture` under `--release`.
+    // -----------------------------------------------------------------
+
+    #[test]
+    #[ignore = "cost measurement, not a correctness gate; run under --release"]
+    fn class_number_enumeration_cost_profile() {
+        for magnitude in [1_000i64, 10_000] {
+            let discriminant = -magnitude;
+            let start = std::time::Instant::now();
+            let (count, certificate) =
+                class_number(&BigInt::from(discriminant)).expect("class number");
+            let produced = start.elapsed();
+            let start = std::time::Instant::now();
+            certificate.verify().expect("verifies");
+            let verified = start.elapsed();
+            println!(
+                "|D| = {}: h = {count}, produce {:?}, verify {:?}",
+                discriminant.abs(),
+                produced,
+                verified
+            );
+        }
+    }
 }
