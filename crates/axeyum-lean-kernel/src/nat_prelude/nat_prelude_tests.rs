@@ -692,6 +692,14 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.subsets_sum_sel,
         p.subsets_sum_sel_pos,
         p.subsets_supported,
+        p.subsets_any_of,
+        p.subsets_none_of,
+        p.subsets_prod_par,
+        p.subsets_meet_ind,
+        p.subsets_meet_card,
+        p.subsets_union_at,
+        p.subsets_ie_sum,
+        p.subsets_ie_sum_pos,
         // `arithmetic-functions` lane (roadmap W2-18): `arith_functions.rs`
         // and `arith_functions_family.rs` (ADR-1619).
         p.dvd_b,
@@ -796,6 +804,16 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.subsets_sum_sel_true_split,
         p.subsets_sum_subsets_card,
         p.subsets_sum_sel_const,
+        p.subsets_any_of_succ,
+        p.subsets_prod_par_succ,
+        p.subsets_none_of_eq,
+        p.subsets_prod_par_even,
+        p.subsets_prod_range_one,
+        p.subsets_meet_card_empty,
+        p.subsets_sum_sel_meet_ind,
+        p.subsets_inclusion_exclusion,
+        p.subsets_inclusion_exclusion_pos,
+        p.subsets_inclusion_exclusion_two,
         // `arithmetic-functions` lane (roadmap W2-18): `arith_functions.rs`
         // and `arith_functions_family.rs` (ADR-1619).
         p.dvd_of_dvd_b,

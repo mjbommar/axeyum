@@ -218,6 +218,7 @@ pub(crate) mod half_ceil_parity;
 mod hall;
 mod helpers;
 pub mod image_group;
+mod inclusion_exclusion;
 mod injective_decide;
 mod irrational;
 mod land;
@@ -436,6 +437,7 @@ use graph::declare_graph_all;
 use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
+use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
 use land::declare_land_all;
@@ -6931,6 +6933,82 @@ pub struct NatPrelude {
     /// -- THE ALTERNATING SUM OVER A NON-EMPTY GROUND SET VANISHES, in `Nat`'s
     /// graded form. `add_comm` and nothing else, once the split law is free.
     pub subsets_sum_sel_const: NameId,
+
+    // --- general inclusion-exclusion (`inclusion_exclusion.rs`, ADR-1624) ---
+    /// `Nat.Subsets.anyOf c n : Bool` -- `exists i < n, c i`, by recursion on
+    /// the width. Defined here rather than reused from
+    /// `Nat.Finset.allBelow` so that `anyOf c 2` reduces to
+    /// `setUnion (c 0) (c 1)` by iota alone, which is what makes the two-set
+    /// case a corollary rather than a separate argument.
+    pub subsets_any_of: NameId,
+    /// `Nat.Subsets.noneOf c n := prodRange (fun i => if c i then 0 else 1) n`
+    /// -- `1` when NO `i < n` has `c i`, and `0` otherwise. The residue of the
+    /// alternating sum.
+    pub subsets_none_of: NameId,
+    /// `Nat.Subsets.prodPar c n b` -- the parity-graded expansion
+    /// `sum over s of prod over i in s of [c i]`, by recursion on the width.
+    /// The value of `sumSel` at the intersection indicator, and the object the
+    /// whole argument is carried out on.
+    pub subsets_prod_par: NameId,
+    /// `Nat.Subsets.meetInd A n s v := prodRangeIf s (fun i => if A i v then 1
+    /// else 0) n` -- the `{0,1}` indicator of `v` lying in EVERY `A i` with
+    /// `i` in `s`.
+    pub subsets_meet_ind: NameId,
+    /// `Nat.Subsets.meetCard A n s m := sumRange (fun v => meetInd A n s v) m`
+    /// -- the cardinality of that intersection inside `[0,m)`.
+    pub subsets_meet_card: NameId,
+    /// `Nat.Subsets.unionAt A n := fun v => anyOf (fun i => A i v) n` -- the
+    /// union of the family, as a decidable predicate.
+    pub subsets_union_at: NameId,
+    /// `Nat.Subsets.ieSum A n m b := sumSel n (fun s => meetCard A n s m) b`.
+    pub subsets_ie_sum: NameId,
+    /// `Nat.Subsets.ieSumPos A n m b := sumSelPos n (fun s => meetCard A n s m) b`
+    /// -- the same over the NON-EMPTY subsets, which is the sum the classical
+    /// statement of inclusion-exclusion ranges over.
+    pub subsets_ie_sum_pos: NameId,
+    /// `Nat.Subsets.anyOf_succ : forall c n, anyOf c (succ n) =
+    /// if anyOf c n then true else c n` -- refl.
+    pub subsets_any_of_succ: NameId,
+    /// `Nat.Subsets.prodPar_succ : forall c n b, prodPar c (succ n) b =
+    /// prodPar c n b + prodPar c n (notB b) * (if c n then 1 else 0)` -- refl.
+    pub subsets_prod_par_succ: NameId,
+    /// `Nat.Subsets.noneOf_eq : forall c n,
+    /// noneOf c n = bool_select_nat (anyOf c n) 0 1`.
+    pub subsets_none_of_eq: NameId,
+    /// `Nat.Subsets.prodPar_even : forall c n,
+    /// prodPar c n true = prodPar c n false + noneOf c n` -- INCLUSION-EXCLUSION
+    /// before it is summed over the ambient range, in the graded `Nat` form.
+    pub subsets_prod_par_even: NameId,
+    /// `Nat.Subsets.sumSel_meetInd : forall A n b v,
+    /// sumSel n (fun s => meetInd A n s v) b = prodPar (fun i => A i v) n b` --
+    /// the per-element identity: at a fixed ambient element the subset sum IS
+    /// the product expansion. Where the support invariant is spent.
+    pub subsets_sum_sel_meet_ind: NameId,
+    /// `Nat.Subsets.meetCard_empty : forall A n m,
+    /// meetCard A n empty m = m` -- the empty intersection is the whole range.
+    pub subsets_meet_card_empty: NameId,
+    /// `Nat.Subsets.prodRange_one : forall n, prodRange (fun _ => 1) n = 1` --
+    /// the empty-intersection indicator, and the only arithmetic
+    /// [`subsets_meet_card_empty`](Self::subsets_meet_card_empty) needs.
+    pub subsets_prod_range_one: NameId,
+    /// `Nat.Subsets.inclusion_exclusion : forall A n m,
+    /// ieSum A n m true + countRange (unionAt A n) m = ieSum A n m false + m`
+    /// -- GENERAL INCLUSION-EXCLUSION (roadmap W2-19), as two `Nat` sums rather
+    /// than one signed one.
+    pub subsets_inclusion_exclusion: NameId,
+    /// `Nat.Subsets.inclusion_exclusion_pos : forall A n m,
+    /// countRange (unionAt A n) m + ieSumPos A n m true = ieSumPos A n m false`
+    /// -- the classical form, over the NON-EMPTY subsets, with the empty set's
+    /// contribution `m` cancelled off both sides.
+    pub subsets_inclusion_exclusion_pos: NameId,
+    /// `Nat.Subsets.inclusion_exclusion_two : forall A m,
+    /// countRange (setUnion (A 0) (A 1)) m + countRange (setInter (A 0) (A 1)) m
+    /// = countRange (A 0) m + countRange (A 1) m` -- the two-set case, DERIVED
+    /// from the general theorem at `n = 2`. It is
+    /// [`count_range_union_add_inter`](Self::count_range_union_add_inter)'s
+    /// statement, so a general result that failed to specialise would not
+    /// compile.
+    pub subsets_inclusion_exclusion_two: NameId,
 }
 
 /// Declare the natural-number prelude into `kernel`'s environment, returning the
@@ -8120,6 +8198,24 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             subsets_sum_sel_true_split: kernel.name_str(subsets, "sumSel_true_eq_empty_add_pos"),
             subsets_sum_subsets_card: kernel.name_str(subsets, "sumSubsets_card"),
             subsets_sum_sel_const: kernel.name_str(subsets, "sumSel_const"),
+            subsets_any_of: kernel.name_str(subsets, "anyOf"),
+            subsets_none_of: kernel.name_str(subsets, "noneOf"),
+            subsets_prod_par: kernel.name_str(subsets, "prodPar"),
+            subsets_meet_ind: kernel.name_str(subsets, "meetInd"),
+            subsets_meet_card: kernel.name_str(subsets, "meetCard"),
+            subsets_union_at: kernel.name_str(subsets, "unionAt"),
+            subsets_ie_sum: kernel.name_str(subsets, "ieSum"),
+            subsets_ie_sum_pos: kernel.name_str(subsets, "ieSumPos"),
+            subsets_any_of_succ: kernel.name_str(subsets, "anyOf_succ"),
+            subsets_prod_par_succ: kernel.name_str(subsets, "prodPar_succ"),
+            subsets_none_of_eq: kernel.name_str(subsets, "noneOf_eq"),
+            subsets_prod_par_even: kernel.name_str(subsets, "prodPar_even"),
+            subsets_sum_sel_meet_ind: kernel.name_str(subsets, "sumSel_meetInd"),
+            subsets_meet_card_empty: kernel.name_str(subsets, "meetCard_empty"),
+            subsets_prod_range_one: kernel.name_str(subsets, "prodRange_one"),
+            subsets_inclusion_exclusion: kernel.name_str(subsets, "inclusion_exclusion"),
+            subsets_inclusion_exclusion_pos: kernel.name_str(subsets, "inclusion_exclusion_pos"),
+            subsets_inclusion_exclusion_two: kernel.name_str(subsets, "inclusion_exclusion_two"),
             strong_induction: kernel.name_str(nat, "strongInduction"),
             strong_induction_eq: kernel.name_str(nat, "strongInduction_eq"),
             dvd_b: kernel.name_str(nat, "dvdB"),
@@ -9604,6 +9700,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // lemmas `add_zero`/`add_comm`/`add_add_add_comm`. Deliberately does
         // NOT need `Nat.Finset`: a subset here is a `Nat -> Bool` predicate.
         declare_subset_sums_all(&mut d, &p)?;
+        // General inclusion-exclusion (`inclusion_exclusion.rs`, ADR-1624,
+        // roadmap W2-19). Needs `declare_subset_sums_all` immediately above
+        // plus `Nat.prodRange`/`prodRangeIf` (`subset_sum.rs`, `binomial.rs`),
+        // `Nat.countRange`/`countRange_compl`/`countRange_eq_sumRange` and
+        // `Nat.setUnion`/`setInter`/`setCompl` (`finite_set.rs`).
+        declare_inclusion_exclusion_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -9743,6 +9845,8 @@ mod ramsey_tests;
 #[cfg(test)]
 mod hall_tests;
 
+#[cfg(test)]
+mod inclusion_exclusion_tests;
 #[cfg(test)]
 mod subset_search_tests;
 #[cfg(test)]

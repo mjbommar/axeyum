@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1347 names,
+/// The `NatPrelude` field table (1365 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1935,6 +1935,30 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ("subsets_sum_sel_true_split", p.subsets_sum_sel_true_split),
             ("subsets_sum_subsets_card", p.subsets_sum_subsets_card),
             ("subsets_sum_sel_const", p.subsets_sum_sel_const),
+            ("subsets_any_of", p.subsets_any_of),
+            ("subsets_none_of", p.subsets_none_of),
+            ("subsets_prod_par", p.subsets_prod_par),
+            ("subsets_meet_ind", p.subsets_meet_ind),
+            ("subsets_meet_card", p.subsets_meet_card),
+            ("subsets_union_at", p.subsets_union_at),
+            ("subsets_ie_sum", p.subsets_ie_sum),
+            ("subsets_ie_sum_pos", p.subsets_ie_sum_pos),
+            ("subsets_any_of_succ", p.subsets_any_of_succ),
+            ("subsets_prod_par_succ", p.subsets_prod_par_succ),
+            ("subsets_none_of_eq", p.subsets_none_of_eq),
+            ("subsets_prod_par_even", p.subsets_prod_par_even),
+            ("subsets_sum_sel_meet_ind", p.subsets_sum_sel_meet_ind),
+            ("subsets_meet_card_empty", p.subsets_meet_card_empty),
+            ("subsets_prod_range_one", p.subsets_prod_range_one),
+            ("subsets_inclusion_exclusion", p.subsets_inclusion_exclusion),
+            (
+                "subsets_inclusion_exclusion_pos",
+                p.subsets_inclusion_exclusion_pos,
+            ),
+            (
+                "subsets_inclusion_exclusion_two",
+                p.subsets_inclusion_exclusion_two,
+            ),
         ],
         lists: Vec::new(),
     }
