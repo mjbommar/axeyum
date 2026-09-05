@@ -13,9 +13,9 @@
 //! claim independently, sharing no bookkeeping with the producer.
 
 use super::{
-    enumerate_group, image_key, is_power_of, p_adic_valuation, sift_with_trace,
-    MembershipCertificate, OrderCertificate, PermgroupError, Permutation, PermutationGroup,
-    SiftOutcome, ENUMERATION_BOUND,
+    ENUMERATION_BOUND, MembershipCertificate, OrderCertificate, PermgroupError, Permutation,
+    PermutationGroup, SiftOutcome, enumerate_group, image_key, is_power_of, p_adic_valuation,
+    sift_with_trace,
 };
 use std::collections::BTreeSet;
 
@@ -88,8 +88,12 @@ impl SylowCertificate {
     /// Never panics.
     pub fn verify(&self) -> Result<(), SylowFailure> {
         use SylowFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
-        self.sylow_order.verify().map_err(|_| F::SylowCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
+        self.sylow_order
+            .verify()
+            .map_err(|_| F::SylowCertificateInvalid)?;
         if self.group_order.degree != self.sylow_order.degree {
             return Err(F::DegreeMismatch);
         }
@@ -103,10 +107,7 @@ impl SylowCertificate {
         if self.exponent == 0 {
             return Err(F::PrimeDoesNotDivideOrder);
         }
-        let expected_order = self
-            .prime
-            .checked_pow(self.exponent)
-            .ok_or(F::Overflow)?;
+        let expected_order = self.prime.checked_pow(self.exponent).ok_or(F::Overflow)?;
         if self.sylow_order.claimed_order != expected_order {
             return Err(F::OrderIsNotFullPPart {
                 computed: expected_order,
@@ -196,8 +197,9 @@ impl PermutationGroup {
         p_elements.sort_by_key(|e| image_key(e, self.degree));
 
         let mut current_gens: Vec<Permutation> = Vec::new();
-        let mut current_group = PermutationGroup::from_generators(current_gens.clone(), self.degree)
-            .expect("the empty generator list always builds the trivial group");
+        let mut current_group =
+            PermutationGroup::from_generators(current_gens.clone(), self.degree)
+                .expect("the empty generator list always builds the trivial group");
         let mut current_order = current_group.order();
         while current_order < target {
             let mut progressed = false;
@@ -303,8 +305,12 @@ impl SylowCountCertificate {
     /// Never panics.
     pub fn verify(&self) -> Result<(), SylowCountFailure> {
         use SylowCountFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
-        self.sylow_order.verify().map_err(|_| F::SylowCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
+        self.sylow_order
+            .verify()
+            .map_err(|_| F::SylowCertificateInvalid)?;
         if self.group_order.degree != self.sylow_order.degree {
             return Err(F::DegreeMismatch);
         }
@@ -314,24 +320,36 @@ impl SylowCountCertificate {
         let exponent = p_adic_valuation(self.group_order.claimed_order, self.prime);
         let p_power = self.prime.checked_pow(exponent).ok_or(F::Overflow)?;
         let cofactor = self.group_order.claimed_order / p_power;
-        if cofactor % self.n_p != 0 {
+        if !cofactor.is_multiple_of(self.n_p) {
             return Err(F::DoesNotDivideCofactor);
         }
         if self.group_order.claimed_order > ENUMERATION_BOUND {
             return Err(F::TooLargeToVerify);
         }
         let degree = self.group_order.degree;
-        let g_elems = enumerate_group(&self.group_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::TooLargeToVerify)?;
-        let p_elems = enumerate_group(&self.sylow_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::TooLargeToVerify)?;
+        let g_elems = enumerate_group(
+            &self.group_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::TooLargeToVerify)?;
+        let p_elems = enumerate_group(
+            &self.sylow_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::TooLargeToVerify)?;
         let mut distinct: BTreeSet<Vec<Vec<usize>>> = BTreeSet::new();
         for g in &g_elems {
             let g_inv = g.inverse();
             let mut conj_keys: Vec<Vec<usize>> = p_elems
                 .iter()
                 .map(|x| {
-                    let conj = g.compose(x).expect("same degree").compose(&g_inv).expect("same degree");
+                    let conj = g
+                        .compose(x)
+                        .expect("same degree")
+                        .compose(&g_inv)
+                        .expect("same degree");
                     image_key(&conj, degree)
                 })
                 .collect();
@@ -396,7 +414,11 @@ impl PermutationGroup {
             let mut conj_keys: Vec<Vec<usize>> = p_elems
                 .iter()
                 .map(|x| {
-                    let conj = g.compose(x).expect("same degree").compose(&g_inv).expect("same degree");
+                    let conj = g
+                        .compose(x)
+                        .expect("same degree")
+                        .compose(&g_inv)
+                        .expect("same degree");
                     image_key(&conj, self.degree)
                 })
                 .collect();
@@ -466,6 +488,40 @@ pub enum NormalityFailure {
     WitnessActuallyNormal,
 }
 
+/// Shared preconditions for both [`NormalityCertificate`] variants: both
+/// order certificates verify, they act on the same degree, and every
+/// generator of `subgroup_order` is genuinely a member of `group_order`
+/// (re-derived by sifting -- never trusted from the producer). Returns the
+/// shared degree on success.
+fn verify_normality_preconditions(
+    group_order: &OrderCertificate,
+    subgroup_order: &OrderCertificate,
+) -> Result<usize, NormalityFailure> {
+    use NormalityFailure as F;
+    group_order
+        .verify()
+        .map_err(|_| F::GroupCertificateInvalid)?;
+    subgroup_order
+        .verify()
+        .map_err(|_| F::SubgroupCertificateInvalid)?;
+    if group_order.degree != subgroup_order.degree {
+        return Err(F::DegreeMismatch);
+    }
+    let degree = group_order.degree;
+    for h in &subgroup_order.original_generators {
+        if let SiftOutcome::Failure { .. } = sift_with_trace(
+            h,
+            &group_order.base,
+            &group_order.transversals,
+            &group_order.strong_generators,
+            degree,
+        ) {
+            return Err(F::SubgroupNotContainedInGroup);
+        }
+    }
+    Ok(degree)
+}
+
 impl NormalityCertificate {
     /// Independently re-derives this certificate's claim, returning the
     /// first guard that fails.
@@ -484,35 +540,29 @@ impl NormalityCertificate {
                 group_order,
                 subgroup_order,
             } => {
-                group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
-                subgroup_order.verify().map_err(|_| F::SubgroupCertificateInvalid)?;
-                if group_order.degree != subgroup_order.degree {
-                    return Err(F::DegreeMismatch);
-                }
-                let degree = group_order.degree;
-                for h in &subgroup_order.original_generators {
-                    if let SiftOutcome::Failure { .. } = sift_with_trace(
-                        h,
-                        &group_order.base,
-                        &group_order.transversals,
-                        &group_order.strong_generators,
-                        degree,
-                    ) {
-                        return Err(F::SubgroupNotContainedInGroup);
-                    }
-                }
+                let degree = verify_normality_preconditions(group_order, subgroup_order)?;
                 if group_order.claimed_order > ENUMERATION_BOUND {
                     return Err(F::TooLargeToVerify);
                 }
-                let g_elems = enumerate_group(&group_order.original_generators, degree, ENUMERATION_BOUND)
-                    .ok_or(F::TooLargeToVerify)?;
-                let h_elems = enumerate_group(&subgroup_order.original_generators, degree, ENUMERATION_BOUND)
-                    .ok_or(F::TooLargeToVerify)?;
-                let h_keys: BTreeSet<Vec<usize>> = h_elems.iter().map(|p| image_key(p, degree)).collect();
+                let g_elems =
+                    enumerate_group(&group_order.original_generators, degree, ENUMERATION_BOUND)
+                        .ok_or(F::TooLargeToVerify)?;
+                let h_elems = enumerate_group(
+                    &subgroup_order.original_generators,
+                    degree,
+                    ENUMERATION_BOUND,
+                )
+                .ok_or(F::TooLargeToVerify)?;
+                let h_keys: BTreeSet<Vec<usize>> =
+                    h_elems.iter().map(|p| image_key(p, degree)).collect();
                 for g in &g_elems {
                     let g_inv = g.inverse();
                     for h in &h_elems {
-                        let conj = g.compose(h).expect("same degree").compose(&g_inv).expect("same degree");
+                        let conj = g
+                            .compose(h)
+                            .expect("same degree")
+                            .compose(&g_inv)
+                            .expect("same degree");
                         if !h_keys.contains(&image_key(&conj, degree)) {
                             return Err(F::NotActuallyNormal);
                         }
@@ -526,23 +576,7 @@ impl NormalityCertificate {
                 conjugating_element,
                 subgroup_element,
             } => {
-                group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
-                subgroup_order.verify().map_err(|_| F::SubgroupCertificateInvalid)?;
-                if group_order.degree != subgroup_order.degree {
-                    return Err(F::DegreeMismatch);
-                }
-                let degree = group_order.degree;
-                for h in &subgroup_order.original_generators {
-                    if let SiftOutcome::Failure { .. } = sift_with_trace(
-                        h,
-                        &group_order.base,
-                        &group_order.transversals,
-                        &group_order.strong_generators,
-                        degree,
-                    ) {
-                        return Err(F::SubgroupNotContainedInGroup);
-                    }
-                }
+                let degree = verify_normality_preconditions(group_order, subgroup_order)?;
                 if conjugating_element.len() != degree || subgroup_element.len() != degree {
                     return Err(F::ConjugatingElementNotInGroup);
                 }
@@ -572,8 +606,12 @@ impl NormalityCertificate {
                 if subgroup_order.claimed_order > ENUMERATION_BOUND {
                     return Err(F::TooLargeToVerify);
                 }
-                let h_elems = enumerate_group(&subgroup_order.original_generators, degree, ENUMERATION_BOUND)
-                    .ok_or(F::TooLargeToVerify)?;
+                let h_elems = enumerate_group(
+                    &subgroup_order.original_generators,
+                    degree,
+                    ENUMERATION_BOUND,
+                )
+                .ok_or(F::TooLargeToVerify)?;
                 let conj_key = image_key(&conj, degree);
                 let in_h = h_elems.iter().any(|h| image_key(h, degree) == conj_key);
                 if in_h {
@@ -630,11 +668,16 @@ impl PermutationGroup {
                 actual: subgroup.order_certificate.claimed_order,
             },
         )?;
-        let h_keys: BTreeSet<Vec<usize>> = h_elems.iter().map(|p| image_key(p, self.degree)).collect();
+        let h_keys: BTreeSet<Vec<usize>> =
+            h_elems.iter().map(|p| image_key(p, self.degree)).collect();
         for g in &g_elems {
             let g_inv = g.inverse();
             for h in &h_elems {
-                let conj = g.compose(h).expect("same degree").compose(&g_inv).expect("same degree");
+                let conj = g
+                    .compose(h)
+                    .expect("same degree")
+                    .compose(&g_inv)
+                    .expect("same degree");
                 if !h_keys.contains(&image_key(&conj, self.degree)) {
                     return Ok(NormalityCertificate::NotNormal {
                         group_order: self.order_certificate.clone(),
@@ -701,9 +744,15 @@ impl NormalClosureCertificate {
     /// Never panics.
     pub fn verify(&self) -> Result<(), NormalClosureFailure> {
         use NormalClosureFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
-        self.subgroup_order.verify().map_err(|_| F::SubgroupCertificateInvalid)?;
-        self.closure_order.verify().map_err(|_| F::ClosureCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
+        self.subgroup_order
+            .verify()
+            .map_err(|_| F::SubgroupCertificateInvalid)?;
+        self.closure_order
+            .verify()
+            .map_err(|_| F::ClosureCertificateInvalid)?;
         if self.group_order.degree != self.subgroup_order.degree
             || self.group_order.degree != self.closure_order.degree
         {
@@ -735,26 +784,38 @@ impl NormalClosureCertificate {
         if self.group_order.claimed_order > ENUMERATION_BOUND {
             return Err(F::TooLargeToVerify);
         }
-        let g_elems = enumerate_group(&self.group_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::TooLargeToVerify)?;
+        let g_elems = enumerate_group(
+            &self.group_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::TooLargeToVerify)?;
         let mut gens: Vec<Permutation> = self.subgroup_order.original_generators.clone();
         for g in &g_elems {
             let g_inv = g.inverse();
             for h in &self.subgroup_order.original_generators {
-                gens.push(g.compose(h).expect("same degree").compose(&g_inv).expect("same degree"));
+                gens.push(
+                    g.compose(h)
+                        .expect("same degree")
+                        .compose(&g_inv)
+                        .expect("same degree"),
+                );
             }
         }
         let recomputed_elems =
             enumerate_group(&gens, degree, ENUMERATION_BOUND).ok_or(F::TooLargeToVerify)?;
-        let recomputed: BTreeSet<Vec<usize>> =
-            recomputed_elems.iter().map(|p| image_key(p, degree)).collect();
+        let recomputed: BTreeSet<Vec<usize>> = recomputed_elems
+            .iter()
+            .map(|p| image_key(p, degree))
+            .collect();
         let claimed_elems = enumerate_group(
             &self.closure_order.original_generators,
             degree,
             ENUMERATION_BOUND,
         )
         .ok_or(F::TooLargeToVerify)?;
-        let claimed: BTreeSet<Vec<usize>> = claimed_elems.iter().map(|p| image_key(p, degree)).collect();
+        let claimed: BTreeSet<Vec<usize>> =
+            claimed_elems.iter().map(|p| image_key(p, degree)).collect();
         if recomputed != claimed {
             return Err(F::SetMismatch);
         }
@@ -801,7 +862,12 @@ impl PermutationGroup {
         for g in &g_elems {
             let g_inv = g.inverse();
             for h in &subgroup.generators {
-                gens.push(g.compose(h).expect("same degree").compose(&g_inv).expect("same degree"));
+                gens.push(
+                    g.compose(h)
+                        .expect("same degree")
+                        .compose(&g_inv)
+                        .expect("same degree"),
+                );
             }
         }
         let closure = PermutationGroup::from_generators(gens, self.degree)
@@ -858,7 +924,9 @@ impl QuotientOrderCertificate {
     /// Never panics.
     pub fn verify(&self) -> Result<(), QuotientOrderFailure> {
         use QuotientOrderFailure as F;
-        self.normality.verify().map_err(|_| F::NormalityCertificateInvalid)?;
+        self.normality
+            .verify()
+            .map_err(|_| F::NormalityCertificateInvalid)?;
         let (group_order, subgroup_order) = match &self.normality {
             NormalityCertificate::Normal {
                 group_order,
@@ -912,5 +980,232 @@ impl PermutationGroup {
             }
             NormalityCertificate::NotNormal { .. } => Err(PermgroupError::NotNormal),
         }
+    }
+}
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn transposition(n: usize, a: usize, b: usize) -> Permutation {
+        Permutation::from_cycles(&[vec![a, b]], n).unwrap()
+    }
+
+    fn cycle(n: usize, pts: &[usize]) -> Permutation {
+        Permutation::from_cycles(&[pts.to_vec()], n).unwrap()
+    }
+
+    fn symmetric_group(n: usize) -> PermutationGroup {
+        let gens: Vec<Permutation> = (0..n - 1).map(|i| transposition(n, i, i + 1)).collect();
+        PermutationGroup::from_generators(gens, n).unwrap()
+    }
+
+    fn alternating_group(n: usize) -> PermutationGroup {
+        let gens: Vec<Permutation> = (2..n).map(|k| cycle(n, &[0, 1, k])).collect();
+        PermutationGroup::from_generators(gens, n).unwrap()
+    }
+
+    // -- sylow_subgroup / sylow_count --
+
+    #[test]
+    fn s4_has_three_sylow_2_subgroups_of_order_8() {
+        let g = symmetric_group(4);
+        let (sylow2, cert) = g.sylow_subgroup(2).unwrap();
+        assert_eq!(sylow2.order(), 8);
+        assert_eq!(cert.exponent, 3);
+        assert!(cert.verify().is_ok());
+        let count_cert = g.sylow_count(&sylow2, 2).unwrap();
+        assert_eq!(count_cert.n_p, 3);
+        assert!(count_cert.verify().is_ok());
+    }
+
+    #[test]
+    fn s4_has_four_sylow_3_subgroups_of_order_3() {
+        let g = symmetric_group(4);
+        let (sylow3, cert) = g.sylow_subgroup(3).unwrap();
+        assert_eq!(sylow3.order(), 3);
+        assert_eq!(cert.exponent, 1);
+        assert!(cert.verify().is_ok());
+        let count_cert = g.sylow_count(&sylow3, 3).unwrap();
+        assert_eq!(count_cert.n_p, 4);
+        assert!(count_cert.verify().is_ok());
+    }
+
+    #[test]
+    fn a5_sylow_counts_are_5_10_6_for_p_2_3_5() {
+        let g = alternating_group(5);
+        assert_eq!(g.order(), 60);
+        for (p, expected_order, expected_count) in [(2u128, 4u128, 5u128), (3, 3, 10), (5, 5, 6)] {
+            let (sylow, cert) = g.sylow_subgroup(p).unwrap();
+            assert_eq!(sylow.order(), expected_order, "prime {p}");
+            assert!(cert.verify().is_ok());
+            let count_cert = g.sylow_count(&sylow, p).unwrap();
+            assert_eq!(count_cert.n_p, expected_count, "prime {p}");
+            assert!(count_cert.verify().is_ok());
+        }
+    }
+
+    #[test]
+    fn sylow_subgroup_declines_for_a_prime_not_dividing_the_order() {
+        let g = symmetric_group(4); // order 24 = 2^3 * 3
+        assert!(matches!(
+            g.sylow_subgroup(5),
+            Err(PermgroupError::PrimeDoesNotDivideOrder)
+        ));
+    }
+
+    #[test]
+    fn forged_sylow_certificate_wrong_order_is_refused() {
+        let g = symmetric_group(4);
+        let (_, cert) = g.sylow_subgroup(2).unwrap();
+        let trivial = PermutationGroup::from_generators(vec![], 4).unwrap();
+        let mut forged = cert.clone();
+        forged.sylow_order = trivial.order_certificate().clone();
+        assert_eq!(
+            forged.verify(),
+            Err(SylowFailure::OrderIsNotFullPPart {
+                computed: 8,
+                claimed: 1,
+            })
+        );
+    }
+
+    #[test]
+    fn forged_sylow_count_violating_congruence_is_refused() {
+        let g = symmetric_group(4);
+        let (sylow2, _) = g.sylow_subgroup(2).unwrap();
+        let mut cert = g.sylow_count(&sylow2, 2).unwrap();
+        assert_eq!(cert.n_p, 3);
+        // 2 % 2 == 0, violating n_p == 1 (mod p); checked before the
+        // expensive recount, so this never enumerates G.
+        cert.n_p = 2;
+        assert_eq!(
+            cert.verify(),
+            Err(SylowCountFailure::NotCongruentToOneModPrime)
+        );
+    }
+
+    #[test]
+    fn forged_sylow_count_recompute_mismatch_is_refused() {
+        let g = symmetric_group(4);
+        let (sylow2, _) = g.sylow_subgroup(2).unwrap();
+        let mut cert = g.sylow_count(&sylow2, 2).unwrap();
+        assert_eq!(cert.n_p, 3);
+        // 1 % 2 == 1 (congruent) and 3 % 1 == 0 (divides the cofactor), so
+        // both cheap arithmetic guards pass; only the full recount catches
+        // this forgery.
+        cert.n_p = 1;
+        assert_eq!(
+            cert.verify(),
+            Err(SylowCountFailure::CountMismatch {
+                computed: 3,
+                claimed: 1,
+            })
+        );
+    }
+
+    // -- is_normal / normal_closure / quotient_order --
+
+    #[test]
+    fn a4_is_normal_in_s4_with_quotient_order_2() {
+        let s4 = symmetric_group(4);
+        let a4 = alternating_group(4);
+        let cert = s4.is_normal(&a4).unwrap();
+        assert!(matches!(cert, NormalityCertificate::Normal { .. }));
+        assert!(cert.verify().is_ok());
+
+        let quotient_cert = s4.quotient_order(&a4).unwrap();
+        assert_eq!(quotient_cert.quotient_order, 2);
+        assert!(quotient_cert.verify().is_ok());
+    }
+
+    #[test]
+    fn a_sylow_3_subgroup_of_s4_is_not_normal() {
+        let s4 = symmetric_group(4);
+        let (sylow3, _) = s4.sylow_subgroup(3).unwrap();
+        let cert = s4.is_normal(&sylow3).unwrap();
+        assert!(matches!(cert, NormalityCertificate::NotNormal { .. }));
+        assert!(cert.verify().is_ok());
+
+        assert_eq!(s4.quotient_order(&sylow3), Err(PermgroupError::NotNormal));
+    }
+
+    #[test]
+    fn normal_closure_of_a_3_cycle_in_s4_is_a4() {
+        let s4 = symmetric_group(4);
+        let three_cycle = PermutationGroup::from_generators(vec![cycle(4, &[0, 1, 2])], 4).unwrap();
+        let (closure, cert) = s4.normal_closure(&three_cycle).unwrap();
+        assert_eq!(closure.order(), 12);
+        assert!(cert.verify().is_ok());
+
+        let normal_cert = s4.is_normal(&closure).unwrap();
+        assert!(matches!(normal_cert, NormalityCertificate::Normal { .. }));
+        assert!(normal_cert.verify().is_ok());
+    }
+
+    #[test]
+    fn forged_normality_witness_actually_normal_is_refused() {
+        let s4 = symmetric_group(4);
+        let a4 = alternating_group(4);
+        // a4 IS normal in s4, so any (g, h) pair conjugates back into a4 --
+        // a manufactured "NotNormal" claim over this genuinely-normal pair
+        // is refused because the witness's conjugate is actually in H.
+        let g = transposition(4, 0, 1);
+        let h = cycle(4, &[0, 1, 2]);
+        let forged = NormalityCertificate::NotNormal {
+            group_order: s4.order_certificate().clone(),
+            subgroup_order: a4.order_certificate().clone(),
+            conjugating_element: g,
+            subgroup_element: h,
+        };
+        assert_eq!(
+            forged.verify(),
+            Err(NormalityFailure::WitnessActuallyNormal)
+        );
+    }
+
+    #[test]
+    fn forged_normal_closure_too_small_is_refused() {
+        let s4 = symmetric_group(4);
+        let three_cycle = PermutationGroup::from_generators(vec![cycle(4, &[0, 1, 2])], 4).unwrap();
+        let (_, mut cert) = s4.normal_closure(&three_cycle).unwrap();
+        // Claim the closure is just the subgroup itself (order 3, not 12).
+        cert.closure_order = three_cycle.order_certificate().clone();
+        assert!(matches!(
+            cert.verify(),
+            Err(NormalClosureFailure::SubgroupNotContainedInClosure
+                | NormalClosureFailure::SetMismatch)
+        ));
+    }
+
+    #[test]
+    fn forged_quotient_order_mismatch_is_refused() {
+        let s4 = symmetric_group(4);
+        let a4 = alternating_group(4);
+        let mut cert = s4.quotient_order(&a4).unwrap();
+        assert_eq!(cert.quotient_order, 2);
+        cert.quotient_order = 3;
+        assert_eq!(
+            cert.verify(),
+            Err(QuotientOrderFailure::QuotientOrderMismatch {
+                computed: 2,
+                claimed: 3,
+            })
+        );
+    }
+
+    #[test]
+    fn is_normal_declines_when_degrees_mismatch() {
+        let s4 = symmetric_group(4);
+        let other_degree =
+            PermutationGroup::from_generators(vec![cycle(5, &[0, 1, 2, 3, 4])], 5).unwrap();
+        assert_eq!(
+            s4.is_normal(&other_degree),
+            Err(PermgroupError::DegreeMismatch)
+        );
     }
 }
