@@ -57,3 +57,12 @@ name = "cvc5_qfbv_timeout_sweep"
 [[bin]]
 name = "axeyum"
 path = "src/bin/axeyum.rs"
+
+# ADR-1703: `gate_b_sweep` measures the native CDCL core AGAINST the retired
+# `rustsat-batsat` adapter, so it only exists when that adapter does. Declared
+# with `required-features` rather than `#[cfg]` inside the file, so
+# `cargo check --all-targets` SKIPS it without the feature instead of failing on
+# an unresolved import -- and builds it, in full, with the feature on.
+[[example]]
+name = "gate_b_sweep"
+required-features = ["batsat-reference"]

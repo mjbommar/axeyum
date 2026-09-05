@@ -32,6 +32,31 @@ no search at all rather than "0 conflicts", preserving the "encode but do not
 solve" contract the rest of the tree relies on — that one was found by the full
 solver unit sweep, not by the targeted per-file runs.
 
+**Measured before/after, same box (s4), `taskset -c 0-7`, `corpus/qfbv-curated`
+(43 files), 2 s timeout, `--jobs 2`, `--backend sat-bv`.** The "before" is a
+snapshot of `9abb438d4` — the last commit where `native_cdcl` still selected
+between two engines — so both arms come from one binary and one build:
+
+| Run | decided | sat | unsat | unknown | PAR-2 mean (s) | DISAGREE | replay failures |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| before, BatSat default (`9abb438d4`) | 33 (76.74%) | 9 | 24 | 10 | 0.971 | 0 | 0 |
+| before, `--native-cdcl` (`9abb438d4`) | 33 (76.74%) | 9 | 24 | 10 | 0.981 | 0 | 0 |
+| after, native default (`ab7ea1cb9`) | 33 (76.74%) | 9 | 24 | 10 | 0.986 | 0 | 0 |
+
+Identical verdicts and identical decided counts; the PAR-2 spread is 1.5% across
+all three, and the two *native* runs differ from each other by 0.5%, so the
+spread is noise on a box that was carrying other lanes throughout. **No
+capability change on this slice**, and no wrong verdict: `DISAGREE=0` and
+`model_replay_failures=0` in every run.
+
+**Capability ratchet** (`progress_frontier`, `--features full`,
+`--test-threads=1`, pinned): 12 tests, **no REGRESSION in any family**.
+`nia_unsat` 40 (baseline 40) and `nra_degree` 40 (baseline 40) were enforced;
+`bv_reduction` 34 (baseline 30), `lia_cuts` 35 (baseline 26) and `string_bound`
+40 (baseline 8) each printed PROGRESS but were marked **ADVISORY ONLY / NOT
+COMPARABLE** — throughput moved 28–46% mid-sweep under fleet load — so no
+baseline may be raised from this run and the improvements are not claimed.
+
 **Next (slice 2):** delete `crates/axeyum-cnf/src/batsat_reference.rs`, the
 `batsat-reference` features in `axeyum-cnf` / `axeyum-solver` / `axeyum-bench`,
 the three dependencies, and the ~70 historical documentation references. Not
