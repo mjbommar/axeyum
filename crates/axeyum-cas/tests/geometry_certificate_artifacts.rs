@@ -286,15 +286,46 @@ fn a_gaussian_counterexample_with_its_imaginary_part_dropped_is_rejected() {
 /// tried against each certificate and the ones whose coordinates it covers are
 /// used — and the test asserts **full coverage** at the end, so the next
 /// promotion cannot quietly opt out either.
+fn at(entries: &[(&str, i128, i128)]) -> BTreeMap<String, Rational> {
+    entries
+        .iter()
+        .map(|(name, numerator, denominator)| {
+            ((*name).to_string(), Rational::new(*numerator, *denominator))
+        })
+        .collect()
+}
+
+/// The `tetrahedron-medians-concurrent` entry in [`on_locus_but_harmless`],
+/// extracted only to keep that function's own line count down: A=(0,0,0),
+/// B=(4,0,0), C=(0,4,0), D=(2,2,0) all have z=0, so `abcd-not-coplanar`
+/// genuinely fails -- and yet the medians from A and B still meet only at the
+/// true centroid (3/2,3/2,0), so 4P = A+B+C+D holds. The committed
+/// counterexample is instead A=(1,1,0), B=(0,0,0), C=(3,0,0), D=(0,3,0),
+/// P=(5,5,0): there A is exactly the centroid of B,C,D, so the median from A
+/// degenerates to every point being "on" it, and P is free to be anything on
+/// the median from B -- which is where this configuration differs and is why
+/// it is harmless while that one is not.
+fn tetrahedron_medians_locus_but_harmless() -> BTreeMap<String, Rational> {
+    at(&[
+        ("ax", 0, 1),
+        ("ay", 0, 1),
+        ("az", 0, 1),
+        ("bx", 4, 1),
+        ("by", 0, 1),
+        ("bz", 0, 1),
+        ("cx", 0, 1),
+        ("cy", 4, 1),
+        ("cz", 0, 1),
+        ("dx", 2, 1),
+        ("dy", 2, 1),
+        ("dz", 0, 1),
+        ("px", 3, 2),
+        ("py", 3, 2),
+        ("pz", 0, 1),
+    ])
+}
+
 fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
-    let at = |entries: &[(&str, i128, i128)]| -> BTreeMap<String, Rational> {
-        entries
-            .iter()
-            .map(|(name, numerator, denominator)| {
-                ((*name).to_string(), Rational::new(*numerator, *denominator))
-            })
-            .collect()
-    };
     vec![
         // Collinear points, covering every theorem coordinatised in `a..d` and
         // `p`. `abd-not-collinear` and `abc-not-collinear` both genuinely fail,
@@ -398,34 +429,11 @@ fn on_locus_but_harmless() -> Vec<(&'static str, BTreeMap<String, Rational>)> {
                 ("zy", 0, 1),
             ]),
         ),
-        // `tetrahedron-medians-concurrent`, on the locus and harmless. A=(0,0,0),
-        // B=(4,0,0), C=(0,4,0), D=(2,2,0) all have z=0, so `abcd-not-coplanar`
-        // genuinely fails -- and yet the medians from A and B still meet only at
-        // the true centroid (3/2,3/2,0), so 4P = A+B+C+D holds. The committed
-        // counterexample is instead A=(1,1,0), B=(0,0,0), C=(3,0,0), D=(0,3,0),
-        // P=(5,5,0): there A is exactly the centroid of B,C,D, so the median from
-        // A degenerates to every point being "on" it, and P is free to be
-        // anything on the median from B -- which is where this configuration
-        // differs and is why it is harmless while that one is not.
+        // `tetrahedron-medians-concurrent`, on the locus and harmless -- see
+        // `tetrahedron_medians_locus_but_harmless`'s own doc for why.
         (
             "A=(0,0,0) B=(4,0,0) C=(0,4,0) D=(2,2,0), coplanar but still the true centroid",
-            at(&[
-                ("ax", 0, 1),
-                ("ay", 0, 1),
-                ("az", 0, 1),
-                ("bx", 4, 1),
-                ("by", 0, 1),
-                ("bz", 0, 1),
-                ("cx", 0, 1),
-                ("cy", 4, 1),
-                ("cz", 0, 1),
-                ("dx", 2, 1),
-                ("dy", 2, 1),
-                ("dz", 0, 1),
-                ("px", 3, 2),
-                ("py", 3, 2),
-                ("pz", 0, 1),
-            ]),
+            tetrahedron_medians_locus_but_harmless(),
         ),
     ]
 }

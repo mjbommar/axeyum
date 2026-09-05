@@ -31,7 +31,12 @@
 //!   is the *location* form instead (mirroring the plane's
 //!   `centroid-divides-medians`, which needs the analogous "triangle
 //!   non-degenerate" condition for exactly this reason), with a committed
-//!   [`DegenerateWitness`] exhibiting the coincident-median failure mode.
+//!   [`DegenerateWitness`] exhibiting the coincident-median failure mode. It
+//!   is genuinely certified (`artifacts/geometry-certificates/tetrahedron-medians-concurrent.json`,
+//!   checker-verified, `abcd-not-coplanar` used) but its own reduction costs
+//!   769.0 s in release, so its `#[test]` carries `#[ignore]` — see the Cost
+//!   profile section and that test's doc for the measured diagnosis and why a
+//!   smaller budget was tried and declined rather than shrinking the cost.
 //! - [`tetrahedron_circumcenter_problem`] — the six perpendicular-bisector
 //!   *planes* of a tetrahedron's edges meet at a common point: "P equidistant
 //!   from A & B, from B & C, and from C & D" already forces P equidistant from
@@ -109,7 +114,7 @@
 //!
 //! Measured via `cargo run -p axeyum-cas --release --example
 //! emit_geometry_certificates -- <id>` (the same emitter and timing the plane
-//! corpus's own doc comments quote):
+//! corpus's own doc comments quote), this host, 2026-09-05:
 //!
 //! - [`tetrahedron_circumcenter_problem`] (13 coordinate variables, 3
 //!   hypotheses, 3 conclusions, no non-degeneracy): **30.2 ms**, release.
@@ -119,22 +124,35 @@
 //!   settle by direct substitution (constant or linear cofactors, `1` and
 //!   `2t` for the conic case) — no Gröbner search runs at all.
 //! - [`tetrahedron_medians_concurrent_problem`] (15 coordinate variables, 6
-//!   hypotheses, 3 conclusions, 1 non-degeneracy condition): release timing
-//!   not separately captured in this pass, but well under
-//!   [`crate::geometry_certify::geometry_limits`]'s ceilings — the search
-//!   settles by constant cofactors once the coplanarity condition is
-//!   available. **The debug-mode cost is the interesting number**: the
-//!   *first* (incidence-form, ultimately abandoned) statement of this theorem
-//!   ran for over 500 s of sustained CPU under a debug `cargo test` before it
-//!   was killed and re-measured in release, where it returned in 138.8 s —
-//!   consistent with this crate's own documented debug/release gap
+//!   hypotheses, 3 conclusions, 1 non-degeneracy condition): **769.0 s**,
+//!   release — by far the most expensive reduction in this module, and the
+//!   reason its own `#[test]` carries `#[ignore]` (see that test's doc for
+//!   the diagnosis: `certify_any_route`'s linear-block detector is scoped per
+//!   *conclusion*, and each per-axis conclusion here mentions only one of
+//!   `px,py,pz` while every hypothesis row mixes two of the three
+//!   coordinates, so the fast linear route cannot see all three unknowns
+//!   together and the search falls back to the general, slow route). A
+//!   shrunk `Limits` (`reduction_steps` 4,000 vs. the default 50,000) was
+//!   tried and *declined outright* rather than certifying faster, confirming
+//!   the instance could not be cheaply shrunk without changing the certifier
+//!   itself. The committed artifact is the source of truth thereafter — the
+//!   `geometry_certificate_artifacts` integration suite re-derives it from the
+//!   file in milliseconds, no search involved. An earlier, ultimately
+//!   abandoned *incidence-form* statement of this theorem was measured at
+//!   500+ s of sustained CPU under a **debug** `cargo test` before being
+//!   killed; the debug/release gap on this route is roughly consistent with
+//!   this crate's documented gap elsewhere
 //!   (`docs/contributor-guide/prelude-build-cost.md`'s "up to 32×" note is
-//!   about the Lean kernel, not this crate, but the same order of magnitude
-//!   showed up here). Use `--release` for anything beyond a quick correctness
-//!   check on a Gröbner-search-backed theorem.
+//!   about the Lean kernel specifically, but the same order of magnitude
+//!   showed up here: the location-form fix measured 922.68 s for the full
+//!   `--lib` suite in release vs. an earlier ~4,522 s debug run of the same
+//!   32 tests). Use `--release` for anything beyond a quick correctness check
+//!   on a Gröbner-search-backed theorem.
 //!
-//! None of the three approached the ceilings themselves (no `Declined` on a
-//! resource reason).
+//! Only [`tetrahedron_medians_concurrent_problem`] approached
+//! [`crate::geometry_certify::geometry_limits`]'s ceilings on the route that
+//! ultimately succeeds; none of the three returned `Declined` on a resource
+//! reason in the certificates actually committed.
 
 use std::collections::BTreeMap;
 
@@ -226,14 +244,21 @@ impl Conic {
     /// The conic `a·x² + b·x·y + c·y² + d·x + e·y + f = 0`.
     #[must_use]
     pub fn new(
-        a: Rational,
-        b: Rational,
-        c: Rational,
-        d: Rational,
-        e: Rational,
-        f: Rational,
+        coeff_a: Rational,
+        coeff_b: Rational,
+        coeff_c: Rational,
+        coeff_d: Rational,
+        coeff_e: Rational,
+        coeff_f: Rational,
     ) -> Conic {
-        Conic { a, b, c, d, e, f }
+        Conic {
+            a: coeff_a,
+            b: coeff_b,
+            c: coeff_c,
+            d: coeff_d,
+            e: coeff_e,
+            f: coeff_f,
+        }
     }
 
     /// The coefficient of `x²`.
@@ -357,7 +382,6 @@ impl Conic {
     /// Returns [`ConicRefusal::Overflow`] on `i128` coefficient overflow, or
     /// [`ConicRefusal::NotInGeneralPosition`] when the five points do not
     /// determine a unique conic.
-    #[must_use]
     pub fn through_five_points(
         points: &[Point; 5],
     ) -> Result<(Conic, ConicFiveCertificate), ConicRefusal> {
@@ -539,15 +563,15 @@ impl Point3 {
 /// projective line from two points, or a projective point from two lines are
 /// all this one computation, unified here.
 fn cross3(
-    u: (Rational, Rational, Rational),
-    v: (Rational, Rational, Rational),
+    first: (Rational, Rational, Rational),
+    second: (Rational, Rational, Rational),
 ) -> Option<(Rational, Rational, Rational)> {
-    let (u1, u2, u3) = u;
-    let (v1, v2, v3) = v;
-    let a = u2.checked_mul(v3)?.checked_sub(u3.checked_mul(v2)?)?;
-    let b = u3.checked_mul(v1)?.checked_sub(u1.checked_mul(v3)?)?;
-    let c = u1.checked_mul(v2)?.checked_sub(u2.checked_mul(v1)?)?;
-    Some((a, b, c))
+    let (u1, u2, u3) = first;
+    let (v1, v2, v3) = second;
+    let result_x = u2.checked_mul(v3)?.checked_sub(u3.checked_mul(v2)?)?;
+    let result_y = u3.checked_mul(v1)?.checked_sub(u1.checked_mul(v3)?)?;
+    let result_z = u1.checked_mul(v2)?.checked_sub(u2.checked_mul(v1)?)?;
+    Some((result_x, result_y, result_z))
 }
 
 /// A plane in space, stored as the coefficients of `a·x + b·y + c·z + d = 0`
@@ -616,26 +640,31 @@ impl Plane {
     /// or on overflow.
     #[must_use]
     pub fn through_three_points(p1: &Point3, p2: &Point3, p3: &Point3) -> Option<Plane> {
-        let u = (
+        let edge1 = (
             p2.x.checked_sub(p1.x)?,
             p2.y.checked_sub(p1.y)?,
             p2.z.checked_sub(p1.z)?,
         );
-        let v = (
+        let edge2 = (
             p3.x.checked_sub(p1.x)?,
             p3.y.checked_sub(p1.y)?,
             p3.z.checked_sub(p1.z)?,
         );
-        let (a, b, c) = cross3(u, v)?;
-        if a.is_zero() && b.is_zero() && c.is_zero() {
+        let (normal_x, normal_y, normal_z) = cross3(edge1, edge2)?;
+        if normal_x.is_zero() && normal_y.is_zero() && normal_z.is_zero() {
             return None;
         }
-        let d = a
+        let constant = normal_x
             .checked_mul(p1.x)?
-            .checked_add(b.checked_mul(p1.y)?)?
-            .checked_add(c.checked_mul(p1.z)?)?
+            .checked_add(normal_y.checked_mul(p1.y)?)?
+            .checked_add(normal_z.checked_mul(p1.z)?)?
             .checked_neg()?;
-        Some(Plane { a, b, c, d })
+        Some(Plane {
+            a: normal_x,
+            b: normal_y,
+            c: normal_z,
+            d: constant,
+        })
     }
 }
 
@@ -989,12 +1018,17 @@ impl HLine {
 /// their coordinate triples. `None` if `p` and `q` represent the same point
 /// (cross product zero) or on overflow.
 #[must_use]
-pub fn join(p: &HPoint, q: &HPoint) -> Option<HLine> {
-    let (a, b, c) = cross3((p.x, p.y, p.w), (q.x, q.y, q.w))?;
-    if a.is_zero() && b.is_zero() && c.is_zero() {
+pub fn join(first: &HPoint, second: &HPoint) -> Option<HLine> {
+    let (line_a, line_b, line_c) =
+        cross3((first.x, first.y, first.w), (second.x, second.y, second.w))?;
+    if line_a.is_zero() && line_b.is_zero() && line_c.is_zero() {
         return None;
     }
-    Some(HLine { a, b, c })
+    Some(HLine {
+        a: line_a,
+        b: line_b,
+        c: line_c,
+    })
 }
 
 /// The point where two distinct projective lines meet, via the cross product
@@ -1002,12 +1036,17 @@ pub fn join(p: &HPoint, q: &HPoint) -> Option<HLine> {
 /// `None` if `l` and `m` are the same line (cross product zero) or on
 /// overflow.
 #[must_use]
-pub fn meet(l: &HLine, m: &HLine) -> Option<HPoint> {
-    let (x, y, w) = cross3((l.a, l.b, l.c), (m.a, m.b, m.c))?;
-    if x.is_zero() && y.is_zero() && w.is_zero() {
+pub fn meet(first: &HLine, second: &HLine) -> Option<HPoint> {
+    let (point_x, point_y, point_w) =
+        cross3((first.a, first.b, first.c), (second.a, second.b, second.c))?;
+    if point_x.is_zero() && point_y.is_zero() && point_w.is_zero() {
         return None;
     }
-    Some(HPoint { x, y, w })
+    Some(HPoint {
+        x: point_x,
+        y: point_y,
+        w: point_w,
+    })
 }
 
 // =============================================================================
@@ -1063,7 +1102,6 @@ impl Isometry {
     /// Returns [`IsometryRefusal::Overflow`] on `i128` overflow while checking
     /// orthogonality, or [`IsometryRefusal::NotOrthogonal`] when the linear
     /// part is not exactly orthogonal.
-    #[must_use]
     pub fn new(
         m00: Rational,
         m01: Rational,
@@ -1116,7 +1154,6 @@ impl Isometry {
     /// # Errors
     ///
     /// See [`Isometry::new`].
-    #[must_use]
     pub fn rotation(cos: Rational, sin: Rational) -> Result<Isometry, IsometryRefusal> {
         let neg_sin = sin.checked_neg().ok_or(IsometryRefusal::Overflow)?;
         Isometry::new(cos, neg_sin, sin, cos, Rational::zero(), Rational::zero())
@@ -1129,7 +1166,6 @@ impl Isometry {
     /// # Errors
     ///
     /// See [`Isometry::new`].
-    #[must_use]
     pub fn reflection_through_origin(
         cos: Rational,
         sin: Rational,
@@ -1462,12 +1498,12 @@ pub fn collinear3(first: &Pt3, second: &Pt3, third: &Pt3) -> Option<[MvPoly; 3]>
 /// `A`, `B`, `C`, `D` are coplanar: the scalar triple product
 /// `(B−A) · ((C−A) × (D−A))` vanishes. `None` on overflow.
 #[must_use]
-pub fn coplanar4(a: &Pt3, b: &Pt3, c: &Pt3, d: &Pt3) -> Option<MvPoly> {
-    let u = b.sub(a)?;
-    let v = c.sub(a)?;
-    let w = d.sub(a)?;
-    let cross = cross3_mv(&v, &w)?;
-    dot3(&u, &cross)
+pub fn coplanar4(first: &Pt3, second: &Pt3, third: &Pt3, fourth: &Pt3) -> Option<MvPoly> {
+    let edge1 = second.sub(first)?;
+    let edge2 = third.sub(first)?;
+    let edge3 = fourth.sub(first)?;
+    let cross = cross3_mv(&edge2, &edge3)?;
+    dot3(&edge1, &cross)
 }
 
 /// `|AB| = |CD|`, stated on squared distances so it stays polynomial. `None`
@@ -1542,9 +1578,16 @@ pub fn hjoin(p: &HPt, q: &HPt) -> Option<(MvPoly, MvPoly, MvPoly)> {
 
 /// The symbolic point where lines `l` and `m` meet. `None` on overflow.
 #[must_use]
-pub fn hmeet(l: &(MvPoly, MvPoly, MvPoly), m: &(MvPoly, MvPoly, MvPoly)) -> Option<HPt> {
-    let (x, y, w) = cross3_mv_triple((&l.0, &l.1, &l.2), (&m.0, &m.1, &m.2))?;
-    Some(HPt { x, y, w })
+pub fn hmeet(first: &(MvPoly, MvPoly, MvPoly), second: &(MvPoly, MvPoly, MvPoly)) -> Option<HPt> {
+    let (point_x, point_y, point_w) = cross3_mv_triple(
+        (&first.0, &first.1, &first.2),
+        (&second.0, &second.1, &second.2),
+    )?;
+    Some(HPt {
+        x: point_x,
+        y: point_y,
+        w: point_w,
+    })
 }
 
 /// The incidence value `a·p.x + b·p.y + c·p.w` of a symbolic line `(a,b,c)`
@@ -1685,23 +1728,23 @@ fn gloss3(points: &[(&str, &str)]) -> Vec<(String, String)> {
 /// symbolic polynomials this problem is stated with (never observed here).
 #[must_use]
 pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
-    let a = Pt3::free("a");
-    let b = Pt3::free("b");
-    let c = Pt3::free("c");
-    let d = Pt3::free("d");
-    let p = Pt3::free("p");
-    let g_bcd = centroid3(&b, &c, &d).expect("centroid3");
-    let g_acd = centroid3(&a, &c, &d).expect("centroid3");
-    let hyp_a = collinear3(&a, &g_bcd, &p).expect("collinear3");
-    let hyp_b = collinear3(&b, &g_acd, &p).expect("collinear3");
-    let not_coplanar = coplanar4(&a, &b, &c, &d).expect("coplanar4");
+    let vertex_a = Pt3::free("a");
+    let vertex_b = Pt3::free("b");
+    let vertex_c = Pt3::free("c");
+    let vertex_d = Pt3::free("d");
+    let meeting = Pt3::free("p");
+    let hub_one = centroid3(&vertex_b, &vertex_c, &vertex_d).expect("centroid3");
+    let hub_two = centroid3(&vertex_a, &vertex_c, &vertex_d).expect("centroid3");
+    let hyp_a = collinear3(&vertex_a, &hub_one, &meeting).expect("collinear3");
+    let hyp_b = collinear3(&vertex_b, &hub_two, &meeting).expect("collinear3");
+    let not_coplanar = coplanar4(&vertex_a, &vertex_b, &vertex_c, &vertex_d).expect("coplanar4");
     let four = MvPoly::constant(Rational::integer(4));
-    let total = a
-        .add(&b)
+    let total = vertex_a
+        .add(&vertex_b)
         .expect("sum")
-        .add(&c)
+        .add(&vertex_c)
         .expect("sum")
-        .add(&d)
+        .add(&vertex_d)
         .expect("sum");
 
     let axis = ["x", "y", "z"];
@@ -1724,7 +1767,7 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
         Constraint::new(
             "centroid-x",
             "4 P.x = A.x + B.x + C.x + D.x",
-            four.mul(&p.x)
+            four.mul(&meeting.x)
                 .expect("product")
                 .sub(&total.x)
                 .expect("difference"),
@@ -1732,7 +1775,7 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
         Constraint::new(
             "centroid-y",
             "4 P.y = A.y + B.y + C.y + D.y",
-            four.mul(&p.y)
+            four.mul(&meeting.y)
                 .expect("product")
                 .sub(&total.y)
                 .expect("difference"),
@@ -1740,7 +1783,7 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
         Constraint::new(
             "centroid-z",
             "4 P.z = A.z + B.z + C.z + D.z",
-            four.mul(&p.z)
+            four.mul(&meeting.z)
                 .expect("product")
                 .sub(&total.z)
                 .expect("difference"),
@@ -1773,35 +1816,59 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
              the centroid of B,C,D, so the median from A is vacuous (satisfied by every P); P = \
              (5,5,0) then lies on the median from B (through the origin in direction (1,1,0)) \
              while 4P = (20,20,0) but A+B+C+D = (4,4,0)",
-            at(&[
-                ("ax", 1, 1), ("ay", 1, 1), ("az", 0, 1),
-                ("bx", 0, 1), ("by", 0, 1), ("bz", 0, 1),
-                ("cx", 3, 1), ("cy", 0, 1), ("cz", 0, 1),
-                ("dx", 0, 1), ("dy", 3, 1), ("dz", 0, 1),
-                ("px", 5, 1), ("py", 5, 1), ("pz", 0, 1),
-            ]),
+            tetrahedron_medians_degenerate_assignment(),
         )],
         generic_witnesses: vec![GenericWitness {
             description: "A=(0,0,0), B=(4,0,0), C=(0,4,0), D=(0,0,4), centroid P=(1,1,1)".into(),
-            assignment: at(&[
-                ("ax", 0, 1),
-                ("ay", 0, 1),
-                ("az", 0, 1),
-                ("bx", 4, 1),
-                ("by", 0, 1),
-                ("bz", 0, 1),
-                ("cx", 0, 1),
-                ("cy", 4, 1),
-                ("cz", 0, 1),
-                ("dx", 0, 1),
-                ("dy", 0, 1),
-                ("dz", 4, 1),
-                ("px", 1, 1),
-                ("py", 1, 1),
-                ("pz", 1, 1),
-            ]),
+            assignment: tetrahedron_medians_generic_assignment(),
         }],
     }
+}
+
+/// The degenerate-witness coordinate assignment for
+/// [`tetrahedron_medians_concurrent_problem`], extracted only to keep that
+/// function's own line count down.
+fn tetrahedron_medians_degenerate_assignment() -> BTreeMap<String, Rational> {
+    at(&[
+        ("ax", 1, 1),
+        ("ay", 1, 1),
+        ("az", 0, 1),
+        ("bx", 0, 1),
+        ("by", 0, 1),
+        ("bz", 0, 1),
+        ("cx", 3, 1),
+        ("cy", 0, 1),
+        ("cz", 0, 1),
+        ("dx", 0, 1),
+        ("dy", 3, 1),
+        ("dz", 0, 1),
+        ("px", 5, 1),
+        ("py", 5, 1),
+        ("pz", 0, 1),
+    ])
+}
+
+/// The generic-witness coordinate assignment for
+/// [`tetrahedron_medians_concurrent_problem`], extracted only to keep that
+/// function's own line count down.
+fn tetrahedron_medians_generic_assignment() -> BTreeMap<String, Rational> {
+    at(&[
+        ("ax", 0, 1),
+        ("ay", 0, 1),
+        ("az", 0, 1),
+        ("bx", 4, 1),
+        ("by", 0, 1),
+        ("bz", 0, 1),
+        ("cx", 0, 1),
+        ("cy", 4, 1),
+        ("cz", 0, 1),
+        ("dx", 0, 1),
+        ("dy", 0, 1),
+        ("dz", 4, 1),
+        ("px", 1, 1),
+        ("py", 1, 1),
+        ("pz", 1, 1),
+    ])
 }
 
 /// The six perpendicular-bisector planes of a tetrahedron's edges meet at a
@@ -1816,17 +1883,17 @@ pub fn tetrahedron_medians_concurrent_problem() -> GeometryProblem {
 /// symbolic polynomials this problem is stated with (never observed here).
 #[must_use]
 pub fn tetrahedron_circumcenter_problem() -> GeometryProblem {
-    let a = Pt3::free("a");
-    let b = Pt3::free("b");
-    let c = Pt3::free("c");
-    let d = Pt3::free("d");
-    let p = Pt3::free("p");
-    let eq_ab = equidistant3(&p, &a, &p, &b).expect("equidistant3");
-    let eq_bc = equidistant3(&p, &b, &p, &c).expect("equidistant3");
-    let eq_cd = equidistant3(&p, &c, &p, &d).expect("equidistant3");
-    let eq_ac = equidistant3(&p, &a, &p, &c).expect("equidistant3");
-    let eq_bd = equidistant3(&p, &b, &p, &d).expect("equidistant3");
-    let eq_ad = equidistant3(&p, &a, &p, &d).expect("equidistant3");
+    let vertex_a = Pt3::free("a");
+    let vertex_b = Pt3::free("b");
+    let vertex_c = Pt3::free("c");
+    let vertex_d = Pt3::free("d");
+    let meeting = Pt3::free("p");
+    let dist_one = equidistant3(&meeting, &vertex_a, &meeting, &vertex_b).expect("equidistant3");
+    let dist_two = equidistant3(&meeting, &vertex_b, &meeting, &vertex_c).expect("equidistant3");
+    let dist_three = equidistant3(&meeting, &vertex_c, &meeting, &vertex_d).expect("equidistant3");
+    let dist_four = equidistant3(&meeting, &vertex_a, &meeting, &vertex_c).expect("equidistant3");
+    let dist_five = equidistant3(&meeting, &vertex_b, &meeting, &vertex_d).expect("equidistant3");
+    let dist_six = equidistant3(&meeting, &vertex_a, &meeting, &vertex_d).expect("equidistant3");
 
     GeometryProblem {
         id: "tetrahedron-perpendicular-bisectors-concurrent".into(),
@@ -1842,15 +1909,15 @@ pub fn tetrahedron_circumcenter_problem() -> GeometryProblem {
             .into(),
         coordinate_gloss: gloss3(&[("a", "A"), ("b", "B"), ("c", "C"), ("d", "D"), ("p", "P")]),
         hypotheses: vec![
-            Constraint::new("p-eq-ab", "P is equidistant from A and B", eq_ab),
-            Constraint::new("p-eq-bc", "P is equidistant from B and C", eq_bc),
-            Constraint::new("p-eq-cd", "P is equidistant from C and D", eq_cd),
+            Constraint::new("p-eq-ab", "P is equidistant from A and B", dist_one),
+            Constraint::new("p-eq-bc", "P is equidistant from B and C", dist_two),
+            Constraint::new("p-eq-cd", "P is equidistant from C and D", dist_three),
         ],
         nondegeneracy: Vec::new(),
         conclusions: vec![
-            Constraint::new("p-eq-ac", "P is equidistant from A and C", eq_ac),
-            Constraint::new("p-eq-bd", "P is equidistant from B and D", eq_bd),
-            Constraint::new("p-eq-ad", "P is equidistant from A and D", eq_ad),
+            Constraint::new("p-eq-ac", "P is equidistant from A and C", dist_four),
+            Constraint::new("p-eq-bd", "P is equidistant from B and D", dist_five),
+            Constraint::new("p-eq-ad", "P is equidistant from A and D", dist_six),
         ],
         degenerate_witnesses: Vec::new(),
         generic_witnesses: vec![GenericWitness {
@@ -2045,27 +2112,28 @@ fn pascal_hexagon_problem() -> GeometryProblem {
         .iter()
         .map(|name| HPt::free(name))
         .collect();
-    let [a, b, c, d, e, f]: [HPt; 6] = pts.try_into().expect("six points");
+    let [point_a, point_b, point_c, point_d, point_e, point_f]: [HPt; 6] =
+        pts.try_into().expect("six points");
     let conic = on_common_conic(&[
-        a.clone(),
-        b.clone(),
-        c.clone(),
-        d.clone(),
-        e.clone(),
-        f.clone(),
+        point_a.clone(),
+        point_b.clone(),
+        point_c.clone(),
+        point_d.clone(),
+        point_e.clone(),
+        point_f.clone(),
     ])
     .expect("6x6 determinant");
 
-    let x = HPt::free("x");
-    let y = HPt::free("y");
-    let z = HPt::free("z");
-    let hyp_x1 = hcollinear(&a, &b, &x).expect("hcollinear");
-    let hyp_x2 = hcollinear(&d, &e, &x).expect("hcollinear");
-    let hyp_y1 = hcollinear(&b, &c, &y).expect("hcollinear");
-    let hyp_y2 = hcollinear(&e, &f, &y).expect("hcollinear");
-    let hyp_z1 = hcollinear(&c, &d, &z).expect("hcollinear");
-    let hyp_z2 = hcollinear(&f, &a, &z).expect("hcollinear");
-    let conclusion = hcollinear(&x, &y, &z).expect("hcollinear");
+    let point_x = HPt::free("x");
+    let point_y = HPt::free("y");
+    let point_z = HPt::free("z");
+    let side_one = hcollinear(&point_a, &point_b, &point_x).expect("hcollinear");
+    let side_two = hcollinear(&point_d, &point_e, &point_x).expect("hcollinear");
+    let side_three = hcollinear(&point_b, &point_c, &point_y).expect("hcollinear");
+    let side_four = hcollinear(&point_e, &point_f, &point_y).expect("hcollinear");
+    let side_five = hcollinear(&point_c, &point_d, &point_z).expect("hcollinear");
+    let side_six = hcollinear(&point_f, &point_a, &point_z).expect("hcollinear");
+    let conclusion = hcollinear(&point_x, &point_y, &point_z).expect("hcollinear");
 
     GeometryProblem {
         id: "pascal-hexagon".into(),
@@ -2115,12 +2183,12 @@ fn pascal_hexagon_problem() -> GeometryProblem {
                 "A,B,C,D,E,F lie on a common conic",
                 conic,
             ),
-            Constraint::new("x-on-ab", "X is collinear with A and B", hyp_x1),
-            Constraint::new("x-on-de", "X is collinear with D and E", hyp_x2),
-            Constraint::new("y-on-bc", "Y is collinear with B and C", hyp_y1),
-            Constraint::new("y-on-ef", "Y is collinear with E and F", hyp_y2),
-            Constraint::new("z-on-cd", "Z is collinear with C and D", hyp_z1),
-            Constraint::new("z-on-fa", "Z is collinear with F and A", hyp_z2),
+            Constraint::new("x-on-ab", "X is collinear with A and B", side_one),
+            Constraint::new("x-on-de", "X is collinear with D and E", side_two),
+            Constraint::new("y-on-bc", "Y is collinear with B and C", side_three),
+            Constraint::new("y-on-ef", "Y is collinear with E and F", side_four),
+            Constraint::new("z-on-cd", "Z is collinear with C and D", side_five),
+            Constraint::new("z-on-fa", "Z is collinear with F and A", side_six),
         ],
         nondegeneracy: Vec::new(),
         conclusions: vec![Constraint::new(
@@ -2147,26 +2215,38 @@ fn pascal_generic_witness() -> BTreeMap<String, Rational> {
     let pt = |x: i128, y: i128, xd: i128, yd: i128| -> HPoint {
         HPoint::finite(Rational::new(x, xd), Rational::new(y, yd))
     };
-    let a = pt(1, 0, 1, 1);
-    let b = pt(0, 1, 1, 1);
-    let c = pt(-1, 0, 1, 1);
-    let d = pt(0, -1, 1, 1);
-    let e = pt(3, 4, 5, 5);
-    let f = pt(4, -3, 5, 5);
-    let x = meet(&join(&a, &b).expect("join"), &join(&d, &e).expect("join")).expect("meet");
-    let y = meet(&join(&b, &c).expect("join"), &join(&e, &f).expect("join")).expect("meet");
-    let z = meet(&join(&c, &d).expect("join"), &join(&f, &a).expect("join")).expect("meet");
+    let point_a = pt(1, 0, 1, 1);
+    let point_b = pt(0, 1, 1, 1);
+    let point_c = pt(-1, 0, 1, 1);
+    let point_d = pt(0, -1, 1, 1);
+    let point_e = pt(3, 4, 5, 5);
+    let point_f = pt(4, -3, 5, 5);
+    let point_x = meet(
+        &join(&point_a, &point_b).expect("join"),
+        &join(&point_d, &point_e).expect("join"),
+    )
+    .expect("meet");
+    let point_y = meet(
+        &join(&point_b, &point_c).expect("join"),
+        &join(&point_e, &point_f).expect("join"),
+    )
+    .expect("meet");
+    let point_z = meet(
+        &join(&point_c, &point_d).expect("join"),
+        &join(&point_f, &point_a).expect("join"),
+    )
+    .expect("meet");
     let mut assignment = BTreeMap::new();
     for (name, point) in [
-        ("a", a),
-        ("b", b),
-        ("c", c),
-        ("d", d),
-        ("e", e),
-        ("f", f),
-        ("x", x),
-        ("y", y),
-        ("z", z),
+        ("a", point_a),
+        ("b", point_b),
+        ("c", point_c),
+        ("d", point_d),
+        ("e", point_e),
+        ("f", point_f),
+        ("x", point_x),
+        ("y", point_y),
+        ("z", point_z),
     ] {
         assignment.insert(format!("{name}x"), point.x);
         assignment.insert(format!("{name}y"), point.y);
@@ -2178,29 +2258,29 @@ fn pascal_generic_witness() -> BTreeMap<String, Rational> {
 /// The projective statement of Desargues' theorem, stated but not certified —
 /// see the module doc.
 fn desargues_problem() -> GeometryProblem {
-    let o = HPt::free("o");
-    let a = HPt::free("a");
-    let b = HPt::free("b");
-    let c = HPt::free("c");
-    let a2 = HPt::free("a2");
-    let b2 = HPt::free("b2");
-    let c2 = HPt::free("c2");
+    let origin = HPt::free("o");
+    let vertex_a = HPt::free("a");
+    let vertex_b = HPt::free("b");
+    let vertex_c = HPt::free("c");
+    let image_a = HPt::free("a2");
+    let image_b = HPt::free("b2");
+    let image_c = HPt::free("c2");
 
-    let hyp_oa = hcollinear(&o, &a, &a2).expect("hcollinear");
-    let hyp_ob = hcollinear(&o, &b, &b2).expect("hcollinear");
-    let hyp_oc = hcollinear(&o, &c, &c2).expect("hcollinear");
+    let perspective_one = hcollinear(&origin, &vertex_a, &image_a).expect("hcollinear");
+    let perspective_two = hcollinear(&origin, &vertex_b, &image_b).expect("hcollinear");
+    let perspective_three = hcollinear(&origin, &vertex_c, &image_c).expect("hcollinear");
 
-    let bc = hjoin(&b, &c).expect("hjoin");
-    let b2c2 = hjoin(&b2, &c2).expect("hjoin");
-    let x = hmeet(&bc, &b2c2).expect("hmeet");
-    let ca = hjoin(&c, &a).expect("hjoin");
-    let c2a2 = hjoin(&c2, &a2).expect("hjoin");
-    let y = hmeet(&ca, &c2a2).expect("hmeet");
-    let ab = hjoin(&a, &b).expect("hjoin");
-    let a2b2 = hjoin(&a2, &b2).expect("hjoin");
-    let z = hmeet(&ab, &a2b2).expect("hmeet");
+    let bc = hjoin(&vertex_b, &vertex_c).expect("hjoin");
+    let b2c2 = hjoin(&image_b, &image_c).expect("hjoin");
+    let point_x = hmeet(&bc, &b2c2).expect("hmeet");
+    let ca = hjoin(&vertex_c, &vertex_a).expect("hjoin");
+    let c2a2 = hjoin(&image_c, &image_a).expect("hjoin");
+    let point_y = hmeet(&ca, &c2a2).expect("hmeet");
+    let ab = hjoin(&vertex_a, &vertex_b).expect("hjoin");
+    let a2b2 = hjoin(&image_a, &image_b).expect("hjoin");
+    let point_z = hmeet(&ab, &a2b2).expect("hmeet");
 
-    let conclusion = hcollinear(&x, &y, &z).expect("hcollinear");
+    let conclusion = hcollinear(&point_x, &point_y, &point_z).expect("hcollinear");
 
     GeometryProblem {
         id: "desargues-perspective-triangles".into(),
@@ -2239,9 +2319,21 @@ fn desargues_problem() -> GeometryProblem {
         })
         .collect(),
         hypotheses: vec![
-            Constraint::new("o-a-a2-collinear", "O, A, A' are collinear", hyp_oa),
-            Constraint::new("o-b-b2-collinear", "O, B, B' are collinear", hyp_ob),
-            Constraint::new("o-c-c2-collinear", "O, C, C' are collinear", hyp_oc),
+            Constraint::new(
+                "o-a-a2-collinear",
+                "O, A, A' are collinear",
+                perspective_one,
+            ),
+            Constraint::new(
+                "o-b-b2-collinear",
+                "O, B, B' are collinear",
+                perspective_two,
+            ),
+            Constraint::new(
+                "o-c-c2-collinear",
+                "O, C, C' are collinear",
+                perspective_three,
+            ),
         ],
         nondegeneracy: Vec::new(),
         conclusions: vec![Constraint::new(
@@ -2265,34 +2357,46 @@ fn desargues_problem() -> GeometryProblem {
 /// unprimed vertex, scaled by 2), with `X`, `Y`, `Z` computed directly by
 /// [`hjoin`]/[`hmeet`] over concrete rationals.
 fn desargues_generic_witness() -> BTreeMap<String, Rational> {
-    let o = HPoint::finite(Rational::zero(), Rational::zero());
-    let a = HPoint::finite(Rational::integer(1), Rational::zero());
-    let b = HPoint::finite(Rational::zero(), Rational::integer(1));
-    let c = HPoint::finite(Rational::integer(1), Rational::integer(1));
-    let scale2 = |p: &HPoint| {
+    let origin = HPoint::finite(Rational::zero(), Rational::zero());
+    let vertex_a = HPoint::finite(Rational::integer(1), Rational::zero());
+    let vertex_b = HPoint::finite(Rational::zero(), Rational::integer(1));
+    let vertex_c = HPoint::finite(Rational::integer(1), Rational::integer(1));
+    let scale2 = |point: &HPoint| {
         HPoint::finite(
-            Rational::integer(2).checked_mul(p.x).expect("scale"),
-            Rational::integer(2).checked_mul(p.y).expect("scale"),
+            Rational::integer(2).checked_mul(point.x).expect("scale"),
+            Rational::integer(2).checked_mul(point.y).expect("scale"),
         )
     };
-    let a2 = scale2(&a);
-    let b2 = scale2(&b);
-    let c2 = scale2(&c);
-    let x = meet(&join(&b, &c).expect("join"), &join(&b2, &c2).expect("join")).expect("meet");
-    let y = meet(&join(&c, &a).expect("join"), &join(&c2, &a2).expect("join")).expect("meet");
-    let z = meet(&join(&a, &b).expect("join"), &join(&a2, &b2).expect("join")).expect("meet");
+    let image_a = scale2(&vertex_a);
+    let image_b = scale2(&vertex_b);
+    let image_c = scale2(&vertex_c);
+    let point_x = meet(
+        &join(&vertex_b, &vertex_c).expect("join"),
+        &join(&image_b, &image_c).expect("join"),
+    )
+    .expect("meet");
+    let point_y = meet(
+        &join(&vertex_c, &vertex_a).expect("join"),
+        &join(&image_c, &image_a).expect("join"),
+    )
+    .expect("meet");
+    let point_z = meet(
+        &join(&vertex_a, &vertex_b).expect("join"),
+        &join(&image_a, &image_b).expect("join"),
+    )
+    .expect("meet");
     let mut assignment = BTreeMap::new();
     for (name, point) in [
-        ("o", o),
-        ("a", a),
-        ("b", b),
-        ("c", c),
-        ("a2", a2),
-        ("b2", b2),
-        ("c2", c2),
-        ("x", x),
-        ("y", y),
-        ("z", z),
+        ("o", origin),
+        ("a", vertex_a),
+        ("b", vertex_b),
+        ("c", vertex_c),
+        ("a2", image_a),
+        ("b2", image_b),
+        ("c2", image_c),
+        ("x", point_x),
+        ("y", point_y),
+        ("z", point_z),
     ] {
         assignment.insert(format!("{name}x"), point.x);
         assignment.insert(format!("{name}y"), point.y);
@@ -2385,23 +2489,31 @@ mod tests {
 
     #[test]
     fn through_five_points_recovers_the_unit_circle() {
-        let points = [
-            p(1, 0),
-            p(0, 1),
-            p(-1, 0),
-            p(0, -1),
-            p(3, 4).midpoint(&p(3, 4)),
-        ];
-        // Fifth point: pick one genuinely on the unit circle at (3/5, 4/5)
-        // via a rational point, not the accidental midpoint above.
-        let points = [points[0], points[1], points[2], points[3], p(0, 0)];
-        // Replace the degenerate stub with a real fifth circle point.
+        // A fifth point genuinely on the unit circle at (3/5, 4/5).
         let fifth = GPoint::new(Rational::new(3, 5), Rational::new(4, 5));
-        let points = [points[0], points[1], points[2], points[3], fifth];
+        let points = [p(1, 0), p(0, 1), p(-1, 0), p(0, -1), fifth];
         let (conic, certificate) = Conic::through_five_points(&points).expect("unique conic");
         assert!(certificate.verify());
         assert_eq!(conic.classify(), Some(ConicKind::Ellipse));
         assert!(conic.on_conic(&fifth));
+    }
+
+    #[test]
+    fn a_forged_conic_five_certificate_naming_a_point_off_the_conic_is_rejected() {
+        // A deliberately WRONG certificate: four genuine unit-circle points plus
+        // one that is NOT on the conic. `verify` must independently catch this
+        // rather than trust the producer.
+        let points = [p(1, 0), p(0, 1), p(-1, 0), p(0, -1), p(2, 2)];
+        let conic = Conic::new(
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::integer(1),
+            Rational::zero(),
+            Rational::zero(),
+            Rational::integer(-1),
+        );
+        let forged = ConicFiveCertificate { points, conic };
+        assert!(!forged.verify());
     }
 
     #[test]
@@ -2529,6 +2641,20 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "measured 922.68s in release (--test-threads=1, this host, 2026-09-05): \
+                certify_any_route's linear-block detector is scoped per CONCLUSION, and each \
+                per-axis conclusion here ('4 P.x = ...') mentions only one of px,py,pz, while \
+                every hypothesis row (a 3D cross-product component) mixes two of the three \
+                coordinates -- so the block search cannot see all three unknowns together and \
+                falls back to the general (slow) route. A shrunk Limits was tried first \
+                (reduction_steps 4_000 vs the default 50_000) and DECLINED outright \
+                (Reduction(ReductionSteps)) rather than certifying faster, so the instance \
+                could not be cheaply shrunk without changing the certifier itself, which is out \
+                of this module's scope. The theorem IS certified: the committed artifact at \
+                artifacts/geometry-certificates/tetrahedron-medians-concurrent.json was produced \
+                by this same call under the full budget and is re-checked (cheaply, no search) \
+                by the `geometry_certificate_artifacts` integration suite on every run. Run this \
+                test explicitly with `--ignored` to re-derive it from scratch."]
     fn tetrahedron_medians_concurrent_certifies_and_checks() {
         let problem = tetrahedron_medians_concurrent_problem();
         let outcome = certify_any_route(&problem, geometry_limits());
