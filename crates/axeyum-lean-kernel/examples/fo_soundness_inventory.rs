@@ -63,6 +63,12 @@ fn kind_of(declaration: &Declaration) -> &'static str {
     }
 }
 
+// The argument parsing, the set difference, the three exit conditions and the
+// row rendering are one linear pipeline; splitting it into helpers to satisfy
+// `too_many_lines` would spread the exit conditions across functions, which is
+// the opposite of what a checker whose whole contract is "fails on absence"
+// wants.
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut filter = String::new();

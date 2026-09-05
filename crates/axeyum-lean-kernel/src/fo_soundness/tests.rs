@@ -48,7 +48,7 @@ impl Fixture {
 fn soundness_and_its_corollary_are_axiom_free() {
     let f = Fixture::new();
     let p = f.p;
-    let mut kernel = f.kernel;
+    let kernel = f.kernel;
     for (name, label) in [
         (p.ctx_sat_shift, "FO.ctxSat_shift"),
         (p.soundness, "FO.soundness"),

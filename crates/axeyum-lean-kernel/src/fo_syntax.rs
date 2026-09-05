@@ -126,6 +126,23 @@
 //! `subst` must reach *under* a binder with the lifted substitution, and it
 //! must leave index `0` alone there while shifting everything else.
 
+// The mathematical variables in this group are the ones the literature uses --
+// `M`/`S` for a structure, `w`/`v` for a valuation, `s` for a substitution,
+// `t` for a term, `p`/`q` for formulas, `g` for a context, `n`/`k` for de
+// Bruijn indices. Renaming them to satisfy `many_single_char_names` /
+// `similar_names` would make every proof term harder to check against the
+// semantics it encodes, which is the only thing that matters here. Same
+// judgement, same wording, as `ipc_soundness.rs`.
+#![allow(clippy::many_single_char_names)]
+#![allow(clippy::similar_names)]
+// `LogicPrelude` is a 444-byte `Copy` struct of `NameId`s and is threaded by
+// value through every combinator, exactly as `NatOps::prelude()` hands it out
+// everywhere else in this crate. Taking it by reference here would be a
+// different convention from the rest of the kernel for no measured gain.
+#![allow(clippy::large_types_passed_by_value)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_lines)]
+
 use crate::{BinderInfo, Declaration, ExprId, KernelError, LevelId, NameId, RecField};
 use crate::{NatPrelude, ReducibilityHint, build_nat_prelude};
 
@@ -245,7 +262,7 @@ pub fn build_fo_syntax_prelude(kernel: &mut crate::Kernel) -> Result<FoSyntaxPre
     let ex = kernel.name_str(formula, "ex");
     declare_formula_inductive(
         kernel,
-        FormulaCtors {
+        &FormulaCtors {
             formula,
             bot,
             eqf,
@@ -477,7 +494,7 @@ pub(crate) fn pis(kernel: &mut crate::Kernel, binders: &[(u64, ExprId)], body: E
 /// `FO.Formula.rec` application in this group).
 fn declare_formula_inductive(
     kernel: &mut crate::Kernel,
-    c: FormulaCtors,
+    c: &FormulaCtors,
     nat_ty: ExprId,
     term_ty: ExprId,
     one: LevelId,

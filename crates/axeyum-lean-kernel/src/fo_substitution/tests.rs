@@ -40,7 +40,7 @@ impl Fixture {
 fn every_substitution_lemma_is_declared_and_axiom_free() {
     let f = Fixture::new();
     let p = f.p;
-    let mut kernel = f.kernel;
+    let kernel = f.kernel;
     for (name, label) in [
         (p.val_cons_congr, "FO.Val.cons_congr"),
         (p.eval_congr, "FO.Term.eval_congr"),

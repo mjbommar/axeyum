@@ -94,7 +94,20 @@
 //! is `Prop`-valued rather than valued in a Heyting chain (contrast
 //! `ipc_soundness.rs`, whose eleven minors each needed a lattice lemma).
 
+// The mathematical variables in this group are the ones the literature uses --
+// `M`/`S` for a structure, `w`/`v` for a valuation, `s` for a substitution,
+// `t` for a term, `p`/`q` for formulas, `g` for a context, `n`/`k` for de
+// Bruijn indices. Renaming them to satisfy `many_single_char_names` /
+// `similar_names` would make every proof term harder to check against the
+// semantics it encodes, which is the only thing that matters here. Same
+// judgement, same wording, as `ipc_soundness.rs`.
+#![allow(clippy::many_single_char_names)]
 #![allow(clippy::similar_names)]
+// `LogicPrelude` is a 444-byte `Copy` struct of `NameId`s and is threaded by
+// value through every combinator, exactly as `NatOps::prelude()` hands it out
+// everywhere else in this crate. Taking it by reference here would be a
+// different convention from the rest of the kernel for no measured gain.
+#![allow(clippy::large_types_passed_by_value)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::too_many_lines)]
 
@@ -1796,10 +1809,7 @@ fn declare_sat_subst(
                 let z = kernel.fvar(z_id);
                 let extended = vcons(kernel, &e, z, w);
                 let inner_iff = apply_all(kernel, ip, &[lifted, extended]);
-                let mid_val = {
-                    let composed_lift = compose(kernel, &e, lifted, extended, fv + 2);
-                    composed_lift
-                };
+                let mid_val = compose(kernel, &e, lifted, extended, fv + 2);
                 let end_val = vcons(kernel, &e, z, composed);
                 let key = key_at(kernel, z, fv + 3);
                 let outer_iff = congr_at(kernel, mid_val, end_val, key);

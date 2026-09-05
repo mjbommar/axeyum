@@ -10,11 +10,6 @@
 use super::*;
 use crate::Kernel;
 
-/// A test-local mirror of the parent module's fvar-id discipline: the ids here
-/// are only ever live inside one expression build, so a single high block is
-/// enough.
-const TEST_FV: u64 = 1_636_900_u64;
-
 struct Fixture {
     kernel: Kernel,
     p: FoSyntaxPrelude,
@@ -506,12 +501,4 @@ fn shift_substitution_is_not_the_identity() {
     let body = f.rel2(0, v0, v1);
     let unchanged = f.all(body);
     f.assert_ne_expr(got, unchanged, "Subst.shift must change the formula");
-}
-
-/// The fvar-id block this test module reserves is distinct from the parent
-/// module's, which is what keeps a test-built expression from colliding with
-/// a definition-built one inside the same kernel.
-#[test]
-fn test_fvar_block_is_disjoint_from_the_definition_block() {
-    assert!(TEST_FV > 1_636_500_u64);
 }

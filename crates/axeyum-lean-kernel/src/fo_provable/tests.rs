@@ -202,7 +202,7 @@ fn ctx_sat_computes_at_nil_and_at_a_cons() {
 /// undeclared name is also empty.
 #[test]
 fn the_example_derivations_are_axiom_free() {
-    let mut f = Fixture::new();
+    let f = Fixture::new();
     for (name, label) in [
         (f.p.provable_imp_self, "FO.provable_imp_self"),
         (f.p.provable_all_imp_self, "FO.provable_all_imp_self"),
