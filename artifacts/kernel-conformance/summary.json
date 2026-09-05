@@ -1,0 +1,116 @@
+{
+  "generator": "scripts/check-kernel-conformance.py --refresh",
+  "measured_at": "2026-09-05T11:26:41Z",
+  "corpus": {
+    "repository": "https://github.com/leanprover/lean-kernel-arena",
+    "revision": "abc55357aee17c59dfdbf39c8a2e19739e23dd10",
+    "tarball_url": "https://arena.lean-lang.org/lean-arena-tests.tar.gz",
+    "tarball_sha256": "7e396d5de90e8871c9b1d7e2931f3efaba303056cdfd93e65f9ae1de628bf326",
+    "cases": 186,
+    "digest": "85fcd0166965743839f26f1e9ff179112d0ea6471a76b4c283c561149e7cd6f1"
+  },
+  "case_timeout_seconds": 30,
+  "floors": {
+    "accept": 108,
+    "reject": 69
+  },
+  "scores": {
+    "full": {
+      "accept": {
+        "total": 113,
+        "correct": 108,
+        "wrong": 4,
+        "declined": 0,
+        "nonverdict": 1
+      },
+      "reject": {
+        "total": 73,
+        "correct": 69,
+        "wrong": 2,
+        "declined": 2,
+        "nonverdict": 0
+      }
+    },
+    "parse-only": {
+      "accept": {
+        "total": 113,
+        "correct": 110,
+        "wrong": 2,
+        "declined": 0,
+        "nonverdict": 1
+      },
+      "reject": {
+        "total": 73,
+        "correct": 21,
+        "wrong": 50,
+        "declined": 2,
+        "nonverdict": 0
+      }
+    }
+  },
+  "divergences": [
+    {
+      "case": "core/level-index-out-of-order",
+      "expected": "accept",
+      "verdict": "reject",
+      "class": "malformed",
+      "detail": "line_1:_meta.exporter.name_is_not_lean4export"
+    },
+    {
+      "case": "core/sparse-name-index",
+      "expected": "accept",
+      "verdict": "reject",
+      "class": "malformed",
+      "detail": "line_1:_meta.exporter.name_is_not_lean4export"
+    },
+    {
+      "case": "perf/app-lam",
+      "expected": "accept",
+      "verdict": "timeout",
+      "class": "timeout",
+      "detail": "no_verdict_in_30s"
+    },
+    {
+      "case": "tutorial/012_nonPropThm",
+      "expected": "reject",
+      "verdict": "accept",
+      "class": "ok",
+      "detail": "-"
+    },
+    {
+      "case": "tutorial/019_tut06_bad01",
+      "expected": "reject",
+      "verdict": "accept",
+      "class": "ok",
+      "detail": "-"
+    },
+    {
+      "case": "tutorial/107_unitEta1",
+      "expected": "accept",
+      "verdict": "reject",
+      "class": "kernel:DeclarationValueMismatch",
+      "detail": "line_116:_kernel_rejected_unitEta1:_DeclarationValueMismatch_{_declared:_ExprId(266),_inferred:_ExprId(289)_}"
+    },
+    {
+      "case": "tutorial/108_unitEta2",
+      "expected": "accept",
+      "verdict": "reject",
+      "class": "kernel:DeclarationValueMismatch",
+      "detail": "line_109:_kernel_rejected_unitEta2:_DeclarationValueMismatch_{_declared:_ExprId(262),_inferred:_ExprId(278)_}"
+    },
+    {
+      "case": "tutorial/141_falseFromUnsafe",
+      "expected": "reject",
+      "verdict": "decline",
+      "class": "unsupported:declaration-unsafe-or-partial",
+      "detail": "line_20:_unsupported_lean4export_construct:_declaration-unsafe-or-partial"
+    },
+    {
+      "case": "tutorial/142_falseFromPartial",
+      "expected": "reject",
+      "verdict": "decline",
+      "class": "unsupported:declaration-unsafe-or-partial",
+      "detail": "line_20:_unsupported_lean4export_construct:_declaration-unsafe-or-partial"
+    }
+  ]
+}

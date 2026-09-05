@@ -1216,6 +1216,25 @@ step lean-gate ./scripts/check-lean-gate.sh
 step kernel-differential-gate-controls bash scripts/tests/test-kernel-differential-gate.sh
 step kernel-differential python3 scripts/check-kernel-differential.py
 step kernel-differential-mutants python3 scripts/check-kernel-differential-mutants.py
+# ADR-1663: the PUBLIC conformance corpus (leanprover/lean-kernel-arena, pinned
+# by scripts/fetch-references.sh), scored on BOTH halves separately -- 113
+# streams the official Lean kernel accepts and 73 it rejects. The accept half
+# alone is worthless and the corpus ships the proof: its `parse-only` control,
+# reproduced in-tree as `--mode parse-only`, scores 110/113 on accepts and
+# 21/73 on rejects. The gate's G6 requires that inversion, so a harness that
+# stopped measuring the trusted gate fails instead of reporting a perfect
+# score. The artifact layer runs everywhere; the live layer re-runs the
+# divergent cases plus a fixed sample when the corpus is present, and says so
+# by name when it does not.
+step kernel-conformance-controls python3 scripts/check-kernel-conformance.py --self-test
+step kernel-conformance python3 scripts/check-kernel-conformance.py
+# The divergence ledger: lean4lean's `divergences.md` shape, with the standing
+# rule that an unlisted divergence from Lean 4 is a bug. Derived from the
+# authorities (the differential's EXPLAINED_INCOMPLETENESS, the conformance
+# results' mismatches, the replay census's typed classes), never from a literal
+# list inside the checker.
+step lean-divergences-controls python3 scripts/check-lean-divergences.py --self-test
+step lean-divergences python3 scripts/check-lean-divergences.py
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2_test_authority
