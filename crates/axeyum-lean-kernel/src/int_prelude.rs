@@ -2805,3 +2805,6 @@ mod quadratic_reciprocity_tests;
 
 #[cfg(test)]
 mod mult_order_tests;
+
+#[cfg(test)]
+mod cas_pratt_bridge_tests;
