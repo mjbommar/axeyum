@@ -280,8 +280,12 @@ fn census(kernel: &mut Kernel) -> Census {
 /// the ledger CREDITS, not what someone remembered to type.
 fn ledger_kernel_theorems(facts_dir: &Path) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
-    let entries = std::fs::read_dir(facts_dir)
-        .unwrap_or_else(|e| panic!("the fact ledger must be readable at {facts_dir:?}: {e}"));
+    let entries = std::fs::read_dir(facts_dir).unwrap_or_else(|e| {
+        panic!(
+            "the fact ledger must be readable at {}: {e}",
+            facts_dir.display()
+        )
+    });
     for entry in entries {
         let path = entry.expect("a readable directory entry").path();
         if path.extension().and_then(|e| e.to_str()) != Some("json") {
@@ -326,7 +330,10 @@ fn ledger_kernel_theorems(facts_dir: &Path) -> BTreeSet<String> {
 /// would notice.
 fn elaborator_refusals(path: &Path) -> BTreeMap<String, String> {
     let text = std::fs::read_to_string(path).unwrap_or_else(|error| {
-        panic!("the elaborator-refusal measurement must be readable at {path:?}: {error}")
+        panic!(
+            "the elaborator-refusal measurement must be readable at {}: {error}",
+            path.display()
+        )
     });
     let value: serde_json::Value =
         serde_json::from_str(&text).expect("the elaborator-refusal measurement must be JSON");
