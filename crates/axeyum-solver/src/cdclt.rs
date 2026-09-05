@@ -1872,6 +1872,19 @@ mod termination_tests {
     #[test]
     fn vsids_bumps_conflict_vars_and_reorders_decisions_deterministically() {
         fn run() -> (Vec<f64>, Vec<Lit>) {
+            // A conflict over four purely Boolean variables: the analysis never
+            // reaches the theory, but the signature takes one (ADR-1701).
+            struct NoTheory;
+            impl TheorySolver for NoTheory {
+                fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
+                    Ok(())
+                }
+                fn push(&mut self) {}
+                fn pop(&mut self) {}
+                fn propagate(&self) -> Vec<TheoryProp> {
+                    Vec::new()
+                }
+            }
             let mut solver = CdclT::new(4, 0, Vec::new(), None);
             solver.decision_level = 1;
             solver.value[0] = Some(true);
@@ -1900,19 +1913,6 @@ mod termination_tests {
                     positive: false,
                 },
             ];
-            // A conflict over four purely Boolean variables: the analysis never
-            // reaches the theory, but the signature takes one (ADR-1701).
-            struct NoTheory;
-            impl TheorySolver for NoTheory {
-                fn assert(&mut self, _atom: usize, _value: bool) -> Result<(), Vec<TheoryLit>> {
-                    Ok(())
-                }
-                fn push(&mut self) {}
-                fn pop(&mut self) {}
-                fn propagate(&self) -> Vec<TheoryProp> {
-                    Vec::new()
-                }
-            }
             let (learned, _, _) = solver
                 .analyze_conflict(&mut NoTheory, &conflict, false)
                 .expect("a purely Boolean analysis never defers an explanation");
