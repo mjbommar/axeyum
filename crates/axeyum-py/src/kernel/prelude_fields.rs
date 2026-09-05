@@ -149,7 +149,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1295 names,
+/// The `NatPrelude` field table (1310 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1633,6 +1633,24 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             ),
             ("strong_induction", p.strong_induction),
             ("strong_induction_eq", p.strong_induction_eq),
+            ("dvd_b", p.dvd_b),
+            ("dvd_of_dvd_b", p.dvd_of_dvd_b),
+            ("dvd_b_of_dvd", p.dvd_b_of_dvd),
+            ("sum_divisors_by", p.sum_divisors_by),
+            ("num_divisors", p.num_divisors),
+            (
+                "sum_divisors_by_eq_sum_divisors",
+                p.sum_divisors_by_eq_sum_divisors,
+            ),
+            ("div_div_self_of_dvd", p.div_div_self_of_dvd),
+            ("divisor_flip", p.divisor_flip),
+            ("divisor_flip_at_divisor", p.divisor_flip_at_divisor),
+            ("divisor_flip_at_non_divisor", p.divisor_flip_at_non_divisor),
+            ("divisor_flip_dvd_b", p.divisor_flip_dvd_b),
+            ("divisor_flip_involutive", p.divisor_flip_involutive),
+            ("divisor_flip_injective_on", p.divisor_flip_injective_on),
+            ("divisor_flip_maps_into", p.divisor_flip_maps_into),
+            ("sum_divisors_by_reindex", p.sum_divisors_by_reindex),
             ("structures.magma.ind", p.structures.magma.ind),
             ("structures.magma.mk", p.structures.magma.mk),
             ("structures.magma.rec", p.structures.magma.rec),

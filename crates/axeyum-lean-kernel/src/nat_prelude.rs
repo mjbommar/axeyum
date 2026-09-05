@@ -140,6 +140,7 @@ mod add_factorial_lt;
 mod add_pos;
 mod algebra;
 mod and_or_distrib;
+mod arith_functions;
 mod asc_factorial;
 mod asc_factorial_div;
 mod avg_pair;
@@ -336,6 +337,7 @@ use algebra::{
     declare_zero_or_succ,
 };
 use and_or_distrib::declare_and_or_distrib_all;
+use arith_functions::declare_arith_functions_all;
 use asc_factorial::declare_asc_factorial_all;
 use asc_factorial_div::declare_asc_factorial_eq_div;
 use avg_pair::declare_avg_pair_all;
@@ -6681,6 +6683,73 @@ pub struct NatPrelude {
     /// `WellFounded.fix_eq` at the same instance.
     pub strong_induction_eq: NameId,
 
+    // -- `arithmetic-functions` lane: `arith_functions.rs` (ADR-1619) --
+    /// `Nat.dvdB : Nat → Nat → Bool` — `dvdB d n := beq (mod n d) 0`, the
+    /// DECIDABLE divisibility test the `sumRangeIf`/`countRange`/
+    /// `prodRangeIf` family needs (a `Prop` cannot drive `Bool.rec`). It is
+    /// the same expression [`sum_divisors`](Self::sum_divisors) already
+    /// inlined, which is what makes
+    /// [`sum_divisors_by_eq_sum_divisors`](Self::sum_divisors_by_eq_sum_divisors)
+    /// an `Eq.refl`. `dvdB 0 n` is `beq n 0` (because `mod n 0 = n`), which
+    /// matches `Nat.dvd`'s own convention that `0 ∣ n` iff `n = 0`.
+    pub dvd_b: NameId,
+    /// `Nat.dvd_of_dvdB : ∀ a n, Eq Bool (dvdB a n) true → dvd a n`.
+    pub dvd_of_dvd_b: NameId,
+    /// `Nat.dvdB_of_dvd : ∀ a n, dvd a n → Eq Bool (dvdB a n) true`.
+    pub dvd_b_of_dvd: NameId,
+    /// `Nat.sumDivisorsBy : (Nat → Nat) → Nat → Nat` —
+    /// `sumDivisorsBy f n := sumRangeIf (fun k => dvdB k n) f (succ n)`, the
+    /// divisor aggregate taking its SUMMAND as an argument.
+    /// [`sum_divisors`](Self::sum_divisors) (`perfect.rs`) is the `f = id`
+    /// case with the summand hard-wired; every multiplicative arithmetic
+    /// function is this same fold at a different `f`.
+    pub sum_divisors_by: NameId,
+    /// `Nat.numDivisors : Nat → Nat` — `sumDivisorsBy (fun _ => 1)`, the
+    /// divisor-counting function `d(n)` / `τ(n)`.
+    pub num_divisors: NameId,
+    /// `Nat.sumDivisorsBy_eq_sumDivisors : ∀ n,
+    /// Eq (sumDivisorsBy (fun k => k) n) (sumDivisors n)` — `Eq.refl`.
+    pub sum_divisors_by_eq_sum_divisors: NameId,
+    /// `Nat.div_div_self_of_dvd : ∀ n k, Lt zero n → dvd k n →
+    /// Eq (div n (div n k)) k` — the cofactor of a cofactor. Positivity is
+    /// load-bearing: at `n = 0` every `k` divides and `0 / (0 / k) = 0`.
+    pub div_div_self_of_dvd: NameId,
+    /// `Nat.divisorFlip : Nat → Nat → Nat` —
+    /// `divisorFlip n k := if dvdB k n then n / k else k`. The bare map
+    /// `k ↦ n / k` is NOT injective on `[0, n]` (at `n = 6` it sends `4`,
+    /// `5` and `6` all to `1`), so the permutation
+    /// [`sum_range_permute`](Self::sum_range_permute) can consume is the one
+    /// that moves only the divisors and fixes everything else.
+    pub divisor_flip: NameId,
+    /// `Nat.divisorFlip_at_divisor : ∀ n k, Eq Bool (dvdB k n) true →
+    /// Eq (divisorFlip n k) (div n k)`.
+    pub divisor_flip_at_divisor: NameId,
+    /// `Nat.divisorFlip_at_nonDivisor : ∀ n k, Eq Bool (dvdB k n) false →
+    /// Eq (divisorFlip n k) k`.
+    pub divisor_flip_at_non_divisor: NameId,
+    /// `Nat.divisorFlip_dvdB : ∀ n k, Lt zero n → Eq Bool (dvdB k n) true →
+    /// Eq Bool (dvdB (div n k) n) true` — the cofactor of a divisor is again
+    /// a divisor.
+    pub divisor_flip_dvd_b: NameId,
+    /// `Nat.divisorFlip_involutive : ∀ n, Lt zero n → ∀ k,
+    /// Eq (divisorFlip n (divisorFlip n k)) k`. The `∀ k` is INSIDE the
+    /// positivity hypothesis so the conclusion is the single term
+    /// `∀ k, t (t k) = k` the involution-to-injectivity argument consumes.
+    pub divisor_flip_involutive: NameId,
+    /// `Nat.divisorFlip_injectiveOn : ∀ n m, Lt zero n →
+    /// injectiveOn (fun k => divisorFlip n k) m` — at an ARBITRARY range
+    /// `m`, because an involution is injective everywhere.
+    pub divisor_flip_injective_on: NameId,
+    /// `Nat.divisorFlip_mapsInto : ∀ n, Lt zero n →
+    /// mapsInto (fun k => divisorFlip n k) (succ n)`.
+    pub divisor_flip_maps_into: NameId,
+    /// `Nat.sumDivisorsBy_reindex : ∀ (f : Nat → Nat) (n : Nat), Lt zero n →
+    /// Eq (sumDivisorsBy f n) (sumDivisorsBy (fun k => f (div n k)) n)` —
+    /// **the `d ↦ n/d` reindexing of a predicate-restricted sum**, the
+    /// primitive ADR-1598 named as missing when the counting route to
+    /// `∑_{d∣n} φ(d) = n` stalled.
+    pub sum_divisors_by_reindex: NameId,
+
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
     /// a field. See [`structures`] for the field lists and every selector
@@ -7829,6 +7898,21 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             finset_forall_subset_of_search: kernel.name_str(finset, "forallSubset_of_search"),
             strong_induction: kernel.name_str(nat, "strongInduction"),
             strong_induction_eq: kernel.name_str(nat, "strongInduction_eq"),
+            dvd_b: kernel.name_str(nat, "dvdB"),
+            dvd_of_dvd_b: kernel.name_str(nat, "dvd_of_dvdB"),
+            dvd_b_of_dvd: kernel.name_str(nat, "dvdB_of_dvd"),
+            sum_divisors_by: kernel.name_str(nat, "sumDivisorsBy"),
+            num_divisors: kernel.name_str(nat, "numDivisors"),
+            sum_divisors_by_eq_sum_divisors: kernel.name_str(nat, "sumDivisorsBy_eq_sumDivisors"),
+            div_div_self_of_dvd: kernel.name_str(nat, "div_div_self_of_dvd"),
+            divisor_flip: kernel.name_str(nat, "divisorFlip"),
+            divisor_flip_at_divisor: kernel.name_str(nat, "divisorFlip_at_divisor"),
+            divisor_flip_at_non_divisor: kernel.name_str(nat, "divisorFlip_at_nonDivisor"),
+            divisor_flip_dvd_b: kernel.name_str(nat, "divisorFlip_dvdB"),
+            divisor_flip_involutive: kernel.name_str(nat, "divisorFlip_involutive"),
+            divisor_flip_injective_on: kernel.name_str(nat, "divisorFlip_injectiveOn"),
+            divisor_flip_maps_into: kernel.name_str(nat, "divisorFlip_mapsInto"),
+            sum_divisors_by_reindex: kernel.name_str(nat, "sumDivisorsBy_reindex"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -9259,6 +9343,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.pow`. Goes after `declare_finset_all` and `declare_graph_all`
         // (it reads `Nat.Graph.notB`).
         declare_subset_search_all(&mut d, &p)?;
+        // The divisor aggregate and its `d ↦ n/d` reindexing
+        // (`arith_functions.rs`, ADR-1619). Needs `Nat.sumRangeIf`
+        // (`subset_sum.rs`), `Nat.sumRange_permute`/`Nat.sumRange_congr`,
+        // `Nat.sumDivisors` (`perfect.rs`), `Nat.injectiveOn`/`Nat.mapsInto`
+        // (`finite.rs`), and the divisibility bridges
+        // `Nat.dvd_iff_mod_eq_zero`/`Nat.div_mul_cancel_of_dvd`/
+        // `Nat.one_le_of_dvd_pos`/`Nat.le_of_dvd`. Goes after
+        // `declare_subset_sum_all`.
+        declare_arith_functions_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
@@ -9317,6 +9410,9 @@ mod gauss_fold_sum_tests;
 
 #[cfg(test)]
 mod subset_sum_tests;
+
+#[cfg(test)]
+mod arith_functions_tests;
 
 #[cfg(test)]
 mod gauss_residue_reconcile_tests;
