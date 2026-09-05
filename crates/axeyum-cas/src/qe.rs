@@ -1,45 +1,56 @@
-//! Real quantifier elimination for the **univariate** fragment, with
-//! sample-point certificates.
+//! Real quantifier elimination with sample-point certificates: the univariate
+//! fragment, disjunctive normal form under `∃`, and one bivariate projection
+//! step.
 //!
 //! # What is decided
 //!
-//! One quantifier, one variable, polynomial atoms with rational coefficients:
+//! Polynomial atoms `p ▷ 0` with `▷ ∈ {=, ≠, <, ≤, >, ≥}` and exact rational
+//! coefficients ([`num_rational::BigRational`] — **no** `i128`, so no
+//! coefficient is too large).
 //!
-//! - [`ExistsFormula`] — `∃x. ⋀ᵢ pᵢ(x) ▷ᵢ 0` with `▷ ∈ {=, ≠, <, ≤, >, ≥}`,
-//!   decided by [`decide_exists`];
+//! - [`ExistsFormula`] — `∃x. ⋀ᵢ pᵢ(x) ▷ᵢ 0`, decided by [`decide_exists`];
 //! - [`ForallFormula`] — `∀x. ⋁ᵢ pᵢ(x) ▷ᵢ 0`, decided by [`decide_forall`]
 //!   through the De Morgan dual (the negation table is on
 //!   [`Relation::negate`]);
-//! - [`eliminate`] is the thin, self-checking front door: it decides and then
-//!   *verifies its own certificate* before returning a `bool`.
+//! - [`dnf::Dnf`] — `∃x. ⋁ᵢ ⋀ⱼ pᵢⱼ(x) ▷ᵢⱼ 0`, decided by
+//!   [`dnf::decide_exists_dnf`]. A disjunction is a **first-class object** here,
+//!   not a caller's loop: its `true` certificate names the disjunct it
+//!   satisfies, and its `false` certificate names, in every cell, a failing
+//!   conjunct **for every disjunct**;
+//! - [`bivariate::ExistsYFormula`] — `∃y. ⋀ᵢ pᵢ(x, y) ▷ᵢ 0` at total degree at
+//!   most [`bivariate::MAX_TOTAL_DEGREE`], eliminated by
+//!   [`bivariate::eliminate_y`] into a quantifier-free description of the
+//!   `x`-line as a list of cells with a verdict each;
+//! - [`eliminate`] / [`eliminate_forall`] are the thin, self-checking front
+//!   doors: they decide and then *verify their own certificate* before
+//!   returning a `bool`.
 //!
 //! The method is the sign-invariant cell decomposition of ℝ. The real roots of
 //! every `pᵢ` cut the line into finitely many cells — the roots themselves
 //! (point cells) and the open intervals between and beyond them. Inside one
-//! cell no `pᵢ` changes sign, so the whole conjunction has a constant truth
-//! value there, and testing one sample per cell decides the sentence. A `true`
-//! answer is witnessed by the satisfying sample ([`SampleCertificate`]); a
-//! `false` answer is witnessed by the whole decomposition together with, for
-//! every cell, a conjunct that fails in it ([`RefutationCertificate`]).
+//! cell no `pᵢ` changes sign, so the whole formula has a constant truth value
+//! there, and testing one sample per cell decides the sentence. A `true` answer
+//! is witnessed by the satisfying sample ([`SampleCertificate`]); a `false`
+//! answer is witnessed by the whole decomposition together with, for every
+//! cell, a conjunct that fails in it ([`RefutationCertificate`]).
 //!
 //! # What is **not** decided
 //!
-//! - **Multivariate** formulas — nothing here builds a projection operator.
-//! - **CAD.** Low-dimensional cylindrical algebraic decomposition is the next
-//!   slice of this item and is deliberately absent; a univariate cell
-//!   decomposition is CAD in dimension one and nothing more.
-//! - **Quantifier alternation.** `∃x∀y` has no representation here; the
-//!   formula types carry a single implicit variable.
+//! - **Full CAD.** [`bivariate`] is one projection step in two variables at
+//!   bounded degree. There is no lifting to three or more variables, no cell
+//!   adjacency structure, and no cell index.
+//! - **Irrational cell boundaries in the bivariate step.** A projection root
+//!   that is not rational forces a decline
+//!   ([`bivariate::Fault::IrrationalCellBoundary`]): substituting a real
+//!   algebraic `x` into the atoms would need arithmetic in `ℚ(α)`, which this
+//!   slice does not have. The *univariate* module has no such restriction —
+//!   there an algebraic sample is a first-class point.
+//! - **Quantifier alternation.** `∃x∀y` has no representation here.
 //! - **Transcendental atoms** (`sin`, `exp`, …). Atoms are polynomials.
-//! - **Disjunction under `∃`** (and the dual, conjunction under `∀`). A
-//!   disjunctive existential is decided by running [`decide_exists`] on each
-//!   disjunct, but that loop is the caller's, because a single certificate for
-//!   the disjunction would have to name which disjunct it certifies and this
-//!   slice does not define that object.
 //!
 //! # Certificates
 //!
-//! Both certificates are **data, not a trace**: each carries the formula it
+//! Every certificate is **data, not a trace**: each carries the formula it
 //! speaks about, and its `verify` re-derives every claim from the polynomials
 //! alone — it re-isolates roots, recomputes every sign, and re-checks every
 //! relation. Nothing produced by the search is trusted. A `verify` failure is
@@ -48,62 +59,77 @@
 //!
 //! # Exactness
 //!
-//! No floating point. Signs at rational samples are computed by Horner
-//! evaluation over `BigRational`, so a high-degree polynomial at a
-//! fine-denominator sample cannot overflow. Signs at algebraic samples go
-//! through [`axeyum_ir::RealAlgebraic::sign_at_big`], which is bignum
-//! throughout. The only `i128` arithmetic left is inside the **reused** root
-//! isolation ([`crate::sturm`], [`crate::algebraic`]), which reports overflow
-//! as `None`; that becomes [`Decision::Unknown`], never a verdict.
+//! No floating point, and **no `i128`** on the deciding path. Root isolation,
+//! Sturm counting, the sign of a polynomial at a rational or at a real
+//! algebraic number, and the comparison of an algebraic number with a rational
+//! are all `BigRational`, in the private `qe::big` engine. The first slice of this module reused the
+//! `i128` machinery in [`crate::sturm`] and [`crate::algebraic`] and therefore
+//! declined `∃x. x² − 10³⁰ = 0` — the Sturm chain evaluates near a Cauchy bound
+//! of `10³⁰ + 1` and squares it. That decline is gone; `10⁶⁰` decides too. The
+//! only remaining declines are named step budgets in the private `qe::big` engine, never an
+//! arithmetic wall.
+//!
+//! The `i128` route is retained under `cfg(test)` and run against the whole
+//! first-slice corpus, so "the new engine agrees with the old one wherever the
+//! old one had an answer" is a test, not a claim.
 //!
 //! # What this module reuses
 //!
-//! - [`crate::algebraic::real_roots`] — irreducible factorization over ℚ plus
-//!   Sturm isolation, giving every real root of every atom as an
-//!   [`AlgebraicReal`] (minimal polynomial + isolating bracket).
-//! - [`crate::sturm::count_real_roots_in`] — the checker's independent
-//!   re-derivation of "this bracket isolates exactly one root" and of "the
-//!   recorded root list is complete".
-//! - [`crate::algebraic::AlgebraicReal::refine`] — bracket separation, to find
-//!   a rational strictly between two consecutive roots.
-//! - [`crate::real_algebraic::from_algebraic_real`] and
-//!   [`crate::real_algebraic::algebraic_cmp`] — the exact ordering of two
-//!   algebraic numbers, used only as the fallback when the cheap bracket tests
-//!   do not settle it.
-//! - [`axeyum_ir::RealAlgebraic::sign_at_big`] and
-//!   [`axeyum_ir::RealAlgebraic::compare_rational`] — the exact sign of a
-//!   polynomial at an algebraic number, and the exact position of an algebraic
-//!   number relative to a rational.
+//! - [`axeyum_ir::poly::sylvester_matrix`] and
+//!   [`axeyum_ir::poly::sylvester_determinant`] — the bivariate Sylvester
+//!   resultant, which is exactly the engine [`crate::resultant`] and
+//!   [`crate::discriminant`] call for the univariate case. `crate::resultant`
+//!   itself cannot be used for projection: it eliminates a variable from two
+//!   *univariate* polynomials and returns a constant, whereas projection needs
+//!   `res_y(p, q)` as a polynomial in `x`.
+//! - [`crate::sturm`], [`crate::algebraic`] and [`crate::real_algebraic`] — only
+//!   in the `cfg(test)` differential route.
 //!
-//! Root isolation and sign evaluation at an algebraic point are **not**
-//! re-implemented here.
+//! # Cost profile — ADVISORY
 //!
-//! # Cost profile
+//! Measured 2026-09-05 on a prebuilt `--release` lib-test binary, 20 repeats
+//! per shape with process startup subtracted, at load average 8.5 on a shared
+//! box. **Single run, advisory only** — do not ratchet on these. Each row is
+//! one named test, and the test does more than one decision, so read the row as
+//! "the whole shape", not "one call".
 //!
-//! Not measured. The shape is: one irreducible factorization plus one Sturm
-//! isolation per atom, then `2r + 1` cells for `r` distinct roots, each cell
-//! costing one sign evaluation per atom. The sign at an *algebraic* sample
-//! dominates — it is a polynomial-division test plus bracket refinement in
-//! bignum — so the practical limit is the degree at which
-//! [`crate::factor_univariate_over_q`] and the `i128` Sturm chain decline, not
-//! anything in this module.
+//! | shape (the test that is timed) | cost |
+//! |---|---|
+//! | univariate, cubic, 3 atoms, decide + verify + front door | 0.6 ms |
+//! | DNF, 2 disjuncts, 3 atoms, refutation + verify | 0.5 ms |
+//! | bivariate, total degree 2 (`x² + y² < 1`), 5 cells + verify | 0.7 ms |
+//! | bivariate, total degree 4 (`x²y² − 1 < 0 ∧ y > 0`), 3 cells + verify | 0.7 ms |
+//! | univariate, `x² − 10³⁰` (+ the `i128` control) | 14 ms |
+//! | univariate, `x² − 10⁶⁰`, two verdicts | 85 ms |
+//!
+//! Two things the table says. First, **degree is cheap and magnitude is not**:
+//! the bivariate step at degree 4 costs the same as the univariate cubic, while
+//! a `10⁶⁰` coefficient costs a hundred times more — isolation bisects from a
+//! Cauchy bound of `10⁶⁰`, so it spends ~200 halvings on 60-digit rationals
+//! before the rational root is recognised. Second, the bivariate cost is
+//! dominated not by the projection but by the `2r + 1` univariate decisions in
+//! the fibres, so it scales with the number of cut points, not with the
+//! Sylvester determinants.
 
 use core::cmp::Ordering;
 
-use axeyum_ir::{Rational, RealAlgebraic, Sign};
+use axeyum_ir::Rational;
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::{One, Signed, Zero};
+use num_traits::{One, Zero};
 
-use crate::algebraic::{self, AlgebraicReal};
-use crate::real_algebraic;
-use crate::sturm;
+#[path = "qe_big.rs"]
+pub(crate) mod big;
 
-/// How many alternating bisections we will spend separating two consecutive
-/// roots before declining. Each step halves the target width, and the brackets
-/// are `i128` rationals, so the denominators cannot survive many more than this
-/// anyway — [`AlgebraicReal::refine`] declines first.
-const MAX_SEPARATION_STEPS: usize = 60;
+#[path = "qe_bivariate.rs"]
+pub mod bivariate;
+
+#[path = "qe_dnf.rs"]
+pub mod dnf;
+
+/// How many bisections [`open_cell_samples`] will spend finding a rational
+/// strictly between a rational root and the next root along.
+const MAX_SEPARATION_STEPS: usize = 4096;
 
 // ============================================================================
 // The fragment: atoms and formulas.
@@ -156,7 +182,7 @@ impl Relation {
 
     /// Whether `p(x) ▷ 0` holds when `p(x)` has sign `sign` (`-1`, `0`, or
     /// `1`). This is the *only* place a relation is interpreted; both the
-    /// producer and both checkers call it, which is what makes "the relation
+    /// producer and every checker call it, which is what makes "the relation
     /// holds at the recomputed sign" a single auditable guard.
     #[must_use]
     pub fn holds(self, sign: i8) -> bool {
@@ -171,11 +197,29 @@ impl Relation {
     }
 }
 
+/// An LSB-first rational polynomial built from integer coefficients — the
+/// ergonomic constructor for atoms.
+///
+/// ```
+/// use axeyum_cas::qe::{Atom, ExistsFormula, Relation, eliminate, integer_poly};
+///
+/// // ∃x. x² − 2 = 0 — true, at an irrational point.
+/// let formula = ExistsFormula::new(vec![Atom::new(integer_poly(&[-2, 0, 1]), Relation::Eq)]);
+/// assert_eq!(eliminate(&formula), Some(true));
+/// ```
+#[must_use]
+pub fn integer_poly(coefficients: &[i64]) -> Vec<BigRational> {
+    coefficients
+        .iter()
+        .map(|c| BigRational::from_integer(BigInt::from(*c)))
+        .collect()
+}
+
 /// One atom `poly(x) ▷ 0`, with `poly` LSB-first over ℚ.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Atom {
     /// The polynomial, LSB-first (`poly[k]` is the coefficient of `xᵏ`).
-    pub poly: Vec<Rational>,
+    pub poly: Vec<BigRational>,
     /// The comparison against `0`.
     pub relation: Relation,
 }
@@ -183,7 +227,7 @@ pub struct Atom {
 impl Atom {
     /// Build an atom from an LSB-first coefficient vector and a relation.
     #[must_use]
-    pub fn new(poly: Vec<Rational>, relation: Relation) -> Atom {
+    pub fn new(poly: Vec<BigRational>, relation: Relation) -> Atom {
         Atom { poly, relation }
     }
 
@@ -198,7 +242,7 @@ impl Atom {
     }
 }
 
-/// `∃x. ⋀ᵢ atoms[i]` — the fragment this module decides.
+/// `∃x. ⋀ᵢ atoms[i]` — the conjunctive fragment.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ExistsFormula {
     /// The conjuncts. An **empty** conjunction is `true` (witnessed at `x = 0`).
@@ -247,31 +291,34 @@ impl ForallFormula {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SamplePoint {
     /// An exact rational.
-    Rational(Rational),
+    Rational(BigRational),
     /// The unique real root of `defining_poly` in `(lower, upper]`.
     Algebraic {
         /// The defining polynomial, LSB-first over ℚ.
-        defining_poly: Vec<Rational>,
+        defining_poly: Vec<BigRational>,
         /// The bracket's lower endpoint (exclusive).
-        lower: Rational,
+        lower: BigRational,
         /// The bracket's upper endpoint (inclusive).
-        upper: Rational,
+        upper: BigRational,
     },
 }
 
 impl SamplePoint {
-    /// The sample for an [`AlgebraicReal`]: a degree-1 root is emitted as an
-    /// exact [`SamplePoint::Rational`], anything else keeps its minimal
-    /// polynomial and bracket.
-    fn from_algebraic(root: &AlgebraicReal) -> SamplePoint {
-        if let Some(value) = root.rational_value() {
-            return SamplePoint::Rational(value);
-        }
-        let (lower, upper) = root.isolating_interval();
-        SamplePoint::Algebraic {
-            defining_poly: root.minimal_polynomial().to_vec(),
-            lower,
-            upper,
+    /// The sample for one isolated root of `defining_poly`: a root recognised
+    /// as rational is emitted as an exact [`SamplePoint::Rational`], anything
+    /// else keeps the defining polynomial and its bracket.
+    pub(crate) fn from_isolated(
+        defining_poly: &[BigRational],
+        root: &big::IsolatedRoot,
+    ) -> SamplePoint {
+        if root.exact {
+            SamplePoint::Rational(root.hi.clone())
+        } else {
+            SamplePoint::Algebraic {
+                defining_poly: defining_poly.to_vec(),
+                lower: root.lo.clone(),
+                upper: root.hi.clone(),
+            }
         }
     }
 }
@@ -282,8 +329,8 @@ impl SamplePoint {
 
 /// Why a certificate was refused. Every variant is a **distinct guard**;
 /// [`Fault::Declined`] is the one variant that is not an accusation — it means
-/// the exact arithmetic gave up (a cap or an `i128` overflow in the reused
-/// isolation), so the certificate was neither accepted nor disproved.
+/// the exact arithmetic ran out of its named step budget, so the certificate
+/// was neither accepted nor disproved.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Fault {
     /// The certificate records a different number of signs than the formula
@@ -366,7 +413,27 @@ pub enum Fault {
         /// The recomputed sign, at which the relation holds.
         sign: i8,
     },
-    /// Exact arithmetic declined. Not a refusal of the claim.
+    /// A disjunctive certificate names a disjunct the formula does not have.
+    DisjunctIndexOutOfRange {
+        /// The index the certificate named.
+        recorded: usize,
+        /// How many disjuncts the formula actually has.
+        disjuncts: usize,
+    },
+    /// A cell of a disjunctive refutation does not refute **every** disjunct:
+    /// it records a different number of failing conjuncts than the formula has
+    /// disjuncts. This is the guard that stops a refutation from quietly
+    /// skipping one branch of the disjunction.
+    DisjunctFailureCountMismatch {
+        /// The offending cell.
+        cell: usize,
+        /// Failing conjuncts recorded in that cell.
+        recorded: usize,
+        /// Disjuncts the formula has.
+        disjuncts: usize,
+    },
+    /// Exact arithmetic ran out of a named step budget. Not a refusal of the
+    /// claim.
     Declined(&'static str),
 }
 
@@ -391,12 +458,12 @@ impl SampleCertificate {
     /// one; every relation holds at the recomputed sign. Nothing the producer
     /// computed is reused — the signs are recomputed from the polynomials, by
     /// `BigRational` Horner at a rational sample and by
-    /// [`axeyum_ir::RealAlgebraic::sign_at_big`] at an algebraic one.
+    /// the private `qe::big` engine (`sign_at_algebraic`) at an algebraic one.
     ///
     /// # Errors
     ///
     /// Returns the [`Fault`] naming the guard that rejected, or
-    /// [`Fault::Declined`] if the exact arithmetic gave up.
+    /// [`Fault::Declined`] if a step budget ran out.
     pub fn verify(&self) -> Result<(), Fault> {
         if self.signs.len() != self.atoms.len() {
             return Err(Fault::SignCountMismatch {
@@ -405,10 +472,21 @@ impl SampleCertificate {
             });
         }
         check_sample_is_isolated(&self.sample)?;
-        for (index, atom) in self.atoms.iter().enumerate() {
-            let recomputed = sign_at_sample(&atom.poly, &self.sample)
-                .ok_or(Fault::Declined("sign at the sample point declined"))?;
-            let recorded = self.signs[index];
+        check_atoms_hold(&self.atoms, &self.sample, Some(&self.signs))
+    }
+}
+
+/// Every atom holds at `sample`, with the recorded signs if any are supplied.
+pub(crate) fn check_atoms_hold(
+    atoms: &[Atom],
+    sample: &SamplePoint,
+    recorded_signs: Option<&[i8]>,
+) -> Result<(), Fault> {
+    for (index, atom) in atoms.iter().enumerate() {
+        let recomputed = sign_at_sample(&atom.poly, sample)
+            .ok_or(Fault::Declined("sign at the sample point declined"))?;
+        if let Some(signs) = recorded_signs {
+            let recorded = signs[index];
             if recorded != recomputed {
                 return Err(Fault::SignMismatch {
                     index,
@@ -416,15 +494,15 @@ impl SampleCertificate {
                     recomputed,
                 });
             }
-            if !atom.relation.holds(recomputed) {
-                return Err(Fault::RelationFails {
-                    index,
-                    sign: recomputed,
-                });
-            }
         }
-        Ok(())
+        if !atom.relation.holds(recomputed) {
+            return Err(Fault::RelationFails {
+                index,
+                sign: recomputed,
+            });
+        }
     }
+    Ok(())
 }
 
 /// The conjunct that fails in one cell, and its sign there.
@@ -459,7 +537,7 @@ pub struct RefutationCertificate {
     /// The distinct real roots of all the `pᵢ`, strictly ascending.
     pub roots: Vec<SamplePoint>,
     /// One rational sample per open cell; `roots.len() + 1` of them.
-    pub open_samples: Vec<Rational>,
+    pub open_samples: Vec<BigRational>,
     /// One failing conjunct per cell; `2·roots.len() + 1` of them.
     pub failures: Vec<CellFailure>,
 }
@@ -467,15 +545,8 @@ pub struct RefutationCertificate {
 impl RefutationCertificate {
     /// The sample point of cell `index`, in the interleaved order documented on
     /// the struct.
-    fn cell_sample(&self, index: usize) -> Option<SamplePoint> {
-        if index.is_multiple_of(2) {
-            self.open_samples
-                .get(index / 2)
-                .copied()
-                .map(SamplePoint::Rational)
-        } else {
-            self.roots.get(index / 2).cloned()
-        }
+    pub(crate) fn cell_sample(&self, index: usize) -> Option<SamplePoint> {
+        cell_sample_of(&self.roots, &self.open_samples, index)
     }
 
     /// Re-derive the refutation from `atoms` alone.
@@ -483,10 +554,11 @@ impl RefutationCertificate {
     /// Guards, in order: the cell and open-sample counts match the root list;
     /// every recorded algebraic root's bracket really isolates one root; the
     /// samples and roots strictly interleave, so the cells cover ℝ in order;
-    /// the root list is **complete** — for every conjunct, an independent Sturm
-    /// count of its distinct real roots over a Cauchy bound equals the number
-    /// of recorded roots at which it vanishes; and every cell's nominated
-    /// conjunct has the recorded sign there and genuinely fails.
+    /// the root list is **complete** — for every conjunct, an independent
+    /// `BigRational` Sturm count of its distinct real roots over a Cauchy bound
+    /// equals the number of recorded roots at which it vanishes; and every
+    /// cell's nominated conjunct has the recorded sign there and genuinely
+    /// fails.
     ///
     /// Completeness is the guard that makes the decomposition sign-invariant:
     /// if no `pᵢ` has a root strictly inside an open cell, `pᵢ`'s sign is
@@ -495,7 +567,7 @@ impl RefutationCertificate {
     /// # Errors
     ///
     /// Returns the [`Fault`] naming the guard that rejected, or
-    /// [`Fault::Declined`] if the exact arithmetic gave up.
+    /// [`Fault::Declined`] if a step budget ran out.
     pub fn verify(&self) -> Result<(), Fault> {
         let expected_cells = 2 * self.roots.len() + 1;
         if self.failures.len() != expected_cells {
@@ -504,111 +576,148 @@ impl RefutationCertificate {
                 expected: expected_cells,
             });
         }
-        let expected_open = self.roots.len() + 1;
-        if self.open_samples.len() != expected_open {
-            return Err(Fault::OpenSampleCountMismatch {
-                recorded: self.open_samples.len(),
-                expected: expected_open,
-            });
-        }
-        for root in &self.roots {
-            check_sample_is_isolated(root)?;
-        }
-        self.check_cell_order()?;
-        self.check_root_list_complete()?;
+        check_decomposition(&self.roots, &self.open_samples, &self.atoms)?;
         self.check_every_cell_fails()
-    }
-
-    /// The cells cover ℝ in order: `open_samples[k] < αₖ < open_samples[k+1]`.
-    /// This forces the open samples to be strictly increasing *and* the roots
-    /// to be strictly separated by them, so no two recorded roots collide and
-    /// no cell is empty.
-    fn check_cell_order(&self) -> Result<(), Fault> {
-        for (index, root) in self.roots.iter().enumerate() {
-            let below = self.open_samples[index];
-            let above = self.open_samples[index + 1];
-            if compare_sample_to_rational(root, below)
-                .ok_or(Fault::Declined("root/sample comparison declined"))?
-                != Ordering::Greater
-            {
-                return Err(Fault::CellOrderViolation { index });
-            }
-            if compare_sample_to_rational(root, above)
-                .ok_or(Fault::Declined("root/sample comparison declined"))?
-                != Ordering::Less
-            {
-                return Err(Fault::CellOrderViolation { index: index + 1 });
-            }
-        }
-        Ok(())
-    }
-
-    /// Every real root of every `pᵢ` appears in `roots`, re-checked by Sturm
-    /// counts over a Cauchy bound rather than by trusting the producer's search.
-    fn check_root_list_complete(&self) -> Result<(), Fault> {
-        for (atom_index, atom) in self.atoms.iter().enumerate() {
-            let Some(bound) = cauchy_root_bound(&atom.poly) else {
-                continue; // the zero polynomial or a constant: no roots to miss
-            };
-            let sturm_count = sturm::count_real_roots_in(
-                &atom.poly,
-                bound
-                    .checked_neg()
-                    .ok_or(Fault::Declined("Cauchy bound negation overflowed"))?,
-                bound,
-            )
-            .ok_or(Fault::Declined("Sturm root count declined"))?;
-            let mut recorded = 0usize;
-            for root in &self.roots {
-                let sign = sign_at_sample(&atom.poly, root)
-                    .ok_or(Fault::Declined("sign at a recorded root declined"))?;
-                if sign == 0 {
-                    recorded += 1;
-                }
-            }
-            if sturm_count != recorded {
-                return Err(Fault::IncompleteRootList {
-                    atom: atom_index,
-                    sturm_count,
-                    recorded,
-                });
-            }
-        }
-        Ok(())
     }
 
     /// Every cell names a conjunct that really fails there, at the sign the
     /// certificate records.
     fn check_every_cell_fails(&self) -> Result<(), Fault> {
         for (cell, failure) in self.failures.iter().enumerate() {
-            let Some(atom) = self.atoms.get(failure.conjunct) else {
-                return Err(Fault::ConjunctIndexOutOfRange {
-                    cell,
-                    index: failure.conjunct,
-                });
-            };
             let sample = self
                 .cell_sample(cell)
                 .ok_or(Fault::Declined("cell index has no sample"))?;
-            let recomputed = sign_at_sample(&atom.poly, &sample)
-                .ok_or(Fault::Declined("sign at a cell sample declined"))?;
-            if recomputed != failure.sign {
-                return Err(Fault::SignMismatch {
-                    index: failure.conjunct,
-                    recorded: failure.sign,
-                    recomputed,
-                });
-            }
-            if atom.relation.holds(recomputed) {
-                return Err(Fault::ConjunctDoesNotFail {
-                    cell,
-                    index: failure.conjunct,
-                    sign: recomputed,
-                });
-            }
+            check_cell_failure(&self.atoms, cell, &sample, failure)?;
         }
         Ok(())
     }
+}
+
+/// The interleaved sample of cell `index`: an open sample at even indices, a
+/// root at odd ones.
+pub(crate) fn cell_sample_of(
+    roots: &[SamplePoint],
+    open_samples: &[BigRational],
+    index: usize,
+) -> Option<SamplePoint> {
+    if index.is_multiple_of(2) {
+        open_samples
+            .get(index / 2)
+            .cloned()
+            .map(SamplePoint::Rational)
+    } else {
+        roots.get(index / 2).cloned()
+    }
+}
+
+/// The shared decomposition guards: bracket isolation, cell order, and the
+/// completeness of the root list against every polynomial in `atoms`.
+///
+/// Both the conjunctive refutation and the disjunctive one call this, which is
+/// what keeps "the cells really are sign-invariant" a single auditable check
+/// rather than two drifting copies.
+pub(crate) fn check_decomposition(
+    roots: &[SamplePoint],
+    open_samples: &[BigRational],
+    atoms: &[Atom],
+) -> Result<(), Fault> {
+    let expected_open = roots.len() + 1;
+    if open_samples.len() != expected_open {
+        return Err(Fault::OpenSampleCountMismatch {
+            recorded: open_samples.len(),
+            expected: expected_open,
+        });
+    }
+    for root in roots {
+        check_sample_is_isolated(root)?;
+    }
+    check_cell_order(roots, open_samples)?;
+    check_root_list_complete(roots, atoms)
+}
+
+/// The cells cover ℝ in order: `open_samples[k] < αₖ < open_samples[k+1]`.
+/// This forces the open samples to be strictly increasing *and* the roots to be
+/// strictly separated by them, so no two recorded roots collide and no cell is
+/// empty.
+fn check_cell_order(roots: &[SamplePoint], open_samples: &[BigRational]) -> Result<(), Fault> {
+    for (index, root) in roots.iter().enumerate() {
+        let below = &open_samples[index];
+        let above = &open_samples[index + 1];
+        if compare_sample_to_rational(root, below)
+            .ok_or(Fault::Declined("root/sample comparison declined"))?
+            != Ordering::Greater
+        {
+            return Err(Fault::CellOrderViolation { index });
+        }
+        if compare_sample_to_rational(root, above)
+            .ok_or(Fault::Declined("root/sample comparison declined"))?
+            != Ordering::Less
+        {
+            return Err(Fault::CellOrderViolation { index: index + 1 });
+        }
+    }
+    Ok(())
+}
+
+/// Every real root of every `pᵢ` appears in `roots`, re-checked by
+/// `BigRational` Sturm counts over a Cauchy bound rather than by trusting the
+/// producer's search.
+fn check_root_list_complete(roots: &[SamplePoint], atoms: &[Atom]) -> Result<(), Fault> {
+    for (atom_index, atom) in atoms.iter().enumerate() {
+        // The zero polynomial vanishes everywhere and a nonzero constant
+        // nowhere: neither can hide a missing cut point.
+        let Some(sturm_count) = big::count_real_roots(&atom.poly) else {
+            continue;
+        };
+        let mut recorded = 0usize;
+        for root in roots {
+            let sign = sign_at_sample(&atom.poly, root)
+                .ok_or(Fault::Declined("sign at a recorded root declined"))?;
+            if sign == 0 {
+                recorded += 1;
+            }
+        }
+        if sturm_count != recorded {
+            return Err(Fault::IncompleteRootList {
+                atom: atom_index,
+                sturm_count,
+                recorded,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// One cell's nominated conjunct exists, has the recorded sign, and fails.
+pub(crate) fn check_cell_failure(
+    atoms: &[Atom],
+    cell: usize,
+    sample: &SamplePoint,
+    failure: &CellFailure,
+) -> Result<(), Fault> {
+    let Some(atom) = atoms.get(failure.conjunct) else {
+        return Err(Fault::ConjunctIndexOutOfRange {
+            cell,
+            index: failure.conjunct,
+        });
+    };
+    let recomputed = sign_at_sample(&atom.poly, sample)
+        .ok_or(Fault::Declined("sign at a cell sample declined"))?;
+    if recomputed != failure.sign {
+        return Err(Fault::SignMismatch {
+            index: failure.conjunct,
+            recorded: failure.sign,
+            recomputed,
+        });
+    }
+    if atom.relation.holds(recomputed) {
+        return Err(Fault::ConjunctDoesNotFail {
+            cell,
+            index: failure.conjunct,
+            sign: recomputed,
+        });
+    }
+    Ok(())
 }
 
 // ============================================================================
@@ -677,35 +786,32 @@ impl ForallDecision {
 
 /// Decide `∃x. ⋀ᵢ pᵢ(x) ▷ᵢ 0`.
 ///
-/// Isolates the real roots of every `pᵢ` (reusing
-/// [`crate::algebraic::real_roots`]), merges them into one strictly ascending
-/// list, forms the `2r + 1` sign-invariant cells, and tests the conjunction at
-/// one sample per cell — the root itself for a point cell, a rational strictly
-/// between consecutive brackets for an open cell.
+/// Isolates the distinct real roots of the product of the `pᵢ` in
+/// `BigRational` (the private `qe::big` engine), forms the `2r + 1` sign-invariant cells,
+/// and tests the conjunction at one sample per cell — the root itself for a
+/// point cell, a rational strictly between consecutive roots for an open cell.
 ///
-/// Returns [`Decision::Unknown`] with a human-readable reason whenever the
-/// reused exact machinery declines (an `i128` overflow in the Sturm chain, a
-/// factorization cap, or a bracket that will not separate within the
-/// refinement budget). It never guesses.
+/// Returns [`Decision::Unknown`] with a human-readable reason only when a named
+/// step budget in the private `qe::big` engine runs out. It never guesses, and it never declines for
+/// an arithmetic overflow, because there is none.
 #[must_use]
 pub fn decide_exists(formula: &ExistsFormula) -> Decision {
-    let roots = match merged_roots(formula) {
-        Ok(roots) => roots,
+    let decomposition = match decompose(&formula.atoms) {
+        Ok(parts) => parts,
         Err(reason) => return Decision::Unknown(reason),
     };
-    let open_samples = match open_cell_samples(&roots) {
-        Ok(samples) => samples,
-        Err(reason) => return Decision::Unknown(reason),
-    };
-    let root_samples: Vec<SamplePoint> = roots.iter().map(SamplePoint::from_algebraic).collect();
+    let open_samples = decomposition.open_samples;
+    let root_samples: Vec<SamplePoint> = decomposition
+        .roots
+        .iter()
+        .map(|root| SamplePoint::from_isolated(&decomposition.cut, root))
+        .collect();
 
     let cells = 2 * root_samples.len() + 1;
     let mut failures: Vec<CellFailure> = Vec::with_capacity(cells);
     for cell in 0..cells {
-        let sample = if cell % 2 == 0 {
-            SamplePoint::Rational(open_samples[cell / 2])
-        } else {
-            root_samples[cell / 2].clone()
+        let Some(sample) = cell_sample_of(&root_samples, &open_samples, cell) else {
+            return Decision::Unknown(format!("cell {cell} has no sample"));
         };
         let mut signs: Vec<i8> = Vec::with_capacity(formula.atoms.len());
         for atom in &formula.atoms {
@@ -770,7 +876,7 @@ pub fn eliminate_forall(formula: &ForallFormula) -> Option<bool> {
 }
 
 /// The first conjunct whose relation fails at the given signs, if any.
-fn first_failure(atoms: &[Atom], signs: &[i8]) -> Option<CellFailure> {
+pub(crate) fn first_failure(atoms: &[Atom], signs: &[i8]) -> Option<CellFailure> {
     for (index, atom) in atoms.iter().enumerate() {
         let sign = signs[index];
         if !atom.relation.holds(sign) {
@@ -784,284 +890,154 @@ fn first_failure(atoms: &[Atom], signs: &[i8]) -> Option<CellFailure> {
 }
 
 // ============================================================================
-// Root collection and cell samples (producer side).
+// The decomposition (producer side).
 // ============================================================================
 
-/// Every distinct real root of every conjunct, strictly ascending.
-fn merged_roots(formula: &ExistsFormula) -> Result<Vec<AlgebraicReal>, String> {
-    let mut roots: Vec<AlgebraicReal> = Vec::new();
-    for (index, atom) in formula.atoms.iter().enumerate() {
-        if axeyum_ir::poly::rat_degree(&atom.poly).unwrap_or(0) == 0 {
+/// The **cut polynomial**: the square-free part of the product of every
+/// non-constant atom polynomial. Its distinct real roots are exactly the points
+/// where some `pᵢ` changes sign, so they are exactly the cut points of the
+/// sign-invariant decomposition.
+///
+/// Using one product rather than isolating each atom separately is what removes
+/// the first slice's cross-polynomial comparison problem: the roots come out of
+/// a single bisection already distinct, already ordered, and already carrying
+/// pairwise disjoint brackets, so no two algebraic numbers ever have to be
+/// compared.
+pub(crate) fn cut_polynomial(atoms: &[Atom]) -> Vec<BigRational> {
+    let mut product = vec![BigRational::one()];
+    for atom in atoms {
+        if big::degree(&atom.poly).is_none_or(|d| d == 0) {
             continue; // the zero polynomial or a nonzero constant: no roots
         }
-        let Some(found) = algebraic::real_roots(&atom.poly) else {
-            return Err(format!(
-                "real-root isolation declined for conjunct {index} (overflow or a degree cap)"
-            ));
-        };
-        for root in found {
-            let mut duplicate = false;
-            for existing in &roots {
-                match compare_roots(existing, &root) {
-                    Some(Ordering::Equal) => {
-                        duplicate = true;
-                        break;
-                    }
-                    Some(_) => {}
-                    None => {
-                        return Err(format!(
-                            "exact comparison of two algebraic roots declined (conjunct {index})"
-                        ));
-                    }
-                }
-            }
-            if !duplicate {
-                roots.push(root);
-            }
-        }
+        product = big::mul(&product, &atom.poly);
     }
-    // Insertion sort, so a declining comparison is an error rather than a panic
-    // or a silently wrong order (`sort_by` cannot propagate `None`).
-    let mut sorted: Vec<AlgebraicReal> = Vec::with_capacity(roots.len());
-    for root in roots {
-        let mut position = sorted.len();
-        for (index, existing) in sorted.iter().enumerate() {
-            match compare_roots(&root, existing) {
-                Some(Ordering::Less) => {
-                    position = index;
-                    break;
-                }
-                Some(_) => {}
-                None => return Err("exact comparison of two algebraic roots declined".to_string()),
-            }
-        }
-        sorted.insert(position, root);
-    }
-    Ok(sorted)
+    big::squarefree_part(&product).unwrap_or_default()
 }
 
-/// Exact comparison of two isolated real roots.
-///
-/// Three cheap sound tests first — both rational; brackets already disjoint;
-/// identical minimal polynomial *and* identical bracket — and only then the
-/// reused [`crate::real_algebraic::algebraic_cmp`], which costs a resultant.
-fn compare_roots(a: &AlgebraicReal, b: &AlgebraicReal) -> Option<Ordering> {
-    if let (Some(x), Some(y)) = (a.rational_value(), b.rational_value()) {
-        return x.checked_cmp(&y);
-    }
-    let (a_lo, a_hi) = a.isolating_interval();
-    let (b_lo, b_hi) = b.isolating_interval();
-    // Bracket is `(lo, hi]`, so `a_hi <= b_lo` forces `a <= a_hi <= b_lo < b`.
-    if a_hi.checked_cmp(&b_lo)? != Ordering::Greater {
-        return Some(Ordering::Less);
-    }
-    if b_hi.checked_cmp(&a_lo)? != Ordering::Greater {
-        return Some(Ordering::Greater);
-    }
-    if a.minimal_polynomial() == b.minimal_polynomial() && a_lo == b_lo && a_hi == b_hi {
-        return Some(Ordering::Equal);
-    }
-    let left = real_algebraic::from_algebraic_real(a)?;
-    let right = real_algebraic::from_algebraic_real(b)?;
-    real_algebraic::algebraic_cmp(&left, &right)
+/// The sign-invariant decomposition of ℝ induced by a set of atoms.
+#[derive(Debug, Clone)]
+pub(crate) struct Decomposition {
+    /// The isolated distinct real roots of the cut polynomial, ascending.
+    pub(crate) roots: Vec<big::IsolatedRoot>,
+    /// One rational sample per open cell; `roots.len() + 1` of them.
+    pub(crate) open_samples: Vec<BigRational>,
+    /// The cut polynomial, which is the defining polynomial of every algebraic
+    /// root sample.
+    pub(crate) cut: Vec<BigRational>,
+}
+
+/// The full decomposition of ℝ induced by `atoms`.
+pub(crate) fn decompose(atoms: &[Atom]) -> Result<Decomposition, String> {
+    let cut = cut_polynomial(atoms);
+    let roots = if big::degree(&cut).is_none_or(|d| d == 0) {
+        Vec::new()
+    } else {
+        big::isolate(&cut)
+            .ok_or_else(|| "real-root isolation ran out of its bisection budget".to_string())?
+    };
+    let open_samples = open_cell_samples(&cut, &roots)?;
+    Ok(Decomposition {
+        roots,
+        open_samples,
+        cut,
+    })
 }
 
 /// One rational sample strictly inside every open cell: below the first root,
 /// between each consecutive pair, and above the last.
-fn open_cell_samples(roots: &[AlgebraicReal]) -> Result<Vec<Rational>, String> {
+///
+/// The isolating brackets are pairwise disjoint (`hiⱼ ≤ loⱼ₊₁`) and every root
+/// satisfies `loⱼ < αⱼ ≤ hiⱼ`, so the separator is read straight off the
+/// brackets in all but one case: when `αⱼ` is *exactly* `hiⱼ` and the next
+/// bracket starts there. Only then does anything have to be searched for, and
+/// then the search is a bisection of the next bracket.
+fn open_cell_samples(
+    cut: &[BigRational],
+    roots: &[big::IsolatedRoot],
+) -> Result<Vec<BigRational>, String> {
     if roots.is_empty() {
         // No root anywhere: ℝ is one cell and every point decides it.
-        return Ok(vec![Rational::zero()]);
+        return Ok(vec![BigRational::zero()]);
     }
-    let mut samples: Vec<Rational> = Vec::with_capacity(roots.len() + 1);
-    // Every root lies inside its own Sturm bracket, so the smallest recorded
-    // lower endpoint minus one is below all of them, and the largest upper
-    // endpoint plus one is above all of them — a tighter and overflow-free
-    // stand-in for a Cauchy bound over the product of the polynomials.
-    let mut lowest = roots[0].isolating_interval().0;
-    let mut highest = roots[0].isolating_interval().1;
-    for root in roots {
-        let (lo, hi) = root.isolating_interval();
-        if lo
-            .checked_cmp(&lowest)
-            .ok_or("bracket comparison overflowed")?
-            == Ordering::Less
-        {
-            lowest = lo;
-        }
-        if hi
-            .checked_cmp(&highest)
-            .ok_or("bracket comparison overflowed")?
-            == Ordering::Greater
-        {
-            highest = hi;
-        }
-    }
-    samples.push(
-        lowest
-            .checked_sub(Rational::integer(1))
-            .ok_or("left-hand sample overflowed")?,
-    );
+    let chain =
+        big::SturmChain::new(cut).ok_or_else(|| "the cut polynomial is zero".to_string())?;
+    let mut samples: Vec<BigRational> = Vec::with_capacity(roots.len() + 1);
+    samples.push(roots[0].lo.clone());
     for window in roots.windows(2) {
-        samples.push(rational_between(&window[0], &window[1])?);
+        let (previous, next) = (&window[0], &window[1]);
+        let separator = if previous.exact {
+            if previous.hi < next.lo {
+                next.lo.clone()
+            } else {
+                strictly_below_root(&chain, &next.lo, &next.hi)?
+            }
+        } else {
+            previous.hi.clone()
+        };
+        samples.push(separator);
     }
-    samples.push(
-        highest
-            .checked_add(Rational::integer(1))
-            .ok_or("right-hand sample overflowed")?,
-    );
+    let last = roots.last().expect("roots is non-empty");
+    samples.push(&last.hi + BigRational::one());
     Ok(samples)
 }
 
-/// A rational strictly between two consecutive roots `a < b`, found by refining
-/// both brackets until they are disjoint and taking the midpoint of the gap.
-fn rational_between(a: &AlgebraicReal, b: &AlgebraicReal) -> Result<Rational, String> {
-    let mut left = a.clone();
-    let mut right = b.clone();
-    let mut width = Rational::integer(1);
+/// A rational strictly greater than `lo` and strictly less than the unique root
+/// of the cut polynomial in `(lo, hi]`, by bisection.
+fn strictly_below_root(
+    chain: &big::SturmChain,
+    lo: &BigRational,
+    hi: &BigRational,
+) -> Result<BigRational, String> {
+    let two = BigRational::from_integer(BigInt::from(2));
+    let mut hi = hi.clone();
     for _ in 0..MAX_SEPARATION_STEPS {
-        let left_hi = left.isolating_interval().1;
-        let right_lo = right.isolating_interval().0;
-        if left_hi
-            .checked_cmp(&right_lo)
-            .ok_or("bracket comparison overflowed")?
-            == Ordering::Less
-        {
-            let sum = left_hi
-                .checked_add(right_lo)
-                .ok_or("gap midpoint overflowed")?;
-            return sum
-                .checked_div(Rational::integer(2))
-                .ok_or_else(|| "gap midpoint overflowed".to_string());
+        let mid = (lo + &hi) / &two;
+        if chain.count_in(lo, &mid) == 0 {
+            return Ok(mid); // the root is in (mid, hi], so lo < mid < root
         }
-        width = width
-            .checked_div(Rational::integer(2))
-            .ok_or("refinement width overflowed")?;
-        left = left
-            .refine(width)
-            .ok_or("bracket refinement declined (i128 overflow)")?;
-        right = right
-            .refine(width)
-            .ok_or("bracket refinement declined (i128 overflow)")?;
+        hi = mid;
     }
-    Err("two roots did not separate within the refinement budget".to_string())
+    Err("two roots did not separate within the bisection budget".to_string())
 }
 
 // ============================================================================
 // Exact sign evaluation (checker side; also used by the producer).
 // ============================================================================
 
-/// The polynomial's coefficients as `BigRational`s.
-fn big_coefficients(poly: &[Rational]) -> Vec<BigRational> {
-    poly.iter()
-        .map(|c| BigRational::new(BigInt::from(c.numerator()), BigInt::from(c.denominator())))
-        .collect()
-}
-
-/// The polynomial scaled by the positive lcm of its denominators, so the
-/// coefficients are integers and every sign is unchanged.
-fn integer_coefficients(poly: &[Rational]) -> Vec<BigInt> {
-    let mut lcm = BigInt::one();
-    for coeff in poly {
-        let den = BigInt::from(coeff.denominator());
-        let gcd = big_gcd(&lcm, &den);
-        lcm = &lcm / &gcd * den;
-    }
-    poly.iter()
-        .map(|c| BigInt::from(c.numerator()) * &lcm / BigInt::from(c.denominator()))
-        .collect()
-}
-
-/// Euclid's algorithm on [`BigInt`]s, returning `1` for `gcd(0, 0)` so the lcm
-/// fold above never divides by zero.
-fn big_gcd(left: &BigInt, right: &BigInt) -> BigInt {
-    let mut larger = left.abs();
-    let mut smaller = right.abs();
-    while !smaller.is_zero() {
-        let remainder = &larger % &smaller;
-        larger = smaller;
-        smaller = remainder;
-    }
-    if larger.is_zero() {
-        BigInt::one()
-    } else {
-        larger
-    }
-}
-
-/// The exact sign of `poly` at the rational `x`, by Horner over `BigRational`.
-/// Cannot overflow and cannot decline.
-fn sign_at_rational(poly: &[Rational], x: Rational) -> i8 {
-    let point = BigRational::new(BigInt::from(x.numerator()), BigInt::from(x.denominator()));
-    let mut acc = BigRational::zero();
-    for coeff in big_coefficients(poly).iter().rev() {
-        acc = acc * &point + coeff;
-    }
-    if acc.is_zero() {
-        0
-    } else if acc.is_negative() {
-        -1
-    } else {
-        1
-    }
-}
-
-/// The [`axeyum_ir::RealAlgebraic`] a sample point denotes, or `None` if the
-/// bracket does not straddle a root of the (denominator-cleared) defining
-/// polynomial.
-fn as_real_algebraic(sample: &SamplePoint) -> Option<RealAlgebraic> {
+/// The exact sign of `poly` at a sample point: `BigRational` Horner at a
+/// rational, and the private `qe::big` engine (`sign_at_algebraic`) at an algebraic one — a gcd root
+/// count for the zero case, then bracket refinement until `poly` has no root in
+/// the bracket at all.
+pub(crate) fn sign_at_sample(poly: &[BigRational], sample: &SamplePoint) -> Option<i8> {
     match sample {
-        SamplePoint::Rational(value) => RealAlgebraic::from_rational(*value),
+        SamplePoint::Rational(value) => Some(big::sign_at(poly, value)),
         SamplePoint::Algebraic {
             defining_poly,
             lower,
             upper,
-        } => {
-            let coeffs = integer_coefficients(defining_poly);
-            let lo = BigRational::new(
-                BigInt::from(lower.numerator()),
-                BigInt::from(lower.denominator()),
-            );
-            let hi = BigRational::new(
-                BigInt::from(upper.numerator()),
-                BigInt::from(upper.denominator()),
-            );
-            RealAlgebraic::new_big(coeffs, lo, hi)
-        }
-    }
-}
-
-/// The exact sign of `poly` at a sample point: `BigRational` Horner for a
-/// rational, and the reused [`axeyum_ir::RealAlgebraic::sign_at_big`] for an
-/// algebraic one (an exact polynomial-divisibility test for the zero case, then
-/// bracket refinement until the sign is constant — no Sturm count, no float).
-fn sign_at_sample(poly: &[Rational], sample: &SamplePoint) -> Option<i8> {
-    match sample {
-        SamplePoint::Rational(value) => Some(sign_at_rational(poly, *value)),
-        SamplePoint::Algebraic { .. } => {
-            let alpha = as_real_algebraic(sample)?;
-            let sign = alpha.sign_at_big(&integer_coefficients(poly))?;
-            Some(match sign {
-                Sign::Neg => -1,
-                Sign::Zero => 0,
-                Sign::Pos => 1,
-            })
-        }
+        } => big::sign_at_algebraic(poly, defining_poly, lower, upper),
     }
 }
 
 /// Where a sample point sits relative to a rational.
-fn compare_sample_to_rational(sample: &SamplePoint, x: Rational) -> Option<Ordering> {
+pub(crate) fn compare_sample_to_rational(
+    sample: &SamplePoint,
+    x: &BigRational,
+) -> Option<Ordering> {
     match sample {
-        SamplePoint::Rational(value) => value.checked_cmp(&x),
-        SamplePoint::Algebraic { .. } => as_real_algebraic(sample)?.compare_rational(&x),
+        SamplePoint::Rational(value) => Some(value.cmp(x)),
+        SamplePoint::Algebraic {
+            defining_poly,
+            lower,
+            upper,
+        } => big::compare_algebraic_to_rational(defining_poly, lower, upper, x),
     }
 }
 
-/// The guard behind both certificates' "this bracket names one real number":
-/// an independent Sturm count over the recorded bracket must be exactly one.
-/// A rational sample has nothing to isolate.
-fn check_sample_is_isolated(sample: &SamplePoint) -> Result<(), Fault> {
+/// The guard behind every certificate's "this bracket names one real number":
+/// an independent `BigRational` Sturm count over the recorded bracket must be
+/// exactly one. A rational sample has nothing to isolate.
+pub(crate) fn check_sample_is_isolated(sample: &SamplePoint) -> Result<(), Fault> {
     let SamplePoint::Algebraic {
         defining_poly,
         lower,
@@ -1070,7 +1046,7 @@ fn check_sample_is_isolated(sample: &SamplePoint) -> Result<(), Fault> {
     else {
         return Ok(());
     };
-    let count = sturm::count_real_roots_in(defining_poly, *lower, *upper)
+    let count = big::count_roots_in(defining_poly, lower, upper)
         .ok_or(Fault::Declined("Sturm count over the bracket declined"))?;
     if count == 1 {
         Ok(())
@@ -1081,40 +1057,315 @@ fn check_sample_is_isolated(sample: &SamplePoint) -> Result<(), Fault> {
     }
 }
 
-/// A Cauchy bound `B = 1 + maxᵢ |aᵢ / aₙ|`: every real root of `poly` lies in
-/// `(−B, B)`. Computed in `BigRational` and rounded up to an integer, so it
-/// cannot overflow on the way; `None` for the zero polynomial, for a constant,
-/// or if the rounded bound does not fit `i128` (the reused Sturm count needs an
-/// `i128` rational endpoint).
-fn cauchy_root_bound(poly: &[Rational]) -> Option<Rational> {
-    let degree = axeyum_ir::poly::rat_degree(poly)?;
-    if degree == 0 {
-        return None;
+// ============================================================================
+// Conversions to and from the `i128` rational surface.
+// ============================================================================
+
+/// The `BigRational` view of an `i128` rational. Total.
+#[must_use]
+pub fn big_of_rational(value: Rational) -> BigRational {
+    BigRational::new(
+        BigInt::from(value.numerator()),
+        BigInt::from(value.denominator()),
+    )
+}
+
+/// An LSB-first `i128`-rational polynomial as a `BigRational` one.
+#[must_use]
+pub fn big_poly(poly: &[Rational]) -> Vec<BigRational> {
+    poly.iter().copied().map(big_of_rational).collect()
+}
+
+/// The `i128` rational a `BigRational` denotes, or `None` if it does not fit.
+#[must_use]
+pub fn rational_of_big(value: &BigRational) -> Option<Rational> {
+    let numerator = i128::try_from(value.numer().clone()).ok()?;
+    let denominator = i128::try_from(value.denom().clone()).ok()?;
+    Some(Rational::new(numerator, denominator))
+}
+
+// ============================================================================
+// The retained `i128` route (test-only, for the differential corpus).
+// ============================================================================
+
+/// The first slice's `i128` decision route, kept **only** so the new
+/// `BigRational` engine can be tested against it.
+///
+/// It is the original producer verbatim — [`crate::algebraic::real_roots`] for
+/// isolation, pairwise [`crate::real_algebraic::algebraic_cmp`] for ordering,
+/// bracket refinement for the separators — retargeted to emit today's
+/// `BigRational` certificates so that both routes' certificates go through
+/// exactly one checker. It declines (`Decision::Unknown`) whenever the `i128`
+/// arithmetic overflows, which is the wall this module was rebuilt to remove.
+#[cfg(test)]
+pub(crate) mod legacy_i128 {
+    use super::{
+        Atom, CellFailure, Decision, ExistsFormula, RefutationCertificate, SampleCertificate,
+        SamplePoint, big_of_rational, first_failure, rational_of_big, sign_at_sample,
+    };
+    use crate::algebraic::{self, AlgebraicReal};
+    use crate::real_algebraic;
+    use axeyum_ir::Rational;
+    use core::cmp::Ordering;
+    use num_rational::BigRational;
+
+    /// The refinement budget of the first slice, unchanged.
+    const MAX_SEPARATION_STEPS: usize = 60;
+
+    /// The `i128` polynomial an atom denotes, or `None` if a coefficient does
+    /// not fit — the overflow wall, made explicit.
+    fn i128_poly(poly: &[BigRational]) -> Option<Vec<Rational>> {
+        poly.iter().map(rational_of_big).collect()
     }
-    let coeffs = big_coefficients(poly);
-    let leading = coeffs[degree].clone();
-    let mut max_ratio = BigRational::zero();
-    for coeff in &coeffs[..degree] {
-        let ratio = (coeff / &leading).abs();
-        if ratio > max_ratio {
-            max_ratio = ratio;
+
+    /// Decide `∃x. ⋀ᵢ pᵢ ▷ᵢ 0` through the `i128` machinery.
+    pub(crate) fn decide_exists_i128(formula: &ExistsFormula) -> Decision {
+        let mut i128_atoms: Vec<(Vec<Rational>, &Atom)> = Vec::new();
+        for atom in &formula.atoms {
+            match i128_poly(&atom.poly) {
+                Some(poly) => i128_atoms.push((poly, atom)),
+                None => {
+                    return Decision::Unknown(
+                        "a coefficient does not fit i128: the legacy route cannot express this"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+        let roots = match merged_roots(&i128_atoms) {
+            Ok(roots) => roots,
+            Err(reason) => return Decision::Unknown(reason),
+        };
+        let open_samples = match open_cell_samples(&roots) {
+            Ok(samples) => samples,
+            Err(reason) => return Decision::Unknown(reason),
+        };
+        let root_samples: Vec<SamplePoint> = roots.iter().map(sample_of).collect();
+        let open_samples: Vec<BigRational> =
+            open_samples.into_iter().map(big_of_rational).collect();
+
+        let cells = 2 * root_samples.len() + 1;
+        let mut failures: Vec<CellFailure> = Vec::with_capacity(cells);
+        for cell in 0..cells {
+            let sample = if cell.is_multiple_of(2) {
+                SamplePoint::Rational(open_samples[cell / 2].clone())
+            } else {
+                root_samples[cell / 2].clone()
+            };
+            let mut signs: Vec<i8> = Vec::with_capacity(formula.atoms.len());
+            for atom in &formula.atoms {
+                match sign_at_sample(&atom.poly, &sample) {
+                    Some(sign) => signs.push(sign),
+                    None => {
+                        return Decision::Unknown(format!(
+                            "exact sign evaluation declined in cell {cell}"
+                        ));
+                    }
+                }
+            }
+            match first_failure(&formula.atoms, &signs) {
+                None => {
+                    return Decision::True(Box::new(SampleCertificate {
+                        atoms: formula.atoms.clone(),
+                        sample,
+                        signs,
+                    }));
+                }
+                Some(failure) => failures.push(failure),
+            }
+        }
+        Decision::False(Box::new(RefutationCertificate {
+            atoms: formula.atoms.clone(),
+            roots: root_samples,
+            open_samples,
+            failures,
+        }))
+    }
+
+    /// The `SamplePoint` an `i128` isolated root denotes.
+    fn sample_of(root: &AlgebraicReal) -> SamplePoint {
+        if let Some(value) = root.rational_value() {
+            return SamplePoint::Rational(big_of_rational(value));
+        }
+        let (lower, upper) = root.isolating_interval();
+        SamplePoint::Algebraic {
+            defining_poly: super::big_poly(root.minimal_polynomial()),
+            lower: big_of_rational(lower),
+            upper: big_of_rational(upper),
         }
     }
-    let bound = (max_ratio + BigRational::one()).ceil().to_integer();
-    i128::try_from(bound).ok().map(Rational::integer)
+
+    /// Every distinct real root of every conjunct, strictly ascending.
+    fn merged_roots(atoms: &[(Vec<Rational>, &Atom)]) -> Result<Vec<AlgebraicReal>, String> {
+        let mut roots: Vec<AlgebraicReal> = Vec::new();
+        for (index, (poly, _)) in atoms.iter().enumerate() {
+            if axeyum_ir::poly::rat_degree(poly).unwrap_or(0) == 0 {
+                continue;
+            }
+            let Some(found) = algebraic::real_roots(poly) else {
+                return Err(format!(
+                    "real-root isolation declined for conjunct {index} (overflow or a degree cap)"
+                ));
+            };
+            for root in found {
+                let mut duplicate = false;
+                for existing in &roots {
+                    match compare_roots(existing, &root) {
+                        Some(Ordering::Equal) => {
+                            duplicate = true;
+                            break;
+                        }
+                        Some(_) => {}
+                        None => {
+                            return Err(format!(
+                                "exact comparison of two algebraic roots declined (conjunct {index})"
+                            ));
+                        }
+                    }
+                }
+                if !duplicate {
+                    roots.push(root);
+                }
+            }
+        }
+        let mut sorted: Vec<AlgebraicReal> = Vec::with_capacity(roots.len());
+        for root in roots {
+            let mut position = sorted.len();
+            for (index, existing) in sorted.iter().enumerate() {
+                match compare_roots(&root, existing) {
+                    Some(Ordering::Less) => {
+                        position = index;
+                        break;
+                    }
+                    Some(_) => {}
+                    None => {
+                        return Err("exact comparison of two algebraic roots declined".to_string());
+                    }
+                }
+            }
+            sorted.insert(position, root);
+        }
+        Ok(sorted)
+    }
+
+    /// Exact comparison of two isolated real roots.
+    fn compare_roots(a: &AlgebraicReal, b: &AlgebraicReal) -> Option<Ordering> {
+        if let (Some(x), Some(y)) = (a.rational_value(), b.rational_value()) {
+            return x.checked_cmp(&y);
+        }
+        let (a_lo, a_hi) = a.isolating_interval();
+        let (b_lo, b_hi) = b.isolating_interval();
+        if a_hi.checked_cmp(&b_lo)? != Ordering::Greater {
+            return Some(Ordering::Less);
+        }
+        if b_hi.checked_cmp(&a_lo)? != Ordering::Greater {
+            return Some(Ordering::Greater);
+        }
+        if a.minimal_polynomial() == b.minimal_polynomial() && a_lo == b_lo && a_hi == b_hi {
+            return Some(Ordering::Equal);
+        }
+        let left = real_algebraic::from_algebraic_real(a)?;
+        let right = real_algebraic::from_algebraic_real(b)?;
+        real_algebraic::algebraic_cmp(&left, &right)
+    }
+
+    /// One rational sample strictly inside every open cell.
+    fn open_cell_samples(roots: &[AlgebraicReal]) -> Result<Vec<Rational>, String> {
+        if roots.is_empty() {
+            return Ok(vec![Rational::zero()]);
+        }
+        let mut samples: Vec<Rational> = Vec::with_capacity(roots.len() + 1);
+        let mut lowest = roots[0].isolating_interval().0;
+        let mut highest = roots[0].isolating_interval().1;
+        for root in roots {
+            let (lo, hi) = root.isolating_interval();
+            if lo
+                .checked_cmp(&lowest)
+                .ok_or("bracket comparison overflowed")?
+                == Ordering::Less
+            {
+                lowest = lo;
+            }
+            if hi
+                .checked_cmp(&highest)
+                .ok_or("bracket comparison overflowed")?
+                == Ordering::Greater
+            {
+                highest = hi;
+            }
+        }
+        samples.push(
+            lowest
+                .checked_sub(Rational::integer(1))
+                .ok_or("left-hand sample overflowed")?,
+        );
+        for window in roots.windows(2) {
+            samples.push(rational_between(&window[0], &window[1])?);
+        }
+        samples.push(
+            highest
+                .checked_add(Rational::integer(1))
+                .ok_or("right-hand sample overflowed")?,
+        );
+        Ok(samples)
+    }
+
+    /// A rational strictly between two consecutive roots `a < b`.
+    fn rational_between(a: &AlgebraicReal, b: &AlgebraicReal) -> Result<Rational, String> {
+        let mut left = a.clone();
+        let mut right = b.clone();
+        let mut width = Rational::integer(1);
+        for _ in 0..MAX_SEPARATION_STEPS {
+            let left_hi = left.isolating_interval().1;
+            let right_lo = right.isolating_interval().0;
+            if left_hi
+                .checked_cmp(&right_lo)
+                .ok_or("bracket comparison overflowed")?
+                == Ordering::Less
+            {
+                let sum = left_hi
+                    .checked_add(right_lo)
+                    .ok_or("gap midpoint overflowed")?;
+                return sum
+                    .checked_div(Rational::integer(2))
+                    .ok_or_else(|| "gap midpoint overflowed".to_string());
+            }
+            width = width
+                .checked_div(Rational::integer(2))
+                .ok_or("refinement width overflowed")?;
+            left = left
+                .refine(width)
+                .ok_or("bracket refinement declined (i128 overflow)")?;
+            right = right
+                .refine(width)
+                .ok_or("bracket refinement declined (i128 overflow)")?;
+        }
+        Err("two roots did not separate within the refinement budget".to_string())
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::legacy_i128::decide_exists_i128;
     use super::*;
 
     /// An integer-coefficient polynomial, LSB-first.
-    fn ipoly(coeffs: &[i128]) -> Vec<Rational> {
-        coeffs.iter().copied().map(Rational::integer).collect()
+    pub(crate) fn ipoly(coeffs: &[i64]) -> Vec<BigRational> {
+        integer_poly(coeffs)
+    }
+
+    /// The rational `n/d`.
+    fn frac(n: i64, d: i64) -> BigRational {
+        BigRational::new(BigInt::from(n), BigInt::from(d))
+    }
+
+    /// The integer `n` as a `BigRational`.
+    pub(crate) fn int(n: i64) -> BigRational {
+        BigRational::from_integer(BigInt::from(n))
     }
 
     /// `x`, LSB-first.
-    fn x_poly() -> Vec<Rational> {
+    fn x_poly() -> Vec<BigRational> {
         ipoly(&[0, 1])
     }
 
@@ -1197,12 +1448,12 @@ mod tests {
             Atom::new(ipoly(&[-1, 1]), Relation::Gt),
         ]);
         let cert = as_true(decide_exists(&formula));
-        let SamplePoint::Rational(sample) = cert.sample else {
+        let SamplePoint::Rational(sample) = cert.sample.clone() else {
             panic!("the satisfying cell is open, so the sample is rational");
         };
         // Strictly between 1 and sqrt(2).
-        assert_eq!(sign_at_rational(&ipoly(&[-1, 1]), sample), 1);
-        assert_eq!(sign_at_rational(&ipoly(&[-2, 0, 1]), sample), -1);
+        assert_eq!(big::sign_at(&ipoly(&[-1, 1]), &sample), 1);
+        assert_eq!(big::sign_at(&ipoly(&[-2, 0, 1]), &sample), -1);
         assert_eq!(cert.signs, vec![-1, 1]);
         assert_eq!(cert.verify(), Ok(()));
     }
@@ -1220,9 +1471,9 @@ mod tests {
         assert_eq!(
             cert.roots,
             vec![
-                SamplePoint::Rational(Rational::integer(-1)),
-                SamplePoint::Rational(Rational::zero()),
-                SamplePoint::Rational(Rational::integer(1)),
+                SamplePoint::Rational(int(-1)),
+                SamplePoint::Rational(int(0)),
+                SamplePoint::Rational(int(1)),
             ]
         );
         assert_eq!(cert.failures.len(), 7);
@@ -1245,7 +1496,7 @@ mod tests {
         let ForallDecision::True(cert) = decide_forall(&formula) else {
             panic!("x² ≥ 0 is valid");
         };
-        assert_eq!(cert.roots, vec![SamplePoint::Rational(Rational::zero())]);
+        assert_eq!(cert.roots, vec![SamplePoint::Rational(int(0))]);
         assert_eq!(cert.failures.len(), 3);
         assert_eq!(cert.verify(), Ok(()));
         assert_eq!(eliminate_forall(&formula), Some(true));
@@ -1257,11 +1508,11 @@ mod tests {
         let ForallDecision::False(cert) = decide_forall(&formula) else {
             panic!("x² − x < 0 on (0, 1), so the universal is false");
         };
-        let SamplePoint::Rational(sample) = cert.sample else {
+        let SamplePoint::Rational(sample) = cert.sample.clone() else {
             panic!("the counterexample cell (0, 1) is open");
         };
-        assert_eq!(sign_at_rational(&x_poly(), sample), 1, "sample > 0");
-        assert_eq!(sign_at_rational(&ipoly(&[-1, 1]), sample), -1, "sample < 1");
+        assert_eq!(big::sign_at(&x_poly(), &sample), 1, "sample > 0");
+        assert_eq!(big::sign_at(&ipoly(&[-1, 1]), &sample), -1, "sample < 1");
         assert_eq!(cert.verify(), Ok(()));
         assert_eq!(eliminate_forall(&formula), Some(false));
     }
@@ -1271,13 +1522,13 @@ mod tests {
         // (x−1)²·(x−2) = x³ − 4x² + 5x − 2 ≥ 0 ∧ x < 3/2.  The only point where
         // the cubic is non-negative below 3/2 is the double root x = 1.
         let cubic = ipoly(&[-2, 5, -4, 1]);
-        let bound = vec![Rational::new(-3, 2), Rational::integer(1)];
+        let bound = vec![frac(-3, 2), int(1)];
         let formula = exists(vec![
             Atom::new(cubic, Relation::Ge),
             Atom::new(bound, Relation::Lt),
         ]);
         let cert = as_true(decide_exists(&formula));
-        assert_eq!(cert.sample, SamplePoint::Rational(Rational::integer(1)));
+        assert_eq!(cert.sample, SamplePoint::Rational(int(1)));
         assert_eq!(cert.signs, vec![0, -1]);
         assert_eq!(cert.verify(), Ok(()));
     }
@@ -1289,7 +1540,7 @@ mod tests {
         let atoms = vec![Atom::new(x_poly(), Relation::Gt)];
         let cert = SampleCertificate {
             atoms,
-            sample: SamplePoint::Rational(Rational::integer(1)),
+            sample: SamplePoint::Rational(int(1)),
             signs: Vec::new(),
         };
         assert_eq!(
@@ -1334,8 +1585,8 @@ mod tests {
             atoms: vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Eq)],
             sample: SamplePoint::Algebraic {
                 defining_poly: ipoly(&[-2, 0, 1]),
-                lower: Rational::integer(-2),
-                upper: Rational::integer(2),
+                lower: int(-2),
+                upper: int(2),
             },
             signs: vec![0],
         };
@@ -1352,7 +1603,7 @@ mod tests {
         // The sign is recorded correctly; the point simply does not satisfy `x > 0`.
         let cert = SampleCertificate {
             atoms: vec![Atom::new(x_poly(), Relation::Gt)],
-            sample: SamplePoint::Rational(Rational::integer(-1)),
+            sample: SamplePoint::Rational(int(-1)),
             signs: vec![-1],
         };
         assert_eq!(
@@ -1381,7 +1632,7 @@ mod tests {
         let mut cert = cubic_refutation();
         // open_samples[1] must lie in (−1, 0); 5 lies above every root, so the
         // cells no longer cover ℝ in order.
-        cert.open_samples[1] = Rational::integer(5);
+        cert.open_samples[1] = int(5);
         assert_eq!(cert.verify(), Err(Fault::CellOrderViolation { index: 1 }));
     }
 
@@ -1395,9 +1646,9 @@ mod tests {
             atoms: cert.atoms.clone(),
             roots: vec![cert.roots[0].clone(), cert.roots[2].clone()],
             open_samples: vec![
-                cert.open_samples[0],
-                cert.open_samples[1],
-                cert.open_samples[3],
+                cert.open_samples[0].clone(),
+                cert.open_samples[1].clone(),
+                cert.open_samples[3].clone(),
             ],
             failures: vec![
                 cert.failures[0],
@@ -1422,7 +1673,7 @@ mod tests {
         let mut cert = cubic_refutation();
         // In cell 0 (far left of every root) `x < 1` holds, so nominating it as
         // the failing conjunct — with its true sign — is a forgery.
-        let sample = SamplePoint::Rational(cert.open_samples[0]);
+        let sample = SamplePoint::Rational(cert.open_samples[0].clone());
         let sign = sign_at_sample(&cert.atoms[2].poly, &sample).expect("exact sign");
         cert.failures[0] = CellFailure { conjunct: 2, sign };
         assert_eq!(
@@ -1475,6 +1726,19 @@ mod tests {
     }
 
     #[test]
+    fn forged_refutation_with_the_wrong_number_of_open_samples_is_refused() {
+        let mut cert = cubic_refutation();
+        cert.open_samples.pop();
+        assert_eq!(
+            cert.verify(),
+            Err(Fault::OpenSampleCountMismatch {
+                recorded: 3,
+                expected: 4
+            })
+        );
+    }
+
+    #[test]
     fn decision_verify_delegates_to_its_certificate_and_a_decline_carries_no_claim() {
         let formula = exists(vec![Atom::new(x_poly(), Relation::Gt)]);
         assert_eq!(decide_exists(&formula).verify(), Ok(Some(true)));
@@ -1487,24 +1751,148 @@ mod tests {
         );
     }
 
-    // ------------------------------------------------------------- declines
+    // ----------------------------------------- the i128 wall, and its removal
+
+    /// `10³⁰` and `10⁶⁰` as `BigRational`s.
+    fn power_of_ten(exponent: u32) -> BigRational {
+        BigRational::from_integer(BigInt::from(10u32).pow(exponent))
+    }
 
     #[test]
-    fn coefficients_beyond_the_reused_i128_isolation_decline_to_unknown_not_a_verdict() {
-        // Positive control: the same shape at a small coefficient decides.
-        let small = exists(vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Eq)]);
-        assert!(matches!(decide_exists(&small), Decision::True(_)));
-
-        // `x² − 10³⁰` fits `i128` as a coefficient, but the reused Sturm
-        // machinery evaluates near the Cauchy bound and overflows there.
-        let huge = exists(vec![Atom::new(
-            ipoly(&[-1_000_000_000_000_000_000_000_000_000_000, 0, 1]),
+    fn the_coefficient_that_defeated_the_first_slice_now_decides() {
+        // `x² − 10³⁰ = 0` fits `i128` as a coefficient, but the first slice's
+        // reused Sturm machinery evaluates near the Cauchy bound and overflowed
+        // there, so this shape was documented as a decline. It decides now.
+        let formula = exists(vec![Atom::new(
+            vec![-power_of_ten(30), int(0), int(1)],
             Relation::Eq,
         )]);
-        match decide_exists(&huge) {
-            Decision::Unknown(reason) => assert!(!reason.is_empty()),
-            other => panic!("an i128 overflow must decline, not decide: {other:?}"),
+        let cert = as_true(decide_exists(&formula));
+        assert_eq!(
+            cert.sample,
+            SamplePoint::Rational(-power_of_ten(15)),
+            "the root is exactly −10¹⁵ and must be recognised as rational"
+        );
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate(&formula), Some(true));
+
+        // The legacy route is the control: it still declines on this input, so
+        // the test measures the new engine and not a change of subject.
+        assert!(
+            matches!(decide_exists_i128(&formula), Decision::Unknown(_)),
+            "the i128 route must still decline, or this test proves nothing"
+        );
+    }
+
+    #[test]
+    fn a_coefficient_far_beyond_i128_decides_too() {
+        // `x² − 10⁶⁰ > 0` cannot even be *expressed* over `i128` rationals.
+        let formula = exists(vec![
+            Atom::new(vec![-power_of_ten(60), int(0), int(1)], Relation::Eq),
+            Atom::new(ipoly(&[0, 1]), Relation::Gt),
+        ]);
+        let cert = as_true(decide_exists(&formula));
+        assert_eq!(cert.sample, SamplePoint::Rational(power_of_ten(30)));
+        assert_eq!(cert.verify(), Ok(()));
+        assert_eq!(eliminate(&formula), Some(true));
+
+        // And the unsatisfiable companion, so the huge-coefficient path is
+        // exercised on both verdicts.
+        let unsatisfiable = exists(vec![
+            Atom::new(vec![power_of_ten(60), int(0), int(1)], Relation::Eq),
+            Atom::new(ipoly(&[0, 1]), Relation::Gt),
+        ]);
+        assert_eq!(eliminate(&unsatisfiable), Some(false));
+    }
+
+    /// The whole first-slice corpus, as formulas — the population the two
+    /// routes are compared on.
+    fn first_slice_corpus() -> Vec<(&'static str, ExistsFormula)> {
+        vec![
+            (
+                "x² − 2 = 0",
+                exists(vec![Atom::new(ipoly(&[-2, 0, 1]), Relation::Eq)]),
+            ),
+            (
+                "x² + 1 < 0",
+                exists(vec![Atom::new(ipoly(&[1, 0, 1]), Relation::Lt)]),
+            ),
+            (
+                "x² < 2 ∧ x > 1",
+                exists(vec![
+                    Atom::new(ipoly(&[-2, 0, 1]), Relation::Lt),
+                    Atom::new(ipoly(&[-1, 1]), Relation::Gt),
+                ]),
+            ),
+            (
+                "x³ − x = 0 ∧ x > 0 ∧ x < 1",
+                exists(vec![
+                    Atom::new(ipoly(&[0, -1, 0, 1]), Relation::Eq),
+                    Atom::new(x_poly(), Relation::Gt),
+                    Atom::new(ipoly(&[-1, 1]), Relation::Lt),
+                ]),
+            ),
+            (
+                "x² < 0 (the negated ∀x. x² ≥ 0)",
+                exists(vec![Atom::new(ipoly(&[0, 0, 1]), Relation::Lt)]),
+            ),
+            (
+                "x² − x < 0 (the negated ∀x. x² − x ≥ 0)",
+                exists(vec![Atom::new(ipoly(&[0, -1, 1]), Relation::Lt)]),
+            ),
+            (
+                "(x−1)²(x−2) ≥ 0 ∧ x < 3/2",
+                exists(vec![
+                    Atom::new(ipoly(&[-2, 5, -4, 1]), Relation::Ge),
+                    Atom::new(vec![frac(-3, 2), int(1)], Relation::Lt),
+                ]),
+            ),
+            ("x > 0", exists(vec![Atom::new(x_poly(), Relation::Gt)])),
+            ("the empty conjunction", exists(Vec::new())),
+            (
+                "a constant conjunct: 1 = 0",
+                exists(vec![Atom::new(ipoly(&[1]), Relation::Eq)]),
+            ),
+            (
+                "the zero polynomial: 0 = 0",
+                exists(vec![Atom::new(ipoly(&[0]), Relation::Eq)]),
+            ),
+        ]
+    }
+
+    #[test]
+    fn the_big_rational_route_agrees_with_the_i128_route_on_the_first_slice_corpus() {
+        let corpus = first_slice_corpus();
+        assert_eq!(corpus.len(), 11, "the corpus must not silently shrink");
+        let mut compared = 0usize;
+        for (name, formula) in corpus {
+            let modern = decide_exists(&formula);
+            let legacy = decide_exists_i128(&formula);
+            let modern_verdict = modern.verify().unwrap_or_else(|fault| {
+                panic!("{name}: the new route's certificate was refused: {fault:?}")
+            });
+            let legacy_verdict = legacy.verify().unwrap_or_else(|fault| {
+                panic!("{name}: the legacy certificate was refused: {fault:?}")
+            });
+            assert!(
+                modern_verdict.is_some(),
+                "{name}: the BigRational route must not decline"
+            );
+            // The legacy route may decline; where it answers, the answers must
+            // agree — and its certificate must satisfy today's checker, which
+            // is the stronger of the two claims.
+            if let Some(legacy_verdict) = legacy_verdict {
+                assert_eq!(
+                    modern_verdict,
+                    Some(legacy_verdict),
+                    "{name}: the two routes disagree"
+                );
+                compared += 1;
+            }
         }
-        assert_eq!(eliminate(&huge), None);
+        assert!(
+            compared >= 9,
+            "the legacy route answered only {compared} of the corpus; the comparison is too thin"
+        );
     }
 }
