@@ -55,18 +55,28 @@
 //!
 //! # Cost
 //!
-//! Wall clock for [`enclose_constant`]`("pi", …)` plus its
-//! [`Enclosure::verify`], under `--release`, from the prebuilt test binary, one
-//! run each. **Advisory only, not a baseline**: the host was shared with other
-//! lanes during the measurement, and this is a single unpinned run.
+//! Wall clock for [`enclose_constant`]`("pi", …)` and its
+//! [`Enclosure::verify`], measured 2026-09-05 under `--release` from the
+//! prebuilt test binary, one run each (`cost_table_pi`, run it with
+//! `--nocapture` to re-measure).
 //!
-//! | precision | wall clock |
-//! |---|---|
-//! | 10 | see `cost_table_pi` |
-//! | 50 | see `cost_table_pi` |
-//! | 100 | see `cost_table_pi` |
-//! | 200 | see `cost_table_pi` |
-//! | 500 | see `cost_table_pi` |
+//! **ADVISORY ONLY, NOT A BASELINE.** The host was loaded — 16 cores at load
+//! average 29 with several other lanes building — and this is a single
+//! unpinned run of each row, so the absolute numbers are an upper bound and
+//! the shape (roughly quadratic in the precision, as the order and the
+//! `BigRational` denominators both grow) is the part worth reading.
+//!
+//! | precision | order used | produce | verify |
+//! |---|---|---|---|
+//! | 10 | 4 | 168 µs | 74 µs |
+//! | 50 | 16 | 638 µs | 409 µs |
+//! | 100 | 32 | 1.47 ms | 1.04 ms |
+//! | 200 | 64 | 5.57 ms | 3.82 ms |
+//! | 500 | 128 | 20.3 ms | 15.1 ms |
+//!
+//! Verification costs about three quarters of production, which is expected:
+//! the verifier does one evaluation per step at the recorded order while the
+//! producer searches the [`ORDERS`] ladder for it.
 //!
 //! # Out of scope
 //!
@@ -196,6 +206,7 @@ impl BigInterval {
     }
 
     /// The sum `self + other`.
+    #[must_use]
     pub fn add(&self, other: &BigInterval) -> BigInterval {
         BigInterval {
             lo: &self.lo + &other.lo,
@@ -204,6 +215,7 @@ impl BigInterval {
     }
 
     /// The difference `self − other`.
+    #[must_use]
     pub fn sub(&self, other: &BigInterval) -> BigInterval {
         BigInterval {
             lo: &self.lo - &other.hi,
@@ -212,6 +224,7 @@ impl BigInterval {
     }
 
     /// The negation `−self`.
+    #[must_use]
     pub fn negate(&self) -> BigInterval {
         BigInterval {
             lo: -self.hi.clone(),
@@ -220,6 +233,7 @@ impl BigInterval {
     }
 
     /// The product `self · other`, by the four-endpoint-products rule.
+    #[must_use]
     pub fn mul(&self, other: &BigInterval) -> BigInterval {
         let products = [
             &self.lo * &other.lo,
@@ -253,6 +267,7 @@ impl BigInterval {
     }
 
     /// The `n`-th power; `pow(0)` is the point interval `[1, 1]`.
+    #[must_use]
     pub fn pow(&self, n: u32) -> BigInterval {
         if n == 0 {
             return BigInterval::point(BigRational::one());
@@ -261,7 +276,7 @@ impl BigInterval {
         let hi_pow = ratpow(&self.hi, n);
         let zero = BigRational::zero();
         let straddles = self.lo <= zero && zero <= self.hi;
-        if n % 2 == 0 && straddles {
+        if n.is_multiple_of(2) && straddles {
             let hi = if lo_pow > hi_pow { lo_pow } else { hi_pow };
             BigInterval { lo: zero, hi }
         } else if lo_pow <= hi_pow {
@@ -278,6 +293,7 @@ impl BigInterval {
     }
 
     /// The scalar multiple `c · self` (endpoints swap when `c < 0`).
+    #[must_use]
     pub fn scale(&self, c: &BigRational) -> BigInterval {
         let a = &self.lo * c;
         let b = &self.hi * c;
@@ -289,6 +305,7 @@ impl BigInterval {
     }
 
     /// The convex hull of `self` and `other`.
+    #[must_use]
     pub fn hull(&self, other: &BigInterval) -> BigInterval {
         BigInterval {
             lo: if self.lo <= other.lo {
@@ -728,11 +745,6 @@ fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
         };
     }
     Some(enclosure)
-}
-
-/// A crude but finite upper bound used only as the high side of an `exp` clamp.
-fn enormous() -> BigRational {
-    pow2(1 << 20)
 }
 
 /// `ln(p)` for a rational `p > 0`.
