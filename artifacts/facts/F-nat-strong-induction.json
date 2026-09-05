@@ -5,7 +5,7 @@
   "statement": "If a property (or a construction, at any universe) holds at n whenever it holds at every m < n, then it holds at every n -- and the resulting function satisfies the expected unfolding equation, so a proof about it can take its first step. Both are kernel terms over Nat.lt_well_founded and the generic WellFounded.fix, with an empty axiom footprint.",
   "formal": {
     "language": "lean4",
-    "statement": "def Nat.strongInduction.{u} (motive : Nat -> Sort u) (step : forall n, (forall m, m < n -> motive m) -> motive n) (n : Nat) : motive n",
+    "statement": "theorem Nat.strongInduction_eq : ((x0 : ((x0 : AxNat) -> Sort (u))) -> ((x1 : ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> ((x3 : AxNat.lt x2 x1) -> x0 x2))) -> x0 x1))) -> ((x2 : AxNat) -> Eq.{u} (x0 x2) (AxNat.strongInduction.{u} x0 x1 x2) (x1 x2 (fun (x3 : AxNat) => fun (x4 : AxNat.lt x3 x2) => AxNat.strongInduction.{u} x0 x1 x3)))))",
     "fragment": "Nat",
     "kernel_theorem": "Nat.strongInduction_eq",
     "kernel_statement": "Nat.strongInduction.{u} : forall (motive : Nat -> Sort u), (forall n, (forall m, Nat.lt m n -> motive m) -> motive n) -> forall n, motive n, defined as WellFounded.fix.{1,u} Nat Nat.lt motive Nat.lt_well_founded. Nat.strongInduction_eq.{u} : forall motive step n, Eq.{u} (motive n) (Nat.strongInduction motive step n) (step n (fun m _ => Nat.strongInduction motive step m))."
