@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:creal-field-setoid",
+  "title": "The constructed reals are a field, and the inverse must be existential because a functional one is undefinable",
+  "statement": "CReal.fieldS : AlgS.Field makes the constructed reals an instance of the constructive field record, over the existing CReal.commRingS and the existing Bishop apartness CReal.Apart. The load-bearing declaration is CReal.mulInvEx: for every real x apart from zero there EXISTS a real y with x*y equivalent to one. This shape is forced. CReal.inv : (x : CReal) -> (k : Nat) -> PosBound x k -> CReal takes its modulus as DATA; CReal.Apart x zero is Or (lt x zero) (lt zero x), a Prop; and CReal.pos_bound_of_lt yields the modulus only inside an Exists, also a Prop. So neither the sign nor the modulus can be eliminated out into a CReal, and a field field of type (x : carrier) -> apart x zero -> carrier is UNDEFINABLE here -- a large-elimination wall, not a missing lemma (CReal.no_total_inverse already proves the total form impossible). The existential form is a Prop, so both eliminations are legal: the proof is one Or.elim on the sign and one Exists.rec on the modulus per branch. The positive branch is free (pos_bound_of_lt then mul_inv_cancel). The negative branch costs two new theorems: CReal.pos_of_neg_lt_zero (x < 0 gives 0 < -x, one add_lt_add_of_le_of_lt read back through lt_congr) and the sign pushed through the product by AlgS.mul_neg_right, because CReal has only neg_mul_neg, which is squares.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CReal.mulInvEx : ((x0 : CReal) -> ((x1 : CReal.Apart x0 CReal.zero) -> Exists.{1} CReal (fun (x2 : CReal) => CReal.Equiv (CReal.mul x0 x2) CReal.one)))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CReal.mulInvEx"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-field-mul-left-cancel",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-mul-comm",
+    "F:creal-mul-inv-cancel",
+    "F:creal-neg-congr",
+    "F:creal-pos-bound-of-lt"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "creal-field-setoid-1",
+      "kind": "kernel-term",
+      "supports": "CReal.apart_compat, one_apart_zero, pos_of_neg_lt_zero, mulInvEx and fieldS admit with empty footprints, and all five were admitted on FIRST submission. The suite checks that CReal.fieldS's rendered type is exactly AlgS.Field; that mulInvEx's hypothesis really names CReal.Apart (not a disequality) and its conclusion really names Exists; that the AlgS.Field selectors carrier/equiv/zero/one/mul/neg/apart/apartSymm/apartCotrans/mulInvEx at CReal.fieldS reduce by def_eq to CReal's OWN constants -- an evaluation test a wrongly ordered constructor application would fail while still having type AlgS.Field -- and that apart is NOT def_eq to CReal.Equiv. It also infers AlgS.Field.mul_left_cancel at CReal.fieldS, so the generic field theorem demonstrably reaches the reals. One negative control must be REFUSED: pos_of_neg_lt_zero applied with the hypothesis 0 < x rather than x < 0.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- creal::field_setoid_instance --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 7 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 7 (six behavioural tests plus the ADR-1627 declaration inventory). AlgS.Field.IsTight CReal.fieldS is deliberately ABSENT -- see the notes."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel creal::field_setoid_instance, lane vector-spaces-field, ADR-1627 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/creal/field_setoid_instance.rs; crates/axeyum-lean-kernel/src/creal/inverse.rs (CReal.inv, mul_inv_cancel); tests creal::field_setoid_instance::field_setoid_instance_tests::*."
+  },
+  "notes": "AlgS.Field.IsTight CReal.fieldS is NOT declared. creal.rs's doc block on not_apart_one_of_pow_succ_eq_one calls tightness 'Markov's principle' and that is WRONG -- Markov is the converse, Not (Equiv x y) -> Apart x y, and the apart doc block on the same struct states the direction correctly. Tightness of the Bishop apartness is constructively true; what its proof needs is a single-index introduction rule for CReal.lt (from x_n - y_n > 2/(n+1) produce lt y x with the explicit rational gap), and no such lemma exists among CReal's order theorems. That is why AlgS.Field carries tightness as a predicate rather than as a field: making it a field would have made the reals not a field."
+}

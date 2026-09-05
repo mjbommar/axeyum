@@ -2509,10 +2509,10 @@ pub(super) fn int_sub(p: &IntPrelude) -> Vec<(&'static str, Sub)> {
     ]
 }
 
-/// The `RatPrelude` field table (583 names,
+/// The `RatPrelude` field table (595 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 76 of the names come from ADR-1512 per-module registries and
+/// 88 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `RatPrelude` itself.
 #[must_use]
@@ -3292,6 +3292,27 @@ pub(super) fn rat(p: &RatPrelude) -> Fields {
                 "probability_s.uncorrelated_of_independent",
                 p.probability_s.uncorrelated_of_independent,
             ),
+            ("field_setoid.ne_of_lt", p.field_setoid.ne_of_lt),
+            ("field_setoid.apart", p.field_setoid.apart),
+            ("field_setoid.apart_symm", p.field_setoid.apart_symm),
+            ("field_setoid.apart_cotrans", p.field_setoid.apart_cotrans),
+            ("field_setoid.apart_compat", p.field_setoid.apart_compat),
+            ("field_setoid.mul_inv_ex", p.field_setoid.mul_inv_ex),
+            ("field_setoid.field_s", p.field_setoid.field_s),
+            (
+                "field_setoid.field_s_is_tight",
+                p.field_setoid.field_s_is_tight,
+            ),
+            ("vector_space.comm_ring_s", p.vector_space.comm_ring_s),
+            (
+                "vector_space.add_comm_group_s",
+                p.vector_space.add_comm_group_s,
+            ),
+            ("vector_space.vector_space_s", p.vector_space.vector_space_s),
+            (
+                "vector_space.lin_comb_eq_sum_range",
+                p.vector_space.lin_comb_eq_sum_range,
+            ),
         ],
         lists: Vec::new(),
     }
@@ -3351,10 +3372,10 @@ pub(super) fn arith_sub(p: &ArithPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `CRealPrelude` field table (615 names,
+/// The `CRealPrelude` field table (620 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 73 of the names come from ADR-1512 per-module registries and
+/// 78 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `CRealPrelude` itself.
 #[must_use]
@@ -4224,6 +4245,11 @@ pub(super) fn creal(p: &CRealPrelude) -> Fields {
             ("comm_ring_s", p.comm_ring_s),
             ("ordered_ring_s", p.ordered_ring_s),
             ("add_group_s", p.add_group_s),
+            ("field_s.apart_compat", p.field_s.apart_compat),
+            ("field_s.one_apart_zero", p.field_s.one_apart_zero),
+            ("field_s.pos_of_neg_lt_zero", p.field_s.pos_of_neg_lt_zero),
+            ("field_s.mul_inv_ex", p.field_s.mul_inv_ex),
+            ("field_s.field_s", p.field_s.field_s),
             ("pi.pi_half_coef", p.pi.pi_half_coef),
             ("pi.pi_half_term", p.pi.pi_half_term),
             ("pi.pi_half_series_partial", p.pi.pi_half_series_partial),

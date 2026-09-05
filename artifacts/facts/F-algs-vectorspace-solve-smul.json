@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-vectorspace-solve-smul",
+  "title": "In a vector space over a constructive field, a scalar apart from zero can be solved for",
+  "statement": "AlgS.VectorSpace.IsVectorSpace F M smul is AlgS.Module.IsModule (AlgS.Field.toCommRing F) M smul -- a vector space IS a module, and what 'vector space' adds is carried by the type of F. solve_smul is the atomic Steinitz exchange step and the one place a vector-space proof genuinely needs the field rather than the ring: given a apart from zero and M.equiv (smul a v) w, there EXISTS a scalar c with M.equiv v (smul c w). The witness is the inverse the field's mulInvEx supplies, and it never leaves the Prop: the proof opens the existential inverse with Exists.rec, runs v ~ 1.v ~ (b*a).v ~ b.(a.v) ~ b.w through oneSmul/mulSmul/smulCongr, and re-introduces the existential at b. Its companion smul_left_cancel is the same chain used twice: a # 0 and a.v ~ a.w give v ~ w.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.VectorSpace.solve_smul : ((x0 : AlgS.Field) -> ((x1 : AlgS.CommGroup) -> ((x2 : ((x2 : AlgS.Field.carrier x0) -> ((x3 : AlgS.CommGroup.carrier x1) -> AlgS.CommGroup.carrier x1))) -> ((x3 : AlgS.VectorSpace.IsVectorSpace x0 x1 x2) -> ((x4 : AlgS.Field.carrier x0) -> ((x5 : AlgS.CommGroup.carrier x1) -> ((x6 : AlgS.CommGroup.carrier x1) -> ((x7 : AlgS.Field.apart x0 x4 (AlgS.Field.zero x0)) -> ((x8 : AlgS.CommGroup.equiv x1 (x2 x4 x5) x6) -> Exists.{1} (AlgS.Field.carrier x0) (fun (x9 : AlgS.Field.carrier x0) => AlgS.CommGroup.equiv x1 x5 (x2 x9 x6)))))))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.VectorSpace.solve_smul"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-field-mul-left-cancel"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-vectorspace-solve-smul-1",
+      "kind": "kernel-term",
+      "supports": "IsVectorSpace, smul_left_cancel, solve_smul and basis_zero_unique admit with empty footprints. The suite checks with def_eq that IsVectorSpace F M smul unfolds to IsModule (toCommRing F) M smul AND that it is not def_eq to True (a definition unfolding to True would type-check), and carries a negative control that must be REFUSED: introducing the existential of solve_smul at a VECTOR rather than a scalar.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- field_setoid vector_space --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 18 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 18. The load-bearing member is is_vector_space_unfolds_to_is_module_over_the_underlying_ring's second assertion -- without the not-True half the definition could be vacuous and every theorem over it trivial."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::field_setoid and nat_prelude::vector_space, lane vector-spaces-field, ADR-1627 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/vector_space.rs (declare_solve_smul, declare_smul_left_cancel); tests nat_prelude::vector_space::vector_space_tests::*."
+  },
+  "notes": "The general Steinitz exchange is NOT here. The obstruction is neither the field nor Quot.sound: it is index surgery on a coefficient family (a Nat.beq-guarded replacement plus the linComb relation for it), and Nat.lt and Nat.beq are undeclared at the AlgS build position -- which is why AlgS.Module.coeffAgree exists at all. See ADR-1627."
+}

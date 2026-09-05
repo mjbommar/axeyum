@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-vectorspace-basis-zero-unique",
+  "title": "Invariance of basis number at zero: a space with an empty basis has no basis of any other length",
+  "statement": "The first dimension statement in this library, and a genuine instance of 'any two bases have the same cardinality'. If v is a basis of length zero for M and u is a basis of length m, then m = 0. The proof is the field's NON-TRIVIALITY doing the work: spans v 0 collapses the space (linComb c v 0 iota-reduces to M.e, so every vector is equivalent to the identity), hence linearIndependent u (succ j) applies to the two CONSTANT coefficient families fun _ => one and fun _ => zero -- their combinations are equivalent because both are equivalent to M.e -- and coeffAgree at succ j delivers equiv one zero, refuted by the record's oneApartZero through apartCompat. It takes NO IsVectorSpace hypothesis, and that is itself the finding: at length zero the module axioms are not used at all, only the field's non-triviality, so stating it over a module would have been a weaker theorem with a decorative hypothesis.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.VectorSpace.basis_zero_unique : ((x0 : AlgS.Field) -> ((x1 : AlgS.CommGroup) -> ((x2 : ((x2 : AlgS.Field.carrier x0) -> ((x3 : AlgS.CommGroup.carrier x1) -> AlgS.CommGroup.carrier x1))) -> ((x3 : ((x3 : AxNat) -> AlgS.CommGroup.carrier x1)) -> ((x4 : ((x4 : AxNat) -> AlgS.CommGroup.carrier x1)) -> ((x5 : AxNat) -> ((x6 : AlgS.Module.isBasis (AlgS.Field.toCommRing x0) x1 x2 x3 AxNat.zero) -> ((x7 : AlgS.Module.isBasis (AlgS.Field.toCommRing x0) x1 x2 x4 x5) -> Eq.{1} AxNat x5 AxNat.zero))))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.VectorSpace.basis_zero_unique"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-vectorspace-solve-smul"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-vectorspace-basis-zero-unique-1",
+      "kind": "kernel-term",
+      "supports": "basis_zero_unique admits with an empty footprint and is a Theorem, so the kernel checked its proof term. The suite asserts its rendered type really names AlgS.Module.isBasis and concludes at Nat.zero -- so it cannot pass on a statement about something else -- and carries a negative control that must be REFUSED: the contradiction rebuilt with equivRefl one in place of the derived equiv one zero, which is a proof of equiv one one and does not fit oneApartZero's apart one zero slot.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- field_setoid vector_space --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 18 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 18. Without oneApartZero the record admits the zero ring and this theorem is false, which is why the non-vacuity witness is a field and not an afterthought."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::field_setoid and nat_prelude::vector_space, lane vector-spaces-field, ADR-1627 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/vector_space.rs (declare_basis_zero_unique); tests nat_prelude::vector_space::vector_space_tests::*."
+  },
+  "notes": "The general theorem isBasis v n -> isBasis u m -> n = m is NOT proved. ADR-1627 decomposes it into (1) 'a sum apart from zero has a summand apart from zero', which the field supplies through cotransitivity, (2) index surgery on a coefficient family, which needs Nat.beq at the AlgS build position, and (3) the exchange induction. Item (2) is the piece nobody had priced before."
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-field-setoid-tight",
+  "title": "The rationals are a constructive field whose apartness is tight",
+  "statement": "Rat.fieldS : AlgS.Field is the decidable-equality instance of the constructive field record. Because equality on the constructed rationals is decidable, apartness is just disequality -- Rat.apart a b := Eq Rat a b -> False -- and the whole apartness layer is Rat.lt_trichotomy plus one Eq.rec transport (Rat.ne_of_lt). The setoid cost is ZERO: AlgS.CommRing.ofAlg Rat.commRing supplies all 23 ring fields with equiv := Eq Rat, and only the six field-specific arguments are proved. Rat.fieldS_isTight then proves AlgS.Field.IsTight Rat.fieldS: Not (apart a b) implies equiv a b, i.e. stability of equality, by trichotomy with Rat.ne_of_lt in the two strict branches. This is the half of the tightness story the constructed REALS cannot supply, and it is what makes AlgS.Field.IsTight a non-vacuous predicate rather than a decorative one.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Rat.fieldS_isTight : AlgS.Field.IsTight Rat.fieldS",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "Rat.fieldS_isTight"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-field-mul-left-cancel",
+    "F:eq-symm",
+    "F:rat-lt-trichotomy"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "rat-field-setoid-tight-1",
+      "kind": "kernel-term",
+      "supports": "Rat.ne_of_lt, apart, apart_symm, apart_cotrans, apart_compat, mulInvEx, fieldS and fieldS_isTight admit with empty footprints, all on FIRST submission. The suite checks that Rat.fieldS's rendered type is exactly AlgS.Field; that the AlgS.Field selectors carrier/zero/one/mul/add/neg/apart at Rat.fieldS reduce by def_eq to the rationals' own constants, and that apart is NOT def_eq to Eq Rat -- apartness is data, its NEGATION; and that fieldS_isTight's rendered type names both AlgS.Field.IsTight and Rat.fieldS. One negative control must be REFUSED: cotransitivity's first branch introduced on the RIGHT disjunct, where a < c says nothing about c and b.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- rat_prelude::field_setoid_instance --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 5 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 5. The load-bearing member is the def_eq assertion that AlgS.Field.apart Rat.fieldS is not Eq Rat -- the two have the same type, so nothing else separates a field whose apartness is its equality from one whose apartness is real."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel rat_prelude::field_setoid_instance, lane vector-spaces-field, ADR-1627 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/rat_prelude/field_setoid_instance.rs; tests rat_prelude::field_setoid_instance::field_setoid_instance_tests::*."
+  },
+  "notes": "Rat.mul_inv_cancel_of_ne_zero already existed and is what discharges mulInvEx: the rationals' inverse is TOTAL, so the existential's witness is a plain term Rat.inv a. That is exactly the case the constructed reals cannot copy, and the contrast is the whole content of ADR-1627."
+}

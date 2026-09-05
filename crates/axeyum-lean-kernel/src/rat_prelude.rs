@@ -68,6 +68,9 @@ mod echelon;
 mod echelon_invariant;
 mod echelon_section;
 mod field;
+/// ADR-1627 / roadmap W3-2: `Rat.fieldS : AlgS.Field`, the decidable-equality
+/// instance of the constructive field record, plus `Rat.fieldS_isTight`.
+mod field_setoid_instance;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
@@ -99,6 +102,9 @@ mod sum;
 mod sum_maps;
 mod taylor;
 mod vector;
+/// ADR-1627 / roadmap W3-2: ℚ as a vector space over itself, and the
+/// `linComb` to `Rat.sumRange` bridge.
+mod vector_space_instance;
 
 pub use model::{RatModel, RatModelLaw, build_rat_model_of_arith};
 
@@ -106,9 +112,11 @@ use crate::int_prelude::ops::IntDev;
 use crate::nat_prelude::NatOps;
 use algebra_ext::AlgebraExtNames;
 use algebra_instances::AlgebraNames;
+use field_setoid_instance::RatFieldSNames;
 use ordered_ring_ext::OrderedRingExtNames;
 use ordered_ring_ext_s::OrderedRingExtSNames;
 use probability_s::ProbSNames;
+use vector_space_instance::RatVectorSpaceNames;
 
 /// The interned names produced by [`build_rat_prelude`]: the field constants,
 /// the order, the inverse, the structural characterisation of the normalised
@@ -3165,6 +3173,13 @@ pub struct RatPrelude {
     /// three auxiliary ring lemmas the record's field set makes necessary.
     /// See [`probability_s`].
     pub probability_s: ProbSNames,
+    /// `rat_prelude/field_setoid_instance.rs`'s own 8 names (an ADR-1512-style
+    /// per-module registry, ADR-1627): `Rat.fieldS : AlgS.Field` and the
+    /// apartness supports it is built from.
+    pub field_setoid: RatFieldSNames,
+    /// `rat_prelude/vector_space_instance.rs`'s own 4 names (ADR-1627): ℚ as a
+    /// vector space over itself, and the `linComb`/`sumRange` bridge.
+    pub vector_space: RatVectorSpaceNames,
 }
 
 impl RatPrelude {
@@ -3723,6 +3738,8 @@ fn intern_names(kernel: &mut Kernel, int: IntPrelude) -> RatPrelude {
         ordered_ring_ext: ordered_ring_ext::intern_ordered_ring_ext(kernel),
         ordered_ring_ext_s: ordered_ring_ext_s::intern_ordered_ring_ext_s(kernel),
         probability_s: probability_s::intern_probability_s(kernel),
+        field_setoid: RatFieldSNames::intern(kernel, root),
+        vector_space: RatVectorSpaceNames::intern(kernel, root),
     }
 }
 
@@ -3823,6 +3840,8 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude.ordered_ring_ext_s,
         )?;
         probability_s::declare_probability_s_all(&mut d, &prelude)?;
+        field_setoid_instance::declare_rat_field_s(d.kernel(), &prelude)?;
+        vector_space_instance::declare_rat_vector_space(d.kernel(), &prelude)?;
         Ok(())
     })();
     match built {

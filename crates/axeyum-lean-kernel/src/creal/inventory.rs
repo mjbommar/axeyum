@@ -55,6 +55,7 @@ mod exponential;
 mod extreme_value;
 mod fermat;
 mod field;
+mod field_setoid_instance;
 mod geometric;
 mod integral;
 mod inverse;
@@ -111,6 +112,7 @@ pub(crate) fn all_entries(
     all.extend(extreme_value::entries(p));
     all.extend(fermat::entries(p));
     all.extend(field::entries(p));
+    all.extend(field_setoid_instance::entries(p));
     all.extend(geometric::entries(p));
     all.extend(integral::entries(p));
     all.extend(inverse::entries(p));

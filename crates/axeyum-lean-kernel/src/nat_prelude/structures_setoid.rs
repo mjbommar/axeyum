@@ -4887,3 +4887,18 @@ mod first_iso_tests {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// ADR-1627: `AlgS.Field` lives in its own module (`super::field_setoid`) but
+// its first 23 fields must be the SAME `FieldSpec` closures this spine's
+// `AlgS.CommRing` is built from — otherwise `AlgS.Field.toCommRing` and
+// `AlgS.Field.ofCommRing` would not type-check, since a record's field type
+// is the term the closure builds and nothing else. Exposing the list (rather
+// than re-deriving it there) is what makes those two projections free.
+// ---------------------------------------------------------------------------
+
+/// `AlgS.CommRing`'s 23 field specs, for [`super::field_setoid`] to prefix
+/// its apartness/inverse fields onto.
+pub(crate) fn comm_ring_fields_for_field_s() -> Vec<FieldSpec> {
+    comm_ring_fields_s()
+}

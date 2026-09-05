@@ -200,6 +200,9 @@ mod fermat_number_mirrors;
 mod fermat_witness;
 mod fib_extra;
 mod fibonacci;
+/// ADR-1627 / roadmap W3-2: `AlgS.Field.*`, a constructive field over the
+/// setoid spine -- apartness as data, the inverse as an existential.
+pub mod field_setoid;
 mod find_greatest;
 mod finite;
 mod finite_set;
@@ -315,6 +318,9 @@ mod totient_prime_pow;
 pub(crate) mod transposition;
 mod unpair;
 mod vandermonde;
+/// ADR-1627 / roadmap W3-2: `AlgS.VectorSpace.*`, modules over an
+/// `AlgS.Field`, and the first dimension statement.
+pub mod vector_space;
 mod xor;
 mod xor_algebra;
 mod xor_order;
@@ -7239,7 +7245,7 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // ADR-1609 / roadmap W3-2: `AlgS.Module.*`. Needs the `AlgS` records,
         // three of `declare_structures_s_extra`'s own results, and the
         // polynomial ring above (`R[X]` is the second module instance).
-        let _module_s = module_setoid::declare_module_setoid(
+        let module_s = module_setoid::declare_module_setoid(
             kernel,
             &logic,
             &structures_s.comm_ring,
@@ -7254,6 +7260,33 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 poly_smul: poly_s.ops.smul,
                 poly_equiv: poly_s.ops.equiv,
             },
+            structures_s_names.algs,
+        )?;
+
+        // ADR-1627 / roadmap W3-2: `AlgS.Field.*` and `AlgS.VectorSpace.*`.
+        // The field record is `AlgS.CommRing`'s 23 fields plus an apartness
+        // relation and an EXISTENTIAL inverse (`field_setoid`'s module doc
+        // says why it cannot be a function); the vector-space layer is
+        // `AlgS.Module.*` over it, so it lands directly after the module
+        // layer. Names are DELIBERATELY not threaded into `NatPrelude`, for
+        // the reason `AlgS.Poly.*`'s are not -- consumers (`rat_prelude`,
+        // `creal`) re-derive them from the interned `AlgS` root.
+        let field_s = field_setoid::declare_field_setoid(
+            kernel,
+            &logic,
+            &structures_s.comm_ring,
+            field_setoid::FieldDeps {
+                comm_ring_to_ring_s: structures_s_extra.comm_ring_to_ring_s,
+                mul_neg_one: structures_s_extra.mul_neg_one,
+            },
+            structures_s_names.algs,
+        )?;
+        let _vector_space_s = vector_space::declare_vector_space(
+            kernel,
+            &logic,
+            &field_s,
+            &structures_s.comm_group,
+            &module_s,
             structures_s_names.algs,
         )?;
 

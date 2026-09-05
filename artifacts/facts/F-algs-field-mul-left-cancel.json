@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "id": "F:algs-field-mul-left-cancel",
+  "title": "Over a constructive field carried as a setoid, a scalar apart from zero cancels",
+  "statement": "AlgS.Field is a 29-field one-constructor Sort 2 record: AlgS.CommRing's own 23 fields verbatim, plus an apartness relation apart : carrier -> carrier -> Prop as POSITIVE DATA (never Not (equiv ...)), its symmetry, its cotransitivity (apart a b -> forall c, apart a c \\/ apart c b), setoid compatibility (equiv a b -> apart a b -> False), the non-vacuity witness apart one zero, and the multiplicative inverse stated EXISTENTIALLY as mulInvEx : forall a, apart a zero -> exists b, equiv (mul a b) one. mul_left_cancel is the theorem the record exists for: from apart a zero and equiv (mul a x) (mul a y), conclude equiv x y. The proof opens mulInvEx with Exists.rec into the Prop goal -- which is exactly why the inverse can be existential and still be useful -- and cancels along x ~ 1*x ~ (b*a)*x ~ b*(a*x) ~ b*(a*y) ~ (b*a)*y ~ 1*y ~ y. The inverse is existential rather than a function (x : carrier) -> apart x zero -> carrier because that functional shape is UNDEFINABLE at the constructed reals: CReal.inv takes its modulus as data, CReal.Apart x zero is a Prop disjunction, and CReal.pos_bound_of_lt delivers the modulus only inside an Exists, so neither the sign nor the modulus survives elimination into a CReal. Irreflexivity is DERIVED from setoid compatibility, not assumed; compatibility is the stronger field and is what makes both apartness-congruence directions provable, which irreflexivity alone does not.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem AlgS.Field.mul_left_cancel : ((x0 : AlgS.Field) -> ((x1 : AlgS.Field.carrier x0) -> ((x2 : AlgS.Field.carrier x0) -> ((x3 : AlgS.Field.carrier x0) -> ((x4 : AlgS.Field.apart x0 x1 (AlgS.Field.zero x0)) -> ((x5 : AlgS.Field.equiv x0 (AlgS.Field.mul x0 x1 x2) (AlgS.Field.mul x0 x1 x3)) -> AlgS.Field.equiv x0 x2 x3))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "AlgS.Field.mul_left_cancel"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:algs-poly-module"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "algs-field-mul-left-cancel-1",
+      "kind": "kernel-term",
+      "supports": "AlgS.Field (29 fields, inductive + constructor + recursor + 29 selectors), toCommRing, ofCommRing, IsTight, apart_irrefl, apart_left_congr, apart_right_congr, inv_unique, mul_left_cancel and AlgS.mul_neg_right all admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint, and every one was admitted on FIRST submission. The suite pins the field count at 29 and each of the six new fields by NAME at its index; it round-trips toCommRing(ofCommRing R ap ...) against R's own selectors field by field with def_eq (a wrong selector index type-checks and fails here); it requires AlgS.Field.apart of a constructed field to be the supplied relation and NOT the ring's own equivalence; and it carries three negative controls that must be REFUSED -- a proof of False offered as a proof of apart a a, Or.resolve_right where the congruence proof resolves the LEFT disjunct, and mulInvEx fed an apartness witness against one rather than zero -- each paired with the real declaration as a positive twin.",
+      "check_status": "checked",
+      "checker_command": "out=$(cargo test -p axeyum-lean-kernel --lib --release -- field_setoid vector_space --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 18 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 18 (field_setoid 11 + vector_space 7). The load-bearing members are control_apart_left_congr_cannot_resolve_the_other_disjunct (without it apartCompat could be any Prop-valued field) and of_comm_ring_keeps_the_apartness_it_was_given (without it the record could collapse apart into equiv, which has the same type)."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::field_setoid and nat_prelude::vector_space, lane vector-spaces-field, ADR-1627 (roadmap W3-2).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/field_setoid.rs (declare_field_setoid, declare_mul_left_cancel); crates/axeyum-lean-kernel/src/nat_prelude/structures_setoid.rs (comm_ring_fields_for_field_s); tests nat_prelude::field_setoid::field_setoid_tests::*."
+  },
+  "notes": "Tightness (Not (apart a b) -> equiv a b) is deliberately NOT a field of this record; it is the separate predicate AlgS.Field.IsTight, rendered ((x0 : AlgS.Field) -> Prop). Rat satisfies it and CReal's case is open -- see F:rat-field-setoid-tight."
+}

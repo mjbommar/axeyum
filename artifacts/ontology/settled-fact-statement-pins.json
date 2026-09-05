@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2325,
+    "min_identity_bound": 2331,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1011,6 +1011,13 @@
       "kernel_theorem": "AlgS.add_left_cancel"
     },
     {
+      "fact_id": "F:algs-field-mul-left-cancel",
+      "language": "lean4",
+      "statement_sha256": "1ccfa4f165173133bf99dcd0ff33514260e0d3997a9dc422aeb52992771a0480",
+      "prose_sha256": "3ef2fa44a90427ff6bc1bea8bdd45a1d5fb82209c2fc17499b44fb89860cea43",
+      "kernel_theorem": "AlgS.Field.mul_left_cancel"
+    },
+    {
       "fact_id": "F:algs-inv-inv",
       "language": "lean4",
       "statement_sha256": "692dabd6b224bd92983e59ee3d2cf9747817e2155c8938da9341d773cf32d2ed",
@@ -1135,6 +1142,20 @@
       "statement_sha256": "0a45cb2bac0cb52002893db7b4db607ea824cc3f02b8b867f3929dba3b64c6c0",
       "prose_sha256": "66333e45cc4acd078df35afaf0412a976a464bba9129bc39e345e3f3e7686845",
       "kernel_theorem": "AlgS.Subgroup.ker_isSub"
+    },
+    {
+      "fact_id": "F:algs-vectorspace-basis-zero-unique",
+      "language": "lean4",
+      "statement_sha256": "c5d5176e6e2252f3f84236ce9bfdd95d9ee511959aec734f15e0b3fa72786006",
+      "prose_sha256": "6c62d4040d55856dbceb8ca0815f994216e4cfd3b4969a0011c1f46d6bfffb75",
+      "kernel_theorem": "AlgS.VectorSpace.basis_zero_unique"
+    },
+    {
+      "fact_id": "F:algs-vectorspace-solve-smul",
+      "language": "lean4",
+      "statement_sha256": "f020bb9b14ba7b8ae477aac0f9e57d585e74e355f2d6e417678a6522db3ef9f7",
+      "prose_sha256": "b867d59910dc3476bd8812331aa5207f26a27bf9ec80fde90906154ff33fb6f6",
+      "kernel_theorem": "AlgS.VectorSpace.solve_smul"
     },
     {
       "fact_id": "F:alternating-binomial-row-sum-zero",
@@ -4673,6 +4694,13 @@
       "statement_sha256": "8bcb4e35d4f6045944c3c35fd8c00d7e50cba8c707d4bf42e920076c59a97f6d",
       "prose_sha256": "c850632756e21e550dabf4b34f187f777ca5009fe12a19eae1606956b93506f2",
       "kernel_theorem": "CReal.fermat_interiorExtremum"
+    },
+    {
+      "fact_id": "F:creal-field-setoid",
+      "language": "lean4",
+      "statement_sha256": "c5267b1c72350b19c8c6e8e9a7f78b8d8746eee0a1aea9501e45e5cd36122b0f",
+      "prose_sha256": "962b9365ef54a94360b2fc686822ca0d979f0b4a5c6d954396cf15161b0a7745",
+      "kernel_theorem": "CReal.mulInvEx"
     },
     {
       "fact_id": "F:creal-fineblocksum-close",
@@ -21985,6 +22013,13 @@
       "kernel_theorem": "Rat.ext"
     },
     {
+      "fact_id": "F:rat-field-setoid-tight",
+      "language": "lean4",
+      "statement_sha256": "58830493c1a3e45e8b4b870f5f9934a976d937dba36dd5d4c0f4ba592801a333",
+      "prose_sha256": "addb3e90484472058696498db88bd8a45778656f0ed3be0e65fd7a21fa895edf",
+      "kernel_theorem": "Rat.fieldS_isTight"
+    },
+    {
       "fact_id": "F:rat-gcd-one-right",
       "language": "lean4",
       "statement_sha256": "27fedd38b22ce418b5a18b7d77c93a3d6b1aa9aad64a82a443e36e069d123bc3",
@@ -22442,6 +22477,13 @@
           "prose_sha256": "dad7c91d0fc9a18a922dfcf169cd941986bfe5be569776db3a8e02e54eb2652a"
         }
       ]
+    },
+    {
+      "fact_id": "F:rat-lincomb-eq-sumrange",
+      "language": "lean4",
+      "statement_sha256": "9c2a6631ecb2c3d3ebd052f09f528b860b6a1b2fac28eec53d17fcbffd0a249a",
+      "prose_sha256": "276c8f9d8b3ac074d0ea1b750c30bd2ead812d22cf3e342c8d508ab0f0b03a80",
+      "kernel_theorem": "Rat.linComb_eq_sumRange"
     },
     {
       "fact_id": "F:rat-lt-irrefl",

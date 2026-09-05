@@ -110,6 +110,7 @@ pub use deriv_unique::DerivUniqueNames;
 pub use evt_row1::EvtRow1Names;
 pub use exp_fn::ExpFnNames;
 pub use extreme_value::ExtremeValueNames;
+pub use field_setoid_instance::FieldSNames;
 pub use inverse_fn::InverseFnNames;
 /// Re-exported so `CRealPrelude::ivt_boundary` -- a `pub` field -- has a
 /// publicly nameable type. `mod creal` is private at the crate root, so a
@@ -6254,6 +6255,13 @@ pub struct CRealPrelude {
     /// wired into `STEP_DISPATCH` right after
     /// `algebra_instance::declare_ordered_ring_s`.
     pub add_group_s: NameId,
+    /// `creal/field_setoid_instance.rs`'s own 5 names, in that module's own
+    /// registry (ADR-1512) so that adding a declaration there touches that
+    /// module alone.
+    ///
+    /// Reached as `p.field_s.field_s` (`CReal.fieldS : AlgS.Field`) and
+    /// documented in [`FieldSNames`] rather than here.
+    pub field_s: FieldSNames,
     // --- `CReal.pi` (creal/pi.rs) --------------------------------------------
     /// `creal/pi.rs`'s own 14 names, moved out of this struct by
     /// ADR-1512 so that adding a declaration to that module touches
@@ -6437,6 +6445,7 @@ fn intern_names(kernel: &mut Kernel, rat: RatPrelude) -> CRealPrelude {
         lt_cotrans: kernel.name_str(creal, "lt_cotrans"),
         apart_cotrans: kernel.name_str(creal, "apart_cotrans"),
         completeness: completeness::CompletenessNames::intern(kernel, creal),
+        field_s: field_setoid_instance::FieldSNames::intern(kernel, creal),
         converges: kernel.name_str(creal, "Converges"),
         converges_unique: kernel.name_str(creal, "converges_unique"),
         converges_of_close: kernel.name_str(creal, "converges_of_close"),
@@ -7944,6 +7953,10 @@ const STEP_DISPATCH: &[StepDispatch] = &[
         cos_sign::declare_cos_wide_nonpositive,
     ),
     ("pi::declare_pi_family", pi::declare_pi_family),
+    (
+        "field_setoid_instance::declare_field_s_all",
+        field_setoid_instance::declare_field_s_all,
+    ),
 ];
 
 /// Build the real prelude: `ℝ` as a Bishop setoid over the constructed `ℚ`,
@@ -9055,6 +9068,9 @@ mod exponential;
 mod extreme_value;
 mod fermat;
 mod field;
+/// ADR-1627 / roadmap W3-2: `CReal.fieldS : AlgS.Field` -- the existential
+/// inverse, which is the only shape `CReal` can discharge.
+mod field_setoid_instance;
 mod geometric;
 mod integral;
 mod inverse;
