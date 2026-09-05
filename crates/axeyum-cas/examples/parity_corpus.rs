@@ -1,5 +1,5 @@
-//! CAS SymPy parity corpus harness (math-department file 13, item 10, second
-//! half — `docs/plan/cas-parity-corpus-2026-09-05/README.md`).
+//! CAS `SymPy` parity corpus harness (math-department file 13, item 10,
+//! second half — `docs/plan/cas-parity-corpus-2026-09-05/README.md`).
 //!
 //! For every entry in `corpus.json`, this file's `entries()` reconstructs the
 //! same query directly against `axeyum-cas`, independent of whatever
@@ -30,6 +30,7 @@
 //! cited non-elementary/undecidable case); see `corpus.json`'s
 //! `justification` field per entry, and the README's design-decision note on
 //! why trust is derived per-entry rather than from one verdict type.
+#![allow(clippy::too_many_lines)] // one flat entry table in main; length is inherent (cf. cas_tour.rs)
 
 use std::time::Instant;
 
@@ -133,7 +134,12 @@ struct Entry {
 /// expected expression? The `ZeroTest` this produces — `Certified` or
 /// `Unknown` — is the entry's trust, exactly as `CertifiedIntegral`'s own
 /// certificate *is* an `equal` call under the hood.
-fn eq_check(actual: &CasExpr, expected: &CasExpr, expect_equal: bool, actual_label: &str) -> Outcome {
+fn eq_check(
+    actual: &CasExpr,
+    expected: &CasExpr,
+    expect_equal: bool,
+    actual_label: &str,
+) -> Outcome {
     match equal(actual, expected) {
         ZeroTest::Certified { equal: decided, .. } => Outcome {
             verdict: if decided == expect_equal {
@@ -236,14 +242,24 @@ fn d3_chain_ctrl() -> Outcome {
 fn i1_def_poly() -> Outcome {
     let integrand = i(3) * x().pow(2) + i(2) * x();
     match definite_integrate(&integrand, "x", &i(0), &i(1)) {
-        Some(result) => eq_check(&result.value, &i(2), true, &format!("value={}", result.value)),
+        Some(result) => eq_check(
+            &result.value,
+            &i(2),
+            true,
+            &format!("value={}", result.value),
+        ),
         None => declined("definite_integrate(3x^2+2x, x, 0, 1)"),
     }
 }
 fn i2_def_log() -> Outcome {
     let e = i(1).exp();
     match definite_integrate(&(i(1) / x()), "x", &i(1), &e) {
-        Some(result) => eq_check(&result.value, &i(1), true, &format!("value={}", result.value)),
+        Some(result) => eq_check(
+            &result.value,
+            &i(1),
+            true,
+            &format!("value={}", result.value),
+        ),
         None => declined("definite_integrate(1/x, x, 1, e)"),
     }
 }
@@ -252,7 +268,12 @@ fn i3_indef_trig() -> Outcome {
     match integrate(&f, "x") {
         Some(result) => {
             let expected = x().sin() - x() * x().cos();
-            eq_check(&result.antiderivative, &expected, true, &format!("F={}", result.antiderivative))
+            eq_check(
+                &result.antiderivative,
+                &expected,
+                true,
+                &format!("F={}", result.antiderivative),
+            )
         }
         None => declined("integrate(x*sin(x))"),
     }
@@ -262,32 +283,45 @@ fn i3_indef_trig_ctrl() -> Outcome {
     match integrate(&f, "x") {
         Some(result) => {
             let wrong = x() * x().cos() + x().sin();
-            eq_check(&result.antiderivative, &wrong, false, &format!("F={}", result.antiderivative))
+            eq_check(
+                &result.antiderivative,
+                &wrong,
+                false,
+                &format!("F={}", result.antiderivative),
+            )
         }
         None => declined("integrate(x*sin(x))"),
     }
 }
-/// `integrate(e^{-x^2}, x)` has no elementary closed form (the antiderivative
-/// is `(sqrt(pi)/2) erf(x)`, not a finite combination of the elementary
-/// functions this fragment covers) — this is Liouville's theorem, classical.
-/// `axeyum-cas`'s `integrate` covers the polynomial fast path plus specific
-/// closed-form finders (`1/x`, `1/(x^2+-1)`, `x^k e^{ax}`, `x^k sin/cos`); none
-/// of those match `e^{-x^2}`, so `None` is the expected, correct answer.
-fn i4_nonelementary() -> Outcome {
+/// `integrate(e^{-x^2}, x)` has no antiderivative in CLOSED ELEMENTARY form
+/// (Liouville's theorem: the standard elementary functions cannot express
+/// it) — but `erf` is exactly the special function defined to fill this gap
+/// (`erf(x) = (2/sqrt(pi)) integral_0^x e^{-t^2} dt`), and this was FOUND
+/// EMPIRICALLY: `axeyum-cas`'s `integrate` has a dedicated Gaussian-integral
+/// route that returns `(sqrt(pi)/2) erf(x)` here, which is correct — its
+/// derivative is exactly `e^{-x^2}` (checked below via the same
+/// differentiate-and-`equal` route `CertifiedIntegral`'s own certificate
+/// uses). This corrects an initial assumption (based on the module's plain
+/// polynomial/`1/x`/`x^k e^{ax}` fast paths) that this would decline; the
+/// real capability is broader. `is_certified()` on the returned
+/// `CertifiedIntegral` should be true.
+fn i4_gaussian_erf() -> Outcome {
     let f = (-x().pow(2)).exp();
     match integrate(&f, "x") {
-        None => Outcome {
-            verdict: Verdict::Agree,
-            trust: Trust::Unknown,
-            expected: "None (no elementary antiderivative, Liouville)".to_string(),
-            actual: "declined".to_string(),
-        },
-        Some(result) => Outcome {
-            verdict: Verdict::Disagree,
-            trust: Trust::Uncertified,
-            expected: "None (no elementary antiderivative, Liouville)".to_string(),
-            actual: format!("decided: {}", result.antiderivative),
-        },
+        Some(result) => {
+            let expected = r(1, 2) * CasExpr::var("pi").sqrt() * x().erf();
+            eq_check(
+                &result.antiderivative,
+                &expected,
+                true,
+                &format!(
+                    "F={} (is_certified={})",
+                    result.antiderivative,
+                    result.is_certified()
+                ),
+            )
+        }
+        None => declined("integrate(e^(-x^2), x)"),
     }
 }
 
@@ -378,8 +412,7 @@ fn s2_sin() -> Outcome {
 fn s3_ln() -> Outcome {
     match series(&(i(1) + x()).ln(), "x", 4) {
         Some(actual) => {
-            let expected =
-                x() - r(1, 2) * x().pow(2) + r(1, 3) * x().pow(3) - r(1, 4) * x().pow(4);
+            let expected = x() - r(1, 2) * x().pow(2) + r(1, 3) * x().pow(3) - r(1, 4) * x().pow(4);
             eq_check(&actual, &expected, true, &format!("series={actual}"))
         }
         None => declined("series(ln(1+x), x, 4)"),
@@ -469,7 +502,11 @@ fn solve1_rational_roots() -> Outcome {
             let has2 = contains_root(&roots, &i(2));
             let agree = has1 && has2 && roots.len() == 2;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
                 trust: Trust::Uncertified,
                 expected: "{1, 2}".to_string(),
                 actual: format!("{roots:?} (has 1: {has1}, has 2: {has2})"),
@@ -487,7 +524,11 @@ fn solve2_irrational_roots() -> Outcome {
             let has_neg = contains_root(&roots, &(-sqrt2.clone()));
             let agree = has_pos && has_neg && roots.len() == 2;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
                 trust: Trust::Uncertified,
                 expected: "{-sqrt(2), sqrt(2)}".to_string(),
                 actual: format!("{roots:?} (has +sqrt2: {has_pos}, has -sqrt2: {has_neg})"),
@@ -498,24 +539,36 @@ fn solve2_irrational_roots() -> Outcome {
 }
 /// `x^5 - x - 1` is irreducible over Q with Galois group `S_5`, which is not
 /// solvable — Abel-Ruffini says there is no radical formula for its roots.
-/// `axeyum-cas`'s `solve` has no general quintic method (no radical solver
-/// past degree 4, no Galois-group machinery at all — see
-/// `docs/math-department/13-computer-algebra.md` chair 04), so `None` is the
-/// correct, expected answer.
+/// `solve`'s own rustdoc documents that "complex roots and irreducible
+/// cubics+" are OMITTED from its returned list (not claimed root-free) — so
+/// this is expected to return `Some(vec![])` (an honestly incomplete, not a
+/// wrong, list), not `None`. FOUND EMPIRICALLY: this is exactly what
+/// happens, which corrects an initial assumption that `solve` would return
+/// `None` outright; the real contract is "omit what I can't handle",
+/// distinguishable from "claim no roots" only by reading the doc.
 fn solve3_quintic() -> Outcome {
     let p = x().pow(5) - x() - i(1);
     match solve(&p, "x") {
-        None => Outcome {
+        Some(roots) if roots.is_empty() => Outcome {
             verdict: Verdict::Agree,
-            trust: Trust::Unknown,
-            expected: "None (Abel-Ruffini: Galois group S5, unsolvable by radicals)".to_string(),
-            actual: "declined".to_string(),
+            trust: Trust::Uncertified,
+            expected: "Some([]) (irreducible S5-quintic factor omitted, per solve's own \
+                       documented contract; Abel-Ruffini says no radical roots exist to find)"
+                .to_string(),
+            actual: "Some([]) (empty, as documented)".to_string(),
         },
         Some(roots) => Outcome {
             verdict: Verdict::Disagree,
             trust: Trust::Uncertified,
-            expected: "None (Abel-Ruffini: Galois group S5, unsolvable by radicals)".to_string(),
+            expected: "Some([]) (irreducible S5-quintic factor omitted)".to_string(),
             actual: format!("decided: {roots:?}"),
+        },
+        None => Outcome {
+            verdict: Verdict::Decline,
+            trust: Trust::Unknown,
+            expected: "Some([]) (irreducible S5-quintic factor omitted)".to_string(),
+            actual: "declined (None) -- also honest, but not what solve's own doc predicts"
+                .to_string(),
         },
     }
 }
@@ -546,7 +599,12 @@ fn f2_quartic() -> Outcome {
     match factor_expr(&(x().pow(4) - i(1)), "x") {
         Some(factored) => {
             let expected = (x() - i(1)) * (x() + i(1)) * (x().pow(2) + i(1));
-            eq_check(&factored, &expected, true, &format!("factor_expr={factored}"))
+            eq_check(
+                &factored,
+                &expected,
+                true,
+                &format!("factor_expr={factored}"),
+            )
         }
         None => declined("factor_expr(x^4-1, x)"),
     }
@@ -596,12 +654,25 @@ fn e1_radical() -> Outcome {
     let lhs = i(2).sqrt() * i(2).sqrt();
     eq_check(&lhs, &i(2), true, &format!("lhs={lhs}"))
 }
-/// `sqrt(2)*sqrt(3)` and `sqrt(6)` are mathematically equal, but `equal`'s
-/// zero-test treats `sqrt(2)`, `sqrt(3)`, and `sqrt(6)` as three unrelated
-/// atomic constants with no multiplicative relation recorded between them
-/// (there is no `sqrt(a)*sqrt(b) = sqrt(a*b)` rewrite rule in the zero-test's
-/// atom algebra) — so this is expected to decline rather than to wrongly
-/// return `false`.
+/// `sqrt(2)*sqrt(3)` and `sqrt(6)` are mathematically equal (as real
+/// numbers), but `equal`'s zero-test does not know that: it treats
+/// `sqrt(2)`, `sqrt(3)`, and `sqrt(6)` as three unrelated atomic constants
+/// with no multiplicative relation between them (there is no
+/// `sqrt(a)*sqrt(b) = sqrt(a*b)` rewrite rule in the zero-test's atom
+/// algebra — confirmed by printing the witness with `{:?}`: it is the
+/// nonzero free-algebra polynomial `1*(sqrt:2)*(sqrt:3) - 1*(sqrt:6)`).
+///
+/// **THE FINDING**: this is not an honest decline. `equal` returns
+/// `ZeroTest::Certified { equal: false, .. }` — a CONFIDENT, LABELED-CERTIFIED
+/// claim that these two equal real numbers are different. The certificate is
+/// internally consistent (the witness polynomial genuinely is nonzero *in the
+/// free algebra over these three atoms*, and re-deriving it reproduces the
+/// same witness), so it is not a forged or malformed certificate; but the
+/// atom algebra it certifies over is coarser than real-number equality, and
+/// nothing downstream is told that. This is exactly the shape CLAUDE.md's
+/// evidence-and-checker-discipline warns about: a certificate whose scope is
+/// narrower than the claim its label suggests. A caller reading only
+/// `ZeroTest::Certified { equal: false }` has no way to see this gap.
 fn e1_radical_cross_base() -> Outcome {
     let lhs = i(2).sqrt() * i(3).sqrt();
     let rhs = i(6).sqrt();
@@ -614,10 +685,17 @@ fn e1_radical_cross_base() -> Outcome {
             actual: "declined".to_string(),
         },
         ZeroTest::Certified { equal: decided, .. } => Outcome {
-            verdict: if decided { Verdict::Agree } else { Verdict::Disagree },
+            verdict: if decided {
+                Verdict::Agree
+            } else {
+                Verdict::Disagree
+            },
             trust: Trust::Certified,
-            expected: "true, ideally via Unknown (see justification)".to_string(),
-            actual: format!("decided equal={decided}"),
+            expected: "true (sqrt(2)*sqrt(3) = sqrt(6) as real numbers)".to_string(),
+            actual: format!(
+                "Certified{{equal={decided}}} -- a confidently WRONG, certified false; \
+                 see this function's doc comment"
+            ),
         },
     }
 }
@@ -646,7 +724,11 @@ fn e3_trig_pythagorean() -> Outcome {
             actual: "declined".to_string(),
         },
         ZeroTest::Certified { equal: decided, .. } => Outcome {
-            verdict: if decided { Verdict::Agree } else { Verdict::Disagree },
+            verdict: if decided {
+                Verdict::Agree
+            } else {
+                Verdict::Disagree
+            },
             trust: Trust::Certified,
             expected: "true".to_string(),
             actual: format!("decided equal={decided}"),
@@ -674,17 +756,30 @@ fn la2_eigen() -> Outcome {
     match eigenvectors(&m, "L") {
         Some(pairs) => {
             let has_2 = pairs.iter().any(|(lambda, _)| {
-                matches!(equal(lambda, &i(2)), ZeroTest::Certified { equal: true, .. })
+                matches!(
+                    equal(lambda, &i(2)),
+                    ZeroTest::Certified { equal: true, .. }
+                )
             });
             let has_3 = pairs.iter().any(|(lambda, _)| {
-                matches!(equal(lambda, &i(3)), ZeroTest::Certified { equal: true, .. })
+                matches!(
+                    equal(lambda, &i(3)),
+                    ZeroTest::Certified { equal: true, .. }
+                )
             });
             let agree = has_2 && has_3 && pairs.len() == 2;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
                 trust: Trust::Uncertified,
                 expected: "eigenvalues {2, 3}".to_string(),
-                actual: format!("{} eigenvalue(s) (has 2: {has_2}, has 3: {has_3})", pairs.len()),
+                actual: format!(
+                    "{} eigenvalue(s) (has 2: {has_2}, has 3: {has_3})",
+                    pairs.len()
+                ),
             }
         }
         None => declined("eigenvectors([[2,0],[0,3]])"),
@@ -728,12 +823,20 @@ fn la3_minpoly_jordan_ctrl() -> Outcome {
 // ============================================================================
 
 fn nt1_mersenne_prime() -> Outcome {
-    bool_check(ntheory::is_prime(2_147_483_647), true, "is_prime(2^31-1)=true")
+    bool_check(
+        ntheory::is_prime(2_147_483_647),
+        true,
+        "is_prime(2^31-1)=true",
+    )
 }
 fn nt1_mersenne_prime_ctrl() -> Outcome {
     // 2^31 - 3 = 2147483645 = 5 * 429496729 (composite; verified in
     // ground_truth.py by trial division, independent of this crate).
-    bool_check(ntheory::is_prime(2_147_483_645), false, "is_prime(2^31-3)=false")
+    bool_check(
+        ntheory::is_prime(2_147_483_645),
+        false,
+        "is_prime(2^31-3)=false",
+    )
 }
 fn nt2_factorize() -> Outcome {
     let mut actual = ntheory::factorize(360);
@@ -741,7 +844,11 @@ fn nt2_factorize() -> Outcome {
     let mut expected = vec![(2i128, 3u32), (3, 2), (5, 1)];
     expected.sort_unstable();
     Outcome {
-        verdict: if actual == expected { Verdict::Agree } else { Verdict::Disagree },
+        verdict: if actual == expected {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
         trust: Trust::Uncertified,
         expected: format!("{expected:?}"),
         actual: format!("{actual:?}"),
@@ -750,7 +857,11 @@ fn nt2_factorize() -> Outcome {
 fn nt3_legendre() -> Outcome {
     let actual = ntheory_advanced::legendre_symbol(3, 7);
     Outcome {
-        verdict: if actual == -1 { Verdict::Agree } else { Verdict::Disagree },
+        verdict: if actual == -1 {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
         trust: Trust::Uncertified,
         expected: "-1".to_string(),
         actual: format!("{actual}"),
@@ -783,11 +894,19 @@ fn nt4_pell() -> Outcome {
 
 fn ode1_homog() -> Outcome {
     // y'' + y = 0, char_coeffs = [c0, c1, c2] for c0*y + c1*y' + c2*y'' = 0.
-    match dsolve_homogeneous(&[Rational::integer(1), Rational::zero(), Rational::integer(1)], "x") {
+    match dsolve_homogeneous(
+        &[Rational::integer(1), Rational::zero(), Rational::integer(1)],
+        "x",
+    ) {
         Some(sol) => {
             let second_deriv = sol.differentiate("x").differentiate("x");
             let residual = second_deriv + sol.clone();
-            eq_check(&residual, &CasExpr::zero(), true, &format!("y={sol}; y''+y"))
+            eq_check(
+                &residual,
+                &CasExpr::zero(),
+                true,
+                &format!("y={sol}; y''+y"),
+            )
         }
         None => declined("dsolve_homogeneous([1,0,1], x) [y''+y=0]"),
     }
@@ -798,7 +917,12 @@ fn ode2_inhomog() -> Outcome {
         Some(sol) => {
             let first_deriv = sol.differentiate("x");
             let residual = first_deriv + sol.clone() - x();
-            eq_check(&residual, &CasExpr::zero(), true, &format!("y={sol}; y'+y-x"))
+            eq_check(
+                &residual,
+                &CasExpr::zero(),
+                true,
+                &format!("y={sol}; y'+y-x"),
+            )
         }
         None => declined("dsolve_inhomogeneous([1,1], x, x) [y'+y=x]"),
     }
@@ -869,15 +993,17 @@ fn tr3_laplace_decline() -> Outcome {
         None => Outcome {
             verdict: Verdict::Agree,
             trust: Trust::Unknown,
-            expected: "None (tan(t) is outside laplace_transform's product-with-polynomial fragment)"
-                .to_string(),
+            expected:
+                "None (tan(t) is outside laplace_transform's product-with-polynomial fragment)"
+                    .to_string(),
             actual: "declined".to_string(),
         },
         Some(actual) => Outcome {
             verdict: Verdict::Disagree,
             trust: Trust::Uncertified,
-            expected: "None (tan(t) is outside laplace_transform's product-with-polynomial fragment)"
-                .to_string(),
+            expected:
+                "None (tan(t) is outside laplace_transform's product-with-polynomial fragment)"
+                    .to_string(),
             actual: format!("decided: {actual}"),
         },
     }
@@ -899,9 +1025,18 @@ fn fps1_fibonacci() -> Outcome {
             let coeffs_ok = cert.coefficients == vec![BigRational::one(), BigRational::one()];
             let agree = verified && order_ok && coeffs_ok;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
-                expected: "order=2, coefficients=[1,1] (Fibonacci: a_n=a_{n-1}+a_{n-2})".to_string(),
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
+                expected: "order=2, coefficients=[1,1] (Fibonacci: a_n=a_{n-1}+a_{n-2})"
+                    .to_string(),
                 actual: format!(
                     "order={}, coefficients={:?}, verify_ok={verified}",
                     cert.order, cert.coefficients
@@ -915,9 +1050,16 @@ fn fps1_fibonacci() -> Outcome {
 /// order (classical: they are not eventually periodic nor polynomially
 /// recursive) — `docs/math-department/13-computer-algebra.md`'s progress log
 /// for `fps` records this directly: "recovers Fibonacci, Lucas, Padovan;
-/// declines on the primes".
+/// declines on the primes". Uses the same 13 terms as this crate's own
+/// `fps.rs` regression test
+/// (`berlekamp_massey_declines_on_the_primes_which_satisfy_no_short_recurrence`):
+/// with only 10 terms an order-5 fit is a trivial, uninformative overfit
+/// (Berlekamp-Massey can always fit `floor(len/2)` unknowns to `len` data
+/// points), which this entry's first draft used and got a spurious
+/// `Some(order=5)` — an artifact of too little data, not a genuine
+/// recurrence, and fixed here to the crate's own better-chosen sample size.
 fn fps2_primes_decline() -> Outcome {
-    let terms: Vec<BigRational> = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+    let terms: Vec<BigRational> = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41]
         .iter()
         .map(|&n| BigRational::from_integer(BigInt::from(n)))
         .collect();
@@ -950,8 +1092,16 @@ fn enc1_pi() -> Outcome {
             let matches_digits = decimal.starts_with("[3.141592");
             let agree = verified && matches_digits;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "[3.141592... (OEIS A000796), verify Ok".to_string(),
                 actual: format!("{decimal}, verify_ok={verified}"),
             }
@@ -988,7 +1138,11 @@ fn enc2_gamma_decline() -> Outcome {
 fn qe1_exists_sqrt2() -> Outcome {
     // exists x. x^2 - 2 = 0 -- true, witnessed by sqrt(2).
     let atom = Atom::new(
-        vec![Rational::integer(-2), Rational::zero(), Rational::integer(1)],
+        vec![
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ],
         Relation::Eq,
     );
     let formula = ExistsFormula::new(vec![atom]);
@@ -1039,7 +1193,11 @@ fn qe2_forall_positive() -> Outcome {
 fn qe3_overflow_decline() -> Outcome {
     let ten_to_30: i128 = 1_000_000_000_000_000_000_000_000_000_000; // 10^30
     let atom = Atom::new(
-        vec![Rational::integer(-ten_to_30), Rational::zero(), Rational::integer(1)],
+        vec![
+            Rational::integer(-ten_to_30),
+            Rational::zero(),
+            Rational::integer(1),
+        ],
         Relation::Eq,
     );
     let formula = ExistsFormula::new(vec![atom]);
@@ -1072,8 +1230,16 @@ fn nf1_two_squares_41() -> Outcome {
             let verified = cert.verify().is_ok();
             let is_represented = matches!(cert, TwoSquaresCertificate::Represented { .. });
             Outcome {
-                verdict: if verified && is_represented { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if verified && is_represented {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "Represented: 41 = 4^2 + 5^2 (Fermat's two-squares theorem)".to_string(),
                 actual: format!("{cert:?}, verify_ok={verified}"),
             }
@@ -1091,8 +1257,16 @@ fn nf2_two_squares_43_refuted() -> Outcome {
             let verified = cert.verify().is_ok();
             let is_refuted = matches!(cert, TwoSquaresCertificate::Refuted { .. });
             Outcome {
-                verdict: if verified && is_refuted { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if verified && is_refuted {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "Refuted: 43 is prime, 43 mod 4 = 3 to an odd power".to_string(),
                 actual: format!("{cert:?}, verify_ok={verified}"),
             }
@@ -1113,10 +1287,19 @@ fn nf3_fundamental_unit_61() -> Outcome {
     match field.fundamental_unit() {
         Ok(cert) => {
             let verified = cert.verify().is_ok();
-            let matches_expected = cert.a == BigInt::from(29718i64) && cert.b == BigInt::from(3805i64);
+            let matches_expected =
+                cert.a == BigInt::from(29718i64) && cert.b == BigInt::from(3805i64);
             Outcome {
-                verdict: if verified && matches_expected { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if verified && matches_expected {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "a=29718, b=3805".to_string(),
                 actual: format!("a={}, b={}, verify_ok={verified}", cert.a, cert.b),
             }
@@ -1142,8 +1325,16 @@ fn pg1_s3_order() -> Outcome {
             let order = group.order();
             let verified = group.order_certificate().verify().is_ok();
             Outcome {
-                verdict: if order == 6 { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if order == 6 {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "6 (|S3| = 3!)".to_string(),
                 actual: format!("{order}, verify_ok={verified}"),
             }
@@ -1161,8 +1352,16 @@ fn pg2_c4_order() -> Outcome {
             let order = group.order();
             let verified = group.order_certificate().verify().is_ok();
             Outcome {
-                verdict: if order == 4 { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if order == 4 {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "4 (a single 4-cycle generates C4)".to_string(),
                 actual: format!("{order}, verify_ok={verified}"),
             }
@@ -1191,8 +1390,16 @@ fn hom1_circle_betti() -> Outcome {
             let b1 = cert.betti.get(&1).copied().unwrap_or(usize::MAX);
             let agree = verified && b0 == 1 && b1 == 1;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "b0=1, b1=1 (circle S^1)".to_string(),
                 actual: format!("betti={:?}, verify_ok={verified}", cert.betti),
             }
@@ -1212,8 +1419,16 @@ fn hom2_disk_betti() -> Outcome {
             let b1 = cert.betti.get(&1).copied().unwrap_or(usize::MAX);
             let agree = verified && b0 == 1 && b1 == 0;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "b0=1, b1=0 (a filled 2-simplex is contractible)".to_string(),
                 actual: format!("betti={:?}, verify_ok={verified}", cert.betti),
             }
@@ -1238,8 +1453,16 @@ fn prob1_poisson_convolution() -> Outcome {
         Some(cert) => {
             let certified = cert.is_certified();
             Outcome {
-                verdict: if certified { Verdict::Agree } else { Verdict::Disagree },
-                trust: if certified { Trust::Certified } else { Trust::Uncertified },
+                verdict: if certified {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if certified {
+                    Trust::Certified
+                } else {
+                    Trust::Uncertified
+                },
                 expected: "certified (Poisson(2)+Poisson(3) ~ Poisson(5), classical convolution)"
                     .to_string(),
                 actual: format!("certified={certified}, claim={}", cert.claim),
@@ -1258,8 +1481,16 @@ fn prob2_poisson_totalmass_decline() -> Outcome {
     let cert = d.total_mass();
     let certified = cert.is_certified();
     Outcome {
-        verdict: if certified { Verdict::Disagree } else { Verdict::Agree },
-        trust: if certified { Trust::Certified } else { Trust::Uncertified },
+        verdict: if certified {
+            Verdict::Disagree
+        } else {
+            Verdict::Agree
+        },
+        trust: if certified {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
         expected: "uncertified (true, but lam^k/k! is not Gosper-summable)".to_string(),
         actual: format!("certified={certified}, claim={}", cert.claim),
     }
@@ -1267,15 +1498,28 @@ fn prob2_poisson_totalmass_decline() -> Outcome {
 /// `E[Binomial(n,p)] = n*p`: with `n` concrete, the finite support is
 /// enumerable, so this is expected to certify even with symbolic `p`.
 fn prob3_binomial_mean() -> Outcome {
-    let d = Discrete::Binomial { n: 4, p: CasExpr::var("p") };
+    let d = Discrete::Binomial {
+        n: 4,
+        p: CasExpr::var("p"),
+    };
     let cert = d.mean();
     let certified = cert.is_certified();
     let expected_claim = i(4) * CasExpr::var("p");
-    let matches_expected =
-        matches!(equal(&cert.claim, &expected_claim), ZeroTest::Certified { equal: true, .. });
+    let matches_expected = matches!(
+        equal(&cert.claim, &expected_claim),
+        ZeroTest::Certified { equal: true, .. }
+    );
     Outcome {
-        verdict: if certified && matches_expected { Verdict::Agree } else { Verdict::Disagree },
-        trust: if certified { Trust::Certified } else { Trust::Uncertified },
+        verdict: if certified && matches_expected {
+            Verdict::Agree
+        } else {
+            Verdict::Disagree
+        },
+        trust: if certified {
+            Trust::Certified
+        } else {
+            Trust::Uncertified
+        },
         expected: "certified: E[Binomial(4,p)] = 4p".to_string(),
         actual: format!("certified={certified}, claim={}", cert.claim),
     }
@@ -1305,8 +1549,16 @@ fn gb1_conic_unit_circle() -> Outcome {
             let on_sixth = conic.on_conic(&sixth);
             let agree = verified && on_sixth;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "verify Ok and a 6th unit-circle point also on the conic".to_string(),
                 actual: format!("verify={verified}, on 6th point={on_sixth}"),
             }
@@ -1334,8 +1586,16 @@ fn gb1_conic_unit_circle_ctrl() -> Outcome {
             let on_sixth = conic.on_conic(&sixth);
             let agree = verified && !on_sixth;
             Outcome {
-                verdict: if agree { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if agree {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "verify Ok and the held-out unit-circle point NOT on this conic"
                     .to_string(),
                 actual: format!("verify={verified}, on 6th point={on_sixth}"),
@@ -1360,8 +1620,16 @@ fn gb2_isometry_rotation() -> Outcome {
             let cert = geometry_beyond::certify_preserves_distance(&iso);
             let verified = cert.verify();
             Outcome {
-                verdict: if verified { Verdict::Agree } else { Verdict::Disagree },
-                trust: if verified { Trust::Certified } else { Trust::Unknown },
+                verdict: if verified {
+                    Verdict::Agree
+                } else {
+                    Verdict::Disagree
+                },
+                trust: if verified {
+                    Trust::Certified
+                } else {
+                    Trust::Unknown
+                },
                 expected: "true (a rotation preserves distance)".to_string(),
                 actual: format!("verify={verified}"),
             }
@@ -1398,7 +1666,13 @@ fn gb2_isometry_shear_rejected() -> Outcome {
 
 macro_rules! e {
     ($id:literal, $area:expr, $module:expr, $tier:expr, $f:expr) => {
-        Entry { id: $id, area: $area, module: $module, tier: $tier, run: $f }
+        Entry {
+            id: $id,
+            area: $area,
+            module: $module,
+            tier: $tier,
+            run: $f,
+        }
     };
 }
 
@@ -1407,95 +1681,371 @@ fn main() {
     let entries: Vec<Entry> = vec![
         // differentiate
         e!("d1-cubic", Some("differentiate"), None, Core, d1_cubic),
-        e!("d1-cubic-ctrl", Some("differentiate"), None, Core, d1_cubic_ctrl),
+        e!(
+            "d1-cubic-ctrl",
+            Some("differentiate"),
+            None,
+            Core,
+            d1_cubic_ctrl
+        ),
         e!("d2-product", Some("differentiate"), None, Core, d2_product),
-        e!("d2-product-ctrl", Some("differentiate"), None, Core, d2_product_ctrl),
+        e!(
+            "d2-product-ctrl",
+            Some("differentiate"),
+            None,
+            Core,
+            d2_product_ctrl
+        ),
         e!("d3-chain", Some("differentiate"), None, Core, d3_chain),
-        e!("d3-chain-ctrl", Some("differentiate"), None, Core, d3_chain_ctrl),
+        e!(
+            "d3-chain-ctrl",
+            Some("differentiate"),
+            None,
+            Core,
+            d3_chain_ctrl
+        ),
         // integrate
         e!("i1-def-poly", Some("integrate"), None, Core, i1_def_poly),
         e!("i2-def-log", Some("integrate"), None, Core, i2_def_log),
-        e!("i3-indef-trig", Some("integrate"), None, Core, i3_indef_trig),
-        e!("i3-indef-trig-ctrl", Some("integrate"), None, Core, i3_indef_trig_ctrl),
-        e!("i4-nonelementary", Some("integrate"), None, DeclineExpected, i4_nonelementary),
+        e!(
+            "i3-indef-trig",
+            Some("integrate"),
+            None,
+            Core,
+            i3_indef_trig
+        ),
+        e!(
+            "i3-indef-trig-ctrl",
+            Some("integrate"),
+            None,
+            Core,
+            i3_indef_trig_ctrl
+        ),
+        e!(
+            "i4-gaussian-erf",
+            Some("integrate"),
+            None,
+            Core,
+            i4_gaussian_erf
+        ),
         // limit
         e!("l1-removable", Some("limit"), None, Core, l1_removable),
         e!("l2-sinc", Some("limit"), None, DeclineExpected, l2_sinc),
-        e!("l3-cos-quad", Some("limit"), None, DeclineExpected, l3_cos_quad),
-        e!("l4-e-definition", Some("limit"), None, Core, l4_e_definition),
+        e!(
+            "l3-cos-quad",
+            Some("limit"),
+            None,
+            DeclineExpected,
+            l3_cos_quad
+        ),
+        e!(
+            "l4-e-definition",
+            Some("limit"),
+            None,
+            Core,
+            l4_e_definition
+        ),
         // series
         e!("s1-exp", Some("series"), None, Core, s1_exp),
         e!("s2-sin", Some("series"), None, Core, s2_sin),
         e!("s3-ln", Some("series"), None, Core, s3_ln),
-        e!("s4-sqrt-branch", Some("series"), None, DeclineExpected, s4_sqrt_branch),
+        e!(
+            "s4-sqrt-branch",
+            Some("series"),
+            None,
+            DeclineExpected,
+            s4_sqrt_branch
+        ),
         // sum
         e!("sum1-linear", Some("sum"), None, Core, sum1_linear),
         e!("sum2-quadratic", Some("sum"), None, Core, sum2_quadratic),
         e!("sum3-gosper", Some("sum"), None, Core, sum3_gosper),
         // solve
-        e!("solve1-rational-roots", Some("solve"), None, Core, solve1_rational_roots),
-        e!("solve2-irrational-roots", Some("solve"), None, Core, solve2_irrational_roots),
-        e!("solve3-quintic", Some("solve"), None, DeclineExpected, solve3_quintic),
+        e!(
+            "solve1-rational-roots",
+            Some("solve"),
+            None,
+            Core,
+            solve1_rational_roots
+        ),
+        e!(
+            "solve2-irrational-roots",
+            Some("solve"),
+            None,
+            Core,
+            solve2_irrational_roots
+        ),
+        e!(
+            "solve3-quintic",
+            Some("solve"),
+            None,
+            DeclineExpected,
+            solve3_quintic
+        ),
         // factor
         e!("f1-quadratic", Some("factor"), None, Core, f1_quadratic),
-        e!("f1-quadratic-ctrl", Some("factor"), None, Core, f1_quadratic_ctrl),
+        e!(
+            "f1-quadratic-ctrl",
+            Some("factor"),
+            None,
+            Core,
+            f1_quadratic_ctrl
+        ),
         e!("f2-quartic", Some("factor"), None, Core, f2_quartic),
-        e!("f2-quartic-ctrl", Some("factor"), None, Core, f2_quartic_ctrl),
-        e!("f3-multivariate", Some("factor"), None, DeclineExpected, f3_multivariate),
+        e!(
+            "f2-quartic-ctrl",
+            Some("factor"),
+            None,
+            Core,
+            f2_quartic_ctrl
+        ),
+        e!(
+            "f3-multivariate",
+            Some("factor"),
+            None,
+            DeclineExpected,
+            f3_multivariate
+        ),
         // simplify / equal
         e!("e1-radical", Some("simplify/equal"), None, Core, e1_radical),
-        e!("e1-radical-cross-base", Some("simplify/equal"), None, DeclineExpected, e1_radical_cross_base),
-        e!("e2-poly-identity", Some("simplify/equal"), None, Core, e2_poly_identity),
-        e!("e2-poly-identity-ctrl", Some("simplify/equal"), None, Core, e2_poly_identity_ctrl),
-        e!("e3-trig-pythagorean", Some("simplify/equal"), None, DeclineExpected, e3_trig_pythagorean),
+        e!(
+            "e1-radical-cross-base",
+            Some("simplify/equal"),
+            None,
+            DeclineExpected,
+            e1_radical_cross_base
+        ),
+        e!(
+            "e2-poly-identity",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e2_poly_identity
+        ),
+        e!(
+            "e2-poly-identity-ctrl",
+            Some("simplify/equal"),
+            None,
+            Core,
+            e2_poly_identity_ctrl
+        ),
+        e!(
+            "e3-trig-pythagorean",
+            Some("simplify/equal"),
+            None,
+            DeclineExpected,
+            e3_trig_pythagorean
+        ),
         // linear algebra
         e!("la1-det", Some("linear algebra"), None, Core, la1_det),
         e!("la2-eigen", Some("linear algebra"), None, Core, la2_eigen),
-        e!("la3-minpoly-jordan", Some("linear algebra"), None, Core, la3_minpoly_jordan),
-        e!("la3-minpoly-jordan-ctrl", Some("linear algebra"), None, Core, la3_minpoly_jordan_ctrl),
+        e!(
+            "la3-minpoly-jordan",
+            Some("linear algebra"),
+            None,
+            Core,
+            la3_minpoly_jordan
+        ),
+        e!(
+            "la3-minpoly-jordan-ctrl",
+            Some("linear algebra"),
+            None,
+            Core,
+            la3_minpoly_jordan_ctrl
+        ),
         // number theory
-        e!("nt1-mersenne-prime", Some("number theory"), None, Core, nt1_mersenne_prime),
-        e!("nt1-mersenne-prime-ctrl", Some("number theory"), None, Core, nt1_mersenne_prime_ctrl),
-        e!("nt2-factorize", Some("number theory"), None, Core, nt2_factorize),
-        e!("nt3-legendre", Some("number theory"), None, Core, nt3_legendre),
+        e!(
+            "nt1-mersenne-prime",
+            Some("number theory"),
+            None,
+            Core,
+            nt1_mersenne_prime
+        ),
+        e!(
+            "nt1-mersenne-prime-ctrl",
+            Some("number theory"),
+            None,
+            Core,
+            nt1_mersenne_prime_ctrl
+        ),
+        e!(
+            "nt2-factorize",
+            Some("number theory"),
+            None,
+            Core,
+            nt2_factorize
+        ),
+        e!(
+            "nt3-legendre",
+            Some("number theory"),
+            None,
+            Core,
+            nt3_legendre
+        ),
         e!("nt4-pell", Some("number theory"), None, Core, nt4_pell),
         // ODE
         e!("ode1-homog", Some("ODE"), None, Core, ode1_homog),
         e!("ode2-inhomog", Some("ODE"), None, Core, ode2_inhomog),
-        e!("ode3-tan-forcing", Some("ODE"), None, DeclineExpected, ode3_tan_forcing),
+        e!(
+            "ode3-tan-forcing",
+            Some("ODE"),
+            None,
+            DeclineExpected,
+            ode3_tan_forcing
+        ),
         // transforms
-        e!("tr1-laplace-t", Some("transforms"), None, Core, tr1_laplace_t),
-        e!("tr2-z-geometric", Some("transforms"), None, Core, tr2_z_geometric),
-        e!("tr3-laplace-decline", Some("transforms"), None, DeclineExpected, tr3_laplace_decline),
+        e!(
+            "tr1-laplace-t",
+            Some("transforms"),
+            None,
+            Core,
+            tr1_laplace_t
+        ),
+        e!(
+            "tr2-z-geometric",
+            Some("transforms"),
+            None,
+            Core,
+            tr2_z_geometric
+        ),
+        e!(
+            "tr3-laplace-decline",
+            Some("transforms"),
+            None,
+            DeclineExpected,
+            tr3_laplace_decline
+        ),
         // first-pass modules: fps
-        e!("fps1-fibonacci", Some("series"), Some("fps"), Core, fps1_fibonacci),
-        e!("fps2-primes-decline", Some("series"), Some("fps"), DeclineExpected, fps2_primes_decline),
+        e!(
+            "fps1-fibonacci",
+            Some("series"),
+            Some("fps"),
+            Core,
+            fps1_fibonacci
+        ),
+        e!(
+            "fps2-primes-decline",
+            Some("series"),
+            Some("fps"),
+            DeclineExpected,
+            fps2_primes_decline
+        ),
         // first-pass modules: enclosure
         e!("enc1-pi", None, Some("enclosure"), Core, enc1_pi),
-        e!("enc2-gamma-decline", None, Some("enclosure"), DeclineExpected, enc2_gamma_decline),
+        e!(
+            "enc2-gamma-decline",
+            None,
+            Some("enclosure"),
+            DeclineExpected,
+            enc2_gamma_decline
+        ),
         // first-pass modules: qe
         e!("qe1-exists-sqrt2", None, Some("qe"), Core, qe1_exists_sqrt2),
-        e!("qe2-forall-positive", None, Some("qe"), Core, qe2_forall_positive),
-        e!("qe3-overflow-decline", None, Some("qe"), DeclineExpected, qe3_overflow_decline),
+        e!(
+            "qe2-forall-positive",
+            None,
+            Some("qe"),
+            Core,
+            qe2_forall_positive
+        ),
+        e!(
+            "qe3-overflow-decline",
+            None,
+            Some("qe"),
+            DeclineExpected,
+            qe3_overflow_decline
+        ),
         // first-pass modules: numberfield
-        e!("nf1-two-squares-41", Some("number theory"), Some("numberfield"), Core, nf1_two_squares_41),
-        e!("nf2-two-squares-43-refuted", Some("number theory"), Some("numberfield"), Core, nf2_two_squares_43_refuted),
-        e!("nf3-fundamental-unit-61", Some("number theory"), Some("numberfield"), Core, nf3_fundamental_unit_61),
+        e!(
+            "nf1-two-squares-41",
+            Some("number theory"),
+            Some("numberfield"),
+            Core,
+            nf1_two_squares_41
+        ),
+        e!(
+            "nf2-two-squares-43-refuted",
+            Some("number theory"),
+            Some("numberfield"),
+            Core,
+            nf2_two_squares_43_refuted
+        ),
+        e!(
+            "nf3-fundamental-unit-61",
+            Some("number theory"),
+            Some("numberfield"),
+            Core,
+            nf3_fundamental_unit_61
+        ),
         // first-pass modules: permgroup
         e!("pg1-s3-order", None, Some("permgroup"), Core, pg1_s3_order),
         e!("pg2-c4-order", None, Some("permgroup"), Core, pg2_c4_order),
         // first-pass modules: homology
-        e!("hom1-circle-betti", None, Some("homology"), Core, hom1_circle_betti),
-        e!("hom2-disk-betti", None, Some("homology"), Core, hom2_disk_betti),
+        e!(
+            "hom1-circle-betti",
+            None,
+            Some("homology"),
+            Core,
+            hom1_circle_betti
+        ),
+        e!(
+            "hom2-disk-betti",
+            None,
+            Some("homology"),
+            Core,
+            hom2_disk_betti
+        ),
         // first-pass modules: probability
-        e!("prob1-poisson-convolution", None, Some("probability"), Core, prob1_poisson_convolution),
-        e!("prob2-poisson-totalmass-decline", None, Some("probability"), DeclineExpected, prob2_poisson_totalmass_decline),
-        e!("prob3-binomial-mean", None, Some("probability"), Core, prob3_binomial_mean),
+        e!(
+            "prob1-poisson-convolution",
+            None,
+            Some("probability"),
+            Core,
+            prob1_poisson_convolution
+        ),
+        e!(
+            "prob2-poisson-totalmass-decline",
+            None,
+            Some("probability"),
+            DeclineExpected,
+            prob2_poisson_totalmass_decline
+        ),
+        e!(
+            "prob3-binomial-mean",
+            None,
+            Some("probability"),
+            Core,
+            prob3_binomial_mean
+        ),
         // first-pass modules: geometry_beyond
-        e!("gb1-conic-unit-circle", None, Some("geometry_beyond"), Core, gb1_conic_unit_circle),
-        e!("gb1-conic-unit-circle-ctrl", None, Some("geometry_beyond"), Core, gb1_conic_unit_circle_ctrl),
-        e!("gb2-isometry-rotation", None, Some("geometry_beyond"), Core, gb2_isometry_rotation),
-        e!("gb2-isometry-shear-rejected", None, Some("geometry_beyond"), Core, gb2_isometry_shear_rejected),
+        e!(
+            "gb1-conic-unit-circle",
+            None,
+            Some("geometry_beyond"),
+            Core,
+            gb1_conic_unit_circle
+        ),
+        e!(
+            "gb1-conic-unit-circle-ctrl",
+            None,
+            Some("geometry_beyond"),
+            Core,
+            gb1_conic_unit_circle_ctrl
+        ),
+        e!(
+            "gb2-isometry-rotation",
+            None,
+            Some("geometry_beyond"),
+            Core,
+            gb2_isometry_rotation
+        ),
+        e!(
+            "gb2-isometry-shear-rejected",
+            None,
+            Some("geometry_beyond"),
+            Core,
+            gb2_isometry_shear_rejected
+        ),
     ];
 
     let total_start = Instant::now();
@@ -1507,7 +2057,8 @@ fn main() {
     let mut uncertified = 0u32;
     let mut unknown = 0u32;
     let mut area_counts: std::collections::BTreeMap<&str, u32> = std::collections::BTreeMap::new();
-    let mut module_counts: std::collections::BTreeMap<&str, u32> = std::collections::BTreeMap::new();
+    let mut module_counts: std::collections::BTreeMap<&str, u32> =
+        std::collections::BTreeMap::new();
     let mut disagreements: Vec<(&str, String, String)> = Vec::new();
 
     for entry in &entries {
@@ -1569,5 +2120,5 @@ fn main() {
         }
     }
 
-    std::process::exit(if any_disagree { 1 } else { 0 });
+    std::process::exit(i32::from(any_disagree));
 }

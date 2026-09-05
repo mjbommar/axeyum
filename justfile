@@ -1854,6 +1854,18 @@ bench-micro:
 bench-micro-z3:
     cargo run --release -p axeyum-bench --features z3 -- corpus/micro --backend z3 --timeout-ms 1000 --out /tmp/axeyum-bench-micro-z3.json
 
+# CAS SymPy parity corpus (math-department file 13, item 10, second half):
+# per-entry verdict (agree/disagree/decline), trust classification
+# (certified/uncertified/unknown), and wall time against
+# docs/plan/cas-parity-corpus-2026-09-05/corpus.json. Ground truth is
+# independent of this repository (docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py).
+# Exit status is nonzero iff any entry DISAGREES -- as of 2026-09-05 this
+# includes one confirmed finding (e1-radical-cross-base: `equal` returns a
+# confidently WRONG `Certified{equal:false}` for sqrt(2)*sqrt(3) vs sqrt(6)),
+# so this currently exits 1 by design, not by flake. See the corpus README.
+bench-cas-parity:
+    cargo run --release -p axeyum-cas --example parity_corpus
+
 # Deterministically bind a shadow-diff capture index's trusted verdict/family/tier
 # facts to the exact `.smt2` bytes. The generator rejects missing or unlisted
 # queries and validates its output through the benchmark's normal manifest path.
