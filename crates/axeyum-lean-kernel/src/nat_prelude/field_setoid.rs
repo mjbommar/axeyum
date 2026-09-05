@@ -386,6 +386,7 @@ impl FCtx {
         k.app(self.refl, a)
     }
     /// `mulCongr a a' b b' h1 h2 : equiv (mul a b) (mul a' b')`.
+    #[allow(clippy::too_many_arguments)]
     fn mcongr(
         &self,
         k: &mut Kernel,
@@ -465,9 +466,9 @@ fn declare_of_comm_ring(
     vals.push(k.fvar(AP_FV));
 
     let mut hyps: Vec<(u64, ExprId)> = Vec::with_capacity(5);
-    for i in ix::APART_SYMM..ix::FIELD_COUNT {
-        let ty = (specs[i].build)(k, lg, l1, &vals);
-        let fv = OFC_HYP_BASE + i as u64;
+    for (offset, spec) in specs[ix::APART_SYMM..ix::FIELD_COUNT].iter().enumerate() {
+        let ty = (spec.build)(k, lg, l1, &vals);
+        let fv = OFC_HYP_BASE + (ix::APART_SYMM + offset) as u64;
         hyps.push((fv, ty));
         vals.push(k.fvar(fv));
     }

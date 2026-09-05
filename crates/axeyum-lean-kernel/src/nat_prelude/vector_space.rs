@@ -260,6 +260,7 @@ struct InvChain {
     b_av: ExprId,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn inv_chain(
     k: &mut Kernel,
     c: &VCtx,
