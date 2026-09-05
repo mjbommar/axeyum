@@ -4,7 +4,7 @@
 //! `docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md`.
 //!
 //! Uses the same fixed, committed input as `axeyum-solver`'s
-//! `benches/cdclt_propagate.rs`: `corpus/micro-cnf/php-6-7.cnf` (pigeonhole
+//! `benches/cdclt_propagate.rs`: `corpus/micro-cnf/unsat-pigeonhole-6-7.cnf` (pigeonhole
 //! PHP(7,6), 7 pigeons into 6 holes, UNSAT, 42 vars / 133 clauses). Same
 //! input, same host, same run — the two medians recorded in
 //! `docs/research/08-planning/microbenchmarks-2026-09-05.md` are a direct
@@ -26,12 +26,12 @@ use criterion::{Criterion, criterion_group, criterion_main};
 
 fn load_php_formula() -> axeyum_cnf::CnfFormula {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../corpus/micro-cnf/php-6-7.cnf")
+        .join("../../corpus/micro-cnf/unsat-pigeonhole-6-7.cnf")
         .canonicalize()
-        .expect("corpus/micro-cnf/php-6-7.cnf must exist (committed fixed input)");
+        .expect("corpus/micro-cnf/unsat-pigeonhole-6-7.cnf must exist (committed fixed input)");
     let text = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("reading {}: {error}", path.display()));
-    parse_dimacs(&text).expect("php-6-7.cnf must parse as DIMACS")
+    parse_dimacs(&text).expect("unsat-pigeonhole-6-7.cnf must parse as DIMACS")
 }
 
 fn bench_proof_sat_solve(c: &mut Criterion) {
@@ -43,7 +43,7 @@ fn bench_proof_sat_solve(c: &mut Criterion) {
             match &outcome {
                 ProofSolveOutcome::Unsat(_) => {}
                 other => panic!(
-                    "php-6-7.cnf is a fixed UNSAT instance; a different verdict \
+                    "unsat-pigeonhole-6-7.cnf is a fixed UNSAT instance; a different verdict \
                      ({other:?}) means the committed corpus file or the core changed"
                 ),
             }

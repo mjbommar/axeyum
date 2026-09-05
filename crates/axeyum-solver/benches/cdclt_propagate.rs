@@ -5,7 +5,7 @@
 //! The theory is a trivial always-consistent [`TheorySolver`] (`assert` always
 //! `Ok`, `propagate` always empty), so every conflict and decision comes from
 //! the Boolean skeleton alone. The input is the same committed, fixed
-//! pigeonhole-formula CNF (`corpus/micro-cnf/php-6-7.cnf`, 7 pigeons into 6
+//! pigeonhole-formula CNF (`corpus/micro-cnf/unsat-pigeonhole-6-7.cnf`, 7 pigeons into 6
 //! holes, UNSAT, 42 vars / 133 clauses) as `proof_sat_solve`'s
 //! `axeyum-cnf/benches/proof_sat_solve.rs`, so the two engines' medians in
 //! `docs/research/08-planning/microbenchmarks-2026-09-05.md` are a direct
@@ -51,12 +51,12 @@ impl TheorySolver for NoTheory {
 /// for [`CdclT::new`].
 fn load_php_clauses() -> (usize, Vec<Vec<Lit>>) {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../corpus/micro-cnf/php-6-7.cnf")
+        .join("../../corpus/micro-cnf/unsat-pigeonhole-6-7.cnf")
         .canonicalize()
-        .expect("corpus/micro-cnf/php-6-7.cnf must exist (committed fixed input)");
+        .expect("corpus/micro-cnf/unsat-pigeonhole-6-7.cnf must exist (committed fixed input)");
     let text = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("reading {}: {error}", path.display()));
-    let formula = parse_dimacs(&text).expect("php-6-7.cnf must parse as DIMACS");
+    let formula = parse_dimacs(&text).expect("unsat-pigeonhole-6-7.cnf must parse as DIMACS");
     let var_count = formula.variable_count();
     let clauses = formula
         .clauses()
@@ -86,7 +86,7 @@ fn bench_cdclt_solve(c: &mut Criterion) {
             assert_eq!(
                 outcome,
                 Outcome::Unsat,
-                "php-6-7.cnf is a fixed UNSAT instance; a different verdict means the \
+                "unsat-pigeonhole-6-7.cnf is a fixed UNSAT instance; a different verdict means the \
                  committed corpus file or the driver changed"
             );
             black_box(outcome);
