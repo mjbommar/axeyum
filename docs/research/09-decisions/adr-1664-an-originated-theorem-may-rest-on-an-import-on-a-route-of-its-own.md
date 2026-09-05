@@ -18,7 +18,8 @@ the same type in the same kernel, one proved `fun p h => Classical.em p` and one
 `fun p h => h`, measure the import's whole six-name closure and `EMPTY`
 respectively. Composition costs 0.19 ms at `add_declaration` against 0.09 ms for
 the sibling that avoids the import — the import itself costs 122 ms (106
-declarations) to 17.5 s (Mathlib's 3,585). **Decision: option (2)** — allow it,
+declarations) to 17.5-31.8 s (Mathlib's 3,585; a contended box, see the
+reference-frame note). **Decision: option (2)** — allow it,
 on a distinct `kernel-lean-over-import` route that never counts toward the
 axiom-free headline. Option (3) ("allow when the composed footprint is `[]`") is
 rejected on the measurement that `Kernel::axiom_footprint` **structurally cannot
@@ -86,10 +87,19 @@ Reproduce with
 
 ```sh
 cargo test -p axeyum-lean-import --test imported_composition_footprint \
-  -- --nocapture --test-threads=1            # 3 passed, 1 ignored
+  -- --nocapture               # the 2 regression guards, 0.13 s
 cargo test -p axeyum-lean-import --test imported_composition_footprint \
-  -- --nocapture --ignored                   # the Mathlib endpoint, ~18 s
+  -- --nocapture --ignored --test-threads=1   # the 2 measurements, ~65 s
 ```
+
+**Read the timings as a reference frame, not as constants.** These are wall
+times on a shared, contended dev box. The Mathlib import below was measured
+twice on the same commit the same day at **17.5 s and 31.8 s** — a factor of
+1.8, the same load sensitivity
+`docs/research/08-planning/frontier-ratchet-reference-frame.md` records for the
+capability ratchets. Only the WITHIN-RUN comparisons below are comparable, and
+they are the ones the decision rests on: the composed theorem against its
+sibling, measured back to back in one process.
 
 ### 1. An Init-only import composes to an empty footprint
 
@@ -134,7 +144,8 @@ session.
 
 ### 3. The Mathlib endpoint, re-derived and not quoted
 
-`ivt-intermediate-value-icc.ndjson`, 3,585 declarations, 17.5 s. The footprint
+`ivt-intermediate-value-icc.ndjson`, 3,585 declarations, 17.5 s and 31.8 s on
+two runs of the same commit. The footprint
 of `intermediate_value_Icc` is **eight** names:
 
 ```text
@@ -253,7 +264,7 @@ the silence is a decision rather than an oversight.
 **(1) Forbid dependence; imports stay islands.** Rejected. The measurement gives
 no mechanical reason for it: propagation is transitive and exact (§2), so a
 composed theorem's trust base is *fully derivable* and nothing is hidden; and it
-is cheap (0.19 ms at the gate, against a 122 ms – 17.5 s import). Forbidding
+is cheap (0.19 ms at the gate, against a 122 ms – 31.8 s import). Forbidding
 would cost reviewers 03, 06 and 08 their entire subject in exchange for a
 property — "no originated theorem touches an import" — that the route label
 already expresses without the prohibition. It would also be unenforceable in the

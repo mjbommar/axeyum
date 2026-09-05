@@ -1231,8 +1231,10 @@ lean-gate:
     # originated theorems of the same type in one kernel measure the import's
     # six-name closure and `[]`. Registered because it is the EVIDENCE for a
     # decision, and the numbers the ADR quotes become unverifiable the moment
-    # the suite rots. Needs no `lean` binary (the streams are pinned bytes) and
-    # its Mathlib endpoint is `#[ignore]`d, so it costs ~0.2 s here.
+    # the suite rots. Needs no `lean` binary (the streams are pinned bytes), and
+    # costs 0.13 s measured: the two REGRESSION guards run, while the two
+    # one-time MEASUREMENTS are `#[ignore]`d because they cost 81 s between them.
+    # Confirm a NONZERO count -- "2 passed".
     cargo test -p axeyum-lean-import --test imported_composition_footprint
 
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean) across all

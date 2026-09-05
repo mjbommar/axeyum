@@ -34,6 +34,10 @@
 //! * [`the_mathlib_case_is_measured_not_assumed`] — the other end of the range,
 //!   re-derived from the pinned IVT stream rather than quoted from a doc.
 //!
+//! The first two are the regression guards and run in `lean-gate` (0.13 s
+//! together). The last two are one-time measurements and are `#[ignore]`d,
+//! because between them they cost 81 s; run `-- --ignored` to re-derive them.
+//!
 //! ## What this does NOT establish
 //!
 //! `axiom_footprint` reports what a proof term rests on *inside this kernel*.
@@ -356,7 +360,15 @@ fn classical_import_propagates_its_axioms_and_a_sibling_proof_does_not() {
 /// rendered name here, and the whole shared-name set is enumerated beside it,
 /// because "which names do the two vocabularies share" is what a bridge would
 /// have to answer.
+///
+/// Ignored by default, for the same reason as the Mathlib endpoint below: it is
+/// a one-time measurement, not a regression guard, and it is EXPENSIVE. Building
+/// `nat_prelude` in a fresh kernel to get the comparison set costs 63.6 s of the
+/// suite's 63.7 s in a debug binary (the two fast tests are 0.13 s together),
+/// and the registered `lean-gate` step is not paying a minute for a fact that
+/// only moves when item 4's bridge lands. Run with `-- --ignored` to re-measure.
 #[test]
+#[ignore = "builds nat_prelude in a fresh kernel: 63.6 s of the suite's 63.7 s"]
 fn nat_prelude_and_an_import_share_one_environment() {
     let bytes = stream("bool-and-comm.ndjson");
     let completed = import_ndjson(bytes.as_slice(), ImportLimits::default())

@@ -1208,9 +1208,11 @@ step lean-gate ./scripts/check-lean-gate.sh
 # transitively and per proof term, so a composed tier is decidable per theorem --
 # and the numbers the ADR quotes become unverifiable the moment the suite rots.
 # `axeyum-lean-import`'s suites are named individually in this file; the crate is
-# not run wholesale anywhere, so an unregistered suite is one nothing runs. Fast
-# (~0.2 s): its Mathlib endpoint is `#[ignore]`d, since `imported_fact_evidence`
-# already pins that stream's 3,585 declarations.
+# not run wholesale anywhere, so an unregistered suite is one nothing runs.
+# 0.13 s, measured: the two REGRESSION guards run, and the two one-time
+# MEASUREMENTS are `#[ignore]`d because they cost 81 s between them (the Mathlib
+# endpoint's 3,585 declarations, which `imported_fact_evidence` already pins,
+# and a fresh `nat_prelude` build). Confirm a NONZERO count -- "2 passed".
 step lean-import-composition-footprint \
   cargo test -p axeyum-lean-import --test imported_composition_footprint
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean), 32 hand-

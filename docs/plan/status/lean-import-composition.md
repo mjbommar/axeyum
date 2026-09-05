@@ -39,7 +39,11 @@ which is what makes the tier decidable per theorem, and what means a lane that
 loads an import does not contaminate everything it proves beside it.
 
 Cost: `add_declaration` 0.194 ms composed against 0.091 ms for the sibling. The
-import itself costs 51.7 ms (48 declarations), 122.5 ms (106), 17.5 s (3,585).
+import itself costs 51.7 ms (48 declarations), 122.5 ms (106), and 17.5 s /
+31.8 s on two runs of the SAME commit for the Mathlib slice's 3,585 -- a factor
+of 1.8 from box load alone, so read the absolute times as a reference frame and
+not as constants. Only the WITHIN-RUN pair (composed against sibling, back to
+back in one process) supports a comparison.
 **The trusted gate is not where composition is expensive; the import is.**
 
 **Why option (3) is wrong.** `Kernel::axiom_footprint` walks *declarations* and
@@ -131,7 +135,7 @@ rules it had deleted.
 cargo test -p axeyum-lean-import --test imported_composition_footprint \
   -- --nocapture --test-threads=1      # confirm "3 passed", 1 ignored
 cargo test -p axeyum-lean-import --test imported_composition_footprint \
-  -- --nocapture --ignored             # the Mathlib endpoint, ~18 s
+  -- --nocapture --ignored --test-threads=1   # the 2 MEASUREMENTS, ~65 s
 
 python3 -m unittest scripts.tests.test_validate_facts        # 44
 python3 -m unittest scripts.tests.test_count_landmark_facts  # 22
