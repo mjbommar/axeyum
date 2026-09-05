@@ -63,6 +63,17 @@ abstraction goes:
 | `twoPoints` (I.2) | produces it | yes |
 | `triangle` (I.3) | produces it | yes |
 
+Only the ℚ row of that table is **measured**: every entry in it is a
+declaration this lane admitted. The ℝ column is **analysis, not measurement**
+— no ℝ² instance is built — and it rests on two things that are measured, both
+in `creal_point.rs`: `CPoint.collinear_of_area_zero` takes
+`PosBound (distSq A B) k` and its own doc explains at length why the negation
+will not do, and `CReal.inv` consumes a `PosBound` rather than an `Apart` (its
+doc gives the reason: an `Apart`-indexed inverse would have to eliminate a
+disjunction into a `Type`, which `Or.rec` does not permit). A later lane
+building the ℝ instance should re-derive the "yes" entries rather than inherit
+them from this table.
+
 So exactly one axiom forces the choice. `Geo.Incidence` therefore carries
 
 ```text
