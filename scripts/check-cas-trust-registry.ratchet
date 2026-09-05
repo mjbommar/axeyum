@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	92
+COUNT	99
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -67,6 +67,13 @@ FN	numberfield::GaussianInt::factor	Result<GaussianFactorizationCertificate, Dec
 FN	numberfield::QuadraticField::fundamental_unit	Result<FundamentalUnitCertificate, DeclineReason>
 FN	numberfield::QuadraticField::pell_unit	Result<FundamentalUnitCertificate, DeclineReason>
 FN	numberfield::two_squares	Option<TwoSquaresCertificate>
+FN	numberfield_ideals::QuadraticOrder::class_number	Result<(usize, ClassNumberCertificate), IdealDecline>
+FN	numberfield_ideals::QuadraticOrder::factor_ideal	Result<IdealFactorizationCertificate, IdealDecline>
+FN	numberfield_ideals::QuadraticOrder::factor_principal_ideal	Result<(Ideal, IdealFactorizationCertificate), IdealDecline>
+FN	numberfield_ideals::QuadraticOrder::multiply_ideals	Result<(Ideal, IdealProductCertificate), IdealDecline>
+FN	numberfield_ideals::QuadraticOrder::split_prime	Result<(Vec<Ideal>, PrimeSplittingCertificate), IdealDecline>
+FN	numberfield_ideals::class_number	Result<(usize, ClassNumberCertificate), IdealDecline>
+FN	numberfield_ideals::primitive_element	Result<PrimitiveElementCertificate, IdealDecline>
 FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
 FN	permgroup::PermutationGroup::cayley_table	Result<CayleyTableCertificate, PermgroupError>
 FN	permgroup::PermutationGroup::center	Result<(PermutationGroup, CenterCertificate), PermgroupError>
@@ -123,6 +130,7 @@ VOCAB	CenterCertificate	struct
 VOCAB	Certificate	struct
 VOCAB	CertifiedIntegral	struct
 VOCAB	CheckReport	struct
+VOCAB	ClassNumberCertificate	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CoefficientAsymptotics	struct
 VOCAB	CompositeCertificate	struct
@@ -153,6 +161,8 @@ VOCAB	GosperEvidence	enum
 VOCAB	HalfDegreeParitySplitReport	struct
 VOCAB	HomologyCertificate	struct
 VOCAB	HomologyReport	struct
+VOCAB	IdealFactorizationCertificate	struct
+VOCAB	IdealProductCertificate	struct
 VOCAB	InvariantsCertificate	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
@@ -168,6 +178,8 @@ VOCAB	OrderCertificate	struct
 VOCAB	PRecursiveCertificate	struct
 VOCAB	PartialFractionCertificate	struct
 VOCAB	PrattCertificate	struct
+VOCAB	PrimeSplittingCertificate	struct
+VOCAB	PrimitiveElementCertificate	struct
 VOCAB	ProjectionCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
 VOCAB	QuotientOrderCertificate	struct
