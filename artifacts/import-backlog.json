@@ -7,7 +7,7 @@
   ],
   "description": "Facts with epistemic_status=open and external_status=proved: settled in the wider literature, not yet established here (ADR-0601 SS3). Never edit by hand -- regenerate with `python3 scripts/gen-import-backlog.py`.",
   "ordering": "dependency_ready rows before blocked ones; within that, curriculum_node-mapped rows before unmapped ones, ordered by (curriculum_layer, curriculum_node); ties (and the whole unmapped population) broken by fact id ascending. See docs/autogenesis/263-import-backlog-artifact.md.",
-  "count": 251,
+  "count": 252,
   "rows": [
     {
       "id": "F:fol-validity-undecidable",
@@ -31,6 +31,20 @@
       "id": "F:fermat-last-theorem",
       "statement": "For every integer n greater than 2, there are no positive integers a, b, c with a^n + b^n = c^n.",
       "depends_on": [],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:fo-completeness-henkin",
+      "statement": "If every structure and valuation satisfying a context satisfies a formula, then the formula is derivable from that context in FO.Provable. NOT ESTABLISHED HERE. The converse -- soundness -- IS established (F:fo-soundness), together with the substitution lemma the quantifier rules rest on (F:fo-substitution-lemma) and the consistency corollary soundness buys (F:fo-consistency). What is missing is the Henkin/Lindenbaum construction: a maximal consistent extension of the context in a language with witnesses, and the term model built over it. Two obstructions are recorded rather than estimated. (1) Lindenbaum's lemma extends a consistent set to a MAXIMAL consistent one by deciding each formula in an enumeration, which is a use of excluded middle at every step; this kernel has no Classical.em, no propext and no Quot.sound (measured: crates/axeyum-lean-kernel/src/prelude.rs), so the classical completeness theorem is not the statement to aim at without first adding an axiom the project's axiom-freedom metric would then have to report. (2) The construction needs an enumeration of FO.Formula and a decidable equality on it, neither of which exists in the kernel; FO.Formula is an inductive with nine constructors over two carriers (AxNat and FO.Term), so a decidable equality is a nested recursion over both types, and no such decision procedure was built by the lane that landed the syntax.",
+      "depends_on": [
+        "F:excluded-middle-not-intuitionistic",
+        "F:fo-consistency",
+        "F:fo-soundness",
+        "F:fo-substitution-lemma"
+      ],
       "dependency_ready": true,
       "curriculum_node": null,
       "curriculum_layer": null,
