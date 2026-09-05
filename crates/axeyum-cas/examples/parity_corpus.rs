@@ -1135,16 +1135,16 @@ fn enc2_gamma_decline() -> Outcome {
 // Entries: first-pass modules — qe
 // ============================================================================
 
+/// `Atom::new` takes `BigRational` coefficients (widened from `i128`-backed
+/// `Rational` by the "wave two" fix to item 7's Cauchy-bound overflow, merged
+/// after this corpus's first draft, `docs/math-department/13-computer-algebra.md`).
+fn bigrat(n: i128) -> BigRational {
+    BigRational::from_integer(BigInt::from(n))
+}
+
 fn qe1_exists_sqrt2() -> Outcome {
     // exists x. x^2 - 2 = 0 -- true, witnessed by sqrt(2).
-    let atom = Atom::new(
-        vec![
-            Rational::integer(-2),
-            Rational::zero(),
-            Rational::integer(1),
-        ],
-        Relation::Eq,
-    );
+    let atom = Atom::new(vec![bigrat(-2), bigrat(0), bigrat(1)], Relation::Eq);
     let formula = ExistsFormula::new(vec![atom]);
     match qe::eliminate(&formula) {
         Some(true) => Outcome {
@@ -1164,10 +1164,7 @@ fn qe1_exists_sqrt2() -> Outcome {
 }
 fn qe2_forall_positive() -> Outcome {
     // forall x. x^2 + 1 > 0 -- true (no real root).
-    let atom = Atom::new(
-        vec![Rational::integer(1), Rational::zero(), Rational::integer(1)],
-        Relation::Gt,
-    );
+    let atom = Atom::new(vec![bigrat(1), bigrat(0), bigrat(1)], Relation::Gt);
     let formula = ForallFormula { atoms: vec![atom] };
     match qe::eliminate_forall(&formula) {
         Some(true) => Outcome {
@@ -1185,35 +1182,42 @@ fn qe2_forall_positive() -> Outcome {
         None => declined("eliminate_forall(forall x. x^2+1>0)"),
     }
 }
-/// `exists x. x^2 - 10^30 = 0` is true (witnessed by `10^15`), but the
-/// 2026-09-05 progress log for item 7 (`qe`) records this exact example:
-/// "x² − 10³⁰ returns Unknown because the reused root isolation is still
-/// i128" — a Cauchy-bound overflow in shared machinery, not a mathematical
-/// gap.
-fn qe3_overflow_decline() -> Outcome {
+/// `exists x. x^2 - 10^30 = 0` is true (witnessed by `10^15`). A first draft
+/// of this entry, and the 2026-09-05 progress log for item 7's first slice,
+/// recorded this exact example declining: "x² − 10³⁰ returns Unknown because
+/// the reused root isolation is still i128". **This corpus's own local
+/// `main` merge picked up item 7's "wave two" fix** (`Atom`'s coefficients
+/// widened from `i128`-backed `Rational` to `BigRational`, per
+/// `docs/math-department/13-computer-algebra.md`'s "wave two" log entries)
+/// mid-development, which FIXED exactly this overflow — re-running this
+/// corpus after that merge found `qe1`/`qe2` still passed unchanged (their
+/// coefficients were always small) but this entry flipped from a documented
+/// decline to a correct, certified decision. Reclassified `core`: this is a
+/// genuine capability gain the corpus caught happening in real time, not a
+/// corpus bug.
+fn qe3_large_coefficient() -> Outcome {
     let ten_to_30: i128 = 1_000_000_000_000_000_000_000_000_000_000; // 10^30
-    let atom = Atom::new(
-        vec![
-            Rational::integer(-ten_to_30),
-            Rational::zero(),
-            Rational::integer(1),
-        ],
-        Relation::Eq,
-    );
+    let atom = Atom::new(vec![bigrat(-ten_to_30), bigrat(0), bigrat(1)], Relation::Eq);
     let formula = ExistsFormula::new(vec![atom]);
     match qe::eliminate(&formula) {
-        None => Outcome {
+        Some(true) => Outcome {
             verdict: Verdict::Agree,
-            trust: Trust::Unknown,
-            expected: "None (Cauchy-bound i128 overflow, per the 2026-09-05 progress log)"
+            trust: Trust::Certified,
+            expected: "true (witnessed by 10^15; also now decides, past the former i128 Cauchy-bound overflow)"
                 .to_string(),
-            actual: "declined".to_string(),
+            actual: "true (self-verified by eliminate)".to_string(),
         },
-        Some(v) => Outcome {
+        Some(false) => Outcome {
             verdict: Verdict::Disagree,
-            trust: Trust::Uncertified,
-            expected: "None (Cauchy-bound i128 overflow)".to_string(),
-            actual: format!("decided: {v}"),
+            trust: Trust::Certified,
+            expected: "true".to_string(),
+            actual: "false (self-verified by eliminate)".to_string(),
+        },
+        None => Outcome {
+            verdict: Verdict::Disagree,
+            trust: Trust::Unknown,
+            expected: "true (decides, per the wave-two BigRational fix)".to_string(),
+            actual: "declined".to_string(),
         },
     }
 }
@@ -1949,11 +1953,11 @@ fn main() {
             qe2_forall_positive
         ),
         e!(
-            "qe3-overflow-decline",
+            "qe3-large-coefficient",
             None,
             Some("qe"),
-            DeclineExpected,
-            qe3_overflow_decline
+            Core,
+            qe3_large_coefficient
         ),
         // first-pass modules: numberfield
         e!(

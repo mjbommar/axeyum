@@ -63,10 +63,11 @@ SMT solver's verdict space (`sat`/`unsat`/`unknown`) and a CAS's:
 
 ## Corrections this corpus made against its own first draft
 
-Four of this corpus's first-draft entries were WRONG about `axeyum-cas`'s
+Five of this corpus's first-draft entries were WRONG about `axeyum-cas`'s
 actual behavior, found only by running the harness — exactly the discipline
-CLAUDE.md's "before believing a result" rule asks for. Three turned out to
-be flaws in the corpus, not the CAS; one is real:
+CLAUDE.md's "before believing a result" rule asks for. Four turned out to
+be flaws in the corpus, or the tool changing under it; one is a real,
+standing finding:
 
 - **`i4-gaussian-erf`** (was `i4-nonelementary`, expected a decline): a first
   draft assumed `integrate(e^{-x^2}, x)` would decline (no elementary
@@ -84,6 +85,20 @@ be flaws in the corpus, not the CAS; one is real:
   points, so an order-5 fit on 10 numbers is a trivial overfit, not a
   finding. Fixed to use the same 13-term sample as `axeyum-cas`'s own
   `fps.rs` regression test, which correctly declines.
+- **`qe3-large-coefficient`** (was `qe3-overflow-decline`, expected a
+  decline): after the four corrections above were committed, a routine
+  `git merge main` (local) pulled in `docs/math-department/13-computer-algebra.md`
+  item 7's "wave two" — `qe`'s `Atom` coefficients were widened from
+  `i128`-backed `Rational` to `BigRational`, fixing exactly the Cauchy-bound
+  overflow this entry was built to document (`x^2 - 10^30 = 0` used to
+  return `Unknown`; it now returns a certified `true`, correctly). Rebuilding
+  after the merge broke the entry's type (a compile error, not a silent
+  drift) and running it showed the capability gain directly. Corrected to a
+  `core`-tier entry expecting the certified `true`. This is the sharpest
+  illustration of why this corpus has to be re-run rather than trusted from
+  a stale capability table: the underlying tool changed mid-development, and
+  the corpus caught it because it re-derives against the live crate every
+  time, not because anyone remembered to update a comment.
 - **`e1-radical-cross-base`** (the one that stands): a first draft expected
   either `true` or an honest `Unknown` decline. Neither happened — `equal`
   returns `Certified{equal: false}`, printed with its witness via `{:?}` to
@@ -131,7 +146,7 @@ the raw per-area total exceed a naive 12×3=36.
 | geometry_beyond | 4 |
 | **total** | **21** (≥ 10 required) |
 
-Tiers: **58 `core`**, **13 `decline_expected`** (≥ 10 required — each entry
+Tiers: **59 `core`**, **12 `decline_expected`** (≥ 10 required — each entry
 cites a classical fact, a source-read capability boundary in `axeyum-cas`,
 or this crate's own progress-log finding; see each entry's `justification`
 in `corpus.json`).
@@ -155,8 +170,8 @@ Harness, `--release`, single run:
 ```
 entries: 71
 verdict: agree=70 disagree=1 decline=0
-trust:   certified=53 uncertified=11 unknown=7
-total wall time: 177.541ms
+trust:   certified=54 uncertified=11 unknown=6
+total wall time: 321.540ms
 ```
 
 The one `disagree` is `e1-radical-cross-base` (see above). Exit status is
@@ -183,7 +198,7 @@ every skip is printed and named.
 
 **check.sh / justfile**: registered as `bench-cas-parity` in the `justfile`
 unconditionally, and as `cas-parity-corpus` / `cas-parity-ground-truth` in
-`scripts/check.sh` (177ms measured, far under the 60s threshold the task
+`scripts/check.sh` (321.5ms measured, far under the 60s threshold the task
 sets for inclusion). **This means `scripts/check.sh` currently fails on
 this step, by design, because of the confirmed `e1-radical-cross-base`
 finding above** — not a flaky or nondeterministic step. A maintainer's next
@@ -214,4 +229,5 @@ revisited; this corpus does not make that call unilaterally.
 |---|---|---|
 | 2026-09-05 | Draft: directory, README skeleton, and file layout established. | commit `4f97ce7bc` |
 | 2026-09-05 | 71-entry corpus, `ground_truth.py` (73 claims via SymPy 1.14.0), and the full harness landed; merged local `main` (`d8309e8b0`) cleanly. | commit `98d892caa` |
-| 2026-09-05 | First harness run found 4 disagreements; 3 were corpus-design errors (`i4-nonelementary`→`i4-gaussian-erf`, `solve3-quintic`'s `None` vs `Some([])`, `fps2-primes-decline`'s undersized sample) fixed against the real behavior; 1 (`e1-radical-cross-base`) is a genuine, confirmed CAS finding, kept as the corpus's one `disagree`. `ground_truth.py` extended with pure-Python (no-SymPy) fallbacks for `qe`, `permgroup`, `probability`, `geometry_beyond` (75→still 75 claims with SymPy, 32 claims/exit 0 without). Registered `bench-cas-parity` in the `justfile` and `cas-parity-corpus`/`cas-parity-ground-truth` in `scripts/check.sh` (177ms, so `check.sh` now fails on the confirmed finding, by design). | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1 decline=0, certified=53 uncertified=11 unknown=7, 177.541ms; `ground_truth.py`: 75/0 (SymPy) and 32/0 exit 0 (no SymPy); `cargo clippy -p axeyum-cas --example parity_corpus -- -D warnings`: clean |
+| 2026-09-05 | First harness run found 4 disagreements; 3 were corpus-design errors (`i4-nonelementary`→`i4-gaussian-erf`, `solve3-quintic`'s `None` vs `Some([])`, `fps2-primes-decline`'s undersized sample) fixed against the real behavior; 1 (`e1-radical-cross-base`) is a genuine, confirmed CAS finding, kept as the corpus's one `disagree`. `ground_truth.py` extended with pure-Python (no-SymPy) fallbacks for `qe`, `permgroup`, `probability`, `geometry_beyond` (75 claims with SymPy, 32 claims/exit 0 without). Registered `bench-cas-parity` in the `justfile` and `cas-parity-corpus`/`cas-parity-ground-truth` in `scripts/check.sh`. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1, 177.5ms |
+| 2026-09-05 | Merged local `main` again (picked up `docs/math-department/13-computer-algebra.md` item 7 "wave two" and item 3 "wave two", `b4d6c9465`): `qe`'s `Atom` widened from `i128`-backed `Rational` to `BigRational` coefficients, a source-level break in `qe1`/`qe2`/`qe3` fixed by switching to `BigRational::from_integer`. Rebuilding after the fix found `qe3-overflow-decline` had flipped from a documented decline to a correct, certified `true` (the exact overflow it was built to test was fixed by the same merge) — renamed `qe3-large-coefficient`, reclassified `core`. Final state unchanged otherwise. | `./target/release/examples/parity_corpus`: 71 entries, agree=70 disagree=1 decline=0, certified=54 uncertified=11 unknown=6, 321.540ms; corpus.json tiers now 59 core / 12 decline_expected; `cargo clippy -p axeyum-cas --example parity_corpus -- -D warnings`: clean; `rustfmt --edition 2024 --check`: clean; `python3 -m py_compile ground_truth.py`: OK |
