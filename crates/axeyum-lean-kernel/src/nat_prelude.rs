@@ -157,6 +157,7 @@ mod ble;
 mod cantor;
 mod cardinality;
 mod catalan;
+pub mod category_setoid;
 mod choose;
 mod choose_factorial_add;
 mod clog;
@@ -6815,6 +6816,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 poly_equiv: poly_s.ops.equiv,
             },
             structures_s_names.algs,
+        )?;
+
+        // ADR-1620 / roadmap W3-3: `CatS.*`, setoid-enriched categories,
+        // functors and natural transformations. Needs only `logic` and the
+        // `AlgS.Monoid`/`AlgS.Group` records, so it lands at the same build
+        // position. Names are deliberately not threaded into `NatPrelude`,
+        // for the reason `AlgS.Poly.*` gives above.
+        let _cat_s = category_setoid::declare_category_setoid(
+            kernel,
+            &logic,
+            &structures_s.monoid,
+            &structures_s.group,
         )?;
 
         // ADR-1609 / roadmap W1-11's subobject half: `AlgS.Subgroup.*`. Needs
