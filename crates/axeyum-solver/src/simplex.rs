@@ -452,33 +452,33 @@ impl Tableau {
     }
 
     /// Whether `v`'s value is below its lower bound.
-    fn below_lower(&self, v: usize) -> R<bool> {
-        Ok(match self.lower[v] {
+    fn below_lower(&self, v: usize) -> bool {
+        match self.lower[v] {
             Some(lo) => self.value[v].cmp(lo) == core::cmp::Ordering::Less,
             None => false,
-        })
+        }
     }
     /// Whether `v`'s value is above its upper bound.
-    fn above_upper(&self, v: usize) -> R<bool> {
-        Ok(match self.upper[v] {
+    fn above_upper(&self, v: usize) -> bool {
+        match self.upper[v] {
             Some(hi) => self.value[v].cmp(hi) == core::cmp::Ordering::Greater,
             None => false,
-        })
+        }
     }
 
     /// Can nonbasic `v` increase (strictly below its upper bound, or unbounded)?
-    fn can_increase(&self, v: usize) -> R<bool> {
-        Ok(match self.upper[v] {
+    fn can_increase(&self, v: usize) -> bool {
+        match self.upper[v] {
             Some(hi) => self.value[v].cmp(hi) == core::cmp::Ordering::Less,
             None => true,
-        })
+        }
     }
     /// Can nonbasic `v` decrease (strictly above its lower bound, or unbounded)?
-    fn can_decrease(&self, v: usize) -> R<bool> {
-        Ok(match self.lower[v] {
+    fn can_decrease(&self, v: usize) -> bool {
+        match self.lower[v] {
             Some(lo) => self.value[v].cmp(lo) == core::cmp::Ordering::Greater,
             None => true,
-        })
+        }
     }
 
     /// The main feasibility loop (Bland's rule on the basic variable, then on the
@@ -504,11 +504,11 @@ impl Tableau {
             let mut viol: Option<(usize, bool)> = None; // (row, too_low)
             for i in 0..self.m {
                 let b = self.basic[i];
-                if self.below_lower(b)? {
+                if self.below_lower(b) {
                     viol = Some((i, true));
                     break;
                 }
-                if self.above_upper(b)? {
+                if self.above_upper(b) {
                     viol = Some((i, false));
                     break;
                 }
@@ -520,7 +520,7 @@ impl Tableau {
 
             let b = self.basic[r];
             // Choose the entering nonbasic variable by Bland's rule.
-            let entering = self.select_entering(r, too_low)?;
+            let entering = self.select_entering(r, too_low);
             let Some(j) = entering else {
                 // No way to repair row `r` → infeasible. Build the Farkas cert.
                 return Ok(RunOutcome::Infeasible(self.farkas(r, too_low)?));
@@ -539,7 +539,7 @@ impl Tableau {
     /// Bland's-rule entering-variable selection for repairing row `r` whose basic
     /// variable is too low (`too_low`) or too high. Returns the smallest-index
     /// nonbasic variable that can move the basic variable toward its bound.
-    fn select_entering(&self, r: usize, too_low: bool) -> R<Option<usize>> {
+    fn select_entering(&self, r: usize, too_low: bool) -> Option<usize> {
         for v in 0..self.n {
             if self.is_basic[v] {
                 continue;
@@ -552,15 +552,15 @@ impl Tableau {
             // To INCREASE the basic var (too_low): raise a nonbasic with a>0 that can
             // increase, or lower one with a<0 that can decrease. To DECREASE: mirror.
             let usable = if too_low {
-                (a_pos && self.can_increase(v)?) || (!a_pos && self.can_decrease(v)?)
+                (a_pos && self.can_increase(v)) || (!a_pos && self.can_decrease(v))
             } else {
-                (a_pos && self.can_decrease(v)?) || (!a_pos && self.can_increase(v)?)
+                (a_pos && self.can_decrease(v)) || (!a_pos && self.can_increase(v))
             };
             if usable {
-                return Ok(Some(v));
+                return Some(v);
             }
         }
-        Ok(None)
+        None
     }
 
     /// Pivot nonbasic `enter` into the basis in row `r` (whose current basic var
