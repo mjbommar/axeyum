@@ -1807,6 +1807,42 @@ step graph-dispatcher-gen       python3 scripts/gen-graph-dispatcher.py --check
 step graph-dispatcher           python3 scripts/check-graph-dispatcher.py
 step graph-dispatcher-tests     python3 scripts/tests/test-graph-dispatcher.py
 step graph-dispatcher-mutations bash scripts/tests/test-graph-dispatcher-mutations.sh
+# ---------------------------------------------------------------------------
+# Steps that lanes appended BELOW the verdict between 2026-08-30 and 2026-09-05.
+# There they ran after "all gates passed" was printed, their failures were
+# never counted, and `AXEYUM_CHECK_LIST=1` never listed them (found by the
+# aggregate-scope divergence they caused). Moved above the summary so they
+# gate like every other step. ADD NEW STEPS ABOVE THIS LINE'S SUMMARY, NEVER
+# AFTER `echo "check: all ... gates passed"`.
+# ---------------------------------------------------------------------------
+step structural-index           python3 scripts/check-structural-index.py
+step structural-index-mutations bash scripts/tests/test-structural-index-mutations.sh
+step checked-interchange           python3 scripts/check-checked-interchange.py
+step checked-interchange-mutations bash scripts/tests/test-checked-interchange-mutations.sh
+step checked-interchange-tests     python3 scripts/tests/test-checked-interchange.py
+step lean-adapter                  python3 scripts/check-lean-adapter.py
+step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
+step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
+# ADR-1666: `by axeyum` in real pinned Lean. Needs a Lean toolchain and one
+# cargo build; AXEYUM_ALLOW_NO_LEAN=1 makes it a loud SKIP rather than a pass.
+step lean-tactic                   bash scripts/check-lean-tactic.sh
+# ADR-1675: `lean/axeyum-creal`, the constructed reals as a Lake package a
+# third party can `import`. Regenerates the package from the live kernel and
+# fails on drift (the committed `.lean` is a cache, the kernel is the
+# authority), then builds it with the pinned toolchain and runs the
+# `#print axioms` audit with its positive control. Minutes, not seconds --
+# `scripts/check-lean-creal-library.sh --slice` is the cheap subset (drift,
+# pin and counts, no `lake build`) for a pre-push path. AXEYUM_ALLOW_NO_LEAN=1
+# makes it a loud SKIP rather than a pass.
+# The aggregate gate runs the SLICE: the full `lake build` was measured at
+# roughly 12 minutes for the carrier and more than 55 minutes for the
+# 1,077-command `#print axioms` audit (2026-09-05), which no aggregate gate
+# can carry. The full build is `just lean-creal-library`, run deliberately.
+step lean-creal-library            bash scripts/check-lean-creal-library.sh --slice
+step declaration-spec python3 scripts/check-declaration-spec.py
+step proof-plan                    python3 scripts/check-proof-plan.py
+step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py
+
 
 if [ "$list_only" = "1" ]; then
   echo "check: $ran steps" >&2
@@ -1838,6 +1874,7 @@ if [ "$ran" -lt "$STEP_FLOOR" ]; then
        "this file and say why." >&2
   fail=1
 fi
+
 # NOT run here, and named rather than passed over silently: `cargo deny check`
 # (needs cargo-deny installed), the z3 differential fuzzes (C/C++ leaf dependency,
 # ADR-0002; CLAUDE.md lists them as the linear-arithmetic pre-merge gate), the
@@ -1857,26 +1894,3 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 echo "check: all $ran gates passed"
-step structural-index           python3 scripts/check-structural-index.py
-step structural-index-mutations bash scripts/tests/test-structural-index-mutations.sh
-step checked-interchange           python3 scripts/check-checked-interchange.py
-step checked-interchange-mutations bash scripts/tests/test-checked-interchange-mutations.sh
-step checked-interchange-tests     python3 scripts/tests/test-checked-interchange.py
-step lean-adapter                  python3 scripts/check-lean-adapter.py
-step lean-adapter-mutations        bash scripts/tests/test-lean-adapter-mutations.sh
-step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
-# ADR-1666: `by axeyum` in real pinned Lean. Needs a Lean toolchain and one
-# cargo build; AXEYUM_ALLOW_NO_LEAN=1 makes it a loud SKIP rather than a pass.
-step lean-tactic                   bash scripts/check-lean-tactic.sh
-# ADR-1675: `lean/axeyum-creal`, the constructed reals as a Lake package a
-# third party can `import`. Regenerates the package from the live kernel and
-# fails on drift (the committed `.lean` is a cache, the kernel is the
-# authority), then builds it with the pinned toolchain and runs the
-# `#print axioms` audit with its positive control. Minutes, not seconds --
-# `scripts/check-lean-creal-library.sh --slice` is the cheap subset (drift,
-# pin and counts, no `lake build`) for a pre-push path. AXEYUM_ALLOW_NO_LEAN=1
-# makes it a loud SKIP rather than a pass.
-step lean-creal-library            bash scripts/check-lean-creal-library.sh
-step declaration-spec python3 scripts/check-declaration-spec.py
-step proof-plan                    python3 scripts/check-proof-plan.py
-step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py
