@@ -50,10 +50,33 @@ const GOAL_PACK_ID: &str = "thin-adapter-v1";
 /// this kernel can prove -- C2 already established the identity story for
 /// this exact name.
 const SUBJECT: &str = "Nat.add_comm";
-/// A second credited root, borrowed only to build a genuinely different,
-/// separately-valid proof/goal for the wrong-goal and mutated-proof
+/// Candidates for a second credited root, borrowed only to build a genuinely
+/// different, separately-valid proof/goal for the wrong-goal and mutated-proof
 /// fixtures -- never presented as the answer to a request for `SUBJECT`.
-const BORROWED: &str = "Nat.le_refl";
+///
+/// Chosen at RUN TIME: the first candidate, in the credited-roots population's
+/// order, whose exported closure does not name the subject. A fixed choice
+/// rotted once: `Nat.le_refl` was the borrowed root from 2026-08-30 until its
+/// own closure grew to contain `Nat.add_comm` (re-proved through the order
+/// lemmas), at which point the "wrong goal" stream was an honest, Lean-checked
+/// proof of the subject, the grader's `accepted` was CORRECT, and this suite
+/// went red for a fixture, not a defect. The guard that should have caught it
+/// was vacuous: it tested `stream.contains("Nat.add_comm")`, and lean4export
+/// never spells a dotted name -- names are `{"in":..,"str":{"pre":..,"str":"add_comm"}}`
+/// components. So the guard now uses the component index, strictly.
+const BORROWED_CANDIDATES: &[&str] = &[
+    "Nat.le_refl",
+    "Nat.le_of_succ_le_succ",
+    "Nat.ble_self_eq_true",
+    "Nat.ble_succ_eq_true",
+    "Nat.le_of_ble_eq_true",
+    "Nat.ble_eq_true_of_le",
+    "Nat.add_pos_right",
+];
+static BORROWED: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+fn borrowed_root() -> &'static str {
+    BORROWED.get().map_or("<unselected>", String::as_str)
+}
 
 fn environment_id() -> String {
     format!("lean-{LEAN_VERSION}@{LEAN_COMMIT}:{GOAL_PACK_ID}")
@@ -242,8 +265,27 @@ fn the_eight_required_categories_are_each_graded_correctly_by_real_pinned_lean()
 
         let subject_id =
             name_of(&kernel, SUBJECT).unwrap_or_else(|| panic!("`{SUBJECT}` must be declared"));
-        let borrowed_id =
-            name_of(&kernel, BORROWED).unwrap_or_else(|| panic!("`{BORROWED}` must be declared"));
+        // The borrowed root: the first candidate whose OWN export closure does
+        // not name the subject's final component. Checked on the exported
+        // stream itself, by component index, never by a dotted-string search.
+        let (borrowed_name, borrowed_id, wrong_goal_stream) = BORROWED_CANDIDATES
+            .iter()
+            .find_map(|candidate| {
+                let id = name_of(&kernel, candidate)
+                    .unwrap_or_else(|| panic!("`{candidate}` must be declared"));
+                let stream = kernel
+                    .render_lean4export_ndjson_roots(
+                        &Lean4ExportMetadata::axeyum(LEAN_VERSION),
+                        &[id],
+                    )
+                    .expect("a credited root must export");
+                (name_index(&stream, "add_comm").is_none()).then_some((*candidate, id, stream))
+            })
+            .expect(
+                "no credited root has a closure free of `add_comm`; the wrong-goal fixture cannot be built",
+            );
+        let _ = BORROWED.set(borrowed_name.to_owned());
+        println!("{TAG}: borrowed root for the wrong-goal fixture = {borrowed_name}");
 
         let Declaration::Theorem { ty: subject_ty, .. } = kernel
             .environment()
@@ -268,19 +310,15 @@ fn the_eight_required_categories_are_each_graded_correctly_by_real_pinned_lean()
             )
             .expect("the subject must export");
 
-        // The borrowed root's OWN closure, which never mentions `SUBJECT` at
-        // all -- a real, Lean-acceptable proof of a DIFFERENT goal, used for
-        // "wrong goal".
-        let wrong_goal_stream = kernel
-            .render_lean4export_ndjson_roots(
-                &Lean4ExportMetadata::axeyum(LEAN_VERSION),
-                &[borrowed_id],
-            )
-            .expect("the borrowed root must export");
+        // The borrowed root's OWN closure, exported above, which never names
+        // `SUBJECT` -- a real, Lean-acceptable proof of a DIFFERENT goal, used
+        // for "wrong goal". Re-asserted strictly here as the control: if a
+        // future prelude change makes every candidate's closure reach the
+        // subject, this must fail loudly rather than grade a correct proof
+        // as a wrong goal.
         assert!(
-            name_index(&wrong_goal_stream, "add_comm").is_none()
-                || !wrong_goal_stream.contains(SUBJECT),
-            "the wrong-goal control must not happen to also name the subject"
+            name_index(&wrong_goal_stream, "add_comm").is_none(),
+            "the wrong-goal control `{borrowed_name}` names the subject's component `add_comm`"
         );
 
         // A combined closure holding BOTH roots, so a genuinely different
@@ -459,6 +497,7 @@ fn the_eight_required_categories_are_each_graded_correctly_by_real_pinned_lean()
 
 fn write_result_artifact(outcomes: &[Outcome]) {
     use std::fmt::Write as _;
+    let borrowed = borrowed_root();
     let mut body = String::new();
     for (i, outcome) in outcomes.iter().enumerate() {
         if i > 0 {
@@ -483,7 +522,7 @@ fn write_result_artifact(outcomes: &[Outcome]) {
         "{{\n  \"schema_version\": 1,\n  \"goal_pack_id\": \"{GOAL_PACK_ID}\",\n  \
          \"goal_pack_file\": \"artifacts/lean-adapter/goal-pack/thin-adapter-v1.json\",\n  \
          \"lean_version\": \"{LEAN_VERSION}\",\n  \"lean_commit\": \"{LEAN_COMMIT}\",\n  \
-         \"environment_id\": \"{}\",\n  \"subject\": \"{SUBJECT}\",\n  \"borrowed\": \"{BORROWED}\",\n  \
+         \"environment_id\": \"{}\",\n  \"subject\": \"{SUBJECT}\",\n  \"borrowed\": \"{borrowed}\",\n  \
          \"outcomes\": [\n{body}\n  ]\n}}\n",
         environment_id(),
     );
