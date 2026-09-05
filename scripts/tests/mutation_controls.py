@@ -6702,8 +6702,15 @@ SUITES["cas-trust-registry"] = (
 
 SUITES["geo-incidence"] = (
     "crates/axeyum-lean-kernel/src/geo.rs",
+    # Deliberately NOT `--release`. Both mutants fail at PRELUDE-BUILD time,
+    # not at test-execution time, so the run is dominated by compiling the
+    # kernel crate three times (baseline plus two mutants) and the debug
+    # profile is several times cheaper. The suite's tests all go through
+    # `on_a_deep_stack`, so the debug frame growth CLAUDE.md warns about for
+    # the `--release`-only example binaries does not apply here — measured
+    # green in debug at 7 passed / 0 failed before the mutants were run.
     Cargo(
-        ("--release", "-p", "axeyum-lean-kernel", "--lib", "geo::"),
+        ("-p", "axeyum-lean-kernel", "--lib", "geo::"),
         "geo-incidence",
     ),
     [
