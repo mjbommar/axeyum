@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "id": "F:int-two-squares-descent-step",
+  "title": "The reusable descent step for sums of two squares",
+  "statement": "Let m be nonzero, let m*p = a^2 + b^2 and m*q = c^2 + e^2, and suppose the two cross terms of the conjugate Brahmagupta grouping are divisible by m with quotients u and w, so that m*u = a*c + b*e and m*w = a*e - b*c. Then q*p = u^2 + w^2. The multiplier drops from m to q and the conclusion has the SAME SHAPE as the first hypothesis, so an induction on a Nat measure of the multiplier applies directly. The quotients u and w are hypotheses rather than constructions: exhibiting them is what F:int-two-squares-descent-cross-terms licenses, and leaving them quantified keeps this step usable by any descent that can produce them, not only the balanced-representative one.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.descentStep : ((x0 : Int) -> ((x1 : Int) -> ((x2 : Int) -> ((x3 : Int) -> ((x4 : Int) -> ((x5 : Int) -> ((x6 : Int) -> ((x7 : Int) -> ((x8 : Int) -> ((x9 : Not (Eq.{1} Int x0 Int.zero)) -> ((x10 : Eq.{1} Int (Int.mul x0 x1) (Int.add (Int.mul x3 x3) (Int.mul x4 x4))) -> ((x11 : Eq.{1} Int (Int.mul x0 x2) (Int.add (Int.mul x5 x5) (Int.mul x6 x6))) -> ((x12 : Eq.{1} Int (Int.mul x0 x7) (Int.add (Int.mul x3 x5) (Int.mul x4 x6))) -> ((x13 : Eq.{1} Int (Int.mul x0 x8) (Int.sub (Int.mul x3 x6) (Int.mul x4 x5))) -> Eq.{1} Int (Int.mul x2 x1) (Int.add (Int.mul x7 x7) (Int.mul x8 x8))))))))))))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x10",
+      "x11",
+      "x12",
+      "x13",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9"
+    ],
+    "kernel_theorem": "Int.descentStep"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-brahmagupta-fibonacci",
+    "F:int-two-squares-descent-cross-terms",
+    "F:int-mul-eq-zero",
+    "F:int-mul-sub",
+    "F:int-add-neg",
+    "F:int-add-zero",
+    "F:int-add-comm",
+    "F:int-add-assoc"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.descentStep",
+      "kind": "kernel-term",
+      "supports": "Int.descentStep is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_int_prelude)",
+        "int_theorem_inventory re-list of the admitted declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.descentStep 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\.descentStep[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.descentStep",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack. The anchor AFTER the name is load-bearing here, because Int.brahmaguptaFibonacci' is a different declaration whose rendered name has Int.brahmaguptaFibonacci as a prefix."
+    },
+    {
+      "id": "evaluation-Int.descentStep",
+      "kind": "instance-pin",
+      "supports": "What the declaration MEANS, settled at concrete small arguments and at free variables. The kernel gate cannot do this, and for the Definition Int.IsSumOfTwoSquares nothing else can.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/int_prelude/two_squares_tests.rs (16 tests; every battery asserts what must hold AND what must fail)",
+        "crate::Kernel::add_declaration used as the decision procedure (a probe theorem is admitted or refused, and both outcomes are asserted)",
+        "crate::Kernel::def_eq for the statement-shape comparisons, which have to run at free variables because numerals reduce"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- int_prelude::two_squares --test-threads=4 2>/dev/null | grep -cE '^test result: ok\\. 16 passed'",
+      "checker_seconds": 300,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/two_squares_tests.rs",
+      "notes": "The count 16 is pinned deliberately: a suite that silently stopped compiling some of these tests would still print ok with a smaller number, and this repository has shipped a gate that ran zero tests for 15 days while exiting 0. Relevant tests for this row: the_descent_step_carries_the_worked_instance_of_thirteen, a_wrong_quotient_is_refused_by_the_descent_step, the_descent_step_concludes_at_the_new_multiplier. MUTATION-MEASURED: transposing both the conjunction and its And.intro in Int.modEq_descent_cross_terms SURVIVED the whole suite (0 kills of 15), because at the worked instance (m,a,b,c,e) = (2,5,1,1,1) both conjuncts reduce to Eq Int 0 0 and the two orderings are definitionally equal there; the_cross_term_conjuncts_are_ordered_as_stated was added in response and kills that mutant with EXACTLY ONE failing test (15 passed, 1 failed)."
+    },
+    {
+      "id": "footprint-Int.descentStep",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.descentStep.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint, asserted per declaration AFTER Environment::contains",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "The per-declaration assertion lives in two_squares_tests::every_two_squares_declaration_is_present_and_axiom_free, which checks Environment::contains FIRST for all 20 names. An empty footprint is also what a missing name returns, so without the containment check the footprint assertion would pass for a declaration that does not exist. The name list there is written out in full rather than derived from the module, which is a known weakness: it measures this lane's memory of what it declared, not the module's actual output."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "the two-squares lane (W3-10, ADR-1633), crates/axeyum-lean-kernel/src/int_prelude/two_squares.rs, admitted by build_int_prelude",
+    "source": "the algebraic step of Euler's descent proof (1749) of Fermat's two-square theorem, isolated here so that the ordering argument it is normally fused with can be supplied separately",
+    "prior_art": [
+      {
+        "who": "Brahmagupta; Fibonacci; Fermat; Euler",
+        "what": "the composition identity for sums of two squares (Brahmagupta 628, restated by Fibonacci 1225), Fermat's theorem on sums of two squares (asserted 1640) and Euler's descent proof (1749)",
+        "year": 1749,
+        "where": "classical number theory; standard textbook material",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "Multiplicative cancellation over the integers had to be BUILT for this: shape_search --ns Int --name-contains cancel found only additive and ModEq cancellations, so Int.mul_left_cancel_of_ne_zero was derived from Int.mul_eq_zero, together with Int.mul_ne_zero, Int.eq_of_sub_eq_zero, Int.zero_add, Int.sub_self, Int.add_sub_cancel_right and Int.mul_sub_mul_comm. The worked instance in the test battery is the p = 13 descent: 5^2 + 1^2 = 26 = 2*13, balanced representatives c = e = 1, new multiplier q = 1, quotients u = 3 and w = 2, conclusion 1*13 = 3^2 + 2^2. Its negative halves are u = 2 and w = 3, both refused. That the conclusion is q*p and NOT m*p -- the entire content of calling this a descent -- is pinned by the_descent_step_concludes_at_the_new_multiplier, since at that instance 1*13 checks and 2*13 does not."
+}
