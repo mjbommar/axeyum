@@ -64,6 +64,78 @@ records the contract and the first measured baselines.
 - SAT internals: propagations, conflicts, decisions, learned/deleted clauses.
 - Peak memory per phase.
 
+## The Timing Ratchet
+
+Until 2026-09-05 **nothing in any gate failed when solve time regressed.** The
+progress-frontier suite ratchets capability at a fixed budget, the parity ledger
+ratchets decide count, the corpus sweep ratchets soundness, and the
+`summary.par2_mean_s` carried by the 72 baselines under `bench-results/baselines/`
+was compared to nothing. A change that kept every verdict and every frontier but
+halved throughput was invisible to every gate in the repository — until an
+instance crossed the budget, at which point the *capability* ratchet reported it
+as a lost lever, which is the wrong diagnosis arriving late.
+
+**What it is.** `crates/axeyum-solver/tests/progress_frontier.rs` now carries a
+`TimingBaseline` per family: a few `N` pinned deep inside that family's frontier,
+the calibrated total measured over five runs, and a ceiling. It is enforced in
+the same `frontier` step that already runs the capability ratchets
+(`scripts/check.sh`, `just frontier`) and costs **no extra solving** — the pinned
+points are read out of the curve the capability sweep has already produced.
+
+**The metric is calibrated, not raw.** Each pinned point contributes
+`solve_ms / scale`, where `scale` is the frontier suite's existing machine
+calibration (a frozen dependent-chain kernel, measured to track this solver's
+core-class sensitivity to within 6 %; see
+[frontier-ratchet-reference-frame.md](frontier-ratchet-reference-frame.md)). The
+same factor that stretches the per-instance budget on a slow or busy box shrinks
+the reported time, so a loaded run and the reference machine land on one axis.
+
+**The budget.** The pinned totals per family, in reference-machine milliseconds:
+
+| family | pinned `N` | min | median | max | ceiling |
+|---|---|---:|---:|---:|---:|
+| `bv_reduction` | 12, 15, 18 | 959.9 | 1216.0 | 1509.5 | **2264.3** |
+| `lia_cuts` | 3, 19, 20 | 238.6 | 323.1 | 393.1 | **589.6** |
+| `string_bound` | 13, 25, 33 | 387.6 | 426.9 | 646.0 | **969.1** |
+| `nra_degree` | 10, 20, 30, 40 | 6.5 | 10.5 | 12.0 | **18.0** |
+| `nia_unsat` | 1, 2, 3, 4, 5 | 30.4 | 44.3 | 62.3 | **93.5** |
+
+**The noise band was measured, not chosen.** Those min/median/max are the spread
+over 5 runs of the same binary on the dev box (`s4`, i5-12600K, `taskset -c 0-7`)
+on 2026-09-05, at 1-minute load 18 to 38 — i.e. deliberately including heavily
+contended runs, because the residual the calibration does *not* remove is exactly
+what the band has to absorb. Measured `scale` across those runs ranged 1.10x to
+2.03x. The ceiling is `1.5x x the slowest run`, so:
+
+- a genuine 2x slowdown on the pinned paths fires the gate,
+- a regression smaller than the band does not. That is the stated cost of a
+  ratchet that must not fire on a busy shared box, and it is why the band is
+  recorded in the artifact rather than only in the assert.
+
+**When it does not fire.** The check is enforced only when
+`machine.comparable` is true in `bench-results/frontier/<family>.json` — the same
+flag that governs the capability ratchet, false when the calibrated `scale` falls
+outside `[1/3, 3]` or when throughput drifts more than 25 % between the
+pre-sweep and post-sweep calibrations. On an uncomparable run, and on CI, the
+number is printed and written with `"enforced": false` and nothing fails. This is
+the rule that exists because the same gate reported `bv_reduction = 35 / 39 / 40`
+on one commit at 1-minute loads 34 / 5.4 / 1.17, and reported a REGRESSION that
+never happened (29 against a baseline of 30, four runs in five) when the sweep
+landed on the efficiency cores of a hybrid CPU.
+
+**Where it has least resolution.** `nra_degree` and `nia_unsat` have no
+mid-priced instances: every `nra_degree` point costs ~1-4 ms (the syntactic
+even-power refutation is O(term size)), and `nia_unsat` jumps from tens of
+milliseconds at `N<=5` to ~2.7 s of a 4 s budget at `N>=6`, too close to the
+clock to pin. Both therefore pin more, cheaper points and average them. Their
+absolute ceilings are small, but so is the failure they must catch: losing either
+fast path costs seconds, two to three orders of magnitude above the ceiling.
+
+**What it does not cover.** The 72 PAR-2 means under `bench-results/baselines/`
+are still compared to nothing; this slice ratchets the five oracle-free
+parametric families only. Extending the same calibrated-band scheme to
+`par2_mean_s` is the natural next slice.
+
 ## Parity Sweep Resume Identity
 
 `scripts/parity-run.sh` may reuse an interrupted sweep only when every cached

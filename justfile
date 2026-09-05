@@ -1167,7 +1167,16 @@ autogenesis-result:
 test:
     scripts/check-workspace-tests.sh
 
-# The capability ratchets, serialized and alone. Run nothing else concurrently.
+# The capability ratchets AND the timing ratchet, serialized and alone. Run
+# nothing else concurrently.
+#
+# Two ratchets, one sweep. `FRONTIER <family> = N` is capability at a fixed
+# budget; `TIMING <family> = <ms> calibrated` is the clock, read out of the same
+# curve at a small set of pinned `N` deep inside the frontier, so it costs no
+# extra solving. Before 2026-09-05 NOTHING in any gate failed when solve time
+# regressed (design review 2026-09-05, section 2.2 item 1); the timing ratchet
+# is that hole closed. Both are gated on the same `comparable` flag: on a box
+# the calibration cannot compare, each prints its number and asserts nothing.
 frontier:
     cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 

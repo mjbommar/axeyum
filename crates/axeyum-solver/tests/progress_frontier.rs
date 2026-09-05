@@ -225,6 +225,75 @@ const BASELINE_NIA_UNSAT: u32 = 40;
 const MAX_N: u32 = 40;
 
 // ---------------------------------------------------------------------------
+// Committed TIMING baselines — see the "TIMING ratchet" section below for the
+// design and [`TimingBaseline`] for the field meanings. Measured over
+// [`TIMING_BASELINE_RUNS`] runs of this binary on `s4` (i5-12600K, `taskset -c
+// 0-7`) on 2026-09-05 at 1-minute loads 27-44, i.e. deliberately including
+// heavily contended boxes, because the residual the calibration does not remove
+// is what the band has to absorb.
+// ---------------------------------------------------------------------------
+
+/// `bv_reduction`: the multiplier tower grows smoothly in `N`, so the pins sit
+/// on the steep part of the curve — where a lost word-level reduction would
+/// show up first — while staying under a third of the budget so they always
+/// decide.
+const TIMING_BV_REDUCTION: TimingBaseline = TimingBaseline {
+    pins: &[12, 15, 18],
+    min_ms: 959.9,
+    median_ms: 1216.0,
+    max_ms: 1509.5,
+    ceiling_ms: 2264.3,
+};
+
+/// `lia_cuts`: branch-and-bound is not monotone in `N` here, so the pins are the
+/// two stable small points plus `N=20`, the first that costs real search.
+const TIMING_LIA_CUTS: TimingBaseline = TimingBaseline {
+    pins: &[3, 19, 20],
+    min_ms: 238.6,
+    median_ms: 323.1,
+    max_ms: 393.1,
+    ceiling_ms: 589.6,
+};
+
+/// `string_bound`: the packed-string route is flat within each length band, so
+/// the pins straddle three bands.
+const TIMING_STRING_BOUND: TimingBaseline = TimingBaseline {
+    pins: &[13, 25, 33],
+    min_ms: 387.6,
+    median_ms: 426.9,
+    max_ms: 646.0,
+    ceiling_ms: 969.1,
+};
+
+/// `nra_degree`: the syntactic even-power refutation decides every instance in
+/// single-digit milliseconds, so no pin is expensive and the total is small.
+/// Four pins rather than three, because at ~1 ms per point the scheduler is a
+/// large share of each sample and averaging is the only way to tighten the band.
+/// The small total is not a weakness here: losing the fast path costs *seconds*,
+/// two to three orders of magnitude above this ceiling.
+const TIMING_NRA_DEGREE: TimingBaseline = TimingBaseline {
+    pins: &[10, 20, 30, 40],
+    min_ms: 6.5,
+    median_ms: 10.5,
+    max_ms: 12.0,
+    ceiling_ms: 18.0,
+};
+
+/// `nia_unsat`: the bound-aware exact int-blast is cheap only at the small end —
+/// the blast width grows with the bound and every instance from `N=6` up costs
+/// ~2.7 s of a 4 s budget, far too close to the clock to pin. So the pins are
+/// `N=1..5`, five points averaged for the same reason as `nra_degree`. This is
+/// the family where the ratchet has the least resolution, and that is a property
+/// of the curve, not of the design.
+const TIMING_NIA_UNSAT: TimingBaseline = TimingBaseline {
+    pins: &[1, 2, 3, 4, 5],
+    min_ms: 30.4,
+    median_ms: 44.3,
+    max_ms: 62.3,
+    ceiling_ms: 93.5,
+};
+
+// ---------------------------------------------------------------------------
 // One point on a family's difficulty curve.
 // ---------------------------------------------------------------------------
 
@@ -691,6 +760,214 @@ fn classify(
     }
 }
 
+// ===========================================================================
+// The TIMING ratchet: the frontier's counterpart on the clock.
+// ===========================================================================
+//
+// THE HOLE THIS CLOSES. Measured 2026-09-05 (`docs/research/11-design-review/
+// 2026-09-05-sat-smt-performance-and-architecture-review.md` section 2.2 item
+// 1): **nothing in any gate fails when solve time regresses.** This suite
+// ratchets *capability at a fixed budget*; the parity ledger ratchets *decide
+// count*; the corpus sweep ratchets *soundness*. The 72 baselines under
+// `bench-results/baselines/` carry a `summary.par2_mean_s` that is compared to
+// nothing. So a change that keeps every verdict and every frontier but makes
+// the solver twice as slow is invisible to every gate in this repository —
+// right up until an instance crosses the budget and the CAPABILITY ratchet
+// reports it as a lost lever, which is the wrong diagnosis at the wrong time.
+//
+// WHY IT LIVES HERE RATHER THAN IN A NEW SWEEP. Everything a timing ratchet
+// needs that is hard, this suite already has: a frozen calibration kernel
+// validated against the solver's own core-class sensitivity, a per-family
+// `scale`, and a `comparable` / `ratchetable` verdict that says when a number
+// may be believed. A second sweep would pay the whole ~6 min again and would
+// have to re-derive all of it. The pinned points are read out of the curve the
+// sweep has already produced, so the timing ratchet costs **zero extra
+// solving** and is registered wherever `progress_frontier` already is
+// (`scripts/check.sh`'s `frontier` step and the `justfile`'s `frontier`
+// recipe).
+//
+// THE BAND IS MEASURED, NOT GUESSED. Each family pins a small set of `N` deep
+// inside its frontier — chosen so they decide on every run with time to spare,
+// and so their total is dominated by real solving rather than by fixed
+// overhead. The pinned total is *calibrated* (`solve_ms / scale`), i.e.
+// expressed in reference-machine milliseconds, and compared with a committed
+// ceiling. Baseline and ceiling both come from [`TIMING_BASELINE_RUNS`] runs of
+// this very binary on this box, deliberately spanning quiet and heavily loaded
+// conditions, because the residual the calibration does NOT remove is exactly
+// what the band has to absorb. The numbers are in
+// `docs/research/08-planning/benchmarking-and-performance-methodology.md`.
+//
+// AND IT SAYS WHEN IT CANNOT COMPARE, on the same flag as the capability
+// ratchet: outside the comparable band (`scale` beyond [1/3, 3], or throughput
+// drifting more than [`DRIFT_LIMIT`] mid-sweep) the total is printed and
+// written to the JSON with `"enforced": false`, and nothing fails. That is the
+// same rule that stopped `bv_reduction` reporting a REGRESSION that never
+// happened when the sweep landed on the efficiency cores (29 against a baseline
+// of 30, four runs in five), and the same rule behind the 35 / 39 / 40 spread
+// at 1-minute loads 34 / 5.4 / 1.17 recorded in
+// `docs/research/08-planning/frontier-ratchet-reference-frame.md`.
+
+/// How many runs of this binary the committed timing baselines were measured
+/// over. Recorded in the artifact so a reader can weigh the band.
+const TIMING_BASELINE_RUNS: u32 = 5;
+
+/// The ceiling is this factor times the **slowest** of those runs' calibrated
+/// totals.
+///
+/// Not a taste judgement. The calibration is a proxy (a dependent-chain kernel
+/// that tracks the solver's core-class sensitivity to within 6 %), so it does
+/// not remove the machine's influence exactly: across the baseline runs the
+/// *calibrated* total still moved between the quietest and the busiest box, and
+/// the ceiling sits above the worst of them. What that buys is a gate that
+/// fires on a genuine 2x slowdown and stays silent on a busy box; what it costs
+/// is blindness to a regression smaller than the band on the pinned points,
+/// which is stated here rather than left for a reader to discover.
+const TIMING_BAND_FACTOR: f64 = 1.5;
+
+/// One family's committed timing baseline: which `N` are pinned, what the
+/// calibrated total measured over [`TIMING_BASELINE_RUNS`] runs, and the
+/// ceiling that follows from the worst of them.
+struct TimingBaseline {
+    /// `N` values pinned **deep inside** the frontier, so they decide on every
+    /// run and a slowdown shows up as *time*, not as a lost instance.
+    pins: &'static [u32],
+    /// Minimum / median / maximum calibrated total over the baseline runs.
+    min_ms: f64,
+    median_ms: f64,
+    max_ms: f64,
+    /// The enforced ceiling: [`TIMING_BAND_FACTOR`] x `max_ms`.
+    ceiling_ms: f64,
+}
+
+/// One pinned point as this run measured it.
+struct TimingPoint {
+    n: u32,
+    /// `None` when the sweep never reached this `N` (it stopped early).
+    solve_ms: Option<f64>,
+    decided: bool,
+    calibrated_ms: Option<f64>,
+}
+
+/// This run's timing measurement against a committed [`TimingBaseline`].
+struct TimingMeasured {
+    points: Vec<TimingPoint>,
+    /// Sum of the calibrated pinned times; `None` if any pin is missing or
+    /// undecided, which is itself a failure when the run is enforceable.
+    calibrated_total_ms: Option<f64>,
+    /// Empty when the pinned points are healthy; otherwise why they are not.
+    faults: Vec<String>,
+}
+
+/// Read the pinned points out of the curve the sweep already produced and
+/// express them in reference-machine milliseconds.
+///
+/// Calibrated, not raw: `solve_ms / scale`. The same `scale` that stretches the
+/// per-instance budget shrinks the reported time, so a busy box and the
+/// reference machine land on one axis. That is the whole reason this ratchet
+/// can live in a gate rather than in a nightly report.
+fn measure_timing(
+    baseline: &TimingBaseline,
+    curve: &[CurvePoint],
+    measurement: &Measurement,
+) -> TimingMeasured {
+    let mut points = Vec::with_capacity(baseline.pins.len());
+    let mut faults = Vec::new();
+    let mut total = 0.0f64;
+    let mut complete = true;
+    for &n in baseline.pins {
+        if let Some(point) = curve.iter().find(|p| p.n == n) {
+            let calibrated = point.solve_ms / measurement.scale;
+            if point.decided_correct {
+                total += calibrated;
+            } else {
+                complete = false;
+                faults.push(format!(
+                    "pinned N={n} did not decide ({} at {:.1} ms) — a pin sits deep inside \
+                     the frontier and must always decide",
+                    point.status, point.solve_ms
+                ));
+            }
+            points.push(TimingPoint {
+                n,
+                solve_ms: Some(point.solve_ms),
+                decided: point.decided_correct,
+                calibrated_ms: Some(calibrated),
+            });
+        } else {
+            complete = false;
+            faults.push(format!(
+                "pinned N={n} was never reached (the sweep stopped at N={})",
+                curve.last().map_or(0, |p| p.n)
+            ));
+            points.push(TimingPoint {
+                n,
+                solve_ms: None,
+                decided: false,
+                calibrated_ms: None,
+            });
+        }
+    }
+    TimingMeasured {
+        points,
+        calibrated_total_ms: if complete { Some(total) } else { None },
+        faults,
+    }
+}
+
+/// Per-pin breakdown, for the printed line and the failure message.
+fn timing_pin_breakdown(measured: &TimingMeasured) -> String {
+    measured
+        .points
+        .iter()
+        .map(|p| match (p.solve_ms, p.calibrated_ms, p.decided) {
+            (Some(raw), Some(cal), true) => format!("N={} {cal:.1} ms (raw {raw:.1})", p.n),
+            (Some(raw), _, false) => format!("N={} UNDECIDED (raw {raw:.1})", p.n),
+            _ => format!("N={} NOT REACHED", p.n),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The message a timing regression fails with, or `None` when the pinned points
+/// are inside the band.
+fn timing_regression(
+    family: &str,
+    baseline: &TimingBaseline,
+    measured: &TimingMeasured,
+    measurement: &Measurement,
+) -> Option<String> {
+    if !measured.faults.is_empty() {
+        return Some(format!(
+            "TIMING REGRESSION [{family}]: {}. Per pin: {}. Reference frame: {}.",
+            measured.faults.join("; "),
+            timing_pin_breakdown(measured),
+            measurement.describe(),
+        ));
+    }
+    let total = measured.calibrated_total_ms?;
+    if total <= baseline.ceiling_ms {
+        return None;
+    }
+    Some(format!(
+        "TIMING REGRESSION [{family}]: pinned N={:?} took {total:.1} ms calibrated, over the \
+         committed ceiling of {:.1} ms (= {TIMING_BAND_FACTOR:.1}x the slowest of \
+         {TIMING_BASELINE_RUNS} baseline runs: min {:.1} / median {:.1} / max {:.1} ms).\n\
+         Per pin: {}.\n\
+         Before believing this: {}. The times above are CALIBRATED — divided by the measured \
+         scale, so this box has already been compensated for — and the check is not enforced \
+         at all outside the comparable band. Re-run on an otherwise idle machine; if it \
+         reproduces, either the solver got slower on these paths or the baseline is stale and \
+         must be re-measured over {TIMING_BASELINE_RUNS} runs and re-committed together.",
+        baseline.pins,
+        baseline.ceiling_ms,
+        baseline.min_ms,
+        baseline.median_ms,
+        baseline.max_ms,
+        timing_pin_breakdown(measured),
+        measurement.describe(),
+    ))
+}
+
 // ---------------------------------------------------------------------------
 // The frontier sweep.
 // ---------------------------------------------------------------------------
@@ -780,14 +1057,21 @@ fn sweep(
     (frontier, curve)
 }
 
-/// Print the curve and the headline `FRONTIER` line, write the JSON artifact,
-/// and assert the regression floor.
+/// Print the curve, the headline `FRONTIER` line and the `TIMING` line, write
+/// the JSON artifact, and assert BOTH ratchets: capability (frontier >= floor)
+/// and clock (calibrated pinned time <= ceiling).
+///
+/// Both asserts run at the end rather than early-returning, so a run that is not
+/// comparable still writes its artifact and still reports both numbers — and so
+/// a capability regression can never hide a timing regression by panicking
+/// first.
 fn report_and_assert(
     family: &str,
     baseline: u32,
     frontier: u32,
     curve: &[CurvePoint],
     measurement: &mut Measurement,
+    timing: &TimingBaseline,
 ) {
     // Second calibration: a box that got busy DURING the sweep is a fact about
     // the number, not a footnote.
@@ -840,7 +1124,54 @@ fn report_and_assert(
         );
     }
 
-    write_curve_json(family, baseline, frontier, curve, measurement);
+    // ---- the timing ratchet, read out of the curve above (no extra solving) --
+    //
+    // Gated on the SAME two conditions as the capability ratchet below: a CI
+    // runner and an uncomparable box both get the number without the assert.
+    let measured = measure_timing(timing, curve, measurement);
+    let timing_enforced = !ci && measurement.comparable();
+    let timing_fault = timing_regression(family, timing, &measured, measurement);
+    match measured.calibrated_total_ms {
+        Some(total) => eprintln!(
+            "TIMING {family} = {total:.1} ms calibrated over pinned N={:?} \
+             (baseline median {:.1} ms, ceiling {:.1} ms, {} runs){}",
+            timing.pins,
+            timing.median_ms,
+            timing.ceiling_ms,
+            TIMING_BASELINE_RUNS,
+            if timing_enforced {
+                ""
+            } else {
+                " — ADVISORY, not enforced on this run"
+            },
+        ),
+        None => eprintln!(
+            "TIMING {family} = incomplete over pinned N={:?}: {}",
+            timing.pins,
+            measured.faults.join("; ")
+        ),
+    }
+    eprintln!("  pinned [{family}]: {}", timing_pin_breakdown(&measured));
+    if let Some(message) = &timing_fault
+        && !timing_enforced
+    {
+        eprintln!(
+            "  TIMING NOT ENFORCED [{family}]: {} — recorded in the JSON artifact only.",
+            message.lines().next().unwrap_or(message)
+        );
+    }
+
+    write_curve_json(
+        family,
+        baseline,
+        frontier,
+        curve,
+        measurement,
+        timing,
+        &measured,
+        timing_enforced,
+        timing_fault.is_none(),
+    );
 
     // Knife-edge instances: decided, but within 20 % of the budget. These are the
     // points that flip on box load, and they are exactly what a reader needs to
@@ -860,12 +1191,16 @@ fn report_and_assert(
         );
     }
 
+    // The capability ratchet's two escape hatches. They used to `return`, which
+    // would now skip the timing assert as well — so they set a flag instead and
+    // both ratchets are decided together at the end of this function.
+    let mut capability_enforced = true;
     if ci && frontier < baseline {
         eprintln!(
             "CI: skipping the frontier ratchet for [{family}] ({frontier} < {baseline}) — \
              hardware-relative baseline, enforced on the dev box"
         );
-        return;
+        capability_enforced = false;
     }
     // Refusing to compare is the whole point of the calibration: a REGRESSION
     // measured outside the comparable band is a statement about the box.
@@ -876,10 +1211,10 @@ fn report_and_assert(
              recorded in the JSON artifact; re-run it on an idle box before believing it.",
             measurement.why_not_comparable()
         );
-        return;
+        capability_enforced = false;
     }
     assert!(
-        frontier >= baseline,
+        !capability_enforced || frontier >= baseline,
         "REGRESSION [{family}]: frontier {frontier} < committed baseline {baseline} — a \
          roadmap lever lost ground. (Lowering the baseline is only correct if the loss is \
          understood and accepted.)\n\
@@ -894,16 +1229,30 @@ fn report_and_assert(
         measurement.describe(),
         measurement.budget_ms(),
     );
+
+    // The clock ratchet. Deliberately AFTER the capability assert: a lost lever
+    // is the more fundamental finding, and a family that stopped deciding its
+    // pinned instances will also have failed above.
+    if let Some(message) = timing_fault
+        && timing_enforced
+    {
+        panic!("{message}");
+    }
 }
 
 /// `bench-results/frontier/<family>.json`. Hand-rolled (no `serde_json` dep in
 /// the solver test crate) — the schema is tiny and stable.
+#[allow(clippy::too_many_arguments)]
 fn write_curve_json(
     family: &str,
     baseline: u32,
     frontier: u32,
     curve: &[CurvePoint],
     measurement: &Measurement,
+    timing: &TimingBaseline,
+    measured: &TimingMeasured,
+    timing_enforced: bool,
+    timing_ok: bool,
 ) {
     let dir = artifact_dir();
     if let Err(error) = std::fs::create_dir_all(&dir) {
@@ -961,6 +1310,67 @@ fn write_curve_json(
         measurement.ratchetable(),
     );
     let _ = writeln!(json, "  }},");
+    // The TIMING ratchet's whole state, next to the machine that produced it.
+    //
+    // `"enforced"` is the field a reader checks before believing a `"verdict"`,
+    // and it is false exactly when `machine.comparable` is false (or on CI) —
+    // the same flag that governs the capability ratchet. A busy box therefore
+    // records its numbers and asserts nothing: this is the mechanism that keeps
+    // the gate quiet under load, and it is the one the 35 / 39 / 40 spread at
+    // 1-minute loads 34 / 5.4 / 1.17 (frontier-ratchet-reference-frame.md) made
+    // necessary.
+    //
+    // `calibrated_ms` = `solve_ms / machine.scale`, i.e. reference-machine
+    // milliseconds; `calibrated_total_ms` is their sum over the pinned `N` and
+    // is what `ceiling_ms` bounds. `baseline_{min,median,max}_ms` are the
+    // measured spread over `baseline_runs` runs of this binary on this box, and
+    // `ceiling_ms` = `band_factor` x `baseline_max_ms`.
+    let _ = writeln!(json, "  \"timing\": {{");
+    let pins: Vec<String> = timing.pins.iter().map(u32::to_string).collect();
+    let _ = writeln!(json, "    \"pins\": [{}],", pins.join(", "));
+    let _ = writeln!(
+        json,
+        "    \"calibrated_total_ms\": {},",
+        measured
+            .calibrated_total_ms
+            .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}"))
+    );
+    let _ = writeln!(
+        json,
+        "    \"baseline_min_ms\": {:.1}, \"baseline_median_ms\": {:.1}, \
+         \"baseline_max_ms\": {:.1},",
+        timing.min_ms, timing.median_ms, timing.max_ms
+    );
+    let _ = writeln!(
+        json,
+        "    \"ceiling_ms\": {:.1}, \"band_factor\": {TIMING_BAND_FACTOR:.2}, \
+         \"baseline_runs\": {TIMING_BASELINE_RUNS},",
+        timing.ceiling_ms
+    );
+    let _ = writeln!(
+        json,
+        "    \"enforced\": {timing_enforced}, \"verdict\": \"{}\",",
+        if timing_ok { "ok" } else { "regression" }
+    );
+    json.push_str("    \"observed\": [\n");
+    for (i, p) in measured.points.iter().enumerate() {
+        let comma = if i + 1 < measured.points.len() {
+            ","
+        } else {
+            ""
+        };
+        let _ = writeln!(
+            json,
+            "      {{ \"n\": {}, \"decided\": {}, \"solve_ms\": {}, \"calibrated_ms\": {} }}{comma}",
+            p.n,
+            p.decided,
+            p.solve_ms
+                .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
+            p.calibrated_ms
+                .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
+        );
+    }
+    json.push_str("    ]\n  },\n");
     json.push_str("  \"curve\": [\n");
     for (i, p) in curve.iter().enumerate() {
         let comma = if i + 1 < curve.len() { "," } else { "" };
@@ -1692,6 +2102,7 @@ fn frontier_bv_reduction() {
         frontier,
         &curve,
         &mut measurement,
+        &TIMING_BV_REDUCTION,
     );
 }
 
@@ -1706,6 +2117,7 @@ fn frontier_lia_cuts() {
         frontier,
         &curve,
         &mut measurement,
+        &TIMING_LIA_CUTS,
     );
 }
 
@@ -1740,6 +2152,7 @@ fn frontier_string_bound() {
         frontier,
         &curve,
         &mut measurement,
+        &TIMING_STRING_BOUND,
     );
 }
 
@@ -1755,6 +2168,7 @@ fn frontier_nra_degree() {
         frontier,
         &curve,
         &mut measurement,
+        &TIMING_NRA_DEGREE,
     );
 }
 
@@ -1770,6 +2184,7 @@ fn frontier_nia_unsat() {
         frontier,
         &curve,
         &mut measurement,
+        &TIMING_NIA_UNSAT,
     );
 }
 
@@ -1869,6 +2284,142 @@ fn calibration_frames_the_measurement() {
 /// re-verifies a sample of each generator independently of the solver — a
 /// corrupted generator (one that builds a witness/identity that does not hold)
 /// must be caught here, before any frontier number is trusted.
+/// Every committed [`TimingBaseline`], checked against its own stated rule.
+///
+/// A ceiling that is not actually above the measured spread, or a spread that is
+/// not ordered, is a band nobody can read — and a `ceiling_ms` typed one digit
+/// too large is a ratchet that cannot fail, which this repository has shipped
+/// before (six of seven guards in one suite were removable with everything still
+/// green). So the arithmetic relation between the four numbers is asserted here
+/// rather than trusted to the comment beside them.
+#[test]
+fn timing_baselines_are_internally_consistent() {
+    let families: [(&str, &TimingBaseline); 5] = [
+        ("bv_reduction", &TIMING_BV_REDUCTION),
+        ("lia_cuts", &TIMING_LIA_CUTS),
+        ("string_bound", &TIMING_STRING_BOUND),
+        ("nra_degree", &TIMING_NRA_DEGREE),
+        ("nia_unsat", &TIMING_NIA_UNSAT),
+    ];
+    for (family, baseline) in families {
+        assert!(
+            !baseline.pins.is_empty(),
+            "[{family}] pins no timing points, so its timing ratchet cannot fail"
+        );
+        assert!(
+            baseline.pins.windows(2).all(|w| w[0] < w[1]),
+            "[{family}] pins must be strictly increasing and distinct: {:?}",
+            baseline.pins
+        );
+        assert!(
+            baseline.min_ms <= baseline.median_ms && baseline.median_ms <= baseline.max_ms,
+            "[{family}] measured spread is not ordered: min {:.1} / median {:.1} / max {:.1}",
+            baseline.min_ms,
+            baseline.median_ms,
+            baseline.max_ms,
+        );
+        let expected = baseline.max_ms * TIMING_BAND_FACTOR;
+        assert!(
+            (baseline.ceiling_ms - expected).abs() <= 0.1 * TIMING_BAND_FACTOR,
+            "[{family}] ceiling {:.1} ms is not {TIMING_BAND_FACTOR:.1}x the slowest baseline \
+             run ({:.1} ms => {expected:.1} ms). The ceiling is DERIVED from the measurement; \
+             re-measure over {TIMING_BASELINE_RUNS} runs rather than widening it by hand.",
+            baseline.ceiling_ms,
+            baseline.max_ms,
+        );
+    }
+}
+
+/// The timing ratchet's own controls: it accepts what it must accept and fires
+/// on each way it is meant to fire.
+///
+/// Written as an adversarial fixture rather than an observation of a real run,
+/// because a real run only ever exercises the accepting branch — and "a checker
+/// that cannot fail is worse than no checker".
+#[test]
+fn timing_ratchet_fires_on_a_slowdown_and_not_on_a_healthy_run() {
+    let baseline = TimingBaseline {
+        pins: &[2, 3],
+        min_ms: 90.0,
+        median_ms: 100.0,
+        max_ms: 110.0,
+        ceiling_ms: 165.0,
+    };
+    // A box measured at 2x the reference: raw times are doubled, calibrated
+    // times are not. This is the load-invariance the whole design rests on, so
+    // it is asserted rather than assumed.
+    let measurement = Measurement {
+        machine: Machine {
+            host: "fixture".to_owned(),
+            cpus: 8,
+            model: "fixture".to_owned(),
+        },
+        calibration_start_ms: CALIBRATION_REFERENCE_MS * 2.0,
+        calibration_end_ms: Some(CALIBRATION_REFERENCE_MS * 2.0),
+        raw_scale: 2.0,
+        scale: 2.0,
+        load_start: None,
+        load_end: None,
+    };
+    let point = |n: u32, decided: bool, solve_ms: f64| CurvePoint {
+        n,
+        decided_correct: decided,
+        status: if decided { "unsat" } else { "unknown" },
+        solve_ms,
+    };
+
+    // Healthy: 120 + 80 raw on a 2x box = 100 ms calibrated, at the median.
+    let healthy = vec![
+        point(1, true, 10.0),
+        point(2, true, 120.0),
+        point(3, true, 80.0),
+        point(4, true, 900.0),
+    ];
+    let measured = measure_timing(&baseline, &healthy, &measurement);
+    assert_eq!(measured.calibrated_total_ms, Some(100.0));
+    assert!(
+        timing_regression("fixture", &baseline, &measured, &measurement).is_none(),
+        "a run at the committed median must not fire"
+    );
+
+    // Still healthy at the ceiling exactly: 330 raw = 165 calibrated.
+    let at_ceiling = vec![point(2, true, 165.0), point(3, true, 165.0)];
+    let measured = measure_timing(&baseline, &at_ceiling, &measurement);
+    assert_eq!(measured.calibrated_total_ms, Some(165.0));
+    assert!(
+        timing_regression("fixture", &baseline, &measured, &measurement).is_none(),
+        "the ceiling is inclusive"
+    );
+
+    // A 2x slowdown on one pinned path, everything still decided and the
+    // frontier untouched: exactly the regression no other gate in the repository
+    // can see.
+    let slow = vec![point(2, true, 240.0), point(3, true, 160.0)];
+    let measured = measure_timing(&baseline, &slow, &measurement);
+    assert_eq!(measured.calibrated_total_ms, Some(200.0));
+    let fired = timing_regression("fixture", &baseline, &measured, &measurement)
+        .expect("a 2x slowdown over the ceiling must fire");
+    assert!(fired.contains("TIMING REGRESSION"), "{fired}");
+    assert!(fired.contains("200.0 ms calibrated"), "{fired}");
+
+    // A pin that stopped deciding is a timing failure too — the instance ran out
+    // of clock, which is the same finding arriving one step later.
+    let undecided = vec![point(2, true, 120.0), point(3, false, 9000.0)];
+    let measured = measure_timing(&baseline, &undecided, &measurement);
+    assert_eq!(measured.calibrated_total_ms, None);
+    let fired = timing_regression("fixture", &baseline, &measured, &measurement)
+        .expect("an undecided pin must fire");
+    assert!(fired.contains("did not decide"), "{fired}");
+
+    // A sweep that never reached a pin cannot be silently scored.
+    let truncated = vec![point(2, true, 120.0)];
+    let measured = measure_timing(&baseline, &truncated, &measurement);
+    assert_eq!(measured.calibrated_total_ms, None);
+    let fired = timing_regression("fixture", &baseline, &measured, &measurement)
+        .expect("a missing pin must fire");
+    assert!(fired.contains("never reached"), "{fired}");
+}
+
 #[test]
 fn every_generated_instance_self_checks() {
     // bv_reduction: each depth is an exhaustively-verified UNSAT identity.
