@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-union-under-family-deletion",
+  "title": "Deleting a fixed set from every member of an indexed family commutes with taking the family's union, so the union loses at most that set's own size",
+  "statement": "Let nb be a family of finite sets of naturals indexed by the naturals, t a finite index set, and u a finite set. Throwing u out of every member of the family and then unioning over t gives the same set -- member for member, at every point -- as unioning over t and then throwing u out. Consequently the union of the deleted family is smaller than the original union by at most the size of u: card (unionOver nb t) <= card (unionOver (fun i => sdiff (nb i) u) t) + card u. Both statements are kernel terms with an empty axiom footprint. The additive form is the honest one here because Nat subtraction is truncated; the subtractive reading is the same statement and is vacuously weaker exactly when card u is large, which is the case the Hall argument cares about.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Hall.card_le_card_unionOver_sdiff_add : ((x0 : ((x0 : AxNat) -> AxNat.Finset)) -> ((x1 : AxNat.Finset) -> ((x2 : AxNat.Finset) -> AxNat.le (AxNat.Finset.card (AxNat.Hall.unionOver x0 x2)) (AxNat.add (AxNat.Finset.card (AxNat.Hall.unionOver (fun (x3 : AxNat) => AxNat.Finset.sdiff (x0 x3) x1) x2)) (AxNat.Finset.card x1)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Hall.card_le_card_unionOver_sdiff_add",
+    "kernel_statement": "Nat.Hall.unionOver nb t := Nat.Finset.mk (fun v => Nat.Hall.anyBelow (fun i => Nat.Graph.andB (Nat.Finset.memB t i) (Nat.Finset.memB (nb i) v)) (Nat.Finset.bound t)) (Nat.Hall.unionBound nb (Nat.Finset.bound t)); Nat.Finset.sdiff s t := Nat.Finset.mk (Nat.setDiff (Nat.Finset.memB s) (Nat.Finset.memB t)) (Nat.Finset.bound s). The pointwise half is Nat.Hall.memB_unionOver_sdiff : forall nb u t v, Eq Bool (memB (unionOver (fun i => sdiff (nb i) u) t) v) (memB (sdiff (unionOver nb t) u) v), and the single-deletion count it is combined with is Nat.Finset.card_le_card_sdiff_add : forall s t, Le (card s) (add (card (sdiff s t)) (card t))."
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:nat-finset-card-eq-count-range-add",
+    "F:nat-finset-all-below-false-witness",
+    "F:nat-finset-card-union-add-card-inter"
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum lane `hall-counting`, roadmap item W2-12 residue: `nat_prelude/hall.rs` gains `anyBelow_witness`, `memB_unionOver_elim`, both `unionOver` congruences and both family-modification transports; `nat_prelude/finset.rs` gains the set difference's membership calculus and `card_le_card_sdiff_add`. ADR-1623.",
+    "source": "The deletion step of the standard inductive proof of Hall's marriage theorem, where the inductive hypothesis is applied to a family with a critical subfamily's union removed. Standard, and in a classical setting written as a subtraction over unions.",
+    "prior_art": [
+      {
+        "citation": "Mathlib, `Finset.sdiff_union_of_subset` and `Finset.card_sdiff`",
+        "establishes": "the same deletion arithmetic over Mathlib's `Finset`, in the SUBTRACTIVE form and with decidable equality supplied by a typeclass; this route computes the carrier (a predicate plus a bound) so the difference needs no decidability instance, and states the count additively because `Nat.sub` is truncated"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "kernel-Nat.Hall.card_le_card_unionOver_sdiff_add",
+      "kind": "kernel-term",
+      "supports": "the union of the deleted family loses at most card u from the original union",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_tests::the_deficiency_inequality_is_admitted_and_dropping_the_deleted_size_is_not",
+        "nat_prelude::hall_tests::every_hall_counting_declaration_is_present_and_axiom_free",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::hall_tests -- --test-threads=4",
+      "notes": "ADR-1614 sized this step as a genuine counting argument over a union whose bound changes at every step. It is not: the deleted set does not depend on the index, so the quantifier commutes and the whole content is pointwise. The card follows in ONE application of Nat.Finset.card_congr_of_memB, and the only counting left is the single-deletion bound in finset.rs. The union's bound never enters -- bound (sdiff s u) IS bound s by iota, so the modified family has the same unionBound anyway.",
+      "checker_paired_negative": "The same proof term offered without the `+ card u` on the right -- `Le (card (unionOver nb t)) (card (unionOver nb' t))` -- must be REJECTED by the trusted gate. The deleted family's union really is smaller, so that statement is FALSE, not merely unprovable by this term."
+    },
+    {
+      "id": "kernel-Nat.Finset.card_le_card_sdiff_add",
+      "kind": "kernel-term",
+      "supports": "deleting a set from a finite set removes at most that set's own size",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (re-derives the type from the proof term)",
+        "nat_prelude::hall_tests::card_le_card_sdiff_add_is_admitted_and_dropping_the_deleted_size_is_not",
+        "nat_prelude::hall_tests::the_sdiff_membership_laws_are_admitted_and_the_slid_statements_are_not",
+        "nat_prelude_tests::every_nat_declaration_is_checked_and_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::hall_tests -- --test-threads=4",
+      "notes": "A plain Nat.Finset law, filed in finset.rs rather than hall.rs -- the same call ADR-1614 made for card_congr_of_memB. Everything is folded over the common bound `bound s + bound t`, where card_eq_countRange_add collapses each of the three counts back to its own card; `sdiff s t` is free there because its stored bound IS `bound s`. Between the folds sit two loose countRange facts that already existed: countRange_le_of_subset applied to `p subset (p \\ q) union q` (pointwise, one Bool decision on q k), and countRange_union_add_inter read as an inequality by discarding the intersection through le_add_right. Before this lane NOTHING in the tree had a type mentioning Nat.Finset.sdiff.",
+      "checker_paired_negative": "The same proof term offered at `Le (card s) (card (sdiff s t))` -- the deleted set's own size dropped -- must be REJECTED. That statement is false whenever `t` meets `s`."
+    },
+    {
+      "id": "eval-deletion-commutes-tight",
+      "kind": "instance-pin",
+      "supports": "the deletion really takes effect, and the bound is TIGHT rather than slack",
+      "check_status": "checked",
+      "checkers": [
+        "nat_prelude::hall_tests::deleting_commutes_with_the_union_at_a_concrete_family",
+        "nat_prelude::hall_tests::sdiff_deletes_exactly_the_second_set"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib nat_prelude::hall_tests -- --test-threads=4",
+      "notes": "nb 0 = {1,2}, nb 1 = {2,3}, index set {0,1}, deleted set u = {2}. The union is {1,2,3} (card 3); the union of the deleted family is {1} u {3} = {1,3} (card 2), and so is the deletion of the union. The deficiency bound is TIGHT here -- 3 <= 2 + 1 -- which is what makes the arithmetic discriminating: an off-by-one in either direction breaks it. The named wrong answer is 3, which is what a family modification that did NOT take effect would give.",
+      "checker_paired_negative": "Every Nat assertion in these tests names the value a specific wrong formula would produce (3 for a no-op modification, 4 for an undeleted family), and every Bool assertion carries its own negative half -- the term must NOT reduce to the other Bool."
+    },
+    {
+      "id": "shape-Nat.Hall.card_le_card_unionOver_sdiff_add",
+      "kind": "exhaustive-enumeration",
+      "supports": "the declarations exist under these exact names and are theorems, and nothing of this shape existed before",
+      "check_status": "checked",
+      "checkers": [
+        "shape_search --name Nat.Hall.card_le_card_unionOver_sdiff_add --expect 1",
+        "shape_search --const Nat.Finset.sdiff (pre-state: ABSENT)"
+      ],
+      "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.Hall.card_le_card_unionOver_sdiff_add --expect 1",
+      "notes": "shape_search exits 1 when the count differs and 3 when the query is unanswerable, so a stale index cannot pass for a present declaration. The pre-state this row is measured against: at declarations=3000, positive control `--name Nat.Finset.forallSubset_of_search --expect 1` FOUND, `--const Nat.Finset.sdiff` returned ABSENT -- not one declaration in the tree had a type mentioning the set difference. The post-state is declarations=3017 on a binary rebuilt at this lane's HEAD, the increment being exactly the seventeen declarations added."
+    }
+  ],
+  "notes": "epistemic_status and external_status agree on purpose: neither statement is a new mathematical result. The value is the ROUTE and what it unblocks, and the interesting part is that ADR-1614's sizing was wrong in a specific, reusable way -- it priced this step as counting because the textbook writes it as a subtraction over unions, when reading the same step through this carrier's definitions makes it a quantifier commutation with one small counting lemma behind it.\n\nWhat this does NOT do is finish Hall. All three of ADR-1614's named obstructions are now closed and sufficiency still did not land; ADR-1623's closing section sizes the new one, which is the EMPTY SET. Measured at declarations=3017 with a freshness control that postdates every commit in the lane: `--const Nat.Finset.singleton` is ABSENT, so the singleton has no lemmas at all, and nothing turns a positive card into a member (`Nat.countRange_eq_zero_of_all_false` exists and is the wrong direction). Hall's base case is a singleton index set and its inductive step extracts a representative from a non-empty neighbourhood, so both are needed before the skeleton can be assembled."
+}

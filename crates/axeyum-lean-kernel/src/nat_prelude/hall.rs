@@ -93,6 +93,8 @@ use super::NatPrelude;
 use super::graph::{and_b, bool_congr, not_b};
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps, bool_true_or_false};
+use super::subset_search::{nat_to_bool_congr, not_b_false_elim, not_b_true_elim};
+use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
 use crate::env::ReducibilityHint;
@@ -712,6 +714,1266 @@ fn declare_necessity(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelErr
 }
 
 // ---------------------------------------------------------------------------
+// Logical plumbing (this prelude's per-file convention is a private copy).
+// ---------------------------------------------------------------------------
+
+/// Non-dependent `Or.rec` into a `Prop` goal.
+#[allow(clippy::too_many_arguments)]
+fn or_elim(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    left_ty: ExprId,
+    right_ty: ExprId,
+    goal: ExprId,
+    left_case: ExprId,
+    right_case: ExprId,
+    or_proof: ExprId,
+) -> ExprId {
+    let anon = d.anon_name();
+    let or_ty = d.const_app(p.logic.or, &[left_ty, right_ty]);
+    let motive = d.kernel().lam(anon, or_ty, goal, BinderInfo::Default);
+    let or_rec = d.kernel().const_(p.logic.or_rec, vec![]);
+    d.apply(
+        or_rec,
+        &[left_ty, right_ty, motive, left_case, right_case, or_proof],
+    )
+}
+
+/// `Exists.{1} Nat pred`.
+fn exists_nat(d: &mut NatDev<'_>, p: &NatPrelude, pred: ExprId) -> ExprId {
+    let one = d.level_one();
+    let nat = d.nat_ty();
+    let ex = d.kernel().const_(p.logic.exists_, vec![one]);
+    d.apply(ex, &[nat, pred])
+}
+
+/// `Exists.intro.{1} Nat pred w h`.
+fn exists_intro_nat(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred: ExprId,
+    w: ExprId,
+    h: ExprId,
+) -> ExprId {
+    let one = d.level_one();
+    let nat = d.nat_ty();
+    let intro = d.kernel().const_(p.logic.exists_intro, vec![one]);
+    d.apply(intro, &[nat, pred, w, h])
+}
+
+/// `Exists.rec.{1}` over `Nat` into a `Prop` goal.
+fn exists_elim_nat(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    pred: ExprId,
+    goal: ExprId,
+    minor: ExprId,
+    proof: ExprId,
+) -> ExprId {
+    let one = d.level_one();
+    let nat = d.nat_ty();
+    let ex_ty = exists_nat(d, p, pred);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, ex_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.exists_rec, vec![one]);
+    d.apply(rec, &[nat, pred, motive, minor, proof])
+}
+
+/// `fun i => And (Lt i n) (Eq Bool (f i) false)` — the shape
+/// `Nat.Finset.allBelow_false_witness` produces.
+fn below_witness_pred(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let lt = d.lt(i, n);
+    let fi = d.apply(f, &[i]);
+    let fal = d.bool_false();
+    let is_false = d.bool_eq(fi, fal);
+    let body = d.const_app(p.logic.and, &[lt, is_false]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `fun i => And (Lt i n) (Eq Bool (f i) true)` — the shape
+/// [`declare_any_below_witness`] produces, and `below_witness_pred`'s
+/// opposite polarity.
+fn above_witness_pred(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let lt = d.lt(i, n);
+    let fi = d.apply(f, &[i]);
+    let tru = d.bool_true();
+    let is_true = d.bool_eq(fi, tru);
+    let body = d.const_app(p.logic.and, &[lt, is_true]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `fun i => And (memB t i = true) (memB (nb i) v = true)` — the witness shape
+/// [`declare_mem_union_over_elim`] produces. The index bound is DROPPED:
+/// `Nat.Finset.lt_bound_of_memB` recovers `Lt i (bound t)` from the first
+/// conjunct, so carrying it would make every consumer discard it.
+fn union_witness_pred(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    nb: ExprId,
+    t: ExprId,
+    v: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let in_t = mem_true(d, &p, t, i);
+    let member = d.apply(nb, &[i]);
+    let holds = mem_true(d, &p, member, v);
+    let body = d.const_app(p.logic.and, &[in_t, holds]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// Two `Bool` terms that imply each other's truth are equal. This kernel has
+/// no `propext` and no `Bool`-valued iff, so the bridge from a two-way
+/// implication to an equation is three nested decisions: `a`, and in the
+/// `false` branch `b` as well.
+fn bool_eq_of_iff(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    a: ExprId,
+    b: ExprId,
+    fwd: ExprId,
+    bwd: ExprId,
+) -> ExprId {
+    let p = *p;
+    let tru = d.bool_true();
+    let fal = d.bool_false();
+    let goal = d.bool_eq(a, b);
+    let a_true = d.bool_eq(a, tru);
+    let a_false = d.bool_eq(a, fal);
+    let decided = bool_true_or_false(d, &p, a);
+
+    let on_true = {
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let hb = d.apply(fwd, &[ha]);
+        let back = d.bool_symm(b, tru, hb);
+        let body = d.bool_trans(a, tru, b, ha, back);
+        d.lam_fv(ha_fv, a_true, body)
+    };
+    let on_false = {
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let b_true = d.bool_eq(b, tru);
+        let b_false = d.bool_eq(b, fal);
+        let decided_b = bool_true_or_false(d, &p, b);
+        let on_b_true = {
+            let hb_fv = d.fresh_fvar();
+            let hb = d.kernel().fvar(hb_fv);
+            let ha2 = d.apply(bwd, &[hb]);
+            let back = d.bool_symm(a, fal, ha);
+            let impossible = d.bool_trans(fal, a, tru, back, ha2);
+            let absurd = d.false_true_elim(goal, impossible);
+            d.lam_fv(hb_fv, b_true, absurd)
+        };
+        let on_b_false = {
+            let hb_fv = d.fresh_fvar();
+            let hb = d.kernel().fvar(hb_fv);
+            let back = d.bool_symm(b, fal, hb);
+            let body = d.bool_trans(a, fal, b, ha, back);
+            d.lam_fv(hb_fv, b_false, body)
+        };
+        let body = or_elim(
+            d, &p, b_true, b_false, goal, on_b_true, on_b_false, decided_b,
+        );
+        d.lam_fv(ha_fv, a_false, body)
+    };
+    or_elim(d, &p, a_true, a_false, goal, on_true, on_false, decided)
+}
+
+// ---------------------------------------------------------------------------
+// `anyBelow`'s ELIMINATION rule — the half ADR-1608 declared missing.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Hall.anyBelow_witness : ∀ f n, Eq Bool (anyBelow f n) true →
+/// Exists (fun i => And (Lt i n) (Eq Bool (f i) true))`.
+///
+/// ADR-1608 declared only the introduction rule and named this one as what
+/// sufficiency would need; ADR-1614 then observed it is a one-dimensional
+/// instance of `Nat.Finset.allBelow_false_witness` and called it bookkeeping.
+/// It is: `anyBelow` is `notB ∘ allBelow ∘ notB`, so a `true` verdict is a
+/// `false` loop (`not_b_true_elim`), the loop's own third law computes an
+/// index where its body is `false`, and the body's `notB` comes back off
+/// (`not_b_false_elim`). No choice principle — the recursion inside
+/// `allBelow_false_witness` IS the search.
+fn declare_any_below_witness(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let pty = pred_ty(d);
+    let tru = d.bool_true();
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let search = any_below(d, &p, f, n);
+    let hyp_ty = d.bool_eq(search, tru);
+
+    let result_pred = above_witness_pred(d, &p, f, n);
+    let goal = exists_nat(d, &p, result_pred);
+
+    let negated = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let at_k = d.apply(f, &[k]);
+        let body = not_b(d, &p, at_k);
+        d.lam_fv(k_fv, nat, body)
+    };
+    let looped = d.const_app(p.finset_all_below, &[negated, n]);
+    let loop_false = not_b_true_elim(d, &p, looped, h);
+    let found = d.lemma(p.finset_all_below_false_witness, &[negated, n, loop_false]);
+
+    let witness_pred = below_witness_pred(d, &p, negated, n);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let lt_ty = d.lt(k, n);
+        let neg_at_k = d.apply(negated, &[k]);
+        let fal = d.bool_false();
+        let neg_false = d.bool_eq(neg_at_k, fal);
+        let hw_ty = d.const_app(p.logic.and, &[lt_ty, neg_false]);
+        let hw_fv = d.fresh_fvar();
+        let hw = d.kernel().fvar(hw_fv);
+
+        let lt_pf = and_left(d, lt_ty, neg_false, hw);
+        let off = and_right(d, lt_ty, neg_false, hw);
+        let at_k = d.apply(f, &[k]);
+        // `negated k` beta-reduces to `notB (f k)`; the kernel identifies them.
+        let holds = not_b_false_elim(d, &p, at_k, off);
+        let tru2 = d.bool_true();
+        let is_true = d.bool_eq(at_k, tru2);
+        let pair = d.const_app(p.logic.and_intro, &[lt_ty, is_true, lt_pf, holds]);
+        let intro = exists_intro_nat(d, &p, result_pred, k, pair);
+        let with_hw = d.lam_fv(hw_fv, hw_ty, intro);
+        d.lam_fv(k_fv, nat, with_hw)
+    };
+    let proof = exists_elim_nat(d, &p, witness_pred, goal, minor, found);
+
+    let ty = {
+        let with_h = d.arrow(hyp_ty, goal);
+        let with_n = d.pi_fv(n_fv, nat, with_h);
+        d.pi_fv(f_fv, pty, with_n)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_n = d.lam_fv(n_fv, nat, with_h);
+        d.lam_fv(f_fv, pty, with_n)
+    };
+    d.declare_theorem(p.hall_any_below_witness, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// Membership in the union, in the other direction.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Hall.memB_unionOver_elim : ∀ nb t v,
+/// Eq Bool (memB (unionOver nb t) v) true →
+/// Exists (fun i => And (Eq Bool (memB t i) true) (Eq Bool (memB (nb i) v) true))`.
+///
+/// The converse of [`declare_mem_union_over`], and with it `unionOver` finally
+/// has a two-sided characterisation: `v` is in the union exactly when SOME
+/// index of `t` supplies it. Everything below in this file is that
+/// characterisation used twice.
+///
+/// `memB` truncates, so the hypothesis already places `v` below the union's
+/// own bound (`lt_bound_of_memB`) and `memB_of_lt` exposes the stored
+/// indicator, which is one `anyBelow`. [`declare_any_below_witness`] computes
+/// the index and `Nat.Graph.andB_left`/`andB_right` split the conjunction the
+/// indicator is built from.
+fn declare_mem_union_over_elim(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+    let tru = d.bool_true();
+
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let cover = union_over(d, &p, nb, t);
+    let mem_here = mem_b(d, &p, cover, v);
+    let hyp_ty = d.bool_eq(mem_here, tru);
+
+    let result_pred = union_witness_pred(d, &p, nb, t, v);
+    let goal = exists_nat(d, &p, result_pred);
+
+    let bt = fs_bound(d, &p, t);
+    let indicator = cover_pred(d, &p, nb, t, v);
+    let ind_at = any_below(d, &p, indicator, bt);
+
+    let hlt = d.lemma(p.finset_lt_bound_of_mem_b, &[cover, v, h]);
+    let unfolded = d.lemma(p.finset_mem_b_of_lt, &[cover, v, hlt]);
+    let back = d.bool_symm(mem_here, ind_at, unfolded);
+    let ind_true = d.bool_trans(ind_at, mem_here, tru, back, h);
+    let found = d.lemma(p.hall_any_below_witness, &[indicator, bt, ind_true]);
+
+    let witness_pred = above_witness_pred(d, &p, indicator, bt);
+    let minor = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let lt_ty = d.lt(k, bt);
+        let ind_k = d.apply(indicator, &[k]);
+        let tru2 = d.bool_true();
+        let ind_k_true = d.bool_eq(ind_k, tru2);
+        let hw_ty = d.const_app(p.logic.and, &[lt_ty, ind_k_true]);
+        let hw_fv = d.fresh_fvar();
+        let hw = d.kernel().fvar(hw_fv);
+
+        let fired = and_right(d, lt_ty, ind_k_true, hw);
+        let in_t = mem_b(d, &p, t, k);
+        let member = d.apply(nb, &[k]);
+        let holds = mem_b(d, &p, member, v);
+        // `indicator k` beta-reduces to `andB (memB t k) (memB (nb k) v)`.
+        let hi = d.lemma(p.graph_and_b_left, &[in_t, holds, fired]);
+        let hv = d.lemma(p.graph_and_b_right, &[in_t, holds, fired]);
+
+        let in_t_true = mem_true(d, &p, t, k);
+        let holds_true = mem_true(d, &p, member, v);
+        let pair = d.const_app(p.logic.and_intro, &[in_t_true, holds_true, hi, hv]);
+        let intro = exists_intro_nat(d, &p, result_pred, k, pair);
+        let with_hw = d.lam_fv(hw_fv, hw_ty, intro);
+        d.lam_fv(k_fv, nat, with_hw)
+    };
+    let proof = exists_elim_nat(d, &p, witness_pred, goal, minor, found);
+
+    let ty = {
+        let with_h = d.arrow(hyp_ty, goal);
+        let with_v = d.pi_fv(v_fv, nat, with_h);
+        let with_t = d.pi_fv(t_fv, fs, with_v);
+        d.pi_fv(nb_fv, fam, with_t)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_v = d.lam_fv(v_fv, nat, with_h);
+        let with_t = d.lam_fv(t_fv, fs, with_v);
+        d.lam_fv(nb_fv, fam, with_t)
+    };
+    d.declare_theorem(p.hall_mem_union_over_elim, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// The union depends on the index set's MEMBERS, not on its stored bound.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Hall.memB_unionOver_congr : ∀ nb t t',
+/// (∀ i, Eq Bool (memB t i) (memB t' i)) →
+/// ∀ v, Eq Bool (memB (unionOver nb t) v) (memB (unionOver nb t') v)`.
+///
+/// **The bookkeeping obstruction ADR-1614 §4 named, closed.** `unionOver nb t`
+/// stores `unionBound nb (bound t)`, which reads `t`'s BOUND and not its
+/// members, so two membership-equal index sets give unions that are not `Eq`
+/// and whose bounds differ — and until now nothing said their MEMBERSHIPS
+/// agree. They do, and the reason is that membership in the union never
+/// mentions the bound: [`declare_mem_union_over_elim`] turns a member into an
+/// index of `t`, the hypothesis moves that index to `t'`, and
+/// [`declare_mem_union_over`] puts it back. Twice, once per direction, plus
+/// the `Bool` decision that turns a two-way implication into an equation.
+fn declare_mem_union_over_congr(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+    let tru = d.bool_true();
+
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hc_fv = d.fresh_fvar();
+    let hc = d.kernel().fvar(hc_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+
+    let hc_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = mem_b(d, &p, t, i);
+        let rhs = mem_b(d, &p, u, i);
+        let body = d.bool_eq(lhs, rhs);
+        d.pi_fv(i_fv, nat, body)
+    };
+
+    let cover_t = union_over(d, &p, nb, t);
+    let cover_u = union_over(d, &p, nb, u);
+    let mem_t_side = mem_b(d, &p, cover_t, v);
+    let mem_u_side = mem_b(d, &p, cover_u, v);
+
+    // `from`'s membership implies `to`'s, transporting each witnessing index
+    // across `hc` in the direction `flip` selects.
+    let direction = |d: &mut NatDev<'_>, from: ExprId, to: ExprId, flip: bool| -> ExprId {
+        let src = union_over(d, &p, nb, from);
+        let dst = union_over(d, &p, nb, to);
+        let mem_src = mem_b(d, &p, src, v);
+        let mem_dst = mem_b(d, &p, dst, v);
+        let hyp_ty = d.bool_eq(mem_src, tru);
+        let goal = d.bool_eq(mem_dst, tru);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+
+        let found = d.lemma(p.hall_mem_union_over_elim, &[nb, from, v, ha]);
+        let witness_pred = union_witness_pred(d, &p, nb, from, v);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let in_src = mem_true(d, &p, from, k);
+            let member = d.apply(nb, &[k]);
+            let holds = mem_true(d, &p, member, v);
+            let hw_ty = d.const_app(p.logic.and, &[in_src, holds]);
+            let hw_fv = d.fresh_fvar();
+            let hw = d.kernel().fvar(hw_fv);
+
+            let hi = and_left(d, in_src, holds, hw);
+            let hv = and_right(d, in_src, holds, hw);
+
+            // `hc k : memB t k = memB u k`, oriented for this direction.
+            let at_k = d.apply(hc, &[k]);
+            let mem_from = mem_b(d, &p, from, k);
+            let mem_to = mem_b(d, &p, to, k);
+            let oriented = if flip {
+                d.bool_symm(mem_to, mem_from, at_k)
+            } else {
+                at_k
+            };
+            let back = d.bool_symm(mem_from, mem_to, oriented);
+            let hi_to = d.bool_trans(mem_to, mem_from, tru, back, hi);
+
+            let placed = d.lemma(p.hall_mem_union_over, &[nb, to, k, v, hi_to, hv]);
+            let with_hw = d.lam_fv(hw_fv, hw_ty, placed);
+            d.lam_fv(k_fv, nat, with_hw)
+        };
+        let body = exists_elim_nat(d, &p, witness_pred, goal, minor, found);
+        d.lam_fv(ha_fv, hyp_ty, body)
+    };
+
+    let fwd = direction(d, t, u, false);
+    let bwd = direction(d, u, t, true);
+    let proof = bool_eq_of_iff(d, &p, mem_t_side, mem_u_side, fwd, bwd);
+
+    let goal = d.bool_eq(mem_t_side, mem_u_side);
+    let ty = {
+        let with_v = d.pi_fv(v_fv, nat, goal);
+        let with_hc = d.arrow(hc_ty, with_v);
+        let with_u = d.pi_fv(u_fv, fs, with_hc);
+        let with_t = d.pi_fv(t_fv, fs, with_u);
+        d.pi_fv(nb_fv, fam, with_t)
+    };
+    let value = {
+        let with_v = d.lam_fv(v_fv, nat, proof);
+        let with_hc = d.lam_fv(hc_fv, hc_ty, with_v);
+        let with_u = d.lam_fv(u_fv, fs, with_hc);
+        let with_t = d.lam_fv(t_fv, fs, with_u);
+        d.lam_fv(nb_fv, fam, with_t)
+    };
+    d.declare_theorem(p.hall_mem_union_over_congr, ty, value)
+}
+
+/// `Nat.Hall.card_unionOver_congr : ∀ nb t t',
+/// (∀ i, Eq Bool (memB t i) (memB t' i)) →
+/// Eq Nat (card (unionOver nb t)) (card (unionOver nb t'))`.
+///
+/// [`declare_mem_union_over_congr`] fed to `Nat.Finset.card_congr_of_memB`
+/// (ADR-1614), which is exactly the lemma that survives a difference in the
+/// two sets' stored bounds — and the two bounds here DO differ, since
+/// `unionBound` sums over `bound t`. This is the form the searched property in
+/// Hall's sufficiency has to discharge.
+fn declare_card_union_over_congr(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let hc_fv = d.fresh_fvar();
+    let hc = d.kernel().fvar(hc_fv);
+
+    let hc_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = mem_b(d, &p, t, i);
+        let rhs = mem_b(d, &p, u, i);
+        let body = d.bool_eq(lhs, rhs);
+        d.pi_fv(i_fv, nat, body)
+    };
+
+    let cover_t = union_over(d, &p, nb, t);
+    let cover_u = union_over(d, &p, nb, u);
+    let pointwise = d.lemma(p.hall_mem_union_over_congr, &[nb, t, u, hc]);
+    let proof = d.lemma(p.finset_card_congr_of_mem_b, &[cover_t, cover_u, pointwise]);
+
+    let lhs = fs_card(d, &p, cover_t);
+    let rhs = fs_card(d, &p, cover_u);
+    let goal = d.eq(lhs, rhs);
+    let ty = {
+        let with_hc = d.arrow(hc_ty, goal);
+        let with_u = d.pi_fv(u_fv, fs, with_hc);
+        let with_t = d.pi_fv(t_fv, fs, with_u);
+        d.pi_fv(nb_fv, fam, with_t)
+    };
+    let value = {
+        let with_hc = d.lam_fv(hc_fv, hc_ty, proof);
+        let with_u = d.lam_fv(u_fv, fs, with_hc);
+        let with_t = d.lam_fv(t_fv, fs, with_u);
+        d.lam_fv(nb_fv, fam, with_t)
+    };
+    d.declare_theorem(p.hall_card_union_over_congr, ty, value)
+}
+
+// ---------------------------------------------------------------------------
+// The union under family modification — the piece ADR-1614 said to size.
+// ---------------------------------------------------------------------------
+
+/// `fun i => Nat.Finset.sdiff (nb i) u` — the family with `u` deleted from
+/// every member, which is what BOTH branches of Hall's induction build.
+fn deleted_family(d: &mut NatDev<'_>, p: &NatPrelude, nb: ExprId, u: ExprId) -> ExprId {
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let member = d.apply(nb, &[i]);
+    let body = d.const_app(p.finset_sdiff, &[member, u]);
+    d.lam_fv(i_fv, nat, body)
+}
+
+/// `Nat.Hall.memB_unionOver_sdiff : ∀ nb u t v,
+/// Eq Bool (memB (unionOver (fun i => sdiff (nb i) u) t) v)
+///         (memB (sdiff (unionOver nb t) u) v)`.
+///
+/// **Deleting commutes with the union**: throwing `u` out of every member of
+/// the family and then unioning is the same set as unioning and then throwing
+/// `u` out. This is the statement ADR-1614 §4 asked the next lane to size, and
+/// it is not a counting argument at all — it is `∃i. (P i ∧ ¬Q) ↔ (∃i. P i) ∧ ¬Q`,
+/// which holds because the deleted set does not depend on the index.
+///
+/// The bounds do NOT match up incidentally: `bound (sdiff s u)` IS `bound s`,
+/// so the modified family has the same `unionBound`. Nothing here relies on
+/// that — the proof is pointwise — but it is why `card` follows in one step.
+fn declare_mem_union_over_sdiff(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+    let tru = d.bool_true();
+
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let v_fv = d.fresh_fvar();
+    let v = d.kernel().fvar(v_fv);
+
+    let nb_del = deleted_family(d, &p, nb, u);
+    let cover_del = union_over(d, &p, nb_del, t);
+    let cover = union_over(d, &p, nb, t);
+    let del_cover = d.const_app(p.finset_sdiff, &[cover, u]);
+
+    let lhs = mem_b(d, &p, cover_del, v);
+    let rhs = mem_b(d, &p, del_cover, v);
+
+    // `union of the deleted family  ⟹  deletion of the union`.
+    let fwd = {
+        let hyp_ty = d.bool_eq(lhs, tru);
+        let goal = d.bool_eq(rhs, tru);
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+
+        let found = d.lemma(p.hall_mem_union_over_elim, &[nb_del, t, v, ha]);
+        let witness_pred = union_witness_pred(d, &p, nb_del, t, v);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let in_t = mem_true(d, &p, t, k);
+            let del_member = d.apply(nb_del, &[k]);
+            let holds = mem_true(d, &p, del_member, v);
+            let hw_ty = d.const_app(p.logic.and, &[in_t, holds]);
+            let hw_fv = d.fresh_fvar();
+            let hw = d.kernel().fvar(hw_fv);
+
+            let hi = and_left(d, in_t, holds, hw);
+            let hv = and_right(d, in_t, holds, hw);
+
+            let member = d.apply(nb, &[k]);
+            // `nb_del k` beta-reduces to `sdiff (nb k) u`.
+            let split = d.lemma(p.finset_mem_b_sdiff_elim, &[member, u, v, hv]);
+            let member_true = mem_true(d, &p, member, v);
+            let mem_u = mem_b(d, &p, u, v);
+            let fal = d.bool_false();
+            let u_false = d.bool_eq(mem_u, fal);
+            let in_member = and_left(d, member_true, u_false, split);
+            let off_u = and_right(d, member_true, u_false, split);
+
+            let placed = d.lemma(p.hall_mem_union_over, &[nb, t, k, v, hi, in_member]);
+            let body = d.lemma(p.finset_mem_b_sdiff_intro, &[cover, u, v, placed, off_u]);
+            let with_hw = d.lam_fv(hw_fv, hw_ty, body);
+            d.lam_fv(k_fv, nat, with_hw)
+        };
+        let body = exists_elim_nat(d, &p, witness_pred, goal, minor, found);
+        d.lam_fv(ha_fv, hyp_ty, body)
+    };
+
+    // `deletion of the union  ⟹  union of the deleted family`.
+    let bwd = {
+        let hyp_ty = d.bool_eq(rhs, tru);
+        let goal = d.bool_eq(lhs, tru);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+
+        let split = d.lemma(p.finset_mem_b_sdiff_elim, &[cover, u, v, hb]);
+        let cover_true = mem_true(d, &p, cover, v);
+        let mem_u = mem_b(d, &p, u, v);
+        let fal = d.bool_false();
+        let u_false = d.bool_eq(mem_u, fal);
+        let in_cover = and_left(d, cover_true, u_false, split);
+        let off_u = and_right(d, cover_true, u_false, split);
+
+        let found = d.lemma(p.hall_mem_union_over_elim, &[nb, t, v, in_cover]);
+        let witness_pred = union_witness_pred(d, &p, nb, t, v);
+        let minor = {
+            let k_fv = d.fresh_fvar();
+            let k = d.kernel().fvar(k_fv);
+            let in_t = mem_true(d, &p, t, k);
+            let member = d.apply(nb, &[k]);
+            let holds = mem_true(d, &p, member, v);
+            let hw_ty = d.const_app(p.logic.and, &[in_t, holds]);
+            let hw_fv = d.fresh_fvar();
+            let hw = d.kernel().fvar(hw_fv);
+
+            let hi = and_left(d, in_t, holds, hw);
+            let hv = and_right(d, in_t, holds, hw);
+            let deleted = d.lemma(p.finset_mem_b_sdiff_intro, &[member, u, v, hv, off_u]);
+            let body = d.lemma(p.hall_mem_union_over, &[nb_del, t, k, v, hi, deleted]);
+            let with_hw = d.lam_fv(hw_fv, hw_ty, body);
+            d.lam_fv(k_fv, nat, with_hw)
+        };
+        let body = exists_elim_nat(d, &p, witness_pred, goal, minor, found);
+        d.lam_fv(hb_fv, hyp_ty, body)
+    };
+
+    let proof = bool_eq_of_iff(d, &p, lhs, rhs, fwd, bwd);
+    let goal = d.bool_eq(lhs, rhs);
+
+    let ty = {
+        let with_v = d.pi_fv(v_fv, nat, goal);
+        let with_t = d.pi_fv(t_fv, fs, with_v);
+        let with_u = d.pi_fv(u_fv, fs, with_t);
+        d.pi_fv(nb_fv, fam, with_u)
+    };
+    let value = {
+        let with_v = d.lam_fv(v_fv, nat, proof);
+        let with_t = d.lam_fv(t_fv, fs, with_v);
+        let with_u = d.lam_fv(u_fv, fs, with_t);
+        d.lam_fv(nb_fv, fam, with_u)
+    };
+    d.declare_theorem(p.hall_mem_union_over_sdiff, ty, value)
+}
+
+/// `Nat.Hall.card_unionOver_sdiff : ∀ nb u t,
+/// Eq Nat (card (unionOver (fun i => sdiff (nb i) u) t))
+///        (card (sdiff (unionOver nb t) u))`.
+fn declare_card_union_over_sdiff(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let nb_del = deleted_family(d, &p, nb, u);
+    let cover_del = union_over(d, &p, nb_del, t);
+    let cover = union_over(d, &p, nb, t);
+    let del_cover = d.const_app(p.finset_sdiff, &[cover, u]);
+
+    let pointwise = d.lemma(p.hall_mem_union_over_sdiff, &[nb, u, t]);
+    let proof = d.lemma(
+        p.finset_card_congr_of_mem_b,
+        &[cover_del, del_cover, pointwise],
+    );
+
+    let lhs = fs_card(d, &p, cover_del);
+    let rhs = fs_card(d, &p, del_cover);
+    let goal = d.eq(lhs, rhs);
+    let ty = {
+        let with_t = d.pi_fv(t_fv, fs, goal);
+        let with_u = d.pi_fv(u_fv, fs, with_t);
+        d.pi_fv(nb_fv, fam, with_u)
+    };
+    let value = {
+        let with_t = d.lam_fv(t_fv, fs, proof);
+        let with_u = d.lam_fv(u_fv, fs, with_t);
+        d.lam_fv(nb_fv, fam, with_u)
+    };
+    d.declare_theorem(p.hall_card_union_over_sdiff, ty, value)
+}
+
+/// `Nat.Hall.card_le_card_unionOver_sdiff_add : ∀ nb u t,
+/// Le (card (unionOver nb t))
+///    (add (card (unionOver (fun i => sdiff (nb i) u) t)) (card u))`.
+///
+/// **The deficiency inequality**, and the whole reason this lane exists.
+/// Hall's inductive step deletes a critical subfamily's union `u` from every
+/// member and must re-establish Hall's condition for what is left; the count
+/// it needs is exactly this — the union of the DELETED family loses at most
+/// `card u` from the union of the original. `Nat.sub` is truncated, so the
+/// statement is additive.
+///
+/// Two lemmas, in this order: [`declare_card_union_over_sdiff`] moves the
+/// deletion outside the union, and `Nat.Finset.card_le_card_sdiff_add` counts
+/// a single deletion. Neither existed before this lane; between them the
+/// counting obstruction ADR-1614 §4 named is discharged.
+fn declare_card_le_union_over_sdiff(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let u_fv = d.fresh_fvar();
+    let u = d.kernel().fvar(u_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let nb_del = deleted_family(d, &p, nb, u);
+    let cover_del = union_over(d, &p, nb_del, t);
+    let cover = union_over(d, &p, nb, t);
+    let del_cover = d.const_app(p.finset_sdiff, &[cover, u]);
+
+    let card_cover = fs_card(d, &p, cover);
+    let card_del_cover = fs_card(d, &p, del_cover);
+    let card_cover_del = fs_card(d, &p, cover_del);
+    let card_u = fs_card(d, &p, u);
+
+    let base = d.lemma(p.finset_card_le_card_sdiff_add, &[cover, u]);
+    let swap = d.lemma(p.hall_card_union_over_sdiff, &[nb, u, t]);
+    let back = d.symm(card_cover_del, card_del_cover, swap);
+    let motive = d.eq_motive(card_del_cover, &|d, x| {
+        let rhs = d.add(x, card_u);
+        d.le(card_cover, rhs)
+    });
+    let proof = d.transport(card_del_cover, motive, base, card_cover_del, back);
+
+    let ty = {
+        let rhs = d.add(card_cover_del, card_u);
+        let concl = d.le(card_cover, rhs);
+        let with_t = d.pi_fv(t_fv, fs, concl);
+        let with_u = d.pi_fv(u_fv, fs, with_t);
+        d.pi_fv(nb_fv, fam, with_u)
+    };
+    let value = {
+        let with_t = d.lam_fv(t_fv, fs, proof);
+        let with_u = d.lam_fv(u_fv, fs, with_t);
+        d.lam_fv(nb_fv, fam, with_u)
+    };
+    d.declare_theorem(p.hall_card_le_card_union_over_sdiff_add, ty, value)
+}
+
+/// `Nat.Hall.glue f g s := fun i => bool_select_nat (memB s i) (f i) (g i)`
+/// — the glued choice function: `f`'s value on `s`, `g`'s elsewhere.
+///
+/// `s` comes LAST among the three data arguments so `glue f g s` is a
+/// `Nat -> Nat` ready to hand to `IsMatching`, which takes the choice function
+/// in its third slot. The set is read, not the index set of the union: a shared
+/// index takes `f`'s value, so no disjointness of INDEX sets is needed anywhere
+/// (only of images) -- see [`declare_is_matching_union`].
+fn declare_glue(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let ch = choice_ty(d);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let cond = mem_b(d, &p, s, i);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let body = d.bool_select_nat(cond, fi, gi);
+    let value = {
+        let s4 = d.lam_fv(i_fv, nat, body);
+        let s3 = d.lam_fv(s_fv, fs, s4);
+        let s2 = d.lam_fv(g_fv, ch, s3);
+        d.lam_fv(f_fv, ch, s2)
+    };
+    let ty = {
+        let s4 = d.arrow(fs, ch);
+        let s3 = d.arrow(ch, s4);
+        d.arrow(ch, s3)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.hall_glue,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(3),
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Gluing two matchings.
+// ---------------------------------------------------------------------------
+
+/// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a`.
+fn select_nat_true(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let back = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, a)
+    });
+    let refl_case = d.refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, back)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
+fn select_nat_false(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let back = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, b)
+    });
+    let refl_case = d.refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, back)
+}
+
+/// `False.rec` into an arbitrary `Prop` goal. `NatOps::false_true_elim` takes
+/// an impossible `Bool` equation; this one takes a bare `False`, which is what
+/// the disjoint-images hypothesis produces.
+fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, proof: ExprId) -> ExprId {
+    let zero = d.kernel().level_zero();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, proof])
+}
+
+/// `Nat.Hall.glue f g s i` — the glued choice function, applied.
+fn glue_at(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    f: ExprId,
+    g: ExprId,
+    s: ExprId,
+    i: ExprId,
+) -> ExprId {
+    d.const_app(p.hall_glue, &[f, g, s, i])
+}
+
+/// `IsMatching`'s FIRST conjunct at `(s, nb, f)`, rebuilt so `and_left` can be
+/// offered the component type the definition names.
+fn maps_into_ty(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, nb: ExprId, f: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp = mem_true(d, &p, s, i);
+    let member = d.apply(nb, &[i]);
+    let fi = d.apply(f, &[i]);
+    let concl = mem_true(d, &p, member, fi);
+    let step = d.arrow(hyp, concl);
+    d.pi_fv(i_fv, nat, step)
+}
+
+/// `IsMatching`'s SECOND conjunct at `(s, nb, f)`.
+fn inj_on_ty(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, f: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let hi = mem_true(d, &p, s, i);
+    let hj = mem_true(d, &p, s, j);
+    let fi = d.apply(f, &[i]);
+    let fj = d.apply(f, &[j]);
+    let heq = d.eq(fi, fj);
+    let concl = d.eq(i, j);
+    let s4 = d.arrow(heq, concl);
+    let s3 = d.arrow(hj, s4);
+    let s2 = d.arrow(hi, s3);
+    let inner = d.pi_fv(j_fv, nat, s2);
+    d.pi_fv(i_fv, nat, inner)
+}
+
+/// `∀ a b, memB s1 a = true → memB s2 b = true → Eq Nat (f a) (g b) → False`
+/// — the two matchings' images are disjoint. Spelled as an arrow into `False`
+/// rather than through a `Not` constant: they are the same type, and every
+/// consumer here applies it directly.
+fn disjoint_images_ty(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s1: ExprId,
+    s2: ExprId,
+    f: ExprId,
+    g: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let ha = mem_true(d, &p, s1, a);
+    let hb = mem_true(d, &p, s2, b);
+    let fa = d.apply(f, &[a]);
+    let gb = d.apply(g, &[b]);
+    let clash = d.eq(fa, gb);
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let s4 = d.arrow(clash, false_ty);
+    let s3 = d.arrow(hb, s4);
+    let s2t = d.arrow(ha, s3);
+    let inner = d.pi_fv(b_fv, nat, s2t);
+    d.pi_fv(a_fv, nat, inner)
+}
+
+/// `Nat.Hall.isMatching_union : ∀ s1 s2 nb f g,
+/// IsMatching s1 nb f → IsMatching s2 nb g →
+/// (∀ a b, memB s1 a = true → memB s2 b = true → Eq Nat (f a) (g b) → False) →
+/// IsMatching (union s1 s2) nb (glue f g s1)`.
+///
+/// **The third of ADR-1614 §4's obstructions.** Two systems of distinct
+/// representatives combine into one exactly when their IMAGES are disjoint;
+/// nothing before this related the two images at all.
+///
+/// The index sets need NOT be disjoint, which is the one place this statement
+/// is stronger than the textbook's. `glue` reads `s1` first, so a shared index
+/// takes `f`'s value and the definition is unambiguous without a side
+/// condition — and the injectivity argument still closes, because the mixed
+/// branch (`i ∈ s1`, `j ∉ s1` hence `j ∈ s2`) is refuted by the disjointness
+/// hypothesis at exactly that pair.
+///
+/// Four branches, one per pair of decisions on `memB s1 i` and `memB s1 j`.
+/// The two diagonal ones are each matching's own injectivity; the two mixed
+/// ones are `False`. `Nat.Finset.memB_union_elim` is what turns "in the union
+/// but not in `s1`" into "in `s2`".
+fn declare_is_matching_union(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+    let ch = choice_ty(d);
+    let tru = d.bool_true();
+    let fal = d.bool_false();
+
+    let s1_fv = d.fresh_fvar();
+    let s1 = d.kernel().fvar(s1_fv);
+    let s2_fv = d.fresh_fvar();
+    let s2 = d.kernel().fvar(s2_fv);
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let h1_ty = d.const_app(p.hall_is_matching, &[s1, nb, f]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = d.const_app(p.hall_is_matching, &[s2, nb, g]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let hd_ty = disjoint_images_ty(d, &p, s1, s2, f, g);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    // Take the two conjuncts apart.
+    let maps1_ty = maps_into_ty(d, &p, s1, nb, f);
+    let inj1_ty = inj_on_ty(d, &p, s1, f);
+    let maps1 = and_left(d, maps1_ty, inj1_ty, h1);
+    let inj1 = and_right(d, maps1_ty, inj1_ty, h1);
+    let maps2_ty = maps_into_ty(d, &p, s2, nb, g);
+    let inj2_ty = inj_on_ty(d, &p, s2, g);
+    let maps2 = and_left(d, maps2_ty, inj2_ty, h2);
+    let inj2 = and_right(d, maps2_ty, inj2_ty, h2);
+
+    let un = d.const_app(p.finset_union, &[s1, s2]);
+    let glued = d.const_app(p.hall_glue, &[f, g, s1]);
+
+    // --- the glued function lands in the right member ---------------------
+    let maps_pf = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hu_fv = d.fresh_fvar();
+        let hu_ty = mem_true(d, &p, un, i);
+        let hu = d.kernel().fvar(hu_fv);
+
+        let member = d.apply(nb, &[i]);
+        let sel = glue_at(d, &p, f, g, s1, i);
+        let goal = mem_true(d, &p, member, sel);
+
+        let mem_s1 = mem_b(d, &p, s1, i);
+        let s1_true = d.bool_eq(mem_s1, tru);
+        let s1_false = d.bool_eq(mem_s1, fal);
+        let decided = bool_true_or_false(d, &p, mem_s1);
+
+        let on_in = {
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let fi = d.apply(f, &[i]);
+            let gi = d.apply(g, &[i]);
+            let is_f = select_nat_true(d, mem_s1, fi, gi, hs);
+            let lands = d.apply(maps1, &[i, hs]);
+            let bridged = nat_to_bool_congr(d, sel, fi, is_f, &|d, x| {
+                let m = d.apply(nb, &[i]);
+                mem_b(d, &p, m, x)
+            });
+            let at_sel = mem_b(d, &p, member, sel);
+            let at_fi = mem_b(d, &p, member, fi);
+            let body = d.bool_trans(at_sel, at_fi, tru, bridged, lands);
+            d.lam_fv(hs_fv, s1_true, body)
+        };
+        let on_out = {
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let split = d.lemma(p.finset_mem_b_union_elim, &[s1, s2, i, hu]);
+            let left_ty = mem_true(d, &p, s1, i);
+            let right_ty = mem_true(d, &p, s2, i);
+            let refute = {
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let back = d.bool_symm(mem_s1, fal, hs);
+                let impossible = d.bool_trans(fal, mem_s1, tru, back, hl);
+                let absurd = d.false_true_elim(goal, impossible);
+                d.lam_fv(hl_fv, left_ty, absurd)
+            };
+            let use_g = {
+                let hr_fv = d.fresh_fvar();
+                let hr = d.kernel().fvar(hr_fv);
+                let fi = d.apply(f, &[i]);
+                let gi = d.apply(g, &[i]);
+                let is_g = select_nat_false(d, mem_s1, fi, gi, hs);
+                let lands = d.apply(maps2, &[i, hr]);
+                let bridged = nat_to_bool_congr(d, sel, gi, is_g, &|d, x| {
+                    let m = d.apply(nb, &[i]);
+                    mem_b(d, &p, m, x)
+                });
+                let at_sel = mem_b(d, &p, member, sel);
+                let at_gi = mem_b(d, &p, member, gi);
+                let body = d.bool_trans(at_sel, at_gi, tru, bridged, lands);
+                d.lam_fv(hr_fv, right_ty, body)
+            };
+            let body = or_elim(d, &p, left_ty, right_ty, goal, refute, use_g, split);
+            d.lam_fv(hs_fv, s1_false, body)
+        };
+        let body = or_elim(d, &p, s1_true, s1_false, goal, on_in, on_out, decided);
+        let with_hu = d.lam_fv(hu_fv, hu_ty, body);
+        d.lam_fv(i_fv, nat, with_hu)
+    };
+
+    // --- the glued function is injective on the union ---------------------
+    let inj_pf = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = mem_true(d, &p, un, i);
+        let hi = d.kernel().fvar(hi_fv);
+        let hj_fv = d.fresh_fvar();
+        let hj_ty = mem_true(d, &p, un, j);
+        let hj = d.kernel().fvar(hj_fv);
+
+        let sel_i = glue_at(d, &p, f, g, s1, i);
+        let sel_j = glue_at(d, &p, f, g, s1, j);
+        let heq_ty = d.eq(sel_i, sel_j);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let goal = d.eq(i, j);
+
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let fj = d.apply(f, &[j]);
+        let gj = d.apply(g, &[j]);
+        let mem_i = mem_b(d, &p, s1, i);
+        let mem_j = mem_b(d, &p, s1, j);
+        let i_true = d.bool_eq(mem_i, tru);
+        let i_false = d.bool_eq(mem_i, fal);
+        let j_true = d.bool_eq(mem_j, tru);
+        let j_false = d.bool_eq(mem_j, fal);
+        let decided = bool_true_or_false(d, &p, mem_i);
+
+        // In the `j ∉ s1` branch, `j ∈ union` gives `j ∈ s2`.
+        let in_s2 = |d: &mut NatDev<'_>,
+                     which: ExprId,
+                     hyp: ExprId,
+                     off: ExprId,
+                     mem_off: ExprId,
+                     target: ExprId,
+                     k: ExprId|
+         -> ExprId {
+            let split = d.lemma(p.finset_mem_b_union_elim, &[s1, s2, k, hyp]);
+            let left_ty = mem_true(d, &p, s1, k);
+            let right_ty = mem_true(d, &p, s2, k);
+            let refute = {
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let back = d.bool_symm(mem_off, fal, off);
+                let impossible = d.bool_trans(fal, mem_off, tru, back, hl);
+                let absurd = d.false_true_elim(target, impossible);
+                d.lam_fv(hl_fv, left_ty, absurd)
+            };
+            or_elim(d, &p, left_ty, right_ty, target, refute, which, split)
+        };
+
+        let on_i_true = {
+            let hsi_fv = d.fresh_fvar();
+            let hsi = d.kernel().fvar(hsi_fv);
+            let e_i = select_nat_true(d, mem_i, fi, gi, hsi);
+
+            let decided_j = bool_true_or_false(d, &p, mem_j);
+            let both_in = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_true(d, mem_j, fj, gj, hsj);
+                let back_i = d.symm(sel_i, fi, e_i);
+                let (_, values) = d.chain(fi, &[(sel_i, back_i), (sel_j, heq), (fj, e_j)]);
+                let body = d.apply(inj1, &[i, j, hsi, hsj, values]);
+                d.lam_fv(hsj_fv, j_true, body)
+            };
+            let mixed = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_false(d, mem_j, fj, gj, hsj);
+                let back_i = d.symm(sel_i, fi, e_i);
+                let (_, values) = d.chain(fi, &[(sel_i, back_i), (sel_j, heq), (gj, e_j)]);
+                let use_s2 = {
+                    let hr_fv = d.fresh_fvar();
+                    let hr = d.kernel().fvar(hr_fv);
+                    let clash = d.apply(hd, &[i, j, hsi, hr, values]);
+                    let absurd = false_elim(d, &p, goal, clash);
+                    let right_ty = mem_true(d, &p, s2, j);
+                    d.lam_fv(hr_fv, right_ty, absurd)
+                };
+                let body = in_s2(d, use_s2, hj, hsj, mem_j, goal, j);
+                d.lam_fv(hsj_fv, j_false, body)
+            };
+            let body = or_elim(d, &p, j_true, j_false, goal, both_in, mixed, decided_j);
+            d.lam_fv(hsi_fv, i_true, body)
+        };
+        let on_i_false = {
+            let hsi_fv = d.fresh_fvar();
+            let hsi = d.kernel().fvar(hsi_fv);
+            let e_i = select_nat_false(d, mem_i, fi, gi, hsi);
+
+            let decided_j = bool_true_or_false(d, &p, mem_j);
+            let mixed = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_true(d, mem_j, fj, gj, hsj);
+                let back_j = d.symm(sel_j, fj, e_j);
+                // `f j = sel_j = sel_i = g i`, the disjointness clash at (j, i).
+                let back_heq = d.symm(sel_i, sel_j, heq);
+                let (_, values) = d.chain(fj, &[(sel_j, back_j), (sel_i, back_heq), (gi, e_i)]);
+                let use_s2 = {
+                    let hr_fv = d.fresh_fvar();
+                    let hr = d.kernel().fvar(hr_fv);
+                    let clash = d.apply(hd, &[j, i, hsj, hr, values]);
+                    let absurd = false_elim(d, &p, goal, clash);
+                    let right_ty = mem_true(d, &p, s2, i);
+                    d.lam_fv(hr_fv, right_ty, absurd)
+                };
+                let body = in_s2(d, use_s2, hi, hsi, mem_i, goal, i);
+                d.lam_fv(hsj_fv, j_true, body)
+            };
+            let both_out = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_false(d, mem_j, fj, gj, hsj);
+                let back_i = d.symm(sel_i, gi, e_i);
+                let (_, values) = d.chain(gi, &[(sel_i, back_i), (sel_j, heq), (gj, e_j)]);
+                // Both indices are in `s2`, through the union elimination.
+                let inner = {
+                    let hri_fv = d.fresh_fvar();
+                    let hri = d.kernel().fvar(hri_fv);
+                    let use_j = {
+                        let hrj_fv = d.fresh_fvar();
+                        let hrj = d.kernel().fvar(hrj_fv);
+                        let body = d.apply(inj2, &[i, j, hri, hrj, values]);
+                        let right_j = mem_true(d, &p, s2, j);
+                        d.lam_fv(hrj_fv, right_j, body)
+                    };
+                    let body = in_s2(d, use_j, hj, hsj, mem_j, goal, j);
+                    let right_i = mem_true(d, &p, s2, i);
+                    d.lam_fv(hri_fv, right_i, body)
+                };
+                let body = in_s2(d, inner, hi, hsi, mem_i, goal, i);
+                d.lam_fv(hsj_fv, j_false, body)
+            };
+            let body = or_elim(d, &p, j_true, j_false, goal, mixed, both_out, decided_j);
+            d.lam_fv(hsi_fv, i_false, body)
+        };
+        let body = or_elim(d, &p, i_true, i_false, goal, on_i_true, on_i_false, decided);
+
+        let with_heq = d.lam_fv(heq_fv, heq_ty, body);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    let maps_goal = maps_into_ty(d, &p, un, nb, glued);
+    let inj_goal = inj_on_ty(d, &p, un, glued);
+    let proof = d.const_app(p.logic.and_intro, &[maps_goal, inj_goal, maps_pf, inj_pf]);
+
+    let concl = d.const_app(p.hall_is_matching, &[un, nb, glued]);
+    let ty = {
+        let with_hd = d.arrow(hd_ty, concl);
+        let with_h2 = d.arrow(h2_ty, with_hd);
+        let with_h1 = d.arrow(h1_ty, with_h2);
+        let with_g = d.pi_fv(g_fv, ch, with_h1);
+        let with_f = d.pi_fv(f_fv, ch, with_g);
+        let with_nb = d.pi_fv(nb_fv, fam, with_f);
+        let with_s2 = d.pi_fv(s2_fv, fs, with_nb);
+        d.pi_fv(s1_fv, fs, with_s2)
+    };
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, hd_ty, proof);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_hd);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_g = d.lam_fv(g_fv, ch, with_h1);
+        let with_f = d.lam_fv(f_fv, ch, with_g);
+        let with_nb = d.lam_fv(nb_fv, fam, with_f);
+        let with_s2 = d.lam_fv(s2_fv, fs, with_nb);
+        d.lam_fv(s1_fv, fs, with_s2)
+    };
+    d.declare_theorem(p.hall_is_matching_union, ty, value)
+}
+
+// ---------------------------------------------------------------------------
 // Entry point.
 // ---------------------------------------------------------------------------
 
@@ -725,5 +1987,14 @@ pub(super) fn declare_hall_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
     declare_any_below_intro(d, p)?;
     declare_mem_union_over(d, p)?;
     declare_necessity(d, p)?;
+    declare_any_below_witness(d, p)?;
+    declare_mem_union_over_elim(d, p)?;
+    declare_mem_union_over_congr(d, p)?;
+    declare_card_union_over_congr(d, p)?;
+    declare_mem_union_over_sdiff(d, p)?;
+    declare_card_union_over_sdiff(d, p)?;
+    declare_card_le_union_over_sdiff(d, p)?;
+    declare_glue(d, p)?;
+    declare_is_matching_union(d, p)?;
     Ok(())
 }

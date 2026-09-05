@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2320,
+    "min_identity_bound": 2322,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7877,6 +7877,20 @@
       "language": "certificate-spec",
       "statement_sha256": "27ce5febb3bd68e08381ff4d5d96afefbeee8b83ab8f18492af1737b8b5eeb06",
       "prose_sha256": "eddc03b867681ea69fd7f1634fe5a8ba650e6eb3e09b1d80b2a2c849d9a95460"
+    },
+    {
+      "fact_id": "F:hall-matching-union-disjoint-images",
+      "language": "lean4",
+      "statement_sha256": "3df75d0b6f723a4ac3c778d8c1efb2358f438fb8e90dade9e8ce12f7a16a46e0",
+      "prose_sha256": "09a520fae7b89a49c27ae37ffd4a76e452b8134ff30a1e7f2d4c7feb6472d9e6",
+      "kernel_theorem": "Nat.Hall.isMatching_union"
+    },
+    {
+      "fact_id": "F:hall-union-under-family-deletion",
+      "language": "lean4",
+      "statement_sha256": "6d93f495c5bee14408d89bd5c7c4bc11476120649241c1a4652b0dd459dedd95",
+      "prose_sha256": "a46ab1392532eb5df6f14d035067684b68d1baa7f18f97153eac5cb1e2aea5d4",
+      "kernel_theorem": "Nat.Hall.card_le_card_unionOver_sdiff_add"
     },
     {
       "fact_id": "F:heyting-3-chain-refutes-excluded-middle",

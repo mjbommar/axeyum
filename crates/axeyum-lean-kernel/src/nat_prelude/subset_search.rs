@@ -214,7 +214,7 @@ fn select_bool_false(
 /// its conclusion and `graph::bool_congr` takes a `Bool` equation, so neither
 /// applies; every bridge in this module (`bit_div_two`, `bit_mod_two`,
 /// `succ_add`, `zero_add`) is a `Nat` equation read inside a `Bool` term.
-fn nat_to_bool_congr(
+pub(super) fn nat_to_bool_congr(
     d: &mut NatDev<'_>,
     a: ExprId,
     b: ExprId,
@@ -253,7 +253,7 @@ fn or_elim(
 }
 
 /// `h : Eq Bool (notB x) true ⊢ Eq Bool x false`.
-fn not_b_true_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
+pub(super) fn not_b_true_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
     let p = *p;
     let tv = d.bool_true();
     let fv = d.bool_false();
@@ -283,7 +283,7 @@ fn not_b_true_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> 
 }
 
 /// `h : Eq Bool (notB x) false ⊢ Eq Bool x true`.
-fn not_b_false_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
+pub(super) fn not_b_false_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
     let p = *p;
     let tv = d.bool_true();
     let fv = d.bool_false();
