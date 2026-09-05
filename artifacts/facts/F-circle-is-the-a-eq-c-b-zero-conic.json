@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:circle-is-the-a-eq-c-b-zero-conic",
+  "title": "A circle is exactly the conic with A = C and B = 0",
+  "statement": "For every centre O, every squared radius r2 and every point P, P lies on the conic CPoint.Conic.circle O r2 -- the six-coefficient datum (1, 0, 1, -2 Ox, -2 Oy, Ox^2 + Oy^2 - r2) -- if and only if P lies on the circle of centre O and squared radius r2 in the sense CPoint.OnCircle already had, namely distSq P O ~ r2. The correspondence is an Iff and NOT a definitional identity, and the reason is structural: CPoint.OnCircle compares two quantities while CPoint.OnConic compares one quantity against zero, so moving r2 across the CReal.Equiv is add_right_cancel-shaped work rather than an Eq.refl. The conic's discriminant is CReal.Equiv to -4 with no hypothesis whatever, so every circle is of ellipse type -- including the degenerate r2 <= 0 ones, since being of ellipse type is a statement about the quadratic part A = C = 1, B = 0 and not about the zero set being a nonempty curve.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CPoint.onConic_circle_iff : ((x0 : CPoint) -> ((x1 : CReal) -> ((x2 : CPoint) -> Iff (CPoint.OnConic (CPoint.Conic.circle x0 x1) x2) (CPoint.OnCircle x2 x0 x1))))",
+    "fragment": "CPoint",
+    "free_symbols": [],
+    "kernel_theorem": "CPoint.onConic_circle_iff"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:creal-add-assoc", "F:creal-add-comm", "F:creal-add-congr", "F:creal-add-neg", "F:creal-add-zero", "F:creal-equiv-refl", "F:creal-equiv-symm", "F:creal-equiv-trans", "F:creal-left-distrib", "F:creal-mul-assoc", "F:creal-mul-comm", "F:creal-mul-congr", "F:creal-mul-one", "F:creal-mul-zero", "F:creal-neg-congr"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.onConic_circle_iff",
+      "kind": "kernel-term",
+      "supports": "CPoint.onConic_circle_iff is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "cpoint_theorem_inventory (this lane's own inventory example: nat_theorem_inventory builds only Nat, prelude_theorem_inventory prints footprints rather than types, and kernel_declaration_projection's --require-declaration is a presence check, so no in-tree tool rendered a CPoint type before it)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example cpoint_theorem_inventory -- onConic_circle_iff",
+      "checker_seconds": 300,
+      "kernel_declaration": "CPoint.onConic_circle_iff",
+      "notes": "--release is mandatory: the CReal/CPoint preludes underneath recurse deep enough that the debug kernel is measured up to 32x slower on proof terms of this size. A filter matching zero declarations exits non-zero (an absent declaration is a failure, not an empty report), the same discipline nat_theorem_inventory and metric_prod_theorem_inventory use."
+    },
+    {
+      "id": "suite-every_theorem_here_is_axiom_free",
+      "kind": "exhaustive-enumeration",
+      "supports": "Every CPoint declaration live in the prelude -- all 56 this lane adds included -- has an empty Kernel::axiom_footprint. The test's coverage half enumerates the ENVIRONMENT and fails on any CPoint-prefixed name absent from its list, so a new declaration cannot escape it by being forgotten.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point::creal_point_tests::every_theorem_here_is_axiom_free, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- creal_point::creal_point_tests::every_theorem_here_is_axiom_free --test-threads=1 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 200,
+      "notes": "`cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so the exact `1 passed` count is load-bearing, not the exit status alone. --release avoids the debug-build stack overflow the CReal/CPoint preludes are already documented as needing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_cpoint_prelude, creal_point/conic.rs (declare_on_conic_circle_iff)",
+    "source": "Lane `conics`, roadmap W3-9. ADR-1641. formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from this lane's cpoint_theorem_inventory example."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It does not say the CONVERSE classification -- that a conic with A ~ C and B ~ 0 and a suitable constant term is a circle with some centre and radius. That direction needs completing the square, hence CReal.inv to divide by A, hence a PosBound witness for A, none of which this fact carries. It also does not say the two zero sets are equal as SETS: CPoint has no set former, and the statement is pointwise over a universally quantified P, which is the strongest form available here."
+}

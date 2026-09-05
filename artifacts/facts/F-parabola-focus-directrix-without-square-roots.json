@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "F:parabola-focus-directrix-without-square-roots",
+  "title": "The focus-directrix property of the parabola, stated without a square root",
+  "statement": "For every p and every point P, P lies on the parabola x^2 = 4 p y -- the conic datum (1, 0, 0, 0, -4p, 0) -- if and only if the SQUARED distance from P to the focus (0, p) equals (P.y + p)^2, which is the squared distance from P to the directrix y = -p. Comparing squares is not a weakening of the classical statement: CPoint.distSq is the squared distance to the focus by definition, and the perpendicular distance from P to a horizontal line is the absolute value of y - (-p), whose square is (y + p)^2 with no absolute value left to interpret. The point of the square-free form is that CReal.sqrt is a limit construction the ring normalizer cannot see through, so the classical dist-to-focus equals dist-to-directrix form would need sqrt injectivity on the nonnegatives as an extra step; the squared form is a pure commutative-ring identity over CReal.Equiv and is discharged flat.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CPoint.parabola_focus_directrix : ((x0 : CReal) -> ((x1 : CPoint) -> Iff (CPoint.OnConic (CPoint.Conic.parabolaFocal x0) x1) (CReal.Equiv (CPoint.distSq x1 (CPoint.mk CReal.zero x0)) (CReal.mul (CReal.add (CPoint.y x1) x0) (CReal.add (CPoint.y x1) x0)))))",
+    "fragment": "CPoint",
+    "free_symbols": [],
+    "kernel_theorem": "CPoint.parabola_focus_directrix"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": ["F:creal-add-assoc", "F:creal-add-comm", "F:creal-add-congr", "F:creal-add-neg", "F:creal-add-zero", "F:creal-equiv-refl", "F:creal-equiv-symm", "F:creal-equiv-trans", "F:creal-left-distrib", "F:creal-mul-assoc", "F:creal-mul-comm", "F:creal-mul-congr", "F:creal-mul-one", "F:creal-mul-zero", "F:creal-neg-congr"],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.parabola_focus_directrix",
+      "kind": "kernel-term",
+      "supports": "CPoint.parabola_focus_directrix is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "cpoint_theorem_inventory (this lane's own inventory example: nat_theorem_inventory builds only Nat, prelude_theorem_inventory prints footprints rather than types, and kernel_declaration_projection's --require-declaration is a presence check, so no in-tree tool rendered a CPoint type before it)"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example cpoint_theorem_inventory -- parabola_focus_directrix",
+      "checker_seconds": 300,
+      "kernel_declaration": "CPoint.parabola_focus_directrix",
+      "notes": "--release is mandatory: the CReal/CPoint preludes underneath recurse deep enough that the debug kernel is measured up to 32x slower on proof terms of this size. A filter matching zero declarations exits non-zero (an absent declaration is a failure, not an empty report), the same discipline nat_theorem_inventory and metric_prod_theorem_inventory use."
+    },
+    {
+      "id": "suite-every_theorem_here_is_axiom_free",
+      "kind": "exhaustive-enumeration",
+      "supports": "Every CPoint declaration live in the prelude -- all 56 this lane adds included -- has an empty Kernel::axiom_footprint. The test's coverage half enumerates the ENVIRONMENT and fails on any CPoint-prefixed name absent from its list, so a new declaration cannot escape it by being forgotten.",
+      "check_status": "checked",
+      "checkers": [
+        "creal_point::creal_point_tests::every_theorem_here_is_axiom_free, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- creal_point::creal_point_tests::every_theorem_here_is_axiom_free --test-threads=1 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 200,
+      "notes": "`cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so the exact `1 passed` count is load-bearing, not the exit status alone. --release avoids the debug-build stack overflow the CReal/CPoint preludes are already documented as needing."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_cpoint_prelude, creal_point/conic.rs (declare_parabola_focus_directrix)",
+    "source": "Lane `conics`, roadmap W3-9. ADR-1641. formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from this lane's cpoint_theorem_inventory example."
+  },
+  "notes": "WHAT THIS DOES NOT SAY. It is stated over CPoint.Conic.parabolaFocal (x^2 = 4 p y), not over CPoint.Conic.parabola (y = a x^2), and the two are not interchangeable here: reaching the same statement from y = a x^2 needs the focus (0, 1/(4a)), hence CReal.inv, which is partial and would drag a PosBound witness for a through a statement that otherwise needs no hypothesis at all -- this one holds for every p including p ~ 0, where the parabola degenerates to the line x^2 ~ 0. It also does not say anything about the REFLECTIVE property of the parabola: that needs the tangent line, so either a derivative on CPoint or an explicit tangency-as-double-root definition, neither of which is in tree."
+}

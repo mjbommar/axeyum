@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2387,
+    "min_identity_bound": 2390,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1616,6 +1616,13 @@
       ]
     },
     {
+      "fact_id": "F:circle-is-the-a-eq-c-b-zero-conic",
+      "language": "lean4",
+      "statement_sha256": "7591452263019c7381447c203a688ef3045f539e16275d6698f2745fce5c2e15",
+      "prose_sha256": "857588369460ee995efe734926391d875fd48f916c42ab928c6418df9f7b4946",
+      "kernel_theorem": "CPoint.onConic_circle_iff"
+    },
+    {
       "fact_id": "F:complex-abs-add-le",
       "language": "lean4",
       "statement_sha256": "3be2af449af5248e9e084da181670260f8656aa0d2e214655376eeb5579496e4",
@@ -2807,6 +2814,13 @@
       "statement_sha256": "4cf2644242c8ee2a1f7d3ef26962e7837c6403ffe495b7e13a0059386c2aa713",
       "prose_sha256": "2e3e90abe8c4b1554934327ee27d26e1076462c29afa27e048ebf8695650500f",
       "kernel_theorem": "congrFun'"
+    },
+    {
+      "fact_id": "F:conic-discriminant-invariant-under-rotation",
+      "language": "lean4",
+      "statement_sha256": "71b5f52151f1610fe919353968785ca6c64ce36ed96d08f2be2b0b7fae3a9f73",
+      "prose_sha256": "1ca42f97dbbbd01651c3908bae753afcaaaa23c5598124dc88160accda179298",
+      "kernel_theorem": "CPoint.Conic.discriminant_rotate_unit"
     },
     {
       "fact_id": "F:conjunctive-query-containment-homomorphism-certified",
@@ -21349,6 +21363,13 @@
           "statement_sha256": "b448c25b812bdfbc0761d77c4cc9e52d955636163028618a821a02a85a480876"
         }
       ]
+    },
+    {
+      "fact_id": "F:parabola-focus-directrix-without-square-roots",
+      "language": "lean4",
+      "statement_sha256": "ef1546a6aa79e008f91a75de0a14d379d0db0ec18ce4a8b6ef6036aa20913583",
+      "prose_sha256": "c5b6cc08ca7e53a73331e92e517a013e32605c921e6a6ada12053f1462a9c1e4",
+      "kernel_theorem": "CPoint.parabola_focus_directrix"
     },
     {
       "fact_id": "F:peirce-law",
