@@ -75,7 +75,6 @@ restructuring a shared regex mid-flight, and recorded it.
 
 <!-- plan-section: landed-changes -->
 
-| date | change | commits |
-|---|---|---|
-| 2026-09-05 | `Top.Frame` record, the derived generic theorems, the `Top.Opens` instance of ℝ, and the point lemmas | `7e8fc512e` |
-| 2026-09-05 | `top_frame_theorem_inventory`, and `Top.MemBall`/`Top.MemOpen` folded into the statements | `c4754b326` |
+| 2026-09-05 | frame-carrier | `7e8fc512e` — `Top.Frame`, a sixteen-field pointfree topological carrier with a countable join, its nine derived generic theorems, the open-ball frame of ℝ (`Top.Opens`, `Top.ballFrame`), and the point lemmas; 53 declarations, all axiom-free, 11 of 11 tests |
+| 2026-09-05 | frame-carrier | `c4754b326` — `top_frame_theorem_inventory` (exit status depends on both an absent filter and a nonempty footprint), and `Top.MemBall`/`Top.MemOpen` folded into the three statements that had spelled them out |
+| 2026-09-05 | frame-carrier | `2db998539` — ADR-1643, four facts, the `top` group `shape_search` was blind to, and the repair of two duplicated "keep both sides" lines in `shape_search` |
