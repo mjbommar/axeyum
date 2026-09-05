@@ -21069,6 +21069,15 @@ mod tests {
             equal(&cube, &(CasExpr::int(2) * CasExpr::int(2).sqrt())),
             ZeroTest::Certified { equal: false, .. }
         ));
+        // `√(c·u) = √c·√u` splits only for a POSITIVE rational `c`: `√(2π)`
+        // becomes `√2·√π`…
+        assert_eq!(
+            simplify_radicals(&(CasExpr::int(2) * v("pi")).sqrt()),
+            fold_trivial(&CasExpr::Mul(vec![CasExpr::int(2).sqrt(), v("pi").sqrt()])),
+        );
+        // …and `√(−2·π)` must NOT, since the split would need `u ≤ 0`.
+        let negative = (CasExpr::int(-2) * v("pi")).sqrt();
+        assert_eq!(simplify_radicals(&negative), negative);
     }
 
     /// A `k/k` factor inside a limit at `∞` cancels through the normal form, and
