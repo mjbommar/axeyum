@@ -13,7 +13,9 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:algs-orderedring-markov-inequality"
+    "F:algs-orderedring-markov-inequality",
+    "F:algs-orderedring-bernoulli-mass-nonneg",
+    "F:algs-orderedring-zero-add"
   ],
   "axiom_footprint": [],
   "evidence": [

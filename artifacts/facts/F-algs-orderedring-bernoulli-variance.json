@@ -14,7 +14,9 @@
   "proof_route": "kernel-lean",
   "depends_on": [
     "F:algs-orderedring-bernoulli-expectation",
-    "F:algs-neg-neg"
+    "F:algs-neg-neg",
+    "F:algs-orderedring-mul-neg",
+    "F:algs-orderedring-zero-add"
   ],
   "axiom_footprint": [],
   "evidence": [

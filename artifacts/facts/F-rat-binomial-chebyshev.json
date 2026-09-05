@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "F:rat-binomial-chebyshev",
+  "title": "Chebyshev's bound for a sum of uncorrelated identically-distributed trials mentions no variance at all",
+  "statement": "Let X be a family of rational-valued random variables on a finite index range [0, n) with a distribution p, let m be a natural number, q a rational, and a a positive rational. If the family is pairwise uncorrelated below m and every trial below m has variance q(1-q), then a^2 times the expectation of the indicator of the event {(S - E S)^2 >= a^2} is at most m*q(1-q), where S is the pointwise sum of the first m trials. This is Rat.chebyshev_inequality at S with the right-hand side rewritten by Rat.binomial_variance, so the bound is a closed expression in m, q and a and the caller never has to rewrite a Rat.variance term. The classical form divides through by a^2 to read P(|S - E S| >= a) <= m*q(1-q)/a^2; this is the same content before that division, in the multiplied-through shape that needs no Rat.inv.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "theorem Rat.binomial_chebyshev : forall (a : Rat) (X : Nat -> Nat -> Rat) (p : Nat -> Rat) (n : Nat), Rat.IsDistribution p n -> forall (m : Nat) (q : Rat), Rat.PairwiseUncorrelated X m p n -> (forall j, Nat.lt j m -> Eq (Rat.variance (X j) p n) (Rat.mul q (Rat.sub Rat.one q))) -> Rat.lt Rat.zero a -> Rat.le (Rat.mul (Rat.mul a a) (Rat.expectation (Rat.indicator (Rat.mul a a) (fun k => Rat.mul (Rat.sub (Rat.sumVars X m k) (Rat.expectation (Rat.sumVars X m) p n)) (Rat.sub (Rat.sumVars X m k) (Rat.expectation (Rat.sumVars X m) p n)))) p n)) (Rat.mul (Rat.natDivSucc m 0) (Rat.mul q (Rat.sub Rat.one q)))",
+    "fragment": "Prop",
+    "kernel_theorem": "Rat.binomial_chebyshev"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:rat-binomial-variance",
+    "F:rat-chebyshev-inequality"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free",
+      "kind": "kernel-term",
+      "supports": "The declaration is admitted by the trusted kernel gate with an empty Kernel::axiom_footprint, together with every other declaration of ADR-1631's rational binomial layer. The test asserts Environment::contains FIRST, because an absent name has an empty footprint too, and it pins its own name-list length, so a declaration silently dropped from the layer fails it.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration)",
+        "binomial_rat_declarations_are_axiom_free"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::binomial_rat::binomial_rat_tests::binomial_rat_declarations_are_axiom_free -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declaration": "Rat.binomial_chebyshev",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    },
+    {
+      "id": "bound-is-not-the-plain-chebyshev",
+      "kind": "kernel-term",
+      "supports": "The test infers the corollary's declared type and requires that it is NOT definitionally the plain Rat.chebyshev_inequality statement, with a positive control that its type is definitionally itself. Without that, 'the conclusion no longer mentions variance' would be a claim about the source rather than about the admitted declaration.",
+      "check_status": "checked",
+      "checkers": [
+        "binomial_chebyshev_bound_is_the_binomial_variance_not_the_variance"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib rat_prelude::binomial_rat::binomial_rat_tests::binomial_chebyshev_bound_is_the_binomial_variance_not_the_variance -- --exact 2>&1 | grep -c '^test result: ok. 1 passed'",
+      "checker_seconds": 60,
+      "kernel_declaration": "Rat.binomial_chebyshev",
+      "notes": "grep -c, not grep -q: -q would SIGPIPE the producer under pipefail, and -c exits 1 printing 0 when the line is absent, so a suite that compiled to zero tests and exited 0 is caught rather than counted as a pass. --release is mandatory: the rational prelude SIGABRTs on the default debug thread stack."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane binomial-hoeffding (roadmap W3-12, ADR-1631)"
+  },
+  "notes": "Free once the binomial variance exists: one rewrite under `le _ .`. It is recorded separately because a concentration bound whose right-hand side is a closed expression in the model's parameters is a different object, for a consumer, from one whose right-hand side is a variance the consumer must still evaluate."
+}

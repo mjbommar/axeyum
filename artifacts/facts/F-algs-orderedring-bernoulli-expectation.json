@@ -13,7 +13,8 @@
   "external_status": "proved",
   "proof_route": "kernel-lean",
   "depends_on": [
-    "F:algs-orderedring-bernoulli-is-distribution"
+    "F:algs-orderedring-bernoulli-is-distribution",
+    "F:algs-orderedring-zero-add"
   ],
   "axiom_footprint": [],
   "evidence": [
