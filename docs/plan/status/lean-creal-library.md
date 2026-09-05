@@ -46,3 +46,4 @@ coordinator re-measured and closed out (ADR-1675 Evidence).
 <!-- plan-section: landed-changes -->
 
 | 2026-09-05 | coordinator | `lean/axeyum-creal` committed (3,397 commands, 103 typed exclusions); gate floor 3,542 -> 3,397 measured, ceiling 0 -> 103; aggregate gates run the `--slice`; thirteen `check.sh` steps appended below the verdict since 2026-08-30 moved above it (listing 505 -> 518); Lean accepted the carrier module and reports the 7 headline results axiom-free (ADR-1675) |
+| 2026-09-05 | coordinator | drift gate fired on main after W3-5 landed (3,617 -> 3,654 declarations); regenerated: 3,430 commands, 107 exclusions (four new, all through `CReal.abs_mul_le_of_bounds`), ceiling 103 -> 107; Lean accepted the regenerated carrier (`Carrier.olean` at 10 min) and the 7 headline results audit axiom-free against it |

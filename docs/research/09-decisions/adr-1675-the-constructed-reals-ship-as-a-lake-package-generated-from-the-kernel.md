@@ -132,9 +132,14 @@ commands published, 107 excluded** (the 19 refusals are unchanged; the four
 new exclusions -- `CReal.abs_pow_le`, `CReal.powerSeriesTermRadiusBound`,
 `CReal.powerSeriesCauchyWithinRadius`, `CReal.powerSeriesConvergesWithinRadius`
 -- reach `CReal.abs_mul_le_of_bounds`, one of the 19). `EXCLUSION_CEILING`
-103 -> 107 for that reason. The Lean build of the regenerated carrier is
-recorded in the row below when it has run; the 3,397-command carrier is the
-one Lean accepted above.
+103 -> 107 for that reason. **The regenerated carrier was then built and audited
+the same way:** `lake build Axeyum.Creal.Carrier` wrote `Carrier.olean`
+(52,811,688 bytes) at 15:46:03, ten minutes after start, so Lean elaborated and
+its kernel admitted all 3,430 commands; the same post-olean `lake` tail
+recurred and was bounded. The headline audit against that module (2 s) reports
+the same seven results axiom-free and the positive control's axiom. So both the
+3,397- and the 3,430-command revisions are Lean-accepted; the full
+1,080-command audit remains not run.
 
 ## Alternatives
 
