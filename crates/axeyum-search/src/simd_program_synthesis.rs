@@ -495,7 +495,7 @@ mod tests {
             UnaryAvx2SynthesisLimits::default(),
         )
         .unwrap();
-        let SatResult::Sat(model) = axeyum_cnf::solve_with_rustsat_batsat(upper.formula()).unwrap()
+        let SatResult::Sat(model) = axeyum_cnf::solve_with_native_core(upper.formula()).unwrap()
         else {
             panic!("two unary instructions remain available in the multi-source language");
         };
@@ -551,7 +551,7 @@ mod tests {
         for (source, &variable) in encoding.steps[1].second_sources.iter().enumerate() {
             pinned.add_clause(unit(variable, source == 1)).unwrap();
         }
-        let SatResult::Sat(model) = axeyum_cnf::solve_with_rustsat_batsat(&pinned).unwrap() else {
+        let SatResult::Sat(model) = axeyum_cnf::solve_with_native_core(&pinned).unwrap() else {
             panic!("pinned two-source unpack construction must be satisfiable");
         };
         let program = encoding.lift_model(&model).unwrap();

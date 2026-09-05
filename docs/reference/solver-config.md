@@ -53,7 +53,7 @@ selected fragment and route.
 | `xor_cdcl_fallback` | Enable the CDCL(XOR) fallback |
 | `lazy_bv` | Enable the lazy/CEGAR BV experiment |
 | `lazy_bv_abstract_ite` | Permit ITE abstraction within lazy BV |
-| `native_cdcl` | Use the in-tree proof-producing CDCL core as primary SAT search |
+| `native_cdcl` | **Retired no-op** (ADR-1703). The in-tree CDCL core is the primary SAT search unconditionally; nothing reads this field. Kept only because `axeyum-py`, `axeyum-bench` and `axeyum-verify` name it |
 
 These levers are separate and mostly off by default. Do not combine them into
 an undocumented “fast” profile; benchmark each configuration with an explicit

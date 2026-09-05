@@ -273,6 +273,33 @@ class ShardSummaryTests(unittest.TestCase):
             self.assertEqual(result["aggregate"]["maximum_resident_set_kib"], 1024)
             self.assertEqual(result["aggregate"]["construction"]["cnf_clauses_emitted"], 26)
 
+    def test_accepts_the_native_engine_determinism_block(self) -> None:
+        # ADR-1703: both engine shapes validate; a block naming neither does not.
+        native = {
+            "determinism": {
+                "profile": "axeyum-bench-fixed-seeds-v1",
+                "sat_bv": {
+                    "engine": "axeyum-native-cdcl-v1",
+                    "randomness": (
+                        "none: no random seed, no random branching, "
+                        "no randomized initial activity"
+                    ),
+                },
+                "z3": {"random_seed": 0, "set_explicitly": True},
+            }
+        }
+        MODULE.validate_determinism(native, "config")
+
+        drifted = json.loads(json.dumps(native))
+        drifted["determinism"]["sat_bv"]["engine"] = "axeyum-native-cdcl-v2"
+        with self.assertRaisesRegex(MODULE.SummaryError, "engine must be"):
+            MODULE.validate_determinism(drifted, "config")
+
+        unknown = json.loads(json.dumps(native))
+        unknown["determinism"]["sat_bv"] = {"solver": "kissat"}
+        with self.assertRaisesRegex(MODULE.SummaryError, "names neither"):
+            MODULE.validate_determinism(unknown, "config")
+
     def test_rejects_wrong_instance_verdict(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             shard_set, parent, artifacts = self.make_fixture(Path(directory))

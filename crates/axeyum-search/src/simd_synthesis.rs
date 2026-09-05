@@ -634,9 +634,7 @@ pub fn encode_weighted_unary_avx2_sequence(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axeyum_cnf::{
-        ProofSolveOutcome, SatResult, solve_with_drat_proof, solve_with_rustsat_batsat,
-    };
+    use axeyum_cnf::{ProofSolveOutcome, SatResult, solve_with_drat_proof, solve_with_native_core};
 
     #[test]
     fn global_reverse_has_checked_one_step_refutation_and_lifted_two_step_model() {
@@ -653,7 +651,7 @@ mod tests {
 
         let two =
             encode_unary_avx2_sequence(&target, 2, UnaryAvx2SynthesisLimits::default()).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(two.formula()).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(two.formula()).unwrap() else {
             panic!("global reversal has a two-instruction sequence");
         };
         let sequence = two.lift_model(&model).unwrap();
@@ -667,7 +665,7 @@ mod tests {
             Avx2Shuffle::PermuteDwords([7, 6, 5, 4, 3, 2, 1, 0]).replay(&ByteTags::identity());
         let encoding =
             encode_unary_avx2_sequence(&target, 1, UnaryAvx2SynthesisLimits::default()).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(encoding.formula()).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(encoding.formula()).unwrap() else {
             panic!("dword reversal is one vpermd");
         };
         assert_eq!(
@@ -719,7 +717,7 @@ mod tests {
             UnaryAvx2SynthesisLimits::default(),
         )
         .unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(upper.formula()).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(upper.formula()).unwrap() else {
             panic!("global reversal has weighted cost four");
         };
         let sequence = upper.lift_model(&model).unwrap();
@@ -768,7 +766,7 @@ mod tests {
                 pinned.add_clause(unit(variable, family == 5)).unwrap();
             }
         }
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&pinned).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&pinned).unwrap() else {
             panic!("one cost-three instruction must survive in three padded slots");
         };
         let sequence = encoding.lift_model(&model).unwrap();

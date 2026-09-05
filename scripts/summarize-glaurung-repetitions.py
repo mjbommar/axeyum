@@ -157,6 +157,56 @@ def validate_identity(config: dict[str, Any], path: Path) -> dict[str, str]:
     }
 
 
+NATIVE_CDCL_ENGINE_ID = "axeyum-native-cdcl-v1"
+NATIVE_CDCL_OPTION_SOURCE = "in-tree constants in crates/axeyum-cnf/src/proof_sat.rs"
+NATIVE_CDCL_RANDOMNESS = (
+    "none: no random seed, no random branching, no randomized initial activity"
+)
+BATSAT_OPTION_SOURCE = "batsat::SolverOpts::default from the Cargo.lock-pinned dependency"
+
+
+def validate_sat_bv_determinism(sat_bv: dict[str, Any], location: str) -> None:
+    """Validate the `sat_bv` determinism block in either engine's shape.
+
+    ADR-1703 replaced the `rustsat-batsat` adapter with the in-tree native CDCL
+    core, and the block changed shape with it: the adapter had four randomness
+    options to pin, the native core has none (VSIDS with an index tie-break,
+    phase saving, all-zero initial activities). Artifacts recorded before that
+    commit carry the old shape and are still valid descriptions of the run that
+    produced them, so both are accepted -- but each is validated in full, and a
+    block that is neither is a failure rather than a pass by omission.
+    """
+    if "engine" in sat_bv:
+        if sat_bv.get("engine") != NATIVE_CDCL_ENGINE_ID:
+            fail(f"{location}.engine must be `{NATIVE_CDCL_ENGINE_ID}`")
+        if sat_bv.get("option_source") != NATIVE_CDCL_OPTION_SOURCE:
+            fail(f"{location}.option_source does not match the native-core profile")
+        if sat_bv.get("randomness") != NATIVE_CDCL_RANDOMNESS:
+            fail(f"{location}.randomness does not match the native-core profile")
+        if not isinstance(sat_bv.get("restart_schedule"), str):
+            fail(f"{location}.restart_schedule must be a string")
+        return
+    if sat_bv.get("adapter") != "rustsat-batsat":
+        fail(
+            f"{location} names neither the native engine nor the retired adapter: "
+            f"expected `engine` = `{NATIVE_CDCL_ENGINE_ID}` or "
+            f"`adapter` = `rustsat-batsat`"
+        )
+    if sat_bv.get("option_source") != BATSAT_OPTION_SOURCE:
+        fail(f"{location}.option_source does not match the v1 profile")
+    expected_numbers = {
+        "random_seed": 91_648_253.0,
+        "random_var_freq": 0.0,
+    }
+    for key, expected in expected_numbers.items():
+        actual = require_number(sat_bv.get(key), f"{location}.{key}")
+        if actual != expected:
+            fail(f"{location}.{key} must be {expected}")
+    for key in ("random_polarity", "random_initial_activity"):
+        if require_bool(sat_bv.get(key), f"{location}.{key}"):
+            fail(f"{location}.{key} must be false")
+
+
 def validate_determinism(value: Any, location: str) -> None:
     profile = require_mapping(value, location)
     if profile.get("profile") != "axeyum-bench-fixed-seeds-v1":
@@ -167,24 +217,7 @@ def validate_determinism(value: Any, location: str) -> None:
     if profile.get("corpus_order") != expected_order:
         fail(f"{location}.corpus_order does not match the v1 profile")
     sat_bv = require_mapping(profile.get("sat_bv"), f"{location}.sat_bv")
-    if sat_bv.get("adapter") != "rustsat-batsat":
-        fail(f"{location}.sat_bv.adapter must be `rustsat-batsat`")
-    expected_source = (
-        "batsat::SolverOpts::default from the Cargo.lock-pinned dependency"
-    )
-    if sat_bv.get("option_source") != expected_source:
-        fail(f"{location}.sat_bv.option_source does not match the v1 profile")
-    expected_numbers = {
-        "random_seed": 91_648_253.0,
-        "random_var_freq": 0.0,
-    }
-    for key, expected in expected_numbers.items():
-        actual = require_number(sat_bv.get(key), f"{location}.sat_bv.{key}")
-        if actual != expected:
-            fail(f"{location}.sat_bv.{key} must be {expected}")
-    for key in ("random_polarity", "random_initial_activity"):
-        if require_bool(sat_bv.get(key), f"{location}.sat_bv.{key}"):
-            fail(f"{location}.sat_bv.{key} must be false")
+    validate_sat_bv_determinism(sat_bv, f"{location}.sat_bv")
     z3 = require_mapping(profile.get("z3"), f"{location}.z3")
     if require_int(z3.get("random_seed"), f"{location}.z3.random_seed") != 0:
         fail(f"{location}.z3.random_seed must be 0")
@@ -216,8 +249,14 @@ def validate_resource_profile(
         if require_int(config.get(config_key), f"config.{config_key}") != limit:
             fail(f"{location}.limits.{profile_key} must match config.{config_key}")
     units = require_mapping(profile.get("units"), f"{location}.units")
-    if units.get("primary_search") != "rustsat-batsat within_budget progress checks":
-        fail(f"{location}.units.primary_search does not match the v1 profile")
+    # ADR-1703: the primary search unit changed from the retired adapter's
+    # private progress-check polls to the native core's conflicts. Artifacts
+    # recorded before that commit keep the old unit and are still accurate.
+    if units.get("primary_search") not in (
+        "native proof-CDCL conflicts",
+        "rustsat-batsat within_budget progress checks",
+    ):
+        fail(f"{location}.units.primary_search does not match a known profile")
     if units.get("z3_oracle_search") != "Z3 rlimit units":
         fail(f"{location}.units.z3_oracle_search does not match the v1 profile")
     timeout = require_int(

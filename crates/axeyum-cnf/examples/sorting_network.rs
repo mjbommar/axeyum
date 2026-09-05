@@ -112,7 +112,7 @@ use std::time::Instant;
 use axeyum_cnf::{
     CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, ProofSolveOutcome, SatResult,
     StreamingProofOutcome, TextProofSink, check_drat_backward, check_drat_backward_reader,
-    solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits, solve_with_rustsat_batsat,
+    solve_with_drat_proof_streaming, solve_with_drat_proof_with_limits, solve_with_native_core,
 };
 
 /// `S(n)` for `n = 1..=10`, indexed by `n`. Entry `0` is a placeholder.
@@ -1108,7 +1108,7 @@ fn run(
         };
     }
 
-    let result = solve_with_rustsat_batsat(&enc.formula).expect("SAT solver ran");
+    let result = solve_with_native_core(&enc.formula).expect("SAT solver ran");
     let seconds = started.elapsed().as_secs_f64();
     match result {
         SatResult::Sat(model) => {
