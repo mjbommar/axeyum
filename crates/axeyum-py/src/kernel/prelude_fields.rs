@@ -1993,7 +1993,7 @@ pub(super) fn nat_sub(p: &NatPrelude) -> Vec<(&'static str, Sub)> {
     vec![("logic", Sub::Logic(Box::new(p.logic)))]
 }
 
-/// The `IntPrelude` field table (381 names,
+/// The `IntPrelude` field table (401 names,
 /// 0 name lists, 2 sub-packages).
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
@@ -2495,6 +2495,29 @@ pub(super) fn int(p: &IntPrelude) -> Fields {
                 "primitive_root_pow_injective",
                 p.primitive_root_pow_injective,
             ),
+            ("is_sum_of_two_squares", p.is_sum_of_two_squares),
+            ("is_sum_of_two_squares_intro", p.is_sum_of_two_squares_intro),
+            ("brahmagupta_fibonacci", p.brahmagupta_fibonacci),
+            ("brahmagupta_fibonacci_swap", p.brahmagupta_fibonacci_swap),
+            ("is_sum_of_two_squares_mul", p.is_sum_of_two_squares_mul),
+            ("sq_of_two_mul", p.sq_of_two_mul),
+            ("sq_of_two_mul_add_one", p.sq_of_two_mul_add_one),
+            ("sq_mod_eq_four_zero_or_one", p.sq_mod_eq_four_zero_or_one),
+            (
+                "not_is_sum_of_two_squares_of_mod_eq_four_three",
+                p.not_is_sum_of_two_squares_of_mod_eq_four_three,
+            ),
+            ("zero_add", p.zero_add),
+            ("sub_self", p.sub_self),
+            ("add_sub_cancel_right", p.add_sub_cancel_right),
+            ("mul_sub_mul_comm", p.mul_sub_mul_comm),
+            ("eq_of_sub_eq_zero", p.eq_of_sub_eq_zero),
+            ("mul_ne_zero", p.mul_ne_zero),
+            ("mul_left_cancel_of_ne_zero", p.mul_left_cancel_of_ne_zero),
+            ("mod_eq_descent_cross_terms", p.mod_eq_descent_cross_terms),
+            ("mul_mul_of_mul_mul", p.mul_mul_of_mul_mul),
+            ("sq_add_sq_of_mul_left", p.sq_add_sq_of_mul_left),
+            ("descent_step", p.descent_step),
         ],
         lists: Vec::new(),
     }
