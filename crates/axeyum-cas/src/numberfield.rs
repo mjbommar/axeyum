@@ -118,12 +118,25 @@
 //!
 //! # Cost profile
 //!
-//! Not measured under `--release`. Everything here is `O(n³)` bignum linear
-//! algebra at field degree `n ≤ 4`, plus one call into the `i128` integer
-//! factorizer whose cost dominates for [`two_squares`] and
-//! [`GaussianInt::factor`]. The `d = 61` unit is 22 convergent steps of the
-//! `BigInt` recurrence, so it is cheap; what is *not* cheap at that size is
-//! the minimality search, which is exactly why it is bounded and labelled.
+//! **Not measured under `--release`, and not measured per operation.** What
+//! *was* measured, 2026-09-05: the whole 65-test module sweep
+//! (`cargo test -p axeyum-cas --lib numberfield::`) runs in **0.01 s to 0.20 s**
+//! of wall clock in a **debug** build. That single number covers every case
+//! this module ships — degree 2, 3 and 4 field arithmetic including inverses,
+//! characteristic polynomials and element minimal polynomials; eight Gaussian
+//! factorizations; the `2⁸⁹ − 1` decline; and the `d = 61` fundamental unit
+//! **including its exhaustive minimality search over 3,804 candidates**. So no
+//! individual operation here is expensive at these sizes, and the per-operation
+//! split was not worth measuring. Treat the range as ADVISORY: it was taken on
+//! a shared host under other lanes' load.
+//!
+//! What the shape says, independently of the clock: the field work is `O(n³)`
+//! bignum linear algebra at `n ≤ 4`; the `d = 61` convergent walk is 23 steps
+//! of a `BigInt` recurrence. The two things that can actually cost is (a) the
+//! `i128` integer factorizer, which dominates [`two_squares`] and
+//! [`GaussianInt::factor`] and is why both carry magnitude guards, and (b) the
+//! minimality search, which is `b` iterations and is why it is bounded by
+//! [`MINIMALITY_SEARCH_BOUND`] and labelled rather than run.
 
 use core::fmt;
 
