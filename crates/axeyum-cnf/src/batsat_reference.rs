@@ -35,9 +35,8 @@ use rustsat::{
 };
 
 use crate::{
-    CnfAssignment, CnfClause, CnfFormula, CnfLit, CnfVar, SatCapabilities, SatDependencyProfile,
-    SatError, SatFeatureSupport, SatProofStatus, SatResult, SatSolver, SatUnknownReason,
-    SatUnsatEvidence,
+    CnfAssignment, CnfClause, CnfFormula, CnfLit, SatCapabilities, SatDependencyProfile, SatError,
+    SatFeatureSupport, SatProofStatus, SatResult, SatSolver, SatUnknownReason, SatUnsatEvidence,
 };
 
 /// First pure-Rust SAT adapter, backed by `rustsat-batsat`.
