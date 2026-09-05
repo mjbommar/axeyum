@@ -46,6 +46,14 @@ fn named(p: &RatPrelude) -> Vec<(&'static str, crate::NameId)> {
         ("mk_congr", p.mk_congr),
         ("eta", p.eta),
         ("ext", p.ext),
+        // The three whose proofs the `psatz` producer FOUND rather than a
+        // person writing them (ADR-1649). They are listed here like any other
+        // declaration precisely because their provenance must not exempt them
+        // from the axiom-footprint sweep: a searched proof is checked by the
+        // same gate as a written one or it is not checked at all.
+        ("two_mul_le_sq_add_sq", p.two_mul_le_sq_add_sq),
+        ("mul_add_le_sq_add_sq_three", p.mul_add_le_sq_add_sq_three),
+        ("four_mul_le_sq_add", p.four_mul_le_sq_add),
         ("le_total", p.le_total),
         ("lt_of_not_le", p.lt_of_not_le),
         ("le_antisymm", p.le_antisymm),
