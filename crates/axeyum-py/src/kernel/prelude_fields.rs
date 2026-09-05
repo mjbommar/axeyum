@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1410 names,
+/// The `NatPrelude` field table (1424 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1710,6 +1710,35 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             (
                 "hall_exists_is_matching_singleton",
                 p.hall_exists_is_matching_singleton,
+            ),
+            ("finset_all_below_congr", p.finset_all_below_congr),
+            ("finset_subset_fixed", p.finset_subset_fixed),
+            ("finset_subset_fixed_of_mem", p.finset_subset_fixed_of_mem),
+            ("finset_mem_of_subset_fixed", p.finset_mem_of_subset_fixed),
+            ("finset_subset_fixed_congr", p.finset_subset_fixed_congr),
+            (
+                "finset_card_union_of_disjoint",
+                p.finset_card_union_of_disjoint,
+            ),
+            ("hall_condition_subset", p.hall_condition_subset),
+            (
+                "hall_mem_union_over_union_of_vanishing",
+                p.hall_mem_union_over_union_of_vanishing,
+            ),
+            (
+                "hall_condition_sdiff_of_critical",
+                p.hall_condition_sdiff_of_critical,
+            ),
+            (
+                "hall_condition_sdiff_singleton_of_strict",
+                p.hall_condition_sdiff_singleton_of_strict,
+            ),
+            ("finset_restrict", p.finset_restrict),
+            ("finset_bound_restrict", p.finset_bound_restrict),
+            ("finset_mem_b_restrict", p.finset_mem_b_restrict),
+            (
+                "finset_mem_b_union_sdiff_self",
+                p.finset_mem_b_union_sdiff_self,
             ),
             ("strong_induction", p.strong_induction),
             ("strong_induction_eq", p.strong_induction_eq),

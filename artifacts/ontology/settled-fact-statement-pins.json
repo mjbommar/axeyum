@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2364,
+    "min_identity_bound": 2367,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -8065,11 +8065,25 @@
       "kernel_theorem": "Nat.Hall.exists_isMatching_singleton"
     },
     {
+      "fact_id": "F:hall-critical-subset-split",
+      "language": "lean4",
+      "statement_sha256": "f469aa33c069eb78171f51a1fb5647c5b82994f2c5216479817f2dbd8ba3b6f1",
+      "prose_sha256": "5774cf82d6b25432ebe82b0734075470b6a89b014d4c6e35148c6a0481f3e6f6",
+      "kernel_theorem": "Nat.Hall.hallCondition_sdiff_of_critical"
+    },
+    {
       "fact_id": "F:hall-matching-union-disjoint-images",
       "language": "lean4",
       "statement_sha256": "3df75d0b6f723a4ac3c778d8c1efb2358f438fb8e90dade9e8ce12f7a16a46e0",
       "prose_sha256": "09a520fae7b89a49c27ae37ffd4a76e452b8134ff30a1e7f2d4c7feb6472d9e6",
       "kernel_theorem": "Nat.Hall.isMatching_union"
+    },
+    {
+      "fact_id": "F:hall-noncritical-single-value-deletion",
+      "language": "lean4",
+      "statement_sha256": "ec93546e7cb6bb6c10fac0c4750ac10b15acc4751a95408612ec6d9358892fe9",
+      "prose_sha256": "f1777bcd5a5a60e80f158767120894b4aded745719136e89c0381e8aee9219e8",
+      "kernel_theorem": "Nat.Hall.hallCondition_sdiff_singleton_of_strict"
     },
     {
       "fact_id": "F:hall-union-under-family-deletion",
@@ -17857,6 +17871,13 @@
       "statement_sha256": "37c0876082d26013cd35f2c31de310bc1c93a7901e8eeef91b68d1b3b3571bbd",
       "prose_sha256": "253183357bf2e41f8443b4f27d6a5e64acbcbefdc42f4c9ea7e13cad1735a0fe",
       "kernel_theorem": "Nat.Fin.val_mk"
+    },
+    {
+      "fact_id": "F:nat-finset-all-below-congr",
+      "language": "lean4",
+      "statement_sha256": "787852cb712f1a26068b5baa7e64c24919f0086d9bfb293cceabb915500ac308",
+      "prose_sha256": "72e3d9bc876e9d963bf8b6a2f297a67c3bb91d0fab9ffcadfa903615c50440a1",
+      "kernel_theorem": "Nat.Finset.allBelow_congr"
     },
     {
       "fact_id": "F:nat-finset-all-below-false-witness",

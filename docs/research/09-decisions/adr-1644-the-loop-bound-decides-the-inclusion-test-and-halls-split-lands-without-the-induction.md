@@ -1,14 +1,15 @@
-# ADR-1644 — The loop bound decides the inclusion test, and Hall's split lands without the induction
+# ADR-1644: the loop bound decides the inclusion test, and Hall's split lands without the induction
+
+Status: accepted
+Date: 2026-09-05
+Lane: `hall-theorem`
 
 Index-summary: A `Bool`-valued inclusion test is congruent in an argument only if
 its loop bound does not depend on that argument; `subsetFixed` takes the bound
 from the fixed set, `allBelow_congr` is the missing law that makes it work, and
 both branches of Hall's critical-subset split are now proved — the strong
 induction that composes them is not.
-Index-status: Accepted
 
-Date: 2026-09-05
-Lane: `hall-theorem`
 Supersedes nothing. Continues ADR-1608, ADR-1614, ADR-1623, ADR-1630.
 
 ## Context

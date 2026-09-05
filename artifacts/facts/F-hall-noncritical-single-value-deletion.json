@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-noncritical-single-value-deletion",
+  "title": "Strict slack lets one value be deleted from every neighbourhood",
+  "statement": "Let a family of finite sets be indexed by a finite set s in which every nonempty subset has strictly fewer elements than its neighbourhood. Then for any value v, s still satisfies Hall's condition against the family with v deleted from every member.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Hall.hallCondition_sdiff_singleton_of_strict : ((x0 : AxNat.Finset) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : ((x3 : AxNat.Finset) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Bool (AxNat.Finset.memB x3 x4) Bool.true) -> Eq.{1} Bool (AxNat.Finset.memB x0 x4) Bool.true))) -> ((x5 : AxNat.lt AxNat.zero (AxNat.Finset.card x3)) -> AxNat.lt (AxNat.Finset.card x3) (AxNat.Finset.card (AxNat.Hall.unionOver x2 x3)))))) -> AxNat.Hall.HallCondition x0 (fun (x4 : AxNat) => AxNat.Finset.sdiff (x2 x4) (AxNat.Finset.singleton x1))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Hall.hallCondition_sdiff_singleton_of_strict"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:hall-union-under-family-deletion",
+    "F:hall-base-case-singleton",
+    "F:ml430-nat-le-of-succ-le-succ-a180a72c",
+    "F:nat-le-trans",
+    "F:nat-lt-or-ge",
+    "F:nat-zero-le"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.Hall.hallCondition_sdiff_singleton_of_strict",
+      "kind": "kernel-term",
+      "supports": "theorem Nat.Hall.hallCondition_sdiff_singleton_of_strict : ((x0 : AxNat.Finset) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : ((x3 : AxNat.Finset) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Bool (AxNat.Finset.memB x3 x4) Bool.true) -> Eq.{1} Bool (AxNat.Finset.memB x0 x4) Bool.true))) -> ((x5 : AxNat.lt AxNat.zero (AxNat.Finset.card x3)) -> AxNat.lt (AxNat.Finset.card x3) (AxNat.Finset.card (AxNat.Hall.unionOver x2 x3)))))) -> AxNat.Hall.HallCondition x0 (fun (x4 : AxNat) => AxNat.Finset.sdiff (x2 x4) (AxNat.Finset.singleton x1))))))",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- Nat.Hall.hallCondition_sdiff_singleton_of_strict 2>/dev/null | grep -xFc 'Nat.Hall.hallCondition_sdiff_singleton_of_strict\t10\t((x0 : AxNat.Finset) -> ((x1 : AxNat) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : ((x3 : AxNat.Finset) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Bool (AxNat.Finset.memB x3 x4) Bool.true) -> Eq.{1} Bool (AxNat.Finset.memB x0 x4) Bool.true))) -> ((x5 : AxNat.lt AxNat.zero (AxNat.Finset.card x3)) -> AxNat.lt (AxNat.Finset.card x3) (AxNat.Finset.card (AxNat.Hall.unionOver x2 x3)))))) -> AxNat.Hall.HallCondition x0 (fun (x4 : AxNat) => AxNat.Finset.sdiff (x2 x4) (AxNat.Finset.singleton x1))))))')\" -ge 1",
+      "notes": "Admitted through `Kernel::add_declaration`, which re-derives the type from the proof term; the checker greps the inventory's exact row, so any single wrong token in the rendered type makes it exit 1."
+    },
+    {
+      "id": "footprint-Nat.Hall.hallCondition_sdiff_singleton_of_strict",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --release --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and this theorem is declared inside `build_nat_prelude`, so it cannot rest on a trusted declaration the Nat environment does not contain. Demonstrated to discriminate: `--require-axiom-free axreal` against the SAME kernel build exits 1 (`axreal trusted surface = 30, expected 0`), so the flag is not satisfied unconditionally."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane hall-theorem (ADR-1644): proved in `crates/axeyum-lean-kernel/src/nat_prelude/hall_theorem.rs` and admitted through `Kernel::add_declaration`",
+    "source": "proved in-tree; no import, no replay"
+  },
+  "notes": "THE NON-CRITICAL BRANCH of Hall's inductive step, and the counterpart of F:hall-critical-subset-split. When no proper nonempty subset is critical every nonempty subset has strict slack, and the slack pays for committing one index to one of its neighbours: deleting that single value from every member of the family leaves Hall's condition intact. The strict hypothesis is guarded by `0 < card w` and the guard is NOT cosmetic -- at the empty subset the strict inequality would read `0 < card (unionOver nb empty)`, which is false; that case is discharged by `Nat.zero_le`, DECIDED with `Nat.lt_or_ge` rather than assumed. Hall's condition at s is deliberately not a hypothesis: it would be redundant, since the strict hypothesis is stronger wherever it applies and the conclusion is free where it does not. The successor step is definitional -- `Nat.add` recurses on its right argument, so `add x 1` IS `succ x` by iota. ADR-1644. Hall's marriage theorem itself is NOT established."
+}
