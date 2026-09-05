@@ -49,6 +49,7 @@ Measured 2026-09-05 at `f67ce41d2`; the commands are in *How to re-measure*.
 | compatibility matrix | 13 rows: K0 1/1, K1 6/6, K2 0/2, K3 0/1, K4 0/1, K5 0/1, K6 0/1 |
 | real-Lean suites in the kernel crate | 18 files (`real_lean_*`, `kernel_differential*`); gate floors 261 checks and 37 theory families |
 | kernel differential corpus | 32 cases, 8 subsystems; 1 registered incompleteness (`Quot.sound` absent) ([ADR-0780](../research/09-decisions/adr-0780-the-kernel-differential-corpus-finds-real-defects-and-two-guards-survive-uncaught.md)) |
+| public conformance corpus | `leanprover/lean-kernel-arena` at `abc55357`, 186-case tarball: **accept half 108/113, reject half 69/73**; control 110/113 and 21/73; 9 divergences, all ledgered ([ADR-1663](../research/09-decisions/adr-1663-the-public-conformance-corpus-scores-both-halves-and-the-divergence-ledger-is-gated.md)) |
 | trusted core | 5,526 function-body lines, 9 files ([ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md)) |
 | our theorems replayed in pinned Lean | `creal` carrier only: population 2,045, replayed 1,972, 48 `Type`-valued theorems Lean refuses as theorems, 25 blocked behind them ([ADR-0760](../research/09-decisions/adr-0760-independent-replay-is-graded-per-declaration-by-name.md)) |
 | credited roots exported, reimported, Lean-checked | 9 (C2) |
@@ -76,7 +77,7 @@ against the July documents.
 | 07 | combinatorics | `Nat.Finset` ↔ Mathlib `Finset` as a named bridge | the mirror-fidelity gate protects ℕ/ℤ statements by hash; nothing says when a `Finset` mirror is a different object |
 | 08 | probability | same as 03 | same as 03, plus the ℚ-valued shelf has no Mathlib counterpart at all |
 | 09 | category theory | universe levels that agree with Lean **exactly** | one divergence found by a gate this week (`PSigma` at `Sort (max u v)` vs Lean's `Sort (max 1 u v)`); the `max-to-imax` mutant is open; `imax` normalization is over-complete (requirements §4.6) |
-| 10 | logic | the kernel *is* the paper; the paper needs the public conformance corpus, both halves | 32 hand-authored differential cases against a corpus of 189 (121 accept / 62 reject / 6 either) nobody has run; no divergence ledger |
+| 10 | logic | the kernel *is* the paper; the paper needs the public conformance corpus, both halves | **run** ([ADR-1663](../research/09-decisions/adr-1663-the-public-conformance-corpus-scores-both-halves-and-the-divergence-ledger-is-gated.md)): `leanprover/lean-kernel-arena`, 108/113 accepts and 69/73 rejects against the `parse-only` control's 110/113 and 21/73; ledger at [`docs/plan/lean-divergences.md`](../plan/lean-divergences.md). The corpus is 204 tests (118/73/13), not 189 — and the tarball scored here omits the 13 `either` cases and the five accepts over 10 MB |
 | 11 | applied | `by axeyum` as a real tactic, and LRAT proofs Lean consumes | C3 is a Rust-side sidecar protocol with one subject; no Lean-side tactic, no Lake package, no LRAT hand-off |
 | 12 | the chair | one pin, green gates, and one sentence saying what "Lean compatible" means | two pins, three red gates, and a claim surface (PLAN.md, the K3 row, next-action A9) still describing July |
 | 13 | the CAS | its certificates reconstruct into kernel terms; Lean would see them only through 11's tactic | same as 11 |
@@ -124,7 +125,7 @@ what makes the whole thing a claim rather than a folder.
       Axeyum and hands back a term Lean checks; first fragments linear
       arithmetic and `ring` over ℕ and ℤ, then LRAT-carrying `bv_decide`-style
       goals. Nothing is trusted on the Lean side. Serves 11, 13, 01.
-- [ ] **7. The public conformance corpus and a divergence ledger.** Run
+- [x] **7. The public conformance corpus and a divergence ledger.** *(landed 2026-09-05, [ADR-1663](../research/09-decisions/adr-1663-the-public-conformance-corpus-scores-both-halves-and-the-divergence-ledger-is-gated.md); the `imax` question is decided as a **sanctioned** divergence on the corpus's own `outcome: either`, and `max-to-imax` with it.)* Run
       Lean 4's own kernel test cases, report both the accept and the reject
       half, publish a gated `divergences.md` in lean4lean's shape with the
       rule that an unlisted divergence is a bug; close the open `max-to-imax`
@@ -184,6 +185,7 @@ count depend on Lean's axioms.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
+| 2026-09-05 | **Next Ten item 7 landed** ([ADR-1663](../research/09-decisions/adr-1663-the-public-conformance-corpus-scores-both-halves-and-the-divergence-ledger-is-gated.md)). The corpus is `leanprover/lean-kernel-arena`, pinned at `abc55357` with its published tarball pinned by SHA-256. **The `189 / 121 / 62 / 6` figures in this file and in the requirements doc were stale**: it is 204 tests, 118 accept / 73 reject / 13 either, and upstream's `parse-only` control scores 118/118 and 6/73. Scored on the 186-case tarball: **accept half 108/113, reject half 69/73**; the in-tree control 110/113 and 21/73, so 21 of the reject half is the reader and 48 the trusted gate. Nine divergences published and gated in [`lean-divergences.md`](../plan/lean-divergences.md); one closed in the kernel (duplicate universe binders, arena `tut06_bad01`); Probe 5 and the `max-to-imax` mutant re-measured first-hand and recorded as a **sanctioned** divergence on the corpus's own `outcome: either` for that shape, which closes the question ADR-1600 §4 left open. Not fixed by this lane: `perf/app-lam` produces no verdict in 600 s at 3.0 GB RSS, and the three gates this file lists as red today are still red. | ADR-1663; `python3 scripts/check-kernel-conformance.py`; `python3 scripts/check-lean-divergences.py` |
 
 ## How to re-measure
 
