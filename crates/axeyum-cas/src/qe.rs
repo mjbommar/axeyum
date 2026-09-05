@@ -626,6 +626,26 @@ pub enum Decision {
     Unknown(String),
 }
 
+impl Decision {
+    /// Check this decision's own certificate, returning the verdict it
+    /// establishes. `Ok(None)` is a decline — there is no claim to check.
+    ///
+    /// This is what makes a [`Decision`] a certificate-carrying answer rather
+    /// than a bare verdict: nothing in it is believed until the checker has
+    /// re-derived it from the polynomials.
+    ///
+    /// # Errors
+    ///
+    /// The [`Fault`] naming the guard that refused the certificate.
+    pub fn verify(&self) -> Result<Option<bool>, Fault> {
+        match self {
+            Decision::True(cert) => cert.verify().map(|()| Some(true)),
+            Decision::False(cert) => cert.verify().map(|()| Some(false)),
+            Decision::Unknown(_) => Ok(None),
+        }
+    }
+}
+
 /// The verdict on a [`ForallFormula`]. Note the certificates swap sides: a
 /// universal is *proved* by a refutation of its negation, and *refuted* by a
 /// counterexample sample.
@@ -637,6 +657,22 @@ pub enum ForallDecision {
     False(Box<SampleCertificate>),
     /// Exact arithmetic declined. Never a verdict.
     Unknown(String),
+}
+
+impl ForallDecision {
+    /// Check this decision's own certificate, returning the verdict it
+    /// establishes. `Ok(None)` is a decline.
+    ///
+    /// # Errors
+    ///
+    /// The [`Fault`] naming the guard that refused the certificate.
+    pub fn verify(&self) -> Result<Option<bool>, Fault> {
+        match self {
+            ForallDecision::True(cert) => cert.verify().map(|()| Some(true)),
+            ForallDecision::False(cert) => cert.verify().map(|()| Some(false)),
+            ForallDecision::Unknown(_) => Ok(None),
+        }
+    }
 }
 
 /// Decide `∃x. ⋀ᵢ pᵢ(x) ▷ᵢ 0`.
@@ -724,17 +760,13 @@ pub fn decide_forall(formula: &ForallFormula) -> ForallDecision {
 /// path rather than an opt-in.
 #[must_use]
 pub fn eliminate(formula: &ExistsFormula) -> Option<bool> {
-    match decide_exists(formula) {
-        Decision::True(cert) => cert.verify().ok().map(|()| true),
-        Decision::False(cert) => cert.verify().ok().map(|()| false),
-        Decision::Unknown(_) => None,
-    }
+    decide_exists(formula).verify().unwrap_or(None)
 }
 
 /// The universal front door, dual to [`eliminate`]; likewise self-checking.
 #[must_use]
 pub fn eliminate_forall(formula: &ForallFormula) -> Option<bool> {
-    eliminate(&formula.negate()).map(|satisfiable| !satisfiable)
+    decide_forall(formula).verify().unwrap_or(None)
 }
 
 /// The first conjunct whose relation fails at the given signs, if any.
@@ -1279,6 +1311,16 @@ mod tests {
                 recomputed: -1
             })
         );
+        // The same forgery must not survive the front door either: a
+        // `Decision` is only as good as the certificate it carries.
+        assert_eq!(
+            Decision::True(Box::new(cert)).verify(),
+            Err(Fault::SignMismatch {
+                index: 0,
+                recorded: 1,
+                recomputed: -1
+            })
+        );
     }
 
     #[test]
@@ -1425,6 +1467,19 @@ mod tests {
                 recorded: 6,
                 expected: 7
             })
+        );
+    }
+
+    #[test]
+    fn decision_verify_delegates_to_its_certificate_and_a_decline_carries_no_claim() {
+        let formula = exists(vec![Atom::new(x_poly(), Relation::Gt)]);
+        assert_eq!(decide_exists(&formula).verify(), Ok(Some(true)));
+        let unsatisfiable = exists(vec![Atom::new(ipoly(&[1, 0, 1]), Relation::Lt)]);
+        assert_eq!(decide_exists(&unsatisfiable).verify(), Ok(Some(false)));
+        assert_eq!(
+            Decision::Unknown("declined".to_string()).verify(),
+            Ok(None),
+            "a decline carries no claim, so there is nothing to check"
         );
     }
 
