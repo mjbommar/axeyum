@@ -140,6 +140,7 @@ struct Args {
     out: PathBuf,
     facts: PathBuf,
     toolchain: PathBuf,
+    refused: PathBuf,
     check: bool,
     spelling: ProofSpelling,
 }
@@ -148,6 +149,8 @@ fn parse_args() -> Args {
     let mut out = PathBuf::from("lean/axeyum-creal");
     let mut facts = PathBuf::from("artifacts/facts");
     let mut toolchain = PathBuf::from("lean-toolchain");
+    let mut refused =
+        PathBuf::from("artifacts/measurements/lean-creal-elaborator-refusals-2026-09-05.json");
     let mut check = false;
     let mut spelling = ProofSpelling::Def;
     let mut argv = std::env::args().skip(1);
@@ -158,6 +161,7 @@ fn parse_args() -> Args {
             "--toolchain" => {
                 toolchain = PathBuf::from(argv.next().expect("--toolchain needs a path"));
             }
+            "--refused" => refused = PathBuf::from(argv.next().expect("--refused needs a path")),
             "--check" => check = true,
             "--proof-spelling" => {
                 spelling = match argv.next().as_deref() {
@@ -173,6 +177,7 @@ fn parse_args() -> Args {
         out,
         facts,
         toolchain,
+        refused,
         check,
         spelling,
     }
@@ -206,8 +211,9 @@ fn is_a_proposition(kernel: &mut Kernel, ty: ExprId) -> bool {
         return false;
     };
     let sort = kernel.whnf(sort);
-    let ExprNode::Sort(level) = *kernel.expr_node(sort) else {
-        return false;
+    let level = match kernel.expr_node(sort) {
+        ExprNode::Sort(level) => *level,
+        _ => return false,
     };
     matches!(kernel.level_node(level), LevelNode::Zero)
 }
@@ -304,6 +310,45 @@ fn ledger_kernel_theorems(facts_dir: &Path) -> BTreeSet<String> {
     names
 }
 
+/// The declarations pinned Lean's **elaborator** refuses, read from the
+/// measurement artifact rather than listed here.
+///
+/// Lean has two checkers and they disagree (ADR-0517). Its *kernel* accepts
+/// these terms — the replay census hands it the same proofs over the
+/// `lean4export` wire and grades them accepted by name. Its *elaborator*, which
+/// is what reads `.lean` source, will not unfold a definition far enough to see
+/// the definitional equality the term needs, and refuses. That is a property of
+/// the route, not of the mathematics, which is why these are EXCLUSIONS with a
+/// stated reason rather than a quietly smaller headline.
+///
+/// A name here that is not in the built environment is a hard failure: a stale
+/// refusal list would silently shrink the published library and nothing else
+/// would notice.
+fn elaborator_refusals(path: &Path) -> BTreeMap<String, String> {
+    let text = std::fs::read_to_string(path).unwrap_or_else(|error| {
+        panic!("the elaborator-refusal measurement must be readable at {path:?}: {error}")
+    });
+    let value: serde_json::Value =
+        serde_json::from_str(&text).expect("the elaborator-refusal measurement must be JSON");
+    let rows = value
+        .get("refusals")
+        .and_then(serde_json::Value::as_array)
+        .expect("the measurement must carry a `refusals` array");
+    let mut out = BTreeMap::new();
+    for row in rows {
+        let name = row
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+            .expect("every refusal names a declaration");
+        let reason = row
+            .get("lean_error")
+            .and_then(serde_json::Value::as_str)
+            .expect("every refusal carries Lean's own error");
+        out.insert(name.to_owned(), reason.to_owned());
+    }
+    out
+}
+
 /// Retag the rendered source: give every `Type`-valued theorem the `def`
 /// keyword and a doc comment saying why.
 ///
@@ -313,7 +358,11 @@ fn ledger_kernel_theorems(facts_dir: &Path) -> BTreeSet<String> {
 /// the module writer that moved a declaration head off column zero would make
 /// this return the wrong number and fail the generator, rather than silently
 /// emitting a `theorem` Lean refuses.
-fn retag_type_valued(source: &str, subjects: &BTreeMap<String, NameId>, from: &str) -> (String, usize) {
+fn retag_type_valued(
+    source: &str,
+    subjects: &BTreeMap<String, NameId>,
+    from: &str,
+) -> (String, usize) {
     let mut out = String::with_capacity(source.len() + subjects.len() * 200);
     let mut rewritten = 0usize;
     let mut seen: BTreeSet<&str> = BTreeSet::new();
@@ -385,7 +434,61 @@ fn run(args: &Args) -> i32 {
     let build_seconds = started.elapsed().as_secs_f64();
 
     let census = census(&mut kernel);
-    let roots: Vec<NameId> = kernel.environment().iter().map(|(name, _)| *name).collect();
+
+    // ------------------------------------------------------------------
+    // The elaborator refusals, and everything that rests on one. Lean's
+    // KERNEL accepts these terms (the replay census grades them accepted over
+    // the wire); its ELABORATOR, which is what reads `.lean` source, refuses
+    // them (ADR-0517). They are excluded BY NAME, with Lean's own error, and
+    // so is every declaration whose dependency closure reaches one -- because
+    // Lean would answer `unknown constant` for those, which is a cascade and
+    // not a second finding.
+    // ------------------------------------------------------------------
+    let refusals = elaborator_refusals(&args.refused);
+    let every_name: BTreeMap<String, NameId> = kernel
+        .environment()
+        .iter()
+        .map(|(name, _)| (kernel.lean_name(*name), *name))
+        .collect();
+    let stale: Vec<&String> = refusals
+        .keys()
+        .filter(|name| !every_name.contains_key(*name))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "the elaborator-refusal measurement names {stale:?}, which this kernel does not declare. \
+         A stale refusal list shrinks the published library silently; re-measure it."
+    );
+    let mut excluded_reasons: BTreeMap<String, String> = BTreeMap::new();
+    for (name, error) in &refusals {
+        excluded_reasons.insert(
+            name.clone(),
+            format!("pinned Lean's elaborator refuses it from source: {error}"),
+        );
+    }
+    if !refusals.is_empty() {
+        for (rendered, id) in &every_name {
+            if excluded_reasons.contains_key(rendered) {
+                continue;
+            }
+            if let Some(blocker) = kernel
+                .declaration_dependency_closure(*id)
+                .into_iter()
+                .map(|dep| kernel.lean_name(dep))
+                .find(|dep| refusals.contains_key(dep))
+            {
+                excluded_reasons.insert(
+                    rendered.clone(),
+                    format!("its dependency closure reaches `{blocker}`, which Lean's elaborator refuses"),
+                );
+            }
+        }
+    }
+    let roots: Vec<NameId> = every_name
+        .iter()
+        .filter(|(rendered, _)| !excluded_reasons.contains_key(*rendered))
+        .map(|(_, id)| *id)
+        .collect();
 
     // ------------------------------------------------------------------
     // Render, twice, and require the two to be byte-identical. Determinism
@@ -402,15 +505,21 @@ fn run(args: &Args) -> i32 {
     );
     let carrier_file = first.file_name();
 
+    let published_type_valued: BTreeMap<String, NameId> = census
+        .type_valued_theorems
+        .iter()
+        .filter(|(name, _)| !excluded_reasons.contains_key(*name))
+        .map(|(name, id)| (name.clone(), *id))
+        .collect();
     let (carrier_source, rewritten) = retag_type_valued(
         first.source(),
-        &census.type_valued_theorems,
+        &published_type_valued,
         args.spelling.as_str(),
     );
     assert_eq!(
         rewritten,
-        census.type_valued_theorems.len(),
-        "every `Type`-valued theorem must be retagged as a `def`; the module writer's \
+        published_type_valued.len(),
+        "every published `Type`-valued theorem must be retagged as a `def`; the module writer's \
          declaration-head shape has moved"
     );
 
@@ -419,53 +528,54 @@ fn run(args: &Args) -> i32 {
     // listed exclusion. Nothing is silently dropped.
     // ------------------------------------------------------------------
     let heads = declaration_heads(&carrier_source);
-    let mut coverage: BTreeMap<String, Coverage> = BTreeMap::new();
-    let mut emitted_inductives: BTreeSet<NameId> = BTreeSet::new();
-    for (&name, decl) in kernel.environment().iter() {
-        if matches!(decl, Declaration::Inductive { .. }) && heads.contains(&kernel.lean_name(name))
-        {
-            emitted_inductives.insert(name);
-        }
-    }
-    let emitted_inductive_names: BTreeSet<String> = emitted_inductives
-        .iter()
-        .map(|&name| kernel.lean_name(name))
-        .collect();
-    // A constructor names its inductive in the declaration; a `Recursor` does
-    // not carry one, so its owner is read off the name the kernel generated it
-    // under (`X.rec`), which is the same rule `Kernel::name_of_rec` uses in the
-    // other direction. Anything that does not fit becomes an exclusion rather
-    // than a guess.
-    let owners: BTreeMap<NameId, String> = kernel
+
+    // The whole population, snapshotted once: the rendered name, and (for a
+    // `Constructor` or a `Recursor`) the inductive Lean would regenerate it
+    // from. A constructor names its inductive in the declaration; a `Recursor`
+    // does not carry one, so its owner is read off the name the kernel
+    // generated it under (`X.rec`) -- the same rule `Kernel::name_of_rec` uses
+    // in the other direction. Anything that does not fit becomes a listed
+    // exclusion rather than a guess.
+    let population: Vec<(String, Option<String>, bool)> = kernel
         .environment()
         .iter()
-        .filter_map(|(&name, decl)| match decl {
-            Declaration::Constructor { inductive, .. } => {
-                Some((name, kernel.lean_name(*inductive)))
-            }
-            Declaration::Recursor { .. } => {
-                let rendered = kernel.lean_name(name);
-                rendered
-                    .strip_suffix(".rec")
-                    .map(|owner| (name, owner.to_owned()))
-            }
-            _ => None,
+        .map(|(name, decl)| {
+            let rendered = kernel.lean_name(*name);
+            let owner = match decl {
+                Declaration::Constructor { inductive, .. } => Some(kernel.lean_name(*inductive)),
+                Declaration::Recursor { .. } => {
+                    rendered.strip_suffix(".rec").map(ToOwned::to_owned)
+                }
+                _ => None,
+            };
+            let is_inductive = matches!(decl, Declaration::Inductive { .. });
+            (rendered, owner, is_inductive)
         })
         .collect();
+    let emitted_inductives: BTreeSet<&str> = population
+        .iter()
+        .filter(|(rendered, _, is_inductive)| *is_inductive && heads.contains(rendered))
+        .map(|(rendered, _, _)| rendered.as_str())
+        .collect();
+
+    let mut coverage: BTreeMap<String, Coverage> = BTreeMap::new();
     let mut excluded: Vec<(String, String)> = Vec::new();
-    for (&name, _) in kernel.environment().iter() {
-        let rendered = kernel.lean_name(name);
-        let verdict = if heads.contains(&rendered) {
+    for (rendered, owner, _) in &population {
+        let verdict = if let Some(reason) = excluded_reasons.get(rendered) {
+            // Named first, so a refused declaration is never mistaken for a
+            // rendering hole and never reported with the wrong reason.
+            Coverage::Excluded(reason.clone())
+        } else if heads.contains(rendered) {
             Coverage::Command
-        } else if let Some(owner) = owners.get(&name) {
-            if emitted_inductive_names.contains(owner) {
+        } else if let Some(owner) = owner {
+            if emitted_inductives.contains(owner.as_str()) {
                 Coverage::RegeneratedByLean(owner.clone())
             } else {
                 Coverage::Excluded(format!(
                     "its inductive `{owner}` is not emitted as an `inductive` command"
                 ))
             }
-        } else if census.quotients.contains(&rendered) {
+        } else if census.quotients.contains(rendered) {
             Coverage::Excluded(
                 "Lean's built-in quotient package is not available in a `prelude` module"
                     .to_owned(),
@@ -476,7 +586,7 @@ fn run(args: &Args) -> i32 {
         if let Coverage::Excluded(reason) = &verdict {
             excluded.push((rendered.clone(), reason.clone()));
         }
-        coverage.insert(rendered, verdict);
+        coverage.insert(rendered.clone(), verdict);
     }
     let commands = coverage
         .values()
@@ -491,14 +601,8 @@ fn run(args: &Args) -> i32 {
     // The audit sample: derived from the ledger, controlled on the headlines.
     // ------------------------------------------------------------------
     let ledger = ledger_kernel_theorems(&args.facts);
-    let present: BTreeSet<String> = kernel
-        .environment()
-        .iter()
-        .map(|(&name, _)| kernel.lean_name(name))
-        .collect();
     let sample: Vec<String> = ledger
         .iter()
-        .filter(|name| present.contains(*name))
         .filter(|name| coverage.get(*name).is_some_and(|c| *c == Coverage::Command))
         .cloned()
         .collect();
@@ -506,16 +610,29 @@ fn run(args: &Args) -> i32 {
         !sample.is_empty(),
         "the derived audit sample is empty; `#print axioms` over nothing would pass over nothing"
     );
+    // The derivation control: every headline result must be a declaration this
+    // kernel actually built and a name the ledger actually credits. If either
+    // half stopped holding, the derivation is broken and a smaller audit that
+    // still passed would be worse than none, so this aborts.
+    let unbuilt_headlines: Vec<&str> = HEADLINE_CONTROL
+        .iter()
+        .copied()
+        .filter(|headline| !coverage.contains_key(*headline) || !ledger.contains(*headline))
+        .collect();
+    assert!(
+        unbuilt_headlines.is_empty(),
+        "headline results {unbuilt_headlines:?} are not both built by this kernel and credited \
+         by the fact ledger; the derivation is broken, not the library"
+    );
+    // A DIFFERENT question, and a finding rather than a bug: which headline
+    // results the published package does not carry, because Lean's elaborator
+    // refuses something under them. Reported everywhere a reader looks --
+    // marker line, manifest, README -- rather than quietly absent.
     let missing_headlines: Vec<&str> = HEADLINE_CONTROL
         .iter()
         .copied()
-        .filter(|h| !sample.iter().any(|s| s == h))
+        .filter(|headline| !sample.iter().any(|name| name.as_str() == *headline))
         .collect();
-    assert!(
-        missing_headlines.is_empty(),
-        "the derived audit sample lost headline results {missing_headlines:?}; the derivation \
-         is broken and a smaller audit that still passed would be worse than none"
-    );
 
     let package = assemble(
         args,
@@ -524,16 +641,20 @@ fn run(args: &Args) -> i32 {
         &sample,
         &census,
         &excluded,
+        &missing_headlines,
         commands,
         regenerated,
     );
 
     println!(
         "{MARKER} declarations={} commands={commands} regenerated={regenerated} excluded={} \
+         refused={} headlines_not_published={} \
          definitions={} prop_theorems={} type_valued_theorems={} opaques={} axioms={} \
          inductives={} spelling={} audit_sample={} carrier_bytes={} build_seconds={build_seconds:.1}",
         census.declarations,
         excluded.len(),
+        refusals.len(),
+        missing_headlines.len(),
         census.definitions,
         census.prop_theorems,
         census.type_valued_theorems.len(),
@@ -544,6 +665,12 @@ fn run(args: &Args) -> i32 {
         sample.len(),
         carrier_source.len(),
     );
+    for headline in &missing_headlines {
+        println!(
+            "{MARKER} headline-not-published {headline} -- Lean's elaborator refuses something \
+             in its dependency closure"
+        );
+    }
     for (name, reason) in &excluded {
         println!("{MARKER} exclusion {name} -- {reason}");
     }
@@ -572,7 +699,9 @@ fn run(args: &Args) -> i32 {
         for row in &drift {
             eprintln!("  {row}");
         }
-        eprintln!("  regenerate with: cargo run --release -p axeyum-lean-kernel --example render_creal_library");
+        eprintln!(
+            "  regenerate with: cargo run --release -p axeyum-lean-kernel --example render_creal_library"
+        );
         return 1;
     }
 
@@ -583,11 +712,15 @@ fn run(args: &Args) -> i32 {
         }
         std::fs::write(&path, contents).expect("the package file must be writable");
     }
-    println!("{MARKER} wrote {} files to {}", package.len(), args.out.display());
+    println!(
+        "{MARKER} wrote {} files to {}",
+        package.len(),
+        args.out.display()
+    );
     0
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn assemble(
     args: &Args,
     carrier_file: &str,
@@ -595,6 +728,7 @@ fn assemble(
     sample: &[String],
     census: &Census,
     excluded: &[(String, String)],
+    missing_headlines: &[&str],
     commands: usize,
     regenerated: usize,
 ) -> Package {
@@ -607,6 +741,17 @@ fn assemble(
     package.insert("lean-toolchain".to_owned(), format!("{pin}\n"));
     package.insert(".gitignore".to_owned(), ".lake/\n".to_owned());
     package.insert("lakefile.lean".to_owned(), lakefile());
+    // Committed rather than left for `lake` to write, so a gate run does not
+    // dirty the worktree -- the same shape `lean/axeyum-tactic` commits. There
+    // are no dependencies to resolve, deliberately (ADR-1675): a Mathlib
+    // dependency would make it impossible to tell whether Lean accepted a term
+    // or Mathlib's automation reproved it.
+    package.insert(
+        "lake-manifest.json".to_owned(),
+        "{\"version\": \"1.2.0\",\n \"packagesDir\": \".lake/packages\",\n \"packages\": [],\n \
+         \"name\": \"«axeyum-creal»\",\n \"lakeDir\": \".lake\",\n \"fixedToolchain\": false}\n"
+            .to_owned(),
+    );
     package.insert(
         format!("{}.lean", ROOT_MODULE.replace('.', "/")),
         root_module(census, commands, regenerated, excluded.len()),
@@ -625,9 +770,27 @@ fn assemble(
     );
     package.insert(
         "MANIFEST.json".to_owned(),
-        manifest_json(census, commands, regenerated, excluded.len(), sample.len(), &pin, args.spelling),
+        manifest_json(
+            census,
+            commands,
+            regenerated,
+            excluded.len(),
+            sample.len(),
+            &pin,
+            args.spelling,
+            missing_headlines,
+        ),
     );
-    package.insert("README.md".to_owned(), readme(census, commands, sample.len()));
+    package.insert(
+        "README.md".to_owned(),
+        readme(
+            census,
+            commands,
+            sample.len(),
+            excluded.len(),
+            missing_headlines,
+        ),
+    );
     package
 }
 
@@ -657,7 +820,21 @@ that proves the audit can fail -- and nothing a user imports may.
 
 package «axeyum-creal» where
   leanOptions := #[
-    ⟨`autoImplicit, false⟩
+    ⟨`autoImplicit, false⟩,
+    -- The development's own `Nat` is unary and its rationals reduce through
+    -- `Nat.gcd`, so type-checking a single lemma can outrun the elaborator's
+    -- default 200,000-heartbeat budget. Measured 2026-09-05 on the pin: three
+    -- declarations hit `(deterministic) timeout at whnf` at the default and
+    -- none at this value. This bounds the ELABORATOR only; Lean's kernel still
+    -- checks every term and `#print axioms` is unaffected.
+    ⟨`maxHeartbeats, (1000000 : Nat)⟩,
+    -- A proof spelled `def` is not a defect here: see the `--proof-spelling`
+    -- note in the generator and ADR-0517/0518. Lean's elaborator refuses to
+    -- unfold a `theorem` while reducing, and this development's type-checking
+    -- must compute through its own proofs, so the `theorem` spelling does not
+    -- elaborate at all. Silencing the linter is the honest option; the
+    -- alternative is 2,472 warnings that say nothing new.
+    ⟨`linter.defProp, false⟩
   ]
 
 @[default_target]
@@ -808,6 +985,7 @@ fn manifest_json(
     audit_sample: usize,
     pin: &str,
     spelling: ProofSpelling,
+    missing_headlines: &[&str],
 ) -> String {
     let mut out = String::new();
     out.push_str("{\n");
@@ -835,6 +1013,14 @@ fn manifest_json(
     let _ = writeln!(out, "  \"constructors\": {},", census.constructors);
     let _ = writeln!(out, "  \"recursors\": {},", census.recursors);
     let _ = writeln!(out, "  \"audit_sample\": {audit_sample},");
+    out.push_str("  \"headline_results_not_published\": [");
+    for (index, name) in missing_headlines.iter().enumerate() {
+        if index > 0 {
+            out.push(',');
+        }
+        let _ = write!(out, "\n    {}", json_string(name));
+    }
+    out.push_str("\n  ],\n");
     out.push_str("  \"type_valued_theorem_names\": [");
     for (index, name) in census.type_valued_theorems.keys().enumerate() {
         if index > 0 {
@@ -846,7 +1032,31 @@ fn manifest_json(
     out
 }
 
-fn readme(census: &Census, commands: usize, audit_sample: usize) -> String {
+fn readme(
+    census: &Census,
+    commands: usize,
+    audit_sample: usize,
+    excluded: usize,
+    missing_headlines: &[&str],
+) -> String {
+    let mut caveat = String::new();
+    if missing_headlines.is_empty() {
+        caveat.push_str(
+            "Every headline result the fact ledger credits to the constructed reals is in this\npackage.\n",
+        );
+    } else {
+        caveat.push_str(
+            "## What this package does NOT contain\n\nLean has two checkers and they disagree (ADR-0517). Its **kernel** accepts every\nterm here and every term below; its **elaborator**, which is what reads `.lean`\nsource, refuses some of them because it will not unfold a definition far enough\nto see a definitional equality the proof needs. Those declarations, and\neverything whose dependency closure reaches one, are excluded by name and\nreason in `EXCLUSIONS.json` — never as `sorry`, never as an axiom.\n\nThe cost is not evenly spread, and it is stated here rather than left to be\ndiscovered. These headline results are **not** in this package:\n\n",
+        );
+        for name in missing_headlines {
+            let _ = writeln!(caveat, "* `{name}`");
+        }
+        let _ = write!(
+            caveat,
+            "\n{excluded} of the kernel's {declarations} declarations are excluded for this reason.\nThe replay census (ADR-1661) shows pinned Lean's KERNEL accepting them over the\n`lean4export` wire, so this is a limit of the source route, not of the\nmathematics.\n",
+            declarations = census.declarations,
+        );
+    }
     format!(
         "\
 <!-- GENERATED by `crates/axeyum-lean-kernel/examples/render_creal_library.rs`. Do not edit. -->
@@ -897,6 +1107,7 @@ not in this version.
   axiom and `#print axioms` must say so, which is what makes the audit above
   capable of failing.
 
+{caveat}
 Gate: `scripts/check-lean-creal-library.sh`. Decision: ADR-1675.
 ",
         declarations = census.declarations,

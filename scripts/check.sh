@@ -1868,6 +1868,15 @@ step lean-adapter-tests            python3 scripts/tests/test-lean-adapter.py
 # ADR-1666: `by axeyum` in real pinned Lean. Needs a Lean toolchain and one
 # cargo build; AXEYUM_ALLOW_NO_LEAN=1 makes it a loud SKIP rather than a pass.
 step lean-tactic                   bash scripts/check-lean-tactic.sh
+# ADR-1675: `lean/axeyum-creal`, the constructed reals as a Lake package a
+# third party can `import`. Regenerates the package from the live kernel and
+# fails on drift (the committed `.lean` is a cache, the kernel is the
+# authority), then builds it with the pinned toolchain and runs the
+# `#print axioms` audit with its positive control. Minutes, not seconds --
+# `scripts/check-lean-creal-library.sh --slice` is the cheap subset (drift,
+# pin and counts, no `lake build`) for a pre-push path. AXEYUM_ALLOW_NO_LEAN=1
+# makes it a loud SKIP rather than a pass.
+step lean-creal-library            bash scripts/check-lean-creal-library.sh
 step declaration-spec python3 scripts/check-declaration-spec.py
 step proof-plan                    python3 scripts/check-proof-plan.py
 step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py

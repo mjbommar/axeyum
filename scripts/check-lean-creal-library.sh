@@ -176,7 +176,8 @@ lake_bin="$(dirname "$lean_bin")/lake"
 #    about staleness but silent about it, and a cached module prints nothing.
 # ---------------------------------------------------------------------------
 rm -rf "$PACKAGE_DIR/.lake/build/lib/lean/Axeyum/Creal/Axioms.olean" \
-       "$PACKAGE_DIR/.lake/build/lib/lean/Tests"
+       "$PACKAGE_DIR/.lake/build/lib/lean/Tests" \
+       "$PACKAGE_DIR/.lake/build/ir/Tests"
 build_log=$(mktemp "${TMPDIR:-/tmp}/axeyum-creal-lake.XXXXXX")
 trap 'rm -f "$build_log"' EXIT
 started=$(date +%s)

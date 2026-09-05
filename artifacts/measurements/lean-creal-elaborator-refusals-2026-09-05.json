@@ -1,0 +1,86 @@
+{
+  "measured": "2026-09-05",
+  "toolchain": "leanprover/lean4:v4.34.0-rc1",
+  "carrier": "creal",
+  "note": "Declarations pinned Lean's ELABORATOR refuses from `.lean` source. Lean's KERNEL accepts the same terms over the `lean4export` wire (ADR-1661); the disagreement is ADR-0517's, between Lean's two checkers, and is a property of the route rather than of the mathematics. Derived by scripts/derive-lean-creal-refusals.py from Lean's own output; the cascade (every declaration that merely mentions one of these, which Lean reports as `unknown constant`) is NOT listed here -- the generator recomputes it from the kernel's dependency graph.",
+  "direct_refusals": 19,
+  "cascade_errors_dropped": 84,
+  "refusals": [
+    {
+      "name": "AxNat.odd_totient_iff_eq_one",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "AxNat.totient_eq_one_iff",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.Equiv.not_zero_one",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.abs_mul_le_of_bounds",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.cosWideTailAntitone",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.geomCauchyOrderedHalf",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.geomHalfInvLeafBound",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.hasDerivative_uniform_limit",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.not_le_one_zero",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.piHalfTermLePowHalf",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.sinTermAbsLeDominant",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.sqrt_one",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "CReal.sumRange_pow_half_closed_form",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "Rat.det_eval_example",
+      "lean_error": "Type mismatch"
+    },
+    {
+      "name": "Rat.det_eval_example4",
+      "lean_error": "Type mismatch"
+    },
+    {
+      "name": "Rat.det_eval_singular",
+      "lean_error": "Type mismatch"
+    },
+    {
+      "name": "Rat.matInv2_eval_example",
+      "lean_error": "Type mismatch"
+    },
+    {
+      "name": "Rat.matInv2_example",
+      "lean_error": "Application type mismatch: The argument"
+    },
+    {
+      "name": "Rat.matTranspose_mul_example",
+      "lean_error": "Type mismatch"
+    }
+  ]
+}
