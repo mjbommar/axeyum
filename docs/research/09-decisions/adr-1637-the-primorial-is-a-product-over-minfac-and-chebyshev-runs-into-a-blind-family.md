@@ -103,16 +103,34 @@ Every one is `partition: "held-out"`, and the family has **never been scored**:
 `artifacts/autogenesis/holdout-evaluation-v1.json` is the only committed
 evaluation record and it scores `integer-absolute-value`, not this one.
 
-The two gates that fire at push do not forbid what the brief asked for.
+Neither gate that fires at push forbids the brief's inequality on its face.
 `check-autogenesis-holdout-isolation.py` forbids *settling* a held-out fact or
-*referencing* its id; `4^n ≤ (2n+1) · (2n)^(π(2n))` is neither. But
-`check-holdout-adjacency.py`'s own docstring names the shape this would be —
-**shape 2, a differently-named theorem**, "our development proves the same
-proposition under another name, so R9's exact-name comparison sees nothing" —
-and the route to `choose 2n n ≤ (2n)^(π(2n))` runs through monotonicity of
-`Nat.count` at `isPrime`, which is `Monotone Nat.primeCounting'` under another
-name. ADR-0653 states the rule the incident established: *a family may be blind
-only if its mathematics is unpublished*, and R9 is a proxy for it.
+*referencing* its id, and `4^n ≤ (2n+1) · (2n)^(π(2n))` is neither — this run
+reports `held_out=216 settled=0 references=0 verdict=PASS` with the primorial
+shelf in the tree. The objection is ADR-0653's rule, which R9 is only a proxy
+for: *a family may be blind only if its mathematics is unpublished.* A lane
+that states Chebyshev's lower bound over `Nat.primeCounting` publishes the
+mathematics of `Mathlib.NumberTheory.PrimeCounting`, which is the whole of this
+family's `Nat` half.
+
+### The measured half of that, which is worth the coordinator's attention
+
+**Two of the ten rows are one existing-lemma application away from the
+environment as it stands today, before this lane wrote anything.**
+`Nat.primeCounting' = Nat.count Nat.isPrime`, `Nat.count` is definitionally
+`Nat.countRange`, and `Nat.countRange_le_of_le : ∀ f m n, Le m n →
+Le (countRange f m) (countRange f n)` has been in this prelude since the
+counting shelf landed. That IS `Monotone Nat.primeCounting'` — held-out row 7 —
+with `f := Nat.isPrime`, and row 6 follows from it through
+`primeCounting n = primeCounting' (succ n)` and `le_succ_succ`.
+
+Nothing has been declared, so nothing is spent. But it means the family's
+blindness does not rest on the mathematics being hard here; it rests on nobody
+having written the two lines. That is exactly `check-holdout-adjacency.py`'s
+**shape 2** ("our development proves the same proposition under another name,
+so R9's exact-name comparison sees nothing"), reached by construction rather
+than by accident — and it is a reason to score or amend the family deliberately
+rather than to leave it standing as a measurement nobody can cash.
 
 So: **the primorial shelf lands, stated entirely without `Nat.primeCounting`,
 and the counting form is not stated here.** This is a decision about who may
@@ -144,21 +162,33 @@ from `nat_prelude.rs`, every declaration axiom-free.
 | `Nat.primorial_le_succ` | `∀ n, primorial n ≤ primorial (succ n)` |
 | `Nat.primorial_mono` | `∀ m n, m ≤ n → primorial m ≤ primorial n` |
 
+And in `nat_prelude/central_binomial.rs`, the arithmetic half of Erdős's odd
+step, which is independent of everything above:
+
+| name | statement |
+| --- | --- |
+| `Nat.mul_two_eq_add_self` | `∀ a, mul a 2 = add a a` |
+| `Nat.le_of_add_self_le_add_self` | `∀ a b, add a a ≤ add b b → a ≤ b` |
+| `Nat.four_pow_eq_two_pow_add_self` | `∀ m, pow 4 m = pow 2 (add m m)` |
+| `Nat.choose_two_mul_succ_le_two_pow` | `∀ m, choose (succ (add m m)) m ≤ pow 2 (add m m)` |
+| `Nat.choose_two_mul_succ_le_four_pow` | `∀ m, choose (succ (add m m)) m ≤ pow 4 m` |
+
+The last is **strictly sharper** than what `Nat.choose_le_two_pow` already gave
+at that row (`2^(2m+1) = 2 · 4^m`), and the factor of two is exactly what
+Erdős's induction cannot afford. Two steps this prelude did not have came out
+of it and are reusable: *two DISTINCT terms of a `sumRange` are together at
+most the sum* (`le_sumRange_of_lt` was the one-term form), and `a + a ≤ b + b →
+a ≤ b` (`le_of_add_le_add_right` cancels a COMMON summand and does not apply).
+
 ## What did NOT land, sized
 
 **`Nat.primorial_le_four_pow : ∀ n, primorial n ≤ 4^n`** — Erdős's bound. Its
 strong induction is available (`Nat.strongInduction`, ADR-1614) and its even
 step is `primorial_succ_of_not_prime` above. The odd step is the whole cost and
-it decomposes into two pieces that are NOT in this prelude:
+it decomposes into two pieces, of which the first landed and the second did
+not:
 
-1. **`choose (2m+1) m ≤ 4^m`.** `Nat.sum_choose_row` gives
-   `∑_{k ≤ 2m+1} choose (2m+1) k = 2^(2m+1)` and `Nat.choose_symm_of_eq_add`
-   gives `choose (2m+1) m = choose (2m+1) (m+1)`, so the missing step is *two
-   DISTINCT terms of a `sumRange` are together at most the sum*.
-   `Nat.le_sumRange_of_lt` is the one-term form; the two-term form is
-   reachable from `Nat.sumRange_split` (split at `m`, then split the tail at
-   `2`) plus `le_of_mul_le_mul_left`. Estimated small — one lemma and a
-   cancellation.
+1. **`choose (2m+1) m ≤ 4^m`.** This one LANDED — see the table above.
 2. **`(∏ {p prime, m+1 < p ≤ 2m+1}) ∣ choose (2m+1) m`.** This is the real
    obstruction. Each such prime divides the coefficient, but turning "each of
    these pairwise-distinct primes divides `N`" into "their product divides `N`"

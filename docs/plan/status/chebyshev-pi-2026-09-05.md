@@ -32,12 +32,24 @@ this is the finding worth carrying forward.** Both are statements about
 (`monotone_primeCounting`, `monotone_primeCounting'`,
 `primeCounting'_eq_zero_iff`, `primeCounting_add_le`, `primeCounting'_add_le`),
 every one `partition: "held-out"`, and the family has never been scored — the
-only committed evaluation record scores `integer-absolute-value`. The route to
-`choose 2n n ≤ (2n)^(π(2n))` runs through monotonicity of `Nat.count` at
-`isPrime`, which is `Monotone Nat.primeCounting'` under another name: exactly
-the shape-2 contamination `check-holdout-adjacency.py`'s own docstring names.
-**W3-11's headline inequality cannot be landed by any lane until the family is
-scored or amended (ADR-0542); that is a coordinator decision, not a lane one.**
+only committed evaluation record scores `integer-absolute-value`. The isolation gate PASSES with the primorial
+shelf in the tree (`held_out=216 settled=0 references=0`); the objection is
+ADR-0653's rule that *a family may be blind only if its mathematics is
+unpublished*, and stating Chebyshev's lower bound over `Nat.primeCounting`
+publishes the whole `Nat` half of `Mathlib.NumberTheory.PrimeCounting`.
+
+**Measured, and worth the coordinator's attention: two of the ten rows are one
+existing-lemma application away from the environment as it already stands.**
+`Nat.primeCounting' = Nat.count Nat.isPrime`, `Nat.count` is definitionally
+`Nat.countRange`, and `Nat.countRange_le_of_le : ∀ f m n, Le m n →
+Le (countRange f m) (countRange f n)` has been in this prelude since the
+counting shelf landed — that IS `Monotone Nat.primeCounting'` at
+`f := Nat.isPrime`, and `Monotone Nat.primeCounting` follows through
+`primeCounting n = primeCounting' (succ n)`. Nothing was declared, so nothing
+is spent; but the family's blindness rests on nobody having written two lines,
+not on difficulty. **W3-11's headline inequality cannot be landed by any lane
+until the family is scored or amended (ADR-0542); that is a coordinator
+decision, not a lane one.**
 
 **Deliverable 3 already exists in its non-counting form.**
 `Nat.exists_prime_gt : ∀ n, ∃ p, n < p ∧ prime p` — Euclid's theorem — is
