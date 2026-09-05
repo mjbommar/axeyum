@@ -154,6 +154,43 @@ does not have. Getting from there to primality needs additionally
 only one direction. That is the shape of the next increment, and it is a
 prelude-development task, not a bridge task.
 
+## Mutation table
+
+Every obligation either route emits was deleted in turn and the two suites
+re-run. Measured 2026-09-04 against a prebuilt `--release` test binary (so no
+cargo lock was held while sweeping), in this lane's own worktree, with the
+knob removed and `git status` confirmed clean afterwards. Baseline: **13
+passed, 0 failed**.
+
+| guard deleted | what it emits | tests killed |
+|---|---|---|
+| Pratt G6 | `Check.pratt_factorization_<n>` (the factorization of `n−1` is complete) | `a_corrupted_factorization_is_refused_by_the_kernel`, `pratt_certificates_are_kernel_reconstructed` |
+| Pratt G8 | `Check.pratt_fermat_<n>` | `a_corrupted_witness_is_refused_by_the_kernel` (only — the 40-theorem floor still held) |
+| Pratt G9 | `Check.pratt_order_<n>_q<q>` (order maximality) | `a_corrupted_witness_is_refused_by_the_kernel`, `pratt_certificates_are_kernel_reconstructed` |
+| Pratt `seen` | the cross-call dedup of already-declared factor bases | `a_corrupted_witness_is_refused_by_the_kernel`, `pratt_certificates_are_kernel_reconstructed` |
+| CRT R4 | `Check.crt_least_modulus_<id>` (leastness) | `a_merely_common_modulus_is_refused_by_the_kernel`, `crt_certificates_are_kernel_reconstructed` |
+| CRT R6 | `Check.crt_inconsistent_<id>` | `a_fabricated_conflict_is_refused_by_the_kernel`, `crt_certificates_are_kernel_reconstructed` |
+
+Two things this table says that a bare "every mutant died" would not:
+
+- **The pinned counts are doing work.** Four of the six mutants are caught by
+  the emitted-theorem floors in the main reconstruction tests as well as by
+  their adversarial test. G8 is the one that is *not*, because deleting it
+  removes only 14 of the ~60 theorems and the floor is 40 — so for that guard
+  the adversarial fixture is the only thing standing, which is exactly the
+  case where it matters that the fixture exists.
+- **`seen` is a correctness guard, not an optimisation.** Deleting it kills two
+  tests via `DeclarationExists`, because `2` is a factor base of every prime's
+  `n − 1` and a kernel name may be declared once. This was found by the route
+  failing, not by review.
+
+The kernel-refusal demonstrations are separate from this table and are the
+route's own `RouteGuards::none()`: with every Rust-side guard switched off, the
+kernel refuses a forged Pratt witness (two forgeries, failing at G8 and at G9
+respectively), an incomplete Pratt factorization, a CRT modulus that is merely
+a common multiple, and a fabricated CRT conflict — each with the genuine
+certificate under the same guards-off configuration as the non-vacuity control.
+
 ## The residue, before and after
 
 `python3 scripts/check-cas-internal-residue.py --report`:

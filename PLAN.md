@@ -6917,6 +6917,27 @@ then hypergeometric (9 facts, the largest family, needs `Nat.choose`
 identities that do not exist), then GF(2)/SOS (need carriers that do not
 exist).
 
+**Mutation table (ADR-1622).** All six emitted-obligation guards deleted in
+turn against a prebuilt `--release` binary; baseline 13 passed / 0 failed,
+every mutant killed. Pratt G6/G9/`seen` and CRT R4/R6 each kill their
+adversarial test **and** the pinned emitted-theorem floor; **Pratt G8 kills
+only its adversarial test**, because deleting it removes 14 of ~60 theorems
+and the floor is 40 — so for that one guard the fixture is the only thing
+standing. `seen` (the cross-call dedup of already-declared factor bases) is a
+correctness guard, not an optimisation: `2` is a factor base of every prime's
+`n - 1` and a kernel name may be declared once, so deleting it fails with
+`DeclarationExists`. Found by the route failing, not by review.
+
+**Gates, with counts.** `int_prelude::` 100 passed / 0 failed (13.8 s);
+`int_prelude::cas_` 13 passed / 0 failed; clippy `-p axeyum-lean-kernel
+--all-targets --all-features -D warnings` exit 0; `cargo fmt --all --check`
+exit 0; `validate-facts.py` 2808 facts / 0 errors;
+`check-fact-depends-derived.py --fix` nothing to fix;
+`check-cas-internal-residue.py --report` OK (16 reconstructed, floor 14, all
+held); `check-cas-substance.py` OK (16 blocks); `frontier-shape-census.py`
+exit 0 (regenerated, ledger 2807 -> 2808); `shape_search --name
+Int.order_exists --expect 1` FOUND 1, `declarations=2857`.
+
 **Your lane's block (`DONE for this slice`, ratint, 2026-08-27).**
 
 **State before this lane, established by reading `ratint.rs` first (it had

@@ -236,7 +236,7 @@ fn reconstruct_solution(
     for (index, &(a, m)) in residues.iter().enumerate() {
         let name = d
             .kernel()
-            .name_str(anon, &format!("Check.crt_congruence_{id}_{index}"));
+            .name_str(anon, format!("Check.crt_congruence_{id}_{index}"));
         let m_i = inum(d, m);
         let x_i = inum(d, x);
         let a_i = inum(d, a);
@@ -266,7 +266,7 @@ fn reconstruct_solution(
         }
         let name = d
             .kernel()
-            .name_str(anon, &format!("Check.crt_least_modulus_{id}"));
+            .name_str(anon, format!("Check.crt_least_modulus_{id}"));
         let folded = lcm_fold(d, &moduli);
         let target = d.num(modulus);
         let ty = d.eq(folded, target);
@@ -280,7 +280,7 @@ fn reconstruct_solution(
     {
         let name = d
             .kernel()
-            .name_str(anon, &format!("Check.crt_canonical_{id}"));
+            .name_str(anon, format!("Check.crt_canonical_{id}"));
         let x_nat = d.num(x);
         let m_nat = d.num(modulus);
         let ty = d.lt(x_nat, m_nat);
@@ -318,7 +318,7 @@ fn reconstruct_inconsistent(
 
     let name = d
         .kernel()
-        .name_str(anon, &format!("Check.crt_inconsistent_{id}"));
+        .name_str(anon, format!("Check.crt_inconsistent_{id}"));
     let p = d.int();
     let int_ty = d.int_ty();
 

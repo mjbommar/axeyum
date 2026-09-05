@@ -199,7 +199,7 @@ fn pow_modeq(d: &mut IntDev<'_>, n: u32, a: u32, m: u32) -> (ExprId, u32) {
         return (d.irefl(lhs), r);
     }
 
-    let (split_eq, left_pow, right_int, right_residue, half) = if m % 2 == 0 {
+    let (split_eq, left_pow, right_int, right_residue, half) = if m.is_multiple_of(2) {
         // `a^(t+t) = a^t · a^t` — squaring.
         let t = m / 2;
         let t_nat = d.num(t);
@@ -396,7 +396,7 @@ fn reconstruct_one(
     {
         let name = d
             .kernel()
-            .name_str(anon, &format!("Check.pratt_factorization_{n}"));
+            .name_str(anon, format!("Check.pratt_factorization_{n}"));
         let product = factor_product(d, &factors);
         let target = d.num(m);
         let ty = d.eq(product, target);
@@ -416,12 +416,11 @@ fn reconstruct_one(
     // -- G8: the Fermat condition -------------------------------------------
     {
         let residue = residue_of(n, witness, m);
-        if guards.fermat_residue && residue != 1 {
-            panic!("route guard: witness {witness} does not satisfy Fermat modulo {n}");
-        }
-        let name = d
-            .kernel()
-            .name_str(anon, &format!("Check.pratt_fermat_{n}"));
+        assert!(
+            !(guards.fermat_residue && residue != 1),
+            "route guard: witness {witness} does not satisfy Fermat modulo {n}"
+        );
+        let name = d.kernel().name_str(anon, format!("Check.pratt_fermat_{n}"));
         let n_i = inum(d, n);
         let a_i = inum(d, witness);
         let m_nat = d.num(m);
@@ -437,12 +436,13 @@ fn reconstruct_one(
     for &(base, _) in &factors {
         let exponent = m / base;
         let residue = residue_of(n, witness, exponent);
-        if guards.order_residue && residue == 1 {
-            panic!("route guard: witness {witness} has non-maximal order modulo {n} at {base}");
-        }
+        assert!(
+            !(guards.order_residue && residue == 1),
+            "route guard: witness {witness} has non-maximal order modulo {n} at {base}"
+        );
         let name = d
             .kernel()
-            .name_str(anon, &format!("Check.pratt_order_{n}_q{base}"));
+            .name_str(anon, format!("Check.pratt_order_{n}_q{base}"));
         let n_i = inum(d, n);
         let a_i = inum(d, witness);
         let e_nat = d.num(exponent);
