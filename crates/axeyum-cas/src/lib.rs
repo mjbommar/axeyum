@@ -2385,7 +2385,7 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     match equal_core_bounded(a, b) {
         ZeroTest::Unknown => equal_core_unbounded(a, b),
-        decided => decided,
+        decided @ ZeroTest::Certified { .. } => decided,
     }
 }
 
@@ -29864,16 +29864,14 @@ mod bignum_overflow_fallback {
             let mut total: i128 = 0;
             let mut overflowed = false;
             for i in 0..n {
-                match catalan[i]
+                let Some(value) = catalan[i]
                     .checked_mul(catalan[n - 1 - i])
                     .and_then(|product| total.checked_add(product))
-                {
-                    Some(value) => total = value,
-                    None => {
-                        overflowed = true;
-                        break;
-                    }
-                }
+                else {
+                    overflowed = true;
+                    break;
+                };
+                total = value;
             }
             if overflowed {
                 break;
@@ -30204,7 +30202,9 @@ mod bignum_overflow_fallback {
                     equal, expected,
                     "transcendental verdict changed for {left} vs {right}"
                 ),
-                other => panic!("{left} vs {right} must still decide, got {other:?}"),
+                other @ ZeroTest::Unknown => {
+                    panic!("{left} vs {right} must still decide, got {other:?}")
+                }
             }
         }
     }
