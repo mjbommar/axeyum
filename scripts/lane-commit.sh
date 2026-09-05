@@ -87,6 +87,33 @@ WANT=$(printf '%s\n' "$@" | LC_ALL=C sort -u)
 # they fell back to plain `git commit`. `--git-dir` returns the per-worktree
 # gitdir there and `.git` in the main checkout, which is right in both.
 GITDIR=$(git rev-parse --git-dir) || exit 3
+
+# A merge (or rebase, cherry-pick, revert) IN PROGRESS in this checkout belongs
+# to somebody else, and `git commit` under MERGE_HEAD always produces a MERGE
+# commit, whatever index it is handed. Measured 2026-09-05: a one-file PLAN.md
+# commit through this helper, while a sibling session's merge sat on a `UU`
+# conflict, landed as a merge commit with parents (main, their branch tip) and a
+# tree carrying NONE of their branch's content -- their lane was recorded as
+# merged and dropped in one commit, and MERGE_HEAD was consumed so their own
+# `git commit` could no longer finish the merge. Every guard below passed,
+# because the pathspec was right; the state of the REPOSITORY was wrong. So
+# this refuses first, in `--dry-run` too, since a dry run that says "fine" is
+# the last thing read before the real one.
+for inprog in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD; do
+  if git rev-parse -q --verify "$inprog" >/dev/null 2>&1; then
+    echo "lane-commit: REFUSING -- $inprog exists: a merge/cherry-pick/revert is in" >&2
+    echo "  progress in this checkout (another lane's, if you did not start one)." >&2
+    echo "  A commit now would become a MERGE commit that records that branch as" >&2
+    echo "  merged with none of its content. Wait for it to finish, or abort YOUR" >&2
+    echo "  OWN one; never touch another lane's." >&2
+    exit 6
+  fi
+done
+if [ -d "$GITDIR/rebase-merge" ] || [ -d "$GITDIR/rebase-apply" ]; then
+  echo "lane-commit: REFUSING -- a rebase is in progress in this checkout." >&2
+  exit 6
+fi
+
 export GIT_INDEX_FILE="$GITDIR/index-$AXEYUM_AGENT"
 git read-tree HEAD || exit 3
 git add -A -- "$@" || exit 3
