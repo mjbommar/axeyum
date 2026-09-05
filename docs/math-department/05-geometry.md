@@ -104,14 +104,14 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 
 ## Next five, in their priority order
 
-- [ ] **1. Angle measure, and the laws of sines and cosines.** Connect the
+- [x] **1. Angle measure, and the laws of sines and cosines.** *Done 2026-09-04, cosine-first.* Connect the
       analytic `sin`/`cos` to `CPoint`'s `dot` and `cross`. Their view: the
       library has trigonometry and it has geometry and they do not touch,
       which is the most conspicuous seam in the shelf.
 - [x] **2. ℝⁿ as a carrier** — *done 2026-09-04.*, with the existing `CPoint` as the n = 2
       instance, and the inner product and norm proved once. Prerequisite for
       almost everything else here and for classical analysis.
-- [ ] **3. Isometries of the plane**, as maps preserving `distSq`, with
+- [~] **3. Isometries of the plane** — *monoid and instances done 2026-09-04; classification sized, not started.*, as maps preserving `distSq`, with
       composition and the classification into translations, rotations and
       reflections. Reachable now, and the first real use of transformations.
 - [ ] **4. A synthetic incidence development with the coordinate plane as a
@@ -128,6 +128,8 @@ Different per seat, and none of them is `Quot.sound` in the first instance:
 |---|---|---|
 | 2026-09-04 | File created. Baseline: 94 proved plane facts over `CPoint`. Stewart, Ceva, Menelaus, Ptolemy, Euler line, nine-point centre, power of a point, radical axis. No ℝⁿ, no manifolds, no varieties, no angle measure. | ledger snapshot at `1856cdb3c` |
 | 2026-09-04 | **Next Five item 2 landed** (roadmap W2-4): ℝⁿ as a coefficient function with the dimension carried by the equivalence rather than the type, 58 declarations, footprint 0. **Unsquared Cauchy–Schwarz at symbolic dimension**, whose induction step is exactly the plane's `dotLeSqrtMul` at the points `(‖u‖ₙ, uₙ)` and `(‖v‖ₙ, vₙ)` — the plane lemma became the engine of the general one, and no case split on whether the norm vanishes was needed, which is fortunate because `CReal` has no `le_total`. Minkowski, a `Metric` instance, and `CPoint` embedded as a setoid map with agreement on `dot`, `distSq` and the metric distance. Not landed: the inverse of the embedding, since two `Metric` values with different carriers admit no equality without a transport this kernel lacks. (ADR-1606.) | `d00d2a33c`; `rn::` 24 passed |
+| 2026-09-04 | **Next Five items 1 and 3 landed** (roadmap W1-8, W2-13; ADR-1615): the seam this reviewer called the most conspicuous in the shelf is closed, cosine-first. `norm`, `crossV`, the Lagrange identity, the laws of cosines and sines, and `sin² + cos² = 1` for the angle ratios, proved with no trigonometric name in the closure. The analytic `sin_fn`/`cos_fn` are still not connected to the angle; the brief's assumption that the analytic Pythagorean identity existed was false; `arccos` is sized at three analytic results deep. Isometries as a monoid with translations, rotations and reflections, the doubling map refused; the classification sized at 25–40 declarations, blocked on nothing. Five doc comments in `creal_point.rs` still claim `sqrt` does not exist. | `c7ddfeca1`; `creal_point::` 69 passed |
+
 
 ## How to re-measure
 
