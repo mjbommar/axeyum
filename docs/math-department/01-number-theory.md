@@ -122,7 +122,7 @@ great deal of that left.
       `exists_prime_factorization` (audit row A5). Original framing: This
       is the bridge between the number theory shelf and the new combinatorics
       carriers.
-- [ ] **4. Sums of two squares, with the descent argument reusable.** A named
+- [~] **4. Sums of two squares, with the descent argument reusable.** — *descent step, the identity, and the mod-4 refutation landed 2026-09-05; Fermat's theorem itself waits on an ℤ order shelf.* A named
       classical result that exercises Gaussian-integer reasoning without
       needing the ring structure, and whose descent method is worth having as
       a producer-visible pattern.
@@ -140,6 +140,7 @@ great deal of that left.
 | 2026-09-04 | **Next Five item 1 landed** (roadmap W1-7): `int_prelude/mult_order.rs`, 11 declarations with empty footprints — multiplicative order by bounded search, order divides the totient, `a^k ≡ 1 ↔ ord ∣ k`, primitive roots, and power injectivity (ADR-1598). **Existence of a primitive root mod a prime did not land**, and the obstruction is precise: the counting route needs `∑_{d∣n} φ(d) = n`, hence a divisor-set aggregate and the `d ↦ n/d` reindexing of a predicate-restricted sum, neither of which exists. Two design findings recorded: the search predicate must be shifted (`a^(j+1) ≡ 1`, since the unshifted form is true at j=0 for every a), and `Coprime (a^i) n` falls out of the order relation via the Bézout certificate already inside it. | `a9ef9465d`; `int_prelude::` 87 passed |
 | 2026-09-05 | **Next Five item 2 partly landed** (roadmap W2-18, ADR-1619): the divisor-set aggregate `sumDivisorsBy`, its reindexing primitive, `numDivisors`, `IsMultiplicative` with the totient as an instance, and Dirichlet convolution with commutativity — 29 declarations, footprint 0. The obstruction ADR-1598 named for primitive-root existence is half closed: the aggregate and reindexing exist; the classification of `[0,n)` by `gcd k n` does not. **The reindexing map this reviewer and every brief assumed, `d ↦ n/d`, is not the one that works** — it is not injective on the range — and the involution fixing non-divisors is. Möbius inversion did not land and is sized: it needs the divisors of a squarefree number in bijection with subsets of its prime factors. | `3e650f81a`; `nat_prelude::` 562 passed |
 
+| 2026-09-05 | **Item 4, first slice** (roadmap W3-10, ADR-1633): `Int.IsSumOfTwoSquares`, the Brahmagupta–Fibonacci identity emitted by the ring producer rather than proved by hand, closure under multiplication, the mod-4 refutation, and a reusable descent step shaped for `Nat.strongInduction`; 20 declarations, footprint 0. **Fermat's theorem is open on order, not algebra**: ℤ has no `natAbs_le_iff`, `mul_le_mul`, or `sq_le_sq`, so the strict decrease of the descent measure cannot yet be stated. The reviewer's blocker was wrong in one place: −1 as a residue mod `p ≡ 1 (mod 4)` was already proved (ADR-1235). | `e5c1d09cd` |
 
 ## How to re-measure
 

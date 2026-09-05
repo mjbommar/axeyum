@@ -17,7 +17,12 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	41
+COUNT	59
+FN	enclosure::enclose	Option<Enclosure>
+FN	enclosure::enclose_constant	Option<Enclosure>
+FN	enclosure::enclose_root	Option<Enclosure>
+FN	enclosure::enclose_root_with_reason	Result<Enclosure, DeclineReason>
+FN	enclosure::enclose_with_reason	Result<Enclosure, DeclineReason>
 FN	equal	ZeroTest
 FN	extremum::polynomial_extremum	Option<ExtremumCertificate>
 FN	fps::FormalPowerSeries::from_rational_function	Option<(FormalPowerSeries, TruncationIdentity)>
@@ -40,6 +45,8 @@ FN	gf2_extension::binary_extension_witt_shifted_trace	Result<BinaryExtensionWitt
 FN	gf2_extension::collapse_binary_extension_long_cycle_trace_subshards	Result<BinaryExtensionLongCycleTraceShardReport, BinaryExtensionTraceError>
 FN	gf2_extension::combine_binary_extension_connected_adams_trace_shards	Result<BinaryExtensionConnectedAdamsTraceReport, BinaryExtensionTraceError>
 FN	gf2_extension::combine_binary_extension_long_cycle_trace_shards	Result<BinaryExtensionLongCycleTraceReport, BinaryExtensionTraceError>
+FN	homology::HomologyCertificate::verify	Result<HomologyReport, String>
+FN	homology::homology	Option<HomologyCertificate>
 FN	integrate	Option<CertifiedIntegral>
 FN	inverse::polynomial_inverse	Option<InverseCertificate>
 FN	mvt::polynomial_mvt	Option<MvtCertificate>
@@ -48,6 +55,17 @@ FN	ntheory_certify::certify_crt	Option<CrtCertificate>
 FN	ntheory_certify::certify_factorization	Option<FactorizationCertificate>
 FN	ntheory_certify::certify_prime	Option<PrattCertificate>
 FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
+FN	probability::Continuous::mean	Certificate
+FN	probability::Continuous::mgf	Certificate
+FN	probability::Continuous::total_mass	Certificate
+FN	probability::Continuous::variance	Certificate
+FN	probability::Discrete::mean	Certificate
+FN	probability::Discrete::mgf	Certificate
+FN	probability::Discrete::total_mass	Certificate
+FN	probability::Discrete::variance	Certificate
+FN	probability::chebyshev_bound	Certificate
+FN	probability::convolve_poisson	Option<Certificate>
+FN	probability::markov_bound	Certificate
 FN	prove_derivative	ZeroTest
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
@@ -65,12 +83,14 @@ VOCAB	BinaryExtensionConnectedAdamsTraceShardReport	struct
 VOCAB	BinaryExtensionLongCycleTraceReport	struct
 VOCAB	BinaryExtensionLongCycleTraceShardReport	struct
 VOCAB	BinaryExtensionWittShiftedTraceReport	struct
+VOCAB	Certificate	struct
 VOCAB	CertifiedIntegral	struct
 VOCAB	CheckReport	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CompositeCertificate	struct
 VOCAB	CrtCertificate	enum
 VOCAB	DegenerateWitness	struct
+VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorizationCertificate	struct
 VOCAB	GenericWitness	struct
@@ -78,6 +98,8 @@ VOCAB	GeometryCertificate	struct
 VOCAB	GeometryReport	struct
 VOCAB	GosperEvidence	enum
 VOCAB	HalfDegreeParitySplitReport	struct
+VOCAB	HomologyCertificate	struct
+VOCAB	HomologyReport	struct
 VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
 VOCAB	IvtCertificate	struct

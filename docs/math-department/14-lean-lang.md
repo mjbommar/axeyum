@@ -107,13 +107,30 @@ what makes the whole thing a claim rather than a folder.
       `#print axioms` empty on the Lean side, packaged for Lake. Reviewer 02's
       verdict is the strongest in the department and today no one outside can
       use the thing it praises. Serves 02, 05, 03.
-- [ ] **4. A carrier correspondence ledger.** One row per pair — `CReal` ↔
-      `Real`, `Nat.Finset` ↔ `Finset`, `AlgS.Group` ↔ `Group`, `CPoint` ↔
-      `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph` — graded *same
-      statement*, *constructively stronger*, *constructively weaker*, or
-      *different object*, gated the way the ℕ/ℤ mirror-fidelity check already
-      is. Serves 02, 03, 05, 07, 08; it is what makes reviewer 03's
-      "a different theorem" a table instead of a sentence.
+- [x] **4. A carrier correspondence ledger.** *Done 2026-09-05 (ADR-1665).*
+      `artifacts/carrier-correspondence/carrier-correspondence-v1.json` holds
+      16 rows — `CReal` ↔ `Real`, `Nat.Finset` ↔ `Finset`, `Nat.Multiset` ↔
+      `Multiset`, `AlgS.Group` ↔ `Group`, `AlgS.CommRing` ↔ `CommRing`,
+      `AlgS.Field` ↔ `Field` (a constructive field with an EXISTENTIAL
+      inverse over apartness, landed the same day in `53c851e5b`/ADR-1627 —
+      this ledger's own first pass missed it from a stale merge base and was
+      corrected before merge, see ADR-1665), `CPoint` ↔
+      `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph`, `Complex` ↔
+      `Complex`, Rat matrices ↔ `Matrix`, the ℚ probability shelf ↔ `PMF`,
+      `Metric` ↔ `MetricSpace`, `IntSpace` ↔ the Bochner integral, `Nat.RM` ↔
+      Mathlib's computability library (the brief's own "no counterpart"
+      assumption was wrong — Mathlib has a general halting-problem theorem —
+      and the row corrects it), `Provable`/`ipc_*` ↔ Mathlib's
+      Heyting/ModelTheory, plus a bonus `Nat.Rado` `no-counterpart` row —
+      graded *same-statement* (2), *constructively-stronger* (2),
+      *different-object* (11) or *no-counterpart* (1), each with a witness
+      theorem pair verified against the live kernel projection or, where the
+      declaration postdates that projection's last regeneration, a fresh
+      `shape_search` build.
+      `scripts/check-carrier-correspondence.py --check` gates it exactly the
+      way `check-mirror-statement-fidelity.py` gates the ℕ/ℤ mirrors, with
+      nine mutation-verified guards. Serves 02, 03, 05, 07, 08; reviewer 03's
+      "a different theorem" is now a table (`CC:creal-real`), not a sentence.
 - [ ] **5. The statement-import blocker census, and the first screen.** Run
       every one of the 257 open mirrors plus a fresh Mathlib draw through
       statement-only import and count the decline reasons. Ship the
@@ -201,6 +218,8 @@ count depend on Lean's axioms.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
+| 2026-09-05 | **Next Ten item 4 landed** (ADR-1665): the carrier correspondence ledger, 16 rows, gated by `scripts/check-carrier-correspondence.py --check` (nine mutation-verified guards, every mutation killing exactly one control test) exactly the way the ℕ/ℤ mirror-fidelity check gates `F:ml430-*`. `Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s general halting-problem theorem, contra the brief's assumption), so that row is `different-object` rather than `no-counterpart`. Grade counts: same-statement 2, constructively-stronger 2, different-object 11, no-counterpart 1. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; `python3 scripts/check-carrier-correspondence.py --check`; `python3 scripts/tests/mutation_controls.py carrier-correspondence` |
+| 2026-09-05 | **Correction, same day, before merge**: this ledger's own first pass on `AlgS.Field`↔`Field` was wrong, from a stale worktree — `AlgS.Field` landed on `main` in `53c851e5b` (ADR-1627) after this lane's merge base and was measured absent. After `git merge --no-edit main` and a fresh `shape_search` release build (declarations `4291 -> 4379`), `AlgS.Field` is confirmed live (`FOUND 1`, positive control `AlgS.Group` also `FOUND 1`) with an EXISTENTIAL inverse over apartness (`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`), not proved tight for `CReal`. `CC:algs-field-field` is regraded `different-object` (was `same-statement` over the wrong, Eq-based `Alg.Field`): stronger hypothesis, weaker conclusion than Mathlib's total-inverse `Field`, the same non-comparable pattern ADR-1030 used for EVT. The general lesson — merge local `main` before measuring an absence — recurred a second time, independently, caught before merge rather than after. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; fresh `shape_search` build post-merge |
 | 2026-09-05 | **Next Ten item 8 landed** ([ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md)). An originated theorem may rest on an import, on route `kernel-lean-over-import`, footprint = the kernel walk **plus** the import route's three assumptions, axiom-free headline never. Decided by building the theorem: propagation is transitive and **per proof term** (two originated theorems of the same type in one kernel measure the import's six-name closure and `[]`), and costs 0.19 ms at the gate against 0.09 ms without. The rejected option — "allow when the composed footprint is `[]`" — fails because `Kernel::axiom_footprint` structurally cannot see the three import assumptions: an Init-only composition measures `EMPTY` and rests on all three. Enforced by four validator guards, each mutation-verified to kill exactly one test. **Three things this row corrects rather than adds.** (1) This file said imports carry `[propext, Classical.choice, Quot.sound]`; the kernel reports **eight** names for IVT and **EMPTY** for the three Init-only streams. (2) It said "largest closure 3,142 declarations"; 3,142 is the record count and 3,585 the declaration count. (3) `count-landmark-facts.py` never read `proof_route`, so **all 7 imports were counted as landmarks**, IVT and EVT included — `landmark` 1,523 → 1,516, with `imported=7` now printed beside it. **Not yet exercised**: 0 composed facts, blocked on the name collision now recorded in *The blocker*. | `766cfeb0f`, `08b97603b`; `cargo test -p axeyum-lean-import --test imported_composition_footprint` 3 passed + 1 ignored; `python3 -m unittest scripts.tests.test_validate_facts` 44 passed |
 
 ## How to re-measure

@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axeyum.dev/ontology/carrier-correspondence.schema.json",
+  "title": "Axeyum Carrier Correspondence Ledger",
+  "description": "The carrier correspondence ledger: one JSON file, `artifacts/carrier-correspondence/carrier-correspondence-v1.json`, with one `rows[]` entry per (Axeyum carrier, Mathlib counterpart) pair -- the object-level sibling of theorem-correspondence.schema.json (which adjudicates two FACTS as the same idea; this adjudicates two CARRIERS -- types, or typeclass/record spines -- as the same, stronger, weaker, different, or absent). It exists because `docs/math-department/14-lean-lang.md` Next Ten item 4 found that reviewers 03, 05, 07 and 08 each have a carrier this repository shares no written mapping for, so a sentence like 'we proved the theorem Mathlib has' could not be checked -- only asserted. Each row names both carriers with a verified source location, the equality regime on each side (this kernel is built from setoids and defined `Equiv`/`Apart` relations where Mathlib is a classical Cauchy or Quot.sound quotient -- ADR-0512, ADR-1588), a grade from a closed enum, a one-sentence reason, and -- for every grade except `no-counterpart` -- at least one concrete theorem pair as the witness the grade rests on. `scripts/check-carrier-correspondence.py --check` enforces the closed enum, resolves every Axeyum name against the live kernel projection (`artifacts/autogenesis/kernel-dependency-projection-v1.json`), and requires the witness. A name that could not be verified is recorded with `verification: \"unverified\"` rather than silently guessed.",
+  "type": "object",
+  "required": ["schema_version", "kind", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "axeyum-carrier-correspondence-ledger" },
+    "rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/row" }
+    }
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "kind",
+        "id",
+        "title",
+        "axeyum",
+        "mathlib",
+        "grade",
+        "reason",
+        "witness",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "axeyum-carrier-correspondence"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^CC:[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "`CC:` for carrier-correspondence, distinct from `F:` facts, `X:` theorem-correspondences, `C:`/`K:`/`L:` overlay entities -- an id says what kind of thing it names. Must be unique across `rows[]`; enforced by the checker, not by this schema."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 16,
+          "description": "One line naming both carriers, e.g. \"CReal, a Bishop-style regular-sequence real, against Mathlib's Cauchy-quotient Real\"."
+        },
+        "axeyum": {
+          "type": "object",
+          "required": ["carrier", "verification", "equality_regime", "equality_regime_note"],
+          "additionalProperties": false,
+          "properties": {
+            "carrier": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The Axeyum-side name, e.g. `CReal`, `Nat.Finset`, `AlgS.Group`, `Nat.RM`. Need not itself be a single kernel declaration id -- it may be the family/module the row is about, or may explain that the brief's named object does not exist -- but every `witness[].axeyum_theorem` must resolve exactly."
+            },
+            "source_location": {
+              "type": ["string", "null"],
+              "pattern": "^crates/[A-Za-z0-9_./-]+\\.rs:[0-9]+$",
+              "description": "`file:line` inside this repository where the carrier is defined or first declared. `null` only when `verification` is `unverified`."
+            },
+            "verification": {
+              "enum": ["verified-in-kernel-projection", "verified-in-source-only", "unverified"],
+              "description": "`verified-in-kernel-projection`: the carrier (or its representative declaration) is an `id` in `artifacts/autogenesis/kernel-dependency-projection-v1.json`. `verified-in-source-only`: confirmed present in `crates/axeyum-lean-kernel/src` but the projection does not carry a matching id (e.g. a module-level family name rather than one declaration, or a declaration that postdates the projection's last regeneration). `unverified`: could not be confirmed either way -- named honestly rather than guessed, per the brief's discipline."
+            },
+            "verification_detail": {
+              "type": "string",
+              "description": "What was actually run to verify -- a grep/shape_search command or projection lookup, or the reason verification could not complete."
+            },
+            "equality_regime": {
+              "enum": ["eq", "setoid", "quotient", "none", "other"],
+              "description": "`eq`: kernel-primitive `Eq`. `setoid`: a defined `Equiv`/`Apart`-style relation distinct from `Eq` (ADR-0512/ADR-1588). `quotient`: a genuine `Quot`-built type (this kernel has none by construction -- `Quot.sound` is a registered absence, ADR-0780). `none`: not a carrier with an equality of its own (e.g. a derivability relation or a logic-fragment family). `other`: something not covered, explained in the note."
+            },
+            "equality_regime_note": {
+              "type": "string",
+              "minLength": 20,
+              "description": "The specific relation and how it differs from bare `Eq`, e.g. \"CReal.Equiv: a defined Prop-valued closeness relation over regular rational sequences, not literal Eq\"."
+            }
+          }
+        },
+        "mathlib": {
+          "type": "object",
+          "required": ["counterpart", "verification", "equality_regime", "equality_regime_note"],
+          "additionalProperties": false,
+          "properties": {
+            "counterpart": {
+              "type": ["string", "null"],
+              "description": "The Mathlib name, e.g. `Real`, `Finset`, `Group`, `SimpleGraph`. `null` only when `grade` is `no-counterpart`."
+            },
+            "module_path": {
+              "type": ["string", "null"],
+              "description": "The Mathlib module the counterpart is declared in, e.g. `Mathlib.Data.Real.Basic`. `null` only when `counterpart` is `null`."
+            },
+            "source_location": {
+              "type": ["string", "null"],
+              "pattern": "^Mathlib/[A-Za-z0-9_./-]+\\.lean:[0-9]+(-[0-9]+)?$",
+              "description": "`file:line` (or `file:line-line`) inside the pinned mathlib4 checkout (commit `c5ea00351c28e24afc9f0f84379aa41082b1188f`, Lean 4.30.0). `null` only when `counterpart` is `null`."
+            },
+            "verification": {
+              "enum": ["verified-in-pinned-checkout", "unverified", "not-applicable"],
+              "description": "`verified-in-pinned-checkout`: read directly from the pinned mathlib4 checkout (`scripts/provision-lean-import-toolchain.sh --verify` names its path), never from memory. `unverified`: a plausible name that could not be confirmed against the checkout on this host. `not-applicable`: `grade` is `no-counterpart` and there is nothing to verify."
+            },
+            "verification_detail": {
+              "type": "string",
+              "description": "The grep/read that confirmed (or failed to confirm) the counterpart and its file:line, or why none was searched (no-counterpart rows should still record the negative search, e.g. \"grep -ri 'rado' across Mathlib/ : 0 matches, positive control 'AffineSubspace' 53 as a sanity check that the tree is readable\")."
+            },
+            "equality_regime": {
+              "enum": ["eq", "quotient-eq", "classical-prop", "none", "other"],
+              "description": "`eq`: an ordinary structure/typeclass whose intended equality is literal `Eq`. `quotient-eq`: a `Quot`-built type where distinct representatives become propositionally `Eq` via `Quot.sound` (e.g. `Real`, `Multiset`). `classical-prop`: a bare `Prop`-valued relation with no witness/data content. `none`/`other` as on the Axeyum side."
+            },
+            "equality_regime_note": {
+              "type": "string",
+              "minLength": 10,
+              "description": "As `axeyum.equality_regime_note`, or a short reason when `equality_regime` is `none` (no-counterpart rows)."
+            }
+          }
+        },
+        "grade": {
+          "enum": [
+            "same-statement",
+            "constructively-stronger",
+            "constructively-weaker",
+            "different-object",
+            "no-counterpart"
+          ],
+          "description": "`same-statement`: stripping the carrier from both formal statements leaves the identical proposition (the theorem-correspondence schema's `carrier-transport` shape, applied to the carrier pair as a whole). `constructively-stronger`: the Axeyum side proves a strictly stronger or more computational statement over the same content (a witness/algorithm where Mathlib has a bare existence or classical instance) -- ADR-1030's IVT verdict is the worked example. `constructively-weaker`: the reverse -- Mathlib's classical route reaches further than this kernel's constructive one on the same content. `different-object`: the two are not comparable on one axis -- either the hypotheses and conclusions differ in the same direction (ADR-1030's EVT verdict) or the carriers serve genuinely different purposes despite a superficial name match. `no-counterpart`: nothing in the pinned Mathlib checkout plays this role at all."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 40,
+          "description": "One sentence giving the specific reason for the grade -- not a restatement of the grade's definition."
+        },
+        "witness": {
+          "type": "array",
+          "description": "Concrete theorem pairs the grade rests on. Required (minItems 1) for every grade except `no-counterpart`, where it must be empty -- enforced by the checker's cross-field rule as well as this schema's conditional, because a JSON Schema validator alone cannot be trusted to be the only enforcement point for a rule this load-bearing.",
+          "items": {
+            "type": "object",
+            "required": ["axeyum_theorem", "axeyum_verification", "note"],
+            "additionalProperties": false,
+            "properties": {
+              "axeyum_theorem": {
+                "type": "string",
+                "minLength": 1,
+                "description": "A kernel declaration id, e.g. `CReal.ivt_approx`. Must resolve in the kernel projection unless `axeyum_verification` says otherwise."
+              },
+              "axeyum_location": {
+                "type": "string",
+                "description": "`file:line` in this repository."
+              },
+              "axeyum_verification": {
+                "enum": ["verified-in-kernel-projection", "verified-in-source-only", "unverified"]
+              },
+              "mathlib_theorem": {
+                "type": ["string", "null"],
+                "description": "The comparable Mathlib lemma/instance name, or `null` if this witness is deliberately one-sided (e.g. documenting an Axeyum-only result, or a clean negative search, inside an otherwise-comparable row)."
+              },
+              "mathlib_location": {
+                "type": ["string", "null"],
+                "description": "`file:line` in the pinned mathlib4 checkout, or `null` to match `mathlib_theorem: null`."
+              },
+              "note": {
+                "type": "string",
+                "minLength": 20,
+                "description": "What this specific pair shows about the grade -- e.g. \"ours returns an approximate root with an explicit tolerance witness; theirs asserts existence classically\"."
+              }
+            }
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "required": ["date", "established_by", "sources"],
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            "established_by": {
+              "type": "string",
+              "minLength": 8
+            },
+            "sources": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "grade": { "const": "no-counterpart" } },
+            "required": ["grade"]
+          },
+          "then": {
+            "properties": {
+              "witness": { "maxItems": 0 },
+              "mathlib": {
+                "type": "object",
+                "properties": {
+                  "counterpart": { "const": null },
+                  "module_path": { "const": null },
+                  "source_location": { "const": null },
+                  "verification": { "const": "not-applicable" }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "witness": { "minItems": 1 },
+              "mathlib": {
+                "type": "object",
+                "properties": {
+                  "counterpart": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

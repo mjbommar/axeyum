@@ -34,6 +34,7 @@ mod arena;
 mod bits;
 mod error;
 mod eval;
+pub mod fast_map;
 mod fmt;
 pub mod poly;
 pub mod poly_big;
@@ -52,6 +53,7 @@ pub use bits::{
 };
 pub use error::IrError;
 pub use eval::{Assignment, eval, eval_with_memo, well_founded_default};
+pub use fast_map::{FastMap, FastSet};
 pub use fmt::render;
 pub use rational::Rational;
 pub use real_algebraic::{RealAlgebraic, Sign};

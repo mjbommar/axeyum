@@ -3,9 +3,8 @@
 //! This is the stable debug format (performance note: debug renderers are
 //! separate from canonical serialization, which does not exist yet).
 
-use std::collections::HashMap;
-
 use crate::arena::TermArena;
+use crate::fast_map::FastMap;
 use crate::term::{Op, TermId, TermNode};
 
 /// Operator name in SMT-LIB concrete syntax.
@@ -104,7 +103,7 @@ fn op_name(op: Op) -> String {
 /// Panics if `term` does not belong to `arena`.
 pub fn render(arena: &TermArena, term: TermId) -> String {
     // Iterative post-order with memoized strings, mirroring the evaluator.
-    let mut memo: HashMap<TermId, String> = HashMap::new();
+    let mut memo: FastMap<TermId, String> = FastMap::default();
     let mut stack: Vec<(TermId, bool)> = vec![(term, false)];
     while let Some((t, children_ready)) = stack.pop() {
         if memo.contains_key(&t) {
