@@ -196,7 +196,7 @@ fn every_metric_declaration_is_present_and_derived() {
     let named = all_declarations(p);
     assert_eq!(
         named.len(),
-        37 + FIELD_COUNT + 15 + 19 + 10,
+        37 + FIELD_COUNT + 15 + 19 + 10 + 4,
         "the declaration list changed; update this count deliberately"
     );
     for (label, name) in named {

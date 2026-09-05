@@ -221,7 +221,7 @@ generality: `Metric.Interval` was usable only as the `P` of a `*On` form and is
 now a metric space that `Metric.Complete`, `Metric.Cauchy` and the rest of the
 layer apply to directly.
 
-**W2-10's subspace half is open, not blocked on anything else.** What this ADR
+**W2-10's subspace half is now expressible, and this was its last prerequisite.** What this ADR
 does *not* do is migrate the existing `*On` forms; `Metric.CompactOn`,
 `Metric.TotallyBoundedOn`, `Metric.CompleteOn` and the continuity family keep
 their relativized statements. Whether they should be restated over

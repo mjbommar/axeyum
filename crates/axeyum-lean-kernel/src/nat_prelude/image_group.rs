@@ -394,6 +394,7 @@ fn sub(k: &mut Kernel, lg: &LogicPrelude, l1: LevelId, c: &Ctx, deps: &ImageGrou
 ///
 /// Legal because `goal` is always a `Prop` here; `Exists` in this kernel has no
 /// large elimination, and nothing below asks for one.
+#[allow(clippy::too_many_arguments)]
 fn exists_elim(
     k: &mut Kernel,
     lg: &LogicPrelude,
@@ -784,6 +785,7 @@ fn declare_induced(
 
 /// `AlgS.Hom.firstIsoClassical` — `G/ker f ≅ Im f` between two `AlgS.Group`
 /// objects.
+#[allow(clippy::too_many_arguments)]
 fn declare_first_iso_classical(
     k: &mut Kernel,
     lg: &LogicPrelude,

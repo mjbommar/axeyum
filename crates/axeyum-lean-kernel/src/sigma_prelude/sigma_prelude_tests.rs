@@ -62,6 +62,10 @@ fn declared_type(kernel: &Kernel, name: crate::NameId, label: &str) -> ExprId {
 
 /// `(Bool, fun _ : Bool => Bool)` — the simplest `Sigma.{0,0}` instantiation:
 /// `Bool : Type 0 = Sort 1`, so `u = v = 0`.
+// `LogicPrelude` is past clippy's by-value size threshold but is `Copy` and
+// cheap to move; this is a size-lint override, not a real inefficiency (the
+// same override `prelude_tests.rs` carries).
+#[allow(clippy::large_types_passed_by_value)]
 fn bool_pair_shape(kernel: &mut Kernel, p: LogicPrelude) -> (ExprId, ExprId) {
     let bool_const = kernel.const_(p.bool_, vec![]);
     let beta = const_lam(kernel, bool_const, bool_const);
