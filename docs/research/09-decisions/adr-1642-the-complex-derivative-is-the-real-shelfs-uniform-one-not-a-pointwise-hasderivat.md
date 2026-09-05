@@ -19,9 +19,8 @@ for position, and the error bound is a `CReal` on both sides because
 `Complex.abs` already is. The lane's measured finding is that the transcription
 is **cheap in exactly one half and not the other**: `complex/ring.rs`'s
 `ring_law_proof` decides every error-term identity in one call, replacing
-ninety lines and five named helpers in the real sum rule
-(`neg_add_distrib`, `right_distrib`, `add4_comm` twice, three `add_congr`
-liftings), and `Complex.abs`'s nonnegativity removes the real closing step's
+the 87 lines of the real sum rule's steps A–E and its five named helpers
+(`neg_add_distrib`, `right_distrib`, `add4_comm`, `echain`, `erefl`), and `Complex.abs`'s nonnegativity removes the real closing step's
 two-sided `abs_le` split — but the ANALYTIC half transcribes verbatim, with
 `Rat.natDivSucc_antitone`, `Rat.natDivSucc_add` and `Rat.natDivSucc_halve`
 used at the identical indices. Leibniz did NOT land, and the obstruction is
@@ -118,7 +117,7 @@ identity is such an identity. Concretely:
 | --- | --- | --- |
 | constant's error is zero | `const_error_equiv_zero`, a named helper | one `ring_law_proof` |
 | identity's error is zero | `id_error_equiv_zero`, a named helper | one `ring_law_proof` |
-| sum's error IS the sum of errors | ~90 lines, steps A–E, five helpers (`neg_add_distrib`, `right_distrib`, `add4_comm` ×2, three `add_congr` liftings) | one `ring_law_proof` |
+| sum's error IS the sum of errors | 87 lines, steps A–E (`creal/derivative.rs:3110-3196`), five named helpers (`neg_add_distrib`, `right_distrib`, `add4_comm`, each ×2, plus `echain`/`erefl`) | one `ring_law_proof` |
 | negation's error IS the negated error | `neg_mul_equiv_left` + `le_abs_neg_of_le_abs` | one `ring_law_proof` + `Complex.abs_neg` |
 
 The closing step is shorter too. `creal/derivative.rs::close_zero_error` needs

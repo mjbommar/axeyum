@@ -1134,11 +1134,13 @@ fn declare_has_derivative_neg(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
 /// [`crate::RatPrelude::nat_div_succ_halve`], again verbatim from the real
 /// proof.
 ///
-/// What is NOT verbatim is the last step. `creal/derivative.rs` spends ninety
-/// lines and five named helpers (`neg_add_distrib`, `right_distrib`,
-/// `add4_comm` twice, three `add_congr` liftings) showing that the sum's error
-/// term IS the sum of the two errors. Here that is one `ring_law_proof` call,
-/// because `complex/ring.rs` decides commutative-ring identities.
+/// What is NOT verbatim is the last step. `creal/derivative.rs` spends the
+/// eighty-seven lines from its `// Step A` to the closing `echain`
+/// (`creal/derivative.rs:3110-3196`) and five named helpers
+/// (`neg_add_distrib`, `right_distrib` and `add4_comm`, each used twice, plus
+/// `echain` and `erefl`) showing that the sum's error term IS the sum of the
+/// two errors. Here that is one `ring_law_proof` call, because
+/// `complex/ring.rs` decides commutative-ring identities.
 fn declare_has_derivative_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
     let creal = p.creal;
     let carrier = complex_ty(d, p);
