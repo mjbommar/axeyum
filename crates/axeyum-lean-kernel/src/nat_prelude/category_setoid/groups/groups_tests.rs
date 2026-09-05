@@ -31,7 +31,7 @@ fn build(k: &mut Kernel) -> Fixture {
     let deps = GroupCatDeps {
         map_one: extra.hom_map_one,
     };
-    let (recs, cs, grp_recs, gs) =
+    let (recs, cs, grp_recs, gs, _ps) =
         super::super::declare_category_setoid(k, &lg, &st.monoid, &st.group, deps)
             .expect("the Sigma-residue layer must admit");
     Fixture {
