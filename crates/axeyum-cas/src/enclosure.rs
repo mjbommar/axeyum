@@ -2104,6 +2104,70 @@ mod tests {
     }
 
     #[test]
+    fn forged_step_input_is_refused() {
+        // exp(1): two nodes, so a step can be fed an operand its child never
+        // produced. Narrowing the operand is how a forger would fake a width.
+        let expr = CasExpr::int(1).exp();
+        let mut e = enclose(&expr, &[], 40).expect("exp(1)");
+        e.evidence[1].inputs = vec![BigInterval::point(BigRational::zero())];
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("not the outputs of its children"),
+            "expected the input guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_final_interval_detached_from_the_evidence_is_refused() {
+        // Every step is honest; only the headline interval was swapped, and it
+        // has the same width so the width guard cannot see it.
+        let (expr, mut e) = pi_certificate();
+        e.interval = e.interval.add(&BigInterval::point(bi(1)));
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("does not produce the enclosure interval"),
+            "expected the final-step guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_root_certificate_with_extra_steps_is_refused() {
+        let p = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let isolating = (Rational::integer(1), Rational::integer(2));
+        let mut e = enclose_root(&p, isolating, 30).expect("root");
+        let duplicate = e.evidence[0].clone();
+        e.evidence.push(duplicate);
+        let message = e.verify_root(&p, isolating).unwrap_err();
+        assert!(
+            message.contains("exactly one step"),
+            "expected the shape guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_root_certificate_against_a_non_isolating_interval_is_refused() {
+        // The refined interval and its signs are honest; the interval it is
+        // checked against holds two roots, so it does not identify which.
+        let p = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
+        let e = enclose_root(&p, (Rational::integer(1), Rational::integer(2)), 30).expect("root");
+        let message = e
+            .verify_root(&p, (Rational::integer(-2), Rational::integer(2)))
+            .unwrap_err();
+        assert!(
+            message.contains("roots in the isolating interval"),
+            "expected the Sturm guard, got: {message}"
+        );
+    }
+
+    #[test]
     fn forged_root_endpoint_sign_is_refused() {
         let p = [
             Rational::integer(-2),
