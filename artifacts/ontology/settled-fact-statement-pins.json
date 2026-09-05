@@ -889,6 +889,16 @@
       "to_sha256": "587f308eee0ccb56ecb614f97a3b0e325eaf060115878a1615f16f570c115ece",
       "reason": "CONTENT change, not header-only, and the reason is that the previous text was not the kernel's rendering at all: lane hall-sufficiency wrote a Lean-surface signature with binders before the colon (`theorem Nat.strongInduction_eq (P : ...) (n : ...) ... :`), which the structural bind cannot parse, and in one of the two the header named the DEFINITION `Nat.strongInduction` while the fact claims the theorem `Nat.strongInduction_eq`. Replaced by `theorem Nat.strongInduction_eq : ` followed by `nat_theorem_inventory --release`'s rendered type verbatim, so the statement is now the declaration it claims. The proposition described is unchanged.",
       "recorded_by": "coordinator"
+    },
+    {
+      "fact_id": "F:cas-ntheory-crt-certificate",
+      "date": "2026-09-04",
+      "from_sha256": "257569cfa2634eafa6bb431de880d34fc7a9c7dcdee240623bf52770e2140838",
+      "to_sha256": "6aea8eb9adad3093bb98c5f33727340e463c0bee5ba20c70aecb5e7556c3890d",
+      "reason": "CONTENT change by lane cas-reconstruct (ADR-1622): the CRT certificate fact was extended to record that every one of its six systems is now kernel-reconstructed (the largest numeral its instances form is 105, within the unary budget), and its evidence moved from cas-internal to kernel-checked. The proposition -- the CRT solutions the CAS produced -- is unchanged; what changed is that the kernel now certifies them. The lane flipped the fact without an amendment; the amendment is recorded at merge.",
+      "recorded_by": "coordinator",
+      "from_prose_sha256": "43d4c8a1eaf6b9153ac313173f88c7b1ee7ff59170d70ad84086cbe5599bd163",
+      "to_prose_sha256": "bf8601369e34784be0cb32a41a3594bdf6983e7e5f4cecbb69d0956e6358f44d"
     }
   ],
   "pins": [
@@ -1299,14 +1309,27 @@
     {
       "fact_id": "F:cas-ntheory-crt-certificate",
       "language": "cas-term",
-      "statement_sha256": "257569cfa2634eafa6bb431de880d34fc7a9c7dcdee240623bf52770e2140838",
-      "prose_sha256": "43d4c8a1eaf6b9153ac313173f88c7b1ee7ff59170d70ad84086cbe5599bd163"
+      "statement_sha256": "6aea8eb9adad3093bb98c5f33727340e463c0bee5ba20c70aecb5e7556c3890d",
+      "prose_sha256": "bf8601369e34784be0cb32a41a3594bdf6983e7e5f4cecbb69d0956e6358f44d",
+      "history": [
+        {
+          "language": "cas-term",
+          "statement_sha256": "257569cfa2634eafa6bb431de880d34fc7a9c7dcdee240623bf52770e2140838",
+          "prose_sha256": "43d4c8a1eaf6b9153ac313173f88c7b1ee7ff59170d70ad84086cbe5599bd163"
+        }
+      ]
     },
     {
       "fact_id": "F:cas-ntheory-factorization-certificate",
       "language": "cas-term",
       "statement_sha256": "8aba7af6c743e779bdcd9c8a7e69763d29fe5ea668dd3f9e610b1cfac6b0f52c",
       "prose_sha256": "3cce4953ab2569dd7dc048a924c35ad5e3ace5fd5a2266e76a288ee26f4ca035"
+    },
+    {
+      "fact_id": "F:cas-ntheory-pratt-certificate-kernel-reconstructed",
+      "language": "cas-term",
+      "statement_sha256": "fcfdc6a14a2a3967e56b2ece839aace07d62833dd3eae62ddd9d48a7ecb2a82f",
+      "prose_sha256": "7d96ad15bf7765461da0ea96f6049ab6d49922e1d1e29e89079944124327dcb6"
     },
     {
       "fact_id": "F:cas-ntheory-pratt-primality-mersenne89",
