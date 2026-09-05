@@ -1908,14 +1908,26 @@ mod tests {
     }
 
     #[test]
-    fn forged_common_factor_is_refused_by_the_denominator_split() {
+    fn forged_common_factor_is_refused_by_the_numerator_split() {
         let mut certificate = fibonacci_radius();
         certificate.common_factor = rats(&[2]);
-        assert!(matches!(
+        assert_eq!(
             certificate.verify(),
-            Err(AnalyticError::DenominatorSplitMismatch { .. }
-                | AnalyticError::NumeratorSplitMismatch { .. })
-        ));
+            Err(AnalyticError::NumeratorSplitMismatch { degree: 0 })
+        );
+    }
+
+    #[test]
+    fn forged_reduced_denominator_that_does_not_multiply_back_is_refused() {
+        // The numerator split still holds, so this reaches the denominator
+        // guard and nothing else. Without a case that isolates it the guard was
+        // dead weight: its mutation control survived until this test existed.
+        let mut certificate = fibonacci_radius();
+        certificate.reduced_denominator = rats(&[1, -1, -2]);
+        assert_eq!(
+            certificate.verify(),
+            Err(AnalyticError::DenominatorSplitMismatch { degree: 2 })
+        );
     }
 
     #[test]
