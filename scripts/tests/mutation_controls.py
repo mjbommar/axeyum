@@ -7112,6 +7112,94 @@ SUITES["geo-incidence"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# The CAS summation / Gaussian guards (lane cas-sum-gaps).
+#
+# Both new routes here can only ever turn a decline into a value, so the risk
+# is not a regression but an over-eager acceptance: a near-miss series read as
+# `e^λ`, or an erf antiderivative claimed for a shape that is not a Gaussian.
+# Each mutation below removes exactly one of the guards that refuse those.
+# The runner is the whole crate `--lib` sweep because the four tests involved
+# live in different modules and `cargo test` takes only ONE filter.
+# --------------------------------------------------------------------------
+
+SUITES["cas-summation-and-gaussian"] = (
+    "crates/axeyum-cas/src/lib.rs",
+    Cargo(("-p", "axeyum-cas", "--lib"), "cas-summation-and-gaussian"),
+    [
+        (
+            # The recognized series is stated at lower bound 0. Without the
+            # guard, `Σ_{k≥1} 3ᵏ/k!` silently returns `e³` (the k=0 term, 1,
+            # is not subtracted).
+            "the exponential series is only claimed from a lower bound of 0",
+            "    if integer_constant(lower)? != 0 {\n        return None;\n    }",
+            "    if false {\n        return None;\n    }",
+        ),
+        (
+            # `λᵏ/(k!·(k+1))` leaves `(k+1)` in the residual denominator. Drop
+            # the check and its `P` extraction reads the summand as `λᵏ/k!`.
+            "a `var` surviving in the residual denominator refuses the shape",
+            "    let denominator = deatomize_from(&rf.den.to_expr(), &product);\n"
+            "    if expr_contains_var(&denominator, var) {\n        return None;\n    }",
+            "    let denominator = deatomize_from(&rf.den.to_expr(), &product);\n"
+            "    if false {\n        return None;\n    }",
+        ),
+        # THE TWO ENTRIES BELOW SURVIVE, and that is the finding, not an
+        # oversight. Both are fail-closed SELF-checks: the extraction reads the
+        # same canonical atom form `equal` decides on, so whenever the
+        # extraction succeeds the reconstruction is equal by construction, and
+        # the Newton expansion is exact rational arithmetic that fails only on
+        # overflow. No input distinguishes them, so no test can die when they
+        # are deleted. They stay because a later change to the extractor or to
+        # `normalize_rational`'s atom conventions would be caught by them and
+        # by nothing else. Per CLAUDE.md: the impossibility IS the finding.
+        (
+            # Obligation 1: the heuristic extraction's reconstruction must be
+            # decided equal to the summand itself.
+            "the shape reconstruction must certify against the summand",
+            "    if !matches!(\n        equal(f, &reconstruction),\n"
+            "        ZeroTest::Certified { equal: true, .. }\n    ) {\n        return None;\n    }",
+            "    if false {\n        return None;\n    }",
+        ),
+        (
+            # Obligation 2: the falling-factorial expansion of `P`.
+            "the Newton falling-factorial expansion must certify",
+            "    if !matches!(\n        equal(&polynomial, &rebuilt),\n"
+            "        ZeroTest::Certified { equal: true, .. }\n    ) {\n        return None;\n    }",
+            "    if false {\n        return None;\n    }",
+        ),
+        (
+            # An UPWARD Gaussian is not an erf antiderivative; the finder would
+            # hand `integrate` a candidate for `∫e^{+x²}`.
+            "an upward Gaussian (a <= 0) is refused",
+            "    if c2.numerator() >= 0 {\n        return None; // need a downward (convergent-shaped) Gaussian\n    }",
+            "    if false {\n        return None; // need a downward (convergent-shaped) Gaussian\n    }",
+        ),
+        (
+            # `(−A)^{2k} = A^{2k}` needs the even exponent: without it
+            # `(−√2)³` loses its sign.
+            "the negation is absorbed only under an even exponent",
+            "            if exponent.is_multiple_of(2)\n                && let CasExpr::Neg(inner) = &simplified_base\n            {",
+            "            if let CasExpr::Neg(inner) = &simplified_base {",
+        ),
+        (
+            # `√(c·u) = √c·√u` needs `c > 0`; without it `√(−2·π)` splits into
+            # `√(−2)·√π`.
+            "the sqrt split takes only a positive rational factor",
+            "                        CasExpr::Const(c) if c.numerator() > 0 => match constant.checked_mul(*c) {",
+            "                        CasExpr::Const(c) if true => match constant.checked_mul(*c) {",
+        ),
+        (
+            # Without the surd-normalized retry the Gaussian certificate never
+            # closes for an irrational `√a` and the whole route declines.
+            "prove_derivative retries under simplify_radicals",
+            "    if derivative_radical != derivative || claimed_radical != *claimed {",
+            "    if false {",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
