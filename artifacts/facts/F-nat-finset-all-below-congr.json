@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-finset-all-below-congr",
+  "title": "The bounded universal search is congruent in its predicate",
+  "statement": "For all Boolean predicates f and g on the naturals and every bound n, if f and g agree at every index then the bounded searches `allBelow f n` and `allBelow g n` return the same Boolean.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Finset.allBelow_congr : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Eq.{1} Bool (x0 x3) (x1 x3))) -> Eq.{1} Bool (AxNat.Finset.allBelow x0 x2) (AxNat.Finset.allBelow x1 x2)))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Finset.allBelow_congr"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:finset-subset-search-reflection"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.Finset.allBelow_congr",
+      "kind": "kernel-term",
+      "supports": "theorem Nat.Finset.allBelow_congr : ((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Eq.{1} Bool (x0 x3) (x1 x3))) -> Eq.{1} Bool (AxNat.Finset.allBelow x0 x2) (AxNat.Finset.allBelow x1 x2)))))",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- Nat.Finset.allBelow_congr 2>/dev/null | grep -xFc 'Nat.Finset.allBelow_congr\t7\t((x0 : ((x0 : AxNat) -> Bool)) -> ((x1 : ((x1 : AxNat) -> Bool)) -> ((x2 : AxNat) -> ((x3 : ((x3 : AxNat) -> Eq.{1} Bool (x0 x3) (x1 x3))) -> Eq.{1} Bool (AxNat.Finset.allBelow x0 x2) (AxNat.Finset.allBelow x1 x2)))))')\" -ge 1",
+      "notes": "`build_nat_prelude` admits this through the trusted `Kernel::add_declaration` gate, which re-derives the type from the proof term; the checker greps for the inventory's exact tab-separated row, so a single wrong token in the rendered type makes it exit 1. Mutation-verified: reversing the hypothesis direction to `g i = f i` while leaving the proof unchanged makes the kernel reject the declaration with `TypeMismatch`, and all 11 tests in `nat_prelude::hall_theorem_tests` die (measured 2026-09-05, exit 101)."
+    },
+    {
+      "id": "footprint-Nat.Finset.allBelow_congr",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --release --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and this theorem is declared inside `build_nat_prelude`, so it cannot rest on a trusted declaration the Nat environment does not contain. Demonstrated to discriminate: `--require-axiom-free axreal` against the SAME kernel build exits 1 (`axreal trusted surface = 30, expected 0`), so the flag is not satisfied unconditionally."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane hall-theorem (ADR-1644): proved in `crates/axeyum-lean-kernel/src/nat_prelude/hall_theorem.rs` and admitted through `Kernel::add_declaration`",
+    "source": "proved in-tree; no import, no replay"
+  },
+  "notes": "The law `Nat.Finset.allBelow` was missing, and a THIRD kind: its three existing laws (`allBelow_of_all_true`, `allBelow_true_at`, `allBelow_false_witness`) all relate a loop to its predicate's VALUES, and none relates two loops to each other. Measured absent before proving, at 3,222 declarations with a freshly built `shape_search`: `--const Nat.Finset.allBelow_congr` UNANSWERABLE against the positive control `--name-like allBelow` FOUND 4. It is what discharges `Nat.Finset.forallSubset_of_search`'s congruence premise for a bounded inclusion test, which is why Hall's sufficiency direction needed it. The proof is an induction on the bound with NO case split on the predicate's value -- unlike all three existing laws -- because two congruences close the successor case, one through the `then` branch and one through the scrutinee. ADR-1644."
+}

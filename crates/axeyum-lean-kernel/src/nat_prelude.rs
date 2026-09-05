@@ -222,6 +222,7 @@ mod group;
 pub(crate) mod half_ceil_parity;
 mod hall;
 mod hall_sufficiency;
+mod hall_theorem;
 mod helpers;
 pub mod image_group;
 mod inclusion_exclusion;
@@ -452,6 +453,7 @@ use group::declare_group_all;
 use half_ceil_parity::declare_half_ceil_parity_all;
 use hall::declare_hall_all;
 use hall_sufficiency::declare_hall_sufficiency_all;
+use hall_theorem::declare_hall_theorem_all;
 use inclusion_exclusion::declare_inclusion_exclusion_all;
 use injective_decide::declare_injective_on_or_duplicate;
 use irrational::{declare_even_of_even_sq, declare_no_rational_sqrt_two};
@@ -6875,6 +6877,129 @@ pub struct NatPrelude {
     /// injectivity is free because every index in a singleton is `a`.
     pub hall_exists_is_matching_singleton: NameId,
 
+    // --- The fixed-bound inclusion decision (`hall_theorem.rs`, ADR-1644) ---
+    /// `Nat.Finset.allBelow_congr : ∀ f g n, (∀ i, Eq Bool (f i) (g i)) →
+    /// Eq Bool (allBelow f n) (allBelow g n)` (ADR-1644) — `allBelow`'s third
+    /// law, and the only one relating two LOOPS rather than a loop to its
+    /// predicate's values. It is what
+    /// [`finset_subset_fixed_congr`](Self::finset_subset_fixed_congr) needs,
+    /// and through it what discharges
+    /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search)'s
+    /// congruence premise for an inclusion test.
+    pub finset_all_below_congr: NameId,
+    /// `Nat.Finset.subsetFixed s t := allBelow (fun i => if memB t i then
+    /// memB s i else true) (bound s)` (ADR-1644) — "`t ⊆ s`, decided over
+    /// `[0, bound s)`". The loop bound comes from the FIXED set `s`, where
+    /// [`finset_subset_b`](Self::finset_subset_b)'s comes from the set on the
+    /// left of the inclusion; that is the whole difference, and it is what
+    /// makes the predicate congruent in `t`.
+    pub finset_subset_fixed: NameId,
+    /// `Nat.Finset.subsetFixed_of_mem : ∀ s t,
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+    /// Eq Bool (subsetFixed s t) true` (ADR-1644) — the introduction rule. No
+    /// bound hypothesis is needed in this direction.
+    pub finset_subset_fixed_of_mem: NameId,
+    /// `Nat.Finset.mem_of_subsetFixed : ∀ s t i,
+    /// Eq Bool (subsetFixed s t) true → Lt i (bound s) →
+    /// Eq Bool (memB t i) true → Eq Bool (memB s i) true` (ADR-1644) — the
+    /// elimination rule. `Lt i (bound s)` is genuine, not bookkeeping: above
+    /// `bound s` the conclusion is false for any `t` wider than `s`.
+    pub finset_mem_of_subset_fixed: NameId,
+    /// `Nat.Finset.subsetFixed_congr : ∀ s t t',
+    /// (∀ i, Eq Bool (memB t i) (memB t' i)) →
+    /// Eq Bool (subsetFixed s t) (subsetFixed s t')` (ADR-1644) — both sides
+    /// loop to the same `bound s`, so
+    /// [`finset_all_below_congr`](Self::finset_all_below_congr) applies
+    /// directly and the two sets' differing stored bounds never enter.
+    pub finset_subset_fixed_congr: NameId,
+    /// `Nat.Finset.card_union_of_disjoint : ∀ s t,
+    /// (∀ i, Eq Bool (memB s i) true → Eq Bool (memB t i) false) →
+    /// Eq Nat (card (union s t)) (add (card s) (card t))` (ADR-1644). Proved
+    /// by DEFINITIONAL identity with
+    /// [`finset_sum_union_disjoint`](Self::finset_sum_union_disjoint) at the
+    /// constant weight `1`: `card s` and `sum s (fun _ => 1)` unfold to the
+    /// same `Nat.rec`. Only the hypothesis is translated — from the pointwise
+    /// implication every caller has to the `setInter … = false` spelling that
+    /// lemma asks for.
+    pub finset_card_union_of_disjoint: NameId,
+    /// `Nat.Hall.hallCondition_subset : ∀ s t nb, HallCondition s nb →
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+    /// HallCondition t nb` (ADR-1644) — Hall's condition restricts to a
+    /// subset. Pure composition of two pointwise inclusions; named because
+    /// both branches of the inductive step need it and an argument-order slip
+    /// composing it by hand would type-check as the converse.
+    pub hall_condition_subset: NameId,
+    /// `Nat.Hall.memB_unionOver_union_of_vanishing : ∀ mb w t v,
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB (mb i) v) false) →
+    /// Eq Bool (memB (unionOver mb (union w t)) v)
+    ///         (memB (unionOver mb w) v)` (ADR-1644) — indices whose family
+    /// member is EMPTY at `v` may be dropped from a union. In the critical
+    /// branch the deleted family `fun i => sdiff (nb i) (unionOver nb t)` is
+    /// empty at every `i ∈ t`, so the union over `w ∪ t` and the union over
+    /// `w` have the same members;
+    /// [`finset_card_congr_of_mem_b`](Self::finset_card_congr_of_mem_b) then
+    /// equates their counts, which is the step the counting chain needs.
+    pub hall_mem_union_over_union_of_vanishing: NameId,
+    /// `Nat.Hall.hallCondition_sdiff_of_critical : ∀ s t nb,
+    /// HallCondition s nb →
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+    /// Le (card (unionOver nb t)) (card t) →
+    /// HallCondition (sdiff s t) (fun i => sdiff (nb i) (unionOver nb t))`
+    /// (ADR-1644) — **the critical branch of Hall's inductive step**. Once a
+    /// subset `t ⊆ s` is critical, the rest of the index set still satisfies
+    /// Hall's condition against the family with `t`'s neighbourhood deleted,
+    /// which is what lets the induction match `t` and the complement
+    /// separately and glue them: nothing the second matching can pick
+    /// collides with the first. Only ONE direction of criticality is a
+    /// hypothesis — the other is Hall's condition at `t` and is never used —
+    /// so the caller decides the branch with a `Le` test rather than an
+    /// equality test.
+    pub hall_condition_sdiff_of_critical: NameId,
+    /// `Nat.Hall.hallCondition_sdiff_singleton_of_strict : ∀ s v nb,
+    /// (∀ w, (∀ i, Eq Bool (memB w i) true → Eq Bool (memB s i) true) →
+    ///       Lt zero (card w) → Lt (card w) (card (unionOver nb w))) →
+    /// HallCondition s (fun i => sdiff (nb i) (singleton v))` (ADR-1644) —
+    /// **the non-critical branch of Hall's inductive step**. When every
+    /// NONEMPTY subset has strict slack, one value may be deleted from every
+    /// member of the family and Hall's condition survives — which is what lets
+    /// the induction commit an index to a neighbour and recurse on the rest.
+    /// The strict hypothesis is guarded by `Lt zero (card w)` because at the
+    /// EMPTY subset it would be false; that case is discharged by
+    /// [`zero_le`](Self::zero_le), decided with
+    /// [`lt_or_ge`](Self::lt_or_ge). The successor step is definitional:
+    /// `Nat.add` recurses on its right argument, so `add x 1` IS `succ x`.
+    pub hall_condition_sdiff_singleton_of_strict: NameId,
+    /// `Nat.Finset.restrict s n := mk (memB s) n` (ADR-1644) — the same MEMBERS
+    /// with the stored bound forced to `n`.
+    /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search)
+    /// concludes only for sets with `Le (bound t) n`, and a caller's `w` may
+    /// carry a larger stored bound while every member is below `n`, because
+    /// `memB` truncates. This is the normalisation that closes that gap;
+    /// [`finset_mem_b_decode_encode`](Self::finset_mem_b_decode_encode) cannot,
+    /// because it takes the missing bound fact as a hypothesis.
+    pub finset_restrict: NameId,
+    /// `Nat.Finset.bound_restrict : ∀ s n, Eq Nat (bound (restrict s n)) n`
+    /// (ADR-1644) — `refl`, stated because it is the premise the search's
+    /// exhaustion rule consumes.
+    pub finset_bound_restrict: NameId,
+    /// `Nat.Finset.memB_restrict : ∀ s n,
+    /// (∀ j, Eq Bool (memB s j) true → Lt j n) →
+    /// ∀ i, Eq Bool (memB (restrict s n) i) (memB s i)` (ADR-1644) —
+    /// restricting changes no members provided every member was already below
+    /// the new bound.
+    pub finset_mem_b_restrict: NameId,
+    /// `Nat.Finset.memB_union_sdiff_self : ∀ s t,
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+    /// ∀ i, Eq Bool (memB (union t (sdiff s t)) i) (memB s i)` (ADR-1644) —
+    /// splitting a set at a subset and putting it back changes no members. The
+    /// last step of the critical branch:
+    /// [`hall_is_matching_union`](Self::hall_is_matching_union) produces a
+    /// matching on `union t (sdiff s t)` and
+    /// [`hall_is_matching_congr`](Self::hall_is_matching_congr) moves it to `s`
+    /// given exactly this. Pointwise because the two stored bounds differ —
+    /// `union` sums them.
+    pub finset_mem_b_union_sdiff_self: NameId,
+
     /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
     /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
     /// course-of-values recursion, `Nat.lt_well_founded` + `WellFounded.fix`
@@ -8496,6 +8621,24 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             hall_exists_is_matching_of_card_le_zero: kernel
                 .name_str(hall, "exists_isMatching_of_card_le_zero"),
             hall_exists_is_matching_singleton: kernel.name_str(hall, "exists_isMatching_singleton"),
+            // The fixed-bound inclusion decision (`hall_theorem.rs`, ADR-1644).
+            finset_all_below_congr: kernel.name_str(finset, "allBelow_congr"),
+            finset_subset_fixed: kernel.name_str(finset, "subsetFixed"),
+            finset_subset_fixed_of_mem: kernel.name_str(finset, "subsetFixed_of_mem"),
+            finset_mem_of_subset_fixed: kernel.name_str(finset, "mem_of_subsetFixed"),
+            finset_subset_fixed_congr: kernel.name_str(finset, "subsetFixed_congr"),
+            finset_card_union_of_disjoint: kernel.name_str(finset, "card_union_of_disjoint"),
+            hall_condition_subset: kernel.name_str(hall, "hallCondition_subset"),
+            hall_mem_union_over_union_of_vanishing: kernel
+                .name_str(hall, "memB_unionOver_union_of_vanishing"),
+            hall_condition_sdiff_of_critical: kernel
+                .name_str(hall, "hallCondition_sdiff_of_critical"),
+            hall_condition_sdiff_singleton_of_strict: kernel
+                .name_str(hall, "hallCondition_sdiff_singleton_of_strict"),
+            finset_restrict: kernel.name_str(finset, "restrict"),
+            finset_bound_restrict: kernel.name_str(finset, "bound_restrict"),
+            finset_mem_b_restrict: kernel.name_str(finset, "memB_restrict"),
+            finset_mem_b_union_sdiff_self: kernel.name_str(finset, "memB_union_sdiff_self"),
             subsets_empty: kernel.name_str(subsets, "empty"),
             subsets_insert_at: kernel.name_str(subsets, "insertAt"),
             subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),
@@ -10030,6 +10173,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `Nat.pow`. Goes after `declare_finset_all` and `declare_graph_all`
         // (it reads `Nat.Graph.notB`).
         declare_subset_search_all(&mut d, &p)?;
+        // The fixed-bound inclusion decision (`hall_theorem.rs`, ADR-1644).
+        // Needs `Nat.Finset.allBelow` and its `of_all_true`/`true_at` laws
+        // (`finset.rs`) and `Nat.Graph.bool_congr`'s host module, and it is
+        // consumed by the subset SEARCH, so it goes after
+        // `declare_subset_search_all` rather than beside `hall_sufficiency.rs`.
+        declare_hall_theorem_all(&mut d, &p)?;
         // The divisor aggregate and its `d ↦ n/d` reindexing
         // (`arith_functions.rs`, ADR-1619). Needs `Nat.sumRangeIf`
         // (`subset_sum.rs`), `Nat.sumRange_permute`/`Nat.sumRange_congr`,
@@ -10219,6 +10368,9 @@ mod hall_tests;
 
 #[cfg(test)]
 mod hall_sufficiency_tests;
+
+#[cfg(test)]
+mod hall_theorem_tests;
 
 #[cfg(test)]
 mod inclusion_exclusion_tests;
