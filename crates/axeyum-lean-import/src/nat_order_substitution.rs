@@ -2077,6 +2077,15 @@ mod tests {
             "Nat.not_le_of_not_ble_eq_true" => p.not_le_of_not_ble_eq_true,
             "Nat.lt_of_lt_of_le" => p.lt_of_lt_of_le,
             "Nat.le_of_succ_le_succ" => p.le_of_succ_le_succ,
+            // `Nat.le_of_lt_add_one` shares `Nat.le_of_succ_le_succ`'s
+            // construction verbatim (see `build`), so our own prelude's
+            // `le_of_succ_le_succ` IS the statement our candidate proves, and
+            // it is the right stand-in `wire_ty` for the fast tests. It is
+            // NOT the shape that blocks the census rows -- Mathlib spells the
+            // same proposition with the order typeclasses -- which is what
+            // `real_mathlib_type_tests` exists to cover, against the pinned
+            // export of the real declaration.
+            "Nat.le_of_lt_add_one" => p.le_of_succ_le_succ,
             other => panic!("no NatPrelude field mapped for {other:?}"),
         }
     }
@@ -2093,18 +2102,14 @@ mod tests {
             // hand-built `And`-carrying wire type. `Nat.div_rec_fuel_lemma`
             // is the same story, one level up — covered by
             // `div_rec_fuel_lemma_reconstructs_and_kernel_checks`.
-            // `Nat.le_of_lt_add_one` is Mathlib's TYPECLASS-SPELLED form
-            // (`LT.lt Nat instLTNat n (m + 1)`); this project's own
-            // `nat_prelude` never states it, and admitting our value at
-            // `Nat.le_of_succ_le_succ`'s bare type here would test nothing
-            // about the spelling that actually blocks the census rows.
-            // Covered instead by
-            // `le_of_lt_add_one_reconstructs_against_the_real_mathlib_type`,
-            // against the pinned Lean 4.30 export of the real declaration.
-            if rendered == "Nat.div_rec_lemma"
-                || rendered == "Nat.div_rec_fuel_lemma"
-                || rendered == "Nat.le_of_lt_add_one"
-            {
+            //
+            // `Nat.le_of_lt_add_one` IS covered here, against
+            // `Nat.le_of_succ_le_succ`'s type (the proposition its value
+            // proves), but that is the BARE spelling; Mathlib's own
+            // typeclass-spelled form is what actually blocks the census rows
+            // and is covered by
+            // `real_mathlib_type_tests::le_of_lt_add_one_reconstructs_against_the_real_mathlib_type`.
+            if rendered == "Nat.div_rec_lemma" || rendered == "Nat.div_rec_fuel_lemma" {
                 continue;
             }
             let existing = field_name(&prelude, rendered);

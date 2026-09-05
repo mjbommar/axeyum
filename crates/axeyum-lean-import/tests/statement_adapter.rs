@@ -353,6 +353,30 @@ fn the_native_quotient_package_does_not_block_a_statement() {
             .any(|n| n == "Quot.sound"),
         "Quot.sound must never appear: this kernel does not have it"
     );
+
+    // The exemption is about ADMITTING a statement, never about what a later
+    // proof may claim: `Kernel::axiom_footprint` must still classify every
+    // package member as trusted base, so a theorem that reaches one is still
+    // visibly not axiom-free (ADR-1595 prices the quotient package on exactly
+    // this accounting). Measured here rather than asserted in a comment.
+    let kernel = completed.kernel();
+    for member in ["Quot", "Quot.mk", "Quot.lift", "Quot.ind"] {
+        let name = kernel
+            .environment()
+            .iter()
+            .find(|(name, _)| kernel.display_name(**name).to_string() == member)
+            .map(|(name, _)| *name)
+            .unwrap_or_else(|| panic!("{member} must be in the admitted environment"));
+        let footprint: Vec<String> = kernel
+            .axiom_footprint(name)
+            .into_iter()
+            .map(|n| kernel.display_name(n).to_string())
+            .collect();
+        assert!(
+            footprint.iter().any(|n| n == member),
+            "{member} must still count toward its own axiom footprint; got {footprint:?}"
+        );
+    }
 }
 
 /// NEGATIVE control for the same feature: the quotient exemption must not

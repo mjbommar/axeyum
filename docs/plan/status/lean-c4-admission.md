@@ -1,0 +1,82 @@
+# Lane: lean-c4-admission -- the feature works, the population does not move, and 217 of 361 rows sit behind axioms
+
+<!-- plan-section: lane-status -->
+
+**Lane block (`DONE -- ADR-1667 accepted; C4's first demand-gated feature built
+and measured at +0 population survival`, lean-c4-admission, 2026-09-05).**
+
+ADR-1662 measured that 361 of 756 pinned Mathlib statement mirrors are refused
+because their own DEFINITION closure reaches a proof-bearing declaration, and
+recommended extending the independently reconstructed substitution set over
+seven constructive names. This lane built that, re-ran the census over the same
+population, and found three things ADR-1662 could not have known.
+
+## Headline
+
+**390 statements crossed before. 390 cross after.** The five names addressed
+fall to zero as first-reported blockers and the same 150 rows reappear behind
+the next declaration in their own closure: exactly −150 / +150.
+
+| | before | after |
+| --- | ---: | ---: |
+| admitted | 390 | **390** |
+| `trusted-declaration-in-closure` | 361 | **361** |
+| `Quot` as first blocker | 73 | **0** |
+| `dif_pos` | 34 | **0** |
+| `Nat.le_of_lt_add_one` | 24 | **0** |
+| `And.left` | 12 | **0** |
+| `Eq.subst` | 7 | **0** |
+| `funext` | 0 | **62** |
+| `eq_self` | 97 | **131** |
+| `WellFounded.Nat.eager_eq` | 0 | **24** |
+| `And.right` / `asymm` / `ne_eq` | 0 | **19 / 10 / 1** |
+
+## What is actually behind the 361, now that the first layer is gone
+
+| | rows | share |
+| --- | ---: | ---: |
+| axioms this kernel excludes (`propext` via `eq_self`, `funext`, `em`) | **217** | 60% |
+| Lean's well-founded-recursion machinery (`Nat.mod_lt`, `WellFounded.Nat.eager_eq`) | **114** | 32% |
+| ordinary constructive names still worth substituting (`And.right`, `asymm`, `ne_eq`) | **30** | 8% |
+
+## The three findings
+
+1. **`eq_self` is not constructive.** Its own Lean 4.30 closure reaches the
+   `propext` AXIOM, so it belongs with `em`/`propext`. This re-confirms
+   `docs/autogenesis/240-…` (2026-08-22) and `docs/autogenesis/295-…`
+   (2026-08-27), which ADR-1662 lost. It is now a TEST, so the next census
+   cannot re-recommend it.
+2. **`Quot` needed no substitution.** `Kernel::add_quotient_package` already
+   derives all four package types itself, so the gate was refusing a type
+   former and its eliminators for a reason that only applies to proofs. This
+   overturns doc 294's "`Quotient` never exempted, by hard rule" and doc 295's
+   `permanent — Quot` row. `Quot.sound` is excluded at three independent
+   points.
+3. **C4's demand gate ranks by the wrong thing.** It picks a feature by
+   FIRST-reported blocker, which on a layered frontier measures order in the
+   stream rather than demand: `Quot` looked like 73 rows of demand and was
+   worth 0.
+
+## Gates
+
+`check-kernel-trusted-core.py` and `check-trust-closure.py` are byte-identical
+before and after and were **already red on `main`** (`FAIL D: image_group.rs`
+joined the core; a stale disclosure plus identity-map drift). The trusted core
+is 257 functions / **5,534** lines both times — which also corrects ADR-1600's
+5,526. `gen-lean-axiom-ledger.py --check` exit 0 both times.
+`check-autogenesis-holdout-isolation.py` PASS both times, identical counts. The
+published artifact lists 0 held-out ids of 205.
+
+## Not done, deliberately
+
+`Nat.mod_lt` (90 rows). Its own closure needs six more theorems (36 of its 42
+are already substituted); a whole statement closure reaching it needs more
+still. `And.right`/`asymm`/`ne_eq` (30 rows) are the measured next increment
+and are left for the next lane, because the measurement above predicts they
+move the frontier by 30 and survival by 0 again.
+
+<!-- plan-section: landed-changes -->
+
+| date | change | evidence |
+| --- | --- | --- |
+| 2026-09-05 | `dif_pos`, `Eq.subst`, `And.left` reconstructed in `trusted_substitution`; `Nat.le_of_lt_add_one` in `nat_order_substitution`; the native quotient package exempted from the statement-isolation gate; census re-run over the same 756 rows | `88609630f`; ADR-1667; `artifacts/measurements/statement-import-blocker-census-2026-09-05-after-c4.json` |
