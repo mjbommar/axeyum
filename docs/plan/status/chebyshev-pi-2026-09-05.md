@@ -66,4 +66,32 @@ coprimality side condition. `subset_product.rs`'s module doc records that
 the `Int` counterparts span ~650 lines and "took three drafts to close". That
 is a lane of its own, not an addition to `primorial.rs`.
 
+**Gates, with counts and exit status.** `cargo test --release -p
+axeyum-lean-kernel --lib -- nat_prelude::primorial_tests::
+nat_prelude::central_binomial_tests:: --test-threads=4` ran **10 tests, 10
+passed, 0 failed** (both modules, 5 + 5; the count is what rules out the
+zero-test trap). `cargo clippy --workspace --all-targets --all-features --
+-D warnings` exit 0 — workspace-wide because `crates/axeyum-py/src/kernel/
+prelude_fields.rs` is a generated consumer of `NatPrelude` and a kernel-only
+clippy would not see it. `cargo fmt --all --check` exit 0.
+`nat_axiom_inventory --require-axiom-free nat` reports
+`ok: nat trusted surface = 0`, exit 0. `validate-facts.py` exit 0 with
+`missing_edges=0`; `check-settled-fact-statements.py` exit 0 with
+`settled=2587 pinned=2587 unpinned=0 drifted=0`.
+`check-merge-hygiene.sh` exit 0 after two repairs it demanded (the production
+provenance ledger and the kernel dependency projection).
+
+**Did NOT run: the mutation kill counts.** Both suites
+(`primorial-in-kernel`, four anchors; `central-binomial-in-kernel`, two) are
+REGISTERED in `scripts/tests/mutation_controls.py` and their anchors validate
+(`MUTATION_ANCHORS|suites=72|anchors=765|stale=1`, the one stale row being the
+pre-existing `creal-migrate-consumers`). The runs themselves did not finish
+inside this lane's window: each mutant is a full `--release` rebuild of
+`axeyum-lean-kernel` through `cargo-serialized.sh`, and the host was at load
+22-24 with all five slots held throughout, so the two suites were still
+building after ~30 minutes apiece. **No kill count is claimed.** Logs:
+`chebyshev-pi.mut-cb2.log` and `chebyshev-pi.mut-pr2.log` in the session
+scratchpad; the runs were left detached and their `/data0` target caches are
+warm, so a re-run is cheap.
+
 <!-- /plan-section -->
