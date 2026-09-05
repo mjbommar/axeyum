@@ -96,7 +96,7 @@ REQUIRED_COVERAGE = [
     "Nat.Multiset",
     "AlgS.Group",
     "AlgS.CommRing",
-    "Alg.Field",  # AlgS.Field is unbuilt; the honest substitute is Alg.Field
+    "AlgS.Field",
     "CPoint",
     "Nat.Graph",
     "Complex",

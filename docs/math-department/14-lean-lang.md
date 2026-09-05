@@ -109,9 +109,11 @@ what makes the whole thing a claim rather than a folder.
 - [x] **4. A carrier correspondence ledger.** *Done 2026-09-05 (ADR-1665).*
       `artifacts/carrier-correspondence/carrier-correspondence-v1.json` holds
       16 rows — `CReal` ↔ `Real`, `Nat.Finset` ↔ `Finset`, `Nat.Multiset` ↔
-      `Multiset`, `AlgS.Group` ↔ `Group`, `AlgS.CommRing` ↔ `CommRing`, `Alg.Field`
-      / `Rat.IsField` ↔ `Field` (`AlgS.Field` itself is unbuilt — recorded
-      honestly rather than graded as if it existed), `CPoint` ↔
+      `Multiset`, `AlgS.Group` ↔ `Group`, `AlgS.CommRing` ↔ `CommRing`,
+      `AlgS.Field` ↔ `Field` (a constructive field with an EXISTENTIAL
+      inverse over apartness, landed the same day in `53c851e5b`/ADR-1627 —
+      this ledger's own first pass missed it from a stale merge base and was
+      corrected before merge, see ADR-1665), `CPoint` ↔
       `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph`, `Complex` ↔
       `Complex`, Rat matrices ↔ `Matrix`, the ℚ probability shelf ↔ `PMF`,
       `Metric` ↔ `MetricSpace`, `IntSpace` ↔ the Bochner integral, `Nat.RM` ↔
@@ -119,9 +121,11 @@ what makes the whole thing a claim rather than a folder.
       assumption was wrong — Mathlib has a general halting-problem theorem —
       and the row corrects it), `Provable`/`ipc_*` ↔ Mathlib's
       Heyting/ModelTheory, plus a bonus `Nat.Rado` `no-counterpart` row —
-      graded *same-statement* (3), *constructively-stronger* (2),
-      *different-object* (10) or *no-counterpart* (1), each with a witness
-      theorem pair verified against the live kernel projection.
+      graded *same-statement* (2), *constructively-stronger* (2),
+      *different-object* (11) or *no-counterpart* (1), each with a witness
+      theorem pair verified against the live kernel projection or, where the
+      declaration postdates that projection's last regeneration, a fresh
+      `shape_search` build.
       `scripts/check-carrier-correspondence.py --check` gates it exactly the
       way `check-mirror-statement-fidelity.py` gates the ℕ/ℤ mirrors, with
       nine mutation-verified guards. Serves 02, 03, 05, 07, 08; reviewer 03's
@@ -197,7 +201,8 @@ count depend on Lean's axioms.
 | date | change | evidence |
 |---|---|---|
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
-| 2026-09-05 | **Next Ten item 4 landed** (ADR-1665): the carrier correspondence ledger, 16 rows, gated by `scripts/check-carrier-correspondence.py --check` (nine mutation-verified guards, every mutation killing exactly one control test) exactly the way the ℕ/ℤ mirror-fidelity check gates `F:ml430-*`. Two of the brief's own row assumptions were wrong and are corrected in the ledger rather than silently substituted: `AlgS.Field` does not exist (only nine `AlgS.*` records are built, ending at `CommRing`; the row grades `Alg.Field` instead) and `Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s general halting-problem theorem), so that row is `different-object` rather than the assumed `no-counterpart`. Grade counts: same-statement 3, constructively-stronger 2, different-object 10, no-counterpart 1. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; `python3 scripts/check-carrier-correspondence.py --check`; `python3 scripts/tests/mutation_controls.py carrier-correspondence` |
+| 2026-09-05 | **Next Ten item 4 landed** (ADR-1665): the carrier correspondence ledger, 16 rows, gated by `scripts/check-carrier-correspondence.py --check` (nine mutation-verified guards, every mutation killing exactly one control test) exactly the way the ℕ/ℤ mirror-fidelity check gates `F:ml430-*`. `Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s general halting-problem theorem, contra the brief's assumption), so that row is `different-object` rather than `no-counterpart`. Grade counts: same-statement 2, constructively-stronger 2, different-object 11, no-counterpart 1. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; `python3 scripts/check-carrier-correspondence.py --check`; `python3 scripts/tests/mutation_controls.py carrier-correspondence` |
+| 2026-09-05 | **Correction, same day, before merge**: this ledger's own first pass on `AlgS.Field`↔`Field` was wrong, from a stale worktree — `AlgS.Field` landed on `main` in `53c851e5b` (ADR-1627) after this lane's merge base and was measured absent. After `git merge --no-edit main` and a fresh `shape_search` release build (declarations `4291 -> 4379`), `AlgS.Field` is confirmed live (`FOUND 1`, positive control `AlgS.Group` also `FOUND 1`) with an EXISTENTIAL inverse over apartness (`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`), not proved tight for `CReal`. `CC:algs-field-field` is regraded `different-object` (was `same-statement` over the wrong, Eq-based `Alg.Field`): stronger hypothesis, weaker conclusion than Mathlib's total-inverse `Field`, the same non-comparable pattern ADR-1030 used for EVT. The general lesson — merge local `main` before measuring an absence — recurred a second time, independently, caught before merge rather than after. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; fresh `shape_search` build post-merge |
 
 ## How to re-measure
 

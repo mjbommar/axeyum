@@ -8,10 +8,10 @@ One row per (Axeyum carrier, Mathlib counterpart) pair (`docs/math-department/14
 
 | Grade | Rows |
 |---|---:|
-| Same statement (`same-statement`) | 3 |
+| Same statement (`same-statement`) | 2 |
 | Constructively stronger (ours) (`constructively-stronger`) | 2 |
 | Constructively weaker (ours) (`constructively-weaker`) | 0 |
-| Different object (`different-object`) | 10 |
+| Different object (`different-object`) | 11 |
 | No counterpart (`no-counterpart`) | 1 |
 | **Total** | **16** |
 
@@ -35,25 +35,26 @@ One row per (Axeyum carrier, Mathlib counterpart) pair (`docs/math-department/14
 - `AlgS.mul_zero` vs `mul_zero` -- Same proposition (a*0 = 0), different epistemic status: AlgS.mul_zero is derived from the ring axioms without using the multiplicative identity (structures_setoid.rs:2082-2085 doc); Mathlib's mul_zero is a primitive FIELD of MulZeroClass, assumed rather than derived at that layer even though it is classically derivable higher up.
 - `AlgS.mul_neg_one` vs `mul_comm` -- AlgS.mul_neg_one (a * -1 = -a) is downstream of mul_zero and commutativity; cited alongside mul_comm as the second generic ring law this spine proves once rather than per-instance.
 
-### `CC:algs-field-field` -- Alg.Field (the Eq-based spine; AlgS.Field is not yet built) against Mathlib's Field class
+### `CC:algs-field-field` -- AlgS.Field, a constructive field with an existential inverse over apartness, against Mathlib's total-inverse Field
 
-**Grade:** Same statement (`same-statement`)
+**Grade:** Different object (`different-object`)
 
-**Reason:** Alg.Field's laws are Eq-based like Mathlib's Field, so the same beta-erasure argument as AlgS.Group/CommRing applies directly with no equiv substitution needed; but the row's namesake AlgS.Field is unbuilt, which is itself the finding reviewer 04's stake (docs/math-department/14-lean-lang.md chair 04) asked this ledger to make precise rather than leave as an ADR footnote.
+**Reason:** AlgS.Field's inverse (`mulInvEx : forall a, apart a zero -> exists b, equiv (mul a b) one`) assumes a strictly more informative hypothesis (witnessed apartness, not proved tight for CReal) and concludes a strictly less usable result (existence only, no term) than Mathlib's Field, which assumes a bare inequality and hands back a computed total-function value -- the same two-asymmetries-in-opposite-directions pattern ADR-1030 used to grade EVT non-comparable, and CReal.no_total_inverse proves the stronger (functional) shape is not merely unbuilt here but impossible.
 
 | | Axeyum | Mathlib |
 |---|---|---|
-| Carrier | Alg.Field (AlgS.Field, named in ADR-1627 / roadmap W3-2 as Rat.fieldS's target type, is UNBUILT) | Field |
-| Location | `crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:1550` | `Mathlib/Algebra/Field/Defs.lean:180` |
-| Verification | verified-in-kernel-projection | verified-in-pinned-checkout |
-| Equality regime | eq | eq |
+| Carrier | AlgS.Field | Field |
+| Location | `crates/axeyum-lean-kernel/src/nat_prelude/field_setoid.rs:1056` | `Mathlib/Algebra/Field/Defs.lean:180` |
+| Verification | verified-in-source-only | verified-in-pinned-checkout |
+| Equality regime | setoid | eq |
 
 **Witness pairs:**
 
-- `Alg.Field.mulInv` vs `mul_inv_cancel₀` -- Alg.Field.mulInv is conditional (structures.rs:1389, `cond_inv_field`) matching Mathlib's hypothesis-carrying mul_inv_cancel₀ (h : a ≠ 0); both are bare-inequality hypotheses, not witnessed apartness data, so this pair is same-statement rather than constructively-stronger.
-- `Rat.rat_isField` vs *(no Mathlib counterpart for this pair)* -- One-sided: this is the Rat instantiation of Alg.Field, included to show the concrete route from the abstract spine to a landed Field-shaped instance. No single Mathlib lemma names 'Field ℚ instantiated' since it is a type-class instance rather than a theorem there.
+- `AlgS.Field.mulInvEx` vs `mul_inv_cancel₀` -- Confirmed via the fresh shape_search build: `AlgS.Field.mulInvEx : AlgS.Field -> AlgS.Field.carrier -> AlgS.Field.apart -> Exists`. Ours proves only that an inverse EXISTS, as a Prop, over the apartness hypothesis; theirs returns the actual inverse value under a bare `a != 0`. Neither dominates: ours is stronger on the hypothesis, weaker on the conclusion.
+- `CReal.no_total_inverse` vs *(no Mathlib counterpart for this pair)* -- A genuinely stronger result with no Mathlib counterpart: proves constructively that no function `(x : CReal) -> Apart x zero -> CReal` can serve as a multiplicative inverse (a large-elimination wall on the sign disjunction and the modulus existential, per field_setoid.rs's own module doc -- not a missing lemma). This is exactly the impossibility Mathlib's total `Inv.inv : R -> R` sidesteps by deciding `x = 0` classically on the Cauchy quotient. Confirmed by direct source read at the `no_total_inverse` name_str interning site. CReal.fieldS itself IS confirmed live via a fresh shape_search --name-like "fieldS" run (FOUND 3, alongside Rat.fieldS and Rat.fieldS_isTight); a separate targeted query for `no_total_inverse` specifically was not run in this session.
+- `Rat.fieldS_isTight` vs *(no Mathlib counterpart for this pair)* -- The instance-dependent half of the same asymmetry: Q's apartness (`Not (Eq a b)`, decidable) IS tight, proved in three lines from `Rat.lt_trichotomy` per the module's own doc table, while CReal's is not proved tight anywhere in the tree. Mathlib's Field never needs a tightness predicate at all, because its apartness-free `a != 0` hypothesis has no analogous gap to close. Confirmed live via the same fresh shape_search --name-like "fieldS" run: Rat.fieldS_isTight : AlgS.Field.IsTight, FOUND.
 
-**Notes:** The brief that commissioned this ledger named the row 'AlgS.Field ↔ Field'. AlgS.Field does not exist as a kernel declaration (confirmed absent from the projection and from structures_setoid.rs's own nine-record list). Recording this honestly, per the brief's own discipline ('mark anything you could not verify unverified rather than guessing'), rather than inventing a grade for an object that is not built.
+**Notes:** Original draft of this row (pre-coordinator-correction) graded `same-statement` over the OLDER `Alg.Field` (Eq-based spine) because `AlgS.Field` appeared absent -- the worktree's merge base predated `53c851e5b`. After merging main and confirming `AlgS.Field` is real via a fresh shape_search build with a positive control, this row grades the actual setoid Field record the brief named, not its Eq-based cousin. `Alg.Field` and `Rat.IsField`/`Rat.rat_isField` remain real, landed, and closer in shape to Mathlib's Field (same Eq-based bare-inequality hypothesis) -- worth a future row of their own if a `Rat matrices`-style split is ever wanted here.
 
 ### `CC:algs-group-group` -- AlgS.Group, the equiv-parametrized setoid group record, against Mathlib's Eq-based Group class
 

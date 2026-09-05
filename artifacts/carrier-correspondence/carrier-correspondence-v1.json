@@ -256,55 +256,66 @@
       "schema_version": 1,
       "kind": "axeyum-carrier-correspondence",
       "id": "CC:algs-field-field",
-      "title": "Alg.Field (the Eq-based spine; AlgS.Field is not yet built) against Mathlib's Field class",
+      "title": "AlgS.Field, a constructive field with an existential inverse over apartness, against Mathlib's total-inverse Field",
       "axeyum": {
-        "carrier": "Alg.Field (AlgS.Field, named in ADR-1627 / roadmap W3-2 as Rat.fieldS's target type, is UNBUILT)",
-        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:1550",
-        "verification": "verified-in-kernel-projection",
-        "verification_detail": "Confirmed: `AlgS.Field*` has zero matches in the kernel projection, and structures_setoid.rs's own module doc (lines 3-4) lists exactly nine AlgS.* records ending at CommRing -- Field is not among them. `Rat.fieldS` (rat_prelude.rs:73, :3181 doc comments citing ADR-1627/W3-2 as future work) is likewise absent from the projection. The existing Eq-based `Alg.Field` (structures.rs:1550, declared via declare_structures_all at :1575) IS present, along with `Alg.Field.mulInv`, `Alg.Field.distribL`, `Alg.Field.distribR`, and the Rat instantiation `Rat.IsField`/`Rat.rat_isField` (rat_prelude.rs:3254-3255).",
-        "equality_regime": "eq",
-        "equality_regime_note": "Alg.Field's laws are stated over literal Eq (the older, pre-ADR-1588 spine), which matches carriers with Leibniz equality such as Rat -- the same reason no setoid twin was needed until CReal wanted a Field structure."
+        "carrier": "AlgS.Field",
+        "source_location": "crates/axeyum-lean-kernel/src/nat_prelude/field_setoid.rs:1056",
+        "verification": "verified-in-source-only",
+        "verification_detail": "CORRECTED 2026-09-05 after merging main: `AlgS.Field` landed in `53c851e5b` (ADR-1627), after this ledger's original draft ran against a pre-merge worktree. Confirmed via a FRESH release build of shape_search, rebuilt after the merge (declarations=4379, up from 4291 pre-merge): `shape_search --include-constructed --name AlgS.Field` -> FOUND 1 (inductive, arity 0); positive control `--name AlgS.Group` -> FOUND 1, confirming the query methodology was not silently broken. `--name-contains Field` (67 matches) additionally confirms `AlgS.Field.mulInvEx`, `AlgS.Field.apart`, `AlgS.Field.IsTight`, `AlgS.Field.ofCommRing`, `AlgS.Field.mul_left_cancel`, `AlgS.Field.apartCotrans`, `AlgS.Field.apart_irrefl`, all as live declarations. Absent from artifacts/autogenesis/kernel-dependency-projection-v1.json, which was not regenerated across this merge (still 4291, still dated before 53c851e5b) -- so this is shape_search/source verification, not kernel-projection verification, exactly the same distinction already used for this session's other post-projection landings (Nat.Finset.exists_memB_of_card_pos, the Rat.binomial_* theorems). A follow-up shape_search --name-like \"fieldS\" (same fresh build) additionally confirms CReal.fieldS : AlgS.Field, Rat.fieldS : AlgS.Field, and Rat.fieldS_isTight : AlgS.Field.IsTight as live declarations (FOUND 3).",
+        "equality_regime": "setoid",
+        "equality_regime_note": "Carries the same equiv/congruence apparatus as AlgS.Group/AlgS.CommRing PLUS a genuine apartness relation `apart` as positive record data (at CReal, `Or (lt x zero) (lt zero x)` -- a disjunction, not a bare negation). `AlgS.Field.IsTight` (`not(apart a b) -> equiv a b`) is deliberately kept OUT of the record as a separate predicate rather than a field, because Q proves it (`Rat.fieldS_isTight`) but CReal cannot prove it from anything in the tree."
       },
       "mathlib": {
         "counterpart": "Field",
         "module_path": "Mathlib.Algebra.Field.Defs",
         "source_location": "Mathlib/Algebra/Field/Defs.lean:180",
         "verification": "verified-in-pinned-checkout",
-        "verification_detail": "`class Field (K : Type u) extends CommRing K, DivisionRing K`, read directly at line 180.",
+        "verification_detail": "`class Field (K : Type u) extends CommRing K, DivisionRing K`, read directly at line 180. The inverse is `Inv.inv : K -> K`, a total function (with the convention `inv_zero : (0:K)^-1 = 0`), and `GroupWithZero.mul_inv_cancel`/`mul_inv_cancel0` take a bare inequality hypothesis `a != 0`, read directly at Mathlib/Algebra/GroupWithZero/Defs.lean:229-239.",
         "equality_regime": "eq",
-        "equality_regime_note": "Ordinary Eq-based typeclass, same regime as Alg.Field."
+        "equality_regime_note": "Ordinary Eq-based typeclass; `a != 0` is `Not (Eq a 0)`, a bare negation with no witness content, unlike AlgS.Field's `apart`."
       },
-      "grade": "same-statement",
-      "reason": "Alg.Field's laws are Eq-based like Mathlib's Field, so the same beta-erasure argument as AlgS.Group/CommRing applies directly with no equiv substitution needed; but the row's namesake AlgS.Field is unbuilt, which is itself the finding reviewer 04's stake (docs/math-department/14-lean-lang.md chair 04) asked this ledger to make precise rather than leave as an ADR footnote.",
+      "grade": "different-object",
+      "reason": "AlgS.Field's inverse (`mulInvEx : forall a, apart a zero -> exists b, equiv (mul a b) one`) assumes a strictly more informative hypothesis (witnessed apartness, not proved tight for CReal) and concludes a strictly less usable result (existence only, no term) than Mathlib's Field, which assumes a bare inequality and hands back a computed total-function value -- the same two-asymmetries-in-opposite-directions pattern ADR-1030 used to grade EVT non-comparable, and CReal.no_total_inverse proves the stronger (functional) shape is not merely unbuilt here but impossible.",
       "witness": [
         {
-          "axeyum_theorem": "Alg.Field.mulInv",
-          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:1389",
-          "axeyum_verification": "verified-in-kernel-projection",
+          "axeyum_theorem": "AlgS.Field.mulInvEx",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/nat_prelude/field_setoid.rs:233",
+          "axeyum_verification": "verified-in-source-only",
           "mathlib_theorem": "mul_inv_cancel₀",
           "mathlib_location": "Mathlib/Algebra/GroupWithZero/Defs.lean:239",
-          "note": "Alg.Field.mulInv is conditional (structures.rs:1389, `cond_inv_field`) matching Mathlib's hypothesis-carrying mul_inv_cancel₀ (h : a ≠ 0); both are bare-inequality hypotheses, not witnessed apartness data, so this pair is same-statement rather than constructively-stronger."
+          "note": "Confirmed via the fresh shape_search build: `AlgS.Field.mulInvEx : AlgS.Field -> AlgS.Field.carrier -> AlgS.Field.apart -> Exists`. Ours proves only that an inverse EXISTS, as a Prop, over the apartness hypothesis; theirs returns the actual inverse value under a bare `a != 0`. Neither dominates: ours is stronger on the hypothesis, weaker on the conclusion."
         },
         {
-          "axeyum_theorem": "Rat.rat_isField",
-          "axeyum_location": "crates/axeyum-lean-kernel/src/rat_prelude.rs:3255",
-          "axeyum_verification": "verified-in-kernel-projection",
+          "axeyum_theorem": "CReal.no_total_inverse",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/creal.rs:6402",
+          "axeyum_verification": "verified-in-source-only",
           "mathlib_theorem": null,
           "mathlib_location": null,
-          "note": "One-sided: this is the Rat instantiation of Alg.Field, included to show the concrete route from the abstract spine to a landed Field-shaped instance. No single Mathlib lemma names 'Field ℚ instantiated' since it is a type-class instance rather than a theorem there."
+          "note": "A genuinely stronger result with no Mathlib counterpart: proves constructively that no function `(x : CReal) -> Apart x zero -> CReal` can serve as a multiplicative inverse (a large-elimination wall on the sign disjunction and the modulus existential, per field_setoid.rs's own module doc -- not a missing lemma). This is exactly the impossibility Mathlib's total `Inv.inv : R -> R` sidesteps by deciding `x = 0` classically on the Cauchy quotient. Confirmed by direct source read at the `no_total_inverse` name_str interning site. CReal.fieldS itself IS confirmed live via a fresh shape_search --name-like \"fieldS\" run (FOUND 3, alongside Rat.fieldS and Rat.fieldS_isTight); a separate targeted query for `no_total_inverse` specifically was not run in this session."
+        },
+        {
+          "axeyum_theorem": "Rat.fieldS_isTight",
+          "axeyum_location": "crates/axeyum-lean-kernel/src/rat_prelude/field_setoid_instance.rs:78",
+          "axeyum_verification": "verified-in-source-only",
+          "mathlib_theorem": null,
+          "mathlib_location": null,
+          "note": "The instance-dependent half of the same asymmetry: Q's apartness (`Not (Eq a b)`, decidable) IS tight, proved in three lines from `Rat.lt_trichotomy` per the module's own doc table, while CReal's is not proved tight anywhere in the tree. Mathlib's Field never needs a tightness predicate at all, because its apartness-free `a != 0` hypothesis has no analogous gap to close. Confirmed live via the same fresh shape_search --name-like \"fieldS\" run: Rat.fieldS_isTight : AlgS.Field.IsTight, FOUND."
         }
       ],
       "provenance": {
         "date": "2026-09-05",
-        "established_by": "lane lean-carrier-ledger (2026-09-05), docs/math-department/14-lean-lang.md Next Ten item 4",
+        "established_by": "lane lean-carrier-ledger (2026-09-05), regraded after the coordinator's correction: AlgS.Field landed on main in 53c851e5b (ADR-1627) after this lane's original draft",
         "sources": [
           "docs/math-department/14-lean-lang.md",
-          "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+          "docs/research/09-decisions/adr-1627-a-constructive-field-has-an-existential-inverse-because-creal-cannot-have-a-functional-one.md",
+          "crates/axeyum-lean-kernel/src/nat_prelude/field_setoid.rs",
+          "crates/axeyum-lean-kernel/src/creal/field_setoid_instance.rs",
+          "crates/axeyum-lean-kernel/src/rat_prelude/field_setoid_instance.rs",
           "scripts/provision-lean-import-toolchain.sh --verify (mathlib4 c5ea00351c28e24afc9f0f84379aa41082b1188f, Lean 4.30.0)",
-          "crates/axeyum-lean-kernel/src/rat_prelude.rs (doc comments at lines 73, 3181 naming ADR-1627/W3-2)"
+          "fresh shape_search release build, 2026-09-05 07:37, post-merge (declarations=4379)"
         ]
       },
-      "notes": "The brief that commissioned this ledger named the row 'AlgS.Field ↔ Field'. AlgS.Field does not exist as a kernel declaration (confirmed absent from the projection and from structures_setoid.rs's own nine-record list). Recording this honestly, per the brief's own discipline ('mark anything you could not verify unverified rather than guessing'), rather than inventing a grade for an object that is not built."
+      "notes": "Original draft of this row (pre-coordinator-correction) graded `same-statement` over the OLDER `Alg.Field` (Eq-based spine) because `AlgS.Field` appeared absent -- the worktree's merge base predated `53c851e5b`. After merging main and confirming `AlgS.Field` is real via a fresh shape_search build with a positive control, this row grades the actual setoid Field record the brief named, not its Eq-based cousin. `Alg.Field` and `Rat.IsField`/`Rat.rat_isField` remain real, landed, and closer in shape to Mathlib's Field (same Eq-based bare-inequality hypothesis) -- worth a future row of their own if a `Rat matrices`-style split is ever wanted here."
     },
     {
       "schema_version": 1,

@@ -110,17 +110,40 @@ correspondence machinery rather than an extension of it.**
 ### A finding this ADR records rather than silently substitutes
 
 The brief that commissioned this ledger named `AlgS.Field`↔`Field` and
-`Nat.RM`↔no counterpart as two of the required rows. Both assumptions were
-wrong, verified against the tree rather than assumed:
+`Nat.RM`↔no counterpart as two of the required rows, and this lane's own first
+pass on `AlgS.Field` was ALSO wrong, for a different reason than a brief error:
+a stale merge base.
 
-- **`AlgS.Field` does not exist.** `structures_setoid.rs`'s own module doc
-  lists exactly nine `AlgS.*` records ending at `CommRing`; `Field` is not
-  among them, and `Rat.fieldS : AlgS.Field` (named in `rat_prelude.rs` as
-  ADR-1627/roadmap-W3-2 future work) is absent from the kernel projection.
-  The `CC:algs-field-field` row grades the real, landed `Alg.Field` (the
-  older Eq-based spine) and `Rat.IsField`/`Rat.rat_isField` instead, with an
-  explicit `notes` field recording the gap rather than inventing a grade for
-  an undeclared object.
+- **`AlgS.Field` does exist, and this lane's own draft first got that wrong.**
+  The lane's worktree branched before `53c851e5b` (ADR-1627) landed `AlgS.Field`
+  on `main`, so its first pass measured `AlgS.Field*` absent from
+  `structures_setoid.rs`'s nine-record list and graded `Alg.Field` (the older
+  Eq-based spine) instead. The coordinator caught the staleness before merge.
+  After `git merge --no-edit main` and a FRESH release build of `shape_search`
+  (declarations `4291 -> 4379`), `AlgS.Field` is confirmed live: `--name
+  AlgS.Field` returns `FOUND 1` (positive control `--name AlgS.Group` also
+  `FOUND 1`), and `--name-contains Field` (67 matches) confirms
+  `AlgS.Field.mulInvEx`, `.apart`, `.IsTight`, `.ofCommRing`,
+  `.mul_left_cancel` as live declarations; a follow-up `--name-like fieldS`
+  confirms `CReal.fieldS`, `Rat.fieldS` and `Rat.fieldS_isTight`. None of this
+  is in `artifacts/autogenesis/kernel-dependency-projection-v1.json`, which was
+  not regenerated across the merge — so every `AlgS.Field`-related name in the
+  ledger is `verified-in-source-only` (shape_search + direct source read), not
+  `verified-in-kernel-projection`, the same distinction already used for this
+  session's other post-projection landings.
+
+  `CC:algs-field-field` now grades the REAL `AlgS.Field` against Mathlib's
+  `Field`, as **`different-object`** rather than the withdrawn
+  `same-statement` grade its first (stale) draft gave `Alg.Field`: `AlgS.Field`'s
+  inverse is existential (`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`)
+  over an apartness hypothesis not proved tight for `CReal`, while Mathlib's
+  `Field` commits to a total function under a bare inequality — hypothesis
+  stronger, conclusion weaker, the same two-asymmetries-in-opposite-directions
+  pattern ADR-1030 used for EVT. `CReal.no_total_inverse` (verified by direct
+  source read; a dedicated shape_search query for this one name was not run in
+  this session, reported as such rather than guessed) proves the functional
+  shape is impossible for `CReal`, not merely unbuilt, which is the strongest
+  single fact in the row.
 - **`Nat.RM` has a Mathlib counterpart.** Mathlib's `Computability` library
   states the general halting problem (`halting_problem`,
   `Mathlib/Computability/Halting.lean:65`) and Rice's theorem over its own
@@ -131,17 +154,22 @@ wrong, verified against the tree rather than assumed:
   row's own `reason` field.
 
 Both are recorded as findings, per this repository's own discipline that an
-absence must be a measured negative and a brief's "blocked on" or "assumed
-absent" is a claim about one route rather than a verified fact.
+absence must be a measured negative and a brief's — or a lane's own first
+pass's — "blocked on" or "assumed absent" is a claim about one route (or one
+worktree's merge base) rather than a verified fact. **Merge local `main`
+before measuring an absence, and re-measure after merging** is the general
+lesson ADR-1030 already recorded from a 22-commit-stale worktree; this ADR is
+a second, independent instance of the same failure mode, caught before merge
+rather than after.
 
 ### Counts per grade (measured 2026-09-05, `check-carrier-correspondence.py --check`)
 
 | Grade | Rows |
 |---|---:|
-| `same-statement` | 3 |
+| `same-statement` | 2 |
 | `constructively-stronger` | 2 |
 | `constructively-weaker` | 0 |
-| `different-object` | 10 |
+| `different-object` | 11 |
 | `no-counterpart` | 1 |
 | **Total** | **16** |
 
@@ -159,19 +187,30 @@ lines are otherwise unchanged.
 ## Evidence
 
 - `python3 scripts/check-carrier-correspondence.py --check` --
-  `CARRIER_CORRESPONDENCE|rows=16|witnesses=24|kernel_verified_names=22|kernel_declaration_ids=4291|grades=constructively-stronger:2,constructively-weaker:0,different-object:10,no-counterpart:1,same-statement:3|violations=0|verdict=PASS`.
+  `CARRIER_CORRESPONDENCE|rows=16|witnesses=25|kernel_verified_names=20|kernel_declaration_ids=4291|grades=constructively-stronger:2,constructively-weaker:0,different-object:11,no-counterpart:1,same-statement:2|violations=0|verdict=PASS`.
 - `python3 -m unittest scripts.tests.test_check_carrier_correspondence` -- 12
-  tests, all passing, bare, nonzero count confirmed.
+  tests, all passing, bare, nonzero count confirmed (re-run after the
+  `AlgS.Field` regrade).
 - `python3 scripts/tests/mutation_controls.py carrier-correspondence` -- 11/11
   registered mutations KILLED, each by exactly the test named for its guard;
-  zero survivors, zero unmeasured.
+  zero survivors, zero unmeasured (re-run after the regrade).
 - `python3 scripts/gen-carrier-correspondence-md.py --check` -- clean against
   the committed `docs/plan/generated/carrier-correspondence.md`.
+- A FRESH `shape_search` release build after `git merge --no-edit main`
+  (declarations `4291 -> 4379`, build cost ~210-350s per query since
+  `--include-constructed` rebuilds the `creal`/`complex`/`cpoint`/`metric`/
+  `intspace` preludes in memory each run): `--name AlgS.Field` -> `FOUND 1`;
+  positive control `--name AlgS.Group` -> `FOUND 1`; `--name-contains Field`
+  (67 matches) confirms `AlgS.Field.mulInvEx`, `.apart`, `.IsTight`,
+  `.ofCommRing`, `.mul_left_cancel`; `--name-like fieldS` confirms
+  `CReal.fieldS`, `Rat.fieldS`, `Rat.fieldS_isTight`.
 - Every Axeyum name cited as `verified-in-kernel-projection` was cross-checked
   against `artifacts/autogenesis/kernel-dependency-projection-v1.json`
-  (4,291 declarations) by exact `id` lookup; names that postdate that
-  projection's last regeneration (the 2026-09-05 binomial/Hall-singleton
-  landings) are marked `verified-in-source-only` rather than guessed present.
+  (4,291 declarations, unregenerated across the `main` merge) by exact `id`
+  lookup; names that postdate that projection's last regeneration (the
+  2026-09-05 binomial/Hall-singleton landings, and now the entire
+  `AlgS.Field`/`fieldS` family) are marked `verified-in-source-only` rather
+  than guessed present.
 - Every Mathlib name and `file:line` was read directly from the pinned
   mathlib4 checkout at `c5ea00351c28e24afc9f0f84379aa41082b1188f` (Lean
   4.30.0), located via `scripts/provision-lean-import-toolchain.sh --verify`,
@@ -218,8 +257,12 @@ of "0 against 3" over-generalization ADR-1030 found and corrected.
   obviously look wrong -- the same failure mode CLAUDE.md's "a stable number
   can be stably wrong" note warns about, applied here before it happens
   rather than after.
-- Two follow-on items this ADR does NOT close: (1) a specific grading of the
+- One follow-on item this ADR does NOT close: a specific grading of the
   `Rat.rank`↔`Matrix.rank` pair on its own, now that it is no longer
-  fixed-size-vs-general-n (flagged in `CC:rat-matrix-matrix`'s witness note);
-  (2) whether `AlgS.Field` should actually be built, which is ADR-1627's
-  question, not this one's.
+  fixed-size-vs-general-n (flagged in `CC:rat-matrix-matrix`'s witness note).
+- `CC:algs-field-field`'s `notes` field records that `Alg.Field` and
+  `Rat.IsField`/`Rat.rat_isField` (the Eq-based spine `AlgS.Field` sits beside)
+  remain real, landed, and closer in shape to Mathlib's `Field` than
+  `AlgS.Field` is -- a future lane could reasonably want a second row for that
+  pair specifically, since this row now grades the setoid record the brief
+  named rather than its Eq-based cousin.
