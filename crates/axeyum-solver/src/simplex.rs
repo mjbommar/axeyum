@@ -15,9 +15,26 @@
 //!   row, with `Σ yᵢ·aᵢ = 0` (the combined left-hand side vanishes) and
 //!   `Σ yᵢ·bᵢ < 0` — a self-checkable refutation, the same certificate shape the
 //!   Fourier–Motzkin path's [`crate::lra`] already consumes, or
-//! - [`SimplexOutcome::Unknown`] iff the exact `i128` rational arithmetic overflows
+//! - [`SimplexOutcome::Unknown`] iff the exact rational arithmetic declines
 //!   (never a wrong verdict — the same `checked_*` discipline as the rest of the
 //!   solver).
+//!
+//! Since **ADR-1702** that last case is much narrower than it was. This engine
+//! OPTS IN to promoting rational arithmetic (`Rational::wide_*`), so `i128`
+//! overflow inside the tableau no longer abandons the search — the value is
+//! carried at arbitrary precision and demoted again as soon as it fits. The
+//! whole class of `unknown`s this engine used to return on intermediate
+//! coefficient growth is therefore decided.
+//!
+//! Promotion is **contained**: every value that leaves this module passes
+//! through `narrow`, which declines to `Unknown` if a feasible point or a Farkas
+//! multiplier does not fit `i128`. Nothing downstream can observe that a
+//! promoted value existed, which is why the widening is a pure gain rather than
+//! a new obligation on `lra`, `lra_online` or model lifting.
+//!
+//! The remaining declines are a witness or certificate outside `i128`, division
+//! by zero, and a big-rational pool at capacity — see the `Overflow` marker
+//! below.
 //!
 //! # Scope
 //!
@@ -51,9 +68,10 @@ use std::time::Instant;
 use axeyum_ir::Rational;
 
 /// Hard ceiling on the dense tableau [`Incremental::new`] will build (rows ×
-/// columns). A `Rational` is two `i128`s, so 4M cells is ~128 MB — past that the
-/// dense general simplex is the wrong data structure and the caller keeps whatever
-/// engine it had. Purely structural (no clock), so the decline is deterministic.
+/// columns). A `Rational` is two `i128`s — still true after ADR-1702, whose
+/// promoted values live out of line in a capped pool — so 4M cells is ~128 MB;
+/// past that the dense general simplex is the wrong data structure and the caller
+/// keeps whatever engine it had. Purely structural (no clock), so the decline is deterministic.
 pub(crate) const MAX_TABLEAU_CELLS: usize = 4_000_000;
 
 /// Pivot ceiling for a single [`feasible`] / [`Incremental::check`] call. Bland's
@@ -108,28 +126,70 @@ pub enum SimplexOutcome {
     /// Unsatisfiable: Farkas multipliers `y` over the *input rows* (one per
     /// constraint) whose nonnegative-combination collapses to `0 < 0`.
     Infeasible(Vec<Rational>),
-    /// Exact arithmetic overflowed — a sound `unknown`, never a verdict.
+    /// Exact arithmetic declined — a sound `unknown`, never a verdict.
     Unknown,
 }
 
-/// Marker for an `i128`-rational overflow; mapped to [`SimplexOutcome::Unknown`].
+/// Marker for an exact-arithmetic decline; mapped to [`SimplexOutcome::Unknown`].
+///
+/// **ADR-1702 narrowed this but did not make it unreachable, so it stays.** The
+/// tableau's arithmetic promotes rather than overflowing, which removes the
+/// coefficient-growth `unknown`s this marker used to carry. What remains
+/// reachable is [`Rational::wide_div`] declining on a **zero divisor** — not an
+/// overflow at all — and the big-rational pool reaching
+/// [`Rational::big_pool_capacity`], past which every operation behaves exactly
+/// as it did before ADR-1702. Deleting the marker would delete a live soundness
+/// path, so the pivot and deadline budgets and this decline route are all kept.
+///
+/// One helper below dropped out of this shape entirely: `cmp` is infallible after
+/// ADR-1702, because `Rational::wide_cmp` allocates no pool entry, so it returns
+/// a bare `Ordering`. Keeping a `Result` that can only be `Ok` is a failure path
+/// that cannot fail, which is exactly what this repository does not keep.
 struct Overflow;
 type R<T> = Result<T, Overflow>;
 
+// ADR-1702: this engine OPTS IN to promoting rational arithmetic. The `wide_*`
+// family carries a value past `i128` instead of declining, which is what removes
+// the coefficient-growth `unknown`s the tableau used to return; promoted values
+// never leave this module, because every public exit narrows through
+// [`narrow`].
 fn add(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_add(b).ok_or(Overflow)
+    a.wide_add(b).ok_or(Overflow)
 }
 fn sub(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_sub(b).ok_or(Overflow)
+    a.wide_sub(b).ok_or(Overflow)
 }
 fn mul(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_mul(b).ok_or(Overflow)
+    a.wide_mul(b).ok_or(Overflow)
 }
 fn div(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_div(b).ok_or(Overflow)
+    a.wide_div(b).ok_or(Overflow)
 }
-fn cmp(a: Rational, b: Rational) -> R<core::cmp::Ordering> {
-    a.checked_cmp(&b).ok_or(Overflow)
+/// Exact comparison. **Infallible since ADR-1702** — `wide_cmp` allocates no
+/// pool entry, so there is no failure to carry — which is why this one is not
+/// wrapped in `R<_>` like its four arithmetic siblings.
+fn cmp(a: Rational, b: Rational) -> core::cmp::Ordering {
+    a.wide_cmp(&b)
+}
+
+/// The **containment boundary** for ADR-1702 promotion.
+///
+/// The tableau computes over promoted rationals, but every value this module
+/// hands back — a feasible point, a Farkas multiplier vector — must be an
+/// ordinary `i128` rational, because the consumers downstream (`lra`,
+/// `lra_online`, model lifting, certificate serialization) read
+/// `Rational::numerator()`, which panics rather than truncate on a promoted
+/// value. A witness or certificate that genuinely does not fit therefore
+/// declines to `unknown`, exactly as the whole call declined before.
+///
+/// This is what makes the widening strictly a gain: intermediate growth no
+/// longer abandons the search, and nothing outside this module can observe that
+/// a promoted value ever existed.
+fn narrow(values: Vec<Rational>) -> Option<Vec<Rational>> {
+    if values.iter().any(|v| v.is_big()) {
+        return None;
+    }
+    Some(values)
 }
 
 /// A value `c + k·δ` in the ordered field `ℚ(δ)` with `δ` a positive infinitesimal
@@ -173,12 +233,12 @@ impl Delta {
         })
     }
     /// Lexicographic order on `(c, k)` — the total order of `ℚ(δ)` for infinitesimal
-    /// `δ > 0`.
-    fn cmp(self, o: Delta) -> R<core::cmp::Ordering> {
-        Ok(match cmp(self.c, o.c)? {
-            core::cmp::Ordering::Equal => cmp(self.k, o.k)?,
+    /// `δ > 0`. Infallible for the same reason the free `cmp` above is.
+    fn cmp(self, o: Delta) -> core::cmp::Ordering {
+        match cmp(self.c, o.c) {
+            core::cmp::Ordering::Equal => cmp(self.k, o.k),
             ord => ord,
-        })
+        }
     }
 }
 
@@ -198,10 +258,12 @@ pub fn feasible(nvars: usize, constraints: &[Constraint]) -> SimplexOutcome {
     let mut tableau = Tableau::new(nvars, constraints);
     match tableau.run(None, MAX_PIVOTS) {
         Ok(RunOutcome::Feasible) => match tableau.materialize() {
-            Ok(point) => SimplexOutcome::Feasible(point),
+            Ok(point) => narrow(point).map_or(SimplexOutcome::Unknown, SimplexOutcome::Feasible),
             Err(Overflow) => SimplexOutcome::Unknown,
         },
-        Ok(RunOutcome::Infeasible(y)) => SimplexOutcome::Infeasible(y),
+        Ok(RunOutcome::Infeasible(y)) => {
+            narrow(y).map_or(SimplexOutcome::Unknown, SimplexOutcome::Infeasible)
+        }
         Ok(RunOutcome::Unknown) | Err(Overflow) => SimplexOutcome::Unknown,
     }
 }
@@ -377,12 +439,12 @@ impl Tableau {
             return Ok(());
         }
         if let Some(hi) = self.upper[v]
-            && self.value[v].cmp(hi)? == core::cmp::Ordering::Greater
+            && self.value[v].cmp(hi) == core::cmp::Ordering::Greater
         {
             return self.update_nonbasic(v, hi);
         }
         if let Some(lo) = self.lower[v]
-            && self.value[v].cmp(lo)? == core::cmp::Ordering::Less
+            && self.value[v].cmp(lo) == core::cmp::Ordering::Less
         {
             return self.update_nonbasic(v, lo);
         }
@@ -390,33 +452,33 @@ impl Tableau {
     }
 
     /// Whether `v`'s value is below its lower bound.
-    fn below_lower(&self, v: usize) -> R<bool> {
-        Ok(match self.lower[v] {
-            Some(lo) => self.value[v].cmp(lo)? == core::cmp::Ordering::Less,
+    fn below_lower(&self, v: usize) -> bool {
+        match self.lower[v] {
+            Some(lo) => self.value[v].cmp(lo) == core::cmp::Ordering::Less,
             None => false,
-        })
+        }
     }
     /// Whether `v`'s value is above its upper bound.
-    fn above_upper(&self, v: usize) -> R<bool> {
-        Ok(match self.upper[v] {
-            Some(hi) => self.value[v].cmp(hi)? == core::cmp::Ordering::Greater,
+    fn above_upper(&self, v: usize) -> bool {
+        match self.upper[v] {
+            Some(hi) => self.value[v].cmp(hi) == core::cmp::Ordering::Greater,
             None => false,
-        })
+        }
     }
 
     /// Can nonbasic `v` increase (strictly below its upper bound, or unbounded)?
-    fn can_increase(&self, v: usize) -> R<bool> {
-        Ok(match self.upper[v] {
-            Some(hi) => self.value[v].cmp(hi)? == core::cmp::Ordering::Less,
+    fn can_increase(&self, v: usize) -> bool {
+        match self.upper[v] {
+            Some(hi) => self.value[v].cmp(hi) == core::cmp::Ordering::Less,
             None => true,
-        })
+        }
     }
     /// Can nonbasic `v` decrease (strictly above its lower bound, or unbounded)?
-    fn can_decrease(&self, v: usize) -> R<bool> {
-        Ok(match self.lower[v] {
-            Some(lo) => self.value[v].cmp(lo)? == core::cmp::Ordering::Greater,
+    fn can_decrease(&self, v: usize) -> bool {
+        match self.lower[v] {
+            Some(lo) => self.value[v].cmp(lo) == core::cmp::Ordering::Greater,
             None => true,
-        })
+        }
     }
 
     /// The main feasibility loop (Bland's rule on the basic variable, then on the
@@ -442,11 +504,11 @@ impl Tableau {
             let mut viol: Option<(usize, bool)> = None; // (row, too_low)
             for i in 0..self.m {
                 let b = self.basic[i];
-                if self.below_lower(b)? {
+                if self.below_lower(b) {
                     viol = Some((i, true));
                     break;
                 }
-                if self.above_upper(b)? {
+                if self.above_upper(b) {
                     viol = Some((i, false));
                     break;
                 }
@@ -458,7 +520,7 @@ impl Tableau {
 
             let b = self.basic[r];
             // Choose the entering nonbasic variable by Bland's rule.
-            let entering = self.select_entering(r, too_low)?;
+            let entering = self.select_entering(r, too_low);
             let Some(j) = entering else {
                 // No way to repair row `r` → infeasible. Build the Farkas cert.
                 return Ok(RunOutcome::Infeasible(self.farkas(r, too_low)?));
@@ -477,7 +539,7 @@ impl Tableau {
     /// Bland's-rule entering-variable selection for repairing row `r` whose basic
     /// variable is too low (`too_low`) or too high. Returns the smallest-index
     /// nonbasic variable that can move the basic variable toward its bound.
-    fn select_entering(&self, r: usize, too_low: bool) -> R<Option<usize>> {
+    fn select_entering(&self, r: usize, too_low: bool) -> Option<usize> {
         for v in 0..self.n {
             if self.is_basic[v] {
                 continue;
@@ -486,19 +548,19 @@ impl Tableau {
             if a.is_zero() {
                 continue;
             }
-            let a_pos = cmp(a, Rational::zero())? == core::cmp::Ordering::Greater;
+            let a_pos = cmp(a, Rational::zero()) == core::cmp::Ordering::Greater;
             // To INCREASE the basic var (too_low): raise a nonbasic with a>0 that can
             // increase, or lower one with a<0 that can decrease. To DECREASE: mirror.
             let usable = if too_low {
-                (a_pos && self.can_increase(v)?) || (!a_pos && self.can_decrease(v)?)
+                (a_pos && self.can_increase(v)) || (!a_pos && self.can_decrease(v))
             } else {
-                (a_pos && self.can_decrease(v)?) || (!a_pos && self.can_increase(v)?)
+                (a_pos && self.can_decrease(v)) || (!a_pos && self.can_increase(v))
             };
             if usable {
-                return Ok(Some(v));
+                return Some(v);
             }
         }
-        Ok(None)
+        None
     }
 
     /// Pivot nonbasic `enter` into the basis in row `r` (whose current basic var
@@ -611,7 +673,7 @@ impl Tableau {
             // Toward-violation test: for an upper bound (Le/Lt) K>0 pushes up toward
             // b; for a lower bound (Ge/Gt) K<0 pushes down toward b. When margin and
             // the push have the shape that could cross, cap ε.
-            let k_pos = cmp(kk, Rational::zero())? == core::cmp::Ordering::Greater;
+            let k_pos = cmp(kk, Rational::zero()) == core::cmp::Ordering::Greater;
             let toward = match rel {
                 Rel::Le | Rel::Lt => k_pos,  // rising toward an upper bound
                 Rel::Ge | Rel::Gt => !k_pos, // falling toward a lower bound
@@ -623,13 +685,13 @@ impl Tableau {
             // Cap: ε ≤ |margin / K| / 2.  margin has the same sign as the room; take
             // the magnitude.
             let ratio = div(margin, kk)?;
-            let mag = if cmp(ratio, Rational::zero())? == core::cmp::Ordering::Less {
+            let mag = if cmp(ratio, Rational::zero()) == core::cmp::Ordering::Less {
                 sub(Rational::zero(), ratio)?
             } else {
                 ratio
             };
             let half = mul(mag, Rational::checked_new(1, 2).ok_or(Overflow)?)?;
-            if cmp(half, eps)? == core::cmp::Ordering::Less {
+            if cmp(half, eps) == core::cmp::Ordering::Less {
                 eps = half;
             }
         }
@@ -719,8 +781,8 @@ pub enum Status {
     /// outside its bound with no eligible entering variable), but the caller gets no
     /// minimized support and must fall back to a coarse explanation.
     Infeasible(Vec<usize>),
-    /// Exact `i128` arithmetic overflowed, or the pivot/deadline budget ran out —
-    /// a sound "don't know", never a verdict.
+    /// Exact arithmetic declined (see the `Overflow` marker), or the pivot/deadline budget
+    /// ran out — a sound "don't know", never a verdict.
     Unknown,
 }
 
@@ -840,7 +902,8 @@ impl Incremental {
     /// against the original assertions — that replay, not this function, is what
     /// makes a `sat` trustworthy.
     pub(crate) fn point(&self) -> Option<Vec<Rational>> {
-        self.tab.materialize().ok()
+        // `narrow`: a promoted witness cannot cross this boundary (ADR-1702).
+        self.tab.materialize().ok().and_then(narrow)
     }
 }
 
