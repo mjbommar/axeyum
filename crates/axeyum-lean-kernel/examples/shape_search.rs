@@ -102,9 +102,9 @@ use axeyum_lean_kernel::shape_index::{
 };
 use axeyum_lean_kernel::{
     Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_intspace_prelude,
-    build_ipc_soundness_prelude, build_logic_prelude, build_metric_prelude, build_nat_prelude,
-    build_rat_prelude, build_rn_prelude, build_string_prelude, on_a_deep_stack,
+    build_cpoint_prelude, build_creal_prelude, build_geo_prelude, build_int_prelude,
+    build_intspace_prelude, build_ipc_soundness_prelude, build_logic_prelude, build_metric_prelude,
+    build_nat_prelude, build_rat_prelude, build_rn_prelude, build_string_prelude, on_a_deep_stack,
 };
 
 const USAGE: &str = "\
@@ -340,6 +340,15 @@ fn build_index(include_constructed: bool, index_values: bool) -> ShapeIndex {
         let mut rn = Kernel::new();
         let _ = build_rn_prelude(&mut rn).expect("RN prelude must build");
         index_kernel(&rn, "rn", &mut index, index_values);
+
+        // `Geo.*` (ADR-1635, synthetic incidence geometry and its rational
+        // model) sits ON TOP of `cpoint`, and is indexed as its own group for
+        // exactly the reason the `metric` call above records: this lane's own
+        // absence controls (`--name-like incidence --expect-absent`) are only
+        // worth anything if the index can SEE the namespace once it exists.
+        let mut geo = Kernel::new();
+        let _ = build_geo_prelude(&mut geo).expect("Geo prelude must build");
+        index_kernel(&geo, "geo", &mut index, index_values);
     }
 
     index.finish();

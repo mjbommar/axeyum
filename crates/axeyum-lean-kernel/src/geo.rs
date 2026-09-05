@@ -128,8 +128,12 @@ use crate::nat_prelude::structures::{
 };
 use crate::prelude::LogicPrelude;
 
+pub mod qplane;
+
 #[cfg(test)]
 mod geo_tests;
+
+pub use qplane::QPlaneNames;
 
 // ---------------------------------------------------------------------------
 // Field indices. Index a field through these, never with a bare integer.
@@ -663,6 +667,10 @@ pub struct GeoPrelude {
     /// — the `triangle` axiom's fourth conjunct is exactly the negation of
     /// [`Self::collinear`], which this makes checkable rather than asserted.
     pub triangle_not_collinear: NameId,
+
+    /// The rational coordinate plane, the model that proves these axioms
+    /// consistent.
+    pub qplane: QPlaneNames,
 }
 
 /// Pre-compute every name this module declares.
@@ -692,6 +700,7 @@ pub(crate) fn intern(kernel: &mut Kernel, cpoint: CPointPrelude) -> GeoPrelude {
         collinear_perm: kernel.name_str(inc, "collinear_perm"),
         distinct_lines_meet_once: kernel.name_str(inc, "distinct_lines_meet_once"),
         triangle_not_collinear: kernel.name_str(inc, "triangle_not_collinear"),
+        qplane: qplane::intern(kernel, geo),
     }
 }
 
@@ -742,6 +751,8 @@ pub fn build_geo_prelude(kernel: &mut Kernel) -> Result<GeoPrelude, KernelError>
     declare_collinear_perm(kernel, &logic, p)?;
     declare_distinct_lines_meet_once(kernel, &logic, p)?;
     declare_triangle_not_collinear(kernel, &logic, p)?;
+
+    qplane::declare_all(kernel, p)?;
 
     Ok(p)
 }

@@ -6700,6 +6700,39 @@ SUITES["cas-trust-registry"] = (
 )
 
 
+SUITES["geo-incidence"] = (
+    "crates/axeyum-lean-kernel/src/geo.rs",
+    Cargo(
+        ("--release", "-p", "axeyum-lean-kernel", "--lib", "geo::"),
+        "geo-incidence",
+    ),
+    [
+        # ADR-1635. The whole design rests on `apart` being CONSUMED by
+        # exactly one axiom; drop it from that axiom's statement and the
+        # rational model's own `joinUnique` (which still carries it) no longer
+        # has the field's type, so `Geo.qplane` cannot be assembled.
+        (
+            "axiom I.1's uniqueness half keeps its distinctness hypothesis",
+            "            let body = arrow(k, oql, body);\n"
+            "            let body = arrow(k, opl, body);\n"
+            "            let body = arrow(k, a, body);",
+            "            let body = arrow(k, oql, body);\n"
+            "            let body = arrow(k, opl, body);",
+        ),
+        # The line through two points is `(y Q - y P, x P - x Q, …)`, in that
+        # order. Swap the first two and `Geo.QPlane.joinOnLeft`'s ring proof
+        # -- which is emitted at the coefficients spelled out, not at the
+        # projections -- no longer has the type its own statement claims.
+        (
+            "the join's a and b coefficients are not swapped",
+            "        let body = lmk(d, q, big_a, big_b, big_c);",
+            "        let body = lmk(d, q, big_b, big_a, big_c);",
+            "crates/axeyum-lean-kernel/src/geo/qplane.rs",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
