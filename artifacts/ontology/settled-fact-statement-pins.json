@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2364,
+    "min_identity_bound": 2375,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1665,6 +1665,13 @@
       "kernel_theorem": "Complex.abs_one"
     },
     {
+      "fact_id": "F:complex-abs-zero",
+      "language": "lean4",
+      "statement_sha256": "7cd377a29dc7cea417c99dd325c6c83b9c9f23bca18e48e2b07b267be579a7a3",
+      "prose_sha256": "e0228edb24ab9eb16c70a263932ac23d44d8e6257e855c76744cfc9ffc41bdfc",
+      "kernel_theorem": "Complex.abs_zero"
+    },
+    {
       "fact_id": "F:complex-add-assoc",
       "language": "lean4",
       "statement_sha256": "a768e4dad050c50ae977da0aaa6354ea6bea3431c72418d1b8ce422e4024e98a",
@@ -2027,6 +2034,76 @@
       "statement_sha256": "cc56a3c1137377ca4bdcbb79591ea90cca1731037af9cb031500f5b7be6293c2",
       "prose_sha256": "30cda60d8515a8ac62c45732bf9b61296cfafd5a25a837d1e518351379e3f39e",
       "kernel_theorem": "Complex.geom_sum_eq_zero_of_root_of_unity"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-add",
+      "language": "lean4",
+      "statement_sha256": "768fc9926b7ba2f9d958371528da8f5025d4d8486fded1982c45b548b75fbdee",
+      "prose_sha256": "b220fbf80281fd9ef950c5d3c3d2c89bbf543c21f3d6f446112254b359f23cfa",
+      "kernel_theorem": "Complex.hasDerivative_add"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-const",
+      "language": "lean4",
+      "statement_sha256": "3e50beebeca4257fd0156c6a68a0251c3165645a8e821d6795c0c6148419c11f",
+      "prose_sha256": "c8fca57e66b5b1b3a1fdeffff33354889bc8ca70bc8ab1a22832ae61e5542c83",
+      "kernel_theorem": "Complex.hasDerivative_const"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-id",
+      "language": "lean4",
+      "statement_sha256": "dd620a3f89ca5af151f7a34b4aaead934f41fb244f041ce7b7ffb641da215de2",
+      "prose_sha256": "4ea6321cfa2a71c13adeea187ddb7fcaf606fbf3b2e872a0b540fa5c01b129b5",
+      "kernel_theorem": "Complex.hasDerivative_id"
+    },
+    {
+      "fact_id": "F:complex-hasderivative-neg",
+      "language": "lean4",
+      "statement_sha256": "539cc7db042b987a02d406a33375e364f3f9b1276664bcdbbc3df757044c6336",
+      "prose_sha256": "fc16f7a6cf70b1050c10e212e6832af10f7cd400edef18bbf8c7d0ce4cb521a7",
+      "kernel_theorem": "Complex.hasDerivative_neg"
+    },
+    {
+      "fact_id": "F:complex-hasderivativeon-spec",
+      "language": "lean4",
+      "statement_sha256": "aac9b3764e776cbb3ca7ecc376750cf2433386e45ef8a7a6cc81aa1e6427bf8e",
+      "prose_sha256": "cc89687312b98b044c3abbb37cd5e18b96c2fbda1c3dd2b087e87c662a955686",
+      "kernel_theorem": "Complex.HasDerivativeOn.spec"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-add",
+      "language": "lean4",
+      "statement_sha256": "bee387f1f177f5bdf17d5574370c0f997f8ac1dc3e22a293e71498a58f191331",
+      "prose_sha256": "a62516a1d0d8b3ba887cfcda7b09220b6258d12be827c346add4699c1ec00d1f",
+      "kernel_theorem": "Complex.holomorphic_add"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-const",
+      "language": "lean4",
+      "statement_sha256": "21d276bb3db34cf672ead5f06df1e791220e017ef064f5903b8635d3cc9e030b",
+      "prose_sha256": "4f0891eafe9fda53882a329a410b93f36da82fc50b1cb9e665822472d6cb897b",
+      "kernel_theorem": "Complex.holomorphic_const"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-id",
+      "language": "lean4",
+      "statement_sha256": "fa38881568dcc9fe2d37c6893313cfa4669736479a9fb8f359ff3b7ee4415692",
+      "prose_sha256": "de95de2191abac1e4fddb8d9ef8d242274705fbc7bb5998384b855b1ea48e284",
+      "kernel_theorem": "Complex.holomorphic_id"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-neg",
+      "language": "lean4",
+      "statement_sha256": "938466a3ebb2f20cdacf5d4befb4cbae80aeca81d1fb73e8b532ab6d7d42c354",
+      "prose_sha256": "55b1988d2ad9561d305ae3cac6eeb8b022b1445d0ca55cc177222cafad2002b9",
+      "kernel_theorem": "Complex.holomorphic_neg"
+    },
+    {
+      "fact_id": "F:complex-holomorphic-spec",
+      "language": "lean4",
+      "statement_sha256": "15988fd97bd3ad793d22971b40699c2bb0c30efcfb2b5936eaa958e12eacdffb",
+      "prose_sha256": "00e1b0537c7013f826037d91b99c6fb8593b7efb2340977c67e039ca40034361",
+      "kernel_theorem": "Complex.holomorphic_spec"
     },
     {
       "fact_id": "F:complex-hornerfromtop",
