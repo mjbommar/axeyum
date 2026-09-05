@@ -576,6 +576,16 @@ step credit-transaction-ledger-mutations bash scripts/tests/test-credit-transact
 # The check is exact, not a token screen: 362 of 374 mirrors are hash-pinned by
 # a preregistered catalog.
 step mirror-statement-fidelity python3 scripts/check-mirror-statement-fidelity.py
+# The carrier correspondence ledger (docs/math-department/14-lean-lang.md
+# Next Ten item 4): one row per (Axeyum carrier, Mathlib counterpart) pair,
+# graded same-statement/constructively-stronger/-weaker/different-object/
+# no-counterpart, each with a witness theorem pair resolved against the live
+# kernel projection. Before this gate, nothing recorded per-carrier whether a
+# shared-looking theorem (CReal vs Mathlib's Real, a Bishop setoid vs a
+# classical Cauchy quotient) is actually the same statement.
+step carrier-correspondence-tests python3 -m unittest scripts.tests.test_check_carrier_correspondence
+step carrier-correspondence python3 scripts/check-carrier-correspondence.py --check
+step carrier-correspondence-md python3 scripts/gen-carrier-correspondence-md.py --check
 step fact-dag-tests python3 -m unittest scripts.tests.test_check_fact_dag
 step fact-dag python3 scripts/check-fact-dag.py --quiet
 # ADR-0584. The kernel type checker recurses over the term with no bound, so a

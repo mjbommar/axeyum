@@ -106,13 +106,30 @@ what makes the whole thing a claim rather than a folder.
       `#print axioms` empty on the Lean side, packaged for Lake. Reviewer 02's
       verdict is the strongest in the department and today no one outside can
       use the thing it praises. Serves 02, 05, 03.
-- [ ] **4. A carrier correspondence ledger.** One row per pair — `CReal` ↔
-      `Real`, `Nat.Finset` ↔ `Finset`, `AlgS.Group` ↔ `Group`, `CPoint` ↔
-      `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph` — graded *same
-      statement*, *constructively stronger*, *constructively weaker*, or
-      *different object*, gated the way the ℕ/ℤ mirror-fidelity check already
-      is. Serves 02, 03, 05, 07, 08; it is what makes reviewer 03's
-      "a different theorem" a table instead of a sentence.
+- [x] **4. A carrier correspondence ledger.** *Done 2026-09-05 (ADR-1665).*
+      `artifacts/carrier-correspondence/carrier-correspondence-v1.json` holds
+      16 rows — `CReal` ↔ `Real`, `Nat.Finset` ↔ `Finset`, `Nat.Multiset` ↔
+      `Multiset`, `AlgS.Group` ↔ `Group`, `AlgS.CommRing` ↔ `CommRing`,
+      `AlgS.Field` ↔ `Field` (a constructive field with an EXISTENTIAL
+      inverse over apartness, landed the same day in `53c851e5b`/ADR-1627 —
+      this ledger's own first pass missed it from a stale merge base and was
+      corrected before merge, see ADR-1665), `CPoint` ↔
+      `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph`, `Complex` ↔
+      `Complex`, Rat matrices ↔ `Matrix`, the ℚ probability shelf ↔ `PMF`,
+      `Metric` ↔ `MetricSpace`, `IntSpace` ↔ the Bochner integral, `Nat.RM` ↔
+      Mathlib's computability library (the brief's own "no counterpart"
+      assumption was wrong — Mathlib has a general halting-problem theorem —
+      and the row corrects it), `Provable`/`ipc_*` ↔ Mathlib's
+      Heyting/ModelTheory, plus a bonus `Nat.Rado` `no-counterpart` row —
+      graded *same-statement* (2), *constructively-stronger* (2),
+      *different-object* (11) or *no-counterpart* (1), each with a witness
+      theorem pair verified against the live kernel projection or, where the
+      declaration postdates that projection's last regeneration, a fresh
+      `shape_search` build.
+      `scripts/check-carrier-correspondence.py --check` gates it exactly the
+      way `check-mirror-statement-fidelity.py` gates the ℕ/ℤ mirrors, with
+      nine mutation-verified guards. Serves 02, 03, 05, 07, 08; reviewer 03's
+      "a different theorem" is now a table (`CC:creal-real`), not a sentence.
 - [ ] **5. The statement-import blocker census, and the first screen.** Run
       every one of the 257 open mirrors plus a fresh Mathlib draw through
       statement-only import and count the decline reasons. Ship the
@@ -191,6 +208,8 @@ count depend on Lean's axioms.
 |---|---|---|
 | 2026-09-05 | **Next Ten item 6 landed for ℕ** ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md), lane `lean-tactic`). `lean/axeyum-tactic` is a Lake package with no Mathlib dependency exposing `by axeyum`: the tactic ships the already-elaborated goal to a Rust sidecar and hands the returned proof TERM to Lean's own parser, elaborator and kernel. Measured on the pinned `v4.34.0-rc1` (`3447a668`): 11 of 11 ℕ goals accepted, stated in ordinary Lean-core notation; 11 of 11 mutations rejected with 1 positive control; 13 `Axeyum.Shim` rows proved from Lean core, of which 10 depend on no axiom and 3 reach `propext` (`natLeOfAddLeAddRight`, `natMulAssoc`, `natRightDistrib` — Lean core's axiom use, inherited on restatement). The correspondence finding: a rename is not enough, because axeyum applies every lemma with all arguments explicit in its own order — of 20 emitted constants, 9 structural, 6 exact, 5 reordered, 0 derived. NOT built: ℤ (`linarith::int::prove` and `ring::int::prove` are `pub(crate)`; the ℤ carrier is interned as `Int`, so the name map must become carrier-scoped) and the LRAT route. | `scripts/check-lean-tactic.sh`: `goals-accepted=11 mutations-rejected=11 shim-rows=13 controls=1`; three negative controls, each failing differently |
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
+| 2026-09-05 | **Next Ten item 4 landed** (ADR-1665): the carrier correspondence ledger, 16 rows, gated by `scripts/check-carrier-correspondence.py --check` (nine mutation-verified guards, every mutation killing exactly one control test) exactly the way the ℕ/ℤ mirror-fidelity check gates `F:ml430-*`. `Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s general halting-problem theorem, contra the brief's assumption), so that row is `different-object` rather than `no-counterpart`. Grade counts: same-statement 2, constructively-stronger 2, different-object 11, no-counterpart 1. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; `python3 scripts/check-carrier-correspondence.py --check`; `python3 scripts/tests/mutation_controls.py carrier-correspondence` |
+| 2026-09-05 | **Correction, same day, before merge**: this ledger's own first pass on `AlgS.Field`↔`Field` was wrong, from a stale worktree — `AlgS.Field` landed on `main` in `53c851e5b` (ADR-1627) after this lane's merge base and was measured absent. After `git merge --no-edit main` and a fresh `shape_search` release build (declarations `4291 -> 4379`), `AlgS.Field` is confirmed live (`FOUND 1`, positive control `AlgS.Group` also `FOUND 1`) with an EXISTENTIAL inverse over apartness (`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`), not proved tight for `CReal`. `CC:algs-field-field` is regraded `different-object` (was `same-statement` over the wrong, Eq-based `Alg.Field`): stronger hypothesis, weaker conclusion than Mathlib's total-inverse `Field`, the same non-comparable pattern ADR-1030 used for EVT. The general lesson — merge local `main` before measuring an absence — recurred a second time, independently, caught before merge rather than after. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; fresh `shape_search` build post-merge |
 
 ## How to re-measure
 

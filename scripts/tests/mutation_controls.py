@@ -6644,6 +6644,69 @@ SUITES["cas-internal-residue"] = (
 )
 
 
+SUITES["carrier-correspondence"] = (
+    "scripts/check-carrier-correspondence.py",
+    Unittest("scripts.tests.test_check_carrier_correspondence"),
+    [
+        (
+            "G0 a duplicate id across rows is refused",
+            "        if rid in seen_ids:",
+            "        if False:",
+        ),
+        (
+            "G1 a grade outside the closed enum is refused",
+            "        if grade not in GRADES:",
+            "        if False:",
+        ),
+        (
+            "G2 witness required for every grade except no-counterpart",
+            "            if not witness_list:",
+            "            if False:",
+        ),
+        (
+            "G2 witness forbidden for no-counterpart",
+            "            if witness_list:",
+            "            if False:",
+        ),
+        (
+            "G3 a no-counterpart row's mathlib side must be null",
+            "                if mathlib.get(field) is not None:",
+            "                if False:",
+        ),
+        (
+            "G4 a witness claiming kernel-projection verification must resolve",
+            '                if not isinstance(name, str) or name not in kernel_ids:',
+            "                if False:",
+        ),
+        (
+            "G5 an empty ledger fails closed",
+            '    if stats["rows"] == 0:',
+            "    if False:",
+        ),
+        (
+            "G6 zero kernel-projection-verified witnesses fails closed",
+            '    if stats["rows"] > 0 and stats["kernel_verified_names"] == 0:',
+            "    if False:",
+        ),
+        (
+            "G7 the Next Ten item 4 coverage floor is enforced",
+            "    if missing_coverage:",
+            "    if False:",
+        ),
+        (
+            "G8 mathlib_theorem/mathlib_location must be null together",
+            "            if (mv is None) != (ml is None):",
+            "            if False:",
+        ),
+        (
+            "a missing kernel projection file is its own violation, not a silent empty set",
+            "    if not KERNEL_PROJECTION.exists():",
+            "    if False:",
+        ),
+    ],
+)
+
+
 # --------------------------------------------------------------------------
 # `cas-trust-registry` (math-department file 13, Next Ten item 10, first
 # half).

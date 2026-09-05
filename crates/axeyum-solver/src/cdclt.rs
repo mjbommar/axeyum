@@ -80,10 +80,18 @@ use crate::euf_egraph::{TheoryLit, TheorySolver};
 /// Initial theory atoms occupy the first slots, while dynamically added theory
 /// variables may follow ordinary Tseitin auxiliaries; [`CdclT`] keeps the explicit
 /// atom/variable mapping.
+///
+/// Declared `pub` (rather than `pub(crate)`) only so [`crate::bench_internals`]
+/// can re-export it for `benches/cdclt_propagate.rs`; the containing `cdclt`
+/// module stays crate-private and the re-export path is gated behind the
+/// `bench-internals` feature, so this is not reachable from an ordinary
+/// dependent of the crate. Do not use this type outside the driver or a bench.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Lit {
-    pub(crate) var: usize,
-    pub(crate) positive: bool,
+pub struct Lit {
+    /// The variable index.
+    pub var: usize,
+    /// `true` for the positive literal, `false` for its negation.
+    pub positive: bool,
 }
 
 impl Lit {
@@ -97,8 +105,12 @@ impl Lit {
 }
 
 /// The result of a CDCL(T) search.
+///
+/// `pub` for the same bench-only reason as [`Lit`]: reachable outside the
+/// crate only through [`crate::bench_internals`], gated by the
+/// `bench-internals` feature.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Outcome {
+pub enum Outcome {
     /// The skeleton is UNSAT under the theory (a resolution refutation reached the
     /// empty clause at level 0).
     Unsat,
@@ -186,7 +198,12 @@ enum Learn {
 /// A generic online CDCL(T) search over a CNF skeleton, driving any
 /// [`TheorySolver`] online with 1-UIP theory-conflict learning, theory propagation,
 /// non-chronological backjumping, and deadline-bounded termination.
-pub(crate) struct CdclT {
+///
+/// `pub` for the same bench-only reason as [`Lit`]: reachable outside the
+/// crate only through [`crate::bench_internals`], gated by the
+/// `bench-internals` feature. Fields stay `pub(crate)`/private; a bench
+/// drives this only through [`CdclT::new`] and [`CdclT::solve`].
+pub struct CdclT {
     var_count: usize,
     /// Per SAT variable, the aligned theory atom when this variable is mirrored
     /// into the theory. Dynamic theory variables may follow Tseitin auxiliaries.
@@ -273,7 +290,15 @@ impl CdclT {
     /// `theory_atom_count` variables are theory atoms aligned by index with the
     /// [`TheorySolver`]; later dynamic theory variables use an explicit mapping.
     /// `deadline`, when set, bounds the search.
-    pub(crate) fn new(
+    ///
+    /// `pub` bench-only (see the type doc); reachable outside the crate only
+    /// via [`crate::bench_internals`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `theory_atom_count > var_count` (a caller bug: there cannot be
+    /// more theory atoms than variables).
+    pub fn new(
         var_count: usize,
         theory_atom_count: usize,
         clauses: Vec<Vec<Lit>>,
@@ -986,7 +1011,10 @@ impl CdclT {
     /// refutation, [`Outcome::Sat`] on a Boolean- and theory-consistent total
     /// assignment (the theory is left in that state), or [`Outcome::Unknown`] on
     /// deadline.
-    pub(crate) fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
+    ///
+    /// `pub` bench-only (see the type doc); reachable outside the crate only
+    /// via [`crate::bench_internals`].
+    pub fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
         loop {
             // Defense in depth against a non-monotone-theory livelock: bound the
             // main-loop iterations even with no deadline. Sound — `Unknown` is a
