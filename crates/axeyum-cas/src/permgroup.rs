@@ -178,7 +178,10 @@ fn is_identity(p: &Permutation, degree: usize) -> bool {
 /// `Hash`.
 fn image_key(p: &Permutation, degree: usize) -> Vec<usize> {
     (0..degree)
-        .map(|i| p.apply(i).expect("point in range for a degree-consistent permutation"))
+        .map(|i| {
+            p.apply(i)
+                .expect("point in range for a degree-consistent permutation")
+        })
         .collect()
 }
 
@@ -189,7 +192,11 @@ fn image_key(p: &Permutation, degree: usize) -> Vec<usize> {
 ///
 /// Deterministic: the frontier is processed as a `BTreeSet` (increasing point
 /// order) and `gens` in the order given.
-fn bfs_orbit(base_point: usize, gens: &[(usize, Permutation)], degree: usize) -> BTreeMap<usize, Word> {
+fn bfs_orbit(
+    base_point: usize,
+    gens: &[(usize, Permutation)],
+    degree: usize,
+) -> BTreeMap<usize, Word> {
     let mut transversal: BTreeMap<usize, Word> = BTreeMap::new();
     transversal.insert(base_point, Vec::new());
     let mut frontier: BTreeSet<usize> = BTreeSet::new();
@@ -202,13 +209,13 @@ fn bfs_orbit(base_point: usize, gens: &[(usize, Permutation)], degree: usize) ->
                 if g.len() != degree {
                     continue;
                 }
-                if let Some(p) = g.apply(x) {
-                    if let std::collections::btree_map::Entry::Vacant(entry) = transversal.entry(p) {
-                        let mut new_word = vec![*global_index];
-                        new_word.extend_from_slice(&word_x);
-                        entry.insert(new_word);
-                        next_frontier.insert(p);
-                    }
+                if let Some(p) = g.apply(x)
+                    && let std::collections::btree_map::Entry::Vacant(entry) = transversal.entry(p)
+                {
+                    let mut new_word = vec![*global_index];
+                    new_word.extend_from_slice(&word_x);
+                    entry.insert(new_word);
+                    next_frontier.insert(p);
                 }
             }
         }
@@ -282,7 +289,10 @@ fn sift_to_identity(
             return false;
         };
         let t = word_to_perm(sgs, word, degree).expect("transversal word is valid by construction");
-        g = t.inverse().compose(&g).expect("same degree throughout a build");
+        g = t
+            .inverse()
+            .compose(&g)
+            .expect("same degree throughout a build");
     }
     is_identity(&g, degree)
 }
@@ -291,7 +301,11 @@ fn sift_to_identity(
 /// If `base_hint` is given, it is forced to be the first base point
 /// (needed by [`PermutationGroup::stabilizer`]'s Schreier-generator route —
 /// unused by the public API directly, kept for internal reuse).
-fn build_bsgs(original_generators: &[Permutation], degree: usize, base_hint: Option<usize>) -> BsgsBuild {
+fn build_bsgs(
+    original_generators: &[Permutation],
+    degree: usize,
+    base_hint: Option<usize>,
+) -> BsgsBuild {
     let mut sgs: Vec<Permutation> = original_generators.to_vec();
     let mut words: Vec<SignedWord> = (0..sgs.len()).map(|i| vec![encode(i, false)]).collect();
     let mut base: Vec<usize> = base_hint.into_iter().collect();
@@ -302,13 +316,13 @@ fn build_bsgs(original_generators: &[Permutation], degree: usize, base_hint: Opt
         loop {
             let mut to_add = None;
             for g in &sgs {
-                if !is_identity(g, degree) && fixes_prefix(g, &base) {
-                    if let Some(pt) = (0..degree).find(|&pt| g.apply(pt) != Some(pt)) {
-                        if !base.contains(&pt) {
-                            to_add = Some(pt);
-                            break;
-                        }
-                    }
+                if !is_identity(g, degree)
+                    && fixes_prefix(g, &base)
+                    && let Some(pt) = (0..degree).find(|&pt| g.apply(pt) != Some(pt))
+                    && !base.contains(&pt)
+                {
+                    to_add = Some(pt);
+                    break;
                 }
             }
             match to_add {
@@ -354,18 +368,32 @@ fn build_bsgs(original_generators: &[Permutation], degree: usize, base_hint: Opt
                     let sx = s.compose(&tx).expect("same degree");
                     let sg = tp.inverse().compose(&sx).expect("same degree");
 
-                    if !sift_to_identity(sg.clone(), &base, &level_orbits, &sgs, i + 1, degree) {
-                        let tx_orig = expand_word(&words, wx);
-                        let tp_orig = expand_word(&words, wp);
-                        let tp_inv_orig = invert_signed_word(&tp_orig);
-                        let mut new_word = tp_inv_orig;
-                        new_word.extend(words[gi].clone());
-                        new_word.extend(tx_orig);
-                        sgs.push(sg);
-                        words.push(new_word);
-                        changed = true;
-                        break 'levels;
+                    if sift_to_identity(sg.clone(), &base, &level_orbits, &sgs, i + 1, degree) {
+                        continue;
                     }
+                    // `sg` fails to sift, but that alone does not make it new
+                    // information: when `x == base[i]` and `s` already fixes
+                    // `base[i]`, both transversal reps collapse to the
+                    // identity and `sg` reduces to exactly `s` itself --
+                    // already a member of `sgs`. Re-pushing such a duplicate
+                    // under a fresh index changes nothing about any level's
+                    // generating set (same permutations, one more redundant
+                    // index), so the search would find the identical
+                    // "failure" forever without ever reaching a level whose
+                    // basic orbit is actually incomplete. Skip a duplicate
+                    // and keep searching for a genuinely new element.
+                    if sgs.contains(&sg) {
+                        continue;
+                    }
+                    let word_from_x = expand_word(&words, wx);
+                    let word_from_p = expand_word(&words, wp);
+                    let mut new_word = invert_signed_word(&word_from_p);
+                    new_word.extend(words[gi].clone());
+                    new_word.extend(word_from_x);
+                    sgs.push(sg);
+                    words.push(new_word);
+                    changed = true;
+                    break 'levels;
                 }
             }
         }
@@ -549,6 +577,11 @@ impl OrderCertificate {
     /// Independently re-derives every claim this certificate makes,
     /// returning the first guard that fails.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`OrderCertificateFailure`] guard that does not
+    /// hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
@@ -561,7 +594,11 @@ impl OrderCertificate {
         if self.strong_generators.len() != self.strong_generator_words.len() {
             return Err(F::LengthMismatch);
         }
-        for g in self.original_generators.iter().chain(self.strong_generators.iter()) {
+        for g in self
+            .original_generators
+            .iter()
+            .chain(self.strong_generators.iter())
+        {
             if g.len() != self.degree {
                 return Err(F::DegreeMismatch);
             }
@@ -586,6 +623,13 @@ impl OrderCertificate {
 
         for (level, transversal) in self.transversals.iter().enumerate() {
             let prefix = &self.base[0..level];
+            // MEASURED REDUNDANT, KEPT AS DEFENCE IN DEPTH. Deleting this
+            // guard kills no test: a transversal missing `base[level]`
+            // always differs from the independently recomputed orbit
+            // closure below (which always contains its own seed point), so
+            // `TransversalDoesNotMatchOrbitClosure` catches it too. Kept
+            // because it names the specific defect instead of the generic
+            // set-mismatch.
             if !transversal.contains_key(&self.base[level]) {
                 return Err(F::TransversalMissingBasePoint { level });
             }
@@ -773,7 +817,12 @@ impl PermutationGroup {
             return None;
         }
         let gens: Vec<(usize, Permutation)> = self.generators.iter().cloned().enumerate().collect();
-        Some(bfs_orbit(point, &gens, self.degree).keys().copied().collect())
+        Some(
+            bfs_orbit(point, &gens, self.degree)
+                .keys()
+                .copied()
+                .collect(),
+        )
     }
 
     /// The stabilizer of `point`, as its own [`PermutationGroup`] with its
@@ -806,7 +855,10 @@ impl PermutationGroup {
     /// orbit-stabilizer certificate relating the two order certificates.
     /// `None` if `point >= degree`.
     #[must_use]
-    pub fn orbit_stabilizer(&self, point: usize) -> Option<(PermutationGroup, OrbitStabilizerCertificate)> {
+    pub fn orbit_stabilizer(
+        &self,
+        point: usize,
+    ) -> Option<(PermutationGroup, OrbitStabilizerCertificate)> {
         if point >= self.degree {
             return None;
         }
@@ -824,6 +876,17 @@ impl PermutationGroup {
     /// Left coset representatives of `subgroup` in this group, for `|G| <=`
     /// [`ENUMERATION_BOUND`]. Declines above the bound, or on a degree
     /// mismatch, with a distinct [`PermgroupError`].
+    ///
+    /// # Errors
+    ///
+    /// [`PermgroupError::DegreeMismatch`] if `subgroup` acts on a different
+    /// number of points; [`PermgroupError::TooLarge`] if `|G|` (or `|H|`)
+    /// exceeds [`ENUMERATION_BOUND`].
+    ///
+    /// # Panics
+    ///
+    /// Never panics: every permutation composed here shares this group's
+    /// degree by construction.
     pub fn cosets(&self, subgroup: &PermutationGroup) -> Result<CosetCertificate, PermgroupError> {
         if subgroup.degree != self.degree {
             return Err(PermgroupError::DegreeMismatch);
@@ -869,6 +932,16 @@ impl PermutationGroup {
 
     /// The Cayley table of this group, for `|G| <=` [`CAYLEY_TABLE_BOUND`].
     /// Declines above the bound with a distinct [`PermgroupError`].
+    ///
+    /// # Errors
+    ///
+    /// [`PermgroupError::TooLarge`] if `|G|` exceeds [`CAYLEY_TABLE_BOUND`].
+    ///
+    /// # Panics
+    ///
+    /// Never panics: every permutation composed here shares this group's
+    /// degree, and the group is closed under its own operation by
+    /// construction.
     pub fn cayley_table(&self) -> Result<CayleyTableCertificate, PermgroupError> {
         if self.order_certificate.claimed_order > CAYLEY_TABLE_BOUND {
             return Err(PermgroupError::TooLarge {
@@ -876,12 +949,11 @@ impl PermutationGroup {
                 actual: self.order_certificate.claimed_order,
             });
         }
-        let mut elements = enumerate_group(&self.generators, self.degree, CAYLEY_TABLE_BOUND).ok_or(
-            PermgroupError::TooLarge {
+        let mut elements = enumerate_group(&self.generators, self.degree, CAYLEY_TABLE_BOUND)
+            .ok_or(PermgroupError::TooLarge {
                 bound: CAYLEY_TABLE_BOUND,
                 actual: self.order_certificate.claimed_order,
-            },
-        )?;
+            })?;
         elements.sort_by_key(|p| image_key(p, self.degree));
         let index: BTreeMap<Vec<usize>, usize> = elements
             .iter()
@@ -908,12 +980,20 @@ impl PermutationGroup {
     /// Whether the group is abelian, checked by pairwise commutativity of
     /// its generators (sufficient: if every pair of generators commutes, the
     /// generated group is abelian).
+    ///
+    /// # Panics
+    ///
+    /// Never panics: every generator shares this group's degree.
     #[must_use]
     pub fn is_abelian(&self) -> AbelianCertificate {
         for i in 0..self.generators.len() {
             for j in (i + 1)..self.generators.len() {
-                let a = self.generators[i].compose(&self.generators[j]).expect("same degree");
-                let b = self.generators[j].compose(&self.generators[i]).expect("same degree");
+                let a = self.generators[i]
+                    .compose(&self.generators[j])
+                    .expect("same degree");
+                let b = self.generators[j]
+                    .compose(&self.generators[i])
+                    .expect("same degree");
                 if a != b {
                     return AbelianCertificate::NonAbelian { i, j };
                 }
@@ -924,6 +1004,16 @@ impl PermutationGroup {
 
     /// The center `Z(G)`, for `|G| <=` [`ENUMERATION_BOUND`]: elements
     /// commuting with every generator. Declines above the bound.
+    ///
+    /// # Errors
+    ///
+    /// [`PermgroupError::TooLarge`] if `|G|` exceeds [`ENUMERATION_BOUND`].
+    ///
+    /// # Panics
+    ///
+    /// Never panics: every permutation composed here shares this group's
+    /// degree, and the filtered central elements always form a valid
+    /// generating set for the (possibly trivial) center subgroup.
     pub fn center(&self) -> Result<(PermutationGroup, CenterCertificate), PermgroupError> {
         if self.order_certificate.claimed_order > ENUMERATION_BOUND {
             return Err(PermgroupError::TooLarge {
@@ -946,8 +1036,8 @@ impl PermutationGroup {
             })
             .cloned()
             .collect();
-        let center_group =
-            PermutationGroup::from_generators(central, self.degree).expect("degree matches by construction");
+        let center_group = PermutationGroup::from_generators(central, self.degree)
+            .expect("degree matches by construction");
         let cert = CenterCertificate {
             group_order: self.order_certificate.clone(),
             center_order: center_group.order_certificate.clone(),
@@ -957,22 +1047,37 @@ impl PermutationGroup {
 
     /// The derived (commutator) subgroup `[G, G]`, for `|G| <=`
     /// [`DERIVED_SUBGROUP_ENUMERATION_BOUND`]. Declines above the bound.
-    pub fn derived_subgroup(&self) -> Result<(PermutationGroup, DerivedSubgroupCertificate), PermgroupError> {
+    ///
+    /// # Errors
+    ///
+    /// [`PermgroupError::TooLarge`] if `|G|` exceeds
+    /// [`DERIVED_SUBGROUP_ENUMERATION_BOUND`].
+    ///
+    /// # Panics
+    ///
+    /// Never panics: every permutation composed here shares this group's
+    /// degree.
+    pub fn derived_subgroup(
+        &self,
+    ) -> Result<(PermutationGroup, DerivedSubgroupCertificate), PermgroupError> {
         if self.order_certificate.claimed_order > DERIVED_SUBGROUP_ENUMERATION_BOUND {
             return Err(PermgroupError::TooLarge {
                 bound: DERIVED_SUBGROUP_ENUMERATION_BOUND,
                 actual: self.order_certificate.claimed_order,
             });
         }
-        let elems = enumerate_group(&self.generators, self.degree, DERIVED_SUBGROUP_ENUMERATION_BOUND).ok_or(
-            PermgroupError::TooLarge {
-                bound: DERIVED_SUBGROUP_ENUMERATION_BOUND,
-                actual: self.order_certificate.claimed_order,
-            },
-        )?;
+        let elems = enumerate_group(
+            &self.generators,
+            self.degree,
+            DERIVED_SUBGROUP_ENUMERATION_BOUND,
+        )
+        .ok_or(PermgroupError::TooLarge {
+            bound: DERIVED_SUBGROUP_ENUMERATION_BOUND,
+            actual: self.order_certificate.claimed_order,
+        })?;
         let commutators = all_commutators(&elems);
-        let derived_group =
-            PermutationGroup::from_generators(commutators, self.degree).expect("degree matches by construction");
+        let derived_group = PermutationGroup::from_generators(commutators, self.degree)
+            .expect("degree matches by construction");
         let cert = DerivedSubgroupCertificate {
             group_order: self.order_certificate.clone(),
             derived_order: derived_group.order_certificate.clone(),
@@ -1062,6 +1167,10 @@ impl MembershipCertificate {
     /// Independently re-derives this certificate's claim against `group`'s
     /// [`OrderCertificate`], returning the first guard that fails.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`MembershipFailure`] guard that does not hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
@@ -1094,9 +1203,13 @@ impl MembershipCertificate {
                 if *level > group.base.len() {
                     return Err(F::LevelOutOfRange);
                 }
-                let prefix = word_to_perm(&group.strong_generators, prefix_factorization, group.degree)
+                let prefix =
+                    word_to_perm(&group.strong_generators, prefix_factorization, group.degree)
+                        .ok_or(F::WordDoesNotMultiply)?;
+                let residual = prefix
+                    .inverse()
+                    .compose(subject)
                     .ok_or(F::WordDoesNotMultiply)?;
-                let residual = prefix.inverse().compose(subject).ok_or(F::WordDoesNotMultiply)?;
                 if *level == group.base.len() {
                     if is_identity(&residual, group.degree) {
                         return Err(F::ResidualDoesNotMatch);
@@ -1176,6 +1289,11 @@ impl OrbitStabilizerCertificate {
     /// Independently re-derives this certificate's claim, returning the
     /// first guard that fails.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`OrbitStabilizerFailure`] guard that does not
+    /// hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
@@ -1184,7 +1302,9 @@ impl OrbitStabilizerCertificate {
         if self.point >= self.group_order.degree {
             return Err(F::PointOutOfRange);
         }
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
         self.stabilizer_order
             .verify()
             .map_err(|_| F::StabilizerCertificateInvalid)?;
@@ -1263,12 +1383,18 @@ impl CosetCertificate {
     /// Independently re-enumerates both groups and re-checks that the
     /// claimed cosets partition `G` exactly once.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`CosetFailure`] guard that does not hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
     pub fn verify(&self) -> Result<(), CosetFailure> {
         use CosetFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
         self.subgroup_order
             .verify()
             .map_err(|_| F::SubgroupCertificateInvalid)?;
@@ -1282,10 +1408,18 @@ impl CosetCertificate {
         if self.subgroup_order.claimed_order > ENUMERATION_BOUND {
             return Err(F::SubgroupTooLargeToVerify);
         }
-        let g_elems = enumerate_group(&self.group_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::GroupTooLargeToVerify)?;
-        let h_elems = enumerate_group(&self.subgroup_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::SubgroupTooLargeToVerify)?;
+        let g_elems = enumerate_group(
+            &self.group_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::GroupTooLargeToVerify)?;
+        let h_elems = enumerate_group(
+            &self.subgroup_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::SubgroupTooLargeToVerify)?;
         let g_keys: BTreeSet<Vec<usize>> = g_elems.iter().map(|p| image_key(p, degree)).collect();
 
         let mut covered: BTreeSet<Vec<usize>> = BTreeSet::new();
@@ -1378,12 +1512,18 @@ impl CayleyTableCertificate {
     /// associativity, returning the first axiom (or precondition) that
     /// fails.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`CayleyTableFailure`] guard that does not hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
     pub fn verify(&self) -> Result<(), CayleyTableFailure> {
         use CayleyTableFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
         let degree = self.group_order.degree;
         let n = self.elements.len();
         if u128::try_from(n).unwrap_or(u128::MAX) != self.group_order.claimed_order {
@@ -1405,7 +1545,9 @@ impl CayleyTableCertificate {
         for (i, gi) in self.elements.iter().enumerate() {
             for (j, gj) in self.elements.iter().enumerate() {
                 let prod = gi.compose(gj).ok_or(F::NotClosed { i, j })?;
-                let &actual = index.get(&image_key(&prod, degree)).ok_or(F::NotClosed { i, j })?;
+                let &actual = index
+                    .get(&image_key(&prod, degree))
+                    .ok_or(F::NotClosed { i, j })?;
                 if self.table[i][j] != actual {
                     return Err(F::WrongEntry { i, j });
                 }
@@ -1482,6 +1624,10 @@ impl AbelianCertificate {
     /// Independently re-checks commutativity of `generators` against this
     /// claim.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`AbelianFailure`] guard that does not hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
@@ -1549,13 +1695,21 @@ impl CenterCertificate {
     /// Independently re-enumerates `G`, recomputes the center by its
     /// definition, and compares to the claimed center subgroup's elements.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`CenterFailure`] guard that does not hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
     pub fn verify(&self) -> Result<(), CenterFailure> {
         use CenterFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
-        self.center_order.verify().map_err(|_| F::CenterCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
+        self.center_order
+            .verify()
+            .map_err(|_| F::CenterCertificateInvalid)?;
         if self.group_order.claimed_order > ENUMERATION_BOUND {
             return Err(F::TooLargeToVerify);
         }
@@ -1569,20 +1723,27 @@ impl CenterCertificate {
                 }
             }
         }
-        let g_elems = enumerate_group(&self.group_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::TooLargeToVerify)?;
+        let g_elems = enumerate_group(
+            &self.group_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::TooLargeToVerify)?;
         let recomputed_center: BTreeSet<Vec<usize>> = g_elems
             .iter()
             .filter(|e| {
-                self.group_order
-                    .original_generators
-                    .iter()
-                    .all(|g| e.compose(g).expect("same degree") == g.compose(e).expect("same degree"))
+                self.group_order.original_generators.iter().all(|g| {
+                    e.compose(g).expect("same degree") == g.compose(e).expect("same degree")
+                })
             })
             .map(|p| image_key(p, degree))
             .collect();
-        let center_elems = enumerate_group(&self.center_order.original_generators, degree, ENUMERATION_BOUND)
-            .ok_or(F::TooLargeToVerify)?;
+        let center_elems = enumerate_group(
+            &self.center_order.original_generators,
+            degree,
+            ENUMERATION_BOUND,
+        )
+        .ok_or(F::TooLargeToVerify)?;
         let claimed_center: BTreeSet<Vec<usize>> =
             center_elems.iter().map(|p| image_key(p, degree)).collect();
         if recomputed_center != claimed_center {
@@ -1624,12 +1785,19 @@ impl DerivedSubgroupCertificate {
     /// Independently re-enumerates `G`, recomputes every commutator and the
     /// group they generate, and compares to the claimed derived subgroup.
     ///
+    /// # Errors
+    ///
+    /// Returns the first [`DerivedSubgroupFailure`] guard that does not
+    /// hold.
+    ///
     /// # Panics
     ///
     /// Never panics.
     pub fn verify(&self) -> Result<(), DerivedSubgroupFailure> {
         use DerivedSubgroupFailure as F;
-        self.group_order.verify().map_err(|_| F::GroupCertificateInvalid)?;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
         self.derived_order
             .verify()
             .map_err(|_| F::DerivedCertificateInvalid)?;
@@ -1646,14 +1814,16 @@ impl DerivedSubgroupCertificate {
         let commutators = all_commutators(&g_elems);
         let closure = enumerate_group(&commutators, degree, DERIVED_SUBGROUP_ENUMERATION_BOUND)
             .ok_or(F::TooLargeToVerify)?;
-        let recomputed: BTreeSet<Vec<usize>> = closure.iter().map(|p| image_key(p, degree)).collect();
+        let recomputed: BTreeSet<Vec<usize>> =
+            closure.iter().map(|p| image_key(p, degree)).collect();
         let derived_elems = enumerate_group(
             &self.derived_order.original_generators,
             degree,
             DERIVED_SUBGROUP_ENUMERATION_BOUND,
         )
         .ok_or(F::TooLargeToVerify)?;
-        let claimed: BTreeSet<Vec<usize>> = derived_elems.iter().map(|p| image_key(p, degree)).collect();
+        let claimed: BTreeSet<Vec<usize>> =
+            derived_elems.iter().map(|p| image_key(p, degree)).collect();
         if recomputed != claimed {
             return Err(F::SetMismatch);
         }
@@ -1929,9 +2099,15 @@ mod tests {
         let even = cycle(5, &[0, 1, 2]);
         let cert = g.contains(&even);
         let forged = match cert {
-            MembershipCertificate::Member { subject, mut factorization } => {
+            MembershipCertificate::Member {
+                subject,
+                mut factorization,
+            } => {
                 factorization.push(factorization.first().copied().unwrap_or(0));
-                MembershipCertificate::Member { subject, factorization }
+                MembershipCertificate::Member {
+                    subject,
+                    factorization,
+                }
             }
             other => panic!("expected membership, got {other:?}"),
         };
@@ -1945,24 +2121,24 @@ mod tests {
     fn forged_strong_generator_word_that_does_not_reconstruct_is_refused() {
         let g = symmetric_group(4);
         let mut forged = g.order_certificate().clone();
-        // Flip a word's sign on its first entry so it no longer reconstructs
-        // the same strong generator (unless that strong generator happens to
-        // be an involution equal to its own inverse's product -- guarded by
-        // asserting the forgery actually changes the word).
+        // Replace the word with the empty word (product = identity). A
+        // strong generator is never the identity, so this is guaranteed to
+        // change the reconstructed permutation -- unlike sign-flipping the
+        // word's first entry, which is a no-op for an involution generator
+        // (S_4's adjacent transpositions are all self-inverse).
         let idx = 0;
-        let original = forged.strong_generator_words[idx].clone();
-        let mut corrupted = original.clone();
-        if let Some(first) = corrupted.first_mut() {
-            *first = invert_code(*first);
-        } else {
-            corrupted.push(0);
-        }
-        assert_ne!(original, corrupted, "forgery must actually change the word");
-        forged.strong_generator_words[idx] = corrupted;
+        assert_ne!(
+            forged.strong_generators[idx],
+            Permutation::identity(forged.degree),
+            "test assumption: a strong generator is never the identity"
+        );
+        forged.strong_generator_words[idx] = Vec::new();
         assert!(matches!(
             forged.verify(),
-            Err(OrderCertificateFailure::StrongGeneratorWordDoesNotReconstruct { index: 0 })
-                | Err(OrderCertificateFailure::BadStrongGeneratorWord { index: 0 })
+            Err(
+                OrderCertificateFailure::StrongGeneratorWordDoesNotReconstruct { index: 0 }
+                    | OrderCertificateFailure::BadStrongGeneratorWord { index: 0 }
+            )
         ));
     }
 
@@ -2030,13 +2206,13 @@ mod tests {
     }
 
     #[test]
-    fn mutation_guard_transversal_missing_base_point_is_load_bearing() {
-        // If the "transversal must contain base[level] itself" guard were
-        // deleted, a certificate missing that entry would slip through the
-        // per-point checks (there being no entry to check) even though the
-        // orbit-closure guard (recomputed independently) still catches it --
-        // so this also exercises that the closure guard alone is sufficient.
-        // Here we confirm the certificate is rejected either way.
+    fn missing_base_point_transversal_is_refused() {
+        // A certificate whose level-0 transversal omits base[0] is
+        // rejected. Mutation-checked: deleting the explicit
+        // "TransversalMissingBasePoint" guard kills no test here, because
+        // the independently recomputed orbit-closure guard (which always
+        // contains its own seed point) catches the same defect -- measured
+        // redundant, kept as defence in depth (see the guard's own comment).
         let g = symmetric_group(3);
         let mut forged = g.order_certificate().clone();
         let base0 = forged.base[0];
