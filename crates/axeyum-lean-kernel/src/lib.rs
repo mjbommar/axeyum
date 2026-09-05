@@ -61,6 +61,10 @@ mod creal_point;
 pub mod decide;
 mod env;
 mod expr;
+mod fo_provable;
+mod fo_semantics;
+mod fo_substitution;
+mod fo_syntax;
 mod inductive;
 mod int_prelude;
 mod intspace;
@@ -126,6 +130,10 @@ pub use intspace::{
     INTEGRAL_SCALE as INTSPACE_INTEGRAL_SCALE, IntSpacePrelude, TOTAL as INTSPACE_TOTAL,
     build_intspace_prelude,
 };
+pub use fo_provable::{FoProvablePrelude, build_fo_provable_prelude};
+pub use fo_semantics::{FoSemanticsPrelude, build_fo_semantics_prelude};
+pub use fo_substitution::{FoSubstitutionPrelude, build_fo_substitution_prelude};
+pub use fo_syntax::{FoSyntaxPrelude, build_fo_syntax_prelude};
 pub use ipc_eval::{IpcEvalPrelude, build_ipc_eval_prelude};
 pub use ipc_heyting::{
     IpcHeytingPrelude, NatPreludeHandle, build_ipc_heyting_prelude, pem_instance,
