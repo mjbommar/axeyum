@@ -1086,25 +1086,18 @@ fn sweep(
     (frontier, curve)
 }
 
-/// Print the curve, the headline `FRONTIER` line and the `TIMING` line, write
-/// the JSON artifact, and assert BOTH ratchets: capability (frontier >= floor)
-/// and clock (calibrated pinned time <= ceiling).
+/// Print the difficulty curve, the headline `FRONTIER` line and the reference
+/// frame it was taken in.
 ///
-/// Both asserts run at the end rather than early-returning, so a run that is not
-/// comparable still writes its artifact and still reports both numbers — and so
-/// a capability regression can never hide a timing regression by panicking
-/// first.
-fn report_and_assert(
+/// Split out of [`report_and_assert`] only for length; it is one step of that
+/// function and is not called anywhere else.
+fn report_frontier(
     family: &str,
     baseline: u32,
     frontier: u32,
     curve: &[CurvePoint],
-    measurement: &mut Measurement,
-    timing: &TimingBaseline,
+    measurement: &Measurement,
 ) {
-    // Second calibration: a box that got busy DURING the sweep is a fact about
-    // the number, not a footnote.
-    measurement.finish();
     eprintln!("--- frontier curve: {family} ---");
     eprintln!(
         "{:>4}  {:>9}  {:>9}  {:>10}",
@@ -1119,13 +1112,6 @@ fn report_and_assert(
             p.solve_ms,
         );
     }
-    // The frontier ratchet is HARDWARE-RELATIVE: the committed baselines were
-    // ratcheted on the dev box, and the frontier reached within the fixed time
-    // budget collapses on slow shared CI runners (observed 3 vs 20 on a
-    // 2-core GitHub runner) — a hardware artifact, not a lost lever. The
-    // ratchet stays enforced where it is meaningful (local runs); on CI the
-    // curve is still printed and the JSON still written for inspection.
-    let ci = std::env::var("CI").is_ok();
     let progress = if frontier > baseline {
         let over = frontier - baseline;
         if measurement.ratchetable() {
@@ -1152,14 +1138,24 @@ fn report_and_assert(
             measurement.why_not_comparable()
         );
     }
+}
 
-    // ---- the timing ratchet, read out of the curve above (no extra solving) --
-    //
-    // Gated on the SAME two conditions as the capability ratchet below: a CI
-    // runner and an uncomparable box both get the number without the assert.
+/// Print the `TIMING` line and its per-pin breakdown, and decide whether this
+/// run may assert on it.
+///
+/// Returns the measurement, whether the ratchet is enforceable here, and the
+/// failure message if there is one. Split out of [`report_and_assert`] only for
+/// length; it is one step of that function and is not called anywhere else.
+fn report_timing(
+    family: &str,
+    timing: &TimingBaseline,
+    curve: &[CurvePoint],
+    measurement: &Measurement,
+    ci: bool,
+) -> (TimingMeasured, bool, Option<String>) {
     let measured = measure_timing(timing, curve, measurement);
-    let timing_enforced = !ci && measurement.comparable();
-    let timing_fault = timing_regression(family, timing, &measured, measurement);
+    let enforced = !ci && measurement.comparable();
+    let fault = timing_regression(family, timing, &measured, measurement);
     match measured.calibrated_total_ms {
         Some(total) => eprintln!(
             "TIMING {family} = {total:.1} ms calibrated over pinned N={:?} \
@@ -1168,7 +1164,7 @@ fn report_and_assert(
             timing.median_ms,
             timing.ceiling_ms,
             timing.runs,
-            if timing_enforced {
+            if enforced {
                 ""
             } else {
                 " — ADVISORY, not enforced on this run"
@@ -1181,14 +1177,51 @@ fn report_and_assert(
         ),
     }
     eprintln!("  pinned [{family}]: {}", timing_pin_breakdown(&measured));
-    if let Some(message) = &timing_fault
-        && !timing_enforced
+    if let Some(message) = &fault
+        && !enforced
     {
         eprintln!(
             "  TIMING NOT ENFORCED [{family}]: {} — recorded in the JSON artifact only.",
             message.lines().next().unwrap_or(message)
         );
     }
+    (measured, enforced, fault)
+}
+
+/// Print the curve, the headline `FRONTIER` line and the `TIMING` line, write
+/// the JSON artifact, and assert BOTH ratchets: capability (frontier >= floor)
+/// and clock (calibrated pinned time <= ceiling).
+///
+/// Both asserts run at the end rather than early-returning, so a run that is not
+/// comparable still writes its artifact and still reports both numbers — and so
+/// a capability regression can never hide a timing regression by panicking
+/// first.
+fn report_and_assert(
+    family: &str,
+    baseline: u32,
+    frontier: u32,
+    curve: &[CurvePoint],
+    measurement: &mut Measurement,
+    timing: &TimingBaseline,
+) {
+    // Second calibration: a box that got busy DURING the sweep is a fact about
+    // the number, not a footnote.
+    measurement.finish();
+    report_frontier(family, baseline, frontier, curve, measurement);
+    // The frontier ratchet is HARDWARE-RELATIVE: the committed baselines were
+    // ratcheted on the dev box, and the frontier reached within the fixed time
+    // budget collapses on slow shared CI runners (observed 3 vs 20 on a
+    // 2-core GitHub runner) — a hardware artifact, not a lost lever. The
+    // ratchet stays enforced where it is meaningful (local runs); on CI the
+    // curve is still printed and the JSON still written for inspection.
+    let ci = std::env::var("CI").is_ok();
+
+    // ---- the timing ratchet, read out of the curve above (no extra solving) --
+    //
+    // Gated on the SAME two conditions as the capability ratchet below: a CI
+    // runner and an uncomparable box both get the number without the assert.
+    let (measured, timing_enforced, timing_fault) =
+        report_timing(family, timing, curve, measurement, ci);
 
     write_curve_json(
         family,
@@ -1269,6 +1302,76 @@ fn report_and_assert(
     }
 }
 
+/// The `"timing"` object inside a family's JSON artifact.
+///
+/// Split out of [`write_curve_json`] only for length. `"enforced"` is the field
+/// a reader checks before believing `"verdict"`, and it is false exactly when
+/// `machine.comparable` is false (or on CI) — the same flag that governs the
+/// capability ratchet. A busy box therefore records its numbers and asserts
+/// nothing: this is the mechanism that keeps the gate quiet under load, and it
+/// is the one the 35 / 39 / 40 spread at 1-minute loads 34 / 5.4 / 1.17
+/// (`frontier-ratchet-reference-frame.md`) made necessary.
+///
+/// `calibrated_ms` = `solve_ms / machine.scale`, i.e. reference-machine
+/// milliseconds; `calibrated_total_ms` is their sum over the pinned `N` and is
+/// what `ceiling_ms` bounds. `baseline_{min,median,max}_ms` are the measured
+/// spread over `baseline_runs` sweeps of this binary on this box, and
+/// `ceiling_ms` = `band_factor` x `baseline_max_ms`.
+fn write_timing_json(
+    json: &mut String,
+    timing: &TimingBaseline,
+    measured: &TimingMeasured,
+    timing_enforced: bool,
+    timing_ok: bool,
+) {
+    let _ = writeln!(json, "  \"timing\": {{");
+    let pins: Vec<String> = timing.pins.iter().map(u32::to_string).collect();
+    let _ = writeln!(json, "    \"pins\": [{}],", pins.join(", "));
+    let _ = writeln!(
+        json,
+        "    \"calibrated_total_ms\": {},",
+        measured
+            .calibrated_total_ms
+            .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}"))
+    );
+    let _ = writeln!(
+        json,
+        "    \"baseline_min_ms\": {:.1}, \"baseline_median_ms\": {:.1}, \
+         \"baseline_max_ms\": {:.1},",
+        timing.min_ms, timing.median_ms, timing.max_ms
+    );
+    let _ = writeln!(
+        json,
+        "    \"ceiling_ms\": {:.1}, \"band_factor\": {TIMING_BAND_FACTOR:.2}, \
+         \"baseline_runs\": {},",
+        timing.ceiling_ms, timing.runs
+    );
+    let _ = writeln!(
+        json,
+        "    \"enforced\": {timing_enforced}, \"verdict\": \"{}\",",
+        if timing_ok { "ok" } else { "regression" }
+    );
+    json.push_str("    \"observed\": [\n");
+    for (i, p) in measured.points.iter().enumerate() {
+        let comma = if i + 1 < measured.points.len() {
+            ","
+        } else {
+            ""
+        };
+        let _ = writeln!(
+            json,
+            "      {{ \"n\": {}, \"decided\": {}, \"solve_ms\": {}, \"calibrated_ms\": {} }}{comma}",
+            p.n,
+            p.decided,
+            p.solve_ms
+                .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
+            p.calibrated_ms
+                .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
+        );
+    }
+    json.push_str("    ]\n  },\n");
+}
+
 /// `bench-results/frontier/<family>.json`. Hand-rolled (no `serde_json` dep in
 /// the solver test crate) — the schema is tiny and stable.
 #[allow(clippy::too_many_arguments)]
@@ -1339,67 +1442,7 @@ fn write_curve_json(
         measurement.ratchetable(),
     );
     let _ = writeln!(json, "  }},");
-    // The TIMING ratchet's whole state, next to the machine that produced it.
-    //
-    // `"enforced"` is the field a reader checks before believing a `"verdict"`,
-    // and it is false exactly when `machine.comparable` is false (or on CI) —
-    // the same flag that governs the capability ratchet. A busy box therefore
-    // records its numbers and asserts nothing: this is the mechanism that keeps
-    // the gate quiet under load, and it is the one the 35 / 39 / 40 spread at
-    // 1-minute loads 34 / 5.4 / 1.17 (frontier-ratchet-reference-frame.md) made
-    // necessary.
-    //
-    // `calibrated_ms` = `solve_ms / machine.scale`, i.e. reference-machine
-    // milliseconds; `calibrated_total_ms` is their sum over the pinned `N` and
-    // is what `ceiling_ms` bounds. `baseline_{min,median,max}_ms` are the
-    // measured spread over `baseline_runs` runs of this binary on this box, and
-    // `ceiling_ms` = `band_factor` x `baseline_max_ms`.
-    let _ = writeln!(json, "  \"timing\": {{");
-    let pins: Vec<String> = timing.pins.iter().map(u32::to_string).collect();
-    let _ = writeln!(json, "    \"pins\": [{}],", pins.join(", "));
-    let _ = writeln!(
-        json,
-        "    \"calibrated_total_ms\": {},",
-        measured
-            .calibrated_total_ms
-            .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}"))
-    );
-    let _ = writeln!(
-        json,
-        "    \"baseline_min_ms\": {:.1}, \"baseline_median_ms\": {:.1}, \
-         \"baseline_max_ms\": {:.1},",
-        timing.min_ms, timing.median_ms, timing.max_ms
-    );
-    let _ = writeln!(
-        json,
-        "    \"ceiling_ms\": {:.1}, \"band_factor\": {TIMING_BAND_FACTOR:.2}, \
-         \"baseline_runs\": {},",
-        timing.ceiling_ms, timing.runs
-    );
-    let _ = writeln!(
-        json,
-        "    \"enforced\": {timing_enforced}, \"verdict\": \"{}\",",
-        if timing_ok { "ok" } else { "regression" }
-    );
-    json.push_str("    \"observed\": [\n");
-    for (i, p) in measured.points.iter().enumerate() {
-        let comma = if i + 1 < measured.points.len() {
-            ","
-        } else {
-            ""
-        };
-        let _ = writeln!(
-            json,
-            "      {{ \"n\": {}, \"decided\": {}, \"solve_ms\": {}, \"calibrated_ms\": {} }}{comma}",
-            p.n,
-            p.decided,
-            p.solve_ms
-                .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
-            p.calibrated_ms
-                .map_or_else(|| "null".to_owned(), |ms| format!("{ms:.1}")),
-        );
-    }
-    json.push_str("    ]\n  },\n");
+    write_timing_json(&mut json, timing, measured, timing_enforced, timing_ok);
     json.push_str("  \"curve\": [\n");
     for (i, p) in curve.iter().enumerate() {
         let comma = if i + 1 < curve.len() { "," } else { "" };
