@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls
 
 fmt:
     cargo fmt --all --check
@@ -1288,6 +1288,33 @@ kernel-differential:
     bash scripts/tests/test-kernel-differential-gate.sh
     python3 scripts/check-kernel-differential.py
     python3 scripts/check-kernel-differential-mutants.py
+
+# ADR-1663: the PUBLIC Lean kernel conformance corpus (leanprover/lean-kernel-
+# arena, pinned at an exact commit plus a SHA-256-pinned test tarball by
+# `scripts/fetch-references.sh`), scored on BOTH halves separately: 113 streams
+# the official Lean kernel accepts and 73 it rejects. A positive-only score is
+# meaningless and the corpus ships its own proof of that -- the `parse-only`
+# checker, reproduced in-tree as `--mode parse-only` (the identical reader with
+# the trusted gate's verdict discarded), scores 110/113 on the accept half and
+# 21/73 on the reject half. The gate's G6 REQUIRES that inversion by at least
+# 40 cases, so a harness that quietly stopped exercising the kernel fails
+# rather than reporting a perfect score. Floors pin both halves; ceilings pin
+# the known divergences, so a NEW one fails instead of being absorbed. `--rerun`
+# re-runs every case live instead of the divergences plus a fixed sample.
+kernel-conformance:
+    python3 scripts/check-kernel-conformance.py --self-test
+    python3 scripts/check-kernel-conformance.py --require-corpus --rerun
+
+# The divergence ledger, in lean4lean's `divergences.md` shape: unless it is
+# listed there, any divergence between this kernel and Lean 4 is a bug. The
+# checker derives the divergence set from the AUTHORITIES -- the kernel
+# differential's `EXPLAINED_INCOMPLETENESS`, the conformance run's per-case
+# mismatches, and the replay census's typed classes -- and never from a literal
+# list of its own, so a new divergence appearing in any of them fails until the
+# ledger names it.
+lean-divergences:
+    python3 scripts/check-lean-divergences.py --self-test
+    python3 scripts/check-lean-divergences.py
 
 # Same as `test`, but under a hard 64 GiB memory cap (scripts/mem-run.sh) so a
 # runaway allocation (e.g. an unbounded NRA / wide bit-blast blowup) aborts the
