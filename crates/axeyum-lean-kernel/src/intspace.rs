@@ -526,6 +526,10 @@ pub struct IntSpacePrelude {
     /// becomes a total function of one argument.
     pub bundled: bundled::BundledNames,
 
+    /// The L¹ layer (`intspace/l1.rs`, ADR-1625): the L¹ seminorm on the
+    /// bundled carrier, its setoid, and the `Metric` instance built from them.
+    pub l1: l1::L1Names,
+
     /// `IntSpace.Triv : Sort 1` — a one-constructor `Type`, the integrability
     /// datum of a space where **every** function is integrable. `True` will
     /// not do: `Integrable` is `Sort 1`-valued and `True : Prop`.
@@ -757,6 +761,7 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
         creal,
         record,
         bundled: bundled::intern(kernel, ns),
+        l1: l1::intern(kernel, ns),
         triv,
         triv_mk: kernel.name_str(triv, "mk"),
         triv_rec: kernel.name_str(triv, "rec"),
@@ -827,6 +832,10 @@ fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude {
 /// this file's two descriptions of the same record.
 pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, KernelError> {
     let creal = crate::build_creal_prelude(kernel)?;
+    // ADR-1625: the L¹ layer builds a `Metric`, so the metric prelude is now a
+    // dependency of this one. `Metric` does not depend on `IntSpace`, so there
+    // is no cycle; both builders are idempotent.
+    let metric = crate::build_metric_prelude(kernel)?;
     let p = intern(kernel, creal);
     if kernel.environment().get(p.record.ind).is_some() {
         return Ok(p);
@@ -873,6 +882,7 @@ pub fn build_intspace_prelude(kernel: &mut Kernel) -> Result<IntSpacePrelude, Ke
     detachable::declare_all(&mut d, p)?;
     probability_bridge::declare_all(&mut d, p)?;
     bundled::declare_all(&mut d, p)?;
+    l1::declare_all(&mut d, p, metric)?;
 
     Ok(p)
 }
@@ -886,11 +896,14 @@ mod convergence;
 mod detachable;
 mod generic;
 mod instances;
+pub mod l1;
 mod measure;
 mod probability_bridge;
 
 #[cfg(test)]
 mod intspace_tests;
+#[cfg(test)]
+mod l1_tests;
 
 /// A bound `S : IntSpace` plus its carrier, the shape every generic theorem
 /// opens with.

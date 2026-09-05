@@ -14,16 +14,16 @@
     ]
   },
   "population": {
-    "files_scanned": 608,
-    "private_fns": 12324,
-    "private_fns_outside_tests": 10062,
-    "distinct_names": 9692,
-    "distinct_body_digests": 10941,
-    "duplicated_name_groups": 1009,
+    "files_scanned": 610,
+    "private_fns": 12365,
+    "private_fns_outside_tests": 10097,
+    "distinct_names": 9728,
+    "distinct_body_digests": 10982,
+    "duplicated_name_groups": 1010,
     "duplicated_body_groups": 515,
     "sites_in_duplicated_body_groups": 1898,
-    "inline_step_fns": 8123,
-    "inline_step_name_groups": 686,
+    "inline_step_fns": 8158,
+    "inline_step_name_groups": 687,
     "inline_step_body_groups": 344,
     "sites_in_inline_step_body_groups": 1143
   },
@@ -337,15 +337,15 @@
     },
     {
       "key": "built",
-      "count": 27,
+      "count": 28,
       "names": [
         "built"
       ],
-      "files": 27,
+      "files": 28,
       "carriers": [],
       "body_lines": 12,
       "signature": "fn built() -> (Kernel, ComplexPrelude)",
-      "test_file_members": 26,
+      "test_file_members": 27,
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/cas_bridge_tests.rs:115",
         "crates/axeyum-lean-kernel/src/complex/complex_tests.rs:18",
@@ -354,6 +354,7 @@
         "crates/axeyum-lean-kernel/src/int_prelude/cas_crt_bridge_tests.rs:419",
         "crates/axeyum-lean-kernel/src/int_prelude/cas_pratt_bridge_tests.rs:562",
         "crates/axeyum-lean-kernel/src/intspace/intspace_tests.rs:26",
+        "crates/axeyum-lean-kernel/src/intspace/l1_tests.rs:28",
         "crates/axeyum-lean-kernel/src/intspace/probability_bridge_tests.rs:20",
         "crates/axeyum-lean-kernel/src/metric/metric_tests.rs:19",
         "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:963",
@@ -374,6 +375,45 @@
         "crates/axeyum-lean-kernel/src/rat_prelude/sum_maps_tests.rs:44",
         "crates/axeyum-lean-kernel/src/rn/rn_tests.rs:29",
         "crates/axeyum-lean-kernel/src/sigma_prelude/sigma_prelude_tests.rs:26"
+      ]
+    },
+    {
+      "key": "intern",
+      "count": 25,
+      "names": [
+        "intern"
+      ],
+      "files": 25,
+      "carriers": [],
+      "body_lines": 9,
+      "signature": "fn intern(kernel: &mut Kernel, creal: NameId) -> Self",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/creal/completeness.rs:568",
+        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:1995",
+        "crates/axeyum-lean-kernel/src/creal/crossing.rs:2305",
+        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:2051",
+        "crates/axeyum-lean-kernel/src/creal/evt_row1.rs:420",
+        "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:902",
+        "crates/axeyum-lean-kernel/src/creal/extreme_value.rs:771",
+        "crates/axeyum-lean-kernel/src/creal/inverse_fn.rs:655",
+        "crates/axeyum-lean-kernel/src/creal/ivt_boundary.rs:331",
+        "crates/axeyum-lean-kernel/src/creal/lub_boundary.rs:562",
+        "crates/axeyum-lean-kernel/src/creal/mvt.rs:964",
+        "crates/axeyum-lean-kernel/src/creal/omniscience.rs:146",
+        "crates/axeyum-lean-kernel/src/creal/pi.rs:1474",
+        "crates/axeyum-lean-kernel/src/creal/polynomial.rs:863",
+        "crates/axeyum-lean-kernel/src/creal/ratio_test.rs:428",
+        "crates/axeyum-lean-kernel/src/intspace.rs:740",
+        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:221",
+        "crates/axeyum-lean-kernel/src/metric.rs:554",
+        "crates/axeyum-lean-kernel/src/metric/compactness.rs:273",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:193",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:180",
+        "crates/axeyum-lean-kernel/src/metric/subspace.rs:114",
+        "crates/axeyum-lean-kernel/src/nat_prelude/omniscience.rs:178",
+        "crates/axeyum-lean-kernel/src/rn.rs:321"
       ]
     },
     {
@@ -454,44 +494,6 @@
         "crates/axeyum-lean-kernel/src/creal/trig.rs:231",
         "crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs:2583",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1773"
-      ]
-    },
-    {
-      "key": "intern",
-      "count": 24,
-      "names": [
-        "intern"
-      ],
-      "files": 24,
-      "carriers": [],
-      "body_lines": 9,
-      "signature": "fn intern(kernel: &mut Kernel, creal: NameId) -> Self",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/creal/completeness.rs:568",
-        "crates/axeyum-lean-kernel/src/creal/cos_sign.rs:1995",
-        "crates/axeyum-lean-kernel/src/creal/crossing.rs:2305",
-        "crates/axeyum-lean-kernel/src/creal/deriv_unique.rs:2051",
-        "crates/axeyum-lean-kernel/src/creal/evt_row1.rs:420",
-        "crates/axeyum-lean-kernel/src/creal/exp_fn.rs:902",
-        "crates/axeyum-lean-kernel/src/creal/extreme_value.rs:771",
-        "crates/axeyum-lean-kernel/src/creal/inverse_fn.rs:655",
-        "crates/axeyum-lean-kernel/src/creal/ivt_boundary.rs:331",
-        "crates/axeyum-lean-kernel/src/creal/lub_boundary.rs:562",
-        "crates/axeyum-lean-kernel/src/creal/mvt.rs:964",
-        "crates/axeyum-lean-kernel/src/creal/omniscience.rs:146",
-        "crates/axeyum-lean-kernel/src/creal/pi.rs:1474",
-        "crates/axeyum-lean-kernel/src/creal/polynomial.rs:863",
-        "crates/axeyum-lean-kernel/src/creal/ratio_test.rs:428",
-        "crates/axeyum-lean-kernel/src/intspace.rs:736",
-        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
-        "crates/axeyum-lean-kernel/src/metric.rs:554",
-        "crates/axeyum-lean-kernel/src/metric/compactness.rs:273",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:193",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:180",
-        "crates/axeyum-lean-kernel/src/metric/subspace.rs:114",
-        "crates/axeyum-lean-kernel/src/nat_prelude/omniscience.rs:178",
-        "crates/axeyum-lean-kernel/src/rn.rs:321"
       ]
     },
     {
@@ -913,6 +915,38 @@
       ]
     },
     {
+      "key": "declare_all",
+      "count": 16,
+      "names": [
+        "declare_all"
+      ],
+      "files": 16,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 15,
+      "signature": "fn declare_all(d: &mut IntDev<'_>) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
+        "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
+        "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:1677",
+        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:391",
+        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:53",
+        "crates/axeyum-lean-kernel/src/intspace/detachable.rs:59",
+        "crates/axeyum-lean-kernel/src/intspace/generic.rs:33",
+        "crates/axeyum-lean-kernel/src/intspace/instances.rs:38",
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:1917",
+        "crates/axeyum-lean-kernel/src/intspace/measure.rs:47",
+        "crates/axeyum-lean-kernel/src/intspace/probability_bridge.rs:44",
+        "crates/axeyum-lean-kernel/src/metric/compactness.rs:303",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
+        "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
+      ]
+    },
+    {
       "key": "name",
       "count": 16,
       "names": [
@@ -1032,37 +1066,6 @@
         "crates/axeyum-lean-kernel/src/string_prelude/substr.rs:198",
         "crates/axeyum-lean-kernel/src/string_prelude/substr_arithmetic.rs:155",
         "crates/axeyum-lean-kernel/src/string_prelude/take_drop.rs:201"
-      ]
-    },
-    {
-      "key": "declare_all",
-      "count": 15,
-      "names": [
-        "declare_all"
-      ],
-      "files": 15,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 15,
-      "signature": "fn declare_all(d: &mut IntDev<'_>) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
-        "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
-        "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
-        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:1677",
-        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:391",
-        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:53",
-        "crates/axeyum-lean-kernel/src/intspace/detachable.rs:59",
-        "crates/axeyum-lean-kernel/src/intspace/generic.rs:33",
-        "crates/axeyum-lean-kernel/src/intspace/instances.rs:38",
-        "crates/axeyum-lean-kernel/src/intspace/measure.rs:47",
-        "crates/axeyum-lean-kernel/src/intspace/probability_bridge.rs:44",
-        "crates/axeyum-lean-kernel/src/metric/compactness.rs:303",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
-        "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
       ]
     },
     {
@@ -1314,7 +1317,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point/angle.rs:106",
         "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:85",
-        "crates/axeyum-lean-kernel/src/intspace.rs:974",
+        "crates/axeyum-lean-kernel/src/intspace.rs:987",
         "crates/axeyum-lean-kernel/src/ipc_soundness.rs:531",
         "crates/axeyum-lean-kernel/src/metric.rs:783",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:443",
@@ -2436,7 +2439,7 @@
       "signature": "fn radd(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:935",
+        "crates/axeyum-lean-kernel/src/intspace.rs:948",
         "crates/axeyum-lean-kernel/src/metric.rs:721",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:419",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:253",
@@ -2503,7 +2506,7 @@
       "signature": "fn rneg(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:938",
+        "crates/axeyum-lean-kernel/src/intspace.rs:951",
         "crates/axeyum-lean-kernel/src/metric.rs:724",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:422",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:256",
@@ -2892,7 +2895,7 @@
       "signature": "fn req(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:947",
+        "crates/axeyum-lean-kernel/src/intspace.rs:960",
         "crates/axeyum-lean-kernel/src/metric.rs:737",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:425",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:266",
@@ -2914,7 +2917,7 @@
       "signature": "fn rle(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:944",
+        "crates/axeyum-lean-kernel/src/intspace.rs:957",
         "crates/axeyum-lean-kernel/src/metric.rs:734",
         "crates/axeyum-lean-kernel/src/metric/continuity.rs:256",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:158",
@@ -2936,7 +2939,7 @@
       "signature": "fn rrefl(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:950",
+        "crates/axeyum-lean-kernel/src/intspace.rs:963",
         "crates/axeyum-lean-kernel/src/metric.rs:740",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:428",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:269",
@@ -2958,7 +2961,7 @@
       "signature": "fn rtrans( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, z: ExprId, h1: ExprId, h2: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:962",
+        "crates/axeyum-lean-kernel/src/intspace.rs:975",
         "crates/axeyum-lean-kernel/src/metric.rs:746",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:431",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:275",
@@ -3970,7 +3973,7 @@
       "signature": "fn rmul(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:941",
+        "crates/axeyum-lean-kernel/src/intspace.rs:954",
         "crates/axeyum-lean-kernel/src/metric.rs:1974",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:115",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability_s.rs:204",
@@ -4012,7 +4015,7 @@
       "signature": "fn rsymm( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, h: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:953",
+        "crates/axeyum-lean-kernel/src/intspace.rs:966",
         "crates/axeyum-lean-kernel/src/metric.rs:743",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:272",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:221",
@@ -4033,7 +4036,7 @@
       "signature": "fn rzero(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:929",
+        "crates/axeyum-lean-kernel/src/intspace.rs:942",
         "crates/axeyum-lean-kernel/src/metric.rs:718",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:286",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:127",
@@ -4597,7 +4600,7 @@
       "signature": "fn definition( d: &mut IntDev<'_>, name: NameId, ty: ExprId, value: ExprId, ) -> Result<(), KernelError>",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:988",
+        "crates/axeyum-lean-kernel/src/intspace.rs:1001",
         "crates/axeyum-lean-kernel/src/ipc_soundness.rs:543",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:452",
         "crates/axeyum-lean-kernel/src/rn.rs:583"
@@ -5769,7 +5772,7 @@
       ],
       "files": 3,
       "carriers": [],
-      "body_lines": 142,
+      "body_lines": 145,
       "signature": "fn all_declarations(p: IntSpacePrelude) -> Vec<(String, crate::name::NameId)>",
       "test_file_members": 3,
       "sites": [
@@ -7120,7 +7123,7 @@
       "signature": "fn field(d: &mut IntDev<'_>, p: IntSpacePrelude, s: ExprId, i: usize) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:919",
+        "crates/axeyum-lean-kernel/src/intspace.rs:932",
         "crates/axeyum-lean-kernel/src/metric.rs:1386",
         "crates/axeyum-lean-kernel/src/metric/subspace.rs:179"
       ]
@@ -7568,6 +7571,25 @@
         "crates/axeyum-lean-kernel/src/int_prelude/statements.rs:199",
         "crates/axeyum-lean-kernel/src/int_prelude/sub_nat_nat.rs:61",
         "crates/axeyum-lean-kernel/src/rat_prelude/statements.rs:169"
+      ]
+    },
+    {
+      "key": "level_one",
+      "count": 3,
+      "names": [
+        "level_one"
+      ],
+      "files": 3,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 4,
+      "signature": "fn level_one(d: &mut IntDev<'_>) -> LevelId",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:1265",
+        "crates/axeyum-lean-kernel/src/ipc_soundness.rs:384",
+        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:117"
       ]
     },
     {
@@ -8562,7 +8584,7 @@
       "signature": "fn rty(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:926",
+        "crates/axeyum-lean-kernel/src/intspace.rs:939",
         "crates/axeyum-lean-kernel/src/metric.rs:715",
         "crates/axeyum-lean-kernel/src/rn.rs:509"
       ]
@@ -10882,6 +10904,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/rat_prelude/decide.rs:99",
         "crates/axeyum-lean-kernel/src/rat_prelude/lattice.rs:109"
+      ]
+    },
+    {
+      "key": "ctx",
+      "count": 2,
+      "names": [
+        "ctx"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 136,
+      "signature": "fn ctx(d: &mut IntDev<'_>, p: IntSpacePrelude) -> L1Ctx",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:281",
+        "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:226"
       ]
     },
     {
@@ -15108,22 +15148,6 @@
       ]
     },
     {
-      "key": "level_one",
-      "count": 2,
-      "names": [
-        "level_one"
-      ],
-      "files": 2,
-      "carriers": [],
-      "body_lines": 4,
-      "signature": "fn level_one(&mut self) -> crate::LevelId",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/ipc_soundness.rs:384",
-        "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:117"
-      ]
-    },
-    {
       "key": "lookup",
       "count": 2,
       "names": [
@@ -17935,7 +17959,7 @@
       "signature": "fn rone(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:932",
+        "crates/axeyum-lean-kernel/src/intspace.rs:945",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:132"
       ]
     },
@@ -20931,7 +20955,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point/angle.rs:106",
         "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:85",
-        "crates/axeyum-lean-kernel/src/intspace.rs:974",
+        "crates/axeyum-lean-kernel/src/intspace.rs:987",
         "crates/axeyum-lean-kernel/src/metric.rs:783",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:443",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:300",
@@ -21219,7 +21243,7 @@
       "signature": "fn radd(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:935",
+        "crates/axeyum-lean-kernel/src/intspace.rs:948",
         "crates/axeyum-lean-kernel/src/metric.rs:721",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:419",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:253",
@@ -21303,7 +21327,7 @@
       "signature": "fn req(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:947",
+        "crates/axeyum-lean-kernel/src/intspace.rs:960",
         "crates/axeyum-lean-kernel/src/metric.rs:737",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:425",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:266",
@@ -21494,7 +21518,7 @@
       "signature": "fn rneg(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:938",
+        "crates/axeyum-lean-kernel/src/intspace.rs:951",
         "crates/axeyum-lean-kernel/src/metric.rs:724",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:422",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:256",
@@ -21515,7 +21539,7 @@
       "signature": "fn rrefl(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:950",
+        "crates/axeyum-lean-kernel/src/intspace.rs:963",
         "crates/axeyum-lean-kernel/src/metric.rs:740",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:428",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:269",
@@ -21635,7 +21659,7 @@
       "signature": "fn rtrans( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, z: ExprId, h1: ExprId, h2: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:962",
+        "crates/axeyum-lean-kernel/src/intspace.rs:975",
         "crates/axeyum-lean-kernel/src/metric.rs:746",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:431",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:275"
@@ -21656,7 +21680,7 @@
       "signature": "fn rty(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:926",
+        "crates/axeyum-lean-kernel/src/intspace.rs:939",
         "crates/axeyum-lean-kernel/src/metric.rs:715",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:250",
         "crates/axeyum-lean-kernel/src/rn.rs:509"
@@ -21908,7 +21932,7 @@
       "signature": "fn rzero(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:929",
+        "crates/axeyum-lean-kernel/src/intspace.rs:942",
         "crates/axeyum-lean-kernel/src/metric.rs:718",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:286",
         "crates/axeyum-lean-kernel/src/rn.rs:512"
@@ -22123,7 +22147,7 @@
       "signature": "fn rsymm( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, h: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:953",
+        "crates/axeyum-lean-kernel/src/intspace.rs:966",
         "crates/axeyum-lean-kernel/src/metric.rs:743",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:272",
         "crates/axeyum-lean-kernel/src/rn.rs:536"
@@ -22415,7 +22439,7 @@
       "signature": "fn rle(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:944",
+        "crates/axeyum-lean-kernel/src/intspace.rs:957",
         "crates/axeyum-lean-kernel/src/metric.rs:734",
         "crates/axeyum-lean-kernel/src/metric/continuity.rs:256",
         "crates/axeyum-lean-kernel/src/rn.rs:527"
@@ -22755,7 +22779,7 @@
       "signature": "fn rmul(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:941",
+        "crates/axeyum-lean-kernel/src/intspace.rs:954",
         "crates/axeyum-lean-kernel/src/metric.rs:1974",
         "crates/axeyum-lean-kernel/src/rn.rs:521"
       ]
@@ -27657,7 +27681,7 @@
       "signature": "fn every_intspace_declaration_is_axiom_free()",
       "test_file_members": 2,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace/intspace_tests.rs:265",
+        "crates/axeyum-lean-kernel/src/intspace/intspace_tests.rs:268",
         "crates/axeyum-lean-kernel/src/metric/metric_tests.rs:217"
       ]
     },
@@ -29700,6 +29724,38 @@
       ]
     },
     {
+      "key": "declare_all",
+      "count": 16,
+      "names": [
+        "declare_all"
+      ],
+      "files": 16,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 15,
+      "signature": "fn declare_all(d: &mut IntDev<'_>) -> Result<(), KernelError>",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
+        "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
+        "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
+        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:1677",
+        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:391",
+        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:53",
+        "crates/axeyum-lean-kernel/src/intspace/detachable.rs:59",
+        "crates/axeyum-lean-kernel/src/intspace/generic.rs:33",
+        "crates/axeyum-lean-kernel/src/intspace/instances.rs:38",
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:1917",
+        "crates/axeyum-lean-kernel/src/intspace/measure.rs:47",
+        "crates/axeyum-lean-kernel/src/intspace/probability_bridge.rs:44",
+        "crates/axeyum-lean-kernel/src/metric/compactness.rs:303",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
+        "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
+      ]
+    },
+    {
       "key": "cadd",
       "count": 15,
       "names": [
@@ -29728,37 +29784,6 @@
         "crates/axeyum-lean-kernel/src/creal/trig.rs:251",
         "crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs:2587",
         "crates/axeyum-lean-kernel/src/creal_point.rs:1765"
-      ]
-    },
-    {
-      "key": "declare_all",
-      "count": 15,
-      "names": [
-        "declare_all"
-      ],
-      "files": 15,
-      "carriers": [
-        "IntDev"
-      ],
-      "body_lines": 15,
-      "signature": "fn declare_all(d: &mut IntDev<'_>) -> Result<(), KernelError>",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/int_prelude/dvd_gcd_mirrors.rs:874",
-        "crates/axeyum-lean-kernel/src/int_prelude/gcd_scaled_mirrors.rs:272",
-        "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:359",
-        "crates/axeyum-lean-kernel/src/int_prelude/mult_order.rs:1677",
-        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:391",
-        "crates/axeyum-lean-kernel/src/intspace/convergence.rs:53",
-        "crates/axeyum-lean-kernel/src/intspace/detachable.rs:59",
-        "crates/axeyum-lean-kernel/src/intspace/generic.rs:33",
-        "crates/axeyum-lean-kernel/src/intspace/instances.rs:38",
-        "crates/axeyum-lean-kernel/src/intspace/measure.rs:47",
-        "crates/axeyum-lean-kernel/src/intspace/probability_bridge.rs:44",
-        "crates/axeyum-lean-kernel/src/metric/compactness.rs:303",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:220",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:202",
-        "crates/axeyum-lean-kernel/src/metric/subspace.rs:488"
       ]
     },
     {
@@ -30164,7 +30189,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point/angle.rs:106",
         "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:85",
-        "crates/axeyum-lean-kernel/src/intspace.rs:974",
+        "crates/axeyum-lean-kernel/src/intspace.rs:987",
         "crates/axeyum-lean-kernel/src/metric.rs:783",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:443",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:300",
@@ -30197,6 +30222,29 @@
         "crates/axeyum-lean-kernel/src/creal/rolle.rs:296",
         "crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs:1432",
         "crates/axeyum-lean-kernel/src/creal/uniform_convergence.rs:116"
+      ]
+    },
+    {
+      "key": "intern",
+      "count": 9,
+      "names": [
+        "intern"
+      ],
+      "files": 9,
+      "carriers": [],
+      "body_lines": 80,
+      "signature": "fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/intspace.rs:740",
+        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:221",
+        "crates/axeyum-lean-kernel/src/metric.rs:554",
+        "crates/axeyum-lean-kernel/src/metric/compactness.rs:273",
+        "crates/axeyum-lean-kernel/src/metric/continuity.rs:193",
+        "crates/axeyum-lean-kernel/src/metric/interval.rs:180",
+        "crates/axeyum-lean-kernel/src/metric/subspace.rs:114",
+        "crates/axeyum-lean-kernel/src/rn.rs:321"
       ]
     },
     {
@@ -30346,28 +30394,6 @@
         "crates/axeyum-lean-kernel/src/int_prelude/gcd.rs:1299",
         "crates/axeyum-lean-kernel/src/int_prelude/gcd_dvd_iff.rs:53",
         "crates/axeyum-lean-kernel/src/int_prelude/modeq_cancel_div_gcd.rs:93"
-      ]
-    },
-    {
-      "key": "intern",
-      "count": 8,
-      "names": [
-        "intern"
-      ],
-      "files": 8,
-      "carriers": [],
-      "body_lines": 79,
-      "signature": "fn intern(kernel: &mut Kernel, creal: CRealPrelude) -> IntSpacePrelude",
-      "test_file_members": 0,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:736",
-        "crates/axeyum-lean-kernel/src/intspace/bundled.rs:128",
-        "crates/axeyum-lean-kernel/src/metric.rs:554",
-        "crates/axeyum-lean-kernel/src/metric/compactness.rs:273",
-        "crates/axeyum-lean-kernel/src/metric/continuity.rs:193",
-        "crates/axeyum-lean-kernel/src/metric/interval.rs:180",
-        "crates/axeyum-lean-kernel/src/metric/subspace.rs:114",
-        "crates/axeyum-lean-kernel/src/rn.rs:321"
       ]
     },
     {
@@ -30551,7 +30577,7 @@
       "signature": "fn radd(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:935",
+        "crates/axeyum-lean-kernel/src/intspace.rs:948",
         "crates/axeyum-lean-kernel/src/metric.rs:721",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:419",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:253",
@@ -30574,7 +30600,7 @@
       "signature": "fn rneg(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:938",
+        "crates/axeyum-lean-kernel/src/intspace.rs:951",
         "crates/axeyum-lean-kernel/src/metric.rs:724",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:422",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:256",
@@ -30837,7 +30863,7 @@
       "signature": "fn req(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:947",
+        "crates/axeyum-lean-kernel/src/intspace.rs:960",
         "crates/axeyum-lean-kernel/src/metric.rs:737",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:425",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:266",
@@ -30859,7 +30885,7 @@
       "signature": "fn rle(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:944",
+        "crates/axeyum-lean-kernel/src/intspace.rs:957",
         "crates/axeyum-lean-kernel/src/metric.rs:734",
         "crates/axeyum-lean-kernel/src/metric/continuity.rs:256",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:158",
@@ -30881,7 +30907,7 @@
       "signature": "fn rrefl(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:950",
+        "crates/axeyum-lean-kernel/src/intspace.rs:963",
         "crates/axeyum-lean-kernel/src/metric.rs:740",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:428",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:269",
@@ -30903,7 +30929,7 @@
       "signature": "fn rtrans( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, z: ExprId, h1: ExprId, h2: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:962",
+        "crates/axeyum-lean-kernel/src/intspace.rs:975",
         "crates/axeyum-lean-kernel/src/metric.rs:746",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:431",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:275",
@@ -31519,7 +31545,7 @@
       "signature": "fn rmul(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:941",
+        "crates/axeyum-lean-kernel/src/intspace.rs:954",
         "crates/axeyum-lean-kernel/src/metric.rs:1974",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:115",
         "crates/axeyum-lean-kernel/src/rat_prelude/probability_s.rs:204",
@@ -31561,7 +31587,7 @@
       "signature": "fn rsymm( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, h: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:953",
+        "crates/axeyum-lean-kernel/src/intspace.rs:966",
         "crates/axeyum-lean-kernel/src/metric.rs:743",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:272",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:221",
@@ -31582,7 +31608,7 @@
       "signature": "fn rzero(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:929",
+        "crates/axeyum-lean-kernel/src/intspace.rs:942",
         "crates/axeyum-lean-kernel/src/metric.rs:718",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:286",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:127",
@@ -33641,7 +33667,7 @@
       "signature": "fn definition( d: &mut IntDev<'_>, name: NameId, ty: ExprId, value: ExprId, ) -> Result<(), KernelError>",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:988",
+        "crates/axeyum-lean-kernel/src/intspace.rs:1001",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:452",
         "crates/axeyum-lean-kernel/src/rn.rs:583"
       ]
@@ -33792,7 +33818,7 @@
       "signature": "fn field(d: &mut IntDev<'_>, p: IntSpacePrelude, s: ExprId, i: usize) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:919",
+        "crates/axeyum-lean-kernel/src/intspace.rs:932",
         "crates/axeyum-lean-kernel/src/metric.rs:1386",
         "crates/axeyum-lean-kernel/src/metric/subspace.rs:179"
       ]
@@ -34784,7 +34810,7 @@
       "signature": "fn rty(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:926",
+        "crates/axeyum-lean-kernel/src/intspace.rs:939",
         "crates/axeyum-lean-kernel/src/metric.rs:715",
         "crates/axeyum-lean-kernel/src/rn.rs:509"
       ]
@@ -36273,6 +36299,24 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/rat_prelude/decide.rs:99",
         "crates/axeyum-lean-kernel/src/rat_prelude/lattice.rs:109"
+      ]
+    },
+    {
+      "key": "ctx",
+      "count": 2,
+      "names": [
+        "ctx"
+      ],
+      "files": 2,
+      "carriers": [
+        "IntDev"
+      ],
+      "body_lines": 136,
+      "signature": "fn ctx(d: &mut IntDev<'_>, p: IntSpacePrelude) -> L1Ctx",
+      "test_file_members": 0,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/intspace/l1.rs:281",
+        "crates/axeyum-lean-kernel/src/nat_prelude/image_group.rs:226"
       ]
     },
     {
@@ -41632,7 +41676,7 @@
       "signature": "fn rone(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:932",
+        "crates/axeyum-lean-kernel/src/intspace.rs:945",
         "crates/axeyum-lean-kernel/src/rat_prelude/ops.rs:132"
       ]
     },
@@ -43395,7 +43439,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/creal_point/angle.rs:106",
         "crates/axeyum-lean-kernel/src/creal_point/isometry.rs:85",
-        "crates/axeyum-lean-kernel/src/intspace.rs:974",
+        "crates/axeyum-lean-kernel/src/intspace.rs:987",
         "crates/axeyum-lean-kernel/src/metric.rs:783",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:443",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:300",
@@ -43620,7 +43664,7 @@
       "signature": "fn radd(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:935",
+        "crates/axeyum-lean-kernel/src/intspace.rs:948",
         "crates/axeyum-lean-kernel/src/metric.rs:721",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:419",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:253",
@@ -43683,7 +43727,7 @@
       "signature": "fn req(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:947",
+        "crates/axeyum-lean-kernel/src/intspace.rs:960",
         "crates/axeyum-lean-kernel/src/metric.rs:737",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:425",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:266",
@@ -43855,7 +43899,7 @@
       "signature": "fn rneg(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:938",
+        "crates/axeyum-lean-kernel/src/intspace.rs:951",
         "crates/axeyum-lean-kernel/src/metric.rs:724",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:422",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:256",
@@ -43876,7 +43920,7 @@
       "signature": "fn rrefl(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:950",
+        "crates/axeyum-lean-kernel/src/intspace.rs:963",
         "crates/axeyum-lean-kernel/src/metric.rs:740",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:428",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:269",
@@ -43957,7 +44001,7 @@
       "signature": "fn rtrans( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, z: ExprId, h1: ExprId, h2: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:962",
+        "crates/axeyum-lean-kernel/src/intspace.rs:975",
         "crates/axeyum-lean-kernel/src/metric.rs:746",
         "crates/axeyum-lean-kernel/src/metric/compactness.rs:431",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:275"
@@ -43998,7 +44042,7 @@
       "signature": "fn rty(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:926",
+        "crates/axeyum-lean-kernel/src/intspace.rs:939",
         "crates/axeyum-lean-kernel/src/metric.rs:715",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:250",
         "crates/axeyum-lean-kernel/src/rn.rs:509"
@@ -44162,7 +44206,7 @@
       "signature": "fn rzero(d: &mut IntDev<'_>, c: CRealPrelude) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:929",
+        "crates/axeyum-lean-kernel/src/intspace.rs:942",
         "crates/axeyum-lean-kernel/src/metric.rs:718",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:286",
         "crates/axeyum-lean-kernel/src/rn.rs:512"
@@ -44304,7 +44348,7 @@
       "signature": "fn rsymm( d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId, h: ExprId, ) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:953",
+        "crates/axeyum-lean-kernel/src/intspace.rs:966",
         "crates/axeyum-lean-kernel/src/metric.rs:743",
         "crates/axeyum-lean-kernel/src/metric/interval.rs:272",
         "crates/axeyum-lean-kernel/src/rn.rs:536"
@@ -44485,7 +44529,7 @@
       "signature": "fn rle(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:944",
+        "crates/axeyum-lean-kernel/src/intspace.rs:957",
         "crates/axeyum-lean-kernel/src/metric.rs:734",
         "crates/axeyum-lean-kernel/src/metric/continuity.rs:256",
         "crates/axeyum-lean-kernel/src/rn.rs:527"
@@ -44739,7 +44783,7 @@
       "signature": "fn rmul(d: &mut IntDev<'_>, c: CRealPrelude, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/intspace.rs:941",
+        "crates/axeyum-lean-kernel/src/intspace.rs:954",
         "crates/axeyum-lean-kernel/src/metric.rs:1974",
         "crates/axeyum-lean-kernel/src/rn.rs:521"
       ]

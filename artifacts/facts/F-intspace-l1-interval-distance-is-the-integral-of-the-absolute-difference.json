@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:intspace-l1-interval-distance-is-the-integral-of-the-absolute-difference",
+  "title": "The L1 distance on [a,b] is the Riemann integral of the absolute difference, definitionally",
+  "statement": "For real numbers a <= b and two functions F, G uniformly continuous on [a,b], the distance between their bundles in the metric space `IntSpace.crealIntervalL1 a b hab` is EQUAL -- as `Eq`, by `Eq.refl`, not merely `CReal.Equiv` -- to the Riemann integral over [a,b] of `fun t => CReal.abs (CReal.add (F t) (CReal.neg (G t)))`. The equation is definitional because every step between the two sides reduces: the bundled carrier is a Sigma whose projections iota-reduce on the literal constructor, the record selector `Metric.dist` reduces on the literal instance, and the interval integration space's `integral` field is `CReal.integral` applied to the same arguments. This is what makes 'we built a Metric' a claim about the integral of |F - G| rather than a claim about a twelve-field record. Its finite counterpart, `IntSpace.crealFiniteL1_dist`, is the same equation with `CReal.sumRange` at `Nat.succ m` in place of the integral, which over counting measure is E|X - Y|.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem IntSpace.crealIntervalL1_dist : ((x0 : CReal) -> ((x1 : CReal) -> ((x2 : CReal.le x0 x1) -> ((x3 : ((x3 : CReal) -> CReal)) -> ((x4 : ((x4 : CReal) -> CReal)) -> ((x5 : CReal.UniformlyContinuousOn x3 x0 x1) -> ((x6 : CReal.UniformlyContinuousOn x4 x0 x1) -> Eq.{1} CReal (Metric.dist (IntSpace.crealIntervalL1 x0 x1 x2) (IntSpace.bundle (IntSpace.crealInterval x0 x1 x2) x3 x5) (IntSpace.bundle (IntSpace.crealInterval x0 x1 x2) x4 x6)) (CReal.integral (fun (x7 : CReal) => CReal.abs (CReal.add (x3 x7) (CReal.neg (x4 x7)))) x0 x1 x2 (IntSpace.CReal.uniformly_continuous_abs (fun (x7 : CReal) => CReal.add (x3 x7) (CReal.neg (x4 x7))) x0 x1 (CReal.uniformly_continuous_sub x3 x4 x0 x1 x5 x6))))))))))",
+    "fragment": "IntSpace",
+    "kernel_theorem": "IntSpace.crealIntervalL1_dist",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:intspace-l1-is-a-metric-space"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free",
+      "kind": "kernel-term",
+      "supports": "Every one of the nineteen declarations in intspace/l1.rs is admitted by Kernel::add_declaration with an EMPTY axiom footprint. The list the sweep runs over is derived from the L1Names struct's own fields, not from a literal, so a declaration cannot be added without entering it.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::every_intspace_declaration_is_axiom_free"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_intspace_declaration_is_axiom_free 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "Confirmed independently by kernel_declaration_projection --release, which reports footprint size 0 for all nineteen names in the intspace group."
+    },
+    {
+      "id": "the-integrand-is-pinned-verbatim",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.crealIntervalL1_dist",
+      "supports": "The rendered type of the admitted theorem is read from the environment and required to contain the integrand `fun t => CReal.abs (CReal.add (F t) (CReal.neg (G t)))` VERBATIM, in that argument order, together with CReal.integral and Metric.dist -- and required NOT to mention IntSpace.bundledDist, ADR-1613's explicitly-not-L1 pseudometric, which has the same type. A swapped integrand renders G before F and a dropped negation renders no CReal.neg at all, so this discriminates both.",
+      "check_status": "checked",
+      "checkers": [
+        "l1_tests::l1_headline_types_render"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::l1_tests::l1_headline_types_render 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "This stands in for a concrete mutation table, which is PATHOLOGICAL here: to refuse an Eq.refl between two CReal.integral applications the kernel unfolds the Riemann-sum machinery, and the run was still going after ten minutes (measured 2026-09-05, killed). The refutation is done instead at a bound S and a bound fdist, where nothing can unfold -- see F:intspace-l1-is-a-metric-space's own mutation-table row -- and concretely at the finite instance, whose integral is a Nat.rec."
+    },
+    {
+      "id": "the-finite-index-bound-is-load-bearing",
+      "kind": "exhaustive-enumeration",
+      "supports": "The finite counterpart is pinned the same way, and its index bound is one of the mutations: summing over m indices rather than Nat.succ m is refused, alongside the dropped negation and the swapped arguments, with the correct probe admitted in the same test.",
+      "check_status": "checked",
+      "checkers": [
+        "l1_tests::the_finite_l1_distance_is_the_sum_of_absolute_differences"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::l1_tests::the_finite_l1_distance_is_the_sum_of_absolute_differences 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "An off-by-one in the index bound is the mutation a rendered-type check cannot see, because both bounds render as a Nat."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel intspace::l1 module (l1-completion lane, roadmap W3-1 follow-on)",
+    "source": "IntSpace.bundledL1 applied to IntSpace.crealInterval, with the six analytic obligations discharged by CReal.uniformly_continuous_sub, CReal.uniformly_continuous_add, IntSpace.CReal.uniformly_continuous_abs, CReal.abs_nonneg, Metric.CReal.distSelf, Metric.CReal.absSubLe and Metric.CReal.distTriangle -- every one applied verbatim. See docs/research/09-decisions/adr-1625-l1-is-a-metric-space-from-a-pointwise-distance-and-the-completion-functor-does-not-exist-yet.md."
+  },
+  "notes": "WHY IT IS AN Eq AND NOT A CReal.Equiv. ADR-1613 declared IntSpace.bundledDist b1 b2 := |Integral b1 - Integral b2| and labelled it explicitly NOT L1 -- it is a pseudometric that does not separate points and is generally smaller than the L1 seminorm. Both functions have the type Metric.dist demands, so a type check cannot tell them apart. This equation can, and the rendered-type check asserts the statement does not mention bundledDist."
+}
