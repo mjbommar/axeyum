@@ -132,7 +132,15 @@ def assignTerm (goal : MVarId) (termStr : String) : TacticM (Except Failure Unit
     | .ok stx =>
       let ty ← goal.getType
       try
-        let e ← Term.elabTermEnsuringType stx ty
+        -- `withoutErrToSorry` matters here, and not only for tidiness. By
+        -- default a failed elaboration LOGS the error and returns a `sorryAx`
+        -- placeholder, so a wrong term surfaced as two messages -- Lean's real
+        -- diagnosis, plus this tactic reporting "the term mentions sorryAx",
+        -- which reads as if the SIDECAR had sent a `sorry`. It had not. With
+        -- this, a wrong term throws and is reported once, with Lean's own
+        -- reason, and the `hasSorry` guard below is left to catch the case it
+        -- is actually for: a sidecar that really did send `sorry`.
+        let e ← Term.withoutErrToSorry <| Term.elabTermEnsuringType stx ty
         Term.synthesizeSyntheticMVarsNoPostponing
         let e ← instantiateMVars e
         if e.hasSorry then
@@ -194,10 +202,13 @@ syntax (name := axeyumTactic) "axeyum" (ppSpace str)? : tactic
 
 @[tactic axeyumTactic]
 def evalAxeyum : Tactic := fun stx => do
-  let override : Option String :=
-    match stx[1].isStrLit? with
-    | some s => some s
-    | none => none
+  -- `stx[1]` is the OPTIONAL node, not the string literal inside it. Reading
+  -- `stx[1].isStrLit?` returns `none` for `axeyum "path"` as well as for bare
+  -- `axeyum`, so every override silently fell back to `AXEYUM_SIDECAR` -- which
+  -- made the whole mutation battery run against the REAL sidecar and pass by
+  -- closing the goals it was supposed to fail on. Found by `#guard_msgs`
+  -- reporting an empty message where an error was expected (2026-09-05).
+  let override : Option String := stx[1][0].isStrLit?
   match ← run override with
   | .ok () => pure ()
   | .error f => throwError f.message
