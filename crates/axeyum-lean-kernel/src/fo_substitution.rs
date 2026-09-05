@@ -98,11 +98,11 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::too_many_lines)]
 
-use crate::fo_syntax::{
-    apply_all, arrow, gcongr, geq, geq_motive, grefl, gsymm, gtrans, gtransport, giff_refl,
-    giff_trans, iff_intro, iff_mp, iff_mpr, iff_ty, lam_fv, lams, pi_fv, pis,
-};
 use crate::fo_syntax::SyntaxNames;
+use crate::fo_syntax::{
+    apply_all, arrow, gcongr, geq, geq_motive, giff_refl, giff_trans, grefl, gsymm, gtrans,
+    gtransport, iff_intro, iff_mp, iff_mpr, iff_ty, lam_fv, lams, pi_fv, pis,
+};
 use crate::{
     BinderInfo, Declaration, ExprId, FoSemanticsPrelude, KernelError, LevelId, LogicPrelude,
     NameId, build_fo_semantics_prelude,
@@ -171,8 +171,6 @@ pub(crate) struct Env {
     pub(crate) sem: FoSemanticsPrelude,
     /// `Sort 1`, the carrier's universe.
     pub(crate) type_sort: ExprId,
-    /// `Prop`.
-    pub(crate) prop: ExprId,
     pub(crate) one: LevelId,
     /// The fvar id of the ambient carrier `M`.
     pub(crate) m_id: u64,
@@ -197,7 +195,6 @@ impl Env {
         let zero = kernel.level_zero();
         let one = kernel.level_succ(zero);
         let type_sort = kernel.sort(one);
-        let prop = kernel.sort_zero();
 
         let m_id = 1_638_001_u64;
         let s_id = 1_638_002_u64;
@@ -213,7 +210,6 @@ impl Env {
             syn,
             sem: *sem,
             type_sort,
-            prop,
             one,
             m_id,
             s_id,
@@ -1293,7 +1289,7 @@ fn declare_sat_congr(
     };
 
     // The three binary connectives share a shape.
-    let mut binary = |kernel: &mut crate::Kernel, which: u8, blk: u64| -> ExprId {
+    let binary = |kernel: &mut crate::Kernel, which: u8, blk: u64| -> ExprId {
         let p_id = blk;
         let q_id = blk + 1;
         let ip_id = blk + 2;
@@ -1342,7 +1338,7 @@ fn declare_sat_congr(
     let m_imp = binary(kernel, 2, base + 160);
 
     // The two quantifier minors.
-    let mut quantifier = |kernel: &mut crate::Kernel, universal: bool, blk: u64| -> ExprId {
+    let quantifier = |kernel: &mut crate::Kernel, universal: bool, blk: u64| -> ExprId {
         let p_id = blk;
         let ip_id = blk + 1;
         let w1_id = blk + 2;
@@ -1516,11 +1512,10 @@ fn declare_sat_subst(
         apply_all(kernel, c, &[t, s])
     };
     // `FO.Term.eval_subst M S t s w`
-    let term_sub_eq =
-        |kernel: &mut crate::Kernel, t: ExprId, s: ExprId, w: ExprId| -> ExprId {
-            let c = kernel.const_(eval_subst, vec![]);
-            apply_all(kernel, c, &[e.m, e.s, t, s, w])
-        };
+    let term_sub_eq = |kernel: &mut crate::Kernel, t: ExprId, s: ExprId, w: ExprId| -> ExprId {
+        let c = kernel.const_(eval_subst, vec![]);
+        apply_all(kernel, c, &[e.m, e.s, t, s, w])
+    };
 
     // motive_at p := Π (s : Nat -> Term) (w : Nat -> M),
     //   Iff (sat (Formula.subst p s) w) (sat p (fun n => eval (s n) w))
@@ -1648,7 +1643,7 @@ fn declare_sat_subst(
         )
     };
 
-    let mut binary = |kernel: &mut crate::Kernel, which: u8, blk: u64| -> ExprId {
+    let binary = |kernel: &mut crate::Kernel, which: u8, blk: u64| -> ExprId {
         let p_id = blk;
         let q_id = blk + 1;
         let ip_id = blk + 2;
@@ -1695,7 +1690,7 @@ fn declare_sat_subst(
     let m_or = binary(kernel, 1, base + 120);
     let m_imp = binary(kernel, 2, base + 160);
 
-    let mut quantifier = |kernel: &mut crate::Kernel, universal: bool, blk: u64| -> ExprId {
+    let quantifier = |kernel: &mut crate::Kernel, universal: bool, blk: u64| -> ExprId {
         let p_id = blk;
         let ip_id = blk + 1;
         let s_id = blk + 2;

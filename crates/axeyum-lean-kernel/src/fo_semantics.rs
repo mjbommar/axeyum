@@ -150,10 +150,10 @@
 //! `∀ x, ∃ y, Nat.lt y y`, which is false outright. Neither is provable, so
 //! the theorem is a real check on the valuation plumbing and not a formality.
 
-use crate::fo_syntax::{apply_all, arrow, lam_fv, lams, pi_fv, pis};
-use crate::{BinderInfo, Declaration, ExprId, KernelError, LevelId, LogicPrelude, NameId};
 use crate::FoSyntaxPrelude;
 use crate::fo_syntax::SyntaxNames;
+use crate::fo_syntax::{apply_all, arrow, lam_fv, lams, pi_fv, pis};
+use crate::{BinderInfo, Declaration, ExprId, KernelError, LevelId, LogicPrelude, NameId};
 use crate::{ReducibilityHint, build_fo_syntax_prelude};
 
 /// Names produced by [`build_fo_semantics_prelude`].
@@ -283,21 +283,6 @@ pub(crate) struct Interp {
     pub(crate) rel1: NameId,
     pub(crate) rel2: NameId,
     pub(crate) val_cons: NameId,
-}
-
-impl FoSemanticsPrelude {
-    /// Re-gather the interpretation names later slices build over.
-    pub(crate) fn interp(&self) -> Interp {
-        Interp {
-            structure: self.structure,
-            fn0: self.fn0,
-            fn1: self.fn1,
-            fn2: self.fn2,
-            rel1: self.rel1,
-            rel2: self.rel2,
-            val_cons: self.val_cons,
-        }
-    }
 }
 
 /// Which of `FO.Structure`'s five fields a projection selects.

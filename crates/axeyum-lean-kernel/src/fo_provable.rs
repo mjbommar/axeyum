@@ -106,9 +106,9 @@
 //!   `all_elim` **and** `ex_intro` at the same instance term, the genuinely
 //!   first-order derivation of the group.
 
+use crate::fo_syntax::SyntaxNames;
 use crate::fo_syntax::{apply_all, arrow, lam_fv, lams, pis};
 use crate::{BinderInfo, Declaration, ExprId, FoSemanticsPrelude, KernelError, LevelId, NameId};
-use crate::fo_syntax::SyntaxNames;
 use crate::{RecField, ReducibilityHint, build_fo_semantics_prelude};
 
 /// Names produced by [`build_fo_provable_prelude`].
@@ -280,14 +280,7 @@ pub fn build_fo_provable_prelude(
         syntax.formula_shift,
         one,
     )?;
-    let ctx_sat = declare_ctx_sat(
-        kernel,
-        &syn,
-        &semantics,
-        context_ty,
-        context_rec,
-        one,
-    )?;
+    let ctx_sat = declare_ctx_sat(kernel, &syn, &semantics, context_ty, context_rec, one)?;
 
     // --- FO.Provable : Context -> Formula -> Prop ----------------------------
     let provable = kernel.name_str(syn.fo, "Provable");
@@ -566,12 +559,7 @@ pub(crate) fn instantiate(
     apply_all(kernel, subst, &[p, sigma])
 }
 
-fn binary_formula(
-    kernel: &mut crate::Kernel,
-    ctor: NameId,
-    a: ExprId,
-    b: ExprId,
-) -> ExprId {
+fn binary_formula(kernel: &mut crate::Kernel, ctor: NameId, a: ExprId, b: ExprId) -> ExprId {
     let head = kernel.const_(ctor, vec![]);
     apply_all(kernel, head, &[a, b])
 }

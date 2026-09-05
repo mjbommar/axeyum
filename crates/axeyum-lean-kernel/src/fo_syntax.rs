@@ -1058,7 +1058,6 @@ fn declare_formula_shift(
     Ok(name)
 }
 
-
 // ============================================================================
 // Carrier-generic `Eq` and `Iff` combinators.
 //

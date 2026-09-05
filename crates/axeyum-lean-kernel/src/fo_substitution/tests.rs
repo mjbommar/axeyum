@@ -89,11 +89,7 @@ fn sat_subst_states_the_substitution_lemma() {
     let want = {
         let inner = pis(
             &mut f.kernel,
-            &[
-                (p_id, e.syn.formula_ty),
-                (s_id, e.sub_ty),
-                (w_id, e.val_ty),
-            ],
+            &[(p_id, e.syn.formula_ty), (s_id, e.sub_ty), (w_id, e.val_ty)],
             concl,
         );
         pis(

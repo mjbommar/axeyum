@@ -63,6 +63,7 @@ mod env;
 mod expr;
 mod fo_provable;
 mod fo_semantics;
+mod fo_soundness;
 mod fo_substitution;
 mod fo_syntax;
 mod inductive;
@@ -118,6 +119,11 @@ pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use creal_point::{CPointPrelude, build_cpoint_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
+pub use fo_provable::{FoProvablePrelude, build_fo_provable_prelude};
+pub use fo_semantics::{FoSemanticsPrelude, build_fo_semantics_prelude};
+pub use fo_soundness::{FoSoundnessPrelude, build_fo_soundness_prelude};
+pub use fo_substitution::{FoSubstitutionPrelude, build_fo_substitution_prelude};
+pub use fo_syntax::{FoSyntaxPrelude, build_fo_syntax_prelude};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use intspace::{
@@ -130,10 +136,6 @@ pub use intspace::{
     INTEGRAL_SCALE as INTSPACE_INTEGRAL_SCALE, IntSpacePrelude, TOTAL as INTSPACE_TOTAL,
     build_intspace_prelude,
 };
-pub use fo_provable::{FoProvablePrelude, build_fo_provable_prelude};
-pub use fo_semantics::{FoSemanticsPrelude, build_fo_semantics_prelude};
-pub use fo_substitution::{FoSubstitutionPrelude, build_fo_substitution_prelude};
-pub use fo_syntax::{FoSyntaxPrelude, build_fo_syntax_prelude};
 pub use ipc_eval::{IpcEvalPrelude, build_ipc_eval_prelude};
 pub use ipc_heyting::{
     IpcHeytingPrelude, NatPreludeHandle, build_ipc_heyting_prelude, pem_instance,
