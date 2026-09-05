@@ -1999,6 +1999,30 @@ pub struct IntPrelude {
     /// composition law, i.e. [`Self::brahmagupta_fibonacci`] read as a
     /// closure property of [`Self::is_sum_of_two_squares`].
     pub is_sum_of_two_squares_mul: NameId,
+    /// `Int.sq_of_two_mul : forall k,`
+    /// `  Eq Int (mul (mul k 2) (mul k 2)) (mul 4 (mul k k))` -- `(2k)^2 =
+    /// 4k^2`, emitted by `ring::int`. The even leaf of
+    /// [`Self::sq_mod_eq_four_zero_or_one`].
+    pub sq_of_two_mul: NameId,
+    /// `Int.sq_of_two_mul_add_one : forall k,`
+    /// `  Eq Int (mul (add (mul k 2) 1) (add (mul k 2) 1))`
+    /// `    (add (mul 4 (add (mul k k) k)) 1)` -- `(2k+1)^2 = 4(k^2+k) + 1`,
+    /// emitted by `ring::int`. The odd leaf of
+    /// [`Self::sq_mod_eq_four_zero_or_one`].
+    pub sq_of_two_mul_add_one: NameId,
+    /// `Int.sq_modEq_four_zero_or_one : forall a,`
+    /// `  Or (ModEq 4 (mul a a) 0) (ModEq 4 (mul a a) 1)` -- **every square
+    /// is 0 or 1 modulo 4**. Split by `Nat.even_or_odd_exists` at `natAbs a`
+    /// and closed with the definable witness `a / 2` in each branch; no
+    /// existential is opened. `two_squares.rs`.
+    pub sq_mod_eq_four_zero_or_one: NameId,
+    /// `Int.not_isSumOfTwoSquares_of_modEq_four_three : forall n,`
+    /// `  ModEq 4 n 3 -> Not (IsSumOfTwoSquares n)` -- **the boundary
+    /// refutation** (ADR-0603 grade 2): `n = 3 (mod 4)` is not a sum of two
+    /// squares. Four leaves under a doubled
+    /// [`Self::sq_mod_eq_four_zero_or_one`], each closed by REDUCTION of
+    /// `emod` at closed numerals plus `Int.natAbs` injectivity.
+    pub not_is_sum_of_two_squares_of_mod_eq_four_three: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2426,6 +2450,13 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         brahmagupta_fibonacci: child(kernel, "brahmaguptaFibonacci"),
         brahmagupta_fibonacci_swap: child(kernel, "brahmaguptaFibonacci'"),
         is_sum_of_two_squares_mul: child(kernel, "isSumOfTwoSquares_mul"),
+        sq_of_two_mul: child(kernel, "sq_of_two_mul"),
+        sq_of_two_mul_add_one: child(kernel, "sq_of_two_mul_add_one"),
+        sq_mod_eq_four_zero_or_one: child(kernel, "sq_modEq_four_zero_or_one"),
+        not_is_sum_of_two_squares_of_mod_eq_four_three: child(
+            kernel,
+            "not_isSumOfTwoSquares_of_modEq_four_three",
+        ),
     }
 }
 

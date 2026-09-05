@@ -159,6 +159,80 @@ fn intro_sum_of_two_squares(
     int_exists_intro(d, outer, a, step)
 }
 
+/// `Int.ofNat k` for a small `u32` numeral.
+pub(super) fn int_num(d: &mut IntDev<'_>, k: u32) -> ExprId {
+    let n = d.num(k);
+    d.of_nat(n)
+}
+
+/// `Int.ModEq n a b`.
+pub(super) fn imodeq(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId) -> ExprId {
+    let f = d.int().mod_eq;
+    d.const_app(f, &[n, a, b])
+}
+
+/// `Not (Eq Int (ofNat x) (ofNat y))` for distinct small numerals, by pushing
+/// the equation through `Int.natAbs` onto `Nat` and refuting it with
+/// `Nat.ne_of_beq_eq_false`.
+///
+/// The construction `mult_order_tests.rs` carries as a test helper, lifted
+/// into the prelude because
+/// [`declare_not_is_sum_of_two_squares_of_modeq_four_three`] needs it inside a
+/// theorem and not only inside a test.
+fn ofnat_ne(d: &mut IntDev<'_>, x: u32, y: u32) -> ExprId {
+    assert!(x != y, "ofnat_ne is only for distinct numerals");
+    let p = d.int();
+    let xv = d.num(x);
+    let yv = d.num(y);
+    let xi = d.of_nat(xv);
+    let yi = d.of_nat(yv);
+
+    let h_ty = d.ieq(xi, yi);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let start = d.refl(xv);
+    let moved = d.int_eq_rewrite(xi, yi, h, start, &|d, z| {
+        let na = d.const_app(p.nat_abs, &[z]);
+        d.eq(xv, na)
+    });
+    let false_b = d.bool_false();
+    let hbeq = d.bool_refl(false_b);
+    let body = {
+        let f = p.nat.ne_of_beq_eq_false;
+        d.const_app(f, &[xv, yv, hbeq, moved])
+    };
+    d.lam_fv(h_fv, h_ty, body)
+}
+
+/// `Or (Int.Even a) (Int.Odd a)`, as `Nat.even_or_odd_exists (natAbs a)`.
+///
+/// No new proof: `Int.Even n` is **defined** as `Nat.Even (natAbs n)`
+/// (`parity.rs`), so the `Nat`-level dichotomy at the magnitude already IS the
+/// `Int`-level one, up to one delta unfold the kernel does for free.
+fn even_or_odd_int(d: &mut IntDev<'_>, a: ExprId) -> ExprId {
+    let p = d.int();
+    let mag = d.const_app(p.nat_abs, &[a]);
+    d.const_app(p.nat.even_or_odd_exists, &[mag])
+}
+
+/// `ModEq n (mul n q) 0` — a multiple of the modulus is congruent to zero.
+///
+/// `Int.modEq_add_mul_left` at `a := 0` gives `ModEq n (n*q + 0) 0`, and
+/// `Int.add_zero` moves it onto `n*q`. Unconditional in `n`, because
+/// `modEq_add_mul_left` is.
+fn modeq_mul_zero(d: &mut IntDev<'_>, n: ExprId, q: ExprId) -> ExprId {
+    let p = d.int();
+    let zero = d.izero();
+    let base = d.const_app(p.mod_eq_add_mul_left, &[n, zero, q]);
+    let nq = d.imul(n, q);
+    let with_zero = d.iadd(nq, zero);
+    let drop_zero = d.const_app(p.add_zero, &[nq]);
+    d.int_eq_rewrite(with_zero, nq, drop_zero, base, &|d, x| {
+        imodeq(d, n, x, zero)
+    })
+}
+
 // ============================================================================
 // `Int.IsSumOfTwoSquares`
 // ============================================================================
@@ -407,6 +481,276 @@ fn declare_is_sum_of_two_squares_mul(d: &mut IntDev<'_>) -> Result<(), KernelErr
     Ok(())
 }
 
+// ============================================================================
+// squares modulo 4, and the boundary refutation
+// ============================================================================
+
+/// `Int.sq_of_two_mul : ∀ k, Eq Int (mul (mul k 2) (mul k 2))
+/// (mul 4 (mul k k))` — `(2k)² = 4k²`. Emitted by `ring::int`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection if the emitted term does not check, or
+/// `UnknownConst` if the ring producer declined.
+fn declare_sq_of_two_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    crate::ring::int::declare(d, &p, p.sq_of_two_mul, 1, &|d, v| {
+        let k = v[0];
+        let two = int_num(d, 2);
+        let t = d.imul(k, two);
+        let lhs = d.imul(t, t);
+        let four = int_num(d, 4);
+        let kk = d.imul(k, k);
+        let rhs = d.imul(four, kk);
+        d.ieq(lhs, rhs)
+    })
+}
+
+/// `Int.sq_of_two_mul_add_one : ∀ k, Eq Int (mul (add (mul k 2) 1)
+/// (add (mul k 2) 1)) (add (mul 4 (add (mul k k) k)) 1)` —
+/// `(2k+1)² = 4(k²+k) + 1`. Emitted by `ring::int`.
+///
+/// # Errors
+///
+/// As [`declare_sq_of_two_mul`].
+fn declare_sq_of_two_mul_add_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    crate::ring::int::declare(d, &p, p.sq_of_two_mul_add_one, 1, &|d, v| {
+        let k = v[0];
+        let two = int_num(d, 2);
+        let one = d.ione();
+        let t = {
+            let dbl = d.imul(k, two);
+            d.iadd(dbl, one)
+        };
+        let lhs = d.imul(t, t);
+        let four = int_num(d, 4);
+        let kk = d.imul(k, k);
+        let inner = d.iadd(kk, k);
+        let quad = d.imul(four, inner);
+        let rhs = d.iadd(quad, one);
+        d.ieq(lhs, rhs)
+    })
+}
+
+/// `Int.sq_modEq_four_zero_or_one : ∀ a, Or (ModEq 4 (mul a a) 0)
+/// (ModEq 4 (mul a a) 1)` — **every square is `0` or `1` modulo `4`**.
+///
+/// The split is [`even_or_odd_int`], and each branch writes `a` as `2k` or
+/// `2k+1` with the *definable* witness `k := a / 2` (`Int.ediv_two_mul_two_of_even`
+/// / `Int.ediv_two_mul_two_add_one_of_odd`), so no existential is opened and
+/// the whole proof stays first-order. The square is then rewritten by
+/// [`declare_sq_of_two_mul`] / [`declare_sq_of_two_mul_add_one`] and the
+/// residue read off with [`modeq_mul_zero`] / `Int.modEq_add_mul_left`, both
+/// unconditional in the modulus.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_sq_modeq_four_zero_or_one(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.sq_mod_eq_four_zero_or_one, 1, &|d, v| {
+        let a = v[0];
+        let four = int_num(d, 4);
+        let two = int_num(d, 2);
+        let zero = d.izero();
+        let one = d.ione();
+        let aa = d.imul(a, a);
+        let left = imodeq(d, four, aa, zero);
+        let right = imodeq(d, four, aa, one);
+        let stmt = d.or(left, right);
+
+        let even_ty = d.const_app(p.even, &[a]);
+        let odd_ty = d.const_app(p.odd, &[a]);
+        let dichotomy = even_or_odd_int(d, a);
+        let k = d.iediv(a, two);
+
+        let proof = d.or_elim(
+            even_ty,
+            odd_ty,
+            stmt,
+            dichotomy,
+            &|d, he| {
+                // `a` is even: `a = 2k`, so `a² = 4k² ≡ 0 (mod 4)`.
+                let hta = d.const_app(p.ediv_two_mul_two_of_even, &[a, he]);
+                let t = d.imul(k, two);
+                let tt = d.imul(t, t);
+                let at = d.imul(a, t);
+                let c1 = d.icongr(t, a, hta, &|d, x| d.imul(x, t));
+                let c2 = d.icongr(t, a, hta, &|d, x| d.imul(a, x));
+                let tt_aa = d.itrans(tt, at, aa, c1, c2);
+                let ring_eq = d.const_app(p.sq_of_two_mul, &[k]);
+                let kk = d.imul(k, k);
+                let quad = d.imul(four, kk);
+                let aa_tt = d.isymm(tt, aa, tt_aa);
+                let aa_quad = d.itrans(aa, tt, quad, aa_tt, ring_eq);
+                let base = modeq_mul_zero(d, four, kk);
+                let quad_aa = d.isymm(aa, quad, aa_quad);
+                let moved =
+                    d.int_eq_rewrite(quad, aa, quad_aa, base, &|d, x| imodeq(d, four, x, zero));
+                d.or_inl(left, right, moved)
+            },
+            &|d, ho| {
+                // `a` is odd: `a = 2k+1`, so `a² = 4(k²+k) + 1 ≡ 1 (mod 4)`.
+                let hta = d.const_app(p.ediv_two_mul_two_add_one_of_odd, &[a, ho]);
+                let t = {
+                    let dbl = d.imul(k, two);
+                    d.iadd(dbl, one)
+                };
+                let tt = d.imul(t, t);
+                let at = d.imul(a, t);
+                let c1 = d.icongr(t, a, hta, &|d, x| d.imul(x, t));
+                let c2 = d.icongr(t, a, hta, &|d, x| d.imul(a, x));
+                let tt_aa = d.itrans(tt, at, aa, c1, c2);
+                let ring_eq = d.const_app(p.sq_of_two_mul_add_one, &[k]);
+                let kk = d.imul(k, k);
+                let inner = d.iadd(kk, k);
+                let quad = d.imul(four, inner);
+                let shape = d.iadd(quad, one);
+                let aa_tt = d.isymm(tt, aa, tt_aa);
+                let aa_shape = d.itrans(aa, tt, shape, aa_tt, ring_eq);
+                let base = d.const_app(p.mod_eq_add_mul_left, &[four, one, inner]);
+                let shape_aa = d.isymm(aa, shape, aa_shape);
+                let moved =
+                    d.int_eq_rewrite(shape, aa, shape_aa, base, &|d, x| imodeq(d, four, x, one));
+                d.or_inr(left, right, moved)
+            },
+        );
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.not_isSumOfTwoSquares_of_modEq_four_three : ∀ n, ModEq 4 n 3 →
+/// Not (IsSumOfTwoSquares n)` — **the boundary refutation** (ADR-0603's second
+/// grade): an integer congruent to `3` modulo `4` is not a sum of two squares.
+///
+/// Four leaves under a doubled [`declare_sq_modeq_four_zero_or_one`]. In each
+/// leaf `n ≡ r (mod 4)` for `r ∈ {0, 1, 2}` and also `n ≡ 3`, so
+/// `ModEq 4 3 r` — which unfolds to `Eq Int (emod 3 4) (emod r 4)`, both sides
+/// **closed numerals**, so the kernel computes them and [`ofnat_ne`] closes the
+/// leaf. Nothing here is an inequality argument; the whole refutation is
+/// reduction plus `Int.natAbs` injectivity.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_not_is_sum_of_two_squares_of_modeq_four_three(
+    d: &mut IntDev<'_>,
+) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(
+        p.not_is_sum_of_two_squares_of_mod_eq_four_three,
+        1,
+        &|d, v| {
+            let int_ty = d.int_ty();
+            let n = v[0];
+            let four = int_num(d, 4);
+            let three = int_num(d, 3);
+            let zero = d.izero();
+            let one = d.ione();
+            let h3_ty = imodeq(d, four, n, three);
+            let sum_ty = is_sum_of_two_squares(d, n);
+            let concl = d.not(sum_ty);
+            let stmt = d.arrow(h3_ty, concl);
+
+            let h3_fv = d.fresh_fvar();
+            let h3 = d.kernel().fvar(h3_fv);
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let target = d.false_ty();
+
+            // `ModEq 4 3 n`, shared by every leaf.
+            let h3_flipped = d.const_app(p.mod_eq_symm, &[four, n, three, h3]);
+
+            let outer = outer_predicate(d, n);
+            let minor_a = {
+                let a_fv = d.fresh_fvar();
+                let a = d.kernel().fvar(a_fv);
+                let inner = inner_predicate(d, n, a);
+                let ha_ty = int_exists(d, inner);
+                let ha_fv = d.fresh_fvar();
+                let ha = d.kernel().fvar(ha_fv);
+
+                let minor_b = {
+                    let b_fv = d.fresh_fvar();
+                    let b = d.kernel().fvar(b_fv);
+                    let aa = d.imul(a, a);
+                    let bb = d.imul(b, b);
+                    let sum = d.iadd(aa, bb);
+                    let hab_ty = d.ieq(n, sum);
+                    let hab_fv = d.fresh_fvar();
+                    let hab = d.kernel().fvar(hab_fv);
+                    let sum_n = d.isymm(n, sum, hab);
+
+                    // One leaf: `a² ≡ ra`, `b² ≡ rb`, and `3 ≡ ra + rb (mod 4)`
+                    // with `ra + rb` a closed numeral that is not `3`.
+                    let leaf = |d: &mut IntDev<'_>,
+                                ra: ExprId,
+                                rb: ExprId,
+                                ha_sq: ExprId,
+                                hb_sq: ExprId,
+                                residue: u32| {
+                        let residues = d.iadd(ra, rb);
+                        let hsum = d.const_app(p.mod_eq_add, &[four, aa, ra, bb, rb, ha_sq, hb_sq]);
+                        let hn = d.int_eq_rewrite(sum, n, sum_n, hsum, &|d, x| {
+                            imodeq(d, four, x, residues)
+                        });
+                        let hfin = d
+                            .const_app(p.mod_eq_trans, &[four, three, n, residues, h3_flipped, hn]);
+                        let refute = ofnat_ne(d, 3, residue);
+                        d.apply(refute, &[hfin])
+                    };
+
+                    let a_split = d.const_app(p.sq_mod_eq_four_zero_or_one, &[a]);
+                    let b_split = d.const_app(p.sq_mod_eq_four_zero_or_one, &[b]);
+                    let a_zero = imodeq(d, four, aa, zero);
+                    let a_one = imodeq(d, four, aa, one);
+                    let b_zero = imodeq(d, four, bb, zero);
+                    let b_one = imodeq(d, four, bb, one);
+
+                    let body = d.or_elim(
+                        a_zero,
+                        a_one,
+                        target,
+                        a_split,
+                        &|d, ha_sq| {
+                            d.or_elim(
+                                b_zero,
+                                b_one,
+                                target,
+                                b_split,
+                                &|d, hb_sq| leaf(d, zero, zero, ha_sq, hb_sq, 0),
+                                &|d, hb_sq| leaf(d, zero, one, ha_sq, hb_sq, 1),
+                            )
+                        },
+                        &|d, ha_sq| {
+                            d.or_elim(
+                                b_zero,
+                                b_one,
+                                target,
+                                b_split,
+                                &|d, hb_sq| leaf(d, one, zero, ha_sq, hb_sq, 1),
+                                &|d, hb_sq| leaf(d, one, one, ha_sq, hb_sq, 2),
+                            )
+                        },
+                    );
+                    let with_hab = d.lam_fv(hab_fv, hab_ty, body);
+                    d.lam_fv(b_fv, int_ty, with_hab)
+                };
+                let body_b = int_exists_elim(d, inner, target, ha, minor_b);
+                let with_ha = d.lam_fv(ha_fv, ha_ty, body_b);
+                d.lam_fv(a_fv, int_ty, with_ha)
+            };
+            let body = int_exists_elim(d, outer, target, hs, minor_a);
+            let with_hs = d.lam_fv(hs_fv, sum_ty, body);
+            let proof = d.lam_fv(h3_fv, h3_ty, with_hs);
+            (stmt, proof)
+        },
+    )?;
+    Ok(())
+}
+
 /// Declare every theorem in this module.
 ///
 /// # Errors
@@ -419,5 +763,9 @@ pub(super) fn declare_two_squares_all(d: &mut IntDev<'_>) -> Result<(), KernelEr
     declare_brahmagupta_fibonacci(d)?;
     declare_brahmagupta_fibonacci_swap(d)?;
     declare_is_sum_of_two_squares_mul(d)?;
+    declare_sq_of_two_mul(d)?;
+    declare_sq_of_two_mul_add_one(d)?;
+    declare_sq_modeq_four_zero_or_one(d)?;
+    declare_not_is_sum_of_two_squares_of_modeq_four_three(d)?;
     Ok(())
 }

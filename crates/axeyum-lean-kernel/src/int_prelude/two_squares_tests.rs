@@ -316,6 +316,122 @@ fn the_composition_law_applies_to_two_concrete_witnesses() {
     );
 }
 
+/// Try to admit `theorem <label> : Not (IsSumOfTwoSquares (ofNat n)) :=
+/// Int.not_isSumOfTwoSquares_of_modEq_four_three (ofNat n) rfl`.
+///
+/// The `rfl` is the whole measurement: `ModEq 4 n 3` unfolds to
+/// `Eq Int (emod n 4) (emod 3 4)`, so `Eq.refl` checks exactly when the kernel
+/// computes `n % 4 = 3` itself. Returns the verdict rather than asserting, so
+/// a caller can require both outcomes.
+fn admits_mod_four_refutation(d: &mut IntDev<'_>, n: u32, label: &str) -> bool {
+    let p = d.int();
+    let ni = int_num(d, n);
+    let three = int_num(d, 3);
+    let refl = d.irefl(three);
+    let proof = d.const_app(
+        p.not_is_sum_of_two_squares_of_mod_eq_four_three,
+        &[ni, refl],
+    );
+    let sum = is_sum_of_two_squares(d, ni);
+    let ty = d.not(sum);
+    let name = probe_name(d, label);
+    d.declare_theorem(name, ty, proof).is_ok()
+}
+
+/// `3`, `7` and `11` are each `3 (mod 4)` and therefore NOT sums of two
+/// squares — and the kernel checks the congruence by its own reduction of
+/// `Int.emod`, not from anything asserted here.
+#[test]
+fn three_seven_and_eleven_are_refuted_by_the_mod_four_theorem() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    assert!(
+        admits_mod_four_refutation(&mut d, 3, "no_three"),
+        "3 = 3 (mod 4) must refute"
+    );
+    assert!(
+        admits_mod_four_refutation(&mut d, 7, "no_seven"),
+        "7 = 3 (mod 4) must refute"
+    );
+    assert!(
+        admits_mod_four_refutation(&mut d, 11, "no_eleven"),
+        "11 = 3 (mod 4) must refute"
+    );
+}
+
+/// The negative half: the same route must FAIL at the residues that are not
+/// `3`, and in particular at the three primes the positive battery witnesses.
+///
+/// Without this the refutation battery would pass for a theorem whose
+/// hypothesis was vacuous or whose modulus was wrong — `5 % 4 = 1`,
+/// `13 % 4 = 1`, `17 % 4 = 1`, so `Eq.refl 3` cannot check against any of
+/// them, and `4 % 4 = 0` covers the even residue as well.
+#[test]
+fn the_mod_four_refutation_does_not_apply_off_the_residue() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    for (n, label) in [
+        (4_u32, "off_four"),
+        (5, "off_five"),
+        (13, "off_thirteen"),
+        (17, "off_seventeen"),
+    ] {
+        assert!(
+            !admits_mod_four_refutation(&mut d, n, label),
+            "{n} is not 3 (mod 4) and the refutation must not apply to it"
+        );
+    }
+}
+
+/// `Int.sq_modEq_four_zero_or_one` at a concrete odd argument really lands in
+/// the `1` disjunct: `3² = 9 ≡ 1 (mod 4)`.
+///
+/// The theorem is a disjunction, so admitting it says nothing about WHICH side
+/// holds at a given argument. This settles that by reduction instead: `9 % 4`
+/// and `1 % 4` agree, and `9 % 4` and `0 % 4` do not.
+#[test]
+fn nine_is_one_mod_four_and_not_zero() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    let three = int_num(&mut d, 3);
+    let four = int_num(&mut d, 4);
+    let nine = d.imul(three, three);
+    let residue = d.iemod(nine, four);
+
+    let one = d.ione();
+    let one_res = d.iemod(one, four);
+    assert!(
+        d.kernel().def_eq(residue, one_res),
+        "3*3 must reduce to 1 modulo 4"
+    );
+    let zero = d.izero();
+    let zero_res = d.iemod(zero, four);
+    assert!(
+        !d.kernel().def_eq(residue, zero_res),
+        "3*3 must NOT reduce to 0 modulo 4"
+    );
+
+    // And the even side, so the disjunction is exercised in both directions:
+    // `2² = 4 ≡ 0 (mod 4)`.
+    let two = int_num(&mut d, 2);
+    let foursq = d.imul(two, two);
+    let even_res = d.iemod(foursq, four);
+    assert!(
+        d.kernel().def_eq(even_res, zero_res),
+        "2*2 must reduce to 0 modulo 4"
+    );
+    assert!(
+        !d.kernel().def_eq(even_res, one_res),
+        "2*2 must NOT reduce to 1 modulo 4"
+    );
+}
+
 /// Every declaration this module adds is present AND has an empty axiom
 /// footprint.
 ///
@@ -334,6 +450,16 @@ fn every_two_squares_declaration_is_present_and_axiom_free() {
         ("Int.brahmaguptaFibonacci", p.brahmagupta_fibonacci),
         ("Int.brahmaguptaFibonacci'", p.brahmagupta_fibonacci_swap),
         ("Int.isSumOfTwoSquares_mul", p.is_sum_of_two_squares_mul),
+        ("Int.sq_of_two_mul", p.sq_of_two_mul),
+        ("Int.sq_of_two_mul_add_one", p.sq_of_two_mul_add_one),
+        (
+            "Int.sq_modEq_four_zero_or_one",
+            p.sq_mod_eq_four_zero_or_one,
+        ),
+        (
+            "Int.not_isSumOfTwoSquares_of_modEq_four_three",
+            p.not_is_sum_of_two_squares_of_mod_eq_four_three,
+        ),
     ];
     for (label, name) in names {
         assert!(
