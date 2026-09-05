@@ -45,12 +45,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use axeyum_lean_kernel::{
-    Kernel, NameId, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_model_of_arith, build_int_model_of_arith, build_int_prelude,
-    build_intspace_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
-    build_logic_prelude, build_metric_prelude, build_nat_prelude, build_rat_model_of_arith,
-    build_rat_prelude, build_rn_prelude, build_string_length_append, build_string_prelude,
-    build_string_substr_arithmetic, build_top_frame_prelude,
+    Declaration, Kernel, NameId, build_arith_prelude, build_characterization,
+    build_complex_prelude, build_cpoint_prelude, build_creal_model_of_arith,
+    build_int_model_of_arith, build_int_prelude, build_intspace_prelude,
+    build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm, build_logic_prelude,
+    build_metric_prelude, build_nat_prelude, build_rat_model_of_arith, build_rat_prelude,
+    build_rn_prelude, build_string_length_append, build_string_prelude,
+    build_string_substr_arithmetic, build_top_frame_prelude, on_a_deep_stack,
 };
 
 fn facts_dir() -> PathBuf {
@@ -268,7 +269,12 @@ fn score_one_fact(
 }
 
 #[test]
+#[ignore = "builds every prelude into one kernel: minutes in the debug profile the push hook runs, and a stack overflow without a deep stack; run `-- --ignored` (release, ~50 s), which is what check.sh's `lean-read-round-trip` step does"]
 fn lean4_ledger_round_trips_against_the_kernel() {
+    on_a_deep_stack(lean4_ledger_round_trips_against_the_kernel_body);
+}
+
+fn lean4_ledger_round_trips_against_the_kernel_body() {
     let facts = load_lean4_facts();
     assert!(
         facts.len() >= 1900,
@@ -354,7 +360,12 @@ fn lean4_ledger_round_trips_against_the_kernel() {
 /// (it is still syntactically well-formed) but must NOT be `def_eq` to the
 /// original declared type.
 #[test]
+#[ignore = "builds every prelude into one kernel: minutes in the debug profile the push hook runs, and a stack overflow without a deep stack; run `-- --ignored` (release, ~50 s), which is what check.sh's `lean-read-round-trip` step does"]
 fn negative_control_swapped_argument_order_reads_but_fails_def_eq() {
+    on_a_deep_stack(negative_control_swapped_argument_order_reads_but_fails_def_eq_body);
+}
+
+fn negative_control_swapped_argument_order_reads_but_fails_def_eq_body() {
     let facts = load_lean4_facts();
     let fact = facts
         .iter()
@@ -388,7 +399,12 @@ fn negative_control_swapped_argument_order_reads_but_fails_def_eq() {
 /// either fail to read (if the replacement name is not declared) or, if it
 /// reads, must not be `def_eq` to the original.
 #[test]
+#[ignore = "builds every prelude into one kernel: minutes in the debug profile the push hook runs, and a stack overflow without a deep stack; run `-- --ignored` (release, ~50 s), which is what check.sh's `lean-read-round-trip` step does"]
 fn negative_control_renamed_constant_fails_to_read_or_fails_def_eq() {
+    on_a_deep_stack(negative_control_renamed_constant_fails_to_read_or_fails_def_eq_body);
+}
+
+fn negative_control_renamed_constant_fails_to_read_or_fails_def_eq_body() {
     let facts = load_lean4_facts();
     let fact = facts
         .iter()
@@ -421,7 +437,12 @@ fn negative_control_renamed_constant_fails_to_read_or_fails_def_eq() {
 /// Negative control: dropping a universe argument (`Sort (u)` -> `Sort ()`)
 /// on a real universe-polymorphic ledger fact must fail to read.
 #[test]
+#[ignore = "builds every prelude into one kernel: minutes in the debug profile the push hook runs, and a stack overflow without a deep stack; run `-- --ignored` (release, ~50 s), which is what check.sh's `lean-read-round-trip` step does"]
 fn negative_control_dropped_universe_argument_fails_to_read() {
+    on_a_deep_stack(negative_control_dropped_universe_argument_fails_to_read_body);
+}
+
+fn negative_control_dropped_universe_argument_fails_to_read_body() {
     let facts = load_lean4_facts();
     let fact = facts
         .iter()
@@ -470,4 +491,48 @@ fn build_nat_prelude_only() -> Kernel {
     let mut k = Kernel::new();
     build_nat_prelude(&mut k).expect("the Nat prelude must build");
     k
+}
+
+/// The one test the push partition runs live: a cheap kernel (the logic
+/// prelude alone) and the first theorem it declares, rendered, read back,
+/// byte-identical and definitionally equal to the declared type. The four
+/// ledger-wide tests above are `#[ignore]`d for cost and run by check.sh's
+/// `lean-read-round-trip` step with `-- --ignored`. A suite whose push half
+/// ran zero tests would read as inert to `check-kernel-suites.sh`, which is
+/// why this exists.
+#[test]
+fn reader_round_trips_a_logic_theorem_live() {
+    on_a_deep_stack(|| {
+        let mut k = Kernel::new();
+        build_logic_prelude(&mut k).expect("the logic prelude must build");
+        let index = display_name_index(&k);
+        let mut checked = 0usize;
+        for (name, id) in &index {
+            let Some(Declaration::Theorem { ty, .. }) = k.environment().get(*id).cloned() else {
+                continue;
+            };
+            let rendered = k.render_lean(ty);
+            let read = k.read_lean(&rendered).unwrap_or_else(|e| {
+                panic!("`{name}`'s rendered type must read back: {e:?}\n{rendered}")
+            });
+            assert_eq!(
+                k.render_lean(read),
+                rendered,
+                "`{name}` must round-trip byte-exact"
+            );
+            assert!(
+                k.def_eq(read, ty),
+                "`{name}`'s read type must be def-eq to the declared type"
+            );
+            checked += 1;
+            if checked == 5 {
+                break;
+            }
+        }
+        assert!(
+            checked >= 1,
+            "the logic prelude declared no theorem to round-trip -- an inert control"
+        );
+        println!("lean_read smoke: {checked} logic theorems round-trip");
+    });
 }

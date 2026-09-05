@@ -174,6 +174,9 @@ construction, every builder in it idempotent, plus `top_frame`), scored for:
 
 **Re-measured after the merge with main, 2026-09-05 (coordinator, release, 48.55 s):** 2,023 `lean4` facts, 1,967 read, 1,961 round-trip byte-exact, 1,923 of 1,925 def-eq; the three `CPoint` facts the conics merge added all pass; failure classes unchanged. The lane that built this was terminated by an account spend limit before committing its final edits; the coordinator verified (workspace check, trusted core 5,545 unchanged, rustfmt, this run) and closed it out.
 
+
+**Gate placement, 2026-09-05 (coordinator).** `scripts/check-kernel-suites.sh` partitions every kernel suite without the real-Lean probe marker into the PUSH half, which `hooks/pre-push` runs in the debug profile. Measured there, this suite's negative control overflowed its stack (`fatal runtime error: stack overflow`, the suite had no `on_a_deep_stack`) and the ledger test ran past 60 s. So: every body now runs on a deep stack; the four ledger-wide tests are `#[ignore]`d and run by `scripts/check.sh`'s `lean-read-round-trip` step (above the summary; listing 522 -> 523) and the justfile recipe of the same name with `-- --ignored` in release (50.77 s, 4 passed); the push half runs one live smoke test on the logic prelude alone (1 passed, 4 ignored, 0.04 s) so the suite is never inert to the partition's per-suite count.
+
 ### Per-fragment round-trip table
 
 Measured 2026-09-05 against commit `8808f0951` with
