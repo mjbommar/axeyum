@@ -60,7 +60,10 @@ use axeyum_ir::Rational;
 use crate::cofactor_ansatz::{AnsatzLimits, AnsatzOutcome, cofactors_by_ansatz};
 use crate::groebner::MonomialOrder;
 use crate::groebner_cert::{CofactorOutcome, DeclineReason, Limits, reduce_many_with_cofactors};
-use crate::linear_elim::{LinearBlock, LinearElimination, detect_linear_blocks, eliminate_blocks};
+use crate::linear_elim::{
+    BlockSearch, LinearBlock, LinearElimination, detect_linear_blocks, detect_linear_blocks_where,
+    eliminate_blocks,
+};
 use crate::mvpoly::MvPoly;
 
 /// A point of the plane at symbolic coordinates.
@@ -856,6 +859,34 @@ pub fn certify(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
 /// any non-constant condition. This stops a constant one from spinning.
 const MAX_INVERSE_POWER: u32 = 32;
 
+/// Which unknowns [`certify_by_linear_elimination_scoped`] lets the linear route
+/// look for.
+///
+/// # The measured reason this is a choice rather than a constant
+///
+/// A theorem's conclusions are stated one component at a time, and the detector
+/// was scoped to **one** of them: for `tetrahedron-medians-concurrent` the
+/// conclusion `4P.x = A.x+B.x+C.x+D.x` mentions `px` and neither `py` nor `pz`,
+/// so no subsystem over the point `P` was ever offered, and the block the search
+/// did return was over `{ax, bx, cx}` — alphabetical order, not geometry. That
+/// scoping is what `docs/math-department/13-computer-algebra.md` records as the
+/// reason the medians cost 769 s on the general route.
+///
+/// [`BlockScope::Joint`] removes that limitation, and **it is not enough**, which
+/// is the finding this type exists to make checkable rather than assumed. See
+/// [`certify_by_linear_elimination_scoped`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlockScope {
+    /// Candidate unknowns come from the conclusion being settled, and the search
+    /// stops at the first nonsingular subsystem, licensed or not. **The committed
+    /// behaviour**: every certificate in `artifacts/geometry-certificates/` was
+    /// produced under it, and [`certify_any_route`] still uses it.
+    PerConclusion,
+    /// Candidate unknowns come from **all** of the theorem's conclusions at once,
+    /// and an unlicensed determinant advances the search instead of ending it.
+    Joint,
+}
+
 /// Certify a geometry theorem by **linear elimination** instead of by Gröbner
 /// search, keeping the certificate in the original generators.
 ///
@@ -942,6 +973,61 @@ pub fn certify_by_linear_elimination(
     problem: &GeometryProblem,
     handover: Option<Limits>,
 ) -> ProofOutcome {
+    certify_by_linear_elimination_scoped(problem, handover, BlockScope::PerConclusion)
+}
+
+/// [`certify_by_linear_elimination`] against an explicit [`BlockScope`].
+///
+/// # When the widened search still declines
+///
+/// [`BlockScope::Joint`] was built for `tetrahedron-medians-concurrent`, and it
+/// does not reach it. The enumeration, measured 2026-09-05 in release and pinned
+/// by `the_widened_scope_reaches_blocks_the_narrow_one_cannot_see`:
+///
+/// - Every one of the eighteen nonsingular `3×3` subsystems over `{px, py, pz}`
+///   settles all three conclusions with a **zero residue**. Linear algebra
+///   answers this theorem outright, in milliseconds.
+/// - Not one of those eighteen determinants is licensed by the stated condition
+///   `abcd-not-coplanar`, and not one is even divisible by it.
+/// - Widening further does not help: the exhaustive licensing-aware search over
+///   *every* subset of the fifteen candidate unknowns and every row selection —
+///   400,000 subsystems, 0.76 s — returns **no** licensed block at all.
+///
+/// The reason is structural rather than a limit of the search. Writing the two
+/// median directions as `u` and `v`, the hypotheses are `u × (P − A) = 0` and
+/// `v × (P − B) = 0`, so the coefficient matrix of `P` is the two skew matrices
+/// `[u]ₓ` and `[v]ₓ` stacked. Each has rank two, and every `3×3` minor of the
+/// stack is therefore a **product** — one coordinate of `u` or `v` times one
+/// component of `u × v`. The second factor is geometry (the medians are not
+/// parallel, which for these medians is exactly non-coplanarity); the first is a
+/// coordinate artifact of the skew encoding, vanishing on a plane that has
+/// nothing to do with the theorem. A determinant carrying that spurious factor is
+/// not a product of the stated conditions, and inventing a condition to divide it
+/// out would certify a **weaker** theorem — which is precisely what
+/// [`GeometryDecline::UndividableMultiplier`] refuses to do.
+///
+/// So the per-conclusion scoping named in
+/// `docs/math-department/13-computer-algebra.md` is a real limitation of the
+/// detector, and it is **not** what keeps this theorem on the slow route.
+/// Removing it changes the medians' outcome not at all.
+///
+/// # Why [`certify_any_route`] does not use [`BlockScope::Joint`]
+///
+/// Because it would change committed evidence for no gain. The widened search
+/// finds a licensed block on two theorems the narrow one misses —
+/// `centroid-divides-medians` (`{px, py}`) and `parallelogram-diagonals-bisect`
+/// (`{cx, cy}`) — and both are theorems the Gröbner route already reaches in
+/// milliseconds, with committed certificates that seventeen fact-ledger rows
+/// cite. Routing them differently would rewrite two artifacts and weaken
+/// `the_route_selector_reproduces_the_groebner_certificate_exactly`, which exists
+/// to say the route selector disturbs nothing, in exchange for no theorem this
+/// route could not already certify.
+#[must_use]
+pub fn certify_by_linear_elimination_scoped(
+    problem: &GeometryProblem,
+    handover: Option<Limits>,
+    scope: BlockScope,
+) -> ProofOutcome {
     let count = problem.nondegeneracy.len();
     if count > 16 {
         return ProofOutcome::Declined(GeometryDecline::TooManyConditions);
@@ -975,6 +1061,11 @@ pub fn certify_by_linear_elimination(
             .iter()
             .map(|&index| problem.nondegeneracy[index].poly.clone())
             .collect();
+        let targets: Vec<MvPoly> = problem
+            .conclusions
+            .iter()
+            .map(|conclusion| conclusion.poly.clone())
+            .collect();
         for conclusion in &problem.conclusions {
             match linear_cofactors(
                 &hypotheses,
@@ -983,6 +1074,8 @@ pub fn certify_by_linear_elimination(
                 &conditions,
                 conclusion,
                 handover,
+                scope,
+                &targets,
             ) {
                 Ok(cofactors) => cofactor_sets.push(cofactors),
                 Err(outcome) => {
@@ -1078,12 +1171,27 @@ fn linear_cofactors(
     conditions: &[MvPoly],
     conclusion: &Constraint,
     handover: Option<Limits>,
+    scope: BlockScope,
+    targets: &[MvPoly],
 ) -> Result<Vec<MvPoly>, ProofOutcome> {
     let overflow = || ProofOutcome::Declined(GeometryDecline::Reduction(DeclineReason::Overflow));
-    let blocks = licensed_blocks(
-        detect_linear_blocks(hypotheses, &conclusion.poly),
-        conditions,
-    );
+    let blocks = match scope {
+        BlockScope::PerConclusion => licensed_blocks(
+            detect_linear_blocks(hypotheses, &conclusion.poly),
+            conditions,
+        ),
+        // The filter is inside the search here, so everything it returns is
+        // already licensed and `licensed_blocks` would be a no-op.
+        BlockScope::Joint => {
+            let accept = |determinant: &MvPoly| factors_into(determinant, conditions);
+            let search = BlockSearch {
+                choices: JOINT_CHOICES,
+                examined: JOINT_EXAMINED,
+                accept: &accept,
+            };
+            detect_linear_blocks_where(hypotheses, targets, &search)
+        }
+    };
     let Some(elimination) = eliminate_blocks(hypotheses, &conclusion.poly, blocks) else {
         return Err(overflow());
     };
@@ -1143,6 +1251,20 @@ fn linear_cofactors(
         )),
     }
 }
+
+/// The subset ceiling [`BlockScope::Joint`]'s search runs under.
+///
+/// The two ceilings are what keep an exhaustive search bounded rather than
+/// merely slow: the number of square subsystems is binomial in the candidate
+/// count, and `tetrahedron-medians-concurrent` — fifteen candidates over six
+/// rows, the widest instance in the corpus — examines about 54,000 of them in
+/// 0.76 s in release. The budget is set well above that and well below anything
+/// that would stall a suite, and it is a **budget**, so a search that hits it
+/// returns fewer blocks rather than wrong ones.
+const JOINT_CHOICES: usize = 20_000;
+
+/// See [`JOINT_CHOICES`].
+const JOINT_EXAMINED: usize = 400_000;
 
 /// Hand whatever linear algebra could not remove to a general ideal-membership
 /// route, and fold the cofactors it returns into `cofactors`.
@@ -1558,10 +1680,11 @@ fn verify_witnesses(
 #[cfg(test)]
 mod tests {
     use super::{
-        Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
-        GeometryDecline, GeometryProblem, ProofOutcome, Pt, certify, certify_any_route,
-        certify_by_linear_elimination, collinear, detect_linear_blocks, factors_into,
-        geometry_limits, licensed_blocks, midpoint, parallel, perpendicular, same_point,
+        BlockScope, Condition, Constraint, DegenerateWitness, GenericWitness, GeometryCertificate,
+        GeometryDecline, GeometryProblem, JOINT_CHOICES, JOINT_EXAMINED, ProofOutcome, Pt, certify,
+        certify_any_route, certify_by_linear_elimination, certify_by_linear_elimination_scoped,
+        collinear, detect_linear_blocks, factors_into, geometry_limits, licensed_blocks, midpoint,
+        parallel, perpendicular, same_point,
     };
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
@@ -2385,68 +2508,197 @@ mod tests {
         }
     }
 
-    // cas-certifier-scope probe
+    /// The theorems whose route [`BlockScope::Joint`] changes, and the ones it
+    /// does not.
+    ///
+    /// Widening the detector's scope is only interesting if it *reaches*
+    /// something, and only safe if [`certify_any_route`] keeps away from it.
+    /// Both halves are asserted here, on named theorems, so that removing the
+    /// widening kills this test and quietly enabling it kills the next one.
+    ///
+    /// Measured 2026-09-05, release, on a host at load 18 (ADVISORY): the joint
+    /// search costs 1.2–1.8 ms on these two, against 0.1 ms for the narrow one
+    /// that declines.
     #[test]
-    fn scope_probe_medians_block_over_p() {
-        use crate::linear_elim::detect_linear_blocks;
+    fn the_widened_scope_reaches_blocks_the_narrow_one_cannot_see() {
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            let narrow = certify_by_linear_elimination(&problem, Some(geometry_limits()));
+            assert!(
+                !matches!(narrow, ProofOutcome::Certified(_)),
+                "{id}: the per-conclusion scope was expected to decline, got {narrow:?}"
+            );
+            let joint = certify_by_linear_elimination_scoped(
+                &problem,
+                Some(geometry_limits()),
+                BlockScope::Joint,
+            );
+            let ProofOutcome::Certified(certificate) = joint else {
+                panic!("{id}: the joint scope did not certify: {joint:?}");
+            };
+            // Reach is worth nothing unless the independent checker agrees, and
+            // this route produces a *different* identity from the committed one,
+            // so the check is the only thing that makes the claim.
+            identity_recombines(&certificate);
+            assert!(
+                crate::geometry_check::check_certificate(
+                    &certificate,
+                    &crate::geometry_check::CheckOptions::default(),
+                )
+                .is_verified(),
+                "{id}: the joint route's certificate did not check"
+            );
+        }
+    }
+
+    /// [`certify_any_route`] must stay on [`BlockScope::PerConclusion`].
+    ///
+    /// The guard behind "the widening changes no committed evidence". The two
+    /// theorems above are exactly the ones whose artifact would be rewritten if
+    /// the joint scope became the default, and seventeen fact-ledger rows cite
+    /// this artifact directory. So the requirement is not "the joint scope is
+    /// wrong" — it checks — it is that the *shipped* route still produces what
+    /// the committed files contain.
+    #[test]
+    fn the_shipped_route_keeps_the_per_conclusion_scope() {
+        for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
+            let problem = crate::geometry_corpus::corpus()
+                .into_iter()
+                .find(|problem| problem.id == id)
+                .expect("a corpus theorem");
+            assert_eq!(
+                certify_any_route(&problem, geometry_limits()),
+                certify(&problem, geometry_limits()),
+                "{id}: the shipped route left the Gröbner certificate"
+            );
+        }
+    }
+
+    /// Why widening the scope does **not** rescue the tetrahedron medians.
+    ///
+    /// `docs/math-department/13-computer-algebra.md` records the 769 s general
+    /// search as caused by the detector being scoped per conclusion. That is a
+    /// true statement about the detector and a false diagnosis of this theorem,
+    /// and the difference is worth a test rather than a paragraph.
+    ///
+    /// What is asserted, in the order the argument runs:
+    ///
+    /// 1. Linear algebra settles the theorem outright. Every nonsingular `3×3`
+    ///    subsystem over `{px, py, pz}` eliminates the point with a **zero**
+    ///    residue, in microseconds.
+    /// 2. Not one of those determinants is licensed by the stated condition
+    ///    `abcd-not-coplanar`, so not one of them can be divided back out.
+    /// 3. Nor does anything else in the problem help: the exhaustive
+    ///    licensing-aware search over every subset of the candidate unknowns
+    ///    returns **no** block at all.
+    ///
+    /// The structural reason is in
+    /// [`certify_by_linear_elimination_scoped`]'s docs: the coefficient matrix
+    /// of `P` is two rank-two skew matrices stacked, so every `3×3` minor
+    /// carries a spurious coordinate factor alongside the geometric one.
+    #[test]
+    fn the_widened_scope_still_cannot_license_a_block_for_the_tetrahedron_medians() {
+        use crate::linear_elim::{
+            BlockSearch, LinearBlock, detect_linear_blocks, eliminate_blocks,
+        };
+
         let problem = crate::geometry_beyond::tetrahedron_medians_concurrent_problem();
         let hypotheses: Vec<MvPoly> = problem
             .hypotheses
             .iter()
-            .map(|h| h.poly.clone())
+            .map(|hypothesis| hypothesis.poly.clone())
             .collect();
         let conditions: Vec<MvPoly> = problem
             .nondegeneracy
             .iter()
-            .map(|c| c.poly.clone())
+            .map(|condition| condition.poly.clone())
             .collect();
-        println!("condition terms = {}", conditions[0].term_count());
-        let joint = MvPoly::var("px")
+        assert_eq!(conditions.len(), 1, "the theorem states one condition");
+        let point = MvPoly::var("px")
             .add(&MvPoly::var("py"))
-            .unwrap()
+            .expect("sum")
             .add(&MvPoly::var("pz"))
-            .unwrap();
-        let blocks = detect_linear_blocks(&hypotheses, &joint);
-        for block in &blocks {
-            println!(
-                "block unknowns={:?} rows={:?} det terms={} deg={} licensed={}",
-                block.unknowns,
-                block.rows,
-                block.determinant.term_count(),
-                block.determinant.total_degree(),
-                factors_into(&block.determinant, &conditions)
-            );
-        }
-        // Union of the three conclusions, the widening the task asks for.
-        let mut union = MvPoly::zero();
-        for conclusion in &problem.conclusions {
-            union = union.add(&conclusion.poly).unwrap();
-        }
-        println!("union vars = {:?}", union.variables());
-        let wide = detect_linear_blocks(&hypotheses, &union);
-        for block in &wide {
-            println!(
-                "WIDE unknowns={:?} rows={:?} det terms={} licensed={}",
-                block.unknowns,
-                block.rows,
-                block.determinant.term_count(),
-                factors_into(&block.determinant, &conditions)
-            );
-        }
-        // Does the {px,py,pz} block actually settle each conclusion?
-        for conclusion in &problem.conclusions {
-            let done =
-                crate::linear_elim::eliminate_blocks(&hypotheses, &conclusion.poly, blocks.clone());
-            match done {
-                Some(elimination) => println!(
-                    "{}: residue {} terms, multiplier {} terms licensed={}",
-                    conclusion.id,
-                    elimination.residue.term_count(),
-                    elimination.multiplier.term_count(),
-                    factors_into(&elimination.multiplier, &conditions)
-                ),
-                None => println!("{}: elimination returned None", conclusion.id),
+            .expect("sum");
+
+        let mut nonsingular = 0usize;
+        for first in 0..hypotheses.len() {
+            for second in (first + 1)..hypotheses.len() {
+                for third in (second + 1)..hypotheses.len() {
+                    let rows = vec![first, second, third];
+                    let subsystem: Vec<MvPoly> =
+                        rows.iter().map(|&row| hypotheses[row].clone()).collect();
+                    // Restricting the generator list is how the determinant of
+                    // *these three rows* is obtained without reaching into the
+                    // detector's private helpers.
+                    let found = detect_linear_blocks(&subsystem, &point);
+                    let Some(block) = found.iter().find(|block| block.unknowns.len() == 3) else {
+                        continue;
+                    };
+                    nonsingular += 1;
+                    let block = LinearBlock {
+                        unknowns: block.unknowns.clone(),
+                        rows,
+                        determinant: block.determinant.clone(),
+                    };
+                    for conclusion in &problem.conclusions {
+                        let elimination =
+                            eliminate_blocks(&hypotheses, &conclusion.poly, vec![block.clone()])
+                                .expect("the elimination is exact");
+                        assert!(
+                            elimination.residue.is_zero(),
+                            "{}: linear algebra was expected to settle this outright",
+                            conclusion.id
+                        );
+                    }
+                    assert!(
+                        !factors_into(&block.determinant, &conditions),
+                        "a licensed 3x3 determinant exists after all: rows {:?}. The medians can \
+                         take the linear route, and `certify_any_route` should be told so.",
+                        block.rows
+                    );
+                }
             }
         }
+        assert_eq!(
+            nonsingular, 18,
+            "two of the twenty row triples are the components of one cross product and are \
+             singular; the other eighteen are not"
+        );
+
+        let targets: Vec<MvPoly> = problem
+            .conclusions
+            .iter()
+            .map(|conclusion| conclusion.poly.clone())
+            .collect();
+        let accept = |determinant: &MvPoly| factors_into(determinant, &conditions);
+        let exhaustive = crate::linear_elim::detect_linear_blocks_where(
+            &hypotheses,
+            &targets,
+            &BlockSearch {
+                choices: JOINT_CHOICES,
+                examined: JOINT_EXAMINED,
+                accept: &accept,
+            },
+        );
+        assert!(
+            exhaustive.is_empty(),
+            "the exhaustive licensing-aware search found {} block(s); the medians are reachable \
+             after all",
+            exhaustive.len()
+        );
+        assert!(
+            !matches!(
+                certify_by_linear_elimination_scoped(
+                    &problem,
+                    Some(geometry_limits()),
+                    BlockScope::Joint,
+                ),
+                ProofOutcome::Certified(_)
+            ),
+            "the joint scope certified the medians; the cost row and this test both need redoing"
+        );
     }
 }

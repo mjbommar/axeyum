@@ -374,15 +374,16 @@ impl Components {
     }
 }
 
-/// One step of [`choices`]: extend `stack` from `start` onwards.
+/// One step of [`choices_capped`]: extend `stack` from `start` onwards.
 fn walk_choices(
     items: &[usize],
     take: usize,
     start: usize,
+    cap: usize,
     stack: &mut Vec<usize>,
     out: &mut Vec<Vec<usize>>,
 ) {
-    if out.len() >= MAX_ROW_CHOICES {
+    if out.len() >= cap {
         return;
     }
     if stack.len() == take {
@@ -391,18 +392,68 @@ fn walk_choices(
     }
     for index in start..items.len() {
         stack.push(items[index]);
-        walk_choices(items, take, index + 1, stack, out);
+        walk_choices(items, take, index + 1, cap, stack, out);
         stack.pop();
     }
 }
 
 /// The `k`-subsets of `items`, in ascending lexicographic order, capped at
-/// [`MAX_ROW_CHOICES`].
-fn choices(items: &[usize], take: usize) -> Vec<Vec<usize>> {
+/// `cap`.
+fn choices_capped(items: &[usize], take: usize, cap: usize) -> Vec<Vec<usize>> {
     let mut out: Vec<Vec<usize>> = Vec::new();
     let mut stack: Vec<usize> = Vec::new();
-    walk_choices(items, take, 0, &mut stack, &mut out);
+    walk_choices(items, take, 0, cap, &mut stack, &mut out);
     out
+}
+
+/// How hard [`detect_linear_blocks_where`] looks, and which determinants it is
+/// allowed to come back with.
+///
+/// # Why a determinant filter belongs *inside* the search
+///
+/// The detector's answer is not simply "a nonsingular square subsystem": it is
+/// one whose determinant the **caller** can afterwards divide back out. For
+/// [`crate::geometry_certify`] that means a determinant which is a product of the
+/// theorem's stated non-degeneracy conditions, because those are the only things
+/// the certificate can invert (the Rabinowitsch generator `d·z − 1`).
+///
+/// Until 2026-09-05 the two halves were separate: the search stopped at the
+/// **first** nonsingular subsystem it found, and the certifier then discarded it
+/// if the determinant was unusable — with no second look. That threw away the
+/// only question that mattered. A component with fifteen candidate unknowns has
+/// hundreds of square subsystems and the search was examining exactly one of
+/// them, chosen by nothing more meaningful than alphabetical order.
+///
+/// Passing the filter in fixes that: an unusable determinant now advances the
+/// search instead of ending it. Soundness is untouched either way — a block is a
+/// *proposal*, and `eliminate_blocks` re-derives and re-checks every determinant
+/// it is handed.
+pub struct BlockSearch<'a> {
+    /// Upper bound on the subsets enumerated at each size, for the unknowns and
+    /// for the rows independently. A ceiling rather than a guess: the number of
+    /// subsets is binomial in the candidate count, so an uncapped search is not a
+    /// slow search but an unbounded one.
+    pub choices: usize,
+    /// Total square subsystems the search may examine before giving up. The
+    /// per-size caps bound each list; this bounds their product, which is what
+    /// actually costs time.
+    pub examined: usize,
+    /// Whether a determinant is one the caller can use. `|_| true` reproduces the
+    /// unfiltered search exactly.
+    pub accept: &'a dyn Fn(&MvPoly) -> bool,
+}
+
+impl BlockSearch<'_> {
+    /// The search [`detect_linear_blocks`] performs: every determinant accepted,
+    /// capped at [`MAX_ROW_CHOICES`] subsets per size.
+    #[must_use]
+    pub fn permissive() -> BlockSearch<'static> {
+        BlockSearch {
+            choices: MAX_ROW_CHOICES,
+            examined: usize::MAX,
+            accept: &|_| true,
+        }
+    }
 }
 
 /// Find the square subsystems of `generators` that determine, outright, the
@@ -447,7 +498,44 @@ fn choices(items: &[usize], take: usize) -> Vec<Vec<usize>> {
 /// ```
 #[must_use]
 pub fn detect_linear_blocks(generators: &[MvPoly], target: &MvPoly) -> Vec<LinearBlock> {
-    let wanted = target.variables();
+    detect_linear_blocks_where(
+        generators,
+        std::slice::from_ref(target),
+        &BlockSearch::permissive(),
+    )
+}
+
+/// [`detect_linear_blocks`] against **several** targets at once and a
+/// caller-supplied [`BlockSearch`].
+///
+/// # Why several targets
+///
+/// A theorem's conclusions are stated one component at a time — `4P.x = …`,
+/// `4P.y = …`, `4P.z = …` — while the unknown the hypotheses actually determine
+/// is the whole point `P`. Scoping the candidate unknowns to **one** conclusion
+/// then asks the wrong question: `centroid-x` mentions `px` and none of `py`,
+/// `pz`, so no subsystem over the three coordinates is ever considered, and the
+/// component the detector does find is whatever alphabetically-first square block
+/// the hypotheses happen to admit. Taking the union of the conclusions' variables
+/// makes the unknown set the *theorem's*, not one component's.
+///
+/// # What it does not fix
+///
+/// Widening the scope decides which subsystems are **offered**; whether any of
+/// them is usable is a separate question, and on
+/// `tetrahedron-medians-concurrent` the answer measured 2026-09-05 is no — see
+/// [`crate::geometry_certify::certify_by_linear_elimination`]'s "when the
+/// widened search still declines" section for the enumeration.
+#[must_use]
+pub fn detect_linear_blocks_where(
+    generators: &[MvPoly],
+    targets: &[MvPoly],
+    search: &BlockSearch<'_>,
+) -> Vec<LinearBlock> {
+    let mut wanted: BTreeSet<String> = BTreeSet::new();
+    for target in targets {
+        wanted.extend(target.variables());
+    }
     let candidates: Vec<String> = candidate_unknowns(generators)
         .into_iter()
         .filter(|variable| wanted.contains(variable))
@@ -493,18 +581,28 @@ pub fn detect_linear_blocks(generators: &[MvPoly], target: &MvPoly) -> Vec<Linea
         // good 1×1 one over `{x}`.
         let positions: Vec<usize> = (0..unknowns.len()).collect();
         let mut found = false;
+        let mut examined = 0usize;
         for size in (1..=cap).rev() {
-            for chosen in choices(&positions, size) {
+            for chosen in choices_capped(&positions, size, search.choices) {
                 let picked: Vec<String> = chosen
                     .iter()
                     .map(|&index| unknowns[index].clone())
                     .collect();
-                for candidate_rows in choices(&rows, size) {
+                for candidate_rows in choices_capped(&rows, size, search.choices) {
+                    if examined >= search.examined {
+                        break;
+                    }
+                    examined += 1;
                     let Some((_, det)) = coefficient_matrix(generators, &candidate_rows, &picked)
                     else {
                         continue;
                     };
                     if det.is_zero() {
+                        continue;
+                    }
+                    // An unusable determinant advances the search rather than
+                    // ending it. See `BlockSearch::accept`.
+                    if !(search.accept)(&det) {
                         continue;
                     }
                     blocks.push(LinearBlock {
@@ -683,12 +781,180 @@ pub fn eliminate_blocks(
 
 #[cfg(test)]
 mod tests {
-    use super::{combination, detect_linear_blocks, eliminate, eliminate_blocks};
+    use super::{
+        BlockSearch, combination, detect_linear_blocks, detect_linear_blocks_where, eliminate,
+        eliminate_blocks,
+    };
     use crate::mvpoly::MvPoly;
     use axeyum_ir::Rational;
 
     fn int(value: i128) -> MvPoly {
         MvPoly::constant(Rational::integer(value))
+    }
+
+    /// Two generators that determine `p` and `q`, connected so they form one
+    /// component: `2p + q − 3` and `e·q − 5`.
+    ///
+    /// The `2×2` block over `{p, q}` has determinant `2e`; the `1×1` block over
+    /// `{p}` has determinant `2`. A caller that can only divide by constants
+    /// therefore wants the second, and the unfiltered search hands it the first.
+    fn two_blocks_one_usable() -> (Vec<MvPoly>, MvPoly) {
+        let (p, q, e) = (MvPoly::var("p"), MvPoly::var("q"), MvPoly::var("e"));
+        let first = int(2)
+            .mul(&p)
+            .unwrap()
+            .add(&q)
+            .unwrap()
+            .sub(&int(3))
+            .unwrap();
+        let second = e.mul(&q).unwrap().sub(&int(5)).unwrap();
+        (vec![first, second], p.add(&q).unwrap())
+    }
+
+    /// An unusable determinant advances the search instead of ending it.
+    ///
+    /// Delete the `accept` check in `detect_linear_blocks_where` and this dies:
+    /// the filtered search comes back with the `{p, q}` block the permissive one
+    /// already returns, and the two halves of the assertion collapse together.
+    #[test]
+    fn a_rejected_determinant_advances_the_block_search() {
+        let (generators, target) = two_blocks_one_usable();
+        let permissive = detect_linear_blocks(&generators, &target);
+        assert_eq!(
+            permissive.len(),
+            1,
+            "one component, so at most one block: {permissive:?}"
+        );
+        assert_eq!(
+            permissive[0].unknowns,
+            vec!["p".to_string(), "q".to_string()],
+            "the unfiltered search stops at the largest square subsystem"
+        );
+
+        let constants_only = |determinant: &MvPoly| determinant.total_degree() == 0;
+        let filtered = detect_linear_blocks_where(
+            &generators,
+            std::slice::from_ref(&target),
+            &BlockSearch {
+                choices: 256,
+                examined: usize::MAX,
+                accept: &constants_only,
+            },
+        );
+        assert_eq!(filtered.len(), 1, "a usable block exists: {filtered:?}");
+        assert_eq!(
+            filtered[0].unknowns,
+            vec!["p".to_string()],
+            "the search kept looking past the determinant the caller cannot use"
+        );
+        assert_eq!(filtered[0].determinant, int(2));
+    }
+
+    /// Joint targets see an unknown no single target mentions.
+    ///
+    /// `p − 1` and `q − 2` determine two variables in two separate components.
+    /// Scoped to the target `p`, only the first is a candidate — which is exactly
+    /// the shape of a theorem whose conclusions are stated one component at a
+    /// time. Delete the union in `detect_linear_blocks_where` (use `targets[0]`)
+    /// and the second assertion drops to one block.
+    #[test]
+    fn joint_targets_see_unknowns_no_single_target_mentions() {
+        let (p, q) = (MvPoly::var("p"), MvPoly::var("q"));
+        let generators = vec![p.sub(&int(1)).unwrap(), q.sub(&int(2)).unwrap()];
+
+        let alone = detect_linear_blocks(&generators, &p);
+        assert_eq!(alone.len(), 1, "only `p` is in scope: {alone:?}");
+        assert_eq!(alone[0].unknowns, vec!["p".to_string()]);
+
+        let together = detect_linear_blocks_where(
+            &generators,
+            &[p.clone(), q.clone()],
+            &BlockSearch::permissive(),
+        );
+        assert_eq!(
+            together.len(),
+            2,
+            "both components are in scope now: {together:?}"
+        );
+        assert_eq!(together[0].unknowns, vec!["p".to_string()]);
+        assert_eq!(together[1].unknowns, vec!["q".to_string()]);
+    }
+
+    /// The search budget is a budget: exhausted, it returns fewer blocks, never
+    /// wrong ones.
+    ///
+    /// Delete the `examined >= search.examined` break and this dies — the search
+    /// finds the block it is not allowed to look for.
+    #[test]
+    fn an_exhausted_search_budget_returns_no_block() {
+        let (generators, target) = two_blocks_one_usable();
+        let starved = detect_linear_blocks_where(
+            &generators,
+            std::slice::from_ref(&target),
+            &BlockSearch {
+                choices: 256,
+                examined: 0,
+                accept: &|_| true,
+            },
+        );
+        assert!(
+            starved.is_empty(),
+            "a zero budget examined a subsystem anyway: {starved:?}"
+        );
+        assert_eq!(
+            detect_linear_blocks_where(
+                &generators,
+                std::slice::from_ref(&target),
+                &BlockSearch::permissive(),
+            )
+            .len(),
+            1,
+            "the positive control: with a budget the block is there"
+        );
+    }
+
+    /// The subset ceiling is honoured too, and it is *not* the same knob.
+    ///
+    /// `e·p + q − 3` and `q − 5`: the only determinant a constants-only caller
+    /// can use belongs to `{q}`, the **second** size-one subset in alphabetical
+    /// order. With `choices: 1` the search enumerates one subset per size and
+    /// cannot reach it; with the ordinary ceiling it can. Delete the cap in
+    /// `choices_capped` and the first half of this dies.
+    #[test]
+    fn the_subset_ceiling_bounds_what_the_search_enumerates() {
+        let (p, q, e) = (MvPoly::var("p"), MvPoly::var("q"), MvPoly::var("e"));
+        let generators = vec![
+            e.mul(&p).unwrap().add(&q).unwrap().sub(&int(3)).unwrap(),
+            q.sub(&int(5)).unwrap(),
+        ];
+        let target = p.add(&q).unwrap();
+        let constants_only = |determinant: &MvPoly| determinant.total_degree() == 0;
+
+        let starved = detect_linear_blocks_where(
+            &generators,
+            std::slice::from_ref(&target),
+            &BlockSearch {
+                choices: 1,
+                examined: usize::MAX,
+                accept: &constants_only,
+            },
+        );
+        assert!(
+            starved.is_empty(),
+            "one subset per size cannot reach `{{q}}`: {starved:?}"
+        );
+
+        let full = detect_linear_blocks_where(
+            &generators,
+            std::slice::from_ref(&target),
+            &BlockSearch {
+                choices: 256,
+                examined: usize::MAX,
+                accept: &constants_only,
+            },
+        );
+        assert_eq!(full.len(), 1, "the positive control: {full:?}");
+        assert_eq!(full[0].unknowns, vec!["q".to_string()]);
     }
 
     /// The invariant, re-derived without any of the bookkeeping above: this is
