@@ -2357,7 +2357,325 @@ mod tests {
         );
     }
 
+    // -- Wave two: rational powers -----------------------------------------
+
+    /// The 30-decimal truncations of the wave-two reference values, all from
+    /// the standard tables (OEIS A002580 for `2^(1/3)`, A248266 for `erf(1)`,
+    /// A002161 for `sqrt(pi) = Gamma(1/2)`, A073005 for `Gamma(1/3)`, and
+    /// A197036 for `J_0(1)`). A mismatch against these means the **enclosure**
+    /// is wrong; the digit strings are the cited authority.
+    const CBRT2_30: &str = "1.259921049894873164767210607278";
+    const ERF1_30: &str = "0.842700792949714869341220635082";
+    const ERF_HALF_30: &str = "0.520499877813046537682746653891";
+    const ROOT_PI_30: &str = "1.772453850905516027298167483341";
+    const GAMMA_5_2_30: &str = "1.329340388179137020473625612505";
+    const GAMMA_1_3_30: &str = "2.678938534707747633654692091594";
+    const J0_1_30: &str = "0.765197686557966551449717526102";
+    const J1_1_30: &str = "0.440050585744933515959682203719";
+
+    #[test]
+    fn rational_power_of_two_matches_the_cited_digits_at_precision_100() {
+        let expr = rational_power(CasExpr::int(2), 1, 3).expect("cube root");
+        let e = enclose(&expr, &[], 100).expect("2^(1/3) at precision 100");
+        assert!(e.interval.width() <= pow2(-100));
+        assert!(
+            digit_band(CBRT2_30).contains_interval(&e.interval),
+            "2^(1/3) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn the_two_third_power_over_one_to_eight_contains_one_to_four() {
+        // x^(2/3) on [1, 8] has image exactly [1, 4]; the head evaluator must
+        // return an interval that contains all of it. The final-width guard of
+        // `enclose` cannot be met by a box this wide, so the head is exercised
+        // directly — the same function the producer and the verifier both call.
+        let x = BigInterval::new(bi(1), bi(8)).expect("box");
+        let root = eval_head_raw(&StepHead::NthRoot(3), &[x], 64).expect("cube root of the box");
+        let squared = root.pow(2);
+        let image = BigInterval::new(bi(1), bi(4)).expect("image");
+        assert!(
+            squared.contains_interval(&image),
+            "x^(2/3) over [1, 8] gave {squared} which does not contain [1, 4]"
+        );
+    }
+
+    #[test]
+    fn rational_power_routes_agree() {
+        // The Newton root_q route and the exp/ln route are independent; their
+        // enclosures of 2^(1/3) must overlap, and each must hold the digits.
+        let by_root = rational_power(CasExpr::int(2), 1, 3).expect("root route");
+        let by_logarithm = rational_power_via_exp_ln(CasExpr::int(2), 1, 3).expect("log route");
+        let a = enclose(&by_root, &[], 60).expect("root enclosure");
+        let b = enclose(&by_logarithm, &[], 60).expect("log enclosure");
+        a.verify(&by_root, &[]).expect("root route verifies");
+        b.verify(&by_logarithm, &[]).expect("log route verifies");
+        assert_near(&a.interval, CBRT2_30, 17);
+        assert_near(&b.interval, CBRT2_30, 17);
+        assert!(
+            a.interval.lo() <= b.interval.hi() && b.interval.lo() <= a.interval.hi(),
+            "the two routes disagree: {} and {}",
+            a.interval,
+            b.interval
+        );
+    }
+
+    #[test]
+    fn a_negative_base_declines_with_a_reason_naming_the_route() {
+        let by_root = rational_power(CasExpr::int(-2), 1, 3).expect("root route");
+        let root_reason = enclose_with_reason(&by_root, &[], 10).unwrap_err();
+        let DeclineReason::DomainError(root_detail) = &root_reason else {
+            panic!("expected a domain error, got {root_reason:?}");
+        };
+        assert!(
+            root_detail.contains("root_3"),
+            "the root route's decline does not name the degree: {root_detail}"
+        );
+
+        let by_logarithm = rational_power_via_exp_ln(CasExpr::int(-2), 1, 3).expect("log route");
+        let log_reason = enclose_with_reason(&by_logarithm, &[], 10).unwrap_err();
+        let DeclineReason::DomainError(log_detail) = &log_reason else {
+            panic!("expected a domain error, got {log_reason:?}");
+        };
+        assert!(
+            log_detail.contains("ln of an interval"),
+            "the log route's decline does not name `ln`: {log_detail}"
+        );
+        assert_ne!(root_detail, log_detail);
+    }
+
+    #[test]
+    fn a_zero_degree_root_is_not_constructible() {
+        assert!(rational_power(CasExpr::int(2), 1, 0).is_none());
+    }
+
+    #[test]
+    fn a_negative_rational_exponent_takes_the_reciprocal() {
+        // 8^(-2/3) = 1/4.
+        let expr = rational_power(CasExpr::int(8), -2, 3).expect("negative exponent");
+        let e = enclose(&expr, &[], 60).expect("8^(-2/3)");
+        assert!(e.interval.contains(&br(1, 4)));
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    // -- Wave two: erf ------------------------------------------------------
+
+    #[test]
+    fn erf_at_one_matches_the_cited_digits() {
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let e = enclose(&expr, &[], 120).expect("erf(1)");
+        assert!(
+            digit_band(ERF1_30).contains_interval(&e.interval),
+            "erf(1) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn erf_over_a_box_covers_the_whole_image() {
+        // erf is increasing, so the image of [0, 1/2] is [0, erf(1/2)] and the
+        // enclosure must contain all of it.
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::var("x")));
+        let box_ = Interval::new(Rational::zero(), Rational::new(1, 2)).expect("box");
+        let e = enclose(&expr, &[("x", box_)], 0).expect("erf over the box");
+        assert!(*e.interval.lo() <= BigRational::zero());
+        assert!(*e.interval.hi() >= decimal_to_rational(ERF_HALF_30));
+        e.verify(&expr, &[("x", box_)]).expect("verifies");
+    }
+
+    #[test]
+    fn erf_beyond_the_series_limit_uses_the_complementary_tail_bound() {
+        // At 9 the Maclaurin route is abandoned for erfc(x) <= e^-x^2/(x*sqrt pi);
+        // erf(9) = 1 - 4.1e-37..., so the enclosure must sit just below 1 and
+        // must not exceed it.
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(9)));
+        let e = enclose(&expr, &[], 100).expect("erf(9)");
+        assert!(*e.interval.hi() <= BigRational::one());
+        assert!(*e.interval.lo() >= decimal_to_rational("0.999999999999999999999999999999999999"));
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn erf_is_odd() {
+        let positive = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let negative = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(-1)));
+        let a = enclose(&positive, &[], 60).expect("erf(1)");
+        let b = enclose(&negative, &[], 60).expect("erf(-1)");
+        assert_eq!(a.interval.negate(), b.interval);
+        b.verify(&negative, &[]).expect("verifies");
+    }
+
+    // -- Wave two: gamma ----------------------------------------------------
+
+    #[test]
+    fn gamma_at_a_half_is_the_square_root_of_pi() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 2)));
+        let e = enclose(&expr, &[], 120).expect("Gamma(1/2)");
+        assert!(
+            digit_band(ROOT_PI_30).contains_interval(&e.interval),
+            "Gamma(1/2) enclosure {} is outside the cited digits of sqrt(pi)",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn gamma_at_five_halves_matches_the_closed_form() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(5, 2)));
+        let e = enclose(&expr, &[], 120).expect("Gamma(5/2)");
+        assert!(
+            digit_band(GAMMA_5_2_30).contains_interval(&e.interval),
+            "Gamma(5/2) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+
+        // Cross-check against the crate's closed-form `special::gamma`, which
+        // returns the same identity as an exact `CasExpr`: enclosing that
+        // expression must land on the same number.
+        let closed = crate::special::gamma(Rational::new(5, 2)).expect("closed form");
+        let f = enclose(&closed, &[], 60).expect("closed-form enclosure");
+        assert!(
+            e.interval.lo() <= f.interval.hi() && f.interval.lo() <= e.interval.hi(),
+            "the head and the closed form disagree"
+        );
+    }
+
+    #[test]
+    fn gamma_at_positive_integers_is_the_exact_factorial() {
+        for (argument, factorial) in [(1i64, 1i64), (2, 1), (5, 24), (7, 720)] {
+            let expr = CasExpr::Unary(
+                UnaryFunc::Gamma,
+                Box::new(CasExpr::Const(Rational::integer(i128::from(argument)))),
+            );
+            let e = enclose(&expr, &[], 60).expect("Gamma at an integer");
+            assert_eq!(
+                e.interval,
+                BigInterval::point(bi(factorial)),
+                "Gamma({argument}) is not exactly {factorial}"
+            );
+            e.verify(&expr, &[]).expect("verifies");
+        }
+    }
+
+    #[test]
+    fn gamma_at_a_third_is_enclosed_by_the_stirling_route() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 3)));
+        let e = enclose(&expr, &[], 60).expect("Gamma(1/3)");
+        assert!(e.interval.width() <= pow2(-60));
+        assert_near(&e.interval, GAMMA_1_3_30, 17);
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn gamma_of_a_non_positive_interval_declines_as_a_domain_error() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::var("x")));
+        let bindings = [("x", interval(-1, 2))];
+        let reason = enclose_with_reason(&expr, &bindings, 10).unwrap_err();
+        let DeclineReason::DomainError(detail) = &reason else {
+            panic!("expected a domain error, got {reason:?}");
+        };
+        assert!(detail.contains("gamma"), "the decline does not name gamma");
+    }
+
+    #[test]
+    fn gamma_over_a_positive_box_contains_the_whole_image() {
+        // Gamma is increasing on [2, 3] with image [Gamma 2, Gamma 3] = [1, 2].
+        // The shift-and-Stirling route over-widens, so this checks the head
+        // directly rather than through the final-width guard.
+        let x = BigInterval::new(bi(2), bi(3)).expect("box");
+        let image = eval_head_raw(&StepHead::Gamma, &[x], 16).expect("gamma over the box");
+        assert!(
+            image.contains_interval(&BigInterval::new(bi(1), bi(2)).expect("image")),
+            "gamma over [2, 3] gave {image} which does not contain [1, 2]"
+        );
+    }
+
+    // -- Wave two: Bessel ---------------------------------------------------
+
+    #[test]
+    fn bessel_j0_at_one_matches_the_cited_digits() {
+        let expr = CasExpr::Unary(UnaryFunc::BesselJ(0), Box::new(CasExpr::int(1)));
+        let e = enclose(&expr, &[], 120).expect("J_0(1)");
+        assert!(
+            digit_band(J0_1_30).contains_interval(&e.interval),
+            "J_0(1) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn bessel_j1_over_the_unit_interval_covers_its_image() {
+        // J_1 increases on [0, 1] from 0 to 0.4400505857..., so the enclosure
+        // must contain that whole range.
+        let expr = CasExpr::Unary(UnaryFunc::BesselJ(1), Box::new(CasExpr::var("x")));
+        let box_ = Interval::new(Rational::zero(), Rational::integer(1)).expect("box");
+        let e = enclose(&expr, &[("x", box_)], 0).expect("J_1 over [0, 1]");
+        assert!(*e.interval.lo() <= BigRational::zero());
+        assert!(*e.interval.hi() >= decimal_to_rational(J1_1_30));
+        e.verify(&expr, &[("x", box_)]).expect("verifies");
+    }
+
+    #[test]
+    fn bessel_j1_at_one_matches_the_cited_digits() {
+        let expr = CasExpr::Unary(UnaryFunc::BesselJ(1), Box::new(CasExpr::int(1)));
+        let e = enclose(&expr, &[], 120).expect("J_1(1)");
+        assert!(
+            digit_band(J1_1_30).contains_interval(&e.interval),
+            "J_1(1) enclosure {} is outside the cited 30 digits",
+            e.interval.decimal(32)
+        );
+        e.verify(&expr, &[]).expect("verifies");
+    }
+
+    #[test]
+    fn a_still_uncertified_head_declines_rather_than_approximating() {
+        // The wave-two heads landed; `Si` and the rest have no bound here yet
+        // and must still decline rather than route through a nearby one.
+        let expr = CasExpr::Unary(UnaryFunc::Si, Box::new(CasExpr::int(1)));
+        let reason = enclose_with_reason(&expr, &[], 10).unwrap_err();
+        assert!(matches!(reason, DeclineReason::UnsupportedHead(_)));
+    }
+
+    // -- Wave two: the forged-certificate guards on the new heads ------------
+
+    #[test]
+    fn a_forged_order_on_an_erf_step_is_refused() {
+        let expr = CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1)));
+        let mut e = enclose(&expr, &[], 60).expect("erf(1)");
+        // The erf step is the second node; claim the cheapest order and report
+        // its honest (large) remainder, so only the order guard can catch it.
+        let (_, honest) = eval_head(&StepHead::Erf, &e.evidence[1].inputs, ORDERS[0])
+            .expect("re-evaluate at the cheapest order");
+        e.evidence[1].order = ORDERS[0];
+        e.evidence[1].remainder = honest;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("per-step budget"),
+            "expected the order guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_forged_gamma_output_is_refused() {
+        let expr = CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 3)));
+        let mut e = enclose(&expr, &[], 60).expect("Gamma(1/3)");
+        let shifted = e.evidence[1].output.add(&BigInterval::point(BigRational::one()));
+        e.evidence[1].output = shifted.clone();
+        e.interval = shifted;
+        let message = e.verify(&expr, &[]).unwrap_err();
+        assert!(
+            message.contains("does not contain the recomputed"),
+            "expected the containment guard, got: {message}"
+        );
+    }
+
     // -- Cost ---------------------------------------------------------------
+
 
     #[test]
     fn cost_table_pi() {

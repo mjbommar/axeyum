@@ -303,16 +303,30 @@ fn factorial(n: u64) -> BigInt {
 /// `Γ` over a positive interval.
 ///
 /// A degenerate interval at a positive integer or half-integer takes the exact
-/// closed form; everything else goes through the shift-and-Stirling route,
-/// which is evaluated at the two endpoints of the shifted argument (where `Γ`
-/// is increasing) and divided by the interval of the shift product (where every
-/// factor is positive), so the quotient contains `Γ(x)` for every `x` in the
-/// box.
+/// closed form. Everything else goes through the shift identity
+/// `Γ(x) = Γ(x+n)/∏_(i<n)(x+i)`, entirely **in logarithms**:
+///
+/// ```text
+/// ln Γ(x) = ln Γ(x+n) − Σ_(i<n) ln(x+i)
+/// ```
+///
+/// and only the small result is exponentiated. Doing the division on `Γ`
+/// itself would mean forming `exp` of a number near `n·ln n` — at order 128
+/// that is `e^554`, a rational whose repeated squaring in `exp_point` reaches
+/// millions of bits and whose `gcd` normalisation dominates everything else.
+/// In logarithms both sides stay small, the subtraction of exact rationals
+/// loses nothing, and `exp` is applied once to a number of size `ln Γ(x)`.
+///
+/// Each `ln` is monotone and `Γ` is increasing above `2`, so the two endpoint
+/// evaluations bound the whole box; the interval difference is wider than the
+/// true image (the two terms are correlated and interval subtraction cannot
+/// know that) but always contains it.
 ///
 /// # Errors
 ///
 /// [`DeclineReason::DomainError`] for an argument reaching `0` or below,
-/// [`DeclineReason::ResourceLimit`] when the shift would exceed its cap.
+/// [`DeclineReason::ResourceLimit`] when the shift would exceed its cap or a
+/// series kernel runs out of reduction budget.
 pub(crate) fn gamma_interval(x: &BigInterval, order: u32) -> Result<BigInterval, DeclineReason> {
     if !x.lo().is_positive() {
         return Err(DeclineReason::DomainError(
@@ -329,25 +343,34 @@ pub(crate) fn gamma_interval(x: &BigInterval, order: u32) -> Result<BigInterval,
     // even once the Bernoulli count is capped.
     let target = bi_u64(12 + u64::from(order));
     let shift = shift_count(x.lo(), &target)?;
-    let mut product = BigInterval::point(BigRational::one());
-    for i in 0..shift {
-        let step = BigInterval::new(x.lo() + bi_u64(u64::from(i)), x.hi() + bi_u64(u64::from(i)))
-            .ok_or(DeclineReason::ResourceLimit)?;
-        product = product.mul(&step);
-    }
-    let shifted_lo = x.lo() + bi_u64(u64::from(shift));
-    let shifted_hi = x.hi() + bi_u64(u64::from(shift));
-    let low = gamma_stirling_point(&shifted_lo, order).ok_or(DeclineReason::ResourceLimit)?;
-    let high = gamma_stirling_point(&shifted_hi, order).ok_or(DeclineReason::ResourceLimit)?;
-    // Γ is increasing on [2, ∞), and the shift target is well above 2.
-    let numerator = BigInterval::new(low.lo().clone(), high.hi().clone())
+    let low = ln_gamma_stirling(&(x.lo() + bi_u64(u64::from(shift))), order)
+        .ok_or(DeclineReason::ResourceLimit)?;
+    let high = ln_gamma_stirling(&(x.hi() + bi_u64(u64::from(shift))), order)
+        .ok_or(DeclineReason::ResourceLimit)?;
+    // ln Γ is increasing on [2, ∞), and the shift target is well above 2.
+    let mut total = BigInterval::new(low.lo().clone(), high.hi().clone())
         .ok_or(DeclineReason::PrecisionUnreachable)?;
-    numerator
-        .div(&product)
-        .ok_or(DeclineReason::DivisorContainsZero)
+    for i in 0..shift {
+        let offset = bi_u64(u64::from(i));
+        let factor_lo =
+            ln_point(&(x.lo() + &offset), order).ok_or(DeclineReason::ResourceLimit)?;
+        let factor_hi =
+            ln_point(&(x.hi() + &offset), order).ok_or(DeclineReason::ResourceLimit)?;
+        let factor = BigInterval::new(factor_lo.lo().clone(), factor_hi.hi().clone())
+            .ok_or(DeclineReason::PrecisionUnreachable)?;
+        total = total.sub(&factor);
+    }
+    let value_lo = exp_point(total.lo(), order).ok_or(DeclineReason::ResourceLimit)?;
+    let value_hi = exp_point(total.hi(), order).ok_or(DeclineReason::ResourceLimit)?;
+    BigInterval::new(value_lo.lo().clone(), value_hi.hi().clone())
+        .ok_or(DeclineReason::PrecisionUnreachable)
 }
 
 /// How many unit shifts take `x` to at least `target`, or a resource decline.
+///
+/// # Errors
+///
+/// [`DeclineReason::ResourceLimit`] past [`SHIFT_CAP`].
 fn shift_count(x: &BigRational, target: &BigRational) -> Result<u32, DeclineReason> {
     if x >= target {
         return Ok(0);
@@ -394,15 +417,20 @@ fn gamma_closed_form(x: &BigRational, order: u32) -> Option<BigInterval> {
     None
 }
 
-/// `Γ(y)` for a rational `y` at or above the Stirling shift target, by
-/// `exp(ln Γ y)`.
+/// `ln Γ(y)` for a rational `y > 0` by the Stirling series
 ///
-/// `ln Γ z = (z − 1/2)·ln z − z + (1/2)·ln 2π + Σ_(k=1)^m B_(2k)/(2k(2k−1)·z^(2k−1))`
+/// ```text
+/// ln Γ z = (z − 1/2)·ln z − z + (1/2)·ln 2π
+///          + Σ_(k=1)^m B_(2k)/(2k(2k−1)·z^(2k−1))
+/// ```
+///
 /// with the classical remainder bound
-/// `|R_m(z)| <= |B_(2m+2)|/((2m+2)(2m+1)·z^(2m+1))` for real `z > 0` — the
-/// Stirling series is enveloping there, so the remainder never exceeds the
-/// first omitted term (DLMF 5.11.3; Whittaker–Watson §12.33).
-fn gamma_stirling_point(y: &BigRational, order: u32) -> Option<BigInterval> {
+/// `|R_m(z)| <= |B_(2m+2)|/((2m+2)(2m+1)·z^(2m+1))`, which holds for every real
+/// `z > 0`: the series is enveloping there, so the remainder never exceeds the
+/// first omitted term and carries its sign (DLMF 5.11.3; Whittaker–Watson
+/// §12.33). The bound is sharp only for large `z`, which is why
+/// [`gamma_interval`] shifts the argument up before calling this.
+fn ln_gamma_stirling(y: &BigRational, order: u32) -> Option<BigInterval> {
     if !y.is_positive() {
         return None;
     }
@@ -421,18 +449,15 @@ fn gamma_stirling_point(y: &BigRational, order: u32) -> Option<BigInterval> {
         .add(&ln_two_pi.scale(&half));
     for k in 1..=terms {
         let index = 2 * u64::from(k);
-        let coefficient = &bernoulli[index as usize]
-            / (bi_u64(index) * bi_u64(index - 1) * ratpow(y, 2 * k - 1));
+        let coefficient =
+            &bernoulli[index as usize] / (bi_u64(index) * bi_u64(index - 1) * ratpow(y, 2 * k - 1));
         total = total.add(&BigInterval::point(coefficient));
     }
     let next = 2 * u64::from(terms) + 2;
     let error = (&bernoulli[next as usize]
         / (bi_u64(next) * bi_u64(next - 1) * ratpow(y, 2 * terms + 1)))
         .abs();
-    let bounded = BigInterval::new(total.lo() - &error, total.hi() + &error)?;
-    let low = exp_point(bounded.lo(), order)?;
-    let high = exp_point(bounded.hi(), order)?;
-    BigInterval::new(low.lo().clone(), high.hi().clone())
+    BigInterval::new(total.lo() - &error, total.hi() + &error)
 }
 
 // ---------------------------------------------------------------------------
@@ -1028,4 +1053,548 @@ pub fn rational_box(bounds: &[(Rational, Rational)]) -> Option<Vec<BigInterval>>
         .iter()
         .map(|(lo, hi)| BigInterval::new(from_rational(*lo), from_rational(*hi)))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::enclosure::{enclose, enclose_constant};
+    use crate::{CasExpr, UnaryFunc};
+
+    /// `n/d` as a `BigRational`, for readable test fixtures.
+    fn q(n: i64, d: i64) -> BigRational {
+        BigRational::new(BigInt::from(n), BigInt::from(d))
+    }
+
+    /// A decimal literal as an exact rational — used only to state a cited
+    /// digit string, never to compute.
+    fn decimal(text: &str) -> BigRational {
+        let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
+        let digits = format!("{whole}{fraction}");
+        let numerator: BigInt = digits.parse().expect("decimal digits");
+        BigRational::new(
+            numerator,
+            BigInt::from(10u32).pow(u32::try_from(fraction.len()).unwrap()),
+        )
+    }
+
+    /// The unit-circle / diagonal-line system `x² + y² − 1 = 0`, `y − x = 0`.
+    fn circle_and_line() -> PolySystem {
+        let circle = MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[2, 0])
+            .unwrap()
+            .with_term(Rational::integer(1), &[0, 2])
+            .unwrap()
+            .with_term(Rational::integer(-1), &[0, 0])
+            .unwrap();
+        let line = MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[0, 1])
+            .unwrap()
+            .with_term(Rational::integer(-1), &[1, 0])
+            .unwrap();
+        PolySystem::new(vec![circle, line]).expect("square system")
+    }
+
+    /// The box `[7/10, 18/25]²`, which brackets `(1/sqrt 2, 1/sqrt 2)`.
+    fn near_the_root() -> Vec<BigInterval> {
+        vec![
+            BigInterval::new(q(7, 10), q(18, 25)).unwrap(),
+            BigInterval::new(q(7, 10), q(18, 25)).unwrap(),
+        ]
+    }
+
+    /// A certified enclosure of the circle/line intersection at precision 60.
+    fn circle_certificate() -> (PolySystem, Vec<BigInterval>, SystemEnclosure) {
+        let system = circle_and_line();
+        let start = near_the_root();
+        let e = enclose_system(&system, &start, 60).expect("Krawczyk enclosure");
+        (system, start, e)
+    }
+
+    // -- The kernels -------------------------------------------------------
+
+    #[test]
+    fn nth_root_brackets_the_root_from_both_sides() {
+        for (value, degree) in [(2i64, 3u32), (5, 2), (7, 4), (1000, 5)] {
+            let p = BigRational::from(BigInt::from(value));
+            let bracket = nth_root_point(&p, degree, 64).expect("root");
+            // The bracket is honest exactly when lo^q <= p <= hi^q.
+            assert!(
+                ratpow(bracket.lo(), degree) <= p,
+                "lower end of {value}^(1/{degree}) is too big"
+            );
+            assert!(
+                ratpow(bracket.hi(), degree) >= p,
+                "upper end of {value}^(1/{degree}) is too small"
+            );
+        }
+    }
+
+    #[test]
+    fn nth_root_of_a_negative_declines() {
+        assert!(nth_root_point(&-BigRational::one(), 3, 16).is_none());
+        assert!(nth_root_point(&BigRational::one(), 0, 16).is_none());
+    }
+
+    #[test]
+    fn nth_root_at_degree_two_agrees_with_the_certified_sqrt() {
+        // root_2 and the parent module's `sqrt` are the same function by two
+        // spellings of one iteration; their brackets must overlap.
+        let two = bi(2);
+        let mine = nth_root_point(&two, 2, 64).expect("root_2");
+        let theirs = enclose_constant("sqrt2", 60).expect("sqrt 2");
+        assert!(mine.lo() <= theirs.interval.hi() && theirs.interval.lo() <= mine.hi());
+    }
+
+    #[test]
+    fn the_erf_monotone_index_is_where_the_terms_start_falling() {
+        // At magnitude 2 the terms fall from k = 2 (the quadratic 2k²−3k−1 is
+        // non-negative there and negative at k = 1), which is the hypothesis
+        // the alternating bound needs.
+        assert_eq!(erf_monotone_index(&bi(2)), Some(2));
+        assert_eq!(erf_monotone_index(&BigRational::zero()), Some(0));
+        // The index really does bound the ratio: check the terms fall from it.
+        for magnitude in [1i64, 2, 5, 8] {
+            let a = bi(magnitude);
+            let start = erf_monotone_index(&a).expect("index");
+            for k in start..start + 5 {
+                let kk = bi_u64(u64::from(k));
+                let ratio = (&a * &a) * (bi(2) * &kk + BigRational::one())
+                    / ((&kk + BigRational::one()) * (bi(2) * &kk + bi(3)));
+                assert!(
+                    ratio <= BigRational::one(),
+                    "terms rise at k = {k} for magnitude {magnitude}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn the_bessel_monotone_index_is_where_the_terms_start_falling() {
+        for (magnitude, order) in [(1i64, 0u32), (4, 0), (10, 2)] {
+            let a = bi(magnitude);
+            let start = bessel_monotone_index(&a, order).expect("index");
+            for k in start..start + 5 {
+                let ratio = (&a * &a)
+                    / bi(4)
+                    / (bi_u64(u64::from(k) + 1) * bi_u64(u64::from(k) + u64::from(order) + 1));
+                assert!(ratio <= BigRational::one(), "terms rise at k = {k}");
+            }
+        }
+    }
+
+    #[test]
+    fn bernoulli_table_matches_the_i128_reference() {
+        // `combinatorics::bernoulli` is `i128`-bounded; where it answers, this
+        // table must agree with it exactly.
+        let table = bernoulli_table(30);
+        let mut compared = 0usize;
+        for n in 0..=30u32 {
+            let Some(reference) = crate::combinatorics::bernoulli(n) else {
+                continue;
+            };
+            let lifted = from_rational(reference);
+            assert_eq!(
+                table[n as usize], lifted,
+                "B_{n} disagrees with the reference"
+            );
+            compared += 1;
+        }
+        assert!(
+            compared >= 10,
+            "the cross-check compared only {compared} Bernoulli numbers"
+        );
+    }
+
+    #[test]
+    fn the_stirling_route_agrees_with_the_exact_factorial() {
+        // Gamma(13) = 12! = 479001600. The closed form is not consulted here:
+        // `gamma_stirling_point` is called directly, so this measures the
+        // asymptotic series and its error bound against a known integer.
+        let value = gamma_stirling_point(&bi(13), 32).expect("Stirling at 13");
+        assert!(
+            value.contains(&bi(479_001_600)),
+            "Stirling gave {value} for Gamma(13)"
+        );
+        assert!(
+            value.width() < bi(1),
+            "the Stirling enclosure of Gamma(13) is too wide"
+        );
+    }
+
+    #[test]
+    fn the_stirling_error_bound_shrinks_with_the_order() {
+        let coarse = gamma_stirling_point(&bi(13), 4).expect("order 4").width();
+        let fine = gamma_stirling_point(&bi(13), 64).expect("order 64").width();
+        assert!(fine < coarse, "raising the order did not tighten the bound");
+    }
+
+    // -- Multivariate roots: the certificate --------------------------------
+
+    #[test]
+    fn the_circle_and_line_intersection_is_enclosed_and_verifies() {
+        let (system, start, e) = circle_certificate();
+        e.verify(&system, &start).expect("verifies");
+        // 1/sqrt(2) = 0.70710678118654752440084436210485...
+        let root = decimal("0.7071067811865475244008443621048");
+        for coordinate in &e.region {
+            assert!(
+                coordinate.contains(&root),
+                "the enclosure {coordinate} misses 1/sqrt(2)"
+            );
+            assert!(coordinate.width() <= pow2(-60));
+        }
+        assert!(
+            e.steps[e.existence_step].strict,
+            "the existence step does not claim a strict inclusion"
+        );
+    }
+
+    #[test]
+    fn a_box_with_no_root_declines() {
+        let system = circle_and_line();
+        let start = vec![
+            BigInterval::new(bi(2), bi(3)).unwrap(),
+            BigInterval::new(bi(2), bi(3)).unwrap(),
+        ];
+        let reason = enclose_system_with_reason(&system, &start, 20).unwrap_err();
+        assert_eq!(reason, DeclineReason::NotIsolating);
+        assert!(enclose_system(&system, &start, 20).is_none());
+    }
+
+    #[test]
+    fn a_singular_midpoint_jacobian_declines_rather_than_dividing_by_zero() {
+        // x² − y = 0, y² − x⁴ = 0 is degenerate along y = x²: the Jacobian
+        // determinant is 4x(y − x²)... which vanishes on the whole solution
+        // curve, so no Krawczyk inclusion can succeed and the module must
+        // decline rather than return something.
+        let first = MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[2, 0])
+            .unwrap()
+            .with_term(Rational::integer(-1), &[0, 1])
+            .unwrap();
+        let second = MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[0, 2])
+            .unwrap()
+            .with_term(Rational::integer(-1), &[4, 0])
+            .unwrap();
+        let system = PolySystem::new(vec![first, second]).expect("system");
+        let start = vec![
+            BigInterval::new(q(1, 2), bi(2)).unwrap(),
+            BigInterval::new(q(1, 4), bi(4)).unwrap(),
+        ];
+        let reason = enclose_system_with_reason(&system, &start, 20).unwrap_err();
+        assert!(
+            matches!(
+                reason,
+                DeclineReason::DomainError(_)
+                    | DeclineReason::NotIsolating
+                    | DeclineReason::PrecisionUnreachable
+                    | DeclineReason::ResourceLimit
+            ),
+            "expected a decline, got {reason:?}"
+        );
+    }
+
+    #[test]
+    fn a_box_of_the_wrong_length_declines() {
+        let system = circle_and_line();
+        let start = vec![BigInterval::new(bi(0), bi(1)).unwrap()];
+        let reason = enclose_system_with_reason(&system, &start, 20).unwrap_err();
+        assert!(matches!(reason, DeclineReason::DomainError(_)));
+    }
+
+    #[test]
+    fn a_non_square_system_is_not_constructible() {
+        let single = MultiPoly::zero(2)
+            .with_term(Rational::integer(1), &[1, 0])
+            .unwrap();
+        assert!(PolySystem::new(vec![single]).is_none());
+        assert!(PolySystem::new(Vec::new()).is_none());
+    }
+
+    #[test]
+    fn a_term_with_the_wrong_arity_is_rejected() {
+        assert!(
+            MultiPoly::zero(2)
+                .with_term(Rational::integer(1), &[1])
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn the_exact_inverse_is_an_inverse() {
+        let matrix = vec![vec![q(3, 2), bi(2)], vec![bi(-1), q(4, 5)]];
+        let inverse = invert(&matrix).expect("invertible");
+        for row in 0..2 {
+            for column in 0..2 {
+                let entry: BigRational = (0..2).map(|k| &matrix[row][k] * &inverse[k][column]).sum();
+                let expected = if row == column {
+                    BigRational::one()
+                } else {
+                    BigRational::zero()
+                };
+                assert_eq!(entry, expected);
+            }
+        }
+        assert!(invert(&[vec![bi(1), bi(2)], vec![bi(2), bi(4)]]).is_none());
+    }
+
+    // -- Forged system certificates: one guard, one death -------------------
+
+    #[test]
+    fn forged_empty_system_certificate_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        e.steps.clear();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("at least one Krawczyk step"),
+            "expected the shape guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_wrong_dimension_box_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        e.steps[0].domain.pop();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("wrong dimension"),
+            "expected the shape guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_preconditioner_shape_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        e.steps[0].preconditioner[0].pop();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("preconditioner that is not"),
+            "expected the shape guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_certificate_checked_against_a_different_starting_box_is_refused() {
+        let (system, _, e) = circle_certificate();
+        let elsewhere = vec![
+            BigInterval::new(bi(0), bi(1)).unwrap(),
+            BigInterval::new(bi(0), bi(1)).unwrap(),
+        ];
+        let message = e.verify(&system, &elsewhere).unwrap_err();
+        assert!(
+            message.contains("does not start from the given box"),
+            "expected the start guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_broken_chain_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        assert!(e.steps.len() >= 2, "this forgery needs a multi-step chain");
+        // Widen the second step's domain: it is still a valid enclosure of the
+        // root, so only the link to the previous step's output is broken.
+        e.steps[1].domain[0] = BigInterval::new(
+            e.steps[1].domain[0].lo() - BigRational::one(),
+            e.steps[1].domain[0].hi() + BigRational::one(),
+        )
+        .unwrap();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("does not start from the box step"),
+            "expected the chain guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_understated_krawczyk_image_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        // Claim a narrower operator value than the one that recomputes: this is
+        // exactly how a forger would fake a contraction.
+        e.steps[0].image[0] = BigInterval::point(e.steps[0].image[0].midpoint());
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("does not contain the recomputed one"),
+            "expected the image guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn forged_output_dropping_part_of_the_image_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        // Keep only the upper half of the first contraction: a root in the
+        // lower half would be silently lost.
+        let kept = e.steps[0].output[0].clone();
+        e.steps[0].output[0] = BigInterval::new(kept.midpoint(), kept.hi().clone()).unwrap();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("drops part of the Krawczyk image"),
+            "expected the contraction guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_forged_strict_inclusion_is_refused() {
+        // A one-step certificate over a box the operator does NOT contract into
+        // strictly, claiming that it does. Every other guard passes: the image
+        // and the output are the honest recomputed ones.
+        let system = circle_and_line();
+        let start = vec![
+            BigInterval::new(BigRational::zero(), bi(2)).unwrap(),
+            BigInterval::new(BigRational::zero(), bi(2)).unwrap(),
+        ];
+        let midpoint: Vec<BigRational> = start.iter().map(BigInterval::midpoint).collect();
+        let preconditioner = invert(&system.jacobian_at(&midpoint)).expect("invertible");
+        let image = krawczyk_image(&system, &start, &preconditioner).expect("image");
+        assert!(
+            !strictly_inside(&image, &start),
+            "this fixture needs a box the operator does not contract into"
+        );
+        let output = intersect(&image, &start).expect("nonempty");
+        let forged = SystemEnclosure {
+            region: output.clone(),
+            precision: 0,
+            steps: vec![KrawczykStep {
+                domain: start.clone(),
+                preconditioner,
+                image,
+                strict: true,
+                output,
+            }],
+            existence_step: 0,
+        };
+        let message = forged.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("strict inclusion the recomputed operator does not satisfy"),
+            "expected the existence guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn an_existence_step_that_claims_nothing_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        let step = e.existence_step;
+        e.steps[step].strict = false;
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("claims no strict inclusion"),
+            "expected the existence guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn an_out_of_range_existence_step_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        e.existence_step = e.steps.len();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("existence step is out of range"),
+            "expected the range guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_final_box_detached_from_the_chain_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        // Shift the headline box by a whole unit; every step stays honest, so
+        // only the final-box guard can see it.
+        e.region[0] = BigInterval::new(
+            e.region[0].lo() + BigRational::one(),
+            e.region[0].hi() + BigRational::one(),
+        )
+        .unwrap();
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("not the box the last step produced"),
+            "expected the final-box guard, got: {message}"
+        );
+    }
+
+    #[test]
+    fn a_box_too_wide_for_the_claimed_precision_is_refused() {
+        let (system, start, mut e) = circle_certificate();
+        // Widen the last output and the headline box together: the chain still
+        // contains K(X) intersect X and the two still agree, so only the width
+        // guard is left.
+        let last = e.steps.len() - 1;
+        for slot in 0..2 {
+            let widened = BigInterval::new(
+                e.steps[last].output[slot].lo() - BigRational::one(),
+                e.steps[last].output[slot].hi() + BigRational::one(),
+            )
+            .unwrap();
+            e.steps[last].output[slot] = widened.clone();
+            e.region[slot] = widened;
+        }
+        let message = e.verify(&system, &start).unwrap_err();
+        assert!(
+            message.contains("exceeds 2^-"),
+            "expected the width guard, got: {message}"
+        );
+    }
+
+    // -- Cost ---------------------------------------------------------------
+
+    #[test]
+    fn cost_table_wave_two() {
+        // Advisory only: one unpinned run on a shared host. Printed so the
+        // module docs can be re-measured with `--nocapture`.
+        if let Ok(load) = std::fs::read_to_string("/proc/loadavg") {
+            println!("host load at the start of the run: {}", load.trim());
+        }
+        let heads: [(&str, CasExpr); 4] = [
+            (
+                "2^(1/3)",
+                crate::enclosure::rational_power(CasExpr::int(2), 1, 3).expect("cube root"),
+            ),
+            (
+                "erf(1)",
+                CasExpr::Unary(UnaryFunc::Erf, Box::new(CasExpr::int(1))),
+            ),
+            (
+                "Gamma(1/3)",
+                CasExpr::Unary(UnaryFunc::Gamma, Box::new(CasExpr::rat(1, 3))),
+            ),
+            (
+                "J_0(1)",
+                CasExpr::Unary(UnaryFunc::BesselJ(0), Box::new(CasExpr::int(1))),
+            ),
+        ];
+        for (name, expr) in &heads {
+            for precision in [10u32, 50, 100, 200] {
+                let start = std::time::Instant::now();
+                let Some(e) = enclose(expr, &[], precision) else {
+                    println!("{name:>12} precision {precision:>3}: declined");
+                    continue;
+                };
+                let produced = start.elapsed();
+                let start = std::time::Instant::now();
+                e.verify(expr, &[]).expect("verifies");
+                let verified = start.elapsed();
+                println!(
+                    "{name:>12} precision {precision:>3}: order {:>4}  produce {produced:?}  verify {verified:?}",
+                    e.evidence.last().expect("a step").order
+                );
+            }
+        }
+        let system = circle_and_line();
+        let start_box = near_the_root();
+        for precision in [10u32, 50, 100, 200] {
+            let start = std::time::Instant::now();
+            let Some(e) = enclose_system(&system, &start_box, precision) else {
+                println!("{:>12} precision {precision:>3}: declined", "krawczyk");
+                continue;
+            };
+            let produced = start.elapsed();
+            let start = std::time::Instant::now();
+            e.verify(&system, &start_box).expect("verifies");
+            let verified = start.elapsed();
+            println!(
+                "{:>12} precision {precision:>3}: {:>3} steps  produce {produced:?}  verify {verified:?}",
+                "krawczyk",
+                e.steps.len()
+            );
+        }
+    }
 }
