@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential kernel-conformance lean-divergences declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls lean-creal-library-slice
 
 fmt:
     cargo fmt --all --check
@@ -1254,6 +1254,9 @@ kernel-suite-partition:
 # the machine is this repository's signature defect.
 lean-gate:
     ./scripts/tests/test-lean-toolchain-policy.sh
+    # The install script's pin regex (ADR-1660): accepts vX.Y.Z and vX.Y.Z-rcN,
+    # refuses malformed values; no download.
+    ./scripts/tests/test-lean-toolchain-pin-regex.sh
     ./scripts/check-lean-gate.sh
     # ADR-1664's measurement: whether an ORIGINATED theorem inherits an
     # IMPORTED one's axioms. It does, transitively and per PROOF TERM -- two
@@ -2532,6 +2535,30 @@ lean-adapter:
 # which is why the script deletes the Tests build products first.
 lean-tactic:
     bash scripts/check-lean-tactic.sh
+
+# lean-creal-library (Next Ten item 3, ADR-1675): the constructed reals as a
+# Lake package a third party can `import`. Three things happen in order and
+# each can fail on its own:
+#
+#   1. the package is REGENERATED from the live kernel and diffed against
+#      what is committed -- a generated library that has drifted from the
+#      kernel is a claim ABOUT the mathematics, not a projection OF it;
+#   2. `lake build` with the PINNED toolchain, so Lean's own kernel re-checks
+#      every term;
+#   3. `#print axioms` over every result the fact ledger credits to `creal`,
+#      with a positive control that MUST report an axiom -- without it, a
+#      `#print axioms` that had stopped traversing would report everything
+#      clean and the audit could not fail.
+#
+# Minutes, not seconds. `scripts/check-lean-creal-library.sh --slice` is the
+# cheap subset (steps 1 and the counts, no `lake build`).
+lean-creal-library:
+    bash scripts/check-lean-creal-library.sh
+
+# The slice `just check` runs: drift, pin and counts, no `lake build`. The full
+# recipe above is minutes to an hour and is run deliberately, not per check.
+lean-creal-library-slice:
+    bash scripts/check-lean-creal-library.sh --slice
 
 # declaration-spec (L3 phase D1, ADR-0965): the declarative declaration-spec
 # pilot. Builds examples/declaration_spec_pilot (release -- debug SIGABRTs on

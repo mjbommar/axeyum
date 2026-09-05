@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "id": "F:top-separated-balls-share-no-real-point",
+  "title": "Two balls with strictly separated brackets share no point of the real line",
+  "statement": "If the upper bracket of one basic ball is strictly below the lower bracket of another -- ofRat (q + 1/(k+1)) < ofRat (r - 1/(m+1)) -- then no real number lies in both. This is the geometric half of Hausdorff separation for the open-ball frame of R, and it is deliberately recorded as the half that IS proved. Four steps and no arithmetic: CReal.le_trans through the shared point turns the two memberships into ofRat (r - 1/(m+1)) <= ofRat (q + 1/(k+1)), CReal.lt_of_le_of_lt composes that against the separation hypothesis, and CReal.lt_irrefl closes it. The missing half is index selection rather than geometry: producing the separated pair from CReal.Apart x y means eliminating the Or, reading CReal.lt's rational gap, applying the Archimedean property and discharging two Rat inequalities. ADR-1643 sizes that at 250-400 lines of term building against lemmas that all exist, and this fact is written so a reader can see which half is which rather than inferring a stronger claim.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Top.ball_separated : ((x0 : Rat) -> ((x1 : Rat) -> ((x2 : AxNat) -> ((x3 : AxNat) -> ((x4 : CReal.lt (CReal.ofRat (Rat.add x0 (Rat.natDivSucc (AxNat.succ AxNat.zero) x2))) (CReal.ofRat (Rat.sub x1 (Rat.natDivSucc (AxNat.succ AxNat.zero) x3)))) -> ((x5 : CReal) -> ((x6 : Top.MemBall x5 x0 x2) -> ((x7 : Top.MemBall x5 x1 x3) -> False))))))))",
+    "fragment": "Top",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7"
+    ],
+    "kernel_theorem": "Top.ball_separated"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:top-open-ball-frame-covers-the-real-line"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Top.ball_separated",
+      "kind": "kernel-term",
+      "supports": "Top.ball_separated is admitted by the trusted kernel gate with the type recorded in formal.statement, and Kernel::axiom_footprint reports 0 assumed names.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, which re-derives the type from the proof term)",
+        "top_frame_theorem_inventory, filtered to this declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example top_frame_theorem_inventory -- Top.ball_separated | grep -cE '^theorem[[:space:]]+Top\\.ball_separated[[:space:]]+8[[:space:]]+0[[:space:]]'",
+      "checker_seconds": 70,
+      "kernel_declaration": "Top.ball_separated",
+      "notes": "The exit status depends on the finding three times over. top_frame_theorem_inventory exits NON-ZERO when the filter matches nothing (asking for a declaration and finding none is a failure, not an empty report) AND when any printed row carries a nonempty axiom footprint. grep -c then exits 1 printing 0 unless the anchored row is present with the recorded binder count and a footprint column of exactly 0. Anchored with [[:space:]], never a backslash-t: in a scripted (GNU) grep that is a literal t, and 68 checkers in this ledger were wrong for exactly that reason. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this binary builds creal underneath Top, which overflows the default debug thread stack. Definition rows need --defs and are off by default, so a caller who forgets that reads a false ABSENT rather than a wrong type."
+    },
+    {
+      "id": "suite-ball_separation_needs_the_hypothesis_in_the_right_direction",
+      "kind": "exhaustive-enumeration",
+      "supports": "The separation hypothesis is load-bearing and its DIRECTION is what carries the proof: handed the reversed inequality -- ofRat (r - 1/(m+1)) < ofRat (q + 1/(k+1)), which is true precisely when the two balls DO overlap -- the same proof term is refused by Kernel::add_declaration, while the forward direction is accepted at the same call site. Without this the theorem could be vacuously true of a hypothesis nothing satisfies.",
+      "check_status": "checked",
+      "checkers": [
+        "top_frame::top_frame_tests, run against a freshly built kernel environment"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- top_frame::top_frame_tests::ball_separation_needs_the_hypothesis_in_the_right_direction --test-threads=4 2>&1 | grep -cE '^test result: ok\\. 1 passed'",
+      "checker_seconds": 75,
+      "notes": "The `1 passed` is load-bearing: `cargo test -- <filter>` runs ZERO tests and exits 0 when the filter matches nothing, so a rename would turn this checker green while checking nothing. Requiring the exact count is what makes the exit status depend on the finding. --release is mandatory (the creal prelude overflows the debug thread stack); --test-threads=4 keeps the shared build off the OOM ceiling. Mutation MUT-E (2026-09-05) makes the control ignore its `reversed` flag; it kills exactly this one test of the eleven."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_top_frame_prelude (crates/axeyum-lean-kernel/src/top_frame.rs)",
+    "source": "Lane `frame-carrier`, roadmap W2-21, executing ADR-1602's pointfree recommendation and decided in ADR-1643 (docs/research/09-decisions/adr-1643-the-frame-carrier-is-nat-indexed-and-the-ball-index-is-not-a-nat.md). formal.statement is Kernel::render_lean of the declaration's type, taken verbatim from the unfiltered emit of `top_frame_theorem_inventory --defs`; axiom_footprint is that tool's footprint column, which reads Kernel::axiom_footprint."
+  },
+  "notes": "The conclusion is False, so the reader's first question should be whether the hypotheses are satisfiable at all -- a theorem with an unsatisfiable premise is worthless and an empty axiom footprint would not notice. Top.ball_mem_self (a ball contains its own centre) is the non-vacuity witness for Top.MemBall, and F:top-open-ball-frame-covers-the-real-line is the witness that the balls cover R, which is why it is the depends_on."
+}

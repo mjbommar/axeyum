@@ -178,7 +178,7 @@ pub(super) fn list(p: &ListPrelude) -> Fields {
     }
 }
 
-/// The `NatPrelude` field table (1410 names,
+/// The `NatPrelude` field table (1424 names,
 /// 0 name lists, 1 sub-packages).
 ///
 /// 113 of the names come from ADR-1512 per-module registries and
@@ -1710,6 +1710,35 @@ pub(super) fn nat(p: &NatPrelude) -> Fields {
             (
                 "hall_exists_is_matching_singleton",
                 p.hall_exists_is_matching_singleton,
+            ),
+            ("finset_all_below_congr", p.finset_all_below_congr),
+            ("finset_subset_fixed", p.finset_subset_fixed),
+            ("finset_subset_fixed_of_mem", p.finset_subset_fixed_of_mem),
+            ("finset_mem_of_subset_fixed", p.finset_mem_of_subset_fixed),
+            ("finset_subset_fixed_congr", p.finset_subset_fixed_congr),
+            (
+                "finset_card_union_of_disjoint",
+                p.finset_card_union_of_disjoint,
+            ),
+            ("hall_condition_subset", p.hall_condition_subset),
+            (
+                "hall_mem_union_over_union_of_vanishing",
+                p.hall_mem_union_over_union_of_vanishing,
+            ),
+            (
+                "hall_condition_sdiff_of_critical",
+                p.hall_condition_sdiff_of_critical,
+            ),
+            (
+                "hall_condition_sdiff_singleton_of_strict",
+                p.hall_condition_sdiff_singleton_of_strict,
+            ),
+            ("finset_restrict", p.finset_restrict),
+            ("finset_bound_restrict", p.finset_bound_restrict),
+            ("finset_mem_b_restrict", p.finset_mem_b_restrict),
+            (
+                "finset_mem_b_union_sdiff_self",
+                p.finset_mem_b_union_sdiff_self,
             ),
             ("strong_induction", p.strong_induction),
             ("strong_induction_eq", p.strong_induction_eq),
@@ -4415,10 +4444,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (150 names,
+/// The `ComplexPrelude` field table (168 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 21 of the names come from ADR-1512 per-module registries and
+/// 39 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4611,6 +4640,24 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 "poly.factor_quotient_succ_eq",
                 p.poly.factor_quotient_succ_eq,
             ),
+            ("deriv.abs_zero", p.deriv.abs_zero),
+            ("deriv.in_disc", p.deriv.in_disc),
+            ("deriv.has_derivative_on", p.deriv.has_derivative_on),
+            ("deriv.hd_mk", p.deriv.hd_mk),
+            ("deriv.hd_rec", p.deriv.hd_rec),
+            ("deriv.hd_modulus", p.deriv.hd_modulus),
+            ("deriv.hd_spec", p.deriv.hd_spec),
+            ("deriv.has_derivative_const", p.deriv.has_derivative_const),
+            ("deriv.has_derivative_id", p.deriv.has_derivative_id),
+            ("deriv.has_derivative_neg", p.deriv.has_derivative_neg),
+            ("deriv.has_derivative_add", p.deriv.has_derivative_add),
+            ("deriv.holomorphic_on", p.deriv.holomorphic_on),
+            ("deriv.holomorphic_deriv", p.deriv.holomorphic_deriv),
+            ("deriv.holomorphic_spec", p.deriv.holomorphic_spec),
+            ("deriv.holomorphic_const", p.deriv.holomorphic_const),
+            ("deriv.holomorphic_id", p.deriv.holomorphic_id),
+            ("deriv.holomorphic_neg", p.deriv.holomorphic_neg),
+            ("deriv.holomorphic_add", p.deriv.holomorphic_add),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),

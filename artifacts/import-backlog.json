@@ -7,7 +7,7 @@
   ],
   "description": "Facts with epistemic_status=open and external_status=proved: settled in the wider literature, not yet established here (ADR-0601 SS3). Never edit by hand -- regenerate with `python3 scripts/gen-import-backlog.py`.",
   "ordering": "dependency_ready rows before blocked ones; within that, curriculum_node-mapped rows before unmapped ones, ordered by (curriculum_layer, curriculum_node); ties (and the whole unmapped population) broken by fact id ascending. See docs/autogenesis/263-import-backlog-artifact.md.",
-  "count": 252,
+  "count": 255,
   "rows": [
     {
       "id": "F:fol-validity-undecidable",
@@ -44,6 +44,19 @@
         "F:fo-consistency",
         "F:fo-soundness",
         "F:fo-substitution-lemma"
+      ],
+      "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:fo-formula-decoder",
+      "statement": "FO.Formula.decode : Nat -> FO.Formula inverts the Goedel numbering: decode (code p) = p for every formula p. THE FUNCTION IS BUILT AND COMPUTES; THE THEOREM IS NOT PROVED. fo_decode.rs declares FO.Term.decodeAux, FO.Term.decode, FO.Formula.decodeAux and FO.Formula.decode (fuel-recursive, with a nine-way tag tree), and eleven module tests check the round trip AT CONCRETE CODES -- every FO.Term constructor and every FO.Formula constructor, by Kernel::def_eq. Those are instances, not a statement about all formulas. What is missing is the universally quantified theorem, and after building the decoder its cost is no longer an estimate: (1) size functions plus a fuel-additive round trip stated as 'forall t f, decodeAux (Nat.add f (size t)) (code t) = t' -- fuel on the LEFT of the add, so Nat.add f (Nat.succ x) iota-reduces and the recursive call lands on exactly the induction hypothesis's fuel, leaving only Nat.add_assoc and Nat.add_comm for the binary cases, with no Nat.le, no subtraction and no max; (2) one transport per tag, because FO.Code.fst (code (and_ p q)) is NOT definitionally 4 -- FO.Code.fst unfolds to Nat.Pair.fst (unpair ...) and unpair of a symbolic code is stuck, so each of the nine minors must rewrite along FO.Code.fst_pair and snd_pair before the tag tree iota-reduces; (3) size p <= code p, needed only to justify the self-fuelled wrapper decode n := decodeAux n n. Item (2) was invisible before the decoder existed.",
+      "depends_on": [
+        "F:fo-code-pairing-round-trip",
+        "F:fo-formula-code-injective",
+        "F:fo-term-code-injective"
       ],
       "dependency_ready": true,
       "curriculum_node": null,
@@ -2167,6 +2180,33 @@
       "statement": "The proposition declared as `Nat.zero_of_testBit_eq_false` in the pinned Mathlib v4.30 source.",
       "depends_on": [],
       "dependency_ready": true,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:fo-diagonal-lemma",
+      "statement": "For every formula psi with one free variable there is a sentence delta such that the theory proves delta if and only if it proves psi applied to the numeral of delta's own Goedel number. NOT ESTABLISHED HERE. The Goedel numbering delta |-> code delta and its injectivity ARE established (F:fo-formula-code-injective); what is missing is everything that turns a numbering into a self-reference. Two prerequisites, in order of how binding they are. First and binding: the diagonalization function d, sending the code of psi to the code of psi applied to the numeral of its own code, must be a function Nat -> Nat, and defining it means decoding -- which is the open fact F:fo-formula-decoder. Second, and only reachable after that: the biconditional is a claim about FO.Provable, and the calculus as landed by ADR-1636 has eqf_refl as its ONLY equality rule, no Leibniz rule, so a proof that substitutes one numeral for another under a formula is not expressible in it.",
+      "depends_on": [
+        "F:fo-formula-code-injective",
+        "F:fo-formula-decoder",
+        "F:fo-soundness"
+      ],
+      "dependency_ready": false,
+      "curriculum_node": null,
+      "curriculum_layer": null,
+      "curriculum_title": null
+    },
+    {
+      "id": "F:fo-first-incompleteness",
+      "statement": "If a theory is consistent and REPRESENTS ITS OWN PROVABILITY -- that is, there is a formula Prov with one free variable satisfying the two derivability conditions relating Prov to actual derivability -- then the Goedel sentence built by the diagonal lemma from the negation of Prov is not derivable in it. NOT ESTABLISHED HERE, and deliberately stated in the form that takes representability as an explicit HYPOTHESIS rather than proving it: representability of provability is the part of Goedel I that is a construction over the arithmetization, and it is out of reach until the arithmetization can decode. Consistency of the calculus with an empty context IS established (F:fo-consistency), and the numbering the Goedel sentence would be built from IS established (F:fo-formula-code-injective); what is missing is the diagonal lemma (F:fo-diagonal-lemma) and, under it, the decoder (F:fo-formula-decoder).",
+      "depends_on": [
+        "F:fo-consistency",
+        "F:fo-diagonal-lemma",
+        "F:fo-formula-code-injective",
+        "F:fo-formula-decoder"
+      ],
+      "dependency_ready": false,
       "curriculum_node": null,
       "curriculum_layer": null,
       "curriculum_title": null

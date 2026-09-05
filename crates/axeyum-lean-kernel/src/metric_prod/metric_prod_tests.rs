@@ -49,7 +49,7 @@ fn metric_prod_prelude_builds() {
 #[test]
 fn every_metric_prod_declaration_is_present_and_derived() {
     let (kernel, _mp, names) = built();
-    let named = names.all();
+    let named = names.owned_names();
     assert_eq!(
         named.len(),
         12,
@@ -73,7 +73,7 @@ fn every_metric_prod_declaration_is_present_and_derived() {
 #[test]
 fn every_metric_prod_declaration_is_axiom_free() {
     let (kernel, _mp, names) = built();
-    for (label, name) in names.all() {
+    for (label, name) in names.owned_names() {
         let footprint = kernel.axiom_footprint(name);
         assert!(
             footprint.is_empty(),
@@ -169,12 +169,12 @@ fn prod_dist_self_reduces_at_a_concrete_point() {
     );
 }
 
-/// Sanity: `names.all()`'s labels are unique (a copy/paste NameId collision
+/// Sanity: `names.owned_names()`'s labels are unique (a copy/paste NameId collision
 /// would otherwise hide a missing declaration behind a duplicate one).
 #[test]
 fn metric_prod_names_are_pairwise_distinct() {
     let (_kernel, _mp, names) = built();
-    let all = names.all();
+    let all = names.owned_names();
     let mut seen: Vec<NameId> = Vec::new();
     for (label, name) in all {
         assert!(

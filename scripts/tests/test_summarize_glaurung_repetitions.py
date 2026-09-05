@@ -179,6 +179,56 @@ class RepetitionSummaryTests(unittest.TestCase):
             ):
                 MODULE.summarize([first, second])
 
+    def test_accepts_the_native_engine_determinism_block(self) -> None:
+        # ADR-1703: the native CDCL core has no seeds to pin, so its block names
+        # the engine and states that there is no randomness. The old adapter
+        # shape must keep validating too -- artifacts recorded before the switch
+        # are still accurate descriptions of their own run.
+        native = {
+            "engine": "axeyum-native-cdcl-v1",
+            "option_source": "in-tree constants in crates/axeyum-cnf/src/proof_sat.rs",
+            "randomness": (
+                "none: no random seed, no random branching, "
+                "no randomized initial activity"
+            ),
+            "restart_schedule": "Luby (EMA-glue implemented and selectable, off by default)",
+        }
+        MODULE.validate_sat_bv_determinism(native, "config.determinism.sat_bv")
+
+        legacy = {
+            "adapter": "rustsat-batsat",
+            "option_source": (
+                "batsat::SolverOpts::default from the Cargo.lock-pinned dependency"
+            ),
+            "random_seed": 91_648_253.0,
+            "random_var_freq": 0.0,
+            "random_polarity": False,
+            "random_initial_activity": False,
+        }
+        MODULE.validate_sat_bv_determinism(legacy, "config.determinism.sat_bv")
+
+    def test_rejects_an_unknown_or_drifted_engine_determinism_block(self) -> None:
+        # Negative controls: the accepting branch above is only evidence if the
+        # checker can still reject. A block naming neither engine, and a native
+        # block whose engine id drifted, must both fail.
+        with self.assertRaisesRegex(MODULE.SummaryError, "names neither"):
+            MODULE.validate_sat_bv_determinism({"solver": "kissat"}, "loc")
+        with self.assertRaisesRegex(MODULE.SummaryError, "engine must be"):
+            MODULE.validate_sat_bv_determinism(
+                {"engine": "axeyum-native-cdcl-v2"}, "loc"
+            )
+        with self.assertRaisesRegex(MODULE.SummaryError, "randomness"):
+            MODULE.validate_sat_bv_determinism(
+                {
+                    "engine": "axeyum-native-cdcl-v1",
+                    "option_source": (
+                        "in-tree constants in crates/axeyum-cnf/src/proof_sat.rs"
+                    ),
+                    "randomness": "seeded",
+                },
+                "loc",
+            )
+
     def test_rejects_missing_or_decorative_resource_profile(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

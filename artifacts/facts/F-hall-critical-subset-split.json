@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "F:hall-critical-subset-split",
+  "title": "Hall's condition survives on the complement of a critical subset",
+  "statement": "Let a family of finite sets be indexed by a finite set s satisfying Hall's condition, and let t be a subset of s whose neighbourhood is no larger than t itself. Then the complement of t in s satisfies Hall's condition against the family with t's neighbourhood deleted from every member.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Nat.Hall.hallCondition_sdiff_of_critical : ((x0 : AxNat.Finset) -> ((x1 : AxNat.Finset) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : AxNat.Hall.HallCondition x0 x2) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Bool (AxNat.Finset.memB x1 x4) Bool.true) -> Eq.{1} Bool (AxNat.Finset.memB x0 x4) Bool.true))) -> ((x5 : AxNat.le (AxNat.Finset.card (AxNat.Hall.unionOver x2 x1)) (AxNat.Finset.card x1)) -> AxNat.Hall.HallCondition (AxNat.Finset.sdiff x0 x1) (fun (x6 : AxNat) => AxNat.Finset.sdiff (x2 x6) (AxNat.Hall.unionOver x2 x1))))))))",
+    "fragment": "Nat",
+    "kernel_theorem": "Nat.Hall.hallCondition_sdiff_of_critical"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [
+    "F:hall-union-under-family-deletion",
+    "F:hall-matching-union-disjoint-images",
+    "F:nat-add-le-add-left",
+    "F:nat-le-of-add-le-add-right",
+    "F:nat-le-trans"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-Nat.Hall.hallCondition_sdiff_of_critical",
+      "kind": "kernel-term",
+      "supports": "theorem Nat.Hall.hallCondition_sdiff_of_critical : ((x0 : AxNat.Finset) -> ((x1 : AxNat.Finset) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : AxNat.Hall.HallCondition x0 x2) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Bool (AxNat.Finset.memB x1 x4) Bool.true) -> Eq.{1} Bool (AxNat.Finset.memB x0 x4) Bool.true))) -> ((x5 : AxNat.le (AxNat.Finset.card (AxNat.Hall.unionOver x2 x1)) (AxNat.Finset.card x1)) -> AxNat.Hall.HallCondition (AxNat.Finset.sdiff x0 x1) (fun (x6 : AxNat) => AxNat.Finset.sdiff (x2 x6) (AxNat.Hall.unionOver x2 x1))))))))",
+      "check_status": "checked",
+      "checker_command": "test \"$(cargo run -q -p axeyum-lean-kernel --release --example nat_theorem_inventory -- Nat.Hall.hallCondition_sdiff_of_critical 2>/dev/null | grep -xFc 'Nat.Hall.hallCondition_sdiff_of_critical\t9\t((x0 : AxNat.Finset) -> ((x1 : AxNat.Finset) -> ((x2 : ((x2 : AxNat) -> AxNat.Finset)) -> ((x3 : AxNat.Hall.HallCondition x0 x2) -> ((x4 : ((x4 : AxNat) -> ((x5 : Eq.{1} Bool (AxNat.Finset.memB x1 x4) Bool.true) -> Eq.{1} Bool (AxNat.Finset.memB x0 x4) Bool.true))) -> ((x5 : AxNat.le (AxNat.Finset.card (AxNat.Hall.unionOver x2 x1)) (AxNat.Finset.card x1)) -> AxNat.Hall.HallCondition (AxNat.Finset.sdiff x0 x1) (fun (x6 : AxNat) => AxNat.Finset.sdiff (x2 x6) (AxNat.Hall.unionOver x2 x1))))))))')\" -ge 1",
+      "notes": "Admitted through `Kernel::add_declaration`, which re-derives the type from the proof term; the checker greps the inventory's exact row. Mutation-verified: exchanging `t` and `sdiff s t` in the conclusion (and its matching binder) makes the kernel reject with `TypeMismatch` and kills all 11 tests in `nat_prelude::hall_theorem_tests` (measured 2026-09-05, exit 101)."
+    },
+    {
+      "id": "footprint-Nat.Hall.hallCondition_sdiff_of_critical",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the Nat prelude's trusted surface is empty",
+      "check_status": "checked",
+      "checker_command": "cargo run -q -p axeyum-lean-kernel --release --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`nat_axiom_inventory` reports `nat: axiom=0 opaque=0 quotient=0 total_trusted=0`, and this theorem is declared inside `build_nat_prelude`, so it cannot rest on a trusted declaration the Nat environment does not contain. Demonstrated to discriminate: `--require-axiom-free axreal` against the SAME kernel build exits 1 (`axreal trusted surface = 30, expected 0`), so the flag is not satisfied unconditionally."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane hall-theorem (ADR-1644): proved in `crates/axeyum-lean-kernel/src/nat_prelude/hall_theorem.rs` and admitted through `Kernel::add_declaration`",
+    "source": "proved in-tree; no import, no replay"
+  },
+  "notes": "THE CRITICAL BRANCH of Hall's inductive step. Once a subset is critical the rest of the index set still satisfies Hall's condition against the deleted family, which is what lets an induction match the two parts separately and glue them -- nothing the second matching picks can collide with the first, because everything the first could use has been deleted. The counting chain is: card w + card t = card (w union t) <= card (unionOver nb (w union t)) <= card (unionOver nb' (w union t)) + card u = card (unionOver nb' w) + card u <= card (unionOver nb' w) + card t, then cancel. Only the fourth step is new (`Nat.Hall.memB_unionOver_union_of_vanishing` through `Nat.Finset.card_congr_of_memB`); it is where the two unions' differing STORED BOUNDS would otherwise stop the chain. Only ONE direction of criticality is a hypothesis -- the other is Hall's condition at t and is never used -- so a caller decides the branch with a `Le` test rather than an equality test, which matters because the search predicate has to be Bool-valued. ADR-1644. Hall's marriage theorem itself is NOT established; see the ADR for what remains."
+}

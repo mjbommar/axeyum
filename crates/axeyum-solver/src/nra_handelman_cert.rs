@@ -497,7 +497,10 @@ enum GeneratorKind {
 /// this necessary).
 fn round_up_to_grid(value: Rational, grid: u32) -> Option<Rational> {
     let scale = 10_i128.checked_pow(grid)?;
-    let (num, den) = (value.numerator(), value.denominator());
+    // `checked_*`, not the panicking accessors: since ADR-1702 `value` can be a
+    // promoted rational outside `i128`, and declining here is exactly the
+    // behaviour this route had before promotion existed.
+    let (num, den) = (value.checked_numerator()?, value.checked_denominator()?);
     let whole = num.div_euclid(den);
     let remainder = num.rem_euclid(den); // 0 <= remainder < den
     let scaled = remainder.checked_mul(scale)?;
@@ -522,7 +525,12 @@ fn relaxations_at_grid(atoms: &[(NamedPoly, AtomSign)], grid: u32) -> Option<Vec
             continue;
         };
         let constant = nonnegative.constant_term();
-        if constant.denominator() <= RELAXATION_DENOMINATOR_THRESHOLD {
+        // A denominator that does not even fit `i128` (ADR-1702 promotion) is
+        // certainly beyond the threshold, so it needs relaxing.
+        if constant
+            .checked_denominator()
+            .is_some_and(|den| den <= RELAXATION_DENOMINATOR_THRESHOLD)
+        {
             out.push(zero);
             continue;
         }
@@ -745,7 +753,13 @@ fn assemble_case(
                     return None;
                 }
                 products.push(HandelmanProduct {
-                    coefficient: (multiplier.numerator(), multiplier.denominator()),
+                    // The wire certificate carries `i128` pairs, so a promoted
+                    // multiplier (ADR-1702) cannot be serialized: decline, which
+                    // is what this route did before promotion existed.
+                    coefficient: (
+                        multiplier.checked_numerator()?,
+                        multiplier.checked_denominator()?,
+                    ),
                     factors: factors.clone(),
                 });
             }
@@ -766,20 +780,31 @@ fn assemble_case(
         .filter(|(_, poly)| !poly.is_zero())
         .map(|(atom, poly)| (poly.to_wire(), atom))
         .collect();
-    Some(HandelmanCase {
-        atoms: atoms
-            .iter()
-            .zip(relaxations)
-            .map(|((poly, sign), relaxation)| HandelmanAtom {
+    // Same wire-format constraint as `coefficient` above: a promoted relaxation
+    // or residual cannot be written as an `i128` pair, so the case declines.
+    let wire_atoms: Vec<HandelmanAtom> = atoms
+        .iter()
+        .zip(relaxations)
+        .map(|((poly, sign), relaxation)| {
+            Some(HandelmanAtom {
                 poly: poly.to_wire(),
                 sign: *sign,
-                relaxation: (relaxation.numerator(), relaxation.denominator()),
+                relaxation: (
+                    relaxation.checked_numerator()?,
+                    relaxation.checked_denominator()?,
+                ),
             })
-            .collect(),
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some(HandelmanCase {
+        atoms: wire_atoms,
         case_atom,
         products,
         equalities,
-        residual: (residual.numerator(), residual.denominator()),
+        residual: (
+            residual.checked_numerator()?,
+            residual.checked_denominator()?,
+        ),
     })
 }
 

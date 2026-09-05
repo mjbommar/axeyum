@@ -492,8 +492,7 @@ mod tests {
     #[test]
     fn sat_result_and_drat_are_preserved_after_simplification() {
         use crate::{
-            ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof,
-            solve_with_rustsat_batsat,
+            ProofSolveOutcome, SatResult, check_drat, solve_with_drat_proof, solve_with_native_core,
         };
         // UNSAT: (a) ∧ (¬a) ∧ (a ∨ b) — the last clause is subsumed by (a).
         let f = formula(2, &[&[p(0)], &[n(0)], &[p(0), p(1)]]);
@@ -506,11 +505,11 @@ mod tests {
 
         // Both formulas are still UNSAT (satisfiability preserved).
         assert!(matches!(
-            solve_with_rustsat_batsat(&f).unwrap(),
+            solve_with_native_core(&f).unwrap(),
             SatResult::Unsat(_)
         ));
         assert!(matches!(
-            solve_with_rustsat_batsat(&out).unwrap(),
+            solve_with_native_core(&out).unwrap(),
             SatResult::Unsat(_)
         ));
 

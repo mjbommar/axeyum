@@ -30,6 +30,14 @@
 //! Not part of the solve path — a one-shot measurement tool for the SAT-core
 //! priority gate (b) in
 //! `docs/research/08-planning/benchmarking-and-performance-methodology.md`.
+//!
+//! # Requires `--features batsat-reference`
+//!
+//! ADR-1703 retired the `rustsat-batsat` adapter as an engine and put it behind
+//! a non-default feature, so this example carries
+//! `required-features = ["batsat-reference"]` in `Cargo.toml`. Without the
+//! feature `cargo check --all-targets` **skips** this target rather than
+//! failing on an unresolved import; with it, the example builds unchanged.
 #![allow(clippy::doc_markdown)]
 
 use std::fs;

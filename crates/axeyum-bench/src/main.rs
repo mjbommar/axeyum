@@ -42,7 +42,6 @@ mod run {
     use std::process::{Command, ExitCode};
     use std::time::{Duration, Instant};
 
-    use axeyum_cnf::rustsat_batsat_determinism;
     use axeyum_ir::{Op, TermArena, TermId, TermNode, TermStats, Value, eval};
     use axeyum_query::{Query, QueryPlan, StructuralCacheKey};
     use axeyum_rewrite::{
@@ -69,6 +68,11 @@ mod run {
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
+    /// The SAT engine's identity, recorded in the determinism block and folded
+    /// into the config hash. ADR-1703 made the in-tree native CDCL core the
+    /// engine on every path; this string replaces the retired adapter's
+    /// randomness options, which is why the config hash changes at that commit.
+    const NATIVE_CDCL_ENGINE_ID: &str = "axeyum-native-cdcl-v1";
     const RESOURCE_PROFILE: &str = "axeyum-qfbv-cold-bounded-v1";
     /// Corpus SAT-share threshold above which SAT solve time is reported as
     /// dominating end-to-end time — gate (a) for prioritizing the custom CDCL
@@ -6761,28 +6765,29 @@ mod run {
     }
 
     fn determinism_record() -> JsonValue {
-        let batsat = rustsat_batsat_determinism();
         json!({
             "profile": DETERMINISM_PROFILE,
             "corpus_order": "stable manifest order (or deterministic lexical path order without a manifest)",
             "sat_bv": {
-                "adapter": "rustsat-batsat",
-                "option_source": "batsat::SolverOpts::default from the Cargo.lock-pinned dependency",
-                "random_seed": batsat.random_seed,
-                "random_var_freq": batsat.random_var_freq,
-                "random_polarity": batsat.random_polarity,
-                "random_initial_activity": batsat.random_initial_activity,
+                "engine": NATIVE_CDCL_ENGINE_ID,
+                "option_source": "in-tree constants in crates/axeyum-cnf/src/proof_sat.rs",
+                // The native core (ADR-1703) has no randomness to seed: branching
+                // is VSIDS with a lowest-index tie-break, polarities come from
+                // phase saving plus target rephasing, and initial activities are
+                // all zero. There is no `random_seed` field to record, and
+                // recording one would be decoration -- the retired adapter's
+                // seed was reported precisely because the adapter DID have one.
+                "randomness": "none: no random seed, no random branching, no randomized initial activity",
+                "restart_schedule": "Luby (EMA-glue implemented and selectable, off by default)",
             },
             "z3": z3_determinism_record(),
         })
     }
 
     fn resource_profile_record(args: &Args) -> JsonValue {
-        let primary_search_unit = if args.native_cdcl || args.prove_unsat {
-            "native proof-CDCL conflicts"
-        } else {
-            "rustsat-batsat within_budget progress checks"
-        };
+        // ADR-1703: the native core is the primary engine on every path, so the
+        // unit no longer depends on a flag. `--native-cdcl` is a retired no-op.
+        let primary_search_unit = "native proof-CDCL conflicts";
         json!({
             "profile": args.require_deterministic_resources.then_some(RESOURCE_PROFILE),
             "required": args.require_deterministic_resources,
@@ -7261,12 +7266,12 @@ mod run {
             update_hash(&mut hash, family.as_bytes());
             update_hash(&mut hash, &[0]);
         }
-        let batsat = rustsat_batsat_determinism();
         update_hash(&mut hash, DETERMINISM_PROFILE.as_bytes());
-        update_hash(&mut hash, &batsat.random_seed.to_bits().to_le_bytes());
-        update_hash(&mut hash, &batsat.random_var_freq.to_bits().to_le_bytes());
-        update_hash(&mut hash, &[u8::from(batsat.random_polarity)]);
-        update_hash(&mut hash, &[u8::from(batsat.random_initial_activity)]);
+        // The SAT engine's identity, in place of the retired adapter's four
+        // randomness options (ADR-1703). The config hash therefore CHANGES with
+        // this commit, which is correct: the engine that produced every prior
+        // artifact is not the engine that produces the next one.
+        update_hash(&mut hash, NATIVE_CDCL_ENGINE_ID.as_bytes());
         #[cfg(feature = "z3")]
         update_hash(&mut hash, &DETERMINISTIC_Z3_RANDOM_SEED.to_le_bytes());
         update_hash(&mut hash, args.rewrite.as_str().as_bytes());
@@ -8979,7 +8984,7 @@ mod run {
                 rustc: Some("rustc 1.88.0\nhost: x86_64-unknown-linux-gnu".to_owned()),
                 cargo: Some("cargo 1.88.0".to_owned()),
                 build_profile: "release".to_owned(),
-                backend: "axeyum-sat-bv rustsat-batsat".to_owned(),
+                backend: "axeyum-sat-bv native-cdcl".to_owned(),
                 compare_backend: Some("z3 4.13.3.0".to_owned()),
                 hardware: HardwareIdentity {
                     os: "linux".to_owned(),

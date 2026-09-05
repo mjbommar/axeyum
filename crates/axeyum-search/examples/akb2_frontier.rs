@@ -69,7 +69,7 @@ use axeyum_cnf::CacheDroppingWriter;
 use axeyum_cnf::{
     SatResult, StreamingProofOutcome, TextProofSink, check_drat_backward,
     check_drat_backward_reader, parse_drat, solve_with_drat_proof_streaming,
-    solve_with_rustsat_batsat_timeout,
+    solve_with_native_core_timeout,
 };
 use axeyum_search::{
     ColouringFamily, MinConflictsOptions, Rado, Witness, cover, harness, min_conflicts,
@@ -415,7 +415,7 @@ fn main() -> ExitCode {
                 formula.clauses().len()
             );
             let t0 = Instant::now();
-            let result = solve_with_rustsat_batsat_timeout(
+            let result = solve_with_native_core_timeout(
                 &formula,
                 Some(Duration::from_secs_f64(hours * 3600.0)),
             )

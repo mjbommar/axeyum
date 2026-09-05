@@ -513,6 +513,22 @@ impl VecProofSink {
     }
 }
 
+/// A `&mut` borrow of a sink is itself a sink, forwarding every step.
+///
+/// This is what lets the CDCL core **own** its `S` (needed by the persistent
+/// incremental solver, which outlives any one borrow) while the one-shot entry
+/// points keep passing `&mut VecProofSink` / `&mut impl DratSink`: there,
+/// `S = &mut …` and the forwarding is a direct call, monomorphized away.
+impl<S: DratSink + ?Sized> DratSink for &mut S {
+    fn add_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        (**self).add_clause(lits)
+    }
+
+    fn delete_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
+        (**self).delete_clause(lits)
+    }
+}
+
 impl DratSink for VecProofSink {
     fn add_clause(&mut self, lits: &[CnfLit]) -> Result<(), ProofSinkError> {
         self.steps.push(DratStep::Add(lits.to_vec()));

@@ -3342,7 +3342,7 @@ mod tests {
     use axeyum_cnf::cube::{boolean_product_cubes, covering_formula};
     use axeyum_cnf::{
         ProofSolveOutcome, SatResult, check_drat, check_drat_backward, solve_with_drat_proof,
-        solve_with_rustsat_batsat,
+        solve_with_native_core,
     };
 
     const TINY: &str = "2 2\n0 2 1 1\n1 2 0 1\n";
@@ -3585,7 +3585,7 @@ mod tests {
             strengthened.clauses().len(),
             encoding.formula().clauses().len() + 1
         );
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&strengthened).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&strengthened).unwrap() else {
             panic!("the makespan-four boundary remains feasible");
         };
         encoding.lift_model(&model).unwrap();
@@ -3655,7 +3655,7 @@ mod tests {
             strengthened.clauses().len(),
             encoding.formula().clauses().len() + 2
         );
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&strengthened).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&strengthened).unwrap() else {
             panic!("ft06 at its optimum remains feasible");
         };
         assert_eq!(encoding.lift_model(&model).unwrap().makespan, 55);
@@ -3716,7 +3716,7 @@ mod tests {
             strengthened.clauses().len(),
             encoding.formula().clauses().len() + conflicts.len()
         );
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(&strengthened).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(&strengthened).unwrap() else {
             panic!("ft06 at its optimum remains feasible after checked unit closure");
         };
         assert_eq!(encoding.lift_model(&model).unwrap().makespan, 55);
@@ -3744,7 +3744,7 @@ mod tests {
     fn parser_checker_and_model_lifting_agree() {
         let problem = JobShopProblem::parse_orlib(TINY).unwrap();
         let encoding = encode_job_shop(&problem, 3, JobShopEncodingLimits::default()).unwrap();
-        let SatResult::Sat(model) = solve_with_rustsat_batsat(encoding.formula()).unwrap() else {
+        let SatResult::Sat(model) = solve_with_native_core(encoding.formula()).unwrap() else {
             panic!("tiny optimum must fit in three ticks");
         };
         let schedule = encoding.lift_model(&model).unwrap();
@@ -3848,10 +3848,10 @@ mod tests {
                 JobShopEncodingLimits::default(),
             )
             .unwrap();
-            let baseline_result = solve_with_rustsat_batsat(baseline.formula()).unwrap();
-            let windowed_result = solve_with_rustsat_batsat(windowed.formula()).unwrap();
-            let propagated_result = solve_with_rustsat_batsat(propagated.formula()).unwrap();
-            let closed_result = solve_with_rustsat_batsat(closed.formula()).unwrap();
+            let baseline_result = solve_with_native_core(baseline.formula()).unwrap();
+            let windowed_result = solve_with_native_core(windowed.formula()).unwrap();
+            let propagated_result = solve_with_native_core(propagated.formula()).unwrap();
+            let closed_result = solve_with_native_core(closed.formula()).unwrap();
             assert_eq!(
                 matches!(baseline_result, SatResult::Sat(_)),
                 matches!(windowed_result, SatResult::Sat(_)),
@@ -3973,9 +3973,8 @@ mod tests {
                             JobShopEncodingLimits::default(),
                         )
                         .unwrap();
-                        let baseline_result =
-                            solve_with_rustsat_batsat(baseline.formula()).unwrap();
-                        let closed_result = solve_with_rustsat_batsat(closed.formula()).unwrap();
+                        let baseline_result = solve_with_native_core(baseline.formula()).unwrap();
+                        let closed_result = solve_with_native_core(closed.formula()).unwrap();
                         assert_eq!(
                             matches!(baseline_result, SatResult::Sat(_)),
                             matches!(closed_result, SatResult::Sat(_)),

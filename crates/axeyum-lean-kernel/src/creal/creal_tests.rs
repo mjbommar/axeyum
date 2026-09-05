@@ -10270,11 +10270,15 @@ const EXPECTED_STEP_ORDER: &[&str] = &[
     "cos_sign::declare_cos_wide_series_converges",
     "cos_sign::declare_cos_wide_nonpositive",
     "pi::declare_pi_family",
-    // ADR-1627: `CReal.fieldS : AlgS.Field` and its four supports. Last,
-    // because the existential inverse consumes `inverse`'s `mul_inv_cancel`,
-    // `cotransitivity`'s `apart_cotrans` and `algebra_instance`'s
-    // `commRingS`, and nothing consumes it.
     "field_setoid_instance::declare_field_s_all",
+    "power_series::declare_abs_pow_le",
+    "power_series::declare_one_pow",
+    "power_series::declare_power_series_partial",
+    "power_series::declare_power_series_term_radius_bound",
+    "power_series::declare_power_series_cauchy_within_radius",
+    "power_series::declare_power_series_converges_within_radius",
+    "power_series::declare_exp_series_partial_is_power_series",
+    "power_series::declare_cos_series_partial_is_power_series",
 ];
 
 /// `STEPS` (the data-driven build order that replaced the hand-written call

@@ -371,3 +371,100 @@ fn a_numeral_two_spelled_as_one_plus_one_is_still_proved() {
         assert!(got.is_ok(), "2*t = t+t must still be proved: {got:?}");
     });
 }
+
+// ---------------------------------------------------------------------------
+// 5. `cancel_pairs` — the pass added for `crate::geo::qplane` (ADR-1635).
+//
+// The three tests below are a matched set, and each dies to a different
+// change: the first two die if the pass is removed, the third dies if the
+// pass is made unsound by cancelling monomials whose factor lists differ.
+// ---------------------------------------------------------------------------
+
+/// **The pass is load-bearing.** `x*y + -(y*x) = 0` needs *both*
+/// `sort_factors` (to see the two monomials as the same one) and
+/// `cancel_pairs` (to annihilate the pair). Without the cancellation pass
+/// this declines `NotAnIdentity`, and the whole ℚ coordinate-geometry
+/// development rests on exactly this shape.
+#[test]
+fn opposite_monomials_cancel_to_zero() {
+    on_a_deep_stack(|| {
+        let mut env = Env::new();
+        let p = env.p;
+        let name = env.name("opposite_monomials_cancel");
+        let mut d = IntDev::new(&mut env.k, p.int);
+        let got = ring::theorem(&mut d, &p, name, 2, &|d, v| {
+            let (x, y) = (v[0], v[1]);
+            let xy = rmul(d, x, y);
+            let yx = rmul(d, y, x);
+            let neg = rneg(d, yx);
+            let lhs = radd(d, xy, neg);
+            let z = rzero(d, p);
+            req(d, lhs, z)
+        });
+        assert!(got.is_ok(), "x*y + -(y*x) = 0 must be proved: {got:?}");
+    });
+}
+
+/// The determinant shape the geometry actually asks for, as a bare four-atom
+/// identity: `(q₂ − p₂)·p₁ + (p₁ − q₁)·p₂ + (p₂·q₁ − p₁·q₂) = 0`, which is
+/// `Geo.QPlane.joinOnLeft` with the projections spelled out. Three separate
+/// cancelling pairs, and the pass must reach the ones that are not first in
+/// the sorted list.
+#[test]
+fn a_two_by_two_determinant_expansion_collapses() {
+    on_a_deep_stack(|| {
+        let mut env = Env::new();
+        let p = env.p;
+        let name = env.name("determinant_collapses");
+        let mut d = IntDev::new(&mut env.k, p.int);
+        let got = ring::theorem(&mut d, &p, name, 4, &|d, v| {
+            let (p1, p2, q1, q2) = (v[0], v[1], v[2], v[3]);
+            let big_a = {
+                let n = rneg(d, p2);
+                radd(d, q2, n)
+            };
+            let big_b = {
+                let n = rneg(d, q1);
+                radd(d, p1, n)
+            };
+            let big_c = {
+                let m1 = rmul(d, p2, q1);
+                let m2 = rmul(d, p1, q2);
+                let n = rneg(d, m2);
+                radd(d, m1, n)
+            };
+            let t1 = rmul(d, big_a, p1);
+            let t2 = rmul(d, big_b, p2);
+            let sum = radd(d, t1, t2);
+            let lhs = radd(d, sum, big_c);
+            let z = rzero(d, p);
+            req(d, lhs, z)
+        });
+        assert!(got.is_ok(), "the join passes through P: {got:?}");
+    });
+}
+
+/// **Negative control for the same pass.** `x*y + -(x*x) = 0` is NOT an
+/// identity — the two monomials have different factor lists — and must still
+/// decline. A `cancel_pairs` that ignored the factor list would "prove" it.
+#[test]
+fn unequal_monomials_do_not_cancel() {
+    on_a_deep_stack(|| {
+        let mut env = Env::new();
+        let p = env.p;
+        let mut d = IntDev::new(&mut env.k, p.int);
+        let x_fv = d.fresh_fvar();
+        let y_fv = d.fresh_fvar();
+        let x = d.kernel().fvar(x_fv);
+        let y = d.kernel().fvar(y_fv);
+        let xy = rmul(&mut d, x, y);
+        let xx = rmul(&mut d, x, x);
+        let neg = rneg(&mut d, xx);
+        let lhs = radd(&mut d, xy, neg);
+        let z = rzero(&mut d, p);
+        match ring::prove_eq(&mut d, &p, lhs, z) {
+            Err(Decline::NotAnIdentity) => {}
+            other => panic!("x*y + -(x*x) = 0 must decline NotAnIdentity, got {other:?}"),
+        }
+    });
+}

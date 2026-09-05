@@ -49,7 +49,8 @@ fn sat_evidence_carries_a_replayable_model() {
     // Per-layer provenance is snapshotted so a replay failure localizes (#8).
     let layers = report.provenance.layers;
     assert_eq!(layers, axeyum_solver::LayerVersions::CURRENT);
-    assert_eq!(layers.sat_adapter, "rustsat-batsat");
+    // ADR-1703: the native CDCL core is the SAT engine on every path.
+    assert_eq!(layers.sat_adapter, "axeyum-native-cdcl");
     assert!(!layers.bitblaster.is_empty() && !layers.cnf.is_empty());
     // The evidence re-validates against the original query, independently.
     assert!(report.evidence.check(&arena, &[eq]).unwrap());
@@ -74,7 +75,8 @@ fn unsat_evidence_carries_a_recheckable_drat_certificate() {
         panic!("expected a DRAT-certified unsat, got {:?}", report.evidence);
     };
     assert!(report.evidence.is_certified());
-    assert!(report.provenance.backend.contains("rustsat-batsat"));
+    // ADR-1703: the backend identity names the engine that actually ran.
+    assert!(report.provenance.backend.contains("native-cdcl"));
     // Re-running the trusted DRAT checker on the stored certificate confirms it.
     assert!(report.evidence.check(&arena, &assertions).unwrap());
 }

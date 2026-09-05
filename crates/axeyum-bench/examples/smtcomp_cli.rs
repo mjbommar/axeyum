@@ -204,15 +204,19 @@ fn theory_layer_report_line(
 ) -> String {
     format!(
         "; theory-layer boolean_propagate_ms={} theory_assert_ms={} theory_propagate_ms={} \
-         theory_push_pop_ms={} conflict_analysis_ms={} theory_conflicts={} \
-         theory_propagations={} decisions={} restarts={}",
+         theory_push_pop_ms={} conflict_analysis_ms={} theory_final_check_ms={} \
+         theory_explain_ms={} theory_conflicts={} theory_propagations={} \
+         final_checks={} decisions={} restarts={}",
         stats.boolean_propagate.as_millis(),
         stats.theory_assert.as_millis(),
         stats.theory_propagate.as_millis(),
         stats.theory_push_pop.as_millis(),
         stats.conflict_analysis.as_millis(),
+        stats.theory_final_check.as_millis(),
+        stats.theory_explain.as_millis(),
         stats.theory_conflicts,
         stats.theory_propagations,
+        stats.final_checks,
         stats.decisions,
         stats.restarts,
     )

@@ -49,10 +49,10 @@ use std::process::ExitCode;
 
 use axeyum_lean_kernel::{
     Declaration, Kernel, build_arith_prelude, build_characterization, build_complex_prelude,
-    build_cpoint_prelude, build_creal_prelude, build_int_prelude, build_intspace_prelude,
-    build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm, build_logic_prelude,
-    build_metric_prelude, build_nat_prelude, build_rat_prelude, build_rn_prelude,
-    build_string_prelude,
+    build_cpoint_prelude, build_creal_prelude, build_geo_prelude, build_int_prelude,
+    build_intspace_prelude, build_ipc_soundness_prelude, build_list_nat_bridge, build_list_perm,
+    build_logic_prelude, build_metric_prelude, build_nat_prelude, build_rat_prelude,
+    build_rn_prelude, build_string_prelude,
 };
 
 fn kind(declaration: &Declaration) -> &'static str {
@@ -292,6 +292,17 @@ fn run() -> ExitCode {
         emit("rn", &rn);
     }
 
+    // `Geo.*` (ADR-1635), synthetic incidence geometry and its rational model.
+    // It sits ON TOP of `cpoint` and carries its own namespace, so it needs its
+    // own label for exactly the reason the `metric` comment above records: a
+    // prelude this tool is blind to is indistinguishable from the declaration
+    // not existing.
+    let mut geo = Kernel::new();
+    let _ = build_geo_prelude(&mut geo).expect("Geo prelude must build");
+    if unfiltered {
+        emit("geo", &geo);
+    }
+
     // The IPC package, and it is the reason this example is not "every prelude"
     // by accident. `build_ipc_soundness_prelude` transitively builds
     // `provable` -> `heyting` -> `nat`, so one label covers the whole
@@ -339,6 +350,7 @@ fn run() -> ExitCode {
         ("metric", &metric),
         ("intspace", &intspace),
         ("rn", &rn),
+        ("geo", &geo),
         ("ipc", &ipc),
     ]
     .into_iter()

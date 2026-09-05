@@ -180,3 +180,42 @@ not as a sentence claiming it passed.
   upstream.
 
 
+
+## Steps appended below the verdict
+
+- **Thirteen `step` lines in `scripts/check.sh` sat BELOW the script's summary
+  block from 2026-08-30 to 2026-09-05** (`structural-index`,
+  `checked-interchange` and its two controls, `lean-adapter` and its two
+  controls, `lean-tactic`, `lean-creal-library`, `declaration-spec`,
+  `proof-plan` and its control). Each lane appended its gate at the end of the
+  file, which is after `echo "check: all $ran gates passed"`. On a green run
+  those steps executed after the verdict was printed and nothing read their
+  status; on a red run the `exit 1` above them meant they never ran at all;
+  and `AXEYUM_CHECK_LIST=1` listed 505 steps, not 518, because the listing
+  exits at the summary. The only trace was `check-aggregate-scope.sh`
+  reporting them as "just-only" -- a divergence everyone read as the two
+  gates disagreeing rather than as check.sh not running its own steps.
+  Moved above the summary the same day (the listing is the control:
+  505 -> 518).
+- **Rule:** a new step goes above the summary block, and the listing count is
+  the check -- `AXEYUM_CHECK_LIST=1 bash scripts/check.sh | wc -l` must rise by
+  the number of steps you added. A step that the listing cannot see is a step
+  the verdict cannot see. A "just-only" row in `check-aggregate-scope.sh` for a
+  command that IS in `check.sh` means exactly this.
+
+## A green summary line with a guard that has no subject
+
+- **A gate that prints `PASS` and exits 0 can carry, inside that same line, a
+  guard reading `skipped(tool-failed)` or `not-answerable`.** Measured
+  2026-09-05 by the `incidence-geometry` lane: `check-merge-hygiene.sh` printed
+  `...|shape_duplicates=skipped(tool-failed)|kernel_projection=not-answerable|PASS`
+  with exit 0 while `shape_search --include-constructed` was panicking on its
+  own coverage assertion (a prelude group indexed but not declared). Two guards
+  had no subject, so neither could fail, and the aggregate verdict inherited
+  their silence. The lane caught it by reading the summary fields, not the
+  exit status.
+- **Rule:** a guard whose subject did not load must set the aggregate verdict
+  to FAILED, not to a field value the aggregate ignores. Until the script is
+  changed, read every `=` field of the summary line before believing `PASS`;
+  the coordinator's post-merge pass now greps for `skipped|not-answerable` and
+  treats either as red.

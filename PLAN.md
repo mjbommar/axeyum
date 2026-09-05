@@ -154,6 +154,16 @@ now. Nothing was deleted.
 | 2026-09-05 | vector-spaces-field | ℚ is a vector space over itself and `linComb` at ℚ is DEFINITIONALLY `Rat.sumRange`; ADR-1609's bridge item 3 measured and still blocked; 3 tests |
 | 2026-09-05 | py-prelude-fields-fix | fixed the path-qualified-field silent skip in gen-py-prelude-fields.py; regenerated prelude_fields.rs (+21 poly.* fields); added scripts/tests/test_gen_py_prelude_fields.py, registered in check.sh + justfile |
 | 2026-09-05 | perf-par2-ratchet | Timing ratchet in `progress_frontier.rs`: pinned-`N` calibrated solve time per family against a measured ceiling, enforced on the `comparable` flag, registered in `check.sh` and the `justfile`; five baselines regenerated with a `"timing"` block. |
+| 2026-09-05 | `317be80fe` | ADR-1703: the native CDCL core is the SAT engine; BatSat is demoted to a non-default `batsat-reference` differential oracle, scheduled for removal in slice 2. |
+| 2026-09-05 | `560d781ea` | `NativeIncrementalCdcl`: persistent, assumption-capable native core (add clauses between solves, `analyze_final` cores, retained learned clauses, optional DRAT). `Cdcl` owns its sink; `num_original` becomes a per-clause `learned` flag so an input clause added after learning can never become a `reduce_db` deletion candidate. |
+| 2026-09-05 | `f019d503f` | `IncrementalSat` re-based on the native core with its surface unchanged; the adapter moved whole to `batsat_reference.rs` behind a non-default feature; `SatBvBackend` dispatches to the native core unconditionally and `SolverConfig::native_cdcl` becomes a documented no-op; `native_vs_batsat_differential.rs` added (3 tests with the feature, 0 without). |
+| 2026-09-05 | `6240f013e` | A zero conflict budget admits no search (restoring the `resource_limit = 0` contract), and `classify_sat_unknown` recognises the native core's budget wording — both caught by the full `-p axeyum-solver --lib --features full` sweep. |
+| 2026-09-05 | `9833fadb5` | ADR-1703 cites the gate (b) measurement, run for the first time since ADR-0012 deferred to it: the native core is never worse than BatSat and sometimes better (p4dfa 6 vs 4 decided; Noetzli sample tied), with zero cross-engine disagreements. |
+| 2026-09-05 | `399b10e9b` | `FO.Code` — the anti-diagonal pairing, its structural inverse, the round trip and both injectivities; a new pairing rather than `Nat.pair`, which is a held-out family (ADR-1640). |
+| 2026-09-05 | `2f986f4c2` | `FO.Term.code`, `FO.Formula.code` and both `code_injective` — the Gödel numbering of the first-order syntax, 16 + 81 cases (ADR-1640). |
+| 2026-09-05 | `a15383b71` | The every-declaration sweep derived from the environment, and `examples/fo_code_inventory.rs`, which fails on absence (ADR-1640). |
+| 2026-09-05 | `76513ea48` | Three proved facts for the numbering and three open rows above it, each naming its own obstruction (ADR-1640). |
+| 2026-09-05 | `d8a858e63` | `FO.Term.decode`, `FO.Formula.decode`, `FO.Code.substCode` and `FO.Code.isFormulaCode` — the decoder, so what remains above the numbering is a proof gap and not a missing construction (ADR-1640). |
 | 2026-09-05 | `0e5f3a3ad` | `rat_prelude/binomial_s.rs`: the Bernoulli distribution constructed over `AlgS.OrderedRing` — `bernoulliVar`, `bernoulliMass`, `bernoulliMass_nonneg`, `bernoulli_isDistribution`, `bernoulli_expectation`, `bernoulli_variance`, plus the generic ring lemmas `mul_neg` and `zero_add`. (ADR-1631) |
 | 2026-09-05 | `1898e9651` | `binomial_s_tests.rs`: nine tests. `q = 1/2` cannot separate `q(1−q)` from `q·q` (both `1/4`); `q = 1/3` can (`2/9` against `1/9`), and the suite says so in its own assertions. |
 | 2026-09-05 | `dd6a0df24` | `rat_prelude/binomial_rat.rs`: `Rat.binomial_expectation`, `Rat.binomial_variance`, `Rat.binomial_chebyshev`, and a suite that discharges the per-trial hypothesis from the GENERIC Bernoulli theorem and then computes: three Bernoulli(1/3) trials have mean `Rat.one`. |
@@ -167,9 +177,24 @@ now. Nothing was deleted.
 | 2026-09-05 | `066a39659` | docs(conic): ADR-1641, three facts, lane status, regenerated Python mirror (cpoint=205, 56 in the conic registry) |
 | 2026-09-05 | `950d0adfb` | chore(plan): regenerate PLAN.md with the conics lane block |
 | 2026-09-05 | `d8ac6a1b5` | chore(ledger): regenerate the production provenance ledger; merge hygiene PASS |
+| 2026-09-05 | frame-carrier | `7e8fc512e` — `Top.Frame`, a sixteen-field pointfree topological carrier with a countable join, its nine derived generic theorems, the open-ball frame of ℝ (`Top.Opens`, `Top.ballFrame`), and the point lemmas; 53 declarations, all axiom-free, 11 of 11 tests |
+| 2026-09-05 | frame-carrier | `c4754b326` — `top_frame_theorem_inventory` (exit status depends on both an absent filter and a nonempty footprint), and `Top.MemBall`/`Top.MemOpen` folded into the three statements that had spelled them out |
+| 2026-09-05 | frame-carrier | `2db998539` — ADR-1643, four facts, the `top` group `shape_search` was blind to, and the repair of two duplicated "keep both sides" lines in `shape_search` |
 | 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
+| 2026-09-05 | `ca657cbcf` | `Nat.Finset.allBelow_congr` and the fixed-bound inclusion decision: `subsetFixed` plus its intro/elim/congruence rules, all five admitted axiom-free. Six tests, including the two wrong definitions the shape invites — the argument SWAP and the loop BOUND, the latter pinned with a pair that shares its second argument so a `bound t` loop could not separate them. `subsetFixed empty (singleton 0)` is `true`, not `false`, and that is asserted rather than papered over. |
+| 2026-09-05 | `0b094f2b7` | Mutation evidence recorded: three mutants RUN (killed 63 / 64 / exactly 2), and the fourth removed from the committed suite with the reason stated -- it SURVIVED because a constant's modulus is an arbitrary witness choice, not a guard. |
+| 2026-09-05 | `7045bbd18` | `PLAN.md` regenerated for this lane's status block (it was untracked on the first `gen-plan.py` run and skipped): lanes 599 -> 600, landed rows 1105 -> 1106. |
+| 2026-09-05 | `aa383393d` | Holomorphy on a disc: `Complex.HolomorphicOn` as `Sigma (Complex -> Complex) (fun F' => HasDerivativeOn F F' c r)` -- it CANNOT be an `Exists` -- plus `holomorphicDeriv` (`Sigma.fst`), `holomorphic_spec` (`Sigma.snd`, dependent) and four constructors. Replaces the VACUOUS `InDisc` argument-order control with a symbolic one (no closed instance can distinguish the order: `\|z-c\| = \|c-z\|` and the kernel computes both). `prelude_fields.rs` mirror regenerated for the 18 new `Complex` fields. ADR-1642. |
+| 2026-09-05 | `189fbc799` | Nine tests for `complex/deriv.rs`, each with a negative control; `EXPECTED_STEP_ORDER` gains `deriv::declare_derivative` at position 93; `mutation_controls.py` gains a `complex-derivative` suite whose own comment records that two of its four mutants kill through `ring_law_proof`'s panic and are therefore MASS kills, i.e. weak evidence. |
+| 2026-09-05 | `a3066cd01` | `complex/deriv.rs`: `Complex.HasDerivativeOn` on a closed disc, the transcription of `CReal.HasDerivativeOn` — carrier, `.modulus`/`.spec` projections, `InDisc`, `abs_zero`, and the constant / identity / negation / sum witnesses. New module registered from `complex.rs` with its own `DerivNames` (the `poly.rs` arrangement: no hub edit for a new declaration inside the file). All nine names registered in `every_named_complex_declaration_is_checked_and_footprint_free`, which derives coverage from the ENVIRONMENT. |
+| 2026-09-05 | `7ec964eab` | `Geo.Incidence` — a 21-field incidence record over two carriers with Hilbert I.1 (split into `joinExists`/`joinUnique`, this kernel having no `ExistsUnique`), I.2 and I.3, plus `apart` and its three laws; and five theorems derived once over an arbitrary `I : Geo.Incidence` — `Collinear` (a Definition), `collinear_intro`, `collinear_perm`, `distinct_lines_meet_once` (which IS "two distinct lines meet in at most one point") and `triangle_not_collinear`. 7 tests. Every one of the 29 names is asserted present AND axiom-free with `Environment::contains` checked FIRST, and the declaration list is derived from `RecordNames::field_count` rather than a literal. |
+| 2026-09-05 | `054cb3e38` | `Geo.qplane : Geo.Incidence` — the rational plane, 46 declarations: `Geo.QPoint`/`Geo.QLine0` with their projections, `eta` and `ext`; `Geo.QLine = Subtype Geo.QLine0 Geo.QLine0.Nondeg`; extensional line equality with its three laws; `Geo.QPlane.onPivot` and `onOfProp` (the one algebraic lemma, used in BOTH branches of the nonzero split); `joinProp` (proportionality with NO non-degeneracy hypothesis); `joinNondeg`, `joinExists`, `joinUnique`, `shift`/`shiftOn`/`shiftApart`, `basePoint`, `twoPoints`, `triangle`. Plus `Geo.Rat.eqOrNe` from `Rat.lt_trichotomy` — the only place the model uses ℚ's decidability. In the same commit: two new passes in `ring::rat::Problem::cancel_pairs` with three matched tests (19 ring::rat tests pass), and `geo::qplane::congr_cross`, the two-carrier congruence `structures::congr_arg` cannot express. |
+| 2026-09-05 | `8a1ad873a` | Five more tests. `the_handle_names_every_live_geo_declaration` derives the population from `Environment::iter` and requires SET EQUALITY against the handle (measured: 75 live names, vacuity floor 70); four evaluation tests, one per definition family, each with its negative half — including the join-coefficient swap the mutation suite runs, pinned at FREE VARIABLES because a concrete point pair can make two coefficients coincide. The `geo-incidence` mutation suite is registered with the brief's two mutants. |
+| 2026-09-05 | `3243d58e8` | Two curated facts — `F:geo-incidence-model-rational-plane` (the consistency witness, checked by `kernel_declaration_projection --require-declaration Geo.qplane --require-kind definition`, the only in-tree tool that can assert a DEFINITION exists) and `F:geo-distinct-lines-meet-once`. `Geo` added to `validate-facts.py`'s `KERNEL_THEOREM_RE` namespace alternation, with BOTH halves pinned in the allowlist's own control suite: `Geo.qplane` accepted, `Geometry.qplane` and bare `Geo` still rejected. |
+| 2026-09-05 | `8dce39ab1` | `shape_search` declared the `geo` group as well as indexing it. Found through `check-merge-hygiene.sh`'s summary line, not its exit status — see the lane block. |
+| 2026-09-05 | `e15cef034` | Regenerated `artifacts/autogenesis/kernel-dependency-projection-v1.json` (declarations 4291 → 4485), because `check-merge-hygiene.sh` guard 10 compares it against the live `shape_search` count with a tolerance of 100 and `Geo.*` adds 75. |
 | 2026-09-05 | lean-c4-admission | ADR-1662's recommended trusted-substitution extension, built and re-measured. `dif_pos`, `Eq.subst`, `And.left` reconstructed in `trusted_substitution`; `Nat.le_of_lt_add_one` in `nat_order_substitution`; the kernel's own quotient package exempted from the statement-isolation gate (overturning doc 294's hard rule). Each substitution carries a positive control and a negative control in which the reconstructed value is offered at a deliberately wrong type with every Rust-side guard bypassed. **Census re-run over the same 756 rows: 390 admitted before, 390 after** — the five names fall to zero as first blockers and the same 150 rows reappear behind the next declaration, exactly −150/+150. What is behind the 361 now: 217 rows behind axioms this kernel excludes, 114 behind Lean's well-founded-recursion machinery, 30 behind ordinary constructive names. `eq_self` (97, the largest blocker) is NOT constructive — its own Lean 4.30 closure reaches `propext`, re-confirming docs 240 and 295. Commits `88609630f`, `a43c7dc2d`, `afc01dbd4`; evidence `artifacts/measurements/statement-import-blocker-census-2026-09-05-after-c4.json` (carries `delta_against_baseline`) and ADR-1667. |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
 | 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
@@ -179,6 +204,7 @@ now. Nothing was deleted.
 | 2026-09-05 | `2b63883c2` | rescored after the fix (reject half 69 -> 70, floor 69 -> 70, soundness ceiling 2 -> 1), ledger D2 closed with its scope limit stated (inductives do not route through `check_declaration`) |
 | 2026-09-05 | `a24ed468b` | `Kernel::check_declaration` refuses a repeated universe binder (`KernelError::DuplicateUniverseParam`), closing ledger D2 — the arena's `tut06_bad01`; new `declaration_universe_params_must_be_distinct.rs` (3 tests, both directions); ADR-1663; progress rows in `14-lean-lang.md` and `10-logic-and-foundations.md` |
 | 2026-09-05 | `5a954d4be` | `scripts/check-kernel-conformance.py` (9 guards, `--self-test`, floors and ceilings on both halves, G6 requires the control to invert by ≥40); `scripts/check-lean-divergences.py` (5 guards, three authorities, no list of its own); `docs/plan/lean-divergences.md`; `artifacts/kernel-conformance/{results.tsv,summary.json,summary.md}`; `level_conformance_probe` example; both gates registered in `scripts/check.sh` and the `justfile` |
+| 2026-09-05 | coordinator | `lean/axeyum-creal` committed (3,397 commands, 103 typed exclusions); gate floor 3,542 -> 3,397 measured, ceiling 0 -> 103; aggregate gates run the `--slice`; thirteen `check.sh` steps appended below the verdict since 2026-08-30 moved above it (listing 505 -> 518); Lean accepted the carrier module and reports the 7 headline results axiom-free (ADR-1675) |
 | 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
 | 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
 | 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
@@ -201,6 +227,10 @@ now. Nothing was deleted.
 | 2026-09-05 | `a0619473d` | scaffold Metric.prod (max metric, 12-field record + projections + continuity + completeness + cpoint relation); compiles clean, kernel acceptance not yet run |
 | 2026-09-05 | `7068500cf` | fix: move metric_prod_tests under metric_prod/; fix Metric.ContinuousAtWith's modulus (Nat -> Nat, not Nat) |
 | 2026-09-05 | `02384e4c4` | fix: N-side modulus-combination rewrite motive needs Rat.le, not CReal.le |
+| 2026-09-05 | `ebc659b88` | ADR-1702, first draft: exact rationals as an `i128` fast path with an arbitrary-precision slow path, promoting instead of declining. Records the two slices, the determinism and soundness argument, and the rejected alternatives (dropping `Copy`, a fixed `i256`/`i512`, leaking instead of pooling). |
+| 2026-09-05 | `4865e6d48` | The two-representation machinery: `Rational` stays `Copy` and 32 bytes, with promoted values as handles into a capped deduplicating pool marked by the otherwise-impossible `den == 0`; value-based `Eq`/`Ord`/`Hash`/`Display` so the pool id is never observable. |
+| 2026-09-05 | `fe9895dbe` | The 8 `axeyum-solver` failures unconditional promotion caused, in two shapes: `nra_real_root::Sign::of_rational` now reads the sign from the value rather than from `numerator()`; `nra_handelman_cert` uses the checked accessors where it serializes `i128` pairs onto the wire. `adversarial_robustness` stopped asserting "not `Sat`" on a satisfiable query. |
+| 2026-09-05 | `PENDING` | The redesign the `axeyum-cas` measurement forced: promotion becomes the opt-in `wide_*` family, the declining family is restored bit-for-bit, and the simplex opts in behind a `narrow` containment boundary. ADR-1702 rewritten around the measurement, with a discriminating test (`the_checked_family_declines_exactly_where_the_wide_family_promotes`) that a patch making `checked_*` promote would fail and every other test in the file would pass. |
 | 2026-09-05 | `9ce530f62` | `Int.IsSumOfTwoSquares` (Definition) with its intro rule, the Brahmagupta–Fibonacci identity in both conjugate groupings (both emitted by `ring::int::declare` at arity 4, first attempt), and `Int.isSumOfTwoSquares_mul`. Seven tests; one negative control found VACUOUS on its first honest run (`17 = 1²+4²` and its swap both reduce to `17`) and moved to free variables. |
 | 2026-09-05 | `c47a576b5` | `Int.sq_modEq_four_zero_or_one` and `Int.not_isSumOfTwoSquares_of_modEq_four_three` — ADR-0603's boundary-refutation grade. No new `Int` parity lemma was needed (`Int.Even` is *defined* as `Nat.Even (natAbs ·)`), no existential is opened (the witness is the definable `a / 2`), and the four leaves close by REDUCTION of `emod` at closed numerals. Ring stepping stones `Int.sq_of_two_mul`, `Int.sq_of_two_mul_add_one`. 3 tests, each with its negative half: 3, 7, 11 refute; 4, 5, 13, 17 do not. |
 | 2026-09-05 | `8b8b58ed9` | `Int.modEq_descent_cross_terms` and `Int.descentStep` — the two reusable halves of Fermat's descent — plus the cancellation family they needed and `shape_search` reported absent: `Int.mul_left_cancel_of_ne_zero`, `Int.mul_ne_zero`, `Int.eq_of_sub_eq_zero`, `Int.zero_add`, `Int.sub_self`, `Int.add_sub_cancel_right`, `Int.mul_sub_mul_comm`, `Int.mul_mul_of_mul_mul`, `Int.sq_add_sq_of_mul_left`. Records the measured `ring::int` zero-collapse decline. 3 tests carrying the worked `p = 13` descent with wrong quotients refused. |
@@ -8870,6 +8900,67 @@ this pass.** Rungs 1–5 (all prior sessions' work) are untouched.
   changes this pass, so this is expected, not new evidence).
 - Clippy `-p axeyum-lean-kernel --lib --all-targets -D warnings`: clean.
 - Did NOT run a full `--lib creal::` sweep, per the brief.
+
+**Slice 1 of ADR-1703 landed (`WIP`, native-core-retire-batsat, 2026-09-05).**
+The in-tree native CDCL core is now the SAT engine on every Axeyum path, and
+`rustsat-batsat` is a non-default `batsat-reference` cargo feature used only as
+a differential oracle — the role ADR-0002 gives Z3. The default dependency graph
+of `axeyum-cnf` contains no `batsat`, `rustsat`, or `rustsat-batsat`; measured
+with a positive control, `cargo tree -e normal -p axeyum-cnf` is 5 lines
+(`axeyum-aig`, `rustix`) and the same command with `-F batsat-reference` lists
+all three.
+
+What unblocked the flip: the native core had no incremental interface, so the
+warm path (`IncrementalSat` / `IncrementalCnf`, and through them the LIA DPLL(T)
+driver and the warm BV engine) was BatSat-only. `NativeIncrementalCdcl` in
+`proof_sat::incremental` supplies it — clauses added between solves, assumptions
+per solve, retained learned clauses / VSIDS / phases, a failed-assumption core,
+and optional DRAT recording that is off on the warm path.
+
+**Assurance:** the "proofless BatSat UNSAT is lower assurance" boundary in the
+trust ledger disappears rather than moves. Every native `unsat` derives the empty
+clause from RUP-learned clauses, so a DRAT proof exists by construction. Two
+limits are recorded rather than smoothed over: warm-path recording is off by
+default (so a warm `unsat` is still stamped `Unchecked` unless asked for), and an
+`unsat` under assumptions carries a failed-assumption core, not a refutation.
+
+**Behaviour changes, both deliberate and documented.** The deterministic budget
+unit is now the core's *conflicts*, not the adapter's private `within_budget`
+polls; the parameter position is unchanged. And `resource_limit = 0` now admits
+no search at all rather than "0 conflicts", preserving the "encode but do not
+solve" contract the rest of the tree relies on — that one was found by the full
+solver unit sweep, not by the targeted per-file runs.
+
+**Measured before/after, same box (s4), `taskset -c 0-7`, `corpus/qfbv-curated`
+(43 files), 2 s timeout, `--jobs 2`, `--backend sat-bv`.** The "before" is a
+snapshot of `9abb438d4` — the last commit where `native_cdcl` still selected
+between two engines — so both arms come from one binary and one build:
+
+| Run | decided | sat | unsat | unknown | PAR-2 mean (s) | DISAGREE | replay failures |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| before, BatSat default (`9abb438d4`) | 33 (76.74%) | 9 | 24 | 10 | 0.971 | 0 | 0 |
+| before, `--native-cdcl` (`9abb438d4`) | 33 (76.74%) | 9 | 24 | 10 | 0.981 | 0 | 0 |
+| after, native default (`ab7ea1cb9`) | 33 (76.74%) | 9 | 24 | 10 | 0.986 | 0 | 0 |
+
+Identical verdicts and identical decided counts; the PAR-2 spread is 1.5% across
+all three, and the two *native* runs differ from each other by 0.5%, so the
+spread is noise on a box that was carrying other lanes throughout. **No
+capability change on this slice**, and no wrong verdict: `DISAGREE=0` and
+`model_replay_failures=0` in every run.
+
+**Capability ratchet** (`progress_frontier`, `--features full`,
+`--test-threads=1`, pinned): 12 tests, **no REGRESSION in any family**.
+`nia_unsat` 40 (baseline 40) and `nra_degree` 40 (baseline 40) were enforced;
+`bv_reduction` 34 (baseline 30), `lia_cuts` 35 (baseline 26) and `string_bound`
+40 (baseline 8) each printed PROGRESS but were marked **ADVISORY ONLY / NOT
+COMPARABLE** — throughput moved 28–46% mid-sweep under fleet load — so no
+baseline may be raised from this run and the improvements are not claimed.
+
+**Next (slice 2):** delete `crates/axeyum-cnf/src/batsat_reference.rs`, the
+`batsat-reference` features in `axeyum-cnf` / `axeyum-solver` / `axeyum-bench`,
+the three dependencies, and the ~70 historical documentation references. Not
+before the native core has carried a full public-corpus run under the new
+default.
 
 **Status: LANDED and kernel-accepted (`DONE`, pi-rung3, 2026-08-28).**
 
@@ -45000,6 +45091,213 @@ common_refinement_proof_rejected_at_wrong_type`) — all pass.
 | (this lane, Task 1) | doc 295 (measurement); no source changes |
 | (this lane, Task 2) | mechanical clippy fixes, 7 files, doc/mut/allow only |
 
+**Your lane's block (`PARTIAL`, arithmetization, 2026-09-05).** The
+arithmetization of `fo_syntax.rs` is landed, the numbering is proved
+injective, and the decoder and `substCode` are built and computing. The
+diagonal lemma and Gödel I are **not** landed; what is between here and them
+is now a PROOF gap with no missing construction, sized below.
+Three new files, `crates/axeyum-lean-kernel/src/fo_code.rs`,
+`fo_numbering.rs` and `fo_decode.rs`, registered from the crate root beside
+the other `fo_*` modules, plus one new example binary
+(`examples/fo_code_inventory.rs`). Every declaration has an empty
+`Kernel::axiom_footprint`
+([ADR-1640](docs/research/09-decisions/adr-1640-godel-numbering-gets-its-own-pairing-because-nat-pair-is-a-blind-family.md)).
+
+## What landed
+
+1. **A pairing with a proved round trip.**
+   `FO.Code.tri`, `FO.Code.pair a b := tri (a + b) + a`, `FO.Code.step`,
+   `FO.Code.unpair`, `FO.Code.fst`, `FO.Code.snd`; and
+   `FO.Code.pair_zero_succ`, `FO.Code.pair_succ`, `FO.Code.unpair_pair`,
+   `FO.Code.fst_pair`, `FO.Code.snd_pair`, `FO.Code.pair_inj_left`,
+   `FO.Code.pair_inj_right`.
+2. **The numbering.** `FO.Term.code`, `FO.Formula.code` — each constructor is
+   `FO.Code.pair tag payload` with a distinct tag and the payload nesting
+   field codes to the right.
+3. **Injectivity.** `FO.Term.code_injective`, `FO.Formula.code_injective`.
+4. **The decoder and the coded operations** (deliverable 2's construction).
+   `FO.Term.decodeAux`, `FO.Term.decode`, `FO.Formula.decodeAux`,
+   `FO.Formula.decode` — fuel-recursive, with a right-nested `Nat.rec` tag
+   tree whose last arm is the catch-all — and on top of them
+   `FO.Code.substCode : Nat -> Nat -> Nat` (exactly the roadmap item's
+   signature) and `FO.Code.isFormulaCode : Nat -> Bool`.
+
+## The pairing is a new one, and not reusing `Nat.pair` was forced twice over
+
+`Nat.pair` (`nat_prelude/avg_pair.rs`) and its `sqrt`-based projections
+(`nat_prelude/unpair.rs`) already exist, and neither has a round-trip theorem.
+This lane did not supply one:
+
+- **Partition check.** `Nat.pair`, `Nat.avg`, `Nat.unpaired` and
+  `Nat.Primrec` are the constants of the **held-out** families
+  `natural-avg-pair` (10 rows) and `natural-primitive-recursion` in
+  `artifacts/autogenesis/nursery-v2-extension.json`
+  (`"partition": "held-out"`, `"answer_access": "withheld-during-episode"`).
+  Proving `unpairLeft (Nat.pair a b) = a` would spend a blind evaluation
+  population this lane was not given. Nothing in this lane's diff touches any
+  `Nat.pair`/`Nat.avg`/`Nat.unpaired` declaration or states any theorem about
+  one.
+- **Independently, cost.** `Nat.pair`'s inverse reads `Nat.sqrt`, itself a
+  fuel recursion, so the round trip is a theorem about `sqrt (b*b + a)` on top
+  of a fuel-recursive definition, with a fuel-agreement lemma underneath.
+
+## Why the anti-diagonal pairing, specifically
+
+The choice is decided by what the INVERSE has to be, not by what the pairing
+looks like. `2^a (2b+1) - 1` inverts through the 2-adic valuation, which
+recurses on `n / 2` — not structurally smaller, so fuel plus a fuel-agreement
+lemma, and every step needs `(2m+1) % 2 = 1` and `(2m+1) / 2 = m`. The
+anti-diagonal enumeration's successor is a function of the previous pair
+alone,
+
+```text
+step (mk a 0)        = mk 0 (succ a)
+step (mk a (succ b)) = mk (succ a) b
+```
+
+so `FO.Code.unpair` is `step` iterated `n` times — a plain `Nat.rec` on `n`,
+no fuel, no `Nat.div`, no `Nat.sqrt`. Both `step` equations hold by ι, because
+`step` is a `Nat.rec` on the pair's second component. The round trip is then
+ONE structural induction, on the CODE rather than on either component:
+
+```text
+P n := Π a b, Eq Nat (pair a b) n -> Eq Nat.Pair (unpair n) (Nat.Pair.mk a b)
+```
+
+The only `Nat` theorems the whole two-file slice imports are `zero_add`,
+`succ_add`, `succ_injective`, `succ_ne_zero`.
+
+## Small formulas get small codes, and that is what made the tests possible
+
+`⌜bot⌝ = 0`, `⌜eqf (var 0) (var 0)⌝ = 2`, `⌜imp bot bot⌝ = 27`,
+`⌜all bot⌝ = 35`, `⌜ex bot⌝ = 44`. Every numeral in this kernel is unary, so a
+`2^a (2b+1)` pairing would have put a two-constructor formula out of reach of
+any `def_eq`. The evaluation tests check eleven such codes against
+hand-computed numerals.
+
+## Injectivity: 16 + 81 cases, two shapes
+
+An outer structural induction carrying
+`Π u, Eq Nat (code t) (code u) -> Eq _ t u`, with an inner case analysis on
+`u`. The 12-of-16 and 72-of-81 off-diagonal cases are one construction:
+`FO.Code.pair_inj_left` reads the two tags off the hypothesis, and distinct
+unary numerals are refuted by stripping `succ`s with `Nat.succ_injective`
+until `Nat.succ_ne_zero` applies. The diagonal cases peel the payload with
+`pair_inj_left`/`pair_inj_right`, convert each component (a `Nat` field is
+already an equality, an `FO.Term` field goes through
+`FO.Term.code_injective`, a recursive field through the induction
+hypothesis), and recombine by congruence one argument at a time.
+
+Proving `pair a b = pair c d -> a = c` *directly* would have been a double
+induction with a `Nat`-level case split inside it. Through the round trip it
+is three `Eq` steps, and that is what makes the 97 syntax-level cases
+affordable.
+
+## What did NOT land, and it is a PROOF gap now
+
+Not landed: the round trip `FO.Formula.decode (FO.Formula.code p) = p`, and
+therefore the commuting lemma
+`substCode (⌜φ⌝) (⌜t⌝) = ⌜Formula.subst φ (Subst.cons t Subst.id)⌝`, the
+diagonal lemma, and Gödel I.
+
+Before `fo_decode.rs` the obstruction was a missing CONSTRUCTION: `substCode`
+could not be defined, so its commuting lemma could not be stated. It is
+defined now, and evaluation-tested, so what remains is proof-term engineering
+with nothing missing under it. Building the decoder also changed the sizing in
+two ways that were not visible from the numbering alone:
+
+1. **The fuel-agreement lemma is avoidable.** State the round trip additively,
+   `Π t f, decodeAux (Nat.add f (size t)) (code t) = t`, with the fuel on the
+   LEFT of the `add`. `Nat.add` recurses on its RIGHT argument here, so
+   `Nat.add f (Nat.succ x)` ι-reduces and the recursive call's fuel *is* the
+   induction hypothesis's fuel rather than merely bounded by it. The binary
+   cases then need only `Nat.add_assoc` and `Nat.add_comm` — no `Nat.le`, no
+   subtraction, no `max`. That removes the
+   `Nat.binaryRecAux_agree_of_fuel`-shaped lemma this lane's own earlier
+   sizing had put in the list.
+2. **There is a cost nobody had counted: one transport per tag.**
+   `FO.Code.fst (code (and_ p q))` is NOT definitionally `4` — `FO.Code.fst`
+   unfolds to `Nat.Pair.fst (unpair …)` and `unpair` of a symbolic code is
+   stuck — so each of the 4 + 9 minors must rewrite along
+   `FO.Code.fst_pair`/`snd_pair` FIRST, after which the numeral is literal and
+   the tag tree ι-reduces. This was invisible until the tag tree existed.
+
+`size p <= code p` also remains, but only to justify the self-fuelled wrappers
+`decode n := decodeAux n n`; the `decodeAux` round trip in (1) does not use it.
+
+The diagonal lemma has a SECOND prerequisite that is not the binding one:
+ADR-1636 records the Leibniz equality rule as absent from `FO.Provable`
+(`eqf_refl` is the only equality rule), and the biconditional needs it. It was
+not landed here because with the round trip missing there is nothing for it to
+be used on.
+
+Recorded as the `open` facts `F:fo-formula-decoder` (whose statement now says
+the construction is landed and the theorem is not), `F:fo-diagonal-lemma` and
+`F:fo-first-incompleteness`.
+
+## Mutations RUN (not predicted)
+
+Both applied to this lane's own isolated worktree -- no other lane reads it --
+built, run, and restored byte-for-byte (sha256 compared before and after,
+`git status` on the two files empty afterwards). Baseline for all rows:
+`cargo test --release -p axeyum-lean-kernel --lib -- fo_code:: fo_numbering::
+--test-threads=4`, **17 passed, 0 failed, exit 0**.
+
+| mutant | what changed | outcome |
+| --- | --- | --- |
+| A | `FO.Code.pair a b := tri (a + b) + a` becomes `a + b`, i.e. the pairing stops being injective | **killed 17 of 17** (exit 101). The kernel rejects `FO.Code.pair_zero_succ` first -- `pair 0 (succ k)` no longer δι-reduces to `tri (succ (0 + k))` -- so the prelude does not build and every test in both modules dies. |
+| C | `split_payload` swaps `FO.Code.pair_inj_left` and `pair_inj_right`, i.e. the payload's head and tail are read the wrong way round | **killed 10 of 17** (exit 101), 7 survive. `FO.Term.code_injective` is rejected with `TypeMismatch`: the `f1`/`f2` diagonal cases get `Eq Nat (code t) (code u)` where the congruence wants `Eq Nat k l`. The 7 survivors are the `fo_code::` tests, which do not build the numbering prelude -- the mutation is confined to `fo_numbering.rs`, and that partition is the finding, not a gap. |
+
+| D | `FO.Formula.decodeAux`'s tag tree swaps the `all` and `ex` arms | **killed 5 of 11** (exit 101), 6 survive. Baseline for this row is the decoder suite alone (`-- fo_decode::`), 11 passed. Unlike A and C this mutant still ADMITS -- both arms have the same type -- so the kill is BEHAVIOURAL, and the five that died are exactly the ones that distinguish the two quantifiers: `formula_decode_aux_inverts_the_code_at_every_constructor`, `an_out_of_range_tag_falls_into_the_catch_all_arm`, `zero_fuel_returns_the_default_not_the_answer`, `subst_code_round_trips_a_closed_formula`, `the_self_fuelled_wrappers_agree_where_the_code_pays_for_itself`. The 6 survivors are the `FO.Term` rows, `isFormulaCode`, the numeral helper and the two axiom sweeps -- none of which mentions `all` or `ex`. |
+
+Mutant C is this lane's substitute for the brief's second named mutant ("the
+substitution commuting lemma with `code t` and `code φ` swapped"). That lemma
+did not land -- see below -- so there was nothing to mutate; C is the same
+defect class (two components of one code read in the wrong order) on the
+theorem that DID land, and it is named as a substitution rather than passed
+off as the original.
+
+**One mutation attempt was NOT APPLIED and is not counted.** The first run of
+mutant D used an anchor written before `rustfmt` joined the arm list onto one
+line, so the `assert s.count(old) == 1` in the harness fired and the source was
+never edited. The suite then ran green -- which is what a SURVIVED mutant also
+looks like. It is recorded here because "the mutation did not apply" and "the
+guard is not load-bearing" are indistinguishable from the test output alone,
+and only the assertion separated them. The row above is the re-run with the
+corrected anchor.
+
+## Gates, with counts and exit statuses
+
+| gate | result |
+| --- | --- |
+| `cargo test --release -p axeyum-lean-kernel --lib -- fo_code:: fo_numbering:: --test-threads=4` | 17 tests, 17 passed, exit 0 |
+| `cargo test --release -p axeyum-lean-kernel --lib -- fo_decode:: --test-threads=4` | 11 tests, 11 passed, exit 0 |
+| `cargo test --release -p axeyum-lean-kernel --lib -- fo_ --test-threads=4` (whole `fo_*` group) | 57 tests, 57 passed, exit 0 |
+| `cargo clippy --release -p axeyum-lean-kernel --all-targets -- -D warnings` | exit 0 |
+| `cargo fmt --all --check` | exit 0 |
+| `examples/fo_code_inventory --require-axiom-free --expect-count 48` | `48 FO arithmetization declarations`, `axiom-free: yes (48 declarations checked)`, exit 0 |
+| `examples/fo_code_inventory FO.Formula.decode --exact` (absence control) | exit 1, "an absent declaration is a failed check, not an empty report" |
+| `python3 scripts/validate-facts.py` | 2876 facts, 0 errors, exit 0 |
+| `python3 scripts/check-settled-fact-statements.py` | `SETTLED_FACT_STATEMENTS|PASS`, exit 0 |
+
+## One gate is RED, and it is not this lane's
+
+`python3 scripts/check-kernel-trusted-core.py` exits **1**:
+
+```text
+FAIL D: file(s) joined the trusted core: ['metric_prod.rs'].
+```
+
+Checked rather than assumed. `metric_prod.rs:183` carries
+`pub fn all(&self) -> Vec<(&'static str, NameId)>` on a `Names` struct, which
+is what puts it on the derived path from an admission gate; it was last
+touched by `c3249653d` (lane `metric`, W2-10), and
+`git merge-base --is-ancestor c3249653d 5f969ad57` succeeds, so the gate was
+already red at this lane's base. Neither `fo_code.rs` nor `fo_numbering.rs`
+appears anywhere in the trusted-core report, and neither declares a
+`fn all` on a `Names` struct -- `CodeNames::rebuild` returns `Self` and is
+`pub(crate)`. This lane did not change the trusted surface.
+
 **Status: DONE.** Decision record:
 [ADR-1060](docs/research/09-decisions/adr-1060-declare-nat-avg-and-nat-pair.md).
 
@@ -48850,6 +49148,77 @@ any Lean or `lean4export` invocation; the producer dispatch itself.
 | `307e5d2e6` | ADR-1510's two guards + the contract sizing/retirement and 26 resolution backfills |
 | `71cd59d04` | mutation-control registration for the six new guards + the ambiguous-anchor fix |
 
+Status: complete (2026-09-05). Roadmap W2-21 — a topological carrier built as a
+frame, with the open-ball frame of ℝ as the first instance. ADR-1643.
+
+## What this lane did
+
+Executed [ADR-1602](docs/research/09-decisions/adr-1602-the-metric-layer-first-then-pointfree-and-not-open-sets.md)'s
+fourth recommendation — *topology proper, when it is needed, is a frame* — in a
+new file `crates/axeyum-lean-kernel/src/top_frame.rs`, registered from the crate
+root. Nothing under `metric.rs`, `metric_prod.rs`, `creal.rs` or `creal/` was
+touched.
+
+`Top.Frame` is a sixteen-field `Sort 2` record built with the `AlgS` spine's own
+`declare_record`: `le` (reflexive, transitive), `inf`, `top`, `bot`, a
+**countable** join `sup : (Nat → carrier) → carrier`, the four universal
+properties, and one direction of the frame distributive law. The ℝ instance is
+`Top.ballFrame` over `Top.Opens := Rat → Nat → Prop`.
+
+**53 declarations**, **0 axioms** in any footprint, **11 of 11** tests passing
+(`--release --test-threads=4`, 45 s), and **0 kernel refusals** across the whole
+development — every proof term was admitted on its first kernel run.
+
+## The four findings
+
+1. **A frame's setoid equality is derived, not a field.** `Metric` carries
+   `equiv` plus three laws plus `distCongr` because `CReal.Equiv` is independent
+   data (ADR-0512). A frame is a poset, so `Equiv a b := le a b ∧ le b a` is
+   forced by antisymmetry and the three laws are theorems. Six fewer obligations
+   per instance, at zero cost.
+2. **`Nat → Bool` cannot be the carrier.** ADR-1624's decidable-subset
+   representation is the natural first guess for "a set of ball indices", and it
+   fails on the defining operation: `sup f i = ∃ n, f n i` is not a `Bool`.
+   No re-indexing repairs it — the problem is the codomain, not the index.
+3. **The pairing round-trip is held out, so the ball index is a pair.** The
+   planned `sup` re-indexes through `Nat.pair`/`Nat.unpairLeft`, which needs
+   `unpairLeft (pair a b) = a` — the content of the family `natural-avg-pair`
+   (`Batteries.Data.Nat.Bisect` + `Mathlib.Data.Nat.Pairing`), registered
+   **held-out with ten rows**. Indexing a ball by its centre *and* radius
+   (`Rat → Nat → Prop`) removes the need for a pairing, and with it the need for
+   a surjective `Rat.enum : Nat → Rat` the brief had sized as its own commit.
+   The partition check the lane ran *before writing any term* is what caught it.
+4. **`CReal.density` IS the covering property.** `Top.ball_density` is the reals
+   prelude's own density lemma applied, and the restatement type-checks by δβ.
+   Nothing had to be re-derived, because `Top.MemBall` is written in
+   `creal/density.rs`'s two-sided sandwich rather than as `|x − q| < ε`.
+
+## What did not land
+
+Hausdorff separation *from* `CReal.Apart`. `Top.ball_separated` proves the
+geometry (strictly separated brackets ⟹ no shared point) in four steps; the
+missing half is index selection — eliminate the `Or`, read `CReal.lt`'s rational
+gap, apply the Archimedean property, discharge two `Rat` inequalities. Sized at
+250–400 lines of term building against lemmas that all exist. ADR-1643 records
+the route.
+
+Also not attempted, and stated as a limit rather than an omission:
+`Top.ballFrame` is the frame **presented by** the rational-ball basis, not the
+lattice of open subsets of ℝ. Getting the latter means quotienting by the
+covering relation.
+
+## Two shared files repaired in passing
+
+`examples/shape_search.rs` carried two copies of its coverage sentence and of
+its `--include-constructed` usage line — one ending `… and intspace`, one ending
+`… and rn` — a "keep both sides" resolution of two lanes appending to the same
+line, so the tool documented two different, each-incomplete group lists.
+Collapsed, and `top` added as an indexed group so the next lane does not read a
+confident ABSENT for `Top.Frame`. `scripts/validate-facts.py`'s
+`KERNEL_THEOREM_RE` has the same duplication; there it is harmless (a regex
+alternation is a union), so this lane added its own line rather than
+restructuring a shared regex mid-flight, and recorded it.
+
 **DONE, frontier-holdout-screen, 2026-09-01.** Fixed the defect in
 [2026-09-01-the-selector-selected-a-held-out-fact.md](docs/research/11-design-review/2026-09-01-the-selector-selected-a-held-out-fact.md):
 `scripts/fact-frontier.py`'s `held_out_fact_ids()` read `nursery-v1.json`
@@ -50050,6 +50419,67 @@ crate-wide `cargo check --all-targets`, clippy on `-p axeyum-lean-kernel
 NOT fixed here; ADR-1623's lane recorded it as failing on main before that lane
 started, for reasons that predate both lanes, and it needs its own.
 
+**Hall's critical-subset split is proved on both sides; the strong induction
+that composes them is not** (`WIP`, hall-theorem, 2026-09-05, ADR-1644).
+
+The previous lane (ADR-1630) sized the remainder as one missing lemma plus
+bookkeeping, and the sizing was right about the lemma and wrong about the
+bookkeeping. `Nat.Finset.allBelow_congr` was indeed absent — measured at 3,222
+declarations with a freshly built `shape_search`, `--const
+Nat.Finset.allBelow_congr` UNANSWERABLE against the positive control
+`--name-like allBelow` → FOUND 4 — and it is a third KIND of law: `allBelow`'s
+three existing laws all relate a loop to its predicate's values, and none
+relates two loops to each other.
+
+The reason it is needed is not the mathematics but
+`Nat.Finset.forallSubset_of_search`'s congruence premise. `subsetB t s` — the
+natural spelling of `t ⊆ s` — loops to `bound t`, which CHANGES with the
+quantified argument, so two sets with the same members and different stored
+bounds get different loop lengths and the premise is unprovable. The rule this
+generalises to, and the reason it belongs in an ADR rather than a code comment:
+**every loop bound inside a predicate handed to `forallSubset_of_search` must be
+independent of the quantified set.** `Nat.Finset.subsetFixed` takes its bound
+from the fixed set and pays for it with a `Lt i (bound s)` hypothesis on the
+elimination rule only.
+
+Ten declarations landed, all admitted axiom-free, all registered in
+`nat_prelude_tests::definition_names`/`theorem_names` and swept. Both branches of
+the split are proved: `hallCondition_sdiff_of_critical` (the deleted-family
+branch, whose counting chain closes through a NEW vanishing lemma —
+`memB_unionOver_union_of_vanishing` — because the two unions' stored bounds
+differ) and `hallCondition_sdiff_singleton_of_strict` (the one-value-deleted
+branch, whose successor step is definitional: `Nat.add` recurses on its right
+argument so `add x 1` IS `succ x`).
+
+`card_union_of_disjoint` needed no new counting lemma and no `memB_inter`:
+`card s` and `sum s (fun _ => 1)` unfold to the same `Nat.rec`, so
+`Nat.Finset.sum_union_disjoint` at the constant `1` already IS the statement.
+That was found by reading two `Nat.rec` bodies, not by searching for a name, and
+no `--const` query would have surfaced it.
+
+**`Nat.Hall.sufficient` and `Nat.Hall.marriage_iff` did NOT land.** Three
+obstructions were written down and then MEASURED, and the measurement changed
+all three. (1) The claim that no `Nat.ble`/`Nat.blt` reflection pair existed was
+**false** — `Nat.ble` is there with `ble_eq_true_of_le`, `le_of_ble_eq_true` and
+`ble_eq_false_of_lt`, and it reduces definitionally, so the search predicate
+needs term construction and no new lemma. (2) and (3) were real and are now
+**closed by this lane**: `Nat.Finset.restrict`/`bound_restrict`/`memB_restrict`
+normalise a subset's stored bound so `forallSubset_of_search`'s
+`Le (bound t) n` premise can be met, and `Nat.Finset.memB_union_sdiff_self`
+carries a matching from `union t (sdiff s t)` back to `s`.
+
+I wrote obstruction (1) and then had to correct it, which is the reason the ADR
+now says which entries in a blocker list were measured and which were reasoned:
+a stale blocker in an authoritative document is inherited as a reason not to
+try.
+
+What remains is assembly — build `criticalB` from `andB` over `subsetFixed` and
+three `ble` comparisons, run `Nat.strongInduction` on `card s`, and glue. The
+one place a surprise is still possible is the arithmetic of the two descent
+steps (`card t < card s` and `card (sdiff s t) < card s` from `t` proper and
+nonempty); neither was attempted and neither should be assumed free. Detail in
+[ADR-1644](docs/research/09-decisions/adr-1644-the-loop-bound-decides-the-inclusion-test-and-halls-split-lands-without-the-induction.md).
+
 Status: COMPLETE (2026-09-01). `gen-autogenesis-nursery-refill.py --check` is
 green again, adjudicated in [ADR-1445](docs/research/09-decisions/adr-1445-a-drawn-family-is-history-and-is-not-re-screened.md),
 with a regression control that fails without the fix and a zero-diff proof over
@@ -50292,6 +50722,188 @@ today. So: a third occurrence from a stale-snapshot window is still possible;
 a third occurrence of "the construction already existed when the draw ran"
 is not, unless R12 itself is bypassed or its import fails silently (which it
 cannot: an import failure is a `RefillError`, not a skip).
+
+**`Complex.HasDerivativeOn` landed; Leibniz did not, and the obstruction is not
+algebra** (`WIP`, holomorphy, 2026-09-05). The brief asked for
+`Complex.HasDerivAt` "in the ε–δ form the real shelf uses". The real shelf has
+no pointwise derivative: `CReal.HasDerivativeOn F F' a b` is Bishop's *uniform*
+differentiability on a closed interval, a one-constructor inductive in `Type`
+whose first field is a modulus `Nat → Nat` as DATA. So the lane declared the
+same shape on a CLOSED disc and no `Complex.HasDerivAt` at all — a pointwise
+complex derivative beside a uniform real one makes every future bridge a
+conversion rather than a transcription. **Eighteen** new checked, axiom-free
+declarations in `crates/axeyum-lean-kernel/src/complex/deriv.rs`:
+`Complex.abs_zero`, `Complex.InDisc`, `Complex.HasDerivativeOn` with its
+`.mk`/`.rec`/`.modulus`/`.spec`, the witnesses `hasDerivative_const` / `_id` /
+`_neg` / `_add`, and holomorphy on the disc — `Complex.HolomorphicOn` as a
+`Sigma` (it CANNOT be an `Exists`: that predicate must land in `Prop` and
+`HasDerivativeOn` is in `Type 0`), with `holomorphicDeriv` (`Sigma.fst`),
+`holomorphic_spec` (`Sigma.snd`, dependent) and `holomorphic_const` / `_id` /
+`_neg` / `_add`.
+
+The lane's measurable finding is **which half of the transcription gets
+cheaper**. The ALGEBRA does: `complex/ring.rs`'s `ring_law_proof` decides every
+error-term identity in one call, replacing the 87 lines of the real sum rule's steps A–E
+(`creal/derivative.rs:3110-3196`) and its five named helpers, and `Complex.abs`'s nonnegativity removes the
+real closing step's two-sided `abs_le` split. The ANALYSIS does not:
+`hasDerivative_add` uses `Rat.natDivSucc_antitone` at the identical indices and
+fuses its two `1/(2e+2)` bounds through `Rat.natDivSucc_add` and
+`Rat.natDivSucc_halve` exactly as the real proof does — that bookkeeping is
+about rational indices, not about the carrier, and moving up a carrier neither
+helps nor hurts it.
+
+**Leibniz is blocked on three missing ℂ ESTIMATES, not on the ring
+identity.** The decomposition
+`E = EF·G(y) + F'(x)(y−x)(G(y) − G(x)) + F(x)·EG` is one `ring_law_proof`
+call; bounding it needs a uniform bound on `|G|`, one on `|F'|`, one on `|F|`,
+and a modulus of continuity for `G`. The real `hasDerivative_mul` takes exactly
+these as `UniformlyContinuousOn` plus two `Nat` witnesses. Neither
+`Complex.BoundedOn` nor `Complex.UniformlyContinuousOn` exists — checked against
+the full `Complex.*` inventory. ADR-1642 records both routes and recommends the
+hypothesis-carrying one, because `Complex.abs_mul` is an exact `Equiv` where
+the real side needed `abs_mul_le_of_bounds`. `polyEval`'s derivative is blocked
+behind Leibniz and nothing else; Cauchy–Riemann needs
+three named bridge lemmas (`abs_ofReal`, `abs_re_le`, `abs_im_le`). Complex
+power series, `exp` on ℂ, and Cauchy's theorem on a triangle were not started.
+
+One measured negative result worth carrying forward: the first version of the
+`InDisc` argument-order control was **vacuous**, and vacuous in a way no amount
+of care with closed arguments could have fixed. `|z − c| = |c − z|` always, and
+at closed arguments the kernel simply COMPUTES both moduli to the same `CReal`
+and accepts the exchanged claim — so **no closed instance can distinguish the
+argument order at all**. Both halves are now stated at free variables, where
+the equality is a theorem rather than a reduction.
+
+Detail and the sizing of each obstruction:
+[ADR-1642](docs/research/09-decisions/adr-1642-the-complex-derivative-is-the-real-shelfs-uniform-one-not-a-pointwise-hasderivat.md).
+
+Mutation evidence, all three RUN against a 66-test green baseline: the sum
+rule's error identity with a cross term dropped killed 63; `hasDerivative_neg`
+not negating the derivative killed 64; `InDisc`'s argument order reversed killed
+EXACTLY 2, both named. The first two are mass kills through `ring_law_proof`'s
+own normal-form panic and are weak evidence about any individual test, which is
+why the third exists. A fourth mutant (`hasDerivative_const`'s modulus `0` ->
+`3`) was run and SURVIVED, and is deliberately not in the committed suite: a
+constant's error is `Equiv`-zero for every modulus, so the literal is an
+arbitrary witness choice rather than a guard, and a test pinning it would
+measure typing rather than mathematics.
+
+**Your lane's block (`IN PROGRESS`, incidence-geometry, 2026-09-05).** W3-8's
+record landed and is green; the rational model and the `ring::rat` capability
+it forced are in the same branch. `Geo.Incidence` is a **21-field record over
+two carriers**, declared through the ADR-1578 `declare_record` spine at
+`Sort 2` with the ADR-1595 setoid discipline — each carrier its own
+equivalence, the incidence relation a congruence field for each, no `funext`
+and no `Quot.sound`
+([ADR-1635](docs/research/09-decisions/adr-1635-incidence-geometry-needs-apartness-in-exactly-one-axiom-and-the-rational-ring-normalizer-could-not-cancel.md)).
+All of it in NEW files (`crates/axeyum-lean-kernel/src/geo.rs`,
+`src/geo/qplane.rs`) registered from `lib.rs`, so a concurrent lane's merge
+into the kernel stays additive; `creal_point.rs` was not touched at all.
+
+**The finding the brief asked for: exactly one axiom needs apartness.**
+Hilbert I.1's uniqueness half (`joinUnique`) is the only axiom that *consumes*
+distinctness; `joinExists`, `twoPoints` and `triangle` only produce it. Over ℚ
+the consumption is a field cancellation and `(P = Q) → False` supplies it; over
+ℝ the consumption is a division by `distSq P Q`, which is `CReal.inv`, which is
+`PosBound`-indexed — the wall `CPoint.collinear_of_area_zero` already
+documents in its own doc comment. So `apart` is a **field** of the record with
+three laws (`apartNe`, `apartSymm`, `apartCongr`), and each model supplies its
+own notion. `apartNe` is what stops the abstraction being vacuous: without it
+`apart := True` satisfies every axiom.
+
+**The unbudgeted cost was not the geometry, it was the producer.**
+`ring::rat` declined *every* coordinate identity in this lane, for two
+independent reasons neither of which was visible before the goals were put to
+it:
+
+1. It had no `cancel_pairs`. Its module doc said, verbatim, "None of the five
+   ℚ targets produce an `x + (-x)` summand pair, so it was not built." Every
+   identity here produces nothing else — each one asserts that a determinant
+   expansion collapses.
+2. It had no way to drop a `Num(0)`. `scale_item` emits `Item::Num(0)` for
+   every `x * 0` and the additive normalizer never merges two `Num`s, so
+   `a*0 + b*0 + c` normalized to three items against `c`'s one. Every
+   statement about the triangle `(0,0), (1,0), (0,1)` has that shape.
+
+Both passes are now in `ring::rat::Problem::cancel_pairs` (the first ported
+from `ring::int`, the second new), with three matched tests including a
+negative control (`x*y + -(x*x) = 0` must still decline `NotAnIdentity`) that
+dies if the pass stops comparing factor lists. This is the ADR-0601 shape: the
+geometry did not get a bespoke proof, the producer got a capability, and the
+capability is guarded by a control that can fail.
+
+**What the ℚ model costs, and where.** The whole model factors through ONE
+algebraic lemma, `Geo.QPlane.onPivot`, and the `a ≠ 0 ∨ b ≠ 0` case split uses
+it in *both* branches (the `b` branch is the same lemma with `(u,v,s,t)` and
+`(U,V)` swapped, so the second case is three `ring` rearrangements rather than
+a second proof). `Geo.QPlane.joinProp` — every line through `P` and `Q` is
+proportional to the explicit join — needs **no non-degeneracy hypothesis at
+all**; the three relations are three unconditional ring identities with the two
+incidence left-hand sides added as summands on either side, and all three were
+verified by hand before being encoded. Distinctness is spent in exactly one
+place, `Geo.QPlane.joinNondeg`. `twoPoints` needs the case split only for the
+FIRST point: the second is the first plus the direction `(-b, a)`, whose
+incidence is one ring identity and whose apartness needs `Nondeg` alone —
+`Rat.inv` appears at exactly ONE site in the whole model, inside
+`Geo.QPlane.basePoint`'s branch closure (which runs for both cases of the
+split, so the emitted term has two copies and the source has one).
+
+**Mutation table (both mutants RUN, not predicted).** Baseline green, 12
+tests, `scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib geo::`.
+
+| mutant | outcome | kill count |
+| --- | --- | --- |
+| axiom I.1's uniqueness half loses its distinctness hypothesis (`geo.rs`, `join_unique_field`) | **killed** | 9 of 12 |
+| the join's `a` and `b` coefficients are swapped (`geo/qplane.rs`, `declare_join`) | **killed** | 9 of 12 |
+
+The three survivors in each case are the three tests that never build the
+prelude (`field_list_matches_the_suffix_table`,
+`field_indices_name_their_fields`, `the_record_is_refused_at_sort_one`), which
+is the correct outcome and not a gap: both mutants fail at PRELUDE-BUILD time,
+so no test that does not build it can see them. `git status` is clean after
+the run — the harness restored the tree byte-for-byte.
+
+**The mutation harness's first run was UNMEASURABLE, and the reason is worth
+recording.** `mutation_controls.py`'s `Cargo` runner passes no
+`--test-threads`, so libtest used every core and this suite's five
+prelude-building tests ran at once; the run produced `running 12 tests` and no
+`test result:` line, which the harness correctly reported as `INCONSISTENT`
+rather than as a kill. It is a real classification, not a false negative — but
+it is also a trap any memory-heavy kernel suite will hit. The second run set
+`RUST_TEST_THREADS=2` in the environment (which `_capture` merges) and was
+green. A later lane adding a kernel suite here should set that variable rather
+than assume the default is safe.
+
+**A green gate line with two UNANSWERED guards inside it.** Registering
+`Geo.*` in `shape_search` needs two edits — the `index_kernel` call and the
+`coverage:` line's declared-group list — and the tool asserts they agree
+(added 2026-08-31, precisely so a `coverage:` line cannot claim a group nobody
+built). Landing only the first made every `--include-constructed` query panic.
+`check-merge-hygiene.sh` did **not** go red: it printed
+`shape_duplicates=skipped(tool-failed)|kernel_projection=not-answerable` and
+then `PASS`, because a guard with no subject cannot fail. Reading the summary
+line rather than the exit status is what surfaced it. After the fix
+(`8dce39ab1`) both guards answer: `shape_duplicates=ok|kernel_projection=ok`,
+and `--ns Geo --min 70` returns FOUND 75.
+
+**Line equality is extensional and that is the load-bearing choice.** With
+`Equiv l m := ∀ P, (on P l → on P m) ∧ (on P m → on P l)`, reflexivity,
+symmetry and transitivity are free and `onLine` is an `And.left`. The
+alternative — proportionality of coefficient triples — needs the nonzero case
+split three times just for transitivity, once per conjunct.
+
+**What did NOT land: the ℝ² instance.** It is a `Geo.Incidence` instance and
+not a parallel development, which is the point of the record, but nothing of it
+is written. The sized obstruction is `joinUnique`, and only `joinUnique`:
+`CPoint.collinear_of_area_zero` (`∀ A B C k, PosBound (distSq A B) k →
+Equiv (cross A B C) zero → Collinear A B C`) is the theorem it has to route
+through, and it takes a `PosBound` witness, so `apart P Q` for the ℝ model has
+to be `∃ k, PosBound (distSq P Q) k` and the ℝ analogue of `Geo.QPlane.onPivot`
+has to consume that witness through `CReal.inv` rather than through
+`Rat.mul_eq_zero`. The other three axioms are cheaper than their ℚ twins, not
+harder: `joinExists` is the same coordinate computation over `CReal.Equiv`,
+`twoPoints` is the same shift, and `triangle` has `CPoint.cross_self_left` and
+`CPoint.NonCollinear` already built. Nothing about the record blocks it.
 
 **Closed five of doc 292's eleven declined `Int.ModEq` facts** (`DONE`,
 int-modeq-kernel, 2026-08-27). Doc 292's batched flywheel turn declined
@@ -53164,6 +53776,47 @@ indices) and D8 are each bounded and named with their obstruction. When a Lean
 4.29.1 toolchain exists on a fleet host, building the corpus from source adds
 the 13 `either` cases and the five large accepts, and the floors should be
 re-derived from that run rather than nudged.
+
+**Next Ten item 3** of [`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md):
+render the `creal` prelude as `.lean` source that pinned Lean elaborates, with
+`#print axioms` empty on the Lean side, packaged for Lake. Reviewer 02
+(constructive analysis) calls the shelf "among the most complete constructive
+real analyses anywhere"; until this lands, nobody outside this repository can
+`import` a line of it.
+
+**What exists before this lane.** The replay census (ADR-1661,
+`artifacts/measurements/lean-replay-census-2026-09-05.md`) hands pinned Lean's
+*kernel* the `lean4export` NDJSON stream and grades every `creal` declaration by
+name: 3,542 of 3,617 accepted, 49 `Type`-valued theorems Lean refuses as
+theorems, 26 blocked behind five of them. That is a census artifact, not a
+library.
+
+**The shape of the answer.** Lean *source* has a way out the wire format does
+not: a `Type`-valued proof is an ordinary `def`. So the source route publishes
+strictly more of the development than the wire route can, and the census's 3,542
+is the floor the gate enforces rather than the target.
+
+**Status.** In progress, WIP committed. What has run and what it produced:
+
+| step | result |
+|---|---|
+| generator (`examples/render_creal_library.rs`) | RUNS. 3,617 kernel declarations -> **3,397 Lean commands**, 117 regenerated by Lean from `inductive` commands, **103 excluded**, 1,077 results in the derived `#print axioms` audit, 24.5 MB carrier module, 66 s |
+| `lake build` under `theorem` spelling | **FAILED**, as ADR-0517 predicted: 100 errors in 6 m 20 s. The `def` spelling is what elaborates |
+| two renderer defects found and FIXED in `lean_pp.rs` | `Sort (u)` was emitted unparenthesized in application argument position (`f Sort (1)` is three arguments, not one); and `render_real_inductive` rendered constructor types with an EMPTY `@`-set, so a recursor applied inside a constructor type lost its `@` and its motive stayed a metavariable. Neither was reachable from any committed golden module |
+| complete Lean error census over the carrier | RAN, 13 m 43 s at `maxErrors=1000000`: 103 errors, **19 direct elaborator refusals** and 84 `unknown constant` cascades behind them. Derived into `artifacts/measurements/lean-creal-elaborator-refusals-2026-09-05.json` by `scripts/derive-lean-creal-refusals.py` |
+| **the finding** | the 19 refusals' dependency closure is 103 declarations and it contains **four headline results**: `CReal.hasDerivative_antiderivative`, `CReal.integral_eq_antideriv_diff` (FTC both directions), `CReal.e` and `CReal.pi`. Lean's KERNEL accepts all of them over the `lean4export` wire (ADR-1661); its ELABORATOR does not accept them from source. The package names them in `README.md`, `MANIFEST.json` and `EXCLUSIONS.json` rather than being quietly smaller |
+| `lake build Axeyum.Creal.Carrier` (coordinator close-out, 2026-09-05) | **Lean accepted the carrier**: `Carrier.olean` (52.7 MB) written 14 min in; the `lake` process then ran on at 100% CPU with nothing written and hit the 2,400 s bound (exit 124), undiagnosed -- probably native codegen for the 926 `def`s |
+| `#print axioms` on the Lean side | **headline audit RAN** against the compiled carrier: 7 headline results axiom-free, positive control fires; the full 1,077-command module **did not complete a run** |
+| gate `--slice` (drift, pin, counts) | **PASS**: 11 files match, 3,397 >= 3,397, 103 <= 103, audit 1,077 >= 400 |
+| the full gate end to end, `cargo check --workspace`, clippy on the generator | **DID NOT RUN** (coordinator close-out; the lane was terminated by an account spend limit) |
+
+The package is committed (coordinator, 2026-09-05) because Lean accepted its
+carrier module. Next steps, owed: bound the full gate's `lake build` and use
+`lean -o` (no codegen) so the audit can complete; diagnose the post-olean tail;
+lift the 19 elaborator refusals one by one so the FTC, `e` and `pi` publish.
+
+**Lane terminated** 2026-09-05 by an account spend limit on its model; the
+coordinator re-measured and closed out (ADR-1675 Evidence).
 
 **Lane block (`DONE -- ADR-1662 accepted; census published; screen shipped and
 mutation-verified`, lean-import-census, 2026-09-05).**
@@ -56599,6 +57252,59 @@ from the BEFORE derivation as well.
 * `python3 scripts/gen-autogenesis-nursery-refill.py --check` -- run, and it is
   RED for a pre-existing reason (below), so it could not serve as the zero-diff
   instrument.
+
+**ADR-1702 slice 1 landed: `Rational` gains an arbitrary-precision slow path,
+and promotion is OPT-IN PER ROUTE** (`WIP`, rational-bignum, 2026-09-05,
+ADR-1702). A parallel `wide_new`/`wide_add`/`wide_sub`/`wide_mul`/`wide_div`/
+`wide_neg`/`wide_recip` family promotes on `i128` overflow; `new`, the
+`checked_*` family and the arithmetic operators keep declining exactly as
+before. Any result that fits `i128` again is demoted back. The exact-rational
+simplex is the first — and so far only — route to opt in.
+
+**The brief asked for unconditional promotion. That was implemented, measured,
+and rejected, and the measurement is the finding.** Global promotion passed a
+lot: the workspace compiled unchanged, `axeyum-solver --lib --features full`
+reached 1438/1438, the corpus sweep and all three z3 differential fuzzes were
+green. Then `cargo test -p axeyum-cas --lib` was run: **25 unit tests failed and
+about seven stopped terminating** — still running at 45 minutes at full CPU,
+against 69 seconds for the whole suite. A controlled A/B on a named six-test
+subset, my tree versus a snapshot of the pre-change commit, was 6 failed / 0
+passed against 0 failed / 6 passed.
+
+`axeyum-cas` uses **`i128` exhaustion as a cost bound and a termination
+argument**. Its Groebner reduction returns `Declined(Overflow)`, its
+Wilf–Zeilberger certificate search and its zero tests decline when an
+intermediate leaves range, and its interval arithmetic declines on an
+unnegatable endpoint; three of the failing tests are named for that contract.
+Remove the bound and those computations run away on values with hundreds of
+digits instead of stopping. **No magnitude ceiling separates the two
+populations**, because the CAS declines *at* `i128` and the values in its
+failing assertions are 10^30 to 10^69. So `i128` range is load-bearing for one
+population of consumers and a liability for another, one type cannot change its
+meaning to serve both, and opt-in is what serves both.
+
+**Promotion is contained where it is used.** The simplex's five arithmetic
+helpers use the `wide_*` family, and every value leaving the module passes a
+`narrow` guard that declines to `Unknown` if a feasible point or a Farkas
+multiplier does not fit `i128`. Nothing downstream — `lra`, `lra_online`, model
+lifting, certificate serialization — can observe that a promoted value existed,
+which is why the widening puts no new obligation on the 416
+`numerator()`/`denominator()` call sites (those return `i128` and panic rather
+than truncate on a promoted value). Two of those sites were hardened anyway,
+because the global-promotion experiment reached them.
+
+**`simplex.rs`'s `Overflow` marker is kept, not removed.** It is narrower but
+not unreachable: `wide_div` still declines on a zero divisor, the `narrow`
+boundary declines an out-of-range witness or certificate, and promotion still
+fails at the pool cap (2^20 distinct values — an append-only pool without a cap
+would trade a fast `unknown` for an out-of-memory). Pivot and deadline budgets
+are untouched.
+
+**Slice 2 is NOT started and admits none of gap-analysis row 4b on its own.**
+The 26 QF_UFLIA files carrying `2^256` EVM literals are rejected at the
+*parser*, on `Value::Int(i128)`, before any `Rational` exists. Slice 2 is
+`Value::Int`, the SMT-LIB integer-literal parser, and opting further routes in
+one at a time. The LRA 1,024-atom cap does not move here either.
 
 **ℝ has a route and it is free (`DONE`, agent-reals-design, 2026-08-17).**
 [ADR-0512](docs/research/09-decisions/adr-0512-real-is-constructed-as-a-setoid-over-the-rationals.md)
