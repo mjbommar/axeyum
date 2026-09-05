@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "id": "F:intspace-l1-is-a-metric-space",
+  "title": "An integrated pointwise distance on an integration space is a metric on the bundled carrier",
+  "statement": "Let S be a constructive integration space (ADR-1612: a carrier of functions with a preorder `fle`, a linear structure, a Sort 1 integrability family `Integrable`, and a monotone additive homogeneous integral) and let `fdist : S.carrier -> S.carrier -> S.carrier` be any binary operation on the carrier that behaves like a pointwise distance -- nonnegative, vanishing on the diagonal, symmetric, and satisfying the triangle inequality with respect to `fle` and `fadd`. Then the bundled carrier `IntSpace.Bundled S` (a function together with its integrability datum, ADR-1613) with the total distance `d(b1, b2) = S.integral (fdist (fun b1) (fun b2))` is a METRIC SPACE, taking as its setoid the relation `d(b1, b2) ~ 0` -- which for the absolute-difference choice of `fdist` is 'equal almost everywhere', constructively. This is the L1 seminorm and the metric it induces. The statement recorded here is the triangle inequality, which is the only one of the twelve `Metric` fields that consumes the integral's ADDITIVITY; the remaining eleven are declared alongside it and assembled into `IntSpace.bundledL1`. Nothing in the hypotheses asks that `fdist f g` be the absolute value of a difference, that the carrier be closed under `|.|`, or that `fdist` relate to `fadd` and `fscale` at all: fusing the absolute value with the subtraction into a single operation is what removes the lattice question that ADR-1612 recorded as the blocker.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem IntSpace.l1Dist_triangle : ((x0 : IntSpace) -> ((x1 : ((x1 : IntSpace.carrier x0) -> ((x2 : IntSpace.carrier x0) -> IntSpace.carrier x0))) -> ((x2 : ((x2 : IntSpace.carrier x0) -> ((x3 : IntSpace.carrier x0) -> ((x4 : IntSpace.Integrable x0 x2) -> ((x5 : IntSpace.Integrable x0 x3) -> IntSpace.Integrable x0 (x1 x2 x3)))))) -> ((x3 : ((x3 : IntSpace.carrier x0) -> ((x4 : IntSpace.carrier x0) -> ((x5 : IntSpace.Integrable x0 x3) -> ((x6 : IntSpace.Integrable x0 x4) -> IntSpace.Integrable x0 (IntSpace.fadd x0 x3 x4)))))) -> ((x4 : ((x4 : IntSpace.carrier x0) -> ((x5 : IntSpace.carrier x0) -> IntSpace.fle x0 (IntSpace.fconst x0 CReal.zero) (x1 x4 x5)))) -> ((x5 : ((x5 : IntSpace.carrier x0) -> IntSpace.fle x0 (x1 x5 x5) (IntSpace.fconst x0 CReal.zero))) -> ((x6 : ((x6 : IntSpace.carrier x0) -> ((x7 : IntSpace.carrier x0) -> IntSpace.fle x0 (x1 x6 x7) (x1 x7 x6)))) -> ((x7 : ((x7 : IntSpace.carrier x0) -> ((x8 : IntSpace.carrier x0) -> ((x9 : IntSpace.carrier x0) -> IntSpace.fle x0 (x1 x7 x9) (IntSpace.fadd x0 (x1 x7 x8) (x1 x8 x9)))))) -> ((x8 : IntSpace.Bundled x0) -> ((x9 : IntSpace.Bundled x0) -> ((x10 : IntSpace.Bundled x0) -> CReal.le (IntSpace.l1Dist x0 x1 x2 x8 x10) (CReal.add (IntSpace.l1Dist x0 x1 x2 x8 x9) (IntSpace.l1Dist x0 x1 x2 x9 x10)))))))))))))",
+    "fragment": "IntSpace",
+    "kernel_theorem": "IntSpace.l1Dist_triangle",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6",
+      "x7",
+      "x8",
+      "x9",
+      "x10"
+    ]
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:intspace-integral-congr"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-axiom-free",
+      "kind": "kernel-term",
+      "supports": "Every one of the nineteen declarations in intspace/l1.rs is admitted by Kernel::add_declaration with an EMPTY axiom footprint. The list the sweep runs over is derived from the L1Names struct's own fields, not from a literal, so a declaration cannot be added without entering it.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::every_intspace_declaration_is_axiom_free"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_intspace_declaration_is_axiom_free 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "Confirmed independently by kernel_declaration_projection --release, which reports footprint size 0 for all nineteen names in the intspace group."
+    },
+    {
+      "id": "nothing-escapes-the-inventory",
+      "kind": "exhaustive-enumeration",
+      "supports": "The inventory test compares the ENVIRONMENT against the handle-derived list and named all fifteen generic L1 declarations on their first run, before they were registered. That is the check working, and it is also why these names are IntSpace.* rather than Metric.*: a Metric.* name declared by the IntSpace prelude is matched by neither prelude's prefix filter.",
+      "check_status": "checked",
+      "checkers": [
+        "intspace_tests::every_live_intspace_declaration_is_listed"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::intspace_tests::every_live_intspace_declaration_is_listed 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "A namespace-prefix filter is still a literal; this fact records the one case where that mattered and the naming decision taken because of it."
+    },
+    {
+      "id": "four-row-mutation-table-with-a-positive-twin",
+      "kind": "exhaustive-enumeration",
+      "supports": "IntSpace.l1Dist is PINNED to its integrand, not merely well-typed. At a bound S, a bound fdist and bound bundles, the equation `l1Dist (bundle f hf) (bundle g hg) = S.integral (fdist f g) (hI f g hf hg)` is admitted with Eq.refl, and three perturbations are each REFUSED in the same test: the integrand's arguments swapped, the integrand taken on the diagonal, and the two bundles swapped on the left. The swapped row is the sharpest -- `fdist g f` is CReal.Equiv-equal to `fdist f g`, which is IntSpace.l1Dist_comm proved in the same file, and definitionally different, so a probe that accepted it would be measuring nothing.",
+      "check_status": "checked",
+      "checkers": [
+        "l1_tests::the_l1_seminorm_is_pinned_to_its_integrand"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::l1_tests::the_l1_seminorm_is_pinned_to_its_integrand 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "Stated over a bound S deliberately: the same table over the CONCRETE interval instance is pathological, because refusing an Eq.refl between two CReal.integral applications makes the kernel unfold the Riemann-sum machinery. The general form is that the cost of refusing a definitional equation is the cost of the reduction the kernel attempts, not the size of the difference between the two sides."
+    },
+    {
+      "id": "two-structurally-unrelated-instances",
+      "kind": "kernel-term",
+      "kernel_declaration": "IntSpace.crealIntervalL1",
+      "supports": "The theorem is not vacuously general: its seven hypotheses are discharged at TWO structurally unrelated integration spaces. `IntSpace.crealIntervalL1 a b hab` is L1[a,b] over the Riemann integral with a modulus of continuity; `IntSpace.crealFiniteL1 m` is the L1 distance over a finite index set built from Nat.rec, where the derived measure is counting measure. A record with unsatisfiable hypotheses would produce no instance at all.",
+      "check_status": "checked",
+      "checkers": [
+        "l1_tests::l1_headline_types_render"
+      ],
+      "checker_command": "out=$(cargo test -q --release -p axeyum-lean-kernel --lib intspace::l1_tests::l1_headline_types_render 2>&1) && test \"$(printf '%s\\n' \"$out\" | grep -c '1 passed')\" -ge 1",
+      "notes": "All six analytic obligations of both instances are existing lemmas applied verbatim -- zero new estimates -- and three of the six (Metric.CReal.distSelf, absSubLe, distTriangle) are the metric laws of the real line applied at a point."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel intspace::l1 module (l1-completion lane, roadmap W3-1 follow-on)",
+    "source": "Derived from the IntSpace record's integralLe/integralAdd fields, IntSpace.integral_nonneg, IntSpace.integral_le_const and IntSpace.integral_congr. See docs/research/09-decisions/adr-1625-l1-is-a-metric-space-from-a-pointwise-distance-and-the-completion-functor-does-not-exist-yet.md."
+  },
+  "notes": "WHAT THIS FACT DOES NOT CLAIM. L1 is a metric space here; it is NOT known to be complete. `Metric.Complete (IntSpace.crealIntervalL1 a b hab)` is not declared, and Petrakis-Zeuner's L1 is the COMPLETION of a pre-integration space -- what landed is the pre-integration space's metric, the object that gets completed. The deciding measurement for that next step is in ADR-1625: of the 33 declarations in creal/completeness.rs and creal/convergence.rs, 33 are stated about CReal alone and 1 is reusable (CReal.limit, a total Definition with zero algebra lemmas and zero consumers anywhere in the crate). CReal is not the completion functor applied to Q and cannot be made one, because Metric.dist is CReal-valued and CReal's regularity condition is stated on rational samples."
+}

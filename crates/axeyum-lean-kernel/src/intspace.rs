@@ -902,6 +902,8 @@ mod probability_bridge;
 
 #[cfg(test)]
 mod intspace_tests;
+#[cfg(test)]
+mod l1_tests;
 
 /// A bound `S : IntSpace` plus its carrier, the shape every generic theorem
 /// opens with.
