@@ -686,6 +686,17 @@ pub mod theories {
         pub use crate::uflia_online::check_qf_uflia_online;
         pub use crate::uflra_online::check_qf_uflra_online;
     }
+
+    /// Stage/counter attribution for the generic CDCL(T) driver
+    /// (`crate::cdclt::CdclT`), shared by every arithmetic/EUF/string/combined
+    /// theory route above — the counterpart to
+    /// [`crate::layers::BvLayerStats`] for the pure bit-blast pipeline. Off by
+    /// default (each `CdclT::new` reads no clock beyond the deadline check
+    /// unless a [`TheoryLayerStatsGuard`] is active): see [`TheoryLayerStatsGuard::enable`].
+    pub mod cdclt_diagnostics {
+        pub use crate::cdclt::{TheoryLayerStatsGuard, last_theory_layer_stats};
+        pub use crate::layers::TheoryLayerStats;
+    }
 }
 
 /// Verification, reachability, and symbolic-execution APIs.

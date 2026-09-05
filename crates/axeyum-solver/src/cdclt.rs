@@ -72,9 +72,62 @@
 //!   forever on a pathological theory. Exhaustion is *sound* — `Unknown` is always a
 //!   permitted verdict — never a wrong sat/unsat.
 
-use std::time::Instant;
+use std::cell::Cell;
+use std::time::{Duration, Instant};
 
 use crate::euf_egraph::{TheoryLit, TheorySolver};
+use crate::layers::TheoryLayerStats;
+
+thread_local! {
+    /// Whether the *next* [`CdclT::new`] should collect [`TheoryLayerStats`]
+    /// timing. Scoped this way (rather than threaded through the ~10
+    /// `CdclT::new` call sites across the arithmetic/EUF/string/combined
+    /// theory adapters) for the same reason `nra_real_root::ISOLATE_DEADLINE`
+    /// is thread-local: one opt-in knob at the top of a solve, read at the
+    /// handful of internal construction points, instead of a parameter
+    /// threaded through every adapter. See [`TheoryLayerStatsGuard`].
+    static COLLECT_LAYER_STATS: Cell<bool> = const { Cell::new(false) };
+    /// The [`TheoryLayerStats`] collected by the most recently completed
+    /// [`CdclT::solve`] call while collection was enabled. `None` until
+    /// collection has been enabled and a search has completed.
+    static LAST_THEORY_LAYER_STATS: Cell<Option<TheoryLayerStats>> = const { Cell::new(None) };
+}
+
+/// Enables [`TheoryLayerStats`] collection for every `CdclT` search
+/// constructed for the lifetime of the returned guard, restoring the previous
+/// setting on drop (so nested/recursive solves compose correctly). Off by
+/// default: constructing no guard means no extra clock read beyond the
+/// existing deadline check.
+///
+/// ```ignore
+/// let _guard = TheoryLayerStatsGuard::enable();
+/// let _ = axeyum_solver::solve_smtlib(text, &config);
+/// let stats = last_theory_layer_stats(); // Some(..) if a CDCL(T) route ran
+/// ```
+pub struct TheoryLayerStatsGuard(bool);
+
+impl TheoryLayerStatsGuard {
+    /// Enables collection for the lifetime of the returned guard.
+    #[must_use]
+    pub fn enable() -> Self {
+        TheoryLayerStatsGuard(COLLECT_LAYER_STATS.with(|c| c.replace(true)))
+    }
+}
+
+impl Drop for TheoryLayerStatsGuard {
+    fn drop(&mut self) {
+        COLLECT_LAYER_STATS.with(|c| c.set(self.0));
+    }
+}
+
+/// The [`TheoryLayerStats`] collected by the most recently completed
+/// [`CdclT::solve`] call on this thread while a [`TheoryLayerStatsGuard`] was
+/// active. `None` if collection was never enabled, or no CDCL(T) search has
+/// completed yet on this thread.
+#[must_use]
+pub fn last_theory_layer_stats() -> Option<TheoryLayerStats> {
+    LAST_THEORY_LAYER_STATS.with(Cell::get)
+}
 
 /// A CNF literal in the online skeleton: a variable index and its polarity.
 /// Initial theory atoms occupy the first slots, while dynamically added theory
@@ -266,6 +319,28 @@ pub(crate) struct CdclT {
     /// Test-only first-reduction budget override.
     #[cfg(test)]
     reduce_first_override: Option<usize>,
+    /// Whether this search collects [`TheoryLayerStats`] timing (read once at
+    /// construction from [`COLLECT_LAYER_STATS`]). When `false`, every
+    /// `time_*`/stage-timing field below stays at its initial `Duration::ZERO`
+    /// — no extra `Instant::now()` call is made.
+    collect_layer_stats: bool,
+    /// Time inside Boolean unit propagation passes (`Self::unit_propagate`).
+    time_boolean_propagate: Duration,
+    /// Time inside `TheorySolver::assert` calls.
+    time_theory_assert: Duration,
+    /// Time inside `TheorySolver::propagate` calls.
+    time_theory_propagate: Duration,
+    /// Time inside `TheorySolver::push`/`pop` calls.
+    time_theory_push_pop: Duration,
+    /// Time inside 1-UIP conflict analysis (`Self::analyze_conflict`).
+    time_conflict_analysis: Duration,
+    /// Conflicts whose falsified clause traces to a theory inconsistency
+    /// (`Conflict::is_theory`), as opposed to a purely Boolean conflict.
+    /// Counted unconditionally (a plain increment, not a clock read).
+    theory_conflicts: usize,
+    /// Search decisions taken (`Self::pick_unassigned` choices). Counted
+    /// unconditionally.
+    decisions: usize,
 }
 
 impl CdclT {
@@ -323,6 +398,14 @@ impl CdclT {
             reductions: 0,
             #[cfg(test)]
             reduce_first_override: None,
+            collect_layer_stats: COLLECT_LAYER_STATS.with(Cell::get),
+            time_boolean_propagate: Duration::ZERO,
+            time_theory_assert: Duration::ZERO,
+            time_theory_propagate: Duration::ZERO,
+            time_theory_push_pop: Duration::ZERO,
+            time_conflict_analysis: Duration::ZERO,
+            theory_conflicts: 0,
+            decisions: 0,
         }
     }
 
@@ -429,8 +512,8 @@ impl CdclT {
         self
     }
 
-    /// Number of completed restarts.
-    #[cfg(test)]
+    /// Number of completed restarts. Used by tests and by
+    /// [`Self::theory_layer_stats`].
     fn restarts(&self) -> u64 {
         self.restart_index - 1
     }
@@ -523,7 +606,14 @@ impl CdclT {
         self.reason_clause[var] = None;
         self.trail.push((var, value, cause));
         if let Some(atom) = self.theory_atom_for_var[var] {
-            theory.assert(atom, value)?;
+            if self.collect_layer_stats {
+                let started = Instant::now();
+                let outcome = theory.assert(atom, value);
+                self.time_theory_assert += started.elapsed();
+                outcome?;
+            } else {
+                theory.assert(atom, value)?;
+            }
         }
         Ok(())
     }
@@ -610,7 +700,14 @@ impl CdclT {
     /// learned theory-conflict clause on a theory conflict, else `Ok(())`.
     fn theory_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         loop {
-            let props = theory.propagate();
+            let props = if self.collect_layer_stats {
+                let started = Instant::now();
+                let props = theory.propagate();
+                self.time_theory_propagate += started.elapsed();
+                props
+            } else {
+                theory.propagate()
+            };
             let mut progress = false;
             for prop in props {
                 // Intra-batch deadline check (see `unit_propagate`): each
@@ -790,7 +887,13 @@ impl CdclT {
             self.reason_theory[var] = false;
             self.reason_clause[var] = None;
             if cause == Cause::Decision {
-                theory.pop();
+                if self.collect_layer_stats {
+                    let started = Instant::now();
+                    theory.pop();
+                    self.time_theory_push_pop += started.elapsed();
+                } else {
+                    theory.pop();
+                }
             }
         }
         self.decision_level = target_level;
@@ -853,7 +956,14 @@ impl CdclT {
             if self.timed_out() {
                 return Ok(());
             }
-            self.unit_propagate(theory)?;
+            if self.collect_layer_stats {
+                let started = Instant::now();
+                let outcome = self.unit_propagate(theory);
+                self.time_boolean_propagate += started.elapsed();
+                outcome?;
+            } else {
+                self.unit_propagate(theory)?;
+            }
             let before = self.trail.len();
             self.theory_propagate(theory)?;
             if self.trail.len() == before {
@@ -871,8 +981,17 @@ impl CdclT {
         theory: &mut T,
         conflict: &Conflict,
     ) -> Learn {
-        let (learned, backjump, is_theory_lemma) =
-            self.analyze_conflict(&conflict.clause, conflict.is_theory);
+        if conflict.is_theory {
+            self.theory_conflicts += 1;
+        }
+        let (learned, backjump, is_theory_lemma) = if self.collect_layer_stats {
+            let started = Instant::now();
+            let result = self.analyze_conflict(&conflict.clause, conflict.is_theory);
+            self.time_conflict_analysis += started.elapsed();
+            result
+        } else {
+            self.analyze_conflict(&conflict.clause, conflict.is_theory)
+        };
         self.decay_activity();
         self.conflicts_since_restart += 1;
         if learned.is_empty() {
@@ -986,7 +1105,47 @@ impl CdclT {
     /// refutation, [`Outcome::Sat`] on a Boolean- and theory-consistent total
     /// assignment (the theory is left in that state), or [`Outcome::Unknown`] on
     /// deadline.
+    ///
+    /// Thin wrapper over [`Self::solve_inner`]: publishes [`TheoryLayerStats`]
+    /// to [`last_theory_layer_stats`] on the way out when collection is
+    /// enabled, so every early `return` inside the search loop has exactly
+    /// one place recording the final snapshot.
     pub(crate) fn solve<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
+        let outcome = self.solve_inner(theory);
+        if self.collect_layer_stats {
+            let stats = self.theory_layer_stats();
+            LAST_THEORY_LAYER_STATS.with(|c| c.set(Some(stats)));
+        }
+        outcome
+    }
+
+    /// [`Self::theory_layer_stats`]-producing counterpart of
+    /// [`crate::layers::BvLayerStats::from_solve_stats`]: lifts this search's
+    /// accumulated stage timings and counters into the typed, named
+    /// [`TheoryLayerStats`] a caller can compare or print, exactly as
+    /// `BvLayerStats` lifts the `sat-bv` backend's counters.
+    fn theory_layer_stats(&self) -> TheoryLayerStats {
+        TheoryLayerStats {
+            boolean_propagate: self.time_boolean_propagate,
+            theory_assert: self.time_theory_assert,
+            theory_propagate: self.time_theory_propagate,
+            theory_push_pop: self.time_theory_push_pop,
+            conflict_analysis: self.time_conflict_analysis,
+            #[allow(clippy::cast_possible_truncation)] // Conflict/decision counts fit u64 in practice.
+            theory_conflicts: self.theory_conflicts as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            theory_propagations: self.theory_propagations as u64,
+            #[allow(clippy::cast_possible_truncation)]
+            decisions: self.decisions as u64,
+            restarts: self.restarts(),
+            // The generic `TheorySolver` trait has no pivot-count method
+            // (D2, 2026-09-05 architecture review); a concrete simplex-backed
+            // theory would need to expose one before this can be `Some`.
+            simplex_pivots: None,
+        }
+    }
+
+    fn solve_inner<T: TheorySolver>(&mut self, theory: &mut T) -> Outcome {
         loop {
             // Defense in depth against a non-monotone-theory livelock: bound the
             // main-loop iterations even with no deadline. Sound — `Unknown` is a
@@ -1019,7 +1178,14 @@ impl CdclT {
                 None => return Outcome::Sat,
                 Some(var) => {
                     self.decision_level += 1;
-                    theory.push();
+                    self.decisions += 1;
+                    if self.collect_layer_stats {
+                        let started = Instant::now();
+                        theory.push();
+                        self.time_theory_push_pop += started.elapsed();
+                    } else {
+                        theory.push();
+                    }
                     let polarity = self.saved_phase[var];
                     if let Err(core) =
                         self.assign(theory, var, polarity, Cause::Decision, None, false)

@@ -116,11 +116,41 @@
 //! search's remaining budget). A checking stage that runs out is reported as
 //! the honest uncertified `; evidence certified=0` line, never a certified
 //! pass — a timeout is not a pass.
+//!
+//! # Theory-route stage attribution (`AXEYUM_TRACE=1` / `--trace`), OFF by default
+//!
+//! Every arithmetic/EUF/string/combined-theory route runs the same generic
+//! CDCL(T) driver (`crate::cdclt::CdclT`, in `axeyum-solver`), which — until
+//! `axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats` — had no
+//! stage attribution: the 2026-08-21 linear-arithmetic diagnosis classified
+//! ~800 files by hand from per-file TSVs because no instrument said whether a
+//! query's time went to Boolean propagation, `TheorySolver::assert`,
+//! `TheorySolver::propagate`, or 1-UIP conflict analysis. `--trace` enables
+//! collection for this one solve and, if a CDCL(T) route ran and decided,
+//! prints one `;`-prefixed line before the verdict:
+//!
+//! ```text
+//! ; theory-layer boolean_propagate_ms=812 theory_assert_ms=241 theory_propagate_ms=96 \
+//!   theory_push_pop_ms=4 conflict_analysis_ms=118 theory_conflicts=3110 \
+//!   theory_propagations=8842 decisions=4201 restarts=6
+//! ```
+//!
+//! No line is printed when no CDCL(T) route decided the query (e.g. a `QF_BV`
+//! `sat-bv` decide, or an `unknown`) — collection has nothing to report.
+//! Off by default for the same reason `--evidence`/`--progress` are: reading
+//! the clock at every driver stage boundary, however cheap, must never
+//! silently change a recorded parity baseline. This is the CDCL(T)
+//! stage-timing counterpart to `--evidence`'s certificate reporting; it is
+//! **not** the dispatch-level `RouteTrace` (which route was tried and why it
+//! declined) — that instrument's opt-in timed JSON form lives in
+//! `explain_corpus --json --timed-trace`, the diagnosis tool this file's
+//! competition-interface contract (verdict-only stdout) is not shaped for.
 
 use std::process::ExitCode;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
+use axeyum_solver::theories::cdclt_diagnostics::{TheoryLayerStatsGuard, last_theory_layer_stats};
 use axeyum_solver::{
     CheckProgress, CheckResult, CheckingProgress, Evidence, EvidenceCheck, ProofProgress,
     SolverConfig, produce_evidence_smtlib, solve_smtlib,
@@ -161,6 +191,30 @@ fn progress_report_line(snapshot: &axeyum_cnf::ProofSearchProgress) -> String {
         snapshot.elapsed.as_millis(),
         per_sec(snapshot.conflicts as f64),
         per_sec(snapshot.proof_bytes as f64),
+    )
+}
+
+/// Formats a [`axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats`]
+/// snapshot as the `;`-prefixed line documented in the module header (the
+/// `--trace` section). `;` is the SMT-LIB comment character, so this can
+/// never match `^(sat|unsat)$` / `^unknown$` — same convention as
+/// [`progress_report_line`] / [`evidence_report_line`].
+fn theory_layer_report_line(
+    stats: axeyum_solver::theories::cdclt_diagnostics::TheoryLayerStats,
+) -> String {
+    format!(
+        "; theory-layer boolean_propagate_ms={} theory_assert_ms={} theory_propagate_ms={} \
+         theory_push_pop_ms={} conflict_analysis_ms={} theory_conflicts={} \
+         theory_propagations={} decisions={} restarts={}",
+        stats.boolean_propagate.as_millis(),
+        stats.theory_assert.as_millis(),
+        stats.theory_propagate.as_millis(),
+        stats.theory_push_pop.as_millis(),
+        stats.conflict_analysis.as_millis(),
+        stats.theory_conflicts,
+        stats.theory_propagations,
+        stats.decisions,
+        stats.restarts,
     )
 }
 
@@ -426,6 +480,7 @@ struct CliArgs {
     timeout_ms: Option<u64>,
     evidence_mode: bool,
     progress_mode: bool,
+    trace_mode: bool,
 }
 
 fn parse_cli_args() -> CliArgs {
@@ -436,6 +491,7 @@ fn parse_cli_args() -> CliArgs {
             .and_then(|v| v.parse().ok()),
         evidence_mode: std::env::var("AXEYUM_EVIDENCE").is_ok_and(|v| v == "1"),
         progress_mode: std::env::var("AXEYUM_PROOF_PROGRESS").is_ok_and(|v| v == "1"),
+        trace_mode: std::env::var("AXEYUM_TRACE").is_ok_and(|v| v == "1"),
     };
     let mut rest = std::env::args().skip(1);
     while let Some(arg) = rest.next() {
@@ -445,6 +501,7 @@ fn parse_cli_args() -> CliArgs {
             }
             "--evidence" => args.evidence_mode = true,
             "--progress" => args.progress_mode = true,
+            "--trace" => args.trace_mode = true,
             other if other.starts_with("--") => {
                 // Ignore unknown flags: the competition passes only the file.
             }
@@ -458,12 +515,14 @@ fn parse_cli_args() -> CliArgs {
     args
 }
 
+#[allow(clippy::too_many_lines)] // linear CLI driver: arg parsing + solve dispatch + watchdog
 fn main() -> ExitCode {
     let CliArgs {
         path,
         timeout_ms,
         evidence_mode,
         progress_mode,
+        trace_mode,
     } = parse_cli_args();
 
     let Some(path) = path else {
@@ -531,7 +590,12 @@ fn main() -> ExitCode {
     // The second element is the optional `; evidence …` report line: `None` on
     // the DEFAULT path, so the default invocation `scripts/parity-run.sh` uses
     // stays byte-identical output and every recorded baseline keeps its meaning.
-    let solve = move || -> (&'static str, Option<String>) {
+    //
+    // The third element is the optional `; theory-layer …` report line (see
+    // the module header's `--trace` section): `None` unless `trace_mode` is
+    // set AND a CDCL(T) route decided the query, so — like every other lever
+    // here — a default run's output is unaffected byte-for-byte.
+    let solve = move || -> (&'static str, Option<String>, Option<String>) {
         if evidence_mode {
             let started = Instant::now();
             // A parse or solver error is `unknown` here too — and an evidence run
@@ -543,7 +607,7 @@ fn main() -> ExitCode {
                         &report.evidence,
                         started.elapsed().as_millis(),
                     );
-                    (verdict, Some(line))
+                    (verdict, Some(line), None)
                 }
                 Err(_) => (
                     "unknown",
@@ -551,9 +615,15 @@ fn main() -> ExitCode {
                         "; evidence kind=unknown certified=0 recheck=na arena=na ms={}",
                         started.elapsed().as_millis()
                     )),
+                    None,
                 ),
             };
         }
+        // `_guard` collects `TheoryLayerStats` for the dynamic extent of
+        // `solve_smtlib` below when `--trace` is on; dropped (disarmed) right
+        // after, restoring whatever this thread's setting was before. A
+        // no-op when `trace_mode` is `false` — no extra clock read.
+        let _guard = trace_mode.then(TheoryLayerStatsGuard::enable);
         // A parse or solver error is reported as `unknown` — never a wrong
         // verdict, and never a crash that the harness would read as an abort.
         let verdict = match solve_smtlib(&input, &config) {
@@ -564,13 +634,17 @@ fn main() -> ExitCode {
             },
             Err(_) => "unknown",
         };
-        (verdict, None)
+        let trace_line = trace_mode
+            .then(last_theory_layer_stats)
+            .flatten()
+            .map(theory_layer_report_line);
+        (verdict, None, trace_line)
     };
 
     let Some(ms) = timeout_ms else {
         // No wall clock configured: nothing to enforce, so stay on the main
         // thread (its stack is the largest one available).
-        let (verdict, evidence) = solve();
+        let (verdict, evidence, trace_line) = solve();
         // Progress lines come FIRST: they describe the search that already
         // finished producing `verdict`/`evidence`, so printing them after
         // either would be out of order. Still strictly before the evidence
@@ -586,6 +660,9 @@ fn main() -> ExitCode {
         for event in check_progress_rx.try_iter() {
             println!("{}", checking_report_line(&event));
         }
+        if let Some(line) = trace_line {
+            println!("{line}");
+        }
         if let Some(line) = evidence {
             println!("{line}");
         }
@@ -600,13 +677,13 @@ fn main() -> ExitCode {
             // A closed channel means the watchdog already answered; drop quietly.
             let _ = tx.send(solve());
         });
-    let (verdict, evidence) = match worker {
+    let (verdict, evidence, trace_line) = match worker {
         Ok(_) => rx
             .recv_timeout(Duration::from_millis(ms) + WATCHDOG_GRACE)
-            .unwrap_or(("unknown", None)),
+            .unwrap_or(("unknown", None, None)),
         // Could not spawn a worker: a resource failure, which is `unknown` —
         // never a guess and never a crash.
-        Err(_) => ("unknown", None),
+        Err(_) => ("unknown", None, None),
     };
 
     // Progress lines first (see the no-timeout branch above for why), then the
@@ -619,6 +696,9 @@ fn main() -> ExitCode {
     }
     for event in check_progress_rx.try_iter() {
         println!("{}", checking_report_line(&event));
+    }
+    if let Some(line) = trace_line {
+        println!("{line}");
     }
     if let Some(line) = evidence {
         println!("{line}");
