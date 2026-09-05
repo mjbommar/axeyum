@@ -2147,7 +2147,7 @@ fn declare_ball_mem_self(d: &mut IntDev<'_>, p: TopFramePrelude) -> Result<(), K
     };
 
     let xq = embed(d, p, q);
-    let stmt = mem_ball_body(d, p, xq, q, k);
+    let stmt = d.const_app(p.mem_ball, &[xq, q, k]);
     let (left, right) = {
         let hi_e = embed(d, p, hi);
         let sub = rat_p.sub;
@@ -2295,8 +2295,8 @@ fn declare_mem_open_mono(d: &mut IntDev<'_>, p: TopFramePrelude) -> Result<(), K
     let hm = d.kernel().fvar(hm_fv);
 
     let hyp_le = ole(d, p, s, t);
-    let hyp_mem = mem_open_body(d, p, x, s);
-    let target = mem_open_body(d, p, x, t);
+    let hyp_mem = d.const_app(p.mem_open, &[x, s]);
+    let target = d.const_app(p.mem_open, &[x, t]);
 
     // `fun q => ∃ k, s q k ∧ MemBall x q k` — the predicate `hm` witnesses.
     let outer_pred_s = {
@@ -2434,8 +2434,8 @@ fn declare_ball_separated(d: &mut IntDev<'_>, p: TopFramePrelude) -> Result<(), 
         let n = p.creal.lt;
         d.const_app(n, &[hi_e, lo_e])
     };
-    let mem1 = mem_ball_body(d, p, z, q, k);
-    let mem2 = mem_ball_body(d, p, z, r, m);
+    let mem1 = d.const_app(p.mem_ball, &[z, q, k]);
+    let mem2 = d.const_app(p.mem_ball, &[z, r, m]);
 
     // `z ≤ ofRat (q + eps)` and `ofRat (r − delta) ≤ z`.
     let up1 = {
