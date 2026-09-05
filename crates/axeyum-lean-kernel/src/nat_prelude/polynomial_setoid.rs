@@ -2240,11 +2240,10 @@ fn declare_poly_mul_comm(
     lg: &LogicPrelude,
     cr: &RecordNames,
     names: &PolyOpNames,
-    antidiag: NameId,
-    rev: NameId,
-    congr: NameId,
+    w: WalkLemmas,
     poly_ns: NameId,
 ) -> Result<NameId, KernelError> {
+    let (antidiag, rev, congr) = (w.antidiag, w.rev, w.congr);
     let c = rctx(k, lg, cr);
     let equiv_c = {
         let t = k.const_(names.equiv, vec![]);
@@ -2321,11 +2320,11 @@ fn declare_poly_mul_one_r(
     lg: &LogicPrelude,
     cr: &RecordNames,
     names: &PolyOpNames,
-    antidiag: NameId,
-    head_lemma: NameId,
+    w: WalkLemmas,
     deps: PolyDeps,
     poly_ns: NameId,
 ) -> Result<NameId, KernelError> {
+    let (antidiag, head_lemma) = (w.antidiag, w.head);
     let c = rctx(k, lg, cr);
     let equiv_c = {
         let t = k.const_(names.equiv, vec![]);
@@ -2490,14 +2489,11 @@ fn declare_poly_mul_assoc(
     lg: &LogicPrelude,
     cr: &RecordNames,
     names: &PolyOpNames,
-    antidiag: NameId,
-    mul_succ: NameId,
-    mul_right: NameId,
-    congr: NameId,
-    mul_congr_poly: NameId,
-    distrib_l_poly: NameId,
+    w: WalkLemmas,
     poly_ns: NameId,
 ) -> Result<NameId, KernelError> {
+    let (antidiag, mul_succ, mul_right, congr) = (w.antidiag, w.mul_succ, w.mul_right, w.congr);
+    let (mul_congr_poly, distrib_l_poly) = (w.poly_mul_congr, w.poly_distrib_l);
     let c = rctx(k, lg, cr);
     let l0 = k.level_zero();
     let equiv_c = {
@@ -3036,6 +3032,22 @@ pub struct PolyDeps {
     pub mul_zero: NameId,
 }
 
+/// The walk lemmas and the two `AlgS.Poly` theorems that the four remaining
+/// `AlgS.CommRing` fields of `R[X]` are built from (ADR-1618). Bundled so the
+/// four builders keep a readable signature.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct WalkLemmas {
+    antidiag: NameId,
+    shift: NameId,
+    rev: NameId,
+    head: NameId,
+    mul_right: NameId,
+    congr: NameId,
+    mul_succ: NameId,
+    poly_mul_congr: NameId,
+    poly_distrib_l: NameId,
+}
+
 /// The eight `AlgS.Poly.*` theorems that ARE the multiplicative fields of
 /// `AlgS.Poly.commRing`, gathered so the instance builder cannot pick up a
 /// name by accident.
@@ -3220,40 +3232,21 @@ pub(crate) fn declare_poly_setoid(
         antidiag_from_shift,
         poly_ns,
     )?;
-    let mul_comm = declare_poly_mul_comm(
-        k,
-        lg,
-        comm_ring,
-        &ops,
-        antidiag_from,
-        antidiag_from_rev,
-        antidiag_from_congr,
-        poly_ns,
-    )?;
-    let mul_one_r = declare_poly_mul_one_r(
-        k,
-        lg,
-        comm_ring,
-        &ops,
-        antidiag_from,
-        antidiag_from_head,
-        deps,
-        poly_ns,
-    )?;
-    let mul_one_l = declare_poly_mul_one_l(k, lg, comm_ring, &ops, mul_comm, mul_one_r, poly_ns)?;
-    let mul_assoc = declare_poly_mul_assoc(
-        k,
-        lg,
-        comm_ring,
-        &ops,
-        antidiag_from,
+    let walk_lemmas = WalkLemmas {
+        antidiag: antidiag_from,
+        shift: antidiag_from_shift,
+        rev: antidiag_from_rev,
+        head: antidiag_from_head,
+        mul_right: antidiag_from_mul_right,
+        congr: antidiag_from_congr,
         mul_succ,
-        antidiag_from_mul_right,
-        antidiag_from_congr,
-        mul_congr,
-        distrib_l,
-        poly_ns,
-    )?;
+        poly_mul_congr: mul_congr,
+        poly_distrib_l: distrib_l,
+    };
+    let mul_comm = declare_poly_mul_comm(k, lg, comm_ring, &ops, walk_lemmas, poly_ns)?;
+    let mul_one_r = declare_poly_mul_one_r(k, lg, comm_ring, &ops, walk_lemmas, deps, poly_ns)?;
+    let mul_one_l = declare_poly_mul_one_l(k, lg, comm_ring, &ops, mul_comm, mul_one_r, poly_ns)?;
+    let mul_assoc = declare_poly_mul_assoc(k, lg, comm_ring, &ops, walk_lemmas, poly_ns)?;
     let comm_ring_name = declare_poly_comm_ring(
         k,
         lg,
@@ -3684,6 +3677,556 @@ mod poly_setoid_tests {
             })
             .is_err(),
             "the exchange proof must NOT check against the reflexive statement"
+        );
+    }
+
+    // -----------------------------------------------------------------
+    // ADR-1618. Evaluation tests for the three reindexing lemmas, each at
+    // `n <= 3`, then a negative control per lemma and one for the ring
+    // instance. Every evaluation test compares a REDUCTION against a
+    // hand-written term and pins the opposite arrangement as NOT equal, so a
+    // reversed or off-by-one walk cannot satisfy both halves.
+    // -----------------------------------------------------------------
+
+    /// The proof term an admitted theorem was checked against.
+    fn proof_of(k: &Kernel, name: NameId) -> ExprId {
+        match k.environment().get(name).expect("theorem must exist") {
+            Declaration::Theorem { value, .. } => *value,
+            other => panic!("expected a Theorem, got {other:?}"),
+        }
+    }
+
+    /// Declare `ty` with `value` under a fresh name; return whether the
+    /// TRUSTED gate accepted it.
+    fn admits(k: &mut Kernel, root: NameId, label: &str, ty: ExprId, value: ExprId) -> bool {
+        let name = k.name_str(root, label);
+        k.add_declaration(Declaration::Theorem {
+            name,
+            uparams: vec![],
+            ty,
+            value,
+        })
+        .is_ok()
+    }
+
+    /// **Evaluation test for `antidiagFrom_rev` (the reversal).** At `n = 2`
+    /// and `n = 3` the walk and the transposed walk are reduced to explicit
+    /// right-nested sums and compared cell by cell: the walk visits
+    /// `(n,0), (n-1,1), …, (0,n)` and the transposed walk visits them in the
+    /// opposite order. The two are then asserted NOT definitionally equal,
+    /// which is what makes the theorem carry content rather than `refl`.
+    #[test]
+    fn the_reversal_walks_the_antidiagonal_in_the_opposite_order() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let g = k.fvar(G_FV);
+        let gt = transpose_cells(&mut k, &c, g);
+        let anti = k.const_(f.poly.antidiag_from, vec![]);
+        let zero_i = numeral(&mut k, &f.lg, 0);
+
+        // Right-nested sum of `g a_i b_i` over the listed cells, in order.
+        let sum_cells = |k: &mut Kernel, cells: &[(usize, usize)]| -> ExprId {
+            let mut it = cells.iter().rev();
+            let (a, b) = *it.next().expect("non-empty");
+            let na = numeral(k, &f.lg, a);
+            let nb = numeral(k, &f.lg, b);
+            let mut acc = t_app(k, g, &[na, nb]);
+            for &(a, b) in it {
+                let na = numeral(k, &f.lg, a);
+                let nb = numeral(k, &f.lg, b);
+                let head = t_app(k, g, &[na, nb]);
+                acc = c.plus(k, head, acc);
+            }
+            acc
+        };
+
+        for n in [2_usize, 3] {
+            let nn = numeral(&mut k, &f.lg, n);
+            let forward: Vec<(usize, usize)> = (0..=n).map(|s| (n - s, s)).collect();
+            let backward: Vec<(usize, usize)> = (0..=n).map(|s| (s, n - s)).collect();
+
+            let lhs = t_app(&mut k, anti, &[c.r, g, nn, zero_i]);
+            let want = sum_cells(&mut k, &forward);
+            assert!(
+                k.def_eq(lhs, want),
+                "antidiagFrom g {n} 0 must reduce to g {n} 0 + (… + g 0 {n})"
+            );
+            let wrong = sum_cells(&mut k, &backward);
+            assert!(
+                !k.def_eq(lhs, wrong),
+                "antidiagFrom g {n} 0 must NOT reduce to the reversed order -- \
+                 addition is abstract, so the order is observable"
+            );
+
+            let rev = t_app(&mut k, anti, &[c.r, gt, nn, zero_i]);
+            let want_rev = sum_cells(&mut k, &backward);
+            assert!(
+                k.def_eq(rev, want_rev),
+                "the transposed walk must visit the antidiagonal in the \
+                 opposite order"
+            );
+            assert!(
+                !k.def_eq(lhs, rev),
+                "the reversal is NOT definitional -- `antidiagFrom_rev` is a \
+                 theorem with content, and a `refl` proof could not exist"
+            );
+        }
+    }
+
+    /// **Evaluation test for `antidiagFrom_head` (the vanishing-tail
+    /// collapse), through the family it is used at.** At `n = 0..3`,
+    /// `AlgS.Poly.mul R p (AlgS.Poly.one R) n` reduces to
+    /// `p n * R.one + (p (n-1) * R.zero + … )` -- the head cell carries
+    /// `R.one` and every later cell carries `R.zero`, which is exactly the
+    /// hypothesis `antidiagFrom_head` consumes. The negative twin puts
+    /// `R.one` in the SECOND cell, one small term apart, and must not hold.
+    #[test]
+    fn multiplying_by_poly_one_leaves_one_in_the_head_cell_and_zero_after() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let p = k.fvar(P_FV);
+        let one_c = {
+            let t = k.const_(f.poly.ops.one, vec![]);
+            k.app(t, c.r)
+        };
+        let mul_c = k.const_(f.poly.ops.mul, vec![]);
+
+        for n in 0_usize..=3 {
+            let nn = numeral(&mut k, &f.lg, n);
+            let lhs = t_app(&mut k, mul_c, &[c.r, p, one_c, nn]);
+
+            // `p n * one + (p (n-1) * zero + (… + p 0 * zero))`.
+            let mut acc = {
+                let i = numeral(&mut k, &f.lg, 0);
+                let pi = k.app(p, i);
+                if n == 0 {
+                    c.times(&mut k, pi, c.one)
+                } else {
+                    c.times(&mut k, pi, c.zero)
+                }
+            };
+            for s in (0..n).rev() {
+                let i = numeral(&mut k, &f.lg, n - s);
+                let pi = k.app(p, i);
+                let coeff = if s == 0 { c.one } else { c.zero };
+                let head = c.times(&mut k, pi, coeff);
+                acc = c.plus(&mut k, head, acc);
+            }
+            assert!(
+                k.def_eq(lhs, acc),
+                "(p * 1) {n} must reduce to p {n} * one + a tail of p i * zero"
+            );
+
+            if n >= 1 {
+                // The mutant: `R.one` in the second cell instead of the first.
+                let mut bad = {
+                    let i = numeral(&mut k, &f.lg, 0);
+                    let pi = k.app(p, i);
+                    c.times(&mut k, pi, c.zero)
+                };
+                for s in (0..n).rev() {
+                    let i = numeral(&mut k, &f.lg, n - s);
+                    let pi = k.app(p, i);
+                    let coeff = if s == 1 { c.one } else { c.zero };
+                    let head = c.times(&mut k, pi, coeff);
+                    bad = c.plus(&mut k, head, bad);
+                }
+                assert!(
+                    !k.def_eq(lhs, bad),
+                    "(p * 1) {n} must NOT put R.one anywhere but the head cell"
+                );
+            }
+        }
+    }
+
+    /// **Evaluation test for `mulAssoc` (the two-dimensional exchange).** At
+    /// `n = 1, 2, 3` the two association orders are reduced and asserted NOT
+    /// definitionally equal -- the whole reason `mulAssoc` needs a proof. The
+    /// positive half pins what the left side actually is at `n = 1`:
+    /// `(p·q)(1)·s 0 + (p·q)(0)·s 1`, with the inner convolutions expanded.
+    #[test]
+    fn the_two_association_orders_differ_definitionally_and_expand_as_stated() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+        let mul_c = k.const_(f.poly.ops.mul, vec![]);
+
+        let pq = t_app(&mut k, mul_c, &[c.r, p, q]);
+        let qs = t_app(&mut k, mul_c, &[c.r, q, s]);
+
+        for n in 1_usize..=3 {
+            let nn = numeral(&mut k, &f.lg, n);
+            let left = t_app(&mut k, mul_c, &[c.r, pq, s, nn]);
+            let right = t_app(&mut k, mul_c, &[c.r, p, qs, nn]);
+            assert!(
+                !k.def_eq(left, right),
+                "((p*q)*s) {n} and (p*(q*s)) {n} must NOT be definitionally \
+                 equal -- if they were, AlgS.Poly.mulAssoc would be refl and \
+                 the exchange would carry no content"
+            );
+        }
+
+        // n = 1, left side, fully expanded.
+        {
+            let i0 = numeral(&mut k, &f.lg, 0);
+            let i1 = numeral(&mut k, &f.lg, 1);
+            let p0 = k.app(p, i0);
+            let p1 = k.app(p, i1);
+            let q0 = k.app(q, i0);
+            let q1 = k.app(q, i1);
+            let s0 = k.app(s, i0);
+            let s1 = k.app(s, i1);
+            // (p*q) 1 = p1*q0 + p0*q1 ; (p*q) 0 = p0*q0
+            let pq1 = {
+                let a = c.times(&mut k, p1, q0);
+                let b = c.times(&mut k, p0, q1);
+                c.plus(&mut k, a, b)
+            };
+            let pq0 = c.times(&mut k, p0, q0);
+            let want = {
+                let a = c.times(&mut k, pq1, s0);
+                let b = c.times(&mut k, pq0, s1);
+                c.plus(&mut k, a, b)
+            };
+            let left = t_app(&mut k, mul_c, &[c.r, pq, s, i1]);
+            assert!(
+                k.def_eq(left, want),
+                "((p*q)*s) 1 must be ((p1*q0 + p0*q1) * s0) + ((p0*q0) * s1)"
+            );
+            let swapped = {
+                let a = c.times(&mut k, pq1, s1);
+                let b = c.times(&mut k, pq0, s0);
+                c.plus(&mut k, a, b)
+            };
+            assert!(
+                !k.def_eq(left, swapped),
+                "((p*q)*s) 1 must NOT pair the inner sums with the other s index"
+            );
+        }
+    }
+
+    /// **Negative control for the reversal.** The admitted proof term is
+    /// reused against a conclusion in which the family is NOT transposed
+    /// (`equiv (W g n 0) (W g n 0)`) -- one subterm apart. The kernel must
+    /// refuse it. The POSITIVE TWIN re-declares the honest statement with the
+    /// same term and must be ACCEPTED, so the refusal is evidence about the
+    /// transposition and not about the reconstruction.
+    #[test]
+    fn the_reversal_is_rejected_when_the_family_is_not_transposed() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let value = proof_of(&k, f.poly.antidiag_from_rev);
+        let g = k.fvar(G_FV);
+        let n = k.fvar(M_FV);
+        let zero_n = zero_of(&mut k, &f.lg);
+        let lhs = walk(&mut k, &c, f.poly.antidiag_from, g, n, zero_n);
+
+        let build_ty = |k: &mut Kernel, transposed: bool| -> ExprId {
+            let rhs_family = if transposed {
+                transpose_cells(k, &c, g)
+            } else {
+                g
+            };
+            let rhs = walk(k, &c, f.poly.antidiag_from, rhs_family, n, zero_n);
+            let concl = c.eq(k, lhs, rhs);
+            let t = pi_over(k, M_FV, c.nat, concl);
+            let t = pi_over(k, G_FV, c.cell, t);
+            pi_over(k, R_FV, c.ring_ty, t)
+        };
+        let good = build_ty(&mut k, true);
+        let bad = build_ty(&mut k, false);
+
+        assert!(
+            admits(&mut k, f.p.algs, "polyRevRebuiltControl", good, value),
+            "the honest restatement must type-check -- otherwise the refusal \
+             below says nothing about the transposition"
+        );
+        assert!(
+            !admits(&mut k, f.p.algs, "polyRevNoTranspose", bad, value),
+            "the reversal proof must NOT check against the untransposed \
+             statement: over an abstract carrier `W g n 0` and `W gᵀ n 0` are \
+             different terms"
+        );
+    }
+
+    /// **Negative control for the peel-the-last lemma.** The last cell is
+    /// `g 0 (succ n)`; the mutant asks for `g 0 n`, a change of exactly one
+    /// `succ`. Positive twin included.
+    #[test]
+    fn peeling_the_last_cell_is_rejected_at_the_wrong_far_index() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let value = proof_of(&k, f.poly.antidiag_from_succ_last);
+        let g = k.fvar(G_FV);
+        let n = k.fvar(M_FV);
+        let zero_n = zero_of(&mut k, &f.lg);
+        let sn = succ_of(&mut k, &f.lg, n);
+
+        let build_ty = |k: &mut Kernel, honest: bool| -> ExprId {
+            let g1 = shift_first(k, &f.lg, &c, g);
+            let lhs = walk(k, &c, f.poly.antidiag_from, g, sn, zero_n);
+            let w = walk(k, &c, f.poly.antidiag_from, g1, n, zero_n);
+            let far = if honest { sn } else { n };
+            let last = t_app(k, g, &[zero_n, far]);
+            let rhs = c.plus(k, w, last);
+            let concl = c.eq(k, lhs, rhs);
+            let t = pi_over(k, M_FV, c.nat, concl);
+            let t = pi_over(k, G_FV, c.cell, t);
+            pi_over(k, R_FV, c.ring_ty, t)
+        };
+        let good = build_ty(&mut k, true);
+        let bad = build_ty(&mut k, false);
+
+        assert!(
+            admits(&mut k, f.p.algs, "polySuccLastRebuiltControl", good, value),
+            "the honest restatement must type-check"
+        );
+        assert!(
+            !admits(&mut k, f.p.algs, "polySuccLastOffByOne", bad, value),
+            "the last cell of the walk from `succ n` is `g 0 (succ n)`, not \
+             `g 0 n` -- the off-by-one must be REFUSED"
+        );
+    }
+
+    /// **Negative control for the vanishing-tail collapse.** The surviving
+    /// cell is `g n 0`, the FIRST the walk visits; the mutant asks for
+    /// `g 0 n`, the last. The two indices are swapped and nothing else.
+    /// Positive twin included.
+    #[test]
+    fn the_tail_collapse_is_rejected_at_the_other_end_of_the_antidiagonal() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let value = proof_of(&k, f.poly.antidiag_from_head);
+        let g = k.fvar(G_FV);
+        let n = k.fvar(M_FV);
+        let zero_n = zero_of(&mut k, &f.lg);
+
+        let hyp_ty = {
+            let i = k.fvar(I_FV);
+            let j = k.fvar(J_FV);
+            let sj = succ_of(&mut k, &f.lg, j);
+            let cell = t_app(&mut k, g, &[i, sj]);
+            let body = c.eq(&mut k, cell, c.zero);
+            let body = pi_over(&mut k, J_FV, c.nat, body);
+            pi_over(&mut k, I_FV, c.nat, body)
+        };
+        let build_ty = |k: &mut Kernel, honest: bool| -> ExprId {
+            let lhs = walk(k, &c, f.poly.antidiag_from, g, n, zero_n);
+            let rhs = if honest {
+                t_app(k, g, &[n, zero_n])
+            } else {
+                t_app(k, g, &[zero_n, n])
+            };
+            let concl = c.eq(k, lhs, rhs);
+            let t = pi_over(k, M_FV, c.nat, concl);
+            let t = pi_over(k, H_FV, hyp_ty, t);
+            let t = pi_over(k, G_FV, c.cell, t);
+            pi_over(k, R_FV, c.ring_ty, t)
+        };
+        let good = build_ty(&mut k, true);
+        let bad = build_ty(&mut k, false);
+
+        assert!(
+            admits(&mut k, f.p.algs, "polyHeadRebuiltControl", good, value),
+            "the honest restatement must type-check"
+        );
+        assert!(
+            !admits(&mut k, f.p.algs, "polyHeadWrongCell", bad, value),
+            "the tail collapse leaves `g n 0`, not `g 0 n` -- the swapped \
+             indices must be REFUSED"
+        );
+    }
+
+    /// **Negative control for the exchange.** `mulAssoc`'s proof term is
+    /// reused against the conclusion with the two right-hand factors swapped
+    /// (`p * (s * q)` for `p * (q * s)`), a change of exactly two subterms.
+    /// Positive twin included.
+    #[test]
+    fn the_exchange_is_rejected_with_the_inner_factors_swapped() {
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+        let value = proof_of(&k, f.poly.mul_assoc);
+        let equiv_c = {
+            let t = k.const_(f.poly.ops.equiv, vec![]);
+            k.app(t, c.r)
+        };
+        let mul_c = {
+            let t = k.const_(f.poly.ops.mul, vec![]);
+            k.app(t, c.r)
+        };
+        let p = k.fvar(P_FV);
+        let q = k.fvar(Q_FV);
+        let s = k.fvar(S_FV);
+
+        let build_ty = |k: &mut Kernel, honest: bool| -> ExprId {
+            let pq = app2(k, mul_c, p, q);
+            let inner = if honest {
+                app2(k, mul_c, q, s)
+            } else {
+                app2(k, mul_c, s, q)
+            };
+            let l = app2(k, mul_c, pq, s);
+            let r = app2(k, mul_c, p, inner);
+            let concl = app2(k, equiv_c, l, r);
+            let t = pi_over(k, S_FV, c.poly, concl);
+            let t = pi_over(k, Q_FV, c.poly, t);
+            let t = pi_over(k, P_FV, c.poly, t);
+            pi_over(k, R_FV, c.ring_ty, t)
+        };
+        let good = build_ty(&mut k, true);
+        let bad = build_ty(&mut k, false);
+
+        assert!(
+            admits(&mut k, f.p.algs, "polyMulAssocRebuiltControl", good, value),
+            "the honest restatement must type-check"
+        );
+        assert!(
+            !admits(&mut k, f.p.algs, "polyMulAssocSwapped", bad, value),
+            "the associativity proof must NOT check with the inner factors \
+             swapped -- that statement is associativity composed with \
+             commutativity, which this term does not prove"
+        );
+    }
+
+    /// **Evaluation test for `AlgS.Poly.commRing` itself.** The instance is a
+    /// `Definition` producing an `AlgS.CommRing` VALUE -- so the kernel
+    /// checked all 23 fields -- and each of its four data selectors reduces
+    /// to the intended `AlgS.Poly` operation. The negative twins pair `mul`
+    /// against `add` and `one` against `zero`, which a mis-ordered field list
+    /// would satisfy.
+    #[test]
+    fn the_polynomial_ring_instance_carries_the_declared_operations() {
+        use crate::nat_prelude::structures_setoid::idx::comm_ring::{
+            ADD, CARRIER, EQUIV, MUL, ONE, ZERO,
+        };
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+
+        let decl = k
+            .environment()
+            .get(f.poly.comm_ring)
+            .expect("AlgS.Poly.commRing must exist")
+            .clone();
+        assert!(
+            matches!(decl, Declaration::Definition { .. }),
+            "AlgS.Poly.commRing must be a Definition producing an \
+             AlgS.CommRing -- a Theorem or an axiom would not have had its \
+             23 fields checked"
+        );
+
+        let inst = {
+            let t = k.const_(f.poly.comm_ring, vec![]);
+            k.app(t, c.r)
+        };
+        let at_r = |k: &mut Kernel, n: NameId| {
+            let t = k.const_(n, vec![]);
+            k.app(t, c.r)
+        };
+        let poly_equiv = at_r(&mut k, f.poly.ops.equiv);
+        let poly_add = at_r(&mut k, f.poly.ops.add);
+        let poly_mul = at_r(&mut k, f.poly.ops.mul);
+        let poly_zero = at_r(&mut k, f.poly.ops.zero);
+        let poly_one = at_r(&mut k, f.poly.ops.one);
+
+        for (slot, want, label) in [
+            (CARRIER, c.poly, "carrier"),
+            (EQUIV, poly_equiv, "equiv"),
+            (ADD, poly_add, "add"),
+            (MUL, poly_mul, "mul"),
+            (ZERO, poly_zero, "zero"),
+            (ONE, poly_one, "one"),
+        ] {
+            let got = sel(&mut k, &f.st.comm_ring, slot, inst);
+            assert!(
+                k.def_eq(got, want),
+                "AlgS.Poly.commRing's `{label}` field must reduce to the \
+                 declared AlgS.Poly operation"
+            );
+        }
+        // Two swaps a mis-ordered field list would produce.
+        let got_mul = sel(&mut k, &f.st.comm_ring, MUL, inst);
+        assert!(
+            !k.def_eq(got_mul, poly_add),
+            "the `mul` field must NOT be AlgS.Poly.add"
+        );
+        let got_one = sel(&mut k, &f.st.comm_ring, ONE, inst);
+        assert!(
+            !k.def_eq(got_one, poly_zero),
+            "the `one` field must NOT be AlgS.Poly.zero"
+        );
+    }
+
+    /// **Negative control for the ring instance.** Rebuild
+    /// `AlgS.Poly.commRing` from its own selectors, swapping ONE field: slot
+    /// 15 (`mulOneL`, `equiv (mul one p) p`) gets slot 16's proof (`mulOneR`,
+    /// `equiv (mul p one) p`). Those are the two fields ADR-1609 left open,
+    /// they differ in one subterm, and the kernel must refuse the swap.
+    ///
+    /// The POSITIVE TWIN in the same test is the identical reconstruction
+    /// with slot 15 left alone. A record-field mutation poisons the whole
+    /// build if applied in place, so the twin is the only way to know the
+    /// refusal is about `mulOneL` and not about the reconstruction.
+    #[test]
+    fn the_ring_instance_is_rejected_when_mulonel_is_supplied_by_mulone_r() {
+        use crate::nat_prelude::structures_setoid::idx::comm_ring::{
+            MUL_COMM, MUL_ONE_L, MUL_ONE_R,
+        };
+        let mut k = Kernel::new();
+        let f = build(&mut k);
+        let c = rctx(&mut k, &f.lg, &f.st.comm_ring);
+
+        let rebuild = |k: &mut Kernel, swap: bool| -> ExprId {
+            let cr_const = k.const_(f.poly.comm_ring, vec![]);
+            let inst = k.app(cr_const, c.r);
+            let mut args = Vec::with_capacity(MUL_COMM + 1);
+            for i in 0..=MUL_COMM {
+                let source = if swap && i == MUL_ONE_L { MUL_ONE_R } else { i };
+                args.push(sel(k, &f.st.comm_ring, source, inst));
+            }
+            let v = mk_instance(k, &f.st.comm_ring, &args);
+            lam_over(k, R_FV, c.ring_ty, v)
+        };
+        let good = rebuild(&mut k, false);
+        let bad = rebuild(&mut k, true);
+        let ty = arrow(&mut k, c.ring_ty, c.ring_ty);
+
+        let good_name = k.name_str(f.p.algs, "polyCommRingRebuiltControl");
+        assert!(
+            k.add_declaration(Declaration::Definition {
+                name: good_name,
+                uparams: vec![],
+                ty,
+                value: good,
+                hint: ReducibilityHint::Regular(1),
+            })
+            .is_ok(),
+            "the field-by-field reconstruction itself must type-check"
+        );
+        let bad_name = k.name_str(f.p.algs, "polyCommRingMulOneLSwapped");
+        assert!(
+            k.add_declaration(Declaration::Definition {
+                name: bad_name,
+                uparams: vec![],
+                ty,
+                value: bad,
+                hint: ReducibilityHint::Regular(1),
+            })
+            .is_err(),
+            "supplying mulOneR's proof for mulOneL must be REFUSED: over an \
+             abstract commutative ring `equiv (mul one p) p` and \
+             `equiv (mul p one) p` are different propositions, and the \
+             derivation through AlgS.Poly.mulComm is what makes the honest \
+             field type-check"
         );
     }
 }
