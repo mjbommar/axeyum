@@ -37,6 +37,25 @@
 //! `a^(n−1)`. [`tests::the_reducing_route_reaches_primes_the_naive_one_cannot`]
 //! measures both sides of that claim.
 //!
+//! # Where it stops
+//!
+//! Measured 2026-09-04 by [`tests::the_cost_ladder_is_measured`], proving
+//! `a^(n−1) ≡ 1 (mod n)` at the CAS's own witness (shared dev box,
+//! `--release`, other lanes active, so these are upper bounds):
+//!
+//! | `n` | wall clock |
+//! |---|---|
+//! | 47 | 0.83 s |
+//! | 101 | 7.8 s |
+//! | 251 | 398 s |
+//! | 509 | killed, not waited out |
+//!
+//! The cost is superlinear in `n` well beyond the `n²` numeral size — the
+//! `251` rung is 51× the `101` rung for 2.5× the modulus — so `251` is the
+//! last rung that finishes at all and `101` is the last one a gate can carry.
+//! [`RECONSTRUCTED`] therefore stops at 47, comfortably inside that, and
+//! [`COST_LADDER`] at 101. ADR-1622 records the table and what would move it.
+//!
 //! # What is reconstructed
 //!
 //! For each prime `n` in the certificate tree (the subject and, recursively,
@@ -431,20 +450,16 @@ fn reconstruct_one(
         let one_i = d.ione();
         let hit = modeq(d, n_i, pow_ae, one_i);
         let ty = d.not(hit);
-        // With the residue guard off and a corrupted witness, `residue == 1`
-        // and no proof exists — the route must still hand the kernel
-        // SOMETHING, so it hands the certificate's own claim closed by the
-        // only term it has, and the kernel refuses it. `Eq.refl` on the
-        // congruence is exactly the "it is already true" reading a corrupted
-        // certificate asserts.
+        // With the residue guard off and a corrupted witness the residue IS
+        // `1`, so no refutation exists. The route then hands the kernel
+        // exactly what the arithmetic does support — the engine's honest
+        // `a^e ≡ 1` — against a statement claiming the opposite, and the
+        // kernel refuses it. Nothing is fabricated on either side: the
+        // certificate's claim is the type, the true arithmetic is the term,
+        // and the trusted gate is what notices they disagree.
         let value = match pow_not_modeq_one(d, n, witness, exponent) {
             Some(proof) => proof,
-            None => {
-                let lhs = d.iemod(pow_ae, n_i);
-                let refl = d.irefl(lhs);
-                let h_fv = d.fresh_fvar();
-                d.lam_fv(h_fv, hit, refl)
-            }
+            None => pow_modeq(d, n, witness, exponent).0,
         };
         NatOps::declare_theorem(d, name, ty, value)?;
         admitted.push(name);
@@ -456,8 +471,11 @@ fn reconstruct_one(
 /// The reconstruction route: a CAS Pratt certificate for `n`, together with
 /// every subcertificate in its tree, becomes kernel theorems.
 ///
-/// Bases already reconstructed are not re-declared (a factor base recurs
-/// across a tree), so the returned list is duplicate-free.
+/// `seen` carries the bases already declared **across calls**, because a
+/// factor base recurs both within one tree and between trees (`2` is a base of
+/// every prime's `n − 1`). A kernel name may be declared once, so this is not
+/// an optimisation: without it the second tree is refused with
+/// `DeclarationExists`, which is how it was found.
 ///
 /// # Errors
 ///
@@ -473,6 +491,7 @@ pub(super) fn reconstruct(
     n: u32,
     cert: &PrattCertificate,
     guards: RouteGuards,
+    seen: &mut Vec<u32>,
 ) -> Result<Vec<NameId>, KernelError> {
     if guards.cas_recheck {
         assert!(
@@ -480,9 +499,8 @@ pub(super) fn reconstruct(
             "route guard: the CAS's own checker rejects this certificate for {n}"
         );
     }
-    let mut seen = Vec::new();
     let mut admitted = Vec::new();
-    reconstruct_tree(d, n, cert, guards, &mut seen, &mut admitted)?;
+    reconstruct_tree(d, n, cert, guards, seen, &mut admitted)?;
     Ok(admitted)
 }
 
@@ -530,6 +548,16 @@ mod tests {
     /// ADR-1622. Every one of these carries its own factor bases recursively,
     /// so the tree also covers 2, 3, 5, 7, 11 and 13 as bases.
     const RECONSTRUCTED: &[u32] = &[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47];
+
+    /// The ladder [`the_cost_ladder_is_measured`] walks to find the wall.
+    /// Trimmed to `101` from a measured run, not guessed. Wall clock on the
+    /// shared dev box, `--release`, other lanes active:
+    /// `n = 47` 0.83 s, `n = 101` 7.8 s, `n = 251` **398 s**. The rung at
+    /// `251` is the last one that finishes at all and is far too slow for a
+    /// gate (`CLAUDE.md`: "a pathological test is worth deleting"); `509` was
+    /// killed rather than waited out, because it holds the host-wide cargo
+    /// lock every other lane needs. ADR-1622 carries the table.
+    const COST_LADDER: &[u32] = &[47, 101];
 
     fn built() -> (Kernel, crate::int_prelude::IntPrelude) {
         let mut k = Kernel::new();
@@ -703,6 +731,57 @@ mod tests {
         });
     }
 
+    /// **Where it stops, measured.** The route is walked up a ladder of
+    /// primes, each time proving `a^(n-1) = 1 (mod n)` for the CAS's own
+    /// witness, and the wall-clock cost of each rung is printed.
+    ///
+    /// No time budget is asserted -- this box runs many lanes at once and a
+    /// timing assertion would be a gate on the queue, not on the route
+    /// (`CLAUDE.md`, "cargo-serialized.sh takes a host-wide flock"). What IS
+    /// asserted at every rung is that the kernel agrees with the residue, and
+    /// that it REFUSES the neighbouring one. The ceiling in [`RECONSTRUCTED`]
+    /// is chosen from the printed numbers; ADR-1622 records them.
+    #[test]
+    fn the_cost_ladder_is_measured() {
+        on_a_deep_stack(|| {
+            let (mut k, p) = built();
+            let mut d = IntDev::new(&mut k, p);
+            for n in COST_LADDER.iter().copied() {
+                let cert = certificate(n);
+                let a = u32::try_from(cert.witness).expect("witness fits");
+                let start = std::time::Instant::now();
+                let (proof, residue) = pow_modeq(&mut d, n, a, n - 1);
+                let inferred = d
+                    .kernel()
+                    .infer(proof)
+                    .unwrap_or_else(|e| panic!("{a}^{} mod {n} must type-check: {e:?}", n - 1));
+                let n_i = inum(&mut d, n);
+                let a_i = inum(&mut d, a);
+                let m_nat = d.num(n - 1);
+                let pow_am = d.ipow(a_i, m_nat);
+                let one = inum(&mut d, 1);
+                let stated = modeq(&mut d, n_i, pow_am, one);
+                assert!(
+                    d.kernel().def_eq(inferred, stated),
+                    "Fermat must hold for {a}^{} mod {n}",
+                    n - 1
+                );
+                let two = inum(&mut d, 2);
+                let wrong = modeq(&mut d, n_i, pow_am, two);
+                assert!(
+                    !d.kernel().def_eq(inferred, wrong),
+                    "and must NOT land on 2 -- otherwise the check above is vacuous"
+                );
+                assert_eq!(residue, 1, "Fermat's residue is 1 for a prime modulus");
+                println!(
+                    "pratt-cost-ladder n={n} witness={a} exponent={} elapsed={:?}",
+                    n - 1,
+                    start.elapsed()
+                );
+            }
+        });
+    }
+
     // -- the route ----------------------------------------------------------
 
     /// The reconstruction: every prime in [`RECONSTRUCTED`] admitted through
@@ -715,11 +794,13 @@ mod tests {
             let (mut k, p) = built();
             let mut d = IntDev::new(&mut k, p);
             let mut total = 0usize;
+            let mut seen = Vec::new();
             for &n in RECONSTRUCTED {
                 let cert = certificate(n);
-                let names = reconstruct(&mut d, n, &cert, RouteGuards::all()).unwrap_or_else(|e| {
-                    panic!("the kernel must admit the Pratt route for {n}: {e:?}")
-                });
+                let names = reconstruct(&mut d, n, &cert, RouteGuards::all(), &mut seen)
+                    .unwrap_or_else(|e| {
+                        panic!("the kernel must admit the Pratt route for {n}: {e:?}")
+                    });
                 assert!(!names.is_empty(), "{n} must emit at least one theorem");
                 total += names.len();
                 for name in names {
@@ -754,17 +835,42 @@ mod tests {
     #[test]
     fn a_corrupted_witness_is_refused_by_the_kernel() {
         on_a_deep_stack(|| {
+            let good = certificate(11);
+
+            // Control: guards off, GENUINE certificate -- admitted. Without
+            // this the refusals below could be an artefact of running with the
+            // guards off at all.
             let (mut k, p) = built();
             let mut d = IntDev::new(&mut k, p);
-
-            // Control: guards off, genuine certificate — admitted.
-            let good = certificate(11);
-            reconstruct(&mut d, 11, &good, RouteGuards::none())
+            reconstruct(&mut d, 11, &good, RouteGuards::none(), &mut Vec::new())
                 .expect("guards off, the genuine certificate must still be admitted");
 
-            // A wrong witness. `2` is a primitive root mod 11; `3` is not
-            // (3^5 = 1 mod 11), so its order is 5 and G9 fails at q = 5,
-            // while G8 still holds — the subtle forgery, not an obvious one.
+            // Forgery A -- the OBVIOUS one, refused at G8. A witness that is
+            // not a unit modulo 11 fails Fermat outright, so the engine builds
+            // an honest proof of `11^10 == 0 (mod 11)` and the kernel refuses
+            // it against the certificate's claim of `1`.
+            assert_eq!(residue_of(11, 11, 10), 0, "a non-unit witness fails Fermat");
+            let mut forged_unit = good.clone();
+            forged_unit.witness = 11;
+            let (mut k1, p1) = built();
+            let mut d1 = IntDev::new(&mut k1, p1);
+            assert!(
+                reconstruct(
+                    &mut d1,
+                    11,
+                    &forged_unit,
+                    RouteGuards::none(),
+                    &mut Vec::new()
+                )
+                .is_err(),
+                "with this route's guards OFF, the KERNEL must refuse a witness \
+                 that fails the Fermat condition"
+            );
+
+            // Forgery B -- the SUBTLE one, refused at G9. `2` is a primitive
+            // root mod 11; `3` is not, its order is 5. Fermat still holds
+            // (every unit satisfies it), so only order maximality separates
+            // them, and the kernel is what notices.
             assert_eq!(
                 residue_of(11, 3, 10),
                 1,
@@ -777,22 +883,22 @@ mod tests {
             );
             let mut forged = good.clone();
             forged.witness = 3;
-
             let (mut k2, p2) = built();
             let mut d2 = IntDev::new(&mut k2, p2);
-            let refusal = reconstruct(&mut d2, 11, &forged, RouteGuards::none());
             assert!(
-                refusal.is_err(),
+                reconstruct(&mut d2, 11, &forged, RouteGuards::none(), &mut Vec::new()).is_err(),
                 "with this route's guards OFF, the KERNEL must refuse the \
                  forged witness -- it did not, so the reconstruction is not \
                  checking what it claims"
             );
 
-            // And the route's own guard catches it too, when switched on.
+            // And the route's own guard catches it too, when switched on --
+            // so the shipping configuration never reaches the kernel with a
+            // forgery in the first place.
             let (mut k3, p3) = built();
             let mut d3 = IntDev::new(&mut k3, p3);
             let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                reconstruct(&mut d3, 11, &forged, RouteGuards::all())
+                reconstruct(&mut d3, 11, &forged, RouteGuards::all(), &mut Vec::new())
             }));
             assert!(
                 caught.is_err(),
@@ -817,7 +923,7 @@ mod tests {
             forged.factors = vec![(2, 2)];
             forged.subcerts = vec![good.subcerts[0].clone()];
 
-            let refusal = reconstruct(&mut d, 13, &forged, RouteGuards::none());
+            let refusal = reconstruct(&mut d, 13, &forged, RouteGuards::none(), &mut Vec::new());
             assert!(
                 refusal.is_err(),
                 "the kernel must refuse an incomplete factorization of 12"

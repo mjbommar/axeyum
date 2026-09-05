@@ -899,3 +899,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1615](adr-1615-the-angle-is-a-cosine-not-a-number.md) | Angle measure on `CPoint` is `cosAngle`/`sinAngle` as ratios, not `arccos`; the Pythagorean identity comes from Lagrange, not from the trig series | accepted |
 | [1617](adr-1617-exact-real-cost-and-cas-internal-residue-measured.md) | the exact-real evaluation cost is measured (and mostly intractable today), and the `cas-internal` residue is now a gated, falling number | accepted |
 | [1618](adr-1618-the-antidiagonal-walk-keeps-its-shape-and-closes-the-polynomial-ring.md) | the antidiagonal walk keeps its shape, and closes the polynomial ring | proposed |
+| [1622](adr-1622-modular-exponentiation-is-what-makes-a-number-theory-certificate-reconstruct.md) | Modular exponentiation, not a bigger numeral budget, is what makes a number-theory certificate reconstruct | accepted |

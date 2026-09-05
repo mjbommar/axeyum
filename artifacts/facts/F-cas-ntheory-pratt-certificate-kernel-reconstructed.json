@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "id": "F:cas-ntheory-pratt-certificate-kernel-reconstructed",
+  "title": "axeyum-cas's Pratt certificate conditions are re-derived inside the kernel for every prime below the measured unary-numeral ceiling",
+  "statement": "For each prime n in {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47} and, recursively, every prime factor base appearing in its certificate tree, the Pratt (Lucas) certificate axeyum-cas's ntheory_certify::certify_prime produces -- a witness a, the complete prime factorization of n-1, and one subcertificate per factor base -- has each of its three arithmetic conditions re-derived as a kernel theorem admitted through crate::Kernel::add_declaration and axiom-free: Check.pratt_factorization_<n> : Eq Nat (prod q_i^e_i) (n-1) (the CAS checker's G6, completeness of the factorization); Check.pratt_fermat_<n> : Int.ModEq (ofNat n) (Int.pow (ofNat a) (n-1)) Int.one (G8); and Check.pratt_order_<n>_q<q> : Not (Int.ModEq (ofNat n) (Int.pow (ofNat a) ((n-1)/q)) Int.one) for each factor base q (G9, order maximality). The Fermat and order theorems are NOT closed by letting the kernel reduce a^(n-1) -- every Nat numeral here is unary, and that route walls below n = 20. They are built by square-and-multiply with reduction at every step, out of Int.pow_add, Int.pow_succ, Int.modEq_mul_general (unconditional in the modulus) and Int.modEq_trans, so the largest numeral the kernel forms is bounded by n^2. This does NOT establish that n is prime: the step from the certificate's conditions to primality is Lucas's theorem and is not derived here.",
+  "formal": {
+    "language": "cas-term",
+    "statement": "(for each n in {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47} with certificate (a, [(q_i, e_i)]))\n(theorem Check.pratt_factorization_n : Eq Nat (prod-pow [(q_i, e_i)]) (n - 1))\n(theorem Check.pratt_fermat_n     : Int.ModEq (Int.ofNat n) (Int.pow (Int.ofNat a) (n - 1)) Int.one)\n(theorem Check.pratt_order_n_q    : Not (Int.ModEq (Int.ofNat n) (Int.pow (Int.ofNat a) ((n - 1) / q)) Int.one))   ; one per factor base q\n; each admitted by crate::Kernel::add_declaration with an empty axiom_footprint.\n; NOT stated, and NOT implied: IsPrime n. The Lucas implication is absent.",
+    "fragment": "cas-ntheory-pratt-certificate-kernel-reconstructed",
+    "free_symbols": [],
+    "kernel_theorem": null
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cas-ntheory-pratt-primality-mersenne89"
+  ],
+  "proof_route": "cas-certificate",
+  "axiom_footprint": [
+    "kernel.axiom-free-every-emitted-theorem-checked-by-Kernel-axiom-footprint-and-asserted-empty",
+    "cas.the-witness-and-the-factorization-come-from-the-cas-producer-the-kernel-re-checks-them-it-does-not-re-derive-them",
+    "cas.the-lucas-implication-is-not-reconstructed-only-the-certificate-conditions-are-so-nothing-here-establishes-primality",
+    "cas.the-translator-residue-of-and-factor-product-are-rust-and-are-checked-by-evaluation-tests-not-by-the-trusted-gate",
+    "cas.the-mersenne-89-headline-instance-is-out-of-reach-and-stays-cas-internal-see-F-cas-ntheory-pratt-primality-mersenne89"
+  ],
+  "cas_substance": {
+    "shape": "evaluation",
+    "certificate": null,
+    "derivation_declined_reason": "axeyum-cas's ntheory_certify::certify_prime returns a PrattCertificate Rust value, not a certificate artifact of the shape artifacts/geometry-certificates/*.json carries, so scripts/cas_substance.py has nothing to derive a shape from and the shape recorded here is SELF-REPORTED -- the same standing as the 8 of 14 kernel-reconstructed facts ADR-0622 already records as self-reported. The bridge test reads the certificate from the CAS in-process (crates/axeyum-lean-kernel/src/int_prelude/cas_pratt_bridge_tests.rs, fn certificate) rather than from a file. `evaluation` is the honest shape: every obligation is closed at concrete numerals with no free variable. It is NOT `refl` -- the Fermat and order theorems are chains of Int.modEq_mul_general/Int.modEq_trans steps whose statements are false for a wrong witness, which a_corrupted_witness_is_refused_by_the_kernel demonstrates by having the kernel refuse two different forgeries with every route-side guard switched off."
+  },
+  "evidence": [
+    {
+      "id": "kernel-reconstructed-pratt-certificate-conditions",
+      "kind": "kernel-term",
+      "supports": "for every prime in the reconstructed set and every factor base in its certificate tree, the G6/G8/G9 conditions of the CAS's own Pratt certificate are admitted as kernel theorems by crate::Kernel::add_declaration, each checked to be a Theorem (not an Axiom or Opaque) with an empty Kernel::axiom_footprint, against a pinned lower bound of 40 emitted theorems so a route that stopped after the first prime fails rather than passing quietly",
+      "check_status": "checked",
+      "checkers": [
+        "ntheory_certify::certify_prime (untrusted producer: the witness, the factorization of n-1, and the recursive subcertificates -- read in-process from the CAS, never hand-copied)",
+        "int_prelude::cas_pratt_bridge_tests::pow_modeq (untrusted translator: square-and-multiply over Int.pow_add / Int.pow_succ / Int.modEq_mul_general / Int.modEq_trans, emitting a proof term whose residue the kernel re-derives at every step; a wrong residue becomes a kernel rejection, never an admitted falsehood)",
+        "crate::Kernel::add_declaration (the sole trusted judge: re-checks every emitted term against the certificate's stated condition)",
+        "crate::Kernel::axiom_footprint (asserted empty for every emitted theorem, so the reconstruction is axiom-free and not merely admitted)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib int_prelude::cas_pratt_bridge_tests::tests::pratt_certificates_are_kernel_reconstructed -- --exact 2>/dev/null | grep -cE '^test int_prelude::cas_pratt_bridge_tests::tests::pratt_certificates_are_kernel_reconstructed \\.\\.\\. ok$'",
+      "checker_seconds": 30,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/cas_pratt_bridge_tests.rs",
+      "notes": "kernel-reconstructed (ADR-0601 SS2): the checker_command names axeyum-lean-kernel and the trust anchor is crate::Kernel::add_declaration. This closes, for the reachable primes only, the gap that fact F:cas-ntheory-pratt-primality-mersenne89's own notes named as structural ('a kernel reconstruction ... would hit the measured unary-numeral cost wall'). The prediction was right about the NAIVE route and wrong about the family: reducing at every step, rather than at the end, moves the wall from below n = 20 to several hundred. ADR-1622 records the measurement and the ceiling."
+    },
+    {
+      "id": "kernel-refuses-a-forged-pratt-witness",
+      "kind": "kernel-term",
+      "supports": "with EVERY guard belonging to this reconstruction route switched off (RouteGuards::none, which disables the CAS re-check, the Fermat-residue guard and the order-residue guard), crate::Kernel::add_declaration refuses two independent forgeries of the certificate for n = 11 -- a witness that fails Fermat outright (11, non-unit) and a witness that passes Fermat but has order 5 rather than 10 (3, the subtle forgery) -- while the GENUINE certificate run with the same guards off is still admitted, so the refusals are not an artefact of running with the guards off",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude::cas_pratt_bridge_tests::RouteGuards::none (disables every Rust-side guard, leaving the kernel as the only thing that can refuse)",
+        "crate::Kernel::add_declaration (the refusing party; the assertion is on its Err, so a route that silently admitted the forgery fails this test)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib int_prelude::cas_pratt_bridge_tests::tests::a_corrupted_witness_is_refused_by_the_kernel -- --exact 2>/dev/null | grep -cE '^test int_prelude::cas_pratt_bridge_tests::tests::a_corrupted_witness_is_refused_by_the_kernel \\.\\.\\. ok$'",
+      "checker_seconds": 10,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/cas_pratt_bridge_tests.rs",
+      "notes": "The two forgeries fail at DIFFERENT guards on purpose. Forgery A (witness 11) fails G8: the engine builds an honest proof of 11^10 = 0 (mod 11) and the kernel refuses it against the certificate's claim of 1. Forgery B (witness 3) PASSES G8 -- every unit modulo 11 satisfies Fermat -- and fails only G9 at q = 5; there the route hands the kernel the honest a^5 = 1 congruence against a statement asserting the negation, and the kernel refuses. Nothing is fabricated on either side of either refusal: the certificate's claim is the type, the true arithmetic is the term, and the trusted gate is what notices they disagree. A companion test (a_corrupted_factorization_is_refused_by_the_kernel) does the same for G6, using the incompleteness forgery the CAS module records as measured."
+    },
+    {
+      "id": "kernel-reconstructed-pratt-cost-ceiling-measured",
+      "kind": "witness-replay",
+      "supports": "the naive route (Eq.refl on emod (pow a m) n, letting the kernel form a^m) is shown to WORK at 3^6 = 729 -- so its absence at larger primes is a cost fact and not a correctness one -- and the reducing route is shown to land on the correct residue, and to REFUSE the neighbouring residue, at eleven (n, a, m) triples including exponents where the residue is not 1; a cost ladder over primes up to the pinned ceiling prints the wall-clock cost of each rung",
+      "check_status": "checked",
+      "checkers": [
+        "int_prelude::cas_pratt_bridge_tests::tests::the_naive_refl_route_walls_where_the_reducing_route_does_not (asserts BOTH halves, so neither can be vacuous)",
+        "int_prelude::cas_pratt_bridge_tests::tests::the_reducing_route_reaches_primes_the_naive_one_cannot (asserts the correct residue AND the refusal of the neighbouring one at every triple, with a pinned lower bound of five triples landing off 1)",
+        "int_prelude::cas_pratt_bridge_tests::tests::the_cost_ladder_is_measured (prints the per-rung cost; asserts correctness at each rung, never a time budget, because this box runs many lanes and a timing assertion would gate on the queue)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib int_prelude::cas_pratt_bridge_tests::tests::the_reducing_route_reaches_primes_the_naive_one_cannot -- --exact 2>/dev/null | grep -cE '^test int_prelude::cas_pratt_bridge_tests::tests::the_reducing_route_reaches_primes_the_naive_one_cannot \\.\\.\\. ok$'",
+      "checker_seconds": 10,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/cas_pratt_bridge_tests.rs",
+      "notes": "The cost ladder is the finding this fact's ceiling is set from, not a decoration: ADR-1622 records the printed numbers. The wall is a n^2 numeral cost and moves quadratically, which is why the reducing route reaches several hundred where the naive one stops below 20."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane cas-reconstruct (roadmap W1-13), ADR-1622: crates/axeyum-lean-kernel/src/int_prelude/cas_pratt_bridge_tests.rs reconstructs axeyum-cas's ntheory_certify::certify_prime output through crate::Kernel::add_declaration",
+    "source": "the CAS certificate is read in-process from axeyum_cas::ntheory_certify::certify_prime -- the same producer F:cas-ntheory-pratt-primality-mersenne89's checker_command cites -- never hand-transcribed",
+    "prior_art": [
+      {
+        "who": "Vaughan Pratt",
+        "what": "Pratt certificates: a short, independently verifiable proof of primality via a witness of multiplicative order n-1 and the recursive factorization of n-1",
+        "year": 1975,
+        "where": "V. Pratt, \"Every Prime Has a Succinct Certificate\", SIAM Journal on Computing 4(3)",
+        "attribution": "standard textbook/literature attribution; this lane did not consult the primary source"
+      },
+      {
+        "who": "Edouard Lucas; D. H. Lehmer",
+        "what": "the Lucas primality test -- the implication from a witness of order n-1 to the primality of n, which is exactly the step this fact does NOT reconstruct",
+        "year": 1876,
+        "where": "E. Lucas, \"Theorie des fonctions numeriques simplement periodiques\", American Journal of Mathematics 1; D. H. Lehmer, \"Tests for primality by the converse of Fermat's theorem\", Bulletin of the AMS 33 (1927)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "Registered per ADR-1622 and ADR-0603 row 3 (decidable-fragment exact form). This is deliberately a SEPARATE fact from F:cas-ntheory-pratt-primality-mersenne89 rather than a flip of it: that fact's headline is 2^89 - 1 = 618970019642690137449562111, whose modular exponentiation this kernel cannot perform at any numeral budget, so adding a kernel-reconstructed evidence row to it would make a reader of its title believe the kernel checked a number it did not. ADR-0603's graded statement family is exactly the instrument for that split -- one fact per statement. depends_on that fact because this one reconstructs the conditions of certificates produced by the identical producer, and the ledger should record which claim came first. Per ADR-0601 SS2 this fact is kernel-reconstructed and that one stays cas-internal; scripts/check-cas-internal-residue.py --report shows both."
+}
