@@ -20,8 +20,12 @@ pub(super) struct Fields {
     pub(super) lists: Vec<(&'static str, Vec<NameId>)>,
 }
 
-/// The `LogicPrelude` field table (86 names,
+/// The `LogicPrelude` field table (109 names,
 /// 0 name lists, 0 sub-packages).
+///
+/// 23 of the names come from ADR-1512 per-module registries and
+/// carry a dotted field name (`pi.pi_le_four`); the rest are flat
+/// fields on `LogicPrelude` itself.
 #[must_use]
 #[allow(clippy::too_many_lines)] // a generated field table; length is the point.
 pub(super) fn logic(p: &LogicPrelude) -> Fields {
@@ -116,6 +120,29 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
             ("nat_zero", p.nat_zero),
             ("nat_succ", p.nat_succ),
             ("nat_rec", p.nat_rec),
+            ("sigma.sigma", p.sigma.sigma),
+            ("sigma.sigma_mk", p.sigma.sigma_mk),
+            ("sigma.sigma_rec", p.sigma.sigma_rec),
+            ("sigma.sigma_fst", p.sigma.sigma_fst),
+            ("sigma.sigma_snd", p.sigma.sigma_snd),
+            ("sigma.sigma_fst_mk", p.sigma.sigma_fst_mk),
+            ("sigma.sigma_snd_mk", p.sigma.sigma_snd_mk),
+            ("sigma.sigma_mk_eta", p.sigma.sigma_mk_eta),
+            ("sigma.sigma_uparam_u", p.sigma.sigma_uparam_u),
+            ("sigma.sigma_uparam_v", p.sigma.sigma_uparam_v),
+            ("sigma.psigma", p.sigma.psigma),
+            ("sigma.psigma_mk", p.sigma.psigma_mk),
+            ("sigma.psigma_rec", p.sigma.psigma_rec),
+            ("sigma.psigma_uparam_u", p.sigma.psigma_uparam_u),
+            ("sigma.psigma_uparam_v", p.sigma.psigma_uparam_v),
+            ("sigma.subtype", p.sigma.subtype),
+            ("sigma.subtype_mk", p.sigma.subtype_mk),
+            ("sigma.subtype_rec", p.sigma.subtype_rec),
+            ("sigma.subtype_val", p.sigma.subtype_val),
+            ("sigma.subtype_property", p.sigma.subtype_property),
+            ("sigma.subtype_val_mk", p.sigma.subtype_val_mk),
+            ("sigma.subtype_mk_eta", p.sigma.subtype_mk_eta),
+            ("sigma.subtype_uparam", p.sigma.subtype_uparam),
         ],
         lists: Vec::new(),
     }

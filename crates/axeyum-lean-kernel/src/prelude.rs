@@ -92,6 +92,7 @@ use crate::env::{Declaration, ReducibilityHint};
 use crate::expr::ExprId;
 use crate::level::LevelId;
 use crate::name::NameId;
+use crate::sigma_prelude::SigmaNames;
 use crate::{BinderInfo, Kernel, KernelError, PreludeKey, PreludeValue};
 
 /// The interned names produced by [`build_logic_prelude`]: every inductive, its
@@ -428,6 +429,13 @@ pub struct LogicPrelude {
     /// `Nat.zero ≠ Nat.succ _` discriminator, the predecessor selector, and the
     /// `n ≠ Nat.succ n` induction).
     pub nat_rec: NameId,
+
+    /// The dependent-pair / subtype family (ADR-1613): `Sigma`, `PSigma`,
+    /// `Subtype`, their constructors and recursors, and `Sigma`'s /
+    /// `Subtype`'s projections with their defining equations. Declared by
+    /// [`crate::sigma_prelude::declare_sigma_family`] at the end of this
+    /// prelude, so every downstream package that already has `Eq` has them.
+    pub sigma: SigmaNames,
 }
 
 impl Kernel {
@@ -4562,6 +4570,11 @@ pub(crate) fn build_logic_prelude_uncached(
             })?;
         }
 
+        // --- Sigma / PSigma / Subtype (ADR-1613) ------------------------------
+        // Declared last: every theorem in the family is an equation closed by
+        // `Eq.refl`, so `Eq` must already be in the environment.
+        let sigma = crate::sigma_prelude::declare_sigma_family(kernel, eq, eq_refl)?;
+
         Ok(LogicPrelude {
             true_,
             true_intro,
@@ -4649,6 +4662,7 @@ pub(crate) fn build_logic_prelude_uncached(
             nat_zero,
             nat_succ,
             nat_rec,
+            sigma,
         })
     })();
     match built {
