@@ -1270,11 +1270,25 @@ mod tests {
         // reason this does not simply assert one: `equal_core` treats an
         // unknown head as an independent atom, so `Gamma(k+1) - Gamma(k) = k`
         // and every other head tried (Si, Ci, Ai, erf, LambertW, BesselJ, sin)
-        // comes back decidably FALSE. Reachability is established through the
-        // shipped path instead: `admissible_mode` admits
-        // `ReducedGosperIdentity` on exactly one row of its table, the one
-        // where BOTH checks are `Unknown`. So the weighted Vandermonde WZ term
-        // reporting that mode IS a witness that the arm is reached.
+        // comes back decidably FALSE.
+        //
+        // The witness this test used to carry was the weighted Vandermonde WZ
+        // term, whose Gamma tower overflowed `i128`. ADR-1670 wave two decides
+        // that one: the unbounded zero-test carries the identity the bounded
+        // one could not expand, so it is now admitted by full telescoping
+        // (asserted below, since a capability gain that nothing pins can be
+        // lost again silently). Reachability is therefore established on an
+        // input NEITHER normal form can reach -- a residual past the unbounded
+        // path's explicit work budget, which is a resource limit rather than a
+        // width limit and so has no fallback behind it.
+        let past_the_budget = (k.clone() + CasExpr::int(1)).pow(4096);
+        assert_eq!(
+            check_telescoping(&past_the_budget, &k, "k"),
+            TelescopingCheck::Unknown,
+            "the `Unknown` arm must stay reachable: a residual past the unbounded \
+             work budget is declined by both normal forms"
+        );
+
         let binom = |n| crate::binomial_coefficient(&CasExpr::int(n), &k);
         let rhs = |n| {
             CasExpr::int(n) * crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n))
@@ -1287,11 +1301,11 @@ mod tests {
             gosper_sum_certified(&overflowing, "k").expect("the WZ term is Gosper-summable");
         assert_eq!(
             certified.evidence,
-            GosperEvidence::ReducedGosperIdentity,
-            "this term's expanded telescoping residual exhausts i128, so both \
-             zero-tests must decline and only the reduced identity may admit it"
+            GosperEvidence::TelescopingSimplified,
+            "this term's expanded telescoping residual exhausts i128, and ADR-1670 \
+             wave two carries it: the strongest evidence, not the reduced identity"
         );
-        assert!(!certified.evidence.is_full_telescoping());
+        assert!(certified.evidence.is_full_telescoping());
     }
 
     /// The mode is recorded, and the two modes are distinguished on REAL
@@ -1337,7 +1351,7 @@ mod tests {
         let shifted = sum.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
         let delta = shifted - sum.clone();
         match equal(&delta, term) {
-            ZeroTest::Certified { equal, .. } => {
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
                 assert!(equal, "telescoping identity did not certify: S = {sum}");
             }
             ZeroTest::Unknown => panic!("expected a decidable telescoping check for S = {sum}"),

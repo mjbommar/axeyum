@@ -1173,14 +1173,18 @@ mod tests {
         let f = x().pow(4) - CasExpr::int(1);
         let factored = factor_expr(&f, "x").expect("factorable");
         match equal(&factored, &f) {
-            ZeroTest::Certified { equal, .. } => assert!(equal, "not certified equal"),
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal, "not certified equal");
+            }
             ZeroTest::Unknown => panic!("expected a decidable result"),
         }
         // x⁴ + 3x² + 2
         let g = x().pow(4) + CasExpr::int(3) * x().pow(2) + CasExpr::int(2);
         let factored = factor_expr(&g, "x").expect("factorable");
         match equal(&factored, &g) {
-            ZeroTest::Certified { equal, .. } => assert!(equal),
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal);
+            }
             ZeroTest::Unknown => panic!("expected a decidable result"),
         }
     }
@@ -1192,14 +1196,18 @@ mod tests {
         let f = CasExpr::int(2) * x().pow(2) - CasExpr::int(4);
         let factored = factor_expr(&f, "x").expect("factorable");
         match equal(&factored, &f) {
-            ZeroTest::Certified { equal, .. } => assert!(equal),
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal);
+            }
             ZeroTest::Unknown => panic!("expected a decidable result"),
         }
         // x⁴ − 10x² + 1 is irreducible; factor_expr must still certify (as itself).
         let g = x().pow(4) - CasExpr::int(10) * x().pow(2) + CasExpr::int(1);
         let factored = factor_expr(&g, "x").expect("factorable");
         match equal(&factored, &g) {
-            ZeroTest::Certified { equal, .. } => assert!(equal),
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal);
+            }
             ZeroTest::Unknown => panic!("expected a decidable result"),
         }
     }

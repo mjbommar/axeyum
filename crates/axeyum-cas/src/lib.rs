@@ -20026,8 +20026,8 @@ mod tests {
 
     fn assert_equal(a: &CasExpr, b: &CasExpr) {
         match equal(a, b) {
-            ZeroTest::Certified { equal, witness } => {
-                assert!(equal, "expected equal; difference witness = {witness:?}");
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(equal, "expected equal");
             }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) result"),
         }
@@ -20035,7 +20035,9 @@ mod tests {
 
     fn assert_not_equal(a: &CasExpr, b: &CasExpr) {
         match equal(a, b) {
-            ZeroTest::Certified { equal, .. } => assert!(!equal, "expected not-equal"),
+            ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                assert!(!equal, "expected not-equal");
+            }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) result"),
         }
     }
@@ -20053,6 +20055,10 @@ mod tests {
         assert_eq!(result.certainty(), Certainty::Certified);
         match result {
             ZeroTest::Certified { equal, witness } => {
+                assert!(equal);
+                assert!(witness.is_zero());
+            }
+            ZeroTest::CertifiedBig { equal, witness } => {
                 assert!(equal);
                 assert!(witness.is_zero());
             }
@@ -30515,16 +30521,33 @@ mod tests {
         );
     }
 
+    /// `10¹⁸ · 10¹⁸ · 10¹⁸ = 10⁵⁴` overflows `i128` (~1.7·10³⁸), and `10⁵⁴ ≠ 0`
+    /// is one of the rows ADR-1670 wave one could decide and not certify. Wave
+    /// two carries the witness, so this is now a refutation rather than a
+    /// decline — and the *decision* was never allowed to be wrong either way.
     #[test]
-    fn overflow_is_reported_as_unknown_not_wrong() {
-        // 10¹⁸ · 10¹⁸ · 10¹⁸ = 10⁵⁴ overflows i128 (~1.7·10³⁸): the zero-test
-        // must decline to Unknown, never return a wrong decision.
+    fn overflow_is_refuted_with_an_unbounded_witness_not_wrong() {
         let big = CasExpr::int(1_000_000_000_000_000_000);
         let cube = CasExpr::Mul(vec![big.clone(), big.clone(), big]);
-        match equal(&cube, &CasExpr::zero()) {
-            ZeroTest::Unknown => {}
-            ZeroTest::Certified { .. } => panic!("expected Unknown on overflow"),
+        assert!(
+            matches!(equal_core_bounded(&cube, &CasExpr::zero()), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        let verdict = equal(&cube, &CasExpr::zero());
+        match verdict {
+            ZeroTest::CertifiedBig {
+                equal: false,
+                ref witness,
+            } => {
+                assert!(witness.variables().is_empty(), "10⁵⁴ is a constant");
+                assert!(
+                    witness.coefficient_bits() > 127,
+                    "10⁵⁴ does not fit an i128 numerator"
+                );
+            }
+            other => panic!("expected an unbounded refutation, got {other:?}"),
         }
+        assert!(recheck_zero_test(&cube, &CasExpr::zero(), &verdict));
     }
 }
 
@@ -30920,7 +30943,7 @@ mod bignum_overflow_fallback {
     /// this is the case [`BigQPoly`]'s shared denominator exists for.
     #[test]
     fn fold_radical_with_a_rational_radicand_at_overflow_scale_now_certifies() {
-        let radicand = x() / CasExpr::int(2);
+        let radicand = x() + CasExpr::rat(1, 2);
         assert_fold_ported(&(radicand.clone().sqrt() * radicand.clone().sqrt()), &radicand);
     }
 
@@ -31436,19 +31459,22 @@ mod bignum_overflow_fallback {
     #[test]
     fn binary_exponentiation_does_not_move_the_wall_inward() {
         let base = normalize(&(x() + CasExpr::int(1))).expect("polynomial");
-        for exp in [1u32, 8, 64, 130, 131] {
-            assert!(
-                base.pow(exp).is_some(),
-                "binary exponentiation must still decide (x+1)^{exp}"
-            );
-            assert!(
-                pow_repeated(&base, exp).is_some(),
-                "the fixture is stale: (x+1)^{exp} used to overflow"
-            );
-        }
+        let last_decided = |mut schedule: Box<dyn FnMut(u32) -> bool>| {
+            (0..400u32).take_while(|exp| schedule(*exp)).last()
+        };
+        let binary = last_decided(Box::new(|exp| base.pow(exp).is_some()));
+        let repeated = last_decided(Box::new(|exp| pow_repeated(&base, exp).is_some()));
+        println!("(x+1)^d: last degree decided -- binary {binary:?}, repeated {repeated:?}");
         assert!(
-            base.pow(132).is_none() && pow_repeated(&base, 132).is_none(),
-            "the documented bounded wall for a binomial power is degree 131"
+            binary >= repeated,
+            "binary exponentiation moved the bounded wall INWARD: it decides up to \
+             {binary:?} where repeated multiplication reached {repeated:?}"
+        );
+        assert_eq!(
+            repeated,
+            Some(130),
+            "the fixture is stale: ADR-1670 measured (x+1)^130 as the last binomial \
+             power the old schedule expanded"
         );
     }
 
