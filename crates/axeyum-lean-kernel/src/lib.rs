@@ -153,6 +153,7 @@ pub use metric::{
     FIELD_COUNT as METRIC_FIELD_COUNT, MetricPrelude, build_metric_prelude,
 };
 pub use name::{NameId, NameNode};
+pub use nat_prelude::image_group::{ImageGroupDeps, ImageGroupNames};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
 pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,

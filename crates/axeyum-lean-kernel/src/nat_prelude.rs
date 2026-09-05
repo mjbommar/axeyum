@@ -214,6 +214,7 @@ mod group;
 pub(crate) mod half_ceil_parity;
 mod hall;
 mod helpers;
+pub mod image_group;
 mod injective_decide;
 mod irrational;
 mod land;
@@ -6716,6 +6717,32 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `axeyum-py`'s generated field registry mirrors. Tests reach the
         // declarations the same way `first_iso_tests` does -- by calling
         // `declare_poly_setoid` against their own kernel.
+        // ADR-1613 / roadmap W0-5: `AlgS.Hom.imageGroup` and
+        // `AlgS.Hom.firstIsoClassical`. `Subtype` (declared in the logic
+        // prelude) makes the IMAGE of a hom a carrier, so the first
+        // isomorphism theorem becomes a statement about two `AlgS.Group`
+        // objects rather than three conjuncts about `G`, `H` and `f`. Its
+        // names are DELIBERATELY not threaded into `NatPrelude`, for the same
+        // reason `AlgS.Poly.*`'s are not (see just below).
+        let image_group_level = {
+            let zero = kernel.level_zero();
+            kernel.level_succ(zero)
+        };
+        let _image_group = image_group::declare_image_group_all(
+            kernel,
+            &logic,
+            image_group_level,
+            &structures_s.group,
+            &image_group::ImageGroupDeps {
+                image: structures_s_extra.hom_image,
+                map_one: structures_s_extra.hom_map_one,
+                map_inv: structures_s_extra.hom_map_inv,
+                image_mem: structures_s_extra.hom_image_mem,
+                quotient: structures_s_extra.hom_quotient,
+            },
+            structures_s_names.algs,
+        )?;
+
         let poly_s = polynomial_setoid::declare_poly_setoid(
             kernel,
             &logic,
