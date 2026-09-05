@@ -58,6 +58,32 @@
 //! `sqrt (normSq ·)` and [`ComplexPrelude::abs_nonneg`] is already available,
 //! so an `Equiv`-zero error closes through `abs_congr` + [`declare_abs_zero`]
 //! + `le_of_equiv` + `le_trans` with no split at all.
+//!
+//! # Holomorphy is a `Sigma`, and that is forced
+//!
+//! `Complex.HolomorphicOn F c r` — "F has a derivative at every point of the
+//! disc" — is `Σ (F' : Complex → Complex), HasDerivativeOn F F' c r`. It
+//! cannot be an `Exists`, because `Exists`'s predicate must land in `Prop` and
+//! `HasDerivativeOn` is in `Type 0` by the paragraph above. That is not a
+//! limitation: the `Sigma` is the CONSTRUCTIVE statement, and every witness
+//! below hands its derivative back through
+//! [`declare_holomorphic_deriv`] (`Sigma.fst`) with the full ε–δ bound
+//! recovered by [`declare_holomorphic_spec`] (`Sigma.snd`, the DEPENDENT
+//! projection) — which is what a later Cauchy-integral argument needs and
+//! what an `Exists` could not supply.
+//!
+//! # What is NOT here
+//!
+//! The product rule. Its error identity is one `ring_law_proof` call like
+//! every other; what is missing is three ℂ-side ESTIMATES (a uniform bound on
+//! `|G|`, one on `|F'|`, one on `|F|`) and a modulus of continuity for `G`.
+//! `CReal.hasDerivative_mul` takes exactly those as `UniformlyContinuousOn`
+//! plus two `Nat` witnesses, and neither `Complex.BoundedOn` nor
+//! `Complex.UniformlyContinuousOn` exists. ADR-1642 sizes both routes and
+//! recommends carrying the four bounds as hypotheses, because
+//! [`ComplexPrelude::abs_mul`] is an exact `Equiv` where the real side needed
+//! `abs_mul_le_of_bounds`. The derivative of `polyEval` is blocked behind
+//! that and nothing else.
 
 // Proof-term builders take the whole shape of the lemma they apply, so the
 // argument counts follow the kernel's lemma signatures rather than any Rust
@@ -113,6 +139,20 @@ pub struct DerivNames {
     pub has_derivative_neg: NameId,
     /// `Complex.hasDerivative_add`.
     pub has_derivative_add: NameId,
+    /// `Complex.HolomorphicOn F c r` -- a `Sigma` carrying the derivative.
+    pub holomorphic_on: NameId,
+    /// `Complex.holomorphicDeriv` -- `Sigma.fst`, the derivative a witness carries.
+    pub holomorphic_deriv: NameId,
+    /// `Complex.holomorphic_spec` -- `Sigma.snd`, the bound it satisfies.
+    pub holomorphic_spec: NameId,
+    /// `Complex.holomorphic_const`.
+    pub holomorphic_const: NameId,
+    /// `Complex.holomorphic_id`.
+    pub holomorphic_id: NameId,
+    /// `Complex.holomorphic_neg`.
+    pub holomorphic_neg: NameId,
+    /// `Complex.holomorphic_add`.
+    pub holomorphic_add: NameId,
 }
 
 /// Interns this module's names under `complex` (e.g. `Complex.InDisc`).
@@ -131,6 +171,13 @@ pub(super) fn intern_names(kernel: &mut Kernel, complex: NameId) -> DerivNames {
         has_derivative_id: kernel.name_str(complex, "hasDerivative_id"),
         has_derivative_neg: kernel.name_str(complex, "hasDerivative_neg"),
         has_derivative_add: kernel.name_str(complex, "hasDerivative_add"),
+        holomorphic_on: kernel.name_str(complex, "HolomorphicOn"),
+        holomorphic_deriv: kernel.name_str(complex, "holomorphicDeriv"),
+        holomorphic_spec: kernel.name_str(complex, "holomorphic_spec"),
+        holomorphic_const: kernel.name_str(complex, "holomorphic_const"),
+        holomorphic_id: kernel.name_str(complex, "holomorphic_id"),
+        holomorphic_neg: kernel.name_str(complex, "holomorphic_neg"),
+        holomorphic_add: kernel.name_str(complex, "holomorphic_add"),
     }
 }
 
@@ -144,6 +191,12 @@ const IN_DISC_HEIGHT: u16 = super::DERIVED_HEIGHT + 20;
 /// [`IN_DISC_HEIGHT`], since the spec body it eliminates over mentions
 /// `InDisc`.
 const HD_MODULUS_HEIGHT: u16 = IN_DISC_HEIGHT + 1;
+/// Height for `Complex.HolomorphicOn`: above [`HD_MODULUS_HEIGHT`], since its
+/// value mentions `HasDerivativeOn` and everything below it.
+const HOLOMORPHIC_HEIGHT: u16 = HD_MODULUS_HEIGHT + 2;
+/// Height for `Complex.holomorphicDeriv`: strictly above
+/// [`HOLOMORPHIC_HEIGHT`], whose unfolding its own argument type needs.
+const HOLOMORPHIC_DERIV_HEIGHT: u16 = HOLOMORPHIC_HEIGHT + 1;
 
 /// Declare `Complex.HasDerivativeOn` and everything this file proves about it.
 ///
@@ -159,7 +212,14 @@ pub(super) fn declare_derivative(d: &mut IntDev<'_>, p: ComplexPrelude) -> Resul
     declare_has_derivative_const(d, p)?;
     declare_has_derivative_id(d, p)?;
     declare_has_derivative_neg(d, p)?;
-    declare_has_derivative_add(d, p)
+    declare_has_derivative_add(d, p)?;
+    declare_holomorphic_on(d, p)?;
+    declare_holomorphic_deriv(d, p)?;
+    declare_holomorphic_spec(d, p)?;
+    declare_holomorphic_const(d, p)?;
+    declare_holomorphic_id(d, p)?;
+    declare_holomorphic_neg(d, p)?;
+    declare_holomorphic_add(d, p)
 }
 
 // ---------------------------------------------------------------------------
@@ -1409,6 +1469,426 @@ fn declare_has_derivative_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(
     };
     d.kernel().add_declaration(Declaration::Theorem {
         name: p.deriv.has_derivative_add,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// holomorphy on a disc
+// ---------------------------------------------------------------------------
+//
+// "Has a derivative at every point of the disc" is a statement with a
+// WITNESS, and the witness is the derivative function. It cannot be an
+// `Exists`: `Exists`'s predicate must land in `Prop`, and
+// `Complex.HasDerivativeOn` is in `Type 0` for the reason this module's own
+// documentation gives (the modulus is data). So `HolomorphicOn` is a `Sigma`
+// — `sigma_prelude`'s universe-polymorphic dependent pair (ADR-1613),
+// instantiated at `u = v = 0`, which is exactly where `Complex → Complex` and
+// `HasDerivativeOn F F' c r` both sit.
+//
+// This is not a weaker statement than the ∃-form; it is the CONSTRUCTIVE one.
+// Every theorem below hands back the derivative it used, so
+// `Complex.holomorphicDeriv` is a total function on witnesses and
+// `Complex.holomorphic_spec` recovers the full ε–δ bound — which is what a
+// later Cauchy-integral argument needs and what an `Exists` could not supply.
+
+/// `Complex.HolomorphicOn F c r`.
+fn holomorphic_ty(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    f: ExprId,
+    c: ExprId,
+    r: ExprId,
+) -> ExprId {
+    d.const_app(p.deriv.holomorphic_on, &[f, c, r])
+}
+
+/// `fun (F' : Complex → Complex) => Complex.HasDerivativeOn F F' c r` — the
+/// `Sigma` family's second component, built once because
+/// `Sigma`/`Sigma.mk`/`Sigma.fst`/`Sigma.snd` each take it explicitly.
+fn hd_family(d: &mut IntDev<'_>, p: ComplexPrelude, f: ExprId, c: ExprId, r: ExprId) -> ExprId {
+    let func_ty = fn_ty(d, p);
+    let fp_fv = d.fresh_fvar();
+    let fp = d.kernel().fvar(fp_fv);
+    let body = hd_ty(d, p, f, fp, c, r);
+    d.lam_fv(fp_fv, func_ty, body)
+}
+
+/// `Complex.HolomorphicOn (F : Complex → Complex) (c : Complex) (r : CReal)
+///   : Type := Sigma (Complex → Complex) (fun F' => HasDerivativeOn F F' c r)`.
+///
+/// `Sigma.{0,0}`: `Complex → Complex` is `Type 0` and so is
+/// `HasDerivativeOn F F' c r`, so the pair lands in `Type 0` as well.
+fn declare_holomorphic_on(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let one = d.level_one();
+    let type0 = d.kernel().sort(one);
+    let zero_level = d.kernel().level_zero();
+    let sigma = p.creal.rat.int.logic.sigma.sigma;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+
+    let family = hd_family(d, p, f, c, r);
+    let sigma_c = d.kernel().const_(sigma, vec![zero_level, zero_level]);
+    let body = d.apply(sigma_c, &[func_ty, family]);
+
+    let value = {
+        let with_r = d.lam_fv(r_fv, real, body);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        d.lam_fv(f_fv, func_ty, with_c)
+    };
+    let ty = {
+        let with_r = d.arrow(real, type0);
+        let with_c = d.arrow(carrier, with_r);
+        d.arrow(func_ty, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.deriv.holomorphic_on,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(HOLOMORPHIC_HEIGHT),
+    })
+}
+
+/// `Complex.holomorphicDeriv : ∀ F c r, HolomorphicOn F c r →
+/// (Complex → Complex)` — `Sigma.fst`, i.e. the derivative the witness
+/// carries. Total on witnesses, which an `Exists`-based holomorphy could not
+/// be.
+fn declare_holomorphic_deriv(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let zero_level = d.kernel().level_zero();
+    let sigma_fst = p.creal.rat.int.logic.sigma.sigma_fst;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let holo = holomorphic_ty(d, p, f, c, r);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let family = hd_family(d, p, f, c, r);
+    let fst = d.kernel().const_(sigma_fst, vec![zero_level, zero_level]);
+    let body = d.apply(fst, &[func_ty, family, h]);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, holo, body);
+        let with_r = d.lam_fv(r_fv, real, with_h);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        d.lam_fv(f_fv, func_ty, with_c)
+    };
+    let ty = {
+        let with_h = d.arrow(holo, func_ty);
+        let with_r = d.pi_fv(r_fv, real, with_h);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        d.pi_fv(f_fv, func_ty, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.deriv.holomorphic_deriv,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(HOLOMORPHIC_DERIV_HEIGHT),
+    })
+}
+
+/// `Complex.holomorphic_spec : ∀ F c r (h : HolomorphicOn F c r),
+/// HasDerivativeOn F (holomorphicDeriv F c r h) c r` — `Sigma.snd`, the
+/// DEPENDENT projection, so the recovered bound is about the very function
+/// [`declare_holomorphic_deriv`] hands back and not some other one.
+fn declare_holomorphic_spec(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+    let zero_level = d.kernel().level_zero();
+    let sigma_snd = p.creal.rat.int.logic.sigma.sigma_snd;
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let holo = holomorphic_ty(d, p, f, c, r);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let family = hd_family(d, p, f, c, r);
+    let snd = d.kernel().const_(sigma_snd, vec![zero_level, zero_level]);
+    let body = d.apply(snd, &[func_ty, family, h]);
+
+    let derivative = d.const_app(p.deriv.holomorphic_deriv, &[f, c, r, h]);
+    let claim = hd_ty(d, p, f, derivative, c, r);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, holo, body);
+        let with_r = d.lam_fv(r_fv, real, with_h);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        d.lam_fv(f_fv, func_ty, with_c)
+    };
+    let ty = {
+        let with_h = d.pi_fv(h_fv, holo, claim);
+        let with_r = d.pi_fv(r_fv, real, with_h);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        d.pi_fv(f_fv, func_ty, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.deriv.holomorphic_spec,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Sigma.mk (Complex → Complex) (fun F' => HasDerivativeOn F F' c r) fp
+/// witness : HolomorphicOn F c r` — every constructor below is this, with a
+/// different `(fp, witness)` pair.
+fn holomorphic_mk(
+    d: &mut IntDev<'_>,
+    p: ComplexPrelude,
+    f: ExprId,
+    c: ExprId,
+    r: ExprId,
+    fp: ExprId,
+    witness: ExprId,
+) -> ExprId {
+    let func_ty = fn_ty(d, p);
+    let zero_level = d.kernel().level_zero();
+    let sigma_mk = p.creal.rat.int.logic.sigma.sigma_mk;
+    let family = hd_family(d, p, f, c, r);
+    let mk = d.kernel().const_(sigma_mk, vec![zero_level, zero_level]);
+    d.apply(mk, &[func_ty, family, fp, witness])
+}
+
+/// `Complex.holomorphic_const : ∀ (k c : Complex) (r : CReal),
+/// HolomorphicOn (fun _ => k) c r`.
+fn declare_holomorphic_const(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+
+    let k_fv = d.fresh_fvar();
+    let k = d.kernel().fvar(k_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+
+    let const_fn = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, k)
+    };
+    let zero_z = zzero(d, p);
+    let zero_fn = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, zero_z)
+    };
+    let witness = d.lemma(p.deriv.has_derivative_const, &[k, c, r]);
+    let body = holomorphic_mk(d, p, const_fn, c, r, zero_fn, witness);
+
+    let value = {
+        let with_r = d.lam_fv(r_fv, real, body);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        d.lam_fv(k_fv, carrier, with_c)
+    };
+    let ty = {
+        let claim = holomorphic_ty(d, p, const_fn, c, r);
+        let with_r = d.pi_fv(r_fv, real, claim);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        d.pi_fv(k_fv, carrier, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.deriv.holomorphic_const,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.holomorphic_id : ∀ (c : Complex) (r : CReal),
+/// HolomorphicOn (fun z => z) c r`.
+fn declare_holomorphic_id(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+
+    let id_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        d.lam_fv(fv, carrier, z)
+    };
+    let one_z = d.kernel().const_(p.one, vec![]);
+    let one_fn = {
+        let fv = d.fresh_fvar();
+        d.lam_fv(fv, carrier, one_z)
+    };
+    let witness = d.lemma(p.deriv.has_derivative_id, &[c, r]);
+    let body = holomorphic_mk(d, p, id_fn, c, r, one_fn, witness);
+
+    let value = {
+        let with_r = d.lam_fv(r_fv, real, body);
+        d.lam_fv(c_fv, carrier, with_r)
+    };
+    let ty = {
+        let claim = holomorphic_ty(d, p, id_fn, c, r);
+        let with_r = d.pi_fv(r_fv, real, claim);
+        d.pi_fv(c_fv, carrier, with_r)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.deriv.holomorphic_id,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.holomorphic_neg : ∀ F c r, HolomorphicOn F c r →
+/// HolomorphicOn (fun z => neg (F z)) c r`.
+///
+/// The derivative handed back is `fun z => neg (holomorphicDeriv F c r h z)`,
+/// so the pair stays informative: destructuring the result recovers the
+/// negated derivative, not merely the fact that one exists.
+fn declare_holomorphic_neg(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let holo = holomorphic_ty(d, p, f, c, r);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let fp = d.const_app(p.deriv.holomorphic_deriv, &[f, c, r, h]);
+    let spec = d.const_app(p.deriv.holomorphic_spec, &[f, c, r, h]);
+
+    let neg_f = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let fz = d.apply(f, &[z]);
+        let body = zneg(d, p, fz);
+        d.lam_fv(fv, carrier, body)
+    };
+    let neg_fp = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let fpz = d.apply(fp, &[z]);
+        let body = zneg(d, p, fpz);
+        d.lam_fv(fv, carrier, body)
+    };
+    let witness = d.lemma(p.deriv.has_derivative_neg, &[f, fp, c, r, spec]);
+    let body = holomorphic_mk(d, p, neg_f, c, r, neg_fp, witness);
+
+    let value = {
+        let with_h = d.lam_fv(h_fv, holo, body);
+        let with_r = d.lam_fv(r_fv, real, with_h);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        d.lam_fv(f_fv, func_ty, with_c)
+    };
+    let ty = {
+        let claim = holomorphic_ty(d, p, neg_f, c, r);
+        let with_h = d.arrow(holo, claim);
+        let with_r = d.pi_fv(r_fv, real, with_h);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        d.pi_fv(f_fv, func_ty, with_c)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.deriv.holomorphic_neg,
+        uparams: vec![],
+        ty,
+        value,
+    })
+}
+
+/// `Complex.holomorphic_add : ∀ F G c r, HolomorphicOn F c r →
+/// HolomorphicOn G c r → HolomorphicOn (fun z => add (F z) (G z)) c r`.
+fn declare_holomorphic_add(d: &mut IntDev<'_>, p: ComplexPrelude) -> Result<(), KernelError> {
+    let carrier = complex_ty(d, p);
+    let real = creal_ty(d, p);
+    let func_ty = fn_ty(d, p);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let c_fv = d.fresh_fvar();
+    let c = d.kernel().fvar(c_fv);
+    let r_fv = d.fresh_fvar();
+    let r = d.kernel().fvar(r_fv);
+    let holo_f = holomorphic_ty(d, p, f, c, r);
+    let holo_g = holomorphic_ty(d, p, g, c, r);
+    let hf_fv = d.fresh_fvar();
+    let hf = d.kernel().fvar(hf_fv);
+    let hg_fv = d.fresh_fvar();
+    let hg = d.kernel().fvar(hg_fv);
+
+    let fp = d.const_app(p.deriv.holomorphic_deriv, &[f, c, r, hf]);
+    let gp = d.const_app(p.deriv.holomorphic_deriv, &[g, c, r, hg]);
+    let spec_f = d.const_app(p.deriv.holomorphic_spec, &[f, c, r, hf]);
+    let spec_g = d.const_app(p.deriv.holomorphic_spec, &[g, c, r, hg]);
+
+    let sum_fn = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let fz = d.apply(f, &[z]);
+        let gz = d.apply(g, &[z]);
+        let body = zadd(d, p, fz, gz);
+        d.lam_fv(fv, carrier, body)
+    };
+    let sum_fp = {
+        let fv = d.fresh_fvar();
+        let z = d.kernel().fvar(fv);
+        let fpz = d.apply(fp, &[z]);
+        let gpz = d.apply(gp, &[z]);
+        let body = zadd(d, p, fpz, gpz);
+        d.lam_fv(fv, carrier, body)
+    };
+    let witness = d.lemma(
+        p.deriv.has_derivative_add,
+        &[f, fp, g, gp, c, r, spec_f, spec_g],
+    );
+    let body = holomorphic_mk(d, p, sum_fn, c, r, sum_fp, witness);
+
+    let value = {
+        let with_hg = d.lam_fv(hg_fv, holo_g, body);
+        let with_hf = d.lam_fv(hf_fv, holo_f, with_hg);
+        let with_r = d.lam_fv(r_fv, real, with_hf);
+        let with_c = d.lam_fv(c_fv, carrier, with_r);
+        let with_g = d.lam_fv(g_fv, func_ty, with_c);
+        d.lam_fv(f_fv, func_ty, with_g)
+    };
+    let ty = {
+        let claim = holomorphic_ty(d, p, sum_fn, c, r);
+        let with_hg = d.arrow(holo_g, claim);
+        let with_hf = d.arrow(holo_f, with_hg);
+        let with_r = d.pi_fv(r_fv, real, with_hf);
+        let with_c = d.pi_fv(c_fv, carrier, with_r);
+        let with_g = d.pi_fv(g_fv, func_ty, with_c);
+        d.pi_fv(f_fv, func_ty, with_g)
+    };
+    d.kernel().add_declaration(Declaration::Theorem {
+        name: p.deriv.holomorphic_add,
         uparams: vec![],
         ty,
         value,
