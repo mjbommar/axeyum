@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-subst-code-commutes",
+  "title": "Substitution on Goedel codes agrees with substitution on first-order syntax",
+  "statement": "FO.Code.substCodeAux decodes a formula code and a term code, substitutes the term for de Bruijn index 0, and re-encodes; the theorem says that on genuine codes this computes the code of the genuine substitution. This is the arithmetized substitution operation every representability argument is built on: it turns a syntactic operation into a function Nat -> Nat with a proof that the two agree. FO.Code.isFormulaCodeAux_code is the companion image lemma -- everything FO.Formula.code produces is accepted by the decide-and-re-encode test.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Code.substCodeAux_commutes : ((x0 : FO.Formula) -> ((x1 : FO.Term) -> ((x2 : AxNat) -> ((x3 : AxNat) -> Eq.{1} AxNat (FO.Code.substCodeAux (AxNat.add x2 (FO.Formula.size x0)) (AxNat.add x3 (FO.Term.size x1)) (FO.Formula.code x0) (FO.Term.code x1)) (FO.Formula.code (FO.Formula.subst x0 (FO.Subst.cons x1 FO.Subst.id)))))))",
+    "kernel_theorem": "FO.Code.substCodeAux_commutes",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-formula-decode-code",
+    "F:fo-term-decode-code"
+  ],
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-FO.Code.substCodeAux_commutes",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Code.substCodeAux_commutes",
+      "supports": "FO.Code.substCodeAux_commutes is admitted by the trusted kernel gate with the type recorded in formal.statement and rests on no axiom. Its proof is two congruences over the two round trips and nothing else; the whole cost of the statement was F:fo-formula-decode-code.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- FO.Code.substCodeAux_commutes --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_roundtrip.rs by declare_subst_code_aux_commutes. The checker fails on absence."
+    },
+    {
+      "id": "rendered-statement-is-pinned",
+      "kind": "kernel-term",
+      "supports": "The theorem's declared type is rendered with Kernel::render_lean and compared against a literal in the test module, so a silently weakened statement (a dropped binder, a different decoder, the fuel on the other side of the Nat.add) fails the suite rather than passing unnoticed.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_roundtrip::tests::the_commuting_lemma_and_the_image_lemma_have_the_stated_types",
+      "checkers": [
+        "Kernel::render_lean"
+      ]
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "lane fo-diagonal (ADR-1648), by proof-term construction in crates/axeyum-lean-kernel/src/fo_roundtrip.rs",
+    "source": "roadmap W3-7 second slice; the theorem ADR-1640 sized and left open",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel",
+        "what": "arithmetization of syntax: a numbering of formulas whose decoding and substitution are primitive-recursive, and the diagonal identity that the code of a formula with its own numeral substituted is a computable function of the formula's code",
+        "year": 1931,
+        "where": "Goedel, 'Ueber formal unentscheidbare Saetze der Principia Mathematica und verwandter Systeme I', Monatshefte fuer Mathematik und Physik 38 (1931)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "THE FUELS ARE EXPLICIT, AND THAT IS FORCED. fo_decode.rs's FO.Code.substCode is SELF-fuelled (it passes each code to its own decoder as the fuel), so a theorem about IT would need Nat.le (size p) (code p) -- which is false, measured. FO.Code.substCodeAux takes the two fuels as arguments and the theorem instantiates them at Nat.add g (size .). The two fuels are separate rather than shared so that the statement needs no add_assoc/add_comm shuffle to hand one number to two different size functions.\n\nMUTATION RUN: swapping FO.Formula.code p and FO.Term.code t in substCodeAux's argument list makes the kernel reject the theorem with DeclarationValueMismatch and kills all twelve of the module's tests.\n\nTHE DEFINITION IS PINNED SEPARATELY. FO.Code.substCodeAux is a Definition, so admission proves nothing about what it computes; fo_roundtrip/tests.rs::subst_code_aux_actually_substitutes evaluates it at a two-symbol instance (substituting FO.Term.f0 0 into FO.Formula.eqf (var 0) (var 0)) and requires the result to be a DIFFERENT numeral from the unsubstituted code, so an identity body is caught."
+}

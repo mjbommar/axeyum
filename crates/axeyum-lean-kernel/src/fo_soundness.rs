@@ -24,7 +24,7 @@
 //! `FO.sat` lands in `Prop` rather than in a chain: `FO.sat M S (imp p q) w`
 //! **is** the kernel's own function type `FO.sat M S p w -> FO.sat M S q w`,
 //! so `imp_intro`'s minor is a lambda and `imp_elim`'s is an application.
-//! Nine of the sixteen minors below are one line for the same reason —
+//! Nine of the seventeen minors below are one line for the same reason —
 //! `And.intro`, `And.left`, `Or.inl`, `Or.elim`, `False.rec`, `Eq.refl` — with
 //! no algebra layer in between.
 //!
@@ -37,6 +37,7 @@
 //! | `ex_intro` | `FO.sat_inst` (forward) + `Exists.intro` |
 //! | `ex_elim` | `Exists.rec` + `FO.ctxSat_shift` + `FO.sat_shift` (forward) |
 //! | `eqf_refl` | `Eq.refl` |
+//! | `eqf_subst` | `FO.sat_inst` (both ways) + one `Eq.rec` |
 //!
 //! `all_intro` is where the eigenvariable condition is paid for. Its premise
 //! is a derivation over `FO.Context.shift g`, so the induction hypothesis is
@@ -102,7 +103,9 @@
 use crate::fo_provable::{CalcNames, cons_app, ctx_shift_app, f_shift_app, instantiate, rule};
 use crate::fo_substitution::declare_fo_substitution_over;
 use crate::fo_syntax::SyntaxNames;
-use crate::fo_syntax::{apply_all, arrow, iff_mp, iff_mpr, lam_fv, lams, pi_fv, pis};
+use crate::fo_syntax::{
+    apply_all, arrow, geq_motive, gtransport, iff_mp, iff_mpr, lam_fv, lams, pi_fv, pis,
+};
 use crate::{
     BinderInfo, Declaration, ExprId, FoProvablePrelude, FoSubstitutionPrelude, KernelError,
     LevelId, LogicPrelude, NameId, build_fo_provable_prelude,
@@ -453,7 +456,7 @@ fn declare_soundness(
         apply_all(kernel, c, &[g, p])
     };
 
-    let mut minors: Vec<ExprId> = Vec::with_capacity(16);
+    let mut minors: Vec<ExprId> = Vec::with_capacity(17);
 
     // ---- 0. ax_head : Π g p, Provable (cons p g) p -------------------------
     minors.push({
@@ -1133,13 +1136,118 @@ fn declare_soundness(
         )
     });
 
+    // ---- 16. eqf_subst -----------------------------------------------------
+    //
+    // The Leibniz rule. `FO.sat_inst` puts `sat (p[s]) w` in the form
+    // `sat p (Val.cons M (Term.eval M S s w) w)`, where the term appears ONLY
+    // as the VALUE `Term.eval M S s w`. So `s = t` moves it with a single
+    // `Eq.rec` at the motive `fun x => sat p (Val.cons M x w)`, and
+    // `FO.sat_inst` backward at `t` closes the case. No induction over
+    // `FO.Formula` -- see `fo_provable.rs`'s module doc for why ADR-1636's
+    // estimate that one was needed was wrong.
+    minors.push({
+        let blk = base + 280;
+        let g_id = blk;
+        let p_id = blk + 1;
+        let s_id = blk + 2;
+        let t_id = blk + 3;
+        let d1_id = blk + 4;
+        let d2_id = blk + 5;
+        let i1_id = blk + 6;
+        let i2_id = blk + 7;
+        let w_id = blk + 8;
+        let h_id = blk + 9;
+        let g = kernel.fvar(g_id);
+        let p = kernel.fvar(p_id);
+        let s = kernel.fvar(s_id);
+        let t = kernel.fvar(t_id);
+        let i1 = kernel.fvar(i1_id);
+        let i2 = kernel.fvar(i2_id);
+        let w = kernel.fvar(w_id);
+        let h = kernel.fvar(h_id);
+
+        let atom = fapp(kernel, e.calc.eqf, &[s, t]);
+        let d1_ty = prov(kernel, g, atom);
+        let at_s = instantiate(kernel, &e.calc, p, s);
+        let d2_ty = prov(kernel, g, at_s);
+        let at_t = instantiate(kernel, &e.calc, p, t);
+        let i1_ty = carrier(kernel, g, atom, blk + 10);
+        let i2_ty = carrier(kernel, g, at_s, blk + 12);
+        let hyp = ctx_sat_of(kernel, e, g, w);
+
+        // `FO.sat M S (eqf s t) w` IS `Eq M (eval s w) (eval t w)`.
+        let heq = apply_all(kernel, i1, &[w, h]);
+        let s_val = ev(kernel, e, s, w);
+        let t_val = ev(kernel, e, t, w);
+
+        // Forward through `sat_inst` at `s`.
+        let hs = {
+            let lemma = {
+                let c = kernel.const_(e.subst.sat_inst, vec![]);
+                apply_all(kernel, c, &[e.m, e.s, p, s, w])
+            };
+            let a = sat_of(kernel, e, at_s, w);
+            let extended = vcons(kernel, e, s_val, w);
+            let b = sat_of(kernel, e, p, extended);
+            let mover = iff_mp(kernel, e.logic, a, b, lemma);
+            let inner = apply_all(kernel, i2, &[w, h]);
+            kernel.app(mover, inner)
+        };
+
+        // One transport of the VALUE along the equality hypothesis.
+        let ht = {
+            let motive = geq_motive(
+                kernel,
+                e.logic,
+                e.m,
+                s_val,
+                &|k: &mut crate::Kernel, x: ExprId| {
+                    let extended = vcons(k, e, x, w);
+                    sat_of(k, e, p, extended)
+                },
+                blk + 20,
+            );
+            gtransport(kernel, e.logic, e.m, s_val, motive, hs, t_val, heq)
+        };
+
+        // Backward through `sat_inst` at `t`.
+        let body = {
+            let lemma = {
+                let c = kernel.const_(e.subst.sat_inst, vec![]);
+                apply_all(kernel, c, &[e.m, e.s, p, t, w])
+            };
+            let a = sat_of(kernel, e, at_t, w);
+            let extended = vcons(kernel, e, t_val, w);
+            let b = sat_of(kernel, e, p, extended);
+            let mover = iff_mpr(kernel, e.logic, a, b, lemma);
+            kernel.app(mover, ht)
+        };
+
+        lams(
+            kernel,
+            &[
+                (g_id, ctx_ty),
+                (p_id, fml),
+                (s_id, trm),
+                (t_id, trm),
+                (d1_id, d1_ty),
+                (d2_id, d2_ty),
+                (i1_id, i1_ty),
+                (i2_id, i2_ty),
+                (w_id, e.val_ty),
+                (h_id, hyp),
+            ],
+            body,
+        )
+    });
+
     assert_eq!(
         minors.len(),
-        rule::EQF_REFL + 1,
+        rule::EQF_SUBST + 1,
         "one minor per FO.Provable rule, in declaration order"
     );
 
-    // `FO.Provable` is `Prop`-valued with sixteen constructors, so it is not a
+    // `FO.Provable` is `Prop`-valued with seventeen constructors, so it is not a
     // syntactic subsingleton and `inductive.rs` restricts its recursor's motive
     // to `Sort 0`. A restricted recursor carries NO universe parameter -- the
     // same shape `ipc_soundness.rs` applies `Provable.rec` with. Passing one
