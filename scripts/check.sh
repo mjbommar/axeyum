@@ -1211,6 +1211,11 @@ step golden-lean-pins ./scripts/check-lean-golden-pins.sh
 step kernel-suite-partition-controls python3 -m unittest scripts.tests.test_check_kernel_suites
 step kernel-suite-partition ./scripts/check-kernel-suites.sh --list
 step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
+# ADR-1594 moved the pin to a release-candidate suffix and the install
+# script's regex rejected it (CI red since 792224e73, fixed by ADR-1660);
+# this control exercises the regex through --validate-only, with no
+# download and no dependency on which toolchains happen to be installed.
+step lean-toolchain-pin-regex ./scripts/tests/test-lean-toolchain-pin-regex.sh
 step lean-gate ./scripts/check-lean-gate.sh
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean), 32 hand-
 # authored cases across conversion, universes, inductives, recursors,

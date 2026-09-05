@@ -3,6 +3,33 @@
 
 set -euo pipefail
 
+# Accepts a released Lean toolchain pin, including the release-candidate
+# suffix ADR-1594 moved the cross-check pin to
+# (`leanprover/lean4:v4.34.0-rc1`). Keep this pattern in sync with the Python
+# copy in scripts/check-lean-official-construct-matrix.py
+# (TOOLCHAIN_PIN_PATTERN) -- bash and Python do not share a source for it, so
+# a change here needs the matching edit there.
+TOOLCHAIN_PIN_REGEX='^leanprover/lean4:v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$'
+
+toolchain_pin_is_valid() {
+    [[ "$1" =~ $TOOLCHAIN_PIN_REGEX ]]
+}
+
+# --validate-only lets a test exercise the pin regex against arbitrary
+# strings without downloading elan or touching the network.
+if [[ "${1:-}" == "--validate-only" ]]; then
+    if [[ $# -ne 2 ]]; then
+        echo "usage: $0 --validate-only PIN_VALUE" >&2
+        exit 2
+    fi
+    if toolchain_pin_is_valid "$2"; then
+        echo "valid: $2"
+        exit 0
+    fi
+    echo "invalid: $2" >&2
+    exit 1
+fi
+
 if [[ $# -ne 1 ]]; then
     echo "usage: $0 INSTALL_ROOT" >&2
     exit 2
@@ -27,7 +54,7 @@ esac
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 toolchain=$(tr -d '[:space:]' < "$repo_root/lean-toolchain")
-if [[ ! "$toolchain" =~ ^leanprover/lean4:v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if ! toolchain_pin_is_valid "$toolchain"; then
     echo "unexpected lean-toolchain value: $toolchain" >&2
     exit 2
 fi
