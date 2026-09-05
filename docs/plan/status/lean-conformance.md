@@ -85,7 +85,15 @@ kernel checks it and our slowest passing performance case, `grind-ring-5` at
 10.2 MB, takes 8.1 s. Ledger D8. Also unfixed: the three Lean gates
 `14-lean-lang.md` lists as red today are outside this lane's scope.
 
-**Verification.** `check-kernel-conformance.py --self-test` fires all eight
+**Verification.** `cargo check --workspace --all-targets` exits 0 with the new
+`KernelError` variant (20 min, every crate including `axeyum-py`, which reads
+the enum off its `Debug` rendering rather than matching on it — a kernel
+invariant is not a workspace invariant, and that consumer has broken `main`
+before). `cargo clippy -p axeyum-lean-kernel -p axeyum-lean-import
+--all-targets -- -D warnings` exits 0. After merging `main`, the targeted check,
+the three-test suite and the release build were all re-run (exit 0), and the
+conformance gate re-ran **every** case live: 372 of 372 rows reproduced.
+`check-kernel-conformance.py --self-test` fires all eight
 artifact-layer guards on the fixture that names each; G9 was mutation-verified
 separately by changing one committed `class` field with the verdict unchanged,
 which fires G9 **alone**. `check-lean-divergences.py --self-test` fires L1–L5
@@ -103,5 +111,7 @@ re-derived from that run rather than nudged.
 <!-- plan-section: landed-changes -->
 
 | 2026-09-05 | `e75b0db94` | `scripts/fetch-references.sh` pins `leanprover/lean-kernel-arena` at an exact commit plus its test tarball by SHA-256; `kernel_conformance_check` runs one case per process under the arena's own exit-code contract (0 accept / 1 reject / 2 declined / 3 error), with `--mode parse-only` as the in-tree control |
+| 2026-09-05 | `e5570f906` | merge of `main`: three conflicts resolved by identity, not by "keep both" — the `justfile` `check` list as a token union (`lean-tactic` from main kept), the ADR index regenerated rather than hand-merged, and `14-lean-lang.md`'s chair rows / Next Ten items / progress rows split by owner |
+| 2026-09-05 | `2b63883c2` | rescored after the fix (reject half 69 -> 70, floor 69 -> 70, soundness ceiling 2 -> 1), ledger D2 closed with its scope limit stated (inductives do not route through `check_declaration`) |
 | 2026-09-05 | `a24ed468b` | `Kernel::check_declaration` refuses a repeated universe binder (`KernelError::DuplicateUniverseParam`), closing ledger D2 — the arena's `tut06_bad01`; new `declaration_universe_params_must_be_distinct.rs` (3 tests, both directions); ADR-1663; progress rows in `14-lean-lang.md` and `10-logic-and-foundations.md` |
 | 2026-09-05 | `5a954d4be` | `scripts/check-kernel-conformance.py` (9 guards, `--self-test`, floors and ceilings on both halves, G6 requires the control to invert by ≥40); `scripts/check-lean-divergences.py` (5 guards, three authorities, no list of its own); `docs/plan/lean-divergences.md`; `artifacts/kernel-conformance/{results.tsv,summary.json,summary.md}`; `level_conformance_probe` example; both gates registered in `scripts/check.sh` and the `justfile` |
