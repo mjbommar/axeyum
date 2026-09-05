@@ -166,7 +166,18 @@ LANGUAGES_ALL = {
 # faithfully, that our wire translation preserves meaning, and that the delivered
 # bytes are the producer's intended export -- format 3.1 has no footer, so
 # completion is relative to the bytes handed over. So `[]` is unavailable here.
-ROUTES = {"kernel-lean", "imported-kernel-lean", "smt-term-level", "smt-clausal",
+# `kernel-lean-over-import` (ADR-1664) is a proof term THIS project authored
+# whose closure reaches an imported declaration. It is not `kernel-lean` (its
+# trust base includes everything the import assumes) and it is not
+# `imported-kernel-lean` (the proof term IS ours). Measured 2026-09-05 in
+# `crates/axeyum-lean-import/tests/imported_composition_footprint.rs`:
+# `Kernel::axiom_footprint` propagates the imported theorem's WHOLE closure
+# transitively, and does so per PROOF TERM -- two originated theorems of the same
+# type in the same kernel, one proved `fun p h => Classical.em p` and one
+# `fun p h => h`, measure the import's six names and EMPTY respectively. That is
+# what makes this a per-theorem tier rather than a per-session contamination.
+ROUTES = {"kernel-lean", "imported-kernel-lean", "kernel-lean-over-import",
+          "smt-term-level", "smt-clausal",
           "search-certificate", "cas-certificate", "none"}
 # Only this route can deliver axiom-freedom, because only there does an empty
 # footprint correspond to a measurable fact about a kernel environment.
@@ -174,6 +185,32 @@ AXIOM_FREE_CAPABLE = {"kernel-lean"}
 # Routes on which the proof term was NOT authored here. Reported separately from
 # the constructed count for exactly the reason above.
 IMPORTED_ROUTES = {"imported-kernel-lean"}
+# Routes that ADD the import route's assumptions to whatever else they rest on:
+# the import itself, and an originated theorem composed over one. Both must
+# transcribe `IMPORT_ROUTE_ASSUMPTIONS`, and both need `provenance.prior_art`
+# (enforced by two separate branches, one per route, so a control can tell them
+# apart).
+IMPORT_DEPENDENT_ROUTES = IMPORTED_ROUTES | {"kernel-lean-over-import"}
+# The three assumptions an import adds that NO walk over a kernel environment can
+# reach. `Kernel::axiom_footprint` keeps the declarations admitted on trust; these
+# are claims about how the declarations got into the environment at all, so they
+# are structurally invisible to it and must be transcribed.
+#
+# THIS IS THE RULE THAT REJECTS ADR-1664's OPTION (3). Measured: an originated
+# theorem composed over the Init-only `bool-and-comm.ndjson` import has an
+# `Kernel::axiom_footprint` of EMPTY. Routing it to `kernel-lean` on that basis
+# would promote into the axiom-free headline a theorem resting on all three of
+# these. The names are exactly the ones the seven committed `imported-kernel-lean`
+# facts already carry.
+IMPORT_ROUTE_ASSUMPTIONS = (
+    "lean4export-3.1.0-stream-faithfulness",
+    "axeyum-lean-import-wire-translation",
+    "lean4export-3.1.0-delivered-bytes-are-the-intended-export",
+)
+# The composed tier (ADR-1664). Reported apart from BOTH the axiom-free count and
+# the imported count: the proof term is ours, so it is not an import; its trust
+# base is not, so it is not a headline result.
+COMPOSED_ROUTES = {"kernel-lean-over-import"}
 
 # A status that asserts the statement was settled must be backed by something.
 ESTABLISHED = {"proved", "computed", "refuted"}
@@ -616,6 +653,41 @@ def validate_one(path: Path, fact: dict, known_ids: set[str]) -> list[str]:
                      f"An import that reads as a local proof is the failure this route "
                      f"exists to prevent.")
 
+    # ADR-1664 rule 3, the same requirement at half strength. On the COMPOSED
+    # route the proof term IS ours -- what it rests on is not. Kept as its own
+    # branch rather than folded into the one above, so that deleting either one
+    # kills exactly the test for that route: a widened shared branch would make
+    # the two rules indistinguishable to a control, and "the widening quietly
+    # narrowed again" would then be undetectable.
+    if route in COMPOSED_ROUTES and not fact["provenance"].get("prior_art"):
+        fail(errors, f"{fid}: proof_route {route!r} rests on a proof term authored "
+                     f"elsewhere, so provenance.prior_art must name who authored the "
+                     f"import underneath it. A composed theorem that reads as wholly "
+                     f"local is the failure the import route exists to prevent.")
+
+    # ADR-1664 rule 2. `Kernel::axiom_footprint` walks DECLARATIONS and keeps the
+    # ones admitted on trust. The import route's three assumptions are not
+    # declarations -- they are claims about how the declarations reached the
+    # environment -- so no walk can reach them and they have to be transcribed.
+    #
+    # This is the rule that makes ADR-1664's option (3) impossible. Measured
+    # 2026-09-05: an originated theorem composed over the Init-only
+    # `bool-and-comm.ndjson` import has an `axiom_footprint` of EMPTY from the
+    # kernel. Without this guard such a fact could be filed on `kernel-lean` with
+    # `[]` and counted in the axiom-free headline, while resting on all three.
+    if route in IMPORT_DEPENDENT_ROUTES:
+        footprint = fact.get("axiom_footprint")
+        if isinstance(footprint, list):
+            missing = [a for a in IMPORT_ROUTE_ASSUMPTIONS if a not in footprint]
+            if missing:
+                fail(errors, f"{fid}: proof_route {route!r} omits {len(missing)} import-route "
+                             f"assumption(s) from axiom_footprint: {missing}. "
+                             f"`Kernel::axiom_footprint` cannot see these -- they are claims "
+                             f"about how the declarations reached the environment, not "
+                             f"declarations -- so a footprint that does not name them "
+                             f"understates the trust base, and on this route the kernel's own "
+                             f"answer can be EMPTY (measured, for an Init-only import).")
+
     external = fact.get("external_status")
     if external is not None:
         if external not in EXTERNAL_STATUSES:
@@ -673,6 +745,47 @@ def run_depends_derived_gate(skip: bool) -> int:
     return proc.returncode
 
 
+def depends_on_an_import(fact: dict, by_id: dict[str, dict]) -> bool:
+    """Whether any `depends_on` edge of `fact` reaches a fact on an imported route.
+
+    The rule is "cites an IMPORT", not "cites anything": a composed fact whose
+    only edge is to another originated theorem is exactly the case a naive
+    non-empty-`depends_on` check would wave through, and it is the case where the
+    route label would be pointing at nothing.
+    """
+    return any(
+        by_id.get(dep, {}).get("proof_route") in IMPORTED_ROUTES
+        for dep in fact.get("depends_on", [])
+    )
+
+
+def validate_composed_route_traceability(by_id: dict[str, dict]) -> list[str]:
+    """ADR-1664 rule 4: a composed fact must name the import it rests on.
+
+    "Originated over a labeled import" is a claim about a DEPENDENCY, and the
+    tier is only worth having if a reader can walk from the composed fact to the
+    import underneath it. Requiring merely a route label would give a tier that
+    is announced and not auditable -- the shape this repository calls a checker
+    that cannot fail.
+
+    Cross-fact, so it cannot live in `validate_one`: deciding whether an edge
+    points at an import needs the OTHER fact's `proof_route`, and `validate_one`
+    is handed only the set of known ids. `validate_one` already rejects a
+    dangling `depends_on`, so an edge reaching this function resolves.
+    """
+    errors: list[str] = []
+    for fid, fact in sorted(by_id.items()):
+        if fact.get("proof_route") not in COMPOSED_ROUTES:
+            continue
+        if not depends_on_an_import(fact, by_id):
+            fail(errors, f"{fid}: proof_route {fact.get('proof_route')!r} asserts this "
+                         f"proof rests on an import, but no entry of depends_on is a fact "
+                         f"on {sorted(IMPORTED_ROUTES)}. The composed tier is auditable only "
+                         f"if the ledger can name WHICH import; a route label that points at "
+                         f"nothing is a claim nothing can check.")
+    return errors
+
+
 def main() -> int:
     if not SCHEMA.is_file():
         print(f"validate-facts: missing {SCHEMA}", file=sys.stderr)
@@ -701,6 +814,10 @@ def main() -> int:
 
     for p, f in facts.items():
         errors.extend(validate_one(p, f, set(ids)))
+
+    errors.extend(validate_composed_route_traceability(
+        {fid: facts[p] for fid, p in ids.items()}
+    ))
 
     by_status: dict[str, int] = {}
     for f in facts.values():
@@ -898,6 +1015,15 @@ def main() -> int:
     if imported:
         print(f"  {imported} fact(s) on an IMPORTED route -- proof term checked here, "
               f"authored elsewhere; not evidence of construction")
+    # ADR-1664's third number. Apart from BOTH of the two above: the proof term
+    # is ours, so it is not an import; its trust base is not, so it is not a
+    # headline result. Printed only when nonzero, so the absence of the line is
+    # itself the honest report that the tier is decided and not yet exercised.
+    composed = sum(1 for f in facts.values() if f.get("proof_route") in COMPOSED_ROUTES)
+    if composed:
+        print(f"  {composed} fact(s) on a COMPOSED route -- proof term authored here, "
+              f"resting on a labeled import; counted toward NEITHER the axiom-free "
+              f"headline nor the imported count")
     print(
         f"  {multi} evidence row(s) checked by 2+ distinct checkers -- "
         f"{self_rederived} of those count the PRODUCING run as one of the two, so "

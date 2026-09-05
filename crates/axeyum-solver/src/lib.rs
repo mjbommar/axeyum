@@ -232,6 +232,28 @@ macro_rules! full_modules {
 #[cfg(feature = "full")]
 full_modules!();
 
+/// Bench-only re-exports of otherwise crate-private search internals
+/// (2026-09-05 micro-benchmarks, see the design review
+/// `docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md`
+/// §4 item 3).
+///
+/// `benches/*.rs` is a separate crate and cannot name a `pub(crate)` item or
+/// a private (`mod cdclt;`/`mod simplex;`) module path, so [`crate::cdclt`]'s
+/// `CdclT`/`Lit`/`Outcome` and [`crate::simplex`]'s `Incremental`/`Status`
+/// were promoted from `pub(crate)` to `pub` (their containing modules stay
+/// crate-private) and are re-exported here. This module — and therefore the
+/// only reachable path to any of them from outside the crate — exists solely
+/// under the `bench-internals` feature, which is not part of the default or
+/// `full` feature sets and implies `full` itself. Not part of the public API:
+/// do not depend on this from production code, only from a `[[bench]]`
+/// target.
+#[cfg(feature = "bench-internals")]
+#[doc(hidden)]
+pub mod bench_internals {
+    pub use crate::cdclt::{CdclT, Lit, Outcome};
+    pub use crate::simplex::{Incremental, Rel, Status};
+}
+
 /// Boolean, cardinality, and pseudo-Boolean constraint builders.
 ///
 /// This full-profile facade groups existing query-construction helpers without

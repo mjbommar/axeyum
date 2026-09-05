@@ -15,6 +15,11 @@
 set -uo pipefail
 cd "$(dirname "$0")/../.." || exit 2
 HELPER="$PWD/scripts/lane-commit.sh"
+# The `cd` above pins this to the helper in THIS checkout, so a mutation run
+# against another copy needs a scratch tree pairing that helper with this
+# file. A missing helper would make every "refused" case pass vacuously (exit
+# 127 looks exactly like a refusal to a status-only assertion), so fail loudly.
+[ -x "$HELPER" ] || { echo "test-lane-commit: no executable helper at $HELPER" >&2; exit 2; }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -119,6 +124,42 @@ if [ -f "$(git rev-parse --git-dir)/index-$AXEYUM_AGENT" ]; then
 else
   bad "6b private index was not created in the worktree gitdir"
 fi
+cd "$WORK" || exit 2
+
+# --- 7. a merge in progress (somebody else's) refuses the commit ------------
+# The 2026-09-05 incident: a sibling session's `git merge` stopped on a `UU`
+# conflict in the shared checkout; a one-file commit through this helper became
+# a MERGE commit with their branch as second parent and none of its content,
+# and consumed MERGE_HEAD. The helper must refuse while MERGE_HEAD exists, in
+# --dry-run as well, and accept again once the merge is gone.
+# Asserted on the OUTCOME, not on a message: the unguarded helper's dry run
+# accepted this and its real commit produced a two-parent commit -- and git
+# prints its own "MERGE_HEAD exists" in other paths, so a message match cannot
+# tell the guard from git. A fresh repo, so cases 1-6 leave nothing behind.
+WORK7="$WORK/merge-in-progress"; mkdir -p "$WORK7"; cd "$WORK7" || exit 2
+git init -q .; git config user.email t@t; git config user.name t; mkdir -p .git/hooks
+echo one > a.txt; echo two > b.txt; git add -A; git commit -qm base
+git checkout -q -b sibling; echo sibling-side > b.txt; git commit -qam sibling
+git checkout -q -; echo main-side > b.txt; git commit -qam main-side
+git merge -q sibling >/dev/null 2>&1 || true        # stops on the b.txt conflict
+git rev-parse -q --verify MERGE_HEAD >/dev/null || bad "7 fixture: MERGE_HEAD was not set up"
+head_before=$(git rev-parse HEAD)
+echo mine > mine7.txt
+out=$("$HELPER" -m "$WORK/msg" -- mine7.txt 2>&1); rc=$?
+# Outcome AND the helper's own refusal line: outcome alone is vacuous when the
+# helper never ran (a wrong $PWD gave exit 127, HEAD "unmoved", and a green
+# case 7 on the first draft of this control).
+case "$out" in *"REFUSING -- MERGE_HEAD exists"*) refused=1 ;; *) refused=0 ;; esac
+if [ "$rc" != 0 ] && [ "$refused" = 1 ] && [ "$(git rev-parse HEAD)" = "$head_before" ] \
+   && git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+  ok "7 a commit during another merge is refused: HEAD unmoved, MERGE_HEAD intact"
+else
+  bad "7 a commit during another merge went through (rc=$rc, parents=$(git log -1 --format=%P | wc -w), MERGE_HEAD=$(git rev-parse -q --verify MERGE_HEAD || echo gone)): $out"
+fi
+git merge --abort
+out=$("$HELPER" --dry-run -- mine7.txt 2>&1); rc=$?
+[ "$rc" = 0 ] && ok "7b accepted again once the merge is gone" \
+  || bad "7b still refused after merge --abort: $out"
 cd "$WORK" || exit 2
 
 if [ "$fail" = 0 ]; then echo "LANE_COMMIT_CONTROLS|ok"; else echo "LANE_COMMIT_CONTROLS|FAILED" >&2; fi

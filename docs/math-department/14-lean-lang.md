@@ -52,10 +52,12 @@ Measured 2026-09-05 at `f67ce41d2`; the commands are in *How to re-measure*.
 | trusted core | 5,526 function-body lines, 9 files ([ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md)) |
 | our theorems replayed in pinned Lean | **every carrier**, 17 of 17: union population 4,478, replayed 4,394, 50 `Type`-valued theorems Lean refuses as theorems, 34 blocked behind them ([ADR-1661](../research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md), extending [ADR-0760](../research/09-decisions/adr-0760-independent-replay-is-graded-per-declaration-by-name.md)) |
 | credited roots exported, reimported, Lean-checked | 9 (C2) |
-| thin Lean adapter | one 8-category goal pack over one subject, `Nat.add_comm` (C3, [ADR-0935](../research/09-decisions/adr-0935-the-thin-lean-adapter-composes-c2s-two-checked-paths-and-adds-nothing-else.md)) |
+| thin Lean adapter | Rust side: one 8-category goal pack over one subject, `Nat.add_comm` (C3, [ADR-0935](../research/09-decisions/adr-0935-the-thin-lean-adapter-composes-c2s-two-checked-paths-and-adds-nothing-else.md)). **Lean side: `by axeyum` exists** — `lean/axeyum-tactic`, a Lake package on the cross-check pin, no Mathlib; 11 ℕ goals in Lean-core notation accepted and 11 mutations rejected, gated by `scripts/check-lean-tactic.sh` ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md)) |
 | Mathlib mirrors in the ledger | 756 facts: 499 proved, 257 open; fidelity gate PASS, 742 hash-verified, 14 unpinned |
+| mirrors that CROSS into the kernel as a goal | 390 of 756 (132 of the 257 open). 361 are stopped by a proof-bearing declaration inside the STATEMENT's own definition closure -- 9 distinct names, 287 Theorem / 73 Quotient / 1 Axiom -- and 5 by elaboration ([ADR-1662](../research/09-decisions/adr-1662-the-statement-import-blocker-is-a-proof-inside-the-definition-closure-not-the-variable-block.md)) |
 | statements in Lean surface syntax | 769 facts (`lean4-surface`); 1,971 in kernel-core rendering (`lean4`); **no native parser for either** — only real Lean can read the surface form, and it lives on one fleet host with a built Mathlib |
-| labeled imports from Lean/Mathlib | 7 facts, `proof_route: imported-kernel-lean`, footprint `[propext, Classical.choice, Quot.sound]`, never counted as ours; largest closure 3,142 declarations ([ADR-1090](../research/09-decisions/adr-1090-ivt-evt-row-4-labeled-import-lands-mathlib-topology-admits-clean.md)) |
+| labeled imports from Lean/Mathlib | 7 facts, `proof_route: imported-kernel-lean`, never counted as ours; largest closure **3,585 declarations** from **3,142 wire records**, admitted in 17.5-31.8 s on a contended box ([ADR-1090](../research/09-decisions/adr-1090-ivt-evt-row-4-labeled-import-lands-mathlib-topology-admits-clean.md) has both columns) — this row said "3,142 declarations", which is the record count, and the two differ by 443. Footprint is **not** `[propext, Classical.choice, Quot.sound]` — that is Lean's own `#print axioms` vocabulary. Re-derived 2026-09-05, `Kernel::axiom_footprint` of `intermediate_value_Icc` is **eight** names (the six-name `Classical.em` closure — this kernel counts the whole quotient package — plus `String.Internal.append` and one opaque `wrapped._@…`); the three Init-only streams measure **EMPTY**. Every fact additionally carries the import route's three assumptions, which no walk over the environment can reach. |
+| composition over an import | **decided, not yet exercised** ([ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md)): an originated theorem MAY rest on an import, on route `kernel-lean-over-import`, never in the axiom-free headline. 0 such facts today. Blocked in practice on name collision, not trust: 17 `Init` names are shared with our preludes and `build_nat_prelude` into an imported kernel is rejected at `False`, so a composed proof term must live wholly in the imported vocabulary until item 4 lands |
 | Mathlib at scale | a full `lean4export Mathlib` is 680,925 declarations in ~4 min on s5; the declaration graph built so far is 446 declarations and 2,451 edges from 7 roots |
 | native producers | `linarith`, `ring`, `simp`, `decide`, tactic combinator: 18,497 lines emitting kernel terms — over *this* kernel's preludes, not Lean goals; the matrix's K3 row does not mention them |
 | **red today** | All three of the Lean gates this row named on 2026-09-05 are now GREEN, fixed the same day by lane `lean-pin-gates` ([ADR-1660](../research/09-decisions/adr-1660-there-are-two-lean-pins-and-every-claim-names-which-one-it-means.md)): `gen-lean-complete-parity.py --check`, `check-lean-official-construct-matrix.py --check` and `gen-lean-compatibility.py --check` each exit 0 on a clean tree at `3328d2a80`, and `install-pinned-lean.sh` accepts the `-rc1` pin. `check-parity-freshness.py`'s Z3-ledger failure was NOT re-measured by this lane and is not claimed either way. |
@@ -67,9 +69,9 @@ against the July documents.
 
 | # | chair | what "Lean compatible" would mean to them | what stops them |
 |---|---|---|---|
-| 01 | number theory | close the 257 open Mathlib mirrors; read the next thousand | statement extraction loses Mathlib's enclosing `variable` block, so a coercion-carrying statement re-parses as nothing (no screen exists); typeclass-headed statements have no record-spine target |
+| 01 | number theory | close the 257 open Mathlib mirrors; read the next thousand | **Corrected 2026-09-05 by measurement (ADR-1662): the `variable` block is 1 of the 257, not the blocker.** 123 of the 257 are stopped instead by a proof-bearing declaration inside the statement's own definition closure (`eq_self`, `Nat.mod_lt`, `Quot`, `dif_pos`, …), and a screen for the `variable`-block and glyph classes now exists (`scripts/lean_surface_screen.py`, agrees with Lean 5 of 5 over all 756). Typeclass-headed statements still have no record-spine target |
 | 02 | constructive analysis | **export.** "Among the most complete constructive analyses anywhere" is worth nothing to a Lean user until it is a Lake package they can `import` | `creal` replays into Lean at 3,542 of 3,617, but as a census artifact, not a library; 50 theorems across the carriers are `Type`-valued and Lean's kernel refuses them as theorems — now named, with 34 more blocked behind five of them ([the census](../../artifacts/measurements/lean-replay-census-2026-09-05.md)) |
-| 03 | classical analysis | bring measure theory in as labeled scaffolding | 7 imports exist and each carries Mathlib's three axioms; no decision says whether an originated theorem may *depend* on an imported one, so imports cannot compose with anything we prove |
+| 03 | classical analysis | bring measure theory in as labeled scaffolding | ~~no decision says whether an originated theorem may *depend* on an imported one~~ — decided 2026-09-05, [ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md): it may, on `kernel-lean-over-import`. What stops them NOW is a name space, not a trust rule: 17 `Init` names are shared between an import and our preludes, so the two cannot occupy one kernel (item 4) |
 | 04 | algebra | Mathlib's `Group` and our `AlgS.Group` should be the same thing on the wire | Mathlib is typeclass-headed and our spine is records; no correspondence is written down; the differential registers `Quot.sound` as a known incompleteness and stops there |
 | 05 | geometry | render `CPoint` results into Lean | Mathlib's plane is `EuclideanSpace ℝ (Fin 2)` over classical ℝ; no statement of ours is the same statement as theirs, and nothing records the mapping |
 | 06 | topology | an honest **typed decline**: "not statable here" rather than a failed import | the import route declines on unsupported constructs, not on absent carriers; a topological statement fails somewhere inside 3,000 declarations |
@@ -77,9 +79,9 @@ against the July documents.
 | 08 | probability | same as 03 | same as 03, plus the ℚ-valued shelf has no Mathlib counterpart at all |
 | 09 | category theory | universe levels that agree with Lean **exactly** | one divergence found by a gate this week (`PSigma` at `Sort (max u v)` vs Lean's `Sort (max 1 u v)`); the `max-to-imax` mutant is open; `imax` normalization is over-complete (requirements §4.6) |
 | 10 | logic | the kernel *is* the paper; the paper needs the public conformance corpus, both halves | 32 hand-authored differential cases against a corpus of 189 (121 accept / 62 reject / 6 either) nobody has run; no divergence ledger |
-| 11 | applied | `by axeyum` as a real tactic, and LRAT proofs Lean consumes | C3 is a Rust-side sidecar protocol with one subject; no Lean-side tactic, no Lake package, no LRAT hand-off |
+| 11 | applied | `by axeyum` as a real tactic, and LRAT proofs Lean consumes | **half answered 2026-09-05** (ADR-1666): the tactic and the Lake package exist and close 11 ℕ goals against Lean core. Still no LRAT hand-off — `Std.Tactic.BVDecide` consumes LRAT and `axeyum-cnf` emits DRAT — and no ℤ, because the ℤ producer entry points are `pub(crate)` |
 | 12 | the chair | one pin, green gates, and one sentence saying what "Lean compatible" means | two pins, three red gates, and a claim surface (PLAN.md, the K3 row, next-action A9) still describing July |
-| 13 | the CAS | its certificates reconstruct into kernel terms; Lean would see them only through 11's tactic | same as 11 |
+| 13 | the CAS | its certificates reconstruct into kernel terms; Lean would see them only through 11's tactic | 11's tactic now exists, so the route is open in principle; what is missing is a name-correspondence row per constant a reconstructed CAS certificate emits, in `Axeyum.Shim`'s shape (ADR-1666) |
 
 ## The Next Ten, in priority order
 
@@ -112,35 +114,74 @@ what makes the whole thing a claim rather than a folder.
       `#print axioms` empty on the Lean side, packaged for Lake. Reviewer 02's
       verdict is the strongest in the department and today no one outside can
       use the thing it praises. Serves 02, 05, 03.
-- [ ] **4. A carrier correspondence ledger.** One row per pair — `CReal` ↔
-      `Real`, `Nat.Finset` ↔ `Finset`, `AlgS.Group` ↔ `Group`, `CPoint` ↔
-      `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph` — graded *same
-      statement*, *constructively stronger*, *constructively weaker*, or
-      *different object*, gated the way the ℕ/ℤ mirror-fidelity check already
-      is. Serves 02, 03, 05, 07, 08; it is what makes reviewer 03's
-      "a different theorem" a table instead of a sentence.
-- [ ] **5. The statement-import blocker census, and the first screen.** Run
-      every one of the 257 open mirrors plus a fresh Mathlib draw through
-      statement-only import and count the decline reasons. Ship the
-      coercion/`variable`-block screen at extraction time. Then C4's first
-      demand-gated elaboration feature is chosen by count, not by taste.
+- [x] **4. A carrier correspondence ledger.** *Done 2026-09-05 (ADR-1665).*
+      `artifacts/carrier-correspondence/carrier-correspondence-v1.json` holds
+      16 rows — `CReal` ↔ `Real`, `Nat.Finset` ↔ `Finset`, `Nat.Multiset` ↔
+      `Multiset`, `AlgS.Group` ↔ `Group`, `AlgS.CommRing` ↔ `CommRing`,
+      `AlgS.Field` ↔ `Field` (a constructive field with an EXISTENTIAL
+      inverse over apartness, landed the same day in `53c851e5b`/ADR-1627 —
+      this ledger's own first pass missed it from a stale merge base and was
+      corrected before merge, see ADR-1665), `CPoint` ↔
+      `EuclideanSpace ℝ (Fin 2)`, `Nat.Graph` ↔ `SimpleGraph`, `Complex` ↔
+      `Complex`, Rat matrices ↔ `Matrix`, the ℚ probability shelf ↔ `PMF`,
+      `Metric` ↔ `MetricSpace`, `IntSpace` ↔ the Bochner integral, `Nat.RM` ↔
+      Mathlib's computability library (the brief's own "no counterpart"
+      assumption was wrong — Mathlib has a general halting-problem theorem —
+      and the row corrects it), `Provable`/`ipc_*` ↔ Mathlib's
+      Heyting/ModelTheory, plus a bonus `Nat.Rado` `no-counterpart` row —
+      graded *same-statement* (2), *constructively-stronger* (2),
+      *different-object* (11) or *no-counterpart* (1), each with a witness
+      theorem pair verified against the live kernel projection or, where the
+      declaration postdates that projection's last regeneration, a fresh
+      `shape_search` build.
+      `scripts/check-carrier-correspondence.py --check` gates it exactly the
+      way `check-mirror-statement-fidelity.py` gates the ℕ/ℤ mirrors, with
+      nine mutation-verified guards. Serves 02, 03, 05, 07, 08; reviewer 03's
+      "a different theorem" is now a table (`CC:creal-real`), not a sentence.
+- [x] **5. The statement-import blocker census, and the first screen.**
+      **Done 2026-09-05 ([ADR-1662](../research/09-decisions/adr-1662-the-statement-import-blocker-is-a-proof-inside-the-definition-closure-not-the-variable-block.md),
+      `artifacts/measurements/statement-import-blocker-census-2026-09-05.json`).**
+      All 756 mirrors run through the real route -- `def _ : Prop` after
+      `import Mathlib`, `lean4export`, `import_statement_ndjson`. 390 cross; 361
+      are stopped by a proof inside the definition closure; 5 by elaboration.
+      The screen ships and needs no Lean. **The count changed the answer:** C4's
+      first demand-gated feature is an ADMISSION feature (extend the
+      independently reconstructed `trusted_substitution` set over 7 constructive
+      names, 337 rows; `em` and `propext` held back as a separate decision), not
+      the elaboration feature this item and the chair-01 row assumed.
       Serves 01, 07, 04.
-- [ ] **6. `by axeyum` as a Lean tactic.** Turn the C3 sidecar protocol into
-      a Lake package exposing a tactic that ships the elaborated goal to
-      Axeyum and hands back a term Lean checks; first fragments linear
-      arithmetic and `ring` over ℕ and ℤ, then LRAT-carrying `bv_decide`-style
-      goals. Nothing is trusted on the Lean side. Serves 11, 13, 01.
+- [x] **6. `by axeyum` as a Lean tactic.** **ℕ landed 2026-09-05**
+      ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md)):
+      `lean/axeyum-tactic` is a Lake package, no Mathlib, exposing `by axeyum`;
+      11 goals stated in ordinary Lean-core notation close and 11 mutations are
+      rejected, 5 of the goals axiom-free end to end. The finding is that a
+      rename is not enough — axeyum applies every lemma with all arguments
+      explicit in its own order, so 12 lemmas route through `Axeyum.Shim`, one
+      Lean theorem each proved from core. **Still open:** ℤ (blocked by
+      `pub(crate)` on `linarith::int::prove` and `ring::int::prove`, not by
+      mathematics) and the LRAT route (`bv_decide` consumes LRAT, our core
+      emits DRAT). Serves 11, 13, 01.
 - [ ] **7. The public conformance corpus and a divergence ledger.** Run
       Lean 4's own kernel test cases, report both the accept and the reject
       half, publish a gated `divergences.md` in lean4lean's shape with the
       rule that an unlisted divergence is a bug; close the open `max-to-imax`
       mutant and decide the `imax` over-completeness. Serves 10, 09.
-- [ ] **8. The imported-axiom composition ADR.** Imports carry
-      `[propext, Classical.choice, Quot.sound]` and are never counted as ours;
-      ADR-1601 makes *our* classical principles hypotheses. What is undecided
-      is whether an originated theorem may depend on an imported one and how
-      its footprint is then reported. Until it is, measure theory can enter
-      only as an island. Serves 03, 08, 06.
+- [x] **8. The imported-axiom composition ADR.** **Landed 2026-09-05**,
+      [ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md).
+      An originated theorem may depend on an imported one, on a distinct
+      `kernel-lean-over-import` route that carries the imported proof's axioms
+      plus the import route's three assumptions and counts toward the axiom-free
+      headline never. Decided by building the composed theorem: propagation is
+      transitive **and per proof term**, so two originated theorems of the same
+      type in one kernel measure the import's six-name closure and `[]`. Option
+      "allow when the composed footprint is `[]`" was rejected on the
+      measurement that `Kernel::axiom_footprint` structurally cannot see the
+      three import assumptions — an Init-only composition measures `EMPTY` and
+      still rests on all three. Enforced by four new validator guards, each
+      mutation-verified to kill exactly one test; a fifth repaired an existing
+      hole (`count-landmark-facts.py` never read `proof_route`, so all 7 imports
+      were counted as landmarks). **Not yet exercised**: 0 composed facts, and
+      item 4 is the practical prerequisite. Served 03, 08, 06.
 - [ ] **9. A native reader for the statement fragment.** Parse the kernel-core
       rendering (1,971 facts carry it) back into kernel terms with a
       render → parse → same-term gate, then the surface subset the Mathlib
@@ -177,9 +218,15 @@ count depend on Lean's axioms.
   over explicit carriers by design ([ADR-1495](../research/09-decisions/adr-1495-abstraction-over-structures-is-already-expressible-the-gap-is-surface.md)).
   The gap is surface, and it has to be measured (item 5) before it is built
   (item 9).
-- **Trust composition.** Two footprint regimes exist — empty for originated
-  theorems, Mathlib's three axioms for imports — and no rule says whether
-  they may touch. Item 8.
+- ~~**Trust composition.**~~ **Closed 2026-09-05, item 8,
+  [ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md).**
+  The two regimes may touch, on `kernel-lean-over-import`. What replaced it is
+  smaller and mechanical: **one environment cannot hold both.** `import_ndjson`
+  builds its own staging kernel (the fail-closed contract), so the only
+  reachable order is import-then-prelude, and `build_nat_prelude` into a kernel
+  holding the 48-declaration `Init` slice is rejected at `False` — 17 names are
+  shared (`Bool`, `Eq`, `False`, `Decidable`, …). Item 4's carrier
+  correspondence ledger is what removes it.
 - **Real Lean with a built Mathlib lives on one host.** `command -v lean` is
   empty on hosts that have it, a provisioned checkout is not a built Mathlib,
   and attestation of a draw takes 3.6 s on s5 and cannot run anywhere else
@@ -189,8 +236,13 @@ count depend on Lean's axioms.
 
 | date | change | evidence |
 |---|---|---|
+| 2026-09-05 | Next Ten item 5 closed. Statement-import blocker census over all 756 `F:ml430-*` mirrors, run against Mathlib `c5ea0035` / Lean 4.30.0 on s5: 390 admitted, 361 `trusted-declaration-in-closure`, 3 `coercion-variable-block`, 1 `field-notation-variable-block`, 1 `elided-proof-glyph`; zero unsupported-construct, universe, timeout or resource declines. The 499 proved mirrors, used as the positive control, show the same single blocker (238 of them), so it is the route and not the mathematics. `scripts/lean_surface_screen.py` added and wired into `attest-nursery-surface.py` (`--screen-only`, any host): flags 5 of 756, Lean rejects 5, the sets are equal. The chair-01 row and item 5 above are corrected in place -- the `variable` block was 1 of the 257 open mirrors, not their blocker. | `artifacts/measurements/statement-import-blocker-census-2026-09-05.json`; [ADR-1662](../research/09-decisions/adr-1662-the-statement-import-blocker-is-a-proof-inside-the-definition-closure-not-the-variable-block.md); `python3 scripts/run-statement-import-blocker-census.py --rows <rows.jsonl> --work <dir>` |
+| 2026-09-05 | **Next Ten item 6 landed for ℕ** ([ADR-1666](../research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md), lane `lean-tactic`). `lean/axeyum-tactic` is a Lake package with no Mathlib dependency exposing `by axeyum`: the tactic ships the already-elaborated goal to a Rust sidecar and hands the returned proof TERM to Lean's own parser, elaborator and kernel. Measured on the pinned `v4.34.0-rc1` (`3447a668`): 11 of 11 ℕ goals accepted, stated in ordinary Lean-core notation; 11 of 11 mutations rejected with 1 positive control; 13 `Axeyum.Shim` rows proved from Lean core, of which 10 depend on no axiom and 3 reach `propext` (`natLeOfAddLeAddRight`, `natMulAssoc`, `natRightDistrib` — Lean core's axiom use, inherited on restatement). The correspondence finding: a rename is not enough, because axeyum applies every lemma with all arguments explicit in its own order — of 20 emitted constants, 9 structural, 6 exact, 5 reordered, 0 derived. NOT built: ℤ (`linarith::int::prove` and `ring::int::prove` are `pub(crate)`; the ℤ carrier is interned as `Int`, so the name map must become carrier-scoped) and the LRAT route. | `scripts/check-lean-tactic.sh`: `goals-accepted=11 mutations-rejected=11 shim-rows=13 controls=1`; three negative controls, each failing differently |
 | 2026-09-05 | Next Ten item 2 done. The replay census covers every carrier, not just `creal`: 17 carriers, `missing=0` on each, 20 tests green in 738.79 s on the cross-check pin (Lean 4.34.0-rc1). Union row: population 4,478, replayed 4,394, 50 `Type`-valued theorems Lean refuses as theorems (named), 34 blocked behind five of them (named, with blockers). `creal`'s own floor raised 1,900 -> 3,350 — it was set against a 2,045-declaration carrier that now holds 3,617, so it had stopped ratcheting. `check-lean-gate.sh` `CHECK_FLOOR` 261 -> 278. Two mutants run against the `missing` guard: dropping a leaf export root is killed and named, dropping a non-leaf root survives because the exporter emits the closure — recorded as a limitation, not fixed. | `3328d2a80`; [ADR-1661](../research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md); [`artifacts/measurements/lean-replay-census-2026-09-05.md`](../../artifacts/measurements/lean-replay-census-2026-09-05.md) |
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
+| 2026-09-05 | **Next Ten item 4 landed** (ADR-1665): the carrier correspondence ledger, 16 rows, gated by `scripts/check-carrier-correspondence.py --check` (nine mutation-verified guards, every mutation killing exactly one control test) exactly the way the ℕ/ℤ mirror-fidelity check gates `F:ml430-*`. `Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s general halting-problem theorem, contra the brief's assumption), so that row is `different-object` rather than `no-counterpart`. Grade counts: same-statement 2, constructively-stronger 2, different-object 11, no-counterpart 1. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; `python3 scripts/check-carrier-correspondence.py --check`; `python3 scripts/tests/mutation_controls.py carrier-correspondence` |
+| 2026-09-05 | **Correction, same day, before merge**: this ledger's own first pass on `AlgS.Field`↔`Field` was wrong, from a stale worktree — `AlgS.Field` landed on `main` in `53c851e5b` (ADR-1627) after this lane's merge base and was measured absent. After `git merge --no-edit main` and a fresh `shape_search` release build (declarations `4291 -> 4379`), `AlgS.Field` is confirmed live (`FOUND 1`, positive control `AlgS.Group` also `FOUND 1`) with an EXISTENTIAL inverse over apartness (`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`), not proved tight for `CReal`. `CC:algs-field-field` is regraded `different-object` (was `same-statement` over the wrong, Eq-based `Alg.Field`): stronger hypothesis, weaker conclusion than Mathlib's total-inverse `Field`, the same non-comparable pattern ADR-1030 used for EVT. The general lesson — merge local `main` before measuring an absence — recurred a second time, independently, caught before merge rather than after. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; fresh `shape_search` build post-merge |
+| 2026-09-05 | **Next Ten item 8 landed** ([ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md)). An originated theorem may rest on an import, on route `kernel-lean-over-import`, footprint = the kernel walk **plus** the import route's three assumptions, axiom-free headline never. Decided by building the theorem: propagation is transitive and **per proof term** (two originated theorems of the same type in one kernel measure the import's six-name closure and `[]`), and costs 0.19 ms at the gate against 0.09 ms without. The rejected option — "allow when the composed footprint is `[]`" — fails because `Kernel::axiom_footprint` structurally cannot see the three import assumptions: an Init-only composition measures `EMPTY` and rests on all three. Enforced by four validator guards, each mutation-verified to kill exactly one test. **Three things this row corrects rather than adds.** (1) This file said imports carry `[propext, Classical.choice, Quot.sound]`; the kernel reports **eight** names for IVT and **EMPTY** for the three Init-only streams. (2) It said "largest closure 3,142 declarations"; 3,142 is the record count and 3,585 the declaration count. (3) `count-landmark-facts.py` never read `proof_route`, so **all 7 imports were counted as landmarks**, IVT and EVT included — `landmark` 1,523 → 1,516, with `imported=7` now printed beside it. **Not yet exercised**: 0 composed facts, blocked on the name collision now recorded in *The blocker*. | `766cfeb0f`, `08b97603b`; `cargo test -p axeyum-lean-import --test imported_composition_footprint` 3 passed + 1 ignored; `python3 -m unittest scripts.tests.test_validate_facts` 44 passed |
 
 ## How to re-measure
 
@@ -211,6 +263,22 @@ grep -n 'CHECK_FLOOR=\|THEORY_FAMILY_FLOOR=' scripts/check-lean-gate.sh
 
 # our theorems replayed in pinned Lean (creal only today; ~4 min)
 cargo test -p axeyum-lean-kernel --test real_lean_replay_census
+
+# composition over an import (ADR-1664). Every number is on an
+# `AXEYUM-COMPOSE|` marker line, so a suite that compiled to zero tests cannot
+# read as a passing measurement. Confirm "3 passed" and then "1 passed".
+cargo test -p axeyum-lean-import --test imported_composition_footprint \
+  -- --nocapture --test-threads=1
+cargo test -p axeyum-lean-import --test imported_composition_footprint \
+  -- --nocapture --ignored --test-threads=1   # the 2 MEASUREMENTS, ~65 s
+
+# the composed route's four validator guards, each mutation-verified to kill
+# exactly one test (never in the shared worktree -- the harness copies out)
+python3 scripts/tests/mutation_controls.py fact-composed-route-import-assumptions
+python3 scripts/tests/mutation_controls.py fact-composed-route-prior-art
+python3 scripts/tests/mutation_controls.py fact-import-route-prior-art
+python3 scripts/tests/mutation_controls.py fact-composed-route-traceability
+python3 scripts/tests/mutation_controls.py landmark-excludes-import-dependent-routes
 
 # the mirrors, the surface/core split, the imports
 python3 scripts/check-mirror-statement-fidelity.py

@@ -143,6 +143,7 @@ now. Nothing was deleted.
 | 2026-09-05 | vector-spaces-field | ℝ instantiates: `CReal.fieldS`, `CReal.mulInvEx` by `Or.elim` on the sign and `Exists.rec` on the modulus; 6 tests |
 | 2026-09-05 | vector-spaces-field | ℚ is a vector space over itself and `linComb` at ℚ is DEFINITIONALLY `Rat.sumRange`; ADR-1609's bridge item 3 measured and still blocked; 3 tests |
 | 2026-09-05 | py-prelude-fields-fix | fixed the path-qualified-field silent skip in gen-py-prelude-fields.py; regenerated prelude_fields.rs (+21 poly.* fields); added scripts/tests/test_gen_py_prelude_fields.py, registered in check.sh + justfile |
+| 2026-09-05 | perf-par2-ratchet | Timing ratchet in `progress_frontier.rs`: pinned-`N` calibrated solve time per family against a measured ceiling, enforced on the `comparable` flag, registered in `check.sh` and the `justfile`; five baselines regenerated with a `"timing"` block. |
 | 2026-09-05 | `0e5f3a3ad` | `rat_prelude/binomial_s.rs`: the Bernoulli distribution constructed over `AlgS.OrderedRing` — `bernoulliVar`, `bernoulliMass`, `bernoulliMass_nonneg`, `bernoulli_isDistribution`, `bernoulli_expectation`, `bernoulli_variance`, plus the generic ring lemmas `mul_neg` and `zero_add`. (ADR-1631) |
 | 2026-09-05 | `1898e9651` | `binomial_s_tests.rs`: nine tests. `q = 1/2` cannot separate `q(1−q)` from `q·q` (both `1/4`); `q = 1/3` can (`2/9` against `1/9`), and the suite says so in its own assertions. |
 | 2026-09-05 | `dd6a0df24` | `rat_prelude/binomial_rat.rs`: `Rat.binomial_expectation`, `Rat.binomial_variance`, `Rat.binomial_chebyshev`, and a suite that discharges the per-trial hypothesis from the GENERIC Bernoulli theorem and then computes: three Bernoulli(1/3) trials have mean `Rat.one`. |
@@ -153,9 +154,22 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
+| 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
+| 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
+| 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
+| 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
+| 2026-09-05 | Merge of `main` (resolved a two-lane append conflict in `scripts/tests/mutation_controls.py`; both suites kept and both re-run) | `84147ec7b` |
+| 2026-09-05 | lean-import-composition | `imported_composition_footprint.rs` — 4 measurements of whether an originated theorem inherits an import's axioms, each on an `AXEYUM-COMPOSE|` marker line |
+| 2026-09-05 | lean-import-composition | ADR-1664: composition allowed on `kernel-lean-over-import`, footprint = kernel walk + the import route's three assumptions, axiom-free headline never |
+| 2026-09-05 | lean-import-composition | `validate-facts.py` + `fact.schema.json`: the new route, its assumption-transcription rule, its `prior_art` rule, and a cross-fact traceability pass |
+| 2026-09-05 | lean-import-composition | five mutation controls, each measured to kill exactly one test; the imported-route `prior_art` guard had none before |
+| 2026-09-05 | lean-import-composition | `count-landmark-facts.py`: 7 imports were being counted as landmarks (IVT and EVT included); `landmark` 1,523 → 1,516, `imported=7` reported, baseline bumped |
+| 2026-09-05 | lean-import-composition | `14-lean-lang.md` item 8 closed and two of its numbers corrected; `03-classical-analysis.md` progress row (verdict line unchanged) |
+| 2026-09-05 | lean-import-composition | the measurement suite registered under `lean-gate` in BOTH `scripts/check.sh` and the `justfile`, so the ADR's evidence cannot rot unnoticed |
 | 2026-09-05 | `f02c8d530` | `install-pinned-lean.sh` accepts the `-rcN` pin shape via a factored `toolchain_pin_is_valid()` + `--validate-only` mode; new `scripts/tests/test-lean-toolchain-pin-regex.sh` (8 controls, no network) registered in `scripts/check.sh` |
 | 2026-09-05 | `9752b4416` | `check-lean-official-construct-matrix.py`'s `crosscheck_pin_failures()` checks well-formedness of `lean-toolchain` instead of equality to the corpus pin; 3 new unit tests; `docs/plan/generated/lean-complete-parity.json` refreshed (unrelated stale `ci.yml` hash) |
 | 2026-09-05 | `e2218738c` | ADR-1660 names the two Lean pins and which surface is keyed to which; dated correction block appended to ADR-1594; ADR index regenerated |
+| 2026-09-05 | lean-tactic | ADR-1666 + `lean/axeyum-tactic` (Lake package: `Axeyum.Shim` 13 proved rows, `Axeyum.Protocol`, `Axeyum.Tactic` = `by axeyum`; `Tests/NatLinear` 11 goals accepted, `Tests/Mutations` 11 rejections + 1 control, `Tests/ShimCorrespondence` axiom census + reverse re-derivation) + `axeyum_lean_import::tactic_bridge` (goal decode, ℕ translator, name map, Lean printer, 11 unit tests) + `examples/axeyum_sidecar.rs` + `examples/axeyum_tactic_probe.rs` + `scripts/check-lean-tactic.sh` (4 floors, 3 negative controls) registered in `scripts/check.sh` and `just lean-tactic` |
 | 2026-09-05 | `9ce530f62` | `Int.IsSumOfTwoSquares` (Definition) with its intro rule, the Brahmagupta–Fibonacci identity in both conjugate groupings (both emitted by `ring::int::declare` at arity 4, first attempt), and `Int.isSumOfTwoSquares_mul`. Seven tests; one negative control found VACUOUS on its first honest run (`17 = 1²+4²` and its swap both reduce to `17`) and moved to free variables. |
 | 2026-09-05 | `c47a576b5` | `Int.sq_modEq_four_zero_or_one` and `Int.not_isSumOfTwoSquares_of_modEq_four_three` — ADR-0603's boundary-refutation grade. No new `Int` parity lemma was needed (`Int.Even` is *defined* as `Nat.Even (natAbs ·)`), no existential is opened (the witness is the definable `a / 2`), and the four leaves close by REDUCTION of `emod` at closed numerals. Ring stepping stones `Int.sq_of_two_mul`, `Int.sq_of_two_mul_add_one`. 3 tests, each with its negative half: 3, 7, 11 refute; 4, 5, 13, 17 do not. |
 | 2026-09-05 | `8b8b58ed9` | `Int.modEq_descent_cross_terms` and `Int.descentStep` — the two reusable halves of Fermat's descent — plus the cancellation family they needed and `shape_search` reported absent: `Int.mul_left_cancel_of_ne_zero`, `Int.mul_ne_zero`, `Int.eq_of_sub_eq_zero`, `Int.zero_add`, `Int.sub_self`, `Int.add_sub_cancel_right`, `Int.mul_sub_mul_comm`, `Int.mul_mul_of_mul_mul`, `Int.sq_add_sq_of_mul_left`. Records the measured `ring::int` zero-collapse decline. 3 tests carrying the worked `p = 13` descent with wrong quotients refused. |
@@ -8007,6 +8021,74 @@ monotone::erefl;` import (removed) and getting the fully-qualified test
 names right for `cargo test --lib` filters (`creal::creal_tests::…`, not
 `creal::…` — the module nesting is easy to get wrong and silently matches
 zero tests, confirmed nonzero counts throughout).
+
+**Landed** (`WIP`, perf-par2-ratchet, 2026-09-05). Recommendation 1 of the
+[2026-09-05 SAT/SMT performance review](docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md),
+first slice: **a timing regression is now RED.** Section 2.2 item 1 of that
+review measured the hole — nothing in any gate failed when solve time regressed.
+`progress_frontier.rs` ratcheted capability at a fixed budget, the parity ledger
+ratchets decide count, the corpus sweep ratchets soundness, and
+`summary.par2_mean_s` in the 72 `bench-results/baselines/` files was compared to
+nothing.
+
+The ratchet lives inside the existing frontier sweep: each family carries a
+`TimingBaseline` (a few `N` pinned deep inside its frontier, a calibrated total,
+a measured ceiling), read out of the curve the capability sweep already
+produces, so it costs **zero extra solving** and is registered wherever
+`progress_frontier` already is — the `frontier` step in `scripts/check.sh` and
+the `frontier` recipe in the `justfile`, both now documented as running two
+ratchets.
+
+**It fires.** Demonstrated in a private snapshot (`scripts/lane-snapshot.sh`) by
+putting a 25 ms stall in `nra_even_power_refutation` — every verdict correct,
+`FRONTIER nra_degree = 40 (baseline 40)` still green — and the timing ratchet
+failed with `TIMING REGRESSION [nra_degree]: pinned N=[10, 20, 30, 40] took
+98.2 ms calibrated, over the committed ceiling of 23.0 ms`, suite exit 101. The
+same snapshot with the stall removed: `TIMING nra_degree = 10.9 ms`, exit 0 —
+and it passed at 1-minute load 25.1 having failed at load 13.8, so the verdict
+tracks the code, not the box.
+
+**It stays quiet under load.** The check is enforced only when
+`machine.comparable` is true — the same flag the capability ratchet uses, and
+mirrored as `timing.enforced` in each artifact. The committed regeneration sweep
+demonstrates it: `nia_unsat` drifted 37 % mid-sweep, so its row reads
+`"comparable": false`, `"enforced": false`, and its `TIMING` line says
+`ADVISORY, not enforced on this run`, while the other four families asserted.
+
+**Band, measured not guessed** (calibrated ms, `solve_ms / scale`), over eight
+sweeps on s4 at 1-minute load 17.9-37.8 (`scale` 1.10x-2.03x, a 16-core box at
+1-2.4x oversubscription):
+
+| family | pins | sweeps | min / median / max | ceiling |
+|---|---|---:|---|---:|
+| `bv_reduction` | 12, 15, 18 | 8 | 959.9 / 1293.1 / 1509.5 | 2264.3 |
+| `lia_cuts` | 3, 19, 20 | 8 | 238.6 / 341.9 / 393.1 | 589.6 |
+| `string_bound` | 13, 25, 33 | 8 | 387.6 / 423.5 / 646.0 | 969.1 |
+| `nra_degree` | 10, 20, 30, 40 | 8 | 6.5 / 11.2 / 15.3 | 23.0 |
+| `nia_unsat` | 1, 2, 3, 4, 5 | 7 | 30.4 / 44.3 / 77.1 | 115.6 |
+
+**What the next lane should know.**
+
+- **Five sweeps were not enough on this box.** Sweeps six and seven each landed
+  above the five-run maximum on the two cheap families. The band is now eight
+  sweeps, and `TIMING_BASELINE_MIN_RUNS = 5` is a floor a test enforces rather
+  than a count anyone may re-derive downward.
+- **The band is wide because s4 was never idle.** Calibrated totals still spread
+  1.6x-2.4x between the quietest and busiest sweep — the residual the proxy
+  kernel does not compensate. **Re-measuring on an idle machine would tighten
+  every ceiling** and is the cheapest available improvement to this gate's
+  resolution; the recipe is in the methodology note.
+- **`nia_unsat` and `nra_degree` have the least resolution**, because neither
+  family has mid-priced instances (`nra_degree` is 1-4 ms per point;
+  `nia_unsat` jumps from tens of ms at `N<=5` to ~2.7 s at `N>=6`). They still
+  catch the order-of-magnitude failure their fast paths would cause.
+- **A pre-existing flake was observed, not introduced.** In one sweep
+  `nia_unsat` `N=1` — normally ~2 ms — did not return inside `budget + 1 s`, and
+  the CAPABILITY ratchet failed with `frontier 0` against a baseline of 40. The
+  two nonlinear families use `smtlib_unsat_sweep`, which has **no retry loop**,
+  unlike `sweep`. Giving them the same `ATTEMPTS` retry is a small, separate fix.
+- **Still not covered:** the 72 PAR-2 means under `bench-results/baselines/`.
+  Extending the same calibrated-band scheme to `par2_mean_s` is the next slice.
 
 **Your lane's block (`DONE for this pass`, cas-audit, 2026-08-27).** Censused
 709 pub/pub(crate) fns across `crates/axeyum-cas/` (57 src files, excluding
@@ -52396,6 +52478,380 @@ declarations. ADR-1155's status note records 31.8 s for its own seven; measured
 here on the same commit it is 13.15 s, so **that figure was taken under lane
 contention and should not be used as a baseline**.
 
+**Your lane's block (`DONE`, lean-carrier-ledger, 2026-09-05).**
+`docs/math-department/14-lean-lang.md` Next Ten item 4 is closed (ADR-1665).
+`artifacts/carrier-correspondence/carrier-correspondence-v1.json` holds 16
+rows — one per (Axeyum carrier, Mathlib counterpart) pair — each with both
+names, a verified source location on each side, the equality regime on each
+side, a grade from the closed five-value enum (`same-statement`,
+`constructively-stronger`, `constructively-weaker`, `different-object`,
+`no-counterpart`), a one-sentence reason, and a witness theorem pair for every
+grade except `no-counterpart`. Grade counts: same-statement 2,
+constructively-stronger 2, different-object 11, no-counterpart 1.
+`artifacts/ontology/carrier-correspondence.schema.json` is the schema.
+`scripts/check-carrier-correspondence.py --check` gates it: structural
+validation (`jsonschema` when importable, hand-rolled fallback otherwise) plus
+nine independent semantic guards (G0-G8 — unique ids, closed grade enum,
+witness required/forbidden by grade, `no-counterpart`'s mathlib side is null,
+every `verified-in-kernel-projection` name resolves against
+`artifacts/autogenesis/kernel-dependency-projection-v1.json`, ledger
+non-vacuity, kernel-projection-citation non-vacuity, the Next Ten item 4
+coverage floor, and `mathlib_theorem`/`mathlib_location` null-pairing).
+Registered in `scripts/check.sh` and the `justfile` beside
+`mirror-statement-fidelity`. `docs/plan/generated/carrier-correspondence.md`
+is generated by `scripts/gen-carrier-correspondence-md.py`, `--check` gated.
+
+**Correction mid-lane, before merge, from the coordinator:** this lane's own
+first pass on `AlgS.Field`↔`Field` was wrong, not the brief's. The worktree's
+merge base predated `53c851e5b` (ADR-1627), which landed `AlgS.Field` on
+`main` the same day, so the first draft measured `AlgS.Field*` absent (only
+the nine `structures_setoid.rs` records existing at that point) and graded
+the older Eq-based `Alg.Field` instead. After `git merge --no-edit main` and a
+FRESH release build of `shape_search` (declarations `4291 -> 4379`),
+`AlgS.Field` is confirmed live (`--name AlgS.Field` -> `FOUND 1`, positive
+control `--name AlgS.Group` -> `FOUND 1`; `--name-contains Field`, 67 matches,
+confirms `AlgS.Field.mulInvEx`/`.apart`/`.IsTight`/`.ofCommRing`; `--name-like
+fieldS` confirms `CReal.fieldS`/`Rat.fieldS`/`Rat.fieldS_isTight`). All of
+this is `verified-in-source-only` — the kernel-dependency-projection JSON was
+NOT regenerated across the merge (still 4,291, still dated before
+`53c851e5b`). `CC:algs-field-field` is now regraded `different-object`
+(withdrawn from `same-statement`): `AlgS.Field`'s inverse is existential over
+an apartness hypothesis not proved tight for `CReal`
+(`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`), while Mathlib's
+`Field` commits to a total function under a bare inequality — stronger
+hypothesis, weaker conclusion, the same non-comparable pattern ADR-1030 used
+for EVT — and `CReal.no_total_inverse` proves the functional shape is
+impossible here, not merely unbuilt. Grade counts after the correction:
+same-statement 2, constructively-stronger 2, different-object 11,
+no-counterpart 1 (was 3/2/10/1 before). Full reasoning in ADR-1665.
+
+`Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s
+general halting-problem theorem and its `Nat.Partrec.Code`/Turing-machine
+apparatus, contra the brief's assumption), so `CC:nat-rm-computability` is
+graded `different-object` rather than the assumed `no-counterpart`, with the
+correction stated in the row's own `reason` field.
+
+**Names I could not verify are marked `unverified`/`verified-in-source-only`
+rather than guessed present.** `Nat.Finset.exists_memB_of_card_pos`,
+`Rat.binomial_expectation`/`_variance`/`_chebyshev`, `Rat.fourth_moment_inequality`,
+and now the entire `AlgS.Field`/`CReal.fieldS`/`Rat.fieldS` family, all landed
+in source after `artifacts/autogenesis/kernel-dependency-projection-v1.json`'s
+last regeneration (`ebd6c1bcb`, 2026-09-05, 4,291 declarations — NOT
+regenerated across this lane's merge of `main`) and are marked
+`verified-in-source-only` rather than `verified-in-kernel-projection` for
+their witness entries; the `AlgS.Field` family is additionally confirmed live
+via a fresh `shape_search` release build post-merge (declarations `4291 ->
+4379`) with a positive control (`AlgS.Group`, `FOUND 1`). `CReal.no_total_inverse`
+was confirmed only by direct source read (its `name_str` interning site) — a
+dedicated `shape_search` query for that one name was not run in this session
+and is reported as such rather than guessed, per the coordinator's explicit
+"do not wait on a background job" instruction mid-lane. Every other name
+cited as `verified-in-kernel-projection` (20 witness entries after the
+regrade) was cross-checked by exact `id` lookup against the projection file.
+Every Mathlib name and `file:line` was read directly from the pinned mathlib4
+checkout (`c5ea00351c28e24afc9f0f84379aa41082b1188f`, Lean 4.30.0, located via
+`scripts/provision-lean-import-toolchain.sh --verify`), never from memory —
+including three clean negatives (Menelaus/Varignon, the 3-3 Ramsey number,
+Rado's partition-regularity theorem) each backed by a positive control.
+
+**Mutation result:** `python3 scripts/tests/mutation_controls.py
+carrier-correspondence` — 11/11 registered mutations KILLED, each by exactly
+the test named for its guard (G0-G8 plus the witness-forbidden/-required
+split plus the kernel-projection-missing fallback); zero survivors, zero
+unmeasured. Re-run clean after the `AlgS.Field` regrade and the coverage-floor
+constant update (`Alg.Field` -> `AlgS.Field`) it required.
+
+**What did not run in this lane.** No `crates/` file was touched, so no
+kernel-side gate ran. `just check` / `./scripts/check.sh` in full were NOT
+run (no `just` confirmed on this host; the full `check.sh` battery was not
+run end to end — only the specific steps this change touches:
+`check-carrier-correspondence.py --check`, its unit tests, its mutation
+suite, `gen-carrier-correspondence-md.py --check`, `gen-adr-index.py --check`,
+`check-merge-hygiene.sh` (PASS), and `check-links.sh` (PASS)). Heavy cargo was
+one release build of the `shape_search` example via `scripts/cargo-serialized.sh`
+(rebuilt again after merging `main`, since the kernel changed), plus several
+foreground `shape_search --include-constructed` queries directly against that
+binary (not cargo, so not through the serializer) each costing 3-6 minutes to
+rebuild the constructed preludes in memory. A targeted follow-up query for
+`CReal.no_total_inverse`/`CReal.mulInvEx` specifically was not run.
+
+**Lane block (`DONE -- ADR-1662 accepted; census published; screen shipped and
+mutation-verified`, lean-import-census, 2026-09-05).**
+
+Owned *Next Ten item 5* of
+[`docs/math-department/14-lean-lang.md`](docs/math-department/14-lean-lang.md):
+run every pinned Mathlib mirror through the statement-only import route, count
+the decline reasons, and ship the extraction-time screen.
+
+## Headline
+
+**The count changed the answer.** Two documents said the 257 open mirrors are
+blocked because statement-only extraction drops Mathlib's enclosing `variable`
+block. Measured over all 756 mirrors through the real route, that class is
+**5 rows**, one of them open. The blocker is somewhere else and it is one class:
+**361 statements reach a proof-bearing declaration inside their own definition
+closure**, so the proof-isolation gate refuses the stream.
+
+| class | stage | rows | open | proved | Nat | Int | held out |
+|---|---|---:|---:|---:|---:|---:|---:|
+| `admitted` | — | 390 | 132 | 258 | 245 | 145 | 110 |
+| `trusted-declaration-in-closure` | import | 361 | 123 | 238 | 301 | 60 | 93 |
+| `coercion-variable-block` | elaboration | 3 | 1 | 2 | 1 | 2 | 1 |
+| `field-notation-variable-block` | elaboration | 1 | 0 | 1 | 1 | 0 | 0 |
+| `elided-proof-glyph` | elaboration | 1 | 1 | 0 | 1 | 0 | 1 |
+
+Zero rows in every other class the census looked for: unsupported construct
+(three registered decline codes), universe/level, target cardinality,
+goal-not-Prop, stream limit, malformed stream, export timeout, resource. 751 of
+751 exports succeeded, so nothing is unaccounted for.
+
+Nine distinct declarations block the 361: `eq_self` 97, `Nat.mod_lt` 90, `Quot`
+73, `dif_pos` 34, `Nat.le_of_lt_add_one` 24, `em` 23, `And.left` 12, `Eq.subst`
+7, `propext` 1 (287 Theorem / 73 Quotient / 1 Axiom, first blocker per stream).
+So C4's first demand-gated feature is an **admission** feature -- extend the
+independently reconstructed `trusted_substitution` set over the seven
+constructive names (337 rows), with `em` and `propext` held back as a separate
+decision because substituting them would enlarge the trusted surface rather than
+reconstruct it.
+
+## What was verified before building
+
+- `scripts/provision-lean-import-toolchain.sh --verify` PASSES on the dev box,
+  but its Mathlib checkout is a partial cache: 2,006 oleans and **no**
+  `Mathlib.olean`, so `import Mathlib` fails there in 3.2 s with
+  `object file ... does not exist`. A PASS from that script means the pinned
+  checkout and the exporter are present, not that Mathlib is built. s5 has the
+  real thing (6.2 GB `.lake/build`), so the Lean half runs there and the importer
+  half runs in this checkout.
+- `python3 scripts/check-autogenesis-holdout-isolation.py` **before**:
+  `held_out=216 files_scanned=1132 references=0 verdict=PASS`.
+  **After**: identical, `PASS`. No held-out id is named in the published
+  artifact (551 ids named, 0 of them held out); held-out membership comes from
+  `check-dispatchable-frontier.py --json`, never a hand list.
+
+## Method
+
+Four phases in `scripts/run-statement-import-blocker-census.py`. Each statement
+becomes the value of a transparent `def _ : Prop` after `import Mathlib`; Lean
+4.30.0 elaborates it (5.7 s for 756); `lean4export` emits that definition's own
+declaration closure (2,256 s for 751 streams); `import_statement_ndjson` admits
+or declines (410 s). Nothing is proved and no proof value is read.
+
+Controls the run cannot pass without: a negative-control statement naming a
+constant that does not exist (the run aborts if it elaborates -- it was
+rejected); a diagnostic regex whose `error(lean.unknownIdentifier):` tag group is
+OPTIONAL, because demanding a bare `error:` matches nothing and reports every row
+as elaborated; the phase-2 olean build, which recompiles a module made only of
+rows phase 1 called clean and is therefore the parser-desync control; and the 499
+proved mirrors as the positive-control population -- 238 of them hit the SAME
+single blocker, which is what makes "this is the route, not the mathematics" a
+measurement.
+
+## The screen
+
+`scripts/lean_surface_screen.py` classifies a statement from its text alone, on
+any host, with no Lean. Over the same 756 statements it flags 5 and Lean rejects
+5 -- **the sets are equal**, 0 flagged-but-elaborated and 0 rejected-but-unflagged.
+
+The discriminating decision is that a `coerced-projection` requires EVERY
+top-level operand of the group to be `↑`-coerced. 54 statements carry a coercion
+arrow and 51 elaborate, so a `↑` grep would be wrong about 51 of them and would
+still pass a positive-only test suite.
+
+Wired into `scripts/attest-nursery-surface.py`, which runs it before Lean and
+gained `--screen-only` (no ssh, no Mathlib; exit status depends on the finding).
+A flagged row is FLAGGED, never dropped and never rewritten -- ADR-0615 forbids
+editing a preregistered `formal.statement`.
+
+Controls: `scripts/tests/test_lean_surface_screen.py`, 10 tests, every fixture a
+real pinned statement with a measured Lean verdict, including two negative
+controls a coercion grep would fail. Mutation suite `lean-surface-screen`: five
+mutations, each removing one guard, **each killing exactly one test**.
+
+## Not repaired, and not caused here
+
+- `python3 scripts/gen-autogenesis-nursery-refill.py --check` is RED on `main`
+  (`nursery-v2-extension.json does not match its own extension_sha256`); 3 of the
+  61 tests in `test_gen_autogenesis_nursery_refill` + `test_propose_nursery_refill`
+  error for that one reason. `git diff main` over that manifest and both scripts
+  is empty, so this lane did not cause it. It IS why the screen went into
+  attestation rather than into the draw.
+- `scripts.tests.test_create_autogenesis_nursery_dispatch_baseline` fails 2 of
+  its tests; the subject, its test file and `artifacts/autogenesis/` are all
+  identical to `main` here.
+- The three Lean gates `14-lean-lang.md` records as red since the pin moved are
+  untouched.
+
+## What did not run
+
+Nothing in the census was skipped. `cargo test --workspace` was not run (not this
+lane's gate); `cargo check -p axeyum-lean-import --all-targets` and
+`cargo clippy -p axeyum-lean-import --all-targets -- -D warnings` both pass.
+
+**Your lane's block (`DONE`, lean-import-composition, 2026-09-05).**
+
+`docs/math-department/14-lean-lang.md` Next Ten **item 8** — the imported-axiom
+composition ADR — is landed as
+[ADR-1664](docs/research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md),
+decided by building the composed theorem rather than weighing the options.
+
+**The decision.** An originated theorem MAY depend on an imported one. It lands
+on a distinct `proof_route: kernel-lean-over-import`, its `axiom_footprint` is
+`Kernel::axiom_footprint` of the composed theorem **plus** the import route's
+three assumptions, and it counts toward the axiom-free headline never and toward
+a separately reported composed tier always. Option (1) (forbid) and option (3)
+(allow when the composed footprint is `[]`) were both rejected on measurements,
+not preferences.
+
+## What was measured
+
+`crates/axeyum-lean-import/tests/imported_composition_footprint.rs`, four tests,
+every number on an `AXEYUM-COMPOSE|` marker line.
+
+| case | stream | admitted | measured footprint |
+|---|---|---|---|
+| Init-only import | `bool-and-comm.ndjson` | 48 | `EMPTY` |
+| …composed over (`Bool.and_comm x true`) | | | `EMPTY` |
+| classical import | `classical-em.ndjson` | 106 | `Classical.choice, Quot, Quot.lift, Quot.mk, Quot.sound, propext` |
+| …composed over (`fun p h => Classical.em p`) | | | the same six, exactly |
+| …**sibling of the same type** (`fun p h => h`) | | | `EMPTY` |
+| Mathlib import | `ivt-intermediate-value-icc.ndjson` | 3,585 | eight names |
+
+The discriminating pair is the whole decision. Two originated theorems of the
+**same type** in the **same kernel**, differing only in whether the proof term
+reaches the import: one inherits the import's whole closure, the other measures
+`[]`. So propagation is transitive **and per proof term**, not per environment —
+which is what makes the tier decidable per theorem, and what means a lane that
+loads an import does not contaminate everything it proves beside it.
+
+Cost: `add_declaration` 0.194 ms composed against 0.091 ms for the sibling. The
+import itself costs 51.7 ms (48 declarations), 122.5 ms (106), and 17.5 s /
+31.8 s on two runs of the SAME commit for the Mathlib slice's 3,585 -- a factor
+of 1.8 from box load alone, so read the absolute times as a reference frame and
+not as constants. Only the WITHIN-RUN pair (composed against sibling, back to
+back in one process) supports a comparison.
+**The trusted gate is not where composition is expensive; the import is.**
+
+**Why option (3) is wrong.** `Kernel::axiom_footprint` walks *declarations* and
+keeps the ones admitted on trust. The import route's three assumptions
+(`lean4export-3.1.0-stream-faithfulness`,
+`axeyum-lean-import-wire-translation`,
+`lean4export-3.1.0-delivered-bytes-are-the-intended-export`) are not
+declarations — they are claims about how the declarations reached the
+environment — so no walk can reach them. An Init-only composition measures
+`EMPTY` and rests on all three; option (3) would file it on `kernel-lean` with
+`[]` and put it in the axiom-free headline.
+
+## Three things this lane corrected rather than added
+
+- `14-lean-lang.md` said imports carry `[propext, Classical.choice,
+  Quot.sound]`. That is Lean's own `#print axioms` vocabulary. This kernel
+  reports **eight** names for `intermediate_value_Icc` and **EMPTY** for the
+  three Init-only streams.
+- The same row said "largest closure 3,142 declarations". 3,142 is the wire
+  **record** count; 3,585 is the declaration count. ADR-1090 has both columns.
+- `scripts/count-landmark-facts.py` read only `epistemic_status` and `title`,
+  so **all 7 `imported-kernel-lean` facts were counted as landmarks**, Mathlib's
+  IVT and EVT among them — the rows ADR-0601 calls "labeled scaffolding, never
+  headline". Fixed: `landmark` 1,523 → 1,516, `imported=7` now printed beside it
+  so the exclusion is visible rather than subtracted, baseline bumped.
+
+## What is enforced, and how each guard was verified
+
+Five mutation controls, **each measured to kill exactly one test**
+(`python3 scripts/tests/mutation_controls.py <name>`):
+
+| control | rule |
+|---|---|
+| `fact-composed-route-import-assumptions` | the three import-route assumptions must be in `axiom_footprint` (this is what makes option (3) impossible) |
+| `fact-composed-route-prior-art` | `provenance.prior_art` on the composed route |
+| `fact-import-route-prior-art` | the pre-existing imported-route rule, which had no control until its sibling was written beside it |
+| `fact-composed-route-traceability` | ≥1 `depends_on` edge to a fact on an imported route, so the tier is walkable |
+| `landmark-excludes-import-dependent-routes` | an import is not a landmark |
+
+The two prior-art rules are deliberately **separate branches** rather than one
+widened route set: a shared branch could not tell a control which of the two
+rules it had deleted.
+
+## What did NOT happen, stated plainly
+
+- **Zero composed facts exist.** ADR-1664 decides how one is recorded; the
+  first one is not built. `K = 0`, and the validator's composed-tier line prints
+  nothing, which is the honest report.
+- **One environment cannot yet hold both.** `import_ndjson` builds its own
+  staging kernel (the fail-closed contract), so import-then-prelude is the only
+  reachable order, and `build_nat_prelude` into a kernel holding the
+  48-declaration `Init` slice is **rejected at `False`** — 17 names are shared
+  (`Bool`, `Bool.false`, `Bool.rec`, `Bool.true`, `Decidable`, …, `Eq`,
+  `Eq.rec`). This is a name-space obstacle, not a trust one, and Next Ten item 4
+  (the carrier correspondence ledger) is what removes it. Until then a composed
+  proof term must live wholly in the imported vocabulary.
+- **Not registered in `scripts/check-kernel-suites.sh`, and it should not be.**
+  Checked rather than assumed: that script is `axeyum-lean-kernel`-only and
+  *discovers* its membership from the source (`#[path = "support/lean_probe.rs"]`)
+  rather than listing it, so there is nothing to append. `axeyum-lean-import`'s
+  suites are named individually in `scripts/check.sh` and the `justfile`, and
+  the crate is not run wholesale anywhere — so the new suite is registered in
+  **both**, under `lean-gate`. Registering it is not tidiness: it is the
+  evidence for ADR-1664, and the numbers the ADR quotes stop being verifiable
+  the moment it rots. Note for a future lane: `imported_fact_evidence`, which
+  re-derives all seven imported facts, is registered in **neither** gate and is
+  run only by the facts' own `checker_command`s.
+
+## One thing the merger must do
+
+**`python3 scripts/gen-plan.py` has not been run, by instruction**, so
+`gen-plan.py --check` exits 1 and `scripts/check-merge-hygiene.sh` therefore
+reports `MERGE_HYGIENE|FAILED`. **This file is the entire cause** — measured by
+moving it aside and re-running the gate, which then exits 0, and back. Nothing
+else in this lane's diff touches `PLAN.md`. Run the generator and commit
+`PLAN.md` with it.
+
+## Red found and NOT fixed
+
+- `python3 scripts/tests/mutation_controls.py --check-anchors` exits **1** with
+  `stale=1`: `MISSING SUBJECT creal-migrate-consumers: M7 a stale shape census
+  fails the gate, and exit 2 does not`. Pre-existing and unrelated — this lane
+  touched neither `scripts/creal-migrate-registry.py` nor that suite's entry.
+  The five anchors added here all resolve and were each run.
+- `scripts/check-aggregate-scope.sh` exits **1** with **17** unrecorded
+  one-sided steps between `check.sh` (498) and `just check` (563) — all
+  pre-existing, from other lanes' recipes (`check-proof-plan.py`,
+  `check-structural-index.py`, `check-module-baseline.py`, …). This lane's own
+  step was one-sided for one run and was then added to both, so the count went
+  18 → 17. Recording the other 17 with `--update` would be adopting other lanes'
+  divergences as accepted, which is not this lane's call.
+- The three Lean gates `14-lean-lang.md` already records as red on `main` since
+  `792224e73` were not re-checked and were not touched.
+
+## Red found and FIXED in passing
+
+- `scripts/landmark-facts-baseline.json` was **stale on `main`**: 7 facts landed
+  without a bump, so `count-landmark-facts.py --check` measured 2,855/2,582
+  against a pin of 2,848/2,577 and exited 1. Recounted after merging main, as
+  CLAUDE.md requires of any merge touching a pinned count — `total` 2,848 →
+  2,855, `proved` 2,577 → 2,582, `landmark` → 1,521 (1,516 plus the 5 of the 7
+  new facts that are proved and curated). Whoever merges this should recount
+  again if more facts land first; do not increment.
+- `python3 scripts/validate-facts.py` is green after the merge at 2,855 facts /
+  0 errors. Note the headline number moved while this lane ran: **2,474 →
+  2,479** axiom-free on `kernel-lean`. ADR-1664 now says to read all three of
+  its numbers from the validator rather than from the document.
+
+## How to re-measure
+
+```sh
+cargo test -p axeyum-lean-import --test imported_composition_footprint \
+  -- --nocapture --test-threads=1      # confirm "3 passed", 1 ignored
+cargo test -p axeyum-lean-import --test imported_composition_footprint \
+  -- --nocapture --ignored --test-threads=1   # the 2 MEASUREMENTS, ~65 s
+
+python3 -m unittest scripts.tests.test_validate_facts        # 44
+python3 -m unittest scripts.tests.test_count_landmark_facts  # 22
+python3 scripts/validate-facts.py            # 2,848 facts, 0 errors
+python3 scripts/count-landmark-facts.py --check
+```
+
 **Next Ten item 1 is `DONE` (lean-pin-gates, 2026-09-05).** ADR-1594
 (2026-09-03, `792224e73`) moved `lean-toolchain` to
 `leanprover/lean4:v4.34.0-rc1` and claimed "no workflow edit is needed."
@@ -52452,6 +52908,97 @@ directly and bare, per the task's discipline). The real-Lean suites
 (`scripts/check-lean-gate.sh`, `test-lean-toolchain-policy.sh`) that
 require an installed pinned toolchain were not run on this host — did not
 run, not claimed green.
+
+**Your lane's block (`DONE` for the ℕ fragment, `lean-tactic`, 2026-09-05).**
+`docs/math-department/14-lean-lang.md` Next Ten item 6 is landed for ℕ:
+`lean/axeyum-tactic` is a Lake package with no Mathlib dependency, exposing
+`by axeyum` ([ADR-1666](docs/research/09-decisions/adr-1666-by-axeyum-is-a-lean-tactic-and-lean-checks-the-term.md)).
+The tactic serializes the already-elaborated goal as JSON, calls a Rust sidecar
+(`crates/axeyum-lean-import/examples/axeyum_sidecar.rs`), and hands the proof
+**term** that comes back to Lean's own parser, elaborator and kernel. There is
+no `sorry` path, no `admit` path, and no axiom added anywhere in the package.
+
+**Measured on the pinned toolchain** `leanprover/lean4:v4.34.0-rc1` (commit
+`3447a668783dbce1a8fdb97101dd067687b2b418`), binary
+`~/.elan/toolchains/leanprover--lean4---v4.34.0-rc1/bin/lean`:
+
+| | |
+|---|---|
+| goals accepted | **11 of 11** (`Tests/NatLinear.lean`) |
+| mutations rejected | **11 of 11** (`Tests/Mutations.lean`), 1 positive control |
+| shim rows proved from Lean core | **13**, of which **10 depend on no axiom** and 3 reach `propext` |
+| goals axiom-free end to end | 5 (the ring goals); the 6 order goals carry `propext` via `natLeOfAddLeAddRight` |
+
+The goals are stated the way a Lean user states them — `+`, `*`, `≤`,
+numerals, through `HAdd.hAdd` / `instLENat` / `OfNat.ofNat` — not with
+`Nat.add` spelled by hand.
+
+**The name-correspondence finding, which is the real result.** A rename is not
+enough. The producers emit terms over `AxNat` in which every lemma is applied
+with **all arguments explicit, in axeyum's own order**; Lean core takes most of
+them implicitly and, in five cases, in a different order. Measured with
+`crates/axeyum-lean-import/examples/axeyum_tactic_probe.rs` over an
+eleven-goal battery: 20 constants, of which 9 are structural (map to Lean core
+by name), 6 are `exact` (same explicit order) and 5 are `reordered`
+(`AxNat.le.refl`, `le_trans`, `add_le_add_left`, `add_le_add_right`,
+`le_of_add_le_add_right`). Zero needed a `derived` proof. Those 11 lemmas
+route through `Axeyum.Shim` — one Lean theorem each, stated with axeyum's
+signature and **proved from Lean core**, so the shim is the correspondence
+table *and* its own check. The shim carries 13 rows: the 11 the battery
+reached plus `natMulAssoc` and `natRightDistrib`, which `ring/nat.rs`'s
+emitted-term table names but no goal in this battery exercised.
+
+**Bounded, and stated as such.** ℕ only; quantifier-free; the goal must be a
+`Eq`/`≤`/`<` over `+`, `*`, `succ`, `zero` and numerals ≤ 64, with ℕ's own
+instances (a foreign `+` instance at ℕ is refused, not translated). Hypotheses
+from the local context are used. The environment-identity check is a
+**staleness** check and not a soundness one — a plain string comparison an
+honest sidecar simply echoes, the same limit ADR-0935 recorded for C3.
+
+**Did not build, with reasons measured rather than guessed:**
+
+- **ℤ.** Blocked before any correspondence question: `linarith::int::prove`
+  and `ring::int::prove` are `pub(crate)` in `axeyum-lean-kernel`, so no
+  downstream crate can call them. Sized in ADR-1666 §"Fragment 3", including a
+  name collision the ℕ side does not have — the ℤ carrier is interned as
+  `Int`, not `AxInt` (`int_prelude.rs`, `let z = kernel.name_str(anon, "Int")`), so the name map has to become
+  carrier-scoped.
+- **The LRAT route for `Bool`/BV goals via `Std.Tactic.BVDecide`.** Not
+  started. Needs a DRAT→LRAT conversion (our core emits DRAT, ADR-0012;
+  `BVDecide` consumes LRAT), a `BitVec`/`Bool` goal fragment in the
+  translator, and a second `accepted` shape carrying a certificate file rather
+  than a term. Its own lane and its own ADR.
+
+**Two defects real Lean found that no Rust-side test could have**, both on the
+first run against Lean, both recorded in ADR-1666: `@` binds to the
+*application node* rather than the head (so binary-application printing put
+every `Eq.rec` argument one slot late), and the mutation battery was
+**vacuous** because the tactic read `stx[1]` — the optional syntax node —
+instead of `stx[1][0]`, so every stub silently fell back to the real sidecar
+and "passed" by closing the goal it was meant to fail. The second was caught
+only because `#guard_msgs` reported an *empty* message where an error was
+expected.
+
+**Gate:** `scripts/check-lean-tactic.sh`, registered in `scripts/check.sh` and
+as `just lean-tactic` (on the `check:` dependency line beside `lean-adapter`).
+It resolves the pin through `scripts/check-lean-gate.sh --print-toolchain`,
+asserts the package's `lean-toolchain` equals the repository pin (the two-pin
+distinction is ADR-1660; this package follows the **cross-check** pin), builds
+the sidecar rather than assuming it, **deletes the `Tests` build products
+first** so the counts are this run's and not a cache's, and enforces four
+floors. Three negative controls run 2026-09-05, each failing differently:
+removing one goal drops `goals-accepted` to 10 (floor 11); making a mutation
+stop being a mutation fails the `lake build`; removing a shim row drops
+`shim-rows` to 12 *and* fails the build with `Unknown constant`.
+
+**Red found and not fixed:** none new. `14-lean-lang.md`'s three red gates were
+being repaired in parallel by lane `lean-pin-gates`
+([ADR-1660](docs/research/09-decisions/adr-1660-there-are-two-lean-pins-and-every-claim-names-which-one-it-means.md),
+merged into this lane's branch); this lane did not touch them.
+
+**Next, in the order that serves the most chairs:** the ℤ fragment (one
+visibility change plus a carrier-scoped name map), then `Tests/` goals drawn
+from a real population rather than authored here, then the LRAT route.
 
 **DONE (`ledger-duplicate-propositions`, 2026-08-30).** ADR-0771 (S2 trust-closure)
 measured 15 identity classes (theorem pairs sharing a byte-identical

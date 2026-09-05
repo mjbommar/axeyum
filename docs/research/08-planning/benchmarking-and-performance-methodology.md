@@ -52,6 +52,42 @@ so backend agreement is a genuine cross-check rather than a comparison against
 another solver. The [consumer-scenario-models note](../07-verification/consumer-scenario-models.md)
 records the contract and the first measured baselines.
 
+### Micro tier: function-level benchmarks (2026-09-05)
+
+The "Micro" row above is a corpus tier: whole-query SMT-LIB files run through
+`axeyum-bench` (`just bench-micro`). Until 2026-09-05 that was the only
+"micro" instrument in the tree — the
+[2026-09-05 design review](../11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md)
+§2.1 measured that no crate had a `benches/` directory and neither
+`criterion`, `divan`, nor `#[bench]` appeared anywhere, so a per-function
+timing regression (a slower Tseitin pass, a slower AND-node insert, a slower
+CDCL(T) propagate loop) was invisible until it showed up in a whole-query
+PAR-2 number, if it ever did.
+
+A second, function-level micro tier now exists alongside the corpus one:
+`criterion` (`harness = false`) targets under `benches/` in `axeyum-aig`,
+`axeyum-cnf` (two targets), `axeyum-egraph`, `axeyum-ir`, and `axeyum-solver`
+(two targets, gated behind the bench-only `bench-internals` feature — see
+`axeyum_solver::bench_internals`'s doc comment), covering the six hot paths
+the design review's §4 item 3 named: `CdclT::solve`, the native
+`solve_with_drat_proof` core, `tseitin_encode`, AIG AND-node construction,
+`Incremental` simplex feasibility, and e-graph `merge`/`explain`, plus the
+term-arena intern table (named `arena_intern`, kept separate because it is
+also the before/after instrument for a pending hasher swap — D5 in the
+design review). Every bench runs over a fixed, committed or
+deterministically-seeded input so runs are comparable release to release.
+`just bench-criterion` runs all of them pinned to the performance-core range
+(`taskset -c 0-7`); `just bench-criterion-<crate>` runs one crate's targets.
+Method, per-bench medians, and the first cross-engine ratio (`CdclT::solve`
+vs. the native proof core, on byte-identical input) are recorded in
+[`microbenchmarks-2026-09-05.md`](microbenchmarks-2026-09-05.md).
+
+This tier does not yet gate anything — recommendation 1 in the design review
+(turn PAR-2 into a ratchet, reusing the `progress_frontier` machine
+calibration) applies here too and has not been built. A regression here is
+visible only to whoever reruns `just bench-criterion` and reads the numbers,
+same as every other pre-2026-09-05 timing artifact in `bench-results/`.
+
 ## Metrics
 
 - Wall time, PAR-2 over corpus, timeout count.
@@ -63,6 +99,95 @@ records the contract and the first measured baselines.
 - Encoding size: term nodes in/out of rewriter, AIG nodes, CNF vars/clauses.
 - SAT internals: propagations, conflicts, decisions, learned/deleted clauses.
 - Peak memory per phase.
+
+## The Timing Ratchet
+
+Until 2026-09-05 **nothing in any gate failed when solve time regressed.** The
+progress-frontier suite ratchets capability at a fixed budget, the parity ledger
+ratchets decide count, the corpus sweep ratchets soundness, and the
+`summary.par2_mean_s` carried by the 72 baselines under `bench-results/baselines/`
+was compared to nothing. A change that kept every verdict and every frontier but
+halved throughput was invisible to every gate in the repository — until an
+instance crossed the budget, at which point the *capability* ratchet reported it
+as a lost lever, which is the wrong diagnosis arriving late.
+
+**What it is.** `crates/axeyum-solver/tests/progress_frontier.rs` now carries a
+`TimingBaseline` per family: a few `N` pinned deep inside that family's frontier,
+the calibrated total measured over eight sweeps, and a ceiling. It is enforced in
+the same `frontier` step that already runs the capability ratchets
+(`scripts/check.sh`, `just frontier`) and costs **no extra solving** — the pinned
+points are read out of the curve the capability sweep has already produced.
+
+**The metric is calibrated, not raw.** Each pinned point contributes
+`solve_ms / scale`, where `scale` is the frontier suite's existing machine
+calibration (a frozen dependent-chain kernel, measured to track this solver's
+core-class sensitivity to within 6 %; see
+[frontier-ratchet-reference-frame.md](frontier-ratchet-reference-frame.md)). The
+same factor that stretches the per-instance budget on a slow or busy box shrinks
+the reported time, so a loaded run and the reference machine land on one axis.
+
+**The budget.** The pinned totals per family, in reference-machine milliseconds:
+
+| family | pinned `N` | sweeps | min | median | max | ceiling |
+|---|---|---:|---:|---:|---:|---:|
+| `bv_reduction` | 12, 15, 18 | 8 | 959.9 | 1293.1 | 1509.5 | **2264.3** |
+| `lia_cuts` | 3, 19, 20 | 8 | 238.6 | 341.9 | 393.1 | **589.6** |
+| `string_bound` | 13, 25, 33 | 8 | 387.6 | 423.5 | 646.0 | **969.1** |
+| `nra_degree` | 10, 20, 30, 40 | 8 | 6.5 | 11.2 | 15.3 | **23.0** |
+| `nia_unsat` | 1, 2, 3, 4, 5 | 7 | 30.4 | 44.3 | 77.1 | **115.6** |
+
+**The noise band was measured, not chosen.** Those min/median/max are the spread
+over 8 sweeps of the same binary on the dev box (`s4`, i5-12600K, `taskset -c 0-7`)
+on 2026-09-05, at 1-minute load 18 to 38 — i.e. deliberately including heavily
+contended runs, because the residual the calibration does *not* remove is exactly
+what the band has to absorb. Measured `scale` across those runs ranged 1.10x to
+2.03x on a 16-core box, i.e. runs at 1x to 2.4x CPU oversubscription from
+other lanes. The ceiling is **1.5x the slowest of those runs**, so:
+
+- a genuine 2x slowdown on the pinned paths fires the gate,
+- a regression smaller than the band does not. That is the stated cost of a
+  ratchet that must not fire on a busy shared box, and it is why the band is
+  recorded in the artifact rather than only in the assert.
+
+The band is as wide as it is *because of the box it was measured on*. Nothing on
+s4 was idle during these runs; the calibrated totals still spread 1.6x to 2.4x
+between the quietest and busiest, which is the part the proxy kernel does not
+compensate. **Re-measuring the band on an idle machine would tighten every
+ceiling** and is the cheapest available improvement to this gate's resolution:
+run the sweep at least five times with `AXEYUM_PROGRESS_FRONTIER_ARTIFACT_DIR`
+pointed at a fresh directory per run, recompute `min` / `median` / `max` of
+`timing.calibrated_total_ms`, and commit the new constants and the artifacts
+together.
+
+**When it does not fire.** The check is enforced only when
+`machine.comparable` is true in `bench-results/frontier/<family>.json` — the same
+flag that governs the capability ratchet, false when the calibrated `scale` falls
+outside `[1/3, 3]` or when throughput drifts more than 25 % between the
+pre-sweep and post-sweep calibrations. On an uncomparable run, and on CI, the
+number is printed and written with `"enforced": false` and nothing fails. This is
+the rule that exists because the same gate reported `bv_reduction = 35 / 39 / 40`
+on one commit at 1-minute loads 34 / 5.4 / 1.17, and reported a REGRESSION that
+never happened (29 against a baseline of 30, four runs in five) when the sweep
+landed on the efficiency cores of a hybrid CPU.
+
+One sweep is missing from `nia_unsat`'s count: its `N=1` instance, normally
+~2 ms, once failed to return inside `budget + 1 s`. That sweep also failed the
+capability ratchet (`frontier 0` against a baseline of 40), so it is a box event
+rather than a lever, and a sweep with an undecided pin carries no usable total.
+It is excluded and counted, not rounded away.
+
+**Where it has least resolution.** `nra_degree` and `nia_unsat` have no
+mid-priced instances: every `nra_degree` point costs ~1-4 ms (the syntactic
+even-power refutation is O(term size)), and `nia_unsat` jumps from tens of
+milliseconds at `N<=5` to ~2.7 s of a 4 s budget at `N>=6`, too close to the
+clock to pin. Both therefore pin more, cheaper points and average them. Their
+absolute ceilings are small, but so is the failure they must catch: losing either
+fast path costs seconds, two to three orders of magnitude above the ceiling.
+
+**What it does not cover.** The 72 PAR-2 means under `bench-results/baselines/`
+are still compared to nothing; this slice ratchets the five oracle-free
+parametric families only. Extending the same calibrated-band scheme to
+`par2_mean_s` is the natural next slice.
 
 ## Parity Sweep Resume Identity
 
