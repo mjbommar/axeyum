@@ -57,3 +57,25 @@ amendment and the suite now pins the measured behaviour.
   says so (`lean_probe` has no "nearest version" fallback by design); run
   `elan toolchain install leanprover/lean4:v4.34.0-rc1`.
 - The next pin move edits `lean-toolchain` and nothing else in the suites.
+
+## Correction, 2026-09-05 (ADR-1660)
+
+"CI installs whatever the pin file says
+(`scripts/install-pinned-lean.sh`), so no workflow edit is needed" was
+**false**. Two more call sites had hardcoded the pre-existing equality
+between this pin and the Mathlib corpus pin (4.30.0/`c5ea0035`/`a3e35a58`)
+and needed edits:
+
+- `scripts/install-pinned-lean.sh`'s toolchain-value regex rejected the
+  `-rc1` suffix outright, so CI's "real Lean kernel + solver-proof
+  cross-check" job died at the install step on this exact commit's pin —
+  red from `792224e73` until fixed.
+- `scripts/check-lean-official-construct-matrix.py` asserted the
+  `lean-toolchain` file equals the construct matrix's registered corpus
+  pin, which broke the moment this ADR made them unequal
+  (`--check` exited 1, and `gen-lean-complete-parity.py --check` with it
+  through `derive_matrix_rows`).
+
+ADR-1660 names these as two independent pins, fixes both call sites to stop
+asserting equality between them, and is the ADR to cite for "which Lean pin"
+going forward.
