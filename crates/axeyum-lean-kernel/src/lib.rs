@@ -61,6 +61,7 @@ mod creal_point;
 pub mod decide;
 mod env;
 mod expr;
+pub mod geo;
 mod inductive;
 mod int_prelude;
 mod intspace;
@@ -114,6 +115,12 @@ pub use creal_model::{CRealModel, CRealModelLaw, build_creal_model_of_arith};
 pub use creal_point::{CPointPrelude, build_cpoint_prelude};
 pub use env::{Declaration, Environment, QuotKind, RecRule, ReducibilityHint};
 pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
+pub use geo::{
+    APART as GEO_APART, FIELD_COUNT as GEO_FIELD_COUNT, GeoPrelude, JOIN_EXISTS as GEO_JOIN_EXISTS,
+    JOIN_UNIQUE as GEO_JOIN_UNIQUE, L_EQ as GEO_L_EQ, LINE as GEO_LINE, ON as GEO_ON,
+    P_EQ as GEO_P_EQ, POINT as GEO_POINT, TRIANGLE as GEO_TRIANGLE, TWO_POINTS as GEO_TWO_POINTS,
+    build_geo_prelude,
+};
 pub use inductive::InductiveFamilySpec;
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use intspace::{
