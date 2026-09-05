@@ -17,6 +17,20 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   commit `01d47334`; it is **not pushed or integrated**. Its exact base is the
   wave-twenty-three docs merge `a200c050`. Do not rebase topic work onto `main`
   ahead of the integration owner.
+
+  > **2026-09-05 note (docs-only correction, rest of this file unchanged):**
+  > both commits this section names are, by now, ancestors of `main` — the
+  > wave-24 source commit `01d47334c9ccd40c1ff5cb30ec56d2de0891ed69`
+  > ("cas: prove geometric decay rates exactly") and the pause commit
+  > `245d8f2566b8a893a3ad034d757aa7025a5f4b04` ("docs(cas): record wave
+  > twenty-four pause") itself, verified with
+  > `git merge-base --is-ancestor <sha> HEAD` against `main` at `9914a1c0e`.
+  > They reached `main` through the ordinary integration path some time after
+  > this handoff was written; this file is not being updated to describe that
+  > integration in detail, only to stop calling them "not pushed or
+  > integrated," which is no longer true. For the current state of the work
+  > this handoff describes, see
+  > [docs/math-department/13-computer-algebra.md](../math-department/13-computer-algebra.md).
 - **Tests:** the last fully closed checkpoint remains wave twenty-three at
   `565` unit + `147` doctests, all green. Wave twenty-four adds one unit
   regression (expected total `566`). Focused and broad source gates are green,
