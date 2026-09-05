@@ -106,11 +106,11 @@ use std::collections::BTreeMap;
 /// Deterministic and shared by every head: the producer takes the first order
 /// whose remainder meets the step budget and records it, so the verifier
 /// recomputes exactly one evaluation per step.
-const ORDERS: [u32; 9] = [4, 8, 16, 32, 64, 128, 256, 512, 1024];
+pub(crate) const ORDERS: [u32; 9] = [4, 8, 16, 32, 64, 128, 256, 512, 1024];
 
 /// Cap on the halvings/doublings an argument reduction may perform before the
 /// module declines rather than grinding.
-const REDUCTION_CAP: i64 = 4096;
+pub(crate) const REDUCTION_CAP: i64 = 4096;
 
 // ---------------------------------------------------------------------------
 // BigInterval — the BigRational lift of `interval_arith::Interval`.
@@ -325,7 +325,7 @@ impl BigInterval {
     ///
     /// Sound only when the true value is known a priori to lie in the bound —
     /// used for `exp > 0` and `|sin| <= 1`, never to hide an error.
-    fn clamp(&self, lo_bound: &BigRational, hi_bound: &BigRational) -> BigInterval {
+    pub(crate) fn clamp(&self, lo_bound: &BigRational, hi_bound: &BigRational) -> BigInterval {
         let lo = if self.lo < *lo_bound {
             lo_bound.clone()
         } else {
@@ -368,22 +368,22 @@ impl fmt::Display for BigInterval {
 // ---------------------------------------------------------------------------
 
 /// `n/d` as a `BigRational`.
-fn br(n: i64, d: i64) -> BigRational {
+pub(crate) fn br(n: i64, d: i64) -> BigRational {
     BigRational::new(BigInt::from(n), BigInt::from(d))
 }
 
 /// `n` as a `BigRational`.
-fn bi(n: i64) -> BigRational {
+pub(crate) fn bi(n: i64) -> BigRational {
     BigRational::from(BigInt::from(n))
 }
 
 /// The crate's `i128` rational lifted to a `BigRational`.
-fn from_rational(r: Rational) -> BigRational {
+pub(crate) fn from_rational(r: Rational) -> BigRational {
     BigRational::new(BigInt::from(r.numerator()), BigInt::from(r.denominator()))
 }
 
 /// `2^k` for any `i32` exponent, positive or negative.
-fn pow2(k: i32) -> BigRational {
+pub(crate) fn pow2(k: i32) -> BigRational {
     let magnitude = BigInt::from(2u32).pow(k.unsigned_abs());
     if k >= 0 {
         BigRational::from(magnitude)
@@ -393,7 +393,7 @@ fn pow2(k: i32) -> BigRational {
 }
 
 /// `x^n` for a `BigRational` base and `u32` exponent (binary exponentiation).
-fn ratpow(x: &BigRational, n: u32) -> BigRational {
+pub(crate) fn ratpow(x: &BigRational, n: u32) -> BigRational {
     let mut result = BigRational::one();
     let mut base = x.clone();
     let mut exponent = n;
@@ -408,17 +408,17 @@ fn ratpow(x: &BigRational, n: u32) -> BigRational {
 }
 
 /// The larger of two `BigRational`s.
-fn rmax(a: BigRational, b: BigRational) -> BigRational {
+pub(crate) fn rmax(a: BigRational, b: BigRational) -> BigRational {
     if a >= b { a } else { b }
 }
 
 /// The smaller of two `BigRational`s.
-fn rmin(a: BigRational, b: BigRational) -> BigRational {
+pub(crate) fn rmin(a: BigRational, b: BigRational) -> BigRational {
     if a <= b { a } else { b }
 }
 
 /// `floor(q)` as a `BigInt`.
-fn rat_floor(q: &BigRational) -> BigInt {
+pub(crate) fn rat_floor(q: &BigRational) -> BigInt {
     let (num, den) = (q.numer(), q.denom());
     let quotient = num / den;
     if num < &BigInt::zero() && &(&quotient * den) != num {
@@ -549,6 +549,18 @@ pub enum StepHead {
     Atan,
     /// Principal square root.
     Sqrt,
+    /// The principal `q`-th root `x^(1/q)` on a non-negative argument, the
+    /// degree carried in the variant. `NthRoot(2)` and [`StepHead::Sqrt`] are
+    /// the same function by two routes; both are kept so an existing `sqrt`
+    /// certificate still verifies unchanged.
+    NthRoot(u32),
+    /// The error function `erf`.
+    Erf,
+    /// The gamma function `Gamma` on a positive argument.
+    Gamma,
+    /// The Bessel function of the first kind `J_n`, the integer order `n`
+    /// carried in the variant.
+    BesselJ(u32),
     /// A bisection-refined root of a univariate polynomial.
     Root,
 }
@@ -565,6 +577,10 @@ impl StepHead {
                 | StepHead::Cos
                 | StepHead::Atan
                 | StepHead::Sqrt
+                | StepHead::NthRoot(_)
+                | StepHead::Erf
+                | StepHead::Gamma
+                | StepHead::BesselJ(_)
         )
     }
 }
@@ -697,7 +713,7 @@ fn atan_small(z: &BigRational, order: u32) -> Option<BigInterval> {
 /// Machin's identity is exact; the only error is the two series tails, each of
 /// which carries its own alternating bound. `1/5` and `1/239` are both below
 /// `1/2`, so neither `atan` needs `pi` itself — the recursion is well founded.
-fn pi_enclosure(order: u32) -> Option<BigInterval> {
+pub(crate) fn pi_enclosure(order: u32) -> Option<BigInterval> {
     let a = atan_small(&br(1, 5), order)?;
     let b = atan_small(&br(1, 239), order)?;
     Some(a.scale(&bi(16)).sub(&b.scale(&bi(4))))
@@ -710,7 +726,7 @@ fn pi_enclosure(order: u32) -> Option<BigInterval> {
 /// `2·|y|^(n+1)/(n+1)!` (the geometric majorant with ratio `1/2`). Squaring an
 /// interval with a non-negative lower endpoint is monotone in both endpoints,
 /// so the enclosure property survives the unwinding.
-fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     let half = br(1, 2);
     let two = bi(2);
     let mut y = p.clone();
@@ -753,7 +769,7 @@ fn exp_point(p: &BigRational, order: u32) -> Option<BigInterval> {
 /// `ln p = k·ln 2 + 2·atanh((t−1)/(t+1))` with `ln 2 = 2·atanh(1/3)`. Both
 /// `atanh` arguments are at most `1/3`, so the series converges at a fixed rate
 /// independent of `p`.
-fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if !p.is_positive() {
         return None;
     }
@@ -789,7 +805,7 @@ fn ln_point(p: &BigRational, order: u32) -> Option<BigInterval> {
 /// certificate. `order` is the iteration cap; the loop also stops once the
 /// bracket is narrower than `2^(−2048)`, which keeps the denominators finite
 /// and is deterministic in the value, not in the schedule.
-fn sqrt_point(p: &BigRational, order: u32) -> Option<BigInterval> {
+pub(crate) fn sqrt_point(p: &BigRational, order: u32) -> Option<BigInterval> {
     if p.is_negative() {
         return None;
     }
@@ -852,7 +868,7 @@ fn cos_point(t: &BigRational, order: u32) -> BigInterval {
 }
 
 /// A `u64` as a `BigRational`.
-fn bi_u64(n: u64) -> BigRational {
+pub(crate) fn bi_u64(n: u64) -> BigRational {
     BigRational::from(BigInt::from(n))
 }
 
@@ -1040,6 +1056,39 @@ fn eval_head_raw(
             let hi = sqrt_point(&x.hi, order).ok_or(DeclineReason::ResourceLimit)?;
             BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
         }
+        StepHead::NthRoot(degree) => {
+            let x = unary(0)?;
+            if *degree == 0 {
+                return Err(DeclineReason::DomainError(
+                    "the 0-th root is not a function".to_string(),
+                ));
+            }
+            if x.lo.is_negative() {
+                return Err(DeclineReason::DomainError(format!(
+                    "root_{degree} of an interval reaching below 0"
+                )));
+            }
+            let lo = crate::enclosure_special::nth_root_point(&x.lo, *degree, order)
+                .ok_or(DeclineReason::ResourceLimit)?;
+            let hi = crate::enclosure_special::nth_root_point(&x.hi, *degree, order)
+                .ok_or(DeclineReason::ResourceLimit)?;
+            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+        }
+        StepHead::Erf => {
+            let x = unary(0)?;
+            // erf is strictly increasing, so the image of [a, b] is
+            // [erf a, erf b].
+            let lo = crate::enclosure_special::erf_point(&x.lo, order)
+                .ok_or(DeclineReason::PrecisionUnreachable)?;
+            let hi = crate::enclosure_special::erf_point(&x.hi, order)
+                .ok_or(DeclineReason::PrecisionUnreachable)?;
+            BigInterval::new(lo.lo, hi.hi).ok_or(DeclineReason::PrecisionUnreachable)
+        }
+        StepHead::Gamma => crate::enclosure_special::gamma_interval(unary(0)?, order),
+        StepHead::BesselJ(n) => {
+            crate::enclosure_special::bessel_j_interval(*n, unary(0)?, order)
+                .ok_or(DeclineReason::PrecisionUnreachable)
+        }
         StepHead::Sin => sin_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
         StepHead::Cos => cos_interval(unary(0)?, order).ok_or(DeclineReason::ResourceLimit),
     }
@@ -1108,6 +1157,10 @@ fn step_head_for(func: UnaryFunc) -> Result<StepHead, DeclineReason> {
         UnaryFunc::Cos => Ok(StepHead::Cos),
         UnaryFunc::Atan => Ok(StepHead::Atan),
         UnaryFunc::Sqrt => Ok(StepHead::Sqrt),
+        UnaryFunc::NthRoot(degree) => Ok(StepHead::NthRoot(degree)),
+        UnaryFunc::Erf => Ok(StepHead::Erf),
+        UnaryFunc::Gamma => Ok(StepHead::Gamma),
+        UnaryFunc::BesselJ(order) => Ok(StepHead::BesselJ(order)),
         other => Err(DeclineReason::UnsupportedHead(format!("{other:?}"))),
     }
 }
@@ -1662,6 +1715,72 @@ impl Enclosure {
             None => Err("Sturm declined the polynomial".into()),
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Rational powers.
+// ---------------------------------------------------------------------------
+
+/// The expression `base^(p/q)` built from the certified `root_q` head: the
+/// principal `q`-th root by Newton, then an integer power (and a reciprocal
+/// when `p` is negative).
+///
+/// `q` must be at least `1`; `q = 1` degenerates to an ordinary integer power.
+/// The exponent is *not* reduced to lowest terms — `rational_power(x, 2, 4)`
+/// takes the fourth root and squares it, which agrees with `x^(1/2)` on the
+/// non-negative arguments this route accepts and is the honest reading of the
+/// principal-root convention. Returns `None` only for `q = 0`.
+///
+/// The base must enclose to a non-negative interval: [`enclose`] declines a
+/// negative one with [`DeclineReason::DomainError`] naming the root degree,
+/// which is a different message from the `ln` domain error the
+/// [`rational_power_via_exp_ln`] route produces on the same input.
+///
+/// ```
+/// use axeyum_cas::CasExpr;
+/// use axeyum_cas::enclosure::{enclose, rational_power};
+/// let expr = rational_power(CasExpr::int(2), 1, 3).unwrap();
+/// let e = enclose(&expr, &[], 60).unwrap();
+/// // 2^(1/3) = 1.259921049894873164...
+/// assert!(e.interval.decimal(6).starts_with("[1.259921"));
+/// ```
+#[must_use]
+pub fn rational_power(base: CasExpr, p: i64, q: u32) -> Option<CasExpr> {
+    if q == 0 {
+        return None;
+    }
+    let root = if q == 1 {
+        base
+    } else {
+        CasExpr::Unary(UnaryFunc::NthRoot(q), Box::new(base))
+    };
+    let magnitude = u32::try_from(p.unsigned_abs()).ok()?;
+    let raised = CasExpr::Pow(Box::new(root), magnitude);
+    Some(if p < 0 {
+        CasExpr::Div(Box::new(CasExpr::int(1)), Box::new(raised))
+    } else {
+        raised
+    })
+}
+
+/// The expression `base^(p/q)` built as `exp((p/q)·ln base)`, through the
+/// certified `exp` and `ln` heads already in this module.
+///
+/// The analytic route, valid only where `base` encloses to a **strictly
+/// positive** interval; a base reaching `0` or below declines with the `ln`
+/// domain error. It agrees with [`rational_power`] wherever both apply — the
+/// two are independent routes to the same number, which is what the
+/// `rational_power_routes_agree` test checks. Returns `None` for `q = 0`.
+#[must_use]
+pub fn rational_power_via_exp_ln(base: CasExpr, p: i64, q: u32) -> Option<CasExpr> {
+    let exponent = Rational::checked_new(i128::from(p), i128::from(q))?;
+    Some(CasExpr::Unary(
+        UnaryFunc::Exp,
+        Box::new(CasExpr::Mul(vec![
+            CasExpr::Const(exponent),
+            CasExpr::Unary(UnaryFunc::Ln, Box::new(base)),
+        ])),
+    ))
 }
 
 // ---------------------------------------------------------------------------
