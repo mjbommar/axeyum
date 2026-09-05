@@ -720,6 +720,8 @@ fn definition_names(p: &NatPrelude) -> Vec<NameId> {
         p.rm_run_fuel,
         p.rm_diag_step,
         p.rm_halts,
+        // `chebyshev-pi` lane (roadmap W3-11, ADR-1637): `primorial.rs`.
+        p.primorial,
     ]
 }
 
@@ -1853,6 +1855,24 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.abundant_of_dvd,
         // `computability` lane (roadmap W2-14): `computability.rs`.
         p.rm_self_halting_not_decidable,
+        // `chebyshev-pi` lane (roadmap W3-11, ADR-1637): `primorial.rs` and
+        // `central_binomial.rs`. Registered at merge by the coordinator: the lane
+        // ran only its own two test modules, so this sweep was red on main for
+        // one commit (88ee63a0e) with all fifteen declarations unwatched.
+        p.primorial_zero,
+        p.primorial_succ,
+        p.min_fac_eq_self_of_prime,
+        p.prime_of_min_fac_eq_self,
+        p.primorial_succ_of_prime,
+        p.primorial_succ_of_not_prime,
+        p.primorial_pos,
+        p.primorial_le_succ,
+        p.primorial_mono,
+        p.mul_two_eq_add_self,
+        p.le_of_add_self_le_add_self,
+        p.four_pow_eq_two_pow_add_self,
+        p.choose_two_mul_succ_le_two_pow,
+        p.choose_two_mul_succ_le_four_pow,
     ]
 }
 
