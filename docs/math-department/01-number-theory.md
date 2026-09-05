@@ -126,7 +126,7 @@ great deal of that left.
       classical result that exercises Gaussian-integer reasoning without
       needing the ring structure, and whose descent method is worth having as
       a producer-visible pattern.
-- [ ] **5. Chebyshev-type bounds on π(x).** The first genuinely analytic
+- [~] **5. Chebyshev-type bounds on π(x).** — *primorial and the sharp central-binomial bound landed 2026-09-05; the π(x) statements themselves are a never-scored held-out family and are deliberately untouched.* The first genuinely analytic
       result reachable without complex analysis, using only elementary
       estimates on binomial coefficients — which this library already has.
       Their view: the cheapest possible proof that the analytic door is not
@@ -141,6 +141,7 @@ great deal of that left.
 | 2026-09-05 | **Next Five item 2 partly landed** (roadmap W2-18, ADR-1619): the divisor-set aggregate `sumDivisorsBy`, its reindexing primitive, `numDivisors`, `IsMultiplicative` with the totient as an instance, and Dirichlet convolution with commutativity — 29 declarations, footprint 0. The obstruction ADR-1598 named for primitive-root existence is half closed: the aggregate and reindexing exist; the classification of `[0,n)` by `gcd k n` does not. **The reindexing map this reviewer and every brief assumed, `d ↦ n/d`, is not the one that works** — it is not injective on the range — and the involution fixing non-divisors is. Möbius inversion did not land and is sized: it needs the divisors of a squarefree number in bijection with subsets of its prime factors. | `3e650f81a`; `nat_prelude::` 562 passed |
 
 | 2026-09-05 | **Item 4, first slice** (roadmap W3-10, ADR-1633): `Int.IsSumOfTwoSquares`, the Brahmagupta–Fibonacci identity emitted by the ring producer rather than proved by hand, closure under multiplication, the mod-4 refutation, and a reusable descent step shaped for `Nat.strongInduction`; 20 declarations, footprint 0. **Fermat's theorem is open on order, not algebra**: ℤ has no `natAbs_le_iff`, `mul_le_mul`, or `sq_le_sq`, so the strict decrease of the descent measure cannot yet be stated. The reviewer's blocker was wrong in one place: −1 as a residue mod `p ≡ 1 (mod 4)` was already proved (ADR-1235). | `e5c1d09cd` |
+| 2026-09-05 | **Item 5, first slice** (roadmap W3-11, ADR-1637): `Nat.primorial` with its equations and monotonicity, and `choose (2m+1) m ≤ 4^m`, sharper than the existing power-of-two bound; 15 declarations, footprint 0. Erdős's `primorial n ≤ 4^n` is open on a divisibility law for predicate-restricted products. **The π(x) bounds were not attempted and should not be briefed**: five rows of the held-out family `discrete-step-and-counting-bounds` are that shelf and the family has never been scored; two of its rows are one lemma application away, which is a fact about the evaluation, not a task. | `88ee63a0e` |
 
 ## How to re-measure
 
