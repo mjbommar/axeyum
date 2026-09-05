@@ -58,6 +58,14 @@ rustsat = { version = "0.7.5", default-features = false }
 rustsat-batsat = { version = "0.7.5" }
 proptest = { version = "1", default-features = false, features = ["std"] }
 z3 = { version = "0.20", default-features = false }
+# Fast, deterministic, non-cryptographic hasher (rustc's own FxHash), used for
+# the term-arena intern table and its lookup maps (D5,
+# docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md).
+# Pure Rust, MIT/Apache-2.0, no seed (so no RNG dependency and no per-process
+# randomization to defeat the "identical construction sequences yield
+# identical IDs" promise). See axeyum-ir/src/fast_map.rs for why this crate
+# and not `ahash` or `indexmap`.
+rustc-hash = { version = "2.1", default-features = false }
 # Browser-compatible monotonic clock; only used on wasm32 targets (ADR-0017).
 web-time = { version = "1" }
 # Pure-Rust (linux_raw backend) syscall wrappers, safe API surface only; used

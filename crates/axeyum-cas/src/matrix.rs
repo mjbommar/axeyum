@@ -524,6 +524,16 @@ impl Matrix {
             return None;
         }
         let n = self.rows;
+        if n == 0 {
+            // Empty-product convention: `det` of the `0x0` matrix is `1`, matching
+            // `determinant`'s cofactor base case (`cofactor_det(&[]) ==
+            // CasExpr::one()`). Without this, `m[n - 1][n - 1]` below underflows
+            // `n - 1` for `n == 0` and panics rather than declining -- found via
+            // `axeyum_cas::homology`'s unimodularity check on the `0x0` identity
+            // transform of an empty (`0`-row) boundary matrix, a normal, valid
+            // input (the boundary map out of the `0`-simplices has no rows).
+            return Some(CasExpr::one());
+        }
         let mut m = self.to_rational_grid()?;
         let mut sign = 1i128;
         let mut previous = Rational::integer(1);
@@ -1075,5 +1085,42 @@ mod tests {
         let matrix = Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3), konst(4)]])
             .expect("rectangular");
         assert_eq!(format!("{matrix}"), "[1, 2]\n[3, 4]");
+    }
+
+    /// REGRESSION. `bareiss_determinant` computed `m[n - 1][n - 1]` without
+    /// special-casing `n == 0`, so `n - 1` underflowed `usize` and panicked
+    /// (`attempt to subtract with overflow`) on a `0x0` matrix -- a normal,
+    /// valid input, not an adversarial one (e.g. `axeyum_cas::homology`'s
+    /// unimodularity check on the identity transform of an empty boundary
+    /// matrix at the bottom dimension). `determinant`'s cofactor expansion
+    /// already used the empty-product convention (`det = 1`) for a `0x0`
+    /// matrix; this pins `bareiss_determinant` to agree instead of panicking.
+    #[test]
+    fn bareiss_determinant_of_the_empty_matrix_is_one_not_a_panic() {
+        let empty = Matrix::new(0, 0, Vec::new()).expect("0x0 is a valid shape");
+        assert_expr_equal(
+            &empty.bareiss_determinant().expect("must not decline"),
+            &konst(1),
+        );
+        // POSITIVE CONTROL: `determinant` (cofactor) already agrees, so this
+        // is pinning consistency, not inventing a new convention.
+        assert_expr_equal(&empty.determinant().expect("must not decline"), &konst(1));
+    }
+
+    /// `bareiss_determinant` must agree with the cofactor `determinant` on
+    /// ordinary square integer matrices too (not merely on the empty-matrix
+    /// edge case above).
+    #[test]
+    fn bareiss_determinant_agrees_with_cofactor_determinant() {
+        let matrix = Matrix::from_rows(vec![
+            vec![konst(2), konst(4), konst(4)],
+            vec![konst(-6), konst(6), konst(12)],
+            vec![konst(10), konst(-4), konst(-16)],
+        ])
+        .expect("square");
+        assert_expr_equal(
+            &matrix.bareiss_determinant().expect("must not decline"),
+            &matrix.determinant().expect("must not decline"),
+        );
     }
 }
