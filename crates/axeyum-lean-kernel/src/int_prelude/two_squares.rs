@@ -179,7 +179,7 @@ pub(super) fn imodeq(d: &mut IntDev<'_>, n: ExprId, a: ExprId, b: ExprId) -> Exp
 /// into the prelude because
 /// [`declare_not_is_sum_of_two_squares_of_modeq_four_three`] needs it inside a
 /// theorem and not only inside a test.
-fn ofnat_ne(d: &mut IntDev<'_>, x: u32, y: u32) -> ExprId {
+pub(super) fn ofnat_ne(d: &mut IntDev<'_>, x: u32, y: u32) -> ExprId {
     assert!(x != y, "ofnat_ne is only for distinct numerals");
     let p = d.int();
     let xv = d.num(x);
@@ -751,6 +751,557 @@ fn declare_not_is_sum_of_two_squares_of_modeq_four_three(
     Ok(())
 }
 
+// ============================================================================
+// ℤ is an integral domain: cancellation
+// ============================================================================
+
+/// `Int.zero_add : ∀ a, Eq Int (add 0 a) a`. `Int.add_zero` was already here;
+/// its mirror was not.
+///
+/// **Not by `ring::int`.** The producer DECLINED this goal, measured
+/// 2026-09-05: its normal form for `add 0 a` is the item list
+/// `[Mono[a], Num(0)]` and for `a` it is `[Mono[a]]`, and a trailing zero
+/// numeral is not dropped, so the two lists compare unequal and the search
+/// reports `NotAnIdentity`. Every zero-collapsing goal in this module hits the
+/// same wall, so all four are hand-proved from `add_comm`/`add_zero`/`add_neg`
+/// instead — cheaper than teaching the producer to normalize a zero item, and
+/// the finding is recorded here rather than re-derived by the next lane.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_zero_add(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.zero_add, 1, &|d, v| {
+        let a = v[0];
+        let zero = d.izero();
+        let lhs = d.iadd(zero, a);
+        let stmt = d.ieq(lhs, a);
+        let commuted = d.const_app(p.add_comm, &[zero, a]);
+        let a_zero = d.iadd(a, zero);
+        let drop = d.const_app(p.add_zero, &[a]);
+        let proof = d.itrans(lhs, a_zero, a, commuted, drop);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.sub_self : ∀ a, Eq Int (sub a a) 0`.
+///
+/// `Int.sub` is a plain `Definition` (`sub a b := add a (neg b)`), so this is
+/// `Int.add_neg` verbatim up to one delta step — the proof is the constant.
+/// See [`declare_zero_add`] for why the ring producer is not used here.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_sub_self(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.sub_self, 1, &|d, v| {
+        let a = v[0];
+        let zero = d.izero();
+        let lhs = d.isub(a, a);
+        let stmt = d.ieq(lhs, zero);
+        let proof = d.const_app(p.add_neg, &[a]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.add_sub_cancel_right : ∀ a b, Eq Int (add (sub a b) b) a`.
+///
+/// `(a + −b) + b = a + (−b + b) = a + (b + −b) = a + 0 = a`, by
+/// `add_assoc`, `add_comm`, `add_neg` and `add_zero`. See
+/// [`declare_zero_add`] for why not the ring producer.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_add_sub_cancel_right(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.add_sub_cancel_right, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let neg_b = d.ineg(b);
+        let diff = d.isub(a, b);
+        let lhs = d.iadd(diff, b);
+        let stmt = d.ieq(lhs, a);
+
+        let assoc = d.const_app(p.add_assoc, &[a, neg_b, b]);
+        let tail = d.iadd(neg_b, b);
+        let regrouped = d.iadd(a, tail);
+        let flip = d.const_app(p.add_comm, &[neg_b, b]);
+        let flipped_tail = d.iadd(b, neg_b);
+        let zero = d.izero();
+        let vanish = d.const_app(p.add_neg, &[b]);
+        let tail_zero = d.itrans(tail, flipped_tail, zero, flip, vanish);
+        let inner = d.icongr(tail, zero, tail_zero, &|d, x| d.iadd(a, x));
+        let a_zero = d.iadd(a, zero);
+        let drop = d.const_app(p.add_zero, &[a]);
+        let (_end, proof) = d.ichain(lhs, &[(regrouped, assoc), (a_zero, inner), (a, drop)]);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.mul_sub_mul_comm : ∀ a b, Eq Int (sub (mul a b) (mul b a)) 0` — the
+/// commutator of a product, which is what makes the descent's SECOND cross
+/// term `ae − bc` vanish modulo `m`.
+///
+/// `mul_comm` turns the subtrahend into the minuend, then
+/// [`declare_sub_self`]. See [`declare_zero_add`] for why not the ring
+/// producer.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_mul_sub_mul_comm(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mul_sub_mul_comm, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let ab = d.imul(a, b);
+        let ba = d.imul(b, a);
+        let lhs = d.isub(ab, ba);
+        let zero = d.izero();
+        let stmt = d.ieq(lhs, zero);
+
+        let flip = d.const_app(p.mul_comm, &[b, a]);
+        let aligned = d.icongr(ba, ab, flip, &|d, x| d.isub(ab, x));
+        let same = d.isub(ab, ab);
+        let vanish = d.const_app(p.sub_self, &[ab]);
+        let proof = d.itrans(lhs, same, zero, aligned, vanish);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.eq_of_sub_eq_zero : ∀ a b, Eq Int (sub a b) 0 → Eq Int a b`.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_eq_of_sub_eq_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.eq_of_sub_eq_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = d.izero();
+        let diff = d.isub(a, b);
+        let hyp = d.ieq(diff, zero);
+        let concl = d.ieq(a, b);
+        let stmt = d.arrow(hyp, concl);
+
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        // `a = (a − b) + b = 0 + b = b`.
+        let cancel = d.const_app(p.add_sub_cancel_right, &[a, b]);
+        let restored = d.iadd(diff, b);
+        let a_restored = d.isymm(restored, a, cancel);
+        let shifted = d.icongr(diff, zero, h, &|d, x| d.iadd(x, b));
+        let zero_b = d.iadd(zero, b);
+        let a_zero_b = d.itrans(a, restored, zero_b, a_restored, shifted);
+        let zero_add = d.const_app(p.zero_add, &[b]);
+        let proof_body = d.itrans(a, zero_b, b, a_zero_b, zero_add);
+        let proof = d.lam_fv(h_fv, hyp, proof_body);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.mul_ne_zero : ∀ a b, Not (Eq Int a 0) → Not (Eq Int b 0) →
+/// Not (Eq Int (mul a b) 0)` — `Int.mul_eq_zero` contrapositive, i.e. ℤ has no
+/// zero divisors, stated in the direction a cancellation proof consumes.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_mul_ne_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mul_ne_zero, 2, &|d, v| {
+        let (a, b) = (v[0], v[1]);
+        let zero = d.izero();
+        let a_zero = d.ieq(a, zero);
+        let b_zero = d.ieq(b, zero);
+        let ha_ty = d.not(a_zero);
+        let hb_ty = d.not(b_zero);
+        let ab = d.imul(a, b);
+        let ab_zero = d.ieq(ab, zero);
+        let concl = d.not(ab_zero);
+        let inner = d.arrow(hb_ty, concl);
+        let stmt = d.arrow(ha_ty, inner);
+
+        let ha_fv = d.fresh_fvar();
+        let ha = d.kernel().fvar(ha_fv);
+        let hb_fv = d.fresh_fvar();
+        let hb = d.kernel().fvar(hb_fv);
+        let hab_fv = d.fresh_fvar();
+        let hab = d.kernel().fvar(hab_fv);
+
+        let target = d.false_ty();
+        let split = d.const_app(p.mul_eq_zero, &[a, b, hab]);
+        let body = d.or_elim(
+            a_zero,
+            b_zero,
+            target,
+            split,
+            &|d, h| d.apply(ha, &[h]),
+            &|d, h| d.apply(hb, &[h]),
+        );
+        let with_hab = d.lam_fv(hab_fv, ab_zero, body);
+        let with_hb = d.lam_fv(hb_fv, hb_ty, with_hab);
+        let proof = d.lam_fv(ha_fv, ha_ty, with_hb);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.mul_left_cancel_of_ne_zero : ∀ m a b, Not (Eq Int m 0) →
+/// Eq Int (mul m a) (mul m b) → Eq Int a b`.
+///
+/// `m·a = m·b` gives `m·(a−b) = m·a − m·b = 0` (`Int.mul_sub`, then
+/// [`declare_sub_self`]), so `Int.mul_eq_zero` splits, the `m = 0` branch is
+/// absurd, and [`declare_eq_of_sub_eq_zero`] closes the other. This is what
+/// [`declare_descent_step`] needs to divide out the `m²`, and it is the lemma
+/// `shape_search --ns Int --name-contains cancel` reported ABSENT before this
+/// module.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_mul_left_cancel_of_ne_zero(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mul_left_cancel_of_ne_zero, 3, &|d, v| {
+        let (m, a, b) = (v[0], v[1], v[2]);
+        let zero = d.izero();
+        let m_zero = d.ieq(m, zero);
+        let hm_ty = d.not(m_zero);
+        let ma = d.imul(m, a);
+        let mb = d.imul(m, b);
+        let heq_ty = d.ieq(ma, mb);
+        let concl = d.ieq(a, b);
+        let inner = d.arrow(heq_ty, concl);
+        let stmt = d.arrow(hm_ty, inner);
+
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+
+        // `m*a − m*b = m*b − m*b = 0`.
+        let diff_products = d.isub(ma, mb);
+        let shifted = d.icongr(ma, mb, heq, &|d, x| d.isub(x, mb));
+        let mb_mb = d.isub(mb, mb);
+        let self_zero = d.const_app(p.sub_self, &[mb]);
+        let products_zero = d.itrans(diff_products, mb_mb, zero, shifted, self_zero);
+
+        // `m*(a−b) = m*a − m*b`, so `m*(a−b) = 0`.
+        let diff = d.isub(a, b);
+        let distrib = d.const_app(p.mul_sub, &[m, a, b]);
+        let m_diff = d.imul(m, diff);
+        let m_diff_zero = d.itrans(m_diff, diff_products, zero, distrib, products_zero);
+
+        let split = d.const_app(p.mul_eq_zero, &[m, diff, m_diff_zero]);
+        let diff_zero = d.ieq(diff, zero);
+        let body = d.or_elim(
+            m_zero,
+            diff_zero,
+            concl,
+            split,
+            &|d, h| {
+                let contradiction = d.apply(hm, &[h]);
+                d.absurd(concl, contradiction)
+            },
+            &|d, h| d.const_app(p.eq_of_sub_eq_zero, &[a, b, h]),
+        );
+        let with_heq = d.lam_fv(heq_fv, heq_ty, body);
+        let proof = d.lam_fv(hm_fv, hm_ty, with_heq);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+// ============================================================================
+// the descent step
+// ============================================================================
+
+/// `Int.modEq_descent_cross_terms : ∀ m a b c e, 0 < m → ModEq m c a →
+/// ModEq m e b → ModEq m (add (mul a a) (mul b b)) 0 →
+/// And (ModEq m (add (mul a c) (mul b e)) 0)
+///     (ModEq m (sub (mul a e) (mul b c)) 0)`
+/// — **the congruence half of Fermat's descent**, and the reason the descent
+/// uses [`declare_brahmagupta_fibonacci_swap`]'s grouping rather than the
+/// textbook one.
+///
+/// With `c ≡ a` and `e ≡ b` modulo `m`, the two cross terms of that grouping
+/// are `ac + be ≡ a² + b² ≡ 0` and `ae − bc ≡ ab − ba = 0`. Both are therefore
+/// divisible by `m`, which is exactly the licence the descent needs to divide
+/// the product `m²·(m'p)` through by `m²`
+/// ([`declare_descent_step`]).
+///
+/// `0 < m` is inherited from `Int.modEq_mul_left`, the only multiplicative
+/// congruence in this prelude that is not unconditional in the modulus.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_modeq_descent_cross_terms(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.mod_eq_descent_cross_terms, 5, &|d, v| {
+        let (m, a, b, c, e) = (v[0], v[1], v[2], v[3], v[4]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, m);
+        let hc_ty = imodeq(d, m, c, a);
+        let he_ty = imodeq(d, m, e, b);
+        let aa = d.imul(a, a);
+        let bb = d.imul(b, b);
+        let norm = d.iadd(aa, bb);
+        let h0_ty = imodeq(d, m, norm, zero);
+
+        let ac = d.imul(a, c);
+        let be = d.imul(b, e);
+        let first = d.iadd(ac, be);
+        let ae = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let second = d.isub(ae, bc);
+        let left = imodeq(d, m, first, zero);
+        let right = imodeq(d, m, second, zero);
+        let concl = d.and(left, right);
+
+        let stmt = {
+            let s3 = d.arrow(h0_ty, concl);
+            let s2 = d.arrow(he_ty, s3);
+            let s1 = d.arrow(hc_ty, s2);
+            d.arrow(pos_ty, s1)
+        };
+
+        let pos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(pos_fv);
+        let hc_fv = d.fresh_fvar();
+        let hc = d.kernel().fvar(hc_fv);
+        let he_fv = d.fresh_fvar();
+        let he = d.kernel().fvar(he_fv);
+        let h0_fv = d.fresh_fvar();
+        let h0 = d.kernel().fvar(h0_fv);
+
+        // `ac + be ≡ a² + b² ≡ 0`.
+        let t1 = d.const_app(p.mod_eq_mul_left, &[m, c, a, a, hpos, hc]);
+        let t2 = d.const_app(p.mod_eq_mul_left, &[m, e, b, b, hpos, he]);
+        let t3 = d.const_app(p.mod_eq_add, &[m, ac, aa, be, bb, t1, t2]);
+        let part_one = d.const_app(p.mod_eq_trans, &[m, first, norm, zero, t3, h0]);
+
+        // `ae − bc ≡ ab − ba = 0`.
+        let ab = d.imul(a, b);
+        let ba = d.imul(b, a);
+        let s1 = d.const_app(p.mod_eq_mul_left, &[m, e, b, a, hpos, he]);
+        let s2 = d.const_app(p.mod_eq_mul_left, &[m, c, a, b, hpos, hc]);
+        let s3 = d.const_app(p.mod_eq_neg, &[m, bc, ba, s2]);
+        let neg_bc = d.ineg(bc);
+        let neg_ba = d.ineg(ba);
+        let s4 = d.const_app(p.mod_eq_add, &[m, ae, ab, neg_bc, neg_ba, s1, s3]);
+        let commutator = d.isub(ab, ba);
+        let vanishes = d.const_app(p.mul_sub_mul_comm, &[a, b]);
+        let part_two = d.int_eq_rewrite(commutator, zero, vanishes, s4, &|d, x| {
+            imodeq(d, m, second, x)
+        });
+
+        let and_intro = d.int().logic.and_intro;
+        let paired = d.const_app(and_intro, &[left, right, part_one, part_two]);
+
+        let with_h0 = d.lam_fv(h0_fv, h0_ty, paired);
+        let with_he = d.lam_fv(he_fv, he_ty, with_h0);
+        let with_hc = d.lam_fv(hc_fv, hc_ty, with_he);
+        let proof = d.lam_fv(pos_fv, pos_ty, with_hc);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
+/// `Int.mul_mul_of_mul_mul : ∀ m p q,
+/// Eq Int (mul (mul m p) (mul m q)) (mul (mul m m) (mul q p))`. Emitted by
+/// `ring::int`.
+///
+/// # Errors
+///
+/// As [`declare_sq_of_two_mul`].
+fn declare_mul_mul_of_mul_mul(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    crate::ring::int::declare(d, &p, p.mul_mul_of_mul_mul, 3, &|d, v| {
+        let (m, x, y) = (v[0], v[1], v[2]);
+        let mx = d.imul(m, x);
+        let my = d.imul(m, y);
+        let lhs = d.imul(mx, my);
+        let mm = d.imul(m, m);
+        let yx = d.imul(y, x);
+        let rhs = d.imul(mm, yx);
+        d.ieq(lhs, rhs)
+    })
+}
+
+/// `Int.sq_add_sq_of_mul_left : ∀ m u w,
+/// Eq Int (add (mul (mul m u) (mul m u)) (mul (mul m w) (mul m w)))
+///        (mul (mul m m) (add (mul u u) (mul w w)))`. Emitted by `ring::int`.
+///
+/// # Errors
+///
+/// As [`declare_sq_of_two_mul`].
+fn declare_sq_add_sq_of_mul_left(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    crate::ring::int::declare(d, &p, p.sq_add_sq_of_mul_left, 3, &|d, v| {
+        let (m, u, w) = (v[0], v[1], v[2]);
+        let mu = d.imul(m, u);
+        let mw = d.imul(m, w);
+        let mu2 = d.imul(mu, mu);
+        let mw2 = d.imul(mw, mw);
+        let lhs = d.iadd(mu2, mw2);
+        let mm = d.imul(m, m);
+        let uu = d.imul(u, u);
+        let ww = d.imul(w, w);
+        let sum = d.iadd(uu, ww);
+        let rhs = d.imul(mm, sum);
+        d.ieq(lhs, rhs)
+    })
+}
+
+/// `Int.descentStep : ∀ m p q a b c e u w, Not (Eq Int m 0) →`
+/// `  Eq Int (mul m p) (add (mul a a) (mul b b)) →`
+/// `  Eq Int (mul m q) (add (mul c c) (mul e e)) →`
+/// `  Eq Int (mul m u) (add (mul a c) (mul b e)) →`
+/// `  Eq Int (mul m w) (sub (mul a e) (mul b c)) →`
+/// `  Eq Int (mul q p) (add (mul u u) (mul w w))`
+/// — **the algebraic half of Fermat's descent**, stated so that
+/// `Nat.strongInduction` on the `natAbs` of the multiplier applies directly:
+/// the conclusion is again "a multiple of `p` is a sum of two squares", with
+/// `q` in `m`'s place.
+///
+/// The route is one line of mathematics and three of bookkeeping:
+/// `(mp)(mq) = (a²+b²)(c²+e²) = (ac+be)² + (ae−bc)² = (mu)² + (mw)²`, the ends
+/// are `m²·(qp)` and `m²·(u²+w²)`, and
+/// [`declare_mul_left_cancel_of_ne_zero`] divides the `m²` out.
+///
+/// **The quotients `u` and `w` are hypotheses, not constructed here.** That is
+/// deliberate: producing them is exactly what
+/// [`declare_modeq_descent_cross_terms`] licenses (both cross terms are
+/// divisible by `m`), and keeping them universally quantified means this lemma
+/// is reusable by any descent that can exhibit them, not only by the
+/// balanced-representative one.
+///
+/// # Errors
+///
+/// Returns the trusted gate's rejection.
+fn declare_descent_step(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    let p = d.int();
+    d.int_theorem(p.descent_step, 9, &|d, v| {
+        let (m, pp, q) = (v[0], v[1], v[2]);
+        let (a, b, c, e) = (v[3], v[4], v[5], v[6]);
+        let (u, w) = (v[7], v[8]);
+        let zero = d.izero();
+        let m_zero = d.ieq(m, zero);
+        let hm_ty = d.not(m_zero);
+
+        let mp = d.imul(m, pp);
+        let mq = d.imul(m, q);
+        let mu = d.imul(m, u);
+        let mw = d.imul(m, w);
+        let aa = d.imul(a, a);
+        let bb = d.imul(b, b);
+        let sab = d.iadd(aa, bb);
+        let cc = d.imul(c, c);
+        let ee = d.imul(e, e);
+        let sce = d.iadd(cc, ee);
+        let ac = d.imul(a, c);
+        let be = d.imul(b, e);
+        let cross_one = d.iadd(ac, be);
+        let ae = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let cross_two = d.isub(ae, bc);
+
+        let h1_ty = d.ieq(mp, sab);
+        let h2_ty = d.ieq(mq, sce);
+        let h3_ty = d.ieq(mu, cross_one);
+        let h4_ty = d.ieq(mw, cross_two);
+        let qp = d.imul(q, pp);
+        let uu = d.imul(u, u);
+        let ww = d.imul(w, w);
+        let suw = d.iadd(uu, ww);
+        let concl = d.ieq(qp, suw);
+
+        let stmt = {
+            let s4 = d.arrow(h4_ty, concl);
+            let s3 = d.arrow(h3_ty, s4);
+            let s2 = d.arrow(h2_ty, s3);
+            let s1 = d.arrow(h1_ty, s2);
+            d.arrow(hm_ty, s1)
+        };
+
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+        let h1_fv = d.fresh_fvar();
+        let h1 = d.kernel().fvar(h1_fv);
+        let h2_fv = d.fresh_fvar();
+        let h2 = d.kernel().fvar(h2_fv);
+        let h3_fv = d.fresh_fvar();
+        let h3 = d.kernel().fvar(h3_fv);
+        let h4_fv = d.fresh_fvar();
+        let h4 = d.kernel().fvar(h4_fv);
+
+        // `(m·p)(m·q) = (a²+b²)(c²+e²)`.
+        let product = d.imul(mp, mq);
+        let step_a1 = d.icongr(mp, sab, h1, &|d, x| d.imul(x, mq));
+        let sab_mq = d.imul(sab, mq);
+        let step_a2 = d.icongr(mq, sce, h2, &|d, x| d.imul(sab, x));
+        let sab_sce = d.imul(sab, sce);
+        let to_norms = d.itrans(product, sab_mq, sab_sce, step_a1, step_a2);
+
+        // `= (ac+be)² + (ae−bc)²`.
+        let identity = d.const_app(p.brahmagupta_fibonacci_swap, &[a, b, c, e]);
+        let c1_sq = d.imul(cross_one, cross_one);
+        let c2_sq = d.imul(cross_two, cross_two);
+        let crosses = d.iadd(c1_sq, c2_sq);
+        let to_crosses = d.itrans(product, sab_sce, crosses, to_norms, identity);
+
+        // `= (m·u)² + (m·w)²`.
+        let h3s = d.isymm(mu, cross_one, h3);
+        let h4s = d.isymm(mw, cross_two, h4);
+        let step_c1 = d.icongr(cross_one, mu, h3s, &|d, x| {
+            let sq = d.imul(x, x);
+            d.iadd(sq, c2_sq)
+        });
+        let mu_sq = d.imul(mu, mu);
+        let mixed = d.iadd(mu_sq, c2_sq);
+        let step_c2 = d.icongr(cross_two, mw, h4s, &|d, x| {
+            let sq = d.imul(x, x);
+            d.iadd(mu_sq, sq)
+        });
+        let mw_sq = d.imul(mw, mw);
+        let scaled = d.iadd(mu_sq, mw_sq);
+        let crosses_scaled = d.itrans(crosses, mixed, scaled, step_c1, step_c2);
+        let product_scaled = d.itrans(product, crosses, scaled, to_crosses, crosses_scaled);
+
+        // Both ends carry the factor `m²`.
+        let mm = d.imul(m, m);
+        let left_shape = d.const_app(p.mul_mul_of_mul_mul, &[m, pp, q]);
+        let mm_qp = d.imul(mm, qp);
+        let right_shape = d.const_app(p.sq_add_sq_of_mul_left, &[m, u, w]);
+        let mm_suw = d.imul(mm, suw);
+        let from_mm = d.isymm(product, mm_qp, left_shape);
+        let mm_to_scaled = d.itrans(mm_qp, product, scaled, from_mm, product_scaled);
+        let cancellable = d.itrans(mm_qp, scaled, mm_suw, mm_to_scaled, right_shape);
+
+        let mm_ne = d.const_app(p.mul_ne_zero, &[m, m, hm, hm]);
+        let body = d.const_app(
+            p.mul_left_cancel_of_ne_zero,
+            &[mm, qp, suw, mm_ne, cancellable],
+        );
+
+        let with_h4 = d.lam_fv(h4_fv, h4_ty, body);
+        let with_h3 = d.lam_fv(h3_fv, h3_ty, with_h4);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_h3);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let proof = d.lam_fv(hm_fv, hm_ty, with_h1);
+        (stmt, proof)
+    })?;
+    Ok(())
+}
+
 /// Declare every theorem in this module.
 ///
 /// # Errors
@@ -767,5 +1318,16 @@ pub(super) fn declare_two_squares_all(d: &mut IntDev<'_>) -> Result<(), KernelEr
     declare_sq_of_two_mul_add_one(d)?;
     declare_sq_modeq_four_zero_or_one(d)?;
     declare_not_is_sum_of_two_squares_of_modeq_four_three(d)?;
+    declare_zero_add(d)?;
+    declare_sub_self(d)?;
+    declare_add_sub_cancel_right(d)?;
+    declare_mul_sub_mul_comm(d)?;
+    declare_eq_of_sub_eq_zero(d)?;
+    declare_mul_ne_zero(d)?;
+    declare_mul_left_cancel_of_ne_zero(d)?;
+    declare_modeq_descent_cross_terms(d)?;
+    declare_mul_mul_of_mul_mul(d)?;
+    declare_sq_add_sq_of_mul_left(d)?;
+    declare_descent_step(d)?;
     Ok(())
 }

@@ -2023,6 +2023,60 @@ pub struct IntPrelude {
     /// [`Self::sq_mod_eq_four_zero_or_one`], each closed by REDUCTION of
     /// `emod` at closed numerals plus `Int.natAbs` injectivity.
     pub not_is_sum_of_two_squares_of_mod_eq_four_three: NameId,
+    /// `Int.zero_add : forall a, Eq Int (add 0 a) a` -- the mirror of
+    /// [`Self::add_zero`], which was here without it. `ring::int`.
+    pub zero_add: NameId,
+    /// `Int.sub_self : forall a, Eq Int (sub a a) 0`. `ring::int`.
+    pub sub_self: NameId,
+    /// `Int.add_sub_cancel_right : forall a b, Eq Int (add (sub a b) b) a`.
+    /// `ring::int`.
+    pub add_sub_cancel_right: NameId,
+    /// `Int.mul_sub_mul_comm : forall a b,`
+    /// `  Eq Int (sub (mul a b) (mul b a)) 0` -- the commutator of a product,
+    /// which is what makes the descent's second cross term `ae - bc` vanish
+    /// modulo `m`. `ring::int`.
+    pub mul_sub_mul_comm: NameId,
+    /// `Int.eq_of_sub_eq_zero : forall a b, Eq Int (sub a b) 0 ->
+    /// Eq Int a b`.
+    pub eq_of_sub_eq_zero: NameId,
+    /// `Int.mul_ne_zero : forall a b, Not (Eq Int a 0) -> Not (Eq Int b 0) ->
+    /// Not (Eq Int (mul a b) 0)` -- [`Self::mul_eq_zero`] contrapositive,
+    /// i.e. no zero divisors, in the direction a cancellation consumes.
+    pub mul_ne_zero: NameId,
+    /// `Int.mul_left_cancel_of_ne_zero : forall m a b, Not (Eq Int m 0) ->`
+    /// `  Eq Int (mul m a) (mul m b) -> Eq Int a b` -- multiplicative
+    /// cancellation over an integral domain. Absent before the `two-squares`
+    /// lane (`shape_search --ns Int --name-contains cancel` reported only
+    /// additive and `ModEq` cancellations).
+    pub mul_left_cancel_of_ne_zero: NameId,
+    /// `Int.modEq_descent_cross_terms : forall m a b c e, 0 < m ->`
+    /// `  ModEq m c a -> ModEq m e b -> ModEq m (add (mul a a) (mul b b)) 0 ->`
+    /// `  And (ModEq m (add (mul a c) (mul b e)) 0)`
+    /// `      (ModEq m (sub (mul a e) (mul b c)) 0)`
+    /// -- **the congruence half of Fermat's descent**: with `c = a` and
+    /// `e = b` modulo `m`, BOTH cross terms of
+    /// [`Self::brahmagupta_fibonacci_swap`]'s grouping are divisible by `m`.
+    pub mod_eq_descent_cross_terms: NameId,
+    /// `Int.mul_mul_of_mul_mul : forall m p q,`
+    /// `  Eq Int (mul (mul m p) (mul m q)) (mul (mul m m) (mul q p))`.
+    /// `ring::int`.
+    pub mul_mul_of_mul_mul: NameId,
+    /// `Int.sq_add_sq_of_mul_left : forall m u w,`
+    /// `  Eq Int (add (mul (mul m u) (mul m u)) (mul (mul m w) (mul m w)))`
+    /// `    (mul (mul m m) (add (mul u u) (mul w w)))`. `ring::int`.
+    pub sq_add_sq_of_mul_left: NameId,
+    /// `Int.descentStep : forall m p q a b c e u w, Not (Eq Int m 0) ->`
+    /// `  Eq Int (mul m p) (add (mul a a) (mul b b)) ->`
+    /// `  Eq Int (mul m q) (add (mul c c) (mul e e)) ->`
+    /// `  Eq Int (mul m u) (add (mul a c) (mul b e)) ->`
+    /// `  Eq Int (mul m w) (sub (mul a e) (mul b c)) ->`
+    /// `  Eq Int (mul q p) (add (mul u u) (mul w w))`
+    /// -- **the algebraic half of Fermat's descent**: the multiplier drops
+    /// from `m` to `q` and the conclusion has the same shape as the first
+    /// hypothesis, so `Nat.strongInduction` on `natAbs` of the multiplier
+    /// applies directly. The quotients `u`, `w` are hypotheses; producing them
+    /// is what [`Self::mod_eq_descent_cross_terms`] licenses.
+    pub descent_step: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2457,6 +2511,17 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
             kernel,
             "not_isSumOfTwoSquares_of_modEq_four_three",
         ),
+        zero_add: child(kernel, "zero_add"),
+        sub_self: child(kernel, "sub_self"),
+        add_sub_cancel_right: child(kernel, "add_sub_cancel_right"),
+        mul_sub_mul_comm: child(kernel, "mul_sub_mul_comm"),
+        eq_of_sub_eq_zero: child(kernel, "eq_of_sub_eq_zero"),
+        mul_ne_zero: child(kernel, "mul_ne_zero"),
+        mul_left_cancel_of_ne_zero: child(kernel, "mul_left_cancel_of_ne_zero"),
+        mod_eq_descent_cross_terms: child(kernel, "modEq_descent_cross_terms"),
+        mul_mul_of_mul_mul: child(kernel, "mul_mul_of_mul_mul"),
+        sq_add_sq_of_mul_left: child(kernel, "sq_add_sq_of_mul_left"),
+        descent_step: child(kernel, "descentStep"),
     }
 }
 

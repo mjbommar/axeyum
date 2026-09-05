@@ -15,8 +15,11 @@
 //! this file is `4² = 16`.
 
 use super::super::{Kernel, build_int_prelude};
+use super::first_supplementary::pos_of_nat_succ;
 use super::ops::IntDev;
-use super::two_squares::{inner_predicate, int_exists, is_sum_of_two_squares, outer_predicate};
+use super::two_squares::{
+    imodeq, inner_predicate, int_exists, is_sum_of_two_squares, ofnat_ne, outer_predicate,
+};
 use crate::NameId;
 use crate::expr::ExprId;
 use crate::nat_prelude::NatOps;
@@ -432,6 +435,194 @@ fn nine_is_one_mod_four_and_not_zero() {
     );
 }
 
+/// Try to admit `Int.descentStep` at a fully concrete instance.
+///
+/// Returns the verdict so the caller can require both outcomes. Every
+/// hypothesis is supplied as `Eq.refl`, so the kernel has to compute both
+/// sides of each of the five equations itself — a wrong quotient makes one of
+/// them fail to check and the whole application is refused.
+#[allow(clippy::too_many_arguments)]
+fn admits_descent_instance(
+    d: &mut IntDev<'_>,
+    m: u32,
+    pp: u32,
+    q: u32,
+    a: u32,
+    b: u32,
+    c: u32,
+    e: u32,
+    u: u32,
+    w: u32,
+    label: &str,
+) -> bool {
+    let prelude = d.int();
+    let mi = int_num(d, m);
+    let pi = int_num(d, pp);
+    let qi = int_num(d, q);
+    let ai = int_num(d, a);
+    let bi = int_num(d, b);
+    let ci = int_num(d, c);
+    let ei = int_num(d, e);
+    let ui = int_num(d, u);
+    let wi = int_num(d, w);
+
+    let hm = ofnat_ne(d, m, 0);
+    let h1 = {
+        let lhs = d.imul(mi, pi);
+        d.irefl(lhs)
+    };
+    let h2 = {
+        let lhs = d.imul(mi, qi);
+        d.irefl(lhs)
+    };
+    let h3 = {
+        let lhs = d.imul(mi, ui);
+        d.irefl(lhs)
+    };
+    let h4 = {
+        let lhs = d.imul(mi, wi);
+        d.irefl(lhs)
+    };
+    let proof = d.const_app(
+        prelude.descent_step,
+        &[mi, pi, qi, ai, bi, ci, ei, ui, wi, hm, h1, h2, h3, h4],
+    );
+    let ty = {
+        let qp = d.imul(qi, pi);
+        let uu = d.imul(ui, ui);
+        let ww = d.imul(wi, wi);
+        let sum = d.iadd(uu, ww);
+        d.ieq(qp, sum)
+    };
+    let name = probe_name(d, label);
+    d.declare_theorem(name, ty, proof).is_ok()
+}
+
+/// The worked descent instance behind Fermat's theorem at `p = 13`.
+///
+/// `5² + 1² = 26 = 2·13`, so the multiplier is `m = 2`. The balanced
+/// representatives of `5` and `1` modulo `2` are `c = 1` and `e = 1`, giving
+/// `c² + e² = 2 = 2·1`, so the NEW multiplier is `q = 1`. The quotients are
+/// `u = (ac+be)/m = 6/2 = 3` and `w = (ae−bc)/m = 4/2 = 2`, and the
+/// conclusion `1·13 = 3² + 2²` is the representation `13 = 9 + 4`.
+///
+/// The largest magnitude formed is `26`, well inside this kernel's unary
+/// numerals.
+#[test]
+fn the_descent_step_carries_the_worked_instance_of_thirteen() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    assert!(
+        admits_descent_instance(&mut d, 2, 13, 1, 5, 1, 1, 1, 3, 2, "descent_thirteen"),
+        "the m=2 descent from 2*13 = 5^2+1^2 down to 1*13 = 3^2+2^2 must check"
+    );
+}
+
+/// The negative half: a WRONG quotient is refused.
+///
+/// `u = 2` makes the third hypothesis `2·2 = 5·1 + 1·1` read `4 = 6`, and
+/// `w = 3` makes the fourth read `6 = 4`. Without these the positive test
+/// above would pass for a `descentStep` whose hypotheses were vacuous or whose
+/// conclusion did not depend on `u` and `w`.
+#[test]
+fn a_wrong_quotient_is_refused_by_the_descent_step() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    assert!(
+        !admits_descent_instance(&mut d, 2, 13, 1, 5, 1, 1, 1, 2, 2, "descent_bad_u"),
+        "u = 2 does not satisfy 2*u = 5*1 + 1*1 and must be refused"
+    );
+    assert!(
+        !admits_descent_instance(&mut d, 2, 13, 1, 5, 1, 1, 1, 3, 3, "descent_bad_w"),
+        "w = 3 does not satisfy 2*w = 5*1 - 1*1 and must be refused"
+    );
+}
+
+/// `Int.modEq_descent_cross_terms` at the same worked instance: with `m = 2`,
+/// `a = 5`, `b = 1` and the balanced representatives `c = e = 1`, BOTH cross
+/// terms `ac+be = 6` and `ae−bc = 4` are divisible by `2`.
+///
+/// The theorem is applied for real — every hypothesis is `Eq.refl` over a
+/// congruence the kernel computes — and the reduction is checked separately in
+/// both directions, including at a `c` that is NOT congruent to `a`, where the
+/// first cross term becomes odd.
+#[test]
+fn the_cross_terms_are_divisible_by_the_multiplier() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    let two = int_num(&mut d, 2);
+    let five = int_num(&mut d, 5);
+    let one = int_num(&mut d, 1);
+    let zero = d.izero();
+
+    // The theorem, applied.
+    let hpos = {
+        let j = d.num(1);
+        pos_of_nat_succ(&mut d, j)
+    };
+    // Each `Eq.refl` has to be taken at the COMMON REDUCT of the congruence's
+    // two sides, not at either side: `ModEq 2 1 5` unfolds to
+    // `Eq Int (emod 1 2) (emod 5 2)`, both of which reduce to `1`, so the
+    // witness is `Eq.refl 1`. Taking it at `5` — or, for `h0` below, at
+    // `5*5 + 1*1` — does not check, which is how the first draft of this test
+    // failed.
+    let hc = d.irefl(one);
+    let he = d.irefl(one);
+    let h0 = d.irefl(zero);
+    let applied = d.const_app(
+        p.mod_eq_descent_cross_terms,
+        &[two, five, one, one, one, hpos, hc, he, h0],
+    );
+    let ty = {
+        let ac = d.imul(five, one);
+        let be = d.imul(one, one);
+        let first = d.iadd(ac, be);
+        let ae = d.imul(five, one);
+        let bc = d.imul(one, one);
+        let second = d.isub(ae, bc);
+        let left = imodeq(&mut d, two, first, zero);
+        let right = imodeq(&mut d, two, second, zero);
+        d.and(left, right)
+    };
+    let name = probe_name(&mut d, "cross_terms_two_five_one");
+    assert!(
+        d.declare_theorem(name, ty, applied).is_ok(),
+        "the cross terms at (m,a,b,c,e) = (2,5,1,1,1) must both be 0 mod 2"
+    );
+
+    // And the arithmetic, by reduction, in both directions.
+    let zero_res = d.iemod(zero, two);
+    let good = {
+        let ac = d.imul(five, one);
+        let be = d.imul(one, one);
+        let sum = d.iadd(ac, be);
+        d.iemod(sum, two)
+    };
+    assert!(
+        d.kernel().def_eq(good, zero_res),
+        "5*1 + 1*1 = 6 must be 0 mod 2"
+    );
+    // `c = 0` is NOT congruent to `a = 5` mod 2, and the first cross term
+    // becomes `5*0 + 1*1 = 1`, which is odd.
+    let bad = {
+        let ac = d.imul(five, zero);
+        let be = d.imul(one, one);
+        let sum = d.iadd(ac, be);
+        d.iemod(sum, two)
+    };
+    assert!(
+        !d.kernel().def_eq(bad, zero_res),
+        "5*0 + 1*1 = 1 must NOT be 0 mod 2 — otherwise the congruence \
+         hypotheses are doing no work"
+    );
+}
+
 /// Every declaration this module adds is present AND has an empty axiom
 /// footprint.
 ///
@@ -460,6 +651,23 @@ fn every_two_squares_declaration_is_present_and_axiom_free() {
             "Int.not_isSumOfTwoSquares_of_modEq_four_three",
             p.not_is_sum_of_two_squares_of_mod_eq_four_three,
         ),
+        ("Int.zero_add", p.zero_add),
+        ("Int.sub_self", p.sub_self),
+        ("Int.add_sub_cancel_right", p.add_sub_cancel_right),
+        ("Int.mul_sub_mul_comm", p.mul_sub_mul_comm),
+        ("Int.eq_of_sub_eq_zero", p.eq_of_sub_eq_zero),
+        ("Int.mul_ne_zero", p.mul_ne_zero),
+        (
+            "Int.mul_left_cancel_of_ne_zero",
+            p.mul_left_cancel_of_ne_zero,
+        ),
+        (
+            "Int.modEq_descent_cross_terms",
+            p.mod_eq_descent_cross_terms,
+        ),
+        ("Int.mul_mul_of_mul_mul", p.mul_mul_of_mul_mul),
+        ("Int.sq_add_sq_of_mul_left", p.sq_add_sq_of_mul_left),
+        ("Int.descentStep", p.descent_step),
     ];
     for (label, name) in names {
         assert!(
