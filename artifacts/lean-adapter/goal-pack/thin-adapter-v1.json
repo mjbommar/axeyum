@@ -3,7 +3,7 @@
   "description": "L4 phase C3 preregistered goal pack (docs/plan/library-artifact-compatibility-roadmap-2026-08-30.md). One goal (Nat.add_comm, a C2 credited root) and eight synthetic sidecar responses, one per exit-criterion category. crates/axeyum-lean-import/tests/thin_lean_adapter_goal_pack.rs is the ONLY writer of the committed result artifact this file's population is checked against (artifacts/lean-adapter/results/thin-adapter-v1.result.json); scripts/check-lean-adapter.py validates that result, never recomputes it.",
   "subject": "Nat.add_comm",
   "subject_source_population": "artifacts/checked-interchange/populations/credited-roots-v1.json",
-  "borrowed_from": "Nat.le_refl",
+  "borrowed_from": "derived: the first credited root, in population order, whose exported closure does not name the subject",
   "borrowed_from_source_population": "artifacts/checked-interchange/populations/credited-roots-v1.json",
   "lean_version": "4.30.0",
   "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
@@ -37,6 +37,11 @@
     "wrong_environment": "wrong-environment",
     "mutated_proof": "mutated-proof"
   },
-  "categories_that_must_invoke_real_lean": ["success", "wrong_goal", "mutated_proof"],
-  "note": "success/wrong_goal/mutated_proof all route a real NDJSON closure through scripts/lean/replay-lean4export.lean and an independent axeyum_lean_import::import_ndjson reimport -- the SAME two paths C2 (ADR-0915) validated, never a second parser or closure mechanism. unknown/timeout/unsupported/malformed_response/wrong_environment are decided from the sidecar response envelope alone, before any Lean invocation, by axeyum_lean_import::thin_adapter::pre_lean_verdict."
+  "categories_that_must_invoke_real_lean": [
+    "success",
+    "wrong_goal",
+    "mutated_proof"
+  ],
+  "note": "success/wrong_goal/mutated_proof all route a real NDJSON closure through scripts/lean/replay-lean4export.lean and an independent axeyum_lean_import::import_ndjson reimport -- the SAME two paths C2 (ADR-0915) validated, never a second parser or closure mechanism. unknown/timeout/unsupported/malformed_response/wrong_environment are decided from the sidecar response envelope alone, before any Lean invocation, by axeyum_lean_import::thin_adapter::pre_lean_verdict.",
+  "borrowed_from_rule": "2026-09-05 (coordinator): `Nat.le_refl` was the fixed borrowed root from 2026-08-30 until its own closure grew to contain `Nat.add_comm` (re-proved through the order lemmas, 32 declarations), at which point the wrong-goal stream became an honest, Lean-accepted proof of the subject and the grader's `accepted` was correct; the test's guard against this was vacuous. The borrowed root is now chosen at run time and recorded per run in the result artifact's `borrowed` field."
 }
