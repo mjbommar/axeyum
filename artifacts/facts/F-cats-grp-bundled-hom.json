@@ -8,7 +8,7 @@
     "statement": "def CatS.grp : CatS.CategoryLarge",
     "fragment": "none",
     "free_symbols": [],
-    "kernel_theorem": "CatS.isGrpHom_congr"
+    "kernel_theorem": "CatS.grp"
   },
   "epistemic_status": "proved",
   "proof_route": "kernel-lean",
