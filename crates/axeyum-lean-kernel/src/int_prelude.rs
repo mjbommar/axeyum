@@ -134,6 +134,7 @@ mod sub_nat_nat;
 mod sum;
 mod sum_maps;
 mod two_sided_induction;
+mod two_squares;
 mod wilson;
 
 use ops::IntDev;
@@ -1968,6 +1969,36 @@ pub struct IntPrelude {
     /// primitive root are pairwise incongruent, i.e. they enumerate the
     /// `totient n` units without repetition.
     pub primitive_root_pow_injective: NameId,
+    // -- `two-squares` lane (W3-10, ADR-1633): `int_prelude/two_squares.rs` --
+    /// `Int.IsSumOfTwoSquares : Int -> Prop :=`
+    /// `  fun n => Exists Int (fun a => Exists Int (fun b =>`
+    /// `    Eq Int n (add (mul a a) (mul b b))))` -- the double existential
+    /// every statement in the two-squares family quantifies over, named once
+    /// so `shape_search --const` retrieves the family. See
+    /// `two_squares.rs`'s module doc.
+    pub is_sum_of_two_squares: NameId,
+    /// `Int.isSumOfTwoSquares_intro : forall n a b,`
+    /// `  Eq Int n (add (mul a a) (mul b b)) -> IsSumOfTwoSquares n` -- the
+    /// named introduction rule for [`Self::is_sum_of_two_squares`].
+    pub is_sum_of_two_squares_intro: NameId,
+    /// `Int.brahmaguptaFibonacci : forall a b c d,`
+    /// `  Eq Int (mul (add (mul a a) (mul b b)) (add (mul c c) (mul d d)))`
+    /// `    (add (mul (sub (mul a c) (mul b d)) (sub (mul a c) (mul b d)))`
+    /// `         (mul (add (mul a d) (mul b c)) (add (mul a d) (mul b c))))`
+    /// -- **the Brahmagupta-Fibonacci identity**,
+    /// `(a^2+b^2)(c^2+d^2) = (ac-bd)^2 + (ad+bc)^2`. Emitted by
+    /// `ring::int::declare` (ADR-1582), never written by hand.
+    pub brahmagupta_fibonacci: NameId,
+    /// `Int.brahmaguptaFibonacci' : forall a b c d,`
+    /// `  (a^2+b^2)(c^2+d^2) = (ac+bd)^2 + (ad-bc)^2` -- the conjugate form,
+    /// and the one Fermat's descent consumes (both cross terms are divisible
+    /// by `m` when `c = a` and `d = b` modulo `m`). Also `ring::int`.
+    pub brahmagupta_fibonacci_swap: NameId,
+    /// `Int.isSumOfTwoSquares_mul : forall m n, IsSumOfTwoSquares m ->`
+    /// `  IsSumOfTwoSquares n -> IsSumOfTwoSquares (mul m n)` -- the
+    /// composition law, i.e. [`Self::brahmagupta_fibonacci`] read as a
+    /// closure property of [`Self::is_sum_of_two_squares`].
+    pub is_sum_of_two_squares_mul: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2388,6 +2419,13 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         dvd_gcd_mul_gcd_iff_dvd_mul: child(kernel, "dvd_gcd_mul_gcd_iff_dvd_mul"),
         mod_eq_cancel_left_div_gcd: child(kernel, "mod_eq_cancel_left_div_gcd"),
         mod_eq_cancel_right_div_gcd: child(kernel, "mod_eq_cancel_right_div_gcd"),
+
+        // `two-squares` lane -- see the matching struct-field block above.
+        is_sum_of_two_squares: child(kernel, "IsSumOfTwoSquares"),
+        is_sum_of_two_squares_intro: child(kernel, "isSumOfTwoSquares_intro"),
+        brahmagupta_fibonacci: child(kernel, "brahmaguptaFibonacci"),
+        brahmagupta_fibonacci_swap: child(kernel, "brahmaguptaFibonacci'"),
+        is_sum_of_two_squares_mul: child(kernel, "isSumOfTwoSquares_mul"),
     }
 }
 
@@ -2776,6 +2814,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // (`euler_assembly.rs`) and `Nat.lnp_bounded_search`/`Nat.div_mod_exists`
         // from the Nat prelude.
         mult_order::declare_all(&mut d)?;
+        // `two-squares` lane (W3-10, ADR-1633): sums of two squares. Placed
+        // last -- it composes `ring::int` (`Int.add`/`mul`/`sub` laws),
+        // `parity.rs`'s `Int.Even`/`Int.Odd` and their `ediv` extractors, and
+        // `modeq_family.rs`'s `Int.modEq_add_mul_left`.
+        two_squares::declare_two_squares_all(&mut d)?;
         Ok(prelude)
     })();
     match built {
@@ -2811,3 +2854,6 @@ mod cas_pratt_bridge_tests;
 
 #[cfg(test)]
 mod cas_crt_bridge_tests;
+
+#[cfg(test)]
+mod two_squares_tests;
