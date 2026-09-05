@@ -529,6 +529,15 @@ facts:
     # all. Exact, not a token screen: 362 of 374 mirrors are hash-pinned by a
     # preregistered catalog.
     python3 scripts/check-mirror-statement-fidelity.py
+    # The carrier correspondence ledger (docs/math-department/14-lean-lang.md
+    # Next Ten item 4): one row per (Axeyum carrier, Mathlib counterpart)
+    # pair, graded from a closed enum, with a witness theorem pair resolved
+    # against the live kernel projection. Before this gate, nothing recorded
+    # per-carrier whether a shared-looking theorem (CReal vs Mathlib's Real,
+    # a Bishop setoid vs a classical Cauchy quotient) is the same statement.
+    python3 -m unittest scripts.tests.test_check_carrier_correspondence
+    python3 scripts/check-carrier-correspondence.py --check
+    python3 scripts/gen-carrier-correspondence-md.py --check
     # The ledger's `depends_on` graph — the arrow CLAUDE.md's flywheel calls
     # "the DAG picks the next goal". 60% of facts are isolated, so proving one
     # usually unlocks nothing; the ratchet keeps that from getting worse.
@@ -2482,3 +2491,112 @@ declaration-spec:
 proof-plan:
     python3 scripts/check-proof-plan.py
     python3 scripts/tests/test-proof-plan-check.py
+
+# Profiling recipes (docs/plan/global/20-next-actions.md A12; 2026-09-05
+# performance review recommendation 8,
+# docs/research/11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md).
+# Both build target/release/examples/smtcomp_cli through
+# scripts/cargo-serialized.sh -- NOT a bare `cargo build`, because concurrent
+# lane builds have twice taken a dev box down (CLAUDE.md multi-agent hygiene).
+# That wrapper takes a HOST-WIDE flock, so if this recipe is slow, you are
+# measuring the queue behind another lane's job, not the profiled solve --
+# see the "Profiling" section of
+# docs/contributor-guide/measurement-hazards.md and never read a profiling
+# recipe's own wall-clock total as a timing result. The solve itself is
+# pinned to performance cores 0-7 with `taskset` (this host's hybrid CPU
+# is 1.84x slower on the E-cores unpinned, per
+# docs/research/08-planning/frontier-ratchet-reference-frame.md); adjust the
+# core list to your host's P-core count if it differs. Output goes under
+# bench-results/local/profiles/ (gitignored -- see `/bench-results/local/`
+# in .gitignore).
+#
+# Absence on `$PATH` is not absence: `command -v` alone missed `lean` on a
+# host that had it (elan does not touch PATH), so both recipes also check
+# `~/.cargo/bin` directly before declaring a tool missing.
+profile-samply smt2:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SAMPLY=""
+    if command -v samply >/dev/null 2>&1; then
+        SAMPLY="$(command -v samply)"
+    elif [ -x "$HOME/.cargo/bin/samply" ]; then
+        SAMPLY="$HOME/.cargo/bin/samply"
+    fi
+    if [ -z "$SAMPLY" ]; then
+        echo "samply not found on \$PATH or in ~/.cargo/bin -- install with: cargo install samply" >&2
+        exit 1
+    fi
+    if [ ! -f "{{ smt2 }}" ]; then
+        echo "no such file: {{ smt2 }}" >&2
+        exit 2
+    fi
+    scripts/cargo-serialized.sh build --release -p axeyum-bench --example smtcomp_cli
+    mkdir -p bench-results/local/profiles
+    stamp="$(basename "{{ smt2 }}" .smt2)-samply-$(date -u +%Y%m%dT%H%M%SZ)"
+    out="bench-results/local/profiles/${stamp}.json.gz"
+    taskset -c 0-7 "$SAMPLY" record --save-only -o "$out" -- target/release/examples/smtcomp_cli "{{ smt2 }}"
+    echo "samply profile saved: $out (open with: samply load $out)"
+
+profile-perf smt2:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v perf >/dev/null 2>&1; then
+        echo "perf not found on \$PATH -- install with: sudo apt install linux-tools-common linux-tools-\$(uname -r)" >&2
+        exit 1
+    fi
+    if [ ! -f "{{ smt2 }}" ]; then
+        echo "no such file: {{ smt2 }}" >&2
+        exit 2
+    fi
+    FLAMEGRAPH=""
+    if command -v flamegraph >/dev/null 2>&1; then
+        FLAMEGRAPH="$(command -v flamegraph)"
+    elif [ -x "$HOME/.cargo/bin/flamegraph" ]; then
+        FLAMEGRAPH="$HOME/.cargo/bin/flamegraph"
+    fi
+    scripts/cargo-serialized.sh build --release -p axeyum-bench --example smtcomp_cli
+    mkdir -p bench-results/local/profiles
+    stamp="$(basename "{{ smt2 }}" .smt2)-perf-$(date -u +%Y%m%dT%H%M%SZ)"
+    perf_data="bench-results/local/profiles/${stamp}.perf.data"
+    taskset -c 0-7 perf record -g -o "$perf_data" -- target/release/examples/smtcomp_cli "{{ smt2 }}"
+    echo "perf record saved: $perf_data (inspect with: perf report -i $perf_data)"
+    if [ -n "$FLAMEGRAPH" ]; then
+        svg="bench-results/local/profiles/${stamp}.svg"
+        taskset -c 0-7 "$FLAMEGRAPH" --perfdata "$perf_data" -o "$svg" 2>&1 || {
+            echo "flamegraph found at $FLAMEGRAPH but rendering failed -- $perf_data is still usable with 'perf report'" >&2
+        }
+        [ -f "$svg" ] && echo "flamegraph saved: $svg"
+    else
+        echo "flamegraph not found on \$PATH or in ~/.cargo/bin -- install with: cargo install flamegraph (renders an SVG from \$perf_data; perf.data alone is still usable with 'perf report')" >&2
+    fi
+# Micro-benchmarks (2026-09-05 design review, §4 item 3: no crate had a
+# `benches/` directory, no timing ratchet exists, and `CdclT` had never been
+# measured against the native proof-producing CDCL core on identical input).
+# `criterion` (pure Rust, MIT/Apache-2.0, dev-dependency only) with
+# `harness = false` targets under six crates. `taskset -c 0-7` pins to the
+# performance-core range the frontier-ratchet note already established for
+# this fleet (docs/research/08-planning/frontier-ratchet-reference-frame.md);
+# on a host without that core layout or without `taskset`, drop the prefix.
+# Method, per-bench medians, host/load/commit, and the CdclT-vs-native-core
+# ratio are recorded in
+# docs/research/08-planning/microbenchmarks-2026-09-05.md — append new
+# numbers there rather than trusting a rerun's raw terminal output.
+bench-criterion-axeyum-solver:
+    taskset -c 0-7 cargo bench -p axeyum-solver --features bench-internals --bench cdclt_propagate --bench simplex_pivot
+
+bench-criterion-axeyum-cnf:
+    taskset -c 0-7 cargo bench -p axeyum-cnf --bench proof_sat_solve --bench tseitin_encode
+
+bench-criterion-axeyum-aig:
+    taskset -c 0-7 cargo bench -p axeyum-aig --bench and_unique_table
+
+bench-criterion-axeyum-egraph:
+    taskset -c 0-7 cargo bench -p axeyum-egraph --bench congruence_chain
+
+bench-criterion-axeyum-ir:
+    taskset -c 0-7 cargo bench -p axeyum-ir --bench arena_intern
+
+# Runs every micro-benchmark above, pinned. Each per-crate recipe stays
+# independently runnable (a lane touching only one crate's hot path should
+# not have to run all six).
+bench-criterion: bench-criterion-axeyum-solver bench-criterion-axeyum-cnf bench-criterion-axeyum-aig bench-criterion-axeyum-egraph bench-criterion-axeyum-ir

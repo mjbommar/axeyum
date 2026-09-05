@@ -1,8 +1,9 @@
 //! The term arena: interned storage plus typed, sort-checked builders.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use crate::error::IrError;
+use crate::fast_map::FastMap;
 use crate::sort::{ArraySortKey, MAX_BV_WIDTH, Sort, SortId, mask};
 use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
 
@@ -24,23 +25,23 @@ use crate::term::{ConstructorId, DatatypeId, FuncId, Op, SymbolId, TermId, TermN
 #[derive(Debug, Default, Clone)]
 pub struct TermArena {
     symbols: Vec<(String, Sort)>,
-    symbol_lookup: HashMap<String, SymbolId>,
+    symbol_lookup: FastMap<String, SymbolId>,
     /// Name → id map for symbols minted by internal reductions
     /// ([`TermArena::declare_internal`]). Deliberately **disjoint** from
     /// `symbol_lookup`: the same name string may appear in both maps as two
     /// distinct [`SymbolId`]s (one user, one internal). This split is a
     /// soundness firewall — see [`TermArena::declare_internal`].
-    internal_lookup: HashMap<String, SymbolId>,
+    internal_lookup: FastMap<String, SymbolId>,
     functions: Vec<FuncDecl>,
-    function_lookup: HashMap<String, FuncId>,
+    function_lookup: FastMap<String, FuncId>,
     /// Disjoint namespace for total functions introduced by reductions (for
     /// example SMT-LIB-underspecified FP conversions).
-    internal_function_lookup: HashMap<String, FuncId>,
+    internal_function_lookup: FastMap<String, FuncId>,
     uninterpreted_sorts: Vec<String>,
-    uninterpreted_sort_lookup: HashMap<String, SortId>,
+    uninterpreted_sort_lookup: FastMap<String, SortId>,
     nodes: Vec<TermNode>,
     sorts: Vec<Sort>,
-    intern: HashMap<TermNode, TermId>,
+    intern: FastMap<TermNode, TermId>,
     datatypes: Vec<DatatypeInfo>,
     constructors: Vec<ConstructorInfo>,
     /// User-supplied instantiation triggers (SMT-LIB `:pattern`) for quantifier

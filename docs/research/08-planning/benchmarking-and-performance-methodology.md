@@ -52,6 +52,42 @@ so backend agreement is a genuine cross-check rather than a comparison against
 another solver. The [consumer-scenario-models note](../07-verification/consumer-scenario-models.md)
 records the contract and the first measured baselines.
 
+### Micro tier: function-level benchmarks (2026-09-05)
+
+The "Micro" row above is a corpus tier: whole-query SMT-LIB files run through
+`axeyum-bench` (`just bench-micro`). Until 2026-09-05 that was the only
+"micro" instrument in the tree — the
+[2026-09-05 design review](../11-design-review/2026-09-05-sat-smt-performance-and-architecture-review.md)
+§2.1 measured that no crate had a `benches/` directory and neither
+`criterion`, `divan`, nor `#[bench]` appeared anywhere, so a per-function
+timing regression (a slower Tseitin pass, a slower AND-node insert, a slower
+CDCL(T) propagate loop) was invisible until it showed up in a whole-query
+PAR-2 number, if it ever did.
+
+A second, function-level micro tier now exists alongside the corpus one:
+`criterion` (`harness = false`) targets under `benches/` in `axeyum-aig`,
+`axeyum-cnf` (two targets), `axeyum-egraph`, `axeyum-ir`, and `axeyum-solver`
+(two targets, gated behind the bench-only `bench-internals` feature — see
+`axeyum_solver::bench_internals`'s doc comment), covering the six hot paths
+the design review's §4 item 3 named: `CdclT::solve`, the native
+`solve_with_drat_proof` core, `tseitin_encode`, AIG AND-node construction,
+`Incremental` simplex feasibility, and e-graph `merge`/`explain`, plus the
+term-arena intern table (named `arena_intern`, kept separate because it is
+also the before/after instrument for a pending hasher swap — D5 in the
+design review). Every bench runs over a fixed, committed or
+deterministically-seeded input so runs are comparable release to release.
+`just bench-criterion` runs all of them pinned to the performance-core range
+(`taskset -c 0-7`); `just bench-criterion-<crate>` runs one crate's targets.
+Method, per-bench medians, and the first cross-engine ratio (`CdclT::solve`
+vs. the native proof core, on byte-identical input) are recorded in
+[`microbenchmarks-2026-09-05.md`](microbenchmarks-2026-09-05.md).
+
+This tier does not yet gate anything — recommendation 1 in the design review
+(turn PAR-2 into a ratchet, reusing the `progress_frontier` machine
+calibration) applies here too and has not been built. A regression here is
+visible only to whoever reruns `just bench-criterion` and reads the numbers,
+same as every other pre-2026-09-05 timing artifact in `bench-results/`.
+
 ## Metrics
 
 - Wall time, PAR-2 over corpus, timeout count.

@@ -144,6 +144,7 @@ versioned artifacts (v14 and later) with `summary.par2_mean_s`, per-instance
 | `bench-results/frontier/*.json`, `progress_frontier.rs` | largest `N` decided in 4 s on five parametric families; machine calibration with `comparable` / `ratchetable` flags | five baselines, pinned 2026-08-25 |
 | `axeyum-scenarios` + `scenario_scaling` / `scenario_pipeline_report` | oracle-free workloads reporting typed `BvLayerStats` | example binaries, not gated |
 | 28 examples under `crates/axeyum-bench/examples/` | one-off profiles, probes, A/B tools (`preprocess_timing`, `cnf_core_bench`, `uf_pair_profile`, `xor_cdcl_probe`, …) | ad hoc |
+| `criterion` `benches/` (§4 item 3), `just bench-criterion[-<crate>]` | function-level timing for the six named hot paths (`CdclT::solve`, `solve_with_drat_proof`, `tseitin_encode`, `Aig::and`, `Incremental::check`, `EGraph::merge`/`explain`) plus `TermArena` interning (D5's before/after instrument) | added 2026-09-05, one loaded-host run each, not yet a ratchet — see [`microbenchmarks-2026-09-05.md`](../08-planning/microbenchmarks-2026-09-05.md) |
 
 Layer attribution has already answered one methodology question. On the p4dfa
 QF_BV family (`qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json`) the SAT
@@ -303,6 +304,18 @@ insertion-ordered map (`indexmap`) is a workspace dependency. The combination
 is slow on both sides for no determinism gain: `BTreeMap` in hot paths is a
 known constant-factor tax, and SipHash on the intern table is the other half
 of the same trade.
+
+*Measured 2026-09-05* (recommendation 6, scoped to `axeyum-ir` only): the
+intern table and six other lookup maps now use `rustc-hash`'s `FxHashMap`
+(`axeyum-ir/src/fast_map.rs`); the audit for this pass also found and fixed
+two live iteration-order determinism bugs (`Assignment::functions`/
+`real_div_zeros` returned raw hash order to callers). On a 16.8 MiB public
+QF_BV file the throughput delta was small and noisy under fleet load
+(pooled median ~2%, pooled min ~7% faster; see
+[2026-09-05-intern-table-hasher-measured.md](2026-09-05-intern-table-hasher-measured.md)),
+which does not by itself justify extending the sweep to `axeyum-solver`'s
+~470 hot-path maps — that needs recommendation 3's micro-benchmarks on a
+quiet host, not another CLI wall-clock reading.
 
 **D6. Inprocessing is off by default and is preprocessing.**
 `backend.rs:372` sets `cnf_inprocessing: false`; `sat_bv_backend.rs:232-245`

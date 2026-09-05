@@ -22,6 +22,18 @@ num-bigint = { version = "0.4" }
 num-rational = { version = "0.4", default-features = false, features = ["num-bigint"] }
 num-integer = { version = "0.1" }
 num-traits = { version = "0.2" }
+# Fast, seedless, deterministic hasher for the intern table and lookup maps
+# (D5 in the 2026-09-05 performance review); see src/fast_map.rs.
+rustc-hash = { workspace = true }
+
+[dev-dependencies]
+criterion.workspace = true
 
 [lints]
 workspace = true
+
+# Micro-benchmark (2026-09-05, design review §4 item 3); `harness = false`
+# hands control to `criterion`'s own main.
+[[bench]]
+name = "arena_intern"
+harness = false
