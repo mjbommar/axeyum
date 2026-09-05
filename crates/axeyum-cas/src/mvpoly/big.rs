@@ -189,6 +189,61 @@ impl BigPoly {
         self.terms.iter()
     }
 
+    // --- Budgeted arithmetic ------------------------------------------------
+    //
+    // The GCD's own use of this module needs no budget: its inputs are bounded
+    // by the `MvPoly`s it was handed. The zero-test fallback does, because it
+    // normalizes a caller's expression, and the bounded path's implicit budget
+    // -- it stops at the first coefficient that leaves `i128` -- is exactly what
+    // the unbounded ring removes. `(x+1)^100000` costs the bounded path 131
+    // multiplications before it declines and costs this ring the whole
+    // expansion. So these three take an explicit, caller-owned budget measured
+    // in monomial-pair products, and decline when it runs out.
+
+    /// `self · other`, charging `|self| · |other|` monomial-pair products
+    /// against `budget`; `None` when the budget cannot cover it (or on `u32`
+    /// exponent overflow). The cost is charged **before** the work is done, so
+    /// a decline is cheap.
+    pub(crate) fn mul_within(&self, other: &BigPoly, budget: &mut u64) -> Option<BigPoly> {
+        let cost = u64::try_from(self.terms.len())
+            .ok()?
+            .checked_mul(u64::try_from(other.terms.len()).ok()?)?;
+        if cost > *budget {
+            return None;
+        }
+        *budget -= cost;
+        self.mul(other)
+    }
+
+    /// `self + other`, charging `|other|` accumulations against `budget`.
+    pub(crate) fn add_within(&self, other: &BigPoly, budget: &mut u64) -> Option<BigPoly> {
+        let cost = u64::try_from(other.terms.len()).ok()?;
+        if cost > *budget {
+            return None;
+        }
+        *budget -= cost;
+        Some(self.add(other))
+    }
+
+    /// `self^exp` by binary exponentiation — `⌈log₂ exp⌉` squarings rather than
+    /// `exp` multiplications — with every product charged against `budget`.
+    /// `self^0` is `1` and costs nothing.
+    pub(crate) fn pow_within(&self, exp: u32, budget: &mut u64) -> Option<BigPoly> {
+        let mut result = BigPoly::one();
+        let mut base = self.clone();
+        let mut remaining = exp;
+        while remaining > 0 {
+            if remaining & 1 == 1 {
+                result = result.mul_within(&base, budget)?;
+            }
+            remaining >>= 1;
+            if remaining > 0 {
+                base = base.mul_within(&base, budget)?;
+            }
+        }
+        Some(result)
+    }
+
     /// A single-term polynomial; the zero polynomial when `coeff` is zero.
     fn single_term(mono: Monomial, coeff: BigInt) -> BigPoly {
         let mut terms = BTreeMap::new();
@@ -357,28 +412,6 @@ impl BigPoly {
     /// Exact negation.
     pub(crate) fn neg(&self) -> BigPoly {
         BigPoly::zero().sub(self)
-    }
-
-    /// `self` raised to a non-negative integer power, or `None` on `u32`
-    /// exponent overflow inside a monomial product. `self^0` is `1`.
-    ///
-    /// Binary exponentiation: `⌈log₂ exp⌉` squarings rather than `exp`
-    /// multiplications, which matters because these are the coefficients that
-    /// outgrew `i128` in the first place.
-    pub(crate) fn pow(&self, exp: u32) -> Option<BigPoly> {
-        let mut result = BigPoly::one();
-        let mut base = self.clone();
-        let mut remaining = exp;
-        while remaining > 0 {
-            if remaining & 1 == 1 {
-                result = result.mul(&base)?;
-            }
-            remaining >>= 1;
-            if remaining > 0 {
-                base = base.mul(&base)?;
-            }
-        }
-        Some(result)
     }
 
     /// Exact polynomial multiplication, or `None` on `u32` exponent overflow.

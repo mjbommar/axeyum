@@ -2504,24 +2504,28 @@ impl BigRatFunc {
         }
     }
 
-    /// `self + other = (a·d + c·b) / (b·d)`; `None` only on `u32` exponent
-    /// overflow (coefficients cannot overflow here).
-    fn add(&self, other: &BigRatFunc) -> Option<BigRatFunc> {
+    /// `self + other = (a·d + c·b) / (b·d)`; `None` when `budget` runs out or on
+    /// `u32` exponent overflow (coefficients cannot overflow here).
+    fn add(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
         Some(BigRatFunc {
-            num: self.num.mul(&other.den)?.add(&other.num.mul(&self.den)?),
-            den: self.den.mul(&other.den)?,
+            num: self
+                .num
+                .mul_within(&other.den, budget)?
+                .add_within(&other.num.mul_within(&self.den, budget)?, budget)?,
+            den: self.den.mul_within(&other.den, budget)?,
         })
     }
 
     /// `self · other = (a·c) / (b·d)`.
-    fn mul(&self, other: &BigRatFunc) -> Option<BigRatFunc> {
+    fn mul(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
         Some(BigRatFunc {
-            num: self.num.mul(&other.num)?,
-            den: self.den.mul(&other.den)?,
+            num: self.num.mul_within(&other.num, budget)?,
+            den: self.den.mul_within(&other.den, budget)?,
         })
     }
 
-    /// `−self = (−a) / b`.
+    /// `−self = (−a) / b`. Negation rewrites coefficients in place and costs no
+    /// products, so it is not charged.
     fn neg(&self) -> BigRatFunc {
         BigRatFunc {
             num: self.num.neg(),
@@ -2530,25 +2534,42 @@ impl BigRatFunc {
     }
 
     /// `self^exp`.
-    fn pow(&self, exp: u32) -> Option<BigRatFunc> {
+    fn pow(&self, exp: u32, budget: &mut u64) -> Option<BigRatFunc> {
         Some(BigRatFunc {
-            num: self.num.pow(exp)?,
-            den: self.den.pow(exp)?,
+            num: self.num.pow_within(exp, budget)?,
+            den: self.den.pow_within(exp, budget)?,
         })
     }
 
     /// `self / other = (a·d) / (b·c)`; `None` on a division by the identically
     /// zero function, exactly as [`RatFunc::div`] declines.
-    fn div(&self, other: &BigRatFunc) -> Option<BigRatFunc> {
+    fn div(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
         if other.num.is_zero() {
             return None;
         }
         Some(BigRatFunc {
-            num: self.num.mul(&other.den)?,
-            den: self.den.mul(&other.num)?,
+            num: self.num.mul_within(&other.den, budget)?,
+            den: self.den.mul_within(&other.num, budget)?,
         })
     }
 }
+
+/// The unbounded fallback's **explicit work budget**, in monomial-pair products,
+/// for one whole zero-test (both sides plus the cross-multiplication).
+///
+/// The bounded path never needed one: it stops at the first coefficient that
+/// leaves `i128`, so `(x+1)^100000` costs it 131 multiplications and then
+/// declines. Removing the coefficient bound removes that accident too, and an
+/// unbounded ring would happily spend minutes and gigabytes forming an
+/// expansion nobody can use. Declining above a budget is honest —
+/// [`ZeroTest::Unknown`] is a first-class result — and the crate's determinism
+/// promise requires the limit be **explicit** rather than emergent.
+///
+/// Sized against the measurement, not guessed: the largest identity in the
+/// fallback's own test suite, `(x+1)^100·(x+1)^100 = (x+1)^200`, costs about
+/// 15,000 products. A budget of a million is ~65× that, and bounds a decline to
+/// roughly a million big-integer multiply-accumulates.
+const BIG_FALLBACK_WORK_BUDGET: u64 = 1_000_000;
 
 /// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
 /// over unbounded integers.
@@ -2563,7 +2584,10 @@ impl BigRatFunc {
 /// variables does not prove `≠`. Declining is the honest slice: the fragment
 /// covered here — variables, rational constants, `+`, `−`, `×`, `÷`, integer
 /// powers — is exactly the one where no fold can apply.
-fn normalize_rational_big(expr: &CasExpr) -> Option<BigRatFunc> {
+///
+/// Every product is charged against `budget`; see [`BIG_FALLBACK_WORK_BUDGET`]
+/// for why an unbounded ring needs an explicit one.
+fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<BigRatFunc> {
     match expr {
         CasExpr::Const(r) => Some(BigRatFunc {
             num: BigPoly::constant(BigInt::from(r.numerator())),
@@ -2575,22 +2599,33 @@ fn normalize_rational_big(expr: &CasExpr) -> Option<BigRatFunc> {
         CasExpr::Add(terms) => {
             let mut acc = BigRatFunc::from_poly(BigPoly::zero());
             for t in terms {
-                acc = acc.add(&normalize_rational_big(t)?)?;
+                acc = acc.add(&normalize_rational_big_within(t, budget)?, budget)?;
             }
             Some(acc)
         }
         CasExpr::Mul(factors) => {
             let mut acc = BigRatFunc::from_poly(BigPoly::one());
             for f in factors {
-                acc = acc.mul(&normalize_rational_big(f)?)?;
+                acc = acc.mul(&normalize_rational_big_within(f, budget)?, budget)?;
             }
             Some(acc)
         }
-        CasExpr::Neg(inner) => Some(normalize_rational_big(inner)?.neg()),
-        CasExpr::Div(u, w) => normalize_rational_big(u)?.div(&normalize_rational_big(w)?),
-        CasExpr::Pow(base, exp) => normalize_rational_big(base)?.pow(*exp),
+        CasExpr::Neg(inner) => Some(normalize_rational_big_within(inner, budget)?.neg()),
+        CasExpr::Div(u, w) => normalize_rational_big_within(u, budget)?
+            .div(&normalize_rational_big_within(w, budget)?, budget),
+        CasExpr::Pow(base, exp) => normalize_rational_big_within(base, budget)?.pow(*exp, budget),
         CasExpr::Unary(..) => None,
     }
+}
+
+/// [`normalize_rational_big_within`] with a fresh [`BIG_FALLBACK_WORK_BUDGET`].
+///
+/// Used where one expression is normalized on its own; [`equal_core_unbounded`]
+/// shares a single budget across both sides and the cross-multiplication
+/// instead, because that is the unit of work a caller actually asked for.
+fn normalize_rational_big(expr: &CasExpr) -> Option<BigRatFunc> {
+    let mut budget = BIG_FALLBACK_WORK_BUDGET;
+    normalize_rational_big_within(expr, &mut budget)
 }
 
 /// A [`BigPoly`] as a [`MultiPoly`], or `None` when a coefficient does not fit
@@ -2653,10 +2688,19 @@ fn multipoly_from_big(poly: &BigPoly) -> Option<MultiPoly> {
 /// from ordinary complex work. Both are declined rather than reasoned about.
 /// Neither guard applies to the equality branch, where zero is zero.
 fn equal_core_unbounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
-    let (Some(ra), Some(rb)) = (normalize_rational_big(a), normalize_rational_big(b)) else {
+    // One budget for the whole test: both normal forms and the
+    // cross-multiplication. See `BIG_FALLBACK_WORK_BUDGET`.
+    let mut budget = BIG_FALLBACK_WORK_BUDGET;
+    let (Some(ra), Some(rb)) = (
+        normalize_rational_big_within(a, &mut budget),
+        normalize_rational_big_within(b, &mut budget),
+    ) else {
         return ZeroTest::Unknown;
     };
-    let (Some(ad), Some(cb)) = (ra.num.mul(&rb.den), rb.num.mul(&ra.den)) else {
+    let (Some(ad), Some(cb)) = (
+        ra.num.mul_within(&rb.den, &mut budget),
+        rb.num.mul_within(&ra.den, &mut budget),
+    ) else {
         return ZeroTest::Unknown;
     };
     let difference = ad.sub(&cb);
@@ -29802,6 +29846,10 @@ mod exact_positivity_tests {
 ///   is available; the *certificate* is not, and `ZeroTest::Certified` promises
 ///   a certificate. Reported `Unknown`.
 ///   (`refutation_whose_witness_exceeds_i128_declines`)
+/// - **Anything past [`BIG_FALLBACK_WORK_BUDGET`].** Removing the coefficient
+///   bound also removes the implicit resource bound it was providing, so the
+///   fallback carries an explicit one.
+///   (`work_beyond_the_budget_declines_instead_of_expanding_without_bound`)
 #[cfg(test)]
 mod bignum_overflow_fallback {
     use super::*;
@@ -30013,6 +30061,29 @@ mod bignum_overflow_fallback {
                 ZeroTest::Certified { equal: true, .. }
             ),
             "positive control: the identity holds and certifies below the wall"
+        );
+    }
+
+    #[test]
+    fn work_beyond_the_budget_declines_instead_of_expanding_without_bound() {
+        // `(x+1)^4096` is not a hard question -- it is a large answer. The
+        // bounded path never has to say so, because it stops at the first
+        // coefficient outside `i128` (degree 132) and declines after a hundred
+        // or so cheap multiplications. The unbounded ring has no such accident
+        // to save it, so the budget is what makes the decline explicit.
+        let huge = binom(4096);
+        assert!(
+            matches!(equal(&huge, &huge), ZeroTest::Unknown),
+            "work past the budget must decline, not run to completion"
+        );
+        // Positive control: the same shape at a size the budget covers, spelled
+        // two different ways so it is a real identity rather than a `refl`.
+        assert!(
+            matches!(
+                equal(&CasExpr::Mul(vec![binom(100), binom(100)]), &binom(200)),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "the budget must not be so small that the measured cases decline"
         );
     }
 
