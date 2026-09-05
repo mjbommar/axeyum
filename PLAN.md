@@ -177,6 +177,7 @@ now. Nothing was deleted.
 | 2026-09-05 | `066a39659` | docs(conic): ADR-1641, three facts, lane status, regenerated Python mirror (cpoint=205, 56 in the conic registry) |
 | 2026-09-05 | `950d0adfb` | chore(plan): regenerate PLAN.md with the conics lane block |
 | 2026-09-05 | `d8ac6a1b5` | chore(ledger): regenerate the production provenance ledger; merge hygiene PASS |
+| 2026-09-05 | `8341545f5` | merge main (picks up `cc8cb0861`, the MetricProdNames::all rename); five generated files reconciled by regeneration; post-merge suite 82 passed, hygiene PASS |
 | 2026-09-05 | frame-carrier | `7e8fc512e` — `Top.Frame`, a sixteen-field pointfree topological carrier with a countable join, its nine derived generic theorems, the open-ball frame of ℝ (`Top.Opens`, `Top.ballFrame`), and the point lemmas; 53 declarations, all axiom-free, 11 of 11 tests |
 | 2026-09-05 | frame-carrier | `c4754b326` — `top_frame_theorem_inventory` (exit status depends on both an absent filter and a nonempty footprint), and `Top.MemBall`/`Top.MemOpen` folded into the three statements that had spelled them out |
 | 2026-09-05 | frame-carrier | `2db998539` — ADR-1643, four facts, the `top` group `shape_search` was blind to, and the repair of two duplicated "keep both sides" lines in `shape_search` |
@@ -46166,6 +46167,25 @@ sit beside the term builders in the file with a comment saying so.
   `ConicNames` has no `pub fn all` (0 matches). `metric_prod.rs` is already
   on `main` (`c3249653d`), so this red predates the branch; not fixed here,
   because it is another lane's file.
+- `python3 scripts/check-kernel-trusted-core.py` — **exit 1 before the second
+  merge of `main`, exit 0 after**, and the failure was never this lane's:
+  `FAIL D: file(s) joined the trusted core: ['metric_prod.rs']`. `conic.rs`
+  appears nowhere in the checker's output (0 matches) and `ConicNames` has no
+  `pub fn all` (0 matches) — the guard fires on a `Names` struct whose `all()`
+  puts its file on the path to an admitted theorem. `main` fixed it in
+  `cc8cb0861` ("rename MetricProdNames::all so the product-metric file leaves
+  the trusted closure"), which landed AFTER this lane's first merge; the
+  second merge (`8341545f5`) picked it up and the checker now reports
+  `ok: 5 guards, 0 failures`.
+- **Post-merge re-verification** (the "two green branches can not compose"
+  rule), all after `8341545f5`: `cargo check --workspace --all-targets` exit 0
+  (1m11s); `…creal_point:: --test-threads=4` **82 passed; 0 failed**, 143.87s,
+  exit 0; `validate-facts.py` exit 0; `check-settled-fact-statements.py` PASS
+  (`settled=2624|drifted=0`); `check-merge-hygiene.sh` **PASS**, exit 0;
+  `cargo fmt --all --check` exit 0. The merge conflicted on five GENERATED
+  files only (`PLAN.md`, the ADR index, the shape census, the provenance
+  ledger, the settled-statement pins); each was resolved by taking `main`'s
+  side and re-running its generator, never by hand-editing a generated file.
 - **Did NOT run**: `just check` / `./scripts/check.sh` (the full aggregate
   gate). Each release build of this crate cost 3m17s–5m33s on a box at load
   16 with five other lanes queued behind the same `cargo-serialized` flock,
