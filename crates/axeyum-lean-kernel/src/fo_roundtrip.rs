@@ -102,7 +102,7 @@
 use crate::fo_code::{CodeNames, nadd, nsucc, numeral, pair_app};
 use crate::fo_syntax::{
     apply_all, arrow, gcongr, geq, geq_motive, grefl, gsymm, gtrans, gtransport, lam_fv, lams,
-    pi_fv,
+    pi_fv, pis,
 };
 use crate::{
     BinderInfo, Declaration, ExprId, FoDecodePrelude, FoSyntaxPrelude, KernelError, LevelId,
@@ -126,6 +126,17 @@ pub struct FoRoundTripPrelude {
     pub term_decode_code_at_size: NameId,
     /// `FO.Formula.decode_code_at_size : Π p, Eq FO.Formula (decodeAux (size p) (code p)) p`.
     pub formula_decode_code_at_size: NameId,
+    /// `FO.Code.substCodeAux : Nat -> Nat -> Nat -> Nat -> Nat` — the
+    /// fuel-explicit `FO.Code.substCode`.
+    pub subst_code_aux: NameId,
+    /// `FO.Code.substCodeAux_commutes` — the commuting lemma.
+    pub subst_code_aux_commutes: NameId,
+    /// `FO.Code.isFormulaCodeAux : Nat -> Nat -> Bool` — the fuel-explicit
+    /// `FO.Code.isFormulaCode`.
+    pub is_formula_code_aux: NameId,
+    /// `FO.Code.isFormulaCodeAux_code : Π p g, Eq Bool (isFormulaCodeAux
+    /// (Nat.add g (size p)) (code p)) Bool.true`.
+    pub is_formula_code_aux_code: NameId,
 }
 
 /// What one constructor field contributes to the code, to the size, and to the
@@ -254,6 +265,28 @@ pub fn build_fo_roundtrip_prelude(
     let formula_decode_code_at_size =
         declare_at_size(kernel, &rt, &formula_family, formula_decode_code, &mut fv)?;
 
+    let subst_code_aux = declare_subst_code_aux(kernel, &rt, &syntax, &mut fv)?;
+    let subst_code_aux_commutes = declare_subst_code_aux_commutes(
+        kernel,
+        &rt,
+        &syntax,
+        subst_code_aux,
+        term_size,
+        formula_size,
+        term_decode_code,
+        formula_decode_code,
+        &mut fv,
+    )?;
+    let is_formula_code_aux = declare_is_formula_code_aux(kernel, &rt, &mut fv)?;
+    let is_formula_code_aux_code = declare_is_formula_code_aux_code(
+        kernel,
+        &rt,
+        is_formula_code_aux,
+        formula_size,
+        formula_decode_code,
+        &mut fv,
+    )?;
+
     Ok(FoRoundTripPrelude {
         decode: dec,
         term_size,
@@ -262,7 +295,339 @@ pub fn build_fo_roundtrip_prelude(
         formula_decode_code,
         term_decode_code_at_size,
         formula_decode_code_at_size,
+        subst_code_aux,
+        subst_code_aux_commutes,
+        is_formula_code_aux,
+        is_formula_code_aux_code,
     })
+}
+
+// ============================================================================
+// The commuting lemma, at explicit fuel.
+// ============================================================================
+
+/// `FO.Code.substCodeAux : Nat -> Nat -> Nat -> Nat -> Nat` — `fo_decode.rs`'s
+/// `FO.Code.substCode` with the two decoders' fuels taken as arguments instead
+/// of read off the codes.
+///
+/// ```text
+/// substCodeAux fp ft cp ct
+///   := Formula.code (Formula.subst (Formula.decodeAux fp cp)
+///                      (Subst.cons (Term.decodeAux ft ct) Subst.id))
+/// ```
+///
+/// `FO.Code.substCode cp ct` is this at `fp := cp`, `ft := ct`, and the module
+/// doc says why the commuting lemma cannot be stated there: the self-fuelled
+/// wrappers need `Nat.le (size x) (code x)`, which is false.
+fn declare_subst_code_aux(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    syntax: &FoSyntaxPrelude,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = rt.nat_ty;
+    let fp_id = fv.next();
+    let ft_id = fv.next();
+    let cp_id = fv.next();
+    let ct_id = fv.next();
+    let fp = kernel.fvar(fp_id);
+    let ft = kernel.fvar(ft_id);
+    let cp = kernel.fvar(cp_id);
+    let ct = kernel.fvar(ct_id);
+
+    let formula = decode_at(kernel, rt.dec.formula_decode_aux, fp, cp);
+    let term = decode_at(kernel, rt.dec.term_decode_aux, ft, ct);
+    let body = substituted_code(kernel, rt, syntax, formula, term);
+
+    let binders = [
+        (fp_id, nat_ty),
+        (ft_id, nat_ty),
+        (cp_id, nat_ty),
+        (ct_id, nat_ty),
+    ];
+    let value = lams(kernel, &binders, body);
+    let ty = {
+        let mut t = nat_ty;
+        for _ in 0..4 {
+            t = arrow(kernel, nat_ty, t);
+        }
+        t
+    };
+    let name = kernel.name_str(rt.c.code_ns, "substCodeAux");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// `FO.Formula.code (FO.Formula.subst p (FO.Subst.cons t FO.Subst.id))`.
+fn substituted_code(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    syntax: &FoSyntaxPrelude,
+    p: ExprId,
+    t: ExprId,
+) -> ExprId {
+    let sigma = {
+        let cons = kernel.const_(syntax.subst_cons, vec![]);
+        let id = kernel.const_(syntax.subst_id, vec![]);
+        apply_all(kernel, cons, &[t, id])
+    };
+    let substituted = {
+        let s = kernel.const_(syntax.formula_subst, vec![]);
+        apply_all(kernel, s, &[p, sigma])
+    };
+    code_app(kernel, rt.dec.numbering.formula_code, substituted)
+}
+
+/// `FO.Code.substCodeAux_commutes : Π p t gp gt, Eq Nat
+///   (substCodeAux (Nat.add gp (Formula.size p)) (Nat.add gt (Term.size t))
+///                 (Formula.code p) (Term.code t))
+///   (Formula.code (Formula.subst p (Subst.cons t Subst.id)))`
+///
+/// Substitution on codes agrees with substitution on syntax. Two congruences
+/// over the two round trips and nothing else; the whole cost of this statement
+/// was `decode_code`.
+fn declare_subst_code_aux_commutes(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    syntax: &FoSyntaxPrelude,
+    subst_code_aux: NameId,
+    term_size: NameId,
+    formula_size: NameId,
+    term_decode_code: NameId,
+    formula_decode_code: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let logic = rt.logic;
+    let nat_ty = rt.nat_ty;
+
+    let p_id = fv.next();
+    let t_id = fv.next();
+    let gp_id = fv.next();
+    let gt_id = fv.next();
+    let p = kernel.fvar(p_id);
+    let t = kernel.fvar(t_id);
+    let gp = kernel.fvar(gp_id);
+    let gt = kernel.fvar(gt_id);
+
+    let sp = size_app(kernel, formula_size, p);
+    let st = size_app(kernel, term_size, t);
+    let fp = nadd(kernel, &rt.c, gp, sp);
+    let ft = nadd(kernel, &rt.c, gt, st);
+    let cp = code_app(kernel, rt.dec.numbering.formula_code, p);
+    let ct = code_app(kernel, rt.dec.numbering.term_code, t);
+
+    let decoded_formula = decode_at(kernel, rt.dec.formula_decode_aux, fp, cp);
+    let decoded_term = decode_at(kernel, rt.dec.term_decode_aux, ft, ct);
+
+    let start = substituted_code(kernel, rt, syntax, decoded_formula, decoded_term);
+    let middle = substituted_code(kernel, rt, syntax, p, decoded_term);
+    let finish = substituted_code(kernel, rt, syntax, p, t);
+
+    // Step 1: the formula round trip, under `fun x => code (subst x (cons E id))`.
+    let step1 = {
+        let hypothesis = {
+            let head = kernel.const_(formula_decode_code, vec![]);
+            apply_all(kernel, head, &[p, gp])
+        };
+        let id = fv.next();
+        gcongr(
+            kernel,
+            logic,
+            rt.formula_ty,
+            nat_ty,
+            decoded_formula,
+            p,
+            hypothesis,
+            &|k: &mut crate::Kernel, x: ExprId| substituted_code(k, rt, syntax, x, decoded_term),
+            id,
+        )
+    };
+
+    // Step 2: the term round trip, under `fun y => code (subst p (cons y id))`.
+    let step2 = {
+        let hypothesis = {
+            let head = kernel.const_(term_decode_code, vec![]);
+            apply_all(kernel, head, &[t, gt])
+        };
+        let id = fv.next();
+        gcongr(
+            kernel,
+            logic,
+            rt.term_ty,
+            nat_ty,
+            decoded_term,
+            t,
+            hypothesis,
+            &|k: &mut crate::Kernel, y: ExprId| substituted_code(k, rt, syntax, p, y),
+            id,
+        )
+    };
+
+    let body = {
+        let id = fv.next();
+        gtrans(
+            kernel, logic, nat_ty, start, middle, finish, step1, step2, id,
+        )
+    };
+
+    let lhs = {
+        let head = kernel.const_(subst_code_aux, vec![]);
+        apply_all(kernel, head, &[fp, ft, cp, ct])
+    };
+    let concl = geq(kernel, logic, nat_ty, lhs, finish);
+
+    let binders = [
+        (p_id, rt.formula_ty),
+        (t_id, rt.term_ty),
+        (gp_id, nat_ty),
+        (gt_id, nat_ty),
+    ];
+    let ty = pis(kernel, &binders, concl);
+    let value = lams(kernel, &binders, body);
+    let name = kernel.name_str(rt.c.code_ns, "substCodeAux_commutes");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
+/// `FO.Code.isFormulaCodeAux : Nat -> Nat -> Bool
+///   := fun f n => Nat.beq (Formula.code (Formula.decodeAux f n)) n` — the
+/// fuel-explicit `FO.Code.isFormulaCode`.
+fn declare_is_formula_code_aux(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = rt.nat_ty;
+    let f_id = fv.next();
+    let n_id = fv.next();
+    let f = kernel.fvar(f_id);
+    let n = kernel.fvar(n_id);
+
+    let body = recode_beq(kernel, rt, f, n);
+    let binders = [(f_id, nat_ty), (n_id, nat_ty)];
+    let value = lams(kernel, &binders, body);
+    let ty = {
+        let bool_ty = kernel.const_(rt.logic.bool_, vec![]);
+        let inner = arrow(kernel, nat_ty, bool_ty);
+        arrow(kernel, nat_ty, inner)
+    };
+    let name = kernel.name_str(rt.c.code_ns, "isFormulaCodeAux");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// `Nat.beq (FO.Formula.code (FO.Formula.decodeAux f n)) n`.
+fn recode_beq(kernel: &mut crate::Kernel, rt: &Rt, f: ExprId, n: ExprId) -> ExprId {
+    let decoded = decode_at(kernel, rt.dec.formula_decode_aux, f, n);
+    let recoded = code_app(kernel, rt.dec.numbering.formula_code, decoded);
+    let beq = kernel.const_(rt.c.nat.beq, vec![]);
+    apply_all(kernel, beq, &[recoded, n])
+}
+
+/// `FO.Code.isFormulaCodeAux_code : Π p g, Eq Bool
+///   (isFormulaCodeAux (Nat.add g (Formula.size p)) (Formula.code p)) Bool.true`
+///
+/// The image half of "`isFormulaCode` decides the formula codes": everything a
+/// `FO.Formula.code` produces is accepted. The converse — a code accepted by
+/// `isFormulaCodeAux` IS `FO.Formula.code` of something — is `Nat.beq`'s
+/// reflection plus `FO.Formula.code_injective` and does not need the round
+/// trip; it is not landed here because it needs a fuel that is a function of
+/// `n`, i.e. the same self-fuelled bound the module doc records as false.
+fn declare_is_formula_code_aux_code(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    is_formula_code_aux: NameId,
+    formula_size: NameId,
+    formula_decode_code: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let logic = rt.logic;
+    let nat_ty = rt.nat_ty;
+    let bool_ty = kernel.const_(logic.bool_, vec![]);
+
+    let p_id = fv.next();
+    let g_id = fv.next();
+    let p = kernel.fvar(p_id);
+    let g = kernel.fvar(g_id);
+
+    let sp = size_app(kernel, formula_size, p);
+    let fuel = nadd(kernel, &rt.c, g, sp);
+    let cp = code_app(kernel, rt.dec.numbering.formula_code, p);
+    let decoded = decode_at(kernel, rt.dec.formula_decode_aux, fuel, cp);
+
+    let start = recode_beq(kernel, rt, fuel, cp);
+    let middle = {
+        let beq = kernel.const_(rt.c.nat.beq, vec![]);
+        apply_all(kernel, beq, &[cp, cp])
+    };
+    let bool_true = kernel.const_(logic.bool_true, vec![]);
+
+    let step1 = {
+        let hypothesis = {
+            let head = kernel.const_(formula_decode_code, vec![]);
+            apply_all(kernel, head, &[p, g])
+        };
+        let id = fv.next();
+        gcongr(
+            kernel,
+            logic,
+            rt.formula_ty,
+            bool_ty,
+            decoded,
+            p,
+            hypothesis,
+            &|k: &mut crate::Kernel, x: ExprId| {
+                let recoded = code_app(k, rt.dec.numbering.formula_code, x);
+                let beq = k.const_(rt.c.nat.beq, vec![]);
+                apply_all(k, beq, &[recoded, cp])
+            },
+            id,
+        )
+    };
+    let step2 = {
+        let head = kernel.const_(rt.c.nat.beq_refl, vec![]);
+        kernel.app(head, cp)
+    };
+    let body = {
+        let id = fv.next();
+        gtrans(
+            kernel, logic, bool_ty, start, middle, bool_true, step1, step2, id,
+        )
+    };
+
+    let lhs = {
+        let head = kernel.const_(is_formula_code_aux, vec![]);
+        apply_all(kernel, head, &[fuel, cp])
+    };
+    let concl = geq(kernel, logic, bool_ty, lhs, bool_true);
+    let binders = [(p_id, rt.formula_ty), (g_id, nat_ty)];
+    let ty = pis(kernel, &binders, concl);
+    let value = lams(kernel, &binders, body);
+    let name = kernel.name_str(rt.c.code_ns, "isFormulaCodeAux_code");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
 }
 
 fn term_specs(syntax: &FoSyntaxPrelude) -> Vec<Spec> {

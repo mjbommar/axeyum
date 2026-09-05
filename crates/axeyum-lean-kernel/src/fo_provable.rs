@@ -20,7 +20,7 @@
 //! `imp_intro`. Here it does, because `sat (imp φ ψ) v` **is** the kernel's
 //! own function type `sat φ v -> sat ψ v`, so `imp_intro`'s case is a lambda.
 //!
-//! ## The sixteen rules
+//! ## The seventeen rules
 //!
 //! The eleven propositional rules are `ipc_provable.rs`'s, transcribed to
 //! `FO.Formula` (`ax_head`, `weaken`, `and_intro`, `and_elim1`, `and_elim2`,
@@ -42,6 +42,9 @@
 //!                        -> Provable (Context.cons p (Context.shift g)) (Formula.shift q)
 //!                        -> Provable g q
 //! eqf_refl  : Π g t,   Provable g (eqf t t)
+//! eqf_subst : Π g p s t, Provable g (eqf s t)
+//!                        -> Provable g (Formula.subst p (Subst.cons s Subst.id))
+//!                        -> Provable g (Formula.subst p (Subst.cons t Subst.id))
 //! ```
 //!
 //! ### The eigenvariable condition, stated as a shift
@@ -75,15 +78,23 @@
 //! form. No capture check is needed, because `Formula.subst` lifts under
 //! binders (`fo_syntax.rs`).
 //!
-//! ### `eqf_refl`, and what is deliberately *not* here
+//! ### The two equality rules
 //!
-//! `eqf_refl` is the only equality rule. It makes `FO.Formula.eqf` a
-//! non-decorative constructor and its soundness case is `Eq.refl`. The
-//! Leibniz rule — from `s = t` and `φ[s]` infer `φ[t]` — is **not** landed:
-//! it is sound, but its soundness case needs a congruence of `FO.sat` along an
-//! equality *between the evaluations of two terms under a substitution*, which
-//! is a fifth induction over `FO.Formula` this slice does not build. It is
-//! recorded as the next increment rather than claimed.
+//! `eqf_refl` makes `FO.Formula.eqf` a non-decorative constructor and its
+//! soundness case is `Eq.refl`. `eqf_subst` is the **Leibniz rule** — from
+//! `s = t` and `φ[s]` infer `φ[t]` — landed by ADR-1648.
+//!
+//! ADR-1636 left it open on the estimate that its soundness case would need a
+//! *fifth induction over `FO.Formula`*, a congruence of `FO.sat` along an
+//! equality between two terms' evaluations. That estimate was wrong, and
+//! measurably so: `fo_substitution.rs`'s `FO.sat_inst` already reduces
+//! `sat (φ[t]) w` to `sat φ (Val.cons M (eval t w) w)`, in which the term
+//! occurs ONLY as the value `eval t w` — a `Nat`-indexed valuation entry, not
+//! a subterm. So the case is `sat_inst` forward, one `Eq.rec` transporting
+//! that value along the hypothesis, and `sat_inst` backward: no induction at
+//! all. The rule is stated with the substitution on BOTH sides for this
+//! reason; a form with `s` occurring literally inside `φ` would have needed
+//! the induction ADR-1636 predicted.
 //!
 //! Completeness is likewise not attempted, and is not a gap this file is
 //! hiding: it needs a term model over a maximal consistent extension, i.e.
@@ -153,9 +164,9 @@ pub struct FoProvablePrelude {
     pub provable: NameId,
     /// `FO.Provable.rec`.
     pub provable_rec: NameId,
-    /// The sixteen constructors, in declaration order (which fixes the
+    /// The seventeen constructors, in declaration order (which fixes the
     /// minor-premise order of every `FO.Provable.rec` application).
-    pub rules: [NameId; 16],
+    pub rules: [NameId; 17],
 
     // --- example derivations -------------------------------------------------
     /// `FO.provable_imp_self : Provable nil (imp a a)`.
@@ -200,6 +211,8 @@ pub(crate) mod rule {
     pub(crate) const EX_ELIM: usize = 14;
     /// `eqf_refl`.
     pub(crate) const EQF_REFL: usize = 15;
+    /// `eqf_subst` — the Leibniz rule.
+    pub(crate) const EQF_SUBST: usize = 16;
 }
 
 /// The names the rule builders below share.
@@ -301,7 +314,7 @@ pub fn build_fo_provable_prelude(
 
     // --- FO.Provable : Context -> Formula -> Prop ----------------------------
     let provable = kernel.name_str(syn.fo, "Provable");
-    let names: [&str; 16] = [
+    let names: [&str; 17] = [
         "ax_head",
         "weaken",
         "and_intro",
@@ -318,8 +331,9 @@ pub fn build_fo_provable_prelude(
         "ex_intro",
         "ex_elim",
         "eqf_refl",
+        "eqf_subst",
     ];
-    let mut rules = [nil; 16];
+    let mut rules = [nil; 17];
     for (slot, label) in rules.iter_mut().zip(names) {
         *slot = kernel.name_str(provable, label);
     }
@@ -528,7 +542,7 @@ fn declare_ctx_sat(
 }
 
 // ============================================================================
-// The sixteen rule types.
+// The seventeen rule types.
 // ============================================================================
 
 pub(crate) fn provable_app(
@@ -740,10 +754,29 @@ fn rule_type(kernel: &mut crate::Kernel, c: &CalcNames, index: usize) -> ExprId 
             pis(kernel, &[(g_id, ctx), (p_id, fml), (q_id, fml)], body)
         }
         // eqf_refl : Π g t, Provable g (eqf t t)
-        _ => {
+        rule::EQF_REFL => {
             let atom = binary_formula(kernel, c.eqf, t, t);
             let concl = provable_app(kernel, c, g, atom);
             pis(kernel, &[(g_id, ctx), (t_id, trm)], concl)
+        }
+        // eqf_subst : Π g p s t, Provable g (eqf s t) -> Provable g (p[s])
+        //             -> Provable g (p[t])   -- the Leibniz rule
+        _ => {
+            let s_id = base + 5;
+            let s = kernel.fvar(s_id);
+            let atom = binary_formula(kernel, c.eqf, s, t);
+            let h1 = provable_app(kernel, c, g, atom);
+            let at_s = instantiate(kernel, c, p, s);
+            let h2 = provable_app(kernel, c, g, at_s);
+            let at_t = instantiate(kernel, c, p, t);
+            let concl = provable_app(kernel, c, g, at_t);
+            let inner = arrow(kernel, h2, concl);
+            let body = arrow(kernel, h1, inner);
+            pis(
+                kernel,
+                &[(g_id, ctx), (p_id, fml), (s_id, trm), (t_id, trm)],
+                body,
+            )
         }
     }
 }
@@ -770,7 +803,7 @@ fn declare_imp_self(
     kernel: &mut crate::Kernel,
     syn: &SyntaxNames,
     c: &CalcNames,
-    rules: &[NameId; 16],
+    rules: &[NameId; 17],
 ) -> Result<NameId, KernelError> {
     let nil = kernel.const_(c.nil, vec![]);
     let a = example_atom(kernel, syn);
@@ -804,7 +837,7 @@ fn declare_all_imp_self(
     kernel: &mut crate::Kernel,
     syn: &SyntaxNames,
     c: &CalcNames,
-    rules: &[NameId; 16],
+    rules: &[NameId; 17],
 ) -> Result<NameId, KernelError> {
     let nil = kernel.const_(c.nil, vec![]);
     let a = example_atom(kernel, syn);
@@ -849,7 +882,7 @@ fn declare_all_imp_ex(
     kernel: &mut crate::Kernel,
     syn: &SyntaxNames,
     c: &CalcNames,
-    rules: &[NameId; 16],
+    rules: &[NameId; 17],
 ) -> Result<NameId, KernelError> {
     let nil = kernel.const_(c.nil, vec![]);
 

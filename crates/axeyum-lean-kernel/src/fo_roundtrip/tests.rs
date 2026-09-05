@@ -301,6 +301,77 @@ fn size_is_not_bounded_by_the_code() {
 }
 
 // ============================================================================
+// The commuting lemma.
+// ============================================================================
+
+#[test]
+fn the_commuting_lemma_and_the_image_lemma_have_the_stated_types() {
+    let f = Fixture::new();
+    for (name, want) in [
+        (
+            f.p.subst_code_aux_commutes,
+            "((x0 : FO.Formula) -> ((x1 : FO.Term) -> ((x2 : AxNat) -> ((x3 : AxNat) -> \
+             Eq.{1} AxNat (FO.Code.substCodeAux (AxNat.add x2 (FO.Formula.size x0)) \
+             (AxNat.add x3 (FO.Term.size x1)) (FO.Formula.code x0) (FO.Term.code x1)) \
+             (FO.Formula.code (FO.Formula.subst x0 (FO.Subst.cons x1 FO.Subst.id)))))))",
+        ),
+        (
+            f.p.is_formula_code_aux_code,
+            "((x0 : FO.Formula) -> ((x1 : AxNat) -> Eq.{1} Bool \
+             (FO.Code.isFormulaCodeAux (AxNat.add x1 (FO.Formula.size x0)) \
+             (FO.Formula.code x0)) Bool.true))",
+        ),
+    ] {
+        let declaration = f
+            .kernel
+            .environment()
+            .get(name)
+            .expect("the theorem must be declared");
+        let ty = declaration.ty();
+        let rendered = f.kernel.render_lean(ty);
+        assert_eq!(
+            rendered,
+            want,
+            "{} has the wrong statement",
+            f.kernel.display_name(name)
+        );
+    }
+}
+
+/// `FO.Code.substCodeAux` is a `Definition`, so its admission proves nothing:
+/// a body that dropped the substitution, or substituted at the wrong index,
+/// has the same type. Pinned at a concrete, two-symbol instance:
+/// substituting `FO.Term.f0 0` for de Bruijn index `0` in
+/// `FO.Formula.eqf (var 0) (var 0)` must give the code of
+/// `FO.Formula.eqf (f0 0) (f0 0)`, which is a DIFFERENT numeral.
+#[test]
+fn subst_code_aux_actually_substitutes() {
+    let mut f = Fixture::new();
+    let syntax = f.p.decode.numbering.code.syntax;
+    let zero = f.num(0);
+    let v0 = f.var(0);
+    let symbol = f.ctor(syntax.f0, &[zero]);
+    let before = f.ctor(syntax.eqf, &[v0, v0]);
+    let after = f.ctor(syntax.eqf, &[symbol, symbol]);
+
+    let fp = f.fsize(before);
+    let ft = f.tsize(symbol);
+    let cp = f.fcode(before);
+    let ct = f.tcode(symbol);
+    let got = {
+        let head = f.kernel.const_(f.p.subst_code_aux, vec![]);
+        apply_all(&mut f.kernel, head, &[fp, ft, cp, ct])
+    };
+    let want = f.fcode(after);
+    f.assert_eq_expr(got, want, "substCodeAux at eqf (var 0) (var 0) := f0 0");
+
+    // …and the two codes really are different, so the check above is not
+    // satisfied by an identity function.
+    let unchanged = f.fcode(before);
+    f.assert_ne_expr(want, unchanged, "the substituted code differs");
+}
+
+// ============================================================================
 // The every-declaration sweep.
 // ============================================================================
 
@@ -318,6 +389,10 @@ fn every_declaration_of_this_slice_is_axiom_free() {
             p.formula_decode_code_at_size,
             "FO.Formula.decode_code_at_size",
         ),
+        (p.subst_code_aux, "FO.Code.substCodeAux"),
+        (p.subst_code_aux_commutes, "FO.Code.substCodeAux_commutes"),
+        (p.is_formula_code_aux, "FO.Code.isFormulaCodeAux"),
+        (p.is_formula_code_aux_code, "FO.Code.isFormulaCodeAux_code"),
     ] {
         f.assert_axiom_free(name, label);
     }
@@ -327,7 +402,7 @@ fn every_declaration_of_this_slice_is_axiom_free() {
 /// `build_nat_prelude`: the whole `fo_syntax` + `fo_code` + `fo_numbering` +
 /// `fo_decode` chain (48, pinned in `fo_decode/tests.rs`) plus this slice's
 /// six. Pinned so drift in EITHER direction is a failure.
-const FO_ARITHMETIZATION_WITH_ROUND_TRIP: usize = 54;
+const FO_ARITHMETIZATION_WITH_ROUND_TRIP: usize = 58;
 
 /// The every-declaration sweep for the arithmetization package including the
 /// round trip, derived from the environment rather than from a list, with a
@@ -367,6 +442,8 @@ fn the_whole_round_trip_package_is_axiom_free() {
         "FO.Formula.decode_code_at_size",
         "FO.Formula.decodeAux",
         "FO.Formula.code_injective",
+        "FO.Code.substCodeAux_commutes",
+        "FO.Code.isFormulaCodeAux_code",
     ] {
         assert!(
             added.contains_key(control),
