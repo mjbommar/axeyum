@@ -139,6 +139,29 @@ pub fn build_fo_substitution_prelude(
     kernel: &mut crate::Kernel,
 ) -> Result<FoSubstitutionPrelude, KernelError> {
     let semantics = build_fo_semantics_prelude(kernel)?;
+    declare_fo_substitution_over(kernel, &semantics)
+}
+
+/// The same package, over a semantics prelude **already** in this kernel.
+///
+/// `fo_soundness.rs` needs both `fo_provable.rs`'s calculus and these lemmas in
+/// ONE environment, and both packages sit on top of `fo_semantics.rs`. Calling
+/// the two `build_*` entry points in sequence re-runs
+/// `build_fo_semantics_prelude` and the trusted gate refuses the second
+/// `FO.Structure` with `DeclarationExists` — measured 2026-09-05, which is why
+/// this split exists rather than as a stylistic preference. This is the same
+/// shape `ipc_soundness.rs` handles by re-declaring `ipc_eval` itself instead
+/// of calling slice 3's builder.
+///
+/// # Errors
+///
+/// Returns the [`KernelError`] from any of the underlying trusted gates if a
+/// declaration fails to admit.
+pub(crate) fn declare_fo_substitution_over(
+    kernel: &mut crate::Kernel,
+    semantics: &FoSemanticsPrelude,
+) -> Result<FoSubstitutionPrelude, KernelError> {
+    let semantics = *semantics;
     let val_cons_congr = declare_val_cons_congr(kernel, &semantics)?;
     let eval_congr = declare_eval_congr(kernel, &semantics)?;
     let eval_subst = declare_eval_subst(kernel, &semantics)?;

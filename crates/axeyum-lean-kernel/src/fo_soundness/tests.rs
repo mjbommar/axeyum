@@ -276,11 +276,18 @@ fn ctx_sat_shift_instantiates_at_nil_and_at_a_cons() {
     };
     let g = cons_app(&mut f.kernel, &e.calc, atom, nil);
 
-    // The hypothesis is bound rather than supplied, so the term stays closed
-    // and `infer` has no free variable to choke on.
+    // The hypothesis is BOUND rather than supplied, so the term stays closed and
+    // `infer` has no free variable to choke on. Its type is built at the
+    // CONCRETE carrier and structure -- `ctx_sat_of` would use `SoundEnv`'s
+    // ambient `M`/`S` free variables, which are bound inside the declaration
+    // but unbound here, and `infer` then reports `UnboundFVar` (measured
+    // 2026-09-05 on the first run of this file).
     let h_id = 1_645_031_u64;
     let h = f.kernel.fvar(h_id);
-    let hyp_ty = ctx_sat_of(&mut f.kernel, &e, g, valuation);
+    let hyp_ty = {
+        let c = f.kernel.const_(f.p.calculus.ctx_sat, vec![]);
+        apply_all(&mut f.kernel, c, &[nat_ty, structure, g, valuation])
+    };
     let c = f.kernel.const_(f.p.ctx_sat_shift, vec![]);
     let applied = apply_all(
         &mut f.kernel,

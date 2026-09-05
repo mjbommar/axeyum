@@ -220,7 +220,9 @@ fn substitution_definitions_have_their_stated_types() {
 /// `FO.Subst.cons t s` computes: `0 ↦ t`, `succ k ↦ s k`. Hand-computed
 /// against the `Nat.rec` in the definition:
 /// - `cons (f0 7) id Nat.zero      = f0 7`
-/// - `cons (f0 7) id (Nat.succ 2)  = id 2 = var 2`
+/// - `cons (f0 7) id 3 = cons (f0 7) id (Nat.succ 2) = id 2 = var 2`
+///   — note the index DROPS by one past the head, which is what makes
+///   `cons t Subst.id` the de Bruijn spelling of `[t/x]`.
 ///
 /// Both halves are needed: a `cons` that returned its head unconditionally
 /// would pass the first and fail the second, and one that ignored its head
@@ -238,7 +240,7 @@ fn subst_cons_computes_at_zero_and_at_a_successor() {
 
     let three = f.num(3);
     let at_three = f.kernel.app(s, three);
-    let want = f.var(3);
+    let want = f.var(2);
     f.assert_eq_expr(at_three, want, "cons t s (succ k) must be s k");
 }
 

@@ -86,11 +86,12 @@
 #![allow(clippy::too_many_lines)]
 
 use crate::fo_provable::{CalcNames, cons_app, ctx_shift_app, f_shift_app, instantiate, rule};
+use crate::fo_substitution::declare_fo_substitution_over;
 use crate::fo_syntax::SyntaxNames;
 use crate::fo_syntax::{apply_all, arrow, iff_mp, iff_mpr, lam_fv, lams, pi_fv, pis};
 use crate::{
     BinderInfo, Declaration, ExprId, FoProvablePrelude, FoSubstitutionPrelude, KernelError,
-    LevelId, LogicPrelude, NameId, build_fo_provable_prelude, build_fo_substitution_prelude,
+    LevelId, LogicPrelude, NameId, build_fo_provable_prelude,
 };
 
 /// Names produced by [`build_fo_soundness_prelude`].
@@ -118,7 +119,11 @@ pub fn build_fo_soundness_prelude(
     kernel: &mut crate::Kernel,
 ) -> Result<FoSoundnessPrelude, KernelError> {
     let calculus = build_fo_provable_prelude(kernel)?;
-    let substitution = build_fo_substitution_prelude(kernel)?;
+    // NOT `build_fo_substitution_prelude`: that would re-run
+    // `build_fo_semantics_prelude`, and the trusted gate refuses the second
+    // `FO.Structure` with `DeclarationExists`. Both packages sit on the ONE
+    // semantics prelude the calculus already built.
+    let substitution = declare_fo_substitution_over(kernel, &calculus.semantics)?;
     let env = SoundEnv::new(kernel, &calculus, &substitution);
     let ctx_sat_shift = declare_ctx_sat_shift(kernel, &env)?;
     let soundness = declare_soundness(kernel, &env, ctx_sat_shift)?;

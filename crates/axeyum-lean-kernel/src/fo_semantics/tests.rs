@@ -189,32 +189,93 @@ fn val_cons_computes_at_zero_and_at_a_successor() {
 /// docs claim `fun m => FO.Val.cons M a v (Nat.succ m)` is *definitionally*
 /// the valuation `v` — ι-reduction under the binder plus the kernel's η rule.
 /// Everything `fo_substitution.rs` saves rests on that claim, so it is checked
-/// here directly, at a symbolic `a` and a symbolic `v` (free variables, not
-/// literals — a check at a literal valuation would pass for the wrong reason).
+/// here directly.
+///
+/// The carrier, the element and the valuation are all **bound** here, not free
+/// variables and not literals. Both matter, in opposite directions:
+///
+/// - a check at a LITERAL valuation (`fun _ => 0`, say) would reduce both
+///   sides to the same closed term and pass without exercising η at all;
+/// - a check at a BARE free variable cannot pass, because η-expansion needs
+///   the non-lambda side's type and a free variable created by
+///   `Kernel::fvar` carries none. That is a property of how the test is
+///   written, not of the kernel — measured on the first run of this file,
+///   where the free-variable form reported
+///   `got fun (x0 : AxNat) => FO.Val.cons AxNat _fvar.… _fvar.… (AxNat.succ x0),
+///   want _fvar.…`.
+///
+/// Binding them puts a typed local in scope on both sides, which is the
+/// situation every real use inside a proof term is in.
 #[test]
 fn shifting_past_the_new_slot_is_definitionally_the_old_valuation() {
     let mut f = Fixture::new();
-    let nat_ty = f.nat_ty();
-    let val_ty = arrow(&mut f.kernel, nat_ty, nat_ty);
+    let syn = f.syn();
+    let zero_lvl = f.kernel.level_zero();
+    let one_lvl = f.kernel.level_succ(zero_lvl);
+    let type_sort = f.kernel.sort(one_lvl);
 
-    let a_id = 1_636_960_u64;
-    let v_id = 1_636_961_u64;
-    let m_id = 1_636_962_u64;
+    let m_id = 1_636_960_u64;
+    let a_id = 1_636_961_u64;
+    let v_id = 1_636_962_u64;
+    let n_id = 1_636_963_u64;
+    let m = f.kernel.fvar(m_id);
     let a = f.kernel.fvar(a_id);
     let v = f.kernel.fvar(v_id);
-    let m = f.kernel.fvar(m_id);
+    let n = f.kernel.fvar(n_id);
+    let val_ty = arrow(&mut f.kernel, syn.nat_ty, m);
 
-    let succ = f.kernel.const_(f.p.syntax.nat.succ, vec![]);
-    let sm = f.kernel.app(succ, m);
-    let c = f.kernel.const_(f.p.val_cons, vec![]);
-    let body = apply_all(&mut f.kernel, c, &[nat_ty, a, v, sm]);
-    let shifted = lam_fv(&mut f.kernel, m_id, nat_ty, body);
+    // fun (M : Type) (a : M) (v : Nat -> M) (n : Nat) => Val.cons M a v (succ n)
+    let shifted = {
+        let succ = f.kernel.const_(syn.nat_succ, vec![]);
+        let sn = f.kernel.app(succ, n);
+        let c = f.kernel.const_(f.p.val_cons, vec![]);
+        let body = apply_all(&mut f.kernel, c, &[m, a, v, sn]);
+        lams(
+            &mut f.kernel,
+            &[
+                (m_id, type_sort),
+                (a_id, m),
+                (v_id, val_ty),
+                (n_id, syn.nat_ty),
+            ],
+            body,
+        )
+    };
+    // fun (M : Type) (a : M) (v : Nat -> M) => v
+    let plain = lams(
+        &mut f.kernel,
+        &[(m_id, type_sort), (a_id, m), (v_id, val_ty)],
+        v,
+    );
 
-    let _ = val_ty;
     f.assert_eq_expr(
         shifted,
-        v,
+        plain,
         "fun m => Val.cons a v (succ m) must be definitionally v",
+    );
+
+    // Negative control of the same kind: reading the slot the shift skipped —
+    // `fun n => Val.cons M a v n`, i.e. no `succ` — is NOT `v`, so the test
+    // above is not passing because `Val.cons` ignores its index.
+    let unshifted = {
+        let c = f.kernel.const_(f.p.val_cons, vec![]);
+        let n = f.kernel.fvar(n_id);
+        let body = apply_all(&mut f.kernel, c, &[m, a, v, n]);
+        lams(
+            &mut f.kernel,
+            &[
+                (m_id, type_sort),
+                (a_id, m),
+                (v_id, val_ty),
+                (n_id, syn.nat_ty),
+            ],
+            body,
+        )
+    };
+    f.assert_ne_expr(
+        unshifted,
+        plain,
+        "Val.cons a v (without the succ) must NOT be v",
     );
 }
 
