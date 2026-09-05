@@ -8944,7 +8944,7 @@ default.
 
 **Measurement landed (`done`, theory-trait-final-check / theory-trait-measure,
 2026-09-05).** A prior lane landed
-[ADR-1701](../research/09-decisions/adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md)
+[ADR-1701](docs/research/09-decisions/adr-1701-the-theory-interface-gains-final-check-a-driver-owned-queue-lazy-explanation-and-dynamic-atoms.md)
 slice 1 — `TheorySolver` gains `final_check`/`propagate_into`/`explain`/
 `take_new_atoms`, all defaulted, with `DlTheory` (`dl_online.rs`) and
 `LraTheory` (`lra_online.rs`) opting in — as `c64928295` (the trait) and
@@ -8971,7 +8971,7 @@ ADR-1701 designed; on QF_IDL, the theory's own cost is 0–112 ms against
 wider theory interface has nothing to speed up — QF_IDL needs ADR-1701's
 un-landed slice 2 (the CDCL(T) search-engine unification), not slice 1. Full
 method, both before/after tables, and the stage-attribution tables are in
-[the design-review note](../research/11-design-review/2026-09-05-adr-1701-slice-1-measured.md);
+[the design-review note](docs/research/11-design-review/2026-09-05-adr-1701-slice-1-measured.md);
 raw data is under `bench-results/adr-1701-slice-1-20260905/`.
 
 **Gates run, and by whom.** This lane ran no `cargo test`/`clippy`/`just
