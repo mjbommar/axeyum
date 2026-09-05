@@ -1,0 +1,11 @@
+[
+  {
+    "id": "placeholder-draft",
+    "area": null,
+    "module": null,
+    "tier": "core",
+    "description": "placeholder; real entries land in the next commit",
+    "expected": null,
+    "justification": "draft checkpoint"
+  }
+]
