@@ -10,7 +10,20 @@ derived from a stated, checkable rule rather than asserted in prose.
 
 THE RULE. A fact is a **landmark** iff:
 
-    epistemic_status == "proved"  AND  title does not start with "[generated]"
+    epistemic_status == "proved"
+      AND  title does not start with "[generated]"
+      AND  proof_route is not one this project did not author alone
+
+The third clause is ADR-1664 rule 5 and was added on 2026-09-05, when it was
+measured that ALL SEVEN `imported-kernel-lean` facts had been counted as
+landmarks -- Mathlib's Intermediate Value Theorem and Extreme Value Theorem
+among them. Seven of 1,523 does not move a headline, but they are exactly the
+rows ADR-0601 calls "labeled scaffolding, never headline", and a landmark count
+that includes a theorem Mathlib proved is not measuring what the paragraph above
+says it measures. `kernel-lean-over-import` (an originated proof term resting on
+an import) is excluded for the weaker reason that it belongs to ADR-1664's
+separately reported composed tier. The measured effect of the clause is
+`landmark` 1,523 -> 1,516 and a new `imported=7` field in the summary line.
 
 `[generated]` is not a label this script invents: it is the literal prefix an
 existing production pass writes into `title` for a fact whose `statement` is,
@@ -81,6 +94,30 @@ DEFAULT_BASELINE = "scripts/landmark-facts-baseline.json"
 GENERATED_PREFIX = "[generated]"
 LANDMARK_STATUS = "proved"
 
+# Routes whose proof term this project did not construct, or did not construct
+# alone. ADR-1664 rule 5.
+#
+# WHY THIS IS HERE. This script read only `epistemic_status` and `title` until
+# 2026-09-05, and the omission was not free: measured that day, ALL SEVEN
+# `imported-kernel-lean` facts were counted as landmarks, Mathlib's Intermediate
+# Value Theorem and Extreme Value Theorem among them. Seven of 1,523 is 0.46 %
+# and would not move a headline, but they are exactly the rows ADR-0601 calls
+# "labeled scaffolding, never headline", and a landmark count that includes a
+# theorem Mathlib proved is not measuring what its own docstring says it
+# measures.
+#
+# `kernel-lean-over-import` is excluded for a weaker but sufficient reason: that
+# proof term IS ours, but the result rests on an import, so it belongs to the
+# separately reported composed tier rather than to the count a hostile reviewer
+# will read as "results this project established".
+#
+# Read with `.get`, deliberately NOT added to REQUIRED_FIELDS: `proof_route` is
+# absent on open facts by design, and making this script fail-closed on that
+# would reject a well-formed ledger.
+IMPORT_DEPENDENT_ROUTES = frozenset(
+    {"imported-kernel-lean", "kernel-lean-over-import"}
+)
+
 REQUIRED_FIELDS = ("epistemic_status", "title")
 
 
@@ -131,9 +168,23 @@ def is_generated(fact: dict) -> bool:
     return title.startswith(GENERATED_PREFIX)
 
 
+def rests_on_an_import(fact: dict) -> bool:
+    """Whether `fact`'s proof term was authored elsewhere, wholly or in part."""
+    return fact.get("proof_route") in IMPORT_DEPENDENT_ROUTES
+
+
 def is_landmark(fact: dict) -> bool:
-    """The landmark rule: proved, and not mechanically generated."""
-    return fact["epistemic_status"] == LANDMARK_STATUS and not is_generated(fact)
+    """The landmark rule: proved, not mechanically generated, and ours.
+
+    The third clause is ADR-1664 rule 5, added 2026-09-05. Before it, the rule
+    counted a theorem checked here but authored in Mathlib exactly as it counted
+    one this project proved.
+    """
+    return (
+        fact["epistemic_status"] == LANDMARK_STATUS
+        and not is_generated(fact)
+        and not rests_on_an_import(fact)
+    )
 
 
 def count(facts: list[dict]) -> dict:
@@ -141,11 +192,13 @@ def count(facts: list[dict]) -> dict:
     total = len(facts)
     proved = sum(1 for f in facts if f["epistemic_status"] == LANDMARK_STATUS)
     generated = sum(1 for f in facts if is_generated(f))
+    imported = sum(1 for f in facts if rests_on_an_import(f))
     landmark = sum(1 for f in facts if is_landmark(f))
     return {
         "total": total,
         "proved": proved,
         "generated": generated,
+        "imported": imported,
         "landmark": landmark,
     }
 
@@ -157,6 +210,7 @@ def format_summary(counts: dict) -> str:
         f"|total={counts['total']}"
         f"|proved={counts['proved']}"
         f"|generated={counts['generated']}"
+        f"|imported={counts['imported']}"
         f"|landmark={counts['landmark']}"
         f"|landmark_of_proved={ratio:.4f}"
     )
@@ -180,7 +234,7 @@ def run_check(counts: dict, baseline_path: Path) -> int:
         return 1
 
     mismatches = []
-    for key in ("total", "proved", "generated", "landmark"):
+    for key in ("total", "proved", "generated", "imported", "landmark"):
         want = baseline.get(key)
         got = counts.get(key)
         if want != got:

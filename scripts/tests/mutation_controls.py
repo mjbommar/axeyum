@@ -3589,6 +3589,114 @@ SUITES["fact-cas-certificate-classification"] = (
     ],
 )
 
+SUITES["fact-composed-route-import-assumptions"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # ADR-1664 rule 2. `Kernel::axiom_footprint` walks DECLARATIONS and keeps
+        # the ones admitted on trust; the import route's three assumptions are
+        # not declarations but claims about how the declarations reached the
+        # environment, so no walk can reach them. Measured 2026-09-05: an
+        # originated theorem composed over the Init-only `bool-and-comm.ndjson`
+        # import has an `axiom_footprint` of EXACTLY EMPTY. Without this guard
+        # such a fact could be filed with `[]` -- ADR-1664's rejected option (3)
+        # -- and counted in the axiom-free headline. Deleting it must kill
+        # exactly the one test that asserts a footprint missing an assumption is
+        # rejected; the acceptance tests (the conforming fixture, the
+        # kernel-axioms-beside-the-assumptions case) do not reach this branch.
+        (
+            "a composed footprint omitting an import assumption is refused",
+            "            if missing:",
+            "            if False:",
+        ),
+    ],
+)
+
+SUITES["fact-import-route-prior-art"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # The pre-existing rule for `imported-kernel-lean`, which had no control
+        # until ADR-1664's lane added its sibling beside it: without the
+        # citation the only thing separating "we proved this" from "Lean proved
+        # this and we re-checked the term" is a route string a reader has to
+        # already understand. It is a SEPARATE branch from the composed-route
+        # rule below, deliberately -- a single widened branch could not tell a
+        # control which of the two rules it had deleted. Deleting this one must
+        # kill exactly the test that asserts a committed import stripped of its
+        # prior_art is rejected.
+        (
+            "an imported fact without prior_art is refused",
+            "    if route in IMPORTED_ROUTES and not fact[\"provenance\"].get(\"prior_art\"):",
+            "    if False:",
+        ),
+    ],
+)
+
+SUITES["fact-composed-route-prior-art"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # ADR-1664 rule 3. On the composed route the proof term IS ours -- what
+        # it rests on is not, and a composed theorem that reads as wholly local
+        # is the failure the import route exists to prevent. Deleting this guard
+        # must kill exactly the one test that asserts a composed fact without
+        # prior_art is rejected; the imported-route test above hits its own
+        # branch and must keep passing, which is what proves the two rules are
+        # independently enforced.
+        (
+            "a composed fact without prior_art is refused",
+            "    if route in COMPOSED_ROUTES and not fact[\"provenance\"].get(\"prior_art\"):",
+            "    if False:",
+        ),
+    ],
+)
+
+SUITES["fact-composed-route-traceability"] = (
+    "scripts/validate-facts.py",
+    "scripts.tests.test_validate_facts",
+    [
+        # ADR-1664 rule 4: a composed fact must name WHICH import it rests on.
+        # A tier announced by a route label that points at nothing is the shape
+        # this repository calls a checker that cannot fail -- there would be no
+        # way to walk from the composed claim to the import underneath it.
+        # Deleting this guard must kill exactly the one test that asserts a
+        # composed fact citing no import is rejected THROUGH
+        # `validate_composed_route_traceability`. The broader predicate coverage
+        # (`depends_on_an_import` exercised directly, including the
+        # cites-an-originated-theorem case a naive non-empty check would wave
+        # through) does not touch this call site and must keep passing, as must
+        # the two acceptance tests.
+        (
+            "a composed fact citing no import is refused",
+            "        if not depends_on_an_import(fact, by_id):",
+            "        if False:",
+        ),
+    ],
+)
+
+SUITES["landmark-excludes-import-dependent-routes"] = (
+    "scripts/count-landmark-facts.py",
+    "scripts.tests.test_count_landmark_facts",
+    [
+        # ADR-1664 rule 5. Measured 2026-09-05, before this clause existed: ALL
+        # SEVEN `imported-kernel-lean` facts were counted as landmarks, Mathlib's
+        # Intermediate Value Theorem and Extreme Value Theorem among them -- the
+        # rows ADR-0601 calls "labeled scaffolding, never headline". The script
+        # had read only `epistemic_status` and `title`, so the conflation was
+        # structural rather than an oversight in one fact. Deleting this clause
+        # must kill exactly the one test that asserts an imported fact is not a
+        # landmark; the acceptance tests (an originated fact, a fact with no
+        # route at all) and the direct `rests_on_an_import` coverage do not
+        # depend on this call site and must keep passing.
+        (
+            "an imported fact is not a landmark",
+            "        and not rests_on_an_import(fact)",
+            "        and True",
+        ),
+    ],
+)
+
 SUITES["fact-theorem-of-explicit-field"] = (
     "scripts/check-fact-depends-derived.py",
     "scripts.tests.test_check_fact_depends_derived",

@@ -585,5 +585,248 @@ class MainFailsWhenDependsOnDrifts(unittest.TestCase):
         self.assertEqual(MODULE.main(), 0)
 
 
+# ---------------------------------------------------------------------------
+# ADR-1664: the composed route, `kernel-lean-over-import`
+# ---------------------------------------------------------------------------
+
+IMPORTED_FACT = ROOT / "artifacts" / "facts" / "F-bool-and-comm.json"
+# The path the fixture would live at. It does NOT exist and must not: the
+# validator checks that a fact's id and its filename agree, so handing it
+# `IMPORTED_FACT` would produce a filename-mismatch error that drowns out the
+# rules these tests target. `validate_one` reads the dict, never the file.
+COMPOSED_PATH = ROOT / "artifacts" / "facts" / "F-composed-fixture.json"
+
+
+def composed_fixture() -> dict:
+    """A minimal, VALID `kernel-lean-over-import` fact.
+
+    Built from the committed `F:bool-and-comm` import so its `depends_on` edge
+    points at a real imported fact rather than an invented id -- a fixture whose
+    dependency does not exist would be rejected by the dangling-edge rule and
+    would then pass or fail these tests for the wrong reason.
+
+    No such fact is committed yet: ADR-1664 decides how one is RECORDED, and the
+    first one is not built (see its Consequences, `K = 0`). So the fixture is
+    synthetic by necessity, and each test below mutates exactly one field of it,
+    with the unmutated fixture asserted valid first -- otherwise a guard broad
+    enough to reject the CONFORMING shape would be invisible.
+    """
+    imported = json.loads(IMPORTED_FACT.read_text(encoding="utf-8"))
+    return {
+        "schema_version": 1,
+        "id": "F:composed-fixture",
+        "title": "A composed theorem, for the validator's controls",
+        "statement": "A statement proved here on top of a labeled import.",
+        "formal": {
+            "language": "lean4",
+            "statement": "((x : Bool) -> Eq.{1} Bool (Bool.and x Bool.true) "
+                         "(Bool.and Bool.true x))",
+            "fragment": "Bool",
+        },
+        "epistemic_status": "proved",
+        "proof_route": "kernel-lean-over-import",
+        "depends_on": ["F:bool-and-comm"],
+        "axiom_footprint": list(MODULE.IMPORT_ROUTE_ASSUMPTIONS),
+        "evidence": [
+            {
+                "id": "composed-term",
+                "kind": "kernel-term",
+                "supports": "the composed proof term type-checks in our kernel",
+                "check_status": "checked",
+                "checkers": ["Kernel::add_declaration"],
+                "checker_command": (
+                    "test \"$(cargo test -p axeyum-lean-import "
+                    "--test imported_composition_footprint -- --nocapture "
+                    "2>/dev/null | grep -c 'AXEYUM-COMPOSE|')\" -ge 1"
+                ),
+            }
+        ],
+        "provenance": {
+            "date": "2026-09-05",
+            "established_by": "the validator's ADR-1664 controls",
+            "source": "artifacts/lean-imports/bool-and-comm.ndjson",
+            "prior_art": imported["provenance"]["prior_art"],
+        },
+    }
+
+
+COMPOSED_KNOWN_IDS = {"F:composed-fixture", "F:bool-and-comm"}
+
+
+class ComposedRouteTests(unittest.TestCase):
+    """ADR-1664 rules 2 and 3, enforced in `validate_one`.
+
+    Rule 2 (the import-route assumptions must be transcribed) is the rule that
+    makes ADR-1664's rejected option (3) impossible. Measured 2026-09-05
+    (`crates/axeyum-lean-import/tests/imported_composition_footprint.rs`): an
+    originated theorem composed over the Init-only `bool-and-comm.ndjson` import
+    has a `Kernel::axiom_footprint` of EXACTLY EMPTY, because that walk keeps
+    trusted DECLARATIONS and the three import assumptions are not declarations --
+    they are claims about how the declarations reached the environment at all.
+    Without this rule such a fact could be filed with `[]` and counted in the
+    axiom-free headline.
+    """
+
+    def setUp(self) -> None:
+        self.fact = composed_fixture()
+
+    def errors_for(self, fact: dict) -> list[str]:
+        return MODULE.validate_one(COMPOSED_PATH, fact, set(COMPOSED_KNOWN_IDS))
+
+    def test_the_conforming_composed_fixture_is_accepted(self) -> None:
+        # The acceptance half. A guard broad enough to reject the shape ADR-1664
+        # REQUIRES would fail every composed fact ever filed, and no rejection
+        # test would notice.
+        self.assertEqual(self.errors_for(self.fact), [])
+
+    def test_the_route_is_recognised_and_is_not_axiom_free_capable(self) -> None:
+        # Derived from the validator's own sets, not from a second copy of the
+        # literal: a test that spells the route name twice measures the author's
+        # memory rather than the validator.
+        self.assertIn("kernel-lean-over-import", MODULE.ROUTES)
+        self.assertNotIn("kernel-lean-over-import", MODULE.AXIOM_FREE_CAPABLE)
+        self.assertNotIn("kernel-lean-over-import", MODULE.IMPORTED_ROUTES)
+        self.assertIn("kernel-lean-over-import", MODULE.COMPOSED_ROUTES)
+        self.assertIn("kernel-lean-over-import", MODULE.IMPORT_DEPENDENT_ROUTES)
+
+    def test_an_empty_footprint_is_refused_on_the_composed_route(self) -> None:
+        # Delegated to the pre-existing AXIOM_FREE_CAPABLE guard, which this
+        # route joins by NOT being in that set. Asserted anyway because it is
+        # half of what the route means, and because a future edit adding the
+        # route to AXIOM_FREE_CAPABLE would otherwise be silent.
+        fact = copy.deepcopy(self.fact)
+        fact["axiom_footprint"] = []
+        errors = self.errors_for(fact)
+        self.assertTrue(
+            any("axiom_footprint []" in e for e in errors),
+            f"expected an empty-footprint rejection, got {errors!r}",
+        )
+
+    def test_a_missing_import_route_assumption_is_refused(self) -> None:
+        # Deliberately ONE assertion and ONE dropped assumption: the mutation
+        # harness counts each subTest failure as a separate death, and this
+        # suite's contract is that deleting the guard kills exactly one test.
+        fact = copy.deepcopy(self.fact)
+        fact["axiom_footprint"] = [
+            a for a in MODULE.IMPORT_ROUTE_ASSUMPTIONS
+            if a != "axeyum-lean-import-wire-translation"
+        ]
+        errors = self.errors_for(fact)
+        self.assertTrue(
+            any("import-route assumption" in e for e in errors),
+            f"expected a missing-assumption rejection, got {errors!r}",
+        )
+
+    def test_a_kernel_measured_axiom_beside_the_assumptions_is_accepted(self) -> None:
+        # The Mathlib-shaped case: `Kernel::axiom_footprint` names are ADDED to
+        # the three assumptions, never substituted for them. Measured for
+        # `intermediate_value_Icc`, eight kernel names; the six-name
+        # `Classical.em` closure is used here because it is the one this lane
+        # actually composed over.
+        fact = copy.deepcopy(self.fact)
+        fact["axiom_footprint"] = list(MODULE.IMPORT_ROUTE_ASSUMPTIONS) + [
+            "Classical.choice", "Quot", "Quot.lift", "Quot.mk", "Quot.sound", "propext",
+        ]
+        self.assertEqual(self.errors_for(fact), [])
+
+    def test_missing_prior_art_is_refused_on_the_composed_route(self) -> None:
+        # Rule 3. The proof term is partly ours and partly not; a composed
+        # theorem that reads as wholly local is the failure the import route
+        # exists to prevent.
+        fact = copy.deepcopy(self.fact)
+        del fact["provenance"]["prior_art"]
+        errors = self.errors_for(fact)
+        self.assertTrue(
+            any("prior_art" in e for e in errors),
+            f"expected a prior_art rejection, got {errors!r}",
+        )
+
+    def test_prior_art_is_still_required_on_the_plain_imported_route(self) -> None:
+        # The composed rule is enforced by its OWN branch beside the imported
+        # one, rather than by widening that branch's route set. This asserts the
+        # original case survived the change -- a refactor that folded the two
+        # together and then narrowed would leave seven committed imports
+        # unguarded, and a shared branch could not tell a control which rule it
+        # had deleted.
+        fact = json.loads(IMPORTED_FACT.read_text(encoding="utf-8"))
+        del fact["provenance"]["prior_art"]
+        errors = MODULE.validate_one(IMPORTED_FACT, fact, {fact["id"]})
+        self.assertTrue(
+            any("prior_art" in e for e in errors),
+            f"expected a prior_art rejection on the imported route, got {errors!r}",
+        )
+
+
+class ComposedRouteTraceabilityTests(unittest.TestCase):
+    """ADR-1664 rule 4: a composed fact must name WHICH import it rests on.
+
+    Cross-fact, so it cannot live in `validate_one` -- deciding whether an edge
+    points at an import needs the other fact's `proof_route`, and `validate_one`
+    is handed only the set of known ids.
+    """
+
+    def setUp(self) -> None:
+        self.imported = json.loads(IMPORTED_FACT.read_text(encoding="utf-8"))
+        self.composed = composed_fixture()
+
+    def by_id(self, composed: dict) -> dict:
+        return {self.imported["id"]: self.imported, composed["id"]: composed}
+
+    def test_a_composed_fact_citing_an_import_is_accepted(self) -> None:
+        self.assertEqual(
+            MODULE.validate_composed_route_traceability(self.by_id(self.composed)), []
+        )
+
+    def test_a_composed_fact_citing_no_import_is_refused(self) -> None:
+        # Deliberately ONE assertion (see the note on the assumption guard):
+        # deleting the guard must kill exactly one test.
+        composed = copy.deepcopy(self.composed)
+        composed["depends_on"] = []
+        errors = MODULE.validate_composed_route_traceability(self.by_id(composed))
+        self.assertTrue(
+            any("depends_on is a fact on" in e for e in errors),
+            f"expected a traceability rejection, got {errors!r}",
+        )
+
+    def test_the_predicate_distinguishes_an_import_edge_from_any_other_edge(self) -> None:
+        # Exercises `depends_on_an_import` DIRECTLY, not through
+        # `validate_composed_route_traceability`, so this test's outcome is
+        # independent of the call site the mutation control deletes -- the same
+        # arrangement the `grep -q` and `grep \t` guards above use.
+        #
+        # The rule is "cites an IMPORT", not "cites anything": a composed fact
+        # whose only edge is to another originated theorem is exactly the case a
+        # naive non-empty-depends_on check would wave through.
+        by_id = {
+            "F:an-import": {"proof_route": "imported-kernel-lean"},
+            "F:originated": {"proof_route": "kernel-lean"},
+            "F:smt": {"proof_route": "smt-term-level"},
+        }
+        self.assertTrue(
+            MODULE.depends_on_an_import({"depends_on": ["F:an-import"]}, by_id)
+        )
+        self.assertTrue(
+            MODULE.depends_on_an_import(
+                {"depends_on": ["F:originated", "F:an-import"]}, by_id
+            )
+        )
+        for edges in ([], ["F:originated"], ["F:smt"], ["F:originated", "F:smt"],
+                      ["F:not-a-known-id"]):
+            with self.subTest(edges=edges):
+                self.assertFalse(
+                    MODULE.depends_on_an_import({"depends_on": edges}, by_id)
+                )
+
+    def test_a_non_composed_fact_is_never_subject_to_the_rule(self) -> None:
+        # The imported fact itself has an empty `depends_on`; the rule must not
+        # reach it, or every import in the ledger would fail this gate.
+        self.assertEqual(
+            MODULE.validate_composed_route_traceability(
+                {self.imported["id"]: self.imported}
+            ),
+            [],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

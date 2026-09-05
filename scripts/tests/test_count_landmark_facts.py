@@ -90,7 +90,7 @@ class IsLandmarkTests(unittest.TestCase):
 
 
 class CountTests(unittest.TestCase):
-    """Guard C: the four counters are reduced correctly over a fixed list."""
+    """Guard C: the five counters are reduced correctly over a fixed list."""
 
     def test_counts_over_a_known_fixture_set(self) -> None:
         facts = [
@@ -103,8 +103,74 @@ class CountTests(unittest.TestCase):
         counts = CLF.count(facts)
         self.assertEqual(
             counts,
-            {"total": 5, "proved": 3, "generated": 3, "landmark": 1},
+            {"total": 5, "proved": 3, "generated": 3, "imported": 0, "landmark": 1},
         )
+
+
+class ImportDependentRouteTests(unittest.TestCase):
+    """Guard C2 (ADR-1664 rule 5): a proof term this project did not author, or
+    did not author alone, is not a landmark.
+
+    Measured 2026-09-05, before this clause existed: all seven
+    `imported-kernel-lean` facts were counted as landmarks, Mathlib's
+    Intermediate Value Theorem and Extreme Value Theorem among them. A landmark
+    count that includes a theorem Mathlib proved is not measuring what the
+    script's own docstring says it measures.
+    """
+
+    def fact(self, route: str | None) -> dict:
+        f = {"epistemic_status": "proved", "title": "A curated title"}
+        if route is not None:
+            f["proof_route"] = route
+        return f
+
+    def test_an_originated_proved_fact_is_a_landmark(self) -> None:
+        # The acceptance half. A clause broad enough to exclude the ordinary
+        # case would zero the counter and no exclusion test would notice.
+        self.assertTrue(CLF.is_landmark(self.fact("kernel-lean")))
+
+    def test_a_fact_with_no_route_at_all_is_still_a_landmark(self) -> None:
+        # `proof_route` is read with `.get` and is deliberately NOT a required
+        # field: making the script fail-closed on its absence would reject a
+        # well-formed ledger, and treating absence as "imported" would silently
+        # drop facts.
+        self.assertTrue(CLF.is_landmark(self.fact(None)))
+
+    def test_an_imported_fact_is_not_a_landmark(self) -> None:
+        # Deliberately ONE assertion: the mutation harness counts each subTest
+        # failure as a separate death, and the contract is that deleting the
+        # clause kills exactly one test.
+        self.assertFalse(CLF.is_landmark(self.fact("imported-kernel-lean")))
+
+    def test_every_import_dependent_route_is_excluded(self) -> None:
+        # Derived from the script's own set rather than from a second copy of
+        # the literals: a test that spells the route names twice measures the
+        # author's memory. Exercises `rests_on_an_import` directly, so it is
+        # unaffected by a mutation at the `is_landmark` call site.
+        for route in CLF.IMPORT_DEPENDENT_ROUTES:
+            with self.subTest(route=route):
+                self.assertTrue(CLF.rests_on_an_import(self.fact(route)))
+        for route in ("kernel-lean", "smt-term-level", "cas-certificate", "none"):
+            with self.subTest(route=route):
+                self.assertFalse(CLF.rests_on_an_import(self.fact(route)))
+
+    def test_the_imported_counter_counts_them_regardless_of_status(self) -> None:
+        # `imported` is reported beside `landmark` so the exclusion is visible
+        # rather than merely subtracted, and it counts open imports too -- the
+        # number a reader wants is "how much of this ledger is scaffolding".
+        #
+        # Asserts only `imported`, deliberately: the landmark consequence is
+        # asserted by `test_an_imported_fact_is_not_a_landmark`, and this suite's
+        # contract is that deleting the exclusion clause kills exactly that one
+        # test. A `landmark` assertion here would die with it.
+        facts = [
+            self.fact("imported-kernel-lean"),
+            self.fact("kernel-lean-over-import"),
+            {"epistemic_status": "open", "title": "t",
+             "proof_route": "imported-kernel-lean"},
+            self.fact("kernel-lean"),
+        ]
+        self.assertEqual(CLF.count(facts)["imported"], 3)
 
 
 class LoadFactsTests(unittest.TestCase):
