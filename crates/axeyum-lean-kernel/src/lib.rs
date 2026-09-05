@@ -89,6 +89,7 @@ mod nat_prelude;
 mod prelude;
 pub mod prelude_cache;
 pub mod proof_plan;
+pub mod psatz;
 mod quotient;
 mod rat_prelude;
 pub mod ring;
