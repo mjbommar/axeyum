@@ -143,6 +143,7 @@ now. Nothing was deleted.
 | 2026-09-05 | vector-spaces-field | ℝ instantiates: `CReal.fieldS`, `CReal.mulInvEx` by `Or.elim` on the sign and `Exists.rec` on the modulus; 6 tests |
 | 2026-09-05 | vector-spaces-field | ℚ is a vector space over itself and `linComb` at ℚ is DEFINITIONALLY `Rat.sumRange`; ADR-1609's bridge item 3 measured and still blocked; 3 tests |
 | 2026-09-05 | py-prelude-fields-fix | fixed the path-qualified-field silent skip in gen-py-prelude-fields.py; regenerated prelude_fields.rs (+21 poly.* fields); added scripts/tests/test_gen_py_prelude_fields.py, registered in check.sh + justfile |
+| 2026-09-05 | native-core-retire-batsat | what landed, in one line |
 | 2026-09-05 | `0e5f3a3ad` | `rat_prelude/binomial_s.rs`: the Bernoulli distribution constructed over `AlgS.OrderedRing` — `bernoulliVar`, `bernoulliMass`, `bernoulliMass_nonneg`, `bernoulli_isDistribution`, `bernoulli_expectation`, `bernoulli_variance`, plus the generic ring lemmas `mul_neg` and `zero_add`. (ADR-1631) |
 | 2026-09-05 | `1898e9651` | `binomial_s_tests.rs`: nine tests. `q = 1/2` cannot separate `q(1−q)` from `q·q` (both `1/4`); `q = 1/3` can (`2/9` against `1/9`), and the suite says so in its own assertions. |
 | 2026-09-05 | `dd6a0df24` | `rat_prelude/binomial_rat.rs`: `Rat.binomial_expectation`, `Rat.binomial_variance`, `Rat.binomial_chebyshev`, and a suite that discharges the per-trial hypothesis from the GENERIC Bernoulli theorem and then computes: three Bernoulli(1/3) trials have mean `Rat.one`. |
@@ -8758,6 +8759,10 @@ this pass.** Rungs 1–5 (all prior sessions' work) are untouched.
   changes this pass, so this is expected, not new evidence).
 - Clippy `-p axeyum-lean-kernel --lib --all-targets -D warnings`: clean.
 - Did NOT run a full `--lib creal::` sweep, per the brief.
+
+**Your lane's block (`WIP`, native-core-retire-batsat, 2026-09-05).** What landed, what did not,
+and what the next lane needs to know. State a negative as precisely as a
+positive — a sized negative is a complete deliverable here.
 
 **Status: LANDED and kernel-accepted (`DONE`, pi-rung3, 2026-08-28).**
 
