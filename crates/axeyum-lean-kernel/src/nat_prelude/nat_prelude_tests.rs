@@ -841,6 +841,11 @@ fn theorem_names(p: &NatPrelude) -> Vec<NameId> {
         p.finset_bound_restrict,
         p.finset_mem_b_restrict,
         p.finset_mem_b_union_sdiff_self,
+        // `hall-assembly` lane (roadmap W2-12): `hall_descent.rs` (ADR-1645).
+        p.finset_mem_b_of_subset_fixed_of_bound_le,
+        p.finset_card_add_card_sdiff,
+        p.finset_card_lt_card_of_subset_fixed,
+        p.finset_card_sdiff_lt_card_of_subset_fixed,
         // `inclusion-exclusion-mobius` lane (roadmap W2-19): `subset_sums.rs`
         // (ADR-1624).
         p.subsets_sum_subsets_zero,
