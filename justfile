@@ -1254,6 +1254,9 @@ kernel-suite-partition:
 # the machine is this repository's signature defect.
 lean-gate:
     ./scripts/tests/test-lean-toolchain-policy.sh
+    # The install script's pin regex (ADR-1660): accepts vX.Y.Z and vX.Y.Z-rcN,
+    # refuses malformed values; no download.
+    ./scripts/tests/test-lean-toolchain-pin-regex.sh
     ./scripts/check-lean-gate.sh
     # ADR-1664's measurement: whether an ORIGINATED theorem inherits an
     # IMPORTED one's axioms. It does, transitively and per PROOF TERM -- two

@@ -30,12 +30,19 @@ is the floor the gate enforces rather than the target.
 | two renderer defects found and FIXED in `lean_pp.rs` | `Sort (u)` was emitted unparenthesized in application argument position (`f Sort (1)` is three arguments, not one); and `render_real_inductive` rendered constructor types with an EMPTY `@`-set, so a recursor applied inside a constructor type lost its `@` and its motive stayed a metavariable. Neither was reachable from any committed golden module |
 | complete Lean error census over the carrier | RAN, 13 m 43 s at `maxErrors=1000000`: 103 errors, **19 direct elaborator refusals** and 84 `unknown constant` cascades behind them. Derived into `artifacts/measurements/lean-creal-elaborator-refusals-2026-09-05.json` by `scripts/derive-lean-creal-refusals.py` |
 | **the finding** | the 19 refusals' dependency closure is 103 declarations and it contains **four headline results**: `CReal.hasDerivative_antiderivative`, `CReal.integral_eq_antideriv_diff` (FTC both directions), `CReal.e` and `CReal.pi`. Lean's KERNEL accepts all of them over the `lean4export` wire (ADR-1661); its ELABORATOR does not accept them from source. The package names them in `README.md`, `MANIFEST.json` and `EXCLUSIONS.json` rather than being quietly smaller |
-| `lake build` of the excluded package | **RUNNING at the time of this commit** -- roughly 12 minutes per attempt on this host |
-| the axiom audit, the gate end to end, `cargo check --workspace`, clippy | **DID NOT RUN** |
+| `lake build Axeyum.Creal.Carrier` (coordinator close-out, 2026-09-05) | **Lean accepted the carrier**: `Carrier.olean` (52.7 MB) written 14 min in; the `lake` process then ran on at 100% CPU with nothing written and hit the 2,400 s bound (exit 124), undiagnosed -- probably native codegen for the 926 `def`s |
+| `#print axioms` on the Lean side | **headline audit RAN** against the compiled carrier: 7 headline results axiom-free, positive control fires; the full 1,077-command module **did not complete a run** |
+| gate `--slice` (drift, pin, counts) | **PASS**: 11 files match, 3,397 >= 3,397, 103 <= 103, audit 1,077 >= 400 |
+| the full gate end to end, `cargo check --workspace`, clippy on the generator | **DID NOT RUN** (coordinator close-out; the lane was terminated by an account spend limit) |
 
-The package itself is therefore NOT yet committed: it is committed only once
-Lean has accepted it, because a committed `.lean` package that does not build
-is worse than none.
+The package is committed (coordinator, 2026-09-05) because Lean accepted its
+carrier module. Next steps, owed: bound the full gate's `lake build` and use
+`lean -o` (no codegen) so the audit can complete; diagnose the post-olean tail;
+lift the 19 elaborator refusals one by one so the FTC, `e` and `pi` publish.
+
+**Lane terminated** 2026-09-05 by an account spend limit on its model; the
+coordinator re-measured and closed out (ADR-1675 Evidence).
 
 <!-- plan-section: landed-changes -->
 
+| 2026-09-05 | coordinator | `lean/axeyum-creal` committed (3,397 commands, 103 typed exclusions); gate floor 3,542 -> 3,397 measured, ceiling 0 -> 103; aggregate gates run the `--slice`; thirteen `check.sh` steps appended below the verdict since 2026-08-30 moved above it (listing 505 -> 518); Lean accepted the carrier module and reports the 7 headline results axiom-free (ADR-1675) |
