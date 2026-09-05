@@ -7451,6 +7451,22 @@ what `RegularSeq` demands — the factor-of-two overshoot `creal.rs` already
 names). None is deep; all four are new. It is worth more than L¹ alone because
 it makes every `Metric` in the library completable at once.
 
+**A cost finding worth carrying.** The obvious negative control — perturb the
+integrand in the concrete probe `Metric.dist (crealIntervalL1 …) = ∫|F−G|` and
+require a refusal — is **pathological**: to refuse `∫F₁ ≡ ∫F₂` the kernel
+unfolds `CReal.integral`, and the run was still going after ten minutes
+(measured 2026-09-05, killed). The positive direction is fine and is a shipped
+declaration. The mutation table is now stated at a **bound `S` and a bound
+`fdist`**, where nothing can unfold: correct / swapped integrand / diagonal
+integrand / swapped bundles, three refusals against a positive twin, 67 s for
+all three tests. The finite instance keeps a concrete table (bound, negation,
+argument order) because its integral is a `Nat.rec` over `CReal.sumRange`; the
+interval instance is discriminated on its rendered type instead, which must
+contain `fun t => CReal.abs (CReal.add (F t) (CReal.neg (G t)))` verbatim.
+General form: **the cost of refusing a definitional equation is the cost of the
+reduction the kernel attempts, not the size of the difference between the two
+sides.** State the mutation where the heads are opaque.
+
 **A checker finding, not a proof finding.** `Metric.bundledL1` was the briefed
 name and would have been watched by **nothing**: `metric::`'s inventory test
 never builds `IntSpace`, and `intspace::`'s filter is
