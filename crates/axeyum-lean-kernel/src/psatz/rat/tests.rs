@@ -446,8 +446,9 @@ fn a_sign_flipped_weight_is_refused_by_the_kernel() {
         let mut f = Fixture::new();
         let p = f.p;
         let mut d = f.dev();
-        let (_, v, _) = rat_vars(&mut d, 2);
+        let (fvs, v, ty) = rat_vars(&mut d, 2);
         let (x, y) = (v[0], v[1]);
+        let binders = [(fvs[0], ty), (fvs[1], ty)];
 
         let xy = rmul(&mut d, x, y);
         let lhs = radd(&mut d, xy, xy);
@@ -483,9 +484,7 @@ fn a_sign_flipped_weight_is_refused_by_the_kernel() {
         let atoms = [x, y];
         let good = super::emit_unverified(&mut d, p, &atoms, &[], &honest, lhs, rhs)
             .expect("the honest certificate emits");
-        let n = name(&mut d, "psatz_corruption_control");
-        d.declare_theorem(n, goal, good)
-            .expect("the honest certificate must be ACCEPTED by the kernel");
+        declare_axiom_free(&mut d, "psatz_corruption_control", &binders, goal, good);
 
         let bad = super::emit_unverified(&mut d, p, &atoms, &[], &corrupt, lhs, rhs);
         match bad {
@@ -499,8 +498,14 @@ fn a_sign_flipped_weight_is_refused_by_the_kernel() {
                 );
             }
             Ok(term) => {
+                let mut ty_all = goal;
+                let mut value = term;
+                for &(fv, vty) in binders.iter().rev() {
+                    ty_all = d.pi_fv(fv, vty, ty_all);
+                    value = d.lam_fv(fv, vty, value);
+                }
                 let n = name(&mut d, "psatz_corrupted_weight");
-                let outcome = d.declare_theorem(n, goal, term);
+                let outcome = d.declare_theorem(n, ty_all, value);
                 assert!(
                     outcome.is_err(),
                     "the KERNEL accepted a proof built from a certificate whose \

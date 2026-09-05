@@ -21,8 +21,6 @@ fn q(n: i128, d: i128) -> Q {
 
 /// `x²`, `xy`, … over the given variable indices.
 fn mono(p: &mut Poly, vars: &[usize], c: Q) {
-    let mut copy = Poly::zero();
-    let _ = copy;
     let mut term = Poly::constant(c);
     for &v in vars {
         term = term.mul(&Poly::var(v)).expect("no overflow");
