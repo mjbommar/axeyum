@@ -96,12 +96,17 @@ rules it had deleted.
   `Eq.rec`). This is a name-space obstacle, not a trust one, and Next Ten item 4
   (the carrier correspondence ledger) is what removes it. Until then a composed
   proof term must live wholly in the imported vocabulary.
-- **Not registered in `scripts/check-kernel-suites.sh`.** Checked: that script
-  is `axeyum-lean-kernel`-only and discovers its membership from the source
-  rather than listing it, so there is nothing to register. `axeyum-lean-import`
-  suites are named individually in the `justfile`; this one is not yet, and was
-  not added because the justfile is a shared append point and the suite is cheap
-  to run by name.
+- **Not registered in `scripts/check-kernel-suites.sh`, and it should not be.**
+  Checked rather than assumed: that script is `axeyum-lean-kernel`-only and
+  *discovers* its membership from the source (`#[path = "support/lean_probe.rs"]`)
+  rather than listing it, so there is nothing to append. `axeyum-lean-import`'s
+  suites are named individually in `scripts/check.sh` and the `justfile`, and
+  the crate is not run wholesale anywhere — so the new suite is registered in
+  **both**, under `lean-gate`. Registering it is not tidiness: it is the
+  evidence for ADR-1664, and the numbers the ADR quotes stop being verifiable
+  the moment it rots. Note for a future lane: `imported_fact_evidence`, which
+  re-derives all seven imported facts, is registered in **neither** gate and is
+  run only by the facts' own `checker_command`s.
 
 ## Red found and NOT fixed
 
@@ -110,6 +115,13 @@ rules it had deleted.
   fails the gate, and exit 2 does not`. Pre-existing and unrelated — this lane
   touched neither `scripts/creal-migrate-registry.py` nor that suite's entry.
   The five anchors added here all resolve and were each run.
+- `scripts/check-aggregate-scope.sh` exits **1** with **17** unrecorded
+  one-sided steps between `check.sh` (498) and `just check` (563) — all
+  pre-existing, from other lanes' recipes (`check-proof-plan.py`,
+  `check-structural-index.py`, `check-module-baseline.py`, …). This lane's own
+  step was one-sided for one run and was then added to both, so the count went
+  18 → 17. Recording the other 17 with `--update` would be adopting other lanes'
+  divergences as accepted, which is not this lane's call.
 - The three Lean gates `14-lean-lang.md` already records as red on `main` since
   `792224e73` were not re-checked and were not touched.
 
@@ -135,3 +147,4 @@ python3 scripts/count-landmark-facts.py --check
 | 2026-09-05 | lean-import-composition | five mutation controls, each measured to kill exactly one test; the imported-route `prior_art` guard had none before |
 | 2026-09-05 | lean-import-composition | `count-landmark-facts.py`: 7 imports were being counted as landmarks (IVT and EVT included); `landmark` 1,523 → 1,516, `imported=7` reported, baseline bumped |
 | 2026-09-05 | lean-import-composition | `14-lean-lang.md` item 8 closed and two of its numbers corrected; `03-classical-analysis.md` progress row (verdict line unchanged) |
+| 2026-09-05 | lean-import-composition | the measurement suite registered under `lean-gate` in BOTH `scripts/check.sh` and the `justfile`, so the ADR's evidence cannot rot unnoticed |

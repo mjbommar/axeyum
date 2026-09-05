@@ -1226,6 +1226,14 @@ kernel-suite-partition:
 lean-gate:
     ./scripts/tests/test-lean-toolchain-policy.sh
     ./scripts/check-lean-gate.sh
+    # ADR-1664's measurement: whether an ORIGINATED theorem inherits an
+    # IMPORTED one's axioms. It does, transitively and per PROOF TERM -- two
+    # originated theorems of the same type in one kernel measure the import's
+    # six-name closure and `[]`. Registered because it is the EVIDENCE for a
+    # decision, and the numbers the ADR quotes become unverifiable the moment
+    # the suite rots. Needs no `lean` binary (the streams are pinned bytes) and
+    # its Mathlib endpoint is `#[ignore]`d, so it costs ~0.2 s here.
+    cargo test -p axeyum-lean-import --test imported_composition_footprint
 
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean) across all
 # eight named subsystems -- conversion, universes, inductives, recursors,

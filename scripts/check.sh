@@ -1203,6 +1203,16 @@ step kernel-suite-partition-controls python3 -m unittest scripts.tests.test_chec
 step kernel-suite-partition ./scripts/check-kernel-suites.sh --list
 step lean-toolchain-policy ./scripts/tests/test-lean-toolchain-policy.sh
 step lean-gate ./scripts/check-lean-gate.sh
+# ADR-1664's measurement. Registered here because it is the EVIDENCE for a
+# decision -- that an originated theorem inherits an import's axioms
+# transitively and per proof term, so a composed tier is decidable per theorem --
+# and the numbers the ADR quotes become unverifiable the moment the suite rots.
+# `axeyum-lean-import`'s suites are named individually in this file; the crate is
+# not run wholesale anywhere, so an unregistered suite is one nothing runs. Fast
+# (~0.2 s): its Mathlib endpoint is `#[ignore]`d, since `imported_fact_evidence`
+# already pins that stream's 3,585 declarations.
+step lean-import-composition-footprint \
+  cargo test -p axeyum-lean-import --test imported_composition_footprint
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean), 32 hand-
 # authored cases across conversion, universes, inductives, recursors,
 # projections, literals, quotient and proof irrelevance -- each side authored
