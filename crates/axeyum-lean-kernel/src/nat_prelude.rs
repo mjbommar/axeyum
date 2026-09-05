@@ -6969,6 +6969,36 @@ pub struct NatPrelude {
     /// [`lt_or_ge`](Self::lt_or_ge). The successor step is definitional:
     /// `Nat.add` recurses on its right argument, so `add x 1` IS `succ x`.
     pub hall_condition_sdiff_singleton_of_strict: NameId,
+    /// `Nat.Finset.restrict s n := mk (memB s) n` (ADR-1644) — the same MEMBERS
+    /// with the stored bound forced to `n`.
+    /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search)
+    /// concludes only for sets with `Le (bound t) n`, and a caller's `w` may
+    /// carry a larger stored bound while every member is below `n`, because
+    /// `memB` truncates. This is the normalisation that closes that gap;
+    /// [`finset_mem_b_decode_encode`](Self::finset_mem_b_decode_encode) cannot,
+    /// because it takes the missing bound fact as a hypothesis.
+    pub finset_restrict: NameId,
+    /// `Nat.Finset.bound_restrict : ∀ s n, Eq Nat (bound (restrict s n)) n`
+    /// (ADR-1644) — `refl`, stated because it is the premise the search's
+    /// exhaustion rule consumes.
+    pub finset_bound_restrict: NameId,
+    /// `Nat.Finset.memB_restrict : ∀ s n,
+    /// (∀ j, Eq Bool (memB s j) true → Lt j n) →
+    /// ∀ i, Eq Bool (memB (restrict s n) i) (memB s i)` (ADR-1644) —
+    /// restricting changes no members provided every member was already below
+    /// the new bound.
+    pub finset_mem_b_restrict: NameId,
+    /// `Nat.Finset.memB_union_sdiff_self : ∀ s t,
+    /// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+    /// ∀ i, Eq Bool (memB (union t (sdiff s t)) i) (memB s i)` (ADR-1644) —
+    /// splitting a set at a subset and putting it back changes no members. The
+    /// last step of the critical branch:
+    /// [`hall_is_matching_union`](Self::hall_is_matching_union) produces a
+    /// matching on `union t (sdiff s t)` and
+    /// [`hall_is_matching_congr`](Self::hall_is_matching_congr) moves it to `s`
+    /// given exactly this. Pointwise because the two stored bounds differ —
+    /// `union` sums them.
+    pub finset_mem_b_union_sdiff_self: NameId,
 
     /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
     /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
@@ -8605,6 +8635,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
                 .name_str(hall, "hallCondition_sdiff_of_critical"),
             hall_condition_sdiff_singleton_of_strict: kernel
                 .name_str(hall, "hallCondition_sdiff_singleton_of_strict"),
+            finset_restrict: kernel.name_str(finset, "restrict"),
+            finset_bound_restrict: kernel.name_str(finset, "bound_restrict"),
+            finset_mem_b_restrict: kernel.name_str(finset, "memB_restrict"),
+            finset_mem_b_union_sdiff_self: kernel.name_str(finset, "memB_union_sdiff_self"),
             subsets_empty: kernel.name_str(subsets, "empty"),
             subsets_insert_at: kernel.name_str(subsets, "insertAt"),
             subsets_sum_subsets: kernel.name_str(subsets, "sumSubsets"),

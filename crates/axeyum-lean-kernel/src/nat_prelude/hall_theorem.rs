@@ -637,6 +637,16 @@ fn mem_false(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, i: ExprId) -> ExprId
     d.bool_eq(m, fa)
 }
 
+/// `False.rec` into a `Prop` goal.
+fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, proof: ExprId) -> ExprId {
+    let zero = d.kernel().level_zero();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, proof])
+}
+
 /// `Exists.{1} Nat pred`.
 fn exists_nat(d: &mut NatDev<'_>, p: &NatPrelude, pred: ExprId) -> ExprId {
     let one = d.level_one();
@@ -1581,6 +1591,377 @@ fn declare_hall_condition_sdiff_singleton_of_strict(
 }
 
 // ---------------------------------------------------------------------------
+// Two normalisations the inductive step needs (ADR-1644, deliverable 3
+// groundwork).
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.restrict s n := mk (memB s) n` — the same MEMBERS with the
+/// stored bound forced to `n`.
+///
+/// `Nat.Finset.forallSubset_of_search` concludes only for sets with
+/// `Le (bound t) n`, because the enumeration runs over `[0, n)`. A caller's
+/// `w ⊆ s` may have a stored bound larger than `bound s` even though every one
+/// of its members is below `bound s` — `memB` truncates, so the stored bound is
+/// an upper bound on the members and nothing more. This is the normalisation
+/// that closes that gap, and it is a `Definition` rather than an appeal to
+/// `decode`/`encode`: `Nat.Finset.memB_decode_encode` needs `Le (bound t) n` as
+/// a HYPOTHESIS, which is exactly what is missing.
+fn declare_restrict(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let ms = d.const_app(p.finset_mem_b, &[s]);
+    let body = d.const_app(p.finset_mk, &[ms, n]);
+    let value = {
+        let inner = d.lam_fv(n_fv, nat, body);
+        d.lam_fv(s_fv, fs, inner)
+    };
+    let ty = {
+        let inner = d.arrow(nat, fs);
+        d.arrow(fs, inner)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.finset_restrict,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(3),
+    })?;
+    Ok(())
+}
+
+/// `Nat.Finset.bound_restrict : ∀ s n, Eq Nat (bound (restrict s n)) n`.
+///
+/// `refl`. `Nat.Finset` is a structure and `bound (mk p b)` is `b` by iota, so
+/// this holds definitionally — it is stated anyway because it is the fact
+/// `forallSubset_of_search`'s `Le (bound t) n` premise consumes, and a caller
+/// should not have to know that `restrict` is a `mk` in order to use it.
+fn declare_bound_restrict(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let r = d.const_app(p.finset_restrict, &[s, n]);
+    let lhs = fs_bound(d, &p, r);
+    let concl = d.eq(lhs, n);
+    let proof = d.refl(n);
+
+    let ty = {
+        let with_n = d.pi_fv(n_fv, nat, concl);
+        d.pi_fv(s_fv, fs, with_n)
+    };
+    let value = {
+        let with_n = d.lam_fv(n_fv, nat, proof);
+        d.lam_fv(s_fv, fs, with_n)
+    };
+    d.declare_theorem(p.finset_bound_restrict, ty, value)
+}
+
+/// `Nat.Finset.memB_restrict : ∀ s n,
+/// (∀ j, Eq Bool (memB s j) true → Lt j n) →
+/// ∀ i, Eq Bool (memB (restrict s n) i) (memB s i)`.
+///
+/// Restricting changes no members, PROVIDED every member was already below the
+/// new bound. Both branches are one existing lemma:
+///
+/// - below `n`, `memB_of_lt` reads the restricted set's membership off its
+///   stored predicate, which IS `memB s` by iota, so the two sides are
+///   definitionally equal and nothing is rewritten;
+/// - at or above `n`, `memB_of_bound_le` makes the left side `false`, and the
+///   hypothesis makes the right side `false` too — a member at `i` would give
+///   `Lt i n` against `Le n i`, which `lt_of_lt_of_le` turns into `Lt i i` and
+///   `lt_irrefl` refutes.
+fn declare_mem_b_restrict(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hyp_ty = {
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let in_s = mem_true(d, &p, s, j);
+        let below = d.lt(j, n);
+        let step = d.arrow(in_s, below);
+        d.pi_fv(j_fv, nat, step)
+    };
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let r = d.const_app(p.finset_restrict, &[s, n]);
+
+    let body = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = fs_mem(d, &p, r, i);
+        let rhs = fs_mem(d, &p, s, i);
+        let goal = d.bool_eq(lhs, rhs);
+
+        let decided = d.lemma(p.lt_or_ge, &[i, n]);
+        let below_ty = d.lt(i, n);
+        let above_ty = d.le(n, i);
+
+        // Below the new bound: `memB_of_lt` unfolds to the stored predicate,
+        // which is `memB s` by iota.
+        let below_case = {
+            let hb_fv = d.fresh_fvar();
+            let hb = d.kernel().fvar(hb_fv);
+            let step = d.lemma(p.finset_mem_b_of_lt, &[r, i, hb]);
+            d.lam_fv(hb_fv, below_ty, step)
+        };
+        // At or above: both sides are `false`.
+        let above_case = {
+            let ha_fv = d.fresh_fvar();
+            let ha = d.kernel().fvar(ha_fv);
+            let fa = d.bool_false();
+            let vanish_l = d.lemma(p.finset_mem_b_of_bound_le, &[r, i, ha]);
+
+            let vanish_r = {
+                let inner_goal = d.bool_eq(rhs, fa);
+                let tr = d.bool_true();
+                let dec2 = bool_true_or_false(d, &p, rhs);
+                let is_true = d.bool_eq(rhs, tr);
+                let is_false = d.bool_eq(rhs, fa);
+                let true_case = {
+                    let hm_fv = d.fresh_fvar();
+                    let hm = d.kernel().fvar(hm_fv);
+                    let below = d.apply(h, &[i, hm]);
+                    let self_lt = d.lemma(p.lt_of_lt_of_le, &[i, n, i, below, ha]);
+                    let irrefl = d.lemma(p.lt_irrefl, &[i]);
+                    let boom = d.apply(irrefl, &[self_lt]);
+                    let absurd = false_elim(d, &p, inner_goal, boom);
+                    d.lam_fv(hm_fv, is_true, absurd)
+                };
+                let false_case = {
+                    let hm_fv = d.fresh_fvar();
+                    let hm = d.kernel().fvar(hm_fv);
+                    d.lam_fv(hm_fv, is_false, hm)
+                };
+                or_elim(
+                    d, &p, is_true, is_false, inner_goal, true_case, false_case, dec2,
+                )
+            };
+
+            let back = d.bool_symm(rhs, fa, vanish_r);
+            let step = d.bool_trans(lhs, fa, rhs, vanish_l, back);
+            d.lam_fv(ha_fv, above_ty, step)
+        };
+
+        let answered = or_elim(
+            d, &p, below_ty, above_ty, goal, below_case, above_case, decided,
+        );
+        d.lam_fv(i_fv, nat, answered)
+    };
+
+    let ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = fs_mem(d, &p, r, i);
+        let rhs = fs_mem(d, &p, s, i);
+        let concl = d.bool_eq(lhs, rhs);
+        let with_i = d.pi_fv(i_fv, nat, concl);
+        let with_h = d.arrow(hyp_ty, with_i);
+        let with_n = d.pi_fv(n_fv, nat, with_h);
+        d.pi_fv(s_fv, fs, with_n)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, body);
+        let with_n = d.lam_fv(n_fv, nat, with_h);
+        d.lam_fv(s_fv, fs, with_n)
+    };
+    d.declare_theorem(p.finset_mem_b_restrict, ty, value)
+}
+
+/// `Nat.Finset.memB_union_sdiff_self : ∀ s t,
+/// (∀ i, Eq Bool (memB t i) true → Eq Bool (memB s i) true) →
+/// ∀ i, Eq Bool (memB (union t (sdiff s t)) i) (memB s i)`.
+///
+/// Splitting a set at a subset and putting it back changes no members.
+///
+/// The last step of the critical branch, and the one that could not be skipped:
+/// `Nat.Hall.isMatching_union` produces a matching on `union t (sdiff s t)`, and
+/// `Nat.Hall.isMatching_congr` moves it to `s` given exactly this pointwise
+/// identity. The two sets' stored BOUNDS differ — `union` sums them — so
+/// nothing weaker than a pointwise statement will do.
+///
+/// The hypothesis `t ⊆ s` is genuinely needed: without it a `t` with members
+/// outside `s` makes the left side larger.
+fn declare_mem_b_union_sdiff_self(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let hyp_ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let in_t = mem_true(d, &p, t, i);
+        let in_s = mem_true(d, &p, s, i);
+        let step = d.arrow(in_t, in_s);
+        d.pi_fv(i_fv, nat, step)
+    };
+    let hts_fv = d.fresh_fvar();
+    let hts = d.kernel().fvar(hts_fv);
+
+    let rest = fs_sdiff(d, &p, s, t);
+    let rebuilt = fs_union(d, &p, t, rest);
+
+    let body = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = fs_mem(d, &p, rebuilt, i);
+        let rhs = fs_mem(d, &p, s, i);
+        let goal = d.bool_eq(lhs, rhs);
+        let tr = d.bool_true();
+        let fa = d.bool_false();
+
+        let decided = bool_true_or_false(d, &p, rhs);
+        let s_true = d.bool_eq(rhs, tr);
+        let s_false = d.bool_eq(rhs, fa);
+
+        // `i ∈ s`: it is in `t` or in `s \ t`, and either way in the union.
+        let s_true_case = {
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let mti = fs_mem(d, &p, t, i);
+            let dec2 = bool_true_or_false(d, &p, mti);
+            let t_true = d.bool_eq(mti, tr);
+            let t_false = d.bool_eq(mti, fa);
+
+            let from_t = {
+                let ht_fv = d.fresh_fvar();
+                let ht = d.kernel().fvar(ht_fv);
+                let inl = d.lemma(p.finset_mem_b_union_left, &[t, rest, i, ht]);
+                let back = d.bool_symm(rhs, tr, hs);
+                let step = d.bool_trans(lhs, tr, rhs, inl, back);
+                d.lam_fv(ht_fv, t_true, step)
+            };
+            let from_rest = {
+                let ht_fv = d.fresh_fvar();
+                let ht = d.kernel().fvar(ht_fv);
+                let in_rest = d.lemma(p.finset_mem_b_sdiff_intro, &[s, t, i, hs, ht]);
+                let inr = d.lemma(p.finset_mem_b_union_right, &[t, rest, i, in_rest]);
+                let back = d.bool_symm(rhs, tr, hs);
+                let step = d.bool_trans(lhs, tr, rhs, inr, back);
+                d.lam_fv(ht_fv, t_false, step)
+            };
+            let answered = or_elim(d, &p, t_true, t_false, goal, from_t, from_rest, dec2);
+            d.lam_fv(hs_fv, s_true, answered)
+        };
+
+        // `i ∉ s`: nothing in the union can hold it, because both halves are
+        // inside `s`.
+        let s_false_case = {
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let dec2 = bool_true_or_false(d, &p, lhs);
+            let u_true = d.bool_eq(lhs, tr);
+            let u_false = d.bool_eq(lhs, fa);
+
+            let u_true_case = {
+                let hu_fv = d.fresh_fvar();
+                let hu = d.kernel().fvar(hu_fv);
+                let split = d.lemma(p.finset_mem_b_union_elim, &[t, rest, i, hu]);
+                let in_t = mem_true(d, &p, t, i);
+                let in_rest = mem_true(d, &p, rest, i);
+                // From `t`: the inclusion hypothesis puts `i` in `s`.
+                let via_t = {
+                    let hj_fv = d.fresh_fvar();
+                    let hj = d.kernel().fvar(hj_fv);
+                    let in_s = d.apply(hts, &[i, hj]);
+                    let back = d.bool_symm(rhs, fa, hs);
+                    let impossible = d.bool_trans(fa, rhs, tr, back, in_s);
+                    let absurd = d.false_true_elim(goal, impossible);
+                    d.lam_fv(hj_fv, in_t, absurd)
+                };
+                // From `s \ t`: its left conjunct puts `i` in `s`.
+                let via_rest = {
+                    let hj_fv = d.fresh_fvar();
+                    let hj = d.kernel().fvar(hj_fv);
+                    let pair = d.lemma(p.finset_mem_b_sdiff_elim, &[s, t, i, hj]);
+                    let left = mem_true(d, &p, s, i);
+                    let right = mem_false(d, &p, t, i);
+                    let in_s = and_left(d, left, right, pair);
+                    let back = d.bool_symm(rhs, fa, hs);
+                    let impossible = d.bool_trans(fa, rhs, tr, back, in_s);
+                    let absurd = d.false_true_elim(goal, impossible);
+                    d.lam_fv(hj_fv, in_rest, absurd)
+                };
+                let answered = or_elim(d, &p, in_t, in_rest, goal, via_t, via_rest, split);
+                d.lam_fv(hu_fv, u_true, answered)
+            };
+            let u_false_case = {
+                let hu_fv = d.fresh_fvar();
+                let hu = d.kernel().fvar(hu_fv);
+                let back = d.bool_symm(rhs, fa, hs);
+                let step = d.bool_trans(lhs, fa, rhs, hu, back);
+                d.lam_fv(hu_fv, u_false, step)
+            };
+            let answered = or_elim(
+                d,
+                &p,
+                u_true,
+                u_false,
+                goal,
+                u_true_case,
+                u_false_case,
+                dec2,
+            );
+            d.lam_fv(hs_fv, s_false, answered)
+        };
+
+        let answered = or_elim(
+            d,
+            &p,
+            s_true,
+            s_false,
+            goal,
+            s_true_case,
+            s_false_case,
+            decided,
+        );
+        d.lam_fv(i_fv, nat, answered)
+    };
+
+    let ty = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let lhs = fs_mem(d, &p, rebuilt, i);
+        let rhs = fs_mem(d, &p, s, i);
+        let concl = d.bool_eq(lhs, rhs);
+        let with_i = d.pi_fv(i_fv, nat, concl);
+        let with_hts = d.arrow(hyp_ty, with_i);
+        let with_t = d.pi_fv(t_fv, fs, with_hts);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_hts = d.lam_fv(hts_fv, hyp_ty, body);
+        let with_t = d.lam_fv(t_fv, fs, with_hts);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_mem_b_union_sdiff_self, ty, value)
+}
+
+// ---------------------------------------------------------------------------
 // Entry point.
 // ---------------------------------------------------------------------------
 
@@ -1599,5 +1980,9 @@ pub(super) fn declare_hall_theorem_all(
     declare_mem_union_over_union_of_vanishing(d, p)?;
     declare_hall_condition_sdiff_of_critical(d, p)?;
     declare_hall_condition_sdiff_singleton_of_strict(d, p)?;
+    declare_restrict(d, p)?;
+    declare_bound_restrict(d, p)?;
+    declare_mem_b_restrict(d, p)?;
+    declare_mem_b_union_sdiff_self(d, p)?;
     Ok(())
 }

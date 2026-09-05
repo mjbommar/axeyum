@@ -144,6 +144,10 @@ Nat.Hall.hallCondition_subset
 Nat.Hall.memB_unionOver_union_of_vanishing
 Nat.Hall.hallCondition_sdiff_of_critical        the CRITICAL branch
 Nat.Hall.hallCondition_sdiff_singleton_of_strict the NON-CRITICAL branch
+Nat.Finset.restrict                             (Definition)
+Nat.Finset.bound_restrict
+Nat.Finset.memB_restrict
+Nat.Finset.memB_union_sdiff_self
 ```
 
 The critical branch's chain, at an arbitrary `w ⊆ s \ t`, writing `u` for
@@ -184,32 +188,86 @@ conclusion is free where it does not.
 sizing, not a claim of impossibility, and the obstruction is not any of the
 lemmas above.
 
-1. **The search predicate has to be assembled and shown congruent.** Deciding
-   "some proper nonempty `t ⊆ s` is critical" as a single `Bool` needs a
-   conjunction of four tests — `subsetFixed s t`, nonemptiness of `t`,
-   `card t < card s`, and `card (unionOver nb t) ≤ card t` — and the congruence
-   premise must be discharged for the WHOLE conjunction. `subsetFixed_congr`
-   (this lane) and `card_unionOver_congr`/`card_congr_of_memB` (ADR-1623) supply
-   the pieces, but the three arithmetic comparisons need `Bool`-valued forms
-   with congruence, and this tree has no `Nat.ble`/`Nat.blt` reflection pair
-   that was checked for. That is the first thing the next lane should measure,
-   not assume.
+The three obstructions were first written down here unmeasured, and then
+measured. **One of the three was wrong and two are now closed**, which is
+recorded rather than quietly edited away, because a stale blocker in an
+authoritative document is the expensive kind of error — the next lane inherits
+it as a reason not to try.
 
-2. **`forallSubset_of_search` concludes only for sets with `Le (bound t) n`.**
-   The enumeration runs over `[0, bound s)`, so a caller's `w ⊆ s` whose STORED
-   bound exceeds `bound s` is not covered by the verdict, even though its
-   members are. Closing that needs a normalisation step — replacing `w` by a set
-   with the same members and bound at most `bound s` — which does not exist and
-   is not large.
+### 1. The `Bool`-valued comparisons — WRONG, they already exist
 
-3. **Composing the critical branch back onto `s`.** `isMatching_union` produces
-   a matching on `union t (sdiff s t)`, and `isMatching_congr` moves it to `s`
-   given `∀ i, memB (union t (sdiff s t)) i = memB s i`. That pointwise identity
-   needs `t ⊆ s` and is a small lemma nobody has written.
+The first draft of this ADR said "this tree has no `Nat.ble`/`Nat.blt`
+reflection pair that was checked for" and flagged it as the first thing to
+measure. Measured, at 3,222 declarations with a freshly built `shape_search`:
 
-None of these is the counting or the congruence problem the previous three ADRs
-were about. The mathematics of the step is now proved on both sides; what
-remains is plumbing the DECISION into it.
+```text
+Nat.ble                  definition  Nat -> Nat -> Bool
+Nat.ble_eq_true_of_le    : ∀ n m, Le n m → ble n m = true
+Nat.le_of_ble_eq_true    : ∀ n m, ble n m = true → Le n m
+Nat.ble_eq_false_of_lt   : the `Eq Bool _ Bool.false` shape a `Bool.rec` cut needs
+```
+
+Both reflection directions are there, and `ble` reduces definitionally
+(`ble zero _ ≡ true`, `ble (succ x) (succ y) ≡ ble x y`). So the search
+predicate can be assembled from `Nat.Graph.andB` over `subsetFixed s t` and
+three `ble` comparisons, and its congruence premise is discharged by composing
+`subsetFixed_congr` (this lane), `Nat.Finset.card_congr_of_memB` and
+`Nat.Hall.card_unionOver_congr` (ADR-1623) through `nat_to_bool_congr`. No new
+lemma is required — only term construction. **This obstruction does not exist.**
+
+### 2. The search's bound premise — CLOSED by this lane
+
+`forallSubset_of_search` concludes only for sets with `Le (bound t) n`, because
+the enumeration runs over `[0, n)`. A caller's `w ⊆ s` may carry a stored bound
+larger than `bound s` while every one of its members is below `bound s` —
+`memB` truncates, so the stored bound is an upper bound on the members and
+nothing more. `Nat.Finset.memB_decode_encode` cannot close this: it takes the
+missing bound fact as a HYPOTHESIS.
+
+Landed instead as a normalisation:
+
+```text
+Nat.Finset.restrict s n := mk (memB s) n
+Nat.Finset.bound_restrict : ∀ s n, bound (restrict s n) = n          -- refl
+Nat.Finset.memB_restrict  : ∀ s n, (∀ j, memB s j = true → Lt j n) →
+                            ∀ i, memB (restrict s n) i = memB s i
+```
+
+### 3. Composing the critical branch back onto `s` — CLOSED by this lane
+
+`isMatching_union` produces a matching on `union t (sdiff s t)` and
+`isMatching_congr` moves it to `s` given a pointwise membership identity.
+
+```text
+Nat.Finset.memB_union_sdiff_self : ∀ s t, (∀ i, memB t i = true → memB s i = true) →
+                                   ∀ i, memB (union t (sdiff s t)) i = memB s i
+```
+
+It has to be pointwise: `union` SUMS its arguments' stored bounds, so the
+rebuilt set is not definitionally `s`, and the committed test
+`rebuilding_a_split_set_agrees_pointwise_but_not_on_the_bound` asserts exactly
+that non-identity so the lemma cannot silently become `refl`.
+
+### What actually remains
+
+Assembly, and nothing that has been shown to need a new idea:
+
+- build `criticalB s nb t` from `andB` over `subsetFixed` and three `ble`
+  comparisons, and discharge its congruence premise by composition (§1);
+- run `Nat.strongInduction` on `card s`, splitting on
+  `existsSubset_of_search` / `forallSubset_of_search` over that predicate;
+- in the critical branch, apply the induction hypothesis twice, glue with
+  `isMatching_union`, and transport with `isMatching_congr` +
+  `memB_union_sdiff_self` (§3);
+- in the non-critical branch, pick a member with `exists_memB_of_card_pos`, a
+  value with `memB_unionOver_elim`, and recurse on `sdiff s (singleton a)`
+  against `hallCondition_sdiff_singleton_of_strict`;
+- compose with `hallCondition_of_isMatching` for `marriage_iff`.
+
+The one place a surprise is still possible is the arithmetic of the two
+descent steps — showing `card t < card s` and `card (sdiff s t) < card s` from
+`t` proper and nonempty. Neither was attempted here, and neither should be
+assumed free.
 
 ## Consequences
 
@@ -221,6 +279,11 @@ remains is plumbing the DECISION into it.
 - `card_union_of_disjoint` exists without a `memB_inter` lemma, and the reason
   it does is worth reusing: check whether an existing declaration is your
   statement at a specialised argument before writing a new one.
-- Hall's theorem remains OPEN. The fact ledger records the two branches as
-  proved and the theorem itself as open, with the three obstructions above
-  named, so the next lane inherits a measured remainder rather than a mood.
+- Hall's theorem remains OPEN, with the remainder now assembly rather than
+  missing mathematics.
+- **A written-down obstruction is a claim and gets measured before it is
+  inherited.** One of the three named here was false — the comparison
+  primitives it said were missing already existed with both reflection
+  directions — and it was written by the same lane that then had to correct it.
+  A blocker list is worth having only if the next reader is told which entries
+  were measured and which were reasoned.

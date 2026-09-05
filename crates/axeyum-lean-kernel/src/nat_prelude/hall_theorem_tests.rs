@@ -107,6 +107,25 @@ impl Fixture {
         let name = self.p.finset_mem_b;
         self.const_app(name, &[s, lit])
     }
+
+    /// `Nat.Finset.bound s`.
+    fn bound(&mut self, s: ExprId) -> ExprId {
+        let name = self.p.finset_bound;
+        self.const_app(name, &[s])
+    }
+
+    /// `Nat.Finset.sdiff s t`.
+    fn sdiff(&mut self, s: ExprId, t: ExprId) -> ExprId {
+        let name = self.p.finset_sdiff;
+        self.const_app(name, &[s, t])
+    }
+
+    /// `Nat.Finset.restrict s n`.
+    fn restrict(&mut self, s: ExprId, n: u32) -> ExprId {
+        let lit = self.num(n);
+        let name = self.p.finset_restrict;
+        self.const_app(name, &[s, lit])
+    }
 }
 
 /// `subsetFixed` computes the inclusion it claims to, at four hand-checked
@@ -715,4 +734,179 @@ fn hall_condition_subset_is_not_a_tautology() {
         !shown.contains("Nat.Finset.subsetB"),
         "the inclusion premise must not be the bounded decision; got {shown}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// The two normalisations (deliverable 3 groundwork).
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.restrict` keeps the members and replaces the BOUND, and each of
+/// the three wrong definitions its type admits is ruled out by a value.
+///
+/// `restrict : Finset → Nat → Finset` is also the type of `fun s _ => s`, of
+/// `fun _ n => range n`, and of `fun _ n => mk (fun _ => false) n`. The kernel
+/// admits all three. These are the hand-computed instances that do not:
+///
+/// | term                                | value   | rules out                  |
+/// |-------------------------------------|---------|----------------------------|
+/// | `bound (restrict (singleton 2) 5)`  | `5`     | `fun s _ => s` (bound 3)   |
+/// | `memB (restrict (singleton 2) 5) 2` | `true`  | `mk (fun _ => false) n`    |
+/// | `memB (restrict (singleton 2) 5) 4` | `false` | `range n` (4 < 5 is in it) |
+///
+/// The fourth row is the one that matters for `memB_restrict`'s hypothesis
+/// rather than for the definition: `memB (restrict (singleton 2) 1) 2` is
+/// `false`, so restricting BELOW a member really does delete it, and the
+/// `∀ j, memB s j = true → Lt j n` premise is load-bearing rather than
+/// decorative.
+#[test]
+fn restrict_keeps_the_members_and_replaces_the_bound() {
+    let mut f = Fixture::new();
+    let tr = f.bool_true();
+    let fa = f.bool_false();
+
+    let s2 = f.singleton(2);
+    let wide = f.restrict(s2, 5);
+
+    let b = f.bound(wide);
+    let five = f.num(5);
+    let three = f.num(3);
+    assert!(
+        f.k.def_eq(b, five),
+        "bound (restrict (singleton 2) 5) must be 5"
+    );
+    assert!(
+        !f.k.def_eq(b, three),
+        "negative control: it must NOT be `bound (singleton 2)` = 3 -- that \
+         would make `restrict` the identity in its first argument"
+    );
+
+    let kept = f.memb_of(wide, 2);
+    assert!(
+        f.k.def_eq(kept, tr),
+        "restricting to a WIDER bound keeps the member 2"
+    );
+    assert!(
+        !f.k.def_eq(kept, fa),
+        "negative control: `restrict` must not be `mk (fun _ => false) n`"
+    );
+
+    let outside = f.memb_of(wide, 4);
+    assert!(
+        f.k.def_eq(outside, fa),
+        "4 was never a member, and widening the bound must not add it -- \
+         negative control against `restrict s n = range n`"
+    );
+
+    // THE HYPOTHESIS OF `memB_restrict`, made concrete. Restricting BELOW a
+    // member deletes it, so the premise is not bookkeeping.
+    let narrow = f.restrict(s2, 1);
+    let lost = f.memb_of(narrow, 2);
+    assert!(
+        f.k.def_eq(lost, fa),
+        "restricting to bound 1 DELETES the member 2"
+    );
+    assert!(
+        !f.k.def_eq(lost, kept),
+        "negative control: the wide and narrow restrictions must disagree at \
+         2, or `memB_restrict`'s `Lt j n` premise would be vacuous"
+    );
+}
+
+/// Splitting a set at a subset and rebuilding it agrees POINTWISE but is not
+/// the same `Nat.Finset` — which is exactly why
+/// `Nat.Finset.memB_union_sdiff_self` has to be stated pointwise.
+///
+/// At `s := range 3` and `t := singleton 1`, `union t (sdiff s t)` has members
+/// `{0, 1, 2}` and nothing else, and a stored bound that is NOT `3` — `union`
+/// sums its arguments' bounds. If the two were definitionally equal the lemma
+/// would be `refl` and `Nat.Hall.isMatching_congr` would be unnecessary; the
+/// bound assertion below is what records that they are not.
+#[test]
+fn rebuilding_a_split_set_agrees_pointwise_but_not_on_the_bound() {
+    let mut f = Fixture::new();
+    let tr = f.bool_true();
+    let fa = f.bool_false();
+
+    let s = f.range(3);
+    let t = f.singleton(1);
+    let rest = f.sdiff(s, t);
+    let rebuilt = f.union(t, rest);
+
+    for i in [0u32, 1, 2] {
+        let a = f.memb_of(rebuilt, i);
+        let b = f.memb_of(s, i);
+        assert!(f.k.def_eq(a, tr), "{i} must be a member of the rebuilt set");
+        assert!(f.k.def_eq(b, tr), "{i} must be a member of `range 3`");
+    }
+    let out_a = f.memb_of(rebuilt, 3);
+    let out_b = f.memb_of(s, 3);
+    assert!(
+        f.k.def_eq(out_a, fa),
+        "3 must not be a member of the rebuilt set"
+    );
+    assert!(f.k.def_eq(out_b, fa), "3 must not be a member of `range 3`");
+
+    // ...and the two are NOT the same set.
+    assert!(
+        !f.k.def_eq(rebuilt, s),
+        "negative control: `union t (sdiff s t)` must NOT be definitionally \
+         `s` -- if it were, `memB_union_sdiff_self` would be `refl` and the \
+         critical branch would not need `isMatching_congr` at all"
+    );
+    let br = f.bound(rebuilt);
+    let three = f.num(3);
+    assert!(
+        !f.k.def_eq(br, three),
+        "negative control: the rebuilt set's stored bound is a SUM, not 3"
+    );
+}
+
+/// The four normalisation declarations are present, are the kind they claim to
+/// be, and rest on zero axioms.
+#[test]
+fn the_normalisation_shelf_is_admitted_and_axiom_free() {
+    let mut k = Kernel::new();
+    let p = build_nat_prelude(&mut k).expect("Nat prelude must build");
+
+    let definitions: [NameId; 1] = [p.finset_restrict];
+    let theorems: [NameId; 3] = [
+        p.finset_bound_restrict,
+        p.finset_mem_b_restrict,
+        p.finset_mem_b_union_sdiff_self,
+    ];
+
+    for name in definitions {
+        let shown = k.display_name(name).to_string();
+        assert!(
+            k.environment().contains(name),
+            "{shown} must be declared before its footprint means anything"
+        );
+        let decl = k.environment().get(name).expect("just checked");
+        assert!(
+            matches!(decl, Declaration::Definition { .. }),
+            "{shown} must be a Definition"
+        );
+        println!("def {shown} : {}", k.render_lean(decl.ty()));
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{shown} must rest on zero axioms"
+        );
+    }
+    for name in theorems {
+        let shown = k.display_name(name).to_string();
+        assert!(
+            k.environment().contains(name),
+            "{shown} must be declared before its footprint means anything"
+        );
+        let decl = k.environment().get(name).expect("just checked");
+        assert!(
+            matches!(decl, Declaration::Theorem { .. }),
+            "{shown} must be a checked Theorem"
+        );
+        println!("theorem {shown} : {}", k.render_lean(decl.ty()));
+        assert!(
+            k.axiom_footprint(name).is_empty(),
+            "{shown} must rest on zero axioms"
+        );
+    }
 }

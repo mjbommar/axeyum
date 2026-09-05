@@ -40,14 +40,27 @@ argument so `add x 1` IS `succ x`).
 That was found by reading two `Nat.rec` bodies, not by searching for a name, and
 no `--const` query would have surfaced it.
 
-**`Nat.Hall.sufficient` and `Nat.Hall.marriage_iff` did NOT land.** Three sized
-obstructions, none of them the counting or congruence problem the last three
-ADRs were about: (1) the four-way `Bool` search predicate needs congruent
-`Bool`-valued arithmetic comparisons and no `Nat.ble`/`Nat.blt` reflection pair
-was found; (2) `forallSubset_of_search`'s verdict covers only sets with
-`Le (bound t) n`, so a subset with a wide stored bound needs a normalisation
-step that does not exist; (3) moving a matching from `union t (sdiff s t)` back
-to `s` needs a small pointwise-membership lemma nobody has written. Detail in
+**`Nat.Hall.sufficient` and `Nat.Hall.marriage_iff` did NOT land.** Three
+obstructions were written down and then MEASURED, and the measurement changed
+all three. (1) The claim that no `Nat.ble`/`Nat.blt` reflection pair existed was
+**false** — `Nat.ble` is there with `ble_eq_true_of_le`, `le_of_ble_eq_true` and
+`ble_eq_false_of_lt`, and it reduces definitionally, so the search predicate
+needs term construction and no new lemma. (2) and (3) were real and are now
+**closed by this lane**: `Nat.Finset.restrict`/`bound_restrict`/`memB_restrict`
+normalise a subset's stored bound so `forallSubset_of_search`'s
+`Le (bound t) n` premise can be met, and `Nat.Finset.memB_union_sdiff_self`
+carries a matching from `union t (sdiff s t)` back to `s`.
+
+I wrote obstruction (1) and then had to correct it, which is the reason the ADR
+now says which entries in a blocker list were measured and which were reasoned:
+a stale blocker in an authoritative document is inherited as a reason not to
+try.
+
+What remains is assembly — build `criticalB` from `andB` over `subsetFixed` and
+three `ble` comparisons, run `Nat.strongInduction` on `card s`, and glue. The
+one place a surprise is still possible is the arithmetic of the two descent
+steps (`card t < card s` and `card (sdiff s t) < card s` from `t` proper and
+nonempty); neither was attempted and neither should be assumed free. Detail in
 [ADR-1644](../../research/09-decisions/adr-1644-the-loop-bound-decides-the-inclusion-test-and-halls-split-lands-without-the-induction.md).
 
 <!-- plan-section: landed-changes -->
