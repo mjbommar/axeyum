@@ -33,11 +33,12 @@ reference range returns `IrError::ArithmeticOverflow`; a solver route must
 decline the dependent model or verdict rather than wrap, panic, or reinterpret
 the formula.
 
-Rational arithmetic no longer declines on range (ADR-1702): the evaluator's
-`Real` path is an `i128` fast path that *promotes* to arbitrary precision and
-*demotes* back when a result fits again, so `real_add`/`real_mul`/`real_neg`
-return the exact value where they used to return `ArithmeticOverflow`. The
-values are identical on both paths, so this can only turn an `unknown` into a
+Rational arithmetic can exceed `i128`, but only where a route opts in
+(ADR-1702). The evaluator's `Real` path uses the **declining** family, so
+`real_add`/`real_mul`/`real_neg` still return `IrError::ArithmeticOverflow`
+outside `i128` range; the opt-in `Rational::wide_*` family, used by the
+exact-rational simplex, promotes instead. Both families compute the same
+mathematical value, so widening a route can only turn an `unknown` into a
 decision.
 
 ## Replay is a pipeline property

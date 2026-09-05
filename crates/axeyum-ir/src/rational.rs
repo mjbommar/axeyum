@@ -7,7 +7,7 @@
 //!
 //! # Two representations, one value
 //!
-//! Per **ADR-1702** the type is an `i128` **fast path** with an
+//! Per **ADR-1702** the type carries an `i128` **fast path** and an
 //! arbitrary-precision **slow path**:
 //!
 //! - **small** — `num`/`den` are the `i128` fraction directly, `den > 0`.
@@ -15,33 +15,58 @@
 //!   deduplicating pool and `num` holds its pool id, marked by `den == 0`
 //!   (impossible for a small, whose denominator is always positive).
 //!
-//! `i128` overflow **promotes** to the big path rather than declining, and any
-//! result that fits `i128` again is **demoted** back, so the fast path is
-//! retaken after transient growth. Because promotion happens only for values
-//! that genuinely do not fit and every fitting result is demoted, **each value
-//! has exactly one representation** — which is what keeps derived `Eq` (and the
-//! `TermNode` interner that depends on it) correct.
-//!
 //! The struct is still two `i128` fields, so it stays `Copy` and its size and
 //! layout are unchanged; that matters because `Rational` is consumed by value in
 //! thousands of places and is a field of the interned `TermNode::RealConst`.
+//!
+//! # Promotion is OPT-IN, per route
+//!
+//! Two families of operations, deliberately:
+//!
+//! | family | on `i128` overflow | who uses it |
+//! |---|---|---|
+//! | `new`, `checked_*`, the `Add`/`Sub`/`Mul`/`Div`/`Neg` operators | **declines** (`None`) or panics, exactly as before ADR-1702 | everything, by default |
+//! | `wide_new`, `wide_add`, `wide_sub`, `wide_mul`, `wide_div`, `wide_neg`, `wide_recip` | **promotes** to arbitrary precision | a route that has opted in |
+//!
+//! Making promotion the *global* meaning of the existing operations was
+//! implemented first and then measured, and it broke `axeyum-cas`: 25 unit tests
+//! failed and about seven more stopped terminating, because that crate uses
+//! `i128` exhaustion as a **cost bound and a termination argument** — a Gröbner
+//! reduction, a Wilf–Zeilberger certificate search or a zero test that used to
+//! decline instead runs away on values with hundreds of digits. `i128` range is
+//! load-bearing there, so widening it is a per-route decision, not a property of
+//! the type.
+//!
+//! Any result that fits `i128` again is **demoted** back, on both families, so
+//! the fast path is retaken after transient growth and each value has exactly
+//! one representation — which is what keeps derived `Eq` (and the `TermNode`
+//! interner that depends on it) correct. The declining family accepts promoted
+//! operands: it computes exactly and then demotes, returning `None` if the
+//! result does not fit. So a promoted value never produces a wrong answer
+//! anywhere, only a decline.
+//!
+//! Comparison is the exception that is not opt-in: `Ord`/`wide_cmp` are always
+//! exact and can never fail, because comparing allocates no pool entry. Before
+//! ADR-1702 `Ord::cmp` panicked on a cross-multiplication overflow.
 //!
 //! # Soundness
 //!
 //! Both paths compute the same mathematical value — `BigRational` normalizes to
 //! the same canonical form and the demotion check (`BigInt::to_i128`) is exact —
 //! so no verdict built on this type can change. Only an `unknown` caused by
-//! running out of range can become a decision. The pool id is never observable:
-//! `Eq`, `Ord`, `Hash` and `Display` are all defined on the value, so a run that
-//! assigns different ids still produces identical output.
+//! running out of range, on a route that opted in, can become a decision. The
+//! pool id is never observable: `Eq`, `Ord`, `Hash` and `Display` are all defined
+//! on the value, so a run that assigns different ids still produces identical
+//! output.
 //!
 //! # The one hazard
 //!
 //! [`Rational::numerator`] and [`Rational::denominator`] return `i128` and
-//! therefore **panic** on a value outside that range. Saturating would turn an
-//! out-of-range value into a silently wrong one, which this project does not
-//! accept. Use [`Rational::checked_numerator`] / [`Rational::numerator_big`]
-//! (and the `denominator` counterparts) on any route that must not panic.
+//! therefore **panic** on a promoted value rather than truncate. Saturating would
+//! turn an out-of-range value into a silently wrong one, which this project does
+//! not accept. A route that opts into `wide_*` must therefore either keep
+//! promoted values internal or use [`Rational::checked_numerator`] /
+//! [`Rational::numerator_big`] (and the `denominator` counterparts).
 
 use std::sync::{LazyLock, RwLock};
 
@@ -243,6 +268,15 @@ impl Rational {
         }
     }
 
+    /// Demotes an arbitrary-precision value to the `i128` fast path, or `None`
+    /// if it does not fit. **Never** interns, so this is the conversion the
+    /// declining (`checked_*`) family uses.
+    fn demote_only(value: &BigRational) -> Option<Self> {
+        let (num, den) = (value.numer().to_i128()?, value.denom().to_i128()?);
+        debug_assert!(den > 0, "BigRational denominator must be positive");
+        Some(Self { num, den })
+    }
+
     /// Builds a `Rational` from an arbitrary-precision value, demoting to the
     /// `i128` fast path whenever it fits.
     ///
@@ -260,36 +294,49 @@ impl Rational {
 
     /// Creates `num/den` normalized to lowest terms with a positive denominator.
     ///
-    /// Since ADR-1702 this does **not** panic on `i128` overflow; the value is
-    /// promoted to the arbitrary-precision path instead.
+    /// This is a **declining** constructor: it does not promote (see the module
+    /// documentation for why promotion is opt-in). [`Rational::wide_new`] is the
+    /// promoting counterpart.
     ///
     /// # Panics
     ///
-    /// Panics if `den` is zero, or if the value needs the big-rational pool and
-    /// the pool is at capacity.
+    /// Panics if `den` is zero, or on `i128` overflow during normalization.
     pub fn new(num: i128, den: i128) -> Self {
         assert!(den != 0, "rational denominator must be non-zero");
-        if let Some(small) = small_new(num, den) {
-            return small;
-        }
-        Self::from_big(&BigRational::new(BigInt::from(num), BigInt::from(den)))
-            .expect("big-rational pool exhausted")
+        small_new(num, den).expect("rational normalization in range")
     }
 
     /// Creates `num/den` normalized to lowest terms, returning `None` instead of
-    /// panicking when the value cannot be represented (`den` zero is a usage
+    /// panicking on `i128` overflow during normalization (`den` zero is a usage
     /// error and still panics).
     ///
-    /// **Since ADR-1702 this returns `Some` on the promoted path**: `i128`
-    /// overflow during normalization is no longer a failure, so the only `None`
-    /// is a big-rational pool at capacity.
+    /// This is the overflow-graceful counterpart of [`Rational::new`], used by
+    /// the ground evaluator (the soundness trust anchor) so an out-of-range
+    /// rational becomes a graceful error rather than a panic or a wrong wrapped
+    /// value. It **declines** rather than promoting; [`Rational::wide_new`] is
+    /// the promoting counterpart.
     ///
     /// # Panics
     ///
     /// Panics if `den` is zero (a denominator-zero rational is a usage error,
-    /// not an overflow).
+    /// not an overflow). `i128` overflow during normalization returns `None`.
     #[must_use]
     pub fn checked_new(num: i128, den: i128) -> Option<Self> {
+        assert!(den != 0, "rational denominator must be non-zero");
+        small_new(num, den)
+    }
+
+    /// Creates `num/den` normalized to lowest terms, **promoting** to arbitrary
+    /// precision instead of declining on `i128` overflow (ADR-1702).
+    ///
+    /// Returns `None` only if the value needs the big-rational pool and the pool
+    /// is at capacity ([`Rational::big_pool_capacity`]).
+    ///
+    /// # Panics
+    ///
+    /// Panics if `den` is zero (a usage error, not an overflow).
+    #[must_use]
+    pub fn wide_new(num: i128, den: i128) -> Option<Self> {
         assert!(den != 0, "rational denominator must be non-zero");
         if let Some(small) = small_new(num, den) {
             return Some(small);
@@ -445,27 +492,154 @@ impl Rational {
 
     /// The multiplicative inverse `den/num`.
     ///
+    /// Declining, like the rest of the `checked_*`/operator family: it does not
+    /// promote. [`Rational::wide_recip`] is the promoting counterpart.
+    ///
     /// # Panics
     ///
-    /// Panics if this is zero, or if the big-rational pool is at capacity.
+    /// Panics if this is zero, or on `i128` overflow during normalization.
     #[must_use]
     pub fn recip(self) -> Self {
         assert!(!self.is_zero(), "reciprocal of zero rational");
+        self.wide_recip()
+            .filter(|r| !r.is_big())
+            .expect("rational reciprocal in range")
+    }
+
+    /// Exact negation, returning `None` on `i128` overflow (`num == i128::MIN`).
+    ///
+    /// **Declines rather than promotes** (ADR-1702): a result outside `i128` is
+    /// `None`, exactly as before promotion existed. A *promoted operand* — which
+    /// only the opt-in `wide_*` family can produce — is negated exactly and then
+    /// demoted, so this still never returns a wrong value.
+    #[must_use]
+    pub fn checked_neg(self) -> Option<Self> {
+        if self.is_small() {
+            return Some(Self {
+                num: self.num.checked_neg()?,
+                den: self.den,
+            });
+        }
+        Self::demote_only(&-self.to_big_rational())
+    }
+
+    /// Exact addition, returning `None` on `i128` overflow.
+    ///
+    /// **Declines rather than promotes** (ADR-1702); [`Rational::wide_add`] is
+    /// the promoting counterpart.
+    ///
+    /// Adds over the **least** common denominator rather than the product one:
+    /// with `g = gcd(b, d)`, `a/b + c/d = (a·(d/g) + c·(b/g)) / ((b/g)·d)`. The
+    /// naive `(a·d + c·b)/(b·d)` overflows on intermediates whose reduced result
+    /// fits comfortably, which in the exact-rational simplex is not academic: a
+    /// single overflow inside `pivot_and_update` abandons the whole
+    /// branch-and-bound tree as `unknown` (it was the true cause of the `QF_LIA`
+    /// `CAV_2009_benchmarks` residual, misreported as a node-budget exhaustion).
+    #[inline]
+    #[must_use]
+    pub fn checked_add(self, other: Self) -> Option<Self> {
+        if self.is_small() && other.is_small() {
+            return small_add(self.num, self.den, other.num, other.den);
+        }
+        Self::demote_only(&(self.to_big_rational() + other.to_big_rational()))
+    }
+
+    /// Exact subtraction, returning `None` on `i128` overflow.
+    ///
+    /// **Declines rather than promotes** (ADR-1702); [`Rational::wide_sub`] is
+    /// the promoting counterpart.
+    #[inline]
+    #[must_use]
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
+        if self.is_small() && other.is_small() {
+            return small_add(self.num, self.den, other.num.checked_neg()?, other.den);
+        }
+        Self::demote_only(&(self.to_big_rational() - other.to_big_rational()))
+    }
+
+    /// Exact multiplication, returning `None` on `i128` overflow.
+    ///
+    /// **Declines rather than promotes** (ADR-1702); [`Rational::wide_mul`] is
+    /// the promoting counterpart.
+    ///
+    /// **Cross-cancels before multiplying** — `gcd(a, d)` and `gcd(c, b)` are
+    /// divided out of `(a/b)·(c/d)` first — so only the *reduced* product has to
+    /// fit in `i128`. Multiplying first and reducing after loses every product
+    /// whose unreduced form overflows even though the answer is small.
+    #[inline]
+    #[must_use]
+    pub fn checked_mul(self, other: Self) -> Option<Self> {
+        if self.is_small() && other.is_small() {
+            return small_mul(self.num, self.den, other.num, other.den);
+        }
+        Self::demote_only(&(self.to_big_rational() * other.to_big_rational()))
+    }
+
+    /// Exact division, returning `None` on division by zero or `i128` overflow.
+    ///
+    /// **Declines rather than promotes** (ADR-1702); [`Rational::wide_div`] is
+    /// the promoting counterpart.
+    #[inline]
+    #[must_use]
+    pub fn checked_div(self, other: Self) -> Option<Self> {
+        if other.is_zero() {
+            return None;
+        }
+        if self.is_small() && other.is_small() {
+            // The reciprocal is normalized first: `small_mul` assumes both
+            // operands are in lowest terms with a POSITIVE denominator, and
+            // `(other.den, other.num)` is not when `other` is negative.
+            let recip = small_new(other.den, other.num)?;
+            return small_mul(self.num, self.den, recip.num, recip.den);
+        }
+        Self::demote_only(&(self.to_big_rational() / other.to_big_rational()))
+    }
+
+    /// Total ordering that returns `None` on `i128` overflow during the
+    /// cross-multiplication comparison, instead of panicking.
+    ///
+    /// Kept declining for two small operands so the pre-ADR-1702 behaviour is
+    /// preserved exactly. A *promoted* operand is compared at full precision,
+    /// which allocates nothing and cannot fail. [`Rational::wide_cmp`] is the
+    /// always-exact counterpart.
+    #[inline]
+    #[must_use]
+    pub fn checked_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+        if self.is_small() && other.is_small() {
+            return small_cmp(self.num, self.den, other.num, other.den);
+        }
+        Some(self.wide_cmp(other))
+    }
+
+    // --- ADR-1702: the opt-in PROMOTING family -------------------------------
+    //
+    // These are the only operations that can create a value outside `i128`.
+    // Promotion is opt-in per route, not a change in the meaning of the existing
+    // operations, because it was MEASURED to break routes that use `i128`
+    // exhaustion as their cost bound — see the module documentation.
+
+    /// Exact reciprocal, **promoting** past `i128` instead of declining.
+    ///
+    /// Returns `None` if this is zero, or if the big-rational pool is at
+    /// capacity ([`Rational::big_pool_capacity`]).
+    #[must_use]
+    pub fn wide_recip(self) -> Option<Self> {
+        if self.is_zero() {
+            return None;
+        }
         if self.is_small()
             && let Some(small) = small_new(self.den, self.num)
         {
-            return small;
+            return Some(small);
         }
-        Self::from_big(&self.to_big_rational().recip()).expect("big-rational pool exhausted")
+        Self::from_big(&self.to_big_rational().recip())
     }
 
-    /// Exact negation.
+    /// Exact negation, **promoting** past `i128` instead of declining.
     ///
-    /// **Since ADR-1702 this returns `Some` on the promoted path**: `i128`
-    /// overflow (`num == i128::MIN`) promotes instead of failing, so the only
-    /// `None` is a big-rational pool at capacity.
+    /// Returns `None` only if the big-rational pool is at capacity.
     #[must_use]
-    pub fn checked_neg(self) -> Option<Self> {
+    pub fn wide_neg(self) -> Option<Self> {
         if self.is_small()
             && let Some(num) = self.num.checked_neg()
         {
@@ -474,21 +648,12 @@ impl Rational {
         Self::from_big(&-self.to_big_rational())
     }
 
-    /// Exact addition.
+    /// Exact addition, **promoting** past `i128` instead of declining.
     ///
-    /// **Since ADR-1702 this returns `Some` on the promoted path**: `i128`
-    /// overflow promotes to arbitrary precision instead of failing, so the only
-    /// `None` is a big-rational pool at capacity.
-    ///
-    /// The `i128` fast path adds over the **least** common denominator rather
-    /// than the product one: with `g = gcd(b, d)`,
-    /// `a/b + c/d = (a·(d/g) + c·(b/g)) / ((b/g)·d)`. The naive
-    /// `(a·d + c·b)/(b·d)` leaves the fast path on intermediates whose reduced
-    /// result fits comfortably, which is worth avoiding even now that leaving it
-    /// costs a promotion rather than an `unknown`.
+    /// Returns `None` only if the big-rational pool is at capacity.
     #[inline]
     #[must_use]
-    pub fn checked_add(self, other: Self) -> Option<Self> {
+    pub fn wide_add(self, other: Self) -> Option<Self> {
         if self.is_small()
             && other.is_small()
             && let Some(small) = small_add(self.num, self.den, other.num, other.den)
@@ -498,13 +663,12 @@ impl Rational {
         Self::from_big(&(self.to_big_rational() + other.to_big_rational()))
     }
 
-    /// Exact subtraction.
+    /// Exact subtraction, **promoting** past `i128` instead of declining.
     ///
-    /// **Since ADR-1702 this returns `Some` on the promoted path**; the only
-    /// `None` is a big-rational pool at capacity.
+    /// Returns `None` only if the big-rational pool is at capacity.
     #[inline]
     #[must_use]
-    pub fn checked_sub(self, other: Self) -> Option<Self> {
+    pub fn wide_sub(self, other: Self) -> Option<Self> {
         if self.is_small()
             && other.is_small()
             && let Some(neg) = other.num.checked_neg()
@@ -515,17 +679,12 @@ impl Rational {
         Self::from_big(&(self.to_big_rational() - other.to_big_rational()))
     }
 
-    /// Exact multiplication.
+    /// Exact multiplication, **promoting** past `i128` instead of declining.
     ///
-    /// **Since ADR-1702 this returns `Some` on the promoted path**; the only
-    /// `None` is a big-rational pool at capacity.
-    ///
-    /// The `i128` fast path **cross-cancels before multiplying** — `gcd(a, d)`
-    /// and `gcd(c, b)` are divided out of `(a/b)·(c/d)` first — so only the
-    /// *reduced* product has to fit for the fast path to be kept.
+    /// Returns `None` only if the big-rational pool is at capacity.
     #[inline]
     #[must_use]
-    pub fn checked_mul(self, other: Self) -> Option<Self> {
+    pub fn wide_mul(self, other: Self) -> Option<Self> {
         if self.is_small()
             && other.is_small()
             && let Some(small) = small_mul(self.num, self.den, other.num, other.den)
@@ -535,20 +694,16 @@ impl Rational {
         Self::from_big(&(self.to_big_rational() * other.to_big_rational()))
     }
 
-    /// Exact division, returning `None` on division by zero.
+    /// Exact division, **promoting** past `i128` instead of declining.
     ///
-    /// **Since ADR-1702 an out-of-range quotient returns `Some`** on the
-    /// promoted path; the remaining `None`s are division by zero and a
-    /// big-rational pool at capacity.
+    /// Returns `None` on division by zero, or if the big-rational pool is at
+    /// capacity.
     #[inline]
     #[must_use]
-    pub fn checked_div(self, other: Self) -> Option<Self> {
+    pub fn wide_div(self, other: Self) -> Option<Self> {
         if other.is_zero() {
             return None;
         }
-        // The reciprocal must be normalized first: `small_mul` assumes both
-        // operands are in lowest terms with a POSITIVE denominator, and
-        // `(other.den, other.num)` is not when `other` is negative.
         if self.is_small()
             && other.is_small()
             && let Some(recip) = small_new(other.den, other.num)
@@ -559,22 +714,19 @@ impl Rational {
         Self::from_big(&(self.to_big_rational() / other.to_big_rational()))
     }
 
-    /// Total ordering.
-    ///
-    /// **Since ADR-1702 this always returns `Some`**: a cross-multiplication that
-    /// leaves `i128` range falls back to arbitrary-precision comparison, which
-    /// allocates no pool entry and therefore cannot fail. The `Option` is kept so
-    /// the ~5,500 existing call sites compile unchanged.
+    /// Total ordering that is always exact and can never decline: a comparison
+    /// outside `i128` range falls back to arbitrary precision, which allocates no
+    /// pool entry.
     #[inline]
     #[must_use]
-    pub fn checked_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
+    pub fn wide_cmp(&self, other: &Self) -> core::cmp::Ordering {
         if self.is_small()
             && other.is_small()
             && let Some(ordering) = small_cmp(self.num, self.den, other.num, other.den)
         {
-            return Some(ordering);
+            return ordering;
         }
-        Some(self.to_big_rational().cmp(&other.to_big_rational()))
+        self.to_big_rational().cmp(&other.to_big_rational())
     }
 }
 
@@ -585,10 +737,10 @@ impl core::ops::Div for Rational {
     ///
     /// # Panics
     ///
-    /// Panics on division by zero, or if the big-rational pool is at capacity.
+    /// Panics on division by zero or `i128` overflow.
     #[allow(clippy::suspicious_arithmetic_impl)] // division is multiply-by-reciprocal
     fn div(self, other: Self) -> Self {
-        self.checked_div(other).expect("rational division")
+        self.checked_div(other).expect("rational division overflow")
     }
 }
 
@@ -599,9 +751,9 @@ impl core::ops::Neg for Rational {
     ///
     /// # Panics
     ///
-    /// Panics if the big-rational pool is at capacity.
+    /// Panics on `i128` overflow (only `num == i128::MIN`).
     fn neg(self) -> Self {
-        self.checked_neg().expect("rational negation")
+        self.checked_neg().expect("rational negation in range")
     }
 }
 
@@ -612,9 +764,9 @@ impl core::ops::Add for Rational {
     ///
     /// # Panics
     ///
-    /// Panics if the big-rational pool is at capacity.
+    /// Panics on `i128` overflow.
     fn add(self, other: Self) -> Self {
-        self.checked_add(other).expect("rational add")
+        self.checked_add(other).expect("rational add overflow")
     }
 }
 
@@ -625,9 +777,9 @@ impl core::ops::Sub for Rational {
     ///
     /// # Panics
     ///
-    /// Panics if the big-rational pool is at capacity.
+    /// Panics on `i128` overflow.
     fn sub(self, other: Self) -> Self {
-        self.checked_sub(other).expect("rational sub")
+        self.checked_sub(other).expect("rational sub overflow")
     }
 }
 
@@ -638,9 +790,9 @@ impl core::ops::Mul for Rational {
     ///
     /// # Panics
     ///
-    /// Panics if the big-rational pool is at capacity.
+    /// Panics on `i128` overflow.
     fn mul(self, other: Self) -> Self {
-        self.checked_mul(other).expect("rational mul")
+        self.checked_mul(other).expect("rational mul overflow")
     }
 }
 
@@ -651,14 +803,12 @@ impl PartialOrd for Rational {
 }
 
 impl Ord for Rational {
+    /// Always exact, and since ADR-1702 it can no longer panic: a comparison
+    /// whose cross-multiplication leaves `i128` falls back to arbitrary
+    /// precision, which allocates nothing. Comparison is the one operation where
+    /// widening cannot cost anything, so it is not opt-in.
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
-        if self.is_small()
-            && other.is_small()
-            && let Some(ordering) = small_cmp(self.num, self.den, other.num, other.den)
-        {
-            return ordering;
-        }
-        self.to_big_rational().cmp(&other.to_big_rational())
+        self.wide_cmp(other)
     }
 }
 
@@ -768,13 +918,51 @@ mod tests {
         assert!(Rational::new(5, 3) > Rational::integer(1));
     }
 
-    // --- ADR-1702: promotion, demotion, and representation independence ---
+    // --- ADR-1702 --------------------------------------------------------------
+    //
+    // Promotion is OPT-IN: the `checked_*`/operator family must still decline on
+    // `i128` overflow (routes such as `axeyum-cas` use that as a cost bound), and
+    // only the `wide_*` family promotes. The first test below is the one that
+    // distinguishes the two designs.
+
+    #[test]
+    fn the_checked_family_declines_exactly_where_the_wide_family_promotes() {
+        let two_100 = Rational::integer(1i128 << 100);
+        // Declining family: unchanged by ADR-1702.
+        assert_eq!(two_100.checked_mul(two_100), None);
+        assert_eq!(two_100.checked_add(Rational::integer(i128::MAX)), None);
+        assert_eq!(Rational::integer(i128::MIN).checked_neg(), None);
+        assert_eq!(Rational::checked_new(i128::MIN, -1), None);
+        // Promoting family: the same operations succeed and are exact.
+        let product = two_100.wide_mul(two_100).expect("promotes");
+        assert!(product.is_big());
+        assert_eq!(product.numerator_big(), BigInt::from(1u32) << 200u32);
+        assert!(
+            Rational::integer(i128::MIN)
+                .wide_neg()
+                .expect("promotes")
+                .is_big(),
+            "-i128::MIN needs the wide path"
+        );
+        assert!(
+            Rational::wide_new(i128::MIN, -1)
+                .expect("promotes")
+                .is_big()
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "rational mul overflow")]
+    fn the_multiplication_operator_still_panics_on_overflow() {
+        let two_100 = Rational::integer(1i128 << 100);
+        let _ = two_100 * two_100;
+    }
 
     #[test]
     fn product_across_2_127_promotes_and_is_exact() {
         // 2^100 * 2^100 = 2^200, well past i128::MAX (< 2^127).
         let two_100 = Rational::integer(1i128 << 100);
-        let product = two_100 * two_100;
+        let product = two_100.wide_mul(two_100).expect("promotes");
         assert!(product.is_big(), "2^200 must leave the i128 fast path");
         assert!(!two_100.is_big(), "2^100 fits i128 and must stay small");
         let two_200 = BigInt::from(1u32) << 200u32;
@@ -793,7 +981,7 @@ mod tests {
     #[should_panic(expected = "rational numerator exceeds i128")]
     fn numerator_panics_on_a_promoted_value() {
         let two_100 = Rational::integer(1i128 << 100);
-        let _ = (two_100 * two_100).numerator();
+        let _ = two_100.wide_mul(two_100).expect("promotes").numerator();
     }
 
     #[test]
@@ -801,9 +989,9 @@ mod tests {
         // i128::MAX is not a power of two; probe on both sides of 2^126.
         let two_126 = Rational::integer(1i128 << 126);
         assert!(!two_126.is_big());
-        let doubled = two_126 * Rational::integer(2);
+        let doubled = two_126.wide_mul(Rational::integer(2)).expect("promotes");
         assert!(doubled.is_big(), "2^127 exceeds i128::MAX");
-        let halved = doubled / Rational::integer(2);
+        let halved = doubled.wide_div(Rational::integer(2)).expect("demotes");
         assert!(!halved.is_big(), "2^126 must demote back to the fast path");
         assert_eq!(halved, two_126);
         assert_eq!(halved.numerator(), 1i128 << 126);
@@ -820,9 +1008,10 @@ mod tests {
         assert!(target.is_big());
         // Reach the same value by exact arithmetic rather than by construction.
         let built = Rational::integer(16)
-            * Rational::integer(10i128.pow(28))
-            * Rational::integer(10i128.pow(28))
-            / Rational::integer(7);
+            .wide_mul(Rational::integer(10i128.pow(28)))
+            .and_then(|r| r.wide_mul(Rational::integer(10i128.pow(28))))
+            .and_then(|r| r.wide_div(Rational::integer(7)))
+            .expect("promotes");
         assert_eq!(built, target);
         assert_eq!(built.numerator_big(), numerator);
         assert_eq!(built.denominator(), 7);
@@ -833,9 +1022,15 @@ mod tests {
     fn growth_then_cancellation_retakes_the_fast_path() {
         let base = Rational::new(3, 7);
         let huge = Rational::integer(i128::MAX);
-        let grown = base * huge * huge;
+        let grown = base
+            .wide_mul(huge)
+            .and_then(|r| r.wide_mul(huge))
+            .expect("promotes");
         assert!(grown.is_big(), "the intermediate must promote");
-        let back = grown / huge / huge;
+        let back = grown
+            .wide_div(huge)
+            .and_then(|r| r.wide_div(huge))
+            .expect("demotes");
         assert!(
             !back.is_big(),
             "cancelling back into range must demote to the fast path"
@@ -846,22 +1041,45 @@ mod tests {
     }
 
     #[test]
+    fn the_declining_family_accepts_a_promoted_operand_exactly_or_declines() {
+        let huge = Rational::integer(1i128 << 100)
+            .wide_mul(Rational::integer(1i128 << 100))
+            .expect("promotes");
+        // Result still out of range: decline, never a wrong value, never a panic.
+        assert_eq!(huge.checked_mul(Rational::integer(2)), None);
+        assert_eq!(huge.checked_add(Rational::integer(1)), None);
+        // Result back in range: exact.
+        assert_eq!(huge.checked_sub(huge), Some(Rational::zero()));
+        assert_eq!(
+            huge.checked_div(huge),
+            Some(Rational::integer(1)),
+            "a promoted operand whose quotient fits must come back exact"
+        );
+    }
+
+    #[test]
     fn eq_ord_and_hash_agree_across_representations() {
         // A value that fits must be identical whether it was built directly or
         // arrived by demotion from the big path.
         let direct = Rational::new(-5, 9);
         let huge = Rational::integer(i128::MAX);
-        let round_tripped = direct * huge / huge;
+        let round_tripped = direct
+            .wide_mul(huge)
+            .and_then(|r| r.wide_div(huge))
+            .expect("round trip");
         assert!(!round_tripped.is_big());
         assert_eq!(direct, round_tripped);
         assert_eq!(direct.cmp(&round_tripped), core::cmp::Ordering::Equal);
         assert_eq!(hash_of(direct), hash_of(round_tripped));
 
         // Two independently promoted equal big values must also agree.
-        let big_a = Rational::integer(1i128 << 120) * Rational::integer(1i128 << 120);
+        let big_a = Rational::integer(1i128 << 120)
+            .wide_mul(Rational::integer(1i128 << 120))
+            .expect("promotes");
         let big_b = Rational::integer(1i128 << 100)
-            * Rational::integer(1i128 << 100)
-            * Rational::integer(1i128 << 40);
+            .wide_mul(Rational::integer(1i128 << 100))
+            .and_then(|r| r.wide_mul(Rational::integer(1i128 << 40)))
+            .expect("promotes");
         assert!(big_a.is_big() && big_b.is_big());
         assert_eq!(big_a, big_b);
         assert_eq!(hash_of(big_a), hash_of(big_b));
@@ -870,56 +1088,67 @@ mod tests {
     }
 
     #[test]
-    fn comparison_never_declines() {
-        // Cross-multiplication of these two overflows i128, so before ADR-1702
-        // `checked_cmp` returned None here.
+    fn comparison_never_declines_and_never_panics() {
+        // Cross-multiplication of these two overflows i128, so `Ord::cmp` used to
+        // panic here. Comparison allocates nothing, so it is exact unconditionally.
         let a = Rational::new(i128::MAX, 3);
         let b = Rational::new(i128::MAX - 1, 5);
-        assert_eq!(a.checked_cmp(&b), Some(core::cmp::Ordering::Greater));
+        assert_eq!(a.wide_cmp(&b), core::cmp::Ordering::Greater);
         assert!(a > b);
         // Big vs small, both directions.
-        let huge = Rational::integer(1i128 << 100) * Rational::integer(1i128 << 100);
+        let huge = Rational::integer(1i128 << 100)
+            .wide_mul(Rational::integer(1i128 << 100))
+            .expect("promotes");
         assert!(huge > a);
-        assert!((-huge) < b);
+        assert!(huge.wide_neg().expect("promotes") < b);
     }
 
     #[test]
-    fn checked_div_still_declines_on_zero() {
-        assert_eq!(
-            Rational::integer(1).checked_div(Rational::zero()),
-            None,
-            "division by zero is not an overflow and must still decline"
-        );
-        let huge = Rational::integer(1i128 << 100) * Rational::integer(1i128 << 100);
+    fn division_by_zero_still_declines_on_both_families() {
+        assert_eq!(Rational::integer(1).checked_div(Rational::zero()), None);
+        assert_eq!(Rational::integer(1).wide_div(Rational::zero()), None);
+        let huge = Rational::integer(1i128 << 100)
+            .wide_mul(Rational::integer(1i128 << 100))
+            .expect("promotes");
         assert_eq!(huge.checked_div(Rational::zero()), None);
+        assert_eq!(huge.wide_div(Rational::zero()), None);
+        assert_eq!(Rational::zero().wide_recip(), None);
     }
 
     #[test]
     fn recip_and_neg_across_the_boundary() {
-        let huge = Rational::integer(1i128 << 100) * Rational::integer(1i128 << 100);
-        let inverse = huge.recip();
+        let huge = Rational::integer(1i128 << 100)
+            .wide_mul(Rational::integer(1i128 << 100))
+            .expect("promotes");
+        let inverse = huge.wide_recip().expect("promotes");
         assert!(inverse.is_big());
         assert_eq!(inverse.numerator(), 1);
-        assert_eq!(inverse * huge, Rational::integer(1));
-        assert_eq!(-(-huge), huge);
-        // i128::MIN negation used to be the one `checked_neg` failure.
+        assert_eq!(inverse.wide_mul(huge), Some(Rational::integer(1)));
+        assert_eq!(huge.wide_neg().and_then(Rational::wide_neg), Some(huge));
+        // i128::MIN negation is the one `checked_neg` failure, and it still is.
         let min = Rational::integer(i128::MIN);
-        let negated = min.checked_neg().expect("promotes instead of declining");
+        assert_eq!(min.checked_neg(), None);
+        let negated = min.wide_neg().expect("promotes instead of declining");
         assert!(negated.is_big());
-        assert_eq!(negated + min, Rational::zero());
+        assert_eq!(negated.wide_add(min), Some(Rational::zero()));
     }
 
     #[test]
     fn zero_and_integer_predicates_hold_for_promoted_values() {
-        let huge = Rational::integer(1i128 << 100) * Rational::integer(1i128 << 100);
+        let huge = Rational::integer(1i128 << 100)
+            .wide_mul(Rational::integer(1i128 << 100))
+            .expect("promotes");
         assert!(!huge.is_zero());
         assert!(huge.is_integer());
-        let fraction = huge / Rational::integer(3);
+        let fraction = huge.wide_div(Rational::integer(3)).expect("promotes");
         assert!(fraction.is_big());
         assert!(!fraction.is_integer());
         assert!(!fraction.is_zero());
-        assert_eq!(huge - huge, Rational::zero());
-        assert!(!(huge - huge).is_big(), "zero always fits i128");
+        assert_eq!(huge.wide_sub(huge), Some(Rational::zero()));
+        assert!(
+            !huge.wide_sub(huge).expect("exact").is_big(),
+            "zero always fits i128"
+        );
     }
 
     /// Seeded xorshift64* — a property test must be reproducible, and this
@@ -943,14 +1172,17 @@ mod tests {
 
         /// A rational whose magnitude deliberately straddles `2^127`: the shift
         /// pushes the numerator up to the ceiling, and one operand in three is
-        /// squared so that PROMOTED values are inputs too, not just outputs.
+        /// squared through the wide path so that PROMOTED values are inputs too,
+        /// not just outputs.
         fn rational(&mut self) -> Rational {
             let shift = u32::try_from(self.next() % 127).expect("shift < 127");
             let num = self.next_i128() << shift;
             let den = self.next_i128() | 1;
-            let base = Rational::new(num, den);
+            // `wide_new`, not `new`: the generator deliberately produces
+            // `i128::MIN` numerators, which the declining constructor panics on.
+            let base = Rational::wide_new(num, den).expect("pool has room");
             if self.next() % 3 == 0 {
-                base * base
+                base.wide_mul(base).expect("pool has room")
             } else {
                 base
             }
@@ -958,7 +1190,7 @@ mod tests {
     }
 
     #[test]
-    fn every_operation_agrees_with_bigrational() {
+    fn every_wide_operation_agrees_with_bigrational() {
         let mut rng = Rng(0x5EED_1702);
         for _ in 0..2000 {
             let a = rng.rational();
@@ -966,44 +1198,62 @@ mod tests {
             let (ab, bb) = (a.to_big_rational(), b.to_big_rational());
 
             assert_eq!(
-                (a + b).to_big_rational(),
+                a.wide_add(b).expect("pool").to_big_rational(),
                 ab.clone() + bb.clone(),
                 "add disagrees for {a:?} + {b:?}"
             );
             assert_eq!(
-                (a - b).to_big_rational(),
+                a.wide_sub(b).expect("pool").to_big_rational(),
                 ab.clone() - bb.clone(),
                 "sub disagrees for {a:?} - {b:?}"
             );
             assert_eq!(
-                (a * b).to_big_rational(),
+                a.wide_mul(b).expect("pool").to_big_rational(),
                 ab.clone() * bb.clone(),
                 "mul disagrees for {a:?} * {b:?}"
             );
             assert_eq!(
-                (-a).to_big_rational(),
+                a.wide_neg().expect("pool").to_big_rational(),
                 -ab.clone(),
                 "neg disagrees for {a:?}"
             );
-            assert_eq!(a.cmp(&b), ab.cmp(&bb), "cmp disagrees for {a:?} vs {b:?}");
+            assert_eq!(
+                a.wide_cmp(&b),
+                ab.cmp(&bb),
+                "cmp disagrees for {a:?} vs {b:?}"
+            );
             if !b.is_zero() {
                 assert_eq!(
-                    (a / b).to_big_rational(),
+                    a.wide_div(b).expect("pool").to_big_rational(),
                     ab.clone() / bb.clone(),
                     "div disagrees for {a:?} / {b:?}"
                 );
             }
             if !a.is_zero() {
                 assert_eq!(
-                    a.recip().to_big_rational(),
+                    a.wide_recip().expect("pool").to_big_rational(),
                     ab.recip(),
                     "recip disagrees for {a:?}"
                 );
             }
+
             // Representation is canonical: a value that fits i128 is small.
-            let sum = a + b;
+            let sum = a.wide_add(b).expect("pool");
             if sum.checked_numerator().is_some() && sum.checked_denominator().is_some() {
                 assert!(!sum.is_big(), "{sum:?} fits i128 but stayed promoted");
+            }
+
+            // The declining family never disagrees with the wide one: it either
+            // returns the same value or declines.
+            for (checked, wide) in [
+                (a.checked_add(b), a.wide_add(b)),
+                (a.checked_sub(b), a.wide_sub(b)),
+                (a.checked_mul(b), a.wide_mul(b)),
+            ] {
+                if let Some(value) = checked {
+                    assert!(!value.is_big(), "the declining family must stay in i128");
+                    assert_eq!(Some(value), wide, "declining and wide disagree");
+                }
             }
         }
     }
@@ -1012,7 +1262,7 @@ mod tests {
     fn pool_capacity_is_reported() {
         assert_eq!(Rational::big_pool_capacity(), 1 << 20);
         let before = Rational::big_pool_len();
-        let _ = Rational::integer(1i128 << 100) * Rational::integer(1i128 << 100);
+        let _ = Rational::integer(1i128 << 100).wide_mul(Rational::integer(1i128 << 100));
         assert!(
             Rational::big_pool_len() >= before,
             "the pool is append-only"

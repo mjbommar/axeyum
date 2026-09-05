@@ -7,8 +7,8 @@
 //! sound outcome (`Ok(_)`, never a panic, never a wrong verdict).
 //!
 //! **Since ADR-1702 the expected outcome is no longer "`Unknown`, full stop".**
-//! Exact rationals now PROMOTE to arbitrary precision instead of overflowing, so
-//! a query that used to degrade may now be decided correctly. Each test here
+//! A route may OPT IN to promoting rational arithmetic (the simplex does), so a
+//! query that used to degrade may now be decided correctly. Each test here
 //! therefore asserts against the verdict that would be *wrong* for its query,
 //! never against the correct one — asserting "not `Sat`" on a satisfiable query
 //! is a test that forbids the right answer.
@@ -25,11 +25,11 @@ use axeyum_solver::{CheckResult, SolverConfig, solve};
 ///
 /// **This test's assertion changed with ADR-1702.** It used to forbid `Sat`, on
 /// the ground that "the verdict cannot be soundly computed from overflowed
-/// values". Exact rational arithmetic no longer overflows — it promotes to
-/// arbitrary precision — so `x·x` for `x = i128::MAX` is now an exact value and
-/// the query is plainly **satisfiable**. Forbidding `Sat` would forbid the
-/// correct answer. The wrong verdict here is `Unsat`, and that is what is
-/// asserted against; a graceful `Unknown` also remains acceptable.
+/// values". That ground no longer holds in general: a route can compute `x·x`
+/// for `x = i128::MAX` exactly, and the query is plainly **satisfiable**, so
+/// forbidding `Sat` would forbid the correct answer. The wrong verdict here is
+/// `Unsat`, and that is what is asserted against; a graceful `Unknown` also
+/// remains acceptable.
 #[test]
 fn huge_rational_real_mul_is_graceful_not_crash() {
     let mut a = TermArena::new();

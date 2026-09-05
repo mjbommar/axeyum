@@ -19,11 +19,22 @@
 //!   (never a wrong verdict — the same `checked_*` discipline as the rest of the
 //!   solver).
 //!
-//! Since **ADR-1702** that last case is much narrower than it was: `i128`
-//! overflow no longer declines, it PROMOTES to arbitrary precision, so the whole
-//! class of `unknown`s this engine used to return on coefficient growth is now
-//! decided. The remaining declines are division by zero and a big-rational pool
-//! at capacity — see the `Overflow` marker below.
+//! Since **ADR-1702** that last case is much narrower than it was. This engine
+//! OPTS IN to promoting rational arithmetic (`Rational::wide_*`), so `i128`
+//! overflow inside the tableau no longer abandons the search — the value is
+//! carried at arbitrary precision and demoted again as soon as it fits. The
+//! whole class of `unknown`s this engine used to return on intermediate
+//! coefficient growth is therefore decided.
+//!
+//! Promotion is **contained**: every value that leaves this module passes
+//! through `narrow`, which declines to `Unknown` if a feasible point or a Farkas
+//! multiplier does not fit `i128`. Nothing downstream can observe that a
+//! promoted value existed, which is why the widening is a pure gain rather than
+//! a new obligation on `lra`, `lra_online` or model lifting.
+//!
+//! The remaining declines are a witness or certificate outside `i128`, division
+//! by zero, and a big-rational pool at capacity — see the `Overflow` marker
+//! below.
 //!
 //! # Scope
 //!
@@ -121,36 +132,61 @@ pub enum SimplexOutcome {
 
 /// Marker for an exact-arithmetic decline; mapped to [`SimplexOutcome::Unknown`].
 ///
-/// **ADR-1702 narrowed this but did not make it unreachable, so it stays.**
-/// `Rational` now promotes to arbitrary precision instead of overflowing, which
-/// removes the coefficient-growth `unknown`s this marker used to carry. What
-/// remains reachable is [`Rational::checked_div`] declining on a **zero
-/// divisor** — not an overflow at all — and the big-rational pool reaching
+/// **ADR-1702 narrowed this but did not make it unreachable, so it stays.** The
+/// tableau's arithmetic promotes rather than overflowing, which removes the
+/// coefficient-growth `unknown`s this marker used to carry. What remains
+/// reachable is [`Rational::wide_div`] declining on a **zero divisor** — not an
+/// overflow at all — and the big-rational pool reaching
 /// [`Rational::big_pool_capacity`], past which every operation behaves exactly
 /// as it did before ADR-1702. Deleting the marker would delete a live soundness
 /// path, so the pivot and deadline budgets and this decline route are all kept.
 ///
-/// One helper below is now infallible in practice: `checked_cmp` cannot decline
-/// after ADR-1702 (comparison allocates no pool entry), so `cmp` always returns
-/// `Ok`. It keeps the `R<_>` shape because 18 call sites thread it, and because
-/// the shape is what would carry a future failure back.
+/// One helper below is now infallible: `Rational::wide_cmp` cannot decline
+/// (comparison allocates no pool entry), so `cmp` always returns `Ok`. It keeps
+/// the `R<_>` shape because 18 call sites thread it, and because the shape is
+/// what would carry a future failure back.
 struct Overflow;
 type R<T> = Result<T, Overflow>;
 
+// ADR-1702: this engine OPTS IN to promoting rational arithmetic. The `wide_*`
+// family carries a value past `i128` instead of declining, which is what removes
+// the coefficient-growth `unknown`s the tableau used to return; promoted values
+// never leave this module, because every public exit narrows through
+// [`narrow`].
 fn add(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_add(b).ok_or(Overflow)
+    a.wide_add(b).ok_or(Overflow)
 }
 fn sub(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_sub(b).ok_or(Overflow)
+    a.wide_sub(b).ok_or(Overflow)
 }
 fn mul(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_mul(b).ok_or(Overflow)
+    a.wide_mul(b).ok_or(Overflow)
 }
 fn div(a: Rational, b: Rational) -> R<Rational> {
-    a.checked_div(b).ok_or(Overflow)
+    a.wide_div(b).ok_or(Overflow)
 }
 fn cmp(a: Rational, b: Rational) -> R<core::cmp::Ordering> {
-    a.checked_cmp(&b).ok_or(Overflow)
+    Ok(a.wide_cmp(&b))
+}
+
+/// The **containment boundary** for ADR-1702 promotion.
+///
+/// The tableau computes over promoted rationals, but every value this module
+/// hands back — a feasible point, a Farkas multiplier vector — must be an
+/// ordinary `i128` rational, because the consumers downstream (`lra`,
+/// `lra_online`, model lifting, certificate serialization) read
+/// `Rational::numerator()`, which panics rather than truncate on a promoted
+/// value. A witness or certificate that genuinely does not fit therefore
+/// declines to `unknown`, exactly as the whole call declined before.
+///
+/// This is what makes the widening strictly a gain: intermediate growth no
+/// longer abandons the search, and nothing outside this module can observe that
+/// a promoted value ever existed.
+fn narrow(values: Vec<Rational>) -> Option<Vec<Rational>> {
+    if values.iter().any(|v| v.is_big()) {
+        return None;
+    }
+    Some(values)
 }
 
 /// A value `c + k·δ` in the ordered field `ℚ(δ)` with `δ` a positive infinitesimal
@@ -219,10 +255,12 @@ pub fn feasible(nvars: usize, constraints: &[Constraint]) -> SimplexOutcome {
     let mut tableau = Tableau::new(nvars, constraints);
     match tableau.run(None, MAX_PIVOTS) {
         Ok(RunOutcome::Feasible) => match tableau.materialize() {
-            Ok(point) => SimplexOutcome::Feasible(point),
+            Ok(point) => narrow(point).map_or(SimplexOutcome::Unknown, SimplexOutcome::Feasible),
             Err(Overflow) => SimplexOutcome::Unknown,
         },
-        Ok(RunOutcome::Infeasible(y)) => SimplexOutcome::Infeasible(y),
+        Ok(RunOutcome::Infeasible(y)) => {
+            narrow(y).map_or(SimplexOutcome::Unknown, SimplexOutcome::Infeasible)
+        }
         Ok(RunOutcome::Unknown) | Err(Overflow) => SimplexOutcome::Unknown,
     }
 }
@@ -861,7 +899,8 @@ impl Incremental {
     /// against the original assertions — that replay, not this function, is what
     /// makes a `sat` trustworthy.
     pub(crate) fn point(&self) -> Option<Vec<Rational>> {
-        self.tab.materialize().ok()
+        // `narrow`: a promoted witness cannot cross this boundary (ADR-1702).
+        self.tab.materialize().ok().and_then(narrow)
     }
 }
 

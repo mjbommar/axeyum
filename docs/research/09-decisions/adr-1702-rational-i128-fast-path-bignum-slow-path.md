@@ -1,6 +1,6 @@
 # ADR-1702: Exact rationals are an `i128` fast path with an arbitrary-precision slow path
 
-Index-summary: `Rational` promotes to arbitrary precision on `i128` overflow instead of declining (slice 1: `Rational`; slice 2: `Value::Int` and the parser)
+Index-summary: `Rational` gets an opt-in `wide_*` family that promotes to arbitrary precision instead of declining; global promotion was implemented, measured against `axeyum-cas`, and rejected
 Index-status: accepted
 Status: accepted
 Date: 2026-09-05
@@ -40,16 +40,27 @@ in-tree precedent for the same shape in the bit-vector direction.
 
 ## Decision
 
-**Exact rational arithmetic in the IR is an `i128` fast path with an
-arbitrary-precision slow path: `i128` overflow PROMOTES the value to
-`num_rational::BigRational` instead of declining, and a result that fits `i128`
-again DEMOTES back to the fast path.**
+**Exact rational arithmetic in the IR gains an arbitrary-precision slow path
+behind the existing `i128` fast path, and promotion is OPT-IN PER ROUTE: a
+parallel `wide_*` family promotes on `i128` overflow, while `new`, the
+`checked_*` family and the arithmetic operators keep declining exactly as they
+did before.**
+
+The first draft of this ADR made promotion the global meaning of the existing
+operations. That was implemented, measured, and rejected — see *The measurement
+that changed this decision* below. What landed is the same machinery with a
+narrower contract.
+
+| family | on `i128` overflow | who uses it |
+|---|---|---|
+| `new`, `checked_new`, `checked_neg/add/sub/mul/div`, `recip`, and the `Add`/`Sub`/`Mul`/`Div`/`Neg` operators | **declines** (`None`) or panics — unchanged | everything, by default |
+| `wide_new`, `wide_neg`, `wide_add`, `wide_sub`, `wide_mul`, `wide_div`, `wide_recip` | **promotes** to arbitrary precision | a route that opts in |
 
 Detail:
 
-- The public API of `Rational` does not change shape. Every existing `pub fn`
-  keeps its name and signature, so the 223 files and ~5,500 references that
-  consume the type compile unchanged.
+- The public API of `Rational` does not change shape. Every pre-existing
+  `pub fn` keeps its name, signature **and behaviour**, so the 223 files and
+  ~5,500 references that consume the type are unaffected.
 - `Rational` stays `Copy`. This is a hard constraint, not a preference: it is
   consumed by value in ~5,500 places and is a field of the interned
   `TermNode::RealConst`. `BigRational` is heap-owned and therefore not `Copy`,
@@ -58,74 +69,102 @@ Detail:
   otherwise-impossible `den == 0` (the small invariant is `den > 0`). The
   struct's size and layout are unchanged, so the dense simplex tableau's
   memory model is unchanged.
-- The pool is capped (`Rational::big_pool_capacity()`). Past the cap,
-  promotion fails and every operation behaves **exactly as it does today** —
-  `checked_*` returns `None`, the operators panic. The cap is what keeps an
-  append-only pool from turning today's fast `unknown` into an OOM.
-- Functions that returned `None` on overflow keep their signatures and now
-  return `Some` on the promoted path; each such function documents that.
-  `Rational::new` no longer panics on overflow (`den == 0` is still a usage
-  error and still asserts). `checked_cmp` now always returns `Some`, because
-  comparison never allocates a pool entry.
-- `Ord`, `Eq` and `Hash` are **value-based and representation-independent**: a
-  value that fits `i128` hashes and compares identically whether it was built
-  small or arrived by demotion from big. Because promotion only ever happens
-  for values that do *not* fit `i128`, and because every result that fits is
-  demoted, each rational value has exactly one representation — the
-  canonicality that `TermNode` interning depends on is preserved.
+- Any result that fits `i128` again is **demoted** back, on both families, so
+  the fast path is retaken after transient growth and each value has exactly
+  one representation — the canonicality `TermNode` interning depends on.
+- The declining family **accepts** promoted operands: it computes exactly and
+  then demotes, returning `None` if the result does not fit. A promoted value
+  therefore never produces a wrong answer anywhere, only a decline.
+- Comparison is the one operation that is not opt-in. `Ord::cmp` and
+  `wide_cmp` are always exact and can never fail, because comparing allocates
+  no pool entry; before this ADR `Ord::cmp` panicked on a cross-multiplication
+  overflow. `checked_cmp` keeps its declining behaviour for two small operands
+  so nothing that depended on it changes.
+- The pool is capped (`Rational::big_pool_capacity()`, 2^20 distinct values).
+  Past the cap, promotion fails and the `wide_*` family behaves exactly like
+  the declining one. The cap is what keeps an append-only pool from turning a
+  fast `unknown` into an out-of-memory.
+- `Eq`, `Ord`, `Hash` and `Display` are **value-based and
+  representation-independent**: the pool id is never observable.
+
+### The first route to opt in: the simplex
+
+`crates/axeyum-solver/src/simplex.rs` switches its five local arithmetic
+helpers to the `wide_*` family, so intermediate coefficient growth inside the
+tableau no longer abandons the search. Promotion is **contained** there: every
+value leaving the module passes through a `narrow` guard that declines to
+`Unknown` if a feasible point or a Farkas multiplier does not fit `i128`.
+Nothing downstream — `lra`, `lra_online`, model lifting, certificate
+serialization — can observe that a promoted value existed, which is what makes
+the widening a pure gain rather than a new obligation on every consumer.
 
 ### Two slices
 
 | slice | scope | lane |
 |---|---|---|
-| 1 | `Rational` itself, plus the `simplex.rs` overflow marker | this ADR's lane (landed) |
-| 2 | `Value::Int(i128)` in [`value.rs`](../../../crates/axeyum-ir/src/value.rs) and the SMT-LIB integer-literal parser | a later lane; **not started** |
+| 1 | `Rational`'s two representations and the `wide_*` family, plus the simplex opting in | this ADR's lane (landed) |
+| 2 | `Value::Int(i128)` in [`value.rs`](../../../crates/axeyum-ir/src/value.rs), the SMT-LIB integer-literal parser, and opting further routes in one at a time | a later lane; **not started** |
 
 Slice 1 does not admit a single one of the 26 QF_UFLIA files. Those are
 rejected at the *parser*, on `Value::Int(i128)`, before any `Rational` exists —
-slice 2 is what admits them. Slice 1 is the foundation and the smaller,
-independently testable half: it removes overflow as a source of `unknown` in
-the LRA/LIA/NRA arithmetic that is already reached.
+slice 2 is what admits them.
 
-## Determinism and soundness argument
+## The measurement that changed this decision
 
-The two paths compute **the same mathematical value**. `BigRational::new`
-normalizes to lowest terms with a positive denominator, which is the same
-canonical form the `i128` path maintains, and the demotion check is exact
-(`BigInt::to_i128`). So:
+Global promotion — `checked_*` and the operators promoting rather than
+declining — was implemented first, and it passed a lot: the whole workspace
+compiled unchanged, `axeyum-solver --lib --features full` reached 1438/1438
+after two call sites were fixed, the corpus sweep and all three z3 differential
+fuzzes were green.
 
-- **No verdict can change from one to the other.** A `sat` remains `sat` with
-  the same model (the witness is the same rational number, possibly now
-  representable); an `unsat` remains `unsat` with the same Farkas multipliers.
-  The only reachable transition is `Unknown → sat` or `Unknown → unsat`, on
-  queries where the arithmetic previously ran out of range. No previously
-  decided query can be re-decided differently, because on every input where
-  the old code produced a value, the new code produces the identical value by
-  the identical `i128` operations.
-- **Determinism is preserved.** The pool id is never observable: `Eq`, `Ord`,
-  `Hash` and `Display` are all defined on the value, not the handle. Two runs
-  that interleave differently can assign different ids to the same value and
-  still produce byte-identical output, and a `HashMap` keyed by `Rational`
-  iterates in the same order in both.
-- **Replay is unaffected.** A `sat` model is still checked by evaluating the
-  original term against the lifted model; the evaluator's arithmetic is the
-  same `Rational`, now with a wider range.
+Then `cargo test -p axeyum-cas --lib` was run. **25 unit tests failed and about
+seven more stopped terminating** (still running at 45 minutes, at full CPU,
+where the whole suite takes 69 seconds). A controlled A/B on a named subset —
+the same six tests, the same command, my tree versus a snapshot of the
+pre-change commit — was 6 failed / 0 passed against 0 failed / 6 passed.
 
-### The residual hazard, named
+The cause is not incidental. `axeyum-cas` uses **`i128` exhaustion as a cost
+bound and a termination argument**. Its Groebner reduction declines with
+`Declined(Overflow)`, its Wilf-Zeilberger certificate search and its zero tests
+decline when an intermediate leaves range, and its interval arithmetic declines
+on an unnegatable endpoint. Remove that bound and the same computations run
+away on values with hundreds of digits instead of stopping. Several failing
+tests are named for the contract directly:
+`an_overflowing_coefficient_declines_as_overflow_not_as_a_ceiling`,
+`overflow_is_reported_as_unknown_not_wrong`, `a_refutation_is_not_a_decline`.
+
+No magnitude ceiling rescues the global design, because those routes decline
+*at* `i128` — the values in the failing assertions are 10^30 to 10^69, so any
+ceiling loose enough to help the simplex is loose enough to break the CAS.
+
+So `i128` range is load-bearing for one population of consumers and a liability
+for another. One type cannot change its meaning to serve both. Making promotion
+an opt-in family serves both exactly, at the cost of one extra name per
+operation.
+
+### The residual hazard, named and contained
 
 `numerator()` and `denominator()` return `i128` and are called at 416 sites.
-They keep that signature, and they **panic with a clear message** on a value
-outside `i128`. Saturating or truncating was rejected outright: it converts an
+They keep that signature, and they **panic with a clear message** on a promoted
+value. Saturating or truncating was rejected outright: it converts an
 out-of-range value into a silently wrong one, which is the one failure mode
 this project does not accept. New accessors give callers a non-panicking
 route — `checked_numerator()`, `checked_denominator()` (both `Option<i128>`)
 and `numerator_big()` / `denominator_big()` (`BigInt`) — plus `is_big()`.
 
-This is a real change in exposure: before, a big rational could not exist, so
-no caller could meet one. It is a *loud* change, not a silent one, and it is
-bounded by the routes that actually produce big values. Auditing those 416
-sites route by route is slice 2's work, alongside `Value::Int`. Any route that
-must not panic uses `checked_numerator()`.
+Under the opt-in design this hazard is **contained by construction**: only a
+route that calls `wide_*` can create a promoted value, and the only such route
+is the simplex, which narrows at its own boundary. The 416 sites are therefore
+unreachable from a promoted value today. Two of them were hardened anyway,
+because the global-promotion experiment reached them and the fixes are right
+either way: `nra_real_root::Sign::of_rational` now reads the sign from the
+value instead of from `numerator()`, and `nra_handelman_cert` uses
+`checked_numerator`/`checked_denominator` where it serializes `i128` pairs onto
+the wire.
+
+Every future opt-in must repeat that discipline: either keep promoted values
+inside the route, or use the checked accessors at the boundary. That is the
+per-route audit slice 2 inherits.
 
 ## Evidence
 
@@ -136,9 +175,15 @@ must not panic uses `checked_numerator()`.
   benchmarks before and after, pinned to `taskset -c 0-7`; the deltas are in
   the lane status file. A regression beyond the measured noise band was a
   blocking condition for landing.
-- Property test: every operation (`+`, `-`, `*`, `/`, `neg`, `recip`, `cmp`)
-  compared against `BigRational` computed directly, over a seeded generator
-  that deliberately straddles `2^127`.
+- Property test: every `wide_*` operation compared against `BigRational`
+  computed directly, over a seeded generator that deliberately straddles
+  `2^127` and feeds promoted values in as *operands*, not just checking them as
+  results. The same loop asserts the declining family never disagrees with the
+  wide one — it returns the identical value or `None`, never a third answer.
+- The discriminating test for this ADR's actual decision is
+  `the_checked_family_declines_exactly_where_the_wide_family_promotes`: the
+  same six operations, declining on one family and exact on the other. A patch
+  that made `checked_*` promote would pass every other test in the file.
 - Discriminating evaluation tests: products around `2^127`; the exact
   `1.6·10^57` Handelman numerator; a chain that grows past `i128` and cancels
   back into range (verifying demotion, so the fast path is retaken after
@@ -163,14 +208,28 @@ must not panic uses `checked_numerator()`.
 - **Keep declining, and raise the LRA atom cap instead.** Does not address
   row 4b at all, and the cap is a memory bound as well as an overflow guard —
   raising it is a separate lever, measured separately.
+- **Promote globally, with a magnitude ceiling.** Rejected on the measurement
+  above: `axeyum-cas` declines *at* `i128`, and the values in its failing
+  assertions are 10^30 to 10^69, so no ceiling separates the two populations.
+- **Promote globally and fix `axeyum-cas`.** The ~seven non-terminating tests
+  are not test bugs; they are algorithms whose termination argument was the
+  `i128` bound. Giving them explicit magnitude budgets is a real change to a
+  79k-line crate's cost model and belongs in its own ADR, not smuggled in
+  behind a numeric-type change.
 
 ## Consequences
 
 - `simplex.rs`'s `Overflow` marker stays. It is **not** unreachable after
-  slice 1: `checked_div` still returns `None` on division by zero, and
-  promotion still fails at the pool cap. Removing it would delete a live
-  soundness path. The pivot and deadline budgets are untouched, so the
-  simplex's termination and determinism arguments are unchanged.
+  slice 1: `wide_div` still returns `None` on division by zero, the `narrow`
+  boundary declines a witness or certificate outside `i128`, and promotion
+  still fails at the pool cap. Removing it would delete a live soundness path.
+  The pivot and deadline budgets are untouched, so the simplex's termination
+  and determinism arguments are unchanged.
+- **`axeyum-cas` is unchanged and must stay that way** until someone gives its
+  algorithms an explicit cost bound. Anyone tempted to make `checked_*` promote
+  "since the machinery is already there" should run
+  `cargo test -p axeyum-cas --lib` first: it is 69 seconds when the bound is
+  intact and does not finish when it is not.
 - The LRA atom cap does **not** move in slice 1, and slice 1 does not claim
   it. Turning that cap from a partial overflow guard into a pure memory bound
   is a follow-up that must be measured on its own.
