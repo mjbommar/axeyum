@@ -48,6 +48,7 @@ asked for the same thing, a status board, and a history log.
 | 10 | [Logic & foundations](10-logic-and-foundations.md) | proof theory, reverse math | **Most interested of anyone.** The kernel *is* the contribution, and the EM/LNP results are real reverse mathematics. |
 | 11 | [Applied & computational](11-applied-and-computational.md) | formal methods, computable analysis | **Sees the most novel object here.** Proof-producing search into a small checker has little precedent. |
 | 12 | [The chair](12-the-chair.md) | department head / referee | **Would sign the report.** Zero assumptions across 2,487 results and a rising machine-produced share. |
+| 13 | [The CAS, as a tool](13-computer-algebra.md) | all twelve, asked about `axeyum-cas` | **Deep calculus, overflows at 128 bits.** Every chair outside calculus and elementary number theory finds nothing to reach for; the Next Ten are compute capability, not bridges. |
 
 ## The shared snapshot
 
