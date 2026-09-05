@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-completeness-henkin",
+  "title": "Completeness of the first-order natural deduction calculus (OPEN in this ledger)",
+  "statement": "If every structure and valuation satisfying a context satisfies a formula, then the formula is derivable from that context in FO.Provable. NOT ESTABLISHED HERE. The converse -- soundness -- IS established (F:fo-soundness), together with the substitution lemma the quantifier rules rest on (F:fo-substitution-lemma) and the consistency corollary soundness buys (F:fo-consistency). What is missing is the Henkin/Lindenbaum construction: a maximal consistent extension of the context in a language with witnesses, and the term model built over it. Two obstructions are recorded rather than estimated. (1) Lindenbaum's lemma extends a consistent set to a MAXIMAL consistent one by deciding each formula in an enumeration, which is a use of excluded middle at every step; this kernel has no Classical.em, no propext and no Quot.sound (measured: crates/axeyum-lean-kernel/src/prelude.rs), so the classical completeness theorem is not the statement to aim at without first adding an axiom the project's axiom-freedom metric would then have to report. (2) The construction needs an enumeration of FO.Formula and a decidable equality on it, neither of which exists in the kernel; FO.Formula is an inductive with nine constructors over two carriers (AxNat and FO.Term), so a decidable equality is a nested recursion over both types, and no such decision procedure was built by the lane that landed the syntax.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.completeness : ((x0 : FO.Context) -> ((x1 : FO.Formula) -> ((x2 : ((x3 : Sort (1)) -> ((x4 : FO.Structure x3) -> ((x5 : ((x6 : AxNat) -> x3)) -> ((x7 : FO.ctxSat x3 x4 x0 x5) -> FO.sat x3 x4 x1 x5))))) -> FO.Provable x0 x1)))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-soundness",
+    "F:fo-substitution-lemma",
+    "F:fo-consistency",
+    "F:excluded-middle-not-intuitionistic"
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "not established in this ledger",
+    "source": "Goedel's completeness theorem (1929); this row records the measured remaining gap after lane model-theory landed the syntax, the semantics, the calculus and soundness (W3-6, ADR-1636)",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel; Leon Henkin",
+        "what": "the completeness theorem for first-order logic, and the maximal-consistent-set proof that is now standard",
+        "year": 1949,
+        "where": "Goedel 1929 (dissertation); Henkin, 'The completeness of the first-order functional calculus', JSL 14 (1949)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "The statement above is the classical one, written in the same render style Kernel::render_lean produces (checked against the ACTUAL rendered type of FO.soundness, its converse, which is copied verbatim into F:fo-soundness). It is NOT copied from an admitted declaration -- there is no declaration, and the binder indices are therefore this lane's, not the kernel's. It quantifies over every structure at Sort 1 (Type), matching FO.sat's universe-monomorphic signature.\n\nWHY THIS IS AN HONEST OPEN ROW AND NOT A DEFERRAL. The brief for lane model-theory said explicitly not to attempt completeness. The reason it is worth recording as a fact rather than as prose is that the two obstructions above are DIFFERENT in kind from 'we ran out of time', and a later lane needs to know which one it is walking into. Obstruction (2) -- an enumeration and a decidable equality on FO.Formula -- is ordinary work, sized at roughly one slice per type (FO.Term then FO.Formula, each a recursion with a Bool-valued equality plus its soundness/completeness pair, the shape nat_prelude's Nat.beq/eq_of_beq_eq_true already has). Obstruction (1) is not work at all: it is a choice about what to prove. A CONSTRUCTIVE completeness theorem for intuitionistic first-order logic with respect to Kripke models exists (Veldman 1976, Friedman) and would be the statement to aim at in this kernel; the classical statement above would need an axiom, and this project's headline metric is the trusted base read from Kernel::axiom_footprint.\n\nWHAT IS ESTABLISHED, so the gap is legible. FO.soundness (Provable g p -> every structure and valuation satisfying g satisfies p) is admitted axiom-free, by induction on the derivation, sixteen minors. FO.consistency (Not (Provable nil bot)) follows from it through the concrete ℕ structure. Together those say the calculus proves only true things and does not prove everything; completeness would say it proves every true thing, and nothing in this ledger asserts that."
+}

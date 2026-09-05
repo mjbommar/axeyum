@@ -87,6 +87,14 @@ ID_RE = re.compile(r"^F:[a-z0-9]+(-[a-z0-9]+)*$")
 # declared under a fresh `IntSpace` root -- added 2026-09-04 and verified
 # against `kernel_declaration_projection`'s new `intspace` label.
 #
+# `FO` is ADR-1636's first-order model theory root (`FO.Term`, `FO.Formula`,
+# `FO.Structure`, `FO.sat`, `FO.Provable`, `FO.soundness`, `FO.consistency` and
+# the substitution lemmas), declared under a fresh `FO` root for the same
+# collision-avoidance reason as `Alg`/`AlgS`/`Metric`/`IntSpace` -- added
+# 2026-09-05 and verified against
+# `cargo run -q --release -p axeyum-lean-kernel --example fo_soundness_inventory`,
+# which lists every one of them with its kind and an `axioms=0` column.
+#
 # The logic prelude also declares undotted names (bare identifiers), allowed
 # by a separate LOGIC_UNDOTTED set. Widening to accept any bare identifier
 # would weaken the typo guard this regex provides for other theorems; restricting
@@ -96,7 +104,7 @@ KERNEL_THEOREM_RE = re.compile(
     r"^(?:AxReal|AxNat|Nat|Int|Real|Rat|List|Bool|Prop|Acc|WellFounded|Alg|AlgS|CatS|"
     r"And|Decidable|Eq|Iff|Or|Metric|IntSpace|"
     r"And|Decidable|Eq|Iff|Or|Metric|RN|"
-    r"CReal|Complex|CPoint|axeyum\.string\.[0-9]+)"
+    r"CReal|Complex|CPoint|FO|axeyum\.string\.[0-9]+)"
     r"(?:\.[A-Za-z_][A-Za-z0-9_']*)+$"
 )
 

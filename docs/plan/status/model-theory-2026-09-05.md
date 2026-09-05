@@ -76,7 +76,13 @@ case is `Eq.refl`. Any later development that extends a valuation should
 define the extension by `Nat.rec` for exactly this reason. The claim is
 measured, not asserted —
 `fo_semantics.rs`'s `shifting_past_the_new_slot_is_definitionally_the_old_valuation`
-checks it at a symbolic carrier, element and valuation.
+checks it with the carrier, the element and the valuation all **bound**. Both
+halves of that phrasing were bought by a failed first run: a check at a
+*literal* valuation reduces both sides to the same closed term and never
+exercises η, and a check at a *bare free variable* cannot pass however the
+kernel behaves, because η-expansion needs the non-lambda side's type and a
+variable made by `Kernel::fvar` carries none. The first draft used free
+variables and failed for that reason, not because the claim was wrong.
 
 **Arity is bounded at 2, and that is a signature restriction, not a logical
 one.** `Term.app : Nat -> List Term -> Term` is a nested inductive, and
@@ -86,6 +92,42 @@ recursor and a doubling of all four inductions here. ℕ with `0, succ, +, <`
 needs exactly arities 0/1/2 and relation arities 1/2. Every definition and
 lemma treats the three function families uniformly, so raising the bound is
 one constructor and one minor premise per recursion.
+
+**Mutation table — both RUN, neither predicted.** Baseline
+`scripts/cargo-serialized.sh test -j 4 -p axeyum-lean-kernel --lib -- fo_
+--test-threads=4`: **41 passed, 0 failed**. Both mutants collected the same 41
+tests, so both rows are `killed N` measurements and not a change in
+collection. Both were restored byte-for-byte and `git status` is clean on both
+files.
+
+| mutant | edit | outcome |
+| --- | --- | --- |
+| A — delete the eigenvariable condition | `fo_provable.rs`, `rule::ALL_INTRO`: premise `Provable (Context.shift g) p` becomes `Provable g p` | **killed 6** (35 passed / 6 failed) |
+| B — `∃` reads the wrong valuation shift | `fo_semantics.rs`, `declare_sat`'s `m_ex`: `ip (Val.cons M x v)` becomes `ip v` | **killed 27** (14 passed / 27 failed) |
+
+Mutant A kills `fo_provable::tests::all_intro_quantifies_over_the_shifted_context`
+(which reports the two types side by side: got
+`Provable x0 x1 -> Provable x0 (all x1)`, want
+`Provable (Context.shift x0) x1 -> Provable x0 (all x1)`) **and all five
+`fo_soundness` tests**, because the `all_intro` minor of `FO.soundness` no
+longer type-checks — `TypeMismatch` out of `add_declaration`, so
+`build_fo_soundness_prelude` fails outright. That is the finding worth keeping:
+the unsound rule is not merely unguarded by a test, it is **unprovable**. The
+induction hypothesis would only constrain `w`, and the goal needs it at
+`Val.cons M z w`.
+
+Mutant B kills 27 of 41 — everything from `fo_semantics` upward — because
+`FO.nat_sat_no_greatest` stops admitting (`DeclarationValueMismatch`) and
+`build_fo_semantics_prelude` fails, taking `fo_provable`, `fo_substitution` and
+`fo_soundness` with it. The 14 survivors are exactly `fo_syntax`'s, which does
+not depend on the semantics. A kill that broad is less *discriminating* than
+A's, and the reason is worth stating: the sentence `∀x ∃y, x < y` is the only
+declaration in the group whose admission depends on the `∃` clause reading the
+right valuation slot, and it sits at the bottom of the dependency chain. The
+narrow guard for the same defect is
+`fo_semantics::tests::sat_of_a_two_binder_sentence_reads_the_right_valuation_slots`,
+which compares the reduced form against both the correct reading and the
+swapped one.
 
 **Not landed, with the obstruction sized.**
 
