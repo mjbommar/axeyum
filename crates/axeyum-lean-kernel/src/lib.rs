@@ -84,6 +84,7 @@ mod rat_prelude;
 pub mod ring;
 mod rn;
 pub mod shape_index;
+mod sigma_prelude;
 pub mod simp;
 mod stack;
 mod string_prelude;
@@ -152,6 +153,7 @@ pub use metric::{
     FIELD_COUNT as METRIC_FIELD_COUNT, MetricPrelude, build_metric_prelude,
 };
 pub use name::{NameId, NameNode};
+pub use nat_prelude::image_group::{ImageGroupDeps, ImageGroupNames};
 pub use nat_prelude::{NatDev, NatOps, NatPrelude, NatState, build_nat_prelude};
 pub use prelude::{
     DatatypeFamily, DatatypeInductive, LogicPrelude, RecField, RecursiveDatatypeFamily,
@@ -161,6 +163,7 @@ pub use rat_prelude::{
     RatModel, RatModelLaw, RatPrelude, build_rat_model_of_arith, build_rat_prelude,
 };
 pub use rn::{RNPrelude, build_rn_prelude};
+pub use sigma_prelude::SigmaNames;
 pub use stack::{DEEP_STACK_BYTES, on_a_deep_stack};
 pub use string_prelude::{
     StringLengthArithmetic, StringPrelude, StringSubstrArithmetic, build_string_length_append,
