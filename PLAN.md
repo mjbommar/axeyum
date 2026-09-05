@@ -58138,7 +58138,7 @@ and 4.34.0-rc1 (the cross-check pin, ADR-1594/ADR-1660) are installed under
 `scripts/check-lean-gate.sh --print-toolchain`. What "Lean compatible" means
 here is now written once
 ([`docs/math-department/14-lean-lang.md`](../../math-department/14-lean-lang.md),
-[ADR-1668](../../research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md)):
+[ADR-1668](docs/research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md)):
 K0 1/1, K1 6/6, K2-K6 0; the replay census, the two pins, the import tier,
 and the Lean-side tactic are all measured, not aspirational.
 
