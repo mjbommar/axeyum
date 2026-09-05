@@ -7112,6 +7112,83 @@ SUITES["geo-incidence"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `psatz` -- the Positivstellensatz producer (ADR-1649).
+#
+# Two things this suite measures, and they are not the same thing.
+#
+# The SEARCH mutants (the LDL^T pivot guards) ask whether the PSD decision is
+# load-bearing: a search that says "PSD" of an indefinite matrix would hand the
+# emitter a certificate for a polynomial that is negative somewhere.  That is
+# caught downstream -- `ring::rat` will not confirm the identity -- so these
+# measure the search's own honesty, not soundness.
+#
+# The REFUSAL mutants (`PsdNotSos`, the dual-witness check) ask whether the
+# producer's two FINDING declines mean what they say.  `PsdNotSos` is the one
+# refusal here that is a claim about mathematics rather than about the
+# producer, and a claim nobody can falsify is the defect CLAUDE.md names.
+# --------------------------------------------------------------------------
+
+SUITES["psatz"] = (
+    "crates/axeyum-lean-kernel/src/psatz.rs",
+    Cargo(
+        ("-p", "axeyum-lean-kernel", "--release", "--lib", "psatz"),
+        "psatz",
+    ),
+    [
+        (
+            # THE BRIEF'S FIRST MUTANT as a source mutation: a form
+            # coefficient's SIGN is dropped, so `(x - y)^2` is emitted as
+            # `(x + y)^2` -- a certificate for the wrong difference.
+            "a cleared form's coefficient sign reaches the emitted term",
+            "        let signed = if c < 0 { rneg(d, base) } else { base };",
+            "        let signed = base;",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+        (
+            # THE BRIEF'S SECOND MUTANT: the Motzkin refusal reason.
+            "the verified-witness refusal is PsdNotSos and not something else",
+            "                Err(Decline::PsdNotSos)",
+            "                Err(Decline::DualWitnessInvalid)",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+        (
+            # `PsdNotSos` must mean the witness was CHECKED, not offered.
+            "a supplied dual witness is verified rather than believed",
+            "            return if witness.verifies(&difference, vars)? {",
+            "            return if true {",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+        (
+            "a negative LDL pivot is a NotPsd finding",
+            "            if pivot.is_negative() {\n"
+            "                return Err(Decline::NotPsd { pivot: i });\n"
+            "            }",
+            "            if false {\n"
+            "                return Err(Decline::NotPsd { pivot: i });\n"
+            "            }",
+        ),
+        (
+            "a zero pivot beside a nonzero entry is a NotPsd finding",
+            "                    if !work[i][j].is_zero() {\n"
+            "                        return Err(Decline::NotPsd { pivot: i });\n"
+            "                    }",
+            "                    if false {\n"
+            "                        return Err(Decline::NotPsd { pivot: i });\n"
+            "                    }",
+        ),
+        (
+            # Without the division the emitted term proves `0 <= 4p`, not
+            # `0 <= p`, so the KERNEL is what refuses it.
+            "the denominator-clearing scale is divided back out",
+            "    if scale <= 1 {\n        return h_total;\n    }",
+            "    if true {\n        return h_total;\n    }",
+            "crates/axeyum-lean-kernel/src/psatz/rat.rs",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
