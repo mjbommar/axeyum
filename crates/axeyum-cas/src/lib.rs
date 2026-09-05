@@ -30657,17 +30657,22 @@ mod exact_positivity_tests {
 ///   [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
 ///   [`MultiPoly::fold_bessel_recurrences`]. Those folds have no unbounded
 ///   counterpart, and without them a nonzero normal form in atom variables does
-///   not prove `≠` — so [`normalize_rational_big_within`] declines the whole head
-///   rather than half-deciding it.
-///   (`sqrt_atom_identity_at_overflow_scale_still_declines`)
-/// - **The reserved imaginary unit `I`**, for the same reason one level down:
-///   [`MultiPoly::fold_imaginary`] rewrites `I² = −1`, so `I² + 1` is a nonzero
-///   polynomial here and the zero polynomial there.
-///   (`imaginary_unit_at_overflow_scale_declines_rather_than_refuting`)
-/// - **A refutation whose witness does not fit back into `i128`.** The decision
-///   is available; the *certificate* is not, and `ZeroTest::Certified` promises
-///   a certificate. Reported `Unknown`.
-///   (`refutation_whose_witness_exceeds_i128_declines`)
+///   not prove `≠`. **Wave two removed this**: all six folds have unbounded twins
+///   ([`BigQPoly::fold_radical`] and friends), so `√u`, `|u|`, `root_q(u)`,
+///   Pythagorean, Bessel and `I` identities now decide at overflow scale — one
+///   test per fold, each named for the identity it decides.
+/// - **An `exp` head**, which the bounded path *decomposes* rather than
+///   atomizes ([`normalize_exp`]); that decomposition has no unbounded twin, so
+///   the whole head is still declined.
+///   (`exp_head_at_overflow_scale_still_declines`)
+/// - **A surviving `\0` atom on the inequality branch.** An equality over atoms
+///   decides (a zero polynomial is zero whatever the atoms denote); a
+///   *refutation* over them would need the Euler re-check [`equal`] uses to
+///   protect the bounded path, and that cannot run here while `exp` is declined.
+///   (`atom_bearing_inequality_at_overflow_scale_declines`)
+/// - A refutation whose witness does not fit `i128` was declined in wave one and
+///   is now carried by [`ZeroTest::CertifiedBig`].
+///   (`refutation_whose_witness_exceeds_i128_carries_an_unbounded_certificate`)
 /// - **Anything past [`BIG_FALLBACK_WORK_BUDGET`].** Removing the coefficient
 ///   bound also removes the implicit resource bound it was providing, so the
 ///   fallback carries an explicit one.
@@ -30748,9 +30753,37 @@ mod bignum_overflow_fallback {
             "the fixture is not adversarial: the bounded i128 path already decides it"
         );
         match equal(a, b) {
-            ZeroTest::Certified { equal: true, .. } => {}
+            ZeroTest::Certified { equal: true, .. } | ZeroTest::CertifiedBig { equal: true, .. } => {
+            }
             other => panic!("expected the unbounded fallback to certify equality, got {other:?}"),
         }
+        assert!(
+            recheck_zero_test(a, b, &equal(a, b)),
+            "the certificate must re-check against the pair it is about"
+        );
+    }
+
+    /// The wave-two conversions all have the same shape: an atom identity added
+    /// to a binomial-square identity whose intermediates leave `i128`. The
+    /// binomial half is what makes the bounded path decline; the atom half is
+    /// what needs the ported fold.
+    ///
+    /// `atom_left` and `atom_right` are the two sides of the atom identity.
+    fn assert_fold_ported(atom_left: &CasExpr, atom_right: &CasExpr) {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + atom_left.clone();
+        let right = binom(160) + atom_right.clone();
+        // Positive control below the wall: the bounded fold really does decide
+        // this identity, so a decline above would be about width, not the head.
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + atom_left.clone();
+        let small_right = binom(8) + atom_right.clone();
+        assert!(
+            matches!(
+                equal(&small_left, &small_right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: {atom_left} = {atom_right} must certify below the wall"
+        );
+        assert_converted_to_equal(&left, &right);
     }
 
     // --- Overflow `Unknown`s the fallback converts into a decision -----------
@@ -30832,56 +30865,63 @@ mod bignum_overflow_fallback {
 
     // --- The declines that remain, each with its reason ---------------------
 
+    // --- The six folds, ported (ADR-1670 wave two, item 2) ------------------
+    //
+    // One test per fold. Each is an identity the bounded path decides and the
+    // wave-one fallback declined, at a width the bounded path cannot reach.
+
+    /// `I² = −1` — [`BigQPoly::fold_imaginary`].
     #[test]
-    fn sqrt_atom_identity_at_overflow_scale_still_declines() {
-        // `√x·√x = x` is a fold the unbounded path does not carry, so the whole
-        // head is declined rather than half-decided.
-        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().sqrt() * x().sqrt();
-        let right = binom(160) + x();
-        assert!(
-            matches!(equal(&left, &right), ZeroTest::Unknown),
-            "the sqrt fold has no unbounded counterpart; this must decline"
-        );
-        // Positive control of the same shape below the wall: the fold itself
-        // works, so the decline above is about width, not about `√`.
-        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + x().sqrt() * x().sqrt();
-        let small_right = binom(8) + x();
-        assert!(
-            matches!(
-                equal(&small_left, &small_right),
-                ZeroTest::Certified { equal: true, .. }
-            ),
-            "positive control: the same identity must certify below the wall"
+    fn fold_imaginary_i_squared_plus_one_at_overflow_scale_now_certifies() {
+        let imaginary = CasExpr::var("I");
+        assert_fold_ported(
+            &(imaginary.clone() * imaginary + CasExpr::int(1)),
+            &CasExpr::zero(),
         );
     }
 
+    /// `sin² + cos² = 1` — [`BigQPoly::fold_pythagorean`].
     #[test]
-    fn imaginary_unit_at_overflow_scale_declines_rather_than_refuting() {
-        // `I² + 1 = 0`, so these two ARE equal. The unbounded path has no
-        // `fold_imaginary`, so without its guard it would compute the nonzero
-        // polynomial `I² + 1` and REFUTE a true identity.
-        let imaginary = CasExpr::var("I");
-        let left = CasExpr::Mul(vec![binom(80), binom(80)])
-            + imaginary.clone() * imaginary
-            + CasExpr::int(1);
-        let right = binom(160);
-        assert!(
-            matches!(equal(&left, &right), ZeroTest::Unknown),
-            "an `I`-bearing difference must be declined, never refuted"
+    fn fold_pythagorean_sin_sq_plus_cos_sq_at_overflow_scale_now_certifies() {
+        assert_fold_ported(
+            &(x().sin().pow(2) + x().cos().pow(2)),
+            &CasExpr::int(1),
         );
-        // Positive control below the wall: the bounded path folds `I² = −1` and
-        // certifies, so the fixture really is a true identity.
-        let small_imaginary = CasExpr::var("I");
-        let small_left = CasExpr::Mul(vec![binom(4), binom(4)])
-            + small_imaginary.clone() * small_imaginary
-            + CasExpr::int(1);
-        assert!(
-            matches!(
-                equal(&small_left, &binom(8)),
-                ZeroTest::Certified { equal: true, .. }
-            ),
-            "positive control: the identity holds and certifies below the wall"
+    }
+
+    /// `(√u)² = u` — [`BigQPoly::fold_radical`].
+    #[test]
+    fn fold_radical_sqrt_x_squared_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&(x().sqrt() * x().sqrt()), &x());
+    }
+
+    /// `|u|² = u²` — [`BigQPoly::fold_abs`].
+    #[test]
+    fn fold_abs_abs_x_squared_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&x().abs().pow(2), &x().pow(2));
+    }
+
+    /// `root_q(u)^q = u` — [`BigQPoly::fold_nth_root`].
+    #[test]
+    fn fold_nth_root_cube_root_cubed_at_overflow_scale_now_certifies() {
+        assert_fold_ported(&x().nth_root(3).pow(3), &x());
+    }
+
+    /// `u·J₂(u) = 2·J₁(u) − u·J₀(u)` — [`BigQPoly::fold_bessel_recurrences`].
+    #[test]
+    fn fold_bessel_j2_recurrence_at_overflow_scale_now_certifies() {
+        assert_fold_ported(
+            &(x() * x().bessel_j(2)),
+            &(CasExpr::int(2) * x().bessel_j(1) - x() * x().bessel_j(0)),
         );
+    }
+
+    /// A radicand with **rational** coefficients, which ℤ[vars] cannot spell:
+    /// this is the case [`BigQPoly`]'s shared denominator exists for.
+    #[test]
+    fn fold_radical_with_a_rational_radicand_at_overflow_scale_now_certifies() {
+        let radicand = x() / CasExpr::int(2);
+        assert_fold_ported(&(radicand.clone().sqrt() * radicand.clone().sqrt()), &radicand);
     }
 
     #[test]
@@ -30907,16 +30947,212 @@ mod bignum_overflow_fallback {
         );
     }
 
-    #[test]
-    fn refutation_whose_witness_exceeds_i128_declines() {
+    /// The pair whose refutation wave one could decide and could not certify.
+    fn witness_exceeding_i128() -> (CasExpr, CasExpr) {
         // `2·(x+1)^160` differs from `(x+1)^160` by `(x+1)^160`, whose middle
-        // binomial coefficient is far outside `i128`. The DECISION is available;
-        // the CERTIFICATE is not, and `Certified` promises a certificate.
-        let left = binom(160) + binom(160);
-        let right = binom(160);
+        // binomial coefficient is far outside `i128`.
+        (binom(160) + binom(160), binom(160))
+    }
+
+    /// ADR-1670 wave two, item 1: the decision *and* the certificate.
+    #[test]
+    fn refutation_whose_witness_exceeds_i128_carries_an_unbounded_certificate() {
+        let (left, right) = witness_exceeding_i128();
+        assert!(
+            matches!(equal_core_bounded(&left, &right), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        let verdict = equal(&left, &right);
+        let ZeroTest::CertifiedBig {
+            equal: false,
+            ref witness,
+        } = verdict
+        else {
+            panic!("expected an unbounded refutation certificate, got {verdict:?}");
+        };
+        assert!(!witness.is_zero(), "a refutation's witness must be nonzero");
+        assert!(
+            witness.coefficient_bits() > 127,
+            "this variant is only warranted when the witness does not fit i128; \
+             widest coefficient was {} bits",
+            witness.coefficient_bits()
+        );
+        assert!(
+            witness.to_multipoly().is_none(),
+            "a witness that fits i128 must have been reported as `Certified`"
+        );
+        assert_eq!(
+            witness.variables(),
+            BTreeSet::from(["x".to_owned()]),
+            "the witness is a polynomial in the compared expressions' variables"
+        );
+        assert_eq!(
+            witness.term_count(),
+            161,
+            "the difference is (x+1)^160, which has 161 terms"
+        );
+        assert!(
+            recheck_zero_test(&left, &right, &verdict),
+            "the genuine certificate must re-check"
+        );
+    }
+
+    /// **The checker's negative control.** A witness that is not the difference
+    /// must be refused, three ways: a dropped term, a perturbed coefficient, and
+    /// a negated (i.e. wrong-order) difference.
+    #[test]
+    fn a_forged_unbounded_witness_is_refused_by_the_recheck() {
+        let (left, right) = witness_exceeding_i128();
+        let verdict = equal(&left, &right);
+        let ZeroTest::CertifiedBig {
+            equal: false,
+            ref witness,
+        } = verdict
+        else {
+            panic!("expected an unbounded refutation certificate, got {verdict:?}");
+        };
+        let genuine = witness.poly.clone();
+
+        // A positive rational rescaling of the genuine witness still re-checks:
+        // that scale is exactly what the unbounded ring's cleared denominators
+        // introduce, so refusing it would refuse honest certificates.
+        let rescaled = genuine
+            .mul(&BigPoly::constant(BigInt::from(3)))
+            .expect("scaling a witness by 3 cannot overflow an unbounded ring");
+        assert!(
+            recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::CertifiedBig {
+                    equal: false,
+                    witness: BigWitness { poly: rescaled },
+                },
+            ),
+            "a positive rational multiple of the difference is the same certificate"
+        );
+
+        // Forgery 1: drop a term, so the support differs.
+        let (dropped_mono, dropped_coeff) = genuine
+            .terms()
+            .next()
+            .map(|(mono, coeff)| (mono.clone(), coeff.clone()))
+            .expect("the witness is nonzero");
+        let missing_term = genuine.sub(&BigPoly::term(dropped_mono, dropped_coeff));
+        // Forgery 2: perturb one coefficient, so the support matches and the
+        // cross-ratio does not.
+        let perturbed = genuine.add(&BigPoly::term(
+            mvpoly::Monomial::from_powers(&[("x", 3)]),
+            BigInt::from(1),
+        ));
+        // Forgery 3: the difference of the same pair in the other order.
+        let negated = genuine.neg();
+
+        for (name, forged) in [
+            ("a dropped term", missing_term),
+            ("a perturbed coefficient", perturbed),
+            ("a negated difference", negated),
+        ] {
+            assert!(
+                !recheck_zero_test(
+                    &left,
+                    &right,
+                    &ZeroTest::CertifiedBig {
+                        equal: false,
+                        witness: BigWitness { poly: forged },
+                    },
+                ),
+                "the re-check accepted a witness forged by {name}"
+            );
+        }
+
+        // Forgery 4: the zero polynomial claimed as a refutation, which the flag
+        // check alone must reject.
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::CertifiedBig {
+                    equal: false,
+                    witness: BigWitness {
+                        poly: BigPoly::zero()
+                    },
+                },
+            ),
+            "a zero witness cannot certify a refutation"
+        );
+    }
+
+    /// The bounded witness is re-checked by the same route, so the checker is
+    /// not a big-path-only formality.
+    #[test]
+    fn a_forged_bounded_witness_is_refused_by_the_recheck() {
+        let left = (x() + CasExpr::int(1)).pow(2);
+        let right = x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(1);
+        let verdict = equal(&left, &right);
+        assert!(matches!(verdict, ZeroTest::Certified { equal: true, .. }));
+        assert!(recheck_zero_test(&left, &right, &verdict));
+        // A nonzero witness cannot certify an equality.
+        assert!(
+            !recheck_zero_test(
+                &left,
+                &right,
+                &ZeroTest::Certified {
+                    equal: true,
+                    witness: normalize(&x()).expect("x normalizes"),
+                },
+            ),
+            "a nonzero witness cannot certify an equality"
+        );
+        // And a genuine-looking witness that belongs to a different pair is
+        // refused.
+        let other = equal(&x(), &CasExpr::zero());
+        assert!(!recheck_zero_test(&left, &right, &other));
+    }
+
+    // --- The declines that remain -------------------------------------------
+
+    /// `exp` is decomposed, not atomized, by the bounded path, and that
+    /// decomposition has no unbounded twin — so the head is declined whole.
+    #[test]
+    fn exp_head_at_overflow_scale_still_declines() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().exp() * y().exp();
+        let right = binom(160) + (x() + y()).exp();
         assert!(
             matches!(equal(&left, &right), ZeroTest::Unknown),
-            "a refutation with no representable witness must decline"
+            "the exp decomposition has no unbounded counterpart; this must decline"
+        );
+        // Positive control below the wall: the identity is true and decides.
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + x().exp() * y().exp();
+        let small_right = binom(8) + (x() + y()).exp();
+        assert!(
+            matches!(
+                equal(&small_left, &small_right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: the same identity must certify below the wall"
+        );
+    }
+
+    /// The `\0`-atom guard on the inequality branch. A *refutation* over
+    /// transcendental atoms needs the Euler re-check that protects the bounded
+    /// path, and that cannot run in this ring while `exp` is declined.
+    ///
+    /// `ln 4 − 2·ln 2 = 0` is the witness for why: as independent atoms the
+    /// difference is nonzero, and only `expand_log_over_primes` — a
+    /// [`canonicalize_for_equality`] step, i.e. the re-check — knows better.
+    #[test]
+    fn atom_bearing_inequality_at_overflow_scale_declines() {
+        let overflowing = CasExpr::Mul(vec![binom(80), binom(80)]) - binom(160);
+        let left = CasExpr::int(4).ln() + overflowing.clone();
+        let right = CasExpr::int(2) * CasExpr::int(2).ln() + overflowing;
+        assert!(
+            matches!(equal_core_bounded(&left, &right), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        assert!(
+            matches!(equal_core_unbounded(&left, &right), ZeroTest::Unknown),
+            "an atom-bearing difference must be declined on the inequality branch, \
+             never refuted -- these two ARE equal"
         );
     }
 
@@ -30964,7 +31200,112 @@ mod bignum_overflow_fallback {
             (x().pow(2), x().pow(2) + CasExpr::int(1), false),
             (x() / y(), (x() + CasExpr::int(1)) / y(), false),
             (CasExpr::int(7), CasExpr::int(8), false),
+            // Wave two additions: the same corpus has to keep pinning the
+            // bounded path now that `MultiPoly::pow` is binary rather than
+            // repeated multiplication.
+            (binom(40) * binom(40), binom(80), true),
+            (
+                (CasExpr::int(2) * x() + CasExpr::int(3)).pow(5)
+                    * (CasExpr::int(2) * x() + CasExpr::int(3)).pow(5),
+                (CasExpr::int(2) * x() + CasExpr::int(3)).pow(10),
+                true,
+            ),
+            (
+                (x() * y() + CasExpr::int(1)).pow(10) * (x() * y() + CasExpr::int(1)).pow(10),
+                (x() * y() + CasExpr::int(1)).pow(20),
+                true,
+            ),
+            (
+                (x() - CasExpr::rat(1, 2)).pow(20) * (x() - CasExpr::rat(1, 2)).pow(20),
+                (x() - CasExpr::rat(1, 2)).pow(40),
+                true,
+            ),
+            (
+                x() / (y() + CasExpr::int(1)) + CasExpr::int(1) / (y() + CasExpr::int(1)),
+                (x() + CasExpr::int(1)) / (y() + CasExpr::int(1)),
+                true,
+            ),
+            ((x() + y()).pow(2), x().pow(2) + y().pow(2), false),
+            (
+                binom(25) / (x() + CasExpr::int(3)),
+                binom(25) / (x() + CasExpr::int(4)),
+                false,
+            ),
+            (x() * y(), y() * x() + CasExpr::int(1), false),
         ]
+    }
+
+    /// Atom-bearing pairs the **bounded** path settles, with the verdict pinned.
+    ///
+    /// The fourth field says whether [`equal_core_bounded`] settles it on its
+    /// own; `ln 4 = 2·ln 2` and `exp(x)exp(y) = exp(x+y)` need
+    /// [`canonicalize_for_equality`], so only [`equal`] decides those.
+    ///
+    /// This is the control for wave two's two behaviour changes that could reach
+    /// the bounded path: `MultiPoly::pow` becoming binary, and the fold passes
+    /// gaining unbounded twins that must not be consulted when the bounded form
+    /// already decided.
+    fn atom_corpus() -> Vec<(CasExpr, CasExpr, bool, bool)> {
+        let imaginary = CasExpr::var("I");
+        vec![
+            (x().sqrt() * x().sqrt(), x(), true, true),
+            (
+                x().sin().pow(2) + x().cos().pow(2),
+                CasExpr::int(1),
+                true,
+                true,
+            ),
+            (x().abs().pow(2), x().pow(2), true, true),
+            (x().nth_root(3).pow(3), x(), true, true),
+            (
+                x() * x().bessel_j(2),
+                CasExpr::int(2) * x().bessel_j(1) - x() * x().bessel_j(0),
+                true,
+                true,
+            ),
+            (
+                imaginary.clone() * imaginary + CasExpr::int(1),
+                CasExpr::zero(),
+                true,
+                true,
+            ),
+            (
+                CasExpr::int(4).ln(),
+                CasExpr::int(2) * CasExpr::int(2).ln(),
+                true,
+                false,
+            ),
+            (x().exp() * y().exp(), (x() + y()).exp(), true, false),
+            (x().sin(), x().cos(), false, true),
+            (x().sqrt(), y().sqrt(), false, true),
+        ]
+    }
+
+    /// Every atom verdict the bounded path reached, it must still reach — and
+    /// [`equal`] must agree.
+    #[test]
+    fn bounded_atom_verdicts_are_unchanged() {
+        let corpus = atom_corpus();
+        assert!(corpus.len() >= 10, "the corpus must not shrink silently");
+        for (left, right, expected, bounded_decides) in corpus {
+            if bounded_decides {
+                match equal_core_bounded(&left, &right) {
+                    ZeroTest::Certified { equal, .. } => assert_eq!(
+                        equal, expected,
+                        "the bounded verdict changed for {left} vs {right}"
+                    ),
+                    other => panic!(
+                        "{left} vs {right} must still decide in the bounded path, got {other:?}"
+                    ),
+                }
+            }
+            match equal(&left, &right) {
+                ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                    assert_eq!(equal, expected, "the verdict changed for {left} vs {right}");
+                }
+                other => panic!("{left} vs {right} must still decide, got {other:?}"),
+            }
+        }
     }
 
     /// The two normal forms must agree on every verdict the bounded one reaches.
@@ -30975,7 +31316,7 @@ mod bignum_overflow_fallback {
     #[test]
     fn both_paths_reach_the_same_verdict_on_the_deciding_corpus() {
         let corpus = already_deciding_corpus();
-        assert!(corpus.len() >= 12, "the corpus must not shrink silently");
+        assert!(corpus.len() >= 20, "the corpus must not shrink silently");
         for (left, right, expected) in corpus {
             let bounded = equal_core_bounded(&left, &right);
             let unbounded = equal_core_unbounded(&left, &right);
@@ -31035,14 +31376,98 @@ mod bignum_overflow_fallback {
         ];
         for (left, right, expected) in cases {
             match equal(&left, &right) {
-                ZeroTest::Certified { equal, .. } => assert_eq!(
-                    equal, expected,
-                    "transcendental verdict changed for {left} vs {right}"
-                ),
+                ZeroTest::Certified { equal, .. } | ZeroTest::CertifiedBig { equal, .. } => {
+                    assert_eq!(
+                        equal, expected,
+                        "transcendental verdict changed for {left} vs {right}"
+                    );
+                }
                 other @ ZeroTest::Unknown => {
                     panic!("{left} vs {right} must still decide, got {other:?}")
                 }
             }
+        }
+    }
+
+    // --- `MultiPoly::pow` is binary (ADR-1670 wave two, item 3) --------------
+
+    /// The exponentiation schedule wave two replaced: `exp − 1` products where
+    /// `⌈log₂ exp⌉` squarings suffice. Kept as the reference implementation so
+    /// the swap can be checked and priced against it in the same process, under
+    /// the same load, rather than across two builds.
+    fn pow_repeated(base: &MultiPoly, exp: u32) -> Option<MultiPoly> {
+        let mut acc = MultiPoly::constant(Rational::integer(1));
+        for _ in 0..exp {
+            acc = acc.mul(base)?;
+        }
+        Some(acc)
+    }
+
+    /// **The correctness control for item 3.** Binary and repeated
+    /// exponentiation must agree on every exponent, including `0` and `1`, and
+    /// on bases with mixed signs, several variables and rational coefficients —
+    /// the shapes where an associativity slip would show.
+    #[test]
+    fn binary_and_repeated_exponentiation_agree() {
+        let bases = [
+            normalize(&(x() + CasExpr::int(1))).expect("polynomial"),
+            normalize(&(x() - CasExpr::int(3))).expect("polynomial"),
+            normalize(&(x() + y() + CasExpr::int(1))).expect("polynomial"),
+            normalize(&(x() * y() - CasExpr::rat(2, 3))).expect("polynomial"),
+            normalize(&CasExpr::zero()).expect("polynomial"),
+            normalize(&CasExpr::int(1)).expect("polynomial"),
+        ];
+        for base in &bases {
+            for exp in 0..=17u32 {
+                assert_eq!(
+                    base.pow(exp),
+                    pow_repeated(base, exp),
+                    "binary exponentiation disagreed at exponent {exp}"
+                );
+            }
+        }
+    }
+
+    /// **The wall control for item 3.** The binary schedule forms only `self^m`
+    /// for `m ≤ exp`, all of which repeated multiplication formed too, so an
+    /// input that decided before still decides — and some that did not now do.
+    /// `(x+1)^d` overflows `i128` from `d = 132`; both schedules must decline
+    /// there, and neither may decline below it.
+    #[test]
+    fn binary_exponentiation_does_not_move_the_wall_inward() {
+        let base = normalize(&(x() + CasExpr::int(1))).expect("polynomial");
+        for exp in [1u32, 8, 64, 130, 131] {
+            assert!(
+                base.pow(exp).is_some(),
+                "binary exponentiation must still decide (x+1)^{exp}"
+            );
+            assert!(
+                pow_repeated(&base, exp).is_some(),
+                "the fixture is stale: (x+1)^{exp} used to overflow"
+            );
+        }
+        assert!(
+            base.pow(132).is_none() && pow_repeated(&base, 132).is_none(),
+            "the documented bounded wall for a binomial power is degree 131"
+        );
+    }
+
+    /// Price item 3 at the ADR's degrees. Both schedules run in this process,
+    /// microseconds apart, so the ratio is between two measurements under the
+    /// same load — the absolute times are ADVISORY on a shared box, the ratio is
+    /// not. Prints rather than asserts a budget, for the reason
+    /// [`cost_curve_bounded_versus_unbounded_below_the_wall`] gives.
+    #[test]
+    fn cost_of_binary_versus_repeated_exponentiation() {
+        let base = normalize(&(x() + CasExpr::int(1))).expect("polynomial");
+        for degree in [8u32, 16, 32, 64] {
+            let binary = best_of(|| base.pow(degree).is_some());
+            let repeated = best_of(|| pow_repeated(&base, degree).is_some());
+            println!(
+                "MultiPoly::pow degree {degree}: repeated {repeated:?} / binary {binary:?} \
+                 = {:.2}x",
+                repeated.as_secs_f64() / binary.as_secs_f64().max(1e-9)
+            );
         }
     }
 
