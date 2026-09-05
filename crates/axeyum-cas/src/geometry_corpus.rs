@@ -73,27 +73,161 @@ fn at(entries: &[(&str, i128, i128)]) -> BTreeMap<String, Rational> {
         .collect()
 }
 
-/// Every theorem this route **reaches**, in a stable order. Each has a committed
-/// certificate in `artifacts/geometry-certificates/`.
+/// What it costs to **search** for an entry's certificate from scratch through
+/// the general (Buchberger) route [`crate::geometry_certify::certify`].
+///
+/// # Why this is on the entry rather than in a test
+///
+/// A corpus-walking test that re-derives every certificate has to know which
+/// entries it can afford. Until 2026-09-05 that knowledge lived as a literal
+/// `const UNREACHED_BY_BUCHBERGER: [&str; 5]` inside one test, and that shape has
+/// a specific failure mode, predicted in the test's own comment and then observed
+/// twice: an expensive theorem added to the corpus and *not* added to the list
+/// makes the test **hang** rather than fail, and a hang reads like a slow machine
+/// rather than a defect. `simson-line` did it on 2026-08-15 (90 s and killed) and
+/// `tetrahedron-medians-concurrent` did it on 2026-09-05 (one hour of the debug
+/// crate sweep spinning on one core with no failure).
+///
+/// Carrying the cost on the entry inverts the default. A new entry says nothing,
+/// gets [`SearchCost::Unmeasured`], is therefore *included* in the walk, and is
+/// caught by the walk's own deadline with its id in the failure message. Skipping
+/// requires a *declared* measurement, which is a thing a reader can check.
+///
+/// # These figures are ADVISORY
+///
+/// Every number here is one wall-clock measurement under `--release` on a shared
+/// host, not a committed benchmark, and this repository's frontier ratchet exists
+/// because such numbers move by 15% with load
+/// (`docs/research/08-planning/frontier-ratchet-reference-frame.md`). They are
+/// used only to answer "is this entry cheap enough for a unit test", a question
+/// with an order-of-magnitude answer, and never to assert a performance claim.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchCost {
+    /// Nobody has measured it. The entry is walked, and the walk's deadline is
+    /// what decides whether that assumption still holds.
+    Unmeasured,
+    /// Measured wall-clock milliseconds for [`crate::geometry_certify::certify`]
+    /// under `--release`, ADVISORY (see the type's docs).
+    Measured(u64),
+    /// [`crate::geometry_certify::certify`] has never been observed to return on
+    /// this entry. The reduction *is* bounded by
+    /// [`crate::geometry_certify::geometry_limits`] so it does terminate in
+    /// principle; nobody has waited. Deliberately not a large number: a figure
+    /// nobody measured should not look like one somebody did.
+    Unreturned,
+}
+
+impl Default for SearchCost {
+    fn default() -> SearchCost {
+        SearchCost::Unmeasured
+    }
+}
+
+impl SearchCost {
+    /// Whether a walk with `budget_millis` per entry should attempt this one.
+    ///
+    /// [`SearchCost::Unmeasured`] answers **true**: an undeclared entry is
+    /// attempted and caught by the deadline, never skipped silently.
+    #[must_use]
+    pub fn within(self, budget_millis: u64) -> bool {
+        match self {
+            SearchCost::Unmeasured => true,
+            SearchCost::Measured(millis) => millis <= budget_millis,
+            SearchCost::Unreturned => false,
+        }
+    }
+}
+
+/// One committed corpus theorem together with what it costs to re-derive.
+///
+/// The problem is the whole mathematical content; [`CorpusEntry::search_cost`]
+/// is bookkeeping for the test harness and appears in no certificate, no
+/// artifact and no fact. It is a separate wrapper rather than a field on
+/// [`GeometryProblem`] on purpose: that struct is constructed by literal in
+/// `axeyum-py`'s binding layer as well as here, and a cost annotation is not
+/// part of what a geometry problem *is*.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CorpusEntry {
+    /// The theorem.
+    pub problem: GeometryProblem,
+    /// What the general route costs on it.
+    pub search_cost: SearchCost,
+}
+
+impl CorpusEntry {
+    /// An entry whose search cost nobody has measured.
+    #[must_use]
+    pub fn new(problem: GeometryProblem) -> CorpusEntry {
+        CorpusEntry {
+            problem,
+            search_cost: SearchCost::Unmeasured,
+        }
+    }
+
+    /// An entry carrying a declared search cost.
+    #[must_use]
+    pub fn costing(problem: GeometryProblem, search_cost: SearchCost) -> CorpusEntry {
+        CorpusEntry {
+            problem,
+            search_cost,
+        }
+    }
+}
+
+/// Every theorem this route **reaches**, in a stable order, each with what the
+/// general route costs on it. Each has a committed certificate in
+/// `artifacts/geometry-certificates/`.
+///
+/// The measured figures, and where they come from:
+///
+/// - `rhombus-diagonals-perpendicular` — 21 s, the figure
+///   [`crate::geometry_certify::geometry_limits`]'s own doc comment records from
+///   the `grevlex` switch of 2026-08-15.
+/// - `tetrahedron-medians-concurrent` — 769 s, from
+///   [`crate::geometry_beyond`]'s cost profile.
+/// - `euler-line`, `pappus-hexagon`, `simson-line` — [`SearchCost::Unreturned`].
+///   The first two are the theorems the linear-elimination route exists for; the
+///   third was killed at 90 s in release on 2026-08-15.
+///
+/// Everything else is [`SearchCost::Unmeasured`] and gets walked.
 #[must_use]
-pub fn corpus() -> Vec<GeometryProblem> {
+pub fn corpus_entries() -> Vec<CorpusEntry> {
     vec![
-        varignon(),
-        thales(),
-        altitudes_concurrent(),
-        medians_concurrent(),
-        centroid_divides_medians(),
-        parallelogram_diagonals_bisect(),
-        rhombus_diagonals_perpendicular(),
-        euler_line(),
-        pappus_hexagon(),
-        simson_line(),
+        CorpusEntry::new(varignon()),
+        CorpusEntry::new(thales()),
+        CorpusEntry::new(altitudes_concurrent()),
+        CorpusEntry::new(medians_concurrent()),
+        CorpusEntry::new(centroid_divides_medians()),
+        CorpusEntry::new(parallelogram_diagonals_bisect()),
+        CorpusEntry::costing(
+            rhombus_diagonals_perpendicular(),
+            SearchCost::Measured(21_000),
+        ),
+        CorpusEntry::costing(euler_line(), SearchCost::Unreturned),
+        CorpusEntry::costing(pappus_hexagon(), SearchCost::Unreturned),
+        CorpusEntry::costing(simson_line(), SearchCost::Unreturned),
         // Geometry beyond the rational plane (file 13 item 6):
         // `crate::geometry_beyond` states these, this module only lists them.
-        tetrahedron_medians_concurrent_problem(),
-        tetrahedron_circumcenter_problem(),
-        conic_polar_is_tangent_problem(),
+        CorpusEntry::costing(
+            tetrahedron_medians_concurrent_problem(),
+            SearchCost::Measured(769_000),
+        ),
+        CorpusEntry::new(tetrahedron_circumcenter_problem()),
+        CorpusEntry::new(conic_polar_is_tangent_problem()),
     ]
+}
+
+/// Every theorem this route **reaches**, in a stable order. Each has a committed
+/// certificate in `artifacts/geometry-certificates/`.
+///
+/// The cost-carrying form is [`corpus_entries`]; this is the view every consumer
+/// that only wants the mathematics uses.
+#[must_use]
+pub fn corpus() -> Vec<GeometryProblem> {
+    corpus_entries()
+        .into_iter()
+        .map(|entry| entry.problem)
+        .collect()
 }
 
 /// Theorems stated here, correctly as far as the encoding goes, that do **not**

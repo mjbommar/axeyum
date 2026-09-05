@@ -2248,53 +2248,87 @@ mod tests {
         );
     }
 
+    /// The per-entry wall-clock budget the corpus walk below allows.
+    ///
+    /// Generous on purpose. It is not a performance assertion — it is the line
+    /// between "a unit test" and "a hang", and the entries it excludes are
+    /// excluded by their *declared* [`crate::geometry_corpus::SearchCost`], not
+    /// by this number. Its only job at run time is to catch an entry whose
+    /// declaration has gone stale, and for that an order of magnitude of slack
+    /// beats a tight bound that flakes when four lanes share the box.
+    const CORPUS_WALK_BUDGET_MILLIS: u64 = 15_000;
+
+    /// Run both routes on `problem`, or give up after `budget`.
+    ///
+    /// The work happens on a spawned thread so the deadline **fires** rather than
+    /// merely being noticed afterwards: an entry whose declared cost is wrong by
+    /// two orders of magnitude fails this suite in seconds with its own id, which
+    /// is the whole point of the exercise (`docs/math-department/13-computer-algebra.md`,
+    /// the 2026-09-05 hang row).
+    ///
+    /// Two things about the abandoned thread, because "a timeout on a detached
+    /// thread does not bound resources" is a real hazard in this repository and
+    /// deserves an answer rather than a shrug. First, the work it is doing is
+    /// bounded on every axis by [`geometry_limits`] — reduction steps, S-pair
+    /// iterations, basis size and polynomial width are all ceilings, so it
+    /// terminates and its memory is bounded by those ceilings, not by the clock.
+    /// Second, the test harness exits the process when the last test finishes,
+    /// which reaps it. What it does cost is one core until it finishes, which is
+    /// why this route is taken only when a declaration is *already* wrong.
+    fn both_routes_within(
+        problem: &GeometryProblem,
+        budget: std::time::Duration,
+    ) -> Option<(ProofOutcome, ProofOutcome)> {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let owned = problem.clone();
+        std::thread::spawn(move || {
+            let combined = certify_any_route(&owned, geometry_limits());
+            let direct = certify(&owned, geometry_limits());
+            // The receiver is gone on a timeout; that is expected, not an error.
+            let _ = sender.send((combined, direct));
+        });
+        receiver.recv_timeout(budget).ok()
+    }
+
     /// `certify_any_route` must not disturb what the Gröbner route already
     /// proves. This is the assertion behind "7 unchanged, 1 written".
+    ///
+    /// # The skip list is derived, not written
+    ///
+    /// Which entries this walk can afford comes from
+    /// [`crate::geometry_corpus::corpus_entries`], where each theorem carries its
+    /// own measured [`crate::geometry_corpus::SearchCost`]. The previous form of
+    /// this test carried a literal `[&str; 5]` of ids instead, and its own
+    /// comment predicted the failure mode that then happened twice: an expensive
+    /// theorem added to the corpus and not added to the list makes this test
+    /// **hang**, and a hang reads like a slow machine rather than a defect.
+    ///
+    /// Inverting the default is what actually fixes that. An entry that declares
+    /// nothing is [`crate::geometry_corpus::SearchCost::Unmeasured`], is walked,
+    /// and is caught by [`both_routes_within`]'s deadline *with its id in the
+    /// message*. Skipping now requires a declared measurement a reader can check.
     #[test]
     fn the_route_selector_reproduces_the_groebner_certificate_exactly() {
-        // Theorems the Gröbner route cannot be *run* on here. `euler-line` and
-        // `pappus-hexagon` do not return on it inside any budget anyone waits for
-        // — that is why they exist on the linear route at all — and the rhombus
-        // returns but takes 21 s in release, which is not a unit test.
-        //
-        // The hazard this list carries is worth naming: a new divergent theorem
-        // added to the corpus and *not* added here makes this test hang rather
-        // than fail, and a hang reads like a slow machine. The count assertion
-        // below is derived from the corpus so the list cannot silently shrink,
-        // but nothing can make "does not return" cheap to probe.
-        const UNREACHED_BY_BUCHBERGER: [&str; 5] = [
-            "euler-line",
-            "rhombus-diagonals-perpendicular",
-            "pappus-hexagon",
-            // `simson-line` joined the corpus on 2026-08-15 and walked straight
-            // into the hazard the paragraph above names. Fourteen coordinates and
-            // three Rabinowitsch generators: the reduction is bounded by
-            // `geometry_limits` so it does terminate, but it had not returned
-            // after 90 s in release when the run was killed, which is not a unit
-            // test. Leaving it off this list did not FAIL the test, it stalled
-            // it — and a stall reads like a slow machine rather than a defect,
-            // which is exactly what the warning above predicted and exactly how
-            // it presented.
-            "simson-line",
-            // `tetrahedron-medians-concurrent` joined the corpus on 2026-09-05
-            // from `geometry_beyond` and did exactly what the paragraph above
-            // predicts: the debug crate sweep sat in this test for an hour with
-            // one core spinning and no failure. Its search costs 769 s in
-            // release on the certifier's route (the linear-block detector is
-            // scoped per conclusion and each per-axis conclusion sees one of
-            // the three coordinates); the theorem is re-checked from its
-            // committed artifact by `geometry_certificate_artifacts` instead.
-            "tetrahedron-medians-concurrent",
-        ];
-        let corpus = crate::geometry_corpus::corpus();
-        let expected = corpus.len() - UNREACHED_BY_BUCHBERGER.len();
+        let budget = std::time::Duration::from_millis(CORPUS_WALK_BUDGET_MILLIS);
+        let entries = crate::geometry_corpus::corpus_entries();
+        let expected = entries
+            .iter()
+            .filter(|entry| entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS))
+            .count();
         let mut compared = 0usize;
-        for problem in corpus {
-            if UNREACHED_BY_BUCHBERGER.contains(&problem.id.as_str()) {
+        for entry in entries {
+            if !entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS) {
                 continue;
             }
-            let combined = certify_any_route(&problem, geometry_limits());
-            let direct = certify(&problem, geometry_limits());
+            let problem = entry.problem;
+            let Some((combined, direct)) = both_routes_within(&problem, budget) else {
+                panic!(
+                    "{}: declared {:?} but did not finish both routes within {} ms. Either the \
+                     entry's `SearchCost` in `geometry_corpus::corpus_entries` is wrong, or a \
+                     change made this theorem much more expensive.",
+                    problem.id, entry.search_cost, CORPUS_WALK_BUDGET_MILLIS
+                );
+            };
             assert_eq!(
                 combined, direct,
                 "{}: the route selector changed an existing certificate",
@@ -2307,5 +2341,47 @@ mod tests {
             "every corpus theorem the Gröbner route reaches must be compared"
         );
         assert!(compared >= 5, "compared only {compared} theorems");
+    }
+
+    /// An entry is skipped only on a **declared** measurement.
+    ///
+    /// The guard that keeps the inversion above honest. If
+    /// [`crate::geometry_corpus::SearchCost::Unmeasured`] ever started answering
+    /// "skip me", every future corpus addition would silently leave the walk and
+    /// this suite would go back to measuring the maintainer's memory. It also
+    /// pins that the walk really does exclude somebody: a filter that excludes
+    /// nothing is a filter nobody would notice breaking.
+    #[test]
+    fn only_a_declared_cost_excuses_an_entry_from_the_corpus_walk() {
+        use crate::geometry_corpus::SearchCost;
+
+        assert!(
+            SearchCost::Unmeasured.within(0),
+            "an undeclared entry must be walked, whatever the budget"
+        );
+        assert!(SearchCost::default().within(0), "the default is Unmeasured");
+        assert!(!SearchCost::Unreturned.within(u64::MAX));
+        assert!(SearchCost::Measured(10).within(10));
+        assert!(!SearchCost::Measured(11).within(10));
+
+        let entries = crate::geometry_corpus::corpus_entries();
+        let skipped: Vec<&str> = entries
+            .iter()
+            .filter(|entry| !entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS))
+            .map(|entry| entry.problem.id.as_str())
+            .collect();
+        assert!(
+            !skipped.is_empty(),
+            "no entry is excluded, so the exclusion path is untested"
+        );
+        for entry in &entries {
+            if entry.search_cost == SearchCost::Unmeasured {
+                assert!(
+                    entry.search_cost.within(CORPUS_WALK_BUDGET_MILLIS),
+                    "{}: an unmeasured entry was excluded",
+                    entry.problem.id
+                );
+            }
+        }
     }
 }
