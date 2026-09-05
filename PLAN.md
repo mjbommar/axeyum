@@ -118,6 +118,7 @@ now. Nothing was deleted.
 | Date | Commit | Result |
 |---|---|---|
 | 2026-09-05 | sigma-subtype | evaluation tests for the two definitions covered only by their types; mutation-verified at exactly one death |
+| 2026-09-05 | py-prelude-fields-fix | fixed the path-qualified-field silent skip in gen-py-prelude-fields.py; regenerated prelude_fields.rs (+21 poly.* fields); added scripts/tests/test_gen_py_prelude_fields.py, registered in check.sh + justfile |
 | 2026-09-04 | graph-carrier | `Nat.Graph` (ADR-1608): a decidable adjacency relation plus a vertex bound, sibling of `Nat.Finset`, with symmetry and irreflexivity forced inside `adjB`; neighbourhoods as `Nat.Finset`s and degrees through `countRange_le` |
 | 2026-09-04 | graph-carrier | `R(3,3) = 6` in the kernel, both halves axiom-free: a 32-leaf case tree for the upper bound and a reflected five-vertex search certificate for the lower (`F:ramsey-r33-six`) |
 | 2026-09-04 | graph-carrier | Hall's marriage theorem, necessity direction, over `Nat.Finset` through `card_le_of_injOn`; sufficiency NOT proved and its blocker named — computing a critical subfamily needs a bounded subset search with its own reflection lemma |
@@ -7393,6 +7394,52 @@ exit 0; `validate-facts.py` 2808 facts / 0 errors;
 held); `check-cas-substance.py` OK (16 blocks); `frontier-shape-census.py`
 exit 0 (regenerated, ledger 2807 -> 2808); `shape_search --name
 Int.order_exists --expect 1` FOUND 1, `declarations=2857`.
+
+**Your lane's block (`WIP`, py-prelude-fields-fix, 2026-09-05).** Fixed
+ADR-1613's "unrelated live gap": `scripts/gen-py-prelude-fields.py`'s field
+regex excluded `:`, so a path-qualified registry field (`pub poly:
+poly::PolyNames` on `ComplexPrelude`) never matched the field pattern at all
+-- silently absent before classification ever ran, and `--check` printed a
+plausible count and exited 0. Measured on main before the fix: `complex=129`,
+zero `"poly.` entries in the generated file, `--check` green.
+
+Fix: the field regex now allows `:`, and a qualified registry type is
+resolved by walking the real `mod`/`use` declarations starting from the file
+that declares the field (`resolve_qualified_type` / `resolve_module_path` /
+`resolve_struct_in_file` in the generator), never by a bare-name global
+search -- that search is exactly what's ambiguous when a field is written
+qualified (`PolyNames` is defined in both `complex/poly.rs` and
+`nat_prelude/polynomial_setoid.rs`). An unresolvable module or type is a hard
+error naming the field, never a skip.
+
+Regenerated `crates/axeyum-py/src/kernel/prelude_fields.rs`: `complex`
+129 -> 150 names (the 21 `poly.*` fields), diff is exactly those 21 lines
+plus the doc-count comment.
+
+New control suite `scripts/tests/test_gen_py_prelude_fields.py` (15 tests):
+real-repo tests against the actual `ComplexPrelude.poly` two-files case, plus
+synthetic fixtures for guards the current source doesn't exercise (`crate::`
+absolute path + `use` re-export, `super`, an unresolvable module, an
+unresolvable type, a `use` cycle, the bare-name ambiguity regression). A
+`MirrorCompletenessTests` check uses an independent, looser regex (not
+`collect()`'s own) to assert every top-level field of every walked struct has
+some trace in the generated file -- would have caught the original bug
+without sharing its blind spot. Mutation-verified on a scratch copy (not
+`mutation_controls.py` -- this suite wasn't registered there): all 7 guards
+killed, none survived, none failed to build, file restored byte-identical.
+Registered in `scripts/check.sh` (`py-prelude-fields-tests`, before
+`py-prelude-fields`) and `justfile`.
+
+Also fixed a latent crash in `struct_file`'s ambiguity-error path
+(`p.relative_to(ROOT)` raised `ValueError` for any `KERNEL_SRC` outside
+`ROOT`, e.g. a test fixture) -- added `display_path()`, falls back to the
+full path.
+
+Did not touch `mutation_controls.py` (suite not previously registered
+there, task allowed a scratch copy instead). Did not touch any `*Prelude`
+struct or kernel source. ADR-1628 was reserved but not used -- no decision
+was needed; the fix and its rationale are in the generator's own module
+docstring.
 
 **Your lane's block (`DONE for this slice`, ratint, 2026-08-27).**
 
