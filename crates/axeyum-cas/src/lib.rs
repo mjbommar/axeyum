@@ -42,9 +42,19 @@
 //! zero-test is decidable and exact, so every answer here is `certified` in the
 //! sense of
 //! [decidability-map.md](../../../docs/research/10-cas/decidability-map.md):
-//! `equal` returns a re-checkable polynomial witness. Overflow of the underlying
-//! `i128` rational arithmetic is reported as an honest [`ZeroTest::Unknown`],
-//! never a wrong answer.
+//! `equal` returns a re-checkable polynomial witness.
+//!
+//! # Coefficient width
+//!
+//! [`normalize`] and [`expand`] compute in exact `i128` rationals and report an
+//! overflow as `None`; `(x+1)^132` is the first binomial power they decline.
+//! [`equal`] does **not** stop there: when the bounded normal form overflows it
+//! retries the same cross-multiplication over unbounded integers
+//! ([ADR-1670](../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md)),
+//! so `(x+1)^80·(x+1)^80 = (x+1)^160` — an identity whose inputs and answer are
+//! both small and whose intermediates are not — decides. What the fallback
+//! cannot decide it declines: an honest [`ZeroTest::Unknown`], never a wrong
+//! answer.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -94,11 +104,13 @@ pub mod ntheory;
 pub mod ntheory_advanced;
 pub mod ntheory_certify;
 pub mod ntheory_more;
+pub mod numberfield;
 pub mod orthopoly;
 pub mod partial_fractions;
 pub mod permgroup;
 pub mod permutation;
 pub mod probability;
+pub mod qe;
 mod ratint;
 pub mod rationality;
 pub mod real_algebraic;
@@ -112,6 +124,8 @@ pub mod taylor;
 pub mod telescoping;
 pub mod telescoping_check;
 pub mod telescoping_json;
+
+use crate::mvpoly::big::BigPoly;
 
 pub use algebraic::AlgebraicReal;
 pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};
@@ -2058,11 +2072,28 @@ pub enum ZeroTest {
     Certified {
         /// Whether the two expressions are equal (the difference is zero).
         equal: bool,
-        /// The difference `a − b` in canonical form (the certificate).
+        /// The difference `a − b` in canonical form (the certificate): the
+        /// cross-multiplied numerator, which is the zero polynomial exactly
+        /// when `equal` is `true`.
+        ///
+        /// From the unbounded fallback ([ADR-1670]) the polynomial is that
+        /// numerator scaled by a **positive rational** — the least common
+        /// denominator the fallback clears to work over ℤ — which is invisible
+        /// to the zero test and to any re-check of it. A zero witness is the
+        /// zero polynomial either way.
+        ///
+        /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
         witness: MultiPoly,
     },
-    /// Could not decide within exact `i128` rational arithmetic (overflow).
-    /// Honest unknown — never a wrong answer.
+    /// Could not decide. Honest unknown — never a wrong answer.
+    ///
+    /// Two causes, after [ADR-1670]: the expression is outside the fragment the
+    /// zero-test decides at all, or exact arithmetic overflowed `i128` **and**
+    /// the unbounded fallback also declined (a transcendental atom it does not
+    /// carry folds for, the reserved `I`, or a refutation whose witness does not
+    /// fit back into `i128`).
+    ///
+    /// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
     Unknown,
 }
 
@@ -2163,8 +2194,25 @@ fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
 /// (the denominators are non-zero by construction, so no reduced form is
 /// required). Over the fragment this is a **complete decision procedure**; the
 /// `witness` is the cross-multiplied numerator `a·d − c·b` in canonical form,
-/// which is re-checkable independently. Overflow of exact `i128` rational
-/// arithmetic yields [`ZeroTest::Unknown`], never a wrong answer.
+/// which is re-checkable independently.
+///
+/// # Coefficient width
+///
+/// Overflow of exact `i128` rational arithmetic is not the end of the test.
+/// The same cross-multiplication is retried over unbounded integers
+/// ([ADR-1670]), which decides identities whose *intermediates* leave `i128`
+/// even though their inputs and answer do not — `(x+1)^80·(x+1)^80 = (x+1)^160`
+/// is the smallest such binomial case. The retry runs **only** when the bounded
+/// form declines, so it can never change a verdict the bounded form reached.
+///
+/// It does not decide everything. Any expression carrying a transcendental,
+/// radical, absolute-value, root or Bessel head is declined there, because the
+/// folds that relate those atoms have no unbounded counterpart; so is the
+/// reserved imaginary unit `I`; and so is a refutation whose witness cannot be
+/// carried by [`MultiPoly`]. Each of those is [`ZeroTest::Unknown`], never a
+/// wrong answer.
+///
+/// [ADR-1670]: ../../../docs/research/09-decisions/adr-1670-i128-fast-path-with-a-big-integer-overflow-fallback-for-the-cas-zero-test.md
 ///
 /// # Trigonometric soundness (Euler fallback)
 ///
@@ -2332,7 +2380,21 @@ const MAX_WEIGHTED_BESSEL_ORDER: u32 = 32;
 /// The core cross-multiplication zero-test (no Euler canonicalization). Treats
 /// transcendental heads as independent atoms; see [`equal`] for why the public
 /// entry point re-checks a non-equal result on the [`rewrite_exp`] form.
+///
+/// Two normal forms, tried in order: the bounded `i128` one
+/// ([`equal_core_bounded`]) and, **only when that one declines**, the unbounded
+/// integer one ([`equal_core_unbounded`], ADR-1670). The fallback never runs on
+/// an input the bounded form decided, so it cannot change an existing verdict —
+/// it can only turn an overflow `Unknown` into a decision.
 fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    match equal_core_bounded(a, b) {
+        ZeroTest::Unknown => equal_core_unbounded(a, b),
+        decided @ ZeroTest::Certified { .. } => decided,
+    }
+}
+
+/// The bounded (`i128`) cross-multiplication zero-test.
+fn equal_core_bounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let (Some(ra), Some(rb)) = (normalize_rational(a), normalize_rational(b)) else {
         return ZeroTest::Unknown;
     };
@@ -2410,6 +2472,243 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
+            witness,
+        },
+        None => ZeroTest::Unknown,
+    }
+}
+
+// --- The arbitrary-precision overflow fallback (ADR-1670) --------------------
+
+/// A rational function `num / den` over **ℤ[vars]** with unbounded integer
+/// coefficients — the normal form the zero-test retries in when the bounded
+/// `i128` form overflows.
+///
+/// Rational *coefficients* are not needed: a constant `p/q` is the pair
+/// `(constant p, constant q)`, and a quotient of integer polynomials already
+/// denotes every rational function the fragment can spell. That is what lets
+/// this reuse [`mvpoly::big::BigPoly`] — the ring the multivariate GCD already
+/// computes in — instead of introducing a third polynomial type.
+///
+/// The price of clearing denominators is that `num` is the bounded path's
+/// numerator scaled by a **positive rational**; see [`equal_core_unbounded`] for
+/// why that is invisible to the zero-test and what it means for the witness.
+#[derive(Debug, Clone)]
+struct BigRatFunc {
+    num: BigPoly,
+    den: BigPoly,
+}
+
+impl BigRatFunc {
+    /// The polynomial `p` as `p / 1`.
+    fn from_poly(num: BigPoly) -> Self {
+        BigRatFunc {
+            num,
+            den: BigPoly::one(),
+        }
+    }
+
+    /// `self + other = (a·d + c·b) / (b·d)`; `None` when `budget` runs out or on
+    /// `u32` exponent overflow (coefficients cannot overflow here).
+    fn add(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
+        let ad = self.num.mul_within(&other.den, budget)?;
+        let cb = other.num.mul_within(&self.den, budget)?;
+        let num = ad.add_within(&cb, budget)?;
+        let den = self.den.mul_within(&other.den, budget)?;
+        Some(BigRatFunc { num, den })
+    }
+
+    /// `self · other = (a·c) / (b·d)`.
+    fn mul(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
+        let num = self.num.mul_within(&other.num, budget)?;
+        let den = self.den.mul_within(&other.den, budget)?;
+        Some(BigRatFunc { num, den })
+    }
+
+    /// `−self = (−a) / b`. Negation rewrites coefficients in place and costs no
+    /// products, so it is not charged.
+    fn neg(&self) -> BigRatFunc {
+        BigRatFunc {
+            num: self.num.neg(),
+            den: self.den.clone(),
+        }
+    }
+
+    /// `self^exp`.
+    fn pow(&self, exp: u32, budget: &mut u64) -> Option<BigRatFunc> {
+        let num = self.num.pow_within(exp, budget)?;
+        let den = self.den.pow_within(exp, budget)?;
+        Some(BigRatFunc { num, den })
+    }
+
+    /// `self / other = (a·d) / (b·c)`; `None` on a division by the identically
+    /// zero function, exactly as [`RatFunc::div`] declines.
+    fn div(&self, other: &BigRatFunc, budget: &mut u64) -> Option<BigRatFunc> {
+        if other.num.is_zero() {
+            return None;
+        }
+        let num = self.num.mul_within(&other.den, budget)?;
+        let den = self.den.mul_within(&other.num, budget)?;
+        Some(BigRatFunc { num, den })
+    }
+}
+
+/// The unbounded fallback's **explicit work budget**, in monomial-pair products,
+/// for one whole zero-test (both sides plus the cross-multiplication).
+///
+/// The bounded path never needed one: it stops at the first coefficient that
+/// leaves `i128`, so `(x+1)^100000` costs it 131 multiplications and then
+/// declines. Removing the coefficient bound removes that accident too, and an
+/// unbounded ring would happily spend minutes and gigabytes forming an
+/// expansion nobody can use. Declining above a budget is honest —
+/// [`ZeroTest::Unknown`] is a first-class result — and the crate's determinism
+/// promise requires the limit be **explicit** rather than emergent.
+///
+/// Sized against the measurement, not guessed: the largest identity in the
+/// fallback's own test suite, `(x+1)^100·(x+1)^100 = (x+1)^200`, costs about
+/// 15,000 products. A budget of a million is ~65× that, and bounds a decline to
+/// roughly a million big-integer multiply-accumulates.
+const BIG_FALLBACK_WORK_BUDGET: u64 = 1_000_000;
+
+/// Expand a [`CasExpr`] to a [`BigRatFunc`], mirroring [`normalize_rational`]
+/// over unbounded integers.
+///
+/// **Deliberately narrower than [`normalize_rational`]:** every `Unary` head is
+/// declined rather than atomized. The bounded path turns `sin x`, `√u`, `|u|`,
+/// `root_q(u)`, `Jₙ(x)` and `exp` into opaque atom variables and then applies
+/// [`MultiPoly::fold_pythagorean`], [`MultiPoly::fold_radical`],
+/// [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
+/// [`MultiPoly::fold_bessel_recurrences`] to relate them; those folds have no
+/// unbounded counterpart yet, and without them a *nonzero* normal form in atom
+/// variables does not prove `≠`. Declining is the honest slice: the fragment
+/// covered here — variables, rational constants, `+`, `−`, `×`, `÷`, integer
+/// powers — is exactly the one where no fold can apply.
+///
+/// Every product is charged against `budget`; see [`BIG_FALLBACK_WORK_BUDGET`]
+/// for why an unbounded ring needs an explicit one.
+fn normalize_rational_big_within(expr: &CasExpr, budget: &mut u64) -> Option<BigRatFunc> {
+    match expr {
+        CasExpr::Const(r) => Some(BigRatFunc {
+            num: BigPoly::constant(BigInt::from(r.numerator())),
+            // `Rational` keeps the denominator positive, so the clearing factor
+            // this introduces is positive.
+            den: BigPoly::constant(BigInt::from(r.denominator())),
+        }),
+        CasExpr::Var(v) => Some(BigRatFunc::from_poly(BigPoly::variable(v))),
+        CasExpr::Add(terms) => {
+            let mut acc = BigRatFunc::from_poly(BigPoly::zero());
+            for t in terms {
+                acc = acc.add(&normalize_rational_big_within(t, budget)?, budget)?;
+            }
+            Some(acc)
+        }
+        CasExpr::Mul(factors) => {
+            let mut acc = BigRatFunc::from_poly(BigPoly::one());
+            for f in factors {
+                acc = acc.mul(&normalize_rational_big_within(f, budget)?, budget)?;
+            }
+            Some(acc)
+        }
+        CasExpr::Neg(inner) => Some(normalize_rational_big_within(inner, budget)?.neg()),
+        CasExpr::Div(u, w) => normalize_rational_big_within(u, budget)?
+            .div(&normalize_rational_big_within(w, budget)?, budget),
+        CasExpr::Pow(base, exp) => normalize_rational_big_within(base, budget)?.pow(*exp, budget),
+        CasExpr::Unary(..) => None,
+    }
+}
+
+/// A [`BigPoly`] as a [`MultiPoly`], or `None` when a coefficient does not fit
+/// `i128`.
+///
+/// Both sides are canonical maps from a monomial to a **nonzero** coefficient,
+/// and `BigPoly` never stores a zero term, so the result is canonical too and
+/// [`MultiPoly::is_zero`] stays exact on it.
+fn multipoly_from_big(poly: &BigPoly) -> Option<MultiPoly> {
+    let mut terms = BTreeMap::new();
+    for (mono, coeff) in poly.terms() {
+        let value = i128::try_from(coeff).ok()?;
+        let mut powers = BTreeMap::new();
+        for (name, exp) in mono.powers() {
+            powers.insert(name.to_owned(), exp);
+        }
+        terms.insert(Monomial { powers }, Rational::integer(value));
+    }
+    Some(MultiPoly { terms })
+}
+
+/// The unbounded-integer zero-test: the fallback [`equal_core`] takes when the
+/// `i128` normal form overflows (ADR-1670).
+///
+/// # What it decides, and why each branch is sound
+///
+/// The test is the same cross-multiplication: `a/b = c/d` iff `a·d − c·b ≡ 0`.
+/// Over ℤ[vars] the difference is a **positive-rational multiple** of the
+/// bounded path's cross-multiplied numerator (every rational constant had its
+/// denominator cleared, and `Rational` keeps denominators positive). A positive
+/// multiple is zero exactly when the original is, so the *decision* is
+/// unaffected; only the witness's scale is.
+///
+/// - **Zero difference ⇒ `Certified { equal: true }`.** The certificate is
+///   [`MultiPoly::zero()`], which is not an approximation: the difference in
+///   canonical form *is* the zero polynomial, and `MultiPoly` holds it exactly.
+///   A polynomial identity in the variables holds at every value of them, so
+///   this is sound whatever the variables denote — including the reserved `I`.
+/// - **Nonzero difference ⇒ `Certified { equal: false }`, but only when the
+///   witness survives the conversion back to `i128`.** Emitting a certificate
+///   that is not the difference would weaken what [`ZeroTest::Certified`]
+///   means, so a difference whose coefficients exceed `i128` is reported
+///   [`ZeroTest::Unknown`] instead. This asymmetry — equalities always decide,
+///   inequalities decide only when the certificate fits — is the price of not
+///   changing the public witness type, and is what wave two of ADR-1670
+///   removes.
+///
+/// # Two guards on the inequality branch
+///
+/// A nonzero normal form only proves `≠` when no bounded-path fold could have
+/// collapsed it. Two variable classes could:
+///
+/// - `I`, the reserved imaginary unit, which [`MultiPoly::fold_imaginary`]
+///   rewrites by `I² = −1` (so `I² + 1` is nonzero here but zero there);
+/// - any name beginning with `\0`, the prefix [`atom_name`] gives transcendental
+///   atoms, which the Pythagorean/radical/abs/root folds relate.
+///
+/// [`normalize_rational_big_within`] declines every `Unary` head, so a `\0` name can
+/// only arrive from a caller that spelled one as a plain variable; `I` arrives
+/// from ordinary complex work. Both are declined rather than reasoned about.
+/// Neither guard applies to the equality branch, where zero is zero.
+fn equal_core_unbounded(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    // One budget for the whole test: both normal forms and the
+    // cross-multiplication. See `BIG_FALLBACK_WORK_BUDGET`.
+    let mut budget = BIG_FALLBACK_WORK_BUDGET;
+    let Some(ra) = normalize_rational_big_within(a, &mut budget) else {
+        return ZeroTest::Unknown;
+    };
+    let Some(rb) = normalize_rational_big_within(b, &mut budget) else {
+        return ZeroTest::Unknown;
+    };
+    let Some(ad) = ra.num.mul_within(&rb.den, &mut budget) else {
+        return ZeroTest::Unknown;
+    };
+    let Some(cb) = rb.num.mul_within(&ra.den, &mut budget) else {
+        return ZeroTest::Unknown;
+    };
+    let difference = ad.sub(&cb);
+    if difference.is_zero() {
+        return ZeroTest::Certified {
+            equal: true,
+            witness: MultiPoly::zero(),
+        };
+    }
+    if difference
+        .variables()
+        .iter()
+        .any(|name| name == "I" || name.starts_with('\0'))
+    {
+        return ZeroTest::Unknown;
+    }
+    match multipoly_from_big(&difference) {
+        Some(witness) => ZeroTest::Certified {
+            equal: false,
             witness,
         },
         None => ZeroTest::Unknown,
@@ -29506,5 +29805,506 @@ mod exact_positivity_tests {
             matches!(expanded, CasExpr::Add(_)),
             "the positive case must still distribute, got {expanded}"
         );
+    }
+}
+
+/// The arbitrary-precision overflow fallback (ADR-1670).
+///
+/// Every test here names the input it was written for, because the finding this
+/// module exists to record is a *table of inputs*: which realistic computations
+/// the `i128` normal form declines, and which of those the unbounded fallback
+/// converts into a decision. The measured table is in the ADR.
+///
+/// # What still declines, and why
+///
+/// - **Any expression carrying a `Unary` head** — `√u`, `|u|`, `root_q(u)`,
+///   `sin`/`cos`, `ln`, `exp`, `Jₙ`. The bounded path atomizes these into
+///   variables and then relates the variables with
+///   [`MultiPoly::fold_pythagorean`], [`MultiPoly::fold_radical`],
+///   [`MultiPoly::fold_abs`], [`MultiPoly::fold_nth_root`] and
+///   [`MultiPoly::fold_bessel_recurrences`]. Those folds have no unbounded
+///   counterpart, and without them a nonzero normal form in atom variables does
+///   not prove `≠` — so [`normalize_rational_big_within`] declines the whole head
+///   rather than half-deciding it.
+///   (`sqrt_atom_identity_at_overflow_scale_still_declines`)
+/// - **The reserved imaginary unit `I`**, for the same reason one level down:
+///   [`MultiPoly::fold_imaginary`] rewrites `I² = −1`, so `I² + 1` is a nonzero
+///   polynomial here and the zero polynomial there.
+///   (`imaginary_unit_at_overflow_scale_declines_rather_than_refuting`)
+/// - **A refutation whose witness does not fit back into `i128`.** The decision
+///   is available; the *certificate* is not, and `ZeroTest::Certified` promises
+///   a certificate. Reported `Unknown`.
+///   (`refutation_whose_witness_exceeds_i128_declines`)
+/// - **Anything past [`BIG_FALLBACK_WORK_BUDGET`].** Removing the coefficient
+///   bound also removes the implicit resource bound it was providing, so the
+///   fallback carries an explicit one.
+///   (`work_beyond_the_budget_declines_instead_of_expanding_without_bound`)
+#[cfg(test)]
+mod bignum_overflow_fallback {
+    use super::*;
+
+    fn x() -> CasExpr {
+        CasExpr::var("x")
+    }
+
+    fn y() -> CasExpr {
+        CasExpr::var("y")
+    }
+
+    /// `(x + 1)^n`, unexpanded.
+    fn binom(n: u32) -> CasExpr {
+        (x() + CasExpr::int(1)).pow(n)
+    }
+
+    /// The Catalan numbers `C₀ … C₆₈`, and the assertion that `C₆₉` is the first
+    /// one `i128` cannot hold at all.
+    ///
+    /// This is the boundary the coefficient chairs hit: a combinatorial sequence
+    /// whose 69th term cannot be *spelled* in the crate's coefficient type, let
+    /// alone computed with.
+    fn catalan_numbers() -> Vec<i128> {
+        let mut catalan: Vec<i128> = vec![1];
+        for n in 1..200usize {
+            let mut total: i128 = 0;
+            let mut overflowed = false;
+            for i in 0..n {
+                let Some(value) = catalan[i]
+                    .checked_mul(catalan[n - 1 - i])
+                    .and_then(|product| total.checked_add(product))
+                else {
+                    overflowed = true;
+                    break;
+                };
+                total = value;
+            }
+            if overflowed {
+                break;
+            }
+            catalan.push(total);
+        }
+        assert_eq!(
+            catalan.len(),
+            69,
+            "the fixture is only adversarial if C(69) really is the first Catalan \
+             number outside i128; if this changes the sizes below are stale"
+        );
+        catalan
+    }
+
+    /// `Σ_{k=0}^{68} Cₖ·xᵏ` — a polynomial whose largest coefficient is within a
+    /// factor of four of the `i128` ceiling, so any product of it overflows.
+    fn catalan_series() -> CasExpr {
+        let catalan = catalan_numbers();
+        CasExpr::Add(
+            catalan
+                .iter()
+                .enumerate()
+                .map(|(k, &coefficient)| {
+                    CasExpr::int(coefficient) * x().pow(u32::try_from(k).expect("degree fits u32"))
+                })
+                .collect(),
+        )
+    }
+
+    /// Assert that the bounded path declines on this pair (so the test is
+    /// adversarial, not merely green), and that the public zero-test now
+    /// certifies the equality anyway.
+    fn assert_converted_to_equal(a: &CasExpr, b: &CasExpr) {
+        assert!(
+            matches!(equal_core_bounded(a, b), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        match equal(a, b) {
+            ZeroTest::Certified { equal: true, .. } => {}
+            other => panic!("expected the unbounded fallback to certify equality, got {other:?}"),
+        }
+    }
+
+    // --- Overflow `Unknown`s the fallback converts into a decision -----------
+
+    #[test]
+    fn x_plus_1_pow_80_squared_equals_pow_160() {
+        assert_converted_to_equal(&CasExpr::Mul(vec![binom(80), binom(80)]), &binom(160));
+    }
+
+    #[test]
+    fn x_plus_1_pow_100_squared_equals_pow_200() {
+        assert_converted_to_equal(&CasExpr::Mul(vec![binom(100), binom(100)]), &binom(200));
+    }
+
+    #[test]
+    fn x_plus_one_third_pow_41_squared_equals_pow_82() {
+        // Rational coefficients: the wall here is the denominator 3^82, not a
+        // binomial coefficient.
+        let base = x() + CasExpr::rat(1, 3);
+        assert_converted_to_equal(
+            &CasExpr::Mul(vec![base.clone().pow(41), base.clone().pow(41)]),
+            &base.pow(82),
+        );
+    }
+
+    #[test]
+    fn catalan_series_binomial_square_identity() {
+        // `(p + q)² = p² + 2pq + q²` with `p` the Catalan series (coefficients
+        // just inside i128) and `q = x³ + 1`. Two genuinely different expansion
+        // routes; every intermediate product overflows the bounded form.
+        let p = catalan_series();
+        let q = x().pow(3) + CasExpr::int(1);
+        let left = (p.clone() + q.clone()).pow(2);
+        let right = CasExpr::Add(vec![
+            p.clone().pow(2),
+            CasExpr::int(2) * p * q.clone(),
+            q.pow(2),
+        ]);
+        assert_converted_to_equal(&left, &right);
+    }
+
+    #[test]
+    fn rational_function_x_plus_1_pow_180_over_x_plus_2_splits() {
+        let denominator = x() + CasExpr::int(2);
+        assert_converted_to_equal(
+            &(CasExpr::Mul(vec![binom(90), binom(90)]) / denominator.clone()),
+            &(binom(180) / denominator),
+        );
+    }
+
+    /// **The soundness control.** A FALSE identity at overflow scale must come
+    /// back refuted, never certified.
+    ///
+    /// `(x+1)^80·(x+1)^80` and `(x+1)^160 + x³` differ by exactly `x³`, so the
+    /// difference is small even though every intermediate is not — which is the
+    /// only reason a refutation is available here at all (the witness has to fit
+    /// back into `i128`).
+    #[test]
+    fn false_identity_at_degree_160_is_refuted_not_certified() {
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]);
+        let right = binom(160) + x().pow(3);
+        assert!(
+            matches!(equal_core_bounded(&left, &right), ZeroTest::Unknown),
+            "the fixture is not adversarial: the bounded i128 path already decides it"
+        );
+        match equal(&left, &right) {
+            ZeroTest::Certified {
+                equal: false,
+                witness,
+            } => {
+                assert!(
+                    !witness.is_zero(),
+                    "a refutation's witness must be a nonzero polynomial"
+                );
+            }
+            other => panic!("a false identity must be refuted, got {other:?}"),
+        }
+    }
+
+    // --- The declines that remain, each with its reason ---------------------
+
+    #[test]
+    fn sqrt_atom_identity_at_overflow_scale_still_declines() {
+        // `√x·√x = x` is a fold the unbounded path does not carry, so the whole
+        // head is declined rather than half-decided.
+        let left = CasExpr::Mul(vec![binom(80), binom(80)]) + x().sqrt() * x().sqrt();
+        let right = binom(160) + x();
+        assert!(
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "the sqrt fold has no unbounded counterpart; this must decline"
+        );
+        // Positive control of the same shape below the wall: the fold itself
+        // works, so the decline above is about width, not about `√`.
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)]) + x().sqrt() * x().sqrt();
+        let small_right = binom(8) + x();
+        assert!(
+            matches!(
+                equal(&small_left, &small_right),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: the same identity must certify below the wall"
+        );
+    }
+
+    #[test]
+    fn imaginary_unit_at_overflow_scale_declines_rather_than_refuting() {
+        // `I² + 1 = 0`, so these two ARE equal. The unbounded path has no
+        // `fold_imaginary`, so without its guard it would compute the nonzero
+        // polynomial `I² + 1` and REFUTE a true identity.
+        let imaginary = CasExpr::var("I");
+        let left = CasExpr::Mul(vec![binom(80), binom(80)])
+            + imaginary.clone() * imaginary
+            + CasExpr::int(1);
+        let right = binom(160);
+        assert!(
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "an `I`-bearing difference must be declined, never refuted"
+        );
+        // Positive control below the wall: the bounded path folds `I² = −1` and
+        // certifies, so the fixture really is a true identity.
+        let small_imaginary = CasExpr::var("I");
+        let small_left = CasExpr::Mul(vec![binom(4), binom(4)])
+            + small_imaginary.clone() * small_imaginary
+            + CasExpr::int(1);
+        assert!(
+            matches!(
+                equal(&small_left, &binom(8)),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "positive control: the identity holds and certifies below the wall"
+        );
+    }
+
+    #[test]
+    fn work_beyond_the_budget_declines_instead_of_expanding_without_bound() {
+        // `(x+1)^4096` is not a hard question -- it is a large answer. The
+        // bounded path never has to say so, because it stops at the first
+        // coefficient outside `i128` (degree 132) and declines after a hundred
+        // or so cheap multiplications. The unbounded ring has no such accident
+        // to save it, so the budget is what makes the decline explicit.
+        let huge = binom(4096);
+        assert!(
+            matches!(equal(&huge, &huge), ZeroTest::Unknown),
+            "work past the budget must decline, not run to completion"
+        );
+        // Positive control: the same shape at a size the budget covers, spelled
+        // two different ways so it is a real identity rather than a `refl`.
+        assert!(
+            matches!(
+                equal(&CasExpr::Mul(vec![binom(100), binom(100)]), &binom(200)),
+                ZeroTest::Certified { equal: true, .. }
+            ),
+            "the budget must not be so small that the measured cases decline"
+        );
+    }
+
+    #[test]
+    fn refutation_whose_witness_exceeds_i128_declines() {
+        // `2·(x+1)^160` differs from `(x+1)^160` by `(x+1)^160`, whose middle
+        // binomial coefficient is far outside `i128`. The DECISION is available;
+        // the CERTIFICATE is not, and `Certified` promises a certificate.
+        let left = binom(160) + binom(160);
+        let right = binom(160);
+        assert!(
+            matches!(equal(&left, &right), ZeroTest::Unknown),
+            "a refutation with no representable witness must decline"
+        );
+    }
+
+    // --- Negative controls: the fallback changes nothing that already decided -
+
+    /// Pairs the bounded path already decides, half equal and half not.
+    fn already_deciding_corpus() -> Vec<(CasExpr, CasExpr, bool)> {
+        vec![
+            (binom(20) * binom(20), binom(40), true),
+            (binom(64) * binom(64), binom(128), true),
+            (
+                (x() + y() + CasExpr::int(1)).pow(30) * (x() + y() + CasExpr::int(1)).pow(30),
+                (x() + y() + CasExpr::int(1)).pow(60),
+                true,
+            ),
+            (
+                (x() + CasExpr::rat(1, 3)).pow(30) * (x() + CasExpr::rat(1, 3)).pow(30),
+                (x() + CasExpr::rat(1, 3)).pow(60),
+                true,
+            ),
+            (
+                binom(30) / (x() + CasExpr::int(2)),
+                binom(30) / (x() + CasExpr::int(2)),
+                true,
+            ),
+            (
+                (x() + y()).pow(3),
+                x().pow(3)
+                    + CasExpr::int(3) * x().pow(2) * y()
+                    + CasExpr::int(3) * x() * y().pow(2)
+                    + y().pow(3),
+                true,
+            ),
+            (
+                x().pow(2) - CasExpr::int(1),
+                (x() + CasExpr::int(1)) * (x() - CasExpr::int(1)),
+                true,
+            ),
+            (binom(20) * binom(20), binom(40) + x(), false),
+            (
+                (x() + y() + CasExpr::int(1)).pow(35) * (x() + y() + CasExpr::int(1)).pow(35),
+                (x() + y() + CasExpr::int(1)).pow(70) + y(),
+                false,
+            ),
+            (x().pow(2), x().pow(2) + CasExpr::int(1), false),
+            (x() / y(), (x() + CasExpr::int(1)) / y(), false),
+            (CasExpr::int(7), CasExpr::int(8), false),
+        ]
+    }
+
+    /// The two normal forms must agree on every verdict the bounded one reaches.
+    ///
+    /// This runs each pair through **both** paths directly, not through `equal`,
+    /// so it measures the fallback's own answers rather than the dispatch that
+    /// keeps it from being consulted.
+    #[test]
+    fn both_paths_reach_the_same_verdict_on_the_deciding_corpus() {
+        let corpus = already_deciding_corpus();
+        assert!(corpus.len() >= 12, "the corpus must not shrink silently");
+        for (left, right, expected) in corpus {
+            let bounded = equal_core_bounded(&left, &right);
+            let unbounded = equal_core_unbounded(&left, &right);
+            let ZeroTest::Certified {
+                equal: bounded_verdict,
+                ..
+            } = bounded
+            else {
+                panic!("corpus entry {left} vs {right} must decide in the bounded path");
+            };
+            let ZeroTest::Certified {
+                equal: unbounded_verdict,
+                ..
+            } = unbounded
+            else {
+                panic!("corpus entry {left} vs {right} must decide in the unbounded path too");
+            };
+            assert_eq!(
+                bounded_verdict, expected,
+                "bounded verdict changed for {left} vs {right}"
+            );
+            assert_eq!(
+                unbounded_verdict, expected,
+                "the unbounded path disagrees with the bounded one on {left} vs {right}"
+            );
+        }
+    }
+
+    /// Dispatch: when the bounded path decides, `equal_core` returns **its**
+    /// result unchanged — the same variant and the same witness, byte for byte.
+    ///
+    /// The verdict test above would still pass if the fallback quietly replaced
+    /// every witness with its own differently-scaled one; this is what says it
+    /// does not.
+    #[test]
+    fn the_fallback_never_replaces_a_witness_the_bounded_path_produced() {
+        for (left, right, _) in already_deciding_corpus() {
+            assert_eq!(
+                equal_core(&left, &right),
+                equal_core_bounded(&left, &right),
+                "the fallback altered a result the bounded path had already decided: \
+                 {left} vs {right}"
+            );
+        }
+    }
+
+    /// Transcendental identities the bounded path decides must be untouched: the
+    /// fallback declines every `Unary` head, so if it were consulted on these the
+    /// verdicts would collapse to `Unknown`.
+    #[test]
+    fn transcendental_verdicts_are_unchanged() {
+        let cases: Vec<(CasExpr, CasExpr, bool)> = vec![
+            (x().sqrt() * x().sqrt(), x(), true),
+            (x().sin().pow(2) + x().cos().pow(2), CasExpr::int(1), true),
+            (x().exp() * y().exp(), (x() + y()).exp(), true),
+            (x().sin(), x().cos(), false),
+        ];
+        for (left, right, expected) in cases {
+            match equal(&left, &right) {
+                ZeroTest::Certified { equal, .. } => assert_eq!(
+                    equal, expected,
+                    "transcendental verdict changed for {left} vs {right}"
+                ),
+                other @ ZeroTest::Unknown => {
+                    panic!("{left} vs {right} must still decide, got {other:?}")
+                }
+            }
+        }
+    }
+
+    // --- The cost curve -----------------------------------------------------
+
+    /// Best-of-`REPEATS` wall clock for `body`, which must return `true` every
+    /// time — a timing loop over a computation that quietly declined would
+    /// measure the decline.
+    fn best_of(mut body: impl FnMut() -> bool) -> std::time::Duration {
+        const REPEATS: usize = 5;
+        let mut best = std::time::Duration::MAX;
+        for _ in 0..REPEATS {
+            let started = std::time::Instant::now();
+            let decided = body();
+            let elapsed = started.elapsed();
+            assert!(decided, "the timed computation must decide on every repeat");
+            best = best.min(elapsed);
+        }
+        best
+    }
+
+    /// Time both normal forms on the same inputs, at sizes **below** the wall
+    /// where both of them decide.
+    ///
+    /// **Three comparisons, because they answer different questions and the
+    /// obvious one confounds two effects.**
+    ///
+    /// 1. `(x+1)^d` spelled as an explicit `d`-fold **product**, normalized in
+    ///    each ring. Both sides then perform the same `d − 1` polynomial
+    ///    multiplications, so this ratio isolates the *coefficient arithmetic*
+    ///    and nothing else. It is the number that prices "migrate the
+    ///    coefficient type wholesale".
+    /// 2. `(x+1)^d` spelled as a **power**. This is *not* a ring comparison:
+    ///    [`MultiPoly::pow`] is repeated multiplication (`d` products) while
+    ///    [`mvpoly::big::BigPoly::pow`] is binary exponentiation
+    ///    (`⌈log₂ d⌉` squarings), so the ratio mixes a ring difference with an
+    ///    algorithm difference. Reported next to (1) so the two can be
+    ///    separated rather than confused.
+    /// 3. [`equal_core_bounded`] vs [`equal_core_unbounded`] — the whole
+    ///    zero-test. The bounded one additionally builds the atom dictionary and
+    ///    runs six fold passes over the result, and the unbounded one runs none
+    ///    of them, so this ratio is not a coefficient-arithmetic measurement
+    ///    either.
+    ///
+    /// Prints rather than asserts a budget: this box is shared and loaded, so a
+    /// wall-clock threshold here would be a flake, not a gate. The recorded
+    /// numbers, with the load they were taken under, are in ADR-1670. What the
+    /// test does assert is the thing a stale number cannot fake — that every
+    /// timed call decided, so each ratio is between two real answers.
+    #[test]
+    fn cost_curve_bounded_versus_unbounded_below_the_wall() {
+        for degree in [8u32, 16, 32, 48, 64] {
+            let left = CasExpr::Mul(vec![binom(degree), binom(degree)]);
+            let right = binom(2 * degree);
+            // Same algorithm on both sides: an explicit product of `degree`
+            // copies, so each ring performs `degree - 1` multiplications.
+            let product = CasExpr::Mul(vec![
+                x() + CasExpr::int(1);
+                usize::try_from(degree).unwrap_or(0)
+            ]);
+            let big = |expr: &CasExpr| {
+                let mut budget = BIG_FALLBACK_WORK_BUDGET;
+                normalize_rational_big_within(expr, &mut budget).is_some()
+            };
+            let product_bounded = best_of(|| normalize_rational(&product).is_some());
+            let product_unbounded = best_of(|| big(&product));
+            let normalize_bounded = best_of(|| normalize_rational(&left).is_some());
+            let normalize_unbounded = best_of(|| big(&left));
+            let zero_test_bounded = best_of(|| {
+                matches!(
+                    equal_core_bounded(&left, &right),
+                    ZeroTest::Certified { equal: true, .. }
+                )
+            });
+            let zero_test_unbounded = best_of(|| {
+                matches!(
+                    equal_core_unbounded(&left, &right),
+                    ZeroTest::Certified { equal: true, .. }
+                )
+            });
+            let ratio = |big: std::time::Duration, small: std::time::Duration| {
+                big.as_secs_f64() / small.as_secs_f64().max(1e-9)
+            };
+            println!(
+                "degree {degree}\n  \
+                 same-algorithm product : i128 {product_bounded:?} / big \
+                 {product_unbounded:?} = {:.2}x\n  \
+                 pow (algorithms differ): i128 {normalize_bounded:?} / big \
+                 {normalize_unbounded:?} = {:.2}x\n  \
+                 whole zero-test        : i128 {zero_test_bounded:?} / big \
+                 {zero_test_unbounded:?} = {:.2}x",
+                ratio(product_unbounded, product_bounded),
+                ratio(normalize_unbounded, normalize_bounded),
+                ratio(zero_test_unbounded, zero_test_bounded),
+            );
+        }
     }
 }

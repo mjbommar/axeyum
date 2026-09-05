@@ -55,7 +55,7 @@ axiom-freedom:
 # not hide any of them — the chain still fails — it stops them hiding everything
 # else. Note the earlier claim that `adr-remote-collisions` was already last was
 # wrong: it was #40 of 41, so `local-ci-freshness` sat behind it.
-check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls
+check: fmt fmt-all facts facts-replay clippy gate-controls kernel-stack-envelope deep-stack-call-sites axiom-freedom external-coupling autogenesis-knowledge-controls tactic-catalog-controls autogenesis-proposer-isolation autogenesis-induction-search autogenesis-apply-search autogenesis-result autogenesis-nursery autogenesis-mathlib-source autogenesis-mathlib-dependencies autogenesis-mathlib-review autogenesis-mathlib-facts test frontier gate-liveness golden-lean-pins kernel-suite-partition lean-gate prelude-reuse moment-proofs ntheory-certificates doc py-check qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs generated-trackers solver-module-graph plan-authority links gate-step-timeout shared-index sos-negative-controls evidence-portability aggregate-scope adr-remote-collisions local-ci-freshness parity-freshness episodes product-health obstruction-graph mobility-census python-coverage lane-turn-controls correspondences autogenesis-kernel-projection autogenesis-kernel-lemma-index autogenesis-obstruction-projection autogenesis-transport-projection autogenesis-capability-gap autogenesis-concept-coverage autogenesis-producer-outcomes autogenesis-producer-evaluation-frontier autogenesis-binomial-arrow autogenesis-next-reusable-family autogenesis-producer-evaluation-protocol autogenesis-producer-evaluation-result-contract autogenesis-capability-demand autogenesis-nat-modeq-imported-bridge-assay autogenesis-nat-modeq-remainder-contract autogenesis-nat-modeq-remainder-contract-v2 autogenesis-nat-modeq-remainder-operation tock-log2-maestro-controls library-artifact-contract module-baseline module-baseline-controls kernel-differential declaration-graph graph-join infrastructure-frontier effort-taxonomy graph-dispatcher structural-index checked-interchange lean-adapter lean-tactic declaration-spec proof-plan absence-claims curriculum-bucket-cohesion curriculum-bucket-cohesion-controls
 
 fmt:
     cargo fmt --all --check
@@ -1187,7 +1187,16 @@ autogenesis-result:
 test:
     scripts/check-workspace-tests.sh
 
-# The capability ratchets, serialized and alone. Run nothing else concurrently.
+# The capability ratchets AND the timing ratchet, serialized and alone. Run
+# nothing else concurrently.
+#
+# Two ratchets, one sweep. `FRONTIER <family> = N` is capability at a fixed
+# budget; `TIMING <family> = <ms> calibrated` is the clock, read out of the same
+# curve at a small set of pinned `N` deep inside the frontier, so it costs no
+# extra solving. Before 2026-09-05 NOTHING in any gate failed when solve time
+# regressed (design review 2026-09-05, section 2.2 item 1); the timing ratchet
+# is that hole closed. Both are gated on the same `comparable` flag: on a box
+# the calibration cannot compare, each prints its number and asserts nothing.
 frontier:
     cargo test -p axeyum-solver --test progress_frontier --features full -- --test-threads=1
 
@@ -1246,6 +1255,16 @@ kernel-suite-partition:
 lean-gate:
     ./scripts/tests/test-lean-toolchain-policy.sh
     ./scripts/check-lean-gate.sh
+    # ADR-1664's measurement: whether an ORIGINATED theorem inherits an
+    # IMPORTED one's axioms. It does, transitively and per PROOF TERM -- two
+    # originated theorems of the same type in one kernel measure the import's
+    # six-name closure and `[]`. Registered because it is the EVIDENCE for a
+    # decision, and the numbers the ADR quotes become unverifiable the moment
+    # the suite rots. Needs no `lean` binary (the streams are pinned bytes), and
+    # costs 0.13 s measured: the two REGRESSION guards run, while the two
+    # one-time MEASUREMENTS are `#[ignore]`d because they cost 81 s between them.
+    # Confirm a NONZERO count -- "2 passed".
+    cargo test -p axeyum-lean-import --test imported_composition_footprint
 
 # ADR-0717 S5: the kernel differential (Axeyum vs. pinned Lean) across all
 # eight named subsystems -- conversion, universes, inductives, recursors,
@@ -2468,6 +2487,24 @@ lean-adapter:
     python3 scripts/check-lean-adapter.py
     python3 scripts/tests/test-lean-adapter.py
     bash scripts/tests/test-lean-adapter-mutations.sh
+
+# `by axeyum` as a Lean tactic (ADR-1666, docs/math-department/14-lean-lang.md
+# Next Ten item 6). Builds lean/axeyum-tactic with the PINNED toolchain and
+# runs its test library, which IS the acceptance gate: every test is a Lean
+# goal that either elaborates or does not.
+#
+# Unlike `lean-adapter`, this one NEEDS a Lean toolchain and one cargo build
+# (the sidecar), because the whole claim is that real Lean's elaborator and
+# kernel accepted a term Axeyum produced -- there is no committed artifact
+# that could stand in for that. `AXEYUM_ALLOW_NO_LEAN=1` prints a loud SKIP
+# saying zero goals were checked; it is not a pass.
+#
+# Floors (2026-09-05, leanprover/lean4:v4.34.0-rc1): 11 goals accepted,
+# 11 mutations rejected, 13 shim rows, 1 positive control. Each is counted --
+# `lake build` exiting 0 cannot tell eleven closed goals from a cache hit,
+# which is why the script deletes the Tests build products first.
+lean-tactic:
+    bash scripts/check-lean-tactic.sh
 
 # declaration-spec (L3 phase D1, ADR-0965): the declarative declaration-spec
 # pilot. Builds examples/declaration_spec_pilot (release -- debug SIGABRTs on

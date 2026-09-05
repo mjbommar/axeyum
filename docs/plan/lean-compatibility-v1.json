@@ -402,7 +402,7 @@
           "detail": "Track 6 owns the one native goal and tactic engine."
         }
       ],
-      "residual": "P6.2/P6.3 and TL5 remain implementation work."
+      "residual": "P6.2/P6.3 and TL5 remain implementation work. The native producers (linarith, ring, simp, decide, the tactic combinator) are K3-shaped over THIS kernel's preludes, not over Lean goals, so this row's assurance fields stay not_attempted; see ADR-1666 for the Lean-goal side (`by axeyum`, a Lean tactic in lean/axeyum-tactic that hands Lean's own parser/elaborator/kernel a checked term, tracked outside this planned-system-profile row)."
     },
     {
       "id": "planned-native-runtime-profile",

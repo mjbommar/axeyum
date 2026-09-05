@@ -86,6 +86,28 @@ cd "$(dirname "$0")/.." || exit 2
 # headroom so ordinary churn does not trip it; RAISING it as suites grow is the
 # ratchet working, LOWERING it needs a reason in the commit message.
 #
+# Raised 261 -> 262 on 2026-09-05 by lane `lean-replay-census-all` (ADR-1661,
+# item 2 of the Next Ten in `docs/math-department/14-lean-lang.md`), then held
+# there by the coordinator: `real_lean_replay_census_all` runs ONE real-Lean
+# invocation in the gate (the `everything` carrier, the union of all of them)
+# and keeps its sixteen nested per-carrier censuses behind `--ignored`, because
+# seventeen debug-mode full-kernel replays were unmeasured and this gate is in
+# the push hook. The lane's release run measured 738.79 s for all seventeen;
+# the `everything` census alone, debug profile, measured 441.79 s (2026-09-05,
+# host load ~20) -- the cost this gate actually pays.
+# One per
+# carrier when run `-- --ignored`. `real_lean_replay_census` (ADR-0760) graded independent replay per
+# declaration over the constructed reals only; this extends the same harness --
+# `tests/support/replay_census.rs`, shared by both suites so they cannot drift --
+# to every other carrier the kernel builds, plus one `everything` carrier that
+# builds them all into ONE kernel so a headline is a union rather than a sum of
+# nesting rows. Measured that day on pinned Lean 4.34.0-rc1: `everything`
+# population 4,458, representable 4,374, replayed 4,374, `missing=0 extra=0`,
+# with 50 `Theorem`s whose type is not a `Prop` (which Lean's kernel refuses as
+# theorems) and 34 blocked behind one of those. Sixteen of the seventeen come
+# from `CARRIERS`; the three non-Lean tests in that suite (the builder-coverage
+# guard and two classifier controls) contribute none.
+#
 # Raised 229 -> 261 on 2026-08-30 by lane `l0-s5-kernel-differential` (S5 of the
 # ADR-0717 safety roadmap): `kernel_differential` adds THIRTY-TWO real-Lean
 # invocations, one per corpus case across all eight named subsystems
@@ -240,7 +262,7 @@ cd "$(dirname "$0")/.." || exit 2
 # own `checker_command` exits 101. The guards were fail-closed; nobody ran
 # them. `AXEYUM_REQUIRE_LEAN=1` does NOT catch it -- it fires only when a
 # toolchain cannot be resolved, and the abort happens before the probe.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-261}"
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-262}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
@@ -303,6 +325,7 @@ axeyum-lean-kernel||real_lean_shared_prelude_crosscheck
 axeyum-lean-kernel||real_lean_kernel_replay
 axeyum-lean-kernel||real_lean_creal_carrier_kernel_replay
 axeyum-lean-kernel||real_lean_replay_census
+axeyum-lean-kernel||real_lean_replay_census_all
 axeyum-lean-kernel||real_lean_wellfounded_elaborator_divergence
 axeyum-lean-kernel||kernel_differential
 axeyum-lean-import||real_lean_wire_differential

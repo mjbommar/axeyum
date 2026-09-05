@@ -58,6 +58,25 @@ make artifacts comparable without relying on unstable debug output. This split
 is essential for deciding whether performance work belongs in encodings,
 theory propagation, or the SAT core.
 
+The typed split above (`BvLayerStats`) only ever covered the pure-Rust
+bit-blast path. Every arithmetic/EUF/string/combined-theory route instead runs
+the generic CDCL(T) driver (`crate::cdclt::CdclT`), which had no stage
+attribution at all until `TheoryLayerStats` (`crate::layers`): time in Boolean
+unit propagation, `TheorySolver::assert`, `TheorySolver::propagate`,
+`push`/`pop`, and 1-UIP conflict analysis, plus theory-conflict, theory-
+propagation, decision, and restart counts. It is off by default — a search
+pays no extra clock read unless `crate::theories::cdclt_diagnostics::
+TheoryLayerStatsGuard::enable()` is active on the current thread — and reads
+the clock only at stage boundaries (once per driver call to the theory, never
+per trail literal), so the accounting itself cannot become the thing being
+measured. `RouteTrace` gained the matching piece on the dispatch side: each
+recorded attempt now carries wall-clock elapsed time since the previous one
+(`RouteTrace::elapsed`/`total_elapsed`), exposed through the opt-in
+`RouteTrace::to_json_with_timing` alongside the unchanged `to_json`, so a
+*declined* route's cost is visible without hand-classifying per-file TSVs
+(the 2026-08-21 linear-arithmetic diagnosis's workaround for not having
+either instrument).
+
 ## Result discipline
 
 - `sat` requires a source-level model accepted by the appropriate checker.

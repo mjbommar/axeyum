@@ -42,7 +42,7 @@
 //! `Copy` coefficient type, and the checked contract above, are unchanged for
 //! every other operation.
 
-mod big;
+pub(crate) mod big;
 
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};

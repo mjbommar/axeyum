@@ -17,7 +17,7 @@
 # only rises on purpose) -- but a new UNCERTIFIED function is never refused;
 # that label is honest, not a violation. See
 # docs/math-department/13-computer-algebra.md item 10.
-COUNT	59
+COUNT	76
 FN	enclosure::enclose	Option<Enclosure>
 FN	enclosure::enclose_constant	Option<Enclosure>
 FN	enclosure::enclose_root	Option<Enclosure>
@@ -54,7 +54,22 @@ FN	ntheory_certify::certify_composite	Option<CompositeCertificate>
 FN	ntheory_certify::certify_crt	Option<CrtCertificate>
 FN	ntheory_certify::certify_factorization	Option<FactorizationCertificate>
 FN	ntheory_certify::certify_prime	Option<PrattCertificate>
+FN	numberfield::Element::inverse	Option<(Element, InverseCertificate)>
+FN	numberfield::Element::minimal_polynomial	Option<(Vec<BigRational>, ElementMinPolyCertificate)>
+FN	numberfield::Element::norm_trace	NormTraceCertificate
+FN	numberfield::GaussianInt::factor	Result<GaussianFactorizationCertificate, DeclineReason>
+FN	numberfield::QuadraticField::fundamental_unit	Result<FundamentalUnitCertificate, DeclineReason>
+FN	numberfield::QuadraticField::pell_unit	Result<FundamentalUnitCertificate, DeclineReason>
+FN	numberfield::two_squares	Option<TwoSquaresCertificate>
 FN	partial_fractions::partial_fractions	Option<PartialFractionCertificate>
+FN	permgroup::PermutationGroup::cayley_table	Result<CayleyTableCertificate, PermgroupError>
+FN	permgroup::PermutationGroup::center	Result<(PermutationGroup, CenterCertificate), PermgroupError>
+FN	permgroup::PermutationGroup::contains	MembershipCertificate
+FN	permgroup::PermutationGroup::cosets	Result<CosetCertificate, PermgroupError>
+FN	permgroup::PermutationGroup::derived_subgroup	Result<(PermutationGroup, DerivedSubgroupCertificate), PermgroupError>
+FN	permgroup::PermutationGroup::is_abelian	AbelianCertificate
+FN	permgroup::PermutationGroup::orbit_stabilizer	Option<(PermutationGroup, OrbitStabilizerCertificate)>
+FN	permgroup::PermutationGroup::order_certificate	&OrderCertificate
 FN	probability::Continuous::mean	Certificate
 FN	probability::Continuous::mgf	Certificate
 FN	probability::Continuous::total_mass	Certificate
@@ -67,6 +82,8 @@ FN	probability::chebyshev_bound	Certificate
 FN	probability::convolve_poisson	Option<Certificate>
 FN	probability::markov_bound	Certificate
 FN	prove_derivative	ZeroTest
+FN	qe::decide_exists	Decision
+FN	qe::decide_forall	ForallDecision
 FN	rationality::decide_rationality	Option<RationalityCertificate>
 FN	real_algebraic::polynomial_ivt	Option<IvtCertificate>
 FN	sos::check	Result<CheckReport, String>
@@ -77,22 +94,32 @@ FN	sos::check::check_psd_not_sos	Result<CheckReport, String>
 FN	taylor::polynomial_taylor	Option<TaylorCertificate>
 FN	telescoping_check::check_closed_form	Result<ClosedFormReport, Vec<String>>
 FN	telescoping_check::check_closed_form_symbolic	Result<SymbolicClosedFormReport, Vec<String>>
+VOCAB	AbelianCertificate	enum
 VOCAB	BarrierCertificate	struct
 VOCAB	BinaryExtensionConnectedAdamsTraceReport	struct
 VOCAB	BinaryExtensionConnectedAdamsTraceShardReport	struct
 VOCAB	BinaryExtensionLongCycleTraceReport	struct
 VOCAB	BinaryExtensionLongCycleTraceShardReport	struct
 VOCAB	BinaryExtensionWittShiftedTraceReport	struct
+VOCAB	CayleyTableCertificate	struct
+VOCAB	CenterCertificate	struct
 VOCAB	Certificate	struct
 VOCAB	CertifiedIntegral	struct
 VOCAB	CheckReport	struct
 VOCAB	ClosedFormReport	struct
 VOCAB	CompositeCertificate	struct
+VOCAB	CosetCertificate	struct
 VOCAB	CrtCertificate	enum
+VOCAB	Decision	enum
 VOCAB	DegenerateWitness	struct
+VOCAB	DerivedSubgroupCertificate	struct
+VOCAB	ElementMinPolyCertificate	struct
 VOCAB	Enclosure	struct
 VOCAB	ExtremumCertificate	struct
 VOCAB	FactorizationCertificate	struct
+VOCAB	ForallDecision	enum
+VOCAB	FundamentalUnitCertificate	struct
+VOCAB	GaussianFactorizationCertificate	struct
 VOCAB	GenericWitness	struct
 VOCAB	GeometryCertificate	struct
 VOCAB	GeometryReport	struct
@@ -104,16 +131,23 @@ VOCAB	InverseCertificate	struct
 VOCAB	IrreducibilityCertificate	struct
 VOCAB	IvtCertificate	struct
 VOCAB	LyapunovCertificate	struct
+VOCAB	MembershipCertificate	enum
 VOCAB	MvtCertificate	struct
+VOCAB	NormTraceCertificate	struct
+VOCAB	OrbitStabilizerCertificate	struct
+VOCAB	OrderCertificate	struct
 VOCAB	PartialFractionCertificate	struct
 VOCAB	PrattCertificate	struct
 VOCAB	PsdNotSosCertificate	struct
 VOCAB	RationalGeneratingFunction	struct
 VOCAB	RationalityCertificate	struct
 VOCAB	RecurrenceCertificate	struct
+VOCAB	RefutationCertificate	struct
+VOCAB	SampleCertificate	struct
 VOCAB	ShapedCompositionSearchReport	struct
 VOCAB	SymbolicClosedFormReport	struct
 VOCAB	TaylorCertificate	struct
 VOCAB	TelescopingCertificate	struct
 VOCAB	TruncationIdentity	enum
+VOCAB	TwoSquaresCertificate	enum
 VOCAB	ZeroTest	enum

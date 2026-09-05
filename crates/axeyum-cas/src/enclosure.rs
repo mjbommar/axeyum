@@ -29,7 +29,7 @@
 //! There is no `f64` anywhere below this line.
 //!
 //! [`BigInterval`] is the `BigRational` lift of
-//! [`Interval`](crate::interval_arith::Interval), with the same operation set
+//! [`Interval`], with the same operation set
 //! and the same enclosure contract (`f(X) ⊇ { f(x) : x ∈ X }`);
 //! [`BigInterval::from_interval`] converts, and the public binding API of
 //! [`enclose`] takes the `i128` `Interval` so callers keep the existing type.
@@ -76,7 +76,7 @@
 //!
 //! Verification costs about three quarters of production, which is expected:
 //! the verifier does one evaluation per step at the recorded order while the
-//! producer searches the [`ORDERS`] ladder for it.
+//! producer searches the `ORDERS` ladder for it.
 //!
 //! # Out of scope
 //!
@@ -119,7 +119,7 @@ const REDUCTION_CAP: i64 = 4096;
 /// A closed interval `[lo, hi]` of exact `BigRational` endpoints, `lo <= hi`.
 ///
 /// The arbitrary-precision counterpart of
-/// [`Interval`](crate::interval_arith::Interval), with the same contract: every
+/// [`Interval`], with the same contract: every
 /// operation returns an interval that **contains** the true image of the
 /// operation applied pointwise to the operands. Unlike the `i128` version there
 /// is no overflow, so no operation fails for arithmetic reasons; the only
@@ -480,11 +480,11 @@ pub enum DeclineReason {
     /// The argument left the function's domain over the whole binding box —
     /// `ln` of an interval reaching `0` or below, `sqrt` of a negative.
     DomainError(String),
-    /// No order on the [`ORDERS`] ladder, at any slack, produced a final width
+    /// No order on the `ORDERS` ladder, at any slack, produced a final width
     /// within `2^(−precision)`. Widening a binding box or lowering the
     /// requested precision is the fix; this is not a soundness failure.
     PrecisionUnreachable,
-    /// An argument reduction would need more than [`REDUCTION_CAP`] steps, or
+    /// An argument reduction would need more than `REDUCTION_CAP` steps, or
     /// a bisection more than its cap.
     ResourceLimit,
     /// The isolating interval handed to [`enclose_root`] does not contain
@@ -1501,7 +1501,7 @@ fn sign_of(x: &BigRational) -> i8 {
 ///
 /// Returns `None` when the interval does not isolate exactly one root, when the
 /// polynomial is rejected by Sturm, or when the width cannot be reached inside
-/// [`BISECTION_CAP`] steps.
+/// `BISECTION_CAP` steps.
 pub fn enclose_root(
     p: &[Rational],
     isolating: (Rational, Rational),
@@ -1516,7 +1516,7 @@ pub fn enclose_root(
 ///
 /// Returns [`DeclineReason::NotIsolating`] when Sturm does not certify exactly
 /// one root in the interval, or [`DeclineReason::ResourceLimit`] when the
-/// requested width needs more than [`BISECTION_CAP`] bisections.
+/// requested width needs more than `BISECTION_CAP` bisections.
 pub fn enclose_root_with_reason(
     p: &[Rational],
     isolating: (Rational, Rational),

@@ -63,6 +63,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from lean_surface_screen import Finding, screen_statement  # noqa: E402
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = ROOT / "artifacts/autogenesis/nursery-v2-extension.json"
 DEFAULT_HOST = "s5"
@@ -92,6 +95,22 @@ def load_rows(manifest: pathlib.Path) -> list[dict]:
                 raise AttestError(f"entry missing `{field}`: {entry.get('fact_id', '?')}")
         rows.append(entry)
     return rows
+
+
+def screen_rows(rows: list[dict]) -> list[tuple[str, list[Finding]]]:
+    """Every manifest row the surface screen flags, with its findings.
+
+    Rows are returned, not removed: the caller still elaborates them. This
+    exists so a flagged row is NAMED before a 3.6-second remote round trip on
+    the one host with a built Mathlib tells you the same thing as an opaque
+    Lean diagnostic.
+    """
+    flagged = []
+    for row in rows:
+        findings = screen_statement(row["statement"])
+        if findings:
+            flagged.append((row["fact_id"], findings))
+    return flagged
 
 
 def axiom_name(index: int, fact_id: str) -> str:
@@ -228,6 +247,12 @@ def main() -> int:
         "would report them as elaborated when they were never read.",
     )
     parser.add_argument("--emit-only", action="store_true", help="write the module and exit without running Lean")
+    parser.add_argument(
+        "--screen-only",
+        action="store_true",
+        help="run only the extraction-time surface screen (no Lean, no ssh, any host); "
+        "exits 1 when a row is flagged",
+    )
     parser.add_argument("--out", type=pathlib.Path, help="also write the generated module here")
     parser.add_argument("--json-out", type=pathlib.Path, help="write a machine-readable result record here")
     parser.add_argument("--timeout", type=int, default=3600)
@@ -260,6 +285,28 @@ def main() -> int:
     print(f"manifest         {args.manifest}")
     print(f"rows attested    {len(rows)} of {total_rows}{'  (SUBSET)' if subset else ''}")
     print(f"module sha256    {module_sha}")
+
+    # The extraction-time screen (ADR-1662). It runs BEFORE Lean and needs no
+    # Lean: both classes it detects are visible in the statement text, so a host
+    # without a built Mathlib -- every host but one -- can learn what this run
+    # would fail on. A flagged row is still sent to Lean and never modified;
+    # ADR-0615 forbids editing a preregistered `formal.statement`, and a row
+    # dropped from a run is a coverage change nobody recorded.
+    screened = screen_rows(rows)
+    print(f"surface screen   {len(screened)} of {len(rows)} rows flagged")
+    for fact_id, findings in screened:
+        for finding in findings:
+            print(f"  SCREEN  {fact_id}  {finding.screen_class}/{finding.signature}  {finding.evidence}")
+
+    if args.screen_only:
+        # Exit status depends on the FINDING: a clean screen is 0, a flagged
+        # row is 1. Without that this mode would pass on every input and be
+        # worse than not having run it.
+        print(
+            "VERDICT: SCREEN ONLY -- no Lean was run, so nothing here is an "
+            "attestation; this reports only what the screen can see."
+        )
+        return 1 if screened else 0
 
     if args.emit_only:
         return 0

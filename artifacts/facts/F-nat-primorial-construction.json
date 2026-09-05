@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "F:nat-primorial-construction",
+  "title": "The primorial exists in this kernel as a computable fold over minFac",
+  "statement": "Nat.primorial n is the product of every prime p <= n, constructed as Nat.prodRangeIf (fun i => Nat.beq (Nat.minFac i) i) (fun i => i) (Nat.succ n) -- a fold over the predicate-restricted range [0, n], with no choice principle and no decidability instance. The predicate is minFac-based rather than isPrime-based (see F:nat-min-fac-eq-self-of-prime for why), and it admits i = 1: minFac 1 = 1 is Mathlib's own boundary convention, so 1 passes the test. It contributes the factor 1, the multiplicative identity, so the VALUE is still exactly the product over the primes -- which is a claim about the definition, checked by evaluation at n = 0..7 against the hand-computed 1, 1, 2, 6, 6, 30, 30, 210, and not by argument.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Nat.primorial : Nat -> Nat",
+    "fragment": "Nat",
+    "free_symbols": [],
+    "kernel_definition": "Nat.primorial"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": [],
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "declared-Nat.primorial",
+      "kind": "instance-pin",
+      "supports": "Nat.primorial is admitted as a Definition of type Nat -> Nat, arity 1.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example shape_search -- --name Nat.primorial --kind definition --expect 1",
+      "notes": "`nat_theorem_inventory` lists THEOREMS and returns zero rows for a definition (CLAUDE.md's own warning, reproduced here: `nat_theorem_inventory primorial` printed the ten `primorial_*` theorems and not `Nat.primorial` itself), so the declaration is pinned through `shape_search --kind definition --expect 1`, whose exit status depends on the count. The same run reported `declarations=3222`, above the 3,050 floor, and `--name-like primorial` had reported ABSENT at `declarations=3207` before this lane wrote anything."
+    },
+    {
+      "id": "eval-Nat.primorial",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.primorial",
+      "supports": "Nat.primorial reduces to 1, 1, 2, 6, 6, 30, 30, 210 at n = 0..7, and is NOT def-eq to any of four named wrong formulas of the same type.",
+      "check_status": "checked",
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::primorial_tests:: --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "The trusted gate cannot tell a Definition is wrong: every variant ruled out here also has type Nat -> Nat. The four negative controls name the specific wrong formula each excludes -- primorial 4 != 24 rules out a product over the whole range, primorial 7 != 30 rules out a `< n` bound instead of `<= n`, primorial 3 != 2 rules out a predicate admitting only 2, and primorial 2 != 1 rules out a predicate that is never true. n = 4 is the first COMPOSITE step and n = 7 the first place the inclusive bound is observable at a prime."
+    },
+    {
+      "id": "equations-Nat.primorial",
+      "kind": "kernel-term",
+      "kernel_declaration": "Nat.primorial_succ",
+      "supports": "The two defining equations are admitted and hold by Eq.refl; the successor equation is checked at a FREE variable, not at a numeral.",
+      "check_status": "checked",
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- nat_prelude::primorial_tests::the_defining_equations_instantiate --test-threads=1",
+      "checkers": [
+        "Kernel::infer_in",
+        "Kernel::def_eq_in"
+      ],
+      "notes": "A succ-equation that held only at literals would reduce on both sides and pass a numeral test while being useless to every induction downstream, so the check pushes a typed LocalDecl and goes through `infer_in`/`def_eq_in`. `Kernel::infer` builds an EMPTY LocalContext and would report `UnboundFVar` instead. The negative control is the UNCONDITIONAL `primorial (succ n) = primorial n * succ n`, which is true only at primes and is what dropping the Bool selector would produce."
+    },
+    {
+      "id": "footprint-Nat.primorial",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- the Nat environment admits no trusted declaration",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free nat",
+      "notes": "`the_primorial_shelf_is_admitted_and_axiom_free` asserts `Environment::contains` FIRST for each name -- and, for `Nat.primorial` itself, that the declaration kind is `Definition` and not `Theorem` -- before reading the footprint, because the footprint of an absent name is also empty."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_nat_prelude, lane chebyshev-pi",
+    "source": "construction authored in this repository; every evaluation value was hand-computed as the running product of 2, 3, 5, 7 before the definition was written. `shape_search --name-like primorial` reported ABSENT at declarations=3207, with `--name-like lcmupto --kind definition` as the same-kind positive control and `Nat.Finset.card_singleton` (merged the same morning) as the freshness control."
+  },
+  "notes": "Roadmap W3-11, ADR-1637. Deliberately NOT routed through `Nat.primeCounting`: five of the ten rows of the preregistered, never-scored held-out family `discrete-step-and-counting-bounds` are the `Nat.primeCounting` shelf, and a theorem about that constant publishes the mathematics the family's blindness depends on. A COUNT built on this file's predicate would be off by one at i = 1 and would need a `2 <= i` conjunct; a PRODUCT does not, which is one more reason the primorial and the counting function are kept apart here."
+}

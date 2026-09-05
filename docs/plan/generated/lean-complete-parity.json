@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/plan/lean-compatibility-v1.json",
-      "sha256": "6e7574fc31071ca3194364af13ddf5be1610bd53d93586e47c20c54c9838e7c3"
+      "sha256": "95049f9114a358bc364923ebbd51e6c1c50d1201877d1e1a7bda0a59e14428bc"
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
@@ -88,7 +88,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "74834d2fdb5a511eafc2570c4dae6a734545bbe0d03d7719ca00390e1ed97b5e"
+      "sha256": "938ca14c9356ab53149caa6e5eb6d80a3b44dce96016acaa14d141a68417e8de"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-axis-coverage-r5-plan-2026-07-23.md",
@@ -396,7 +396,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "b1e702a677332d0174234f4f6bb78deeb27dd3b66e12913a6af677cdde995777"
+      "sha256": "f4579aa15e1bc5aedd1f9e2a4dd7ac5cdff090b34526c37e27fdc34624021b1e"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
