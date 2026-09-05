@@ -1,12 +1,17 @@
 //! Never-crash / never-unsound corpus for adversarial large-magnitude rational
 //! constants.
 //!
-//! The cardinal rule: the public `solve()` must degrade to a graceful `Unknown`
-//! on `i128` overflow — it must NEVER panic, and NEVER produce a wrong
-//! `Sat`/`Unsat`. The solver search paths use the panicking `Rational` operators
-//! historically; this corpus drives the public entry points on queries that drove
-//! arithmetic out of `i128` range and asserts a sound outcome (`Ok(_)`, never a
-//! panic, never a wrong verdict). Overflow → `Unknown`, full stop.
+//! The cardinal rule: the public `solve()` must never panic and never produce a
+//! wrong `Sat`/`Unsat` on a query whose arithmetic leaves the `i128` fast path.
+//! This corpus drives the public entry points on such queries and asserts a
+//! sound outcome (`Ok(_)`, never a panic, never a wrong verdict).
+//!
+//! **Since ADR-1702 the expected outcome is no longer "`Unknown`, full stop".**
+//! Exact rationals now PROMOTE to arbitrary precision instead of overflowing, so
+//! a query that used to degrade may now be decided correctly. Each test here
+//! therefore asserts against the verdict that would be *wrong* for its query,
+//! never against the correct one — asserting "not `Sat`" on a satisfiable query
+//! is a test that forbids the right answer.
 #![cfg(feature = "full")]
 
 use std::time::Duration;
@@ -15,9 +20,16 @@ use axeyum_ir::{Rational, TermArena};
 use axeyum_solver::{CheckResult, SolverConfig, solve};
 
 /// The original repro: `x = i128::MAX ∧ x*x > i128::MAX` over the reals drove a
-/// `Rational::mul` overflow panic through the NRA → LRA scale path. It must now
-/// return `Ok(_)` (a graceful `Unknown` is correct), never panic, and — because
-/// the verdict cannot be soundly computed from overflowed values — never `Sat`.
+/// `Rational::mul` overflow panic through the NRA → LRA scale path. It must
+/// return `Ok(_)` and never panic.
+///
+/// **This test's assertion changed with ADR-1702.** It used to forbid `Sat`, on
+/// the ground that "the verdict cannot be soundly computed from overflowed
+/// values". Exact rational arithmetic no longer overflows — it promotes to
+/// arbitrary precision — so `x·x` for `x = i128::MAX` is now an exact value and
+/// the query is plainly **satisfiable**. Forbidding `Sat` would forbid the
+/// correct answer. The wrong verdict here is `Unsat`, and that is what is
+/// asserted against; a graceful `Unknown` also remains acceptable.
 #[test]
 fn huge_rational_real_mul_is_graceful_not_crash() {
     let mut a = TermArena::new();
@@ -30,12 +42,11 @@ fn huge_rational_real_mul_is_graceful_not_crash() {
 
     let result =
         solve(&mut a, &[x_eq_huge, xx_gt], &SolverConfig::default()).expect("solve must not error");
-    // Sound outcomes only. `x*x` for `x = i128::MAX` overflows the exact rational,
-    // so a `Sat` model could not be soundly produced; `Unknown` (or a sound
-    // `Unsat`/decline) is acceptable, a `Sat` is not.
+    // `x = i128::MAX` satisfies `x·x > i128::MAX`, so the only wrong verdict is
+    // `Unsat`.
     assert!(
-        !matches!(result, CheckResult::Sat(_)),
-        "overflowed real multiplication must not be reported Sat; got {result:?}"
+        !matches!(result, CheckResult::Unsat),
+        "satisfiable huge-product real query must not be reported Unsat; got {result:?}"
     );
 }
 
