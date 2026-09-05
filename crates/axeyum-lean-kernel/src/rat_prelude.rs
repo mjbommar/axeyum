@@ -68,6 +68,9 @@ mod echelon;
 mod echelon_invariant;
 mod echelon_section;
 mod field;
+/// ADR-1627 / roadmap W3-2: `Rat.fieldS : AlgS.Field`, the decidable-equality
+/// instance of the constructive field record, plus `Rat.fieldS_isTight`.
+mod field_setoid_instance;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
@@ -3823,6 +3826,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
             &prelude.ordered_ring_ext_s,
         )?;
         probability_s::declare_probability_s_all(&mut d, &prelude)?;
+        field_setoid_instance::declare_rat_field_s(d.kernel(), &prelude)?;
         Ok(())
     })();
     match built {

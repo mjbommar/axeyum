@@ -7001,6 +7001,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             kernel,
             &logic,
             &structures_s.comm_ring,
+            field_setoid::FieldDeps {
+                comm_ring_to_ring_s: structures_s_extra.comm_ring_to_ring_s,
+                mul_neg_one: structures_s_extra.mul_neg_one,
+            },
             structures_s_names.algs,
         )?;
         let _vector_space_s = vector_space::declare_vector_space(

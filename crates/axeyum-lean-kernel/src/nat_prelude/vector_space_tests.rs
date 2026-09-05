@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::build_logic_prelude;
-use crate::nat_prelude::field_setoid::{FieldNames, declare_field_setoid};
+use crate::nat_prelude::field_setoid::{FieldDeps, FieldNames, declare_field_setoid};
 use crate::nat_prelude::module_setoid::{ModuleDeps, declare_module_setoid};
 use crate::nat_prelude::polynomial_setoid::{PolyDeps, declare_poly_setoid};
 use crate::nat_prelude::structures as algeq;
@@ -57,7 +57,17 @@ fn build(k: &mut Kernel) -> Fixture {
         p.algs,
     )
     .expect("AlgS.Module must admit");
-    let fld = declare_field_setoid(k, &lg, &st.comm_ring, p.algs).expect("AlgS.Field must admit");
+    let fld = declare_field_setoid(
+        k,
+        &lg,
+        &st.comm_ring,
+        FieldDeps {
+            comm_ring_to_ring_s: extra.comm_ring_to_ring_s,
+            mul_neg_one: extra.mul_neg_one,
+        },
+        p.algs,
+    )
+    .expect("AlgS.Field must admit");
     let vs = declare_vector_space(k, &lg, &fld, &st.comm_group, &m, p.algs)
         .expect("AlgS.VectorSpace must admit over an abstract field");
     Fixture {

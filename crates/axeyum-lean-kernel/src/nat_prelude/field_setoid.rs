@@ -899,6 +899,92 @@ fn cancel_with_inverse(
     c.tr(k, x, one_x, y, p0s, t1)
 }
 
+/// `AlgS.mul_neg_right : forall (R : AlgS.CommRing) (a b : R.carrier),
+/// R.equiv (R.mul a (R.neg b)) (R.neg (R.mul a b))`.
+///
+/// **A `CommRing` fact, declared here rather than in `structures_setoid`**,
+/// and the reason is operational: `structures_setoid.rs` is a shared file
+/// several lanes append to, and adding a spec into
+/// `declare_structures_s_extra`'s middle is a merge hazard this lane does not
+/// need to take. It is here because the `CReal` field instance is its only
+/// consumer: `CReal` has `neg_mul_neg` (squares only) and no `mul_neg`, so
+/// the NEGATIVE branch of `mulInvEx` -- the one that turns `a < 0` into
+/// `0 < -a` and pushes the inverse back through a sign -- cannot be closed
+/// without it.
+///
+/// Three steps off `AlgS.mul_neg_one` at `AlgS.CommRing.toRingS R`:
+/// `a*(-b) ~ a*(b*(-1)) ~ (a*b)*(-1) ~ -(a*b)`.
+fn declare_mul_neg_right(
+    k: &mut Kernel,
+    cr: &RecordNames,
+    deps: FieldDeps,
+    algs: NameId,
+) -> Result<NameId, KernelError> {
+    use idx::comm_ring as r;
+    let ring_ty = k.const_(cr.ind, vec![]);
+    let rv = k.fvar(R_FV);
+    let carrier = sel(k, cr, r::CARRIER, rv);
+    let equiv = sel(k, cr, r::EQUIV, rv);
+    let refl = sel(k, cr, r::EQUIV_REFL, rv);
+    let symm = sel(k, cr, r::EQUIV_SYMM, rv);
+    let trans = sel(k, cr, r::EQUIV_TRANS, rv);
+    let one = sel(k, cr, r::ONE, rv);
+    let mul = sel(k, cr, r::MUL, rv);
+    let neg = sel(k, cr, r::NEG, rv);
+    let mul_congr = sel(k, cr, r::MUL_CONGR, rv);
+    let mul_assoc = sel(k, cr, r::MUL_ASSOC, rv);
+
+    // `mul_neg_one` lives over `AlgS.Ring`; `toRingS R`'s selectors iota-reduce
+    // to `R`'s own, so no transport term is written.
+    let ring_s = {
+        let t = k.const_(deps.comm_ring_to_ring_s, vec![]);
+        k.app(t, rv)
+    };
+    let mno = {
+        let t = k.const_(deps.mul_neg_one, vec![]);
+        k.app(t, ring_s)
+    };
+
+    let a = k.fvar(A_FV);
+    let b = k.fvar(B_FV);
+    let neg_one = k.app(neg, one);
+    let neg_b = k.app(neg, b);
+    let ab = app2(k, mul, a, b);
+    let a_negb = app2(k, mul, a, neg_b);
+    let b_negone = app2(k, mul, b, neg_one);
+    let a_b_negone = app2(k, mul, a, b_negone);
+    let ab_negone = app2(k, mul, ab, neg_one);
+    let neg_ab = k.app(neg, ab);
+
+    let e1 = k.app(mno, b); // equiv (b*(-1)) (-b)
+    let e1s = t_app(k, symm, &[b_negone, neg_b, e1]); // (-b) ~ b*(-1)
+    let ra = k.app(refl, a);
+    let s1 = t_app(k, mul_congr, &[a, a, neg_b, b_negone, ra, e1s]);
+    let assoc = t_app(k, mul_assoc, &[a, b, neg_one]); // (a*b)*(-1) ~ a*(b*(-1))
+    let s2 = t_app(k, symm, &[ab_negone, a_b_negone, assoc]);
+    let s3 = k.app(mno, ab); // (a*b)*(-1) ~ -(a*b)
+    let tail = t_app(k, trans, &[a_b_negone, ab_negone, neg_ab, s2, s3]);
+    let proof = t_app(k, trans, &[a_negb, a_b_negone, neg_ab, s1, tail]);
+
+    let value = lam_over(k, B_FV, carrier, proof);
+    let value = lam_over(k, A_FV, carrier, value);
+    let value = lam_over(k, R_FV, ring_ty, value);
+
+    let concl = app2(k, equiv, a_negb, neg_ab);
+    let ty = pi_over(k, B_FV, carrier, concl);
+    let ty = pi_over(k, A_FV, carrier, ty);
+    let ty = pi_over(k, R_FV, ring_ty, ty);
+
+    let name = k.name_str(algs, "mul_neg_right");
+    k.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
+}
+
 // ---------------------------------------------------------------------------
 // Assembly.
 // ---------------------------------------------------------------------------
@@ -923,6 +1009,14 @@ pub struct FieldNames {
     pub apart_right_congr: NameId,
     pub inv_unique: NameId,
     pub mul_left_cancel: NameId,
+    pub mul_neg_right: NameId,
+}
+
+/// What this module needs from `structures_setoid`'s extras.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FieldDeps {
+    pub comm_ring_to_ring_s: NameId,
+    pub mul_neg_one: NameId,
 }
 
 #[cfg(test)]
@@ -930,8 +1024,9 @@ impl FieldNames {
     /// The three definitions plus the five theorems, for a test that wants to
     /// walk them.
     #[must_use]
-    pub fn all(&self) -> [NameId; 8] {
+    pub fn all(&self) -> [NameId; 9] {
         [
+            self.mul_neg_right,
             self.to_comm_ring,
             self.of_comm_ring,
             self.is_tight,
@@ -950,6 +1045,7 @@ pub(crate) fn declare_field_setoid(
     k: &mut Kernel,
     lg: &LogicPrelude,
     cr: &RecordNames,
+    deps: FieldDeps,
     algs: NameId,
 ) -> Result<FieldNames, KernelError> {
     let l0 = k.level_zero();
@@ -973,6 +1069,7 @@ pub(crate) fn declare_field_setoid(
     let apart_right_congr = declare_apart_right_congr(k, &field, apart_left_congr, field_name)?;
     let inv_unique = declare_inv_unique(k, &field, field_name)?;
     let mul_left_cancel = declare_mul_left_cancel(k, lg, &field, l1, field_name)?;
+    let mul_neg_right = declare_mul_neg_right(k, cr, deps, algs)?;
 
     Ok(FieldNames {
         field,
@@ -984,6 +1081,7 @@ pub(crate) fn declare_field_setoid(
         apart_right_congr,
         inv_unique,
         mul_left_cancel,
+        mul_neg_right,
     })
 }
 

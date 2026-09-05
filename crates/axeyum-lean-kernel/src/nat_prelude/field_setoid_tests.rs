@@ -20,7 +20,8 @@ use super::*;
 use crate::build_logic_prelude;
 use crate::nat_prelude::structures as algeq;
 use crate::nat_prelude::structures_setoid::{
-    StructuresSRecordNames, declare_structures_s_all, intern_structures_s_names,
+    StructuresSRecordNames, declare_structures_s_all, declare_structures_s_extra,
+    intern_structures_s_names,
 };
 
 struct Fixture {
@@ -33,10 +34,16 @@ struct Fixture {
 fn build(k: &mut Kernel) -> Fixture {
     let lg = build_logic_prelude(k).expect("logic prelude must build");
     let alg_p = algeq::intern_structures_names(k);
-    algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
+    let alg_st = algeq::declare_structures_all(k, &alg_p, &lg).expect("Alg spine builds");
     let p = intern_structures_s_names(k);
     let st = declare_structures_s_all(k, &p, &lg).expect("AlgS spine builds");
-    let f = declare_field_setoid(k, &lg, &st.comm_ring, p.algs)
+    let extra = declare_structures_s_extra(k, &lg, &p, &st, &alg_p, &alg_st)
+        .expect("AlgS extras must admit");
+    let deps = FieldDeps {
+        comm_ring_to_ring_s: extra.comm_ring_to_ring_s,
+        mul_neg_one: extra.mul_neg_one,
+    };
+    let f = declare_field_setoid(k, &lg, &st.comm_ring, deps, p.algs)
         .expect("AlgS.Field must admit over the setoid spine");
     Fixture {
         lg,
@@ -136,9 +143,33 @@ fn the_field_layer_types_render() {
         };
         let rendered = k.render_lean(ty);
         println!("decl {name:?} :\n  {rendered}\n");
+        // `mul_neg_right` is the one `CommRing` fact in the bundle (see its
+        // own doc for why it lives here), so the shared assertion is `AlgS`
+        // and the `AlgS.Field` one is made separately below.
+        assert!(
+            rendered.contains("AlgS."),
+            "rendered type must mention the AlgS spine"
+        );
+    }
+    for name in [
+        fx.f.to_comm_ring,
+        fx.f.of_comm_ring,
+        fx.f.is_tight,
+        fx.f.apart_irrefl,
+        fx.f.apart_left_congr,
+        fx.f.apart_right_congr,
+        fx.f.inv_unique,
+        fx.f.mul_left_cancel,
+    ] {
+        let decl = k.environment().get(name).expect("must exist").clone();
+        let ty = match &decl {
+            Declaration::Definition { ty, .. } | Declaration::Theorem { ty, .. } => *ty,
+            _ => panic!("unexpected declaration kind"),
+        };
+        let rendered = k.render_lean(ty);
         assert!(
             rendered.contains("AlgS.Field"),
-            "rendered type must mention AlgS.Field"
+            "rendered type must mention AlgS.Field, got: {rendered}"
         );
     }
 }
