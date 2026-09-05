@@ -15,7 +15,11 @@ field of a dependent pair sits at or below it: `u ≤ max u v` and
 `u ≤ max 1 u` are discharged symbolically by `Kernel::level_leq`, with no
 instantiation and no weakening. `Sigma`, `PSigma` and `Subtype` are declared
 in the logic prelude through the ordinary `add_inductive` gate, with
-projections, defining equations and eta as theorems — **zero axioms**. The
+projections, defining equations and eta as theorems — **zero axioms**. The one
+thing that did bite was found by a gate, not by reasoning: real Lean REFUSES
+`Sort (max u v)` as an inductive result universe where this kernel admits it
+and soundly denies it large elimination, so `PSigma` follows Lean's own
+`Sort (max 1 u v)`. The
 deciding measurement was to re-test the three blocked sites, and the count is
 **3 of 3**: the metric subspace, the L¹-ready bundled carrier, and — the one
 that was supposed to be hard — the first isomorphism theorem restated as
@@ -69,16 +73,17 @@ ordinary `add_inductive` gate, and leave ADR-1495's guard exactly as it is.**
 ```text
 inductive Sigma.{u,v} (α : Type u) (β : α → Type v) : Type (max u v)
   | mk : (fst : α) → (snd : β fst) → Sigma α β
-inductive PSigma.{u,v} (α : Sort u) (β : α → Sort v) : Sort (max u v)
+inductive PSigma.{u,v} (α : Sort u) (β : α → Sort v) : Sort (max 1 u v)
   | mk : (fst : α) → (snd : β fst) → PSigma α β
 inductive Subtype.{u} (α : Sort u) (p : α → Prop) : Sort (max 1 u)
   | mk : (val : α) → (property : p val) → Subtype α p
 ```
 
-plus `Sigma.fst`/`Sigma.snd` (dependent), `Subtype.val`/`Subtype.property`,
-their defining equations `fst_mk`/`snd_mk`/`val_mk`, and `mk_eta` for both.
-Eighteen names, all in `crates/axeyum-lean-kernel/src/sigma_prelude.rs`, every
-one with an empty `Kernel::axiom_footprint`.
+plus `Sigma.fst`/`Sigma.snd` and `PSigma.fst`/`PSigma.snd` (all dependent),
+`Subtype.val`/`Subtype.property`, the defining equations
+`fst_mk`/`snd_mk`/`val_mk`, and `mk_eta` for `Sigma` and `Subtype`. Twenty
+names, all in `crates/axeyum-lean-kernel/src/sigma_prelude.rs`, every one with
+an empty `Kernel::axiom_footprint`.
 
 ### Why the guard does not fire, stated so it cannot be weakened by accident
 
@@ -95,8 +100,8 @@ and `Kernel::level_leq` discharges each obligation *symbolically*:
 | --- | --- | --- | --- | --- |
 | `Sigma.{u,v}` | `Sort (max u v + 1)` | `α : Type u` | `Sort (u+1)` | `u ≤ max u v` |
 | | | `β fst : Type v` | `Sort (v+1)` | `v ≤ max u v` |
-| `PSigma.{u,v}` | `Sort (max u v)` | `α : Sort u` | `Sort u` | `u ≤ max u v` |
-| | | `β fst : Sort v` | `Sort v` | `v ≤ max u v` |
+| `PSigma.{u,v}` | `Sort (max 1 u v)` | `α : Sort u` | `Sort u` | `u ≤ max 1 u v` |
+| | | `β fst : Sort v` | `Sort v` | `v ≤ max 1 u v` |
 | `Subtype.{u}` | `Sort (max 1 u)` | `α : Sort u` | `Sort u` | `u ≤ max 1 u` |
 | | | `p val : Prop` | `Sort 0` | `0 ≤ anything` |
 
@@ -104,26 +109,45 @@ Nothing here stores its own universe. **The guard and a dependent pair are
 different shapes, and this ADR only measures that they are.** The guard is not
 touched, not relaxed, and not made conditional.
 
-### `PSigma` is the measured asymmetry, and it is not a defect
+### The one divergence from real Lean, and the gate that measured it
 
 `add_mutual_inductive` grants large elimination when the result universe is
-*provably* non-zero. `Sigma`'s is a successor and `Subtype`'s is a `max` with
-a literal `1` in it, so both get a recursor with a fresh motive level:
-`Sigma.rec.{w,u,v}`, `Subtype.rec.{w,u}`.
+*provably* non-zero. All three families clear that bar as declared, so each gets
+a recursor with a fresh motive level — `Sigma.rec.{w,u,v}`,
+`PSigma.rec.{w,u,v}`, `Subtype.rec.{w,u}` — and its projections.
 
-`PSigma.{u,v} : Sort (max u v)` does not, because `max u v` **is** zero at
-`u = v = 0`: `PSigma.{0,0}` genuinely is a `Prop`, and a recursor eliminating
-into an arbitrary `Sort w` would be unsound at that instantiation — it would
-be `Exists` with a `fst` projection, which is exactly the large-elimination
-hole `Exists` is denied. So `PSigma.rec.{u,v}` eliminates only into `Prop`,
-and **`PSigma` gets no projections**. It is declared anyway, because it is the
-right carrier for a pair whose first component may be a proposition and
-because recording the asymmetry is worth more than hiding it: a consumer that
-wants projections uses `Sigma` (data/data) or `Subtype` (data/proof).
+**`PSigma`'s `Sort (max 1 u v)` carries a literal `1`, and it is not
+decoration.** The obvious spelling is `Sort (max u v)`, and that is what this
+lane wrote first. **This kernel admits it, and handles it soundly**: `max u v`
+is zero at `u = v = 0`, so `PSigma.{0,0}` genuinely would be a `Prop`; the
+kernel cannot prove the result universe non-zero, refuses large elimination,
+and leaves a `Prop`-only recursor with no projections. That verdict is correct
+— and it is **more permissive than real Lean**, which rejects the declaration
+outright:
 
-The recursor universe-parameter counts — 3, 2, 2 — are asserted in
-`sigma_prelude_tests` precisely because that count IS the kernel's own
-per-family verdict, not the author's belief about it.
+```text
+error: Invalid universe polymorphic resulting type: The resulting universe is
+not `Prop`, but it may be `Prop` for some parameter values:
+  Sort (max u v)
+Hint: A possible solution is to use levels of the form `max 1 _` or `_ + 1`
+```
+
+That is Lean 4.34.0-rc1's own message, and it was produced by
+`tests/real_lean_shared_prelude_crosscheck.rs` — the gate that elaborates this
+prelude's exported module in the pinned real Lean. **It is the only divergence
+the three families produced, and nothing in the lane's own reasoning found it;
+a gate did.** The resolution is to follow Lean: `PSigma` is declared at
+`Sort (max 1 u v)`, exactly Lean's own, and consequently gets large elimination
+and both projections.
+
+The claim that the `1` is load-bearing is itself made falsifiable rather than
+asserted. `sigma_prelude_tests` declares a probe family at the bare
+`Sort (max u v)` into a scratch kernel and **requires** that its generated
+recursor carry two universe parameters and not three — i.e. that the kernel
+really does deny large elimination there. Without that probe, "the `1` earns
+large elimination" would be a sentence with nothing behind it; with it, the
+three recursor counts (3 / 3 / 2 for `Sigma`/`PSigma`/`Subtype`, against the
+probe's 2) are the kernel's own per-family verdict.
 
 ### `Fin` is deliberately not added
 
@@ -264,12 +288,18 @@ named and unchanged.
 
 ## Consequences
 
-- The trusted base is unchanged in kind: eighteen new logic-prelude names, all
+- The trusted base is unchanged in kind: twenty new logic-prelude names, all
   inductives, definitions and theorems, **no axiom**. The three consuming
   layers add fifteen more, also axiom-free.
 - `LogicPrelude` gains one registry field (`sigma: SigmaNames`), so
   `crates/axeyum-py/src/kernel/prelude_fields.rs` is regenerated: the `logic`
-  table goes 86 → 109 names.
+  table goes 86 → 111 names.
+- **The exported prelude must stay elaborable by real Lean, and that is a
+  binding constraint on universe spellings, not a nicety.** This kernel's
+  universe rules are strictly more permissive than Lean's in at least one place
+  (`Sort (max u v)` as an inductive's result), and the shared-prelude crosscheck
+  is the only thing that says so. A future declaration whose result universe is
+  a bare `max` of parameters will hit the same wall.
 - ADR-1606's stated ground for rejecting a `Fin n → CReal` carrier ("the
   subtype route is closed") **no longer holds**. This ADR does not reopen that
   decision — ADR-1606 has other reasons, and re-deciding ℝⁿ's carrier is a
@@ -309,7 +339,7 @@ is exactly the "silent amputation" that script's own docstring says must never
 happen again (ADR-1512, `8dd580a1c`). Measured 2026-09-04 while writing this
 ADR: a `pub sigma: crate::SigmaNames` field on `LogicPrelude` was dropped and
 the generator still printed `logic=86`, its pre-change count. Writing the field
-as a bare `SigmaNames` fixed it here (`logic=109`).
+as a bare `SigmaNames` fixed it here (`logic=111`).
 
 **The gap is still open for `ComplexPrelude.poly: poly::PolyNames`**, whose
 fields are absent from the Python surface today. Fixing it is not a one-line

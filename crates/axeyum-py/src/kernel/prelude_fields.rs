@@ -20,10 +20,10 @@ pub(super) struct Fields {
     pub(super) lists: Vec<(&'static str, Vec<NameId>)>,
 }
 
-/// The `LogicPrelude` field table (109 names,
+/// The `LogicPrelude` field table (111 names,
 /// 0 name lists, 0 sub-packages).
 ///
-/// 23 of the names come from ADR-1512 per-module registries and
+/// 25 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `LogicPrelude` itself.
 #[must_use]
@@ -133,6 +133,8 @@ pub(super) fn logic(p: &LogicPrelude) -> Fields {
             ("sigma.psigma", p.sigma.psigma),
             ("sigma.psigma_mk", p.sigma.psigma_mk),
             ("sigma.psigma_rec", p.sigma.psigma_rec),
+            ("sigma.psigma_fst", p.sigma.psigma_fst),
+            ("sigma.psigma_snd", p.sigma.psigma_snd),
             ("sigma.psigma_uparam_u", p.sigma.psigma_uparam_u),
             ("sigma.psigma_uparam_v", p.sigma.psigma_uparam_v),
             ("sigma.subtype", p.sigma.subtype),

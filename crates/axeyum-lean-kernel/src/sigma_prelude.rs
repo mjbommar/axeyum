@@ -37,8 +37,8 @@
 //! | --- | --- | --- | --- | --- |
 //! | `Sigma.{u,v}` | `Sort (max u v + 1)` | `α : Type u` | `Sort (u+1)` | `u ≤ max u v` |
 //! | | | `β fst : Type v` | `Sort (v+1)` | `v ≤ max u v` |
-//! | `PSigma.{u,v}` | `Sort (max u v)` | `α : Sort u` | `Sort u` | `u ≤ max u v` |
-//! | | | `β fst : Sort v` | `Sort v` | `v ≤ max u v` |
+//! | `PSigma.{u,v}` | `Sort (max 1 u v)` | `α : Sort u` | `Sort u` | `u ≤ max 1 u v` |
+//! | | | `β fst : Sort v` | `Sort v` | `v ≤ max 1 u v` |
 //! | `Subtype.{u}` | `Sort (max 1 u)` | `α : Sort u` | `Sort u` | `u ≤ max 1 u` |
 //! | | | `p val : Prop` | `Sort 0` | `0 ≤ anything` |
 //!
@@ -47,29 +47,39 @@
 //! module only shows that the shape it rejects and the shape a dependent pair
 //! needs are different shapes.
 //!
-//! # Large elimination, and why `PSigma` is the odd one out
+//! # Large elimination, and the one place this kernel diverged from Lean
 //!
 //! `Kernel::add_mutual_inductive` grants large elimination (a recursor with its
 //! own motive universe parameter) when the family's result universe is
 //! *provably* non-zero, or when the family is a single-constructor one whose
-//! non-`Prop` fields all appear in the result type. For
-//! `Sigma.{u,v} : Sort (max u v + 1)` and `Subtype.{u} : Sort (max 1 u)` the
-//! result universe is a successor / a `max` with a `1` in it, so it is provably
-//! non-zero and both get `Sigma.rec.{w,u,v}` / `Subtype.rec.{w,u}`.
+//! non-`Prop` fields all appear in the result type. All three families here
+//! clear that bar — a successor for `Sigma`, a `max` with a literal `1` in it
+//! for `PSigma` and `Subtype` — so each gets `Sigma.rec.{w,u,v}`,
+//! `PSigma.rec.{w,u,v}`, `Subtype.rec.{w,u}` and its projections.
 //!
-//! **`PSigma.{u,v} : Sort (max u v)` does not**, and that is not a defect in
-//! this kernel — it is the truth. `max u v` is zero when `u` and `v` are both
-//! zero, i.e. `PSigma.{0,0}` genuinely *is* a `Prop`, so a recursor eliminating
-//! into an arbitrary `Sort w` would be unsound at that instantiation (it would
-//! be `Exists` with a `fst` projection, and projecting data out of an
-//! existential is exactly the large-elimination hole `Exists` is denied). The
-//! single-constructor escape hatch does not apply either: `PSigma.mk`'s `fst`
-//! field is not one of the family's index arguments. So `PSigma.rec.{u,v}`
-//! eliminates only into `Prop`, and `PSigma` gets **no** `fst`/`snd`. It is
-//! declared anyway because it is the right carrier for a pair whose first
-//! component is a `Sort u` that may be a proposition, and because recording the
-//! *measured* asymmetry is the point: a consumer that wants projections must
-//! use `Sigma` (data/data) or `Subtype` (data/proof), and now knows why.
+//! **`PSigma`'s result universe is `Sort (max 1 u v)`, and the `1` is not
+//! decoration.** The obvious spelling is `Sort (max u v)`, which is what this
+//! module was written with first. This kernel ADMITS that, and handles it
+//! soundly: `max u v` is zero at `u = v = 0`, so `PSigma.{0,0}` genuinely is a
+//! `Prop`, the kernel cannot prove the result universe non-zero, and it
+//! therefore refuses large elimination — leaving a `Prop`-only recursor and no
+//! projections. That is a correct verdict, and it is also **more permissive
+//! than real Lean**, which rejects the declaration outright:
+//!
+//! ```text
+//! error: Invalid universe polymorphic resulting type: The resulting universe
+//! is not `Prop`, but it may be `Prop` for some parameter values:
+//!   Sort (max u v)
+//! Hint: A possible solution is to use levels of the form `max 1 _` or `_ + 1`
+//! ```
+//!
+//! That is Lean 4.34.0-rc1's own message, produced by
+//! `tests/real_lean_shared_prelude_crosscheck.rs` — the gate that elaborates
+//! this prelude's exported module in the pinned real Lean. It is the only
+//! divergence the three families produced, it was found by measurement rather
+//! than by reading, and it is resolved by following Lean: `PSigma` is declared
+//! at `Sort (max 1 u v)`, exactly Lean's own, and consequently DOES get large
+//! elimination and both projections.
 //!
 //! # What is declared
 //!
@@ -82,8 +92,10 @@
 //! Sigma.snd_mk.{u,v} : ∀ α β (a : α) (b : β a), Sigma.snd α β (Sigma.mk α β a b) = b
 //! Sigma.mk_eta.{u,v} : ∀ α β (s : Sigma α β), Sigma.mk α β (Sigma.fst α β s) (Sigma.snd α β s) = s
 //!
-//! inductive PSigma.{u,v} (α : Sort u) (β : α → Sort v) : Sort (max u v)
+//! inductive PSigma.{u,v} (α : Sort u) (β : α → Sort v) : Sort (max 1 u v)
 //!   | mk : (fst : α) → (snd : β fst) → PSigma α β
+//! PSigma.fst.{u,v}   : Π (α) (β) (p : PSigma α β), α
+//! PSigma.snd.{u,v}   : Π (α) (β) (p : PSigma α β), β (PSigma.fst α β p)
 //!
 //! inductive Subtype.{u} (α : Sort u) (p : α → Prop) : Sort (max 1 u)
 //!   | mk : (val : α) → (property : p val) → Subtype α p
@@ -94,7 +106,8 @@
 //!                          Subtype.mk α p (Subtype.val α p s) (Subtype.property α p s) = s
 //! ```
 //!
-//! `Sigma.fst`/`Sigma.snd`/`Subtype.val` are [`Declaration::Definition`]s (their
+//! `Sigma.fst`/`Sigma.snd`/`PSigma.fst`/`PSigma.snd`/`Subtype.val` are
+//! [`Declaration::Definition`]s (their
 //! codomains are data, not `Prop`); everything else with a `=` in it is a
 //! [`Declaration::Theorem`]. Every one of them is proved from the generated
 //! recursor and `Eq.refl` — **no axiom is added by this module**, and
@@ -153,15 +166,17 @@ pub struct SigmaNames {
     /// The universe parameter `v` shared by the whole `Sigma` family.
     pub sigma_uparam_v: NameId,
 
-    /// `PSigma.{u,v} : Π (α : Sort u), (α → Sort v) → Sort (max u v)` — the
-    /// `Sort`-level dependent pair. **No projections**: its result universe is
-    /// not provably non-zero, so its recursor eliminates only into `Prop` (see
-    /// the module doc).
+    /// `PSigma.{u,v} : Π (α : Sort u), (α → Sort v) → Sort (max 1 u v)` — the
+    /// `Sort`-level dependent pair, at Lean's own result universe.
     pub psigma: NameId,
     /// `PSigma.mk.{u,v} : Π (α) (β) (fst : α), β fst → PSigma α β`.
     pub psigma_mk: NameId,
-    /// `PSigma.rec.{u,v}` — `Prop`-eliminating only.
+    /// `PSigma.rec.{w,u,v}` — the generated large-eliminating recursor.
     pub psigma_rec: NameId,
+    /// `PSigma.fst.{u,v} : Π (α) (β) (p : PSigma α β), α`.
+    pub psigma_fst: NameId,
+    /// `PSigma.snd.{u,v} : Π (α) (β) (p : PSigma α β), β (PSigma.fst α β p)`.
+    pub psigma_snd: NameId,
     /// The universe parameter `u` shared by the `PSigma` family.
     pub psigma_uparam_u: NameId,
     /// The universe parameter `v` shared by the `PSigma` family.
@@ -241,6 +256,12 @@ const SIGMA_PAIR: u64 = 71_002;
 const SIGMA_A: u64 = 71_003;
 const SIGMA_B: u64 = 71_004;
 const SIGMA_Y: u64 = 71_005;
+const PSIGMA_ALPHA: u64 = 71_050;
+const PSIGMA_BETA: u64 = 71_051;
+const PSIGMA_PAIR: u64 = 71_052;
+const PSIGMA_A: u64 = 71_053;
+const PSIGMA_B: u64 = 71_054;
+const PSIGMA_Y: u64 = 71_055;
 const SUBTYPE_ALPHA: u64 = 71_100;
 const SUBTYPE_P: u64 = 71_101;
 const SUBTYPE_S: u64 = 71_102;
@@ -603,9 +624,17 @@ pub(crate) fn declare_sigma_family(
         let v_lvl = kernel.level_param(psigma_uparam_v);
         let sort_u = kernel.sort(u_lvl);
         let sort_v = kernel.sort(v_lvl);
+        // `Sort (max 1 u v)`, exactly Lean's own `PSigma`, and NOT
+        // `Sort (max u v)`. See the module doc: this kernel admits the latter
+        // and soundly denies it large elimination, but real Lean refuses the
+        // declaration outright, and the shared-prelude crosscheck is what
+        // measured that. We follow Lean.
         let result_sort = {
+            let zero = kernel.level_zero();
+            let one = kernel.level_succ(zero);
             let max_uv = kernel.level_max(u_lvl, v_lvl);
-            kernel.sort(max_uv)
+            let result_level = kernel.level_max(one, max_uv);
+            kernel.sort(result_level)
         };
         let psigma_const = kernel.const_(psigma, vec![u_lvl, v_lvl]);
 
@@ -642,6 +671,96 @@ pub(crate) fn declare_sigma_family(
         )?;
     }
     let psigma_rec = kernel.name_str(psigma, "rec");
+    let psigma_fst = kernel.name_str(psigma, "fst");
+    let psigma_snd = kernel.name_str(psigma, "snd");
+
+    // --- PSigma.fst / PSigma.snd ------------------------------------------
+    // The same two definitions as `Sigma`'s, one universe lower: `α : Sort u`
+    // rather than `Type u`, so the motive levels are `u` and `v` themselves.
+    {
+        let u_lvl = kernel.level_param(psigma_uparam_u);
+        let v_lvl = kernel.level_param(psigma_uparam_v);
+        let sort_u = kernel.sort(u_lvl);
+        let sort_v = kernel.sort(v_lvl);
+
+        let alpha = kernel.fvar(PSIGMA_ALPHA);
+        let beta = kernel.fvar(PSIGMA_BETA);
+        let beta_ty = pi_fvar(kernel, PSIGMA_A, alpha, sort_v);
+        let psigma_const = kernel.const_(psigma, vec![u_lvl, v_lvl]);
+        let psigma_ab = apply_all(kernel, psigma_const, &[alpha, beta]);
+
+        // fst := fun α β p => PSigma.rec.{u,u,v} α β (fun _ => α) (fun a b => a) p.
+        {
+            let motive = lam_fvar(kernel, PSIGMA_PAIR, psigma_ab, alpha);
+            let minor = {
+                let a = kernel.fvar(PSIGMA_A);
+                let beta_a = kernel.app(beta, a);
+                let inner = lam_fvar(kernel, PSIGMA_B, beta_a, a);
+                lam_fvar(kernel, PSIGMA_A, alpha, inner)
+            };
+            let pair = kernel.fvar(PSIGMA_PAIR);
+            let rec_const = kernel.const_(psigma_rec, vec![u_lvl, u_lvl, v_lvl]);
+            let body = apply_all(kernel, rec_const, &[alpha, beta, motive, minor, pair]);
+            let value = {
+                let with_pair = lam_fvar(kernel, PSIGMA_PAIR, psigma_ab, body);
+                let with_beta = lam_fvar(kernel, PSIGMA_BETA, beta_ty, with_pair);
+                lam_fvar(kernel, PSIGMA_ALPHA, sort_u, with_beta)
+            };
+            let ty = {
+                let with_pair = pi_fvar(kernel, PSIGMA_PAIR, psigma_ab, alpha);
+                let with_beta = pi_fvar(kernel, PSIGMA_BETA, beta_ty, with_pair);
+                pi_fvar(kernel, PSIGMA_ALPHA, sort_u, with_beta)
+            };
+            kernel.add_declaration(Declaration::Definition {
+                name: psigma_fst,
+                uparams: vec![psigma_uparam_u, psigma_uparam_v],
+                ty,
+                value,
+                hint: ReducibilityHint::Regular(1),
+            })?;
+        }
+
+        // snd := fun α β p => PSigma.rec.{v,u,v} α β
+        //          (fun y => β (PSigma.fst α β y)) (fun a b => b) p.
+        {
+            let fst_const = kernel.const_(psigma_fst, vec![u_lvl, v_lvl]);
+            let motive = {
+                let y = kernel.fvar(PSIGMA_Y);
+                let fst_y = apply_all(kernel, fst_const, &[alpha, beta, y]);
+                let claim = kernel.app(beta, fst_y);
+                lam_fvar(kernel, PSIGMA_Y, psigma_ab, claim)
+            };
+            let minor = {
+                let a = kernel.fvar(PSIGMA_A);
+                let beta_a = kernel.app(beta, a);
+                let b = kernel.fvar(PSIGMA_B);
+                let inner = lam_fvar(kernel, PSIGMA_B, beta_a, b);
+                lam_fvar(kernel, PSIGMA_A, alpha, inner)
+            };
+            let pair = kernel.fvar(PSIGMA_PAIR);
+            let rec_const = kernel.const_(psigma_rec, vec![v_lvl, u_lvl, v_lvl]);
+            let body = apply_all(kernel, rec_const, &[alpha, beta, motive, minor, pair]);
+            let value = {
+                let with_pair = lam_fvar(kernel, PSIGMA_PAIR, psigma_ab, body);
+                let with_beta = lam_fvar(kernel, PSIGMA_BETA, beta_ty, with_pair);
+                lam_fvar(kernel, PSIGMA_ALPHA, sort_u, with_beta)
+            };
+            let ty = {
+                let fst_pair = apply_all(kernel, fst_const, &[alpha, beta, pair]);
+                let codomain = kernel.app(beta, fst_pair);
+                let with_pair = pi_fvar(kernel, PSIGMA_PAIR, psigma_ab, codomain);
+                let with_beta = pi_fvar(kernel, PSIGMA_BETA, beta_ty, with_pair);
+                pi_fvar(kernel, PSIGMA_ALPHA, sort_u, with_beta)
+            };
+            kernel.add_declaration(Declaration::Definition {
+                name: psigma_snd,
+                uparams: vec![psigma_uparam_u, psigma_uparam_v],
+                ty,
+                value,
+                hint: ReducibilityHint::Regular(1),
+            })?;
+        }
+    }
 
     // --- Subtype.{u} (α : Sort u) (p : α → Prop) : Sort (max 1 u) ----------
     let subtype_uparam = kernel.name_str(anon, "u");
@@ -906,6 +1025,8 @@ pub(crate) fn declare_sigma_family(
         psigma,
         psigma_mk,
         psigma_rec,
+        psigma_fst,
+        psigma_snd,
         psigma_uparam_u,
         psigma_uparam_v,
         subtype,

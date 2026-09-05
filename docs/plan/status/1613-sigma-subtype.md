@@ -20,16 +20,27 @@ Only the universe-polymorphic form was missing.
 
 Landed in the logic prelude (`sigma_prelude.rs`), so the existing shape_search /
 projection groups index it with no new group: `Sigma.{u,v} : Type (max u v)`,
-`PSigma.{u,v} : Sort (max u v)`, `Subtype.{u} : Sort (max 1 u)`, with
+`PSigma.{u,v} : Sort (max 1 u v)`, `Subtype.{u} : Sort (max 1 u)`, with
 `fst`/`snd` (dependent), `val`/`property`, the defining equations, and `mk_eta`
-as a theorem (ι-reduction plus `Eq.refl`, the `Nat.Fin.val_mk` route). Eighteen
+as a theorem (ι-reduction plus `Eq.refl`, the `Nat.Fin.val_mk` route). Twenty
 names, **zero axioms**.
 
-**`PSigma` is the measured asymmetry and it is not a defect.** `max u v` is zero
-at `u = v = 0`, so the kernel refuses large elimination and `PSigma.rec` carries
-no motive universe — it therefore gets no projections. The recursor
-universe-parameter counts (3 / 2 / 2) are the assertion, because that count IS
-the kernel's own per-family verdict.
+**One divergence from real Lean, found by a gate and not by reasoning.**
+`PSigma` was written first at the obvious `Sort (max u v)`. This kernel ADMITS
+it and handles it soundly — `max u v` is zero at `u = v = 0`, so it denies large
+elimination and leaves a `Prop`-only recursor. **Real Lean rejects the
+declaration outright**, and `tests/real_lean_shared_prelude_crosscheck.rs`,
+which elaborates the exported prelude in the pinned Lean 4.34.0-rc1, is what
+said so — quoting Lean's own hint to use levels of the form `max 1 _`. `PSigma`
+now carries Lean's own `Sort (max 1 u v)` and consequently gets large
+elimination and both projections. The claim that the `1` is load-bearing is
+itself falsifiable: the test declares a probe family at the bare
+`Sort (max u v)` into a scratch kernel and REQUIRES its recursor to carry two
+universe parameters rather than three.
+
+The lesson beyond this lane: this kernel's universe rules are strictly more
+permissive than Lean's in at least one place, and the shared-prelude crosscheck
+is the only gate that says so.
 
 **`Fin` was NOT added.** `Nat.Fin` already exists in `nat_prelude/finite.rs`,
 already in the subtype form, with `val`, `isLt` and `val_mk`.
@@ -70,7 +81,7 @@ statement is now written, admitted, and axiom-free.
 path-qualified field type does not match and the line is **silently skipped** —
 the exact amputation ADR-1512 exists to prevent. Measured: a
 `pub sigma: crate::SigmaNames` field was dropped and the generator still printed
-`logic=86`. Writing it bare fixed it here (`logic=109`), but
+`logic=86`. Writing it bare fixed it here (`logic=111`), but
 `ComplexPrelude.poly: poly::PolyNames` is still being skipped today. The fix is
 not a one-line regex change — `PolyNames` is defined in two files, which is why
 that field is qualified — and the script belongs to another lane, so it is in
@@ -84,6 +95,7 @@ decision; ADR-1606 has other reasons.
 
 | 2026-09-04 | sigma-subtype | opened W0-5: confirmed `Sigma`/`PSigma`/`Subtype`/`Fin` absent at declarations=3935 with two positive controls |
 | 2026-09-04 | sigma-subtype | `Sigma`, `PSigma`, `Subtype` admitted in the logic prelude, zero axioms; ADR-1495's guard never fired and was not touched |
+| 2026-09-04 | sigma-subtype | the real-Lean crosscheck refused `Sort (max u v)`: `PSigma` follows Lean's `Sort (max 1 u v)` and gains both projections |
 | 2026-09-04 | sigma-subtype | `Metric.subspace` + `Metric.crealIntervalSpace` (ADR-1602's site) and `IntSpace.Bundled` + `bundledIntegral` (ADR-1612's site) |
 | 2026-09-04 | sigma-subtype | `AlgS.Hom.imageGroup` and `AlgS.Hom.firstIsoClassical` — `G/ker f ≅ Im f` between two group objects (ADR-1595's site) |
 | 2026-09-04 | sigma-subtype | ADR-1613 proposed: dependent pairs are an ordinary inductive; the deciding count is 3 of 3 |
