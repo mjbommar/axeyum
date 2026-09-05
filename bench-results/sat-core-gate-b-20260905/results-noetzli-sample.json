@@ -1,0 +1,2530 @@
+{
+  "schema": "axeyum-gate-b-results-v2",
+  "family": "noetzli-sample",
+  "budget_secs": 20.0,
+  "disagreements": [],
+  "summary": {
+    "batsat": {
+      "total": 100,
+      "decided": 86,
+      "par2_mean_s": 5.603753540320002
+    },
+    "native": {
+      "total": 100,
+      "decided": 86,
+      "par2_mean_s": 5.605447073279997
+    },
+    "cadical": {
+      "total": 100,
+      "decided": 88,
+      "par2_mean_s": 5.247324910736642
+    },
+    "kissat": {
+      "total": 100,
+      "decided": 89,
+      "par2_mean_s": 4.613268376099877
+    }
+  },
+  "records": [
+    {
+      "file": "bv-term-small-rw_1009.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.043469",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.0044610000000000006",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "304.6068870462477",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.39602395147085",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1036.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.014173",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.002474",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.99071406573057",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.31449504196644",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1048.cnf",
+      "variables": "314",
+      "clauses": "966",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "7.407557000000001",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "2.960937",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.16080802679062",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.54942395538092",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1055.cnf",
+      "variables": "4285",
+      "clauses": "17423",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20000.768031",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20238.927266000002",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20138.50569189526",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20117.679086048156",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1065.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.179148",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.005656",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "108.03127591498196",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.07756904512644",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1068.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.029431",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.005103",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.63820293545723",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.81780711375177",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_107.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.028815",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.006505",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.9746790714562",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.30305886641145",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1070.cnf",
+      "variables": "5842",
+      "clauses": "24269",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20001.60405",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20234.997068999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20141.483749030158",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20116.478155832738",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1074.cnf",
+      "variables": "7668",
+      "clauses": "31801",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20001.345172",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20050.393382",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "17322.086344938725",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "10513.767542084679",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1077.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.214745",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.0062840000000000005",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.65421401709318",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "104.59930007345974",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1087.cnf",
+      "variables": "6309",
+      "clauses": "25883",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20004.260602",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20453.392872999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20118.651991011575",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20131.8618808873",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1088.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.461943",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.012486",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.93690690398216",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "111.79003096185625",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1097.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.0436",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.005919000000000001",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "107.30846808291972",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "110.04598392173648",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1102.cnf",
+      "variables": "431",
+      "clauses": "1489",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.687381",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "2.600276",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.87283500656486",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "111.27121583558619",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1119.cnf",
+      "variables": "669",
+      "clauses": "2492",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.8909640000000003",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "4.640804",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.75471396744251",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "112.20645997673273",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1145.cnf",
+      "variables": "430",
+      "clauses": "1452",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "4.856148999999999",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "3.3125080000000002",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.6461320258677",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "114.37354795634747",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1152.cnf",
+      "variables": "574",
+      "clauses": "2084",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "7.788416000000001",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "13.262362",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "108.14034380018711",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "110.70588300935924",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1170.cnf",
+      "variables": "481",
+      "clauses": "1599",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "16.132152",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "20.220034000000002",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "107.08757699467242",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "111.69543489813805",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1172.cnf",
+      "variables": "366",
+      "clauses": "1260",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.778417",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "5.715751",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.58941701613367",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "111.61931487731636",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1178.cnf",
+      "variables": "366",
+      "clauses": "1260",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.017516",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "5.9668969999999995",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.47527801059186",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "112.80815582722425",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1191.cnf",
+      "variables": "366",
+      "clauses": "1260",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.871112",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "5.901145",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.25812704488635",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "112.52335994504392",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1192.cnf",
+      "variables": "366",
+      "clauses": "1260",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.108707",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "7.523276",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.39390486478806",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "109.36517105437815",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1225.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.16736299999999998",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.009641",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "106.57312301918864",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "106.43337294459343",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1232.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.036478",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.004244",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.15087400563061",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "110.13453803025186",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1295.cnf",
+      "variables": "4287",
+      "clauses": "17427",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20002.025706",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20033.935937",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20125.226564938203",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20137.192076072097",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1301.cnf",
+      "variables": "4449",
+      "clauses": "18159",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20002.322365",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20450.84898",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20131.81449007243",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.9827728346",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1319.cnf",
+      "variables": "4542",
+      "clauses": "18477",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20002.088839",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20089.178405",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20142.14733382687",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20128.14266909845",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1332.cnf",
+      "variables": "347",
+      "clauses": "1128",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "4.508329",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "4.961595",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "110.1940181106329",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.30111510120332",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1370.cnf",
+      "variables": "576",
+      "clauses": "2062",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "6.368511000000001",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "3.8664609999999997",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "108.54048398323357",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "104.20990898273885",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1373.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.06279399999999999",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.004949",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "107.64892492443323",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.1799700576812",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1376.cnf",
+      "variables": "337",
+      "clauses": "1054",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.888071",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.018876",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.8482059314847",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.95743611641228",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1380.cnf",
+      "variables": "4386",
+      "clauses": "17846",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20000.569371",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20160.308644",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20143.067377852276",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.931665085256",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1389.cnf",
+      "variables": "752",
+      "clauses": "2605",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.6640140000000003",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "5.090987",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "312.0914991013706",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.02041098475456",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_140.cnf",
+      "variables": "3251",
+      "clauses": "13833",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20001.145644",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20238.44456",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20167.41368197836",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.222104083747",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1411.cnf",
+      "variables": "625",
+      "clauses": "2199",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "3.313062",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "4.294965",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "309.21913404017687",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "106.97539011016488",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1419.cnf",
+      "variables": "462",
+      "clauses": "1678",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.062873",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.731273",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "106.58170515671372",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "106.67091188952327",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1421.cnf",
+      "variables": "850",
+      "clauses": "3041",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "37.244244",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "39.415775000000004",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.24278595484793",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "106.9435270037502",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1477.cnf",
+      "variables": "399",
+      "clauses": "1393",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.494288",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.383014",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "108.34003798663616",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "107.19518712721765",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1497.cnf",
+      "variables": "798",
+      "clauses": "2742",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "15.893938",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "14.269400999999998",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "113.00277803093195",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.74867599643767",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1498.cnf",
+      "variables": "798",
+      "clauses": "2742",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "11.132850999999999",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "14.868238",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "108.42021508142352",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.46246496960521",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1515.cnf",
+      "variables": "4450",
+      "clauses": "18192",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20002.266146",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20239.741399",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20140.929228859022",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20128.942392999306",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1537.cnf",
+      "variables": "825",
+      "clauses": "2999",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "7.18271",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "7.761476",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "106.93123191595078",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "108.99408906698227",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_1548.cnf",
+      "variables": "526",
+      "clauses": "1897",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "8.481492",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "8.660766",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "208.68854084983468",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "114.2092898953706",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_160.cnf",
+      "variables": "4355",
+      "clauses": "17753",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "4.311383999999999",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "6.849944",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "106.25891597010195",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "108.26618992723525",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_163.cnf",
+      "variables": "285",
+      "clauses": "853",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.7663989999999999",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.547415",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.85690482892096",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "109.87395606935024",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_175.cnf",
+      "variables": "366",
+      "clauses": "1260",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.65901",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "5.276481",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.24756188876927",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "111.42464610747993",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_191.cnf",
+      "variables": "366",
+      "clauses": "1260",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.654842",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "5.514183",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.82705880329013",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "108.46259910613298",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_282.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.11895099999999999",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.010392",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.73281284794211",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "112.3042160179466",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_284.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.02749",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.0018909999999999999",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.57862517796457",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "109.77769596502185",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_289.cnf",
+      "variables": "278",
+      "clauses": "893",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.8740160000000001",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.813496",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.54168606176972",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "111.3646060694009",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_298.cnf",
+      "variables": "871",
+      "clauses": "3147",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.6285649999999996",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "2.482144",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.23689491674304",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "109.69309997744858",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_309.cnf",
+      "variables": "816",
+      "clauses": "2921",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.3451170000000001",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.783739",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "106.1996219214052",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "110.58114911429584",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_31.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.15237599999999998",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.01171",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.558170074597",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "109.16545102372766",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_312.cnf",
+      "variables": "509",
+      "clauses": "1687",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "0.41570399999999996",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "0.460959",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "104.23988499678671",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "109.33644301258028",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_329.cnf",
+      "variables": "491",
+      "clauses": "1646",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.256341",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.26621",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.56944792531431",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "105.2150100003928",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_359.cnf",
+      "variables": "682",
+      "clauses": "2271",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "3.793249",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "2.634291",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.97182088531554",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "107.22437012009323",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_365.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.231627",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.019072",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "108.85182186029851",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "108.56711794622242",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_388.cnf",
+      "variables": "3533",
+      "clauses": "14999",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20000.754872",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20185.191105",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20133.70975595899",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20122.106314171106",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_458.cnf",
+      "variables": "695",
+      "clauses": "2407",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.92878",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "3.8125210000000003",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.70580106973648",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.86388895474374",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_464.cnf",
+      "variables": "2224",
+      "clauses": "8951",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.877077",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.7824200000000001",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "204.2546549346298",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.45810612104833",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_48.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.179844",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.00617",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.73164883255959",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.11285010538995",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_496.cnf",
+      "variables": "651",
+      "clauses": "2425",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "7.945842",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "9.879099",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.99102100543678",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.72904392331839",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_505.cnf",
+      "variables": "641",
+      "clauses": "2263",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "16.84522",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "19.901442",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "102.73684491403401",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.89876093156636",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_524.cnf",
+      "variables": "4261",
+      "clauses": "17468",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20003.958004",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20081.529444",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "16718.829638091847",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "703.4863538574427",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_526.cnf",
+      "variables": "683",
+      "clauses": "2538",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "3.64377",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "4.983022",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "311.92722101695836",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.03203389048576",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_527.cnf",
+      "variables": "417",
+      "clauses": "1437",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.923009",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "2.286842",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "110.59275711886585",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.0618620570749",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_541.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.10472",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.005658",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "114.5315628964454",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.18170301616192",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_55.cnf",
+      "variables": "2193",
+      "clauses": "8824",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "3.474806",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "3.877511",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "120.67996594123542",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.02908811718225",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_558.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.185058",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.008036999999999999",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "233.74077607877553",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.80177998356521",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_599.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.027799",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.004715",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "111.94668104872108",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.09517593123019",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_600.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.017363999999999997",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.00347",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "114.8720399942249",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.92856900580227",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_603.cnf",
+      "variables": "585",
+      "clauses": "2175",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.542122",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "2.135441",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "112.55281884223223",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.05810207501054",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_604.cnf",
+      "variables": "859",
+      "clauses": "3171",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.64414",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "3.4326280000000002",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "106.95743490941823",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.16215991042554",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_62.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.122858",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.013885",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "107.84802096895874",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.02146291360259",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_623.cnf",
+      "variables": "4140",
+      "clauses": "17161",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "126.368118",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "220.593299",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "411.1450710333884",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "203.22079886682332",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_648.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.131348",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.003555",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "212.57810504175723",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.11930510215461",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_65.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.010508",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.00138",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.0173409320414",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.52011700160801",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_653.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.002531",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.0007109999999999999",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.29143102839589",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.75485902093351",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_655.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.0027489999999999997",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.00037",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "109.43904984742403",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.07416110299528",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_663.cnf",
+      "variables": "1547",
+      "clauses": "6871",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20000.385202",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20221.804188000002",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20125.48563000746",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20116.12405302003",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_665.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.376948",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.008072",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.49725792184472",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.30910701304674",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_669.cnf",
+      "variables": "628",
+      "clauses": "2307",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "1.942278",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.807142",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.2013328988105",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.98549197614193",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_67.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.104748",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.00342",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.54477805271745",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.14334998838603",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_680.cnf",
+      "variables": "1872",
+      "clauses": "8032",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "14.892940000000001",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "34.689532",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "105.48540600575507",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.75715007446706",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_733.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.320552",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.012869",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.31298008188605",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.8732848353684",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_763.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.051309",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.007199",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.70314796455204",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.53625200130045",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_772.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.056627",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.006311000000000001",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.90165301598608",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.64632711187005",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_782.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.007212",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.0010470000000000002",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.73942507430911",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.9348848387599",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_80.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.003963",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.0005390000000000001",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.52442902512848",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.08909299783409",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_807.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.021703",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.003193",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.99907315149903",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.92167402803898",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_836.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.072838",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.009662",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.070930974558",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.70648496225476",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_848.cnf",
+      "variables": "3999",
+      "clauses": "16689",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20001.777128",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20496.987674",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20118.21410083212",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "903.5566130187362",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_879.cnf",
+      "variables": "635",
+      "clauses": "2246",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "7.11006",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "22.419165",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.5358709525317",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "104.42383610643446",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_902.cnf",
+      "variables": "480",
+      "clauses": "1594",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "2.468199",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "4.588389",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.02328404597938",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.0880599282682",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_913.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.164307",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.009967",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.0235888902098",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.86181792616844",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_922.cnf",
+      "variables": "2063",
+      "clauses": "8315",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "5.15698",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "1.8375299999999999",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.28831400349736",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "102.96458099037409",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_933.cnf",
+      "variables": "632",
+      "clauses": "2183",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "1.071506",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "0.37922599999999995",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "103.92569587565958",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "103.09378197416663",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_934.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.18072",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.013458999999999999",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "103.58136310242116",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.0240401159972",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_950.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.037",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.004082",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.29973714053631",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.32543007098138",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "bv-term-small-rw_971.cnf",
+      "variables": "0",
+      "clauses": "1",
+      "batsat": {
+        "verdict": "unsat",
+        "wall_ms": "0.046695",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "unsat",
+        "wall_ms": "0.007882",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "unsat",
+        "wall_ms": "104.71130395308137",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unsat",
+        "wall_ms": "103.06355101056397",
+        "timed_out": "False"
+      }
+    }
+  ]
+}

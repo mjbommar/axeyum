@@ -1,0 +1,2855 @@
+{
+  "schema": "axeyum-gate-b-results-v2",
+  "family": "p4dfa",
+  "budget_secs": 20.0,
+  "disagreements": [],
+  "summary": {
+    "batsat": {
+      "total": 113,
+      "decided": 4,
+      "par2_mean_s": 38.72944386738053
+    },
+    "native": {
+      "total": 113,
+      "decided": 6,
+      "par2_mean_s": 38.106723721238936
+    },
+    "cadical": {
+      "total": 113,
+      "decided": 10,
+      "par2_mean_s": 37.20345523111126
+    },
+    "kissat": {
+      "total": 113,
+      "decided": 11,
+      "par2_mean_s": 36.94052230014952
+    }
+  },
+  "records": [
+    {
+      "file": "compose.p2._bit8_na6_nr3_paired.cnf",
+      "variables": "159514",
+      "clauses": "583192",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "10675.197037",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "450.339607",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "1306.4637368079275",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "9821.228379849344",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "compose.p3._bit8_na6_nr3_paired.cnf",
+      "variables": "1401163",
+      "clauses": "5111101",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20433.596127",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "2902.334653",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "8320.157102076337",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20130.193452117965",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "compose.s2._bit8_na6_nr3_paired.cnf",
+      "variables": "106588",
+      "clauses": "390967",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20068.040438",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20402.808111",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "13330.435564043",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "4610.702280886471",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "compose.s2._bit8_na6_nr4_paired.cnf",
+      "variables": "143357",
+      "clauses": "523901",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20029.806547",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20092.880629",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "16852.905147941783",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "13920.833518961444",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "compose.s3._bit8_na6_nr3_paired.cnf",
+      "variables": "473949",
+      "clauses": "1729550",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20094.218497",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20471.174027",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20147.583273937926",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.538640026003",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "compose.s3._bit8_na6_nr4_paired.cnf",
+      "variables": "633175",
+      "clauses": "2308878",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20110.744283",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22233.173447999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20171.012870967388",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.268942952156",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "compose.s4._bit8_na6_nr3_paired.cnf",
+      "variables": "1876101",
+      "clauses": "6845492",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20216.753223",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "25732.708737",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20299.67914102599",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.306416207924",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "compose.s4._bit8_na6_nr4_paired.cnf",
+      "variables": "2506026",
+      "clauses": "9137434",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20776.173501999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "38191.329837",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20387.6078450121",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.547047842294",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "mobiledevice_bit8_na1_nr1_twocond.cnf",
+      "variables": "4120",
+      "clauses": "17456",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "1728.873173",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "3426.3522970000004",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "312.84113391302526",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "603.0118712224066",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "mobiledevice_bit8_na6_nr3_paired.cnf",
+      "variables": "58380",
+      "clauses": "217322",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20018.888258",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "17943.057461",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "4329.342073993757",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "3808.747251983732",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "mobiledevice_bit8_na6_nr3_twocond.cnf",
+      "variables": "31482",
+      "clauses": "118228",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "4021.9749790000005",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "1336.665025",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "2226.4773179776967",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "3718.5560499783605",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "simple_bit8_na1_nr1_twocond.cnf",
+      "variables": "1424",
+      "clauses": "5651",
+      "batsat": {
+        "verdict": "sat",
+        "wall_ms": "1.111825",
+        "timed_out": "false"
+      },
+      "native": {
+        "verdict": "sat",
+        "wall_ms": "1.0314569999999998",
+        "timed_out": "false"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "111.37748695909977",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "104.57672388292849",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "string1x16.1._bit8_na6_nr3_paired.cnf",
+      "variables": "178363",
+      "clauses": "651625",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20049.532172",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20491.416321",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20142.75834010914",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.24562091008",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.10._bit8_na6_nr3_paired.cnf",
+      "variables": "178363",
+      "clauses": "651625",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20050.516414",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20518.311579999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20191.672169836238",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.340415000916",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.2._bit8_na6_nr3_paired.cnf",
+      "variables": "178363",
+      "clauses": "651625",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20067.729777",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20441.821295",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20139.21997300349",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.03999811411",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.3._bit8_na6_nr3_paired.cnf",
+      "variables": "143662",
+      "clauses": "525457",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20072.101781",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20875.947223",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20123.87958401814",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20155.27290198952",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.4._bit8_na6_nr3_paired.cnf",
+      "variables": "108802",
+      "clauses": "398971",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20035.585962999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20652.422174000003",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20136.71883288771",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20134.454194922",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.5._bit8_na6_nr3_paired.cnf",
+      "variables": "143662",
+      "clauses": "525457",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20074.94364",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20808.778042",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20159.79900606908",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20155.789135955274",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.6._bit8_na6_nr3_paired.cnf",
+      "variables": "178363",
+      "clauses": "651625",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20061.585358999997",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20319.440182000002",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20173.525099875405",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20133.080597035587",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.7._bit8_na6_nr3_paired.cnf",
+      "variables": "143662",
+      "clauses": "525457",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20028.545858",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22122.177132",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20157.629687106237",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.286130070686",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.8._bit8_na6_nr3_paired.cnf",
+      "variables": "143662",
+      "clauses": "525457",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20050.71351",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20407.846272",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20130.013946909457",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20122.210477944463",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x16.9._bit8_na6_nr3_paired.cnf",
+      "variables": "143662",
+      "clauses": "525457",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20022.512055",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20116.441371",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20140.913940034807",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.666324160993",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.1._bit8_na6_nr3_paired.cnf",
+      "variables": "78870",
+      "clauses": "290741",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20026.259637",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20295.689408000002",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20144.703790079802",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.329387951642",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.10._bit8_na6_nr3_paired.cnf",
+      "variables": "78870",
+      "clauses": "290741",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20026.180099",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20504.91628",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20150.97266389057",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.395017089322",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.2._bit8_na6_nr3_paired.cnf",
+      "variables": "98696",
+      "clauses": "362295",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20031.936972",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20525.800044",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20194.954108912498",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.70495405048",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.3._bit8_na6_nr3_paired.cnf",
+      "variables": "58826",
+      "clauses": "218751",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20028.470575",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20301.380166000003",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "19581.152623984963",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "13220.722190104425",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "string1x8.4._bit8_na6_nr3_paired.cnf",
+      "variables": "40548",
+      "clauses": "150293",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20013.867806000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20095.488428",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20174.769218079746",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20150.58736805804",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.5._bit8_na6_nr3_paired.cnf",
+      "variables": "78870",
+      "clauses": "290741",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20012.469179",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20030.59549",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20159.02307187207",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20160.978050203994",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.6._bit8_na6_nr3_paired.cnf",
+      "variables": "58826",
+      "clauses": "218751",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20022.763518",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20308.874172",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20178.815650055185",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "9314.93371585384",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "string1x8.7._bit8_na6_nr3_paired.cnf",
+      "variables": "40548",
+      "clauses": "150293",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20020.528051",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20094.91594",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20170.610464876518",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "16817.624943098053",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "string1x8.8._bit8_na6_nr3_paired.cnf",
+      "variables": "78870",
+      "clauses": "290741",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20058.00965",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20299.15841",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20135.515633039176",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.83561499417",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string1x8.9._bit8_na6_nr3_paired.cnf",
+      "variables": "78870",
+      "clauses": "290741",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20038.247205",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20076.630095",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20151.530497940257",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.010908856988",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.1._bit8_na6_nr3_paired.cnf",
+      "variables": "516371",
+      "clauses": "1884144",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20100.194784",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20883.285878",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20176.070241024718",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.62962918915",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.10._bit8_na6_nr3_paired.cnf",
+      "variables": "532052",
+      "clauses": "1941411",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20127.698198000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21626.108301",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20192.68029811792",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.187401073053",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.2._bit8_na6_nr3_paired.cnf",
+      "variables": "467336",
+      "clauses": "1705485",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20061.539939",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21352.309623",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20155.159575864673",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.97198206559",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.3._bit8_na6_nr3_paired.cnf",
+      "variables": "596752",
+      "clauses": "2177305",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20082.357239",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20500.919131",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20163.776027970016",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20122.376163024455",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.4._bit8_na6_nr3_paired.cnf",
+      "variables": "273064",
+      "clauses": "997459",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20057.210354",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21730.955781999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20146.17524598725",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.41715316102",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.5._bit8_na6_nr3_paired.cnf",
+      "variables": "596752",
+      "clauses": "2177305",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20175.094917",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20493.532116000002",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20142.28135999292",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.51749082841",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.6._bit8_na6_nr3_paired.cnf",
+      "variables": "337852",
+      "clauses": "1233529",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20073.473473",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21080.065702",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20123.347857035697",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.230119977146",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.7._bit8_na6_nr3_paired.cnf",
+      "variables": "273064",
+      "clauses": "997459",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20037.407704",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20300.378384",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20146.690231049433",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.130128158256",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.8._bit8_na6_nr3_paired.cnf",
+      "variables": "596752",
+      "clauses": "2177305",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20171.315392",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20446.078128",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20130.039640003815",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.58967491612",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x16.9._bit8_na6_nr3_paired.cnf",
+      "variables": "596752",
+      "clauses": "2177305",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20195.433257",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20666.838061",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20141.4811629802",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.603025890887",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.1._bit8_na6_nr3_paired.cnf",
+      "variables": "233710",
+      "clauses": "852996",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20066.007142",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20632.35764",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20138.483254937455",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.19129516557",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.10._bit8_na6_nr3_paired.cnf",
+      "variables": "212846",
+      "clauses": "777027",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20099.812221",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20181.535324999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20254.7187700402",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.64925597608",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.2._bit8_na6_nr3_paired.cnf",
+      "variables": "212846",
+      "clauses": "777027",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20021.507095",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20050.613202",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20188.476384151727",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.45838819258",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.3._bit8_na6_nr3_paired.cnf",
+      "variables": "281944",
+      "clauses": "1028755",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20023.938288",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20145.298456",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20165.88548780419",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.178821194917",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.4._bit8_na6_nr3_paired.cnf",
+      "variables": "143530",
+      "clauses": "524863",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20013.893895999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20171.366016",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20171.073394129053",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20132.24909082055",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.5._bit8_na6_nr3_paired.cnf",
+      "variables": "212846",
+      "clauses": "777027",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20019.459627",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20439.557835",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20145.84437897429",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20140.650410205126",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.6._bit8_na6_nr3_paired.cnf",
+      "variables": "178231",
+      "clauses": "651031",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20076.22482",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20680.122914000003",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20144.254801096395",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.626883141696",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.7._bit8_na6_nr3_paired.cnf",
+      "variables": "143530",
+      "clauses": "524863",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20018.510238000003",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20358.773915",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20150.628512958065",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.796707881615",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.8._bit8_na6_nr3_paired.cnf",
+      "variables": "212846",
+      "clauses": "777027",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20036.824509",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20693.367663",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20149.58150102757",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20168.309322791174",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string2x8.9._bit8_na6_nr3_paired.cnf",
+      "variables": "212846",
+      "clauses": "777027",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20032.792997",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20589.181979999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20150.754587957636",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20148.513400927186",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.1._bit16_na6_nr3_paired.cnf",
+      "variables": "425968",
+      "clauses": "1554409",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20087.575182999997",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20755.159928",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20174.35047402978",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.75262589194",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.1._bit16_na6_nr4_paired.cnf",
+      "variables": "2677491",
+      "clauses": "9833759",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20739.503826",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21386.332197000003",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20358.947335975245",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20127.835490973666",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.1._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1323705",
+      "clauses": "4830779",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20267.954823",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "25906.950446",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20392.89493393153",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20122.533665969968",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.10._bit16_na6_nr3_paired.cnf",
+      "variables": "726140",
+      "clauses": "2649069",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.997660999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20872.133921",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20190.93385990709",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20137.30817218311",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.10._bit16_na6_nr4_paired.cnf",
+      "variables": "3825797",
+      "clauses": "14047839",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20650.913329000003",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "25080.807589",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20240.36397598684",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20278.876262018457",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.10._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1891179",
+      "clauses": "6899579",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20203.714741",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21706.352658",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20356.889868853614",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.914331102744",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.2._bit16_na6_nr3_paired.cnf",
+      "variables": "378804",
+      "clauses": "1382566",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20093.462402",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20582.24454",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20190.251891035587",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20125.57361810468",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.2._bit16_na6_nr4_paired.cnf",
+      "variables": "2720339",
+      "clauses": "9991326",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20322.407263999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21946.78701",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20390.098748961464",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20142.425084020942",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.2._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1344889",
+      "clauses": "4908218",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20212.427384000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "33611.036155",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20285.43824190274",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20229.765597032383",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.3._bit16_na6_nr3_paired.cnf",
+      "variables": "307815",
+      "clauses": "1123763",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20080.187094",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20747.034076",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20166.69086413458",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20133.90502310358",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.3._bit16_na6_nr4_paired.cnf",
+      "variables": "2028450",
+      "clauses": "7452533",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20462.682819",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21980.825017",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20263.436367036775",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20130.722861969844",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.3._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1002976",
+      "clauses": "3661937",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20232.930043",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "26022.442316",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20262.56117108278",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20128.401095978916",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.4._bit16_na6_nr3_paired.cnf",
+      "variables": "579189",
+      "clauses": "2113166",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20203.576761",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22559.426372",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20179.19069295749",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20134.14493203163",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.4._bit16_na6_nr4_paired.cnf",
+      "variables": "3098002",
+      "clauses": "11377248",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20713.183538999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "25753.724049999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20424.153733067214",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20227.30441391468",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.4._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1531502",
+      "clauses": "5588560",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20184.339407",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "23214.540759",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20246.83226295747",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20133.675791090354",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.5._bit16_na6_nr3_paired.cnf",
+      "variables": "579189",
+      "clauses": "2113166",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20132.546047000003",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20842.313361",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20125.47270907089",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20146.780428942293",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.5._bit16_na6_nr4_paired.cnf",
+      "variables": "3432769",
+      "clauses": "12605474",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20268.207302",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "28739.577144",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20321.435881080106",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20230.620105052367",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.5._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1696936",
+      "clauses": "6191456",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20179.344474",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20737.654068",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20229.198396904394",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20236.96329188533",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.6._bit16_na6_nr3_paired.cnf",
+      "variables": "317815",
+      "clauses": "1160310",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20025.763898",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20184.015122",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20126.764461863786",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20135.294998064637",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.6._bit16_na6_nr4_paired.cnf",
+      "variables": "2061034",
+      "clauses": "7572452",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20349.103202",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20423.571487",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20220.488477963954",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20261.89712388441",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.6._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1019089",
+      "clauses": "3720898",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20182.441223",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21741.634845",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20257.768298964947",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20157.782854977995",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.7._bit16_na6_nr3_paired.cnf",
+      "variables": "596752",
+      "clauses": "2177305",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20195.488296",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22896.881388",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20127.86076613702",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20130.858795018867",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.7._bit16_na6_nr4_paired.cnf",
+      "variables": "3825797",
+      "clauses": "14047839",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20949.291207000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "50926.699845999996",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20227.17409906909",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.312005048618",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.7._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1891179",
+      "clauses": "6899579",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20352.028617",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "24178.211191",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20228.10644400306",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20222.129659028724",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.8._bit16_na6_nr3_paired.cnf",
+      "variables": "256789",
+      "clauses": "937980",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20036.444226",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20966.739321999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20122.42926307954",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.97719491087",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.8._bit16_na6_nr4_paired.cnf",
+      "variables": "2061034",
+      "clauses": "7572452",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20451.648037",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "25554.0329",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20122.452418785542",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20130.729219177738",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.8._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1019089",
+      "clauses": "3720898",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20143.154077",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21541.474254",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20123.378201154992",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.592350864783",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.9._bit16_na6_nr3_paired.cnf",
+      "variables": "402618",
+      "clauses": "1469555",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20148.357593",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20842.088507",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20123.60325199552",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20125.668585067615",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.9._bit16_na6_nr4_paired.cnf",
+      "variables": "2126251",
+      "clauses": "7812487",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20429.920378",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "26738.238098",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20139.50751791708",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20221.84337489307",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x16.9._bit8_na6_nr4_pairedtwobranch.cnf",
+      "variables": "1051338",
+      "clauses": "3838917",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20149.443562999997",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22085.189978",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20145.230278139934",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.796227853745",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.1._bit16_na6_nr4_paired.cnf",
+      "variables": "1154172",
+      "clauses": "4237021",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20139.361129",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21360.589359999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20244.94179803878",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.383667061105",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.1._bit8_na6_nr3_paired.cnf",
+      "variables": "425968",
+      "clauses": "1554409",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20072.164054",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20886.706566",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20160.906709032133",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.546858990565",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.10._bit16_na6_nr4_paired.cnf",
+      "variables": "1968732",
+      "clauses": "7226333",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20259.509244",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "23901.935005",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20341.859405161813",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.738385900855",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.10._bit8_na6_nr3_paired.cnf",
+      "variables": "726140",
+      "clauses": "2649069",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20138.994289",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22249.834075",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20195.352950133383",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20120.60163798742",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.2._bit16_na6_nr4_paired.cnf",
+      "variables": "1025899",
+      "clauses": "3766518",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20103.741109000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20183.574224",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20128.47063387744",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.12850390561",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.2._bit8_na6_nr3_paired.cnf",
+      "variables": "378804",
+      "clauses": "1382566",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20045.939052",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21189.572069",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20118.4555941727",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20117.732651997358",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.3._bit16_na6_nr4_paired.cnf",
+      "variables": "833413",
+      "clauses": "3060199",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20141.376583999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20849.883877",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20121.031743939966",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20138.7286700774",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.3._bit8_na6_nr3_paired.cnf",
+      "variables": "307815",
+      "clauses": "1123763",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20033.451030999997",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20967.650793",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20126.830749912187",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20134.624662110582",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.4._bit16_na6_nr4_paired.cnf",
+      "variables": "1569816",
+      "clauses": "5762396",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20253.484555",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22729.899332999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20238.538103876635",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.963017990813",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.4._bit8_na6_nr3_paired.cnf",
+      "variables": "579189",
+      "clauses": "2113166",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20133.312657000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21582.394293",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20129.008564865217",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.76848107204",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.5._bit16_na6_nr4_paired.cnf",
+      "variables": "1569816",
+      "clauses": "5762396",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20293.768833000002",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20829.723222999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20332.88737689145",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20128.7670370657",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.5._bit8_na6_nr3_paired.cnf",
+      "variables": "579189",
+      "clauses": "2113166",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20062.399417",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "22331.851844999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20125.931035960093",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.998026829213",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.6._bit16_na6_nr4_paired.cnf",
+      "variables": "860371",
+      "clauses": "3159250",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20141.580158",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20571.995832",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20635.496456874534",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.13454588689",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.6._bit8_na6_nr3_paired.cnf",
+      "variables": "317815",
+      "clauses": "1160310",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20062.826836",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20149.454024000002",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20129.50080493465",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20122.54883395508",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.7._bit16_na6_nr4_paired.cnf",
+      "variables": "1617333",
+      "clauses": "5936871",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20191.261651",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20999.439854999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20228.430510964245",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20137.28623301722",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.7._bit8_na6_nr3_paired.cnf",
+      "variables": "596752",
+      "clauses": "2177305",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20114.735107",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21549.413284",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20249.258822062984",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20117.456573061645",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.8._bit16_na6_nr4_paired.cnf",
+      "variables": "694776",
+      "clauses": "2551848",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20104.994493",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "24044.210695",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20154.793300898746",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20132.206164998934",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.8._bit8_na6_nr3_paired.cnf",
+      "variables": "256789",
+      "clauses": "937980",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20066.572444999998",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21813.688073",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20165.748176164925",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.42435388826",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.9._bit16_na6_nr4_paired.cnf",
+      "variables": "1090141",
+      "clauses": "4002491",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20341.863493",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20415.698395",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20182.070632930845",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.330626981333",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "string4x8.9._bit8_na6_nr3_paired.cnf",
+      "variables": "402618",
+      "clauses": "1469555",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20122.565764",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20447.071658999997",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20133.997141150758",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20123.825391056016",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "tcp_full_bit16_na13_nr4_paired.cnf",
+      "variables": "974200",
+      "clauses": "3591806",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20164.650644",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21821.883456",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20129.218587186188",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.199486052617",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "tcp_full_bit8_na6_nr3_paired.cnf",
+      "variables": "258181",
+      "clauses": "942050",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20067.273094",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20364.99378",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20147.373327054083",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20161.468122852966",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "tcp_full_bit8_na6_nr4_paired.cnf",
+      "variables": "345094",
+      "clauses": "1257818",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20067.924201",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20503.545732",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20126.073410967365",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20119.847575901076",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "tcp_full_split4_bit8_na6_nr4_paired.cnf",
+      "variables": "436541",
+      "clauses": "1594274",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20061.387577",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21721.141216",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20136.2659689039",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20124.4203960523",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "tcp_open_bit8_na6_nr3_paired.cnf",
+      "variables": "82541",
+      "clauses": "304079",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20019.859701",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20806.791928",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20125.951474066824",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20143.528942018747",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "tcp_open_bit8_na6_nr4_paired.cnf",
+      "variables": "111567",
+      "clauses": "408523",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20031.326983",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20462.326708",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20162.624628981575",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.198784094304",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "videoconf_full_bit16_na13_nr4_paired.cnf",
+      "variables": "190141",
+      "clauses": "693588",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20099.105156",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20489.178586",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20124.898184090853",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20118.85007703677",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "videoconf_full_bit8_na6_nr3_paired.cnf",
+      "variables": "141923",
+      "clauses": "518910",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20054.906625",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20268.27771",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20133.800134062767",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20121.053356910124",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "videoconf_full_bit8_na6_nr4_paired.cnf",
+      "variables": "190141",
+      "clauses": "693588",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20050.440221999997",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "21023.348664",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20125.294176861644",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20149.911907035857",
+        "timed_out": "True"
+      }
+    },
+    {
+      "file": "videoconf_simple_bit8_na6_nr3_paired.cnf",
+      "variables": "94401",
+      "clauses": "346684",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20041.086486",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20215.199442999998",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "sat",
+        "wall_ms": "17619.28892787546",
+        "timed_out": "False"
+      },
+      "kissat": {
+        "verdict": "sat",
+        "wall_ms": "18338.08299107477",
+        "timed_out": "False"
+      }
+    },
+    {
+      "file": "videoconf_split4_full_bit16_na13_nr4_paired.cnf",
+      "variables": "241457",
+      "clauses": "882518",
+      "batsat": {
+        "verdict": "unknown",
+        "wall_ms": "20085.695861",
+        "timed_out": "true"
+      },
+      "native": {
+        "verdict": "unknown",
+        "wall_ms": "20589.25909",
+        "timed_out": "true"
+      },
+      "cadical": {
+        "verdict": "unknown",
+        "wall_ms": "20133.195627946407",
+        "timed_out": "True"
+      },
+      "kissat": {
+        "verdict": "unknown",
+        "wall_ms": "20139.26102500409",
+        "timed_out": "True"
+      }
+    }
+  ]
+}
