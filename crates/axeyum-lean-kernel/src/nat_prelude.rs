@@ -287,12 +287,14 @@ mod squarefree;
 pub(crate) mod steps;
 mod stirling;
 mod stirling_lemmas;
+mod strong_induction;
 pub mod structures;
 pub mod structures_setoid;
 /// ADR-1609 / roadmap W1-11 (subobject half): `AlgS.Subgroup.*`, subgroups of
 /// an abstract `AlgS.Group` and the meet-semilattice they form.
 pub mod subgroup_setoid;
 mod subset_product;
+mod subset_search;
 mod subset_sum;
 mod sum_range_permute;
 mod testbit_bitwise;
@@ -523,7 +525,9 @@ use sqrt::declare_sqrt_all;
 use squarefree::declare_squarefree_all;
 use stirling::declare_stirling_all;
 use stirling_lemmas::declare_stirling_lemmas_all;
+use strong_induction::declare_strong_induction_all;
 use subset_product::{declare_pigeonhole_p_all, declare_prod_range_if_all};
+use subset_search::declare_subset_search_all;
 use subset_sum::declare_subset_sum_all;
 use sum_range_permute::declare_sum_range_permute_all;
 use testbit_bitwise::declare_testbit_bitwise_all;
@@ -6613,6 +6617,60 @@ pub struct NatPrelude {
     /// missing pieces.
     pub hall_condition_of_is_matching: NameId,
 
+    // --- The subset-search primitive (`subset_search.rs`, ADR-1614) ---------
+    /// `Nat.Finset.bitB k i := beq (Nat.testBit k i) 1` — the `Bool` view of
+    /// the existing `Nat`-valued [`test_bit`](Self::test_bit).
+    pub finset_bit_b: NameId,
+    /// `Nat.Finset.decode n k := Nat.Finset.mk (bitB k) n` — the `k`-th subset
+    /// of `[0, n)`. `bound (decode n k)` is `n` by `refl`.
+    pub finset_decode: NameId,
+    /// `Nat.Finset.encodeFrom f n j` — the code for `f j, f (j+1), …` in the
+    /// low `n` bits. Recursion on the WIDTH `n`, with the start index `j`
+    /// carried through, so `encodeFrom f (succ m) j` is
+    /// `Nat.bit (f j) (encodeFrom f m (succ j))` by iota.
+    pub finset_encode_from: NameId,
+    /// `Nat.Finset.encode t n := encodeFrom (memB t) n 0`.
+    pub finset_encode: NameId,
+    /// `Nat.Finset.anySubset P n := notB (allBelow (fun k => notB (P (decode
+    /// n k))) (pow 2 n))` — the bounded search over every subset of `[0, n)`.
+    /// `pow 2 n` is never reduced: every law below is stated at a variable `n`.
+    pub finset_any_subset: NameId,
+    /// `Nat.Finset.bitB_encodeFrom : ∀ f n j i, Lt i n →
+    /// Eq Bool (bitB (encodeFrom f n j) i) (f (add j i))`.
+    pub finset_bit_b_encode_from: NameId,
+    /// `Nat.Finset.encodeFrom_lt_pow : ∀ f n j,
+    /// Lt (encodeFrom f n j) (pow 2 n)` — the search range is right.
+    pub finset_encode_from_lt_pow: NameId,
+    /// `Nat.Finset.memB_decode_encode : ∀ t n i, Le (bound t) n →
+    /// Eq Bool (memB (decode n (encode t n)) i) (memB t i)` — EXHAUSTIVENESS,
+    /// at every index rather than only below `n`.
+    pub finset_mem_b_decode_encode: NameId,
+    /// `Nat.Finset.existsSubset_of_search : ∀ P n,
+    /// Eq Bool (anySubset P n) true →
+    /// Exists (fun t => And (Eq Nat (bound t) n) (Eq Bool (P t) true))` — the
+    /// two-dimensional
+    /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness).
+    pub finset_exists_subset_of_search: NameId,
+    /// `Nat.Finset.forallSubset_of_search : ∀ P n,
+    /// (∀ u v, (∀ i, Eq Bool (memB u i) (memB v i)) → Eq Bool (P u) (P v)) →
+    /// Eq Bool (anySubset P n) false → ∀ t, Le (bound t) n →
+    /// Eq Bool (P t) false` — an exhausted search refutes EVERY subset. The
+    /// congruence premise is what carries the verdict from the enumerated
+    /// representative to the caller's own set; see `subset_search.rs`.
+    pub finset_forall_subset_of_search: NameId,
+
+    /// `Nat.strongInduction.{u} : ∀ (motive : Nat → Sort u),
+    /// (∀ n, (∀ m, Lt m n → motive m) → motive n) → ∀ n, motive n` —
+    /// course-of-values recursion, `Nat.lt_well_founded` + `WellFounded.fix`
+    /// wrapped under a name (ADR-1614). The universe parameter is
+    /// [`cases_on_uparam`](Self::cases_on_uparam), reused.
+    pub strong_induction: NameId,
+    /// `Nat.strongInduction_eq.{u} : ∀ motive step n,
+    /// strongInduction motive step n =
+    /// step n (fun m _ => strongInduction motive step m)` —
+    /// `WellFounded.fix_eq` at the same instance.
+    pub strong_induction_eq: NameId,
+
     /// The abstract algebra spine (ADR-1578): ten independent `Sort 2`
     /// records `Magma -> ... -> Field`, each carrying `carrier : Sort 1` as
     /// a field. See [`structures`] for the field lists and every selector
@@ -7744,6 +7802,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             hall_any_below_of_witness: kernel.name_str(hall, "anyBelow_of_witness"),
             hall_mem_union_over: kernel.name_str(hall, "memB_unionOver"),
             hall_condition_of_is_matching: kernel.name_str(hall, "hallCondition_of_isMatching"),
+            finset_bit_b: kernel.name_str(finset, "bitB"),
+            finset_decode: kernel.name_str(finset, "decode"),
+            finset_encode_from: kernel.name_str(finset, "encodeFrom"),
+            finset_encode: kernel.name_str(finset, "encode"),
+            finset_any_subset: kernel.name_str(finset, "anySubset"),
+            finset_bit_b_encode_from: kernel.name_str(finset, "bitB_encodeFrom"),
+            finset_encode_from_lt_pow: kernel.name_str(finset, "encodeFrom_lt_pow"),
+            finset_mem_b_decode_encode: kernel.name_str(finset, "memB_decode_encode"),
+            finset_exists_subset_of_search: kernel.name_str(finset, "existsSubset_of_search"),
+            finset_forall_subset_of_search: kernel.name_str(finset, "forallSubset_of_search"),
+            strong_induction: kernel.name_str(nat, "strongInduction"),
+            strong_induction_eq: kernel.name_str(nat, "strongInduction_eq"),
             pair_rec: kernel.name_str(pair, "rec"),
             pair_fst: kernel.name_str(pair, "fst"),
             pair_snd: kernel.name_str(pair, "snd"),
@@ -9165,6 +9235,15 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // Hall's marriage theorem, necessity direction (`hall.rs`, ADR-1608).
         // Needs `Nat.Finset.card_le_of_injOn` and `Nat.Graph.andB`.
         declare_hall_all(&mut d, &p)?;
+        // `Nat.strongInduction` (`strong_induction.rs`, ADR-1614). Needs only
+        // `Nat.lt_well_founded` and the generic `WellFounded.fix`/`fix_eq`.
+        declare_strong_induction_all(&mut d, &p)?;
+        // The two-dimensional subset search (`subset_search.rs`, ADR-1614).
+        // Needs `Nat.Finset.mk`/`memB`/`allBelow` and its three laws, plus
+        // `Nat.testBit`, `Nat.bit_div_two`/`bit_mod_two`/`bit_lt_bit` and
+        // `Nat.pow`. Goes after `declare_finset_all` and `declare_graph_all`
+        // (it reads `Nat.Graph.notB`).
+        declare_subset_search_all(&mut d, &p)?;
         Ok(p)
     })();
     match built {
