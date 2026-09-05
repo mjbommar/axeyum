@@ -90,9 +90,9 @@
 #![allow(clippy::too_many_arguments, clippy::similar_names)]
 
 use super::*;
+use crate::expr::BinderInfo;
 use crate::level::LevelId;
-#[allow(unused_imports)]
-use crate::nat_prelude::structures::{eq_of, refl_of, symm_of, trans_of};
+use crate::nat_prelude::structures::{congr_arg, eq_of, refl_of, symm_of, trans_of};
 
 // ---------------------------------------------------------------------------
 // Free variables. Disjoint from `category_setoid`'s own 25_000..25_130 block.
@@ -1152,12 +1152,35 @@ pub struct GroupCatNames {
     pub forget_grp_mon: NameId,
     /// `CatS.forgetGrpMon_isFunctor` — its three laws, as the predicate.
     pub forget_grp_mon_is_functor: NameId,
+    /// `CatS.PtAlg : Sort 2` — the `Sigma` triple `(N, z, s)`.
+    pub pt_alg: NameId,
+    /// `CatS.PtAlg.carrier`.
+    pub pt_carrier: NameId,
+    /// `CatS.PtAlg.zero`.
+    pub pt_zero: NameId,
+    /// `CatS.PtAlg.succ`.
+    pub pt_succ: NameId,
+    /// `CatS.IsPtHom`.
+    pub is_pt_hom: NameId,
+    /// `CatS.PtHom` — the bundled hom-family.
+    pub pt_hom: NameId,
+    /// `CatS.ptAlg : CatS.CategoryLarge` — the category of pointed unary
+    /// algebras.
+    pub pt_cat: NameId,
+    /// `CatS.IsInitialLarge`.
+    pub is_initial_large: NameId,
+    /// `CatS.natPtAlg : CatS.PtAlg`.
+    pub nat_pt_alg: NameId,
+    /// `CatS.natMed` — the mediating map out of ℕ, given as data.
+    pub nat_med: NameId,
+    /// `CatS.natPtAlg_isInitial` — **ℕ is an initial object**.
+    pub nat_pt_alg_is_initial: NameId,
 }
 
 #[cfg(test)]
 impl GroupCatNames {
     #[must_use]
-    pub fn all(&self) -> [NameId; 14] {
+    pub fn all(&self) -> [NameId; 25] {
         [
             self.grp_hom,
             self.is_grp_hom_congr,
@@ -1173,6 +1196,17 @@ impl GroupCatNames {
             self.functor_large_is_functor,
             self.forget_grp_mon,
             self.forget_grp_mon_is_functor,
+            self.pt_alg,
+            self.pt_carrier,
+            self.pt_zero,
+            self.pt_succ,
+            self.is_pt_hom,
+            self.pt_hom,
+            self.pt_cat,
+            self.is_initial_large,
+            self.nat_pt_alg,
+            self.nat_med,
+            self.nat_pt_alg_is_initial,
         ]
     }
 }
@@ -1283,6 +1317,29 @@ pub(crate) fn declare_group_categories(
         thm(k, ns, "forgetGrpMon_isFunctor", ty, value)?
     };
 
+    // --- pointed unary algebras, and ℕ as an initial object ---------------
+    let (pt_ctx, pt_alg, pt_carrier, pt_zero, pt_succ) = declare_pt_alg(k, lg, ns)?;
+    let is_pt_hom = declare_is_pt_hom(k, lg, &pt_ctx, ns)?;
+    let pt_hom = declare_pt_hom(k, lg, &pt_ctx, is_pt_hom, ns)?;
+    let ops = PtHomOps { is_pt_hom };
+    let pt_cat = declare_pt_cat(k, lg, &recs.category_large, &pt_ctx, &ops, pt_hom, ns)?;
+    let is_initial_large =
+        declare_is_initial(k, &recs.category_large, ns, false, "IsInitialLarge")?;
+    let nat_pt_alg = declare_nat_pt_alg(k, lg, &pt_ctx, ns)?;
+    let nat_med = declare_nat_med(k, lg, &pt_ctx, &ops, pt_hom, nat_pt_alg, ns)?;
+    let nat_pt_alg_is_initial = declare_nat_is_initial(
+        k,
+        lg,
+        &pt_ctx,
+        &ops,
+        pt_hom,
+        pt_cat,
+        nat_pt_alg,
+        nat_med,
+        is_initial_large,
+        ns,
+    )?;
+
     Ok((
         GroupCatRecords { functor_large },
         GroupCatNames {
@@ -1300,6 +1357,967 @@ pub(crate) fn declare_group_categories(
             functor_large_is_functor,
             forget_grp_mon,
             forget_grp_mon_is_functor,
+            pt_alg,
+            pt_carrier,
+            pt_zero,
+            pt_succ,
+            is_pt_hom,
+            pt_hom,
+            pt_cat,
+            is_initial_large,
+            nat_pt_alg,
+            nat_med,
+            nat_pt_alg_is_initial,
         },
     ))
+}
+
+// ---------------------------------------------------------------------------
+// Pointed unary algebras: `Sigma` as DATA, and ℕ as an initial object.
+// ---------------------------------------------------------------------------
+
+/// `Sigma.{u,v} alpha beta`.
+fn sig_ty(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    u: LevelId,
+    v: LevelId,
+    alpha: ExprId,
+    beta: ExprId,
+) -> ExprId {
+    let head = k.const_(lg.sigma.sigma, vec![u, v]);
+    app2(k, head, alpha, beta)
+}
+
+/// `Sigma.fst.{u,v} alpha beta s`.
+fn sig_fst(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    u: LevelId,
+    v: LevelId,
+    alpha: ExprId,
+    beta: ExprId,
+    s: ExprId,
+) -> ExprId {
+    let head = k.const_(lg.sigma.sigma_fst, vec![u, v]);
+    t_app(k, head, &[alpha, beta, s])
+}
+
+/// `Sigma.snd.{u,v} alpha beta s`.
+fn sig_snd(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    u: LevelId,
+    v: LevelId,
+    alpha: ExprId,
+    beta: ExprId,
+    s: ExprId,
+) -> ExprId {
+    let head = k.const_(lg.sigma.sigma_snd, vec![u, v]);
+    t_app(k, head, &[alpha, beta, s])
+}
+
+/// `Sigma.mk.{u,v} alpha beta a b`.
+fn sig_mk(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    u: LevelId,
+    v: LevelId,
+    alpha: ExprId,
+    beta: ExprId,
+    a: ExprId,
+    b: ExprId,
+) -> ExprId {
+    let head = k.const_(lg.sigma.sigma_mk, vec![u, v]);
+    t_app(k, head, &[alpha, beta, a, b])
+}
+
+/// `h : Eq tya a b |- Eq tyb (f a) (f b)` where `f : tya -> tyb` CROSSES
+/// carriers. [`crate::nat_prelude::structures::congr_arg`] fixes one carrier
+/// for both sides, which is right for an algebraic identity and wrong for a
+/// morphism; both carriers here live at `l`, so only the type argument moves.
+fn congr_arg_across(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    l: LevelId,
+    tya: ExprId,
+    tyb: ExprId,
+    a: ExprId,
+    b: ExprId,
+    h: ExprId,
+    scratch_fv: u64,
+    f: &dyn Fn(&mut Kernel, ExprId) -> ExprId,
+) -> ExprId {
+    let fa = f(k, a);
+    let x = k.fvar(scratch_fv);
+    let fx = f(k, x);
+    let concl = eq_of(k, lg, l, tyb, fa, fx);
+    let hyp = eq_of(k, lg, l, tya, a, x);
+    let anon = k.anon();
+    let inner = k.lam(anon, hyp, concl, BinderInfo::Default);
+    let motive = lam_over(k, scratch_fv, tya, inner);
+    let refl_case = refl_of(k, lg, l, tyb, fa);
+    let zero = k.level_zero();
+    let rec = k.const_(lg.eq_rec, vec![zero, l]);
+    t_app(k, rec, &[tya, a, motive, refl_case, b, h])
+}
+
+/// The `Sigma` vocabulary of `CatS.PtAlg`, threaded through every declaration
+/// in this section.
+#[derive(Clone, Copy)]
+struct PtCtx {
+    /// `Sort 1` — the outer `Sigma`'s first component's type.
+    outer_alpha: ExprId,
+    /// `fun (N : Sort 1) => Sigma.{0,0} N (fun _ => N -> N)`.
+    outer_beta: ExprId,
+    /// Level `0`.
+    l0: LevelId,
+    /// Level `1`.
+    l1: LevelId,
+    /// `CatS.PtAlg`, as a constant.
+    pt: ExprId,
+    /// `CatS.PtAlg.carrier`, as a constant.
+    carrier: ExprId,
+    /// `CatS.PtAlg.zero`, as a constant.
+    zero: ExprId,
+    /// `CatS.PtAlg.succ`, as a constant.
+    succ: ExprId,
+}
+
+impl PtCtx {
+    fn carrier_of(&self, k: &mut Kernel, p: ExprId) -> ExprId {
+        k.app(self.carrier, p)
+    }
+    fn zero_of(&self, k: &mut Kernel, p: ExprId) -> ExprId {
+        k.app(self.zero, p)
+    }
+    fn succ_of(&self, k: &mut Kernel, p: ExprId, n: ExprId) -> ExprId {
+        let s = k.app(self.succ, p);
+        k.app(s, n)
+    }
+}
+
+/// `fun (_ : c) => c -> c`, the inner `Sigma`'s family at carrier `c`. Written
+/// exactly as [`PtCtx::outer_beta`]'s body beta-reduces, so `Sigma.snd`'s
+/// dependent result type matches with no work.
+fn inner_beta(k: &mut Kernel, c: ExprId) -> ExprId {
+    let body = arrow(k, c, c);
+    let anon = k.anon();
+    k.lam(anon, c, body, BinderInfo::Default)
+}
+
+/// Declare `CatS.PtAlg` and its three accessors.
+///
+/// `CatS.PtAlg := Sigma.{1,0} (Sort 1) (fun N => Sigma.{0,0} N (fun _ => N -> N))`
+/// — a **triple** `(N, z, s)`, which is precisely the object ADR-1620 could
+/// not form ("`CatS.CategoryLarge` would take the CARRIERS as objects, but not
+/// the algebra structures"). It lands at `Sort (max 1 0 + 1) = Sort 2`, so the
+/// category over it is `CategoryLarge`.
+fn declare_pt_alg(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    ns: NameId,
+) -> Result<(PtCtx, NameId, NameId, NameId, NameId), KernelError> {
+    let l0 = k.level_zero();
+    let l1 = k.level_succ(l0);
+    let l2 = k.level_succ(l1);
+    let sort1 = k.sort(l1);
+    let sort2 = k.sort(l2);
+
+    let outer_beta = {
+        let n = k.fvar(X_A_FV);
+        let ib = inner_beta(k, n);
+        let body = sig_ty(k, lg, l0, l0, n, ib);
+        lam_over(k, X_A_FV, sort1, body)
+    };
+    let pt_body = sig_ty(k, lg, l1, l0, sort1, outer_beta);
+
+    let pt_name = k.name_str(ns, "PtAlg");
+    k.add_declaration(Declaration::Definition {
+        name: pt_name,
+        uparams: vec![],
+        ty: sort2,
+        value: pt_body,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    let pt = k.const_(pt_name, vec![]);
+
+    // carrier := fun P => Sigma.fst P.
+    let carrier_name = k.name_str(pt_name, "carrier");
+    {
+        let p = k.fvar(G_A_FV);
+        let body = sig_fst(k, lg, l1, l0, sort1, outer_beta, p);
+        let value = lam_over(k, G_A_FV, pt, body);
+        let ty = pi_over(k, G_A_FV, pt, sort1);
+        k.add_declaration(Declaration::Definition {
+            name: carrier_name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(1),
+        })?;
+    }
+    let carrier = k.const_(carrier_name, vec![]);
+
+    let ctx0 = PtCtx {
+        outer_alpha: sort1,
+        outer_beta,
+        l0,
+        l1,
+        pt,
+        carrier,
+        zero: carrier,
+        succ: carrier,
+    };
+
+    // zero := fun P => Sigma.fst (Sigma.snd P), succ := the matching snd.
+    let zero_name = k.name_str(pt_name, "zero");
+    {
+        let p = k.fvar(G_A_FV);
+        let c = ctx0.carrier_of(k, p);
+        let ib = inner_beta(k, c);
+        let rest = sig_snd(k, lg, l1, l0, sort1, outer_beta, p);
+        let body = sig_fst(k, lg, l0, l0, c, ib, rest);
+        let value = lam_over(k, G_A_FV, pt, body);
+        let cty = ctx0.carrier_of(k, p);
+        let ty = pi_over(k, G_A_FV, pt, cty);
+        k.add_declaration(Declaration::Definition {
+            name: zero_name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(1),
+        })?;
+    }
+    let succ_name = k.name_str(pt_name, "succ");
+    {
+        let p = k.fvar(G_A_FV);
+        let c = ctx0.carrier_of(k, p);
+        let ib = inner_beta(k, c);
+        let rest = sig_snd(k, lg, l1, l0, sort1, outer_beta, p);
+        let body = sig_snd(k, lg, l0, l0, c, ib, rest);
+        let value = lam_over(k, G_A_FV, pt, body);
+        let cty = ctx0.carrier_of(k, p);
+        let step = arrow(k, cty, cty);
+        let ty = pi_over(k, G_A_FV, pt, step);
+        k.add_declaration(Declaration::Definition {
+            name: succ_name,
+            uparams: vec![],
+            ty,
+            value,
+            hint: ReducibilityHint::Regular(1),
+        })?;
+    }
+
+    let zero = k.const_(zero_name, vec![]);
+    let succ = k.const_(succ_name, vec![]);
+    let ctx = PtCtx { zero, succ, ..ctx0 };
+    Ok((ctx, pt_name, carrier_name, zero_name, succ_name))
+}
+
+/// `CatS.IsPtHom P Q f := f (zero P) = zero Q  and  forall n, f (succ P n) =
+/// succ Q (f n)` — a structure-preserving map of pointed unary algebras. This
+/// one is stated with `Eq`, not a setoid relation, because a pointed unary
+/// algebra carries no equivalence of its own; that is what makes ℕ's
+/// initiality a statement about `Eq` here and about `homEquiv` in every other
+/// category in this file.
+fn declare_is_pt_hom(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    ctx: &PtCtx,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let pv = k.fvar(G_A_FV);
+    let qv = k.fvar(G_B_FV);
+    let cp = ctx.carrier_of(k, pv);
+    let cq = ctx.carrier_of(k, qv);
+    let f_ty = arrow(k, cp, cq);
+    let f = k.fvar(F_1_FV);
+
+    let zp = ctx.zero_of(k, pv);
+    let zq = ctx.zero_of(k, qv);
+    let f_zp = k.app(f, zp);
+    let c1 = eq_of(k, lg, ctx.l1, cq, f_zp, zq);
+
+    let c2 = {
+        let n = k.fvar(N_FV);
+        let sn = ctx.succ_of(k, pv, n);
+        let lhs = k.app(f, sn);
+        let fnv = k.app(f, n);
+        let rhs = ctx.succ_of(k, qv, fnv);
+        let body = eq_of(k, lg, ctx.l1, cq, lhs, rhs);
+        pi_over(k, N_FV, cp, body)
+    };
+
+    let and_c = k.const_(lg.and, vec![]);
+    let body = app2(k, and_c, c1, c2);
+    let value = lam_over(k, F_1_FV, f_ty, body);
+    let value = lam_over(k, G_B_FV, ctx.pt, value);
+    let value = lam_over(k, G_A_FV, ctx.pt, value);
+
+    let prop = k.sort(ctx.l0);
+    let ty = pi_over(k, F_1_FV, f_ty, prop);
+    let ty = pi_over(k, G_B_FV, ctx.pt, ty);
+    let ty = pi_over(k, G_A_FV, ctx.pt, ty);
+
+    let name = k.name_str(ns, "IsPtHom");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `CatS.PtHom P Q := Subtype.{1} (carrier P -> carrier Q) (IsPtHom P Q)`.
+fn declare_pt_hom(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    ctx: &PtCtx,
+    is_pt_hom: NameId,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let sort1 = k.sort(ctx.l1);
+    let pv = k.fvar(G_A_FV);
+    let qv = k.fvar(G_B_FV);
+    let cp = ctx.carrier_of(k, pv);
+    let cq = ctx.carrier_of(k, qv);
+    let f_ty = arrow(k, cp, cq);
+    let iph = k.const_(is_pt_hom, vec![]);
+    let pred = app2(k, iph, pv, qv);
+
+    let value = sub_ty(k, lg, ctx.l1, f_ty, pred);
+    let value = lam_over(k, G_B_FV, ctx.pt, value);
+    let value = lam_over(k, G_A_FV, ctx.pt, value);
+    let ty = pi_over(k, G_B_FV, ctx.pt, sort1);
+    let ty = pi_over(k, G_A_FV, ctx.pt, ty);
+
+    let name = k.name_str(ns, "PtHom");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// The `Subtype` triple at `PtHom P Q`.
+struct PtHomOps {
+    is_pt_hom: NameId,
+}
+
+impl PtHomOps {
+    fn args(&self, k: &mut Kernel, ctx: &PtCtx, pv: ExprId, qv: ExprId) -> (ExprId, ExprId) {
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let f_ty = arrow(k, cp, cq);
+        let iph = k.const_(self.is_pt_hom, vec![]);
+        let pred = app2(k, iph, pv, qv);
+        (f_ty, pred)
+    }
+    fn val(
+        &self,
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        ctx: &PtCtx,
+        pv: ExprId,
+        qv: ExprId,
+        u: ExprId,
+    ) -> ExprId {
+        let (a, p) = self.args(k, ctx, pv, qv);
+        sub_val(k, lg, ctx.l1, a, p, u)
+    }
+    fn prop(
+        &self,
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        ctx: &PtCtx,
+        pv: ExprId,
+        qv: ExprId,
+        u: ExprId,
+    ) -> ExprId {
+        let (a, p) = self.args(k, ctx, pv, qv);
+        sub_prop(k, lg, ctx.l1, a, p, u)
+    }
+    fn mk(
+        &self,
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        ctx: &PtCtx,
+        pv: ExprId,
+        qv: ExprId,
+        v: ExprId,
+        pr: ExprId,
+    ) -> ExprId {
+        let (a, p) = self.args(k, ctx, pv, qv);
+        sub_mk(k, lg, ctx.l1, a, p, v, pr)
+    }
+    /// The two conjuncts of `IsPtHom P Q f`, as statements.
+    fn parts(
+        &self,
+        k: &mut Kernel,
+        lg: &LogicPrelude,
+        ctx: &PtCtx,
+        pv: ExprId,
+        qv: ExprId,
+        f: ExprId,
+    ) -> (ExprId, ExprId) {
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let zp = ctx.zero_of(k, pv);
+        let zq = ctx.zero_of(k, qv);
+        let f_zp = k.app(f, zp);
+        let c1 = eq_of(k, lg, ctx.l1, cq, f_zp, zq);
+        let n = k.fvar(N_FV);
+        let sn = ctx.succ_of(k, pv, n);
+        let lhs = k.app(f, sn);
+        let fnv = k.app(f, n);
+        let rhs = ctx.succ_of(k, qv, fnv);
+        let body = eq_of(k, lg, ctx.l1, cq, lhs, rhs);
+        let c2 = pi_over(k, N_FV, cp, body);
+        (c1, c2)
+    }
+}
+
+/// `CatS.ptAlg : CatS.CategoryLarge` — objects the triples, morphisms the
+/// bundled structure-preserving functions, hom-equivalence pointwise `Eq`.
+fn declare_pt_cat(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    large: &RecordNames,
+    ctx: &PtCtx,
+    ops: &PtHomOps,
+    pt_hom: NameId,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let hom = k.const_(pt_hom, vec![]);
+    let l1 = ctx.l1;
+
+    let hom_equiv = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let hty = app2(k, hom, pv, qv);
+        let u = k.fvar(H_U_FV);
+        let v = k.fvar(H_V_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let vf = ops.val(k, lg, ctx, pv, qv, v);
+        let x = k.fvar(X_A_FV);
+        let ux = k.app(uf, x);
+        let vx = k.app(vf, x);
+        let body = eq_of(k, lg, l1, cq, ux, vx);
+        let body = pi_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, H_V_FV, hty, body);
+        let t = lam_over(k, H_U_FV, hty, t);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    let hom_refl = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let hty = app2(k, hom, pv, qv);
+        let u = k.fvar(H_U_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let x = k.fvar(X_A_FV);
+        let ux = k.app(uf, x);
+        let body = refl_of(k, lg, l1, cq, ux);
+        let body = lam_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, H_U_FV, hty, body);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    let hom_symm = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let hty = app2(k, hom, pv, qv);
+        let u = k.fvar(H_U_FV);
+        let v = k.fvar(H_V_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let vf = ops.val(k, lg, ctx, pv, qv, v);
+        let hyp = {
+            let x = k.fvar(X_A_FV);
+            let ux = k.app(uf, x);
+            let vx = k.app(vf, x);
+            let body = eq_of(k, lg, l1, cq, ux, vx);
+            pi_over(k, X_A_FV, cp, body)
+        };
+        let h = k.fvar(P_1_FV);
+        let x = k.fvar(X_A_FV);
+        let ux = k.app(uf, x);
+        let vx = k.app(vf, x);
+        let hx = k.app(h, x);
+        let body = symm_of(k, lg, l1, cq, ux, vx, hx);
+        let body = lam_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, P_1_FV, hyp, body);
+        let t = lam_over(k, H_V_FV, hty, t);
+        let t = lam_over(k, H_U_FV, hty, t);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    let hom_trans = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let hty = app2(k, hom, pv, qv);
+        let u = k.fvar(H_U_FV);
+        let v = k.fvar(H_V_FV);
+        let w = k.fvar(H_W_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let vf = ops.val(k, lg, ctx, pv, qv, v);
+        let wf = ops.val(k, lg, ctx, pv, qv, w);
+        let hyp1 = {
+            let x = k.fvar(X_A_FV);
+            let a = k.app(uf, x);
+            let b = k.app(vf, x);
+            let body = eq_of(k, lg, l1, cq, a, b);
+            pi_over(k, X_A_FV, cp, body)
+        };
+        let hyp2 = {
+            let x = k.fvar(X_A_FV);
+            let a = k.app(vf, x);
+            let b = k.app(wf, x);
+            let body = eq_of(k, lg, l1, cq, a, b);
+            pi_over(k, X_A_FV, cp, body)
+        };
+        let h1 = k.fvar(P_1_FV);
+        let h2 = k.fvar(P_2_FV);
+        let x = k.fvar(X_A_FV);
+        let ux = k.app(uf, x);
+        let vx = k.app(vf, x);
+        let wx = k.app(wf, x);
+        let h1x = k.app(h1, x);
+        let h2x = k.app(h2, x);
+        let body = trans_of(k, lg, l1, cq, ux, vx, wx, h1x, h2x, SCR_FV);
+        let body = lam_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, P_2_FV, hyp2, body);
+        let t = lam_over(k, P_1_FV, hyp1, t);
+        let t = lam_over(k, H_W_FV, hty, t);
+        let t = lam_over(k, H_V_FV, hty, t);
+        let t = lam_over(k, H_U_FV, hty, t);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    // id := mk (fun x => x) (refl, fun n => refl).
+    let ident = {
+        let pv = k.fvar(G_A_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let idf = {
+            let x = k.fvar(X_A_FV);
+            lam_over(k, X_A_FV, cp, x)
+        };
+        let (c1, c2) = ops.parts(k, lg, ctx, pv, pv, idf);
+        let zp = ctx.zero_of(k, pv);
+        let v1 = refl_of(k, lg, l1, cp, zp);
+        let v2 = {
+            let n = k.fvar(N_FV);
+            let sn = ctx.succ_of(k, pv, n);
+            let body = refl_of(k, lg, l1, cp, sn);
+            lam_over(k, N_FV, cp, body)
+        };
+        let ai = k.const_(lg.and_intro, vec![]);
+        let pr = t_app(k, ai, &[c1, c2, v1, v2]);
+        let body = ops.mk(k, lg, ctx, pv, pv, idf, pr);
+        lam_over(k, G_A_FV, ctx.pt, body)
+    };
+
+    // comp := mk (v . u) (two congrArg-then-trans chains).
+    let comp = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let rv = k.fvar(G_C_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let cr = ctx.carrier_of(k, rv);
+        let hqr = app2(k, hom, qv, rv);
+        let hpq = app2(k, hom, pv, qv);
+        let v = k.fvar(H_V_FV);
+        let u = k.fvar(H_U_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let vf = ops.val(k, lg, ctx, qv, rv, v);
+        let up = ops.prop(k, lg, ctx, pv, qv, u);
+        let vp = ops.prop(k, lg, ctx, qv, rv, v);
+        let (u1, u2) = ops.parts(k, lg, ctx, pv, qv, uf);
+        let (v1, v2) = ops.parts(k, lg, ctx, qv, rv, vf);
+        let al = k.const_(lg.and_left, vec![]);
+        let u_zero = t_app(k, al, &[u1, u2, up]);
+        let ar = k.const_(lg.and_right, vec![]);
+        let u_succ = t_app(k, ar, &[u1, u2, up]);
+        let al2 = k.const_(lg.and_left, vec![]);
+        let v_zero = t_app(k, al2, &[v1, v2, vp]);
+        let ar2 = k.const_(lg.and_right, vec![]);
+        let v_succ = t_app(k, ar2, &[v1, v2, vp]);
+
+        let comp_fn = {
+            let x = k.fvar(X_A_FV);
+            let ux = k.app(uf, x);
+            let body = k.app(vf, ux);
+            lam_over(k, X_A_FV, cp, body)
+        };
+
+        let zp = ctx.zero_of(k, pv);
+        let zq = ctx.zero_of(k, qv);
+        let zr = ctx.zero_of(k, rv);
+        let u_zp = k.app(uf, zp);
+        let vfc = vf;
+        let step1 = congr_arg_across(k, lg, l1, cq, cr, u_zp, zq, u_zero, SCR_FV, &|k2, x| {
+            k2.app(vfc, x)
+        });
+        let a0 = k.app(vf, u_zp);
+        let b0 = k.app(vf, zq);
+        let w1 = trans_of(k, lg, l1, cr, a0, b0, zr, step1, v_zero, SCR_FV);
+
+        let w2 = {
+            let n = k.fvar(N_FV);
+            let sn = ctx.succ_of(k, pv, n);
+            let u_sn = k.app(uf, sn);
+            let un = k.app(uf, n);
+            let q_sun = ctx.succ_of(k, qv, un);
+            let hu = t_app(k, u_succ, &[n]);
+            let s1 = congr_arg_across(k, lg, l1, cq, cr, u_sn, q_sun, hu, SCR_FV, &|k2, x| {
+                k2.app(vfc, x)
+            });
+            let s2 = t_app(k, v_succ, &[un]);
+            let a = k.app(vf, u_sn);
+            let b = k.app(vf, q_sun);
+            let vun = k.app(vf, un);
+            let c = ctx.succ_of(k, rv, vun);
+            let body = trans_of(k, lg, l1, cr, a, b, c, s1, s2, SCR_FV);
+            lam_over(k, N_FV, cp, body)
+        };
+
+        let (c1, c2) = ops.parts(k, lg, ctx, pv, rv, comp_fn);
+        let ai = k.const_(lg.and_intro, vec![]);
+        let pr = t_app(k, ai, &[c1, c2, w1, w2]);
+        let body = ops.mk(k, lg, ctx, pv, rv, comp_fn, pr);
+        let t = lam_over(k, H_U_FV, hpq, body);
+        let t = lam_over(k, H_V_FV, hqr, t);
+        let t = lam_over(k, G_C_FV, ctx.pt, t);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    // compCongr — the one proof, over `Eq` here rather than a setoid relation.
+    let comp_congr = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let rv = k.fvar(G_C_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let cr = ctx.carrier_of(k, rv);
+        let hqr = app2(k, hom, qv, rv);
+        let hpq = app2(k, hom, pv, qv);
+        let v = k.fvar(H_V_FV);
+        let v2 = k.fvar(H_V2_FV);
+        let u = k.fvar(H_U_FV);
+        let u2 = k.fvar(H_U2_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let u2f = ops.val(k, lg, ctx, pv, qv, u2);
+        let vf = ops.val(k, lg, ctx, qv, rv, v);
+        let v2f = ops.val(k, lg, ctx, qv, rv, v2);
+        let hyp_v = {
+            let x = k.fvar(X_A_FV);
+            let a = k.app(vf, x);
+            let b = k.app(v2f, x);
+            let body = eq_of(k, lg, l1, cr, a, b);
+            pi_over(k, X_A_FV, cq, body)
+        };
+        let hyp_u = {
+            let x = k.fvar(X_A_FV);
+            let a = k.app(uf, x);
+            let b = k.app(u2f, x);
+            let body = eq_of(k, lg, l1, cq, a, b);
+            pi_over(k, X_A_FV, cp, body)
+        };
+        let hv = k.fvar(P_1_FV);
+        let hu = k.fvar(P_2_FV);
+        let x = k.fvar(X_A_FV);
+        let ux = k.app(uf, x);
+        let u2x = k.app(u2f, x);
+        let hux = k.app(hu, x);
+        let vfc = vf;
+        let s1 = congr_arg_across(k, lg, l1, cq, cr, ux, u2x, hux, SCR_FV, &|k2, y| {
+            k2.app(vfc, y)
+        });
+        let s2 = k.app(hv, u2x);
+        let a = k.app(vf, ux);
+        let b = k.app(vf, u2x);
+        let c = k.app(v2f, u2x);
+        let body = trans_of(k, lg, l1, cr, a, b, c, s1, s2, SCR_FV);
+        let body = lam_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, P_2_FV, hyp_u, body);
+        let t = lam_over(k, P_1_FV, hyp_v, t);
+        let t = lam_over(k, H_U2_FV, hpq, t);
+        let t = lam_over(k, H_U_FV, hpq, t);
+        let t = lam_over(k, H_V2_FV, hqr, t);
+        let t = lam_over(k, H_V_FV, hqr, t);
+        let t = lam_over(k, G_C_FV, ctx.pt, t);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    let unit_law = |k: &mut Kernel| {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cq = ctx.carrier_of(k, qv);
+        let hty = app2(k, hom, pv, qv);
+        let u = k.fvar(H_U_FV);
+        let uf = ops.val(k, lg, ctx, pv, qv, u);
+        let x = k.fvar(X_A_FV);
+        let ux = k.app(uf, x);
+        let body = refl_of(k, lg, l1, cq, ux);
+        let body = lam_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, H_U_FV, hty, body);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+    let id_l = unit_law(k);
+    let id_r = unit_law(k);
+
+    let assoc = {
+        let pv = k.fvar(G_A_FV);
+        let qv = k.fvar(G_B_FV);
+        let rv = k.fvar(G_C_FV);
+        let sv = k.fvar(G_D_FV);
+        let cp = ctx.carrier_of(k, pv);
+        let cs = ctx.carrier_of(k, sv);
+        let hrs = app2(k, hom, rv, sv);
+        let hqr = app2(k, hom, qv, rv);
+        let hpq = app2(k, hom, pv, qv);
+        let hm = k.fvar(H_W_FV);
+        let gm = k.fvar(H_V_FV);
+        let fm = k.fvar(H_U_FV);
+        let hf = ops.val(k, lg, ctx, rv, sv, hm);
+        let gf = ops.val(k, lg, ctx, qv, rv, gm);
+        let ff = ops.val(k, lg, ctx, pv, qv, fm);
+        let x = k.fvar(X_A_FV);
+        let fx = k.app(ff, x);
+        let gfx = k.app(gf, fx);
+        let hgfx = k.app(hf, gfx);
+        let body = refl_of(k, lg, l1, cs, hgfx);
+        let body = lam_over(k, X_A_FV, cp, body);
+        let t = lam_over(k, H_U_FV, hpq, body);
+        let t = lam_over(k, H_V_FV, hqr, t);
+        let t = lam_over(k, H_W_FV, hrs, t);
+        let t = lam_over(k, G_D_FV, ctx.pt, t);
+        let t = lam_over(k, G_C_FV, ctx.pt, t);
+        let t = lam_over(k, G_B_FV, ctx.pt, t);
+        lam_over(k, G_A_FV, ctx.pt, t)
+    };
+
+    let value = mk_instance(
+        k,
+        large,
+        &[
+            ctx.pt, hom, hom_equiv, hom_refl, hom_symm, hom_trans, ident, comp, comp_congr, id_l,
+            id_r, assoc,
+        ],
+    );
+    let ty = k.const_(large.ind, vec![]);
+    let name = k.name_str(ns, "ptAlg");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `CatS.natPtAlg : CatS.PtAlg` — `(Nat, Nat.zero, Nat.succ)` as one term.
+fn declare_nat_pt_alg(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    ctx: &PtCtx,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let nat = k.const_(lg.nat, vec![]);
+    let z = k.const_(lg.nat_zero, vec![]);
+    let s = k.const_(lg.nat_succ, vec![]);
+    let ib = inner_beta(k, nat);
+    let rest = sig_mk(k, lg, ctx.l0, ctx.l0, nat, ib, z, s);
+    let value = sig_mk(
+        k,
+        lg,
+        ctx.l1,
+        ctx.l0,
+        ctx.outer_alpha,
+        ctx.outer_beta,
+        nat,
+        rest,
+    );
+    let name = k.name_str(ns, "natPtAlg");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty: ctx.pt,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `CatS.natMed : forall Q, CatS.PtHom CatS.natPtAlg Q` — the mediating map,
+/// **given as data** (universal-property template part 2, "computed, not
+/// extracted"). It is `Nat.rec` at the constant motive `fun _ => Q.carrier`,
+/// which is definitionally `Nat.Peano.iter`; its two structure equations are
+/// `Eq.refl`, because both iota-reduce.
+fn declare_nat_med(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    ctx: &PtCtx,
+    ops: &PtHomOps,
+    pt_hom: NameId,
+    nat_pt_alg: NameId,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let nat = k.const_(lg.nat, vec![]);
+    let npa = k.const_(nat_pt_alg, vec![]);
+    let qv = k.fvar(Q_FV);
+    let cq = ctx.carrier_of(k, qv);
+
+    let iter = {
+        let motive = lam_over(k, N_FV, nat, cq);
+        let zq = ctx.zero_of(k, qv);
+        let minor_succ = {
+            let ih = k.fvar(IH_FV);
+            let body = ctx.succ_of(k, qv, ih);
+            let inner = lam_over(k, IH_FV, cq, body);
+            lam_over(k, N_FV, nat, inner)
+        };
+        let n = k.fvar(N_FV);
+        let rec = k.const_(lg.nat_rec, vec![ctx.l1]);
+        let body = t_app(k, rec, &[motive, zq, minor_succ, n]);
+        lam_over(k, N_FV, nat, body)
+    };
+
+    let (c1, c2) = ops.parts(k, lg, ctx, npa, qv, iter);
+    let zq = ctx.zero_of(k, qv);
+    let v1 = refl_of(k, lg, ctx.l1, cq, zq);
+    let v2 = {
+        let n = k.fvar(N_FV);
+        let iter_n = k.app(iter, n);
+        let s = ctx.succ_of(k, qv, iter_n);
+        let body = refl_of(k, lg, ctx.l1, cq, s);
+        let cnpa = ctx.carrier_of(k, npa);
+        lam_over(k, N_FV, cnpa, body)
+    };
+    let ai = k.const_(lg.and_intro, vec![]);
+    let pr = t_app(k, ai, &[c1, c2, v1, v2]);
+    let body = ops.mk(k, lg, ctx, npa, qv, iter, pr);
+    let value = lam_over(k, Q_FV, ctx.pt, body);
+
+    let hom = k.const_(pt_hom, vec![]);
+    let concl = app2(k, hom, npa, qv);
+    let ty = pi_over(k, Q_FV, ctx.pt, concl);
+
+    let name = k.name_str(ns, "natMed");
+    k.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(1),
+    })?;
+    Ok(name)
+}
+
+/// `CatS.natPtAlg_isInitial : CatS.IsInitialLarge CatS.ptAlg CatS.natPtAlg
+/// CatS.natMed` — **the reviewer's item 5**, and ADR-1610's `Nat.Peano.initial`
+/// in categorical form. Induction on `Nat`: the zero case is `Eq.symm` of the
+/// morphism's own zero law, the successor case is `congrArg` then `Eq.trans`.
+fn declare_nat_is_initial(
+    k: &mut Kernel,
+    lg: &LogicPrelude,
+    ctx: &PtCtx,
+    ops: &PtHomOps,
+    pt_hom: NameId,
+    pt_cat: NameId,
+    nat_pt_alg: NameId,
+    nat_med: NameId,
+    is_initial_large: NameId,
+    ns: NameId,
+) -> Result<NameId, KernelError> {
+    let nat = k.const_(lg.nat, vec![]);
+    let npa = k.const_(nat_pt_alg, vec![]);
+    let qv = k.fvar(Q_FV);
+    let cq = ctx.carrier_of(k, qv);
+    let hom = k.const_(pt_hom, vec![]);
+    let g_ty = app2(k, hom, npa, qv);
+    let g = k.fvar(GH_FV);
+    let gf = ops.val(k, lg, ctx, npa, qv, g);
+    let gp = ops.prop(k, lg, ctx, npa, qv, g);
+
+    let med = k.const_(nat_med, vec![]);
+    let med_q = k.app(med, qv);
+    let medf = ops.val(k, lg, ctx, npa, qv, med_q);
+
+    let (c1, c2) = ops.parts(k, lg, ctx, npa, qv, gf);
+    let al = k.const_(lg.and_left, vec![]);
+    let g_zero = t_app(k, al, &[c1, c2, gp]);
+    let ar = k.const_(lg.and_right, vec![]);
+    let g_succ = t_app(k, ar, &[c1, c2, gp]);
+
+    // motive n := Eq (carrier Q) (med n) (g n).
+    let motive = {
+        let n = k.fvar(N_FV);
+        let mn = k.app(medf, n);
+        let gn = k.app(gf, n);
+        let body = eq_of(k, lg, ctx.l1, cq, mn, gn);
+        lam_over(k, N_FV, nat, body)
+    };
+
+    let zp = ctx.zero_of(k, npa);
+    let g_zp = k.app(gf, zp);
+    let zq = ctx.zero_of(k, qv);
+    let minor_zero = symm_of(k, lg, ctx.l1, cq, g_zp, zq, g_zero);
+
+    let minor_succ = {
+        let n = k.fvar(N_FV);
+        let mn = k.app(medf, n);
+        let gn = k.app(gf, n);
+        let ih_ty = eq_of(k, lg, ctx.l1, cq, mn, gn);
+        let ih = k.fvar(IH_FV);
+        let qvc = qv;
+        let succ_c = ctx.succ;
+        let s1 = congr_arg(k, lg, ctx.l1, cq, mn, gn, ih, SCR_FV, &|k2, x| {
+            let s = k2.app(succ_c, qvc);
+            k2.app(s, x)
+        });
+        let sn = ctx.succ_of(k, npa, n);
+        let g_sn = k.app(gf, sn);
+        let q_gn = ctx.succ_of(k, qv, gn);
+        let hs = t_app(k, g_succ, &[n]);
+        let s2 = symm_of(k, lg, ctx.l1, cq, g_sn, q_gn, hs);
+        let q_mn = ctx.succ_of(k, qv, mn);
+        let body = trans_of(k, lg, ctx.l1, cq, q_mn, q_gn, g_sn, s1, s2, SCR_FV);
+        let inner = lam_over(k, IH_FV, ih_ty, body);
+        lam_over(k, N_FV, nat, inner)
+    };
+
+    let rec = k.const_(lg.nat_rec, vec![ctx.l0]);
+    let value = t_app(k, rec, &[motive, minor_zero, minor_succ]);
+    let value = lam_over(k, GH_FV, g_ty, value);
+    let value = lam_over(k, Q_FV, ctx.pt, value);
+
+    let iil = k.const_(is_initial_large, vec![]);
+    let cat = k.const_(pt_cat, vec![]);
+    let ty = t_app(k, iil, &[cat, npa, med]);
+
+    thm(k, ns, "natPtAlg_isInitial", ty, value)
 }
