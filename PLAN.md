@@ -164,6 +164,7 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
+| 2026-09-05 | `a3066cd01` | `complex/deriv.rs`: `Complex.HasDerivativeOn` on a closed disc, the transcription of `CReal.HasDerivativeOn` — carrier, `.modulus`/`.spec` projections, `InDisc`, `abs_zero`, and the constant / identity / negation / sum witnesses. New module registered from `complex.rs` with its own `DerivNames` (the `poly.rs` arrangement: no hub edit for a new declaration inside the file). All nine names registered in `every_named_complex_declaration_is_checked_and_footprint_free`, which derives coverage from the ENVIRONMENT. |
 | 2026-09-05 | lean-c4-admission | ADR-1662's recommended trusted-substitution extension, built and re-measured. `dif_pos`, `Eq.subst`, `And.left` reconstructed in `trusted_substitution`; `Nat.le_of_lt_add_one` in `nat_order_substitution`; the kernel's own quotient package exempted from the statement-isolation gate (overturning doc 294's hard rule). Each substitution carries a positive control and a negative control in which the reconstructed value is offered at a deliberately wrong type with every Rust-side guard bypassed. **Census re-run over the same 756 rows: 390 admitted before, 390 after** — the five names fall to zero as first blockers and the same 150 rows reappear behind the next declaration, exactly −150/+150. What is behind the 361 now: 217 rows behind axioms this kernel excludes, 114 behind Lean's well-founded-recursion machinery, 30 behind ordinary constructive names. `eq_self` (97, the largest blocker) is NOT constructive — its own Lean 4.30 closure reaches `propext`, re-confirming docs 240 and 295. Commits `88609630f`, `a43c7dc2d`, `afc01dbd4`; evidence `artifacts/measurements/statement-import-blocker-census-2026-09-05-after-c4.json` (carries `delta_against_baseline`) and ADR-1667. |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
 | 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
@@ -50097,6 +50098,50 @@ today. So: a third occurrence from a stale-snapshot window is still possible;
 a third occurrence of "the construction already existed when the draw ran"
 is not, unless R12 itself is bypassed or its import fails silently (which it
 cannot: an import failure is a `RefillError`, not a skip).
+
+**`Complex.HasDerivativeOn` landed; Leibniz did not, and the obstruction is not
+algebra** (`WIP`, holomorphy, 2026-09-05). The brief asked for
+`Complex.HasDerivAt` "in the ε–δ form the real shelf uses". The real shelf has
+no pointwise derivative: `CReal.HasDerivativeOn F F' a b` is Bishop's *uniform*
+differentiability on a closed interval, a one-constructor inductive in `Type`
+whose first field is a modulus `Nat → Nat` as DATA. So the lane declared the
+same shape on a CLOSED disc and no `Complex.HasDerivAt` at all — a pointwise
+complex derivative beside a uniform real one makes every future bridge a
+conversion rather than a transcription. Nine new checked, axiom-free
+declarations in `crates/axeyum-lean-kernel/src/complex/deriv.rs`:
+`Complex.abs_zero`, `Complex.InDisc`, `Complex.HasDerivativeOn` with its
+`.mk`/`.rec`/`.modulus`/`.spec`, and `hasDerivative_const` / `_id` / `_neg` /
+`_add`.
+
+The lane's measurable finding is **which half of the transcription gets
+cheaper**. The ALGEBRA does: `complex/ring.rs`'s `ring_law_proof` decides every
+error-term identity in one call, replacing ninety lines and five named helpers
+(`neg_add_distrib`, `right_distrib`, `add4_comm` ×2, three `add_congr`
+liftings) in the real sum rule, and `Complex.abs`'s nonnegativity removes the
+real closing step's two-sided `abs_le` split. The ANALYSIS does not:
+`hasDerivative_add` uses `Rat.natDivSucc_antitone` at the identical indices and
+fuses its two `1/(2e+2)` bounds through `Rat.natDivSucc_add` and
+`Rat.natDivSucc_halve` exactly as the real proof does — that bookkeeping is
+about rational indices, not about the carrier, and moving up a carrier neither
+helps nor hurts it.
+
+**Leibniz is blocked on three missing ℂ ESTIMATES, not on the ring
+identity.** The decomposition
+`E = EF·G(y) + F'(x)(y−x)(G(y) − G(x)) + F(x)·EG` is one `ring_law_proof`
+call; bounding it needs a uniform bound on `|G|`, one on `|F'|`, one on `|F|`,
+and a modulus of continuity for `G`. The real `hasDerivative_mul` takes exactly
+these as `UniformlyContinuousOn` plus two `Nat` witnesses. Neither
+`Complex.BoundedOn` nor `Complex.UniformlyContinuousOn` exists — checked against
+the full `Complex.*` inventory. ADR-1642 records both routes and recommends the
+hypothesis-carrying one, because `Complex.abs_mul` is an exact `Equiv` where
+the real side needed `abs_mul_le_of_bounds`. `polyEval`'s derivative is blocked
+behind Leibniz and nothing else; `Complex.Holomorphic` is blocked on a `Sigma`
+(not an `Exists` — `HasDerivativeOn` is in `Type 0`); Cauchy–Riemann needs
+three named bridge lemmas (`abs_ofReal`, `abs_re_le`, `abs_im_le`). Complex
+power series, `exp` on ℂ, and Cauchy's theorem on a triangle were not started.
+
+Detail and the sizing of each obstruction:
+[ADR-1642](docs/research/09-decisions/adr-1642-the-complex-derivative-is-the-real-shelfs-uniform-one-not-a-pointwise-hasderivat.md).
 
 **Closed five of doc 292's eleven declined `Int.ModEq` facts** (`DONE`,
 int-modeq-kernel, 2026-08-27). Doc 292's batched flywheel turn declined
