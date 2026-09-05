@@ -76,6 +76,42 @@ call inexpressible are stated in this lane. The comments are left in place —
 editing them in a 21k-line file shared by other lanes is a separate change —
 but disbelieve them.
 
+**Mutation table** (private snapshot, never the shared worktree; each mutant
+runs the five tests that can distinguish its outcome, `--test-threads=1`).
+
+| mutant | outcome |
+|---|---|
+| baseline | 5 passed, 0 failed |
+| M1 `crossV`'s sign convention flipped (`(y U)(x V) − (x U)(y V)`) | **killed 5** — `build_cpoint_prelude` itself fails. `lagrange_vector`'s declared conclusion names `crossV`, and the `lagrange_identity` instance proving it produces `ae − bc`; the kernel refuses the mismatch. |
+| M2 `translate T P := add T P` instead of `add P T` | **killed 5** — also the build. `isometry_translate`'s ring proof renders `Px + Tx`, and `CReal.add` is not definitionally commutative, so it is not defeq to `Tx + Px`. |
+| M3 negative control inverted (`refused.is_err()` → `is_ok()`) | **killed exactly 1**: `a_theorem_here_proves_only_its_own_statement`. The refusals it asserts are real. |
+| M4 positive control inverted (`admitted.is_ok()` → `is_err()`) | **killed exactly 1**: the same test. The harness really can admit, so the refusals are not free. |
+
+The finding worth carrying forward: **both subject mutations are caught by the
+trusted kernel, not by the test suite**, because each mutated definition is
+named in some theorem's *declared type* while its proof term is built against
+the intended one. A definition that no theorem's statement pins would be
+invisible to the kernel, and `new_definitions_have_the_intended_value` is the
+only guard that would see it. The first take of this run was pathological and
+was replaced: it ran the whole 69-test suite per mutant, and because `built()`
+memoises through a `OnceLock` that a panic leaves uninitialised, a
+build-breaking mutant made all 69 tests re-run the release prelude build — 35
+failures in 25 minutes and still going.
+
+**Dependency closures, read from the kernel** (`theorem_dependency_inventory`,
+one name per invocation):
+
+- `CPoint.cross_eq_crossV` → `CReal.Equiv.refl`. **One edge.** That is the
+  machine-checked form of "the triangle determinant IS the vector cross
+  product".
+- `CPoint.lagrange_vector` → `CPoint.lagrange_identity`. One edge.
+- `CPoint.sin_sq_add_cos_sq` → `lagrange_vector`, `norm_sq`, and 16 `CReal`
+  ring/setoid lemmas. **No trigonometric name anywhere**, which is the claim
+  the ADR rests on, measured rather than argued.
+- `CPoint.law_of_sines` → 8 edges, all `CReal` multiplication/inverse laws.
+- `CPoint.not_isometry_scale_two` → 21 edges ending at
+  `CReal.not_le_zero_neg_one`.
+
 <!-- plan-section: landed-changes -->
 
 | 2026-09-04 | angles-and-isometries | lane opened; step-0 retrieval at `declarations=3935`, `CReal.sin_sq_add_cos_sq` shown ABSENT |
