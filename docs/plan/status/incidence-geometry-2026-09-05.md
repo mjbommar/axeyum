@@ -88,6 +88,18 @@ it is also a trap any memory-heavy kernel suite will hit. The second run set
 green. A later lane adding a kernel suite here should set that variable rather
 than assume the default is safe.
 
+**A green gate line with two UNANSWERED guards inside it.** Registering
+`Geo.*` in `shape_search` needs two edits — the `index_kernel` call and the
+`coverage:` line's declared-group list — and the tool asserts they agree
+(added 2026-08-31, precisely so a `coverage:` line cannot claim a group nobody
+built). Landing only the first made every `--include-constructed` query panic.
+`check-merge-hygiene.sh` did **not** go red: it printed
+`shape_duplicates=skipped(tool-failed)|kernel_projection=not-answerable` and
+then `PASS`, because a guard with no subject cannot fail. Reading the summary
+line rather than the exit status is what surfaced it. After the fix
+(`8dce39ab1`) both guards answer: `shape_duplicates=ok|kernel_projection=ok`,
+and `--ns Geo --min 70` returns FOUND 75.
+
 **Line equality is extensional and that is the load-bearing choice.** With
 `Equiv l m := ∀ P, (on P l → on P m) ∧ (on P m → on P l)`, reflexivity,
 symmetry and transitivity are free and `onLine` is an `And.left`. The
@@ -113,4 +125,5 @@ harder: `joinExists` is the same coordinate computation over `CReal.Equiv`,
 | 2026-09-05 | `054cb3e38` | `Geo.qplane : Geo.Incidence` — the rational plane, 46 declarations: `Geo.QPoint`/`Geo.QLine0` with their projections, `eta` and `ext`; `Geo.QLine = Subtype Geo.QLine0 Geo.QLine0.Nondeg`; extensional line equality with its three laws; `Geo.QPlane.onPivot` and `onOfProp` (the one algebraic lemma, used in BOTH branches of the nonzero split); `joinProp` (proportionality with NO non-degeneracy hypothesis); `joinNondeg`, `joinExists`, `joinUnique`, `shift`/`shiftOn`/`shiftApart`, `basePoint`, `twoPoints`, `triangle`. Plus `Geo.Rat.eqOrNe` from `Rat.lt_trichotomy` — the only place the model uses ℚ's decidability. In the same commit: two new passes in `ring::rat::Problem::cancel_pairs` with three matched tests (19 ring::rat tests pass), and `geo::qplane::congr_cross`, the two-carrier congruence `structures::congr_arg` cannot express. |
 | 2026-09-05 | `8a1ad873a` | Five more tests. `the_handle_names_every_live_geo_declaration` derives the population from `Environment::iter` and requires SET EQUALITY against the handle (measured: 75 live names, vacuity floor 70); four evaluation tests, one per definition family, each with its negative half — including the join-coefficient swap the mutation suite runs, pinned at FREE VARIABLES because a concrete point pair can make two coefficients coincide. The `geo-incidence` mutation suite is registered with the brief's two mutants. |
 | 2026-09-05 | `3243d58e8` | Two curated facts — `F:geo-incidence-model-rational-plane` (the consistency witness, checked by `kernel_declaration_projection --require-declaration Geo.qplane --require-kind definition`, the only in-tree tool that can assert a DEFINITION exists) and `F:geo-distinct-lines-meet-once`. `Geo` added to `validate-facts.py`'s `KERNEL_THEOREM_RE` namespace alternation, with BOTH halves pinned in the allowlist's own control suite: `Geo.qplane` accepted, `Geometry.qplane` and bare `Geo` still rejected. |
+| 2026-09-05 | `8dce39ab1` | `shape_search` declared the `geo` group as well as indexing it. Found through `check-merge-hygiene.sh`'s summary line, not its exit status — see the lane block. |
 | 2026-09-05 | `e15cef034` | Regenerated `artifacts/autogenesis/kernel-dependency-projection-v1.json` (declarations 4291 → 4485), because `check-merge-hygiene.sh` guard 10 compares it against the live `shape_search` count with a tolerance of 100 and `Geo.*` adds 75. |
