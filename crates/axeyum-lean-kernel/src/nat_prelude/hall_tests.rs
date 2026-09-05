@@ -1014,3 +1014,304 @@ fn every_hall_counting_declaration_is_present_and_axiom_free() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// Gluing two matchings (ADR-1623, deliverable 3).
+// ---------------------------------------------------------------------------
+
+/// `Nat.Hall.glue` is admitted on its TYPE, so a wrong one type-checks: it is
+/// reduced here at concrete arguments against the wrong formula it rules out.
+///
+/// `f i = i + 10`, `g i = i + 20`, `s = {1}`. At `1` the glue must take `f`
+/// (`11`) and at `2` it must take `g` (`22`). The named wrong answers are the
+/// SWAPPED convention — `21` at `1` and `12` at `2` — which is exactly what a
+/// `glue` reading the selector the other way round would give, and which has
+/// the same type.
+#[test]
+fn glue_takes_f_on_the_set_and_g_off_it() {
+    let mut f = Fixture::new();
+    let ten = f.num(10);
+    let twenty = f.num(20);
+    let shift = |f: &mut Fixture, by: ExprId| -> ExprId {
+        let nat = f.nat_ty();
+        let i_fv = f.fresh_fvar();
+        let i = f.k.fvar(i_fv);
+        let body = f.add(i, by);
+        f.lam_fv(i_fv, nat, body)
+    };
+    let low = shift(&mut f, ten);
+    let high = shift(&mut f, twenty);
+    let s = f.set_of(&[1]);
+
+    let at = |f: &mut Fixture, i: u32| -> ExprId {
+        let lit = f.num(i);
+        let name = f.p.hall_glue;
+        f.const_app(name, &[low, high, s, lit])
+    };
+
+    let inside = at(&mut f, 1);
+    f.assert_num(inside, 11, "1 is in {1}, so the glue takes f");
+    f.assert_not_num(inside, 21, "negative control: the SWAPPED glue gives 21");
+
+    let outside = at(&mut f, 2);
+    f.assert_num(outside, 22, "2 is not in {1}, so the glue takes g");
+    f.assert_not_num(outside, 12, "negative control: the SWAPPED glue gives 12");
+
+    // The two values are distinct, which is what the injectivity branch of
+    // `isMatching_union` needs the disjoint-images hypothesis for.
+    let eleven = f.num(11);
+    assert!(
+        !f.k.def_eq(outside, eleven),
+        "negative control: the glue must not collapse two indices onto one value"
+    );
+}
+
+/// The three union membership laws are admitted, and each is refused at a
+/// statement slid by one small term: `setInter` for `setUnion`, a `false`
+/// conclusion, and `And` for `Or`. Every control is a FALSE statement, not
+/// merely one this proof term does not happen to prove.
+#[test]
+fn the_union_membership_laws_are_admitted_and_the_slid_statements_are_not() {
+    let mut f = Fixture::new();
+
+    // `memB_union`, with the intersection in place of the union.
+    let build_pointwise = |f: &mut Fixture, met: bool| -> (ExprId, ExprId) {
+        let p = f.p;
+        let mut d = f.dev();
+        let nat = d.nat_ty();
+        let fs = d.kernel().const_(p.finset, vec![]);
+        let s_fv = d.fresh_fvar();
+        let s = d.kernel().fvar(s_fv);
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let un = d.const_app(p.finset_union, &[s, t]);
+        let lhs = d.const_app(p.finset_mem_b, &[un, i]);
+        let ms = d.const_app(p.finset_mem_b, &[s]);
+        let mt = d.const_app(p.finset_mem_b, &[t]);
+        let fnc = if met {
+            d.const_app(p.set_inter, &[ms, mt])
+        } else {
+            d.const_app(p.set_union, &[ms, mt])
+        };
+        let rhs = d.apply(fnc, &[i]);
+        let body = d.bool_eq(lhs, rhs);
+        let ty = {
+            let with_i = d.pi_fv(i_fv, nat, body);
+            let with_t = d.pi_fv(t_fv, fs, with_i);
+            d.pi_fv(s_fv, fs, with_t)
+        };
+        let value = d.kernel().const_(p.finset_mem_b_union, vec![]);
+        (ty, value)
+    };
+    let (ty, value) = build_pointwise(&mut f, false);
+    assert!(f.admits(ty, value), "memB_union must be admitted");
+    let (ty, value) = build_pointwise(&mut f, true);
+    assert!(
+        !f.admits(ty, value),
+        "negative control: the union is not the INTERSECTION"
+    );
+
+    // The two intro rules, with the conclusion's polarity flipped.
+    let build_intro = |f: &mut Fixture, from_left: bool, flipped: bool| -> (ExprId, ExprId) {
+        let p = f.p;
+        let mut d = f.dev();
+        let nat = d.nat_ty();
+        let fs = d.kernel().const_(p.finset, vec![]);
+        let s_fv = d.fresh_fvar();
+        let s = d.kernel().fvar(s_fv);
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let tru = d.bool_true();
+        let fal = d.bool_false();
+        let side = if from_left { s } else { t };
+        let mem_side = d.const_app(p.finset_mem_b, &[side, i]);
+        let hyp = d.bool_eq(mem_side, tru);
+        let un = d.const_app(p.finset_union, &[s, t]);
+        let lhs = d.const_app(p.finset_mem_b, &[un, i]);
+        let concl = if flipped {
+            d.bool_eq(lhs, fal)
+        } else {
+            d.bool_eq(lhs, tru)
+        };
+        let ty = {
+            let with_h = d.arrow(hyp, concl);
+            let with_i = d.pi_fv(i_fv, nat, with_h);
+            let with_t = d.pi_fv(t_fv, fs, with_i);
+            d.pi_fv(s_fv, fs, with_t)
+        };
+        let name = if from_left {
+            p.finset_mem_b_union_left
+        } else {
+            p.finset_mem_b_union_right
+        };
+        let value = d.kernel().const_(name, vec![]);
+        (ty, value)
+    };
+    for from_left in [true, false] {
+        let (ty, value) = build_intro(&mut f, from_left, false);
+        assert!(
+            f.admits(ty, value),
+            "a member of either side is in the union (from_left={from_left})"
+        );
+        let (ty, value) = build_intro(&mut f, from_left, true);
+        assert!(
+            !f.admits(ty, value),
+            "negative control: a member of a side is NOT absent from the \
+             union (from_left={from_left})"
+        );
+    }
+
+    // `memB_union_elim`, with `And` for `Or`.
+    let build_elim = |f: &mut Fixture, conjoined: bool| -> (ExprId, ExprId) {
+        let p = f.p;
+        let mut d = f.dev();
+        let nat = d.nat_ty();
+        let fs = d.kernel().const_(p.finset, vec![]);
+        let s_fv = d.fresh_fvar();
+        let s = d.kernel().fvar(s_fv);
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let tru = d.bool_true();
+        let un = d.const_app(p.finset_union, &[s, t]);
+        let lhs = d.const_app(p.finset_mem_b, &[un, i]);
+        let hyp = d.bool_eq(lhs, tru);
+        let mem_s = d.const_app(p.finset_mem_b, &[s, i]);
+        let mem_t = d.const_app(p.finset_mem_b, &[t, i]);
+        let left = d.bool_eq(mem_s, tru);
+        let right = d.bool_eq(mem_t, tru);
+        let head = if conjoined { p.logic.and } else { p.logic.or };
+        let concl = d.const_app(head, &[left, right]);
+        let ty = {
+            let with_h = d.arrow(hyp, concl);
+            let with_i = d.pi_fv(i_fv, nat, with_h);
+            let with_t = d.pi_fv(t_fv, fs, with_i);
+            d.pi_fv(s_fv, fs, with_t)
+        };
+        let value = d.kernel().const_(p.finset_mem_b_union_elim, vec![]);
+        (ty, value)
+    };
+    let (ty, value) = build_elim(&mut f, false);
+    assert!(f.admits(ty, value), "memB_union_elim must be admitted");
+    let (ty, value) = build_elim(&mut f, true);
+    assert!(
+        !f.admits(ty, value),
+        "negative control: a member of the union need not be in BOTH sides"
+    );
+}
+
+/// `Nat.Hall.isMatching_union` is admitted, and refused with the
+/// disjoint-images hypothesis dropped.
+///
+/// The dropped hypothesis is the entire content: two matchings whose images
+/// COLLIDE do not glue into an injective function, and the hypothesis-free
+/// statement is false. That the control differs by exactly one binder is the
+/// point.
+#[test]
+fn is_matching_union_is_admitted_and_dropping_disjoint_images_is_not() {
+    let mut f = Fixture::new();
+
+    let build = |f: &mut Fixture, with_disjoint: bool| -> (ExprId, ExprId) {
+        let p = f.p;
+        let mut d = f.dev();
+        let nat = d.nat_ty();
+        let fs = d.kernel().const_(p.finset, vec![]);
+        let fam = d.arrow(nat, fs);
+        let ch = d.arrow(nat, nat);
+        let s1_fv = d.fresh_fvar();
+        let s1 = d.kernel().fvar(s1_fv);
+        let s2_fv = d.fresh_fvar();
+        let s2 = d.kernel().fvar(s2_fv);
+        let nb_fv = d.fresh_fvar();
+        let nb = d.kernel().fvar(nb_fv);
+        let f_fv = d.fresh_fvar();
+        let choice_f = d.kernel().fvar(f_fv);
+        let g_fv = d.fresh_fvar();
+        let choice_g = d.kernel().fvar(g_fv);
+
+        let h1 = d.const_app(p.hall_is_matching, &[s1, nb, choice_f]);
+        let h2 = d.const_app(p.hall_is_matching, &[s2, nb, choice_g]);
+        let hd = {
+            let a_fv = d.fresh_fvar();
+            let a = d.kernel().fvar(a_fv);
+            let b_fv = d.fresh_fvar();
+            let b = d.kernel().fvar(b_fv);
+            let tru = d.bool_true();
+            let in1 = d.const_app(p.finset_mem_b, &[s1, a]);
+            let ha = d.bool_eq(in1, tru);
+            let in2 = d.const_app(p.finset_mem_b, &[s2, b]);
+            let hb = d.bool_eq(in2, tru);
+            let fa = d.apply(choice_f, &[a]);
+            let gb = d.apply(choice_g, &[b]);
+            let clash = d.eq(fa, gb);
+            let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+            let s4 = d.arrow(clash, false_ty);
+            let s3 = d.arrow(hb, s4);
+            let s2t = d.arrow(ha, s3);
+            let inner = d.pi_fv(b_fv, nat, s2t);
+            d.pi_fv(a_fv, nat, inner)
+        };
+        let un = d.const_app(p.finset_union, &[s1, s2]);
+        let glued = d.const_app(p.hall_glue, &[choice_f, choice_g, s1]);
+        let concl = d.const_app(p.hall_is_matching, &[un, nb, glued]);
+
+        let ty = {
+            let inner = if with_disjoint {
+                d.arrow(hd, concl)
+            } else {
+                concl
+            };
+            let with_h2 = d.arrow(h2, inner);
+            let with_h1 = d.arrow(h1, with_h2);
+            let with_g = d.pi_fv(g_fv, ch, with_h1);
+            let with_f = d.pi_fv(f_fv, ch, with_g);
+            let with_nb = d.pi_fv(nb_fv, fam, with_f);
+            let with_s2 = d.pi_fv(s2_fv, fs, with_nb);
+            d.pi_fv(s1_fv, fs, with_s2)
+        };
+        let value = d.kernel().const_(p.hall_is_matching_union, vec![]);
+        (ty, value)
+    };
+    let (ty, value) = build(&mut f, true);
+    assert!(
+        f.admits(ty, value),
+        "two matchings with disjoint images glue into one"
+    );
+    let (ty, value) = build(&mut f, false);
+    assert!(
+        !f.admits(ty, value),
+        "negative control: without disjoint images the glued function is not \
+         injective, and the hypothesis-free statement is false"
+    );
+}
+
+/// Every declaration deliverable 3 added is present AND axiom-free, read from
+/// the kernel. `Environment::contains` is what makes the exit status depend on
+/// the finding — `axiom_footprint` alone returns empty for a missing name.
+#[test]
+fn every_matching_union_declaration_is_present_and_axiom_free() {
+    let f = Fixture::new();
+    let p = f.p;
+    let names = [
+        ("Nat.Finset.memB_union", p.finset_mem_b_union),
+        ("Nat.Finset.memB_union_left", p.finset_mem_b_union_left),
+        ("Nat.Finset.memB_union_right", p.finset_mem_b_union_right),
+        ("Nat.Finset.memB_union_elim", p.finset_mem_b_union_elim),
+        ("Nat.Hall.glue", p.hall_glue),
+        ("Nat.Hall.isMatching_union", p.hall_is_matching_union),
+    ];
+    for (label, name) in names {
+        assert!(f.k.environment().contains(name), "{label} must be declared");
+        let footprint = f.k.axiom_footprint(name);
+        assert!(
+            footprint.is_empty(),
+            "{label} must be axiom-free, got {} names",
+            footprint.len()
+        );
+    }
+}

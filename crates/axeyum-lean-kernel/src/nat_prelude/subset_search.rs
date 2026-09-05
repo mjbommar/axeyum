@@ -214,7 +214,7 @@ fn select_bool_false(
 /// its conclusion and `graph::bool_congr` takes a `Bool` equation, so neither
 /// applies; every bridge in this module (`bit_div_two`, `bit_mod_two`,
 /// `succ_add`, `zero_add`) is a `Nat` equation read inside a `Bool` term.
-fn nat_to_bool_congr(
+pub(super) fn nat_to_bool_congr(
     d: &mut NatDev<'_>,
     a: ExprId,
     b: ExprId,

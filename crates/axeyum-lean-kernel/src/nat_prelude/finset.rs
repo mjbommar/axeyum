@@ -3686,6 +3686,258 @@ fn declare_card_le_card_sdiff_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<
     d.declare_theorem(p.finset_card_le_card_sdiff_add, ty, value)
 }
 
+// ---------------------------------------------------------------------------
+// Union membership: the intro/elim pair `sdiff` above already has.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.memB_union : ∀ s t i,
+/// Eq Bool (memB (union s t) i) (setUnion (memB s) (memB t) i)`.
+///
+/// The same shape as [`declare_mem_b_sdiff`] and the same split, but the tail
+/// costs one more step: `union`'s stored bound is `bound s + bound t`, so
+/// placing `i` above it has to place it above EACH — `Nat.le_add_right` on the
+/// left and the same lemma plus one `add_comm` on the right.
+fn declare_mem_b_union(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let un = d.const_app(p.finset_union, &[s, t]);
+    let lhs = fs_mem(d, &p, un, i);
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let ufn = set_union(d, &p, ms, mt);
+    let rhs = d.apply(ufn, &[i]);
+    let goal = d.bool_eq(lhs, rhs);
+
+    let bs = fs_bound(d, &p, s);
+    let bt = fs_bound(d, &p, t);
+    let total = d.add(bs, bt);
+    let swapped = d.add(bt, bs);
+    let lt_ty = d.lt(i, total);
+    let ge_ty = d.le(total, i);
+    let decided = d.lemma(p.lt_or_ge, &[i, total]);
+
+    let on_lt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = d.lemma(p.finset_mem_b_of_lt, &[un, i, h]);
+        d.lam_fv(h_fv, lt_ty, body)
+    };
+    let on_ge = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let fal = d.bool_false();
+        let lhs_false = d.lemma(p.finset_mem_b_of_bound_le, &[un, i, h]);
+
+        // `bound s <= bound s + bound t <= i`.
+        let left_le = d.lemma(p.le_add_right, &[bs, bt]);
+        let s_past = d.lemma(p.le_trans, &[bs, total, i, left_le, h]);
+        let s_false = d.lemma(p.finset_mem_b_of_bound_le, &[s, i, s_past]);
+        // `bound t <= bound t + bound s = bound s + bound t <= i`.
+        let comm = d.lemma(p.add_comm, &[bs, bt]);
+        let motive = d.eq_motive(total, &|d, x| d.le(x, i));
+        let swapped_le = d.transport(total, motive, h, swapped, comm);
+        let right_le = d.lemma(p.le_add_right, &[bt, bs]);
+        let t_past = d.lemma(p.le_trans, &[bt, swapped, i, right_le, swapped_le]);
+        let t_false = d.lemma(p.finset_mem_b_of_bound_le, &[t, i, t_past]);
+
+        // `setUnion (memB s) (memB t) i = memB t i = false`.
+        let mem_s = fs_mem(d, &p, s, i);
+        let mem_t = fs_mem(d, &p, t, i);
+        let tru = d.bool_true();
+        let rhs_is_t = select_bool_false(d, &p, mem_s, tru, mem_t, s_false);
+        let rhs_false = d.bool_trans(rhs, mem_t, fal, rhs_is_t, t_false);
+        let back = d.bool_symm(rhs, fal, rhs_false);
+        let body = d.bool_trans(lhs, fal, rhs, lhs_false, back);
+        d.lam_fv(h_fv, ge_ty, body)
+    };
+    let proof = or_elim(d, &p, lt_ty, ge_ty, goal, on_lt, on_ge, decided);
+
+    let ty = {
+        let with_i = d.pi_fv(i_fv, nat, goal);
+        let with_t = d.pi_fv(t_fv, fs, with_i);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_i = d.lam_fv(i_fv, nat, proof);
+        let with_t = d.lam_fv(t_fv, fs, with_i);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_mem_b_union, ty, value)
+}
+
+/// `Nat.Finset.memB_union_left : ∀ s t i, Eq Bool (memB s i) true →
+/// Eq Bool (memB (union s t) i) true` and its `_right` twin.
+///
+/// The left one is one selector; the right one needs a decision on `memB s i`,
+/// because `setUnion` reads the LEFT side first and a member of `t` may or may
+/// not also be in `s`.
+fn declare_mem_b_union_intros(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    for from_left in [true, false] {
+        let s_fv = d.fresh_fvar();
+        let s = d.kernel().fvar(s_fv);
+        let t_fv = d.fresh_fvar();
+        let t = d.kernel().fvar(t_fv);
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+
+        let tru = d.bool_true();
+        let fal = d.bool_false();
+        let mem_s = fs_mem(d, &p, s, i);
+        let mem_t = fs_mem(d, &p, t, i);
+        let hyp_ty = if from_left {
+            d.bool_eq(mem_s, tru)
+        } else {
+            d.bool_eq(mem_t, tru)
+        };
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+
+        let un = d.const_app(p.finset_union, &[s, t]);
+        let lhs = fs_mem(d, &p, un, i);
+        let ms = fs_mem_fn(d, &p, s);
+        let mt = fs_mem_fn(d, &p, t);
+        let ufn = set_union(d, &p, ms, mt);
+        let rhs = d.apply(ufn, &[i]);
+        let goal = d.bool_eq(lhs, tru);
+
+        let e0 = d.lemma(p.finset_mem_b_union, &[s, t, i]);
+        let rhs_true = if from_left {
+            select_bool_true(d, &p, mem_s, tru, mem_t, h)
+        } else {
+            // Decide `memB s i`: `true` makes the union `true` outright,
+            // `false` makes it `memB t i`, which the hypothesis is about.
+            let s_is_true = d.bool_eq(mem_s, tru);
+            let s_is_false = d.bool_eq(mem_s, fal);
+            let decided = bool_true_or_false(d, &p, mem_s);
+            let concl = d.bool_eq(rhs, tru);
+            let on_true = {
+                let hs_fv = d.fresh_fvar();
+                let hs = d.kernel().fvar(hs_fv);
+                let body = select_bool_true(d, &p, mem_s, tru, mem_t, hs);
+                d.lam_fv(hs_fv, s_is_true, body)
+            };
+            let on_false = {
+                let hs_fv = d.fresh_fvar();
+                let hs = d.kernel().fvar(hs_fv);
+                let is_t = select_bool_false(d, &p, mem_s, tru, mem_t, hs);
+                let body = d.bool_trans(rhs, mem_t, tru, is_t, h);
+                d.lam_fv(hs_fv, s_is_false, body)
+            };
+            or_elim(
+                d, &p, s_is_true, s_is_false, concl, on_true, on_false, decided,
+            )
+        };
+        let proof = d.bool_trans(lhs, rhs, tru, e0, rhs_true);
+
+        let ty = {
+            let with_h = d.arrow(hyp_ty, goal);
+            let with_i = d.pi_fv(i_fv, nat, with_h);
+            let with_t = d.pi_fv(t_fv, fs, with_i);
+            d.pi_fv(s_fv, fs, with_t)
+        };
+        let value = {
+            let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+            let with_i = d.lam_fv(i_fv, nat, with_h);
+            let with_t = d.lam_fv(t_fv, fs, with_i);
+            d.lam_fv(s_fv, fs, with_t)
+        };
+        let name = if from_left {
+            p.finset_mem_b_union_left
+        } else {
+            p.finset_mem_b_union_right
+        };
+        d.declare_theorem(name, ty, value)?;
+    }
+    Ok(())
+}
+
+/// `Nat.Finset.memB_union_elim : ∀ s t i, Eq Bool (memB (union s t) i) true →
+/// Or (Eq Bool (memB s i) true) (Eq Bool (memB t i) true)`.
+///
+/// The half a case split over a union consumes. `Or`, not `And` and not a
+/// computed index: the two sides may overlap, and `setUnion` reads the left
+/// one first, so the decision on `memB s i` IS the disjunction.
+fn declare_mem_b_union_elim(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let tru = d.bool_true();
+    let fal = d.bool_false();
+    let un = d.const_app(p.finset_union, &[s, t]);
+    let lhs = fs_mem(d, &p, un, i);
+    let hyp_ty = d.bool_eq(lhs, tru);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let ufn = set_union(d, &p, ms, mt);
+    let rhs = d.apply(ufn, &[i]);
+    let mem_s = fs_mem(d, &p, s, i);
+    let mem_t = fs_mem(d, &p, t, i);
+    let s_true = d.bool_eq(mem_s, tru);
+    let t_true = d.bool_eq(mem_t, tru);
+    let goal = d.const_app(p.logic.or, &[s_true, t_true]);
+
+    let e0 = d.lemma(p.finset_mem_b_union, &[s, t, i]);
+    let back0 = d.bool_symm(lhs, rhs, e0);
+    let rhs_true = d.bool_trans(rhs, lhs, tru, back0, h);
+
+    let s_is_false = d.bool_eq(mem_s, fal);
+    let decided = bool_true_or_false(d, &p, mem_s);
+    let on_true = {
+        let hs_fv = d.fresh_fvar();
+        let hs = d.kernel().fvar(hs_fv);
+        let body = d.const_app(p.logic.or_inl, &[s_true, t_true, hs]);
+        d.lam_fv(hs_fv, s_true, body)
+    };
+    let on_false = {
+        let hs_fv = d.fresh_fvar();
+        let hs = d.kernel().fvar(hs_fv);
+        let is_t = select_bool_false(d, &p, mem_s, tru, mem_t, hs);
+        let back = d.bool_symm(rhs, mem_t, is_t);
+        let ht = d.bool_trans(mem_t, rhs, tru, back, rhs_true);
+        let body = d.const_app(p.logic.or_inr, &[s_true, t_true, ht]);
+        d.lam_fv(hs_fv, s_is_false, body)
+    };
+    let proof = or_elim(d, &p, s_true, s_is_false, goal, on_true, on_false, decided);
+
+    let ty = {
+        let with_h = d.arrow(hyp_ty, goal);
+        let with_i = d.pi_fv(i_fv, nat, with_h);
+        let with_t = d.pi_fv(t_fv, fs, with_i);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_i = d.lam_fv(i_fv, nat, with_h);
+        let with_t = d.lam_fv(t_fv, fs, with_i);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_mem_b_union_elim, ty, value)
+}
+
 pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_carrier(d, p)?;
     declare_operations(d, p)?;
@@ -3709,5 +3961,8 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_mem_b_sdiff_intro(d, p)?;
     declare_mem_b_sdiff_elim(d, p)?;
     declare_card_le_card_sdiff_add(d, p)?;
+    declare_mem_b_union(d, p)?;
+    declare_mem_b_union_intros(d, p)?;
+    declare_mem_b_union_elim(d, p)?;
     Ok(())
 }

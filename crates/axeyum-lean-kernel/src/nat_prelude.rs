@@ -6623,6 +6623,18 @@ pub struct NatPrelude {
     /// missing pieces.
     pub hall_condition_of_is_matching: NameId,
 
+    /// `Nat.Hall.glue f g s := fun i => bool_select_nat (memB s i) (f i) (g i)`
+    /// (ADR-1623) — the glued choice function, `f` on `s` and `g` elsewhere.
+    pub hall_glue: NameId,
+    /// `Nat.Hall.isMatching_union : ∀ s1 s2 nb f g, IsMatching s1 nb f →
+    /// IsMatching s2 nb g →
+    /// (∀ a b, memB s1 a = true → memB s2 b = true → Eq Nat (f a) (g b) →
+    ///    False) →
+    /// IsMatching (union s1 s2) nb (glue f g s1)` (ADR-1623) — two systems of
+    /// distinct representatives glue into one exactly when their IMAGES are
+    /// disjoint. ADR-1614 §4's third obstruction; the INDEX sets need not be
+    /// disjoint, because [`hall_glue`](Self::hall_glue) reads `s1` first.
+    pub hall_is_matching_union: NameId,
     /// `Nat.Hall.anyBelow_witness : ∀ f n, Eq Bool (anyBelow f n) true →
     /// Exists (fun i => And (Lt i n) (Eq Bool (f i) true))` (ADR-1623) —
     /// `anyBelow`'s ELIMINATION rule, declared missing by ADR-1608 and sized
@@ -6680,6 +6692,23 @@ pub struct NatPrelude {
     /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search).
     pub finset_card_congr_of_mem_b: NameId,
 
+    /// `Nat.Finset.memB_union : ∀ s t i,
+    /// Eq Bool (memB (union s t) i) (setUnion (memB s) (memB t) i)`
+    /// (ADR-1623).
+    pub finset_mem_b_union: NameId,
+    /// `Nat.Finset.memB_union_left : ∀ s t i, Eq Bool (memB s i) true →
+    /// Eq Bool (memB (union s t) i) true` (ADR-1623).
+    pub finset_mem_b_union_left: NameId,
+    /// `Nat.Finset.memB_union_right : ∀ s t i, Eq Bool (memB t i) true →
+    /// Eq Bool (memB (union s t) i) true` (ADR-1623) — needs a decision on
+    /// `memB s i` where its `_left` twin needs none, because `setUnion` reads
+    /// the LEFT side first.
+    pub finset_mem_b_union_right: NameId,
+    /// `Nat.Finset.memB_union_elim : ∀ s t i,
+    /// Eq Bool (memB (union s t) i) true →
+    /// Or (Eq Bool (memB s i) true) (Eq Bool (memB t i) true)` (ADR-1623) —
+    /// `Or`, not a computed index: the two sides may overlap.
+    pub finset_mem_b_union_elim: NameId,
     /// `Nat.Finset.memB_sdiff : ∀ s t i,
     /// Eq Bool (memB (sdiff s t) i) (setDiff (memB s) (memB t) i)` (ADR-1623)
     /// — the pointwise reading of a set difference. Below `bound s` it is
@@ -8070,6 +8099,12 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             hall_mem_union_over: kernel.name_str(hall, "memB_unionOver"),
             hall_condition_of_is_matching: kernel.name_str(hall, "hallCondition_of_isMatching"),
             finset_card_congr_of_mem_b: kernel.name_str(finset, "card_congr_of_memB"),
+            finset_mem_b_union: kernel.name_str(finset, "memB_union"),
+            finset_mem_b_union_left: kernel.name_str(finset, "memB_union_left"),
+            finset_mem_b_union_right: kernel.name_str(finset, "memB_union_right"),
+            finset_mem_b_union_elim: kernel.name_str(finset, "memB_union_elim"),
+            hall_glue: kernel.name_str(hall, "glue"),
+            hall_is_matching_union: kernel.name_str(hall, "isMatching_union"),
             finset_mem_b_sdiff: kernel.name_str(finset, "memB_sdiff"),
             finset_mem_b_sdiff_intro: kernel.name_str(finset, "memB_sdiff_intro"),
             finset_mem_b_sdiff_elim: kernel.name_str(finset, "memB_sdiff_elim"),

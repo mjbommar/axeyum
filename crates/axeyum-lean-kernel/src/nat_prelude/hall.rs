@@ -93,7 +93,7 @@ use super::NatPrelude;
 use super::graph::{and_b, bool_congr, not_b};
 use super::helpers::{and_left, and_right};
 use super::ops::{NatDev, NatOps, bool_true_or_false};
-use super::subset_search::{not_b_false_elim, not_b_true_elim};
+use super::subset_search::{nat_to_bool_congr, not_b_false_elim, not_b_true_elim};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -1502,6 +1502,486 @@ fn declare_card_le_union_over_sdiff(d: &mut NatDev<'_>, p: &NatPrelude) -> Resul
     d.declare_theorem(p.hall_card_le_card_union_over_sdiff_add, ty, value)
 }
 
+/// `Nat.Hall.glue f g s := fun i => bool_select_nat (memB s i) (f i) (g i)`
+/// — the glued choice function: `f`'s value on `s`, `g`'s elsewhere.
+///
+/// `s` comes LAST among the three data arguments so `glue f g s` is a
+/// `Nat -> Nat` ready to hand to `IsMatching`, which takes the choice function
+/// in its third slot. The set is read, not the index set of the union: a shared
+/// index takes `f`'s value, so no disjointness of INDEX sets is needed anywhere
+/// (only of images) -- see [`declare_is_matching_union`].
+fn declare_glue(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let ch = choice_ty(d);
+
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let cond = mem_b(d, &p, s, i);
+    let fi = d.apply(f, &[i]);
+    let gi = d.apply(g, &[i]);
+    let body = d.bool_select_nat(cond, fi, gi);
+    let value = {
+        let s4 = d.lam_fv(i_fv, nat, body);
+        let s3 = d.lam_fv(s_fv, fs, s4);
+        let s2 = d.lam_fv(g_fv, ch, s3);
+        d.lam_fv(f_fv, ch, s2)
+    };
+    let ty = {
+        let s4 = d.arrow(fs, ch);
+        let s3 = d.arrow(ch, s4);
+        d.arrow(ch, s3)
+    };
+    d.kernel().add_declaration(Declaration::Definition {
+        name: p.hall_glue,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(3),
+    })?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Gluing two matchings.
+// ---------------------------------------------------------------------------
+
+/// `heq : Eq Bool cond true ⊢ Eq Nat (bool_select_nat cond a b) a`.
+fn select_nat_true(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let true_val = d.bool_true();
+    let back = d.bool_symm(cond, true_val, heq);
+    let motive = d.bool_eq_motive(true_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, a)
+    });
+    let refl_case = d.refl(a);
+    d.bool_transport(true_val, motive, refl_case, cond, back)
+}
+
+/// `heq : Eq Bool cond false ⊢ Eq Nat (bool_select_nat cond a b) b`.
+fn select_nat_false(d: &mut NatDev<'_>, cond: ExprId, a: ExprId, b: ExprId, heq: ExprId) -> ExprId {
+    let false_val = d.bool_false();
+    let back = d.bool_symm(cond, false_val, heq);
+    let motive = d.bool_eq_motive(false_val, &|d, value| {
+        let sel = d.bool_select_nat(value, a, b);
+        d.eq(sel, b)
+    });
+    let refl_case = d.refl(b);
+    d.bool_transport(false_val, motive, refl_case, cond, back)
+}
+
+/// `False.rec` into an arbitrary `Prop` goal. `NatOps::false_true_elim` takes
+/// an impossible `Bool` equation; this one takes a bare `False`, which is what
+/// the disjoint-images hypothesis produces.
+fn false_elim(d: &mut NatDev<'_>, p: &NatPrelude, goal: ExprId, proof: ExprId) -> ExprId {
+    let zero = d.kernel().level_zero();
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let anon = d.anon_name();
+    let motive = d.kernel().lam(anon, false_ty, goal, BinderInfo::Default);
+    let rec = d.kernel().const_(p.logic.false_rec, vec![zero]);
+    d.apply(rec, &[motive, proof])
+}
+
+/// `Nat.Hall.glue f g s i` — the glued choice function, applied.
+fn glue_at(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    f: ExprId,
+    g: ExprId,
+    s: ExprId,
+    i: ExprId,
+) -> ExprId {
+    d.const_app(p.hall_glue, &[f, g, s, i])
+}
+
+/// `IsMatching`'s FIRST conjunct at `(s, nb, f)`, rebuilt so `and_left` can be
+/// offered the component type the definition names.
+fn maps_into_ty(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, nb: ExprId, f: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let hyp = mem_true(d, &p, s, i);
+    let member = d.apply(nb, &[i]);
+    let fi = d.apply(f, &[i]);
+    let concl = mem_true(d, &p, member, fi);
+    let step = d.arrow(hyp, concl);
+    d.pi_fv(i_fv, nat, step)
+}
+
+/// `IsMatching`'s SECOND conjunct at `(s, nb, f)`.
+fn inj_on_ty(d: &mut NatDev<'_>, p: &NatPrelude, s: ExprId, f: ExprId) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+    let j_fv = d.fresh_fvar();
+    let j = d.kernel().fvar(j_fv);
+    let hi = mem_true(d, &p, s, i);
+    let hj = mem_true(d, &p, s, j);
+    let fi = d.apply(f, &[i]);
+    let fj = d.apply(f, &[j]);
+    let heq = d.eq(fi, fj);
+    let concl = d.eq(i, j);
+    let s4 = d.arrow(heq, concl);
+    let s3 = d.arrow(hj, s4);
+    let s2 = d.arrow(hi, s3);
+    let inner = d.pi_fv(j_fv, nat, s2);
+    d.pi_fv(i_fv, nat, inner)
+}
+
+/// `∀ a b, memB s1 a = true → memB s2 b = true → Eq Nat (f a) (g b) → False`
+/// — the two matchings' images are disjoint. Spelled as an arrow into `False`
+/// rather than through a `Not` constant: they are the same type, and every
+/// consumer here applies it directly.
+fn disjoint_images_ty(
+    d: &mut NatDev<'_>,
+    p: &NatPrelude,
+    s1: ExprId,
+    s2: ExprId,
+    f: ExprId,
+    g: ExprId,
+) -> ExprId {
+    let p = *p;
+    let nat = d.nat_ty();
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let b_fv = d.fresh_fvar();
+    let b = d.kernel().fvar(b_fv);
+    let ha = mem_true(d, &p, s1, a);
+    let hb = mem_true(d, &p, s2, b);
+    let fa = d.apply(f, &[a]);
+    let gb = d.apply(g, &[b]);
+    let clash = d.eq(fa, gb);
+    let false_ty = d.kernel().const_(p.logic.false_, vec![]);
+    let s4 = d.arrow(clash, false_ty);
+    let s3 = d.arrow(hb, s4);
+    let s2t = d.arrow(ha, s3);
+    let inner = d.pi_fv(b_fv, nat, s2t);
+    d.pi_fv(a_fv, nat, inner)
+}
+
+/// `Nat.Hall.isMatching_union : ∀ s1 s2 nb f g,
+/// IsMatching s1 nb f → IsMatching s2 nb g →
+/// (∀ a b, memB s1 a = true → memB s2 b = true → Eq Nat (f a) (g b) → False) →
+/// IsMatching (union s1 s2) nb (glue f g s1)`.
+///
+/// **The third of ADR-1614 §4's obstructions.** Two systems of distinct
+/// representatives combine into one exactly when their IMAGES are disjoint;
+/// nothing before this related the two images at all.
+///
+/// The index sets need NOT be disjoint, which is the one place this statement
+/// is stronger than the textbook's. `glue` reads `s1` first, so a shared index
+/// takes `f`'s value and the definition is unambiguous without a side
+/// condition — and the injectivity argument still closes, because the mixed
+/// branch (`i ∈ s1`, `j ∉ s1` hence `j ∈ s2`) is refuted by the disjointness
+/// hypothesis at exactly that pair.
+///
+/// Four branches, one per pair of decisions on `memB s1 i` and `memB s1 j`.
+/// The two diagonal ones are each matching's own injectivity; the two mixed
+/// ones are `False`. `Nat.Finset.memB_union_elim` is what turns "in the union
+/// but not in `s1`" into "in `s2`".
+fn declare_is_matching_union(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+    let fam = family_ty(d, &p);
+    let ch = choice_ty(d);
+    let tru = d.bool_true();
+    let fal = d.bool_false();
+
+    let s1_fv = d.fresh_fvar();
+    let s1 = d.kernel().fvar(s1_fv);
+    let s2_fv = d.fresh_fvar();
+    let s2 = d.kernel().fvar(s2_fv);
+    let nb_fv = d.fresh_fvar();
+    let nb = d.kernel().fvar(nb_fv);
+    let f_fv = d.fresh_fvar();
+    let f = d.kernel().fvar(f_fv);
+    let g_fv = d.fresh_fvar();
+    let g = d.kernel().fvar(g_fv);
+
+    let h1_ty = d.const_app(p.hall_is_matching, &[s1, nb, f]);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = d.const_app(p.hall_is_matching, &[s2, nb, g]);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+    let hd_ty = disjoint_images_ty(d, &p, s1, s2, f, g);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+
+    // Take the two conjuncts apart.
+    let maps1_ty = maps_into_ty(d, &p, s1, nb, f);
+    let inj1_ty = inj_on_ty(d, &p, s1, f);
+    let maps1 = and_left(d, maps1_ty, inj1_ty, h1);
+    let inj1 = and_right(d, maps1_ty, inj1_ty, h1);
+    let maps2_ty = maps_into_ty(d, &p, s2, nb, g);
+    let inj2_ty = inj_on_ty(d, &p, s2, g);
+    let maps2 = and_left(d, maps2_ty, inj2_ty, h2);
+    let inj2 = and_right(d, maps2_ty, inj2_ty, h2);
+
+    let un = d.const_app(p.finset_union, &[s1, s2]);
+    let glued = d.const_app(p.hall_glue, &[f, g, s1]);
+
+    // --- the glued function lands in the right member ---------------------
+    let maps_pf = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hu_fv = d.fresh_fvar();
+        let hu_ty = mem_true(d, &p, un, i);
+        let hu = d.kernel().fvar(hu_fv);
+
+        let member = d.apply(nb, &[i]);
+        let sel = glue_at(d, &p, f, g, s1, i);
+        let goal = mem_true(d, &p, member, sel);
+
+        let mem_s1 = mem_b(d, &p, s1, i);
+        let s1_true = d.bool_eq(mem_s1, tru);
+        let s1_false = d.bool_eq(mem_s1, fal);
+        let decided = bool_true_or_false(d, &p, mem_s1);
+
+        let on_in = {
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let fi = d.apply(f, &[i]);
+            let gi = d.apply(g, &[i]);
+            let is_f = select_nat_true(d, mem_s1, fi, gi, hs);
+            let lands = d.apply(maps1, &[i, hs]);
+            let bridged = nat_to_bool_congr(d, sel, fi, is_f, &|d, x| {
+                let m = d.apply(nb, &[i]);
+                mem_b(d, &p, m, x)
+            });
+            let at_sel = mem_b(d, &p, member, sel);
+            let at_fi = mem_b(d, &p, member, fi);
+            let body = d.bool_trans(at_sel, at_fi, tru, bridged, lands);
+            d.lam_fv(hs_fv, s1_true, body)
+        };
+        let on_out = {
+            let hs_fv = d.fresh_fvar();
+            let hs = d.kernel().fvar(hs_fv);
+            let split = d.lemma(p.finset_mem_b_union_elim, &[s1, s2, i, hu]);
+            let left_ty = mem_true(d, &p, s1, i);
+            let right_ty = mem_true(d, &p, s2, i);
+            let refute = {
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let back = d.bool_symm(mem_s1, fal, hs);
+                let impossible = d.bool_trans(fal, mem_s1, tru, back, hl);
+                let absurd = d.false_true_elim(goal, impossible);
+                d.lam_fv(hl_fv, left_ty, absurd)
+            };
+            let use_g = {
+                let hr_fv = d.fresh_fvar();
+                let hr = d.kernel().fvar(hr_fv);
+                let fi = d.apply(f, &[i]);
+                let gi = d.apply(g, &[i]);
+                let is_g = select_nat_false(d, mem_s1, fi, gi, hs);
+                let lands = d.apply(maps2, &[i, hr]);
+                let bridged = nat_to_bool_congr(d, sel, gi, is_g, &|d, x| {
+                    let m = d.apply(nb, &[i]);
+                    mem_b(d, &p, m, x)
+                });
+                let at_sel = mem_b(d, &p, member, sel);
+                let at_gi = mem_b(d, &p, member, gi);
+                let body = d.bool_trans(at_sel, at_gi, tru, bridged, lands);
+                d.lam_fv(hr_fv, right_ty, body)
+            };
+            let body = or_elim(d, &p, left_ty, right_ty, goal, refute, use_g, split);
+            d.lam_fv(hs_fv, s1_false, body)
+        };
+        let body = or_elim(d, &p, s1_true, s1_false, goal, on_in, on_out, decided);
+        let with_hu = d.lam_fv(hu_fv, hu_ty, body);
+        d.lam_fv(i_fv, nat, with_hu)
+    };
+
+    // --- the glued function is injective on the union ---------------------
+    let inj_pf = {
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let j_fv = d.fresh_fvar();
+        let j = d.kernel().fvar(j_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = mem_true(d, &p, un, i);
+        let hi = d.kernel().fvar(hi_fv);
+        let hj_fv = d.fresh_fvar();
+        let hj_ty = mem_true(d, &p, un, j);
+        let hj = d.kernel().fvar(hj_fv);
+
+        let sel_i = glue_at(d, &p, f, g, s1, i);
+        let sel_j = glue_at(d, &p, f, g, s1, j);
+        let heq_ty = d.eq(sel_i, sel_j);
+        let heq_fv = d.fresh_fvar();
+        let heq = d.kernel().fvar(heq_fv);
+        let goal = d.eq(i, j);
+
+        let fi = d.apply(f, &[i]);
+        let gi = d.apply(g, &[i]);
+        let fj = d.apply(f, &[j]);
+        let gj = d.apply(g, &[j]);
+        let mem_i = mem_b(d, &p, s1, i);
+        let mem_j = mem_b(d, &p, s1, j);
+        let i_true = d.bool_eq(mem_i, tru);
+        let i_false = d.bool_eq(mem_i, fal);
+        let j_true = d.bool_eq(mem_j, tru);
+        let j_false = d.bool_eq(mem_j, fal);
+        let decided = bool_true_or_false(d, &p, mem_i);
+
+        // In the `j ∉ s1` branch, `j ∈ union` gives `j ∈ s2`.
+        let in_s2 = |d: &mut NatDev<'_>,
+                     which: ExprId,
+                     hyp: ExprId,
+                     off: ExprId,
+                     mem_off: ExprId,
+                     target: ExprId,
+                     k: ExprId|
+         -> ExprId {
+            let split = d.lemma(p.finset_mem_b_union_elim, &[s1, s2, k, hyp]);
+            let left_ty = mem_true(d, &p, s1, k);
+            let right_ty = mem_true(d, &p, s2, k);
+            let refute = {
+                let hl_fv = d.fresh_fvar();
+                let hl = d.kernel().fvar(hl_fv);
+                let back = d.bool_symm(mem_off, fal, off);
+                let impossible = d.bool_trans(fal, mem_off, tru, back, hl);
+                let absurd = d.false_true_elim(target, impossible);
+                d.lam_fv(hl_fv, left_ty, absurd)
+            };
+            or_elim(d, &p, left_ty, right_ty, target, refute, which, split)
+        };
+
+        let on_i_true = {
+            let hsi_fv = d.fresh_fvar();
+            let hsi = d.kernel().fvar(hsi_fv);
+            let e_i = select_nat_true(d, mem_i, fi, gi, hsi);
+
+            let decided_j = bool_true_or_false(d, &p, mem_j);
+            let both_in = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_true(d, mem_j, fj, gj, hsj);
+                let back_i = d.symm(sel_i, fi, e_i);
+                let (_, values) = d.chain(fi, &[(sel_i, back_i), (sel_j, heq), (fj, e_j)]);
+                let body = d.apply(inj1, &[i, j, hsi, hsj, values]);
+                d.lam_fv(hsj_fv, j_true, body)
+            };
+            let mixed = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_false(d, mem_j, fj, gj, hsj);
+                let back_i = d.symm(sel_i, fi, e_i);
+                let (_, values) = d.chain(fi, &[(sel_i, back_i), (sel_j, heq), (gj, e_j)]);
+                let use_s2 = {
+                    let hr_fv = d.fresh_fvar();
+                    let hr = d.kernel().fvar(hr_fv);
+                    let clash = d.apply(hd, &[i, j, hsi, hr, values]);
+                    let absurd = false_elim(d, &p, goal, clash);
+                    let right_ty = mem_true(d, &p, s2, j);
+                    d.lam_fv(hr_fv, right_ty, absurd)
+                };
+                let body = in_s2(d, use_s2, hj, hsj, mem_j, goal, j);
+                d.lam_fv(hsj_fv, j_false, body)
+            };
+            let body = or_elim(d, &p, j_true, j_false, goal, both_in, mixed, decided_j);
+            d.lam_fv(hsi_fv, i_true, body)
+        };
+        let on_i_false = {
+            let hsi_fv = d.fresh_fvar();
+            let hsi = d.kernel().fvar(hsi_fv);
+            let e_i = select_nat_false(d, mem_i, fi, gi, hsi);
+
+            let decided_j = bool_true_or_false(d, &p, mem_j);
+            let mixed = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_true(d, mem_j, fj, gj, hsj);
+                let back_j = d.symm(sel_j, fj, e_j);
+                // `f j = sel_j = sel_i = g i`, the disjointness clash at (j, i).
+                let back_heq = d.symm(sel_i, sel_j, heq);
+                let (_, values) = d.chain(fj, &[(sel_j, back_j), (sel_i, back_heq), (gi, e_i)]);
+                let use_s2 = {
+                    let hr_fv = d.fresh_fvar();
+                    let hr = d.kernel().fvar(hr_fv);
+                    let clash = d.apply(hd, &[j, i, hsj, hr, values]);
+                    let absurd = false_elim(d, &p, goal, clash);
+                    let right_ty = mem_true(d, &p, s2, i);
+                    d.lam_fv(hr_fv, right_ty, absurd)
+                };
+                let body = in_s2(d, use_s2, hi, hsi, mem_i, goal, i);
+                d.lam_fv(hsj_fv, j_true, body)
+            };
+            let both_out = {
+                let hsj_fv = d.fresh_fvar();
+                let hsj = d.kernel().fvar(hsj_fv);
+                let e_j = select_nat_false(d, mem_j, fj, gj, hsj);
+                let back_i = d.symm(sel_i, gi, e_i);
+                let (_, values) = d.chain(gi, &[(sel_i, back_i), (sel_j, heq), (gj, e_j)]);
+                // Both indices are in `s2`, through the union elimination.
+                let inner = {
+                    let hri_fv = d.fresh_fvar();
+                    let hri = d.kernel().fvar(hri_fv);
+                    let use_j = {
+                        let hrj_fv = d.fresh_fvar();
+                        let hrj = d.kernel().fvar(hrj_fv);
+                        let body = d.apply(inj2, &[i, j, hri, hrj, values]);
+                        let right_j = mem_true(d, &p, s2, j);
+                        d.lam_fv(hrj_fv, right_j, body)
+                    };
+                    let body = in_s2(d, use_j, hj, hsj, mem_j, goal, j);
+                    let right_i = mem_true(d, &p, s2, i);
+                    d.lam_fv(hri_fv, right_i, body)
+                };
+                let body = in_s2(d, inner, hi, hsi, mem_i, goal, i);
+                d.lam_fv(hsj_fv, j_false, body)
+            };
+            let body = or_elim(d, &p, j_true, j_false, goal, mixed, both_out, decided_j);
+            d.lam_fv(hsi_fv, i_false, body)
+        };
+        let body = or_elim(d, &p, i_true, i_false, goal, on_i_true, on_i_false, decided);
+
+        let with_heq = d.lam_fv(heq_fv, heq_ty, body);
+        let with_hj = d.lam_fv(hj_fv, hj_ty, with_heq);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, with_hj);
+        let with_j = d.lam_fv(j_fv, nat, with_hi);
+        d.lam_fv(i_fv, nat, with_j)
+    };
+
+    let maps_goal = maps_into_ty(d, &p, un, nb, glued);
+    let inj_goal = inj_on_ty(d, &p, un, glued);
+    let proof = d.const_app(p.logic.and_intro, &[maps_goal, inj_goal, maps_pf, inj_pf]);
+
+    let concl = d.const_app(p.hall_is_matching, &[un, nb, glued]);
+    let ty = {
+        let with_hd = d.arrow(hd_ty, concl);
+        let with_h2 = d.arrow(h2_ty, with_hd);
+        let with_h1 = d.arrow(h1_ty, with_h2);
+        let with_g = d.pi_fv(g_fv, ch, with_h1);
+        let with_f = d.pi_fv(f_fv, ch, with_g);
+        let with_nb = d.pi_fv(nb_fv, fam, with_f);
+        let with_s2 = d.pi_fv(s2_fv, fs, with_nb);
+        d.pi_fv(s1_fv, fs, with_s2)
+    };
+    let value = {
+        let with_hd = d.lam_fv(hd_fv, hd_ty, proof);
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, with_hd);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_g = d.lam_fv(g_fv, ch, with_h1);
+        let with_f = d.lam_fv(f_fv, ch, with_g);
+        let with_nb = d.lam_fv(nb_fv, fam, with_f);
+        let with_s2 = d.lam_fv(s2_fv, fs, with_nb);
+        d.lam_fv(s1_fv, fs, with_s2)
+    };
+    d.declare_theorem(p.hall_is_matching_union, ty, value)
+}
+
 pub(super) fn declare_hall_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_definitions(d, p)?;
     declare_any_below_intro(d, p)?;
@@ -1514,5 +1994,7 @@ pub(super) fn declare_hall_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
     declare_mem_union_over_sdiff(d, p)?;
     declare_card_union_over_sdiff(d, p)?;
     declare_card_le_union_over_sdiff(d, p)?;
+    declare_glue(d, p)?;
+    declare_is_matching_union(d, p)?;
     Ok(())
 }
