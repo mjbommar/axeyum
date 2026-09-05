@@ -614,9 +614,6 @@ impl TruncationIdentity {
                 if !series.coefficients()[0].is_zero() {
                     return Err(CertificateError::DegenerateTerm { degree: 0 });
                 }
-                if !reversion.coefficients()[0].is_zero() {
-                    return Err(CertificateError::DegenerateTerm { degree: 0 });
-                }
                 if *order >= 1 && series.coefficients()[1].is_zero() {
                     return Err(CertificateError::DegenerateTerm { degree: 1 });
                 }
@@ -949,4 +946,581 @@ pub fn rational_generating_function(
     };
     result.verify().ok()?;
     Some(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        CertificateError, FormalPowerSeries, RecurrenceCertificate, TruncationIdentity,
+        guess_linear_recurrence, rational_generating_function,
+    };
+    use crate::CasExpr;
+    use num_bigint::BigInt;
+    use num_rational::BigRational;
+    use num_traits::Zero;
+
+    fn r(value: i64) -> BigRational {
+        BigRational::from_integer(BigInt::from(value))
+    }
+
+    fn q(numerator: i64, denominator: i64) -> BigRational {
+        BigRational::new(BigInt::from(numerator), BigInt::from(denominator))
+    }
+
+    fn rats(values: &[i64]) -> Vec<BigRational> {
+        values.iter().map(|v| r(*v)).collect()
+    }
+
+    // ---------------------------------------------------------------- ring ops
+
+    #[test]
+    fn add_sub_neg_scale_truncate_to_the_lower_order() {
+        let a = FormalPowerSeries::from_coefficients(&rats(&[1, 2, 3, 4]), 3);
+        let b = FormalPowerSeries::from_coefficients(&rats(&[5, 5]), 1);
+        assert_eq!(a.add(&b).coefficients(), rats(&[6, 7]).as_slice());
+        assert_eq!(a.sub(&b).coefficients(), rats(&[-4, -3]).as_slice());
+        assert_eq!(a.neg().coefficients(), rats(&[-1, -2, -3, -4]).as_slice());
+        assert_eq!(
+            a.scale(&r(2)).coefficients(),
+            rats(&[2, 4, 6, 8]).as_slice()
+        );
+        assert_eq!(a.add(&b).order(), 1);
+    }
+
+    #[test]
+    fn mul_of_one_plus_x_with_one_minus_x_is_one_minus_x_squared() {
+        let a = FormalPowerSeries::from_coefficients(&rats(&[1, 1]), 4);
+        let b = FormalPowerSeries::from_coefficients(&rats(&[1, -1]), 4);
+        assert_eq!(a.mul(&b).coefficients(), rats(&[1, 0, -1, 0, 0]).as_slice());
+    }
+
+    #[test]
+    fn shift_up_truncates_and_shift_down_requires_divisibility() {
+        let a = FormalPowerSeries::from_coefficients(&rats(&[1, 2, 3]), 2);
+        assert_eq!(
+            a.mul_by_x_pow(1).coefficients(),
+            rats(&[0, 1, 2]).as_slice()
+        );
+        assert!(a.div_by_x_pow(1).is_none(), "constant term is nonzero");
+        let shifted = a.mul_by_x_pow(2);
+        let back = shifted.div_by_x_pow(2).expect("divisible by x^2");
+        assert_eq!(back.coefficients(), rats(&[1]).as_slice());
+        assert_eq!(back.order(), 0);
+        assert!(a.div_by_x_pow(9).is_none(), "k past the truncation order");
+    }
+
+    #[test]
+    fn derivative_of_exp_series_is_exp_series_and_integral_inverts_it() {
+        let exp =
+            FormalPowerSeries::from_coefficients(&[r(1), r(1), q(1, 2), q(1, 6), q(1, 24)], 4);
+        let derivative = exp.derivative();
+        assert_eq!(derivative.order(), 3);
+        assert_eq!(
+            derivative.coefficients(),
+            [r(1), r(1), q(1, 2), q(1, 6)].as_slice()
+        );
+        // The integral recovers everything but the constant of integration.
+        let integral = derivative.integral();
+        assert_eq!(integral.order(), 4);
+        assert_eq!(
+            integral.coefficients(),
+            [r(0), r(1), q(1, 2), q(1, 6), q(1, 24)].as_slice()
+        );
+        let restored = integral.add(&FormalPowerSeries::one(4));
+        assert_eq!(restored.coefficients(), exp.coefficients());
+    }
+
+    #[test]
+    fn coefficient_past_the_truncation_is_none_not_zero() {
+        let a = FormalPowerSeries::from_coefficients(&rats(&[1, 2]), 2);
+        assert_eq!(a.coefficient(2), Some(&r(0)));
+        assert_eq!(a.coefficient(3), None);
+    }
+
+    // -------------------------------------------------------- inverse (cert)
+
+    #[test]
+    fn inverse_of_one_minus_x_gives_all_ones() {
+        let one_minus_x = FormalPowerSeries::from_coefficients(&rats(&[1, -1]), 8);
+        let (inverse, certificate) = one_minus_x.inverse().expect("f(0) = 1 is invertible");
+        assert_eq!(inverse.coefficients(), rats(&[1; 9]).as_slice());
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn inverse_declines_when_the_constant_term_vanishes() {
+        let x = FormalPowerSeries::identity(4);
+        assert!(x.inverse().is_none());
+    }
+
+    // ------------------------------------------------- rational generating fns
+
+    #[test]
+    fn fibonacci_from_one_over_one_minus_x_minus_x_squared_is_1_1_2_3_5_8_13_21_34_55_89() {
+        let (expansion, certificate) =
+            FormalPowerSeries::from_rational_function(&rats(&[1]), &rats(&[1, -1, -1]), 10)
+                .expect("q(0) = 1");
+        assert_eq!(
+            expansion.coefficients(),
+            rats(&[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]).as_slice()
+        );
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn rational_function_expansion_declines_when_the_denominator_vanishes_at_zero() {
+        assert!(
+            FormalPowerSeries::from_rational_function(&rats(&[1]), &rats(&[0, 1]), 5).is_none()
+        );
+    }
+
+    // ------------------------------------------------------------- recurrences
+
+    #[test]
+    fn from_recurrence_reproduces_fibonacci_1_1_2_3_5_8_and_certifies_every_term() {
+        let recurrence = RecurrenceCertificate::new(rats(&[1, 1]), rats(&[1, 1, 2]));
+        let (series, certificate) =
+            FormalPowerSeries::from_recurrence(&recurrence, &rats(&[1, 1]), 10)
+                .expect("two initial terms for an order-2 recurrence");
+        assert_eq!(
+            series.coefficients(),
+            rats(&[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]).as_slice()
+        );
+        assert_eq!(certificate.verify(), Ok(()));
+        assert_eq!(certificate.equations_checked(), 9);
+    }
+
+    #[test]
+    fn from_recurrence_declines_when_the_order_leaves_no_equation_to_check() {
+        let recurrence = RecurrenceCertificate::new(rats(&[1, 1]), rats(&[1, 1, 2]));
+        assert!(FormalPowerSeries::from_recurrence(&recurrence, &rats(&[1, 1]), 1).is_none());
+        assert!(FormalPowerSeries::from_recurrence(&recurrence, &rats(&[1]), 6).is_none());
+    }
+
+    #[test]
+    fn berlekamp_massey_recovers_fibonacci_as_order_2_with_coefficients_1_1() {
+        let terms = rats(&[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]);
+        let guess = guess_linear_recurrence(&terms).expect("fibonacci is linear of order 2");
+        assert_eq!(guess.order, 2);
+        assert_eq!(guess.coefficients, rats(&[1, 1]));
+        assert_eq!(guess.terms_fitted, 12);
+        assert_eq!(guess.verify(), Ok(()));
+    }
+
+    #[test]
+    fn berlekamp_massey_recovers_lucas_2_1_3_4_7_11_as_order_2_with_coefficients_1_1() {
+        let terms = rats(&[2, 1, 3, 4, 7, 11, 18, 29, 47, 76, 123, 199]);
+        let guess = guess_linear_recurrence(&terms).expect("lucas is linear of order 2");
+        assert_eq!(guess.order, 2);
+        assert_eq!(guess.coefficients, rats(&[1, 1]));
+        assert_eq!(guess.verify(), Ok(()));
+    }
+
+    #[test]
+    fn berlekamp_massey_recovers_padovan_as_order_3_with_coefficients_0_1_1() {
+        let terms = rats(&[1, 1, 1, 2, 2, 3, 4, 5, 7, 9, 12, 16, 21, 28, 37]);
+        let guess = guess_linear_recurrence(&terms).expect("padovan is linear of order 3");
+        assert_eq!(guess.order, 3);
+        assert_eq!(guess.coefficients, rats(&[0, 1, 1]));
+        assert_eq!(guess.verify(), Ok(()));
+    }
+
+    #[test]
+    fn berlekamp_massey_declines_on_the_primes_which_satisfy_no_short_recurrence() {
+        let primes = rats(&[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41]);
+        assert_eq!(guess_linear_recurrence(&primes), None);
+    }
+
+    #[test]
+    fn berlekamp_massey_declines_on_the_empty_sequence() {
+        assert_eq!(guess_linear_recurrence(&[]), None);
+    }
+
+    #[test]
+    fn rational_generating_function_of_fibonacci_is_one_over_one_minus_x_minus_x_squared() {
+        let terms = rats(&[1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]);
+        let guess = guess_linear_recurrence(&terms).expect("order 2");
+        let generating = rational_generating_function(&guess, &terms).expect("expansion agrees");
+        assert_eq!(generating.numerator, rats(&[1, 0]));
+        assert_eq!(generating.denominator, rats(&[1, -1, -1]));
+        assert_eq!(generating.verify(), Ok(()));
+    }
+
+    #[test]
+    fn rational_generating_function_of_padovan_expands_back_to_every_term() {
+        let terms = rats(&[1, 1, 1, 2, 2, 3, 4, 5, 7, 9, 12, 16, 21, 28, 37]);
+        let guess = guess_linear_recurrence(&terms).expect("order 3");
+        let generating = rational_generating_function(&guess, &terms).expect("expansion agrees");
+        assert_eq!(generating.denominator, rats(&[1, 0, -1, -1]));
+        assert_eq!(generating.verify(), Ok(()));
+        let (expansion, certificate) = FormalPowerSeries::from_rational_function(
+            &generating.numerator,
+            &generating.denominator,
+            terms.len() - 1,
+        )
+        .expect("q(0) = 1");
+        assert_eq!(certificate.verify(), Ok(()));
+        assert_eq!(expansion.coefficients(), terms.as_slice());
+    }
+
+    #[test]
+    fn rational_generating_function_refuses_an_unverifiable_recurrence() {
+        let forged = RecurrenceCertificate::new(rats(&[1, 1]), rats(&[1, 1, 5, 9]));
+        assert_eq!(
+            rational_generating_function(&forged, &rats(&[1, 1, 5, 9])),
+            None
+        );
+    }
+
+    // ---------------------------------------------------- reversion / Catalan
+
+    #[test]
+    fn catalan_via_reversion_of_x_minus_x_squared_is_1_1_2_5_14_42_132_429() {
+        let f = FormalPowerSeries::from_coefficients(&rats(&[0, 1, -1]), 8);
+        let (g, certificate) = f.reversion().expect("f(0) = 0 and f'(0) = 1");
+        assert_eq!(
+            g.coefficients(),
+            rats(&[0, 1, 1, 2, 5, 14, 42, 132, 429]).as_slice()
+        );
+        assert_eq!(certificate.verify(), Ok(()));
+    }
+
+    #[test]
+    fn catalan_reversion_verified_by_composing_back_to_x() {
+        let f = FormalPowerSeries::from_coefficients(&rats(&[0, 1, -1]), 8);
+        let (g, _) = f.reversion().expect("revertible");
+        let composed = f.compose(&g).expect("g(0) = 0");
+        let mut expected = vec![BigRational::zero(); 9];
+        expected[1] = r(1);
+        assert_eq!(composed.coefficients(), expected.as_slice());
+    }
+
+    #[test]
+    fn reversion_declines_without_a_vanishing_constant_or_a_nonzero_linear_term() {
+        let constant_nonzero = FormalPowerSeries::from_coefficients(&rats(&[1, 1]), 4);
+        assert!(constant_nonzero.reversion().is_none());
+        let linear_zero = FormalPowerSeries::from_coefficients(&rats(&[0, 0, 1]), 4);
+        assert!(linear_zero.reversion().is_none());
+    }
+
+    // -------------------------------------------- reuse of the CasExpr engine
+
+    #[test]
+    fn exp_coefficients_from_the_cas_expansion_are_one_over_n_factorial() {
+        let exp = CasExpr::var("x").exp();
+        let series =
+            FormalPowerSeries::from_cas_expr(&exp, "x", 8).expect("exp is in the series fragment");
+        assert_eq!(
+            series.coefficients(),
+            [
+                r(1),
+                r(1),
+                q(1, 2),
+                q(1, 6),
+                q(1, 24),
+                q(1, 120),
+                q(1, 720),
+                q(1, 5040),
+                q(1, 40320),
+            ]
+            .as_slice()
+        );
+    }
+
+    #[test]
+    fn compose_exp_with_x_squared_matches_the_direct_expansion_of_exp_x_squared() {
+        let exp = FormalPowerSeries::from_cas_expr(&CasExpr::var("x").exp(), "x", 8)
+            .expect("exp expands");
+        let x_squared = FormalPowerSeries::from_coefficients(&rats(&[0, 0, 1]), 8);
+        let composed = exp
+            .compose(&x_squared)
+            .expect("inner constant term is zero");
+        let direct = FormalPowerSeries::from_cas_expr(
+            &(CasExpr::var("x") * CasExpr::var("x")).exp(),
+            "x",
+            8,
+        )
+        .expect("exp(x^2) expands");
+        assert_eq!(composed.coefficients(), direct.coefficients());
+        assert_eq!(
+            composed.coefficients(),
+            [
+                r(1),
+                r(0),
+                r(1),
+                r(0),
+                q(1, 2),
+                r(0),
+                q(1, 6),
+                r(0),
+                q(1, 24),
+            ]
+            .as_slice()
+        );
+    }
+
+    #[test]
+    fn compose_declines_when_the_inner_series_has_a_nonzero_constant_term() {
+        let outer = FormalPowerSeries::from_coefficients(&rats(&[1, 1, 1]), 2);
+        let inner = FormalPowerSeries::from_coefficients(&rats(&[1, 1]), 2);
+        assert!(outer.compose(&inner).is_none());
+    }
+
+    // ------------------------------------------------------- forged evidence
+    //
+    // Each of these breaks exactly one thing and names the guard that catches
+    // it, so a deleted guard shows up as a single dead test.
+
+    #[test]
+    fn forged_inverse_with_a_wrong_coefficient_is_refused_as_identity_failure() {
+        let one_minus_x = FormalPowerSeries::from_coefficients(&rats(&[1, -1]), 6);
+        let (inverse, _) = one_minus_x.inverse().expect("invertible");
+        let mut forged = inverse.coefficients().to_vec();
+        forged[3] = r(7);
+        let certificate = TruncationIdentity::Inverse {
+            series: one_minus_x,
+            inverse: FormalPowerSeries::from_coefficients(&forged, 6),
+            order: 6,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::IdentityFailed { degree: 3 })
+        );
+    }
+
+    #[test]
+    fn forged_inverse_claiming_a_lower_truncation_order_is_refused_as_order_mismatch() {
+        // The coefficients are correct; only the declared order is wrong, so
+        // nothing but the order guard can catch this.
+        let one_minus_x = FormalPowerSeries::from_coefficients(&rats(&[1, -1]), 6);
+        let (inverse, _) = one_minus_x.inverse().expect("invertible");
+        let certificate = TruncationIdentity::Inverse {
+            series: one_minus_x,
+            inverse,
+            order: 5,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 5,
+                found: 6
+            })
+        );
+    }
+
+    #[test]
+    fn forged_inverse_of_a_series_vanishing_at_zero_is_refused_as_a_degenerate_term() {
+        let certificate = TruncationIdentity::Inverse {
+            series: FormalPowerSeries::from_coefficients(&rats(&[0, 1]), 3),
+            inverse: FormalPowerSeries::from_coefficients(&rats(&[0, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DegenerateTerm { degree: 0 })
+        );
+    }
+
+    #[test]
+    fn forged_reversion_of_a_series_not_vanishing_at_zero_is_refused_as_a_degenerate_term() {
+        let certificate = TruncationIdentity::Reversion {
+            series: FormalPowerSeries::from_coefficients(&rats(&[1, 1]), 3),
+            reversion: FormalPowerSeries::from_coefficients(&rats(&[0, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DegenerateTerm { degree: 0 })
+        );
+    }
+
+    #[test]
+    fn forged_reversion_of_a_series_with_no_linear_term_is_refused_at_degree_one() {
+        let certificate = TruncationIdentity::Reversion {
+            series: FormalPowerSeries::from_coefficients(&rats(&[0, 0, 1]), 3),
+            reversion: FormalPowerSeries::from_coefficients(&rats(&[0, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DegenerateTerm { degree: 1 })
+        );
+    }
+
+    #[test]
+    fn forged_reversion_with_a_wrong_coefficient_is_refused_as_identity_failure() {
+        let f = FormalPowerSeries::from_coefficients(&rats(&[0, 1, -1]), 6);
+        let (g, _) = f.reversion().expect("revertible");
+        let mut forged = g.coefficients().to_vec();
+        forged[4] = r(6); // the true Catalan coefficient here is 5
+        let certificate = TruncationIdentity::Reversion {
+            series: f,
+            reversion: FormalPowerSeries::from_coefficients(&forged, 6),
+            order: 6,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::IdentityFailed { degree: 4 })
+        );
+    }
+
+    #[test]
+    fn forged_rational_expansion_with_a_numerator_past_the_truncation_is_refused() {
+        // q·s ≡ p holds over every degree the check can see; the only defect is
+        // that the numerator carries data the check never examines.
+        let certificate = TruncationIdentity::RationalExpansion {
+            numerator: rats(&[1, 0, 0, 0, 0]),
+            denominator: rats(&[1, -1]),
+            expansion: FormalPowerSeries::from_coefficients(&rats(&[1, 1, 1, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DataPastTruncation {
+                supplied: 5,
+                order: 3
+            })
+        );
+    }
+
+    #[test]
+    fn forged_rational_expansion_with_a_vanishing_denominator_at_zero_is_refused() {
+        // x·(1+x+x²+x³) ≡ x+x²+x³ mod x⁴, so the identity itself holds; only
+        // the q(0) ≠ 0 side condition fails.
+        let certificate = TruncationIdentity::RationalExpansion {
+            numerator: rats(&[0, 1, 1, 1]),
+            denominator: rats(&[0, 1]),
+            expansion: FormalPowerSeries::from_coefficients(&rats(&[1, 1, 1, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::DegenerateTerm { degree: 0 })
+        );
+    }
+
+    #[test]
+    fn forged_rational_expansion_with_an_empty_denominator_is_refused() {
+        let certificate = TruncationIdentity::RationalExpansion {
+            numerator: rats(&[1]),
+            denominator: Vec::new(),
+            expansion: FormalPowerSeries::from_coefficients(&rats(&[1]), 0),
+            order: 0,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::EmptyDenominator)
+        );
+    }
+
+    #[test]
+    fn forged_rational_expansion_with_a_wrong_coefficient_is_refused_as_identity_failure() {
+        let certificate = TruncationIdentity::RationalExpansion {
+            numerator: rats(&[1, 0, 0, 0]),
+            denominator: rats(&[1, -1]),
+            expansion: FormalPowerSeries::from_coefficients(&rats(&[1, 1, 3, 1]), 3),
+            order: 3,
+        };
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::IdentityFailed { degree: 2 })
+        );
+    }
+
+    #[test]
+    fn forged_recurrence_with_wrong_coefficients_is_refused_at_the_first_bad_term() {
+        let certificate = RecurrenceCertificate::new(rats(&[2, 1]), rats(&[1, 1, 2, 3, 5, 8, 13]));
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::RecurrenceFailed { index: 2 })
+        );
+    }
+
+    #[test]
+    fn forged_recurrence_with_a_wrong_term_is_refused_at_that_term() {
+        let certificate = RecurrenceCertificate::new(rats(&[1, 1]), rats(&[1, 1, 2, 3, 5, 9, 13]));
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::RecurrenceFailed { index: 5 })
+        );
+    }
+
+    #[test]
+    fn forged_recurrence_with_a_mismatched_declared_order_is_refused() {
+        let mut certificate =
+            RecurrenceCertificate::new(rats(&[1, 1]), rats(&[1, 1, 2, 3, 5, 8, 13]));
+        certificate.order = 3;
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 3,
+                found: 2
+            })
+        );
+    }
+
+    #[test]
+    fn forged_recurrence_with_a_mismatched_fitted_term_count_is_refused() {
+        let mut certificate =
+            RecurrenceCertificate::new(rats(&[1, 1]), rats(&[1, 1, 2, 3, 5, 8, 13]));
+        certificate.terms_fitted = 99;
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::TermCountMismatch {
+                declared: 99,
+                found: 7
+            })
+        );
+    }
+
+    #[test]
+    fn vacuous_recurrence_certificate_with_no_equation_to_check_is_refused() {
+        // Two coefficients, two terms: zero equations, so a checker without the
+        // vacuity guard would accept anything at all here.
+        let certificate = RecurrenceCertificate::new(rats(&[1, 1]), rats(&[7, 11]));
+        assert_eq!(certificate.equations_checked(), 0);
+        assert_eq!(
+            certificate.verify(),
+            Err(CertificateError::VacuousRecurrence { order: 2, terms: 2 })
+        );
+    }
+
+    #[test]
+    fn generating_function_whose_inner_certificate_names_a_different_numerator_is_refused() {
+        let terms = rats(&[1, 1, 2, 3, 5, 8, 13, 21]);
+        let guess = guess_linear_recurrence(&terms).expect("order 2");
+        let mut generating = rational_generating_function(&guess, &terms).expect("certified");
+        generating.numerator = rats(&[9, 9]);
+        assert_eq!(
+            generating.verify(),
+            Err(CertificateError::CertificateMismatch)
+        );
+    }
+
+    #[test]
+    fn generating_function_whose_terms_do_not_span_the_truncation_is_refused() {
+        let terms = rats(&[1, 1, 2, 3, 5, 8, 13, 21]);
+        let guess = guess_linear_recurrence(&terms).expect("order 2");
+        let mut generating = rational_generating_function(&guess, &terms).expect("certified");
+        generating.terms.truncate(4);
+        assert_eq!(
+            generating.verify(),
+            Err(CertificateError::OrderMismatch {
+                expected: 3,
+                found: 7
+            })
+        );
+    }
+
+    #[test]
+    fn generating_function_with_a_forged_term_is_refused_at_that_degree() {
+        let terms = rats(&[1, 1, 2, 3, 5, 8, 13, 21]);
+        let guess = guess_linear_recurrence(&terms).expect("order 2");
+        let mut generating = rational_generating_function(&guess, &terms).expect("certified");
+        generating.terms[5] = r(99);
+        assert_eq!(
+            generating.verify(),
+            Err(CertificateError::IdentityFailed { degree: 5 })
+        );
+    }
 }
