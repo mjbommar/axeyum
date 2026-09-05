@@ -99,9 +99,33 @@ BatSat and move behind `batsat-reference`.
   (the table of three engines; "the modern core sits unused on the proof path").
 - The benchmarking methodology's gate (a) — does SAT time dominate? — reads
   **true** on the public `20190311-bv-term-small-rw-Noetzli` slice at ~0.95 SAT
-  share over 1,416 decided `sat-bv` instances. Gate (b) (a consistent material
-  gap to CaDiCaL/Kissat) is about *how much to invest in tuning the core*, not
-  about *which core we own*: it cannot be satisfied by keeping a third-party
+  share over 1,416 decided `sat-bv` instances.
+- **Gate (b) has now been run**, for the first time since ADR-0012 deferred to
+  it in June 2026:
+  [2026-09-05 gate (b) measured](../11-design-review/2026-09-05-gate-b-sat-core-measured.md),
+  artifact [`bench-results/sat-core-gate-b-20260905/`](../../../bench-results/sat-core-gate-b-20260905/README.md).
+  Four engines on byte-identical Axeyum-generated DIMACS, 20 s per instance,
+  `taskset -c 0-7`, one engine at a time:
+
+  | Family | Files | BatSat | native | CaDiCaL | Kissat |
+  |---|---:|---:|---:|---:|---:|
+  | p4dfa (exhaustive) | 113 | 4 | **6** | 10 | 11 |
+  | Noetzli (100-file seeded sample) | 100 | 86 | **86** | 88 | 89 |
+
+  PAR-2 (s): p4dfa 38.729 / 38.107 / 37.203 / 36.941; Noetzli 5.604 / 5.605 /
+  5.247 / 4.613. **Zero cross-engine sat/unsat disagreements and zero invalid
+  SAT models** across all 852 (engine, file) pairs.
+
+  The finding this ADR rests on: **the native core is never worse than BatSat
+  and sometimes better** — six decided against four on p4dfa, tied on the
+  Noetzli sample, never a worse PAR-2. There is no measured case for BatSat as
+  the stronger in-tree engine. Two honest qualifications, from the note itself:
+  the gap to CaDiCaL/Kissat is real but *modest and family-dependent*, so gate
+  (b) does not by itself argue for jumping the core-tuning queue; and the host
+  carried heavy uncontrolled load throughout, so the engine *ordering* is more
+  reliable than the absolute seconds. Neither qualification touches this
+  decision, because gate (b) asks *how much to invest in tuning the core*, not
+  *which core we own* — and it cannot be satisfied by keeping a third-party
   engine on the default path.
 
 ### What this changes about assurance
@@ -136,8 +160,11 @@ Two honest caveats, recorded rather than smoothed over:
 ### Performance
 
 The owner's decision does not rest on the native core being faster. A slower
-native core is a to-do for our engine, not a reason to keep BatSat. The
-before/after measurement is recorded in
+native core would be a to-do for our engine, not a reason to keep BatSat. As it
+happens the gate (b) measurement above found the native core at least BatSat's
+equal on both public families, so the flip costs no measured capability — but
+that is a convenience, not the argument. The before/after measurement for this
+lane is recorded in
 [`docs/plan/status/1703-native-core-retire-batsat.md`](../../plan/status/1703-native-core-retire-batsat.md)
 and any regression is reported there and here as a finding, never tuned away or
 hidden.
