@@ -2810,8 +2810,6 @@ mod category_setoid_tests {
         st: StructuresSRecordNames,
         recs: CategoryRecords,
         cs: CategoryNames,
-        grp_recs: GroupCatRecords,
-        gs: GroupCatNames,
     }
 
     fn build(k: &mut Kernel) -> Fixture {
@@ -2825,17 +2823,10 @@ mod category_setoid_tests {
         let deps = GroupCatDeps {
             map_one: extra.hom_map_one,
         };
-        let (recs, cs, grp_recs, gs) =
+        let (recs, cs, _grp_recs, _gs) =
             declare_category_setoid(k, &lg, &st.monoid, &st.group, &deps)
                 .expect("the setoid-enriched category layer must admit");
-        Fixture {
-            lg,
-            st,
-            recs,
-            cs,
-            grp_recs,
-            gs,
-        }
+        Fixture { lg, st, recs, cs }
     }
 
     /// A `Sort 1` object type to instantiate the small category at: every

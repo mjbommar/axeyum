@@ -2321,3 +2321,6 @@ fn declare_nat_is_initial(
 
     thm(k, ns, "natPtAlg_isInitial", ty, value)
 }
+
+#[cfg(test)]
+mod groups_tests;
