@@ -1,23 +1,25 @@
 //! Sylow subgroups, their conjugate count, subgroup normality, normal
-//! closure, and quotient order -- split out of `permgroup.rs` to keep that
-//! file under its line-count budget. A child module of [`crate::permgroup`]
-//! (declared there via `#[path = "permgroup_sylow.rs"] mod permgroup_sylow;`,
-//! never in `lib.rs`), so every private item it needs from the parent
-//! (`image_key`, `enumerate_group`, `sift_with_trace`, `SiftOutcome`,
-//! `p_adic_valuation`, `is_power_of`, and `PermutationGroup`'s private
-//! fields) is visible here by ordinary Rust privacy (private = visible in
-//! the defining module and its descendants) without being made `pub`.
+//! closure, quotient order, and group invariants / `distinguish` -- split
+//! out of `permgroup.rs` to keep that file under its line-count budget. A
+//! child module of [`crate::permgroup`] (declared there via
+//! `#[path = "permgroup_sylow.rs"] mod permgroup_sylow;`, never in
+//! `lib.rs`), so every private item it needs from the parent (`image_key`,
+//! `enumerate_group`, `sift_with_trace`, `SiftOutcome`, `p_adic_valuation`,
+//! `is_power_of`, and `PermutationGroup`'s private fields) is visible here
+//! by ordinary Rust privacy (private = visible in the defining module and
+//! its descendants) without being made `pub`.
 //!
 //! See the parent module's doc for the shared certificate philosophy: every
 //! public entry point returns a certificate whose `verify` re-derives the
 //! claim independently, sharing no bookkeeping with the producer.
 
 use super::{
-    ENUMERATION_BOUND, MembershipCertificate, OrderCertificate, PermgroupError, Permutation,
-    PermutationGroup, SiftOutcome, enumerate_group, image_key, is_power_of, p_adic_valuation,
-    sift_with_trace,
+    AbelianCertificate, CenterCertificate, ConjugacyClassCertificate,
+    DERIVED_SUBGROUP_ENUMERATION_BOUND, DerivedSubgroupCertificate, ENUMERATION_BOUND,
+    MembershipCertificate, OrderCertificate, PermgroupError, Permutation, PermutationGroup,
+    SiftOutcome, enumerate_group, image_key, is_power_of, p_adic_valuation, sift_with_trace,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 // ---------------------------------------------------------------------------
 // SylowCertificate: existence and order of a Sylow p-subgroup
@@ -983,6 +985,355 @@ impl PermutationGroup {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Invariants and distinguish: telling two permutation groups apart
+// ---------------------------------------------------------------------------
+
+/// A tuple of group-theoretic invariants, computable from a generating set
+/// alone: order, whether the group is abelian, centre order, derived
+/// subgroup order, the multiset of element orders, and the multiset of
+/// conjugacy class sizes.
+///
+/// **Equal invariants do not certify isomorphism.** Two non-isomorphic
+/// groups can share every invariant here (this tuple is not a complete
+/// isomorphism invariant); [`distinguish`] only ever reports a *difference*
+/// as conclusive, never an agreement.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Invariants {
+    /// `|G|`.
+    pub order: u128,
+    /// Whether `G` is abelian.
+    pub abelian: bool,
+    /// `|Z(G)|`.
+    pub center_order: u128,
+    /// `|[G, G]|`.
+    pub derived_order: u128,
+    /// Element order ↦ how many elements of `G` have that order.
+    pub element_order_counts: BTreeMap<u128, usize>,
+    /// The sizes of the conjugacy classes, sorted ascending.
+    pub conjugacy_class_sizes: Vec<u128>,
+}
+
+/// A checkable certificate for [`Invariants`]: the underlying order, abelian,
+/// centre, derived-subgroup, and conjugacy-class certificates, from which
+/// every field of `invariants` is re-derived.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct InvariantsCertificate {
+    /// The order certificate for `G`.
+    pub group_order: OrderCertificate,
+    /// The abelian certificate for `G`.
+    pub abelian: AbelianCertificate,
+    /// The centre certificate for `G`.
+    pub center: CenterCertificate,
+    /// The derived-subgroup certificate for `G`.
+    pub derived: DerivedSubgroupCertificate,
+    /// The conjugacy-class certificate for `G`.
+    pub conjugacy: ConjugacyClassCertificate,
+    /// The invariants tuple this certificate establishes.
+    pub invariants: Invariants,
+}
+
+/// Why an [`InvariantsCertificate`] failed to verify.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum InvariantsFailure {
+    /// `group_order` itself does not verify.
+    GroupCertificateInvalid,
+    /// `abelian` itself does not verify.
+    AbelianCertificateInvalid,
+    /// `center` itself does not verify.
+    CenterCertificateInvalid,
+    /// `derived` itself does not verify.
+    DerivedCertificateInvalid,
+    /// `conjugacy` itself does not verify.
+    ConjugacyCertificateInvalid,
+    /// `center`, `derived`, or `conjugacy` is not about the same group as
+    /// `group_order`.
+    CertificateGroupMismatch,
+    /// `invariants.order != group_order.claimed_order`.
+    OrderMismatch,
+    /// `invariants.abelian` disagrees with `abelian`.
+    AbelianFieldMismatch,
+    /// `invariants.center_order` disagrees with `center`.
+    CenterOrderMismatch,
+    /// `invariants.derived_order` disagrees with `derived`.
+    DerivedOrderMismatch,
+    /// `group_order.claimed_order` exceeds
+    /// [`DERIVED_SUBGROUP_ENUMERATION_BOUND`].
+    TooLargeToVerify,
+    /// The independently recomputed element-order multiset disagrees with
+    /// `invariants.element_order_counts`.
+    ElementOrderCountsMismatch,
+    /// The independently recomputed conjugacy class sizes disagree with
+    /// `invariants.conjugacy_class_sizes`.
+    ConjugacyClassSizesMismatch,
+}
+
+impl InvariantsCertificate {
+    /// Independently re-derives every claim this certificate makes,
+    /// returning the first guard that fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first [`InvariantsFailure`] guard that does not hold.
+    ///
+    /// # Panics
+    ///
+    /// Never panics.
+    pub fn verify(&self) -> Result<(), InvariantsFailure> {
+        use InvariantsFailure as F;
+        self.group_order
+            .verify()
+            .map_err(|_| F::GroupCertificateInvalid)?;
+        self.abelian
+            .verify(&self.group_order.original_generators)
+            .map_err(|_| F::AbelianCertificateInvalid)?;
+        self.center
+            .verify()
+            .map_err(|_| F::CenterCertificateInvalid)?;
+        self.derived
+            .verify()
+            .map_err(|_| F::DerivedCertificateInvalid)?;
+        self.conjugacy
+            .verify()
+            .map_err(|_| F::ConjugacyCertificateInvalid)?;
+        if self.center.group_order != self.group_order
+            || self.derived.group_order != self.group_order
+            || self.conjugacy.group_order != self.group_order
+        {
+            return Err(F::CertificateGroupMismatch);
+        }
+        if self.invariants.order != self.group_order.claimed_order {
+            return Err(F::OrderMismatch);
+        }
+        let claimed_abelian = matches!(self.abelian, AbelianCertificate::Abelian);
+        if self.invariants.abelian != claimed_abelian {
+            return Err(F::AbelianFieldMismatch);
+        }
+        if self.invariants.center_order != self.center.center_order.claimed_order {
+            return Err(F::CenterOrderMismatch);
+        }
+        if self.invariants.derived_order != self.derived.derived_order.claimed_order {
+            return Err(F::DerivedOrderMismatch);
+        }
+        if self.group_order.claimed_order > DERIVED_SUBGROUP_ENUMERATION_BOUND {
+            return Err(F::TooLargeToVerify);
+        }
+        let degree = self.group_order.degree;
+        let elems = enumerate_group(
+            &self.group_order.original_generators,
+            degree,
+            DERIVED_SUBGROUP_ENUMERATION_BOUND,
+        )
+        .ok_or(F::TooLargeToVerify)?;
+        let mut recomputed_counts: BTreeMap<u128, usize> = BTreeMap::new();
+        for e in &elems {
+            let ord = e.order().expect("finite permutation has a finite order");
+            *recomputed_counts.entry(ord).or_insert(0) += 1;
+        }
+        if recomputed_counts != self.invariants.element_order_counts {
+            return Err(F::ElementOrderCountsMismatch);
+        }
+        let mut recomputed_sizes: Vec<u128> = self
+            .conjugacy
+            .classes
+            .iter()
+            .map(|c| u128::try_from(c.len()).unwrap_or(u128::MAX))
+            .collect();
+        recomputed_sizes.sort_unstable();
+        if recomputed_sizes != self.invariants.conjugacy_class_sizes {
+            return Err(F::ConjugacyClassSizesMismatch);
+        }
+        Ok(())
+    }
+}
+
+impl PermutationGroup {
+    /// The [`Invariants`] of `G`, for `|G| <=`
+    /// [`DERIVED_SUBGROUP_ENUMERATION_BOUND`] (the tightest of the bounds
+    /// this composes: [`Self::center`], [`Self::derived_subgroup`],
+    /// [`Self::conjugacy_classes`], and an element-order enumeration).
+    ///
+    /// # Errors
+    ///
+    /// [`PermgroupError::TooLarge`] if `|G|` exceeds
+    /// [`DERIVED_SUBGROUP_ENUMERATION_BOUND`].
+    ///
+    /// # Panics
+    ///
+    /// Never panics.
+    pub fn invariants(&self) -> Result<InvariantsCertificate, PermgroupError> {
+        if self.order_certificate.claimed_order > DERIVED_SUBGROUP_ENUMERATION_BOUND {
+            return Err(PermgroupError::TooLarge {
+                bound: DERIVED_SUBGROUP_ENUMERATION_BOUND,
+                actual: self.order_certificate.claimed_order,
+            });
+        }
+        let abelian = self.is_abelian();
+        let (_, center) = self.center()?;
+        let (_, derived) = self.derived_subgroup()?;
+        let conjugacy = self.conjugacy_classes()?;
+        let elems = enumerate_group(
+            &self.generators,
+            self.degree,
+            DERIVED_SUBGROUP_ENUMERATION_BOUND,
+        )
+        .ok_or(PermgroupError::TooLarge {
+            bound: DERIVED_SUBGROUP_ENUMERATION_BOUND,
+            actual: self.order_certificate.claimed_order,
+        })?;
+        let mut element_order_counts: BTreeMap<u128, usize> = BTreeMap::new();
+        for e in &elems {
+            let ord = e.order().expect("finite permutation has a finite order");
+            *element_order_counts.entry(ord).or_insert(0) += 1;
+        }
+        let mut conjugacy_class_sizes: Vec<u128> = conjugacy
+            .classes
+            .iter()
+            .map(|c| u128::try_from(c.len()).unwrap_or(u128::MAX))
+            .collect();
+        conjugacy_class_sizes.sort_unstable();
+        let invariants = Invariants {
+            order: self.order_certificate.claimed_order,
+            abelian: matches!(abelian, AbelianCertificate::Abelian),
+            center_order: center.center_order.claimed_order,
+            derived_order: derived.derived_order.claimed_order,
+            element_order_counts,
+            conjugacy_class_sizes,
+        };
+        Ok(InvariantsCertificate {
+            group_order: self.order_certificate.clone(),
+            abelian,
+            center,
+            derived,
+            conjugacy,
+            invariants,
+        })
+    }
+}
+
+/// Which field of [`Invariants`] a [`distinguish`] call found to differ
+/// first, in the fixed priority order the comparison uses.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InvariantField {
+    /// The orders differ.
+    Order,
+    /// One group is abelian and the other is not.
+    Abelian,
+    /// The centre orders differ.
+    CenterOrder,
+    /// The derived-subgroup orders differ.
+    DerivedOrder,
+    /// The element-order multisets differ.
+    ElementOrderCounts,
+    /// The conjugacy class size multisets differ.
+    ConjugacyClassSizes,
+}
+
+/// The first field of `a` and `b` that differs, in the fixed priority order
+/// [`InvariantField`] documents, or `None` if every field agrees.
+fn first_difference(a: &Invariants, b: &Invariants) -> Option<InvariantField> {
+    if a.order != b.order {
+        return Some(InvariantField::Order);
+    }
+    if a.abelian != b.abelian {
+        return Some(InvariantField::Abelian);
+    }
+    if a.center_order != b.center_order {
+        return Some(InvariantField::CenterOrder);
+    }
+    if a.derived_order != b.derived_order {
+        return Some(InvariantField::DerivedOrder);
+    }
+    if a.element_order_counts != b.element_order_counts {
+        return Some(InvariantField::ElementOrderCounts);
+    }
+    if a.conjugacy_class_sizes != b.conjugacy_class_sizes {
+        return Some(InvariantField::ConjugacyClassSizes);
+    }
+    None
+}
+
+/// A checkable certificate for [`distinguish`]: the two groups'
+/// [`InvariantsCertificate`]s and the field (if any) their invariants first
+/// differ on.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DistinguishCertificate {
+    /// The left group's invariants certificate.
+    pub left: InvariantsCertificate,
+    /// The right group's invariants certificate.
+    pub right: InvariantsCertificate,
+    /// The first field that differs, in priority order, or `None` if every
+    /// field checked here agrees (which does **not** certify isomorphism).
+    pub difference: Option<InvariantField>,
+}
+
+/// Why a [`DistinguishCertificate`] failed to verify.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DistinguishFailure {
+    /// `left` itself does not verify.
+    LeftCertificateInvalid,
+    /// `right` itself does not verify.
+    RightCertificateInvalid,
+    /// The independently recomputed first difference does not match
+    /// `difference`.
+    DifferenceMismatch {
+        /// The recomputed first difference.
+        expected: Option<InvariantField>,
+    },
+}
+
+impl DistinguishCertificate {
+    /// Independently re-derives every claim this certificate makes,
+    /// returning the first guard that fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns the first [`DistinguishFailure`] guard that does not hold.
+    ///
+    /// # Panics
+    ///
+    /// Never panics.
+    pub fn verify(&self) -> Result<(), DistinguishFailure> {
+        self.left
+            .verify()
+            .map_err(|_| DistinguishFailure::LeftCertificateInvalid)?;
+        self.right
+            .verify()
+            .map_err(|_| DistinguishFailure::RightCertificateInvalid)?;
+        let expected = first_difference(&self.left.invariants, &self.right.invariants);
+        if expected != self.difference {
+            return Err(DistinguishFailure::DifferenceMismatch { expected });
+        }
+        Ok(())
+    }
+}
+
+/// Compares `g` and `h` by [`Invariants`], returning a certificate naming the
+/// first invariant (in the fixed priority order order, abelian, centre
+/// order, derived-subgroup order, element-order multiset, conjugacy class
+/// sizes) that differs, or `None` if every invariant checked here agrees.
+///
+/// **A `None` difference does not certify isomorphism**; it means only that
+/// this particular finite tuple of invariants failed to distinguish them.
+///
+/// # Errors
+///
+/// Propagates [`PermgroupError::TooLarge`] from [`PermutationGroup::invariants`]
+/// for either `g` or `h`.
+pub fn distinguish(
+    g: &PermutationGroup,
+    h: &PermutationGroup,
+) -> Result<DistinguishCertificate, PermgroupError> {
+    let left = g.invariants()?;
+    let right = h.invariants()?;
+    let difference = first_difference(&left.invariants, &right.invariants);
+    Ok(DistinguishCertificate {
+        left,
+        right,
+        difference,
+    })
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -1007,6 +1358,122 @@ mod tests {
     fn alternating_group(n: usize) -> PermutationGroup {
         let gens: Vec<Permutation> = (2..n).map(|k| cycle(n, &[0, 1, k])).collect();
         PermutationGroup::from_generators(gens, n).unwrap()
+    }
+
+    /// The regular representation of the quaternion group `Q8` on its own 8
+    /// elements `[1, -1, i, -i, j, -j, k, -k]` (indices `0..8`), generated by
+    /// left multiplication by `i` and by `j`. Verified independently by
+    /// brute-force Cayley closure before being hand-derived into these two
+    /// image vectors: order 8, non-abelian, one element of order 2 (`-1`)
+    /// and six of order 4 (`±i, ±j, ±k`), centre `{1, -1}` of order 2.
+    fn quaternion_group() -> PermutationGroup {
+        let left_mult_i = Permutation::from_images(vec![2, 3, 1, 0, 6, 7, 5, 4]).unwrap();
+        let left_mult_j = Permutation::from_images(vec![4, 5, 7, 6, 1, 0, 2, 3]).unwrap();
+        PermutationGroup::from_generators(vec![left_mult_i, left_mult_j], 8).unwrap()
+    }
+
+    /// `D_4` acting on the 4 corners of a square: `r = (0 1 2 3)`,
+    /// `s = (1 3)`. Order 8, non-abelian, five involutions (`r^2` and the
+    /// four reflections), two elements of order 4 (`r, r^3`).
+    fn dihedral_group_of_order_8() -> PermutationGroup {
+        let r = cycle(4, &[0, 1, 2, 3]);
+        let s = transposition(4, 1, 3);
+        PermutationGroup::from_generators(vec![r, s], 4).unwrap()
+    }
+
+    // -- invariants and distinguish --
+
+    #[test]
+    fn invariants_of_s3_verify() {
+        let g = symmetric_group(3);
+        let cert = g.invariants().unwrap();
+        assert_eq!(cert.invariants.order, 6);
+        assert!(!cert.invariants.abelian);
+        assert_eq!(cert.invariants.center_order, 1);
+        assert_eq!(cert.invariants.derived_order, 3);
+        assert_eq!(cert.invariants.conjugacy_class_sizes, vec![1, 2, 3]);
+        assert!(cert.verify().is_ok());
+    }
+
+    #[test]
+    fn distinguish_z6_and_s3_by_abelian() {
+        let z6 = PermutationGroup::from_generators(vec![cycle(6, &[0, 1, 2, 3, 4, 5])], 6).unwrap();
+        let s3 = symmetric_group(3);
+        let cert = distinguish(&z6, &s3).unwrap();
+        // Both order 6; abelian is the first field that differs.
+        assert_eq!(cert.difference, Some(InvariantField::Abelian));
+        assert!(cert.verify().is_ok());
+    }
+
+    #[test]
+    fn distinguish_d4_and_q8_by_element_order_counts() {
+        let d4 = dihedral_group_of_order_8();
+        let q8 = quaternion_group();
+        // Both order 8, both non-abelian, both centre order 2, both derived
+        // subgroup order 2 -- the element-order multiset is what separates
+        // them: D_4 has five involutions, Q_8 has one.
+        let d4_invariants = d4.invariants().unwrap();
+        let q8_invariants = q8.invariants().unwrap();
+        assert_eq!(d4_invariants.invariants.order, 8);
+        assert_eq!(q8_invariants.invariants.order, 8);
+        assert!(!d4_invariants.invariants.abelian);
+        assert!(!q8_invariants.invariants.abelian);
+        assert_eq!(d4_invariants.invariants.center_order, 2);
+        assert_eq!(q8_invariants.invariants.center_order, 2);
+        assert_eq!(d4_invariants.invariants.derived_order, 2);
+        assert_eq!(q8_invariants.invariants.derived_order, 2);
+        assert_ne!(
+            d4_invariants.invariants.element_order_counts,
+            q8_invariants.invariants.element_order_counts
+        );
+
+        let cert = distinguish(&d4, &q8).unwrap();
+        assert_eq!(cert.difference, Some(InvariantField::ElementOrderCounts));
+        assert!(cert.verify().is_ok());
+    }
+
+    #[test]
+    fn distinguish_returns_none_for_two_presentations_of_s3() {
+        // S_3 on {0, 1, 2} via adjacent transpositions, versus S_3 on the
+        // same 3 points generated by a different pair of transpositions.
+        let s3_adjacent = symmetric_group(3);
+        let s3_other = PermutationGroup::from_generators(
+            vec![transposition(3, 0, 2), transposition(3, 1, 2)],
+            3,
+        )
+        .unwrap();
+        assert_eq!(s3_other.order(), 6);
+        let cert = distinguish(&s3_adjacent, &s3_other).unwrap();
+        assert_eq!(cert.difference, None);
+        assert!(cert.verify().is_ok());
+    }
+
+    #[test]
+    fn forged_distinguish_difference_mismatch_is_refused() {
+        let z6 = PermutationGroup::from_generators(vec![cycle(6, &[0, 1, 2, 3, 4, 5])], 6).unwrap();
+        let s3 = symmetric_group(3);
+        let mut cert = distinguish(&z6, &s3).unwrap();
+        assert_eq!(cert.difference, Some(InvariantField::Abelian));
+        cert.difference = Some(InvariantField::Order);
+        assert!(matches!(
+            cert.verify(),
+            Err(DistinguishFailure::DifferenceMismatch { .. })
+        ));
+    }
+
+    #[test]
+    fn invariants_decline_above_the_derived_subgroup_bound() {
+        // S_8, order 40320, exceeds DERIVED_SUBGROUP_ENUMERATION_BOUND.
+        let a = cycle(8, &[0, 1, 2, 3, 4, 5, 6, 7]);
+        let b = transposition(8, 0, 1);
+        let g = PermutationGroup::from_generators(vec![a, b], 8).unwrap();
+        match g.invariants() {
+            Err(PermgroupError::TooLarge { bound, actual }) => {
+                assert_eq!(bound, DERIVED_SUBGROUP_ENUMERATION_BOUND);
+                assert_eq!(actual, 40320);
+            }
+            other => panic!("expected TooLarge, got {other:?}"),
+        }
     }
 
     // -- sylow_subgroup / sylow_count --
