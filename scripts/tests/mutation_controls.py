@@ -7144,6 +7144,15 @@ SUITES["cas-summation-and-gaussian"] = (
             "    let denominator = deatomize_from(&rf.den.to_expr(), &product);\n"
             "    if false {\n        return None;\n    }",
         ),
+        # THE TWO ENTRIES BELOW SURVIVE, and that is the finding, not an
+        # oversight. Both are fail-closed SELF-checks: the extraction reads the
+        # same canonical atom form `equal` decides on, so whenever the
+        # extraction succeeds the reconstruction is equal by construction, and
+        # the Newton expansion is exact rational arithmetic that fails only on
+        # overflow. No input distinguishes them, so no test can die when they
+        # are deleted. They stay because a later change to the extractor or to
+        # `normalize_rational`'s atom conventions would be caught by them and
+        # by nothing else. Per CLAUDE.md: the impossibility IS the finding.
         (
             # Obligation 1: the heuristic extraction's reconstruction must be
             # decided equal to the summand itself.
@@ -7177,8 +7186,8 @@ SUITES["cas-summation-and-gaussian"] = (
             # `√(c·u) = √c·√u` needs `c > 0`; without it `√(−2·π)` splits into
             # `√(−2)·√π`.
             "the sqrt split takes only a positive rational factor",
-            "                        CasExpr::Const(c) if c.numerator() > 0 => {",
-            "                        CasExpr::Const(c) if true => {",
+            "                        CasExpr::Const(c) if c.numerator() > 0 => match constant.checked_mul(*c) {",
+            "                        CasExpr::Const(c) if true => match constant.checked_mul(*c) {",
         ),
         (
             # Without the surd-normalized retry the Gaussian certificate never
