@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2351,
+    "min_identity_bound": 2352,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -10691,6 +10691,13 @@
       "statement_sha256": "a9b162614637fb20fbfb2d12df21d980657d8e0d69de0e2c3c5a45a1bb3bc682",
       "prose_sha256": "10a7e60c2e34a41ebe0b7e923a7d90268bfac53e95f399aa7d4e2d11444a08f8",
       "kernel_theorem": "Metric.creal_evt_approx_max_via_metric"
+    },
+    {
+      "fact_id": "F:metric-product-completeness-transfer",
+      "language": "lean4",
+      "statement_sha256": "f82acb6bedaa4baeda45626c56329bd24e91d59386b35f1a9da535b18d8bb2de",
+      "prose_sha256": "eb0e16c7ff4a20f424f276d77bcd27db5a454cb9eb69901ec6834bdc603064b1",
+      "kernel_theorem": "Metric.prod_complete"
     },
     {
       "fact_id": "F:metric-space-completeness-of-the-real-line",

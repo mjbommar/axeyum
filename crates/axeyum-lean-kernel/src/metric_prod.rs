@@ -932,19 +932,26 @@ fn declare_prod(
 ) -> Result<(), KernelError> {
     let mn = mn_ambient(d, c, mp);
 
-    let mut fields = Vec::with_capacity(12);
-    fields.push(mn.pieces.prod_carrier);
-    fields.push(build_equiv(d, mp, &mn));
-    fields.push(build_equiv_refl(d, mp, &mn));
-    fields.push(build_equiv_symm(d, mp, &mn));
-    fields.push(build_equiv_trans(d, mp, &mn));
-    fields.push(build_dist(d, c, mp, &mn));
-    fields.push(build_dist_congr(d, c, mp, &mn));
-    fields.push(build_dist_nonneg(d, c, mp, &mn));
-    fields.push(build_dist_self(d, c, mp, &mn));
-    fields.push(build_dist_equiv(d, c, mp, &mn));
-    fields.push(build_dist_comm(d, c, mp, &mn));
-    fields.push(build_dist_triangle(d, c, mp, &mn));
+    // Order matters: this must match `FIELD_SUFFIXES` in `metric.rs` exactly
+    // (carrier, equiv, equivRefl, equivSymm, equivTrans, dist, distCongr,
+    // distNonneg, distSelf, distEquiv, distComm, distTriangle). `vec![...]`
+    // evaluates its elements left-to-right, same as the sequential pushes
+    // this replaced, which matters here: each builder also mints fresh
+    // fvars from `d` in sequence.
+    let fields = vec![
+        mn.pieces.prod_carrier,
+        build_equiv(d, mp, &mn),
+        build_equiv_refl(d, mp, &mn),
+        build_equiv_symm(d, mp, &mn),
+        build_equiv_trans(d, mp, &mn),
+        build_dist(d, c, mp, &mn),
+        build_dist_congr(d, c, mp, &mn),
+        build_dist_nonneg(d, c, mp, &mn),
+        build_dist_self(d, c, mp, &mn),
+        build_dist_equiv(d, c, mp, &mn),
+        build_dist_comm(d, c, mp, &mn),
+        build_dist_triangle(d, c, mp, &mn),
+    ];
 
     let instance = mk_instance(d.kernel(), &mp.record, &fields);
     let mty = metric_ty(d, mp);
