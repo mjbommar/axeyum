@@ -253,7 +253,7 @@ fn or_elim(
 }
 
 /// `h : Eq Bool (notB x) true ⊢ Eq Bool x false`.
-fn not_b_true_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
+pub(super) fn not_b_true_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
     let p = *p;
     let tv = d.bool_true();
     let fv = d.bool_false();
@@ -283,7 +283,7 @@ fn not_b_true_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> 
 }
 
 /// `h : Eq Bool (notB x) false ⊢ Eq Bool x true`.
-fn not_b_false_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
+pub(super) fn not_b_false_elim(d: &mut NatDev<'_>, p: &NatPrelude, x: ExprId, h: ExprId) -> ExprId {
     let p = *p;
     let tv = d.bool_true();
     let fv = d.bool_false();

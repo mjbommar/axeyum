@@ -95,7 +95,7 @@
 
 use super::NatPrelude;
 use super::helpers::{and_left, and_right};
-use super::ops::{NatDev, NatOps};
+use super::ops::{NatDev, NatOps, bool_true_or_false};
 use crate::BinderInfo;
 use crate::KernelError;
 use crate::env::Declaration;
@@ -3275,6 +3275,417 @@ fn declare_card_congr_of_mem_b(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(),
     d.declare_theorem(p.finset_card_congr_of_mem_b, ty, value)
 }
 
+// ---------------------------------------------------------------------------
+// Set difference: membership, and the counting law it exists for.
+// ---------------------------------------------------------------------------
+
+/// `Nat.Finset.memB_sdiff : ∀ s t i,
+/// Eq Bool (memB (sdiff s t) i) (setDiff (memB s) (memB t) i)`.
+///
+/// `sdiff s t` is `mk (setDiff (memB s) (memB t)) (bound s)`, so BELOW the
+/// bound this is `memB_of_lt` and nothing else. The content is the tail: above
+/// `bound s` the left side is `false` because `memB` truncates
+/// (`memB_of_bound_le`), and the right side is `false` because `memB s` is —
+/// `setDiff` selects on its FIRST argument, so a `false` there decides it
+/// whatever `memB t` does. `Nat.lt_or_ge` splits.
+fn declare_mem_b_sdiff(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let sd = d.const_app(p.finset_sdiff, &[s, t]);
+    let lhs = fs_mem(d, &p, sd, i);
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let dfn = set_diff(d, &p, ms, mt);
+    let rhs = d.apply(dfn, &[i]);
+    let goal = d.bool_eq(lhs, rhs);
+
+    let bs = fs_bound(d, &p, s);
+    let lt_ty = d.lt(i, bs);
+    let ge_ty = d.le(bs, i);
+    let decided = d.lemma(p.lt_or_ge, &[i, bs]);
+
+    // Below `bound s`: `memB` IS the stored predicate, which IS `setDiff`.
+    let on_lt = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let body = d.lemma(p.finset_mem_b_of_lt, &[sd, i, h]);
+        d.lam_fv(h_fv, lt_ty, body)
+    };
+    // At or above it: both sides are `false`, for two different reasons.
+    let on_ge = {
+        let h_fv = d.fresh_fvar();
+        let h = d.kernel().fvar(h_fv);
+        let fal = d.bool_false();
+        let tru = d.bool_true();
+        let lhs_false = d.lemma(p.finset_mem_b_of_bound_le, &[sd, i, h]);
+        let s_false = d.lemma(p.finset_mem_b_of_bound_le, &[s, i, h]);
+        let mem_s = fs_mem(d, &p, s, i);
+        let mem_t = fs_mem(d, &p, t, i);
+        let not_t = bool_select_bool(d, &p, mem_t, fal, tru);
+        let rhs_false = select_bool_false(d, &p, mem_s, not_t, fal, s_false);
+        let back = d.bool_symm(rhs, fal, rhs_false);
+        let body = d.bool_trans(lhs, fal, rhs, lhs_false, back);
+        d.lam_fv(h_fv, ge_ty, body)
+    };
+    let proof = or_elim(d, &p, lt_ty, ge_ty, goal, on_lt, on_ge, decided);
+
+    let ty = {
+        let with_i = d.pi_fv(i_fv, nat, goal);
+        let with_t = d.pi_fv(t_fv, fs, with_i);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_i = d.lam_fv(i_fv, nat, proof);
+        let with_t = d.lam_fv(t_fv, fs, with_i);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_mem_b_sdiff, ty, value)
+}
+
+/// `Nat.Finset.memB_sdiff_intro : ∀ s t i, Eq Bool (memB s i) true →
+/// Eq Bool (memB t i) false → Eq Bool (memB (sdiff s t) i) true`.
+///
+/// [`declare_mem_b_sdiff`] read through both of `setDiff`'s selectors. The
+/// intro/elim pair is what every consumer actually wants: `setDiff`'s
+/// `bool_select_bool` normal form is not something a caller should have to
+/// name.
+fn declare_mem_b_sdiff_intro(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let tru = d.bool_true();
+    let fal = d.bool_false();
+    let mem_s = fs_mem(d, &p, s, i);
+    let mem_t = fs_mem(d, &p, t, i);
+    let h1_ty = d.bool_eq(mem_s, tru);
+    let h1_fv = d.fresh_fvar();
+    let h1 = d.kernel().fvar(h1_fv);
+    let h2_ty = d.bool_eq(mem_t, fal);
+    let h2_fv = d.fresh_fvar();
+    let h2 = d.kernel().fvar(h2_fv);
+
+    let sd = d.const_app(p.finset_sdiff, &[s, t]);
+    let lhs = fs_mem(d, &p, sd, i);
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let dfn = set_diff(d, &p, ms, mt);
+    let rhs = d.apply(dfn, &[i]);
+    let goal = d.bool_eq(lhs, tru);
+
+    let not_t = bool_select_bool(d, &p, mem_t, fal, tru);
+    let e0 = d.lemma(p.finset_mem_b_sdiff, &[s, t, i]);
+    let e1 = select_bool_true(d, &p, mem_s, not_t, fal, h1);
+    let e2 = select_bool_false(d, &p, mem_t, fal, tru, h2);
+    let tail = d.bool_trans(rhs, not_t, tru, e1, e2);
+    let proof = d.bool_trans(lhs, rhs, tru, e0, tail);
+
+    let ty = {
+        let with_h2 = d.arrow(h2_ty, goal);
+        let with_h1 = d.arrow(h1_ty, with_h2);
+        let with_i = d.pi_fv(i_fv, nat, with_h1);
+        let with_t = d.pi_fv(t_fv, fs, with_i);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_h2 = d.lam_fv(h2_fv, h2_ty, proof);
+        let with_h1 = d.lam_fv(h1_fv, h1_ty, with_h2);
+        let with_i = d.lam_fv(i_fv, nat, with_h1);
+        let with_t = d.lam_fv(t_fv, fs, with_i);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_mem_b_sdiff_intro, ty, value)
+}
+
+/// `Nat.Finset.memB_sdiff_elim : ∀ s t i, Eq Bool (memB (sdiff s t) i) true →
+/// And (Eq Bool (memB s i) true) (Eq Bool (memB t i) false)`.
+///
+/// The converse of [`declare_mem_b_sdiff_intro`], and the half the Hall
+/// argument consumes: a member of a difference is a member of the left side
+/// that is NOT a member of the right one. Two nested `Bool` decisions, each
+/// refuting one branch through `false = true`.
+fn declare_mem_b_sdiff_elim(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let nat = d.nat_ty();
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+    let i_fv = d.fresh_fvar();
+    let i = d.kernel().fvar(i_fv);
+
+    let tru = d.bool_true();
+    let fal = d.bool_false();
+    let mem_s = fs_mem(d, &p, s, i);
+    let mem_t = fs_mem(d, &p, t, i);
+    let sd = d.const_app(p.finset_sdiff, &[s, t]);
+    let lhs = fs_mem(d, &p, sd, i);
+    let hyp_ty = d.bool_eq(lhs, tru);
+    let h_fv = d.fresh_fvar();
+    let h = d.kernel().fvar(h_fv);
+
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let dfn = set_diff(d, &p, ms, mt);
+    let rhs = d.apply(dfn, &[i]);
+    let not_t = bool_select_bool(d, &p, mem_t, fal, tru);
+
+    let s_true = d.bool_eq(mem_s, tru);
+    let t_false = d.bool_eq(mem_t, fal);
+    let goal = d.const_app(p.logic.and, &[s_true, t_false]);
+
+    // `memB (sdiff s t) i = true` transported onto `setDiff`'s normal form.
+    let e0 = d.lemma(p.finset_mem_b_sdiff, &[s, t, i]);
+    let back0 = d.bool_symm(lhs, rhs, e0);
+    let rhs_true = d.bool_trans(rhs, lhs, tru, back0, h);
+
+    let s_is_true = d.bool_eq(mem_s, tru);
+    let s_is_false = d.bool_eq(mem_s, fal);
+    let s_decided = bool_true_or_false(d, &p, mem_s);
+    let on_s_true = {
+        let hs_fv = d.fresh_fvar();
+        let hs = d.kernel().fvar(hs_fv);
+        let e1 = select_bool_true(d, &p, mem_s, not_t, fal, hs);
+        let back1 = d.bool_symm(rhs, not_t, e1);
+        let not_t_true = d.bool_trans(not_t, rhs, tru, back1, rhs_true);
+
+        let t_is_true = d.bool_eq(mem_t, tru);
+        let t_is_false = d.bool_eq(mem_t, fal);
+        let t_decided = bool_true_or_false(d, &p, mem_t);
+        let on_t_true = {
+            let ht_fv = d.fresh_fvar();
+            let ht = d.kernel().fvar(ht_fv);
+            let e2 = select_bool_true(d, &p, mem_t, fal, tru, ht);
+            let back2 = d.bool_symm(not_t, fal, e2);
+            let impossible = d.bool_trans(fal, not_t, tru, back2, not_t_true);
+            let absurd = d.false_true_elim(goal, impossible);
+            d.lam_fv(ht_fv, t_is_true, absurd)
+        };
+        let on_t_false = {
+            let ht_fv = d.fresh_fvar();
+            let ht = d.kernel().fvar(ht_fv);
+            let pair = d.const_app(p.logic.and_intro, &[s_true, t_false, hs, ht]);
+            d.lam_fv(ht_fv, t_is_false, pair)
+        };
+        let body = or_elim(
+            d, &p, t_is_true, t_is_false, goal, on_t_true, on_t_false, t_decided,
+        );
+        d.lam_fv(hs_fv, s_is_true, body)
+    };
+    let on_s_false = {
+        let hs_fv = d.fresh_fvar();
+        let hs = d.kernel().fvar(hs_fv);
+        let e1 = select_bool_false(d, &p, mem_s, not_t, fal, hs);
+        let back1 = d.bool_symm(rhs, fal, e1);
+        let impossible = d.bool_trans(fal, rhs, tru, back1, rhs_true);
+        let absurd = d.false_true_elim(goal, impossible);
+        d.lam_fv(hs_fv, s_is_false, absurd)
+    };
+    let proof = or_elim(
+        d, &p, s_is_true, s_is_false, goal, on_s_true, on_s_false, s_decided,
+    );
+
+    let ty = {
+        let with_h = d.arrow(hyp_ty, goal);
+        let with_i = d.pi_fv(i_fv, nat, with_h);
+        let with_t = d.pi_fv(t_fv, fs, with_i);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_h = d.lam_fv(h_fv, hyp_ty, proof);
+        let with_i = d.lam_fv(i_fv, nat, with_h);
+        let with_t = d.lam_fv(t_fv, fs, with_i);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_mem_b_sdiff_elim, ty, value)
+}
+
+/// `Nat.Finset.card_le_card_sdiff_add : ∀ s t,
+/// Le (card s) (add (card (sdiff s t)) (card t))`.
+///
+/// The counting core: **deleting a set removes at most its own size**. Stated
+/// ADDITIVELY, like every other inequality in this file, because `Nat.sub` is
+/// truncated — `card s - card t ≤ card (sdiff s t)` is the same statement and
+/// the truncation makes it vacuously weaker when `card t` is large.
+///
+/// The proof is the file's workhorse pattern once more. Fold everything over
+/// the common bound `bound s + bound t`, where
+/// [`declare_card_eq_count_range_add`] collapses each of the three counts back
+/// to its own `card` — `sdiff s t` is free because its stored bound IS
+/// `bound s`. Between the folds sit two loose `countRange` facts:
+/// `Nat.countRange_le_of_subset` for `p ⊆ (p \ q) ∪ q` (pointwise, one
+/// `Bool` decision on `q k`), and `Nat.countRange_union_add_inter` read as an
+/// inequality by discarding the intersection through `Nat.le_add_right`.
+fn declare_card_le_card_sdiff_add(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
+    let p = *p;
+    let fs = finset_ty(d, &p);
+
+    let s_fv = d.fresh_fvar();
+    let s = d.kernel().fvar(s_fv);
+    let t_fv = d.fresh_fvar();
+    let t = d.kernel().fvar(t_fv);
+
+    let bs = fs_bound(d, &p, s);
+    let bt = fs_bound(d, &p, t);
+    let n = d.add(bs, bt);
+    let n_swapped = d.add(bt, bs);
+
+    let ms = fs_mem_fn(d, &p, s);
+    let mt = fs_mem_fn(d, &p, t);
+    let sd = d.const_app(p.finset_sdiff, &[s, t]);
+    let msd = fs_mem_fn(d, &p, sd);
+    let diff = set_diff(d, &p, ms, mt);
+    let joined = set_union(d, &p, diff, mt);
+    let met = set_inter(d, &p, diff, mt);
+
+    let c_s = count_range(d, &p, ms, n);
+    let c_join = count_range(d, &p, joined, n);
+    let c_diff = count_range(d, &p, diff, n);
+    let c_t = count_range(d, &p, mt, n);
+    let c_meet = count_range(d, &p, met, n);
+    let c_sd = count_range(d, &p, msd, n);
+    let c_t_swapped = count_range(d, &p, mt, n_swapped);
+
+    let card_s = fs_card(d, &p, s);
+    let card_sd = fs_card(d, &p, sd);
+    let card_t = fs_card(d, &p, t);
+
+    // `memB s ⊆ setUnion (setDiff (memB s) (memB t)) (memB t)`, pointwise.
+    let subset_pf = {
+        let nat = d.nat_ty();
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let hk_fv = d.fresh_fvar();
+        let hk_ty = d.lt(k, n);
+        let hm_fv = d.fresh_fvar();
+        let hm = d.kernel().fvar(hm_fv);
+        let tru = d.bool_true();
+        let fal = d.bool_false();
+        let s_at = d.apply(ms, &[k]);
+        let t_at = d.apply(mt, &[k]);
+        let hm_ty = d.bool_eq(s_at, tru);
+        let diff_at = d.apply(diff, &[k]);
+        let join_at = d.apply(joined, &[k]);
+        let concl = d.bool_eq(join_at, tru);
+
+        let not_t = bool_select_bool(d, &p, t_at, fal, tru);
+        // `setDiff (memB s) (memB t) k = notB (memB t k)`, from `memB s k`.
+        let diff_is_not_t = select_bool_true(d, &p, s_at, not_t, fal, hm);
+
+        let t_is_true = d.bool_eq(t_at, tru);
+        let t_is_false = d.bool_eq(t_at, fal);
+        let t_decided = bool_true_or_false(d, &p, t_at);
+        // `memB t k = true`: the difference is empty here, but the union's
+        // RIGHT branch is the member.
+        let on_t_true = {
+            let ht_fv = d.fresh_fvar();
+            let ht = d.kernel().fvar(ht_fv);
+            let not_t_false = select_bool_true(d, &p, t_at, fal, tru, ht);
+            let diff_false = d.bool_trans(diff_at, not_t, fal, diff_is_not_t, not_t_false);
+            let join_is_t = select_bool_false(d, &p, diff_at, tru, t_at, diff_false);
+            let body = d.bool_trans(join_at, t_at, tru, join_is_t, ht);
+            d.lam_fv(ht_fv, t_is_true, body)
+        };
+        // `memB t k = false`: the difference fires and the union's LEFT
+        // branch is `true` outright.
+        let on_t_false = {
+            let ht_fv = d.fresh_fvar();
+            let ht = d.kernel().fvar(ht_fv);
+            let not_t_true = select_bool_false(d, &p, t_at, fal, tru, ht);
+            let diff_true = d.bool_trans(diff_at, not_t, tru, diff_is_not_t, not_t_true);
+            let body = select_bool_true(d, &p, diff_at, tru, t_at, diff_true);
+            d.lam_fv(ht_fv, t_is_false, body)
+        };
+        let body = or_elim(
+            d, &p, t_is_true, t_is_false, concl, on_t_true, on_t_false, t_decided,
+        );
+        let with_hm = d.lam_fv(hm_fv, hm_ty, body);
+        let with_hk = d.lam_fv(hk_fv, hk_ty, with_hm);
+        d.lam_fv(k_fv, nat, with_hk)
+    };
+
+    let le_join = d.lemma(p.count_range_le_of_subset, &[ms, joined, n, subset_pf]);
+    // `c_join + c_meet = c_diff + c_t`, so `c_join ≤ c_diff + c_t`.
+    let incl_excl = d.lemma(p.count_range_union_add_inter, &[diff, mt, n]);
+    let join_plus_meet = d.add(c_join, c_meet);
+    let diff_plus_t = d.add(c_diff, c_t);
+    let le_self = d.lemma(p.le_add_right, &[c_join, c_meet]);
+    let motive_ie = d.eq_motive(join_plus_meet, &|d, x| d.le(c_join, x));
+    let le_split = d.transport(join_plus_meet, motive_ie, le_self, diff_plus_t, incl_excl);
+    let chained = d.lemma(p.le_trans, &[c_s, c_join, diff_plus_t, le_join, le_split]);
+
+    // Collapse the left fold: `countRange (memB s) (bound s + bound t) = card s`.
+    let e_s = d.lemma(p.finset_card_eq_count_range_add, &[s, bt]);
+    let motive_s = d.eq_motive(c_s, &|d, x| d.le(x, diff_plus_t));
+    let at_card_s = d.transport(c_s, motive_s, chained, card_s, e_s);
+
+    // Collapse the difference: through `memB (sdiff s t)`, whose stored bound
+    // IS `bound s`, so the same `card_eq_countRange_add` instance applies.
+    let pointwise = {
+        let nat = d.nat_ty();
+        let i_fv = d.fresh_fvar();
+        let i = d.kernel().fvar(i_fv);
+        let hi_fv = d.fresh_fvar();
+        let hi_ty = d.lt(i, n);
+        let at_i = d.lemma(p.finset_mem_b_sdiff, &[s, t, i]);
+        let lhs_i = d.apply(msd, &[i]);
+        let rhs_i = d.apply(diff, &[i]);
+        let step = d.bool_symm(lhs_i, rhs_i, at_i);
+        let with_hi = d.lam_fv(hi_fv, hi_ty, step);
+        d.lam_fv(i_fv, nat, with_hi)
+    };
+    let e_bridge = d.lemma(p.count_range_congr_lt, &[diff, msd, n, pointwise]);
+    let e_sd = d.lemma(p.finset_card_eq_count_range_add, &[sd, bt]);
+    let (_, e_diff) = d.chain(c_diff, &[(c_sd, e_bridge), (card_sd, e_sd)]);
+    let motive_d = d.eq_motive(c_diff, &|d, x| {
+        let rhs = d.add(x, c_t);
+        d.le(card_s, rhs)
+    });
+    let at_card_sd = d.transport(c_diff, motive_d, at_card_s, card_sd, e_diff);
+
+    // Collapse the right fold, which names the common bound the other way
+    // round — one `add_comm` under the fold.
+    let e_comm = d.lemma(p.add_comm, &[bs, bt]);
+    let e_swap = d.congr(n, n_swapped, e_comm, &|d, x| count_range(d, &p, mt, x));
+    let e_t_tail = d.lemma(p.finset_card_eq_count_range_add, &[t, bs]);
+    let (_, e_t) = d.chain(c_t, &[(c_t_swapped, e_swap), (card_t, e_t_tail)]);
+    let motive_t = d.eq_motive(c_t, &|d, x| {
+        let rhs = d.add(card_sd, x);
+        d.le(card_s, rhs)
+    });
+    let proof = d.transport(c_t, motive_t, at_card_sd, card_t, e_t);
+
+    let ty = {
+        let rhs = d.add(card_sd, card_t);
+        let concl = d.le(card_s, rhs);
+        let with_t = d.pi_fv(t_fv, fs, concl);
+        d.pi_fv(s_fv, fs, with_t)
+    };
+    let value = {
+        let with_t = d.lam_fv(t_fv, fs, proof);
+        d.lam_fv(s_fv, fs, with_t)
+    };
+    d.declare_theorem(p.finset_card_le_card_sdiff_add, ty, value)
+}
+
 pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(), KernelError> {
     declare_carrier(d, p)?;
     declare_operations(d, p)?;
@@ -3294,5 +3705,9 @@ pub(super) fn declare_finset_all(d: &mut NatDev<'_>, p: &NatPrelude) -> Result<(
     declare_all_below_false_witness(d, p)?;
     declare_exists_collision(d, p)?;
     declare_card_congr_of_mem_b(d, p)?;
+    declare_mem_b_sdiff(d, p)?;
+    declare_mem_b_sdiff_intro(d, p)?;
+    declare_mem_b_sdiff_elim(d, p)?;
+    declare_card_le_card_sdiff_add(d, p)?;
     Ok(())
 }

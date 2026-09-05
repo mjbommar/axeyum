@@ -6623,6 +6623,53 @@ pub struct NatPrelude {
     /// missing pieces.
     pub hall_condition_of_is_matching: NameId,
 
+    /// `Nat.Hall.anyBelow_witness : ∀ f n, Eq Bool (anyBelow f n) true →
+    /// Exists (fun i => And (Lt i n) (Eq Bool (f i) true))` (ADR-1623) —
+    /// `anyBelow`'s ELIMINATION rule, declared missing by ADR-1608 and sized
+    /// as bookkeeping by ADR-1614. A one-dimensional instance of
+    /// [`finset_all_below_false_witness`](Self::finset_all_below_false_witness).
+    pub hall_any_below_witness: NameId,
+    /// `Nat.Hall.memB_unionOver_elim : ∀ nb t v,
+    /// Eq Bool (memB (unionOver nb t) v) true →
+    /// Exists (fun i => And (Eq Bool (memB t i) true)
+    ///                      (Eq Bool (memB (nb i) v) true))` (ADR-1623) — the
+    /// converse of [`hall_mem_union_over`](Self::hall_mem_union_over), giving
+    /// `unionOver` a two-sided characterisation for the first time.
+    pub hall_mem_union_over_elim: NameId,
+    /// `Nat.Hall.memB_unionOver_congr : ∀ nb t t',
+    /// (∀ i, Eq Bool (memB t i) (memB t' i)) →
+    /// ∀ v, Eq Bool (memB (unionOver nb t) v) (memB (unionOver nb t') v)`
+    /// (ADR-1623) — membership in the union depends only on the index set's
+    /// MEMBERS, never on its stored bound. ADR-1614 §4's first obstruction.
+    pub hall_mem_union_over_congr: NameId,
+    /// `Nat.Hall.card_unionOver_congr : ∀ nb t t',
+    /// (∀ i, Eq Bool (memB t i) (memB t' i)) →
+    /// Eq Nat (card (unionOver nb t)) (card (unionOver nb t'))` (ADR-1623) —
+    /// [`hall_mem_union_over_congr`](Self::hall_mem_union_over_congr) through
+    /// [`finset_card_congr_of_mem_b`](Self::finset_card_congr_of_mem_b). The
+    /// two unions' stored bounds DO differ, which is why the plain congruence
+    /// is not enough.
+    pub hall_card_union_over_congr: NameId,
+    /// `Nat.Hall.memB_unionOver_sdiff : ∀ nb u t v,
+    /// Eq Bool (memB (unionOver (fun i => sdiff (nb i) u) t) v)
+    ///         (memB (sdiff (unionOver nb t) u) v)` (ADR-1623) — deleting
+    /// commutes with the union. Not a counting argument: the deleted set does
+    /// not depend on the index.
+    pub hall_mem_union_over_sdiff: NameId,
+    /// `Nat.Hall.card_unionOver_sdiff : ∀ nb u t,
+    /// Eq Nat (card (unionOver (fun i => sdiff (nb i) u) t))
+    ///        (card (sdiff (unionOver nb t) u))` (ADR-1623).
+    pub hall_card_union_over_sdiff: NameId,
+    /// `Nat.Hall.card_le_card_unionOver_sdiff_add : ∀ nb u t,
+    /// Le (card (unionOver nb t))
+    ///    (add (card (unionOver (fun i => sdiff (nb i) u) t)) (card u))`
+    /// (ADR-1623) — **the deficiency inequality**: the union of the family
+    /// with `u` deleted from every member loses at most `card u`. This is the
+    /// count Hall's inductive step needs to re-establish `HallCondition`
+    /// across a deleted family, and the obstruction ADR-1614 §4 told the next
+    /// lane to size.
+    pub hall_card_le_card_union_over_sdiff_add: NameId,
+
     /// `Nat.Finset.card_congr_of_memB : ∀ u v,
     /// (∀ i, Eq Bool (memB u i) (memB v i)) → Eq Nat (card u) (card v)` — two
     /// sets with the same members have the same cardinality even when their
@@ -6632,6 +6679,34 @@ pub struct NatPrelude {
     /// The premise-discharging lemma for
     /// [`finset_forall_subset_of_search`](Self::finset_forall_subset_of_search).
     pub finset_card_congr_of_mem_b: NameId,
+
+    /// `Nat.Finset.memB_sdiff : ∀ s t i,
+    /// Eq Bool (memB (sdiff s t) i) (setDiff (memB s) (memB t) i)` (ADR-1623)
+    /// — the pointwise reading of a set difference. Below `bound s` it is
+    /// `memB_of_lt`; above it both sides are `false`, the left because `memB`
+    /// truncates and the right because `setDiff` selects on its FIRST
+    /// argument.
+    pub finset_mem_b_sdiff: NameId,
+    /// `Nat.Finset.memB_sdiff_intro : ∀ s t i, Eq Bool (memB s i) true →
+    /// Eq Bool (memB t i) false → Eq Bool (memB (sdiff s t) i) true`
+    /// (ADR-1623).
+    pub finset_mem_b_sdiff_intro: NameId,
+    /// `Nat.Finset.memB_sdiff_elim : ∀ s t i,
+    /// Eq Bool (memB (sdiff s t) i) true →
+    /// And (Eq Bool (memB s i) true) (Eq Bool (memB t i) false)` (ADR-1623) —
+    /// the half Hall's deletion step consumes.
+    pub finset_mem_b_sdiff_elim: NameId,
+    /// `Nat.Finset.card_le_card_sdiff_add : ∀ s t,
+    /// Le (card s) (add (card (sdiff s t)) (card t))` (ADR-1623) — deleting a
+    /// set removes at most its own size. Stated ADDITIVELY because `Nat.sub`
+    /// is truncated. Everything is folded over the common bound
+    /// `bound s + bound t`, where
+    /// [`finset_card_eq_count_range_add`](Self::finset_card_eq_count_range_add)
+    /// collapses each count back to its own `card`; between the folds sit
+    /// `Nat.countRange_le_of_subset` for `p ⊆ (p \ q) ∪ q` and
+    /// [`count_range_union_add_inter`](Self::count_range_union_add_inter) read
+    /// as an inequality.
+    pub finset_card_le_card_sdiff_add: NameId,
 
     // --- The subset-search primitive (`subset_search.rs`, ADR-1614) ---------
     /// `Nat.Finset.bitB k i := beq (Nat.testBit k i) 1` — the `Bool` view of
@@ -7995,6 +8070,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             hall_mem_union_over: kernel.name_str(hall, "memB_unionOver"),
             hall_condition_of_is_matching: kernel.name_str(hall, "hallCondition_of_isMatching"),
             finset_card_congr_of_mem_b: kernel.name_str(finset, "card_congr_of_memB"),
+            finset_mem_b_sdiff: kernel.name_str(finset, "memB_sdiff"),
+            finset_mem_b_sdiff_intro: kernel.name_str(finset, "memB_sdiff_intro"),
+            finset_mem_b_sdiff_elim: kernel.name_str(finset, "memB_sdiff_elim"),
+            finset_card_le_card_sdiff_add: kernel.name_str(finset, "card_le_card_sdiff_add"),
+            hall_any_below_witness: kernel.name_str(hall, "anyBelow_witness"),
+            hall_mem_union_over_elim: kernel.name_str(hall, "memB_unionOver_elim"),
+            hall_mem_union_over_congr: kernel.name_str(hall, "memB_unionOver_congr"),
+            hall_card_union_over_congr: kernel.name_str(hall, "card_unionOver_congr"),
+            hall_mem_union_over_sdiff: kernel.name_str(hall, "memB_unionOver_sdiff"),
+            hall_card_union_over_sdiff: kernel.name_str(hall, "card_unionOver_sdiff"),
+            hall_card_le_card_union_over_sdiff_add: kernel
+                .name_str(hall, "card_le_card_unionOver_sdiff_add"),
             finset_bit_b: kernel.name_str(finset, "bitB"),
             finset_decode: kernel.name_str(finset, "decode"),
             finset_encode_from: kernel.name_str(finset, "encodeFrom"),
