@@ -69,7 +69,7 @@ measure typing rather than mathematics.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-09-05 | `<this commit>` | Mutation evidence recorded: three mutants RUN (killed 63 / 64 / exactly 2), and the fourth removed from the committed suite with the reason stated -- it SURVIVED because a constant's modulus is an arbitrary witness choice, not a guard. |
+| 2026-09-05 | `0b094f2b7` | Mutation evidence recorded: three mutants RUN (killed 63 / 64 / exactly 2), and the fourth removed from the committed suite with the reason stated -- it SURVIVED because a constant's modulus is an arbitrary witness choice, not a guard. |
 | 2026-09-05 | `7045bbd18` | `PLAN.md` regenerated for this lane's status block (it was untracked on the first `gen-plan.py` run and skipped): lanes 599 -> 600, landed rows 1105 -> 1106. |
 | 2026-09-05 | `aa383393d` | Holomorphy on a disc: `Complex.HolomorphicOn` as `Sigma (Complex -> Complex) (fun F' => HasDerivativeOn F F' c r)` -- it CANNOT be an `Exists` -- plus `holomorphicDeriv` (`Sigma.fst`), `holomorphic_spec` (`Sigma.snd`, dependent) and four constructors. Replaces the VACUOUS `InDisc` argument-order control with a symbolic one (no closed instance can distinguish the order: `\|z-c\| = \|c-z\|` and the kernel computes both). `prelude_fields.rs` mirror regenerated for the 18 new `Complex` fields. ADR-1642. |
 | 2026-09-05 | `189fbc799` | Nine tests for `complex/deriv.rs`, each with a negative control; `EXPECTED_STEP_ORDER` gains `deriv::declare_derivative` at position 93; `mutation_controls.py` gains a `complex-derivative` suite whose own comment records that two of its four mutants kill through `ring_law_proof`'s panic and are therefore MASS kills, i.e. weak evidence. |
