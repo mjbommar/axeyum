@@ -40,8 +40,9 @@
 //! ```
 //!
 //! Running the whole binary with default threads builds several full `CReal`
-//! kernels concurrently and has OOMed this host; `--test-threads=1` is not
-//! optional.
+//! kernels concurrently, and concurrent kernel builds are what the host-wide
+//! `scripts/cargo-serialized.sh` memory ceiling exists to bound;
+//! `--test-threads=1` is not optional.
 
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -95,8 +96,9 @@ struct Carrier {
 /// 4.34.0-rc1 (see `artifacts/measurements/lean-replay-census-2026-09-05.md`).
 ///
 /// `creal` is deliberately absent: it is the subject of
-/// `real_lean_replay_census`, whose floor of 1,900 predates this suite and is
-/// not restated here. The two suites together are the census.
+/// `real_lean_replay_census`, which carries its own floor and its own mutation
+/// controls, and duplicating it here would double a two-minute run and give one
+/// ratchet two homes. The two suites together are the census.
 static CARRIERS: &[Carrier] = &[
     Carrier {
         name: "logic",

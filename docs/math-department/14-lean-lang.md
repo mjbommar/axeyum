@@ -47,10 +47,10 @@ Measured 2026-09-05 at `f67ce41d2`; the commands are in *How to re-measure*.
 | pin, cross-check | `lean-toolchain` = `leanprover/lean4:v4.34.0-rc1` ([ADR-1594](../research/09-decisions/adr-1594-the-crosscheck-pin-moves-to-lean-4-34-0-rc1-and-follows-the-pin-file.md)) |
 | pin, Mathlib corpus | Lean `4.30.0`, mathlib4 `c5ea0035`, `lean4export` `a3e35a58`; every `F:ml430-*` fact is keyed to it |
 | compatibility matrix | 13 rows: K0 1/1, K1 6/6, K2 0/2, K3 0/1, K4 0/1, K5 0/1, K6 0/1 |
-| real-Lean suites in the kernel crate | 18 files (`real_lean_*`, `kernel_differential*`); gate floors 261 checks and 37 theory families |
+| real-Lean suites in the kernel crate | 19 files (`real_lean_*`, `kernel_differential*`); gate floors 278 checks and 37 theory families |
 | kernel differential corpus | 32 cases, 8 subsystems; 1 registered incompleteness (`Quot.sound` absent) ([ADR-0780](../research/09-decisions/adr-0780-the-kernel-differential-corpus-finds-real-defects-and-two-guards-survive-uncaught.md)) |
 | trusted core | 5,526 function-body lines, 9 files ([ADR-1600](../research/09-decisions/adr-1600-the-kernels-metatheoretic-status-what-is-trusted-and-what-is-not.md)) |
-| our theorems replayed in pinned Lean | `creal` carrier only: population 2,045, replayed 1,972, 48 `Type`-valued theorems Lean refuses as theorems, 25 blocked behind them ([ADR-0760](../research/09-decisions/adr-0760-independent-replay-is-graded-per-declaration-by-name.md)) |
+| our theorems replayed in pinned Lean | **every carrier**, 17 of 17: union population 4,478, replayed 4,394, 50 `Type`-valued theorems Lean refuses as theorems, 34 blocked behind them ([ADR-1661](../research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md), extending [ADR-0760](../research/09-decisions/adr-0760-independent-replay-is-graded-per-declaration-by-name.md)) |
 | credited roots exported, reimported, Lean-checked | 9 (C2) |
 | thin Lean adapter | one 8-category goal pack over one subject, `Nat.add_comm` (C3, [ADR-0935](../research/09-decisions/adr-0935-the-thin-lean-adapter-composes-c2s-two-checked-paths-and-adds-nothing-else.md)) |
 | Mathlib mirrors in the ledger | 756 facts: 499 proved, 257 open; fidelity gate PASS, 742 hash-verified, 14 unpinned |
@@ -58,7 +58,7 @@ Measured 2026-09-05 at `f67ce41d2`; the commands are in *How to re-measure*.
 | labeled imports from Lean/Mathlib | 7 facts, `proof_route: imported-kernel-lean`, footprint `[propext, Classical.choice, Quot.sound]`, never counted as ours; largest closure 3,142 declarations ([ADR-1090](../research/09-decisions/adr-1090-ivt-evt-row-4-labeled-import-lands-mathlib-topology-admits-clean.md)) |
 | Mathlib at scale | a full `lean4export Mathlib` is 680,925 declarations in ~4 min on s5; the declaration graph built so far is 446 declarations and 2,451 edges from 7 roots |
 | native producers | `linarith`, `ring`, `simp`, `decide`, tactic combinator: 18,497 lines emitting kernel terms — over *this* kernel's preludes, not Lean goals; the matrix's K3 row does not mention them |
-| **red today** | `scripts/install-pinned-lean.sh` rejects the `-rc1` pin (CI's real-Lean job red since `792224e73`); `gen-lean-complete-parity.py --check` and `check-lean-official-construct-matrix.py --check` exit 1 on a clean tree; in CI both are masked by `check-parity-freshness.py`, red since at least 2026-09-01 on the Z3 ledger |
+| **red today** | All three of the Lean gates this row named on 2026-09-05 are now GREEN, fixed the same day by lane `lean-pin-gates` ([ADR-1660](../research/09-decisions/adr-1660-there-are-two-lean-pins-and-every-claim-names-which-one-it-means.md)): `gen-lean-complete-parity.py --check`, `check-lean-official-construct-matrix.py --check` and `gen-lean-compatibility.py --check` each exit 0 on a clean tree at `3328d2a80`, and `install-pinned-lean.sh` accepts the `-rc1` pin. `check-parity-freshness.py`'s Z3-ledger failure was NOT re-measured by this lane and is not claimed either way. |
 
 ## What each chair would say
 
@@ -68,7 +68,7 @@ against the July documents.
 | # | chair | what "Lean compatible" would mean to them | what stops them |
 |---|---|---|---|
 | 01 | number theory | close the 257 open Mathlib mirrors; read the next thousand | statement extraction loses Mathlib's enclosing `variable` block, so a coercion-carrying statement re-parses as nothing (no screen exists); typeclass-headed statements have no record-spine target |
-| 02 | constructive analysis | **export.** "Among the most complete constructive analyses anywhere" is worth nothing to a Lean user until it is a Lake package they can `import` | `creal` replays into Lean at 1,972 of 2,045, but as a census artifact, not a library; 48 theorems are `Type`-valued and Lean's kernel refuses them as theorems |
+| 02 | constructive analysis | **export.** "Among the most complete constructive analyses anywhere" is worth nothing to a Lean user until it is a Lake package they can `import` | `creal` replays into Lean at 3,542 of 3,617, but as a census artifact, not a library; 50 theorems across the carriers are `Type`-valued and Lean's kernel refuses them as theorems — now named, with 34 more blocked behind five of them ([the census](../../artifacts/measurements/lean-replay-census-2026-09-05.md)) |
 | 03 | classical analysis | bring measure theory in as labeled scaffolding | 7 imports exist and each carries Mathlib's three axioms; no decision says whether an originated theorem may *depend* on an imported one, so imports cannot compose with anything we prove |
 | 04 | algebra | Mathlib's `Group` and our `AlgS.Group` should be the same thing on the wire | Mathlib is typeclass-headed and our spine is records; no correspondence is written down; the differential registers `Quot.sound` as a known incompleteness and stops there |
 | 05 | geometry | render `CPoint` results into Lean | Mathlib's plane is `EuclideanSpace ℝ (Fin 2)` over classical ℝ; no statement of ours is the same statement as theirs, and nothing records the mapping |
@@ -96,11 +96,17 @@ what makes the whole thing a claim rather than a folder.
       are **two** pins — the cross-check toolchain and the Mathlib corpus —
       and which one every existing 4.30 claim refers to. Serves 12, and every
       other item here depends on it.
-- [ ] **2. Replay every proved theorem in pinned Lean, or name the reason.**
-      Extend the `creal` census to every prelude, `missing=0` enforced, with
-      the `Type`-valued theorems as a typed class rather than a footnote. The
-      chair's headline — 2,487 axiom-free results — becomes "and Lean's kernel
-      accepts N of them" with N read from a run. Serves 10, 12, 02.
+- [x] **2. Replay every proved theorem in pinned Lean, or name the reason.**
+      **Done 2026-09-05** ([ADR-1661](../research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md),
+      [the measurement](../../artifacts/measurements/lean-replay-census-2026-09-05.md)).
+      Every carrier the kernel builds now runs ADR-0760's per-declaration
+      census, `missing=0` enforced per carrier, the carrier list derived from
+      `src/lib.rs`'s re-export block rather than recalled, and an `everything`
+      carrier building them all into one kernel because the per-carrier rows
+      nest and cannot be summed. The sentence the chair asked for, read from
+      that row: *of 4,478 proved declarations, pinned Lean's kernel accepts
+      4,394; 50 are `Type`-valued theorems it refuses as theorems, and 34 are
+      blocked behind one of those* — and all 84 are named. Serves 10, 12, 02.
 - [ ] **3. Publish the constructive analysis as a Lean library.** Render the
       `creal` prelude as `.lean` source that pinned Lean elaborates, with
       `#print axioms` empty on the Lean side, packaged for Lake. Reviewer 02's
@@ -183,6 +189,7 @@ count depend on Lean's axioms.
 
 | date | change | evidence |
 |---|---|---|
+| 2026-09-05 | Next Ten item 2 done. The replay census covers every carrier, not just `creal`: 17 carriers, `missing=0` on each, 20 tests green in 738.79 s on the cross-check pin (Lean 4.34.0-rc1). Union row: population 4,478, replayed 4,394, 50 `Type`-valued theorems Lean refuses as theorems (named), 34 blocked behind five of them (named, with blockers). `creal`'s own floor raised 1,900 -> 3,350 — it was set against a 2,045-declaration carrier that now holds 3,617, so it had stopped ratcheting. `check-lean-gate.sh` `CHECK_FLOOR` 261 -> 278. Two mutants run against the `missing` guard: dropping a leaf export root is killed and named, dropping a non-leaf root survives because the exporter emits the closure — recorded as a limitation, not fixed. | `3328d2a80`; [ADR-1661](../research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md); [`artifacts/measurements/lean-replay-census-2026-09-05.md`](../../artifacts/measurements/lean-replay-census-2026-09-05.md) |
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
 
 ## How to re-measure
