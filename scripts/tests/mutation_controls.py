@@ -6700,6 +6700,78 @@ SUITES["cas-trust-registry"] = (
 )
 
 
+# The primorial and the odd central binomial bound (ADR-1637, lane chebyshev-pi).
+#
+# Both subjects are kernel proof scripts, so most mutations here are killed the
+# same blunt way: the mutated declaration is REJECTED by
+# `Kernel::add_declaration`, `build_nat_prelude` returns `Err`, and every test
+# in the module dies at `Fixture::new()`. That is a real measurement -- the
+# harness reports the count it observed -- but it is a coarse one, so each row
+# below records what it is actually distinguishing.
+SUITES["primorial-in-kernel"] = (
+    "crates/axeyum-lean-kernel/src/nat_prelude/primorial.rs",
+    Cargo(
+        ("--release", "-p", "axeyum-lean-kernel", "--lib", "nat_prelude::primorial"),
+        "primorial-in-kernel",
+    ),
+    [
+        (
+            "the predicate compares minFac to the index itself, not to its successor",
+            "    let mf = d.const_app(p.min_fac, &[i]);\n    let body = d.beq(mf, i);",
+            "    let mf = d.const_app(p.min_fac, &[i]);\n    let bumped = d.succ(i);\n"
+            "    let body = d.beq(mf, bumped);",
+        ),
+        (
+            "the product runs up to AND INCLUDING n",
+            "    let bound = d.succ(n);\n    let body = primorial_body(d, &p, bound);",
+            "    let bound = n;\n    let body = primorial_body(d, &p, bound);",
+        ),
+        (
+            "the prime successor equation multiplies by the index, not by 1",
+            "        let concl = {\n            let rhs = d.mul(prior, sn);\n            d.eq(lhs, rhs)\n        };",
+            "        let concl = {\n            let one = d.num(1);\n            let rhs = d.mul(prior, one);\n"
+            "            d.eq(lhs, rhs)\n        };",
+        ),
+        (
+            "the composite successor equation really consumes its `2 <= succ n` premise",
+            "            let prime = d.const_app(p.prime_of_min_fac_eq_self, &[sn, h2, he]);",
+            "            let prime = d.const_app(p.prime_of_min_fac_eq_self, &[sn, he, he]);",
+        ),
+    ],
+)
+
+
+SUITES["central-binomial-in-kernel"] = (
+    "crates/axeyum-lean-kernel/src/nat_prelude/central_binomial.rs",
+    Cargo(
+        (
+            "--release",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "nat_prelude::central_binomial",
+        ),
+        "central-binomial-in-kernel",
+    ),
+    [
+        (
+            "the bound is 4^m and not 3^m -- the brief's own mutant, on the statement that landed",
+            "            let four = d.num(4);\n            let two = d.num(2);\n"
+            "            let pow4 = d.pow(four, m);",
+            "            let four = d.num(3);\n            let two = d.num(2);\n"
+            "            let pow4 = d.pow(four, m);",
+        ),
+        (
+            "the doubling lemma really is `a * 2`, not `a * 1`",
+            "            let two = d.num(2);\n            let lhs = d.mul(a, two);\n"
+            "            let rhs = d.add(a, a);",
+            "            let two = d.num(1);\n            let lhs = d.mul(a, two);\n"
+            "            let rhs = d.add(a, a);",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 

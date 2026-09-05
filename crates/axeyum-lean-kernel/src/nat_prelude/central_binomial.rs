@@ -351,10 +351,7 @@ pub(super) fn declare_four_pow_bridge(
     // four_pow_eq_two_pow_add_self : ∀ m, pow 4 m = pow 2 (add m m)
     {
         d.theorem(p.four_pow_eq_two_pow_add_self, 1, &|d, vars| {
-            let p = d.prelude();
             let m = vars[0];
-            let four = d.num(4);
-            let two = d.num(2);
             let claim = |d: &mut NatDev<'_>, x: ExprId| -> ExprId {
                 let four = d.num(4);
                 let two = d.num(2);
@@ -429,7 +426,6 @@ pub(super) fn declare_four_pow_bridge(
                 },
                 m,
             );
-            let _ = (four, two);
             (stmt, proof)
         })?;
     }

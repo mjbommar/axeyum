@@ -9,7 +9,10 @@
 //! `choose 7 3 = 35`, `4^3 = 64`, `2^7 = 128`.
 
 use crate::env::Declaration;
-use crate::{ExprId, Kernel, NatOps, NatPrelude, NatState, build_nat_prelude};
+use crate::{
+    BinderInfo, ExprId, Kernel, LocalContext, LocalDecl, NatOps, NatPrelude, NatState,
+    build_nat_prelude,
+};
 
 struct Fixture {
     k: Kernel,
@@ -36,6 +39,21 @@ impl Fixture {
     }
 }
 
+/// A free variable of `ty`, registered in `ctx` so `Kernel::infer_in` can see
+/// its type. `Kernel::infer` uses an EMPTY local context and rejects any free
+/// variable with `UnboundFVar`.
+fn free_of(f: &mut Fixture, ctx: &mut LocalContext, ty: ExprId) -> ExprId {
+    let anon = f.k.anon();
+    let fv = f.fresh_fvar();
+    ctx.push(LocalDecl {
+        fvar: fv,
+        name: anon,
+        ty,
+        info: BinderInfo::Default,
+    });
+    f.k.fvar(fv)
+}
+
 /// `Nat.mul_two_eq_add_self` states `a * 2 = a + a` at a FREE `a`.
 ///
 /// At a numeral both sides reduce and the statement is vacuous, so the check
@@ -45,10 +63,13 @@ impl Fixture {
 fn mul_two_eq_add_self_states_the_doubling() {
     let mut f = Fixture::new();
     let p = f.p;
-    let a_fv = f.fresh_fvar();
-    let a = f.k.fvar(a_fv);
+    let mut ctx = LocalContext::new();
+    let nat = f.nat_ty();
+    let a = free_of(&mut f, &mut ctx, nat);
     let applied = f.const_app(p.mul_two_eq_add_self, &[a]);
-    let ty = f.k.infer(applied).expect("mul_two_eq_add_self must apply");
+    let ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("mul_two_eq_add_self must apply");
 
     let expected = {
         let two = f.num(2);
@@ -57,7 +78,7 @@ fn mul_two_eq_add_self_states_the_doubling() {
         f.eq(lhs, rhs)
     };
     assert!(
-        f.k.def_eq(ty, expected),
+        f.k.def_eq_in(ty, expected, &mut ctx),
         "mul_two_eq_add_self must state `a * 2 = a + a`, got {}",
         f.k.render_lean(ty)
     );
@@ -67,7 +88,7 @@ fn mul_two_eq_add_self_states_the_doubling() {
         f.eq(lhs, a)
     };
     assert!(
-        !f.k.def_eq(ty, wrong),
+        !f.k.def_eq_in(ty, wrong, &mut ctx),
         "negative control: it must not state `a * 2 = a`"
     );
 }
@@ -199,11 +220,12 @@ fn the_central_binomial_shelf_is_admitted_and_axiom_free() {
 fn four_pow_bridge_states_the_exponent_doubling() {
     let mut f = Fixture::new();
     let p = f.p;
-    let m_fv = f.fresh_fvar();
-    let m = f.k.fvar(m_fv);
+    let mut ctx = LocalContext::new();
+    let nat = f.nat_ty();
+    let m = free_of(&mut f, &mut ctx, nat);
     let applied = f.const_app(p.four_pow_eq_two_pow_add_self, &[m]);
     let ty =
-        f.k.infer(applied)
+        f.k.infer_in(applied, &mut ctx)
             .expect("four_pow_eq_two_pow_add_self must apply");
 
     let build = |f: &mut Fixture, exponent: ExprId| -> ExprId {
@@ -216,13 +238,13 @@ fn four_pow_bridge_states_the_exponent_doubling() {
     let doubled = f.add(m, m);
     let expected = build(&mut f, doubled);
     assert!(
-        f.k.def_eq(ty, expected),
+        f.k.def_eq_in(ty, expected, &mut ctx),
         "four_pow_eq_two_pow_add_self must state `4^m = 2^(m+m)`, got {}",
         f.k.render_lean(ty)
     );
     let wrong = build(&mut f, m);
     assert!(
-        !f.k.def_eq(ty, wrong),
+        !f.k.def_eq_in(ty, wrong, &mut ctx),
         "negative control: it must not state `4^m = 2^m`"
     );
 }

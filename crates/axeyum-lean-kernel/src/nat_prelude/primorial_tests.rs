@@ -13,7 +13,10 @@
 //! value asserted here is `primorial 7 = 210`.
 
 use crate::env::Declaration;
-use crate::{ExprId, Kernel, NatOps, NatPrelude, NatState, build_nat_prelude};
+use crate::{
+    BinderInfo, ExprId, Kernel, LocalContext, LocalDecl, NatOps, NatPrelude, NatState,
+    build_nat_prelude,
+};
 
 struct Fixture {
     k: Kernel,
@@ -44,6 +47,22 @@ impl Fixture {
         let arg = self.num(n);
         self.const_app(p.primorial, &[arg])
     }
+}
+
+/// A free variable of `ty`, registered in `ctx` so `Kernel::infer_in` can see
+/// its type. `Kernel::infer` uses an EMPTY local context and rejects any free
+/// variable with `UnboundFVar`, so a test that instantiates at a symbolic
+/// argument must carry a context.
+fn free_of(f: &mut Fixture, ctx: &mut LocalContext, ty: ExprId) -> ExprId {
+    let anon = f.k.anon();
+    let fv = f.fresh_fvar();
+    ctx.push(LocalDecl {
+        fvar: fv,
+        name: anon,
+        ty,
+        info: BinderInfo::Default,
+    });
+    f.k.fvar(fv)
 }
 
 /// `Nat.primorial` computes `∏ {p prime, p ≤ n}` at every `n ≤ 7`.
@@ -141,10 +160,13 @@ fn the_defining_equations_instantiate() {
         f.k.render_lean(zero_ty)
     );
 
-    let n_fv = f.fresh_fvar();
-    let n = f.k.fvar(n_fv);
+    let mut ctx = LocalContext::new();
+    let nat = f.nat_ty();
+    let n = free_of(&mut f, &mut ctx, nat);
     let applied = f.const_app(p.primorial_succ, &[n]);
-    let ty = f.k.infer(applied).expect("primorial_succ must apply");
+    let ty =
+        f.k.infer_in(applied, &mut ctx)
+            .expect("primorial_succ must apply");
     let expected = {
         let sn = f.succ(n);
         let lhs = f.const_app(p.primorial, &[sn]);
@@ -157,7 +179,7 @@ fn the_defining_equations_instantiate() {
         f.eq(lhs, rhs)
     };
     assert!(
-        f.k.def_eq(ty, expected),
+        f.k.def_eq_in(ty, expected, &mut ctx),
         "primorial_succ must state the selector equation at a free `n`, got {}",
         f.k.render_lean(ty)
     );
@@ -172,7 +194,7 @@ fn the_defining_equations_instantiate() {
         f.eq(lhs, rhs)
     };
     assert!(
-        !f.k.def_eq(ty, wrong),
+        !f.k.def_eq_in(ty, wrong, &mut ctx),
         "negative control: primorial_succ must NOT drop the selector"
     );
 }
@@ -307,7 +329,7 @@ fn prime_condition_at(f: &mut Fixture, x: ExprId) -> ExprId {
 /// made.
 #[test]
 fn the_primorial_shelf_is_admitted_and_axiom_free() {
-    let mut f = Fixture::new();
+    let f = Fixture::new();
     let p = f.p;
 
     let definitions = [p.primorial];
