@@ -173,9 +173,19 @@
 #      forwarded through `check-shape-duplicates.py`'s own stdout rather than
 #      re-run -- a second `shape_search` invocation would pay the whole
 #      ~130 s index build again, which is the exact expense this guard exists
-#      to avoid. A small tolerance absorbs a projection regenerated a few
-#      commits before or after the `shape_search` binary was built; a gap
-#      past it is drift nobody is watching.
+#      to avoid. The two counts are NOT expected to match exactly even on a
+#      freshly regenerated projection: `shape_search.rs` never imports
+#      `build_list_nat_bridge`/`build_list_perm`, so it never builds the
+#      `list` prelude group at all, while this projection deliberately does
+#      (a lane note in `kernel_declaration_projection.rs` records that
+#      omission is why `List.count_toMultiset`/`List.Perm` were unfindable by
+#      shape-search lookups until 2026-09-03). That is a PERMANENT scope
+#      difference, measured at exactly 31 `list`-only declarations on
+#      2026-09-05 (4,291 committed vs 4,260 live, to the declaration), not
+#      drift -- the tolerance below absorbs that structural gap (which grows
+#      slowly as `list` gains declarations) plus slack for a projection
+#      regenerated a few commits before or after the `shape_search` binary was
+#      built; a gap past it is the real thing this guard exists to catch.
 #
 #      THREE outcomes, like guards 4, 8 and 9: no live count on hand -- guard 7
 #      skipped, unavailable, or its output carried no coverage line -- reports
@@ -478,7 +488,8 @@ fi
 # run above (guard 7) -- so this guard costs a `grep` and a `python3 -c`, not
 # a second ~130s index build.
 kernel_projection_json="artifacts/autogenesis/kernel-dependency-projection-v1.json"
-kernel_projection_tolerance=5
+kernel_projection_tolerance=100  # absorbs the list-scope gap (31 measured
+                                  # 2026-09-05) -- see header point 10
 kernel_projection_live=$(printf '%s\n' "${shape_dupes_out:-}" \
   | /usr/bin/grep -oE 'declarations=[0-9]+' | head -1 | /usr/bin/grep -oE '[0-9]+')
 if [ -z "$kernel_projection_live" ] || [ ! -f "$kernel_projection_json" ]; then

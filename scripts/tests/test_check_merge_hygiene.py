@@ -426,8 +426,18 @@ class MergeHygieneControls(unittest.TestCase):
 
     def test_a_current_kernel_projection_passes_within_tolerance(self) -> None:
         """The positive control: a projection within the stated tolerance of
-        the live count must not block a merge, and must say so by name."""
-        self._write_projection(4258)
+        the live count must not block a merge, and must say so by name.
+
+        Uses the REAL measured gap (4,291 committed vs 4,260 live shape_search
+        on 2026-09-05), not an arbitrary pair: `shape_search.rs` never builds
+        the `list` prelude group at all (it does not import
+        `build_list_nat_bridge`/`build_list_perm`), so a freshly regenerated
+        projection is STRUCTURALLY 31 declarations ahead of the live
+        shape_search count, every time -- not drift. A test using two
+        adjacent numbers would not have caught a tolerance too tight to
+        survive this gap; this one would have failed loudly with the
+        original tolerance=5."""
+        self._write_projection(4291)
         done = self.run_gate({"check_shape_duplicates": "coverage: groups=[nat] declarations=4260 values_indexed=false build=1.0s"})
         self.assertEqual(done.returncode, 0, _ctx(done))
         self.assertIn("kernel_projection=ok", done.stdout)
