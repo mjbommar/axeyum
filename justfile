@@ -391,6 +391,10 @@ facts:
     # kernel-reconstructed AT ALL: a fact regressing to cas-internal (or
     # vanishing) is refused, a new cas-internal fact is not.
     python3 scripts/check-cas-internal-residue.py --report
+    # SymPy parity corpus (docs/plan/cas-parity-corpus-2026-09-05): a DISAGREE is a
+    # failure, a decline is not, and a known_defect entry must keep disagreeing.
+    cargo run --release -q -p axeyum-cas --example parity_corpus
+    python3 docs/plan/cas-parity-corpus-2026-09-05/ground_truth.py
     python3 -m unittest scripts.tests.test_check_cas_internal_residue
     # Math-department file 13, Next Ten item 10 (first half): a per-function
     # trust registry for axeyum-cas -- distinct from cas-internal-residue
