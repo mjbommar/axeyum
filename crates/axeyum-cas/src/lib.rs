@@ -93,6 +93,7 @@ pub mod ntheory_certify;
 pub mod ntheory_more;
 pub mod orthopoly;
 pub mod partial_fractions;
+pub mod permgroup;
 pub mod permutation;
 mod ratint;
 pub mod rationality;
