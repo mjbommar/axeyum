@@ -6988,11 +6988,18 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
         // `AlgS.Monoid`/`AlgS.Group` records, so it lands at the same build
         // position. Names are deliberately not threaded into `NatPrelude`,
         // for the reason `AlgS.Poly.*` gives above.
+        // ADR-1626 / roadmap W3-3's residue: `CatS.grp`, `CatS.mon`, the
+        // forgetful functor between them, and the pointed unary algebras.
+        // `Subtype` (ADR-1613) makes a bundled hom-family a TYPE, which is
+        // the one thing ADR-1620 measured as blocking all three.
         let _cat_s = category_setoid::declare_category_setoid(
             kernel,
             &logic,
             &structures_s.monoid,
             &structures_s.group,
+            category_setoid::GroupCatDeps {
+                map_one: structures_s_extra.hom_map_one,
+            },
         )?;
 
         // ADR-1609 / roadmap W1-11's subobject half: `AlgS.Subgroup.*`. Needs

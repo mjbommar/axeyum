@@ -21,8 +21,8 @@
       "kind": "kernel-term",
       "supports": "CatS.isFunctor_comp admits through Kernel::add_declaration with an empty Kernel::axiom_footprint, and is recorded as a Declaration::Theorem (so the kernel checked its proof term). The rejection control m1_a_constant_morphism_map_is_not_a_functor refuses the identity functor's proof term against the statement whose morphism map has been mutated to a constant, with the unmutated positive twin admitted in the same test.",
       "check_status": "checked",
-      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 14 passed; 0 failed')\" -ge 1",
-      "notes": "The pinned count is 14. the_category_results_are_checked_theorems asserts the Declaration KIND for all ten theorems, so a definition silently replacing a theorem fails the gate."
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 29 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 29 (14 for the ADR-1620 layer plus 14 for ADR-1626's Sigma residue; RECOUNTED from the suite's own output, not incremented). the_category_results_are_checked_theorems asserts the Declaration KIND for all ten theorems, so a definition silently replacing a theorem fails the gate."
     }
   ],
   "concept_refs": [],

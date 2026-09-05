@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2317,
+    "min_identity_bound": 2320,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1428,6 +1428,20 @@
       ]
     },
     {
+      "fact_id": "F:cats-forget-grp-mon",
+      "language": "lean4",
+      "statement_sha256": "8bce42e80ef6406ff8381670cde98af8f5ea7fbfd5894290d847b2f18e396ba6",
+      "prose_sha256": "06e82409a38381c9b818a24ccbba31fed7b72204c121e435ddbc30bbe639bc2d",
+      "kernel_theorem": "CatS.forgetGrpMon_isFunctor"
+    },
+    {
+      "fact_id": "F:cats-grp-bundled-hom",
+      "language": "lean4",
+      "statement_sha256": "4048c81e4c5b147a6caea65c033dd2bc913b485bab1e331ebec0df45f56272d0",
+      "prose_sha256": "48f1006cc76b49bed452c61202fbba98a0f71d6937877e3c9f77e3277df0a39f",
+      "kernel_theorem": "CatS.isGrpHom_congr"
+    },
+    {
       "fact_id": "F:cats-initial-unique",
       "language": "lean4",
       "statement_sha256": "4024bc9de8f615d33e3d2cbb04480e96b3497bfd472493bb3fd0eb48e08781de",
@@ -1447,6 +1461,13 @@
       "statement_sha256": "162a601200931191770e62bd74c363e1f2997d58dc2255a6f9f422292a898e3a",
       "prose_sha256": "6e3100e4238a8846cb32f3782c1239b4ff1f9a1fe9cc51992dc99af8091499f6",
       "kernel_theorem": "CatS.isNat_ofMonoid"
+    },
+    {
+      "fact_id": "F:cats-nat-initial-object",
+      "language": "lean4",
+      "statement_sha256": "282f20d7bcd9d3d0086704bc08bce4ba74619dfc059c158216897f58439a9004",
+      "prose_sha256": "1bbd22c7a212aa0c20abcf29b974b22ec3c0782e9b0e3ebe7bb89b667620f605",
+      "kernel_theorem": "CatS.natPtAlg_isInitial"
     },
     {
       "fact_id": "F:cauchy-schwarz-over-constructed-plane",

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-nat-initial-object",
+  "title": "The natural numbers are an initial object of the category of pointed unary algebras",
+  "statement": "CatS.PtAlg is the type of pointed unary algebras, formed as the dependent triple Sigma (N : Sort 1) (Sigma (z : N) (N -> N)); CatS.ptAlg is the CatS.CategoryLarge over it whose morphisms are the bundled structure-preserving functions; CatS.natPtAlg is (Nat, Nat.zero, Nat.succ); and CatS.natPtAlg_isInitial : CatS.IsInitialLarge CatS.ptAlg CatS.natPtAlg CatS.natMed says every structure-preserving map out of it agrees pointwise with the mediating map CatS.natMed. The mediating map is GIVEN as data (universal-property template, part 2) rather than extracted from an Exists: it is Nat.rec at the constant motive fun _ => Q.carrier, and both of its structure equations are Eq.refl because both sides iota-reduce.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CatS.natPtAlg_isInitial : CatS.IsInitialLarge CatS.ptAlg CatS.natPtAlg CatS.natMed",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.natPtAlg_isInitial"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cats-initial-unique",
+    "F:eq-symm"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-nat-initial-object-1",
+      "kind": "kernel-term",
+      "supports": "CatS.PtAlg, CatS.PtAlg.carrier, CatS.PtAlg.zero, CatS.PtAlg.succ, CatS.IsPtHom, CatS.PtHom, CatS.ptAlg, CatS.IsInitialLarge, CatS.natPtAlg, CatS.natMed and CatS.natPtAlg_isInitial admit through the trusted Kernel::add_declaration gate with an empty Kernel::axiom_footprint. The three projections of CatS.natPtAlg are read from the kernel by def_eq in both directions (carrier IS Nat and is NOT Prop; zero IS Nat.zero and is NOT Nat.succ Nat.zero; succ Nat.zero IS Nat.succ Nat.zero and is NOT Nat.zero), and CatS.natMed is checked by COMPUTATION: med 0 reduces to 0 and not to 1, med 2 reduces to 2 and not to 1. Rejection controls with unmutated positive twins in the same test: N3 the mediating map's zero equation shifted by one succ is refused, N4 initiality read as med n = succ (g n) is refused.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 29 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 29 and is RECOUNTED from the suite's own output. The tests that carry this fact are groups_tests::the_nat_pointed_algebra_projects_to_nat_zero_succ, groups_tests::the_mediating_map_out_of_nat_computes, groups_tests::n3_the_mediating_map_hits_the_base_point and groups_tests::n4_initiality_is_equality_not_a_shift. CatS.PtAlg is pinned at Sort 2 and refused at both Sort 1 and Sort 3."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid::groups, lane group-category, ADR-1626 (roadmap W3-3 residue).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/groups.rs (declare_pt_alg, declare_pt_cat, declare_nat_med, declare_nat_is_initial); tests nat_prelude::category_setoid::groups::groups_tests::*."
+  },
+  "notes": "This is ADR-1610's Nat.Peano.initial in categorical form, and it is RE-PROVED here rather than cited. The reason is build order, not mathematics: Nat.Peano.iter and Nat.Peano.initial live in the characterization package, which is built ON TOP of this prelude, while CatS.* lands at the AlgS position inside it. The mediating map is definitionally the same map. Here the dependent pair is Sigma and not Subtype, because the second component is DATA rather than a proof; that is what puts the objects at Sort 2 and forces CatS.CategoryLarge. Int.Characterization.initial is NOT recovered: a Z-structure is a quadruple (R, e, up, down) subject to two mutual-inverse laws, so its category needs a further nested Sigma and a law-carrying object; that is scoped, not blocked."
+}

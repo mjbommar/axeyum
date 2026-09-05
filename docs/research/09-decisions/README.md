@@ -905,3 +905,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [1620](adr-1620-categories-are-setoid-enriched-and-the-universe-guard-is-not-what-blocks-the-category-of-groups.md) | categories are setoid-enriched, and the universe guard is not what blocks the category of groups | proposed |
 | [1622](adr-1622-modular-exponentiation-is-what-makes-a-number-theory-certificate-reconstruct.md) | Modular exponentiation, not a bigger numeral budget, is what makes a number-theory certificate reconstruct | accepted |
 | [1625](adr-1625-l1-is-a-metric-space-from-a-pointwise-distance-and-the-completion-functor-does-not-exist-yet.md) | L¹ is a metric space from a pointwise distance, and there is no completion functor to reuse | proposed |
+| [1626](adr-1626-the-layer-that-was-missing-was-sigma-and-three-blocked-constructions-came-back-together.md) | the layer that was missing was Σ, and the three blocked constructions came back together | proposed |

@@ -21,8 +21,8 @@
       "kind": "kernel-term",
       "supports": "CatS.isNat_ofMonoid admits through Kernel::add_declaration with an empty Kernel::axiom_footprint. The evaluation test the_delooping_reduces_to_the_monoids_own_fields reads the delooping's selectors out of the kernel -- hom reduces to M.carrier, id to M.e, comp g f to M.op g f and homEquiv to M.equiv -- and refuses each SWAPPED twin (M.op f g, the swapped M.equiv), so the composition order this theorem depends on is pinned rather than asserted. m3_the_naturality_square_is_indexed refuses a square with the wrong right-hand side, with its positive twin in the same test.",
       "check_status": "checked",
-      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 14 passed; 0 failed')\" -ge 1",
-      "notes": "The pinned count is 14."
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 29 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 29 (14 for the ADR-1620 layer plus 14 for ADR-1626's Sigma residue; RECOUNTED from the suite's own output, not incremented)."
     }
   ],
   "concept_refs": [],
