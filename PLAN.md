@@ -161,6 +161,9 @@ now. Nothing was deleted.
 | 2026-09-05 | `b8243a54a` | ADR-1631, six facts, the lane status, and the `bernoulli-binomial-model` mutation suite. `validate-facts.py` derived 18 `depends_on` edges from the proof terms that nobody would have written by hand. |
 | 2026-09-05 | `197f26e1b` | The remaining four ADR-1631 theorems registered, so all ten are in the ledger; registering `zero_add` and `mul_neg` made three EXISTING entries incomplete and the ledger noticed. |
 | 2026-09-05 | `b1c450453`, `f4cb80c35`, `9385cd877` | Generated-artifact and formatting follow-ups: production-provenance ledger, `rustfmt` on the two files the `pub(super)` widening reflowed, private-helper census (`files_scanned` 616 → 620, exactly this lane's four files). |
+| 2026-09-05 | `fb502c560` | feat(conic): six-coefficient family, discriminant classification, circle instance, isometry action on coefficients, standard forms, focus-directrix; 56 names in a ConicNames registry |
+| 2026-09-05 | `232166c28` | fix(conic): the invariance corollaries passed the conic where the hypothesis binds (kernel TypeMismatch); adds examples/cpoint_theorem_inventory.rs |
+| 2026-09-05 | `8f6e69f41` | test(conic): register the 56 names in the sweep; 13 tests (5 evaluation with negative controls, 6 verbatim-statement, 2 structural) |
 | 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
@@ -45702,6 +45705,187 @@ Next: (a) a plain-commutative-ring telescope, since ADR-0457's is parameterised
 over an *ordered* ring and ℂ is not one; (b) ℚ(i) for `geometry_certify`, which
 ADR-0512 deferred ℂ in favour of; (c) `CReal` completeness, which `abs`, `√` and
 algebraic closure are all downstream of.
+
+**Your lane's block (`DONE`, conics, 2026-09-05).** W3-9 is landed in a NEW
+file (`crates/axeyum-lean-kernel/src/creal_point/conic.rs`, registered from
+`creal_point.rs` per the brief's isolation constraint — `complex.rs` and
+`complex/` were never touched). **56 declarations, every one with an empty
+`Kernel::axiom_footprint`**, all registered in the every-declaration sweep.
+See
+[ADR-1641](docs/research/09-decisions/adr-1641-a-conic-is-data-and-the-isometry-acts-on-its-coefficients.md).
+
+The architectural decision that made the rest cheap: **a conic is data, not a
+predicate.** `CPoint.Conic` is a one-constructor inductive over six `CReal`
+coefficients, so the isometry action is a total function on the *coefficients*
+(`Conic.rotate`/`.reflect`/`.translate` : `Conic → Conic`) and "the
+classification is isometry-invariant" is an `Equiv` between two `CReal`s —
+inside what the existing `rn_ring_proof` producer decides. Every algebraic
+obligation in the file is discharged **flat** by it, at up to 72 monomials a
+side, with no staging. **No analytic fact about `CReal` is used anywhere**:
+not `sqrt`, not `inv`, not completeness; the order facts appear only in the
+four sign theorems and the three exclusions.
+
+1. **The family.** `Conic` + `mk` + `rec` + six projections, `Conic.eval`,
+   `CPoint.OnConic`, `Conic.discriminant` (`B² − 4AC`), and the three
+   predicates `IsEllipseType` (`< 0`) / `IsParabolaType` (`~ 0`) /
+   `IsHyperbolaType` (`> 0`). Plus `CPoint.Scalar.four`,
+   `Scalar.zero_lt_four`, `Scalar.neg_lt_zero_of_pos`.
+2. **The classification is a classification.** Three pairwise exclusions
+   (`not_ellipse_and_parabola` and siblings, each `∀ K, P₁ K → P₂ K → False`)
+   and one named inhabitant per class. **There is no trichotomy and there
+   cannot be one** — deciding the sign of a general constructive real is not
+   constructive. Apartness needs no declaration: `CReal.apart x y` is
+   `Or (lt x y) (lt y x)`, so `IsEllipseType ∨ IsHyperbolaType` **is**
+   `apart (discriminant K) zero` definitionally.
+3. **Circles.** `Conic.circle O r2` and `onConic_circle_iff`. **An `Iff`, not
+   a definitional identity** — `OnCircle` compares two quantities,
+   `OnConic` compares one against zero, so moving `r2` across the `Equiv` is
+   `add_right_cancel`-shaped work. `circle_isEllipseType` holds with no
+   hypothesis (`discriminant ~ −4`), degenerate `r2 ≤ 0` circles included.
+4. **Isometry invariance.** `onConic_rotate_iff` / `_reflect_iff` /
+   `_translate_iff`; `discriminant_rotate` / `_reflect` **unconditional**
+   (the factor is `(c²+s²)²` for every `(c,s)`, not only for rotations);
+   `discriminant_rotate_unit` / `_reflect_unit` under `c²+s² ~ 1`;
+   `discriminant_translate` with no hypothesis and an `Equiv.refl` proof.
+   Three `is*Type_congr` transfer lemmas and **nine** `is*Type_*` corollaries
+   — three predicates × three generators, because stating one and asserting
+   eight in prose is the claim shape this repository does not accept.
+5. **Standard forms.** `Conic.ellipse a b` (`b²x² + a²y² − a²b²`, denominators
+   cleared so partial `CReal.inv` never appears), `Conic.hyperbola a b`,
+   `Conic.parabola a` (`y = a x²`), `Conic.parabolaFocal p` (`x² = 4py`),
+   with their sign theorems. The two parabola ones take **no** hypothesis:
+   `B = C = 0` makes `B² − 4AC` vanish identically, so the degenerate
+   `a ~ 0` line is honestly of parabola type.
+6. **`parabola_focus_directrix`** — the focus–directrix property,
+   square-root-free by comparing squared distances. Not a weakening: the
+   perpendicular distance to `y = −p` is `|y + p|`, whose square is `(y+p)²`
+   with no absolute value left to interpret.
+
+**One real defect, found by running the suite, not by inspection.**
+`discriminant_rotate_unit`'s telescope is `∀ c s (h : c²+s² ~ 1) K` — the
+hypothesis binds BEFORE the conic — and `declare_invariance_corollaries`
+applied it as `[c, s, k, h]`. Rust sees only `ExprId`s, so it compiled clean
+and clippy was silent; the kernel refused the whole prelude with a
+`TypeMismatch` naming both sides (expected the unfolded
+`CReal.Equiv (c*c + s*s) one`, got `CPoint.Conic`). Fixed in `232166c28`.
+Same class the `metric-products` lane hit twice the same day.
+
+**Why `4` is spelled out** (`Scalar.four := two + two`, mirrored as four
+`RnExpr::One`s): with an opaque `t` the invariance identity
+`B'² − t·A'C' = (B² − t·AC)(c²+s²)²` is **false** — the `t`-free part of the
+left side carries `A²`, `B²`, `C²` monomials that only cancel when `t` is
+literally `4`. Checked before the proof was attempted; otherwise
+`rn_ring_proof` would have failed with "different normal forms", which says
+nothing about why.
+
+**What did NOT land**, sized:
+
+- **"A line meets a conic in at most two points"** (brief deliverable 4).
+  Needs the quadratic formula over `CReal`, so `sqrt` of the restricted
+  quadratic's own discriminant, so a decision on that discriminant's sign —
+  which the three predicates here cannot supply for a general conic. Not
+  blocked outright: it is reachable for a conic *given* one of the three
+  predicates, which is the natural next slice (~1 definition + 1 sqrt-side
+  lemma + 1 ring identity).
+- **The reflective property of the parabola** (the other deliverable-4
+  option). Needs the tangent line — a derivative on `CPoint`, or tangency as
+  a double root stated without `sqrt`. Roughly one definition plus one ring
+  identity; the definition is the design question, not the proof.
+- **The converse "a conic with `A ~ C`, `B ~ 0` is a circle"**. Needs
+  completing the square, hence `CReal.inv`, hence a `PosBound` witness for
+  `A`.
+- **The general normal form** `IsEllipseType K → ∃ isometry, …`. Needs the
+  eigenvector rotation angle (a square root) and the `±` choice
+  `creal_point/isometry.rs` already sizes at four sub-shelves. Unchanged.
+- **A setoid congruence for `OnConic`** (`CPoint.Equiv P Q → OnConic K P →
+  OnConic K Q`). Six `mul_congr`/`add_congr` steps, ~40 lines; not written.
+
+**Mutation table** — both RUN (not predicted), applied one at a time in this
+lane's own worktree (never the shared checkout), restored byte-for-byte, and
+`git diff` verified empty after each restoration.
+
+| mutant | mechanism | run command | result |
+|---|---|---|---|
+| discriminant with `+ 4AC` | `discriminant_body`'s `let neg_four_ac = cneg(d, p, four_ac)` → `let neg_four_ac = four_ac` (the definition only; the `r_discriminant` ring mirror left saying minus) | `./target/release/deps/axeyum_lean_kernel-<hash> --test-threads=2 …cpoint_prelude_builds …conic_discriminant_evaluates` then `--test-threads=4 …::conic` | **KILLED. 2 of 2, then 6 of 6 `conic` tests failed** (`0 passed; 6 failed`, 183.77s). Kernel `TypeMismatch`: the prelude build is refused, so every consumer dies |
+| rotation with `sin`/`cos` swapped in one entry | `linear_action_body`'s `Action::Rotate` arm, `E' = −(D·s) + E·c` → `−(D·c) + E·s` (definition only; `r_linear_action` mirror unchanged) | `./target/release/deps/axeyum_lean_kernel-<hash> --test-threads=4 creal_point::creal_point_tests::conic`, then `…cpoint_prelude_builds --nocapture` | **KILLED. 6 of 6 `conic` tests failed** (`0 passed; 6 failed`, 145.82s). Kernel `TypeMismatch` names the exact declaration: `onConic_rotate_iff`'s expected type carries `Conic.eval (Conic.rotate …)` while the proof's type carries the mirror's `−(D·s) + E·c` |
+
+Both mutants kill through the same channel — the definition drifts from its
+`RnExpr` mirror, the ring proof still proves a true identity, and the kernel
+refuses the theorem because the two are no longer defeq. That is the one
+defect class the normalizer itself cannot report, and it is why the mirrors
+sit beside the term builders in the file with a comment saying so.
+
+**Gates run, with NONZERO counts and exit status**:
+
+- `cargo check -p axeyum-lean-kernel --all-targets -j 4` — exit 0, clean.
+- `cargo check --workspace --all-targets -j 4` (after the Python mirror
+  regen, per the "a kernel invariant is not a workspace invariant" rule) —
+  exit 0, `Finished in 1m 50s`.
+- `rustfmt --edition 2024` on each file written (per-file, never workspace
+  `cargo fmt`).
+- `cargo fmt --all --check` — exit 0, clean (read-only).
+- `cargo clippy -p axeyum-lean-kernel --all-targets -- -D warnings` — exit 0,
+  clean.
+- **`…creal_point:: --test-threads=4` — 82 passed; 0 failed**, 150.31s,
+  exit 0 (release binary, run directly so the count is the whole
+  `creal_point` module: 69 pre-existing + 13 new).
+- **`…every_theorem_here_is_axiom_free --test-threads=1` — 1 passed**,
+  71.00s, exit 0. This is the **sweep**: its coverage half enumerates the
+  ENVIRONMENT, so all 56 new `CPoint.*` names had to be listed or it goes
+  red.
+- `cargo test --release -p axeyum-lean-kernel --lib --no-run` — exit 0
+  (build step, separated from the run so each stayed inside one foreground
+  budget).
+- `python3 scripts/validate-facts.py` — first run exit 1 with
+  `DEPENDS_DERIVED_ERROR` on all three new facts (the derived `depends_on`
+  edges); `check-fact-depends-derived.py --fix` added 36 edges across the
+  three; re-run **exit 0**, `2859 facts`.
+- `python3 scripts/check-settled-fact-statements.py --write` then bare —
+  `SETTLED_FACT_STATEMENTS|PASS`, exit 0, `settled=2601|drifted=0`.
+- `python3 scripts/gen-py-prelude-fields.py` then `--check` —
+  `OK up to date`, `cpoint=205` (149 flat + **56** in the new `conic`
+  registry).
+- `python3 scripts/gen-adr-index.py` — `rows=854`.
+  `duplicate_numbers=0166,0167` is reported but **pre-existing** (an
+  old-style pair, not touched here).
+- `python3 scripts/gen-plan.py` and `--check` — exit 0.
+- `python3 scripts/frontier-shape-census.py` — exit 0.
+- `scripts/check-merge-hygiene.sh` — see the run log in the report.
+- `python3 scripts/check-kernel-trusted-core.py` — **exit 1, and the failure
+  is NOT this lane's**: `FAIL D: file(s) joined the trusted core:
+  ['metric_prod.rs']`. `conic.rs` appears nowhere in the checker's output and
+  `ConicNames` has no `pub fn all` (0 matches). `metric_prod.rs` is already
+  on `main` (`c3249653d`), so this red predates the branch; not fixed here,
+  because it is another lane's file.
+- **Did NOT run**: `just check` / `./scripts/check.sh` (the full aggregate
+  gate). Each release build of this crate cost 3m17s–5m33s on a box at load
+  16 with five other lanes queued behind the same `cargo-serialized` flock,
+  and the aggregate gate would have cost another long queue. Whoever merges
+  this, or the next pre-push, should still run it.
+- **Did NOT run**: the full `creal_point::` suite under **mutant 1**. It
+  exceeded the 590s foreground budget, because a poisoned prelude build
+  re-runs the `OnceLock` for every one of the 82 tests (~70s each). The
+  `--test-threads=4 …::conic` subset (6 of 6 killed) and the two-test run
+  (2 of 2 killed) are the measurements actually taken; the 82-test figure
+  for that mutant is **not** claimed.
+
+**Retrieval, before anything was written** (the "does it already exist"
+rule): `shape_search --include-constructed --name-like conic` over
+`declarations=4402` returns `verdict: ABSENT`, with a same-kind positive
+control (`--name-like oncircle --kind definition`) returning
+`CPoint.OnCircle`, `verdict: FOUND 1`. **Partition check**: `grep -rl
+'"partition": "held-out"' artifacts/facts/` matches 0 files, and no holdout
+artifact (`artifacts/autogenesis/holdout-*`,
+`artifacts/structural-index/held-out-exclusion-manifest.json`) mentions
+conic, ellipse, parabola, hyperbola or discriminant. Nothing here is in a
+blind evaluation population.
+
+Also added: `crates/axeyum-lean-kernel/examples/cpoint_theorem_inventory.rs`
+— no in-tree example rendered a `CPoint` declaration's TYPE
+(`nat_theorem_inventory` builds only `Nat`, `prelude_theorem_inventory`
+prints axiom footprints, `kernel_declaration_projection --require-declaration`
+answers present/absent), so a fact whose `formal.statement` must be the
+rendered type verbatim had no source for one.
 
 **Status:** landed. One canonical definition per mathematical object is now a
 gate, registered in all four aggregate contexts.
