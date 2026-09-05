@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:law-of-sines-over-constructed-plane",
+  "title": "The law of sines over the constructed reals, as |U x V| = ||U|| ||V|| sin, with the cross product identified with the existing triangle determinant",
+  "statement": "For two points (vectors) U, V of the plane CPoint over the constructed (Bishop) reals, with k and h : PosBound (||U|| ||V||) k, |U x V| ~ ||U|| ||V|| sinAngle(U,V), where |.| is CReal.abs, U x V is CPoint.crossV, and ~ is CReal.Equiv. Separately and definitionally, CPoint.cross_eq_crossV proves cross A B C ~ crossV (sub B A) (sub C B) BY equiv_refl: the three-point triangle determinant the library already had IS the two-vector cross product at the two edge vectors. So the left side is twice the area of the triangle, and this is also the (1/2) a b sin C area formula.",
+  "formal": {
+    "kernel_theorem": "CPoint.law_of_sines",
+    "language": "lean4",
+    "statement": "theorem CPoint.law_of_sines : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CReal.abs (CPoint.crossV x0 x1)) (CReal.mul (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) (CPoint.sinAngle x0 x1 x2 x3))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cauchy-schwarz-over-constructed-plane",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-inv-cancel",
+    "F:creal-mul-one",
+    "F:creal-mul-self-abs",
+    "F:creal-mul-self-sqrt",
+    "F:creal-mul-zero",
+    "F:creal-neg-congr",
+    "F:creal-neg-mul-neg",
+    "F:creal-sq-nonneg",
+    "F:creal-sqrt-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.law_of_sines",
+      "kind": "kernel-term",
+      "kernel_declaration": "CPoint.law_of_sines",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (build_cpoint_prelude)",
+        "creal_point_tests::every_theorem_here_is_axiom_free",
+        "creal_point_tests::new_angle_and_isometry_statements_are_exact"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib creal_point:: -- --test-threads=4",
+      "supports": "`CPoint.law_of_sines` and `CPoint.cross_eq_crossV` are admitted with exactly the types their statement pins record, with empty axiom footprints. `new_definitions_have_the_intended_value` additionally pins `crossV`'s VALUE at a symbolic argument and asserts it still contains a `CReal.neg`, because the kernel cannot tell you a definition is wrong -- a symmetric `crossV` would type-check and would make this statement false."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane angles-and-isometries (2026-09-04), roadmap W1-8/W2-13, ADR-1615. Kernel theorems over CReal (the constructed Bishop reals, ADR-0512) in crates/axeyum-lean-kernel/src/creal_point/angle.rs and creal_point/isometry.rs, all admitted through Kernel::add_declaration with an empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Nasir al-Din al-Tusi and earlier Indian and Islamic authors",
+        "what": "the law of sines for plane triangles",
+        "where": "conventionally attributed",
+        "attribution": "standard attribution; this lane did not consult the primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED. The ratio form a/sin A = b/sin B = c/sin C is NOT proved. This is the product form for one pair of vectors; deriving the ratio form needs the PosBound producer described in F:pythagorean-identity-for-the-plane-angle's notes (so the three angles of one triangle can each be formed) plus a circumradius identity. Recording this fact under the name 'law of sines' without this paragraph would let a reader infer the ratio form.\n\nsinAngle is UNSIGNED, so the left side carries an absolute value and the statement says nothing about orientation. A signed version would need a decision on the sign of a real.\n\nConstructive: no Classical.em, no propext, no funext, no Quot.sound."
+}

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "id": "F:law-of-cosines-over-constructed-plane",
+  "title": "The law of cosines over the constructed reals, in the classical c^2 = a^2 + b^2 - 2ab cos C form",
+  "statement": "For two points (vectors) U, V of the plane CPoint over the constructed (Bishop) reals, with k and h : PosBound (||U|| ||V||) k as in F:pythagorean-identity-for-the-plane-angle, the squared distance satisfies distSq U V ~ ||U||^2 + ||V||^2 - 2 ||U|| ||V|| cosAngle(U,V), where doubling is written X + X (this development has no CReal-times-Nat scalar multiplication) and ~ is CReal.Equiv. A second, weaker and hypothesis-free form is also proved: CPoint.law_of_cosines_dot says distSq U V ~ (U.U) + (V.V) - 2(U.V) for ALL U and V, with no PosBound and no cosine -- that one is pure bilinearity of the dot product. The bridge between them is CPoint.norm_mul_cos_angle, ||U|| ||V|| cos = U.V.",
+  "formal": {
+    "kernel_theorem": "CPoint.law_of_cosines",
+    "language": "lean4",
+    "statement": "theorem CPoint.law_of_cosines : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CPoint.distSq x0 x1) (CReal.add (CReal.add (CReal.mul (CPoint.norm x0) (CPoint.norm x0)) (CReal.mul (CPoint.norm x1) (CPoint.norm x1))) (CReal.neg (CReal.add (CReal.mul (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) (CPoint.cosAngle x0 x1 x2 x3)) (CReal.mul (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) (CPoint.cosAngle x0 x1 x2 x3)))))))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cauchy-schwarz-over-constructed-plane",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-inv-cancel",
+    "F:creal-mul-one",
+    "F:creal-mul-self-abs",
+    "F:creal-mul-self-sqrt",
+    "F:creal-mul-zero",
+    "F:creal-neg-congr",
+    "F:creal-neg-mul-neg",
+    "F:creal-sq-nonneg",
+    "F:creal-sqrt-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.law_of_cosines",
+      "kind": "kernel-term",
+      "kernel_declaration": "CPoint.law_of_cosines",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (build_cpoint_prelude)",
+        "creal_point_tests::every_theorem_here_is_axiom_free",
+        "creal_point_tests::new_angle_and_isometry_statements_are_exact"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib creal_point:: -- --test-threads=4",
+      "supports": "`CPoint.law_of_cosines` and `CPoint.law_of_cosines_dot` are both admitted with exactly the types their statement pins record, with empty axiom footprints. The statement pin is the companion to the footprint check because `axiom_footprint` of an undeclared name is vacuously empty."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane angles-and-isometries (2026-09-04), roadmap W1-8/W2-13, ADR-1615. Kernel theorems over CReal (the constructed Bishop reals, ADR-0512) in crates/axeyum-lean-kernel/src/creal_point/angle.rs and creal_point/isometry.rs, all admitted through Kernel::add_declaration with an empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "Euclid",
+        "what": "Elements II.12 and II.13, the obtuse and acute cases without a cosine",
+        "where": "Elements, Book II",
+        "attribution": "standard attribution; this lane did not consult the primary source."
+      },
+      {
+        "who": "al-Kashi and later trigonometric authors",
+        "what": "the modern statement with a cosine",
+        "where": "conventionally attributed",
+        "attribution": "standard attribution; this lane did not consult the primary source."
+      }
+    ]
+  },
+  "notes": "The stated form uses the vectors U, V rather than a triangle's three vertices, because distSq U V is definitionally dot (sub U V) (sub U V) and no side-length bookkeeping is needed. To read it as a triangle statement at A, B, C, take U := sub A C and V := sub B C; then distSq U V is |AB|^2 and the cosine is the cosine at the vertex C.\n\nThe hypothesis-free companion CPoint.law_of_cosines_dot is the stronger statement in one respect -- it holds for degenerate configurations where the PosBound cannot exist -- and the weaker one in another: it has no cosine in it. Both are recorded because neither implies the other without the bridge.\n\nConstructive: no Classical.em, no propext, no funext, no Quot.sound."
+}

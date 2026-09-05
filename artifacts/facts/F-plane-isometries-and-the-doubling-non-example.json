@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "F:plane-isometries-and-the-doubling-non-example",
+  "title": "Isometries of the constructed plane: the monoid, translations, rotations and reflections as instances, and a constructive refutation that doubling is one",
+  "statement": "Define, for a map f : CPoint -> CPoint over the constructed (Bishop) reals, Isometry f := forall P Q, distSq (f P) (f Q) ~ distSq P Q, with ~ being CReal.Equiv and distSq the squared Euclidean distance. Then: the identity map is an isometry and the composite of two isometries is an isometry (so isometries form a monoid under composition); every translate T (P |-> P + T) is an isometry with NO hypothesis at all; and for any two reals c, s with c^2 + s^2 ~ 1, both rotate c s (P |-> (c Px - s Py, s Px + c Py)) and reflect c s (P |-> (c Px + s Py, s Px - c Py)) are isometries. NO ANGLE IS FORMED ANYWHERE: a rotation is parameterised by the normalised PAIR (c, s), never by an angle, so nothing here needs arccos. Separately, scale r (P |-> (r Px, r Py)) satisfies distSq (scale r P) (scale r Q) ~ r^2 distSq P Q exactly, and the doubling map is REFUTED as an isometry: CPoint.not_isometry_scale_two proves Isometry (scale 2) -> False.",
+  "formal": {
+    "kernel_theorem": "CPoint.not_isometry_scale_two",
+    "language": "lean4",
+    "statement": "theorem CPoint.not_isometry_scale_two : ((x0 : CPoint.Isometry (CPoint.scale CPoint.Scalar.two)) -> False)",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-le-add",
+    "F:creal-add-neg",
+    "F:creal-add-right-cancel",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-le-congr",
+    "F:creal-le-refl",
+    "F:creal-le-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-one",
+    "F:creal-mul-zero",
+    "F:creal-neg-congr",
+    "F:creal-neg-mul-neg",
+    "F:creal-not-le-zero-neg-one",
+    "F:creal-sq-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.not_isometry_scale_two",
+      "kind": "kernel-term",
+      "kernel_declaration": "CPoint.not_isometry_scale_two",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (build_cpoint_prelude)",
+        "creal_point_tests::every_theorem_here_is_axiom_free",
+        "creal_point_tests::new_angle_and_isometry_statements_are_exact",
+        "creal_point_tests::a_theorem_here_proves_only_its_own_statement"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib creal_point:: -- --test-threads=4",
+      "supports": "The refutation and all six positive instances (`isometry_id`, `isometry_comp`, `isometry_translate`, `isometry_rotate`, `isometry_reflect`, `scale_distSq`) are admitted with exactly the types their statement pins record, with empty axiom footprints. THE EXIT STATUS DEPENDS ON THE FINDING IN BOTH DIRECTIONS: `a_theorem_here_proves_only_its_own_statement` re-offers `isometry_id`'s proof value at the type `Isometry (scale CPoint.Scalar.two)` and FAILS unless the kernel refuses it, and re-offers `isometry_rotate`'s value at `isometry_reflect`'s type (the two differ only in two signs) and fails unless that too is refused. Each row carries a matched positive control -- the same value at its own type under a fresh name, which must be ADMITTED -- so the check cannot pass by being unable to admit anything at all."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane angles-and-isometries (2026-09-04), roadmap W1-8/W2-13, ADR-1615. Kernel theorems over CReal (the constructed Bishop reals, ADR-0512) in crates/axeyum-lean-kernel/src/creal_point/angle.rs and creal_point/isometry.rs, all admitted through Kernel::add_declaration with an empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "classical Euclidean geometry",
+        "what": "the isometry group of the plane and its generators",
+        "where": "standard",
+        "attribution": "standard attribution; this lane did not consult a primary source."
+      }
+    ]
+  },
+  "notes": "WHAT IS NOT PROVED, so it is not inferred: THE CLASSIFICATION. 'Every isometry of the plane is a rotation or a reflection followed by a translation' is NOT proved, and none of the instances above amounts to it -- they establish that four families ARE isometries, not that there are no others. The first step toward it, CPoint.isometry_preserves_dot (an isometry preserves the inner product of differences, not just their lengths), IS proved. The remaining three steps and their size are recorded in ADR-1615 and in creal_point/isometry.rs's module doc: a scalar multiple of a point with six bilinearity lemmas; the coordinate expansion closed by CPoint.eq_zero_of_dot_self_zero; and a sign decision that is genuinely constructive work (decidable via CReal.apart_cotrans on the threshold pair (-1/2, 1/2), because (u x v)^2 ~ 1 puts u x v apart from 0, but not a case split). Sized at 25-40 declarations and 1200-1800 lines; nothing in it is blocked.\n\nINVERSES ARE NOT PROVED EITHER. Isometry f is a predicate about f alone and carries no surjectivity, so isometry_id and isometry_comp give a MONOID, not a group. The word 'group' does not appear in any statement here.\n\nThe refutation is constructive and needs no excluded middle: instantiating at (1,0) and (0,0) makes the ring normalizer compute both squared distances, giving 2*2 ~ 1; two CReal.add_right_cancel steps turn that into 1 + 1 ~ -1; and CReal.not_le_zero_neg_one refutes the 0 <= -1 that follows. No Classical.em, no propext, no funext, no Quot.sound.\n\nIsometry is stated over distSq rather than over Metric.CPoint.dist because metric.rs is a LATER prelude than creal_point.rs, so a dist-shaped definition cannot live in the cpoint group. The two conditions agree (sqrt is injective on the nonnegatives) but that agreement is not itself proved here.\n\nexternal_status is `proved`: formalization of classical facts, not discovery."
+}

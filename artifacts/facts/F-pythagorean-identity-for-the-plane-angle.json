@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "F:pythagorean-identity-for-the-plane-angle",
+  "title": "sin^2 + cos^2 = 1 for the angle between two vectors of the constructed plane, proved by algebra with no trigonometry in it",
+  "statement": "Define, for two points (vectors) U, V of the plane CPoint = CReal x CReal over the constructed (Bishop) reals, ||U|| := CReal.sqrt (U.U), U x V := (U.x)(V.y) - (U.y)(V.x), and -- given a natural number k and a proof h that PosBound (||U|| ||V||) k, i.e. that the product of norms is bounded below by 1/(k+1) -- the two ratios cosAngle U V k h := (U.V) * (||U|| ||V||)^-1 and sinAngle U V k h := |U x V| * (||U|| ||V||)^-1. Then sinAngle^2 + cosAngle^2 ~ 1, where ~ is CReal.Equiv. THE ANGLE ITSELF IS NEVER FORMED: there is no arccos here and none is needed. The identity is CPoint.lagrange_identity, (a^2+b^2)(c^2+e^2) - (ac+be)^2 = (ae-bc)^2, instantiated at the four coordinates and divided by ||U||^2 ||V||^2 -- pure commutative-ring algebra plus CReal.mul_self_sqrt, CReal.mul_self_abs and CReal.mul_inv_cancel. NO POWER SERIES, NO DERIVATIVE, NO ANALYTIC INPUT. The nonzero-denominator condition is carried as DATA (the PosBound witness), never as a negation of equality, because CReal.inv consumes a PosBound and not an Apart.",
+  "formal": {
+    "kernel_theorem": "CPoint.sin_sq_add_cos_sq",
+    "language": "lean4",
+    "statement": "theorem CPoint.sin_sq_add_cos_sq : ((x0 : CPoint) -> ((x1 : CPoint) -> ((x2 : AxNat) -> ((x3 : CReal.PosBound (CReal.mul (CPoint.norm x0) (CPoint.norm x1)) x2) -> CReal.Equiv (CReal.add (CReal.mul (CPoint.sinAngle x0 x1 x2 x3) (CPoint.sinAngle x0 x1 x2 x3)) (CReal.mul (CPoint.cosAngle x0 x1 x2 x3) (CPoint.cosAngle x0 x1 x2 x3))) CReal.one))))",
+    "fragment": "CPoint",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3"
+    ]
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:cauchy-schwarz-over-constructed-plane",
+    "F:creal-add-assoc",
+    "F:creal-add-comm",
+    "F:creal-add-congr",
+    "F:creal-add-neg",
+    "F:creal-add-zero",
+    "F:creal-equiv-refl",
+    "F:creal-equiv-symm",
+    "F:creal-equiv-trans",
+    "F:creal-left-distrib",
+    "F:creal-mul-assoc",
+    "F:creal-mul-comm",
+    "F:creal-mul-congr",
+    "F:creal-mul-inv-cancel",
+    "F:creal-mul-one",
+    "F:creal-mul-self-abs",
+    "F:creal-mul-self-sqrt",
+    "F:creal-mul-zero",
+    "F:creal-neg-congr",
+    "F:creal-neg-mul-neg",
+    "F:creal-sq-nonneg",
+    "F:creal-sqrt-nonneg"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-CPoint.sin_sq_add_cos_sq",
+      "kind": "kernel-term",
+      "kernel_declaration": "CPoint.sin_sq_add_cos_sq",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::add_declaration (build_cpoint_prelude)",
+        "creal_point_tests::every_theorem_here_is_axiom_free",
+        "creal_point_tests::new_angle_and_isometry_statements_are_exact"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib creal_point:: -- --test-threads=4",
+      "supports": "`CPoint.sin_sq_add_cos_sq` is admitted with exactly the type in formal.statement, and `Kernel::axiom_footprint` on it is empty. The statement pin is not optional and is not redundant with the footprint check: `axiom_footprint` of a name that was interned but never DECLARED is vacuously empty, so the footprint check alone cannot distinguish 'proved without assumptions' from 'never built'. The pin fetches the declaration from the environment and panics if it is absent. A third check, `a_theorem_here_proves_only_its_own_statement`, re-offers admitted proof values at neighbouring statements' types and requires the kernel to refuse, each row with a matched positive control."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-04",
+    "established_by": "lane angles-and-isometries (2026-09-04), roadmap W1-8/W2-13, ADR-1615. Kernel theorems over CReal (the constructed Bishop reals, ADR-0512) in crates/axeyum-lean-kernel/src/creal_point/angle.rs and creal_point/isometry.rs, all admitted through Kernel::add_declaration with an empty axiom_footprint.",
+    "source": "classical",
+    "prior_art": [
+      {
+        "who": "classical trigonometry",
+        "what": "the identity sin^2 + cos^2 = 1",
+        "where": "standard; older than any single attribution",
+        "attribution": "standard attribution; this lane did not consult a primary source. Noted because the identity proved here is NOT the analytic one about the functions CReal.sin_fn/cos_fn -- it is the identity for the two RATIOS defined above, which is Lagrange's identity in disguise."
+      },
+      {
+        "who": "Joseph-Louis Lagrange",
+        "what": "the identity (a^2+b^2)(c^2+e^2) - (ac+be)^2 = (ae-bc)^2",
+        "year": 1773,
+        "where": "conventionally attributed; the two-square case is older in substance",
+        "attribution": "conventional. It is the load-bearing prior art here: the whole proof is this identity divided by the product of the squared norms."
+      }
+    ]
+  },
+  "notes": "WHAT THIS IS NOT. It is NOT a theorem about CReal.sin_fn and CReal.cos_fn, the power series in creal/trig_fn.rs. `CReal.sin_sq_add_cos_sq` DOES NOT EXIST -- checked 2026-09-04 against a freshly rebuilt shape_search --include-constructed at declarations=3935, with the positive control Metric.CPoint.dotLeSqrtMul returning FOUND 1. Neither does an addition theorem for those series. Nothing here establishes the analytic identity, and recording this fact without that paragraph would let a reader infer it.\n\nWHAT IS NOT PROVIDED, so it is not inferred: there is no lemma producing the PosBound witness the definitions require. A caller must already hold it. Deriving it from PosBound (U.U) j and PosBound (V.V) l needs PosBound x k -> PosBound (sqrt x) k, which is reachable from CRealPrelude alone (with r := ofRat (1/(k+1)), r*r <= r <= x ~ sqrt x * sqrt x, so CReal.le_of_sq_le closes it) but needs Rat.natDivSucc 1 k <= Rat.one plus a second lemma fusing two moduli through mul. Two lemmas and two Rat facts, not landed. So the statement is general but its instantiations are hypothesis-bound.\n\nThe proof is constructive throughout: no Classical.em, no propext, no funext, no Quot.sound. sinAngle is the UNSIGNED sine (it takes an absolute value); a signed one would need an orientation, i.e. a decision on the sign of a real, which is not available.\n\nexternal_status is `proved`: formalization of a classical identity, not discovery."
+}
