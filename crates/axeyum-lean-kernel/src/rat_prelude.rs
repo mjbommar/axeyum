@@ -71,6 +71,9 @@ mod field;
 /// ADR-1627 / roadmap W3-2: `Rat.fieldS : AlgS.Field`, the decidable-equality
 /// instance of the constructive field record, plus `Rat.fieldS_isTight`.
 mod field_setoid_instance;
+/// ADR-1627 / roadmap W3-2: ℚ as a vector space over itself, and the
+/// `linComb` to `Rat.sumRange` bridge.
+mod vector_space_instance;
 pub(crate) mod group;
 pub(crate) mod lattice;
 mod laws;
@@ -3827,6 +3830,7 @@ pub fn build_rat_prelude(kernel: &mut Kernel) -> Result<RatPrelude, KernelError>
         )?;
         probability_s::declare_probability_s_all(&mut d, &prelude)?;
         field_setoid_instance::declare_rat_field_s(d.kernel(), &prelude)?;
+        vector_space_instance::declare_rat_vector_space(d.kernel(), &prelude)?;
         Ok(())
     })();
     match built {
