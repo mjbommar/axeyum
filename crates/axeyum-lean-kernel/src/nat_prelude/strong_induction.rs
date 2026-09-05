@@ -9,9 +9,9 @@
 //! `Nat.base_induction` is a different statement. What exists is
 //! `Nat.lt_well_founded : WellFounded Nat.lt` together with the generic
 //! `WellFounded.fix` — enough, but unwrapped, so every caller re-spells the
-//! five-argument application and its universe levels. Eight modules in this
-//! prelude already do (`gcd`, `bezout`, `factorization`, `irrational`,
-//! `base_induction`, `count_range_reversal`, `totient_dvd_chain`,
+//! five-argument application and its universe levels. Nine modules in this
+//! prelude already do (`base_induction`, `bezout`, `count_range_reversal`,
+//! `factorization`, `gcd`, `gcd_mul_right`, `irrational`, `totient_dvd_chain`,
 //! `totient_gcd_mul`).
 //!
 //! ```text

@@ -64,8 +64,10 @@ recursion on `n` with index `n` as the new high bit — needs
 `2^n` inside a *definition*. Every `Nat` numeral here is unary, so that is a
 definition that cannot be evaluated. With the width recursion the only
 arithmetic in the definition is `Nat.bit`, and `pow 2 n` appears **only in
-statements**, where it is never reduced. Measured: `anySubset` evaluates at
-`n = 2` in the test suite; the same definition with `pow` inside would not.
+statements**, where it is never reduced. What is measured is the positive half:
+`anySubset` evaluates at `n = 2` in the test suite, over all four subsets, in
+well under a second. The alternative was rejected on the unary-numeral argument
+and was not built, so nothing here measures how badly it would have gone.
 
 **(b) `Nat.pow 2 n` rather than a private doubling function.** `pow` exists and
 the bit lemmas that bound a value by its magnitude (`testBit_eq_zero_of_lt`)
@@ -165,10 +167,12 @@ Nat.strongInduction_eq.{u} : ∀ motive step n,
 
 ADR-1608 measured this absent and it still is: `--name-like strong` returns
 ABSENT at 2,832 declarations, and `Nat.base_induction` is a different
-statement. Eight modules in this prelude (`gcd`, `bezout`, `factorization`,
-`irrational`, `base_induction`, `count_range_reversal`, `totient_dvd_chain`,
-`totient_gcd_mul`) already spell the five-argument `WellFounded.fix`
-application by hand. The motive is **explicit**, because there is no elaborator
+statement. Nine modules in this prelude (`base_induction`, `bezout`,
+`count_range_reversal`, `factorization`, `gcd`, `gcd_mul_right`, `irrational`,
+`totient_dvd_chain`, `totient_gcd_mul`) already spell the five-argument
+`WellFounded.fix` application by hand — counted by
+`grep -l 'p.lt_well_founded' nat_prelude/*.rs` minus `order.rs`, which declares
+it. The motive is **explicit**, because there is no elaborator
 here and every application is built positionally; the universe is `Sort u`
 (reusing the existing anonymous `u` level-parameter name), because
 `WellFounded.fix` is already polymorphic and a `Prop`-only wrapper would not

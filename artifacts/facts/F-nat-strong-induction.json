@@ -66,7 +66,7 @@
         "shape_search --name Nat.strongInduction --kind definition --expect 1"
       ],
       "checker_command": "cargo run --release -q -p axeyum-lean-kernel --example shape_search -- --name Nat.strongInduction --kind definition --expect 1",
-      "notes": "The pre-state: at declarations=2832 with positive control Nat.Rado.IsRadoNumber FOUND, `--name-like strong` returned ABSENT, confirming ADR-1608's measurement. `Nat.base_induction` is a different statement. Eight modules in this prelude (gcd, bezout, factorization, irrational, base_induction, count_range_reversal, totient_dvd_chain, totient_gcd_mul) already spelled the five-argument WellFounded.fix application by hand; none was rewritten by this lane."
+      "notes": "The pre-state: at declarations=2832 with positive control Nat.Rado.IsRadoNumber FOUND, `--name-like strong` returned ABSENT, confirming ADR-1608's measurement. `Nat.base_induction` is a different statement. Nine modules in this prelude (base_induction, bezout, count_range_reversal, factorization, gcd, gcd_mul_right, irrational, totient_dvd_chain, totient_gcd_mul) already spelled the five-argument WellFounded.fix application by hand; none was rewritten by this lane."
     }
   ],
   "notes": "epistemic_status and external_status agree: this is a standard principle and the machinery it is built from (Nat.lt_well_founded plus WellFounded.fix) was already here. What was missing was the NAME, and ADR-1608 measured that absence while sizing Hall's marriage theorem. The motive is explicit rather than implicit, and the universe is Sort u rather than Prop, so the same wrapper covers course-of-values definitions and not only proofs."
