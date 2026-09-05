@@ -6789,6 +6789,10 @@ pub(crate) fn build_nat_prelude_uncached(kernel: &mut Kernel) -> Result<NatPrelu
             &logic,
             &structures_s.comm_ring,
             &structures_s.comm_group,
+            polynomial_setoid::PolyDeps {
+                comm_ring_to_ring_s: structures_s_extra.comm_ring_to_ring_s,
+                mul_zero: structures_s_extra.mul_zero,
+            },
             structures_s_names.algs,
         )?;
 

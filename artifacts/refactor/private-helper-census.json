@@ -15,14 +15,14 @@
   },
   "population": {
     "files_scanned": 590,
-    "private_fns": 11866,
-    "private_fns_outside_tests": 9743,
-    "distinct_names": 9342,
-    "distinct_body_digests": 10521,
+    "private_fns": 11896,
+    "private_fns_outside_tests": 9773,
+    "distinct_names": 9371,
+    "distinct_body_digests": 10551,
     "duplicated_name_groups": 965,
     "duplicated_body_groups": 501,
     "sites_in_duplicated_body_groups": 1846,
-    "inline_step_fns": 7844,
+    "inline_step_fns": 7863,
     "inline_step_name_groups": 656,
     "inline_step_body_groups": 336,
     "sites_in_inline_step_body_groups": 1119
@@ -848,7 +848,7 @@
         "crates/axeyum-lean-kernel/src/creal_point.rs:1598",
         "crates/axeyum-lean-kernel/src/linarith/generic.rs:470",
         "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:544",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:204",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:213",
         "crates/axeyum-lean-kernel/src/ring/generic.rs:490",
         "crates/axeyum-lean-kernel/src/simp/list.rs:330",
         "crates/axeyum-lean-kernel/src/string_prelude/all.rs:217",
@@ -1093,7 +1093,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:535",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:201",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:210",
         "crates/axeyum-lean-kernel/src/simp/list.rs:325",
         "crates/axeyum-lean-kernel/src/string_prelude/all.rs:210",
         "crates/axeyum-lean-kernel/src/string_prelude/bool_predicates.rs:332",
@@ -1488,7 +1488,7 @@
         "crates/axeyum-lean-kernel/src/int_prelude/two_sided_induction.rs:87",
         "crates/axeyum-lean-kernel/src/ipc_soundness/tests.rs:98",
         "crates/axeyum-lean-kernel/src/nat_prelude/module_setoid.rs:1693",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:1512",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:3321",
         "crates/axeyum-lean-kernel/src/nat_prelude/subgroup_setoid.rs:1466",
         "crates/axeyum-lean-kernel/src/tc/tc_tests.rs:779",
         "crates/axeyum-lean-kernel/src/tests.rs:112"
@@ -2090,7 +2090,7 @@
         "crates/axeyum-lean-kernel/src/creal_point.rs:1602",
         "crates/axeyum-lean-kernel/src/linarith/generic.rs:477",
         "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:706",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:207",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:216",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:296",
         "crates/axeyum-lean-kernel/src/proof_plan.rs:418",
         "crates/axeyum-lean-kernel/src/ring/generic.rs:497",
@@ -2387,7 +2387,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/linarith/generic.rs:484",
         "crates/axeyum-lean-kernel/src/nat_prelude/ops.rs:716",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:210",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:219",
         "crates/axeyum-lean-kernel/src/nat_prelude/structures.rs:300",
         "crates/axeyum-lean-kernel/src/proof_plan.rs:403",
         "crates/axeyum-lean-kernel/src/ring/generic.rs:504",
@@ -2945,6 +2945,25 @@
         "crates/axeyum-lean-kernel/src/creal/sqrt.rs:3731",
         "crates/axeyum-lean-kernel/src/creal/uniform_continuity.rs:4502",
         "crates/axeyum-lean-kernel/src/creal_point.rs:2070"
+      ]
+    },
+    {
+      "key": "admits",
+      "count": 5,
+      "names": [
+        "admits"
+      ],
+      "files": 5,
+      "carriers": [],
+      "body_lines": 11,
+      "signature": "fn admits(&mut self, ty: ExprId, value: ExprId) -> bool",
+      "test_file_members": 4,
+      "sites": [
+        "crates/axeyum-lean-kernel/src/nat_prelude/hall_tests.rs:54",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:3701",
+        "crates/axeyum-lean-kernel/src/nat_prelude/rado_tests.rs:57",
+        "crates/axeyum-lean-kernel/src/nat_prelude/ramsey_tests.rs:63",
+        "crates/axeyum-lean-kernel/src/nat_prelude/subset_search_tests.rs:67"
       ]
     },
     {
@@ -4004,24 +4023,6 @@
         "crates/axeyum-lean-kernel/src/nat_prelude/count_range_reversal.rs:166",
         "crates/axeyum-lean-kernel/src/nat_prelude/div_mod_lemmas.rs:492",
         "crates/axeyum-lean-kernel/src/nat_prelude/rec_agreement.rs:4406"
-      ]
-    },
-    {
-      "key": "admits",
-      "count": 4,
-      "names": [
-        "admits"
-      ],
-      "files": 4,
-      "carriers": [],
-      "body_lines": 11,
-      "signature": "fn admits(&mut self, ty: ExprId, value: ExprId) -> bool",
-      "test_file_members": 4,
-      "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/hall_tests.rs:54",
-        "crates/axeyum-lean-kernel/src/nat_prelude/rado_tests.rs:57",
-        "crates/axeyum-lean-kernel/src/nat_prelude/ramsey_tests.rs:63",
-        "crates/axeyum-lean-kernel/src/nat_prelude/subset_search_tests.rs:67"
       ]
     },
     {
@@ -6444,7 +6445,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/poly.rs:486",
         "crates/axeyum-lean-kernel/src/creal/polynomial.rs:344",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:370"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:379"
       ]
     },
     {
@@ -7641,7 +7642,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/int_prelude/int_prelude_tests.rs:1054",
         "crates/axeyum-lean-kernel/src/int_prelude/sum_maps_tests.rs:49",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:1523"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:3346"
       ]
     },
     {
@@ -10647,7 +10648,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/add_basics.rs:74",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:240"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:249"
       ]
     },
     {
@@ -12056,7 +12057,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/poly.rs:985",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:856"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:865"
       ]
     },
     {
@@ -24156,7 +24157,7 @@
       "signature": "fn eq(&self, k: &mut Kernel, a: ExprId, b: ExprId) -> ExprId",
       "test_file_members": 0,
       "sites": [
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:201",
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:210",
         "crates/axeyum-lean-kernel/src/nat_prelude/subgroup_setoid.rs:135"
       ]
     },
@@ -32205,7 +32206,7 @@
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/poly.rs:486",
         "crates/axeyum-lean-kernel/src/creal/polynomial.rs:344",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:370"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:379"
       ]
     },
     {
@@ -35035,7 +35036,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/nat_prelude/add_basics.rs:74",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:240"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:249"
       ]
     },
     {
@@ -36408,7 +36409,7 @@
       "test_file_members": 0,
       "sites": [
         "crates/axeyum-lean-kernel/src/complex/poly.rs:985",
-        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:856"
+        "crates/axeyum-lean-kernel/src/nat_prelude/polynomial_setoid.rs:865"
       ]
     },
     {

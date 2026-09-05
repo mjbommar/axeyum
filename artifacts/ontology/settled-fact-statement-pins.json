@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2297,
+    "min_identity_bound": 2302,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -1024,6 +1024,27 @@
       "kernel_theorem": "AlgS.OrderedRing.ofNat_le_ofNat_of_le"
     },
     {
+      "fact_id": "F:algs-poly-antidiagfrom-head",
+      "language": "lean4",
+      "statement_sha256": "5b022b0a5b9851aa958affe239fcf8ca4da6fcba122888f7f05c2533c27a29f7",
+      "prose_sha256": "f89903580a946fcf59e2f448ad480cf8eec5a7639c4ac7dc8696dce453888365",
+      "kernel_theorem": "AlgS.Poly.antidiagFrom_head"
+    },
+    {
+      "fact_id": "F:algs-poly-antidiagfrom-rev",
+      "language": "lean4",
+      "statement_sha256": "1930d6c41cf5cb57f20ddecba0507d8be9cce8217200c814fa881fd3575e06ec",
+      "prose_sha256": "e18648cc223298a0cfa7d5dd1f76cb322d257331db60f4ac61507908ec45591f",
+      "kernel_theorem": "AlgS.Poly.antidiagFrom_rev"
+    },
+    {
+      "fact_id": "F:algs-poly-comm-ring",
+      "language": "lean4",
+      "statement_sha256": "72e50379bb3cfc19818af87c772df524db4d839dfd2fb035e7d2c7ce89913e16",
+      "prose_sha256": "0f5614868167a516f7be13e6c691570a12b61f89592fb620c41f5a92f4061a03",
+      "kernel_theorem": "AlgS.Poly.commRing"
+    },
+    {
       "fact_id": "F:algs-poly-distrib-l",
       "language": "lean4",
       "statement_sha256": "3b0566fa15ee06d0d1eee1c04c096a6aef03802ad6bc3f366c50e1f0656136e9",
@@ -1036,6 +1057,20 @@
       "statement_sha256": "778a03c3d49f9795ac2d4684a314c7444f9c78ddb2c6d5dda85e84745db02082",
       "prose_sha256": "372f33586e41751cf443d868c451d23861c09b3b8f7cfabfcb85e1b4a98da04c",
       "kernel_theorem": "AlgS.Module.polyModule"
+    },
+    {
+      "fact_id": "F:algs-poly-mul-assoc",
+      "language": "lean4",
+      "statement_sha256": "404deba62b2f7764d8d80db6245a7d79cb34c48d02f1f25d14d6fa6ef17389eb",
+      "prose_sha256": "d66daa9133de856f3c781e9560d7805961d67bd0e5caab412222758d62e505dc",
+      "kernel_theorem": "AlgS.Poly.mulAssoc"
+    },
+    {
+      "fact_id": "F:algs-poly-mul-comm",
+      "language": "lean4",
+      "statement_sha256": "75042e0939bc3a6eb8a1e9543cad135228b4a0984c2a60858d80799a735a2d44",
+      "prose_sha256": "48555b15d5515d44fa22937278f7c02f4ba9d5cd24b83277e51243f3dd69926c",
+      "kernel_theorem": "AlgS.Poly.mulComm"
     },
     {
       "fact_id": "F:algs-sub-self",
