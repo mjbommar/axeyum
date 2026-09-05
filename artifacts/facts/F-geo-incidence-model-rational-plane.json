@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "id": "F:geo-incidence-model-rational-plane",
+  "title": "Hilbert's three incidence axioms are consistent, witnessed by the rational coordinate plane",
+  "statement": "The three incidence axioms of Hilbert's Grundlagen -- through two distinct points there is exactly one line; every line carries two distinct points; there exist three points not all on one line -- are stated in this kernel as the record Geo.Incidence, and Geo.qplane is a constructive witness that they are jointly satisfiable: points are pairs of rationals, lines are coefficient triples (a, b, c) with (a, b) not both zero, and incidence is a*x + b*y + c = 0. Because the witness is a term the kernel admitted rather than a model argued about, the consistency claim is checkable in one command. The axioms are stated with an ABSTRACT apartness relation rather than with the negation of point equality; over the rationals the model instantiates that apartness AS the negation, which is why the negation being usable here is a fact about the rationals (decidable equality, unique reduced representative) and not about the axioms.",
+  "formal": {
+    "language": "lean4",
+    "statement": "def Geo.qplane : Geo.Incidence",
+    "fragment": "Prop",
+    "free_symbols": [],
+    "kernel_theorem": "Geo.qplane"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Geo.qplane",
+      "kind": "kernel-term",
+      "supports": "Geo.qplane is a Definition admitted by the trusted kernel gate at the type Geo.Incidence, which re-derives the type from the term -- so every one of the record's 21 fields, including the four axiom fields, was supplied and checked.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_geo_prelude)",
+        "kernel_declaration_projection --require-declaration with --require-kind definition"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection -- --require-declaration Geo.qplane --require-kind definition",
+      "checker_seconds": 400,
+      "kernel_declaration": "Geo.qplane",
+      "notes": "The exit status depends on the finding, not on the run completing: --require-declaration exits 1 and prints to stderr when NO constructed prelude's environment holds a declaration with that exact rendered name, and --require-kind exits 1 when the match is of a different kind -- a deleted or renamed declaration must not read as a present one. This is the ONLY in-tree inventory tool that can assert a Definition exists: theorem_dependency_inventory, nat_theorem_inventory and prelude_theorem_inventory all filter to Declaration::Theorem and explicitly exclude Definitions. --release is MANDATORY: the binary builds creal/complex/cpoint/metric/rn/geo, which recurse deep enough to overflow the default debug thread stack."
+    },
+    {
+      "id": "evaluation-geo-qplane",
+      "kind": "instance-pin",
+      "supports": "What the model MEANS, at the level the kernel gate cannot reach: a Definition computing the wrong value has the right type, so each definition the model rests on is evaluated, and each evaluation carries its negative half.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/geo/geo_tests.rs (12 tests)",
+        "crate::Kernel::def_eq at free variables for the shape pins, and at Rat.zero/Rat.one for the projections",
+        "crate::Kernel::axiom_footprint over a population derived from Environment::iter, not from a list"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib -- geo:: --test-threads=4",
+      "checker_seconds": 440,
+      "notes": "Four evaluation tests, each with a negative half: the projections pick the field their name claims (and NOT the other field), Geo.QPlane.join's coefficients are (y Q - y P, x P - x Q, ...) IN THAT ORDER and the swap is explicitly refuted, Geo.QPlane.shift moves along the line rather than across it, and Geo.QPlane.onRaw pairs each coefficient with its own coordinate rather than the swapped pairing (which type-checks and states a different relation). The join pin runs at FREE VARIABLES on purpose -- a concrete pair of points can make two coefficients coincide and a numeral test would not see the swap. Confirm a NONZERO test count: 12."
+    },
+    {
+      "id": "footprint-geo-qplane",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- every declaration under `Geo.` is axiom-free, over a population read from the environment rather than from a list.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint",
+        "geo_tests::the_handle_names_every_live_geo_declaration (set equality against Environment::iter)"
+      ],
+      "checker_command": "cargo test -p axeyum-lean-kernel --lib -- geo::geo_tests::every_declaration_is_present_and_axiom_free geo::geo_tests::the_handle_names_every_live_geo_declaration",
+      "checker_seconds": 440,
+      "notes": "Environment::contains is asserted BEFORE the footprint, because an empty Kernel::axiom_footprint is also what a MISSING name returns. The population is the set of names rendering under `Geo.`, collected from Environment::iter and required to equal the set the prelude handle names -- so a declaration added and forgotten fails, and so does one named in the handle the build never emitted. It carries a vacuity floor (>= 70 live names) because an empty `live` set would make the equality trivially true and a filter typo produces exactly that. Measured: 75."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "axeyum-lean-kernel build_geo_prelude (crates/axeyum-lean-kernel/src/geo.rs, crates/axeyum-lean-kernel/src/geo/qplane.rs)",
+    "source": "ADR-1635 (docs/research/09-decisions/adr-1635-incidence-geometry-needs-apartness-in-exactly-one-axiom-and-the-rational-ring-normalizer-could-not-cancel.md); roadmap W3-8. formal.statement is the rendered type of the admitted declaration, taken verbatim from the unfiltered emit of `cargo run -q --release -p axeyum-lean-kernel --example kernel_declaration_projection`."
+  },
+  "notes": "What this fact does NOT say. It does not say the axioms are categorical, or that they pin the Euclidean plane -- three incidence axioms do not, which is why Hilbert's Grundlagen has four more groups. It does not say the real plane is a model: no R^2 instance exists, and the single obstruction is `joinUnique`, whose R analogue has to route through CPoint.collinear_of_area_zero and therefore consume a CReal.PosBound witness rather than a negation. And it does not say the RECORD is the only way to state the axioms: the choice to carry `apart` as a field rather than derive it from `pEq` is what makes one record serve both planes, and ADR-1635 records why exactly one of the four axiom fields forces that choice."
+}
