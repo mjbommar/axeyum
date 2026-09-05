@@ -367,8 +367,24 @@ scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel \
 scripts/cargo-serialized.sh build --release -p axeyum-lean-kernel \
   --example shape_search
 target/release/examples/shape_search --include-constructed \
-  --name AlgS.Poly.commRing --expect 1
+  --name AlgS.Poly.commGroup --expect 1     # positive control, predates this lane
+target/release/examples/shape_search --include-constructed \
+  --name AlgS.Poly.commRing --expect 1      # this lane's headline
+target/release/examples/shape_search --include-constructed \
+  --ns AlgS --name-contains Poly --expect 26
 ```
+
+Measured 2026-09-04 against a binary rebuilt after the lane's commits:
+`declarations=3947`, up from `3935` before it — exactly the twelve declarations
+added. `--name-contains Poly` returns **26**, not 27, for the reason ADR-1609
+already records: `AlgS.add_add_add_comm` is declared into the `AlgS` root, not
+into the sub-namespace. `AlgS.Poly.commRing` renders as
+`AlgS.CommRing -> AlgS.CommRing`.
+
+The two `checker_command`s on this lane's facts were run and **their exit
+status depends on the finding**: both exit 0 at the real counts, and the same
+command with the previous pinned count (`8 passed`, which
+`F:algs-poly-distrib-l` carried before this lane) exits **1**.
 
 ### The mutation table
 
