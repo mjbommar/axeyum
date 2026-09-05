@@ -2276,6 +2276,83 @@ SUITES["tactic-catalog"] = (
 #   test_a_healthy_scan_is_not_a_finding
 # They exist to stop the opposite failure: a rule so broad it rejects Mathlib's
 # deliberate pin, or every version string in the tree.
+# --------------------------------------------------------------------------
+# `complex-derivative` — the complex derivative on a disc
+# (`crates/axeyum-lean-kernel/src/complex/deriv.rs`, ADR-1642).
+#
+# Two of these mutants are the ones the lane brief named, adapted to what
+# actually landed: the brief asked for "Leibniz with one cross term dropped"
+# and "the CR equation with a sign flipped", and neither Leibniz nor
+# Cauchy–Riemann landed (ADR-1642 records both obstructions and their size).
+# The nearest live subjects are the SUM rule's error identity — which has the
+# same "the error of the combination is the combination of the errors" shape a
+# dropped cross term breaks — and `hasDerivative_neg`, which is the one landed
+# witness whose whole content is a SIGN.
+#
+# What the first two measure is worth naming, because it is not the tests.
+# `complex/ring.rs`'s `ring_law_proof` is a decision procedure that PANICS when
+# the two normal forms differ rather than handing the kernel a term to reject,
+# so a wrong error identity takes down `build_complex_prelude` and with it every
+# test in the module. That is a real guard and it is why the ℂ transcription is
+# cheap (ADR-1642, Decision 3), but the kill is a MASS kill and therefore weak
+# evidence about any individual test. The third and fourth mutants exist because
+# of that: they are the ones with a predicted killed-set of a named size.
+# --------------------------------------------------------------------------
+
+SUITES["complex-derivative"] = (
+    "crates/axeyum-lean-kernel/src/complex/deriv.rs",
+    Cargo(
+        (
+            "--release",
+            "-j",
+            "4",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "complex::complex_tests::",
+        ),
+        "complex-derivative",
+    ),
+    [
+        (
+            "the sum rule's error term keeps BOTH functions' values "
+            "(the brief's dropped-cross-term mutant)",
+            "            CExpr::add(fy_sym, gy_sym),",
+            "            fy_sym,",
+        ),
+        (
+            "hasDerivative_neg negates the DERIVATIVE too "
+            "(the brief's flipped-sign mutant)",
+            "            CExpr::neg(fpx_sym),",
+            "            fpx_sym,",
+        ),
+        (
+            "InDisc measures the point's distance FROM the centre, not the "
+            "centre's from the point",
+            "    let diff = zsub(d, p, z, c);",
+            "    let diff = zsub(d, p, c, z);",
+        ),
+        (
+            "hasDerivative_const's modulus value is `fun _ => 0`",
+            "    let zero_fn = {\n"
+            "        let ignore_fv = d.fresh_fvar();\n"
+            "        d.lam_fv(ignore_fv, carrier, zero_z)\n"
+            "    };\n"
+            "    let modulus = {\n"
+            "        let ignore_fv = d.fresh_fvar();\n"
+            "        let z = d.num(0);",
+            "    let zero_fn = {\n"
+            "        let ignore_fv = d.fresh_fvar();\n"
+            "        d.lam_fv(ignore_fv, carrier, zero_z)\n"
+            "    };\n"
+            "    let modulus = {\n"
+            "        let ignore_fv = d.fresh_fvar();\n"
+            "        let z = d.num(3);",
+        ),
+    ],
+)
+
+
 SUITES["external-coupling"] = (
     "scripts/check-external-coupling.py",
     "scripts.tests.test_check_external_coupling",
