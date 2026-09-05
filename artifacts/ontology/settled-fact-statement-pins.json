@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2322,
+    "min_identity_bound": 2325,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -16091,6 +16091,13 @@
       ]
     },
     {
+      "fact_id": "F:nat-alternating-subset-sum-vanishes",
+      "language": "lean4",
+      "statement_sha256": "4314b8c6304a14bbb0ec1bcfef02f1e2334157e1a7e568dd149895a299e46958",
+      "prose_sha256": "f2913d0e82a06ee72804c7964e8562f99ea846fb6975109e3fa0a0fd76ee3bb9",
+      "kernel_theorem": "Nat.Subsets.sumSel_const"
+    },
+    {
       "fact_id": "F:nat-asc-factorial-one",
       "language": "lean4",
       "statement_sha256": "2f3919f993f922b6561a0b515743ba4b2aa42f1d30a5e18c8eb2c4ae30d49d12",
@@ -17893,6 +17900,13 @@
       "statement_sha256": "579e0214d0c851c88b202457e01ea67637d66e45d4c30e076cd035e6a2a1aa89",
       "prose_sha256": "c778e0c4ec83ab20a7826356d4a4c9d4b8fd347a3e4b34de61169b99c9fb1a15",
       "kernel_theorem": "Nat.half_ceil_parity"
+    },
+    {
+      "fact_id": "F:nat-inclusion-exclusion-general",
+      "language": "lean4",
+      "statement_sha256": "69234d0090a3e521e3e986406803286f0ce8ea6bca981d4dd1e6be874feb5baa",
+      "prose_sha256": "dbaa3db9cc8fef980bb261f237b1aa8009b27383973c181df87e11f64333a20d",
+      "kernel_theorem": "Nat.Subsets.inclusion_exclusion_pos"
     },
     {
       "fact_id": "F:nat-injective-on-comp",
@@ -20162,6 +20176,13 @@
       "statement_sha256": "95bf7dfbbcaa5a699d507fb846a08e3922ac3a30827cd1ed3117ccdd83f85ba1",
       "prose_sha256": "b1b4537c9df3d0e65314f521a81e3d002c3617f8e7c30045bdf569557359f053",
       "kernel_theorem": "Nat.subset_refl"
+    },
+    {
+      "fact_id": "F:nat-subset-sum-split-law",
+      "language": "lean4",
+      "statement_sha256": "717af4b38c0cd000df43f502fe227302e3b207983a1ef12e5c838b792505e5b7",
+      "prose_sha256": "39d6a830c70a5bdd4c6f2d7974e82f66fc959e4eecc6259debf958256c7856e4",
+      "kernel_theorem": "Nat.Subsets.sumSubsets_succ"
     },
     {
       "fact_id": "F:nat-subset-trans",
