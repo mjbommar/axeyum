@@ -581,13 +581,13 @@ impl LraTheory {
             if install {
                 let previous = if upper {
                     self.bound_upper[var].replace(VarBound {
-                        value: value.clone(),
+                        value,
                         strict,
                         atom,
                     })
                 } else {
                     self.bound_lower[var].replace(VarBound {
-                        value: value.clone(),
+                        value,
                         strict,
                         atom,
                     })

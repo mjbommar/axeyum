@@ -1436,7 +1436,7 @@ impl CdclT {
                     FinalCheck::Sat => return Outcome::Sat,
                     FinalCheck::Unknown => return Outcome::Unknown,
                     FinalCheck::Unsat => return Outcome::Unsat,
-                    FinalCheck::Continue => continue,
+                    FinalCheck::Continue => {}
                 },
                 Some(var) => {
                     self.decision_level += 1;
