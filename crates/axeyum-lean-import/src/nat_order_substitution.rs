@@ -2076,7 +2076,6 @@ mod tests {
             "Nat.le_of_ble_eq_true" => p.le_of_ble_eq_true,
             "Nat.not_le_of_not_ble_eq_true" => p.not_le_of_not_ble_eq_true,
             "Nat.lt_of_lt_of_le" => p.lt_of_lt_of_le,
-            "Nat.le_of_succ_le_succ" => p.le_of_succ_le_succ,
             // `Nat.le_of_lt_add_one` shares `Nat.le_of_succ_le_succ`'s
             // construction verbatim (see `build`), so our own prelude's
             // `le_of_succ_le_succ` IS the statement our candidate proves, and
@@ -2085,7 +2084,7 @@ mod tests {
             // same proposition with the order typeclasses -- which is what
             // `real_mathlib_type_tests` exists to cover, against the pinned
             // export of the real declaration.
-            "Nat.le_of_lt_add_one" => p.le_of_succ_le_succ,
+            "Nat.le_of_succ_le_succ" | "Nat.le_of_lt_add_one" => p.le_of_succ_le_succ,
             other => panic!("no NatPrelude field mapped for {other:?}"),
         }
     }
@@ -2684,15 +2683,13 @@ mod real_mathlib_type_tests {
     }
 
     fn wire_ty_of(kernel: &Kernel, rendered: &str) -> ExprId {
-        kernel
-            .environment()
-            .iter()
-            .find(|(name, decl)| {
-                matches!(decl, Declaration::Theorem { .. })
-                    && kernel.display_name(**name).to_string() == rendered
-            })
-            .map(|(_, decl)| decl.ty())
-            .unwrap_or_else(|| panic!("{rendered} is not a Theorem in the fixture"))
+        let Some((_, decl)) = kernel.environment().iter().find(|(name, decl)| {
+            matches!(decl, Declaration::Theorem { .. })
+                && kernel.display_name(**name).to_string() == rendered
+        }) else {
+            panic!("{rendered} is not a Theorem in the fixture")
+        };
+        decl.ty()
     }
 
     /// POSITIVE control.

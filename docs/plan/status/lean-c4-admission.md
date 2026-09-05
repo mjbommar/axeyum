@@ -57,6 +57,25 @@ the next declaration in their own closure: exactly −150 / +150.
    stream rather than demand: `Quot` looked like 73 rows of demand and was
    worth 0.
 
+## Two real-Lean suites are red, and both were measured red on `main` first
+
+`cargo test -p axeyum-lean-import` is green on 26 of 28 integration suites and
+all 150 lib tests (146 passed, 4 ignored). Two fail, both real-Lean gates on the
+moved 4.34.0-rc1 pin:
+
+- `real_lean_wire_differential::our_kernel_admits_nothing_the_real_lean_kernel_refuses`
+  — `violations=2` of 307 (`level.max-kind:1322:max-to-imax`,
+  `level.succ:1534:+1`)
+- `thin_lean_adapter_goal_pack::the_eight_required_categories_are_each_graded_correctly_by_real_pinned_lean`
+  — category `wrong_goal` graded `accepted`, expected `rejected`
+
+Both re-run at the pre-change commit `26a245dc4` in an isolated snapshot and
+**fail identically** (same counts, same violation ids, same assertion, pinned
+toolchain present and `matches_pin=true` in both — neither is a skip). This lane
+touches zero files in `axeyum-lean-kernel`, and neither suite reaches
+`import_statement_ndjson`. Same family as the three gates `14-lean-lang.md`
+records as red on `main` since the pin moved on 2026-09-03.
+
 ## Gates
 
 `check-kernel-trusted-core.py` and `check-trust-closure.py` are byte-identical

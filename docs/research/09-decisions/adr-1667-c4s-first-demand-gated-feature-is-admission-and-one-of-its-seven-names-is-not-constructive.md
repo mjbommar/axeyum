@@ -358,8 +358,41 @@ measurement says so rather than the claim resting on inspection.
 | `check-trust-closure.py` | exit 1, `failures=2` | exit 1, `failures=2` — output byte-identical |
 | `gen-lean-axiom-ledger.py --check` | exit 0, `total=30 axreal=30 … axiom_free=8` | exit 0, same |
 | `check-autogenesis-holdout-isolation.py` | exit 0, `held_out=216 files_scanned=1132 references=0 verdict=PASS` | exit 0, identical |
+| `clippy -p axeyum-lean-import --all-targets -- -D warnings` | — | exit 0 (five findings in this lane's own code fixed first: two `similar_names`, two `map_unwrap_or`, one `match_same_arms`) |
+| `check --workspace --all-targets` | — | exit 0 — run because `ImportReport` gained a PUBLIC field, and a kernel-crate-clean change is not a workspace-clean change |
+| `check-merge-hygiene.sh` | — | PASS, `markers=0 adr_index=ok generated=current` |
+| `check-links.sh` | — | exit 0, `all links ok` |
+| `validate-facts.py` | — | exit 0; no fact changed |
 
-Two of those four were **already red on `main`** before this lane and are
+### Two real-Lean suites are red, and both were measured red on `main` first
+
+`cargo test -p axeyum-lean-import` is green on **26 of 28 integration suites and
+all 150 lib tests** (146 passed, 4 ignored), including the ten in
+`statement_adapter` and every control this lane added. Two suites fail, both of
+them real-Lean gates on the moved 4.34.0-rc1 pin:
+
+| suite | failure |
+|---|---|
+| `real_lean_wire_differential::our_kernel_admits_nothing_the_real_lean_kernel_refuses` | `violations=2` of 307 mutants: `level.max-kind:1322:max-to-imax` (`DecidablePred`, `max u 1` vs `imax u 1`) and `level.succ:1534:+1` (`Sigma.mk` universe too big) |
+| `thin_lean_adapter_goal_pack::the_eight_required_categories_are_each_graded_correctly_by_real_pinned_lean` | category `wrong_goal` graded `accepted`, expected `rejected` |
+
+**Both were re-run at the pre-change commit `26a245dc4` in an isolated snapshot
+and fail identically** — same `WIRE_DIFFERENTIAL` counts (`generated=11622
+checked=307 lean_kernel_rejected=113 violations=2`), the same two violation ids,
+and the same `wrong_goal` assertion, with the pinned toolchain present and
+`matches_pin=true` in both runs (so neither is a skip). This lane touches **zero
+files in `axeyum-lean-kernel`** (`git diff --name-only 26a245dc4 HEAD --
+crates/axeyum-lean-kernel/` is empty), and neither suite reaches
+`import_statement_ndjson` — both use `import_ndjson`, where
+`trusted_substitution` is off. Reasoning would have said the same thing; the
+snapshot run is what makes it a measurement.
+
+They are the same family as the three gates `14-lean-lang.md` records as red on
+`main` since the pin moved on 2026-09-03, and they belong to whoever owns that
+pin move. `stricter_than_lean=0` in both runs, so the direction of the
+disagreement is "we admit what Lean refuses" and not the reverse.
+
+Two of the four gates below were **already red on `main`** before this lane and are
 recorded here so the next reader does not attribute them to it:
 `check-kernel-trusted-core.py` fails `FAIL D: file(s) joined the trusted core:
 ['image_group.rs']`, and `check-trust-closure.py` fails on a stale disclosure

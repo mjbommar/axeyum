@@ -4156,11 +4156,11 @@ mod c4_admission_tests {
                 kernel.app(e, b2)
             };
             let b1 = kernel.bvar(1);
-            let inner_hb = kernel.pi(anon, b1, and_ab, BinderInfo::Default);
+            let right_field = kernel.pi(anon, b1, and_ab, BinderInfo::Default);
             let a1 = kernel.bvar(1);
-            let inner_ha = kernel.pi(anon, a1, inner_hb, BinderInfo::Default);
-            let inner_b = kernel.pi(anon, prop, inner_ha, BinderInfo::Default);
-            kernel.pi(anon, prop, inner_b, BinderInfo::Default)
+            let left_field = kernel.pi(anon, a1, right_field, BinderInfo::Default);
+            let second_param = kernel.pi(anon, prop, left_field, BinderInfo::Default);
+            kernel.pi(anon, prop, second_param, BinderInfo::Default)
         };
         kernel
             .add_inductive(and_name, &[], 2, and_ty, &[(and_intro, intro_ty)])

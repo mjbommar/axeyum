@@ -361,12 +361,14 @@ fn the_native_quotient_package_does_not_block_a_statement() {
     // this accounting). Measured here rather than asserted in a comment.
     let kernel = completed.kernel();
     for member in ["Quot", "Quot.mk", "Quot.lift", "Quot.ind"] {
-        let name = kernel
+        let Some((name, _)) = kernel
             .environment()
             .iter()
             .find(|(name, _)| kernel.display_name(**name).to_string() == member)
-            .map(|(name, _)| *name)
-            .unwrap_or_else(|| panic!("{member} must be in the admitted environment"));
+        else {
+            panic!("{member} must be in the admitted environment")
+        };
+        let name = *name;
         let footprint: Vec<String> = kernel
             .axiom_footprint(name)
             .into_iter()
