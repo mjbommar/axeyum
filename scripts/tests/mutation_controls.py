@@ -6752,6 +6752,62 @@ SUITES["cas-internal-residue"] = (
 )
 
 
+# --------------------------------------------------------------------------
+# `cas-trust-registry` (math-department file 13, Next Ten item 10, first
+# half).
+#
+# Distinct from `cas-internal-residue` above: that floors the FACT LEDGER's
+# cas-certificate classification. This floors the axeyum-cas SOURCE's own
+# `pub fn` surface -- whether each function's return type carries a
+# certificate at all. The floor is its own `COUNT` ratchet row, deliberately
+# decoupled from the per-function `FN` rows (see the gate's `read_ratchet`
+# docstring), which is what lets G4 below be tested independently of G2/G3:
+# on any ordinary fixture a single function regressing or vanishing ALSO
+# drops the current certified count below whatever floor was recorded for
+# it, so a test that did not decouple the two would have G2/G3's mutation
+# survive (G4 would still refuse on its own). Each guard below has its own
+# fixture in `test_check_cas_trust_registry.py` built to trip ONLY that
+# check, so each kills exactly one test.
+# --------------------------------------------------------------------------
+
+SUITES["cas-trust-registry"] = (
+    "scripts/check-cas-trust-registry.py",
+    Unittest("scripts.tests.test_check_cas_trust_registry"),
+    [
+        (
+            "G1 a missing ratchet file is refused",
+            "    if recorded is None:",
+            "    if False:",
+        ),
+        (
+            "G2 a certified function that reclassified is refused",
+            '        if cls != "certified":',
+            "        if False:",
+        ),
+        (
+            "G3 a certified function that vanished from the source is refused",
+            "        if fn is None:",
+            "        if False:",
+        ),
+        (
+            "G4 the certified count falling below the recorded floor is refused",
+            '    if counts["certified"] < floor:',
+            "    if False:",
+        ),
+        (
+            "G5 a recorded certificate-vocabulary type that disappeared is refused",
+            "        if vname not in vocab_names:",
+            "        if False:",
+        ),
+        (
+            "G6 a new certified function not recorded in the ratchet is refused",
+            "    if new_certified:",
+            "    if False:",
+        ),
+    ],
+)
+
+
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
 
