@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2295,
+    "min_identity_bound": 2297,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7442,6 +7442,13 @@
           "kernel_theorem": "Nat.sumRange_rect_eq_diag_add_corner"
         }
       ]
+    },
+    {
+      "fact_id": "F:finset-subset-search-reflection",
+      "language": "lean4",
+      "statement_sha256": "0aa330aa3db3e876de1562a5970e3eabd293ab07be16f83092d39845e70ef26c",
+      "prose_sha256": "3d1f57aef4ff078e5cef82158ca13ce99330f67b357b41407406c8b85df3ce7c",
+      "kernel_theorem": "Nat.Finset.forallSubset_of_search"
     },
     {
       "fact_id": "F:fp16-add-monotone-rne",
@@ -19816,6 +19823,13 @@
           "kernel_theorem": "Nat.sqrt_zero"
         }
       ]
+    },
+    {
+      "fact_id": "F:nat-strong-induction",
+      "language": "lean4",
+      "statement_sha256": "d50ec05b7bf782df0f70abf6e3d13af9a41ac2327fb4499c32f012fb1e0e8e26",
+      "prose_sha256": "85ff1489a6465e7998989e97a25983e2ecdf503a927d04f5f2876fcc4a74c276",
+      "kernel_theorem": "Nat.strongInduction_eq"
     },
     {
       "fact_id": "F:nat-sub-add-cancel",
