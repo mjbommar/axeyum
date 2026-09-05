@@ -218,23 +218,40 @@ if [ "${AXEYUM_CARGO_SLOT_HELD:-0}" = "1" ]; then
 fi
 export AXEYUM_CARGO_SLOT_HELD=1
 
-# Take the first FREE slot without blocking; only if every slot is busy do we
-# wait, and then on slot 1 -- so a queue forms in one place instead of N lanes
-# each polling. `flock -n` on a per-slot file is a counting semaphore with no
-# shared counter to corrupt.
-# NOT the file-descriptor form. `flock <fd>` takes no command, so
-# `flock "$fd" cmd` is parsed as `flock <FILE> <cmd>` with the fd NUMBER as the
-# filename -- it silently creates `./9` in the current directory, locks that, and
-# three jobs at one slot hung for 60 s under a `timeout` instead of taking 9 s.
-# The file form with a probe is simpler and cannot do that. The probe races (two
-# jobs can both see a slot free), and losing that race is correct behaviour, not
-# a bug: the loser blocks on the same slot with the same timeout it would have
-# waited anyway.
-for i in $(seq 1 "$SLOTS"); do
-  slot="$LOCK.$i"
-  touch "$slot" 2>/dev/null || slot="${TMPDIR:-/tmp}/axeyum-cargo.lock.$i"
-  if flock -n "$slot" true 2>/dev/null; then
-    exec flock --timeout "$WAIT" --conflict-exit-code 75 "$slot" "${run[@]}"
+# Take ANY free slot, and keep looking at every slot until one frees or WAIT
+# expires. `flock -n` on a per-slot file is a counting semaphore with no shared
+# counter to corrupt.
+#
+# The previous shape probed each slot with `flock -n "$slot" true` (acquire and
+# release), then exec'd a BLOCKING `flock --timeout` on the slot it had seen
+# free -- and if every slot was busy at probe time, blocked on slot 1
+# specifically "so a queue forms in one place". Measured 2026-09-05 on s4 with
+# five slots all held: every new job queued on slot 1 and stayed there while
+# slots 4 and 5 came free, so the wrapper degraded to one job at a time exactly
+# when the host was busiest. The probe-then-block race had the same effect at
+# smaller scale (two jobs see slot 3 free, one loses and waits on slot 3 while
+# slot 4 is idle).
+#
+# So the lock is taken for real, once, on an fd we open ourselves, and the job
+# is exec'd holding that fd -- the lock lives as long as the job does, which is
+# what `flock <file> <cmd>` gave us before. We use `exec {fd}>file` plus
+# `flock -n $fd` (the fd form WITHOUT a command), never `flock "$fd" cmd`: that
+# command form parses the fd number as a FILENAME, creates `./9`, and locks
+# that -- three jobs at one slot hung 60 s that way (see git log for this line).
+slot_deadline=$(( SECONDS + WAIT ))
+while :; do
+  for i in $(seq 1 "$SLOTS"); do
+    slot="$LOCK.$i"
+    touch "$slot" 2>/dev/null || slot="${TMPDIR:-/tmp}/axeyum-cargo.lock.$i"
+    exec {slot_fd}>"$slot" || continue
+    if flock -n "$slot_fd"; then
+      exec "${run[@]}"
+    fi
+    exec {slot_fd}>&-
+  done
+  if [ "$SECONDS" -ge "$slot_deadline" ]; then
+    echo "cargo-serialized: no slot free within ${WAIT}s (slots=$SLOTS lock=$LOCK)" >&2
+    exit 75
   fi
+  sleep 1
 done
-exec flock --timeout "$WAIT" --conflict-exit-code 75 "$LOCK.1" "${run[@]}"

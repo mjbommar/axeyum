@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "F:int-fermat-two-squares",
+  "title": "Fermat's theorem on sums of two squares (OPEN in this ledger)",
+  "statement": "Every prime p with p = 1 (mod 4) is a sum of two integer squares. NOT ESTABLISHED HERE. Three of the four ingredients are: the composition identity (F:int-brahmagupta-fibonacci), the congruence half of the descent (F:int-two-squares-descent-cross-terms) and the algebraic half of the descent (F:int-two-squares-descent-step); the fourth, the entry point, is Int.firstSupplementaryLawResidue -- for p = 2m+1 prime with m even, -1 IS a quadratic residue mod p, so p divides x^2 + 1 for some x and SOME multiple of p is a sum of two squares. What is missing is the ingredient that makes the descent terminate.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.fermatTwoSquares : ((x0 : AxNat) -> ((x1 : And (AxNat.le (AxNat.succ (AxNat.succ AxNat.zero)) (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) (((x1 : AxNat) -> ((x2 : AxNat.dvd x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))) -> Or (Eq.{1} AxNat x1 (AxNat.succ AxNat.zero)) (Eq.{1} AxNat x1 (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))) -> ((x2 : AxNat.Even x0) -> Int.IsSumOfTwoSquares (Int.ofNat (AxNat.succ (AxNat.mul (AxNat.succ (AxNat.succ AxNat.zero)) x0))))))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [
+    "F:int-brahmagupta-fibonacci",
+    "F:int-two-squares-descent-cross-terms",
+    "F:int-two-squares-descent-step",
+    "F:int-firstsupplementarylawresidue",
+    "F:nat-strong-induction"
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "not established in this ledger",
+    "source": "Fermat's theorem on sums of two squares (asserted 1640, proved by Euler in 1749 by infinite descent); this row records the measured remaining gap after the two-squares lane (W3-10, ADR-1633)",
+    "prior_art": [
+      {
+        "who": "Fermat; Euler",
+        "what": "the theorem and its first published proof by descent",
+        "year": 1749,
+        "where": "classical number theory",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "THE SIZED OBSTRUCTION, measured 2026-09-05 and stated as an outcome rather than a feeling. What is missing is the BOUNDED choice of representatives and the strict decrease of the measure. Given m*p = a^2 + b^2 with 1 < m < p one picks c = a and e = b modulo m with |c| and |e| at most m/2, whence c^2 + e^2 is at most m^2/2 < m^2 and the new multiplier q = (c^2+e^2)/m is strictly below m. Every step of that is an ORDERING argument over Int, and this prelude has none of the pieces: Int.le and Int.lt exist and Int.natAbs exists, but shape_search finds no natAbs_le_iff, no mul_le_mul over Int and no sq_le_sq. That, and not the descent's algebra, is the whole remaining cost -- the algebra landed on the first attempt. Two smaller pieces are also still needed: the entry step from Int.firstSupplementaryLawResidue's witness to p dividing x^2 + 1, through Int.modEq_iff_dvd; and the q > 0 argument, which is that if c = e = 0 then m divides both a and b, so m^2 divides m*p, so m divides p, contradicting 1 < m < p for prime p. Nothing here claims the route is blocked; this is a statement about what has not been built."
+}

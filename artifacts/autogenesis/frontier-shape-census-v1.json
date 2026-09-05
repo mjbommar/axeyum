@@ -233,10 +233,27 @@
       {
         "divergence_blocked_count": 0,
         "fact_ids": [
+          "F:int-fermat-two-squares"
+        ],
+        "mutation_control_count": 0,
+        "rank": 13,
+        "signature": {
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_head": "other:IsSumOfTwoSquares",
+          "hypothesis_band": "2+"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "divergence_blocked_count": 0,
+        "fact_ids": [
           "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
         ],
         "mutation_control_count": 1,
-        "rank": 13,
+        "rank": 14,
         "signature": {
           "carriers": [
             "Int"
@@ -253,7 +270,7 @@
           "F:ml430-mutation-aabb80b1f89f0c5847364692"
         ],
         "mutation_control_count": 1,
-        "rank": 14,
+        "rank": 15,
         "signature": {
           "carriers": [
             "Int"
@@ -270,7 +287,7 @@
           "F:ml430-mutation-aca37b68d3cdf06f0127def9"
         ],
         "mutation_control_count": 1,
-        "rank": 15,
+        "rank": 16,
         "signature": {
           "carriers": [
             "Int"
@@ -287,7 +304,7 @@
           "F:ml430-nat-squarefree-ext-iff-7218327d"
         ],
         "mutation_control_count": 0,
-        "rank": 16,
+        "rank": 17,
         "signature": {
           "carriers": [
             "Nat"
@@ -304,7 +321,7 @@
           "F:ml430-mutation-c86940b52af8159ca9b381d6"
         ],
         "mutation_control_count": 1,
-        "rank": 17,
+        "rank": 18,
         "signature": {
           "carriers": [
             "Nat"
@@ -321,7 +338,7 @@
           "F:ml430-mutation-e8583599cfae2d40cefae3f0"
         ],
         "mutation_control_count": 1,
-        "rank": 18,
+        "rank": 19,
         "signature": {
           "carriers": [
             "Nat"
@@ -338,7 +355,7 @@
           "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
         ],
         "mutation_control_count": 1,
-        "rank": 19,
+        "rank": 20,
         "signature": {
           "carriers": [],
           "conclusion_head": "other:Coprime",
@@ -786,10 +803,38 @@
       {
         "divergence_blocked_count": 0,
         "fact_ids": [
-          "F:ml430-nat-div-right-comm-ab79d5f8"
+          "F:int-fermat-two-squares"
         ],
         "mutation_control_count": 0,
         "rank": 17,
+        "signature": {
+          "bound_variable_count": 2,
+          "carriers": [
+            "Nat"
+          ],
+          "conclusion_constants_declared": true,
+          "conclusion_head": "other:IsSumOfTwoSquares",
+          "dialect": "kernel-rendered",
+          "divergence_blocked": false,
+          "fragment": "Int",
+          "hypothesis_count": 2,
+          "hypothesis_heads": [
+            "And",
+            "other:Even"
+          ],
+          "mutation_control": false,
+          "provenance": "native"
+        },
+        "size": 1,
+        "targetable_size": 1
+      },
+      {
+        "divergence_blocked_count": 0,
+        "fact_ids": [
+          "F:ml430-nat-div-right-comm-ab79d5f8"
+        ],
+        "mutation_control_count": 0,
+        "rank": 18,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -814,7 +859,7 @@
           "F:ml430-nat-simproc-le-add-le-bc6f7c5c"
         ],
         "mutation_control_count": 0,
-        "rank": 18,
+        "rank": 19,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -841,7 +886,7 @@
           "F:ml430-nat-forall-ne-zero-iff-37819136"
         ],
         "mutation_control_count": 0,
-        "rank": 19,
+        "rank": 20,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -866,7 +911,7 @@
           "F:ml430-nat-prime-dvd-choose-add-235cc461"
         ],
         "mutation_control_count": 0,
-        "rank": 20,
+        "rank": 21,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -896,7 +941,7 @@
           "F:ml430-nat-nat-repr-len-aux-e53093d1"
         ],
         "mutation_control_count": 0,
-        "rank": 21,
+        "rank": 22,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -924,7 +969,7 @@
           "F:twin-prime-unbounded"
         ],
         "mutation_control_count": 0,
-        "rank": 22,
+        "rank": 23,
         "signature": {
           "bound_variable_count": 5,
           "carriers": [
@@ -949,7 +994,7 @@
           "F:goldbach-strong"
         ],
         "mutation_control_count": 0,
-        "rank": 23,
+        "rank": 24,
         "signature": {
           "bound_variable_count": 7,
           "carriers": [
@@ -977,7 +1022,7 @@
           "F:ml430-mutation-c20db9b4c60b816ce738bdf2"
         ],
         "mutation_control_count": 1,
-        "rank": 24,
+        "rank": 25,
         "signature": {
           "bound_variable_count": 0,
           "carriers": [],
@@ -1000,7 +1045,7 @@
           "F:ml430-mutation-aabb80b1f89f0c5847364692"
         ],
         "mutation_control_count": 1,
-        "rank": 25,
+        "rank": 26,
         "signature": {
           "bound_variable_count": 1,
           "carriers": [
@@ -1025,7 +1070,7 @@
           "F:ml430-mutation-1432b2277cf2cc26c1d11cd6"
         ],
         "mutation_control_count": 1,
-        "rank": 26,
+        "rank": 27,
         "signature": {
           "bound_variable_count": 1,
           "carriers": [
@@ -1050,7 +1095,7 @@
           "F:ml430-mutation-5179f333b8333ecff8adc223"
         ],
         "mutation_control_count": 1,
-        "rank": 27,
+        "rank": 28,
         "signature": {
           "bound_variable_count": 1,
           "carriers": [
@@ -1077,7 +1122,7 @@
           "F:ml430-mutation-48fe130e2b8eadb6f626b66f"
         ],
         "mutation_control_count": 1,
-        "rank": 28,
+        "rank": 29,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -1104,7 +1149,7 @@
           "F:ml430-mutation-a6dd1759bce60d820292e107"
         ],
         "mutation_control_count": 1,
-        "rank": 29,
+        "rank": 30,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -1129,7 +1174,7 @@
           "F:ml430-nat-testbit-eq-inth-ffa07392"
         ],
         "mutation_control_count": 0,
-        "rank": 30,
+        "rank": 31,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -1154,7 +1199,7 @@
           "F:ml430-mutation-e8583599cfae2d40cefae3f0"
         ],
         "mutation_control_count": 1,
-        "rank": 31,
+        "rank": 32,
         "signature": {
           "bound_variable_count": 2,
           "carriers": [
@@ -1179,7 +1224,7 @@
           "F:ml430-mutation-aca37b68d3cdf06f0127def9"
         ],
         "mutation_control_count": 1,
-        "rank": 32,
+        "rank": 33,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -1204,7 +1249,7 @@
           "F:ml430-nat-zero-of-testbit-eq-false-e244c9a1"
         ],
         "mutation_control_count": 0,
-        "rank": 33,
+        "rank": 34,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -1231,7 +1276,7 @@
           "F:ml430-mutation-c86940b52af8159ca9b381d6"
         ],
         "mutation_control_count": 1,
-        "rank": 34,
+        "rank": 35,
         "signature": {
           "bound_variable_count": 3,
           "carriers": [
@@ -1256,7 +1301,7 @@
           "F:ml430-nat-lt-of-testbit-72f64ab8"
         ],
         "mutation_control_count": 0,
-        "rank": 35,
+        "rank": 36,
         "signature": {
           "bound_variable_count": 5,
           "carriers": [
@@ -1285,7 +1330,7 @@
           "F:ml430-nat-squarefree-ext-iff-7218327d"
         ],
         "mutation_control_count": 0,
-        "rank": 36,
+        "rank": 37,
         "signature": {
           "bound_variable_count": 8,
           "carriers": [
@@ -1333,23 +1378,23 @@
         "F:godel-first-incompleteness",
         "F:lean-kernel-accepts-the-non-prop-residue-of-the-constructed-real-carrier"
       ],
-      "ready_count": 253,
+      "ready_count": 254,
       "shape_matched_count": 10,
       "unmatched_by_route_class": {
         "no-route": 6,
-        "proof-route-only": 237
+        "proof-route-only": 238
       },
       "unregistered_by_route_class": {
         "no-route": 6,
-        "proof-route-only": 247
+        "proof-route-only": 248
       }
     },
-    "frontier_sha256": "86d1d1b818b3fe0aea0847da2fdee56e39ba6ceb59fa773efa7f8a3f2e2afbf5"
+    "frontier_sha256": "9033a10ff0c490d00b890a04eb61f87194ecb200cc8847744db76a537a0bdf42"
   },
   "kind": "axeyum-frontier-shape-census",
   "ledger": {
-    "fact_count": 2848,
-    "ledger_sha256": "d10af3ac5bde7262741c997bfb6645ef9ded72fc9ba9cc066ce319fd9d22d0e3"
+    "fact_count": 2855,
+    "ledger_sha256": "dc3fe1773e400c7721203824b840d9407840e6ccf2ed8b53622fed666843e98c"
   },
   "other": [
     {
@@ -1655,16 +1700,16 @@
   ],
   "population": {
     "by_dialect": {
-      "kernel-rendered": 2,
+      "kernel-rendered": 3,
       "lean-surface": 51,
       "prose": 3,
       "smtlib": 1
     },
     "by_route_class": {
       "no-route": 6,
-      "proof-route-only": 51
+      "proof-route-only": 52
     },
-    "censused_count": 57,
+    "censused_count": 58,
     "divergence_registry_loaded": true,
     "held_out_authority": [
       "artifacts/autogenesis/nursery-v1.json",
@@ -1678,11 +1723,11 @@
       "known_only_to_isolation_gate": 0
     },
     "other_count": 14,
-    "primary_count": 43,
+    "primary_count": 44,
     "primary_divergence_blocked_count": 9,
     "primary_mutation_control_count": 11,
-    "primary_targetable_count": 23,
-    "ready_count": 253
+    "primary_targetable_count": 24,
+    "ready_count": 254
   },
   "produced_by": "scripts/frontier-shape-census.py",
   "schema_version": 1

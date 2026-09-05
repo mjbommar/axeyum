@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -211,6 +212,11 @@ TL214_COMPUTATION_ORDER = (
     "normal_form",
     "report",
 )
+# EXPECTED_PINS is the CORPUS/AUDIT pin: the Lean + lean4export snapshot this
+# construct matrix's fixtures and computations were generated and audited
+# against (Lean 4.30.0, mathlib c5ea0035, lean4export a3e35a58). It is a
+# permanent property of the recorded evidence and never moves just because
+# the repository's cross-check toolchain does -- see ADR-1660.
 EXPECTED_PINS = {
     "lean": {
         "toolchain": "leanprover/lean4:v4.30.0",
@@ -223,6 +229,35 @@ EXPECTED_PINS = {
         "format": "3.1.0",
     },
 }
+# The repository's CROSS-CHECK pin (`lean-toolchain` at the repo root) is a
+# different pin from EXPECTED_PINS above: ADR-1594 moved it to
+# leanprover/lean4:v4.34.0-rc1 and it is expected to move again independently
+# of the corpus pin's evidence. This checker cannot assert it equals
+# EXPECTED_PINS -- that conflated the two pins and broke on the first move
+# that changed one without the other (ADR-1660) -- so it only asserts the
+# file is a WELL-FORMED pin of the same shape `install-pinned-lean.sh`
+# accepts. Keep this pattern in sync with that script's
+# TOOLCHAIN_PIN_REGEX; there is no shared source between bash and Python.
+TOOLCHAIN_PIN_PATTERN = re.compile(
+    r"^leanprover/lean4:v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$"
+)
+
+
+def crosscheck_pin_failures(toolchain_value: str) -> list[str]:
+    """Validate the CROSS-CHECK pin value (`lean-toolchain`'s content).
+
+    Deliberately does not compare against EXPECTED_PINS -- that is the
+    corpus/audit pin and the two are independent (ADR-1660). A value that
+    is not a well-formed Lean toolchain pin is the only thing rejected here.
+    """
+    if TOOLCHAIN_PIN_PATTERN.match(toolchain_value):
+        return []
+    return [
+        "lean-toolchain is not a well-formed cross-check pin: "
+        f"{toolchain_value!r}"
+    ]
+
+
 EXPECTED_RESOURCES = {
     "runner": "systemd-run --user --scope",
     "memory_high": "3G",
@@ -1157,8 +1192,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         validate_tl214_update(data, failures)
 
     toolchain_path = ROOT / "lean-toolchain"
-    if toolchain_path.read_text(encoding="utf-8").strip() != EXPECTED_PINS["lean"]["toolchain"]:
-        failures.append("lean-toolchain does not match the registered pin")
+    toolchain_value = toolchain_path.read_text(encoding="utf-8").strip()
+    failures.extend(crosscheck_pin_failures(toolchain_value))
 
     commands = data.get("commands")
     command_keys = {

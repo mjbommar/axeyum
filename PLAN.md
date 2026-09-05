@@ -143,6 +143,14 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | the empty/singleton shelf and the count-to-member direction: 9 declarations in the new `nat_prelude/finset_singleton.rs` (5cc0ab0ae) |
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
+| 2026-09-05 | `f02c8d530` | `install-pinned-lean.sh` accepts the `-rcN` pin shape via a factored `toolchain_pin_is_valid()` + `--validate-only` mode; new `scripts/tests/test-lean-toolchain-pin-regex.sh` (8 controls, no network) registered in `scripts/check.sh` |
+| 2026-09-05 | `9752b4416` | `check-lean-official-construct-matrix.py`'s `crosscheck_pin_failures()` checks well-formedness of `lean-toolchain` instead of equality to the corpus pin; 3 new unit tests; `docs/plan/generated/lean-complete-parity.json` refreshed (unrelated stale `ci.yml` hash) |
+| 2026-09-05 | `e2218738c` | ADR-1660 names the two Lean pins and which surface is keyed to which; dated correction block appended to ADR-1594; ADR index regenerated |
+| 2026-09-05 | `9ce530f62` | `Int.IsSumOfTwoSquares` (Definition) with its intro rule, the Brahmagupta–Fibonacci identity in both conjugate groupings (both emitted by `ring::int::declare` at arity 4, first attempt), and `Int.isSumOfTwoSquares_mul`. Seven tests; one negative control found VACUOUS on its first honest run (`17 = 1²+4²` and its swap both reduce to `17`) and moved to free variables. |
+| 2026-09-05 | `c47a576b5` | `Int.sq_modEq_four_zero_or_one` and `Int.not_isSumOfTwoSquares_of_modEq_four_three` — ADR-0603's boundary-refutation grade. No new `Int` parity lemma was needed (`Int.Even` is *defined* as `Nat.Even (natAbs ·)`), no existential is opened (the witness is the definable `a / 2`), and the four leaves close by REDUCTION of `emod` at closed numerals. Ring stepping stones `Int.sq_of_two_mul`, `Int.sq_of_two_mul_add_one`. 3 tests, each with its negative half: 3, 7, 11 refute; 4, 5, 13, 17 do not. |
+| 2026-09-05 | `8b8b58ed9` | `Int.modEq_descent_cross_terms` and `Int.descentStep` — the two reusable halves of Fermat's descent — plus the cancellation family they needed and `shape_search` reported absent: `Int.mul_left_cancel_of_ne_zero`, `Int.mul_ne_zero`, `Int.eq_of_sub_eq_zero`, `Int.zero_add`, `Int.sub_self`, `Int.add_sub_cancel_right`, `Int.mul_sub_mul_comm`, `Int.mul_mul_of_mul_mul`, `Int.sq_add_sq_of_mul_left`. Records the measured `ring::int` zero-collapse decline. 3 tests carrying the worked `p = 13` descent with wrong quotients refused. |
+| 2026-09-05 | `aaabdaea1` | Symbolic statement-shape guards: the two Brahmagupta groupings are pinned against their intended terms at FREE VARIABLES (an operand swap is a still-true theorem and a numeral test cannot see it), and `descentStep`'s conclusion is pinned to the NEW multiplier `q` rather than `m`. |
+| 2026-09-05 | `a06007837` | `the_cross_term_conjuncts_are_ordered_as_stated`, written because a conjunct-transposition mutant survived all 15 existing tests. Re-running the mutant against it kills exactly one. |
 | 2026-09-04 | graph-carrier | `Nat.Graph` (ADR-1608): a decidable adjacency relation plus a vertex bound, sibling of `Nat.Finset`, with symmetry and irreflexivity forced inside `adjB`; neighbourhoods as `Nat.Finset`s and degrees through `countRange_le` |
 | 2026-09-04 | graph-carrier | `R(3,3) = 6` in the kernel, both halves axiom-free: a 32-leaf case tree for the upper bound and a reflected five-vertex search certificate for the lower (`F:ramsey-r33-six`) |
 | 2026-09-04 | graph-carrier | Hall's marriage theorem, necessity direction, over `Nat.Finset` through `card_le_of_injOn`; sufficiency NOT proved and its blocker named — computing a critical subfamily needs a bounded subset search with its own reflection lemma |
@@ -52378,6 +52386,63 @@ declarations. ADR-1155's status note records 31.8 s for its own seven; measured
 here on the same commit it is 13.15 s, so **that figure was taken under lane
 contention and should not be used as a baseline**.
 
+**Next Ten item 1 is `DONE` (lean-pin-gates, 2026-09-05).** ADR-1594
+(2026-09-03, `792224e73`) moved `lean-toolchain` to
+`leanprover/lean4:v4.34.0-rc1` and claimed "no workflow edit is needed."
+That was false: two checkers had hardcoded an equality between this
+**cross-check pin** and the Mathlib **corpus pin** (Lean 4.30.0, mathlib
+`c5ea0035`, `lean4export` `a3e35a58`) that ADR-1594 broke.
+
+1. `scripts/install-pinned-lean.sh`'s toolchain regex had no `-rcN`
+   alternative — CI's real-Lean cross-check job died at the install step,
+   red since `792224e73`. Fixed: factored into `toolchain_pin_is_valid()`,
+   accepts `^leanprover/lean4:v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$`, exposed
+   via a `--validate-only PIN` mode that downloads nothing. New
+   `scripts/tests/test-lean-toolchain-pin-regex.sh` (8 controls, registered
+   in `scripts/check.sh` beside `lean-toolchain-policy`) exercises the
+   regex bare; reverting the `-rcN` alternative fails exactly its two
+   `-rc1`-dependent controls.
+2. `scripts/check-lean-official-construct-matrix.py` asserted
+   `lean-toolchain`'s content equals the construct matrix's registered
+   corpus/audit pin — a category error once the two pins could disagree.
+   Fixed: a new `crosscheck_pin_failures()` requires only that the file is
+   a **well-formed** pin (same shape as the bash regex), independent of the
+   corpus pin's `EXPECTED_PINS` equality check, which is unchanged and
+   still fails closed on real corpus-pin drift. `--check` and (through
+   `derive_matrix_rows`) `gen-lean-complete-parity.py --check` both went
+   from exit 1 to exit 0. Three new unit tests
+   (`scripts.tests.test_lean_official_construct_matrix`, 20 total, was 17)
+   cover: a well-formed pin differing from the corpus pin is accepted; a
+   malformed pin is rejected by name; corpus-pin drift is still caught
+   independent of the cross-check pin. Mutation-verified: reverting
+   `crosscheck_pin_failures` to the old equality form fails 8 of 20 tests.
+3. [ADR-1660](docs/research/09-decisions/adr-1660-there-are-two-lean-pins-and-every-claim-names-which-one-it-means.md)
+   names the two pins, records which existing surface (the fact ledger,
+   compatibility matrix, construct matrix, parity registry, thin Lean
+   adapter goal pack) is keyed to which, and is the ADR to cite for "which
+   Lean pin" going forward. ADR-1594 gained a dated correction block
+   (appended, not rewritten) recording that its "no workflow edit" claim
+   was false for these two files.
+
+**Measured 2026-09-05, all three exit 0 on the merged tree:**
+`python3 scripts/check-lean-official-construct-matrix.py --check`,
+`python3 scripts/gen-lean-complete-parity.py --check`,
+`./scripts/tests/test-lean-toolchain-pin-regex.sh` (new). Also confirmed
+green and unaffected: `python3 scripts/gen-lean-compatibility.py --check`
+(13 rows, unchanged); `python3 -m unittest
+scripts.tests.test_lean_official_construct_matrix` (20 tests);
+`python3 -m unittest scripts.tests.test_lean_complete_parity` (25 tests);
+`./scripts/check-merge-hygiene.sh` (PASS; the pre-existing
+`0166`/`0167` duplicate ADR numbers are unrelated to this lane and were not
+touched).
+
+Not run: `just check` / the full `./scripts/check.sh` aggregate (out of
+scope for this lane's time budget; the specific Lean gates above were run
+directly and bare, per the task's discipline). The real-Lean suites
+(`scripts/check-lean-gate.sh`, `test-lean-toolchain-policy.sh`) that
+require an installed pinned toolchain were not run on this host — did not
+run, not claimed green.
+
 **DONE (`ledger-duplicate-propositions`, 2026-08-30).** ADR-0771 (S2 trust-closure)
 measured 15 identity classes (theorem pairs sharing a byte-identical
 `Kernel::render_lean` canonical type), all 15 with both members registered as
@@ -56614,6 +56679,57 @@ proposition that no identity class can see, because it declares nothing
 `artifacts/trust-closure/population.json` while DROPPING its hand-written
 `ratio_floor_note`, the paragraph telling the next lane not to lower that floor;
 that file was deliberately restored to `HEAD` rather than committed.
+
+**Sums of two squares landed as an ADR-0603 graded family, minus Fermat's
+theorem itself** (`WIP`, two-squares, 2026-09-05, ADR-1633). Twenty
+declarations in `int_prelude/two_squares.rs`, every one axiom-free and every
+one admitted on the first attempt: the Brahmagupta–Fibonacci identity in both
+conjugate groupings (emitted by `ring::int`, no hand proof anywhere in the
+file), the predicate `Int.IsSumOfTwoSquares` with its introduction rule and
+multiplicativity, the mod-4 boundary refutation with its supporting
+"every square is 0 or 1 mod 4", and the descent step in two reusable halves —
+`Int.modEq_descent_cross_terms` (both cross terms of the conjugate grouping
+vanish modulo the multiplier) and `Int.descentStep` (the multiplier drops from
+`m` to `q` with the conclusion in the same shape as the hypothesis, so
+`Nat.strongInduction` on the multiplier applies directly).
+
+**`Int.fermatTwoSquares` did NOT land, and the obstruction is not the
+descent.** The algebra was free. What is missing is the bounded choice of
+representatives and the strict decrease of the measure: `|c|, |e| ≤ m/2` ⟹
+`c² + e² ≤ m²/2 < m²`. Every step of that is an ordering argument over ℤ, and
+this prelude has none of the pieces — `Int.le`, `Int.lt` and `Int.natAbs` all
+exist, but `shape_search` finds no `natAbs_le_iff`, no `mul_le_mul` over `Int`
+and no `sq_le_sq`. Two cheaper pieces are also outstanding: the entry step from
+`Int.firstSupplementaryLawResidue`'s witness to `p ∣ x² + 1` through
+`Int.modEq_iff_dvd`, and the `q > 0` argument. Registered open as
+`F:int-fermat-two-squares`; the composite characterisation is open as
+`F:int-two-squares-composite-characterisation` with its own, different
+obstruction (the exponent of a prime in `n` is not a definable quantity here).
+
+**Two corrections to what the brief expected.**
+`Int.firstSupplementaryLawResidue` — "−1 IS a quadratic residue mod `p` for
+`p ≡ 1 (mod 4)`" — is already **proved** (ADR-1235), so it was not this lane's
+first deliverable. `first_supplementary.rs`'s module doc still describes that
+half as the not-built route and is stale. And `Int.mul_left_cancel_of_ne_zero`
+was **absent**: `shape_search --ns Int --name-contains cancel` returns only
+additive and `ModEq` cancellations, so it had to be built from
+`Int.mul_eq_zero` together with six supporting lemmas.
+
+**Two tooling findings, both measured rather than predicted.** `ring::int`
+declines every goal whose normal form collapses to zero — `add 0 a` normalizes
+to `[Mono[a], Num(0)]`, `a` to `[Mono[a]]`, and the trailing zero is not
+dropped — so four small lemmas are hand-proved. And a mutant transposing the
+two conjuncts of `Int.modEq_descent_cross_terms` **survived the entire concrete
+suite, 0 kills of 15**, because at the worked instance both conjuncts reduce to
+`Eq Int 0 0` and the orderings are definitionally equal. The repair,
+`the_cross_term_conjuncts_are_ordered_as_stated`, runs at free variables and
+kills that mutant with exactly one failing test. The rule that generalises: a
+test that pins a STATEMENT must run at free variables, a test that pins a VALUE
+must run at numerals, and using numerals for both is how a control ends up
+unable to fail.
+
+Detail in
+[ADR-1633](docs/research/09-decisions/adr-1633-the-two-squares-descent-splits-into-algebra-that-is-free-and-an-order-that-does-not-exist.md).
 
 Status: DONE — cycle index 3 is filled. Draw 15 is possible.
 

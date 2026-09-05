@@ -63,6 +63,7 @@ pub mod cofactor_ansatz;
 pub mod combinatorics;
 pub mod extremum;
 mod factor_int;
+pub mod fps;
 pub mod geometry;
 pub mod geometry_certify;
 pub mod geometry_check;

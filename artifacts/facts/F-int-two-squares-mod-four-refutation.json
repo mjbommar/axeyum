@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "F:int-two-squares-mod-four-refutation",
+  "title": "An integer congruent to 3 modulo 4 is not a sum of two squares",
+  "statement": "For every integer n with n = 3 (mod 4) there are no integers a, b with n = a^2 + b^2. This is ADR-0603's boundary-refutation grade of the two-squares family: it is the exact complement of the residue condition in Fermat's theorem, and it is CHEAP where the theorem is expensive, needing no descent and no ordering argument at all. The supporting statement is Int.sq_modEq_four_zero_or_one -- every integer square is 0 or 1 modulo 4.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem Int.not_isSumOfTwoSquares_of_modEq_four_three : ((x0 : Int) -> ((x1 : Int.ModEq (Int.ofNat (AxNat.succ (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))) x0 (Int.ofNat (AxNat.succ (AxNat.succ (AxNat.succ AxNat.zero))))) -> Not (Int.IsSumOfTwoSquares x0)))",
+    "fragment": "Int",
+    "free_symbols": [
+      "x0",
+      "x1"
+    ],
+    "kernel_theorem": "Int.not_isSumOfTwoSquares_of_modEq_four_three"
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "proof_route": "kernel-lean",
+  "depends_on": [
+    "F:int-sum-of-two-squares-multiplicative",
+    "F:int-modeq-add-mul-left",
+    "F:int-modeq-trans",
+    "F:int-modeq-symm",
+    "F:nat-even-or-odd",
+    "F:ml430-int-modeq-add-b805125a",
+    "F:nat-ne-of-beq-eq-false"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "kernel-Int.not_isSumOfTwoSquares_of_modEq_four_three",
+      "kind": "kernel-term",
+      "supports": "Int.not_isSumOfTwoSquares_of_modEq_four_three is admitted by the trusted kernel gate with the type recorded in formal.statement.",
+      "check_status": "checked",
+      "checkers": [
+        "producing-build (Kernel::add_declaration, inside build_int_prelude)",
+        "int_theorem_inventory re-list of the admitted declaration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example int_theorem_inventory -- Int.not_isSumOfTwoSquares_of_modEq_four_three 2>/dev/null | grep -cE '^theorem[[:space:]]+Int\\.not_isSumOfTwoSquares_of_modEq_four_three[[:space:]]'",
+      "checker_seconds": 12,
+      "kernel_declaration": "Int.not_isSumOfTwoSquares_of_modEq_four_three",
+      "notes": "Two independent failure modes, so the exit status depends on the finding rather than on the run completing: int_theorem_inventory exits non-zero when the named filter matches nothing, and grep -c exits 1 printing 0 when the anchored line is absent. Anchored with [[:space:]] and never with a backslash-t, which a scripted (GNU) grep reads as a literal t. grep -c rather than grep -q, which would SIGPIPE the producer under pipefail. --release is MANDATORY: this tool builds the constructed carriers and overflows the default debug thread stack. The anchor AFTER the name is load-bearing here, because Int.brahmaguptaFibonacci' is a different declaration whose rendered name has Int.brahmaguptaFibonacci as a prefix."
+    },
+    {
+      "id": "evaluation-Int.not_isSumOfTwoSquares_of_modEq_four_three",
+      "kind": "instance-pin",
+      "supports": "What the declaration MEANS, settled at concrete small arguments and at free variables. The kernel gate cannot do this, and for the Definition Int.IsSumOfTwoSquares nothing else can.",
+      "check_status": "checked",
+      "checkers": [
+        "crates/axeyum-lean-kernel/src/int_prelude/two_squares_tests.rs (16 tests; every battery asserts what must hold AND what must fail)",
+        "crate::Kernel::add_declaration used as the decision procedure (a probe theorem is admitted or refused, and both outcomes are asserted)",
+        "crate::Kernel::def_eq for the statement-shape comparisons, which have to run at free variables because numerals reduce"
+      ],
+      "checker_command": "cargo test --release -p axeyum-lean-kernel --lib -- int_prelude::two_squares --test-threads=4 2>/dev/null | grep -cE '^test result: ok\\. 16 passed'",
+      "checker_seconds": 300,
+      "artifact": "crates/axeyum-lean-kernel/src/int_prelude/two_squares_tests.rs",
+      "notes": "The count 16 is pinned deliberately: a suite that silently stopped compiling some of these tests would still print ok with a smaller number, and this repository has shipped a gate that ran zero tests for 15 days while exiting 0. Relevant tests for this row: three_seven_and_eleven_are_refuted_by_the_mod_four_theorem, the_mod_four_refutation_does_not_apply_off_the_residue, nine_is_one_mod_four_and_not_zero. MUTATION-MEASURED: transposing both the conjunction and its And.intro in Int.modEq_descent_cross_terms SURVIVED the whole suite (0 kills of 15), because at the worked instance (m,a,b,c,e) = (2,5,1,1,1) both conjuncts reduce to Eq Int 0 0 and the two orderings are definitionally equal there; the_cross_term_conjuncts_are_ordered_as_stated was added in response and kills that mutant with EXACTLY ONE failing test (15 passed, 1 failed)."
+    },
+    {
+      "id": "footprint-Int.not_isSumOfTwoSquares_of_modEq_four_three",
+      "kind": "exhaustive-enumeration",
+      "supports": "axiom_footprint: [] -- the integer prelude's trusted surface is empty, which bounds Int.not_isSumOfTwoSquares_of_modEq_four_three.",
+      "check_status": "checked",
+      "checkers": [
+        "Kernel::axiom_footprint, asserted per declaration AFTER Environment::contains",
+        "environment-wide trusted-surface enumeration"
+      ],
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example nat_axiom_inventory -- --require-axiom-free integer",
+      "checker_seconds": 12,
+      "notes": "The per-declaration assertion lives in two_squares_tests::every_two_squares_declaration_is_present_and_axiom_free, which checks Environment::contains FIRST for all 20 names. An empty footprint is also what a missing name returns, so without the containment check the footprint assertion would pass for a declaration that does not exist. The name list there is written out in full rather than derived from the module, which is a known weakness: it measures this lane's memory of what it declared, not the module's actual output."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "the two-squares lane (W3-10, ADR-1633), crates/axeyum-lean-kernel/src/int_prelude/two_squares.rs, admitted by build_int_prelude",
+    "source": "the classical squares-mod-4 obstruction, the converse half of Fermat's theorem on sums of two squares",
+    "prior_art": [
+      {
+        "who": "Brahmagupta; Fibonacci; Fermat; Euler",
+        "what": "the composition identity for sums of two squares (Brahmagupta 628, restated by Fibonacci 1225), Fermat's theorem on sums of two squares (asserted 1640) and Euler's descent proof (1749)",
+        "year": 1749,
+        "where": "classical number theory; standard textbook material",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "The parity split needed NO new Int-level parity lemma: Int.Even n is DEFINED as Nat.Even (natAbs n) in int_prelude/parity.rs, so Nat.even_or_odd_exists read at natAbs a already IS the Int dichotomy, up to one delta unfold the kernel does for free. Each branch writes a as 2k or 2k+1 with the DEFINABLE witness k := a/2 (Int.ediv_two_mul_two_of_even and Int.ediv_two_mul_two_add_one_of_odd), so no existential is opened. The residue is read off with Int.modEq_add_mul_left, which is unconditional in the modulus, so no 0 < 4 side condition appears anywhere. The four leaves close by REDUCTION and not by any inequality: ModEq 4 3 r unfolds to Eq Int (emod 3 4) (emod r 4) with both sides closed numerals, and Int.emod is a structural Int.rec/Nat.rec definition, so the kernel computes them; Int.natAbs injectivity plus Nat.ne_of_beq_eq_false finishes. The negative half of the battery is what makes the positive half a measurement: 4, 5, 13 and 17 are each confirmed NOT to admit the refutation, and 5, 13, 17 are exactly the primes the sibling fact witnesses."
+}
