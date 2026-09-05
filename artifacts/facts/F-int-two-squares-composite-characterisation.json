@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "F:int-two-squares-composite-characterisation",
+  "title": "The full sum-of-two-squares characterisation for composite n (OPEN, and deliberately out of scope for the lane that opened it)",
+  "statement": "A positive integer n is a sum of two integer squares if and only if every prime congruent to 3 modulo 4 occurs to an EVEN exponent in the prime factorisation of n. NOT ESTABLISHED HERE and deliberately not attempted. The forward direction needs Fermat's theorem for the primes congruent to 1 modulo 4 (F:int-fermat-two-squares, itself open) together with the multiplicativity that IS proved (F:int-sum-of-two-squares-multiplicative); the reverse direction needs the mod-4 refutation lifted from n itself to each prime power, which needs unique factorisation as a MULTISET and not merely the existence of a factorisation.",
+  "formal": {
+    "language": "lean4-surface",
+    "statement": "forall (n : Nat), 0 < n -> (Int.IsSumOfTwoSquares (Int.ofNat n) <-> forall (q : Nat), Nat.IsPrime q -> Nat.ModEq 4 q 3 -> Nat.Even (Nat.factorization n q))",
+    "fragment": "Int",
+    "free_symbols": [
+      "n",
+      "q"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [
+    "F:int-fermat-two-squares",
+    "F:int-sum-of-two-squares-multiplicative",
+    "F:int-two-squares-mod-four-refutation"
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "not established in this ledger",
+    "source": "the classical sum-of-two-squares theorem for general n (Euler, Gauss); registered by the two-squares lane (W3-10, ADR-1633) as the explicitly out-of-scope continuation of the graded family",
+    "prior_art": [
+      {
+        "who": "Fermat; Euler; Gauss",
+        "what": "the characterisation of the integers representable as a sum of two squares",
+        "year": 1801,
+        "where": "Disquisitiones Arithmeticae and earlier correspondence",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "formal.statement here is INFORMAL and is NOT a checked kernel type: formal.language is recorded as lean4-surface, the ledger's vocabulary for a statement quoted rather than admitted, because this one names Nat.factorization, which this repository does not have. That is not a transcription convenience, it is the second obstruction. nat_prelude/factorization.rs proves factorisations EXIST, and its own module doc records that uniqueness is not attempted and cannot be stated, there being no List, Finset or multiset in which to compare two factorisations -- so the exponent of a prime in n is not currently a definable quantity. The general test recorded in docs/contributor-guide/kernel-proof-engineering.md gives the honest reading: an argument that merely INDUCTS past a factorisation is reachable, one that EVALUATES a closed form over the factor multiset is not, and this statement evaluates. A lane picking this up should either build the multiset exponent or reformulate the characterisation as an induction over prime steps."
+}
