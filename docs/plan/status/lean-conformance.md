@@ -26,13 +26,14 @@ not in it, and upstream excludes the five cases over 10 MB — `mathlib`, `std`,
 
 | mode | accept half | reject half |
 |---|---|---|
-| full | **108/113** (4 wrong, 1 no verdict) | **69/73** (2 wrong, 2 declined) |
+| full | **108/113** (4 wrong, 1 no verdict) | **70/73** (1 wrong, 2 declined) |
 | `parse-only` control | 110/113 (2 wrong, 1 no verdict) | **21/73** |
 
 The control is the same reader with the trusted gate's verdict discarded
 (`census_ndjson`), so the gap is an attribution and not a rhetorical flourish:
-**21 of the reject half is earned by the reader and recursor regeneration, 48
-by the trusted gate.**
+**21 of the reject half is earned by the reader and recursor regeneration, 49
+by the trusted gate.** (The finding run read 69/73 with 2 wrong; the second of
+those two was the defect closed below.)
 
 **What that attribution costs us, said plainly.** Five reject-half cases —
 `rec-k-lie`, `nat-rec-k-lie`, `large-elim-param`, `large-elim-prop-bool` and
@@ -51,7 +52,7 @@ the only two accept-half cases refused from inside the trusted gate.
 
 **The ledger.** [`docs/plan/lean-divergences.md`](../lean-divergences.md), in
 lean4lean's shape, carrying the standing rule that an unlisted divergence is a
-bug. Ten entries, nine open, one closed. `scripts/check-lean-divergences.py`
+bug. Ten entries, eight open, two closed. `scripts/check-lean-divergences.py`
 enforces it from three **authorities** — the conformance mismatches, the
 differential's `EXPLAINED_INCOMPLETENESS`, the replay census's
 `Representability::reason` classes — and holds no list of its own; L5 fails when
@@ -102,4 +103,5 @@ re-derived from that run rather than nudged.
 <!-- plan-section: landed-changes -->
 
 | 2026-09-05 | `e75b0db94` | `scripts/fetch-references.sh` pins `leanprover/lean-kernel-arena` at an exact commit plus its test tarball by SHA-256; `kernel_conformance_check` runs one case per process under the arena's own exit-code contract (0 accept / 1 reject / 2 declined / 3 error), with `--mode parse-only` as the in-tree control |
+| 2026-09-05 | `a24ed468b` | `Kernel::check_declaration` refuses a repeated universe binder (`KernelError::DuplicateUniverseParam`), closing ledger D2 — the arena's `tut06_bad01`; new `declaration_universe_params_must_be_distinct.rs` (3 tests, both directions); ADR-1663; progress rows in `14-lean-lang.md` and `10-logic-and-foundations.md` |
 | 2026-09-05 | `5a954d4be` | `scripts/check-kernel-conformance.py` (9 guards, `--self-test`, floors and ceilings on both halves, G6 requires the control to invert by ≥40); `scripts/check-lean-divergences.py` (5 guards, three authorities, no list of its own); `docs/plan/lean-divergences.md`; `artifacts/kernel-conformance/{results.tsv,summary.json,summary.md}`; `level_conformance_probe` example; both gates registered in `scripts/check.sh` and the `justfile` |

@@ -8,7 +8,7 @@ hand edit fails G8.
 - test tarball: `https://arena.lean-lang.org/lean-arena-tests.tar.gz`
   sha256 `7e396d5de90e8871c9b1d7e2931f3efaba303056cdfd93e65f9ae1de628bf326`
 - cases scored: 186 (digest `85fcd0166965743839f26f1e9ff179112d0ea6471a76b4c283c561149e7cd6f1`)
-- measured: 2026-09-05T11:26:41Z
+- measured: 2026-09-05T13:20:37Z
 
 The corpus's `either` corner cases are not in the published tarball and are
 not scored here. Cases larger than 10 MB (mathlib, std, cslib, cedar, init)
@@ -19,7 +19,7 @@ are excluded by upstream from the same tarball.
 | mode | half | total | correct | wrong | declined | no verdict |
 |---|---|---:|---:|---:|---:|---:|
 | full | accept | 113 | 108 | 4 | 0 | 1 |
-| full | reject | 73 | 69 | 2 | 2 | 0 |
+| full | reject | 73 | 70 | 1 | 2 | 0 |
 | parse-only | accept | 113 | 110 | 2 | 0 | 1 |
 | parse-only | reject | 73 | 21 | 50 | 2 | 0 |
 
@@ -29,10 +29,10 @@ are excluded by upstream from the same tarball.
 (`census_ndjson`). It is the arena's own control reproduced in-tree, and it
 is why the accept half alone is not a result.
 
-- reject half: full mode 69, control 21 -- a gap of **48**.
+- reject half: full mode 70, control 21 -- a gap of **49**.
 - so **21** of the reject half is
   decided by the reader and recursor regeneration, and the remaining
-  **48** by the trusted gate. A reject-half score quoted without this
+  **49** by the trusted gate. A reject-half score quoted without this
   split does not say which layer earned it.
 
 ## Divergences
@@ -46,7 +46,6 @@ fails if one is not.
 | `core/sparse-name-index` | accept | reject | `malformed` |
 | `perf/app-lam` | accept | timeout | `timeout` |
 | `tutorial/012_nonPropThm` | reject | accept | `ok` |
-| `tutorial/019_tut06_bad01` | reject | accept | `ok` |
 | `tutorial/107_unitEta1` | accept | reject | `kernel:DeclarationValueMismatch` |
 | `tutorial/108_unitEta2` | accept | reject | `kernel:DeclarationValueMismatch` |
 | `tutorial/141_falseFromUnsafe` | reject | decline | `unsupported:declaration-unsafe-or-partial` |

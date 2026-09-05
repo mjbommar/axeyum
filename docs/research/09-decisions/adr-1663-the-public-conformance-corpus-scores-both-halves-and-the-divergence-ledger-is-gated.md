@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-09-05
-Index-summary: The public corpus is `leanprover/lean-kernel-arena` (204 tests; 118 accept / 73 reject / 13 either), not the 189/121/62/6 the requirements doc cites; on its 186-case published tarball this kernel scores **108/113 accepts and 69/73 rejects**, against the in-tree `parse-only` control's **110/113 and 21/73** — so 21 of the reject half is earned by the reader and **48 by the trusted gate**. Nine divergences are published in a gated `docs/plan/lean-divergences.md` in lean4lean's shape; one (duplicate universe binders) was closed in the kernel; the `imax` over-completeness and the `max-to-imax` mutant are recorded as a **sanctioned** divergence on upstream's own `outcome: either` classification, closing the question ADR-1600 §4 left open.
+Index-summary: The public corpus is `leanprover/lean-kernel-arena` (204 tests; 118 accept / 73 reject / 13 either), not the 189/121/62/6 the requirements doc cites; on its 186-case published tarball this kernel scores **108/113 accepts and 70/73 rejects** (69/73 on the run that found the defect below), against the in-tree `parse-only` control's **110/113 and 21/73** — so 21 of the reject half is earned by the reader and **49 by the trusted gate**. Eight divergences are published in a gated `docs/plan/lean-divergences.md` in lean4lean's shape; one (duplicate universe binders) was closed in the kernel; the `imax` over-completeness and the `max-to-imax` mutant are recorded as a **sanctioned** divergence on upstream's own `outcome: either` classification, closing the question ADR-1600 §4 left open.
 
 ## Context
 
@@ -85,16 +85,20 @@ Measured 2026-09-05 at corpus digest `85fcd016…`
 | mode | half | total | correct | wrong | declined | no verdict |
 |---|---|---:|---:|---:|---:|---:|
 | full | accept | 113 | **108** | 4 | 0 | 1 |
-| full | reject | 73 | **69** | 2 | 2 | 0 |
+| full | reject | 73 | **70** | 1 | 2 | 0 |
 | parse-only (control) | accept | 113 | 110 | 2 | 0 | 1 |
 | parse-only (control) | reject | 73 | **21** | 50 | 2 | 0 |
+
+The reject half read **69 / 2 wrong** on the first run; one of those two is the
+defect closed below, and the numbers here are the run after the fix. Both are
+given because the first is what found it.
 
 The control is the same reader with the trusted gate's verdict discarded
 (`census_ndjson`, which records kernel declines instead of failing on them),
 so the difference between the two rows is attributable and not rhetorical:
 
 > **21 of the reject half is earned by the reader and recursor regeneration;
-> the remaining 48 by the trusted gate.** A reject-half score quoted without
+> the remaining 49 by the trusted gate.** A reject-half score quoted without
 > that split does not say which layer earned it.
 
 This matters concretely. `rec-k-lie`, `nat-rec-k-lie`, `large-elim-param`,
@@ -171,7 +175,16 @@ substitutions for one name and the declaration does not denote one thing.
 tests both directions: the duplicate is refused with the variant that names the
 repeated parameter, **and** one binder, two distinct binders, and no binders are
 all still admitted — without that control the guard is satisfied by a kernel
-that refuses every polymorphic declaration.
+that refuses every polymorphic declaration. `cargo test -p axeyum-lean-kernel
+--lib` was then re-run whole (2,284 passed, 0 failed, 1 ignored, 3,067 s),
+because a wrong version of this check would refuse a declaration every prelude
+in the tree relies on and the targeted test could not see that.
+
+**Scope, stated rather than implied.** `check_declaration` gates
+`Axiom`/`Definition`/`Theorem`/`Opaque`; the inductive gate does its own
+checking and does not route through it, so an inductive family's binding list
+is **not** covered. The arena's case is a `def`, so the corpus does not
+currently distinguish the two, and the ledger's D2 says so.
 
 ### The gates
 
@@ -179,8 +192,10 @@ that refuses every polymorphic declaration.
 fires each one on the fixture that names it. G6 is the one that makes the rest
 mean anything: it **requires** the control to score at least 40 fewer on the
 reject half, so a harness that quietly stopped exercising the kernel fails
-instead of reporting a perfect score. Floors pin both halves; ceilings pin the
-known divergences, so a *new* one fails rather than being absorbed. G9 re-runs
+instead of reporting a perfect score. Floors pin both halves (108 accepts, 70 rejects); ceilings pin the
+known divergences, so a *new* one fails rather than being absorbed -- the
+"we accept what Lean rejects" ceiling is **1** after the closure below, so a
+second such case fails the gate. G9 re-runs
 the divergent cases plus a fixed sample live and requires them to reproduce the
 committed rows; mutating one committed `class` field with the verdict unchanged
 fires G9 alone, verified.
@@ -227,7 +242,8 @@ the ledger cannot silently fall behind the tree.
 change that improves the reject half without the control moving fails G6, which
 is intended: it means the improvement was in the reader, not the kernel.
 
-**Revisited.** D2 is closed here. D5 (unit-like defeq), D6 (dense
+**Revisited.** D2 is closed here, and the reject floor moved 69 -> 70 with the
+soundness-divergence ceiling 2 -> 1 in the same change. D5 (unit-like defeq), D6 (dense
 internalization indices) and D8 (`perf/app-lam`, no verdict in 600 s at 3.0 GB
 RSS) are each bounded and named with their obstruction. D3 is settled as
 sanctioned unless upstream reclassifies `imax-right-successor` away from

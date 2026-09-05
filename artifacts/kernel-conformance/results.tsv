@@ -61,7 +61,7 @@ full	tutorial/015_levelComp1	accept	accept	ok	-
 full	tutorial/016_levelComp2	accept	accept	ok	-
 full	tutorial/017_levelComp3	accept	accept	ok	-
 full	tutorial/018_levelParams	accept	accept	ok	-
-full	tutorial/019_tut06_bad01	reject	accept	ok	-
+full	tutorial/019_tut06_bad01	reject	reject	kernel:DuplicateUniverseParam	line_8:_kernel_rejected_tut06_bad01:_DuplicateUniverseParam_{_declaration:_NameId(1),_param:_NameId(2)_}
 full	tutorial/020_levelComp4	accept	accept	ok	-
 full	tutorial/021_levelComp5	accept	accept	ok	-
 full	tutorial/022_imax1	accept	accept	ok	-

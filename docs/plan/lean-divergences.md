@@ -42,6 +42,11 @@ These are the entries that matter most. None is a soundness defect in the
 sense of admitting `False` — but each one breaks the implication people
 actually rely on, *"axeyum checked it, so Lean would check it"*.
 
+D2 below is **closed** and kept here rather than moved, so a reader sees it
+beside the entries it was found with: the corpus run that produced this section
+found two such cases, one was a defect and was fixed, and the other was not.
+That contrast is the finding.
+
 ### D1 — A `Theorem` whose type is not a proposition
 
 **Status:** open
@@ -72,25 +77,34 @@ non-representable rather than as replayed.
 
 ### D2 — Duplicate universe parameters on one declaration
 
-**Status:** open
-**Keys:** `conformance:tutorial/019_tut06_bad01`
+**Status:** closed
+**Keys:** `manual:duplicate-universe-binders`
 
-The arena case declares a `def` with `levelParams := [u, u]`. Lean rejects it;
-this kernel admits it. A duplicated parameter makes instantiation ambiguous —
-`@f.{a, b}` has two candidate substitutions for the same name — so nothing
-downstream can be relied on to mean one thing.
+The arena case `bad/tutorial/019_tut06_bad01` declares a `def` with
+`levelParams := [u, u]`. Lean rejects it; this kernel admitted it. `Const(c, us)`
+substitutes `us` **positionally** for `c`'s declared parameters, so `@c.{a, b}`
+against `[u, u]` has two candidate substitutions for one name and the
+declaration does not denote one thing.
 
-Bounded and closable: the check belongs at the trusted gate beside the existing
-one that requires a recursor's universe parameters to be bound
-(`crates/axeyum-lean-import/tests/recursor_universe_params_must_be_bound.rs`).
-Not closed here because it is a change to `Kernel::add_declaration`'s admission
-rules, which every prelude in the tree runs through, and this lane's remaining
-budget could not carry both the change and the full kernel-suite re-run its
-soundness class requires.
+**Closed 2026-09-05.** `Kernel::check_declaration` gained step (1a) and
+`KernelError::DuplicateUniverseParam`. Both existing checks there are
+*relative* — inference and def-eq treat `[u, u]` exactly as `[u]`, since each
+occurrence of `u` in the term is the same `Param` node either way — so the
+repeated binder was invisible to everything the kernel ran, the same mechanism
+that left the binding list decorative before
+`declaration_universe_params_must_be_bound.rs`.
 
-**Re-measure:**
-`target/release/examples/kernel_conformance_check references/lean-arena-tests/bad/tutorial/019_tut06_bad01.ndjson`
-(exits 0 = accepted; Lean rejects).
+**Scope, stated rather than implied:** `check_declaration` is the gate for
+`Axiom`/`Definition`/`Theorem`/`Opaque`. The inductive gate does its own
+checking and does not route through it, so **an inductive family's binding list
+is not covered by this check**. The arena's case is a `def`, so the corpus does
+not currently distinguish the two.
+
+**Re-measure:** the case now exits 1 with
+`class=kernel:DuplicateUniverseParam`; `crates/axeyum-lean-kernel/tests/declaration_universe_params_must_be_distinct.rs`
+(3 tests) pins both directions, and `cargo test -p axeyum-lean-kernel --lib`
+was re-run whole afterwards — 2,284 passed, 0 failed — because a wrong version
+of this check would refuse a declaration every prelude in the tree relies on.
 
 ### D3 — Universe-level equality is *more complete* than Lean's
 
@@ -159,7 +173,7 @@ Declining is the fail-closed choice and is the right default — nothing unsafe
 or partial can enter the trusted environment through this route — but it is
 scored honestly in its own column and never inside a pass rate. Two of the
 73 reject-half cases are declines, and the reject half is reported as
-69 correct / 2 declined / 2 wrong rather than as a percentage.
+70 correct / 2 declined / 1 wrong rather than as a percentage.
 
 ---
 

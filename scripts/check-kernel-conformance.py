@@ -76,13 +76,13 @@ MODES = ("full", "parse-only")
 # --- The pinned scores. Raise a floor only from a run you read; a ceiling is
 # --- an inventory of KNOWN divergences and a new one must fail, not be absorbed.
 ACCEPT_FLOOR = 108
-REJECT_FLOOR = 69
-SOUNDNESS_DIVERGENCE_CEILING = 2
+REJECT_FLOOR = 70
+SOUNDNESS_DIVERGENCE_CEILING = 1
 INCOMPLETENESS_CEILING = 4
 DECLINE_CEILING = 2
 NONVERDICT_CEILING = 1  # timeouts and checker errors on the accept half
 # The control has to be visibly worse at rejecting. 40 is well under the
-# measured gap (69 vs 21) and well over any plausible run-to-run wobble, which
+# measured gap (70 vs 21) and well over any plausible run-to-run wobble, which
 # for a deterministic checker is zero.
 CONTROL_MARGIN = 40
 

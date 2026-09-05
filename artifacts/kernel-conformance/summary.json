@@ -1,6 +1,6 @@
 {
   "generator": "scripts/check-kernel-conformance.py --refresh",
-  "measured_at": "2026-09-05T11:26:41Z",
+  "measured_at": "2026-09-05T13:20:37Z",
   "corpus": {
     "repository": "https://github.com/leanprover/lean-kernel-arena",
     "revision": "abc55357aee17c59dfdbf39c8a2e19739e23dd10",
@@ -12,7 +12,7 @@
   "case_timeout_seconds": 30,
   "floors": {
     "accept": 108,
-    "reject": 69
+    "reject": 70
   },
   "scores": {
     "full": {
@@ -25,8 +25,8 @@
       },
       "reject": {
         "total": 73,
-        "correct": 69,
-        "wrong": 2,
+        "correct": 70,
+        "wrong": 1,
         "declined": 2,
         "nonverdict": 0
       }
@@ -72,13 +72,6 @@
     },
     {
       "case": "tutorial/012_nonPropThm",
-      "expected": "reject",
-      "verdict": "accept",
-      "class": "ok",
-      "detail": "-"
-    },
-    {
-      "case": "tutorial/019_tut06_bad01",
       "expected": "reject",
       "verdict": "accept",
       "class": "ok",
