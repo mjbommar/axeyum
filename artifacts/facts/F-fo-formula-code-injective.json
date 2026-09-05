@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-formula-code-injective",
+  "title": "The Goedel numbering of first-order formulas is injective",
+  "statement": "FO.Formula.code assigns to every first-order formula a natural number -- FO.Code.pair tag payload, one distinct tag for each of the nine constructors, with FO.Term fields coded through FO.Term.code and the payload nesting to the right -- and the assignment is injective: if two formulas have the same code they are the same formula.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Formula.code_injective : ((x0 : FO.Formula) -> ((x1 : FO.Formula) -> ((x2 : Eq.{1} AxNat (FO.Formula.code x0) (FO.Formula.code x1)) -> Eq.{1} FO.Formula x0 x1)))",
+    "kernel_theorem": "FO.Formula.code_injective",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-code-pairing-round-trip",
+    "F:fo-term-code-injective"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Formula.code_injective",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Formula.code_injective",
+      "supports": "FO.Formula.code_injective is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. It is a double recursion -- an outer FO.Formula.rec at the motive 'forall q, code p = code q -> p = q', with an inner FO.Formula.rec case analysis on q -- so the recursors' arities fix 9 x 9 = 81 cases and a skipped case is not possible.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- FO.Formula.code_injective --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_numbering.rs by declare_code_injective, the same builder that produces FO.Term.code_injective; the two differ only in the constructor table they are handed. The checker fails on absence."
+    },
+    {
+      "id": "statement-is-injectivity-not-congruence",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Formula.code_injective",
+      "supports": "The theorem's INFERRED type is rebuilt in the test module from FO.Formula.code and Eq and compared by Kernel::def_eq, with the CONVERSE ('p = q -> code p = code q', true but congruence rather than injectivity) as the negative control: the two must NOT be def_eq.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_numbering::tests::formula_code_injective_states_injectivity_not_congruence --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Without this row the fact would rest on a rendered string nobody compared against a rebuilt term."
+    },
+    {
+      "id": "the-numbering-computes-and-separates-the-copy-paste-pairs",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Formula.code",
+      "supports": "FO.Formula.code is a Definition; admission says nothing about what it computes. Five formula codes are pinned by Kernel::def_eq against hand-computed numerals -- bot |-> 0, eqf (var 0) (var 0) |-> 2, imp bot bot |-> 27, all bot |-> 35, ex bot |-> 44. The separating controls are chosen at the two places a copy-paste between cases would collapse the numbering and nothing else would notice: all versus ex (same arity, same field), and the three binary connectives against each other.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_numbering::tests::formula_code_at_small_formulas fo_numbering::tests::the_two_quantifiers_get_different_codes fo_numbering::tests::the_three_binary_connectives_get_different_codes --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "These codes are small only because the pairing is the anti-diagonal one (F:fo-code-pairing-round-trip); every numeral in this kernel is unary, so under a 2^a (2b+1) pairing 'all bot' would not normalize inside a test at all and this row could not exist."
+    },
+    {
+      "id": "mutation-duplicate-tag",
+      "kind": "instance-pin",
+      "supports": "MUTATION-VERIFIED. Two mutations were applied to a scratch copy of the lane's worktree, built, run, and restored byte-for-byte with git status verified clean. Both are recorded with their measured kill counts in docs/plan/status/arithmetization-2026-09-05.md rather than here, so this row does not repeat a number it did not measure itself.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_code:: fo_numbering:: --test-threads=4",
+      "checkers": [
+        "Kernel::add_declaration"
+      ],
+      "notes": "The command above is the BASELINE the mutants were measured against; the mutants themselves are source edits and are not committed. See the lane status file for what was changed and how many tests died."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_fo_numbering_prelude, lane arithmetization (W3-7, ADR-1640)",
+    "source": "authored from the roadmap item; the encoding and both proofs are written here",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel",
+        "what": "arithmetization of syntax",
+        "year": 1931,
+        "where": "Goedel, 'Ueber formal unentscheidbare Saetze der Principia Mathematica und verwandter Systeme I', Monatshefte fuer Mathematik und Physik 38 (1931)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "HOW THE 81 CASES CLOSE, in two shapes. The 72 OFF-diagonal cases are one construction: FO.Code.pair_inj_left reads the two tags off the hypothesis, and distinct unary numerals are refuted by stripping succs with Nat.succ_injective until Nat.succ_ne_zero applies. The 9 diagonal cases peel the payload with pair_inj_left/pair_inj_right, convert each component -- a Nat field is already an equality, an FO.Term field goes through FO.Term.code_injective, a recursive field through the induction hypothesis -- and recombine by congruence one argument at a time.\n\nWHY THE PAIRING'S ROUND TRIP HAD TO COME FIRST. Proving 'pair a b = pair c d -> a = c' directly would be a double induction with a Nat-level case split inside it, once per component. Through FO.Code.fst_pair/snd_pair each direction is three Eq steps, and that is what makes 97 syntax-level cases affordable rather than 97 nested inductions.\n\nWHAT THIS IS NOT. It is NOT a decidable equality on FO.Formula: from code p = code q one gets p = q, but nothing here decides whether code p = code q, because that would need a decidable equality on Nat applied at codes plus a decoder. It is also NOT representability: no syntactic OPERATION is shown to be an arithmetic function, because that needs a decoder Nat -> FO.Formula. Both gaps are the single open fact F:fo-formula-decoder.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

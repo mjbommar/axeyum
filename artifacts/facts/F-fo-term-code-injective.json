@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-term-code-injective",
+  "title": "The Goedel numbering of first-order terms is injective",
+  "statement": "FO.Term.code assigns to every first-order term a natural number -- FO.Code.pair tag payload, one distinct tag per constructor, the payload nesting field codes to the right -- and the assignment is injective: if two terms have the same code they are the same term.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Term.code_injective : ((x0 : FO.Term) -> ((x1 : FO.Term) -> ((x2 : Eq.{1} AxNat (FO.Term.code x0) (FO.Term.code x1)) -> Eq.{1} FO.Term x0 x1)))",
+    "kernel_theorem": "FO.Term.code_injective",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-code-pairing-round-trip"
+  ],
+  "evidence": [
+    {
+      "id": "kernel-FO.Term.code_injective",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Term.code_injective",
+      "supports": "FO.Term.code_injective is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. It is a double recursion -- an outer FO.Term.rec at the motive 'forall u, code t = code u -> t = u', with an inner FO.Term.rec case analysis on u -- so the recursors' arities fix 4 x 4 = 16 cases and a skipped case is not possible.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- FO.Term.code_injective --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "Declared in crates/axeyum-lean-kernel/src/fo_numbering.rs by declare_code_injective. The checker fails on absence."
+    },
+    {
+      "id": "statement-is-injectivity-not-congruence",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Term.code_injective",
+      "supports": "The theorem's INFERRED type is rebuilt in the test module from FO.Term.code and Eq and compared by Kernel::def_eq. The negative control is the CONVERSE, 'forall t u, t = u -> code t = code u' -- true, but congruence rather than injectivity, and the statement a proof term built the wrong way round would carry. The two must NOT be def_eq.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_numbering::tests::term_code_injective_states_injectivity_not_congruence --test-threads=4",
+      "checkers": [
+        "Kernel::infer",
+        "Kernel::def_eq"
+      ],
+      "notes": "Without this row the fact would rest on a rendered string nobody compared against a rebuilt term."
+    },
+    {
+      "id": "the-numbering-computes-and-separates-constructors",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Term.code",
+      "supports": "FO.Term.code is a Definition; admission says nothing about what it computes. Six term codes are pinned by Kernel::def_eq against hand-computed numerals -- var 0 |-> 0, var 2 |-> 3, f0 0 |-> 2, f0 1 |-> 4, f1 0 (var 0) |-> 5, f2 0 (var 0) (var 0) |-> 9 -- and the separating control is code (var 0) != code (f0 0), the pair that differs ONLY in its tag and that a numbering giving two constructors the same tag would collapse.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_numbering::tests::term_code_at_small_terms fo_numbering::tests::different_constructors_at_the_same_argument_get_different_codes --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "The expected values are computed from FO.Code.pair a b = tri (a + b) + a, and tri itself is re-derived in the same test file at 6, 7 and 8 rather than trusted."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_fo_numbering_prelude, lane arithmetization (W3-7, ADR-1640)",
+    "source": "authored from the roadmap item; the encoding and both proofs are written here",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel",
+        "what": "arithmetization of syntax -- assigning natural numbers to formal expressions so that syntactic operations become arithmetic ones",
+        "year": 1931,
+        "where": "Goedel, 'Ueber formal unentscheidbare Saetze der Principia Mathematica und verwandter Systeme I', Monatshefte fuer Mathematik und Physik 38 (1931)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "HOW THE 16 CASES CLOSE, in two shapes. The 12 OFF-diagonal cases are one construction: FO.Code.pair_inj_left reads the two tags off the hypothesis, and distinct unary numerals are refuted by stripping succs with Nat.succ_injective until Nat.succ_ne_zero applies. The 4 diagonal cases peel the payload with pair_inj_left/pair_inj_right, convert each component -- a Nat field is already an equality, a recursive field goes through the induction hypothesis -- and recombine by congruence one argument at a time.\n\nWHAT THIS DOES NOT SAY. FO.Term.code and FO.Formula.code share FO.Code.pair, so a term and a formula can have the SAME natural number; injectivity here is a statement within FO.Term. That is what the diagonal lemma and every representability argument use, and a single numbering across both types would need one more tag level and buy nothing.\n\nWHAT IT IS FOR. F:fo-completeness-henkin records 'an enumeration of FO.Formula and a decidable equality on it' as one of its two obstructions to a Henkin construction. An injection FO.Term -> Nat and FO.Formula -> Nat is the half of that obstruction which does not need Classical.em. The other half -- a decoder Nat -> FO.Formula -- is the open fact F:fo-formula-decoder.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}

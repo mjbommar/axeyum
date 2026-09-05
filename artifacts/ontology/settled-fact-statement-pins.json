@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2364,
+    "min_identity_bound": 2367,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -7747,11 +7747,25 @@
       ]
     },
     {
+      "fact_id": "F:fo-code-pairing-round-trip",
+      "language": "lean4",
+      "statement_sha256": "a72bf373049ecc1b4c73dacf2aef5df5fcc99637e17e35a9892e0e048e7a4986",
+      "prose_sha256": "dfc6157dfdf2ac022d7d2d0c7d0bf79b6fd263703784cab72c44db54f0f3239e",
+      "kernel_theorem": "FO.Code.unpair_pair"
+    },
+    {
       "fact_id": "F:fo-consistency",
       "language": "lean4",
       "statement_sha256": "3a39a30d75bbe4d1b93980b827fb2d422b13aba6e89a882915955b13b3f8b389",
       "prose_sha256": "97dff384fe7debd6a9975ac2f3219b3dabdaeb8096e0d8f56b7639a0a4f57289",
       "kernel_theorem": "FO.consistency"
+    },
+    {
+      "fact_id": "F:fo-formula-code-injective",
+      "language": "lean4",
+      "statement_sha256": "0cd9683460e0eba24a3d7ece33cedb73d397c890345ab3ed04643b75def7ba45",
+      "prose_sha256": "27f43fa0b36265f54e7e17d4c2281d327adb6dc9589b6fe0f8965cf35cac8cbb",
+      "kernel_theorem": "FO.Formula.code_injective"
     },
     {
       "fact_id": "F:fo-soundness",
@@ -7766,6 +7780,13 @@
       "statement_sha256": "482a095c87ab7cac0a9dd31846a7ff78bcb54fc65ffbd0d49c44b0ff6b6d3f5d",
       "prose_sha256": "91a01971e4e4f15f0e7ec32ed3ff5bc00d1776644462b73b18db61c6a306cdbd",
       "kernel_theorem": "FO.sat_subst"
+    },
+    {
+      "fact_id": "F:fo-term-code-injective",
+      "language": "lean4",
+      "statement_sha256": "733c0286a2989a59a5c917be16af3406c4f91bfb9ca87139842c5d21fa683fec",
+      "prose_sha256": "05cb2a36b451eef048ad90e22708d65c23bb08368f7201c6a19a8af5b13c2b5c",
+      "kernel_theorem": "FO.Term.code_injective"
     },
     {
       "fact_id": "F:fp16-add-monotone-rne",

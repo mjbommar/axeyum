@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-formula-decoder",
+  "title": "A decoder from naturals back to first-order formulas (OPEN in this ledger)",
+  "statement": "There is a total function FO.Formula.decode : Nat -> FO.Formula that inverts the Goedel numbering: decode (code p) = p for every formula p. NOT ESTABLISHED HERE. The forward direction and its injectivity ARE established (F:fo-formula-code-injective, F:fo-term-code-injective) on top of a pairing whose own round trip is established (F:fo-code-pairing-round-trip), so the taking-apart is available -- FO.Code.fst and FO.Code.snd compute and are proved to read back what FO.Code.pair put in. What is missing is the rebuild. A decoder recurses on FO.Code.snd n, which is smaller than n but not STRUCTURALLY smaller, so it cannot be a plain Nat.rec; it needs a fuel counter, and then two lemmas to discharge the fuel. This is the single obstruction standing between the arithmetization and everything above it: F:fo-diagonal-lemma and F:fo-first-incompleteness both name it.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Formula.decode_code : ((x0 : FO.Formula) -> Eq.{1} FO.Formula (FO.Formula.decode (FO.Formula.code x0)) x0)",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-formula-code-injective",
+    "F:fo-term-code-injective",
+    "F:fo-code-pairing-round-trip"
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "not established in this ledger",
+    "source": "this row records the measured remaining gap after lane arithmetization landed the numbering and its injectivity (W3-7, ADR-1640)",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel",
+        "what": "arithmetization of syntax, in which decoding is done by primitive-recursive functions built from a pairing's projections",
+        "year": 1931,
+        "where": "Goedel, 'Ueber formal unentscheidbare Saetze der Principia Mathematica und verwandter Systeme I', Monatshefte fuer Mathematik und Physik 38 (1931)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "THE STATEMENT IS AUTHORED, NOT EXTRACTED. FO.Formula.decode does not exist in the kernel, so the binder indices above are this lane's and not Kernel::render_lean's. It is written in the same style render_lean produces, which is what F:fo-completeness-henkin does for the same reason.\n\nWHY IT IS ONE OBSTRUCTION AND NOT THREE. Representability of a syntax operation as an arithmetic function -- 'substCode (code p) (code t) = code (subst p t)' -- means taking a code apart, acting, and REBUILDING. The numbering gives the taking-apart. Without the rebuild, substCode cannot be DEFINED, so its commuting lemma cannot be STATED, so the diagonal lemma has nothing to diagonalize and Goedel I has no sentence. Every one of those is downstream of this row, which is why they are separate facts with this one in depends_on rather than three independent gaps.\n\nWHAT IT WOULD TAKE, SIZED. Three pieces, none of them research:\n\n(1) decodeAux : Nat -> Nat -> FO.Formula (fuel, then code), a Nat.rec on the fuel at motive 'fun _ => Nat -> FO.Formula', whose body is a nine-way case tree on FO.Code.fst n built as a nested Nat.rec. This is exactly the shape nat_prelude already uses for logAux, sqrtAux, clogAux, minFacAux, testBitAux and binaryRecAux, so the device is established here rather than novel. Roughly one slice per type: FO.Term first (a four-way tree), then FO.Formula (a nine-way one).\n\n(2) A fuel-agreement lemma, 'enough fuel on either side gives the same answer', of the Nat.binaryRecAux_agree_of_fuel shape (nat_prelude/binary_rec.rs) -- one induction, with Nat.le hypotheses on both fuel arguments.\n\n(3) A bound letting the code be its own fuel. The natural one is 'depth p <= code p', which needs the monotonicity of FO.Code.pair in each argument (pair a b = tri (a + b) + a, so both are ordinary Nat.le arithmetic over tri and add) plus one induction over FO.Formula. With it, FO.Formula.decode n := decodeAux n n and the round trip follows from (1)-(3).\n\nWHAT THE ARITHMETIZATION ALREADY BUYS THE HENKIN CONSTRUCTION. F:fo-completeness-henkin lists 'an enumeration of FO.Formula and a decidable equality on it' as one of its two obstructions. An injection FO.Formula -> Nat is the half of that which needs no Classical.em, and it is now proved; this row is the other half. The remaining obstruction there -- Lindenbaum's lemma needing excluded middle at every step -- is untouched by any of this and is a choice about what to prove, not work."
+}

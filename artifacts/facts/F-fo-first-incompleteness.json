@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-first-incompleteness",
+  "title": "Goedel's first incompleteness theorem, in the hypothesis-carrying form (OPEN in this ledger)",
+  "statement": "If a theory is consistent and REPRESENTS ITS OWN PROVABILITY -- that is, there is a formula Prov with one free variable satisfying the two derivability conditions relating Prov to actual derivability -- then the Goedel sentence built by the diagonal lemma from the negation of Prov is not derivable in it. NOT ESTABLISHED HERE, and deliberately stated in the form that takes representability as an explicit HYPOTHESIS rather than proving it: representability of provability is the part of Goedel I that is a construction over the arithmetization, and it is out of reach until the arithmetization can decode. Consistency of the calculus with an empty context IS established (F:fo-consistency), and the numbering the Goedel sentence would be built from IS established (F:fo-formula-code-injective); what is missing is the diagonal lemma (F:fo-diagonal-lemma) and, under it, the decoder (F:fo-formula-decoder).",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.goedel_first : ((x0 : FO.Context) -> ((x1 : FO.Formula) -> ((x2 : ((x3 : FO.Formula) -> ((x4 : FO.Provable x0 x3) -> FO.Provable x0 (FO.Formula.subst x1 (FO.Subst.cons (FO.Formula.numeral (FO.Formula.code x3)) FO.Subst.id))))) -> ((x3 : ((x4 : FO.Formula) -> ((x5 : FO.Provable x0 (FO.Formula.subst x1 (FO.Subst.cons (FO.Formula.numeral (FO.Formula.code x4)) FO.Subst.id))) -> FO.Provable x0 x4))) -> ((x4 : Not (FO.Provable x0 FO.Formula.bot)) -> ((x5 : FO.Formula) -> ((x6 : Iff (FO.Provable x0 x5) (FO.Provable x0 (FO.Formula.imp (FO.Formula.subst x1 (FO.Subst.cons (FO.Formula.numeral (FO.Formula.code x5)) FO.Subst.id)) FO.Formula.bot))) -> Not (FO.Provable x0 x5))))))))",
+    "fragment": "Nat",
+    "free_symbols": [
+      "x0",
+      "x1",
+      "x2",
+      "x3",
+      "x4",
+      "x5",
+      "x6"
+    ]
+  },
+  "epistemic_status": "open",
+  "external_status": "proved",
+  "depends_on": [
+    "F:fo-diagonal-lemma",
+    "F:fo-formula-decoder",
+    "F:fo-consistency",
+    "F:fo-formula-code-injective"
+  ],
+  "evidence": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "curation": "curated",
+    "established_by": "not established in this ledger",
+    "source": "this row records the target the arithmetization is aimed at, and the measured distance to it after lane arithmetization landed the numbering (W3-7, ADR-1640)",
+    "prior_art": [
+      {
+        "who": "Kurt Goedel; J. Barkley Rosser",
+        "what": "the first incompleteness theorem; Rosser removed the omega-consistency hypothesis from the second half",
+        "year": 1936,
+        "where": "Goedel 1931; Rosser, 'Extensions of some theorems of Goedel and Church', JSL 1 (1936)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary sources"
+      }
+    ]
+  },
+  "notes": "THE STATEMENT IS AUTHORED, NOT EXTRACTED. Nothing named FO.goedel_first, FO.Formula.numeral or a provability predicate exists in the kernel, so the binder indices are this lane's rather than Kernel::render_lean's; the style is render_lean's.\n\nWHAT THE HYPOTHESES ARE, read off the statement. x1 is the candidate provability formula Prov, with one free variable. x2 and x3 are the two derivability conditions in the weak form this half of the theorem needs: if the theory derives phi then it derives Prov(numeral of code phi), and conversely. x4 is consistency. x5 is the Goedel sentence and x6 is the fixed-point property the diagonal lemma would supply, at psi := 'not Prov'. The conclusion is that x5 is not derivable. This is deliberately ONE half: the other half -- that the negation of the Goedel sentence is also underivable -- needs omega-consistency or Rosser's trick, and is not stated here.\n\nWHY REPRESENTABILITY IS A HYPOTHESIS AND NOT A THEOREM. Constructing Prov means encoding derivability in FO.Provable as an arithmetic formula, which is the whole of the arithmetization programme above the numbering: a code for derivations, a proof-checking predicate, and its representability in Q. None of that is reachable while the decoder (F:fo-formula-decoder) is missing, and this ledger does not claim it. Stating the theorem with representability as an explicit hypothesis is the honest form -- it is a real theorem, it is what a textbook proves before it constructs Prov, and it does not pretend to more than the arithmetization supports.\n\nWHAT IS ALREADY THERE. F:fo-consistency establishes Not (FO.Provable nil bot), obtained by pushing a hypothetical derivation through the concrete natural-number structure, so the consistency hypothesis is not vacuous for at least the empty context. F:fo-formula-code-injective gives the numbering the fixed point would be built over. The two things between here and the statement are F:fo-diagonal-lemma and, under it, F:fo-formula-decoder, and each of those rows names its own obstruction and sizes it."
+}

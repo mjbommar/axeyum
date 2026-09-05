@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "id": "F:fo-code-pairing-round-trip",
+  "title": "A pairing of the naturals whose inverse is a plain structural recursion on the code",
+  "statement": "FO.Code.pair a b := tri (a + b) + a is the index of (a, b) in the anti-diagonal enumeration of pairs of naturals, and FO.Code.unpair -- the iterate of a single step function from (0, 0) -- inverts it: unpair (pair a b) = Nat.Pair.mk a b for all a and b. The two scalar projections FO.Code.fst and FO.Code.snd read the components back, and left and right injectivity of the pairing follow.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem FO.Code.unpair_pair : ((x0 : AxNat) -> ((x1 : AxNat) -> Eq.{1} AxNat.Pair (FO.Code.unpair (FO.Code.pair x0 x1)) (AxNat.Pair.mk x0 x1)))",
+    "kernel_theorem": "FO.Code.unpair_pair",
+    "fragment": "Nat",
+    "free_symbols": []
+  },
+  "epistemic_status": "proved",
+  "external_status": "proved",
+  "depends_on": [],
+  "evidence": [
+    {
+      "id": "kernel-FO.Code.unpair_pair",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Code.unpair_pair",
+      "supports": "FO.Code.unpair_pair is admitted by the trusted kernel gate with the type recorded in formal.statement, and rests on no axiom. The proof is ONE structural induction, on the CODE rather than on either component, at the motive P n := forall a b, pair a b = n -> unpair n = mk a b; the theorem is P (pair a b) applied to Eq.refl. The whole slice imports exactly four Nat theorems: zero_add, succ_add, succ_injective, succ_ne_zero.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- FO.Code.unpair_pair --exact --require-axiom-free",
+      "checkers": [
+        "Kernel::add_declaration",
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "The checker FAILS on absence rather than reporting an empty set: a named filter matching nothing exits 1. --exact matters here because FO.Code.pair also prefixes pair_succ, pair_zero_succ, pair_inj_left and pair_inj_right. Declared in crates/axeyum-lean-kernel/src/fo_code.rs by declare_unpair_pair."
+    },
+    {
+      "id": "the-enumeration-computes",
+      "kind": "kernel-term",
+      "kernel_declaration": "FO.Code.pair",
+      "supports": "pair, unpair, tri, step, fst and snd are Definitions, so admission says nothing about what they compute. Every one is pinned by Kernel::def_eq at concrete arguments: the whole enumeration for a + b <= 3 (ten entries, hand-listed in the test), unpair at all ten codes, tri at 0..5, and step at both of its branches. The asymmetry control pair 1 2 != pair 2 1 is what a transposed implementation (tri (a+b) + b) fails; it agrees with the intended one at every diagonal endpoint.",
+      "check_status": "checked",
+      "checker_command": "cargo test -p axeyum-lean-kernel --release --lib -- fo_code::tests --test-threads=4",
+      "checkers": [
+        "Kernel::def_eq"
+      ],
+      "notes": "Seven tests. A step function with its two branches swapped is invisible at (0, 0) alone, which is why the table runs to a + b = 3 rather than stopping at the first diagonal."
+    },
+    {
+      "id": "footprint-whole-slice",
+      "kind": "instance-pin",
+      "supports": "axiom_footprint: [] -- for every declaration the arithmetization package adds on top of the Nat prelude, not only the headline theorem. The row set is a SET DIFFERENCE against a kernel carrying only build_nat_prelude, recomputed on every run, so it is derived from the environment rather than from a hand-maintained list.",
+      "check_status": "checked",
+      "checker_command": "cargo run -q --release -p axeyum-lean-kernel --example fo_code_inventory -- --require-axiom-free --expect-count 42",
+      "checkers": [
+        "Kernel::axiom_footprint"
+      ],
+      "notes": "--expect-count fails on drift in EITHER direction, so a declaration silently disappearing is a failure too. The same set difference is recomputed inside the test suite by fo_numbering::tests::the_whole_chain_this_prelude_adds_is_axiom_free, with a coverage control requiring four known names to be IN the difference so the sweep cannot pass vacuously."
+    }
+  ],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel build_fo_code_prelude, lane arithmetization (W3-7, ADR-1640)",
+    "source": "authored from the roadmap item; the pairing is the classical Cantor anti-diagonal one, the inverse and both proofs are written here",
+    "prior_art": [
+      {
+        "who": "Georg Cantor",
+        "what": "the anti-diagonal enumeration of pairs of naturals",
+        "year": 1878,
+        "where": "Cantor, 'Ein Beitrag zur Mannigfaltigkeitslehre', Crelle 84 (1878)",
+        "attribution": "standard textbook attribution; this lane did not consult the primary source"
+      }
+    ]
+  },
+  "notes": "WHY THIS IS A NEW PAIRING AND NOT Nat.pair. nat_prelude/avg_pair.rs already declares Nat.pair (Mathlib's and Lean core's 'if a < b then b*b + a else a*a + a + b') and nat_prelude/unpair.rs its two sqrt-based projections; neither has a round-trip theorem. This lane did not supply one, for two independent reasons.\n\n(a) PARTITION. Nat.pair, Nat.avg, Nat.unpaired and Nat.Primrec are the constants of the HELD-OUT families natural-avg-pair (10 rows) and natural-primitive-recursion in artifacts/autogenesis/nursery-v2-extension.json, with answer_access 'withheld-during-episode'. A blind evaluation population is a shared resource with no owner, and proving unpairLeft (Nat.pair a b) = a would spend a family this lane was not given. No declaration in this lane's diff mentions Nat.pair, Nat.avg or Nat.unpaired.\n\n(b) COST. Nat.pair's inverse reads Nat.sqrt, itself a fuel recursion, so the round trip is a theorem about sqrt (b*b + a) on top of a fuel-recursive definition, with a fuel-agreement lemma underneath it.\n\nWHY THE ANTI-DIAGONAL ONE, SPECIFICALLY. The choice is decided by what the INVERSE has to be. The other standard injective pairing, 2^a (2b+1) - 1, inverts through the 2-adic valuation, which recurses on n / 2 -- not structurally smaller, so it needs fuel plus a fuel-agreement lemma, and every step needs (2m+1) % 2 = 1 and (2m+1) / 2 = m, i.e. real div/mod theorems. The anti-diagonal enumeration's SUCCESSOR is a function of the previous pair alone -- step (mk a 0) = mk 0 (succ a) and step (mk a (succ b)) = mk (succ a) b -- so unpair is that step iterated n times, a plain Nat.rec on n. Both step equations hold by iota, because step is a Nat.rec on the pair's second component, and that is what lets every case of the round trip close without a rewrite.\n\nA SIDE EFFECT THAT TURNED OUT TO MATTER. The anti-diagonal pairing keeps codes SMALL: the Goedel numbers built on it in F:fo-formula-code-injective are 0 for bot, 27 for imp bot bot and 35 for all bot. Every numeral in this kernel is unary, so a 2^a (2b+1) pairing would have put a two-constructor formula out of reach of any def_eq and there would have been no evaluation test for the numbering at all.",
+  "proof_route": "kernel-lean",
+  "axiom_footprint": []
+}
