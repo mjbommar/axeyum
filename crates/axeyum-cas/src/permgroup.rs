@@ -35,8 +35,8 @@
 //!   scratch.
 //!
 //! The one shared piece of code between production and verification is the
-//! low-level breadth-first orbit closure ([`bfs_orbit`]) and word
-//! multiplication ([`word_to_perm`], [`signed_word_to_perm`]) — these sit at
+//! low-level breadth-first orbit closure (`bfs_orbit`) and word
+//! multiplication (`word_to_perm`, [`signed_word_to_perm`]) — these sit at
 //! the same trust level as [`Permutation::compose`] itself (a fixed,
 //! inspectable, total operation on an already-tested base type), not at the
 //! level of the bookkeeping under test. Every guard that distinguishes a

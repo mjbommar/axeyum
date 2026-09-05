@@ -164,8 +164,21 @@ selected dependent-core, projection, Nat-literal, recursive-indexed, mutual, and
 nested-inductive coverage, plus the canonical quotient package and its checked
 computation rules. String literals, native source elaboration, tactics, Lake,
 LSP, compiler/runtime, `.olean`, `Init`/`Std`, and
-mathlib compatibility remain separate unsatisfied layers. Bounded K0/K1 results
-do not imply complete Lean compatibility.
+mathlib compatibility remain separate unsatisfied layers.
+
+"Lean compatible" means what the compatibility matrix measures: K0 1/1 and
+K1 6/6 (an independent checker and a versioned import route), K2 through K6
+at 0 — no native source, tactics, workflow, runtime, or ecosystem yet. Two
+pins are distinct and every claim names which: `lean-toolchain`, the
+cross-check pin (currently 4.34.0-rc1, ADR-1594/1660), and the Mathlib
+corpus pin (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`).
+Independent checkability is measured by replay in pinned Lean: `creal`
+only, 1,972 of 2,045 theorems, 48 `Type`-valued theorems Lean refuses, 25
+blocked behind them (ADR-0760). Imports are a labeled tier, never the
+axiom-free headline (ADR-0601, ADR-1664). `by axeyum` lets Lean check
+axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
+identity runs through the carrier correspondence ledger (ADR-1665). Full
+detail: [`docs/math-department/14-lean-lang.md`](math-department/14-lean-lang.md).
 
 ## Reliability state
 

@@ -34,7 +34,7 @@
 //!   by matrix multiplication, `U` and `V` unimodular (`det = +/-1` via
 //!   [`Matrix::determinant`]), and `D` diagonal with the invariant-factor
 //!   divisibility chain (`smith_factorizations_hold`, reusing
-//!   [`crate::normalforms`]'s own certified guards `certify_product_equals`,
+//!   `normalforms`'s own certified guards `certify_product_equals`,
 //!   `is_unimodular`, `certifies_smith_shape` rather than re-implementing
 //!   them);
 //! - (c) recomputes every Betti number and torsion list from the `D`s alone and

@@ -91,13 +91,18 @@ are the ones that put something in a Lean user's hands; 7 to 9 are the
 kernel-and-language work the logician and the category theorist need; 10 is
 what makes the whole thing a claim rather than a folder.
 
-- [ ] **1. One pin, and every Lean gate green under it.** Accept a release-
-      candidate suffix in `scripts/install-pinned-lean.sh`; make the construct
-      matrix read `lean-toolchain` the way the seven suites now do; amend
-      ADR-1594's "no workflow edit needed". Then write down, once, that there
-      are **two** pins — the cross-check toolchain and the Mathlib corpus —
-      and which one every existing 4.30 claim refers to. Serves 12, and every
-      other item here depends on it.
+- [x] **1. One pin, and every Lean gate green under it.** *Done 2026-09-05
+      (ADR-1660, lane `lean-pin-gates`, merge `c1d8db1c2`).*
+      `scripts/install-pinned-lean.sh` accepts a release-candidate suffix;
+      the construct matrix reads `lean-toolchain` the way the seven suites
+      now do; ADR-1594's "no workflow edit needed" is amended. There are
+      **two** pins — the cross-check toolchain (`lean-toolchain`, currently
+      4.34.0-rc1) and the Mathlib corpus pin (Lean 4.30.0, mathlib4
+      `c5ea0035`, lean4export `a3e35a58`) — and every existing 4.30 claim now
+      says which one it means.
+      `python3 scripts/check-lean-official-construct-matrix.py --check` and
+      `python3 scripts/gen-lean-complete-parity.py --check` both exit 0.
+      Serves 12, and every other item here depended on it.
 - [x] **2. Replay every proved theorem in pinned Lean, or name the reason.**
       **Done 2026-09-05** ([ADR-1661](../research/09-decisions/adr-1661-the-replay-census-covers-every-carrier-and-type-valued-theorems-are-a-named-class.md),
       [the measurement](../../artifacts/measurements/lean-replay-census-2026-09-05.md)).
@@ -188,12 +193,25 @@ what makes the whole thing a claim rather than a folder.
       mirrors use, sized by item 5's census. This is the first K2 cell, it
       removes the one-host dependence for attesting a draw, and it is
       demand-gated as C4 requires. Serves 12, 01, 11.
-- [ ] **10. Say what "Lean compatible" means, once.** The K profile, the
-      replay census, the import tier and the two pins in one paragraph on
-      the claim surfaces; the July roadmap and implementation plan marked
-      historical under the C-series ordering; the K3 row decided for native
-      producers (they are K3-shaped over this kernel, not over Lean goals,
-      and the row should say which). Serves 12.
+- [x] **10. Say what "Lean compatible" means, once.** *Done 2026-09-05*
+      ([ADR-1668](../research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md),
+      lane `lean-claim-surface`). One 120-word paragraph — the K profile, the
+      two pins, the replay census, the import tier, `by axeyum`, and the
+      carrier ledger — reused verbatim in `docs/plan/global/10-status.md`,
+      `README.md`, and `docs/PROJECT-STATE.md`. A9 in
+      `docs/plan/global/20-next-actions.md` is rewritten off the false
+      "neither lean nor elan" premise and now points at items 2, 3, 7, 9 in
+      priority order. The K3 row (`planned-native-proof-profile`) keeps
+      every assurance field `not_attempted` and gains one `residual`
+      sentence: the native producers are K3-shaped over this kernel, not
+      over Lean goals, and ADR-1666 is where the Lean-goal side lives.
+      `python3 scripts/gen-lean-compatibility.py --check` and
+      `python3 scripts/gen-lean-complete-parity.py --check` both exit 0. The
+      three July documents (compatibility roadmap, implementation plan,
+      parity roadmap) each carry a dated historical status block under the
+      ADR-0717 C-series ordering; the complete-parity contract and registry
+      are explicitly not superseded; the parity roadmap's block also marks
+      U2 historical. Serves 12.
 
 **What is deliberately not on this list.** A native elaborator, Lake, the
 language server, the compiler and runtime, and a full Mathlib build (K4–K6):
@@ -243,6 +261,7 @@ count depend on Lean's axioms.
 | 2026-09-05 | **Next Ten item 4 landed** (ADR-1665): the carrier correspondence ledger, 16 rows, gated by `scripts/check-carrier-correspondence.py --check` (nine mutation-verified guards, every mutation killing exactly one control test) exactly the way the ℕ/ℤ mirror-fidelity check gates `F:ml430-*`. `Nat.RM` DOES have a Mathlib counterpart (`Mathlib/Computability/Halting.lean`'s general halting-problem theorem, contra the brief's assumption), so that row is `different-object` rather than `no-counterpart`. Grade counts: same-statement 2, constructively-stronger 2, different-object 11, no-counterpart 1. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; `python3 scripts/check-carrier-correspondence.py --check`; `python3 scripts/tests/mutation_controls.py carrier-correspondence` |
 | 2026-09-05 | **Correction, same day, before merge**: this ledger's own first pass on `AlgS.Field`↔`Field` was wrong, from a stale worktree — `AlgS.Field` landed on `main` in `53c851e5b` (ADR-1627) after this lane's merge base and was measured absent. After `git merge --no-edit main` and a fresh `shape_search` release build (declarations `4291 -> 4379`), `AlgS.Field` is confirmed live (`FOUND 1`, positive control `AlgS.Group` also `FOUND 1`) with an EXISTENTIAL inverse over apartness (`mulInvEx : ∀ a, apart a zero → ∃ b, equiv (mul a b) one`), not proved tight for `CReal`. `CC:algs-field-field` is regraded `different-object` (was `same-statement` over the wrong, Eq-based `Alg.Field`): stronger hypothesis, weaker conclusion than Mathlib's total-inverse `Field`, the same non-comparable pattern ADR-1030 used for EVT. The general lesson — merge local `main` before measuring an absence — recurred a second time, independently, caught before merge rather than after. | `artifacts/carrier-correspondence/carrier-correspondence-v1.json`; fresh `shape_search` build post-merge |
 | 2026-09-05 | **Next Ten item 8 landed** ([ADR-1664](../research/09-decisions/adr-1664-an-originated-theorem-may-rest-on-an-import-on-a-route-of-its-own.md)). An originated theorem may rest on an import, on route `kernel-lean-over-import`, footprint = the kernel walk **plus** the import route's three assumptions, axiom-free headline never. Decided by building the theorem: propagation is transitive and **per proof term** (two originated theorems of the same type in one kernel measure the import's six-name closure and `[]`), and costs 0.19 ms at the gate against 0.09 ms without. The rejected option — "allow when the composed footprint is `[]`" — fails because `Kernel::axiom_footprint` structurally cannot see the three import assumptions: an Init-only composition measures `EMPTY` and rests on all three. Enforced by four validator guards, each mutation-verified to kill exactly one test. **Three things this row corrects rather than adds.** (1) This file said imports carry `[propext, Classical.choice, Quot.sound]`; the kernel reports **eight** names for IVT and **EMPTY** for the three Init-only streams. (2) It said "largest closure 3,142 declarations"; 3,142 is the record count and 3,585 the declaration count. (3) `count-landmark-facts.py` never read `proof_route`, so **all 7 imports were counted as landmarks**, IVT and EVT included — `landmark` 1,523 → 1,516, with `imported=7` now printed beside it. **Not yet exercised**: 0 composed facts, blocked on the name collision now recorded in *The blocker*. | `766cfeb0f`, `08b97603b`; `cargo test -p axeyum-lean-import --test imported_composition_footprint` 3 passed + 1 ignored; `python3 -m unittest scripts.tests.test_validate_facts` 44 passed |
+| 2026-09-05 | **Next Ten items 1 and 10 landed** (lane `lean-claim-surface`). Item 1: ticked done off lane `lean-pin-gates`'s merge `c1d8db1c2` (ADR-1660) — `install-pinned-lean.sh` accepts the `-rc1` suffix, the construct matrix reads `lean-toolchain`, and both `check-lean-official-construct-matrix.py --check` and `gen-lean-complete-parity.py --check` exit 0 on this tree. Item 10 ([ADR-1668](../research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md)): one 120-word "what Lean compatible means" paragraph placed verbatim in `docs/plan/global/10-status.md`, `README.md`, and `docs/PROJECT-STATE.md`, replacing three independently-stale wordings (a July "70/70 accepted" figure, a false "neither lean nor elan" premise in A9, and an unqualified "K0/K1" framing); A9 rewritten to point at open items 2, 3, 7, 9; the K3 row (`planned-native-proof-profile` in `docs/plan/lean-compatibility-v1.json`) gains a `residual` sentence recording that native producers are K3-shaped over this kernel, not over Lean goals, with every assurance field left `not_attempted`; the three July Lean documents each get a dated historical status block under the ADR-0717 C-series ordering, the parity roadmap's block also marking U2 historical, and the complete-parity contract/registry are explicitly not superseded. | `python3 scripts/gen-lean-compatibility.py --check`, `python3 scripts/gen-lean-complete-parity.py --check`, `python3 scripts/check-lean-official-construct-matrix.py --check`, `python3 scripts/gen-adr-index.py --check`, `./scripts/check-links.sh` |
 
 ## How to re-measure
 

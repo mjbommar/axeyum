@@ -115,10 +115,20 @@ now. Nothing was deleted.
   **eight independently checked results without Lean reconstruction**, and
   **two QF_NIA `IntPow2` proof-production errors**. Do not combine these
   denominators with the newer QF_BV-only experiment.
-- The current official-source proof-family population has a retained local
-  Lean 4.30 result of **70/70 accepted**. A corrected remote attestation and the
-  exhaustive tier remain open. Lean language, ecosystem, and complete native
-  compatibility remain far beyond the current K0/K1 slices.
+- "Lean compatible" means what the compatibility matrix measures: K0 1/1 and
+  K1 6/6 (an independent checker and a versioned import route), K2 through K6
+  at 0 — no native source, tactics, workflow, runtime, or ecosystem yet. Two
+  pins are distinct and every claim names which: `lean-toolchain`, the
+  cross-check pin (currently 4.34.0-rc1, ADR-1594/1660), and the Mathlib
+  corpus pin (Lean 4.30.0, mathlib4 `c5ea0035`, lean4export `a3e35a58`).
+  Independent checkability is measured by replay in pinned Lean: `creal`
+  only, 1,972 of 2,045 theorems, 48 `Type`-valued theorems Lean refuses, 25
+  blocked behind them (ADR-0760). Imports are a labeled tier, never the
+  axiom-free headline (ADR-0601, ADR-1664). `by axeyum` lets Lean check
+  axeyum-produced terms as a tactic (ADR-1666). Cross-library statement
+  identity runs through the carrier correspondence ledger (ADR-1665). Full
+  detail, the per-chair breakdown, and the open items:
+  [`docs/math-department/14-lean-lang.md`](../../math-department/14-lean-lang.md).
 - The previous 64,345-file full-library candidate is not a result: it produced
   zero admissible raw shards. Resumable/process-free readiness work exists, but
   a representative current-main run has not been admitted or published.
@@ -155,6 +165,7 @@ now. Nothing was deleted.
 | 2026-09-05 | hall-singleton | Hall's base case, empty case and `isMatching_congr`, plus `card_pos_of_memB`: 4 theorems in the new `nat_prelude/hall_sufficiency.rs` (a7d5f071d) |
 | 2026-09-05 | hall-singleton | ADR-1630 and two facts; Hall sufficiency re-sized at one missing lemma, `Nat.Finset.allBelow_congr` |
 | 2026-09-05 | lean-carrier-ledger | the carrier correspondence ledger: schema, 16-row ledger, gate + control suite + mutation coverage, generated markdown view, ADR-1665, and progress-log rows in `14-lean-lang.md`, `03-classical-analysis.md`, `07-combinatorics.md` |
+| 2026-09-05 | lean-claim-surface | One paragraph on what "Lean compatible" means, reused verbatim in `docs/plan/global/10-status.md`, `README.md`, `docs/PROJECT-STATE.md`; A9 rewritten off the false "neither lean nor elan" premise; K3 row residual sentence added with no assurance-field change; three July Lean docs marked historical (ADR-0717 C-series); `docs/math-department/14-lean-lang.md` items 1 and 10 ticked; ADR-1668 added and indexed. |
 | 2026-09-05 | Population builder and batch statement-import census example | `87a6b8609` |
 | 2026-09-05 | The four-phase census driver, piloted end to end on 8 rows | `68c235ed5` |
 | 2026-09-05 | `scripts/lean_surface_screen.py`, its 10-test control suite, mutation suite `lean-surface-screen`, and the `--screen-only` wiring in `attest-nursery-surface.py` | `d95a30125` |
@@ -52575,6 +52586,76 @@ binary (not cargo, so not through the serializer) each costing 3-6 minutes to
 rebuild the constructed preludes in memory. A targeted follow-up query for
 `CReal.no_total_inverse`/`CReal.mulInvEx` specifically was not run.
 
+**Next Ten item 10 is `DONE` (lean-claim-surface, 2026-09-05, ADR-1668).**
+Four claim surfaces had drifted independently from the measured tree: a July
+"70/70 accepted" figure in `docs/plan/global/10-status.md`, a false "neither
+`lean` nor `elan`" premise in action A9, an "every field `not_attempted`"
+reading of the K3 matrix row that did not distinguish "no Lean-goal credit"
+from "no native producers exist," and three July Lean documents still
+carrying an `active` status four weeks after their own tally stopped moving.
+
+1. **One paragraph, written once (120 words), reused verbatim** in
+   `docs/plan/global/10-status.md` (replacing the stale Lean paragraph),
+   `README.md` (§2, the Lean-checker section), and `docs/PROJECT-STATE.md`
+   (replacing the stale close of "Evidence and Lean"). It states the K
+   profile (K0 1/1, K1 6/6, K2-K6 0), the two pins (ADR-1594/1660), the
+   `creal` replay census as the independent-checkability measure (1,972 of
+   2,045, 48 `Type`-valued refusals, 25 blocked behind them, ADR-0760), the
+   import tier (never headline, ADR-0601/1664), `by axeyum` (ADR-1666), and
+   the carrier correspondence ledger (ADR-1665).
+2. **A9 in `docs/plan/global/20-next-actions.md` rewritten**, not patched:
+   both Lean 4.30.0 and 4.34.0-rc1 are installed under `~/.elan/toolchains/`
+   on the fleet (`command -v lean` is empty only because `elan` does not
+   touch `PATH`; `scripts/check-lean-gate.sh --print-toolchain` resolves
+   it). The action now points at `14-lean-lang.md`'s four still-open Next
+   Ten items (2, 3, 7, 9) in that file's priority order.
+3. **The K3 row's assurance fields are unchanged** — every field in
+   `planned-native-proof-profile` (`docs/plan/lean-compatibility-v1.json`)
+   stays `not_attempted`, because `admitted`/`proof_checked` there mean
+   credit toward a *Lean goal* and the native producers (`linarith`, `ring`,
+   `simp`, `decide`, the tactic combinator; 18,497 lines) do not check a
+   Lean goal — `by axeyum` does, on the separate route ADR-1666 already
+   registered. The row gains one `residual` sentence recording exactly this
+   and pointing at ADR-1666. `docs/plan/generated/lean-compatibility.md` and
+   `docs/plan/generated/lean-complete-parity.json` were regenerated.
+4. **The three July documents** — compatibility roadmap, implementation
+   plan, parity roadmap — each got a dated status block appended
+   immediately after their header metadata (their bodies are untouched):
+   historical as of 2026-09-05, ordering superseded by ADR-0717's C-series,
+   the complete-parity contract and registry explicitly **not** superseded.
+   The parity roadmap's block additionally marks the U2 official-execution
+   programme historical.
+5. **ADR-1668** records the paragraph, the claim-surface list, the K3
+   decision, and the rule that a future Lean claim on a claim surface is
+   either a verbatim quote of the paragraph or a measured update to both it
+   and the ADR together.
+6. `docs/math-department/14-lean-lang.md`: items 1 and 10 ticked `[x]` with
+   landing evidence (item 1 credits lane `lean-pin-gates`, ADR-1660, merge
+   `c1d8db1c2`; item 10 credits this lane and ADR-1668); one progress-log
+   row appended at the end. Items 2, 3, 7, 9 and every other verdict line in
+   that file are untouched.
+
+**Measured 2026-09-05, all four required checkers exit 0 on this tree:**
+`./scripts/check-links.sh` ("all links ok"), `python3
+scripts/gen-adr-index.py --check` (845 rows; the pre-existing `0166`/`0167`
+duplicate is unrelated to this lane and was not touched — confirmed against
+`git show HEAD:docs/research/09-decisions/README.md`, which already carried
+it before this lane's one-line insertion), `python3
+scripts/gen-lean-compatibility.py --check` (13 rows), `python3
+scripts/gen-lean-complete-parity.py --check` (10 populations, terminal
+claim still `false`, unchanged).
+
+`scripts/check-merge-hygiene.sh` reports `FAILED` on this tree, but only on
+`gen-plan.py --check` — expected and out of scope: this lane's brief
+explicitly says not to run `gen-plan.py` or edit `PLAN.md` (the coordinator
+regenerates it at merge from this file plus `docs/plan/global/`). No other
+merge-hygiene finding.
+
+Not run: `just check` / the full `./scripts/check.sh` aggregate, `cargo`
+anything (documentation-only lane, no `crates/` or `artifacts/` file
+touched), the real-Lean suites (require an installed pinned toolchain and
+are unrelated to this lane's four required checkers).
+
 **Lane block (`DONE -- ADR-1662 accepted; census published; screen shipped and
 mutation-verified`, lean-import-census, 2026-09-05).**
 
@@ -58047,22 +58128,39 @@ Do not build parametric datatypes or `define-fun-rec` from A8 — they are
 capability zeros in the scored population (gap analysis §9 row 9), not part of
 this session-semantics slice.
 
-### A9 — Restore official Lean execution and shrink the prelude (`TODO`, P2)
+### A9 — Extend the Lean replay census and close the remaining Next Ten items (`TODO`, P2)
 
-**Why now.** The local host currently has neither `lean` nor `elan`; remote
-70/70 attestation remains open; seven ledger rows are already classified as
-derivable theorems.
+**Why now.** "The local host currently has neither `lean` nor `elan`" is
+false and was corrected 2026-09-05: both Lean 4.30.0 (the Mathlib corpus pin)
+and 4.34.0-rc1 (the cross-check pin, ADR-1594/ADR-1660) are installed under
+`~/.elan/toolchains/` on the fleet; `command -v lean` is empty only because
+`elan` does not touch `PATH` — resolve with
+`scripts/check-lean-gate.sh --print-toolchain`. What "Lean compatible" means
+here is now written once
+([`docs/math-department/14-lean-lang.md`](../../math-department/14-lean-lang.md),
+[ADR-1668](../../research/09-decisions/adr-1668-the-lean-claim-surface-says-one-thing.md)):
+K0 1/1, K1 6/6, K2-K6 0; the replay census, the two pins, the import tier,
+and the Lean-side tactic are all measured, not aspirational.
 
-**Next slice.** Provision the checksum-pinned Lean 4.30 executable, prove it
-runs outside the repository working directory, obtain the remote 70/70 result,
-then replace the seven derivable axioms with theorem terms in dependency order.
+**Next slice.** `14-lean-lang.md`'s Next Ten still has four open items, in
+priority order: **2** (replay every proved theorem in pinned Lean or name the
+reason — extend the `creal`-only census, `missing=0` enforced, `Type`-valued
+theorems as a typed class); **3** (publish the constructive analysis as a
+Lean library — render the `creal` prelude as `.lean` source Lean elaborates,
+packaged for Lake); **7** (the public conformance corpus and a divergence
+ledger against Lean 4's own kernel test cases); **9** (a native reader for
+the kernel-core statement rendering, render→parse→same-term gated). Item 2 is
+the precondition for the chair's headline number meaning anything to a Lean
+user and should go first.
 
-**Exit.** Kernel tests, official Lean, generated ledger counts, declaration
-order, parity docs, and mutation controls all pass; no hard-coded old count
-survives.
+**Exit.** Each item closes with its own ADR and the evidence `14-lean-lang.md`
+already asks for (a run, not a projection); the progress-log row and the
+matrix regenerate (`gen-lean-compatibility.py --check`,
+`gen-lean-complete-parity.py --check`).
 
-**Stop.** Do not widen into String literals, quotient computation, or broad
-ecosystem claims during this bounded trust-reduction slice.
+**Stop.** Do not widen into K4-K6 (workflow, runtime, ecosystem) — the C5 gate
+says those wait until the C2/C3 adapter has real use; no chair asked for them.
+Do not claim an item done from a projection or a plan; each needs a run.
 
 ### A10 — Build the SMT-LIB product surface after S1 (`TODO`, P2)
 
