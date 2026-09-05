@@ -1,4 +1,185 @@
-//! PLACEHOLDER MODULE DOC -- rewritten at the end of the lane.
+//! Ideals, prime splitting, class numbers, and primitive elements.
+//!
+//! Item 4 of the CAS *Next Ten*, second wave, and the sibling of
+//! [`crate::numberfield`], which owns **element** arithmetic. This module owns
+//! the **ideal** side: the ring of integers of a quadratic field, ideals as
+//! `ℤ`-modules in Hermite normal form, how a rational prime decomposes, how a
+//! principal ideal factors, the class number of an imaginary quadratic
+//! discriminant, and a primitive element for a compositum.
+//!
+//! Everything here is exact and arbitrary-precision: coefficients are
+//! [`BigInt`] and [`BigRational`], nothing overflows the way the `i128` core
+//! does, and no `f64` appears. Every collection that reaches an output is a
+//! [`BTreeMap`] or [`BTreeSet`], so results are deterministic.
+//!
+//! # What this module computes
+//!
+//! - [`QuadraticOrder`] — `O_K = ℤ + ℤω` for squarefree `d`, carrying the one
+//!   relation `ω² = t·ω + n`. The `d ≡ 1 (mod 4)` case (`ω = (1+√d)/2`) and the
+//!   `d ≡ 2, 3` case (`ω = √d`) differ only in `(t, n)`, so nothing downstream
+//!   branches on which one it is.
+//! - [`Ideal`] — a nonzero ideal as `ℤ·a + ℤ·(b + cω)` with `a > 0`, `c > 0`,
+//!   `0 ≤ b < a`. That normal form is **canonical**, so `==` *is* ideal
+//!   equality; [`Ideal::norm`] is `a·c`, [`Ideal::contains_element`] and
+//!   [`Ideal::contains`] are read straight off the basis.
+//! - [`QuadraticOrder::multiply_ideals`] — `I·J`, with
+//!   [`IdealProductCertificate`].
+//! - [`QuadraticOrder::split_prime`] — Dedekind's criterion over the minimal
+//!   polynomial `x² − t·x − n` of `ω` modulo `p`, with
+//!   [`PrimeSplittingCertificate`] and a [`SplittingType`].
+//! - [`QuadraticOrder::factor_ideal`] and
+//!   [`QuadraticOrder::factor_principal_ideal`] — `I = ∏ 𝔭ᵢ^{eᵢ}`, with
+//!   [`IdealFactorizationCertificate`].
+//! - [`class_number`] — `h(D)` for `D < 0` by enumerating reduced
+//!   [`BinaryQuadraticForm`]s, with [`ClassNumberCertificate`].
+//! - [`primitive_element`] — `θ = α + k·β` for `ℚ(α, β)`, with
+//!   [`PrimitiveElementCertificate`] carrying `α` and `β` back as polynomials
+//!   in `θ`.
+//!
+//! # What this module reuses (and does not reinvent)
+//!
+//! - **[`QuadraticField`]** decides that `d` is squarefree and admissible;
+//!   [`QuadraticOrder::from_field`] takes an already-built one rather than
+//!   repeating the check. Building this module found that
+//!   [`QuadraticField::new`] refused `d = −1`, so `ℚ(i)` was unreachable even
+//!   though [`crate::numberfield::GaussianInt`] sits beside it; that is fixed
+//!   in `numberfield.rs` and `ℤ[i]` is now a worked example here.
+//! - **[`crate::ntheory::factorize`]** (trial division then Pollard rho)
+//!   factors `N(I)` — it is the only integer factorizer in the workspace, and
+//!   it is `i128`, so an ideal whose norm exceeds that range is **declined**
+//!   with [`IdealDecline::MagnitudeOutOfRange`], never guessed at.
+//! - **[`crate::ntheory::is_prime`]** (Miller–Rabin) decides primality both in
+//!   the producer and, independently, inside every `verify`.
+//! - **[`crate::ntheory_advanced::sqrt_mod`]** (Tonelli–Shanks) supplies the
+//!   root of `x² ≡ D (mod p)` that names the two primes above a split `p`.
+//! - **[`crate::ntheory_advanced::kronecker_symbol`]** is what every splitting
+//!   certificate re-derives its splitting type from — deliberately a different
+//!   route from the producer's root-counting, so the two have to agree.
+//! - **[`NumberField`] and [`crate::numberfield::Element`]** carry the
+//!   compositum: `NumberField::new` decides irreducibility through the crate's
+//!   Berlekamp–Zassenhaus factorizer, and `Element::inverse` is what makes the
+//!   `ℚ(θ)[y]` Euclidean algorithm possible.
+//! - **The `BigRational` `ℚ[x]` helpers and the exact determinant** in
+//!   `numberfield.rs`, which became `pub(crate)` for this module. The Sylvester
+//!   resultant here is new; the determinant under it is not.
+//!
+//! What is **not** reused: [`crate::resultant`] is univariate and `i128`. The
+//! resultant needed here, `Res_y(f(θ − k·y), g(y))`, is bivariate — its
+//! coefficients are polynomials in `θ` — so it is computed by evaluation at
+//! `deg f · deg g + 1` rational points and Lagrange interpolation, each
+//! evaluation being one exact Sylvester determinant. That is sound because the
+//! leading coefficient of `f(θ − k·y)` in `y` is the **constant** `(−k)^{deg f}`,
+//! so no evaluation can drop the degree.
+//!
+//! # What is certified, and what is `uncertified`
+//!
+//! Every certificate's `verify` re-derives the claim from the recorded data
+//! and never consults how the producer found it.
+//!
+//! | producer | certificate | guards |
+//! |---|---|---|
+//! | [`QuadraticOrder::multiply_ideals`] | [`IdealProductCertificate`] | order parameters match the radicand; all three ideals pass [`Ideal::admissible_in`]; the four basis products are re-derived and compared elementwise **and** by count; `N(IJ) = N(I)·N(J)`; the Hermite form re-run over the products equals the recorded one |
+//! | [`QuadraticOrder::split_prime`] | [`PrimeSplittingCertificate`] | `p` is prime; the recorded `D` is the one `d` determines; the splitting type equals the recomputed Kronecker symbol `(D/p)`; the factor count matches the type; split means two different primes and ramified means one twice; the factors multiply back to `(p)` through verified product certificates; each factor has norm `p` (split, ramified) or `p²` (inert) |
+//! | [`QuadraticOrder::factor_ideal`] | [`IdealFactorizationCertificate`] | the target is an ideal; no exponent is zero; each factor is a prime ideal, meaning its norm is `p` or `p²` for a rational prime and it appears among the primes `split_prime` puts over that `p`; `∏ N(𝔭ᵢ)^{eᵢ} = N(I)`; `∏ 𝔭ᵢ^{eᵢ} = I` |
+//! | [`class_number`] | [`ClassNumberCertificate`] | `D < 0` and `D ≡ 0, 1 (mod 4)`; every listed form has discriminant `D`, is positive definite, primitive and reduced, all recomputed; no form repeats; and the whole region is **recounted by a different traversal** |
+//! | [`primitive_element`] | [`PrimitiveElementCertificate`] | `f` and `g` are monic and non-constant; `k ≠ 0`; the recorded minimal polynomial of `θ` is monic of degree `deg f · deg g`, squarefree, and irreducible over ℚ; and, inside `ℚ[x]/(R)`, the recorded `α` satisfies `f`, the recorded `β` satisfies `g`, and `α + k·β = θ` |
+//!
+//! **The theorem behind the class number, and its hypothesis.** *Every
+//! positive definite primitive integral binary quadratic form of discriminant
+//! `D < 0` is `SL₂(ℤ)`-equivalent to exactly one reduced form* — reduced
+//! meaning `|b| ≤ a ≤ c` with `b ≥ 0` whenever `|b| = a` or `a = c`. Its
+//! hypothesis is `D < 0` and `D ≡ 0` or `1 (mod 4)`; both are checked, and the
+//! producer declines rather than assumes them. **Uniqueness** is what turns
+//! "the listed forms are pairwise different" into "the listed classes are
+//! pairwise inequivalent", which is why no composition law and no explicit
+//! equivalence test are needed — and none are shipped.
+//!
+//! **`uncertified`, and why.**
+//!
+//! - [`QuadraticOrder::multiply`] and [`QuadraticOrder::element_norm`] on
+//!   [`OrderElement`], and [`QuadraticOrder::ideal_power`]. Checking a product
+//!   costs a product; a certificate for them would be the producer in a hat.
+//!   The same reasoning as [`crate::fps`] and [`crate::numberfield`]. The
+//!   certified route for a power is the product certificate on each step,
+//!   which is what [`IdealFactorizationCertificate::verify`] actually runs.
+//! - [`Ideal::contains_element`], [`Ideal::contains`], [`Ideal::norm`] and
+//!   [`Ideal::basis`] are one-line reads of the canonical basis.
+//! - **The exponents [`QuadraticOrder::factor_ideal`] finds by containment
+//!   testing are not certified as exponents.** Only the product identity is,
+//!   and that is deliberate: a wrong exponent cannot survive `verify`, so the
+//!   search is allowed to be a heuristic. A search that falls short is reported
+//!   as [`IdealDecline::FactorizationIncomplete`], never shipped.
+//! - **Non-principality is not certified.** The test that `𝔭₂ ⊂ ℤ[√−5]` is not
+//!   principal is a bounded exhaustive sweep over the norm form in the test
+//!   module, not a certificate object. A `Principality` certificate would need
+//!   either a class-group *law* or a general norm-equation solver; neither is
+//!   in this slice.
+//! - **The Kronecker symbol, `factorize`, `is_prime` and `sqrt_mod` are
+//!   trusted as reused routines.** They are `i128` and this module is bignum,
+//!   so every crossing point converts explicitly and declines on overflow with
+//!   [`IdealDecline::MagnitudeOutOfRange`] or refuses with
+//!   [`IdealCertificateError::MagnitudeOutOfRange`]; but their *answers* are
+//!   not re-derived here.
+//!
+//! **One guard was measured redundant and removed rather than kept for
+//! appearances.** The splitting certificate used to run
+//! [`Ideal::admissible_in`] on every factor before multiplying them; deleting
+//! that loop killed zero tests, because `product_of_ideals` verifies a product
+//! certificate per step and *that* certificate already checks admissibility.
+//! It is gone. Three other guards were found inert by the same sweep — the
+//! generator-product **count** check, and the `right`/`product` admissibility
+//! calls in the product certificate — and those got the missing forgeries
+//! instead, because unlike the first they are reachable.
+//!
+//! # Out of scope, deliberately
+//!
+//! - **Composition of forms (the class group law).** This module gives the
+//!   class group as a *set* with its cardinality. Gauss composition, the group
+//!   structure, and the correspondence with ideal classes are not here.
+//! - **Real quadratic class groups.** `h(D)` for `D > 0` needs the regulator
+//!   and the continued-fraction cycle of reduced indefinite forms, which is a
+//!   different algorithm from the one shipped; [`class_number`] declines with
+//!   [`IdealDecline::DiscriminantNotNegative`] rather than answering wrongly.
+//!   The related real-quadratic *unit* computation does exist, in
+//!   [`crate::numberfield::QuadraticField::fundamental_unit`].
+//! - **Rings of integers of general number fields.** The `ℤ + ℤω` presentation
+//!   is quadratic-only; a Round 2 / Round 4 maximal-order computation for
+//!   higher degree is not here, so [`primitive_element`] gives the *field*
+//!   `ℚ(α, β)` and says nothing about its ring of integers.
+//! - **Galois groups, ramification groups, different and conductor.**
+//! - **Ideal classes as a group, class field theory, `L`-functions.**
+//! - **Non-maximal orders as objects.** [`class_number`] happily takes a
+//!   non-fundamental `D` — it counts forms of that discriminant, which is the
+//!   form class number of the order of discriminant `D` — but
+//!   [`QuadraticOrder`] itself is always the maximal order.
+//!
+//! # Cost profile
+//!
+//! **ADVISORY.** Measured 2026-09-05 on a shared host at load average 12.02,
+//! `--release`, single-threaded, with the enumeration and its independent
+//! recount timed separately:
+//!
+//! | `|D|` | `h(D)` | produce | verify (recount) |
+//! |---|---|---|---|
+//! | `10³` | 10 | 47 µs | 35 µs |
+//! | `10⁴` | 20 | 92 µs | 244 µs |
+//!
+//! The shape, independent of the clock: the reduced region has
+//! `|b| ≤ a ≤ c` and `4ac = b² − D`, so both `a` and `b` are `O(√|D|)` and the
+//! whole enumeration is `Θ(|D|)` bignum operations. That is why
+//! [`CLASS_NUMBER_DISCRIMINANT_BOUND`] exists and why the producer declines
+//! above it instead of hanging a gate. Verification costs the same order as
+//! production, and at `10⁴` slightly more, because the recount walks the region
+//! by `a` and then by every `b` in `−a ..= a` rather than by divisors.
+//!
+//! Everything else in this module is small at the sizes it admits: ideal
+//! multiplication is four `BigInt` products plus a 2×2 Hermite form; a prime
+//! splitting is one Tonelli–Shanks; an ideal factorization is one `i128`
+//! integer factorization (which dominates it, and is the reason for the
+//! magnitude declines) plus one containment test per candidate exponent. The
+//! whole 70-test module runs in **0.33 s of wall clock, single-threaded, in a
+//! debug build**, the slowest single test being the degree-6 compositum at
+//! 0.065 s — so no per-operation split was worth measuring below that.
 
 use core::fmt;
 
@@ -1012,11 +1193,7 @@ impl PrimeSplittingCertificate {
             }
             _ => {}
         }
-        // S5: each factor really is an ideal of this order.
-        for factor in &self.factors {
-            factor.admissible_in(&order)?;
-        }
-        // S6: the factors multiply back to (p). This runs BEFORE the norm
+        // S5: the factors multiply back to (p). This runs BEFORE the norm
         // check because an ideal of norm p is *forced* to be one of the primes
         // above p — so with the norms already pinned no forgery could reach
         // this guard, and a guard no forgery can reach is not a guard.
@@ -1027,7 +1204,7 @@ impl PrimeSplittingCertificate {
         if product != principal {
             return Err(IdealCertificateError::SplittingProductMismatch);
         }
-        // S7: each factor has the norm its splitting type forces.
+        // S6: each factor has the norm its splitting type forces.
         let wanted_norm = match self.splitting {
             SplittingType::Inert => &self.prime * &self.prime,
             SplittingType::Split | SplittingType::Ramified => self.prime.clone(),
@@ -2528,6 +2705,39 @@ mod tests {
         assert_eq!(
             certificate.verify(),
             Err(IdealCertificateError::BasisLeadingNotPositive)
+        );
+    }
+
+    #[test]
+    fn product_certificate_with_a_forged_right_factor_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.right = ideal(2, 0, 0);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::BasisDenominatorNotPositive)
+        );
+    }
+
+    #[test]
+    fn product_certificate_whose_claimed_product_is_not_an_ideal_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.product = ideal(4, 1, 2);
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::BasisDenominatorDoesNotDivideOffDiagonal)
+        );
+    }
+
+    #[test]
+    fn product_certificate_with_an_extra_generator_product_is_refused() {
+        let order = order(-1);
+        let mut certificate = product_certificate(&order, &ideal(2, 1, 1), &ideal(2, 1, 1));
+        certificate.generator_products.push(element(0, 0));
+        assert_eq!(
+            certificate.verify(),
+            Err(IdealCertificateError::GeneratorProductMismatch { index: 4 })
         );
     }
 
