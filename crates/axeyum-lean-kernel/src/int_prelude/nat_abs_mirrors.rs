@@ -623,6 +623,7 @@ fn nat_pos_of_lt(d: &mut IntDev<'_>, m: ExprId, n: ExprId, h: ExprId) -> ExprId 
 ///
 /// `m*m ≤ m*n` by left-multiplying `h`, and `m*n ≤ n*n` by left-multiplying it
 /// by `n` and commuting. `Nat.mul_le_mul_right` does not exist here, which is
+/// <!-- absent: Nat.mul_le_mul_right -->
 /// why the commutation is explicit.
 fn nat_mul_self_le(d: &mut IntDev<'_>, m: ExprId, n: ExprId, h: ExprId) -> ExprId {
     let mul_le = d.int().nat.mul_le_mul_left;
@@ -1069,6 +1070,7 @@ pub(super) fn declare_nat_abs_eq_iff_mul_self_eq(d: &mut IntDev<'_>) -> Result<(
 
 /// `k ≤ j + k`, from `Nat.le_add_right` and one commutation.
 ///
+/// <!-- absent: Nat.le_add_left -->
 /// `Nat.le_add_left` does not exist in this prelude; `Nat.le_add_right k j` is
 /// `k ≤ k + j`, and `Nat.add` recurses on its RIGHT argument, so the two forms
 /// are not interchangeable by reduction.

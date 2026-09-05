@@ -40,6 +40,7 @@
 //! A consequence worth stating plainly, because it is the opposite of what
 //! the earlier handoffs implied: **residue 2 was never blocked on Gauss's
 //! lemma or on coprimality.** It was blocked on `Nat.sumRangeIf`, which did
+//! <!-- was-absent: Nat.sumRangeIf -->
 //! not exist, and on nothing else.
 //!
 //! ## The proof

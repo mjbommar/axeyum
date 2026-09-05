@@ -183,6 +183,7 @@ and a new fuel induction comparing `logAux a f n` against `logAux b g n` for
 comparable in size to `log_aux_mono`, not blocked by kernel capability.
 
 **`F:ml430-nat-log2-eq-log-two-28085932` (`n.log2 = Nat.log 2 n`) — `Nat.log2`
+<!-- was-absent: Nat.log2 -->
 does not exist in this kernel at all.** It is Lean CORE (not Mathlib), and
 its real definition is well-founded recursion on a `log2`-style measure —
 structurally the same shape CLAUDE.md's `binaryRec` correction covers: a FUEL

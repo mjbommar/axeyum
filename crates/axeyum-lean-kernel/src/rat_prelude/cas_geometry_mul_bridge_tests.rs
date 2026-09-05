@@ -67,6 +67,7 @@
 //! path.
 //!
 //! `Rat.one_mul` and `Rat.zero_mul` do not exist in this prelude; both are
+//! <!-- absent: Rat.one_mul, Rat.zero_mul -->
 //! derived here from `mul_comm` plus `mul_one`/`mul_zero`
 //! ([`rat_one_mul`], [`rat_zero_mul`]).
 //!

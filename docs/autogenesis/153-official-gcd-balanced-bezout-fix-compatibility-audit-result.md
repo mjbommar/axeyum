@@ -10,6 +10,7 @@ representation boundary, not binder metadata:
 - the target support kernel has a five-name closure and represents
   `WellFounded` as a definition;
 - `WellFounded.apply`, `WellFounded.fixF`, `WellFounded.intro`, and
+<!-- absent: WellFounded.apply, WellFounded.fixF, WellFounded.intro, WellFounded.rec -->
   `WellFounded.rec` are absent from the target;
 - four shared declarations are kernel-type-shape compatible, while
   `WellFounded.fix` alone has incompatible type shapes.

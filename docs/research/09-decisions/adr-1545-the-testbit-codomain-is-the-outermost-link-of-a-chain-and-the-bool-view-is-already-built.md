@@ -92,6 +92,7 @@ declined.
 So the two differ on **three** axes, not one: the codomain (`Bool` vs
 `Nat`), the recursion (a shift-and-mask closed form vs an index recursion),
 and the constants the body names. `Nat.shiftRight` **does not exist in this
+<!-- absent: Nat.shiftRight -->
 kernel** (no `shiftRight`/`shift_right` anywhere in `nat_prelude.rs`), and
 `Nat.land` diverges — see (3).
 

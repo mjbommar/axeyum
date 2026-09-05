@@ -294,6 +294,7 @@ re-derived.
 `isBasis` is stated and `linComb_congr` proves the easy half of independence,
 but **invariance of basis number** — the theorem that makes "dimension"
 well-defined — needs to divide, i.e. a field. `AlgS.Field` does not exist:
+<!-- absent: AlgS.Field -->
 ADR-1588 stopped short of `Field` because a constructive field needs an
 apartness relation (`x # 0` rather than `¬ (x = 0)`), and ADR-1595 recorded
 that as a **separate open question**, not part of the quotient decision.

@@ -5,6 +5,7 @@
 //! ## Why this exists
 //!
 //! `Rat.rank` does not exist, and the dominance document concedes it. Rank is
+//! <!-- was-absent: Rat.rank -->
 //! read off a row-echelon form, and rank-nullity follows from the same
 //! construction, so the echelon form is the piece that has to land first. This
 //! module is the first of three: it builds the form and the invertibility of

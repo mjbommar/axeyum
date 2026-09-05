@@ -22,6 +22,7 @@ Closed, forming one dependency chain:
   plus the already-proved `Nat.fib_mono`.
 
 Not attempted: `Nat.fastfib_eq` (needs a `Nat.fastFib` fast-doubling
+<!-- absent: Nat.fastfib_eq, Nat.fastFib -->
 definition that does not exist — same "needs a carrier" shape as the Int
 family, smaller); `Nat.le_fib_self` / `Nat.le_fib_add_one` (a second,
 independent chain — sized but not started, see below); the
@@ -39,4 +40,4 @@ for the next lane rather than rushed.
 <!-- plan-section: landed-changes -->
 
 | 2026-08-28 | fib-backlog | `Nat.fib_add_two_strictmono`, `Nat.fib_strictmonoOn`, `Nat.fib_lt_fib` landed and kernel-checked (nat_prelude/fibonacci.rs); closed F:ml430-nat-fib-add-two-strictmono-c1e86d4d, F:ml430-nat-fib-strictmonoon-905810a9, F:ml430-nat-fib-lt-fib-3582b881 |
-| 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted |
+| 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted <!-- was-absent: Int.fib --> |

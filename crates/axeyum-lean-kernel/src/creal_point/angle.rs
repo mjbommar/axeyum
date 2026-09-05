@@ -13,6 +13,7 @@
 //!
 //! 1. `CReal.cos_fn` is a power series with uniform-convergence and
 //!    derivative machinery, but **`CReal.sin_sq_add_cos_sq` does not exist,
+//! <!-- absent: CReal.sin_sq_add_cos_sq -->
 //!    under any spelling** (checked 2026-09-04 against a freshly rebuilt
 //!    `shape_search --include-constructed`, `declarations=3935`). Neither does
 //!    an addition theorem. So even with an `arccos` in hand, `sin² + cos² = 1`

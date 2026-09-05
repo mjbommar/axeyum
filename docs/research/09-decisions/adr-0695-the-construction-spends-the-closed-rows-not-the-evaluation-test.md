@@ -137,6 +137,7 @@ rule (decision 4) makes the refusal cheap by catching it before a family is
 authored.
 
 **Widen R9 to definitions.** Rejected. R9 asks whether the Mathlib source NAME
+<!-- was-absent: Nat.fermatNumber_zero -->
 is declared here, which is a different and still useful question; the names
 `Nat.fermatNumber_zero` and friends genuinely are absent. Overloading one screen
 with two criteria makes both harder to reason about, and the reduction question

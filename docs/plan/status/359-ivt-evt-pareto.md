@@ -21,6 +21,7 @@ standing in its place, so it is a trade rather than a dominance:
 Mathlib's `IsCompact.exists_isMaxOn` proves EVT for an arbitrary compact subset
 of an arbitrary topological space and we prove nothing positive at all.
 `creal/supremum.rs` already says `CReal.supOn` is "still not landed"; nothing in
+<!-- was-absent: CReal.supOn -->
 the ledger or in `07-the-cost-model-and-pareto-position.md` records that EVT is
 being cited as a dominance example while its row 1 is missing.
 

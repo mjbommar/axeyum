@@ -40,6 +40,7 @@ kind.
 **Findings — extraction was wrong, not merely unaudited:**
 
 1. `F:nat-bitwise-bit` extracted `Nat.bitwise_bit` — no such declaration.
+<!-- was-absent: Nat.bitwise_bit -->
    `evidence[].kernel_declaration` already independently named the real
    subject, `Nat.bitwise_bit'` (primed; the extraction regex excludes
    apostrophes on purpose, so it can never find a primed name). Its rendered

@@ -147,6 +147,7 @@ must run from row `0` upward with the map shifting under it. That shape, not
 the multilinearity, is the work.
 
 It also needs a carrier port: **`Rat.prodRange` and `Rat.sumMaps` do not
+<!-- was-absent: Rat.prodRange, Rat.sumMaps -->
 exist.** Measured with `shape_search --include-constructed --name-like`,
 which fails on absence and prints a positive control:
 

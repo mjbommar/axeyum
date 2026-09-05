@@ -61,6 +61,7 @@ speculates, but by an independent route through the already-public
 as a live blocker and dispatched a lane at a finished task.
 
 It happened TWICE in one hour. The same coordinator logged a deficiency
+<!-- was-absent: Rat.sumRange -->
 asserting `Rat.sumRange` had no diagonal/rectangle reindexing and dispatched an
 Opus lane; `rat_prelude/diagonal.rs` already carried it, AND `complex.rs`
 already ran the same argument over ℂ including the two-bound form that

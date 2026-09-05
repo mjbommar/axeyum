@@ -6,6 +6,7 @@ than worked around. Neither is fixed here.
 ## 1. RETRACTED — the `Rat.sumRange` reindexing already existed
 
 **This section originally asserted that `Rat.sumRange` had no diagonal/rectangle
+<!-- was-absent: Rat.sumRange -->
 double-sum reindexing, and dispatched an Opus lane against it. That was wrong,
 and the error was the coordinator's.**
 <!-- was-absent: Rat.sumRange_diagonal, Rat.sumRange_rect_eq_diag_add_corner, Complex.sumRange_mul_eq_diag_add_corner -- the retracted claim; `scripts/check-absence-claims.py` would have gone red on the `absent:` form the day these landed -->

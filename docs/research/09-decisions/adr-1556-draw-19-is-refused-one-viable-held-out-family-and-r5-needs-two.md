@@ -203,6 +203,8 @@ family subjects, never kernel development) can see it. **A
 `assert_draw_lawful` reads it.
 
 **Every other candidate row screened clean, and three of the queries had to be
+<!-- absent: Nat.Prime, Nat.Coprime -->
+<!-- was-absent: Nat.ModEq -- spelling-normalizes to the kernel's lowercase `Nat.modEq`, cited two lines below as the existing spelling; not a landing event, a naming-convention mismatch -->
 re-asked.** `--concl Nat.Prime`, `--concl Nat.Coprime`, `--concl Nat.ModEq` and
 `--concl Ne` all returned **UNANSWERABLE (exit 3)**, not absent: this kernel has
 no such declarations — primality is spelled as an `And`, coprimality as

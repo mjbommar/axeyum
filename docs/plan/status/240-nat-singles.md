@@ -40,6 +40,7 @@ not hand-counted).
 ## What's still needed for the other two facts
 
 - **`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`** (`m != 0 -> m < n.minFac ->
+<!-- was-absent: Nat.minFac -->
   n.Coprime m`) needs `Nat.minFac` as a COMPUTABLE definition with defining
   equations, which does not exist. `Nat.exists_prime_dvd`/
   `Nat.least_divisor_search` only give an EXISTENCE proof of a prime

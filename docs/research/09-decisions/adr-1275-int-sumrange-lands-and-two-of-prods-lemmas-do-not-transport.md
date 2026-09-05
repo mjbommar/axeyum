@@ -10,6 +10,7 @@ Index-status: Accepted
 ## Context
 
 [ADR-1260](adr-1260-eisenstein-routes-around-the-missing-aggregate-wall.md)
+<!-- was-absent: Int.sumRange -->
 landed the lattice-point partition and named exactly one obstruction between it
 and Eisenstein's lemma: **`Int.sumRange` does not exist.** The classical
 derivation is `(a−1)·Σk = p·(F + N) − 2·Σ_neg`, which subtracts inside a finite

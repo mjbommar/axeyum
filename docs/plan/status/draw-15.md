@@ -37,6 +37,7 @@ than carried from ADR-1115, because that one predates ADR-1160's finding that
 R12 cannot see a quantified defining equation.
 
 Also recorded: `shape_search --concl <Const>` indexes the conclusion HEAD, so
+<!-- was-absent: Nat.countRange -->
 `--concl Nat.countRange` is ABSENT despite 21 matching declarations. Three of
 this lane's absence checks proved nothing until re-run with `--const`.
 

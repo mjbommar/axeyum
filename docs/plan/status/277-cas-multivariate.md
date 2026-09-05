@@ -124,9 +124,13 @@ actually decided the design:
 3. A general `Nat → Nat` exponent vector avoids the nesting but needs a
    product-over-range: a degree-2 monomial in 8 variables unfolds to an
    eight-factor product with **six `Rat.one`s**, each a `mul_one` rewrite. At
-   24 monomials that is ~150 rewrites of pure padding, and `Rat.prodRange` does
-   not exist, so it would also mean a new `Definition` plus its equations.
-   <!-- absent: Rat.prodRange -->
+   24 monomials that is ~150 rewrites of pure padding. This obstacle is
+   RETIRED-AS-PRESENT: `Rat.prodRange` landed 2026-09-02
+   (`68f452c23`, "feat(rat): Rat.prodRange and Rat.sumMaps, the two
+   aggregates obligation 1 needs"), so the new `Definition` this step named
+   as missing now exists; whether it is actually wired into this obligation
+   is a separate, unverified question.
+   <!-- was-absent: Rat.prodRange -->
 4. The `polyEval` design principle is **preserved exactly**: term count,
    variable support and every exponent come from the translator, and nothing in
    the kernel ever computes a degree or a support.

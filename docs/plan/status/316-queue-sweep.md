@@ -45,9 +45,13 @@ would close.** All three are stated for GENERAL `a, b` (not assumed
 coprime). `totient_dvd_of_dvd` and `totient_gcd_mul_totient_mul` need the
 formula applied to shared prime-power structure between `a` and `b` — i.e.
 multiplicativity extended via a full prime-factorization / arithmetic-function
-framework, which does not exist in this kernel (no `Nat.factorization`,
-no general multiplicative-function machinery, no unique-factorization
-induction). <!-- absent: Nat.factorization --> `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
+framework. The named-declaration part of this claim is RETIRED-AS-PRESENT:
+`Nat.factorization` landed 2026-08-25 (`8b5fbe799`, "feat(nat): existence
+half of the Fundamental Theorem of Arithmetic"), before this status file was
+written, so it is not the missing piece; general multiplicative-function
+machinery and a unique-factorization induction principle are still not
+verified to exist here and this file does not check them.
+<!-- was-absent: Nat.factorization --> `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
 classification argument. `301` names this explicitly ("further work beyond
 the coprime case") and neither prior lane attempted it. I did not either —
 sizing it honestly, it is at minimum comparable to the entire `287`→`313`

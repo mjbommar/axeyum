@@ -135,7 +135,9 @@ taking the number on trust.
   `Int.ofNat_add_negOfNat` exists as a theorem. Rows 6 and 8 need it before
   `subNatNat_elim` can be applied at all.
 * **`Nat.le_add_left` does not exist here**; `Nat.le_add_right` plus an explicit
+<!-- absent: Nat.le_add_left -->
   commutation does. `Nat.mul_le_mul_right` does not exist either. Both gaps are
+<!-- absent: Nat.mul_le_mul_right -->
   the same shape and both are consequences of `Nat.add`/`Nat.mul` recursing
   right.
 

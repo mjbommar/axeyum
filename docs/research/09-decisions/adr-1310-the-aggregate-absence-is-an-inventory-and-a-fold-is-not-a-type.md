@@ -175,6 +175,7 @@ the expansion step of the Cauchy–Binet / multilinearity proof of
 It lands over `Int` rather than `Rat` only because `Int` is where both aggregates
 already live (`Int.prodRange` since Wilson's theorem, `Int.sumRange` since
 ADR-1260, yesterday). `Rat.prodRange` does not exist; nothing structural is in
+<!-- was-absent: Rat.prodRange -->
 the way of it.
 
 ### Why the induction has the shape it has
@@ -301,6 +302,7 @@ verify rather than inherit:
   of finite sets — can use it directly, and `sumMaps_congr` /
   `sumMaps_mul_left` are the two rewriting tools such an argument needs first.
 - **A `Rat` copy is straightforward and is NOT landed.** `Rat.prodRange` does
+<!-- was-absent: Rat.prodRange, Rat.sumMaps -->
   not exist; a `Rat.sumMaps` for the determinant work needs it plus the same
   seven lemmas. That is ordinary work, deliberately not done here — this lane's
   deliverable was the decision, and one carrier demonstrates it.

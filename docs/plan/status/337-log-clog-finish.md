@@ -143,6 +143,7 @@ almost line-for-line since `clog`'s guard nesting is simpler). Not
 attempted here for lack of remaining budget, not for lack of a route.
 
 **`F:ml430-nat-log2-eq-log-two-28085932` (`n.log2 = Nat.log 2 n`) —
+<!-- was-absent: Nat.log2 -->
 `Nat.log2` does not exist in this kernel.** Unchanged from the prior
 handoff's assessment: it is Lean CORE (not Mathlib), defined by
 well-founded recursion on a `log2`-style measure with a DEPENDENT motive.

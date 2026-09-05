@@ -92,6 +92,7 @@ to `theorem_names`.
 ## Commits (this lane)
 
 1. `wip(nat): Nat.xor_ne_zero_iff -- NameId field only, not yet declared` —
+<!-- was-absent: Nat.xor_ne_zero_iff -->
    the `p.xor_ne_zero_iff` NameId field, landed within the first ten tool
    calls, before the theorem itself compiled.
 2. `feat(nat): Nat.xor_ne_zero_iff -- last of the four xor_trichotomy sub-targets`

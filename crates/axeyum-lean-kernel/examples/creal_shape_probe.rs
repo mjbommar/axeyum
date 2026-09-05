@@ -30,6 +30,7 @@
 //! It does **not** state Bishop regularity, and it does not define `Equiv`'s
 //! closeness relation. Both need `ℚ`'s **order** development (`Rat.le`,
 //! `Rat.sub`, `Rat.abs`), which does not exist yet — `int_prelude/rat.rs` has
+//! <!-- was-absent: Rat.sub, Rat.abs -->
 //! the carrier, `normalize`, `add`, `mul` and `neg` and no order at all. So the
 //! carrier here is admitted **parametrically in its regularity predicate**:
 //!
@@ -204,6 +205,7 @@ fn main() {
     // This is the shape `Equiv` takes once `ℚ`'s order supplies `close`, and
     // the shape every congruence obligation (`add`, `mul`, `neg`, `le`, `lt`
     // respect `Equiv`) is stated against. `close` is a parameter here for
+    // <!-- was-absent: Rat.le -->
     // exactly the reason `reg` is: `Rat.le` does not exist yet.
     let close_ty = {
         let n = kernel.pi(anon, nat_ty, prop, BinderInfo::Default);

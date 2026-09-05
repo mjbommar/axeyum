@@ -47,4 +47,4 @@ which are now mostly exhausted against what remains.
 
 <!-- plan-section: landed-changes -->
 
-| 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment |
+| 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment <!-- was-absent: CReal.abs_add_le --> |

@@ -127,6 +127,8 @@ now. Nothing was deleted.
 | 2026-09-04 | poly-commring | `AlgS.Poly.commRing` lands: the four `AlgS.CommRing` fields ADR-1609 left open (`mulOneL`, `mulOneR`, `mulComm`, `mulAssoc`) plus the six walk reindexing lemmas, at the same build position, zero kernel rejections (ADR-1618) |
 | 2026-09-04 | poly-commring | ℚ[X], ℝ[X] and ℂ[X] admitted as `AlgS.CommRing` values with empty axiom footprints (`tests/poly_comm_ring_concrete.rs`) |
 | 2026-09-04 | poly-commring | `poly_setoid_tests` 8 → 17: three evaluation tests at `n ≤ 3` plus five rejection controls, each with a positive twin; all five mutation-verified (exactly the five mutated tests died, the other twelve passed) |
+| 2026-09-04 | gate-hygiene | resolved 2 EXPIRED absence claims (`Rat.prodRange`, `Nat.factorization`, both landed) and annotated 56 more bare-named absence-claim sites (37 `was-absent:` retired-as-present, 17 `absent:` still-live, 2 carrying both), bringing `check-absence-claims.py`'s bare count from 206 to 150 against a budget of 122 — not yet green, remaining sites are dominated by 3+-segment names and build-order/foreign-stream-scoped claims the marker grammar cannot honestly express |
+| 2026-09-04 | gate-hygiene | corrected 9 stale "no `CReal.sqrt`" / "not expressible here" doc comments in `creal_point.rs` and `creal_point_tests.rs`, false since `CReal.sqrt` (`b10f4ccb1`, 2026-08-26) and `Metric.CPoint.dotLeSqrtMul`/`distTriangle` (`b34e2dbd7`, 2026-09-04) landed; doc comments only, no code or declarations touched |
 | 2026-09-04 | coordinator | `docs/math-department/`: twelve persona reviews of the library, one per field, each with a measured baseline, a Next Five and a progress log |
 | 2026-09-04 | coordinator | `docs/math-department/00-roadmap.md`: the twelve Next Fives synthesized into 51 items, 7 convergences, 4 waves, with a status board and history log |
 | 2026-09-04 | metatheory-and-landmarks | `90940d7bb` ADR-1600: kernel trusted-core size (5,526 lines, re-derived), what it admits, four mutation-tested guards (3 clean, 1 found redundant), a fresh full `check-lean-gate.sh` run reproducing the known-red `max-to-imax` mutant, and what a relative soundness proof would require |
@@ -798,7 +800,7 @@ now. Nothing was deleted.
 | 2026-08-28 | pi-r2b | measured: the kernel rejected NOTHING -- both `add_declaration` calls succeeded first attempt, no `on_a_deep_stack` needed. `creal_prelude_builds` 94.45 s (inside the 91-117 s band, no measurable slowdown); `every_creal_declaration_is_checked_and_axiom_free` green in `--release` (15.09 s), both declarations `Theorem`-kind, empty `axiom_footprint` |
 | 2026-08-28 | cw-bridge | `CReal.converges_of_abs_diff_le` — `close_within` evidence → `Converges`, axiom-free, first-attempt accept |
 | 2026-08-28 | cw-bridge | the shift bridge it was sized to need already existed: `CReal.sharedIndexToCanonical` (`integral.rs`) + `cauchy_of_abs_diff_le` (`ivt.rs`) |
-| 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment |
+| 2026-08-28 | `68e0a48d8` | dedup: cite `CReal.abs_add_le` instead of re-deriving it, in 4 `creal/` files; fix a stale "does not exist" doc comment <!-- was-absent: CReal.abs_add_le --> |
 | 2026-08-28 | rs-cauchy | no code change — `riemannSum_cauchy`/`CReal.integral` roadmap through `integral_by_parts` confirmed already landed and axiom-free; re-verified `creal_prelude_builds` (96.79s) and environment-derived coverage check (14.92s, `--release`) |
 | 2026-08-28 | pi-r2d | `crates/axeyum-lean-kernel/src/creal/cos_sign.rs`: re-added `CReal.cosWideSeriesConverges` (item 3, unchanged from the reverted `pi-r2c` attempt) and rewrote `CReal.cosWideNonpositive` (item 4) to collapse each series term to a flat, already-reduced `Rat` literal (`collapse_to_flat`/`small_rat`) BEFORE combining via `Rat.add`, instead of nesting three un-reduced `Rat.mul`/`Rat.pow`/`Rat.normalize` towers as the reverted attempt did. `cargo check`/clippy green. `creal_prelude_builds` NOT observed to finish by this lane — do not treat either theorem as landed on the strength of this row alone |
 | 2026-08-28 | pi-r2d | measured (hand-traced, not kernel-timed): the reverted attempt's own final numeric check never needs a `Nat` value above `25*1875=46,875` if combined in `sumRange`'s forced left-nested order — under the documented `60,000`-feasible line — which is evidence the 616s/5.9GB blowup was driven by NESTING DEPTH of un-reduced `Rat` towers rather than by final operand magnitude alone. Offered as a hypothesis, not a confirmed measurement; no isolated A/B was run to separate the two causes |
@@ -849,7 +851,7 @@ now. Nothing was deleted.
 | 2026-08-28 | nat-bitwise | `Nat.bit` (non-recursive, no fuel needed) plus `bit_false`/`bit_true`/`bit_true_pos`/`bit_false_le_bit_true`, all axiom-free, all first-attempt kernel accepts; 4 new `F:nat-bit-*` facts; `Nat.bitwise`/`Nat.bits`/`Nat.ldiff` scoped out |
 | 2026-08-28 | nat-gcd | 9 `natural-gcd` facts closed via the divisibility characterization of `Nat.gcd`/`Nat.lcm` (0 axioms) |
 | 2026-08-28 | fib-backlog | `Nat.fib_add_two_strictmono`, `Nat.fib_strictmonoOn`, `Nat.fib_lt_fib` landed and kernel-checked (nat_prelude/fibonacci.rs); closed F:ml430-nat-fib-add-two-strictmono-c1e86d4d, F:ml430-nat-fib-strictmonoon-905810a9, F:ml430-nat-fib-lt-fib-3582b881 |
-| 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted |
+| 2026-08-28 | fib-backlog | confirmed `Int.fib` absent from the kernel (shape_search, fresh build, declarations=2000); all 6 open integer-fibonacci facts blocked on a missing carrier, not attempted <!-- was-absent: Int.fib --> |
 | 2026-08-28 | int-bezout-witnesses | `Nat.xgcdAux`/`Nat.gcdA`/`Nat.gcdB`/`Int.gcdA`/`Int.gcdB` — extended Euclid as fuel-structural `Definition`s returning data |
 | 2026-08-28 | int-bezout-witnesses | `Int.gcd_eq_gcd_ab_witnesses` — Mathlib v4.30's Bézout at named computable witnesses, axiom-free; closes `F:ml430-int-gcd-eq-gcd-ab-63005aef` |
 | 2026-08-28 | nat-binomial | `Nat.choose_mono` via permuted `choose_le_choose`; closes `F:ml430-nat-choose-mono-a1af9c18`, kernel-lean, axiom-free; nat_prelude 447->448 |
@@ -3111,6 +3113,7 @@ re-run against the exact `checker_command`s above:
   `negOnePowDouble` via the `NameId`, not the string, so it still builds and
   is found unaffected): count **1**, exit **0**.
 - `Nat.succ_add` -> `Nat.succ_add_MUTATED` (`nat_prelude.rs:1909`, a
+<!-- was-absent: Nat.even_or_odd -->
   pre-existing dependency fact `F:nat-succ-add` this batch cites, not a new
   registration — this batch has no NEW `Nat.*` fact since `Nat.even_or_odd`
   does not exist): `theorem_dependency_inventory Nat.succ_add` count **0**,
@@ -6248,6 +6251,7 @@ marker so the record survives under the gate rather than being deleted:
 | `docs/research/09-decisions/adr-0519-the-real-lattice-is-defined-on-the-representation-and-is-one-lipschitz.md:127` | `Rat.abs` | exists |
 
 `Rat.abs` alone was independently written as a live "still does not exist"
+<!-- was-absent: Rat.abs -->
 claim in **three separate documents** — none aware of the other two. None of
 these were caught by any existing gate; `check-absence-claims.py` did not
 exist to catch them until today, and none had a `was-absent:` marker before
@@ -6855,6 +6859,54 @@ genuinely new general helpers — `le_shift` (the linear shuffle
 to `|v − u| ≤ q` through the two-sided form, since
 `Equiv (abs (neg x)) (abs x)` is deliberately absent) — are candidates for
 promotion if a third consumer appears.
+
+**Your lane's block (`DONE this pass`, gate-hygiene, 2026-09-04).**
+
+**(A) `check-absence-claims.py`.** Measured RED on main: 206 bare
+named claims (budget 122), 2 EXPIRED (`Rat.prodRange` landed `68f452c23`
+2026-09-02, `Nat.factorization` landed `8b5fbe799` 2026-08-25) — both
+retired-as-present with the landing commit named in the surrounding prose
+and the marker flipped `absent:` -> `was-absent:`. Both live in files this
+lane does not own (`277-cas-multivariate.md`, `316-queue-sweep.md`).
+
+Bare count brought from 206 to 150 (56 sites annotated: 37 `was-absent:`
+retired-because-present, 17 `absent:` still-genuinely-absent, and 2 sites
+carrying BOTH — one name resolved present, one still absent, in the same
+unit — see the report for the full per-site list) by hand-verifying each candidate
+against a fresh `kernel_declaration_projection` (32,935 rows) rather than
+bulk-annotating. Two markers were caught and corrected mid-pass: `Nat.ModEq`
+resolves present only via SPELLING NORMALIZATION to the kernel's lowercase
+`Nat.modEq` — a naming-convention mismatch, not a landing event — so those
+two sites carry `was-absent:` with that note rather than `absent:`, which
+would have gone EXPIRED. <!-- was-absent: Nat.ModEq --> **Still 28 over budget (150 vs 122).** The
+remaining bare sites are, by sampling, dominated by three unfixable-by-marker
+shapes: (1) a THREE-segment name (a member under a namespace member) where
+`DECL_RE` truncates to a present two-segment prefix, so the harvested
+candidate is present even though the real, longer subject is not; (2) a
+claim scoped to one BUILD-ORDER POSITION or to a FOREIGN import stream,
+where the kernel-wide declaration is present today and a marker would
+misattribute the claim; (3) sentence-level candidate harvest citing a
+PRESENT declaration as evidence next to an unrelated gap elsewhere in the
+same sentence. Gate is registered in `scripts/check.sh:384`
+(`step absence-claims`); it is NOT in `hooks/pre-push` — recommend against
+adding it there un-gated, since it needs a fresh `--release`
+`kernel_declaration_projection` build (multi-minute) on every push, and
+`check.sh`/`just check` already run it once per aggregate pass.
+
+**(B) Stale `creal_point.rs`/`creal_point_tests.rs` sqrt-absence
+comments.** Corrected 9 doc-comment sites (Rust comments only, no code, no
+declarations) claiming "this kernel has no `CReal.sqrt`" or "the norm form
+is not expressible/unreachable here" — false since `CReal.sqrt` landed
+`b10f4ccb1` 2026-08-26 and the unsquared Cauchy-Schwarz/triangle inequality
+now exist as `Metric.CPoint.dotLeSqrtMul`/`distTriangle` in `metric.rs`
+(`b34e2dbd7`, 2026-09-04). `crates/axeyum-lean-kernel/src/creal_point.rs`
+already carried one self-correcting note (`CPointPrelude::norm`'s own doc:
+"several doc comments above still say it does not [exist], and they are
+stale") — this pass is that correction. `cargo check -p axeyum-lean-kernel`,
+`cargo fmt --all --check`, and `RUSTDOCFLAGS="-D warnings" cargo doc -p
+axeyum-lean-kernel --no-deps` (pre-existing unrelated failures in
+`ring/nat.rs`/`tactic.rs`, confirmed via `git diff --stat` those files are
+untouched) all green on the touched files.
 
 **Your lane's block (`DONE for this slice`, ratint, 2026-08-27).**
 
@@ -8458,6 +8510,7 @@ in scope (`creal/integral.rs`, `creal/inventory/integral.rs`, `creal.rs`,
 **Your lane's block (`WIP`, pi-r2d, 2026-08-28).** Re-implemented items 3-4
 after `a313345bf`'s revert (pi-r2c's attempt hit 616s/5.9GB and climbing on
 `creal_prelude_builds`, killed). Item 3 (`CReal.cosWideSeriesConverges`) is
+<!-- was-absent: CReal.converges_of_abs_diff_le -->
 byte-identical to the reverted code — it already used
 `CReal.converges_of_abs_diff_le`, which now exists (landed by the `cw-bridge`
 lane after `pi-r2b` characterised item 3 as blocked on it). Item 4
@@ -10339,6 +10392,7 @@ Closed, forming one dependency chain:
   plus the already-proved `Nat.fib_mono`.
 
 Not attempted: `Nat.fastfib_eq` (needs a `Nat.fastFib` fast-doubling
+<!-- absent: Nat.fastfib_eq, Nat.fastFib -->
 definition that does not exist — same "needs a carrier" shape as the Int
 family, smaller); `Nat.le_fib_self` / `Nat.le_fib_add_one` (a second,
 independent chain — sized but not started, see below); the
@@ -11894,6 +11948,7 @@ hand-off yesterday" warning):
   real but narrower than stated: defining `Int.Odd`/`Int.Even` (a small
   slice) unblocks a genuinely cheap proof.
 - `Nat.fastfib_eq`, the two `Int.fib_two_mul*` facts — untouched, blocked on
+<!-- absent: Nat.fastfib_eq, Nat.fastFib -->
   `Nat.fastFib` / `Int.fib_add` respectively as the brief described; not
   re-investigated this pass.
 
@@ -12224,6 +12279,7 @@ outside `gcd.rs` + one `IntPrelude` field + one build-order line. Verified:
   Building that generality is a real, separate piece of work, not a
   rearrangement of what exists.
 - `F:ml430-int-gcd-div-gcd-div-gcd-2db608dc` (`Int.gcd_div_gcd_div_gcd`) —
+<!-- was-absent: Int.gcd_div -->
   the divisor here (`↑(i.gcd j)`) is always `≥ 0`, so the negative-divisor gap
   above does NOT block it; Mathlib itself derives this fact as a one-line
   corollary of `Int.gcd_div`, which we do not have. I worked out an
@@ -12464,6 +12520,7 @@ prior lane named:
    unnamed step anywhere covers it.
 
 2. **`Int.gcd_div` itself does not exist even for a POSITIVE divisor**,
+<!-- was-absent: Int.gcd_div -->
    which the prior lane's note did not surface (it only discussed the
    negative-divisor gap, on the implicit assumption the positive case was
    already available to build on). Grepped `int_prelude.rs` and every
@@ -12926,6 +12983,7 @@ not hand-counted).
 ## What's still needed for the other two facts
 
 - **`F:ml430-nat-coprime-of-lt-minfac-0f79bdba`** (`m != 0 -> m < n.minFac ->
+<!-- was-absent: Nat.minFac -->
   n.Coprime m`) needs `Nat.minFac` as a COMPUTABLE definition with defining
   equations, which does not exist. `Nat.exists_prime_dvd`/
   `Nat.least_divisor_search` only give an EXISTENCE proof of a prime
@@ -17526,6 +17584,7 @@ ones enumerated above, not the final composition.
 ## Commits (this lane)
 
 1. `wip(nat): bit_order.rs scaffold -- Nat.self_lt_two_pow/self_lt_two_pow_add/lt_of_testBit, NOT yet proved`
+<!-- was-absent: Nat.self_lt_two_pow -->
    -- new file, dispatcher wiring, three `NameId` fields, no-op body.
    Landed within the first ten tool calls per the standing rule.
 2. `feat(nat): Nat.self_lt_two_pow, Nat.self_lt_two_pow_add -- admitted, axiom-free`
@@ -18443,6 +18502,7 @@ to `theorem_names`.
 ## Commits (this lane)
 
 1. `wip(nat): Nat.xor_ne_zero_iff -- NameId field only, not yet declared` —
+<!-- was-absent: Nat.xor_ne_zero_iff -->
    the `p.xor_ne_zero_iff` NameId field, landed within the first ten tool
    calls, before the theorem itself compiled.
 2. `feat(nat): Nat.xor_ne_zero_iff -- last of the four xor_trichotomy sub-targets`
@@ -19699,9 +19759,13 @@ actually decided the design:
 3. A general `Nat → Nat` exponent vector avoids the nesting but needs a
    product-over-range: a degree-2 monomial in 8 variables unfolds to an
    eight-factor product with **six `Rat.one`s**, each a `mul_one` rewrite. At
-   24 monomials that is ~150 rewrites of pure padding, and `Rat.prodRange` does
-   not exist, so it would also mean a new `Definition` plus its equations.
-   <!-- absent: Rat.prodRange -->
+   24 monomials that is ~150 rewrites of pure padding. This obstacle is
+   RETIRED-AS-PRESENT: `Rat.prodRange` landed 2026-09-02
+   (`68f452c23`, "feat(rat): Rat.prodRange and Rat.sumMaps, the two
+   aggregates obligation 1 needs"), so the new `Definition` this step named
+   as missing now exists; whether it is actually wired into this obligation
+   is a separate, unverified question.
+   <!-- was-absent: Rat.prodRange -->
 4. The `polyEval` design principle is **preserved exactly**: term count,
    variable support and every exponent come from the translator, and nothing in
    the kernel ever computes a degree or a support.
@@ -25404,6 +25468,7 @@ type-comparing ranker; it is not proposed for un-archiving.
 | --- | --- |
 | `F:ml430-int-le-elim-efa70bfa` | Statement is a `Nat.le_intro`-style CPS elimination principle (`a <= b -> forall P, (forall n : Nat, a + n = b -> P) -> P`). No declaration of that shape exists; the ranker's top pick is `Nat.le_intro` itself, which is the direct 3-hypothesis witness form, not the CPS eliminator. Same three constants (`add`, `eq`, `le`), completely different arity and structure. |
 | `F:ml430-nat-dvd-add-iff-left-332cbe04` | Needs `k \| n -> (k \| m <-> k \| (m + n))` with hypothesis on `n`. The only candidate, `Nat.dvd_add_iff_right`, is `x0∣x1 -> (x0∣x2 <-> x0∣(x1+x2))`; assigning `x1 = n` to match the hypothesis forces the conclusion to `k∣(n+m)`, not `k∣(m+n)`. `Nat.add` argument order, not commuted in the type. `Nat.dvd_add_iff_left` does not exist (checked directly against the snapshot). |
+<!-- was-absent: Nat.dvd_add_iff_left -->
 | `F:ml430-nat-dvd-mul-left-a1a8a4b8` | Needs `a ∣ b*a` (unconditional). Only candidate is `Nat.dvd_mul : x0 ∣ (x0*x1)`, i.e. `a ∣ a*b` -- multiplication order swapped, and unlike the case above there also isn't a hypothesis to make room for a different variable assignment. |
 | `F:ml430-nat-dvd-mul-left-of-dvd-200e20a4` | Needs `a∣b -> forall c, a ∣ c*b`. Only candidate is `Nat.dvd_mul_right_of_dvd : x0∣x1 -> x0∣(x1*x2)`, i.e. `a∣b -> a∣(b*c)` -- same swapped order. |
 
@@ -26355,9 +26420,13 @@ would close.** All three are stated for GENERAL `a, b` (not assumed
 coprime). `totient_dvd_of_dvd` and `totient_gcd_mul_totient_mul` need the
 formula applied to shared prime-power structure between `a` and `b` — i.e.
 multiplicativity extended via a full prime-factorization / arithmetic-function
-framework, which does not exist in this kernel (no `Nat.factorization`,
-no general multiplicative-function machinery, no unique-factorization
-induction). <!-- absent: Nat.factorization --> `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
+framework. The named-declaration part of this claim is RETIRED-AS-PRESENT:
+`Nat.factorization` landed 2026-08-25 (`8b5fbe799`, "feat(nat): existence
+half of the Fundamental Theorem of Arithmetic"), before this status file was
+written, so it is not the missing piece; general multiplicative-function
+machinery and a unique-factorization induction principle are still not
+verified to exist here and this file does not check them.
+<!-- was-absent: Nat.factorization --> `eq_or_eq_of_totient_eq_totient` needs that plus a genuine
 classification argument. `301` names this explicitly ("further work beyond
 the coprime case") and neither prior lane attempted it. I did not either —
 sizing it honestly, it is at minimum comparable to the entire `287`→`313`
@@ -28611,6 +28680,7 @@ and a new fuel induction comparing `logAux a f n` against `logAux b g n` for
 comparable in size to `log_aux_mono`, not blocked by kernel capability.
 
 **`F:ml430-nat-log2-eq-log-two-28085932` (`n.log2 = Nat.log 2 n`) — `Nat.log2`
+<!-- was-absent: Nat.log2 -->
 does not exist in this kernel at all.** It is Lean CORE (not Mathlib), and
 its real definition is well-founded recursion on a `log2`-style measure —
 structurally the same shape CLAUDE.md's `binaryRec` correction covers: a FUEL
@@ -29478,6 +29548,7 @@ almost line-for-line since `clog`'s guard nesting is simpler). Not
 attempted here for lack of remaining budget, not for lack of a route.
 
 **`F:ml430-nat-log2-eq-log-two-28085932` (`n.log2 = Nat.log 2 n`) —
+<!-- was-absent: Nat.log2 -->
 `Nat.log2` does not exist in this kernel.** Unchanged from the prior
 handoff's assessment: it is Lean CORE (not Mathlib), defined by
 well-founded recursion on a `log2`-style measure with a DEPENDENT motive.
@@ -32077,6 +32148,7 @@ standing in its place, so it is a trade rather than a dominance:
 Mathlib's `IsCompact.exists_isMaxOn` proves EVT for an arbitrary compact subset
 of an arbitrary topological space and we prove nothing positive at all.
 `creal/supremum.rs` already says `CReal.supOn` is "still not landed"; nothing in
+<!-- was-absent: CReal.supOn -->
 the ledger or in `07-the-cost-model-and-pareto-position.md` records that EVT is
 being cited as a dominance example while its row 1 is missing.
 
@@ -37241,6 +37313,8 @@ them in the kernel's own vocabulary is what made the screen honest: this kernel
 declares no `Nat.Prime`, `Nat.Coprime`, `Nat.ModEq` or `Ne` — primality is
 spelled as an `And`, coprimality as `Nat.gcd a b = 1`, congruence as
 `Nat.modEq`. Re-asked, every other row is absent by shape with a live positive
+<!-- absent: Nat.exists_eq_two_pow_mul_odd -->
+<!-- was-absent: Nat.ModEq -- spelling-normalizes to the kernel's lowercase `Nat.modEq`, cited two lines above as the existing spelling; not a landing event, a naming-convention mismatch -->
 control, including Euler's theorem (`Nat.ModEq.pow_totient`: absent, and the 19
 `Nat.totient` theorems are multiplicativity/parity/divisibility, none a
 congruence) and `Nat.exists_eq_two_pow_mul_odd` (absent; the nearest,
@@ -40030,6 +40104,7 @@ doc comment). `Rat.pow_add` matches `Alg.pow_add(Rat.commMulMonoid)` by full
 `def_eq` — stronger, because `Alg.npow` and `Rat.pow` are themselves
 `def_eq` at symbolic arguments (measured, not the ADR-1578 `detR`/`Rat.det`
 one-value case). Two named absences worth recording: `Nat.mul_left_cancel`
+<!-- absent: Nat.mul_left_cancel, Int.neg_neg -->
 doesn't exist under that name (only the CONDITIONAL `..._of_pos`, since
 `Nat`'s multiplicative monoid has no inverse — this theorem does not
 generalize it); `Int.neg_neg` is a private Rust HELPER in `gcd.rs`, never a
@@ -43956,6 +44031,7 @@ kind.
 **Findings — extraction was wrong, not merely unaudited:**
 
 1. `F:nat-bitwise-bit` extracted `Nat.bitwise_bit` — no such declaration.
+<!-- was-absent: Nat.bitwise_bit -->
    `evidence[].kernel_declaration` already independently named the real
    subject, `Nat.bitwise_bit'` (primed; the extraction regex excludes
    apostrophes on purpose, so it can never find a primed name). Its rendered
@@ -45378,8 +45454,10 @@ of `B` with coefficients `A r k`, by `Rat.det_row_multilinear` once per row.
 Measured, not estimated:
 
 - `Rat.sumMaps` does not exist. `Int.sumMaps` is the template at **1,003
+<!-- was-absent: Rat.sumMaps -->
   lines** plus a **354-line** evaluation-test module.
 - `Rat.prodRange` does not exist either (`grep prodRange rat_prelude.rs`
+<!-- was-absent: Rat.prodRange -->
   returns nothing; only `Int.prodRange` exists). The coefficient of each index
   map is a PRODUCT over rows, so it is needed too.
 - The expansion itself is a cursor induction over rows whose intermediate
@@ -45755,6 +45833,7 @@ than carried from ADR-1115, because that one predates ADR-1160's finding that
 R12 cannot see a quantified defining equation.
 
 Also recorded: `shape_search --concl <Const>` indexes the conclusion HEAD, so
+<!-- was-absent: Nat.countRange -->
 `--concl Nat.countRange` is ABSENT despite 21 matching declarations. Three of
 this lane's absence checks proved nothing until re-run with `--const`.
 
@@ -53665,6 +53744,7 @@ at `46bc65cc4`**:
     candidates, fewer than the 10 the refill takes
 
 `Mathlib.Data.Nat.Find`'s 32 rows now screen as 17 blocked on `Nat.find` and
+<!-- absent: Nat.find -->
 **15 blocked by the divergence registry**, which commit `a3da5621c`
 (ADR-1415's module-doc sweep) widened. ADR-1420 recorded this same command
 exiting 0 with `entries=460` on `a6c531eab`, so it went red between those two

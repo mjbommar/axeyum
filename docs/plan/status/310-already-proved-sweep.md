@@ -51,6 +51,7 @@ type-comparing ranker; it is not proposed for un-archiving.
 | --- | --- |
 | `F:ml430-int-le-elim-efa70bfa` | Statement is a `Nat.le_intro`-style CPS elimination principle (`a <= b -> forall P, (forall n : Nat, a + n = b -> P) -> P`). No declaration of that shape exists; the ranker's top pick is `Nat.le_intro` itself, which is the direct 3-hypothesis witness form, not the CPS eliminator. Same three constants (`add`, `eq`, `le`), completely different arity and structure. |
 | `F:ml430-nat-dvd-add-iff-left-332cbe04` | Needs `k \| n -> (k \| m <-> k \| (m + n))` with hypothesis on `n`. The only candidate, `Nat.dvd_add_iff_right`, is `x0∣x1 -> (x0∣x2 <-> x0∣(x1+x2))`; assigning `x1 = n` to match the hypothesis forces the conclusion to `k∣(n+m)`, not `k∣(m+n)`. `Nat.add` argument order, not commuted in the type. `Nat.dvd_add_iff_left` does not exist (checked directly against the snapshot). |
+<!-- was-absent: Nat.dvd_add_iff_left -->
 | `F:ml430-nat-dvd-mul-left-a1a8a4b8` | Needs `a ∣ b*a` (unconditional). Only candidate is `Nat.dvd_mul : x0 ∣ (x0*x1)`, i.e. `a ∣ a*b` -- multiplication order swapped, and unlike the case above there also isn't a hypothesis to make room for a different variable assignment. |
 | `F:ml430-nat-dvd-mul-left-of-dvd-200e20a4` | Needs `a∣b -> forall c, a ∣ c*b`. Only candidate is `Nat.dvd_mul_right_of_dvd : x0∣x1 -> x0∣(x1*x2)`, i.e. `a∣b -> a∣(b*c)` -- same swapped order. |
 
