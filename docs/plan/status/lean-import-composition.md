@@ -112,6 +112,15 @@ rules it had deleted.
   re-derives all seven imported facts, is registered in **neither** gate and is
   run only by the facts' own `checker_command`s.
 
+## One thing the merger must do
+
+**`python3 scripts/gen-plan.py` has not been run, by instruction**, so
+`gen-plan.py --check` exits 1 and `scripts/check-merge-hygiene.sh` therefore
+reports `MERGE_HYGIENE|FAILED`. **This file is the entire cause** — measured by
+moving it aside and re-running the gate, which then exits 0, and back. Nothing
+else in this lane's diff touches `PLAN.md`. Run the generator and commit
+`PLAN.md` with it.
+
 ## Red found and NOT fixed
 
 - `python3 scripts/tests/mutation_controls.py --check-anchors` exits **1** with
@@ -128,6 +137,20 @@ rules it had deleted.
   divergences as accepted, which is not this lane's call.
 - The three Lean gates `14-lean-lang.md` already records as red on `main` since
   `792224e73` were not re-checked and were not touched.
+
+## Red found and FIXED in passing
+
+- `scripts/landmark-facts-baseline.json` was **stale on `main`**: 7 facts landed
+  without a bump, so `count-landmark-facts.py --check` measured 2,855/2,582
+  against a pin of 2,848/2,577 and exited 1. Recounted after merging main, as
+  CLAUDE.md requires of any merge touching a pinned count — `total` 2,848 →
+  2,855, `proved` 2,577 → 2,582, `landmark` → 1,521 (1,516 plus the 5 of the 7
+  new facts that are proved and curated). Whoever merges this should recount
+  again if more facts land first; do not increment.
+- `python3 scripts/validate-facts.py` is green after the merge at 2,855 facts /
+  0 errors. Note the headline number moved while this lane ran: **2,474 →
+  2,479** axiom-free on `kernel-lean`. ADR-1664 now says to read all three of
+  its numbers from the validator rather than from the document.
 
 ## How to re-measure
 

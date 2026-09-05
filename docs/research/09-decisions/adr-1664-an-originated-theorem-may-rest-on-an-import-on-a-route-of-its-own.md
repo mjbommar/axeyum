@@ -248,8 +248,11 @@ After, unchanged in its first clause and extended by one:
 > imported proof's axioms and the import route's three assumptions; and M
 > imports checked here but authored elsewhere, which are not results of ours.**
 
-Three numbers, three trust bases, no total across them. Today N = 2,474 (the
-originated `kernel-lean` facts with an empty footprint), K = 0, M = 7.
+Three numbers, three trust bases, no total across them. **Read all three from
+`python3 scripts/validate-facts.py`, never from here** — N moves with every
+landing, and it moved by 5 while this ADR was being written (2,474 at
+`08b97603b`, 2,479 an hour later). At the time of writing N = 2,479 originated
+`kernel-lean` facts with an empty footprint, K = 0, M = 7.
 
 ### What `check-fact-characterisation.py` does with the tier
 
