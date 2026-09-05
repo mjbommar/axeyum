@@ -450,6 +450,18 @@ pub struct TheoryLayerStats {
     pub theory_push_pop: Duration,
     /// Time inside 1-UIP conflict analysis (`CdclT::analyze_conflict`).
     pub conflict_analysis: Duration,
+    /// Time inside `TheorySolver::final_check` calls — the *complete* check at a
+    /// total Boolean assignment (ADR-1701). Zero for a theory that keeps the
+    /// trait default, whose `final_check` body does nothing.
+    pub theory_final_check: Duration,
+    /// Time inside `TheorySolver::explain` calls resolving deferred explanation
+    /// handles (ADR-1701). Zero for a theory that never emits a handle.
+    pub theory_explain: Duration,
+    /// Completed `TheorySolver::final_check` calls, i.e. the number of times the
+    /// Boolean search reached a total assignment of the active variables. `0`
+    /// distinguishes "never got that far" from "got there and the theory
+    /// accepted it".
+    pub final_checks: u64,
     /// Conflicts where the falsified clause traces to a theory
     /// `assert`/`propagate` inconsistency, as opposed to a purely Boolean
     /// (input-clause) conflict.
@@ -483,5 +495,7 @@ impl TheoryLayerStats {
             + self.theory_propagate
             + self.theory_push_pop
             + self.conflict_analysis
+            + self.theory_final_check
+            + self.theory_explain
     }
 }

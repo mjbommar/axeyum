@@ -75,7 +75,9 @@
 use std::cell::Cell;
 use std::time::{Duration, Instant};
 
-use crate::euf_egraph::{TheoryLit, TheorySolver};
+use crate::euf_egraph::{
+    ExplanationId, FinalCheckOutcome, PropagationQueue, TheoryExplanation, TheoryLit, TheorySolver,
+};
 use crate::layers::TheoryLayerStats;
 
 thread_local! {
@@ -246,6 +248,24 @@ enum Learn {
     Continue,
     /// The conflict was implied at level 0: UNSAT.
     Unsat,
+    /// A theory failed to resolve a deferred explanation handle it emitted
+    /// (ADR-1701). The search abandons with [`Outcome::Unknown`] — sound, never
+    /// a verdict.
+    Abort,
+}
+
+/// What [`CdclT::run_final_check`] decided at a total Boolean assignment
+/// (ADR-1701).
+enum FinalCheck {
+    /// The theory accepted the assignment: the search is `Sat`.
+    Sat,
+    /// The theory's conflict was implied at level 0: the search is `Unsat`.
+    Unsat,
+    /// The theory could not complete the check, or could not explain its own
+    /// conflict: the search degrades to `Unknown`.
+    Unknown,
+    /// The conflict was learned and the search backjumped: keep searching.
+    Continue,
 }
 
 /// A generic online CDCL(T) search over a CNF skeleton, driving any
@@ -351,6 +371,11 @@ pub struct CdclT {
     time_theory_push_pop: Duration,
     /// Time inside 1-UIP conflict analysis (`Self::analyze_conflict`).
     time_conflict_analysis: Duration,
+    /// Time inside `TheorySolver::final_check` calls (ADR-1701).
+    time_theory_final_check: Duration,
+    /// Time inside `TheorySolver::explain` calls resolving deferred explanation
+    /// handles (ADR-1701).
+    time_theory_explain: Duration,
     /// Conflicts whose falsified clause traces to a theory inconsistency
     /// (`Conflict::is_theory`), as opposed to a purely Boolean conflict.
     /// Counted unconditionally (a plain increment, not a clock read).
@@ -358,6 +383,27 @@ pub struct CdclT {
     /// Search decisions taken (`Self::pick_unassigned` choices). Counted
     /// unconditionally.
     decisions: usize,
+    /// Completed [`TheorySolver::final_check`] calls (ADR-1701). Counted
+    /// unconditionally; stays `0` for every theory keeping the trait default,
+    /// because the driver still calls it — the *default body* is what does
+    /// nothing. (It is counted so a diagnosis can tell "never reached a total
+    /// assignment" from "reached one and the theory accepted it".)
+    final_checks: usize,
+    /// Per variable, the **deferred** explanation handle behind its theory
+    /// propagation, when the theory chose not to materialise the reason
+    /// (ADR-1701). `reason[var]` is `None` exactly while this is `Some`;
+    /// `Self::reason_for` resolves it on first use and moves it into `reason`.
+    /// Cleared in lockstep with `reason` on backjump, so a handle never outlives
+    /// the theory state that justifies it.
+    deferred_reason: Vec<Option<ExplanationId>>,
+    /// The driver-owned propagation queue (ADR-1701), reused across every
+    /// propagation fixpoint iteration so a theory that overrides
+    /// `propagate_into` allocates nothing per call.
+    prop_queue: PropagationQueue,
+    /// Set when a theory could not resolve a handle it emitted. The search then
+    /// returns [`Outcome::Unknown`] — sound, never a verdict — rather than
+    /// treating a missing explanation as an empty clause.
+    explanation_unresolved: bool,
 }
 
 impl CdclT {
@@ -429,8 +475,14 @@ impl CdclT {
             time_theory_propagate: Duration::ZERO,
             time_theory_push_pop: Duration::ZERO,
             time_conflict_analysis: Duration::ZERO,
+            time_theory_final_check: Duration::ZERO,
+            time_theory_explain: Duration::ZERO,
             theory_conflicts: 0,
             decisions: 0,
+            final_checks: 0,
+            deferred_reason: vec![None; var_count],
+            prop_queue: PropagationQueue::new(),
+            explanation_unresolved: false,
         }
     }
 
@@ -469,6 +521,7 @@ impl CdclT {
         self.reason.push(None);
         self.reason_theory.push(false);
         self.reason_clause.push(None);
+        self.deferred_reason.push(None);
         self.activity.push(0.0);
         self.saved_phase.push(true);
         (variable, atom)
@@ -721,67 +774,158 @@ impl CdclT {
         Ok(())
     }
 
+    /// Materialises `explanation` into literals, resolving a deferred handle
+    /// through [`TheorySolver::explain`] (ADR-1701). `None` means the theory
+    /// could not resolve a handle it emitted: a theory bug, recorded so the
+    /// search degrades to [`Outcome::Unknown`] instead of learning from a
+    /// reason nobody can state.
+    fn resolve_explanation<T: TheorySolver>(
+        &mut self,
+        theory: &mut T,
+        explanation: TheoryExplanation,
+    ) -> Option<Vec<TheoryLit>> {
+        match explanation {
+            TheoryExplanation::Eager(lits) => Some(lits),
+            TheoryExplanation::Lazy(handle) => {
+                let resolved = if self.collect_layer_stats {
+                    let started = Instant::now();
+                    let resolved = theory.explain(handle);
+                    self.time_theory_explain += started.elapsed();
+                    resolved
+                } else {
+                    theory.explain(handle)
+                };
+                if resolved.is_none() {
+                    self.explanation_unresolved = true;
+                }
+                resolved
+            }
+        }
+    }
+
+    /// The reason clause of an implied literal, resolving a deferred theory
+    /// explanation on first use and caching it in `reason` (ADR-1701). `None`
+    /// only when a theory failed to resolve its own handle.
+    fn reason_for<T: TheorySolver>(&mut self, theory: &mut T, var: usize) -> Option<Vec<Lit>> {
+        if let Some(reason) = &self.reason[var] {
+            return Some(reason.clone());
+        }
+        let handle = self.deferred_reason[var]?;
+        let atom = self.theory_atom_for_var[var]
+            .expect("a deferred reason belongs to a theory-mapped variable");
+        let value = self.value[var].expect("a deferred reason belongs to an assigned variable");
+        let reason_lits = self.resolve_explanation(theory, TheoryExplanation::Lazy(handle))?;
+        let clause = self.theory_reason_clause(&reason_lits, TheoryLit { atom, value });
+        self.reason[var] = Some(clause.clone());
+        self.deferred_reason[var] = None;
+        Some(clause)
+    }
+
+    /// Registers the theory atoms created since the previous call (ADR-1701):
+    /// one appended, activated SAT variable each. A theory keeping the trait
+    /// default reports `0`, so this is a single comparison per fixpoint round.
+    fn register_new_atoms<T: TheorySolver>(&mut self, theory: &mut T) {
+        let fresh = theory.take_new_atoms();
+        for _ in 0..fresh {
+            let (variable, _atom) = self.add_theory_variable();
+            self.active[variable] = true;
+        }
+    }
+
     /// Applies sound theory propagations to the trail until fixpoint. Returns the
     /// learned theory-conflict clause on a theory conflict, else `Ok(())`.
     fn theory_propagate<T: TheorySolver>(&mut self, theory: &mut T) -> Result<(), Conflict> {
         loop {
-            let props = if self.collect_layer_stats {
+            self.register_new_atoms(theory);
+            // Take the driver-owned queue so `self` stays freely borrowable while
+            // the batch is applied; it goes back at the end of the iteration with
+            // its allocation intact (ADR-1701).
+            let mut queue = std::mem::take(&mut self.prop_queue);
+            queue.clear();
+            if self.collect_layer_stats {
                 let started = Instant::now();
-                let props = theory.propagate();
+                theory.propagate_into(&mut queue);
                 self.time_theory_propagate += started.elapsed();
-                props
             } else {
-                theory.propagate()
-            };
+                theory.propagate_into(&mut queue);
+            }
             let mut progress = false;
-            for prop in props {
+            let mut outcome = Ok(());
+            for (lit, explanation) in queue.drain() {
                 // Intra-batch deadline check (see `unit_propagate`): each
                 // applied propagation pays the theory's per-assert cost.
                 if self.timed_out() {
-                    return Ok(());
+                    break;
                 }
-                let Some(var) = self.theory_variable(prop.lit.atom) else {
+                let Some(var) = self.theory_variable(lit.atom) else {
                     continue;
                 };
                 if !self.active[var] {
                     continue;
                 }
                 match self.value[var] {
-                    Some(v) if v == prop.lit.value => {}
+                    Some(v) if v == lit.value => {}
                     Some(_) => {
                         // The theory entails the opposite of the current value: learn
-                        // ¬(reason ∧ current literal).
-                        let mut core = prop.reason.clone();
+                        // ¬(reason ∧ current literal). The reason is needed *now*, so
+                        // a deferred handle is resolved here.
+                        let Some(mut core) = self.resolve_explanation(theory, explanation) else {
+                            outcome = Ok(());
+                            break;
+                        };
                         core.push(TheoryLit {
-                            atom: prop.lit.atom,
-                            value: !prop.lit.value,
+                            atom: lit.atom,
+                            value: !lit.value,
                         });
-                        return Err(Conflict {
+                        outcome = Err(Conflict {
                             clause: self.theory_conflict_clause(&core),
                             is_theory: true,
                         });
+                        break;
                     }
                     None => {
-                        let reason_clause = self.theory_reason_clause(&prop.reason, prop.lit);
-                        if let Err(c) = self.assign(
+                        // A deferred reason is *not* resolved here — that is the
+                        // whole point of the handle. The variable is assigned with
+                        // no stored reason clause and the handle recorded beside
+                        // it; `Self::reason_for` materialises it only if conflict
+                        // analysis reaches this literal.
+                        let reason_clause = match &explanation {
+                            TheoryExplanation::Eager(reason) => {
+                                Some(self.theory_reason_clause(reason, lit))
+                            }
+                            TheoryExplanation::Lazy(_) => None,
+                        };
+                        let deferred = match explanation {
+                            TheoryExplanation::Eager(_) => None,
+                            TheoryExplanation::Lazy(handle) => Some(handle),
+                        };
+                        match self.assign(
                             theory,
                             var,
-                            prop.lit.value,
+                            lit.value,
                             Cause::Implied,
-                            Some(reason_clause),
+                            reason_clause,
                             true,
                         ) {
-                            return Err(Conflict {
-                                clause: self.theory_conflict_clause(&c),
-                                is_theory: true,
-                            });
+                            Ok(()) => {}
+                            Err(c) => {
+                                outcome = Err(Conflict {
+                                    clause: self.theory_conflict_clause(&c),
+                                    is_theory: true,
+                                });
+                                break;
+                            }
                         }
+                        self.deferred_reason[var] = deferred;
                         self.theory_propagations += 1;
                         progress = true;
                     }
                 }
             }
-            if !progress {
+            queue.clear();
+            self.prop_queue = queue;
+            outcome?;
+            if self.explanation_unresolved || self.timed_out() || !progress {
                 return Ok(());
             }
         }
@@ -822,11 +966,16 @@ impl CdclT {
     /// literal — the first UIP — remains. Returns the asserting clause (UIP at index
     /// 0, lower-level literals after), the backjump level, and whether the clause is a
     /// pure theory lemma (resolved through theory clauses only).
-    fn analyze_conflict(
+    /// Returns `None` when a deferred theory explanation could not be resolved
+    /// (ADR-1701): the caller then abandons the search as `Unknown`. It never
+    /// returns the empty asserting clause for that case, which would be a wrong
+    /// `unsat`.
+    fn analyze_conflict<T: TheorySolver>(
         &mut self,
+        theory: &mut T,
         conflict: &[Lit],
         seed_is_theory: bool,
-    ) -> (Vec<Lit>, usize, bool) {
+    ) -> Option<(Vec<Lit>, usize, bool)> {
         let mut seen = vec![false; self.var_count];
         let mut lower: Vec<Lit> = Vec::new();
         let mut path_count = 0_usize;
@@ -861,7 +1010,7 @@ impl CdclT {
             }
             if !found {
                 // Implied at level 0: the empty asserting clause (UNSAT).
-                return (Vec::new(), 0, all_theory);
+                return Some((Vec::new(), 0, all_theory));
             }
 
             let var = self.trail[index].0;
@@ -874,15 +1023,23 @@ impl CdclT {
                 learned.push(self.true_literal(var).negate());
                 learned.extend(lower);
                 let backjump = Self::backjump_level(&self.level, &learned);
-                return (learned, backjump, all_theory);
+                return Some((learned, backjump, all_theory));
             }
 
             all_theory = all_theory && self.reason_theory[var];
-            clause.clone_from(
-                self.reason[var]
-                    .as_ref()
-                    .expect("a current-level implied literal has a reason clause"),
+            // Resolving against this literal is the *only* moment its reason is
+            // needed, which is why a theory may hand the driver a handle instead
+            // of the literals (ADR-1701).
+            assert!(
+                self.reason[var].is_some() || self.deferred_reason[var].is_some(),
+                "a current-level implied literal has a reason clause"
             );
+            let Some(reason) = self.reason_for(theory, var) else {
+                // The theory could not resolve a handle it emitted. Abandon the
+                // search; never learn from a reason nobody can state.
+                return None;
+            };
+            clause = reason;
         }
     }
 
@@ -911,6 +1068,10 @@ impl CdclT {
             self.reason[var] = None;
             self.reason_theory[var] = false;
             self.reason_clause[var] = None;
+            // A deferred explanation handle is dropped in the same step the
+            // theory is popped past the level that justified it (ADR-1701), so a
+            // handle can never outlive the theory state behind it.
+            self.deferred_reason[var] = None;
             if cause == Cause::Decision {
                 if self.collect_layer_stats {
                     let started = Instant::now();
@@ -1009,13 +1170,16 @@ impl CdclT {
         if conflict.is_theory {
             self.theory_conflicts += 1;
         }
-        let (learned, backjump, is_theory_lemma) = if self.collect_layer_stats {
+        let analyzed = if self.collect_layer_stats {
             let started = Instant::now();
-            let result = self.analyze_conflict(&conflict.clause, conflict.is_theory);
+            let result = self.analyze_conflict(theory, &conflict.clause, conflict.is_theory);
             self.time_conflict_analysis += started.elapsed();
             result
         } else {
-            self.analyze_conflict(&conflict.clause, conflict.is_theory)
+            self.analyze_conflict(theory, &conflict.clause, conflict.is_theory)
+        };
+        let Some((learned, backjump, is_theory_lemma)) = analyzed else {
+            return Learn::Abort;
         };
         self.decay_activity();
         self.conflicts_since_restart += 1;
@@ -1159,6 +1323,10 @@ impl CdclT {
             theory_propagate: self.time_theory_propagate,
             theory_push_pop: self.time_theory_push_pop,
             conflict_analysis: self.time_conflict_analysis,
+            theory_final_check: self.time_theory_final_check,
+            theory_explain: self.time_theory_explain,
+            #[allow(clippy::cast_possible_truncation)]
+            final_checks: self.final_checks as u64,
             #[allow(clippy::cast_possible_truncation)] // Conflict/decision counts fit u64 in practice.
             theory_conflicts: self.theory_conflicts as u64,
             #[allow(clippy::cast_possible_truncation)]
@@ -1170,6 +1338,59 @@ impl CdclT {
             // (D2, 2026-09-05 architecture review); a concrete simplex-backed
             // theory would need to expose one before this can be `Some`.
             simplex_pivots: None,
+        }
+    }
+
+    /// Runs [`TheorySolver::final_check`] at a total Boolean assignment and turns
+    /// its answer into a search step (ADR-1701).
+    ///
+    /// The core of a final-check conflict is **not** required to name a
+    /// current-decision-level literal — a complete check looks at the whole
+    /// assignment, not at the literal that just arrived — so it cannot be handed
+    /// straight to 1-UIP analysis, whose path counter assumes the trigger-literal
+    /// invariant. This backjumps to the highest decision level the core names
+    /// first. An all-level-0 core then makes 1-UIP derive the empty asserting
+    /// clause, which is the correct `Unsat`.
+    fn run_final_check<T: TheorySolver>(&mut self, theory: &mut T) -> FinalCheck {
+        let outcome = if self.collect_layer_stats {
+            let started = Instant::now();
+            let outcome = theory.final_check();
+            self.time_theory_final_check += started.elapsed();
+            outcome
+        } else {
+            theory.final_check()
+        };
+        self.final_checks += 1;
+        let explanation = match outcome {
+            FinalCheckOutcome::Sat => return FinalCheck::Sat,
+            FinalCheckOutcome::Unknown => return FinalCheck::Unknown,
+            FinalCheckOutcome::Conflict(explanation) => explanation,
+        };
+        let Some(core) = self.resolve_explanation(theory, explanation) else {
+            return FinalCheck::Unknown;
+        };
+        if core.is_empty() {
+            // A conflict with no core names nothing to learn from; treating it as
+            // the empty clause would be a wrong `unsat`.
+            return FinalCheck::Unknown;
+        }
+        let clause = self.theory_conflict_clause(&core);
+        let trigger_level = clause
+            .iter()
+            .map(|lit| self.level[lit.var])
+            .max()
+            .unwrap_or(0);
+        if trigger_level < self.decision_level {
+            self.backjump_to(theory, trigger_level);
+        }
+        let conflict = Conflict {
+            clause,
+            is_theory: true,
+        };
+        match self.learn_and_backjump(theory, &conflict) {
+            Learn::Unsat => FinalCheck::Unsat,
+            Learn::Abort => FinalCheck::Unknown,
+            Learn::Continue => FinalCheck::Continue,
         }
     }
 
@@ -1190,8 +1411,12 @@ impl CdclT {
                 Ok(()) => {}
                 Err(conflict) => match self.learn_and_backjump(theory, &conflict) {
                     Learn::Unsat => return Outcome::Unsat,
+                    Learn::Abort => return Outcome::Unknown,
                     Learn::Continue => continue,
                 },
+            }
+            if self.explanation_unresolved {
+                return Outcome::Unknown;
             }
             if self.timed_out() {
                 return Outcome::Unknown;
@@ -1203,7 +1428,16 @@ impl CdclT {
                 continue;
             }
             match self.pick_unassigned() {
-                None => return Outcome::Sat,
+                // A *total* assignment of the active variables: the one moment a
+                // theory's complete check is due (ADR-1701). A theory keeping the
+                // trait default answers `Sat` here, so this is byte-identical to
+                // the previous unconditional `return Outcome::Sat`.
+                None => match self.run_final_check(theory) {
+                    FinalCheck::Sat => return Outcome::Sat,
+                    FinalCheck::Unknown => return Outcome::Unknown,
+                    FinalCheck::Unsat => return Outcome::Unsat,
+                    FinalCheck::Continue => continue,
+                },
                 Some(var) => {
                     self.decision_level += 1;
                     self.decisions += 1;
@@ -1222,8 +1456,10 @@ impl CdclT {
                             clause: self.theory_conflict_clause(&core),
                             is_theory: true,
                         };
-                        if let Learn::Unsat = self.learn_and_backjump(theory, &conflict) {
-                            return Outcome::Unsat;
+                        match self.learn_and_backjump(theory, &conflict) {
+                            Learn::Unsat => return Outcome::Unsat,
+                            Learn::Abort => return Outcome::Unknown,
+                            Learn::Continue => {}
                         }
                     }
                 }
