@@ -812,6 +812,92 @@ fn the_cross_terms_are_divisible_by_the_multiplier() {
     );
 }
 
+/// `Int.modEq_descent_cross_terms` states its two conjuncts in the order
+/// claimed — checked at FREE VARIABLES, because at the worked instance it
+/// cannot be checked at all.
+///
+/// **Measured 2026-09-05.** A mutant that transposed both the conjunction and
+/// its `And.intro` survived every other test in this file, 0 kills of 15. The
+/// reason is exact: at `(m,a,b,c,e) = (2,5,1,1,1)` the two conjuncts are
+/// `ModEq 2 6 0` and `ModEq 2 4 0`, both of which unfold to
+/// `Eq Int (emod _ 2) (emod 0 2)` and REDUCE to the same closed proposition
+/// `Eq Int 0 0` — so `And left right` and `And right left` are definitionally
+/// equal there and the concrete battery cannot separate them. This test is the
+/// repair, and it kills that mutant.
+#[test]
+fn the_cross_term_conjuncts_are_ordered_as_stated() {
+    let mut k = Kernel::new();
+    let p = build_int_prelude(&mut k).expect("Int prelude must build");
+    let mut d = IntDev::new(&mut k, p);
+
+    // `∀ m a b c e, 0 < m → ModEq m c a → ModEq m e b →
+    //   ModEq m (a*a + b*b) 0 → <conjunction>`, proved by the theorem itself.
+    let build = |d: &mut IntDev<'_>, v: &[ExprId], swap: bool| {
+        let (m, a, b, c, e) = (v[0], v[1], v[2], v[3], v[4]);
+        let zero = d.izero();
+        let pos_ty = d.ilt(zero, m);
+        let hc_ty = imodeq(d, m, c, a);
+        let he_ty = imodeq(d, m, e, b);
+        let aa = d.imul(a, a);
+        let bb = d.imul(b, b);
+        let norm = d.iadd(aa, bb);
+        let h0_ty = imodeq(d, m, norm, zero);
+
+        let ac = d.imul(a, c);
+        let be = d.imul(b, e);
+        let first = d.iadd(ac, be);
+        let ae = d.imul(a, e);
+        let bc = d.imul(b, c);
+        let second = d.isub(ae, bc);
+        let left = imodeq(d, m, first, zero);
+        let right = imodeq(d, m, second, zero);
+        let concl = if swap {
+            d.and(right, left)
+        } else {
+            d.and(left, right)
+        };
+
+        let ty = {
+            let s3 = d.arrow(h0_ty, concl);
+            let s2 = d.arrow(he_ty, s3);
+            let s1 = d.arrow(hc_ty, s2);
+            d.arrow(pos_ty, s1)
+        };
+
+        let pos_fv = d.fresh_fvar();
+        let hpos = d.kernel().fvar(pos_fv);
+        let hc_fv = d.fresh_fvar();
+        let hc = d.kernel().fvar(hc_fv);
+        let he_fv = d.fresh_fvar();
+        let he = d.kernel().fvar(he_fv);
+        let h0_fv = d.fresh_fvar();
+        let h0 = d.kernel().fvar(h0_fv);
+        let applied = d.const_app(
+            p.mod_eq_descent_cross_terms,
+            &[m, a, b, c, e, hpos, hc, he, h0],
+        );
+        let l3 = d.lam_fv(h0_fv, h0_ty, applied);
+        let l2 = d.lam_fv(he_fv, he_ty, l3);
+        let l1 = d.lam_fv(hc_fv, hc_ty, l2);
+        let proof = d.lam_fv(pos_fv, pos_ty, l1);
+        (ty, proof)
+    };
+
+    let stated_name = probe_name(&mut d, "cross_terms_shape");
+    let stated = d.int_theorem(stated_name, 5, &|d, v| build(d, v, false));
+    assert!(
+        stated.is_ok(),
+        "the first conjunct must be about a*c + b*e and the second about a*e - b*c"
+    );
+
+    let swapped_name = probe_name(&mut d, "cross_terms_shape_swapped");
+    let swapped = d.int_theorem(swapped_name, 5, &|d, v| build(d, v, true));
+    assert!(
+        swapped.is_err(),
+        "the transposed conjunction is a different statement and must not check"
+    );
+}
+
 /// Every declaration this module adds is present AND has an empty axiom
 /// footprint.
 ///
