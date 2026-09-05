@@ -205,6 +205,7 @@ fn binomial_rat_declarations_are_axiom_free() {
         g.binomial_expectation,
         g.binomial_variance,
         g.binomial_chebyshev,
+        g.fourth_moment_inequality,
     ];
     for name in names {
         assert!(
@@ -218,8 +219,8 @@ fn binomial_rat_declarations_are_axiom_free() {
     }
     assert_eq!(
         names.len(),
-        3,
-        "ADR-1631 declares 3 ℚ names; update the ADR if this moves"
+        4,
+        "ADR-1631 declares 4 ℚ names; update the ADR if this moves"
     );
 }
 

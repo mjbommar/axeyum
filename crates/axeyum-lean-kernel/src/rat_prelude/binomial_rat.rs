@@ -58,6 +58,7 @@ pub struct BinomialRatNames {
     pub binomial_expectation: NameId,
     pub binomial_variance: NameId,
     pub binomial_chebyshev: NameId,
+    pub fourth_moment_inequality: NameId,
 }
 
 /// Intern the three names under the `Rat` root.
@@ -68,6 +69,7 @@ pub(crate) fn intern_binomial_rat(k: &mut Kernel) -> BinomialRatNames {
         binomial_expectation: k.name_str(rat, "binomial_expectation"),
         binomial_variance: k.name_str(rat, "binomial_variance"),
         binomial_chebyshev: k.name_str(rat, "binomial_chebyshev"),
+        fourth_moment_inequality: k.name_str(rat, "fourth_moment_inequality"),
     }
 }
 
@@ -412,7 +414,124 @@ fn declare_binomial_chebyshev(
     d.declare_theorem(names.binomial_chebyshev, ty, value)
 }
 
-/// Declare the three `ℚ` binomial theorems.
+/// `Rat.fourth_moment_inequality : ∀ a X p n, IsDistribution p n → lt zero a
+/// → le ((a·a)·(a·a) · expectation (Rat.indicator ((a·a)·(a·a)) (fun k =>
+/// ((X k − μ)·(X k − μ))·((X k − μ)·(X k − μ)))) p n) (expectation (fun k =>
+/// …) p n)` — **the fourth-moment tail bound**, i.e.
+/// `P(|X − E X| ≥ a) ≤ E[(X − E X)⁴] / a⁴` in the multiplied-through form
+/// that needs no `Rat.inv`.
+///
+/// **This is the tail bound this lane could reach without an exponential.**
+/// The roadmap item asked for Hoeffding; the two obstructions are recorded
+/// in ADR-1631 and are structural, not effort:
+///
+/// 1. Hoeffding needs `E[∏_j f(X_j)] = ∏_j E[f(X_j)]`, which is a statement
+///    about a JOINT law over a product space. This development has one weight
+///    function over one index range — `probability.rs`'s own header says so —
+///    and `Rat.PairwiseUncorrelated` is the strictly weaker hypothesis it
+///    uses instead. There is no product distribution to state the identity
+///    over, and none can be built without a second index.
+/// 2. Hoeffding's lemma needs `exp` on the carrier the moments live on.
+///    `CReal.expFn` exists on ℝ, but `CReal.expFn_add` (the functional
+///    equation `e^{x+y} = e^x·e^y`, without which the product step is not
+///    even statable) does not — measured, not assumed.
+///
+/// So the tail bound that IS reachable is Markov at the fourth power, and
+/// this is it: `Rat.markov_constructed` at threshold `a⁴` against the
+/// summand `((X−μ)²)²`, whose nonnegativity is `Rat.sq_nonneg` applied to
+/// `(X−μ)²` rather than to `X−μ`, and whose threshold positivity is
+/// `Rat.mul_pos` twice. Nothing else is needed, and no hypothesis beyond the
+/// ones Markov already carries.
+///
+/// It is stated for an ARBITRARY `X` rather than for `sumVars`, because that
+/// is where its content is: the binomial specialisation is this theorem at
+/// `X := Rat.sumVars X m`, exactly as [`declare_binomial_chebyshev`] is
+/// `Rat.chebyshev_inequality` there.
+fn declare_fourth_moment_inequality(
+    d: &mut IntDev<'_>,
+    p: RatPrelude,
+    names: &BinomialRatNames,
+) -> Result<(), KernelError> {
+    let nat = d.nat_ty();
+    let carrier = rat_ty(d);
+    let fn_ty = d.arrow(nat, carrier);
+
+    let a_fv = d.fresh_fvar();
+    let a = d.kernel().fvar(a_fv);
+    let x_fv = d.fresh_fvar();
+    let x = d.kernel().fvar(x_fv);
+    let pf_fv = d.fresh_fvar();
+    let pf = d.kernel().fvar(pf_fv);
+    let n_fv = d.fresh_fvar();
+    let n = d.kernel().fvar(n_fv);
+
+    let hd_ty = is_distribution(d, p, pf, n);
+    let hd_fv = d.fresh_fvar();
+    let hd = d.kernel().fvar(hd_fv);
+    let zero_r = rzero(d, p);
+    let ha_ty = rlt(d, p, zero_r, a);
+    let ha_fv = d.fresh_fvar();
+    let ha = d.kernel().fvar(ha_fv);
+
+    let mu = expectation(d, p, x, pf, n);
+    // `fun k => ((X k - mu) * (X k - mu)) * ((X k - mu) * (X k - mu))`.
+    let quartic = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let xk = d.apply(x, &[k]);
+        let gap = rsub(d, p, xk, mu);
+        let sq = rmul(d, gap, gap);
+        let body = rmul(d, sq, sq);
+        d.lam_fv(k_fv, nat, body)
+    };
+
+    let a_sq = rmul(d, a, a);
+    let a_4 = rmul(d, a_sq, a_sq);
+
+    let hy = {
+        let k_fv = d.fresh_fvar();
+        let k = d.kernel().fvar(k_fv);
+        let klt_fv = d.fresh_fvar();
+        let klt_ty = d.lt(k, n);
+        let xk = d.apply(x, &[k]);
+        let gap = rsub(d, p, xk, mu);
+        let sq = rmul(d, gap, gap);
+        let nonneg = d.lemma(p.sq_nonneg, &[sq]);
+        let with_klt = d.lam_fv(klt_fv, klt_ty, nonneg);
+        d.lam_fv(k_fv, nat, with_klt)
+    };
+    let ha_sq = d.lemma(p.mul_pos, &[a, a, ha, ha]);
+    let ha_4 = d.lemma(p.mul_pos, &[a_sq, a_sq, ha_sq, ha_sq]);
+
+    let core = d.lemma(p.markov_constructed, &[a_4, quartic, pf, n, hd, hy, ha_4]);
+
+    let concl = {
+        let ind = d.const_app(p.indicator, &[a_4, quartic]);
+        let e_ind = expectation(d, p, ind, pf, n);
+        let lhs = rmul(d, a_4, e_ind);
+        let rhs = expectation(d, p, quartic, pf, n);
+        rle(d, p, lhs, rhs)
+    };
+    let ty = {
+        let with_ha = d.arrow(ha_ty, concl);
+        let with_hd = d.arrow(hd_ty, with_ha);
+        let with_n = d.pi_fv(n_fv, nat, with_hd);
+        let with_pf = d.pi_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.pi_fv(x_fv, fn_ty, with_pf);
+        d.pi_fv(a_fv, carrier, with_x)
+    };
+    let value = {
+        let with_ha = d.lam_fv(ha_fv, ha_ty, core);
+        let with_hd = d.lam_fv(hd_fv, hd_ty, with_ha);
+        let with_n = d.lam_fv(n_fv, nat, with_hd);
+        let with_pf = d.lam_fv(pf_fv, fn_ty, with_n);
+        let with_x = d.lam_fv(x_fv, fn_ty, with_pf);
+        d.lam_fv(a_fv, carrier, with_x)
+    };
+    d.declare_theorem(names.fourth_moment_inequality, ty, value)
+}
+
+/// Declare the four `ℚ` binomial/tail theorems.
 ///
 /// # Errors
 ///
@@ -426,6 +545,7 @@ pub(crate) fn declare_binomial_rat_all(
     declare_binomial_expectation(d, *p, &names)?;
     declare_binomial_variance(d, *p, &names)?;
     declare_binomial_chebyshev(d, *p, &names)?;
+    declare_fourth_moment_inequality(d, *p, &names)?;
     Ok(())
 }
 
