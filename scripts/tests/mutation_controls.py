@@ -2276,6 +2276,91 @@ SUITES["tactic-catalog"] = (
 #   test_a_healthy_scan_is_not_a_finding
 # They exist to stop the opposite failure: a rule so broad it rejects Mathlib's
 # deliberate pin, or every version string in the tree.
+# --------------------------------------------------------------------------
+# `complex-derivative` — the complex derivative on a disc
+# (`crates/axeyum-lean-kernel/src/complex/deriv.rs`, ADR-1642).
+#
+# Two of these mutants are the ones the lane brief named, adapted to what
+# actually landed: the brief asked for "Leibniz with one cross term dropped"
+# and "the CR equation with a sign flipped", and neither Leibniz nor
+# Cauchy–Riemann landed (ADR-1642 records both obstructions and their size).
+# The nearest live subjects are the SUM rule's error identity — which has the
+# same "the error of the combination is the combination of the errors" shape a
+# dropped cross term breaks — and `hasDerivative_neg`, which is the one landed
+# witness whose whole content is a SIGN.
+#
+# What the first two measure is worth naming, because it is not the tests.
+# `complex/ring.rs`'s `ring_law_proof` is a decision procedure that PANICS when
+# the two normal forms differ rather than handing the kernel a term to reject,
+# so a wrong error identity takes down `build_complex_prelude` and with it every
+# test in the module. That is a real guard and it is why the ℂ transcription is
+# cheap (ADR-1642, Decision 3), but the kill is a MASS kill and therefore weak
+# evidence about any individual test. The third mutant exists because of that:
+# it is the one with a predicted killed-set of a named size.
+#
+# MEASURED 2026-09-05, baseline 66 tests green:
+#
+#   dropped cross term (sum rule)  killed 63 of 66
+#   flipped sign (hasDerivative_neg)   killed 64 of 66
+#   InDisc argument order          killed EXACTLY 2, both named:
+#                                  `in_disc_unfolds_to_the_distance_from_the_centre`
+#                                  and `in_disc_argument_order_is_load_bearing`
+#
+# The two mass kills differ by one (63 vs 64) and the difference is informative
+# rather than noise: the sign mutant additionally kills
+# `the_ring_calculus_refuses_a_false_identity`, which builds its own kernel and
+# survives the sum mutant. Neither mass kill includes
+# `the_ring_calculus_proves_a_true_identity` or
+# `steps_table_matches_recorded_extraction`, which touch no prelude build.
+#
+# A FOURTH mutant was run once and is DELIBERATELY NOT LISTED, because listing
+# it would have been a category error rather than a finding. It set
+# `hasDerivative_const`'s modulus from `fun _ => 0` to `fun _ => 3` and
+# SURVIVED — 66 tests ran, none died. That is correct and no test should be
+# written to kill it: a constant's error term is `Equiv`-zero regardless of the
+# hypothesis, so EVERY modulus witnesses the spec and the literal `0` carries no
+# semantic content at all. It is an arbitrary witness choice, not a guard, and a
+# test pinning it would measure the author's typing rather than the mathematics.
+# Recorded here so nobody re-adds it as "an uncovered guard".
+# --------------------------------------------------------------------------
+
+SUITES["complex-derivative"] = (
+    "crates/axeyum-lean-kernel/src/complex/deriv.rs",
+    Cargo(
+        (
+            "--release",
+            "-j",
+            "4",
+            "-p",
+            "axeyum-lean-kernel",
+            "--lib",
+            "complex::complex_tests::",
+        ),
+        "complex-derivative",
+    ),
+    [
+        (
+            "the sum rule's error term keeps BOTH functions' values "
+            "(the brief's dropped-cross-term mutant)",
+            "            CExpr::add(fy_sym, gy_sym),",
+            "            fy_sym,",
+        ),
+        (
+            "hasDerivative_neg negates the DERIVATIVE too "
+            "(the brief's flipped-sign mutant)",
+            "            CExpr::neg(fpx_sym),",
+            "            fpx_sym,",
+        ),
+        (
+            "InDisc measures the point's distance FROM the centre, not the "
+            "centre's from the point",
+            "    let diff = zsub(d, p, z, c);",
+            "    let diff = zsub(d, p, c, z);",
+        ),
+    ],
+)
+
+
 SUITES["external-coupling"] = (
     "scripts/check-external-coupling.py",
     "scripts.tests.test_check_external_coupling",

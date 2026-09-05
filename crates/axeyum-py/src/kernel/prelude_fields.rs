@@ -4415,10 +4415,10 @@ pub(super) fn creal_sub(p: &CRealPrelude) -> Vec<(&'static str, Sub)> {
     vec![("rat", Sub::Rat(Box::new(p.rat)))]
 }
 
-/// The `ComplexPrelude` field table (150 names,
+/// The `ComplexPrelude` field table (168 names,
 /// 0 name lists, 1 sub-packages).
 ///
-/// 21 of the names come from ADR-1512 per-module registries and
+/// 39 of the names come from ADR-1512 per-module registries and
 /// carry a dotted field name (`pi.pi_le_four`); the rest are flat
 /// fields on `ComplexPrelude` itself.
 #[must_use]
@@ -4611,6 +4611,24 @@ pub(super) fn complex(p: &ComplexPrelude) -> Fields {
                 "poly.factor_quotient_succ_eq",
                 p.poly.factor_quotient_succ_eq,
             ),
+            ("deriv.abs_zero", p.deriv.abs_zero),
+            ("deriv.in_disc", p.deriv.in_disc),
+            ("deriv.has_derivative_on", p.deriv.has_derivative_on),
+            ("deriv.hd_mk", p.deriv.hd_mk),
+            ("deriv.hd_rec", p.deriv.hd_rec),
+            ("deriv.hd_modulus", p.deriv.hd_modulus),
+            ("deriv.hd_spec", p.deriv.hd_spec),
+            ("deriv.has_derivative_const", p.deriv.has_derivative_const),
+            ("deriv.has_derivative_id", p.deriv.has_derivative_id),
+            ("deriv.has_derivative_neg", p.deriv.has_derivative_neg),
+            ("deriv.has_derivative_add", p.deriv.has_derivative_add),
+            ("deriv.holomorphic_on", p.deriv.holomorphic_on),
+            ("deriv.holomorphic_deriv", p.deriv.holomorphic_deriv),
+            ("deriv.holomorphic_spec", p.deriv.holomorphic_spec),
+            ("deriv.holomorphic_const", p.deriv.holomorphic_const),
+            ("deriv.holomorphic_id", p.deriv.holomorphic_id),
+            ("deriv.holomorphic_neg", p.deriv.holomorphic_neg),
+            ("deriv.holomorphic_add", p.deriv.holomorphic_add),
             ("comm_ring_s", p.comm_ring_s),
         ],
         lists: Vec::new(),
