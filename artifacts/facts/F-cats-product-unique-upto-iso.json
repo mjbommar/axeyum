@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "F:cats-product-unique-upto-iso",
+  "title": "Two products of the same pair are isomorphic, by the isomorphism the universal property names",
+  "statement": "For any CatS.Category C, any two objects a and b, and any two products of them -- an apex p with projections pr1, pr2 and mediating family medP satisfying CatS.IsProduct, and an apex q with qr1, qr2, medQ satisfying it as well -- the two objects are isomorphic by CatS.Iso C p q (medQ p pr1 pr2) (medP q qr1 qr2). The isomorphism is NAMED, not asserted to exist: it is the pair of maps the two universal properties already compute. Unlike CatS.initial_unique, this is not free. Initiality gives med b ~ g for EVERY g, so both round trips collapse in two homTrans steps; a product's uniqueness clause takes two hypotheses, and discharging them for m := v . u needs the category's assoc and compCongr: pr1 . (v . u) ~ (pr1 . v) . u ~ qr1 . u ~ pr1, four steps, two obligations per side and two sides -- sixteen hom-equivalence steps, all of them assoc/compCongr bookkeeping.",
+  "formal": {
+    "language": "lean4",
+    "statement": "theorem CatS.product_unique_upto_iso : ((x0 : CatS.Category) -> ((x1 : CatS.Category.obj x0) -> ((x2 : CatS.Category.obj x0) -> ((x3 : CatS.Category.obj x0) -> ((x4 : CatS.Category.hom x0 x3 x1) -> ((x5 : CatS.Category.hom x0 x3 x2) -> ((x6 : ((x6 : CatS.Category.obj x0) -> ((x7 : CatS.Category.hom x0 x6 x1) -> ((x8 : CatS.Category.hom x0 x6 x2) -> CatS.Category.hom x0 x6 x3)))) -> ((x7 : CatS.Category.obj x0) -> ((x8 : CatS.Category.hom x0 x7 x1) -> ((x9 : CatS.Category.hom x0 x7 x2) -> ((x10 : ((x10 : CatS.Category.obj x0) -> ((x11 : CatS.Category.hom x0 x10 x1) -> ((x12 : CatS.Category.hom x0 x10 x2) -> CatS.Category.hom x0 x10 x7)))) -> ((x11 : CatS.IsProduct x0 x1 x2 x3 x4 x5 x6) -> ((x12 : CatS.IsProduct x0 x1 x2 x7 x8 x9 x10) -> CatS.Iso x0 x3 x7 (x10 x3 x4 x5) (x6 x7 x8 x9))))))))))))))",
+    "fragment": "none",
+    "free_symbols": [],
+    "kernel_theorem": "CatS.product_unique_upto_iso"
+  },
+  "epistemic_status": "proved",
+  "proof_route": "kernel-lean",
+  "external_status": "proved",
+  "depends_on": [
+    "F:cats-is-product",
+    "F:cats-initial-unique"
+  ],
+  "axiom_footprint": [],
+  "evidence": [
+    {
+      "id": "cats-product-unique-upto-iso-1",
+      "kind": "kernel-term",
+      "supports": "CatS.product_unique_upto_iso admits through the trusted Kernel::add_declaration gate as a Declaration::Theorem (read back from the environment, not asserted) with an empty Kernel::axiom_footprint, checked after Environment::contains. Its conclusion is CatS.Iso at the two mediating maps, and CatS.Iso is pinned in the same suite as BOTH round trips and refused as def_eq to the single round trip -- so the theorem cannot be satisfied by a split epi.",
+      "check_status": "checked",
+      "checker_command": "out=$(RUST_MIN_STACK=1073741824 cargo test -p axeyum-lean-kernel --lib --release category_setoid -- --test-threads=4 2>&1) && test \"$(printf \"%s\\n\" \"$out\" | grep -cE 'test result: ok\\. 41 passed; 0 failed')\" -ge 1",
+      "notes": "The pinned count is 41, RECOUNTED from the suite's own output. The tests that carry this fact are products_tests::the_product_layer_admits_and_is_axiom_free, products_tests::the_results_are_checked_theorems_and_the_rest_are_definitions and products_tests::iso_is_both_round_trips."
+    }
+  ],
+  "concept_refs": [],
+  "provenance": {
+    "date": "2026-09-05",
+    "established_by": "axeyum-lean-kernel nat_prelude::category_setoid::products, lane cat-products, ADR-1632 (roadmap W3-4).",
+    "source": "crates/axeyum-lean-kernel/src/nat_prelude/category_setoid/products.rs (declare_product_unique_upto_iso, round_trip); tests nat_prelude::category_setoid::products::products_tests::*."
+  },
+  "notes": "The sixteen-step count is the measured price of stating uniqueness for a LIMIT rather than for an initial object, and it is what a later lane should expect to pay again for equalisers and pullbacks: none of the sixteen steps mentions groups, sets or elements. The proof needs C.compCongr and C.assoc, which the module's shared Cat accessor does not carry (initiality never needs either), so this module reads them by selector index."
+}

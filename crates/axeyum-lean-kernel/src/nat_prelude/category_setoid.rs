@@ -118,9 +118,11 @@ use super::structures::{
 use super::structures_setoid::idx as algs;
 
 pub mod groups;
+pub mod products;
 
 pub(crate) use groups::GroupCatDeps;
 pub use groups::{GroupCatNames, GroupCatRecords};
+pub use products::ProductNames;
 
 // ---------------------------------------------------------------------------
 // Free-variable block, disjoint from 21_xxx..24_xxx (poly/module/subgroup) and
@@ -2706,6 +2708,7 @@ pub(crate) fn declare_category_setoid(
         CategoryNames,
         GroupCatRecords,
         GroupCatNames,
+        ProductNames,
     ),
     KernelError,
 > {
@@ -2761,6 +2764,23 @@ pub(crate) fn declare_category_setoid(
         ns,
     )?;
 
+    // ADR-1632 / roadmap W3-4: products and coproducts as universal
+    // properties, over BOTH category records, plus the instances.
+    let prod_names = products::declare_products(
+        k,
+        lg,
+        &recs,
+        group,
+        indiscrete,
+        products::ProductDeps {
+            is_grp_hom,
+            is_grp_hom_congr: grp_names.is_grp_hom_congr,
+            grp_hom: grp_names.grp_hom,
+            grp: grp_names.grp,
+        },
+        ns,
+    )?;
+
     Ok((
         recs,
         CategoryNames {
@@ -2788,6 +2808,7 @@ pub(crate) fn declare_category_setoid(
         },
         grp_recs,
         grp_names,
+        prod_names,
     ))
 }
 
@@ -2823,7 +2844,7 @@ mod category_setoid_tests {
         let deps = GroupCatDeps {
             map_one: extra.hom_map_one,
         };
-        let (recs, cs, _grp_recs, _gs) =
+        let (recs, cs, _grp_recs, _gs, _ps) =
             declare_category_setoid(k, &lg, &st.monoid, &st.group, deps)
                 .expect("the setoid-enriched category layer must admit");
         Fixture { lg, st, recs, cs }
