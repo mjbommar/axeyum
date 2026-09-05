@@ -395,6 +395,55 @@ class MergeHygieneControls(unittest.TestCase):
         self.assertIn("partition_edges=not-answerable", done.stdout)
         self.assertIn("|PASS", done.stdout)
 
+    # -- guard 10 (lane kernel-projection-regen, 2026-09-05): kernel ---------
+    #    dependency projection staleness
+    #
+    # The projection's `--check` needs a debug kernel build (tens of minutes)
+    # so this gate does not run it; it compares the committed
+    # `census.declarations` against the live `declarations=N` count guard 7's
+    # `shape_search` run already produced, forwarded through
+    # `check-shape-duplicates.py`'s stdout. Three outcomes, like guards 4, 8
+    # and 9.
+
+    def _write_projection(self, declarations: int) -> None:
+        self.write(
+            "artifacts/autogenesis/kernel-dependency-projection-v1.json",
+            f'{{"census": {{"declarations": {declarations}}}}}\n',
+        )
+
+    def test_a_stale_kernel_projection_fails_the_gate(self) -> None:
+        """Deleting the guard must kill exactly this test. Measured
+        2026-09-05: the committed projection indexed 1,644 declarations
+        against 4,260 live, and `check-merge-hygiene.sh` said
+        `generated=current` throughout because nothing here compared them."""
+        self._write_projection(1644)
+        done = self.run_gate({"check_shape_duplicates": "coverage: groups=[nat] declarations=4260 values_indexed=false build=1.0s"})
+        self.assertEqual(done.returncode, 1, _ctx(done))
+        self.assertIn("FAIL: kernel-dependency-projection staleness", done.stdout)
+        self.assertIn("committed declarations=1644", done.stdout)
+        self.assertIn("live shape_search", done.stdout)
+        self.assertIn("declarations=4260", done.stdout)
+
+    def test_a_current_kernel_projection_passes_within_tolerance(self) -> None:
+        """The positive control: a projection within the stated tolerance of
+        the live count must not block a merge, and must say so by name."""
+        self._write_projection(4258)
+        done = self.run_gate({"check_shape_duplicates": "coverage: groups=[nat] declarations=4260 values_indexed=false build=1.0s"})
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("kernel_projection=ok", done.stdout)
+        self.assertIn("|PASS", done.stdout)
+
+    def test_no_live_count_on_hand_is_not_answerable_not_a_failure(self) -> None:
+        """Guard 7's stub here carries no coverage line (its default tag), so
+        there is no live count to compare against -- even with a projection
+        file present, this must report not-answerable rather than stale or
+        current, and must not block."""
+        self._write_projection(1644)
+        done = self.run_gate()
+        self.assertEqual(done.returncode, 0, _ctx(done))
+        self.assertIn("kernel_projection=not-answerable", done.stdout)
+        self.assertIn("|PASS", done.stdout)
+
     # -- the aggregate ------------------------------------------------------
 
     def test_every_failure_is_reported_not_only_the_first(self) -> None:

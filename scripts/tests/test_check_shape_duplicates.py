@@ -123,6 +123,21 @@ class ParseVerdictCountTests(unittest.TestCase):
         self.assertIsNone(MODULE.parse_verdict_count("DUPLICATE  A -> B  X Y\n"))
 
 
+class ParseCoverageLineTests(unittest.TestCase):
+    """`parse_coverage_line` -- the ADR-1634 forwarding hook that lets
+    `check-merge-hygiene.sh` read the live declaration count from this
+    script's own stdout instead of re-running `shape_search`."""
+
+    def test_reads_the_coverage_line_from_the_real_fixture(self):
+        line = MODULE.parse_coverage_line(REAL_FIXTURE)
+        self.assertIsNotNone(line)
+        self.assertTrue(line.startswith("coverage: "))
+        self.assertIn("declarations=1845", line)
+
+    def test_absent_coverage_line_is_none(self):
+        self.assertIsNone(MODULE.parse_coverage_line("DUPLICATE  A -> B  X Y\n"))
+
+
 class LoadAllowlistTests(unittest.TestCase):
     def test_loads_a_valid_allowlist(self):
         with tempfile.TemporaryDirectory() as d:
@@ -259,6 +274,24 @@ class MainEndToEndTests(unittest.TestCase):
         code, out, _err = self.run_main(REAL_FIXTURE, REAL_ALLOWLIST)
         self.assertEqual(code, 0, out)
         self.assertIn("OK: 10", out)
+
+    def test_coverage_line_is_forwarded_on_success(self):
+        """ADR-1634: `check-merge-hygiene.sh` reads the live declaration count
+        from THIS script's stdout rather than re-running `shape_search`."""
+        code, out, _err = self.run_main(REAL_FIXTURE, REAL_ALLOWLIST)
+        self.assertEqual(code, 0, out)
+        self.assertIn("coverage: ", out)
+        self.assertIn("declarations=1845", out)
+
+    def test_coverage_line_is_forwarded_even_on_failure(self):
+        """The forwarding happens before the pass/fail verdict, so a caller
+        reading the live count does not need the duplicates check to pass."""
+        extra = REAL_FIXTURE.replace(
+            "verdict: DUPLICATE-GROUPS 10", "DUPLICATE  Foo -> Bar  New.One New.Two\nverdict: DUPLICATE-GROUPS 11"
+        )
+        code, out, _err = self.run_main(extra, REAL_ALLOWLIST)
+        self.assertEqual(code, 1)
+        self.assertIn("declarations=1845", out)
 
     def test_new_duplicate_exits_one(self):
         extra = REAL_FIXTURE.replace(
