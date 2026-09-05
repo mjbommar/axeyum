@@ -4,7 +4,7 @@
   "note": "Statement identity for every settled fact (S1 of the trusted-library safety roadmap, ADR-0763). Per fact: SHA-256 of formal.statement (the canonical kernel rendering for native lean4 rows), SHA-256 of the top-level reader-facing statement, and the kernel_theorem it names. A settled fact's statement is what the ledger CLAIMS; changing any of the three silently turns 'we proved X' into 'we proved something we then labelled X'. Changes require an amendment row naming both digests and a reason; superseded digests are preserved in each pin's history. `coverage_floor` is a ratchet the gate re-derives rather than trusts: slack is itself a violation, so a loosened floor is self-reverting. Written by `scripts/check-settled-fact-statements.py --write`; do not hand-edit.",
   "coverage_floor": {
     "max_unpinned_settled": 0,
-    "min_identity_bound": 2351,
+    "min_identity_bound": 2358,
     "max_header_exempt": 0
   },
   "amendments": [
@@ -3706,6 +3706,13 @@
       "kernel_theorem": "CReal.abs_nonneg"
     },
     {
+      "fact_id": "F:creal-abs-pow-le",
+      "language": "lean4",
+      "statement_sha256": "fccf9aaa1c2dc9ad7e622052cb98ca0c4440946c0d081eed819a8f10d9c56b90",
+      "prose_sha256": "125de0d43980296709d6622cbd926ec0d787280abd058f24fa3d76eb71b23737",
+      "kernel_theorem": "CReal.abs_pow_le"
+    },
+    {
       "fact_id": "F:creal-abs-sumrange-le",
       "language": "lean4",
       "statement_sha256": "83d0efcce696a839e603b002fbc9f3c14fe1bdfb59bbf56944f529d6c68983d6",
@@ -4394,6 +4401,13 @@
       "kernel_theorem": "CReal.cosSeriesPartial"
     },
     {
+      "fact_id": "F:creal-cosseriespartialispowerseries",
+      "language": "lean4",
+      "statement_sha256": "0fa43683f98a91a3cc5c344d0c226aae75e4b3c63c291f1853ef2794a205c811",
+      "prose_sha256": "8bd2acb7c07833aa45977c9d0e8957dcc436eed4552fdc113dee3c1eee82c0ff",
+      "kernel_theorem": "CReal.cosSeriesPartialIsPowerSeries"
+    },
+    {
       "fact_id": "F:creal-costerm",
       "language": "lean4",
       "statement_sha256": "0ebfbefb5a2c458a5e1d05cb97ee9fdf961ceca085119595f30f36b678d461b0",
@@ -4715,6 +4729,13 @@
       "statement_sha256": "984c0770a3d6fbe02e3ed1666b4d7e54d1bf8a8c704abbf505904dbd6f18d5d6",
       "prose_sha256": "0e0edfcff8943124aea3e6cc8e3f834715e29fa22cb640ab0ce0f88074e8355d",
       "kernel_theorem": "CReal.expSeriesPartialConverges"
+    },
+    {
+      "fact_id": "F:creal-expseriespartialispowerseries",
+      "language": "lean4",
+      "statement_sha256": "3d79181e9de8fa4499e886c2d7cf37131ca492a21012f6bb5e800c8321b8da29",
+      "prose_sha256": "e0fa1f0d4e36ac78c9aec4acaa90b316cbf5760dc20cc798043ac40ba90d078d",
+      "kernel_theorem": "CReal.expSeriesPartialIsPowerSeries"
     },
     {
       "fact_id": "F:creal-expterm-antitone",
@@ -6175,6 +6196,13 @@
       "kernel_theorem": "CReal.one_le_pow_of_one_le"
     },
     {
+      "fact_id": "F:creal-one-pow",
+      "language": "lean4",
+      "statement_sha256": "a3527577b40383084ddffe55c79a446d0cc59a0b63f68ee1d753fff70bff33c1",
+      "prose_sha256": "eab0266396bfd368a91480678c5f2dfc97afd6ea802833b8fda55568c19595b9",
+      "kernel_theorem": "CReal.one_pow"
+    },
+    {
       "fact_id": "F:creal-order-reflect-of-pos-deriv",
       "language": "lean4",
       "statement_sha256": "b68dd7737b88bf92c3816980a79c149cf5d23eb746c7c10a6df37f0ae9fd43da",
@@ -6465,6 +6493,20 @@
       "kernel_theorem": "CReal.pow_zero"
     },
     {
+      "fact_id": "F:creal-powerseriescauchywithinradius",
+      "language": "lean4",
+      "statement_sha256": "74dc68d7336151608a01d2854269b92f26c151402285604e5b5d9c81c8a3076c",
+      "prose_sha256": "d3d751b5fa8bdecd637081c3273abad1c6b4193bcdf4be839693adc1621f20b0",
+      "kernel_theorem": "CReal.powerSeriesCauchyWithinRadius"
+    },
+    {
+      "fact_id": "F:creal-powerseriesconvergeswithinradius",
+      "language": "lean4",
+      "statement_sha256": "c5a942c09dedce0012e0443ce25b1dd82398158218652f0d0014d4094163fe4b",
+      "prose_sha256": "46e9f603dc75ff91d7b8d58e949c84d9ae3151a1146bee5eebfe53428502c02c",
+      "kernel_theorem": "CReal.powerSeriesConvergesWithinRadius"
+    },
+    {
       "fact_id": "F:creal-powerseriesterm",
       "language": "lean4",
       "statement_sha256": "f774a4e89178d284b8fb27f9c0c06fdb7b5e53881124eb5907b372170b3e5e71",
@@ -6484,6 +6526,13 @@
       "statement_sha256": "3900f0c5619363c8e5c92b9f85b7b0844890b3f0333211883c09c8aaec9b51ed",
       "prose_sha256": "5ca981b8ebcc210dc00abb4cfe775f28c9c790a58068354f3a9d773ae16df02c",
       "kernel_theorem": "CReal.powerSeriesTerm_congr"
+    },
+    {
+      "fact_id": "F:creal-powerseriestermradiusbound",
+      "language": "lean4",
+      "statement_sha256": "8cecc3527feb53ab8985bd065244f6b2dce588f15867adce65b4ca1171c93c5c",
+      "prose_sha256": "d53ce0975ed69ad2ae784cf049141f697622fd49bc3e0905fc69444082814691",
+      "kernel_theorem": "CReal.powerSeriesTermRadiusBound"
     },
     {
       "fact_id": "F:creal-powerseriesuniformconvergeson",

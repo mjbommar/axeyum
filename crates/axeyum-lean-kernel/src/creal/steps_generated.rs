@@ -7128,7 +7128,6 @@ pub(super) const STEPS: &[BuildStep] = &[
     BuildStep {
         label: "power_series::declare_exp_series_partial_is_power_series",
         requires: &[
-            |p: CRealPrelude| p.creal,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,
@@ -7153,7 +7152,6 @@ pub(super) const STEPS: &[BuildStep] = &[
         requires: &[
             |p: CRealPrelude| p.cos_series_partial,
             |p: CRealPrelude| p.cos_term,
-            |p: CRealPrelude| p.creal,
             |p: CRealPrelude| p.equiv,
             |p: CRealPrelude| p.equiv_refl,
             |p: CRealPrelude| p.equiv_symm,

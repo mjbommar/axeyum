@@ -1226,7 +1226,7 @@
   "schema": "creal-declare-deps/v1",
   "source": {
     "creal_prelude_fields": 628,
-    "creal_rs_lines": 11590,
+    "creal_rs_lines": 11596,
     "fields_in_module_registries": 86,
     "functions_indexed": 1994,
     "module_registries": {
@@ -15892,7 +15892,6 @@
         "power_series.exp_series_partial_is_power_series"
       ],
       "declared_requires": [
-        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -15915,7 +15914,6 @@
         "power_series.exp_series_partial_is_power_series"
       ],
       "measured_requires": [
-        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -15933,7 +15931,7 @@
         "sum_range_congr"
       ],
       "module": "power_series",
-      "reachable_fns": 8,
+      "reachable_fns": 7,
       "run": "power_series::declare_exp_series_partial_is_power_series"
     },
     {
@@ -15943,7 +15941,6 @@
       "declared_requires": [
         "cos_series_partial",
         "cos_term",
-        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -15966,7 +15963,6 @@
       "measured_requires": [
         "cos_series_partial",
         "cos_term",
-        "creal",
         "equiv",
         "equiv_refl",
         "equiv_symm",
@@ -15982,7 +15978,7 @@
         "sum_range_congr"
       ],
       "module": "power_series",
-      "reachable_fns": 8,
+      "reachable_fns": 7,
       "run": "power_series::declare_cos_series_partial_is_power_series"
     }
   ]
