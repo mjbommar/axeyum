@@ -25,7 +25,8 @@ Phases (`--phase`, default `all`):
     export     rebuild the module from the rows that elaborated, compile it to
                an olean, and export one stream per target
     import     run the streams through `import_statement_ndjson`
-    classify   fold the three phases into the census JSON and its markdown
+    classify   fold the three phases into one typed verdict per row
+    publish    write the census artifact and its markdown summary
 
 Every phase writes its result under `--work`, so a later phase can be re-run
 without repeating an earlier one.
@@ -77,12 +78,24 @@ def goal_name(index: int) -> str:
 # Elaboration-side classes
 # --------------------------------------------------------------------------
 
-# The two classes this lane also ships a screen for (`scripts/screen-lean-surface-statement.py`).
+# Ordered most specific first; the last entry matches anything, so a row is
+# never left unclassified. The first three are the classes
+# `scripts/lean_surface_screen.py` screens for at extraction time.
+#
+# `coercion-variable-block` and `field-notation-variable-block` have the SAME
+# root cause -- statement-only extraction drops Mathlib's enclosing `variable`
+# block, so `↑a` and `a.choose` have no type to elaborate against -- but they are
+# counted separately because Lean's diagnostic differs and a reader must be able
+# to match a class back to the message it came from.
 ELABORATION_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("coercion-variable-block", re.compile(r"invalid coercion notation", re.IGNORECASE)),
     (
+        "field-notation-variable-block",
+        re.compile(r"[Ii]nvalid field notation.*is not known", re.DOTALL),
+    ),
+    (
         "elided-proof-glyph",
-        re.compile(r"unexpected (token|character)|[⋯✝]", re.IGNORECASE),
+        re.compile(r"[⋯✝]|don't know how to synthesize placeholder", re.IGNORECASE),
     ),
     ("unknown-identifier", re.compile(r"[Uu]nknown (constant|identifier)")),
     ("ambiguous-notation", re.compile(r"ambiguous", re.IGNORECASE)),
@@ -90,6 +103,7 @@ ELABORATION_CLASSES: tuple[tuple[str, re.Pattern[str]], ...] = (
         "instance-or-typeclass",
         re.compile(r"failed to synthesize|typeclass instance", re.IGNORECASE),
     ),
+    ("parse-error", re.compile(r"unexpected (token|character)|expected", re.IGNORECASE)),
     ("elaboration-other", re.compile(r".", re.DOTALL)),
 )
 
@@ -504,6 +518,231 @@ def phase_classify(args, rows: list[dict], work: pathlib.Path) -> dict:
     return {"classified": classified}
 
 
+def _counts(entries: list[dict], key) -> dict[str, int]:
+    return dict(sorted(collections.Counter(key(e) for e in entries).items()))
+
+
+def phase_publish(args, rows: list[dict], work: pathlib.Path) -> dict:
+    """Write the census artifact and its markdown summary.
+
+    HELD-OUT DISCIPLINE. `scripts/check-autogenesis-holdout-isolation.py` forbids
+    a new artifact from naming a held-out fact id, and held-out membership here
+    comes from the nursery manifests via `check-dispatchable-frontier.py`, never
+    from a hand list. So a held-out row contributes to every COUNT and appears in
+    no id list, and the number omitted is itself recorded -- an omission nobody
+    can see is indistinguishable from a row that was never measured.
+    """
+    classified = json.loads((work / "classified.json").read_text(encoding="utf-8"))
+    elaborate = json.loads((work / "elaborate.json").read_text(encoding="utf-8"))
+    export = json.loads((work / "export.json").read_text(encoding="utf-8"))
+    imported = json.loads((work / "import.json").read_text(encoding="utf-8"))
+    log = (work / "elaborate.log").read_text(encoding="utf-8")
+
+    def header(prefix: str) -> str:
+        for line in log.splitlines():
+            if line.startswith(prefix):
+                return line.split("=", 1)[1].strip()
+        return "?"
+
+    by_class: dict[str, dict] = {}
+    for entry in classified:
+        bucket = by_class.setdefault(
+            entry["class"],
+            {
+                "stage": entry["stage"],
+                "count": 0,
+                "by_fragment": collections.Counter(),
+                "by_status": collections.Counter(),
+                "held_out": 0,
+                "fact_ids": [],
+                "example_detail": entry["detail"][:200] if entry["detail"] else "",
+            },
+        )
+        bucket["count"] += 1
+        bucket["by_fragment"][entry["fragment"]] += 1
+        bucket["by_status"][entry["epistemic_status"]] += 1
+        if entry["held_out"]:
+            bucket["held_out"] += 1
+        else:
+            bucket["fact_ids"].append(entry["fact_id"])
+    for bucket in by_class.values():
+        bucket["by_fragment"] = dict(sorted(bucket["by_fragment"].items()))
+        bucket["by_status"] = dict(sorted(bucket["by_status"].items()))
+        bucket["fact_ids"] = sorted(bucket["fact_ids"])
+        bucket["held_out_ids_omitted"] = bucket["held_out"]
+
+    # The screen is run over THIS census's own population, not over the ledger,
+    # so the two sides of the agreement table share a denominator. Comparing a
+    # whole-ledger screen against a subset run reports a disagreement that is
+    # only a difference of population.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from lean_surface_screen import screen_statement
+
+    screen_flagged = sorted(
+        row["fact_id"] for row in rows if screen_statement(row["statement"])
+    )
+
+    # The largest class is only actionable if it says WHICH declaration stopped
+    # each row. `import_statement_ndjson` reports the first trusted declaration
+    # it meets, so this is a distribution over first blockers, not over all of
+    # them -- stated here rather than implied, because the two are different
+    # numbers and only one was measured.
+    blocking = collections.Counter()
+    blocking_kind = collections.Counter()
+    for record in imported["rows"].values():
+        match = re.search(
+            r'trusted declaration "([^"]+)" \((\w+)\)', record.get("display", "")
+        )
+        if match:
+            blocking[match.group(1)] += 1
+            blocking_kind[match.group(2)] += 1
+    elaboration_blockers = {
+        entry["fact_id"] for entry in classified if entry["stage"] == "elaboration"
+    }
+
+    document = {
+        "schema_version": 1,
+        "kind": "axeyum-statement-import-blocker-census",
+        "date": args.date,
+        "question": (
+            "For every pinned Mathlib v4.30 mirror in the ledger, does its "
+            "`formal.statement` cross into this kernel as a goal through the "
+            "statement-only import route, and if not, what typed reason stopped it?"
+        ),
+        "method": (
+            "Each statement becomes the value of a transparent `def _ : Prop` after "
+            "`import Mathlib`; official Lean 4.30.0 elaborates it; official "
+            "lean4export emits that definition's own declaration closure; "
+            "axeyum_lean_import::import_statement_ndjson admits or declines the "
+            "stream. No proof value is read and nothing is proved. Reproduce with "
+            "scripts/run-statement-import-blocker-census.py."
+        ),
+        "provenance": {
+            "axeyum_commit": args.commit,
+            "mathlib_commit": header("AXEYUM_COMMIT"),
+            "lean": header("AXEYUM_LEAN_VERSION"),
+            "lean4export_commit": args.lean4export_commit,
+            "elaboration_host": args.host,
+            "import_host": "this checkout",
+            "negative_control": elaborate["negative_control"],
+            "elapsed_seconds": {
+                "elaborate": elaborate["elapsed_s"],
+                "export": export["elapsed_s"],
+                "import": imported["elapsed_s"],
+            },
+        },
+        "population": {
+            "rows": len(classified),
+            "open": sum(1 for e in classified if e["epistemic_status"] == "open"),
+            "proved": sum(1 for e in classified if e["epistemic_status"] == "proved"),
+            "held_out": sum(1 for e in classified if e["held_out"]),
+            "by_fragment": _counts(classified, lambda e: e["fragment"]),
+            "by_row_kind": _counts(classified, lambda e: e["row_kind"]),
+            "holdout_authority": "scripts/check-dispatchable-frontier.py --json",
+        },
+        "outcome": {
+            "admitted": sum(1 for e in classified if e["class"] == "admitted"),
+            "blocked": sum(1 for e in classified if e["class"] != "admitted"),
+            "by_stage": _counts(classified, lambda e: e["stage"]),
+        },
+        "classes": {
+            name: bucket for name, bucket in sorted(by_class.items(), key=lambda kv: -kv[1]["count"])
+        },
+        "open_mirrors_only": {
+            "rows": sum(1 for e in classified if e["epistemic_status"] == "open"),
+            "by_class": _counts(
+                [e for e in classified if e["epistemic_status"] == "open"],
+                lambda e: e["class"],
+            ),
+        },
+        "proved_mirrors_control": {
+            "why": (
+                "The 499 proved mirrors are the positive control population: they "
+                "were already established here, so a blocker on one is a property "
+                "of the ROUTE and never of the proposition's difficulty."
+            ),
+            "rows": sum(1 for e in classified if e["epistemic_status"] == "proved"),
+            "by_class": _counts(
+                [e for e in classified if e["epistemic_status"] == "proved"],
+                lambda e: e["class"],
+            ),
+        },
+        "first_trusted_declaration_in_closure": {
+            "why": (
+                "The statement's own definition closure reaches a proof-bearing "
+                "declaration, so the proof-isolation gate refuses the stream. This "
+                "is the FIRST such declaration per stream, not all of them."
+            ),
+            "by_kind": dict(sorted(blocking_kind.items())),
+            "by_declaration": dict(sorted(blocking.items(), key=lambda kv: (-kv[1], kv[0]))),
+            "distinct_declarations": len(blocking),
+        },
+        "screen_agreement": {
+            "screen": "scripts/lean_surface_screen.py",
+            "flagged_by_screen": len(screen_flagged),
+            "rejected_by_lean_at_elaboration": len(elaboration_blockers),
+            "flagged_and_rejected": len(set(screen_flagged) & elaboration_blockers),
+            "flagged_but_elaborated": len(set(screen_flagged) - elaboration_blockers),
+            "rejected_but_unflagged": len(elaboration_blockers - set(screen_flagged)),
+            "population": len(rows),
+            "note": (
+                "Both sets are derived over the SAME population -- the screen from "
+                "each row's statement text, Lean from this run. Neither is a literal."
+            ),
+        },
+    }
+    out_json = ROOT / "artifacts/measurements" / f"statement-import-blocker-census-{args.date}.json"
+    out_json.write_text(
+        json.dumps(document, indent=2, ensure_ascii=False, sort_keys=False) + "\n",
+        encoding="utf-8",
+    )
+
+    lines = [
+        f"# Statement-import blocker census, {args.date}",
+        "",
+        "GENERATED by `scripts/run-statement-import-blocker-census.py --phase publish`.",
+        f"Do not edit; the numbers live in `{out_json.name}`.",
+        "",
+        f"Population: {document['population']['rows']} `F:ml430-*` mirrors "
+        f"({document['population']['open']} open, {document['population']['proved']} proved); "
+        f"{document['population']['held_out']} held out, so their ids appear in no list below.",
+        "",
+        f"Route: `def _ : Prop` after `import Mathlib` -> `lean4export` -> "
+        f"`import_statement_ndjson`. Mathlib `{document['provenance']['mathlib_commit'][:12]}`, "
+        f"{document['provenance']['lean']}.",
+        "",
+        f"**{document['outcome']['admitted']} of {document['population']['rows']} statements cross "
+        f"into the kernel as a goal.** The rest, by class:",
+        "",
+        "| class | stage | rows | open | proved | Nat | Int | held out |",
+        "|---|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for name, bucket in document["classes"].items():
+        lines.append(
+            f"| `{name}` | {bucket['stage']} | {bucket['count']} | "
+            f"{bucket['by_status'].get('open', 0)} | {bucket['by_status'].get('proved', 0)} | "
+            f"{bucket['by_fragment'].get('Nat', 0)} | {bucket['by_fragment'].get('Int', 0)} | "
+            f"{bucket['held_out']} |"
+        )
+    agreement = document["screen_agreement"]
+    lines += [
+        "",
+        "## The screen",
+        "",
+        f"`{agreement['screen']}` flags {agreement['flagged_by_screen']} of the "
+        f"{document['population']['rows']} statements; Lean rejects "
+        f"{agreement['rejected_by_lean_at_elaboration']} at elaboration. "
+        f"Agreement {agreement['flagged_and_rejected']}, "
+        f"{agreement['flagged_but_elaborated']} flagged-but-elaborated, "
+        f"{agreement['rejected_but_unflagged']} rejected-but-unflagged.",
+        "",
+    ]
+    out_md = out_json.with_suffix(".md")
+    out_md.write_text("\n".join(lines), encoding="utf-8")
+    print(f"PUBLISH|json={out_json.relative_to(ROOT)}|md={out_md.relative_to(ROOT)}")
+    return document
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=pathlib.Path, required=True)
@@ -511,7 +750,12 @@ def main() -> int:
     parser.add_argument(
         "--phase",
         default="all",
-        choices=["all", "elaborate", "export", "import", "classify"],
+        choices=["all", "elaborate", "export", "import", "classify", "publish"],
+    )
+    parser.add_argument("--date", default="2026-09-05")
+    parser.add_argument("--commit", default="", help="the axeyum commit this census was measured at")
+    parser.add_argument(
+        "--lean4export-commit", default="a3e35a584f59b390667db7269cd37fca8575e4bf"
     )
     parser.add_argument("--status", default="open,proved")
     parser.add_argument("--limit", type=int, default=0)
@@ -533,7 +777,7 @@ def main() -> int:
     (args.work / "rows.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
     print(f"SELECTED|rows={len(rows)}|statuses={args.status}")
 
-    order = ["elaborate", "export", "import", "classify"]
+    order = ["elaborate", "export", "import", "classify", "publish"]
     phases = order if args.phase == "all" else [args.phase]
     for phase in phases:
         {
@@ -541,6 +785,7 @@ def main() -> int:
             "export": phase_export,
             "import": phase_import,
             "classify": phase_classify,
+            "publish": phase_publish,
         }[phase](args, rows, args.work)
     return 0
 

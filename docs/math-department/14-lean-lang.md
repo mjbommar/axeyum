@@ -54,6 +54,7 @@ Measured 2026-09-05 at `f67ce41d2`; the commands are in *How to re-measure*.
 | credited roots exported, reimported, Lean-checked | 9 (C2) |
 | thin Lean adapter | one 8-category goal pack over one subject, `Nat.add_comm` (C3, [ADR-0935](../research/09-decisions/adr-0935-the-thin-lean-adapter-composes-c2s-two-checked-paths-and-adds-nothing-else.md)) |
 | Mathlib mirrors in the ledger | 756 facts: 499 proved, 257 open; fidelity gate PASS, 742 hash-verified, 14 unpinned |
+| mirrors that CROSS into the kernel as a goal | 390 of 756 (132 of the 257 open). 361 are stopped by a proof-bearing declaration inside the STATEMENT's own definition closure -- 9 distinct names, 287 Theorem / 73 Quotient / 1 Axiom -- and 5 by elaboration ([ADR-1662](../research/09-decisions/adr-1662-the-statement-import-blocker-is-a-proof-inside-the-definition-closure-not-the-variable-block.md)) |
 | statements in Lean surface syntax | 769 facts (`lean4-surface`); 1,971 in kernel-core rendering (`lean4`); **no native parser for either** — only real Lean can read the surface form, and it lives on one fleet host with a built Mathlib |
 | labeled imports from Lean/Mathlib | 7 facts, `proof_route: imported-kernel-lean`, footprint `[propext, Classical.choice, Quot.sound]`, never counted as ours; largest closure 3,142 declarations ([ADR-1090](../research/09-decisions/adr-1090-ivt-evt-row-4-labeled-import-lands-mathlib-topology-admits-clean.md)) |
 | Mathlib at scale | a full `lean4export Mathlib` is 680,925 declarations in ~4 min on s5; the declaration graph built so far is 446 declarations and 2,451 edges from 7 roots |
@@ -67,7 +68,7 @@ against the July documents.
 
 | # | chair | what "Lean compatible" would mean to them | what stops them |
 |---|---|---|---|
-| 01 | number theory | close the 257 open Mathlib mirrors; read the next thousand | statement extraction loses Mathlib's enclosing `variable` block, so a coercion-carrying statement re-parses as nothing (no screen exists); typeclass-headed statements have no record-spine target |
+| 01 | number theory | close the 257 open Mathlib mirrors; read the next thousand | **Corrected 2026-09-05 by measurement (ADR-1662): the `variable` block is 1 of the 257, not the blocker.** 123 of the 257 are stopped instead by a proof-bearing declaration inside the statement's own definition closure (`eq_self`, `Nat.mod_lt`, `Quot`, `dif_pos`, …), and a screen for the `variable`-block and glyph classes now exists (`scripts/lean_surface_screen.py`, agrees with Lean 5 of 5 over all 756). Typeclass-headed statements still have no record-spine target |
 | 02 | constructive analysis | **export.** "Among the most complete constructive analyses anywhere" is worth nothing to a Lean user until it is a Lake package they can `import` | `creal` replays into Lean at 1,972 of 2,045, but as a census artifact, not a library; 48 theorems are `Type`-valued and Lean's kernel refuses them as theorems |
 | 03 | classical analysis | bring measure theory in as labeled scaffolding | 7 imports exist and each carries Mathlib's three axioms; no decision says whether an originated theorem may *depend* on an imported one, so imports cannot compose with anything we prove |
 | 04 | algebra | Mathlib's `Group` and our `AlgS.Group` should be the same thing on the wire | Mathlib is typeclass-headed and our spine is records; no correspondence is written down; the differential registers `Quot.sound` as a known incompleteness and stops there |
@@ -113,11 +114,17 @@ what makes the whole thing a claim rather than a folder.
       *different object*, gated the way the ℕ/ℤ mirror-fidelity check already
       is. Serves 02, 03, 05, 07, 08; it is what makes reviewer 03's
       "a different theorem" a table instead of a sentence.
-- [ ] **5. The statement-import blocker census, and the first screen.** Run
-      every one of the 257 open mirrors plus a fresh Mathlib draw through
-      statement-only import and count the decline reasons. Ship the
-      coercion/`variable`-block screen at extraction time. Then C4's first
-      demand-gated elaboration feature is chosen by count, not by taste.
+- [x] **5. The statement-import blocker census, and the first screen.**
+      **Done 2026-09-05 ([ADR-1662](../research/09-decisions/adr-1662-the-statement-import-blocker-is-a-proof-inside-the-definition-closure-not-the-variable-block.md),
+      `artifacts/measurements/statement-import-blocker-census-2026-09-05.json`).**
+      All 756 mirrors run through the real route -- `def _ : Prop` after
+      `import Mathlib`, `lean4export`, `import_statement_ndjson`. 390 cross; 361
+      are stopped by a proof inside the definition closure; 5 by elaboration.
+      The screen ships and needs no Lean. **The count changed the answer:** C4's
+      first demand-gated feature is an ADMISSION feature (extend the
+      independently reconstructed `trusted_substitution` set over 7 constructive
+      names, 337 rows; `em` and `propext` held back as a separate decision), not
+      the elaboration feature this item and the chair-01 row assumed.
       Serves 01, 07, 04.
 - [ ] **6. `by axeyum` as a Lean tactic.** Turn the C3 sidecar protocol into
       a Lake package exposing a tactic that ships the elaborated goal to
@@ -183,6 +190,7 @@ count depend on Lean's axioms.
 
 | date | change | evidence |
 |---|---|---|
+| 2026-09-05 | Next Ten item 5 closed. Statement-import blocker census over all 756 `F:ml430-*` mirrors, run against Mathlib `c5ea0035` / Lean 4.30.0 on s5: 390 admitted, 361 `trusted-declaration-in-closure`, 3 `coercion-variable-block`, 1 `field-notation-variable-block`, 1 `elided-proof-glyph`; zero unsupported-construct, universe, timeout or resource declines. The 499 proved mirrors, used as the positive control, show the same single blocker (238 of them), so it is the route and not the mathematics. `scripts/lean_surface_screen.py` added and wired into `attest-nursery-surface.py` (`--screen-only`, any host): flags 5 of 756, Lean rejects 5, the sets are equal. The chair-01 row and item 5 above are corrected in place -- the `variable` block was 1 of the 257 open mirrors, not their blocker. | `artifacts/measurements/statement-import-blocker-census-2026-09-05.json`; [ADR-1662](../research/09-decisions/adr-1662-the-statement-import-blocker-is-a-proof-inside-the-definition-closure-not-the-variable-block.md); `python3 scripts/run-statement-import-blocker-census.py --rows <rows.jsonl> --work <dir>` |
 | 2026-09-05 | File created. Baseline: K0 1/1, K1 6/6, K2–K6 0; `creal` replay 1,972 of 2,045; 9 credited roots Lean-checked; 756 mirrors (499 proved / 257 open); 7 labeled imports; no native parser, no Lean-side tactic, no Lake package. Three Lean gates red on `main` since the pin moved (`792224e73`, 2026-09-03): the install script regex, `gen-lean-complete-parity --check`, `check-lean-official-construct-matrix --check`; CI's real-Lean job was green on the commit before and red on that commit; the two `--check` gates are masked in CI by the Z3 parity-freshness failure that predates them. Reported, not repaired, by the review this file came out of. | `f67ce41d2`; `gh run list --workflow ci.yml`; the commands below |
 
 ## How to re-measure

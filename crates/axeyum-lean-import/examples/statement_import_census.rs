@@ -45,10 +45,12 @@ struct Row {
 }
 
 fn parse_manifest(path: &Path) -> Result<Vec<Row>, String> {
-    let file = File::open(path).map_err(|error| format!("cannot open {path:?}: {error}"))?;
+    let file =
+        File::open(path).map_err(|error| format!("cannot open {}: {error}", path.display()))?;
     let mut rows = Vec::new();
     for (index, line) in BufReader::new(file).lines().enumerate() {
-        let line = line.map_err(|error| format!("{path:?} line {}: {error}", index + 1))?;
+        let line =
+            line.map_err(|error| format!("{} line {}: {error}", path.display(), index + 1))?;
         if line.trim().is_empty() || line.starts_with('#') {
             continue;
         }
@@ -57,7 +59,8 @@ fn parse_manifest(path: &Path) -> Result<Vec<Row>, String> {
             (fields.next(), fields.next(), fields.next(), fields.next())
         else {
             return Err(format!(
-                "{path:?} line {}: expected exactly 3 tab-separated fields",
+                "{} line {}: expected exactly 3 tab-separated fields",
+                path.display(),
                 index + 1
             ));
         };
@@ -69,7 +72,8 @@ fn parse_manifest(path: &Path) -> Result<Vec<Row>, String> {
     }
     if rows.is_empty() {
         return Err(format!(
-            "{path:?} names no rows; refusing to report an empty census"
+            "{} names no rows; refusing to report an empty census",
+            path.display()
         ));
     }
     Ok(rows)
