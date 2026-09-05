@@ -406,7 +406,7 @@ fn declare_le_of_add_le_add_self(d: &mut IntDev<'_>) -> Result<(), KernelError> 
                 let ba = d.iadd(b, a);
                 let step = d.const_app(p.add_le_add_right, &[b, a, a, hba]);
                 let chained = le_trans(d, ba, aa, bb, step, h);
-                let iff = d.const_app(p.add_le_add_iff_left, &[b, a, b]);
+                let iff = d.const_app(p.add_le_add_iff_left, &[a, b, b]);
                 let left = d.ile(ba, bb);
                 let right = d.ile(a, b);
                 iff_mp(d, left, right, iff, chained)
@@ -663,7 +663,7 @@ fn declare_sq_le_sq_of_neg_le_of_le(d: &mut IntDev<'_>) -> Result<(), KernelErro
 
 /// `fun (c : Int) => And (ModEq m c a) (And (le (neg m) (add c c)) (le (add c c) m))`
 /// — the body of [`declare_exists_centered_representative`]'s existential.
-fn centered_predicate(d: &mut IntDev<'_>, a: ExprId, m: ExprId) -> ExprId {
+pub(super) fn centered_predicate(d: &mut IntDev<'_>, a: ExprId, m: ExprId) -> ExprId {
     let int_ty = d.int_ty();
     let c_fv = d.fresh_fvar();
     let c = d.kernel().fvar(c_fv);
@@ -794,7 +794,7 @@ fn declare_exists_centered_representative(d: &mut IntDev<'_>) -> Result<(), Kern
                     let rr_mm = d.const_app(p.add_le_add, &[r, m, r, m, hrm_le, hrm_le]);
                     let nonpos = d.const_app(p.sub_nonpos_of_le, &[rr, mm, rr_mm]);
                     let up0 = le_trans(d, diff, zero, m, nonpos, hm0);
-                    let dbl_rev = d.isymm(diff, cc, dbl);
+                    let dbl_rev = d.isymm(cc, diff, dbl);
                     let high = d.int_eq_rewrite(diff, cc, dbl_rev, up0, &|d, x| d.ile(x, m));
 
                     // lower: `-m <= (r+r) - (m+m)`, from `m <= r + r` shifted by
@@ -963,7 +963,7 @@ fn declare_sq_add_sq_lt_sq_of_bounds(d: &mut IntDev<'_>) -> Result<(), KernelErr
                         let ss = d.iadd(s, s);
                         d.ile(ss, x)
                     });
-                    let iff = d.const_app(p.add_le_add_iff_left, &[s, s, zero]);
+                    let iff = d.const_app(p.add_le_add_iff_left, &[s, zero, s]);
                     let iff_left = d.ile(ss, s_zero);
                     let iff_right = d.ile(s, zero);
                     let t3 = iff_mp(d, iff_left, iff_right, iff, t2);
@@ -1047,7 +1047,7 @@ fn declare_lt_of_add_le_of_nonneg(d: &mut IntDev<'_>) -> Result<(), KernelError>
                             let mm = d.iadd(m, m);
                             d.ile(mm, x)
                         });
-                        let iff = d.const_app(p.add_le_add_iff_left, &[m, m, zero]);
+                        let iff = d.const_app(p.add_le_add_iff_left, &[m, zero, m]);
                         let iff_left = d.ile(mm, m_zero);
                         let iff_right = d.ile(m, zero);
                         let t3 = iff_mp(d, iff_left, iff_right, iff, t2);
@@ -1125,6 +1125,12 @@ fn with_hypotheses(
 /// Returns the trusted gate's rejection, or `UnknownConst` if a ring-producer
 /// search declined.
 pub(super) fn declare_order_squares_all(d: &mut IntDev<'_>) -> Result<(), KernelError> {
+    // Declaration ORDER is load-bearing: `sq_le_sq_of_neg_le_of_le` consumes
+    // `sq_le_sq_of_nonneg`, `neg_nonneg_of_nonpos` and `neg_le_of_neg_le`;
+    // `two_mul_sq_add_sq_le_sq` consumes `sq_le_sq_of_neg_le_of_le` and
+    // `le_of_add_le_add_self`; `sq_add_sq_lt_sq_of_bounds` consumes the one
+    // above it. `int_prelude_tests::order_squares_declaration_order_is_pinned`
+    // pins this list against the environment.
     declare_ne_zero_of_pos(d)?;
     declare_neg_nonpos_of_nonneg(d)?;
     declare_neg_nonneg_of_nonpos(d)?;

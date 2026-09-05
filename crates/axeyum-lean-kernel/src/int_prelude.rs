@@ -3033,3 +3033,6 @@ mod cas_crt_bridge_tests;
 
 #[cfg(test)]
 mod two_squares_tests;
+
+#[cfg(test)]
+mod order_squares_tests;
