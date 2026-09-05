@@ -62,6 +62,32 @@ incidence is one ring identity and whose apartness needs `Nondeg` alone —
 `Geo.QPlane.basePoint`'s branch closure (which runs for both cases of the
 split, so the emitted term has two copies and the source has one).
 
+**Mutation table (both mutants RUN, not predicted).** Baseline green, 12
+tests, `scripts/cargo-serialized.sh test -p axeyum-lean-kernel --lib geo::`.
+
+| mutant | outcome | kill count |
+| --- | --- | --- |
+| axiom I.1's uniqueness half loses its distinctness hypothesis (`geo.rs`, `join_unique_field`) | **killed** | 9 of 12 |
+| the join's `a` and `b` coefficients are swapped (`geo/qplane.rs`, `declare_join`) | **killed** | 9 of 12 |
+
+The three survivors in each case are the three tests that never build the
+prelude (`field_list_matches_the_suffix_table`,
+`field_indices_name_their_fields`, `the_record_is_refused_at_sort_one`), which
+is the correct outcome and not a gap: both mutants fail at PRELUDE-BUILD time,
+so no test that does not build it can see them. `git status` is clean after
+the run — the harness restored the tree byte-for-byte.
+
+**The mutation harness's first run was UNMEASURABLE, and the reason is worth
+recording.** `mutation_controls.py`'s `Cargo` runner passes no
+`--test-threads`, so libtest used every core and this suite's five
+prelude-building tests ran at once; the run produced `running 12 tests` and no
+`test result:` line, which the harness correctly reported as `INCONSISTENT`
+rather than as a kill. It is a real classification, not a false negative — but
+it is also a trap any memory-heavy kernel suite will hit. The second run set
+`RUST_TEST_THREADS=2` in the environment (which `_capture` merges) and was
+green. A later lane adding a kernel suite here should set that variable rather
+than assume the default is safe.
+
 **Line equality is extensional and that is the load-bearing choice.** With
 `Equiv l m := ∀ P, (on P l → on P m) ∧ (on P m → on P l)`, reflexivity,
 symmetry and transitivity are free and `onLine` is an `And.left`. The
@@ -86,3 +112,5 @@ harder: `joinExists` is the same coordinate computation over `CReal.Equiv`,
 | 2026-09-05 | `7ec964eab` | `Geo.Incidence` — a 21-field incidence record over two carriers with Hilbert I.1 (split into `joinExists`/`joinUnique`, this kernel having no `ExistsUnique`), I.2 and I.3, plus `apart` and its three laws; and five theorems derived once over an arbitrary `I : Geo.Incidence` — `Collinear` (a Definition), `collinear_intro`, `collinear_perm`, `distinct_lines_meet_once` (which IS "two distinct lines meet in at most one point") and `triangle_not_collinear`. 7 tests. Every one of the 29 names is asserted present AND axiom-free with `Environment::contains` checked FIRST, and the declaration list is derived from `RecordNames::field_count` rather than a literal. |
 | 2026-09-05 | `054cb3e38` | `Geo.qplane : Geo.Incidence` — the rational plane, 46 declarations: `Geo.QPoint`/`Geo.QLine0` with their projections, `eta` and `ext`; `Geo.QLine = Subtype Geo.QLine0 Geo.QLine0.Nondeg`; extensional line equality with its three laws; `Geo.QPlane.onPivot` and `onOfProp` (the one algebraic lemma, used in BOTH branches of the nonzero split); `joinProp` (proportionality with NO non-degeneracy hypothesis); `joinNondeg`, `joinExists`, `joinUnique`, `shift`/`shiftOn`/`shiftApart`, `basePoint`, `twoPoints`, `triangle`. Plus `Geo.Rat.eqOrNe` from `Rat.lt_trichotomy` — the only place the model uses ℚ's decidability. In the same commit: two new passes in `ring::rat::Problem::cancel_pairs` with three matched tests (19 ring::rat tests pass), and `geo::qplane::congr_cross`, the two-carrier congruence `structures::congr_arg` cannot express. |
 | 2026-09-05 | `8a1ad873a` | Five more tests. `the_handle_names_every_live_geo_declaration` derives the population from `Environment::iter` and requires SET EQUALITY against the handle (measured: 75 live names, vacuity floor 70); four evaluation tests, one per definition family, each with its negative half — including the join-coefficient swap the mutation suite runs, pinned at FREE VARIABLES because a concrete point pair can make two coefficients coincide. The `geo-incidence` mutation suite is registered with the brief's two mutants. |
+| 2026-09-05 | `3243d58e8` | Two curated facts — `F:geo-incidence-model-rational-plane` (the consistency witness, checked by `kernel_declaration_projection --require-declaration Geo.qplane --require-kind definition`, the only in-tree tool that can assert a DEFINITION exists) and `F:geo-distinct-lines-meet-once`. `Geo` added to `validate-facts.py`'s `KERNEL_THEOREM_RE` namespace alternation, with BOTH halves pinned in the allowlist's own control suite: `Geo.qplane` accepted, `Geometry.qplane` and bare `Geo` still rejected. |
+| 2026-09-05 | `e15cef034` | Regenerated `artifacts/autogenesis/kernel-dependency-projection-v1.json` (declarations 4291 → 4485), because `check-merge-hygiene.sh` guard 10 compares it against the live `shape_search` count with a tolerance of 100 and `Geo.*` adds 75. |
