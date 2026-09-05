@@ -872,18 +872,20 @@ const MAX_INVERSE_POWER: u32 = 32;
 /// scoping is what `docs/math-department/13-computer-algebra.md` records as the
 /// reason the medians cost 769 s on the general route.
 ///
-/// [`BlockScope::Joint`] removes that limitation, and **it is not enough**, which
-/// is the finding this type exists to make checkable rather than assumed. See
-/// [`certify_by_linear_elimination_scoped`].
+/// [`BlockScope::Joint`] removes that limitation. It buys two theorems and it
+/// does **not** buy the medians, which is the finding this type exists to make
+/// checkable rather than assumed. See [`certify_by_linear_elimination_scoped`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockScope {
     /// Candidate unknowns come from the conclusion being settled, and the search
-    /// stops at the first nonsingular subsystem, licensed or not. **The committed
-    /// behaviour**: every certificate in `artifacts/geometry-certificates/` was
-    /// produced under it, and [`certify_any_route`] still uses it.
+    /// stops at the first nonsingular subsystem, licensed or not. The scoping
+    /// every certificate in `artifacts/geometry-certificates/` was first produced
+    /// under, and what [`certify_by_linear_elimination`] still does.
     PerConclusion,
     /// Candidate unknowns come from **all** of the theorem's conclusions at once,
     /// and an unlicensed determinant advances the search instead of ending it.
+    /// What [`certify_any_route`] uses; it reaches two theorems the narrow
+    /// scoping misses and produces the identical certificate on both.
     Joint,
 }
 
@@ -1011,17 +1013,27 @@ pub fn certify_by_linear_elimination(
 /// detector, and it is **not** what keeps this theorem on the slow route.
 /// Removing it changes the medians' outcome not at all.
 ///
-/// # Why [`certify_any_route`] does not use [`BlockScope::Joint`]
+/// # What the widening *does* reach, and why adopting it was safe
 ///
-/// Because it would change committed evidence for no gain. The widened search
-/// finds a licensed block on two theorems the narrow one misses —
-/// `centroid-divides-medians` (`{px, py}`) and `parallelogram-diagonals-bisect`
-/// (`{cx, cy}`) — and both are theorems the Gröbner route already reaches in
-/// milliseconds, with committed certificates that seventeen fact-ledger rows
-/// cite. Routing them differently would rewrite two artifacts and weaken
-/// `the_route_selector_reproduces_the_groebner_certificate_exactly`, which exists
-/// to say the route selector disturbs nothing, in exchange for no theorem this
-/// route could not already certify.
+/// The joint search finds a licensed block on two theorems the narrow one misses:
+/// `centroid-divides-medians` (over `{px, py}`) and
+/// `parallelogram-diagonals-bisect` (over `{cx, cy}`). Both were on the Gröbner
+/// route before, both have committed certificates that the fact ledger cites, and
+/// both now come off the linear route in about a millisecond.
+///
+/// The question that decided whether [`certify_any_route`] could adopt this was
+/// not "is the new identity valid" — the independent checker answers that — but
+/// "is it the **same** identity", because a different-but-valid cofactor set
+/// would rewrite two artifacts. It is the same one, and that was measured rather
+/// than hoped for: `the_widened_scope_reproduces_the_groebner_certificate_where_it_newly_reaches`
+/// asserts full [`ProofOutcome`] equality against [`certify`] on both, and
+/// re-running `emit_geometry_certificates` over the twelve corpus theorems that
+/// finish quickly reports **0 written, 12 unchanged**. Cramer's rule and
+/// Buchberger's algorithm arrive at the same cofactors here.
+///
+/// [`certify_by_linear_elimination`] itself keeps [`BlockScope::PerConclusion`]:
+/// it is public API with committed behaviour, and the widening belongs to the
+/// route *selector*, whose whole job is to reach a theorem by whatever means.
 #[must_use]
 pub fn certify_by_linear_elimination_scoped(
     problem: &GeometryProblem,
@@ -1154,9 +1166,29 @@ pub fn certify_by_linear_elimination_scoped(
 /// and friends — on the identity already committed for them, rather than on a
 /// second one this route happened to find. `emit_geometry_certificates` reports
 /// **8 unchanged** across the switch.
+///
+/// # Why the block scope here is [`BlockScope::Joint`]
+///
+/// Added 2026-09-05. The linear pass looks for its unknowns across **all** of a
+/// theorem's conclusions rather than one at a time, and keeps searching past a
+/// determinant it cannot divide out instead of stopping at the first nonsingular
+/// subsystem. That reaches `centroid-divides-medians` and
+/// `parallelogram-diagonals-bisect`, which were on the Gröbner route, and moves
+/// them to about a millisecond.
+///
+/// It disturbs nothing, by the same measurement the paragraphs above use rather
+/// than by a different argument: the certificate the widened route finds on both
+/// is **identical** to the one Buchberger's algorithm finds — asserted as full
+/// [`ProofOutcome`] equality by
+/// `the_widened_scope_reproduces_the_groebner_certificate_where_it_newly_reaches`
+/// and confirmed by `emit_geometry_certificates` reporting *0 written, 12
+/// unchanged* over the corpus theorems that finish quickly. What it does not
+/// reach is `tetrahedron-medians-concurrent`; that is a fact about the theorem
+/// rather than about the scope, and it is measured in
+/// [`certify_by_linear_elimination_scoped`]'s docs.
 #[must_use]
 pub fn certify_any_route(problem: &GeometryProblem, limits: Limits) -> ProofOutcome {
-    match certify_by_linear_elimination(problem, Some(limits)) {
+    match certify_by_linear_elimination_scoped(problem, Some(limits), BlockScope::Joint) {
         certified @ ProofOutcome::Certified(_) => certified,
         _ => certify(problem, limits),
     }
@@ -2554,25 +2586,47 @@ mod tests {
         }
     }
 
-    /// [`certify_any_route`] must stay on [`BlockScope::PerConclusion`].
+    /// The widened route produces the **same** certificate the Gröbner route
+    /// does, on the two theorems it newly reaches.
     ///
-    /// The guard behind "the widening changes no committed evidence". The two
-    /// theorems above are exactly the ones whose artifact would be rewritten if
-    /// the joint scope became the default, and seventeen fact-ledger rows cite
-    /// this artifact directory. So the requirement is not "the joint scope is
-    /// wrong" — it checks — it is that the *shipped* route still produces what
-    /// the committed files contain.
+    /// This is the assertion that let [`certify_any_route`] adopt
+    /// [`BlockScope::Joint`] at all. `centroid-divides-medians` and
+    /// `parallelogram-diagonals-bisect` have committed artifacts that the fact
+    /// ledger cites; a different-but-valid cofactor set would have rewritten
+    /// both. Full [`ProofOutcome`] equality — every cofactor, every generator,
+    /// every witness — is the only thing that makes "no committed evidence
+    /// changed" a fact rather than a hope, and `emit_geometry_certificates`
+    /// agreed independently with *0 written, 12 unchanged*.
+    ///
+    /// If a future change to either route breaks the agreement, this fails here
+    /// rather than silently rewriting an artifact the next time somebody
+    /// regenerates.
     #[test]
-    fn the_shipped_route_keeps_the_per_conclusion_scope() {
+    fn the_widened_scope_reproduces_the_groebner_certificate_where_it_newly_reaches() {
         for id in ["centroid-divides-medians", "parallelogram-diagonals-bisect"] {
             let problem = crate::geometry_corpus::corpus()
                 .into_iter()
                 .find(|problem| problem.id == id)
                 .expect("a corpus theorem");
+            let joint = certify_by_linear_elimination_scoped(
+                &problem,
+                Some(geometry_limits()),
+                BlockScope::Joint,
+            );
+            assert!(
+                matches!(joint, ProofOutcome::Certified(_)),
+                "{id}: the joint scope stopped reaching this theorem"
+            );
+            assert_eq!(
+                joint,
+                certify(&problem, geometry_limits()),
+                "{id}: the widened route now emits a different identity than the Gröbner route, \
+                 so the committed artifact would be rewritten"
+            );
             assert_eq!(
                 certify_any_route(&problem, geometry_limits()),
                 certify(&problem, geometry_limits()),
-                "{id}: the shipped route left the Gröbner certificate"
+                "{id}: the shipped route left the committed certificate"
             );
         }
     }
