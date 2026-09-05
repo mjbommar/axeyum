@@ -116,6 +116,7 @@ mod nat_abs;
 mod nat_abs_mirrors;
 pub(crate) mod ops;
 mod order;
+mod order_squares;
 mod order_add;
 mod order_coercion;
 mod parity;
@@ -2077,6 +2078,62 @@ pub struct IntPrelude {
     /// applies directly. The quotients `u`, `w` are hypotheses; producing them
     /// is what [`Self::mod_eq_descent_cross_terms`] licenses.
     pub descent_step: NameId,
+    // -- `int-order-two-squares` lane (W3-10 second slice, ADR-1647):
+    // `int_prelude/order_squares.rs` --
+    /// `Int.ne_zero_of_pos : forall k, lt zero k -> Not (Eq Int k zero)`.
+    pub ne_zero_of_pos: NameId,
+    /// `Int.neg_nonpos_of_nonneg : forall a, le zero a -> le (neg a) zero`.
+    pub neg_nonpos_of_nonneg: NameId,
+    /// `Int.neg_nonneg_of_nonpos : forall a, le a zero -> le zero (neg a)`.
+    pub neg_nonneg_of_nonpos: NameId,
+    /// `Int.neg_le_of_neg_le : forall a b, le (neg b) a -> le (neg a) b`.
+    pub neg_le_of_neg_le: NameId,
+    /// `Int.add_nonneg : forall a b, le zero a -> le zero b -> le zero (add a b)`.
+    pub add_nonneg: NameId,
+    /// `Int.sub_nonpos_of_le : forall a b, le a b -> le (sub a b) zero`.
+    pub sub_nonpos_of_le: NameId,
+    /// `Int.le_of_add_le_add_self : forall a b, le (add a a) (add b b) -> le a b`
+    /// -- halving an inequality, the only division in the descent's measure.
+    pub le_of_add_le_add_self: NameId,
+    /// `Int.le_of_mul_le_mul_left : forall k a b, lt zero k ->`
+    /// `  le (mul k a) (mul k b) -> le a b`.
+    pub le_of_mul_le_mul_left: NameId,
+    /// `Int.neg_mul_neg : forall a, Eq Int (mul (neg a) (neg a)) (mul a a)`.
+    /// `ring::int`.
+    pub neg_mul_neg: NameId,
+    /// `Int.neg_add_self_self : forall m, Eq Int (add (neg m) (add m m)) m`.
+    /// `ring::int`.
+    pub neg_add_self_self: NameId,
+    /// `Int.add_sub_add_sub : forall r m,`
+    /// `  Eq Int (add (sub r m) (sub r m)) (sub (add r r) (add m m))`.
+    /// `ring::int`.
+    pub add_sub_add_sub: NameId,
+    /// `Int.sq_double_add_sq_double : forall c e,`
+    /// `  Eq Int (add (mul (add c c) (add c c)) (mul (add e e) (add e e)))`
+    /// `    (add (add S S) (add S S))` for `S := add (mul c c) (mul e e)`.
+    /// `ring::int`.
+    pub sq_double_add_sq_double: NameId,
+    /// `Int.sq_le_sq_of_nonneg : forall a b, le zero a -> le a b ->`
+    /// `  le (mul a a) (mul b b)`.
+    pub sq_le_sq_of_nonneg: NameId,
+    /// `Int.sq_le_sq_of_neg_le_of_le : forall a b, le (neg b) a -> le a b ->`
+    /// `  le (mul a a) (mul b b)` -- the two-sided square bound.
+    pub sq_le_sq_of_neg_le_of_le: NameId,
+    /// `Int.exists_centered_representative : forall a m, lt zero m ->`
+    /// `  Exists Int (fun c => And (ModEq m c a)`
+    /// `    (And (le (neg m) (add c c)) (le (add c c) m)))`
+    /// -- the bounded choice of representative Fermat's descent needs.
+    pub exists_centered_representative: NameId,
+    /// `Int.two_mul_sq_add_sq_le_sq : forall m c e, (four bounds) ->`
+    /// `  le (add S S) (mul m m)` for `S := add (mul c c) (mul e e)`.
+    pub two_mul_sq_add_sq_le_sq: NameId,
+    /// `Int.sq_add_sq_lt_sq_of_bounds : forall m c e, lt zero m ->`
+    /// `  (four bounds) -> lt (add (mul c c) (mul e e)) (mul m m)`
+    /// -- the strict decrease of the descent's measure.
+    pub sq_add_sq_lt_sq_of_bounds: NameId,
+    /// `Int.lt_of_add_le_of_nonneg : forall m q, lt zero m -> le zero q ->`
+    /// `  le (add q q) m -> lt q m`.
+    pub lt_of_add_le_of_nonneg: NameId,
 }
 
 /// Intern every name the integer development uses. Interning is not
@@ -2522,6 +2579,24 @@ fn intern_names(kernel: &mut Kernel, nat: NatPrelude) -> IntPrelude {
         mul_mul_of_mul_mul: child(kernel, "mul_mul_of_mul_mul"),
         sq_add_sq_of_mul_left: child(kernel, "sq_add_sq_of_mul_left"),
         descent_step: child(kernel, "descentStep"),
+        ne_zero_of_pos: child(kernel, "ne_zero_of_pos"),
+        neg_nonpos_of_nonneg: child(kernel, "neg_nonpos_of_nonneg"),
+        neg_nonneg_of_nonpos: child(kernel, "neg_nonneg_of_nonpos"),
+        neg_le_of_neg_le: child(kernel, "neg_le_of_neg_le"),
+        add_nonneg: child(kernel, "add_nonneg"),
+        sub_nonpos_of_le: child(kernel, "sub_nonpos_of_le"),
+        le_of_add_le_add_self: child(kernel, "le_of_add_le_add_self"),
+        le_of_mul_le_mul_left: child(kernel, "le_of_mul_le_mul_left"),
+        neg_mul_neg: child(kernel, "neg_mul_neg"),
+        neg_add_self_self: child(kernel, "neg_add_self_self"),
+        add_sub_add_sub: child(kernel, "add_sub_add_sub"),
+        sq_double_add_sq_double: child(kernel, "sq_double_add_sq_double"),
+        sq_le_sq_of_nonneg: child(kernel, "sq_le_sq_of_nonneg"),
+        sq_le_sq_of_neg_le_of_le: child(kernel, "sq_le_sq_of_neg_le_of_le"),
+        exists_centered_representative: child(kernel, "exists_centered_representative"),
+        two_mul_sq_add_sq_le_sq: child(kernel, "two_mul_sq_add_sq_le_sq"),
+        sq_add_sq_lt_sq_of_bounds: child(kernel, "sq_add_sq_lt_sq_of_bounds"),
+        lt_of_add_le_of_nonneg: child(kernel, "lt_of_add_le_of_nonneg"),
     }
 }
 
@@ -2915,6 +2990,11 @@ pub(crate) fn build_int_prelude_uncached(kernel: &mut Kernel) -> Result<IntPrelu
         // `parity.rs`'s `Int.Even`/`Int.Odd` and their `ediv` extractors, and
         // `modeq_family.rs`'s `Int.modEq_add_mul_left`.
         two_squares::declare_two_squares_all(&mut d)?;
+        // `int-order-two-squares` lane (W3-10 second slice, ADR-1647): the
+        // order shelf the descent needs. Placed after `two_squares.rs` because
+        // `Int.exists_centered_representative` reuses that module's `imodeq`
+        // and `int_exists` shapes.
+        order_squares::declare_order_squares_all(&mut d)?;
         Ok(prelude)
     })();
     match built {
