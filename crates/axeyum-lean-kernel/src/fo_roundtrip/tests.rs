@@ -321,6 +321,15 @@ fn the_commuting_lemma_and_the_image_lemma_have_the_stated_types() {
              (FO.Code.isFormulaCodeAux (AxNat.add x1 (FO.Formula.size x0)) \
              (FO.Formula.code x0)) Bool.true))",
         ),
+        (
+            f.p.diag_aux_code,
+            "((x0 : FO.Formula) -> ((x1 : AxNat) -> ((x2 : AxNat) -> \
+             Eq.{1} AxNat (FO.Code.diagAux (AxNat.add x1 (FO.Formula.size x0)) \
+             (AxNat.add x2 (FO.Term.size (FO.Term.numeral (FO.Formula.code x0)))) \
+             (FO.Formula.code x0)) \
+             (FO.Formula.code (FO.Formula.subst x0 \
+             (FO.Subst.cons (FO.Term.numeral (FO.Formula.code x0)) FO.Subst.id))))))",
+        ),
     ] {
         let declaration = f
             .kernel
@@ -372,6 +381,100 @@ fn subst_code_aux_actually_substitutes() {
 }
 
 // ============================================================================
+// The diagonal identity.
+// ============================================================================
+
+/// `FO.Term.numeral` is a `Definition`, and the wrong symbol indices would
+/// type-check identically. Pinned structurally at `0`, `1` and `2`, and
+/// required to DIFFER at `1` and `2` so a constant body is caught.
+#[test]
+fn term_numeral_stacks_the_successor_symbol() {
+    let mut f = Fixture::new();
+    let syntax = f.p.decode.numbering.code.syntax;
+    let zero = f.num(0);
+    let one = f.num(1);
+
+    let build = |f: &mut Fixture, n: u32| -> ExprId {
+        let head = f.kernel.const_(f.p.term_numeral, vec![]);
+        let idx = f.num(n);
+        f.kernel.app(head, idx)
+    };
+
+    let z = f.ctor(syntax.f0, &[zero]);
+    let got = build(&mut f, 0);
+    f.assert_eq_expr(got, z, "numeral 0");
+
+    let s1 = f.ctor(syntax.f1, &[one, z]);
+    let got = build(&mut f, 1);
+    f.assert_eq_expr(got, s1, "numeral 1");
+
+    let s2 = f.ctor(syntax.f1, &[one, s1]);
+    let got = build(&mut f, 2);
+    f.assert_eq_expr(got, s2, "numeral 2");
+
+    f.assert_ne_expr(s1, s2, "numeral 1 and numeral 2 must differ");
+
+    // The successor symbol index must be 1, not 0: `FO.natStructure`
+    // interprets `f1 k x` as `Nat.add x k`, so `f1 0` would be the identity.
+    let wrong = f.ctor(syntax.f1, &[zero, z]);
+    f.assert_ne_expr(s1, wrong, "the successor symbol index must be 1");
+}
+
+/// `FO.Code.diagAux` is checked at SYMBOLIC arguments, not at a real code, and
+/// that is a measurement rather than a shortcut.
+///
+/// `FO.Code.diagAux (FO.Formula.code p)` contains `FO.Term.code (FO.Term.numeral
+/// (FO.Formula.code p))`, and every `Nat` numeral in this kernel is unary. At
+/// the SMALLEST formula with a free variable — `FO.Formula.eqf (var 0) (var 0)`,
+/// whose code is `2` — the numeral is a three-constructor term with code `47`,
+/// and the diagonalised formula's code is `FO.Code.pair 1 (FO.Code.pair 47 47)`,
+/// which is over ten million. The first draft of this test used
+/// `FO.Formula.rel1 0 (var 0)` (code `5`) and overflowed the stack outright.
+/// **The diagonal is not evaluable in this kernel at ANY genuine code**, which
+/// is worth knowing and is why the check below is `def_eq` at three free
+/// variables: pure δ/β, no numerals, and it pins the definition exactly.
+#[test]
+fn diag_aux_is_subst_code_aux_at_the_formulas_own_numeral() {
+    let mut f = Fixture::new();
+    let nat_ty = f.c.nat_ty;
+    let fp_id = 1_648_901_u64;
+    let ft_id = 1_648_902_u64;
+    let n_id = 1_648_903_u64;
+    let fp = f.kernel.fvar(fp_id);
+    let ft = f.kernel.fvar(ft_id);
+    let n = f.kernel.fvar(n_id);
+    let _ = nat_ty;
+
+    let got = {
+        let head = f.kernel.const_(f.p.diag_aux, vec![]);
+        apply_all(&mut f.kernel, head, &[fp, ft, n])
+    };
+
+    let self_numeral = {
+        let head = f.kernel.const_(f.p.term_numeral, vec![]);
+        let num = f.kernel.app(head, n);
+        code_app(&mut f.kernel, f.p.decode.numbering.term_code, num)
+    };
+    let want = {
+        let head = f.kernel.const_(f.p.subst_code_aux, vec![]);
+        apply_all(&mut f.kernel, head, &[fp, ft, n, self_numeral])
+    };
+    f.assert_eq_expr(got, want, "diagAux unfolds to substCodeAux at the numeral");
+
+    // The fourth argument must be the code of the NUMERAL of `n`, not `n`
+    // itself -- the difference between self-reference and a plain substitution.
+    let naive = {
+        let head = f.kernel.const_(f.p.subst_code_aux, vec![]);
+        apply_all(&mut f.kernel, head, &[fp, ft, n, n])
+    };
+    f.assert_ne_expr(
+        got,
+        naive,
+        "diagAux must substitute the NUMERAL of the code, not the code",
+    );
+}
+
+// ============================================================================
 // The every-declaration sweep.
 // ============================================================================
 
@@ -393,6 +496,9 @@ fn every_declaration_of_this_slice_is_axiom_free() {
         (p.subst_code_aux_commutes, "FO.Code.substCodeAux_commutes"),
         (p.is_formula_code_aux, "FO.Code.isFormulaCodeAux"),
         (p.is_formula_code_aux_code, "FO.Code.isFormulaCodeAux_code"),
+        (p.term_numeral, "FO.Term.numeral"),
+        (p.diag_aux, "FO.Code.diagAux"),
+        (p.diag_aux_code, "FO.Code.diagAux_code"),
     ] {
         f.assert_axiom_free(name, label);
     }
@@ -402,7 +508,7 @@ fn every_declaration_of_this_slice_is_axiom_free() {
 /// `build_nat_prelude`: the whole `fo_syntax` + `fo_code` + `fo_numbering` +
 /// `fo_decode` chain (48, pinned in `fo_decode/tests.rs`) plus this slice's
 /// six. Pinned so drift in EITHER direction is a failure.
-const FO_ARITHMETIZATION_WITH_ROUND_TRIP: usize = 58;
+const FO_ARITHMETIZATION_WITH_ROUND_TRIP: usize = 61;
 
 /// The every-declaration sweep for the arithmetization package including the
 /// round trip, derived from the environment rather than from a list, with a
@@ -444,6 +550,8 @@ fn the_whole_round_trip_package_is_axiom_free() {
         "FO.Formula.code_injective",
         "FO.Code.substCodeAux_commutes",
         "FO.Code.isFormulaCodeAux_code",
+        "FO.Term.numeral",
+        "FO.Code.diagAux_code",
     ] {
         assert!(
             added.contains_key(control),

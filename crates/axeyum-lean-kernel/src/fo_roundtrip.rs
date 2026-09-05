@@ -87,6 +87,49 @@
 //! is strictly larger than `b`; the honest route is a strong induction on the
 //! code with `Nat.lt (FO.Code.snd n) n`, which needs monotonicity of
 //! `FO.Code.tri` and a well-founded `Nat` recursion this slice does not build.
+//!
+//! ## What the round trip buys, and where it stops
+//!
+//! ```text
+//! FO.Code.substCodeAux : Nat -> Nat -> Nat -> Nat -> Nat
+//! FO.Code.substCodeAux_commutes : Π p t gp gt, Eq Nat
+//!      (substCodeAux (add gp (Formula.size p)) (add gt (Term.size t))
+//!                    (Formula.code p) (Term.code t))
+//!      (Formula.code (Formula.subst p (Subst.cons t Subst.id)))
+//!
+//! FO.Code.isFormulaCodeAux : Nat -> Nat -> Bool
+//! FO.Code.isFormulaCodeAux_code : Π p g, Eq Bool
+//!      (isFormulaCodeAux (add g (Formula.size p)) (Formula.code p)) Bool.true
+//!
+//! FO.Term.numeral   : Nat -> FO.Term
+//! FO.Code.diagAux   : Nat -> Nat -> Nat -> Nat
+//! FO.Code.diagAux_code : Π p gp gt, Eq Nat
+//!      (diagAux … (Formula.code p))
+//!      (Formula.code (Formula.subst p
+//!         (Subst.cons (Term.numeral (Formula.code p)) Subst.id)))
+//! ```
+//!
+//! `diagAux_code` is the **arithmetization half of the diagonal lemma**:
+//! `diag ⌜p⌝ = ⌜p(⌜p⌝)⌝`. It is one application of `substCodeAux_commutes`;
+//! the whole cost of the statement was the round trip.
+//!
+//! The provability-level diagonal lemma `FO.Provable Γ_Q (Iff δ (ψ ⌜δ⌝))` does
+//! NOT follow, and the gap is a strand rather than a step: `Γ_Q` has to PROVE
+//! the numeric fact `diag m̄ = ⌜δ⌝`, i.e. the diagonal function must be
+//! representable in Q. Nothing in `fo_*.rs` relates `FO.Provable` to a
+//! computation on `Nat` in either direction yet. Sized in ADR-1648.
+//!
+//! ### The diagonal is not EVALUABLE here, at any genuine code
+//!
+//! Worth knowing before anyone writes a test: every `Nat` numeral in this
+//! kernel is unary, and `diagAux (code p)` contains `Term.code (Term.numeral
+//! (code p))`. At the smallest formula with a free variable —
+//! `FO.Formula.eqf (var 0) (var 0)`, whose code is `2` — the numeral is a
+//! three-constructor term with code `47`, and the diagonalised formula's code
+//! is `FO.Code.pair 1 (FO.Code.pair 47 47)`, over ten million. At
+//! `FO.Formula.rel1 0 (var 0)` (code `5`) it overflows the stack outright,
+//! measured. `fo_roundtrip/tests.rs` therefore checks `diagAux` by `def_eq` at
+//! three FREE variables, which is pure δ/β and pins the definition exactly.
 
 // The mathematical variables in this group are the ones the literature uses --
 // `t`/`u` for terms, `p`/`q` for formulas, `a`/`b`/`k`/`n` for naturals, `f`
@@ -137,6 +180,12 @@ pub struct FoRoundTripPrelude {
     /// `FO.Code.isFormulaCodeAux_code : Π p g, Eq Bool (isFormulaCodeAux
     /// (Nat.add g (size p)) (code p)) Bool.true`.
     pub is_formula_code_aux_code: NameId,
+    /// `FO.Term.numeral : Nat -> FO.Term` — the object-language numeral.
+    pub term_numeral: NameId,
+    /// `FO.Code.diagAux : Nat -> Nat -> Nat -> Nat` — the diagonal function.
+    pub diag_aux: NameId,
+    /// `FO.Code.diagAux_code` — the diagonal identity `diag ⌜p⌝ = ⌜p(⌜p⌝)⌝`.
+    pub diag_aux_code: NameId,
 }
 
 /// What one constructor field contributes to the code, to the size, and to the
@@ -287,6 +336,20 @@ pub fn build_fo_roundtrip_prelude(
         &mut fv,
     )?;
 
+    let term_numeral = declare_term_numeral(kernel, &rt, &syntax, &mut fv)?;
+    let diag_aux = declare_diag_aux(kernel, &rt, subst_code_aux, term_numeral, &mut fv)?;
+    let diag_aux_code = declare_diag_aux_code(
+        kernel,
+        &rt,
+        &syntax,
+        diag_aux,
+        term_numeral,
+        term_size,
+        formula_size,
+        subst_code_aux_commutes,
+        &mut fv,
+    )?;
+
     Ok(FoRoundTripPrelude {
         decode: dec,
         term_size,
@@ -299,7 +362,195 @@ pub fn build_fo_roundtrip_prelude(
         subst_code_aux_commutes,
         is_formula_code_aux,
         is_formula_code_aux_code,
+        term_numeral,
+        diag_aux,
+        diag_aux_code,
     })
+}
+
+// ============================================================================
+// The diagonal identity.
+// ============================================================================
+
+/// `FO.Term.numeral : Nat -> FO.Term` — the object-language numeral,
+/// `Nat.rec (FO.Term.f0 0) (fun _ ih => FO.Term.f1 1 ih)`.
+///
+/// Symbols `0` (nullary) and `1` (unary) are chosen so the numeral denotes its
+/// own index in `FO.natStructure`, whose interpretation (`fo_semantics.rs`) is
+/// `fn0 k = k` and `fn1 k x = Nat.add x k`: `f0 0` evaluates to `0` and
+/// `f1 1 t` to `Nat.add (eval t) 1`, which ι-reduces to `Nat.succ (eval t)`.
+fn declare_term_numeral(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    syntax: &FoSyntaxPrelude,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let carrier = rt.term_ty;
+    let nat_ty = rt.nat_ty;
+    let motive = {
+        let anon = kernel.anon();
+        kernel.lam(anon, nat_ty, carrier, BinderInfo::Default)
+    };
+    let base = {
+        let zero = numeral(kernel, &rt.c, 0);
+        let head = kernel.const_(syntax.f0, vec![]);
+        kernel.app(head, zero)
+    };
+    let step = {
+        let k_id = fv.next();
+        let ih_id = fv.next();
+        let ih = kernel.fvar(ih_id);
+        let one = numeral(kernel, &rt.c, 1);
+        let head = kernel.const_(syntax.f1, vec![]);
+        let body = apply_all(kernel, head, &[one, ih]);
+        lams(kernel, &[(k_id, nat_ty), (ih_id, carrier)], body)
+    };
+    let n_id = fv.next();
+    let n = kernel.fvar(n_id);
+    let rec = kernel.const_(rt.c.nat.rec, vec![rt.one_lvl]);
+    let applied = apply_all(kernel, rec, &[motive, base, step, n]);
+    let value = lam_fv(kernel, n_id, nat_ty, applied);
+    let ty = arrow(kernel, nat_ty, carrier);
+    let name = kernel.name_str(syntax.term, "numeral");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// `FO.Code.diagAux : Nat -> Nat -> Nat -> Nat
+///   := fun fp ft n => substCodeAux fp ft n (FO.Term.code (FO.Term.numeral n))`
+///
+/// "Substitute a formula's own code, as a numeral, into itself." This is the
+/// function the diagonal lemma is about.
+fn declare_diag_aux(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    subst_code_aux: NameId,
+    term_numeral: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let nat_ty = rt.nat_ty;
+    let fp_id = fv.next();
+    let ft_id = fv.next();
+    let n_id = fv.next();
+    let fp = kernel.fvar(fp_id);
+    let ft = kernel.fvar(ft_id);
+    let n = kernel.fvar(n_id);
+
+    let self_numeral = numeral_code(kernel, rt, term_numeral, n);
+    let body = {
+        let head = kernel.const_(subst_code_aux, vec![]);
+        apply_all(kernel, head, &[fp, ft, n, self_numeral])
+    };
+    let binders = [(fp_id, nat_ty), (ft_id, nat_ty), (n_id, nat_ty)];
+    let value = lams(kernel, &binders, body);
+    let ty = {
+        let mut t = nat_ty;
+        for _ in 0..3 {
+            t = arrow(kernel, nat_ty, t);
+        }
+        t
+    };
+    let name = kernel.name_str(rt.c.code_ns, "diagAux");
+    kernel.add_declaration(Declaration::Definition {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+        hint: ReducibilityHint::Regular(0),
+    })?;
+    Ok(name)
+}
+
+/// `FO.Term.code (FO.Term.numeral n)`.
+fn numeral_code(kernel: &mut crate::Kernel, rt: &Rt, term_numeral: NameId, n: ExprId) -> ExprId {
+    let num = {
+        let head = kernel.const_(term_numeral, vec![]);
+        kernel.app(head, n)
+    };
+    code_app(kernel, rt.dec.numbering.term_code, num)
+}
+
+/// `FO.Code.diagAux_code : Π p gp gt, Eq Nat
+///   (diagAux (Nat.add gp (Formula.size p))
+///            (Nat.add gt (Term.size (numeral (Formula.code p))))
+///            (Formula.code p))
+///   (Formula.code (Formula.subst p (Subst.cons (numeral (Formula.code p))
+///                                              Subst.id)))`
+///
+/// **The arithmetization half of the diagonal lemma**: `diag ⌜p⌝` is the code
+/// of `p` with its OWN code substituted for de Bruijn index `0`. It is
+/// `substCodeAux_commutes` at `t := FO.Term.numeral (FO.Formula.code p)` and
+/// nothing else — the whole cost was the round trip.
+///
+/// The provability-level statement the roadmap asks for —
+/// `FO.Provable Γ_Q (Iff δ (ψ ⌜δ⌝))` — does **not** follow from this, and the
+/// gap is not a step but a strand: it needs `Γ_Q` to PROVE the numeric fact
+/// `diag m̄ = ⌜δ⌝`, i.e. that the diagonal function is representable in Q, i.e.
+/// Σ₁-completeness for a `Nat.rec`-defined function. Nothing in `fo_*.rs`
+/// currently relates `FO.Provable` to a computation on `Nat` in either
+/// direction, and `FO.Formula` has no `Iff` connective either (it would be
+/// `and_ (imp a b) (imp b a)`). Sized in ADR-1648.
+fn declare_diag_aux_code(
+    kernel: &mut crate::Kernel,
+    rt: &Rt,
+    syntax: &FoSyntaxPrelude,
+    diag_aux: NameId,
+    term_numeral: NameId,
+    term_size: NameId,
+    formula_size: NameId,
+    subst_code_aux_commutes: NameId,
+    fv: &mut Fv,
+) -> Result<NameId, KernelError> {
+    let logic = rt.logic;
+    let nat_ty = rt.nat_ty;
+
+    let p_id = fv.next();
+    let gp_id = fv.next();
+    let gt_id = fv.next();
+    let p = kernel.fvar(p_id);
+    let gp = kernel.fvar(gp_id);
+    let gt = kernel.fvar(gt_id);
+
+    let cp = code_app(kernel, rt.dec.numbering.formula_code, p);
+    let self_numeral = {
+        let head = kernel.const_(term_numeral, vec![]);
+        kernel.app(head, cp)
+    };
+
+    let sp = size_app(kernel, formula_size, p);
+    let st = size_app(kernel, term_size, self_numeral);
+    let fp = nadd(kernel, &rt.c, gp, sp);
+    let ft = nadd(kernel, &rt.c, gt, st);
+
+    let lhs = {
+        let head = kernel.const_(diag_aux, vec![]);
+        apply_all(kernel, head, &[fp, ft, cp])
+    };
+    let rhs = substituted_code(kernel, rt, syntax, p, self_numeral);
+    let concl = geq(kernel, logic, nat_ty, lhs, rhs);
+
+    let body = {
+        let head = kernel.const_(subst_code_aux_commutes, vec![]);
+        apply_all(kernel, head, &[p, self_numeral, gp, gt])
+    };
+
+    let binders = [(p_id, rt.formula_ty), (gp_id, nat_ty), (gt_id, nat_ty)];
+    let ty = pis(kernel, &binders, concl);
+    let value = lams(kernel, &binders, body);
+    let name = kernel.name_str(rt.c.code_ns, "diagAux_code");
+    kernel.add_declaration(Declaration::Theorem {
+        name,
+        uparams: vec![],
+        ty,
+        value,
+    })?;
+    Ok(name)
 }
 
 // ============================================================================
