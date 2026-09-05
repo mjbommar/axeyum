@@ -588,81 +588,97 @@ fn census(name: &'static str) -> Option<CarrierCensus> {
     Some(census)
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_logic_carrier() {
     census("logic");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_nat_carrier() {
     census("nat");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_axreal_carrier() {
     census("axreal");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_int_carrier() {
     census("int");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_characterization_carrier() {
     census("characterization");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_ipc_carrier() {
     census("ipc");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_ipc_eval_carrier() {
     census("ipc_eval");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_list_carrier() {
     census("list");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_rat_carrier() {
     census("rat");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_string_carrier() {
     census("string");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_arith_models_carrier() {
     census("arith_models");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_complex_carrier() {
     census("complex");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_cpoint_carrier() {
     census("cpoint");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_metric_carrier() {
     census("metric");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_intspace_carrier() {
     census("intspace");
 }
 
+#[ignore = "nested inside `everything`, which the gate runs; re-derive the per-carrier rows with `-- --ignored` (coordinator, 2026-09-05: seventeen debug-mode Lean replays were unmeasured and the gate is in the push hook)"]
 #[test]
 fn pinned_lean_admits_the_rn_carrier() {
     census("rn");

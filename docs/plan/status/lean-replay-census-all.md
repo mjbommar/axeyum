@@ -137,3 +137,5 @@ it aside (exit 0) and putting it back.
 | 2026-09-05 | `defe0d742` | lane opened: status file |
 | 2026-09-05 | `f3d8b3d95` | the census over every carrier: shared harness `tests/support/replay_census.rs`, new suite `real_lean_replay_census_all` (17 carriers, one `#[test]` each), carrier list derived from `src/lib.rs`'s re-export block, `creal` floor raised 1,900 -> 3,350, `check-lean-gate.sh` `CHECK_FLOOR` 261 -> 278 with the new suite registered |
 | 2026-09-05 | (this commit) | `artifacts/measurements/lean-replay-census-2026-09-05.md`, ADR-1661, ADR index regenerated, and the four rows in `docs/math-department/14-lean-lang.md` this run moved |
+
+| 2026-09-05 | coordinator | sixteen nested carriers moved behind `--ignored`, `CHECK_FLOOR` 278 -> 262; the gate keeps the `everything` census only (see ADR-1661's coordinator note) |

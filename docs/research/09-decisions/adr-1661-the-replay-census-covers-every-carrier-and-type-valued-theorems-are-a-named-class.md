@@ -247,3 +247,7 @@ own name. The 84 that are not are named individually, with a reason each.
   The guard is therefore sensitive to every loss that changes what Lean ends
   up holding, which is the property it claims; it is not a per-root
   transmission audit and does not claim to be.
+
+## Coordinator note, 2026-09-05
+
+Before landing, the sixteen nested per-carrier tests in `real_lean_replay_census_all` were put behind `#[ignore]` and `CHECK_FLOOR` set to 262 rather than 278: the gate runs only the `everything` carrier (the union, and the only row a headline may quote), because the suite's cost in the debug profile the push hook uses was not measured (the lane's debug build waited 45 minutes in the cargo queue) and its release run alone took 738.79 s. The sixteen rows above are re-derived with `cargo test -p axeyum-lean-kernel --test real_lean_replay_census_all -- --ignored`; the measurement artifact is unchanged.

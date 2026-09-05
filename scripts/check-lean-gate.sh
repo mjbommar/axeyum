@@ -86,10 +86,15 @@ cd "$(dirname "$0")/.." || exit 2
 # headroom so ordinary churn does not trip it; RAISING it as suites grow is the
 # ratchet working, LOWERING it needs a reason in the commit message.
 #
-# Raised 261 -> 278 on 2026-09-05 by lane `lean-replay-census-all` (ADR-1661,
-# item 2 of the Next Ten in `docs/math-department/14-lean-lang.md`):
-# `real_lean_replay_census_all` adds SEVENTEEN real-Lean invocations, one per
-# carrier. `real_lean_replay_census` (ADR-0760) graded independent replay per
+# Raised 261 -> 262 on 2026-09-05 by lane `lean-replay-census-all` (ADR-1661,
+# item 2 of the Next Ten in `docs/math-department/14-lean-lang.md`), then held
+# there by the coordinator: `real_lean_replay_census_all` runs ONE real-Lean
+# invocation in the gate (the `everything` carrier, the union of all of them)
+# and keeps its sixteen nested per-carrier censuses behind `--ignored`, because
+# seventeen debug-mode full-kernel replays were unmeasured and this gate is in
+# the push hook. The lane's release run measured 738.79 s for all seventeen.
+# One per
+# carrier when run `-- --ignored`. `real_lean_replay_census` (ADR-0760) graded independent replay per
 # declaration over the constructed reals only; this extends the same harness --
 # `tests/support/replay_census.rs`, shared by both suites so they cannot drift --
 # to every other carrier the kernel builds, plus one `everything` carrier that
@@ -255,7 +260,7 @@ cd "$(dirname "$0")/.." || exit 2
 # own `checker_command` exits 101. The guards were fail-closed; nobody ran
 # them. `AXEYUM_REQUIRE_LEAN=1` does NOT catch it -- it fires only when a
 # toolchain cannot be resolved, and the abort happens before the probe.
-CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-278}"
+CHECK_FLOOR="${AXEYUM_LEAN_CHECK_FLOOR:-262}"
 
 # The total above counts modules Lean READ. It is not a count of propositions
 # Lean PROVED, and the gap is large: measured 2026-08-17, 41 of `lean_crosscheck`'s
