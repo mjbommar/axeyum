@@ -7,6 +7,7 @@ use super::{MetricProdNames, build_metric_prod_prelude, creal_creal_pieces, mk_o
 use crate::env::Declaration;
 use crate::int_prelude::ops::IntDev;
 use crate::name::NameId;
+use crate::nat_prelude::NatOps;
 use crate::{Kernel, MetricPrelude, on_a_deep_stack};
 
 fn built() -> (Kernel, MetricPrelude, MetricProdNames) {
@@ -162,7 +163,10 @@ fn prod_dist_self_reduces_at_a_concrete_point() {
         let _proof = d.apply(dist_self, &[pair, pair, refl_at_pair]);
         true
     };
-    assert!(ok, "Metric.prod's distSelf field must apply at a concrete point");
+    assert!(
+        ok,
+        "Metric.prod's distSelf field must apply at a concrete point"
+    );
 }
 
 /// Sanity: `names.all()`'s labels are unique (a copy/paste NameId collision

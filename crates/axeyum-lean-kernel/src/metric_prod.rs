@@ -121,9 +121,8 @@ use crate::{
     METRIC_CARRIER as CARRIER, METRIC_DIST as DIST, METRIC_DIST_COMM as DIST_COMM,
     METRIC_DIST_CONGR as DIST_CONGR, METRIC_DIST_EQUIV as DIST_EQUIV,
     METRIC_DIST_NONNEG as DIST_NONNEG, METRIC_DIST_SELF as DIST_SELF,
-    METRIC_DIST_TRIANGLE as DIST_TRIANGLE, METRIC_EQUIV as EQUIV,
-    METRIC_EQUIV_REFL as EQUIV_REFL, METRIC_EQUIV_SYMM as EQUIV_SYMM,
-    METRIC_EQUIV_TRANS as EQUIV_TRANS,
+    METRIC_DIST_TRIANGLE as DIST_TRIANGLE, METRIC_EQUIV as EQUIV, METRIC_EQUIV_REFL as EQUIV_REFL,
+    METRIC_EQUIV_SYMM as EQUIV_SYMM, METRIC_EQUIV_TRANS as EQUIV_TRANS,
 };
 
 #[cfg(test)]
@@ -205,10 +204,7 @@ impl MetricProdNames {
             ("Metric.prod_complete", self.prod_complete),
             ("Metric.cpoint_of_prod", self.cpoint_of_prod),
             ("Metric.prod_of_cpoint", self.prod_of_cpoint),
-            (
-                "Metric.prod_of_cpoint_of_prod",
-                self.prod_of_cpoint_of_prod,
-            ),
+            ("Metric.prod_of_cpoint_of_prod", self.prod_of_cpoint_of_prod),
             (
                 "Metric.cpoint_of_prod_of_cpoint",
                 self.cpoint_of_prod_of_cpoint,
@@ -222,10 +218,8 @@ fn intern(kernel: &mut Kernel, metric: NameId) -> MetricProdNames {
         prod: kernel.name_str(metric, "prod"),
         prod_fst: kernel.name_str(metric, "prod_fst"),
         prod_snd: kernel.name_str(metric, "prod_snd"),
-        prod_fst_uniformly_continuous: kernel
-            .name_str(metric, "prod_fst_uniformly_continuous"),
-        prod_snd_uniformly_continuous: kernel
-            .name_str(metric, "prod_snd_uniformly_continuous"),
+        prod_fst_uniformly_continuous: kernel.name_str(metric, "prod_fst_uniformly_continuous"),
+        prod_snd_uniformly_continuous: kernel.name_str(metric, "prod_snd_uniformly_continuous"),
         prod_fst_continuous_of_continuous: kernel
             .name_str(metric, "prod_fst_continuous_of_continuous"),
         prod_snd_continuous_of_continuous: kernel
@@ -427,7 +421,13 @@ struct ProdPieces {
     mk_head: ExprId,
 }
 
-fn prod_pieces(d: &mut IntDev<'_>, c: CRealPrelude, mp: MetricPrelude, m: ExprId, n: ExprId) -> ProdPieces {
+fn prod_pieces(
+    d: &mut IntDev<'_>,
+    c: CRealPrelude,
+    mp: MetricPrelude,
+    m: ExprId,
+    n: ExprId,
+) -> ProdPieces {
     let zero = d.kernel().level_zero();
     let sigma = c.rat.int.logic.sigma;
     let m_carrier = field(d, mp, m, CARRIER);
@@ -960,7 +960,13 @@ fn declare_prod(
 }
 
 /// `(Metric.prod M N).carrier`, for `M`, `N` already-built terms.
-fn prod_carrier_of(d: &mut IntDev<'_>, mp: MetricPrelude, names: MetricProdNames, m: ExprId, n: ExprId) -> ExprId {
+fn prod_carrier_of(
+    d: &mut IntDev<'_>,
+    mp: MetricPrelude,
+    names: MetricProdNames,
+    m: ExprId,
+    n: ExprId,
+) -> ExprId {
     let app = d.const_app(names.prod, &[m, n]);
     field(d, mp, app, CARRIER)
 }
@@ -1114,7 +1120,10 @@ fn declare_projection_uniformly_continuous(
         d.lam_fv(mn.m_fv, mty, with_n2)
     };
     let ty = {
-        let uc_ty = d.const_app(mp.continuity.uniformly_continuous, &[prod_inst, codomain, proj_inst]);
+        let uc_ty = d.const_app(
+            mp.continuity.uniformly_continuous,
+            &[prod_inst, codomain, proj_inst],
+        );
         let with_n2 = d.pi_fv(mn.n_fv, mty, uc_ty);
         d.pi_fv(mn.m_fv, mty, with_n2)
     };
@@ -1174,6 +1183,11 @@ fn declare_continuous_comp(
     let mn = mn_ambient(d, c, mp);
     let mty = metric_ty(d, mp);
     let nat = nat_ty(d);
+    // `ContinuousAtWith`'s modulus `k` is `Nat -> Nat` (it supplies the
+    // DENOMINATOR argument `k n`), unlike `CauchyAt`/`TendsToAt`'s plain
+    // `Nat` numerator -- the existential over it must range over
+    // `Nat -> Nat`, not `Nat`.
+    let nat_to_nat = d.arrow(nat, nat);
     let prod_inst = d.const_app(names.prod, &[mn.m, mn.n]);
     let proj_inst = if is_fst {
         d.const_app(names.prod_fst, &[mn.m, mn.n])
@@ -1222,67 +1236,78 @@ fn declare_continuous_comp(
             mp.continuity.continuous_at_with,
             &[p_inst, prod_inst, g, pt, k_var],
         );
-        d.lam_fv(k_fv, nat, body)
+        d.lam_fv(k_fv, nat_to_nat, body)
     };
 
-    let body_at_pt = exists_elim_build(d, c, nat, at_with_pred_prod, target_at_pt, hg_at_pt, |d, k, hk| {
-        // `hk : ContinuousAtWith P (prod M N) G pt k`; reuse `k` unchanged.
-        let n_fv = d.fresh_fvar();
-        let n = d.kernel().fvar(n_fv);
-        let y_fv = d.fresh_fvar();
-        let y = d.kernel().fvar(y_fv);
+    let body_at_pt = exists_elim_build(
+        d,
+        c,
+        nat_to_nat,
+        at_with_pred_prod,
+        target_at_pt,
+        hg_at_pt,
+        |d, k, hk| {
+            // `hk : ContinuousAtWith P (prod M N) G pt k`; reuse `k` unchanged.
+            let n_fv = d.fresh_fvar();
+            let n = d.kernel().fvar(n_fv);
+            let y_fv = d.fresh_fvar();
+            let y = d.kernel().fvar(y_fv);
 
-        // `ContinuousAtWith`'s numerator is FIXED at 1; the modulus `k`
-        // supplies the DENOMINATOR argument `k n`, not a numerator (unlike
-        // `TendsToAt`/`CauchyAt`'s `K`). So the hypothesis bound is
-        // `ofRat (natDivSucc 1 (k n))`, not `ofRat (natDivSucc k n)`.
-        let p_dist = field(d, mp, p_inst, DIST);
-        let d_py = d.apply(p_dist, &[pt, y]);
-        let one_num_hyp = d.num(1);
-        let k_n = d.apply(k, &[n]);
-        let rate_kn = rate_at(d, c, one_num_hyp, k_n);
-        let hyp_ty = rle(d, c, d_py, rate_kn);
-        let h_fv = d.fresh_fvar();
-        let h = d.kernel().fvar(h_fv);
+            // `ContinuousAtWith`'s numerator is FIXED at 1; the modulus `k`
+            // supplies the DENOMINATOR argument `k n`, not a numerator (unlike
+            // `TendsToAt`/`CauchyAt`'s `K`). So the hypothesis bound is
+            // `ofRat (natDivSucc 1 (k n))`, not `ofRat (natDivSucc k n)`.
+            let p_dist = field(d, mp, p_inst, DIST);
+            let d_py = d.apply(p_dist, &[pt, y]);
+            let one_num_hyp = d.num(1);
+            let k_n = d.apply(k, &[n]);
+            let rate_kn = rate_at(d, c, one_num_hyp, k_n);
+            let hyp_ty = rle(d, c, d_py, rate_kn);
+            let h_fv = d.fresh_fvar();
+            let h = d.kernel().fvar(h_fv);
 
-        let step1 = d.apply(hk, &[n, y, h]); // le (dist_prod (G pt) (G y)) (rate n)
+            let step1 = d.apply(hk, &[n, y, h]); // le (dist_prod (G pt) (G y)) (rate n)
 
-        let gp = d.apply(g, &[pt]);
-        let gy = d.apply(g, &[y]);
-        let fpt = fst_of(d, &mn.pieces, gp);
-        let fpy = fst_of(d, &mn.pieces, gy);
-        let spt = snd_of(d, &mn.pieces, gp);
-        let spy = snd_of(d, &mn.pieces, gy);
-        let m_dist = field(d, mp, mn.m, DIST);
-        let n_dist = field(d, mp, mn.n, DIST);
-        let dm = d.apply(m_dist, &[fpt, fpy]);
-        let dn = d.apply(n_dist, &[spt, spy]);
-        let d_proj = if is_fst { dm } else { dn };
-        let one_num = d.num(1);
-        let rate_n = rate_at(d, c, one_num, n);
-        let proj_le_prod = if is_fst {
-            d.lemma(c.le_max_left, &[dm, dn])
-        } else {
-            d.lemma(c.le_max_right, &[dm, dn])
-        };
-        let dprod_gp_gy = rmax(d, c, dm, dn);
-        let concl = d.lemma(c.le_trans, &[d_proj, dprod_gp_gy, rate_n, proj_le_prod, step1]);
-
-        let with_h = d.lam_fv(h_fv, hyp_ty, concl);
-        let with_y = d.lam_fv(y_fv, p_carrier, with_h);
-        let with_n = d.lam_fv(n_fv, nat, with_y);
-
-        let at_with_pred_target = {
-            let k2_fv = d.fresh_fvar();
-            let k2_var = d.kernel().fvar(k2_fv);
-            let body = d.const_app(
-                mp.continuity.continuous_at_with,
-                &[p_inst, codomain, f_map, pt, k2_var],
+            let gp = d.apply(g, &[pt]);
+            let gy = d.apply(g, &[y]);
+            let fpt = fst_of(d, &mn.pieces, gp);
+            let fpy = fst_of(d, &mn.pieces, gy);
+            let spt = snd_of(d, &mn.pieces, gp);
+            let spy = snd_of(d, &mn.pieces, gy);
+            let m_dist = field(d, mp, mn.m, DIST);
+            let n_dist = field(d, mp, mn.n, DIST);
+            let dm = d.apply(m_dist, &[fpt, fpy]);
+            let dn = d.apply(n_dist, &[spt, spy]);
+            let d_proj = if is_fst { dm } else { dn };
+            let one_num = d.num(1);
+            let rate_n = rate_at(d, c, one_num, n);
+            let proj_le_prod = if is_fst {
+                d.lemma(c.le_max_left, &[dm, dn])
+            } else {
+                d.lemma(c.le_max_right, &[dm, dn])
+            };
+            let dprod_gp_gy = rmax(d, c, dm, dn);
+            let concl = d.lemma(
+                c.le_trans,
+                &[d_proj, dprod_gp_gy, rate_n, proj_le_prod, step1],
             );
-            d.lam_fv(k2_fv, nat, body)
-        };
-        exists_intro(d, c, nat, at_with_pred_target, k, with_n)
-    });
+
+            let with_h = d.lam_fv(h_fv, hyp_ty, concl);
+            let with_y = d.lam_fv(y_fv, p_carrier, with_h);
+            let with_n = d.lam_fv(n_fv, nat, with_y);
+
+            let at_with_pred_target = {
+                let k2_fv = d.fresh_fvar();
+                let k2_var = d.kernel().fvar(k2_fv);
+                let body = d.const_app(
+                    mp.continuity.continuous_at_with,
+                    &[p_inst, codomain, f_map, pt, k2_var],
+                );
+                d.lam_fv(k2_fv, nat_to_nat, body)
+            };
+            exists_intro(d, c, nat_to_nat, at_with_pred_target, k, with_n)
+        },
+    );
 
     let value = {
         let with_pt = d.lam_fv(pt_fv, p_carrier, body_at_pt);
@@ -1561,11 +1586,15 @@ fn declare_prod_complete(
                                     let dm_bound = d.apply(m_dist, &[f1n, l1]);
                                     let rate_k1 = rate_at(d, c, k1, nv);
                                     let rate_kc = rate_at(d, c, kc, nv);
-                                    let mono_m = d.lemma(c.rat.nat_div_succ_le_add_left, &[k1, k2, nv]);
+                                    let mono_m =
+                                        d.lemma(c.rat.nat_div_succ_le_add_left, &[k1, k2, nv]);
                                     let nk1 = d.const_app(c.rat.nat_div_succ, &[k1, nv]);
                                     let nkc = d.const_app(c.rat.nat_div_succ, &[kc, nv]);
                                     let lift_m = d.lemma(c.of_rat_le, &[nk1, nkc, mono_m]);
-                                    let bound_m = d.lemma(c.le_trans, &[dm_bound, rate_k1, rate_kc, step_m, lift_m]);
+                                    let bound_m = d.lemma(
+                                        c.le_trans,
+                                        &[dm_bound, rate_k1, rate_kc, step_m, lift_m],
+                                    );
 
                                     // -- N-side bound: rewrite K2+K1 to K1+K2 first --
                                     let step_n = d.apply(hk2t, &[nv]);
@@ -1573,7 +1602,8 @@ fn declare_prod_complete(
                                     let n_dist = field(d, mp, mn.n, DIST);
                                     let dn_bound = d.apply(n_dist, &[f2n, l2]);
                                     let rate_k2 = rate_at(d, c, k2, nv);
-                                    let mono_n_raw = d.lemma(c.rat.nat_div_succ_le_add_left, &[k2, k1, nv]);
+                                    let mono_n_raw =
+                                        d.lemma(c.rat.nat_div_succ_le_add_left, &[k2, k1, nv]);
                                     let k21 = d.add(k2, k1);
                                     let nk2 = d.const_app(c.rat.nat_div_succ, &[k2, nv]);
                                     let add_comm_name = d.prelude().add_comm;
@@ -1587,15 +1617,22 @@ fn declare_prod_complete(
                                     };
                                     let mono_n = d.transport(k21, motive, mono_n_raw, kc, comm);
                                     let lift_n = d.lemma(c.of_rat_le, &[nk2, nkc, mono_n]);
-                                    let bound_n = d.lemma(c.le_trans, &[dn_bound, rate_k2, rate_kc, step_n, lift_n]);
+                                    let bound_n = d.lemma(
+                                        c.le_trans,
+                                        &[dn_bound, rate_k2, rate_kc, step_n, lift_n],
+                                    );
 
-                                    let dist_prod_body = d.lemma(c.max_le, &[dm_bound, dn_bound, rate_kc, bound_m, bound_n]);
+                                    let dist_prod_body = d.lemma(
+                                        c.max_le,
+                                        &[dm_bound, dn_bound, rate_kc, bound_m, bound_n],
+                                    );
 
                                     let tends_to_at_body = d.lam_fv(n_fv, nat, dist_prod_body);
                                     let tends_to_at_pred_prod = {
                                         let k3_fv = d.fresh_fvar();
                                         let k3 = d.kernel().fvar(k3_fv);
-                                        let body = d.const_app(mp.tends_to_at, &[prod_inst, f, l, k3]);
+                                        let body =
+                                            d.const_app(mp.tends_to_at, &[prod_inst, f, l, k3]);
                                         d.lam_fv(k3_fv, nat, body)
                                     };
                                     let tends_to_proof = exists_intro(
@@ -1807,4 +1844,3 @@ fn declare_cpoint_of_prod_of_cpoint(
     };
     theorem(d, names.cpoint_of_prod_of_cpoint, ty, value)
 }
-
