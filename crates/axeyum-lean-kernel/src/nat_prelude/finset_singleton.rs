@@ -115,6 +115,7 @@ fn count_range(d: &mut NatDev<'_>, p: &NatPrelude, f: ExprId, n: ExprId) -> Expr
 }
 
 /// `Or.rec` into a `Prop` goal.
+#[allow(clippy::too_many_arguments)]
 fn or_elim(
     d: &mut NatDev<'_>,
     p: &NatPrelude,
