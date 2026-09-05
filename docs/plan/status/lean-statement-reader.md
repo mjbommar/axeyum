@@ -2,7 +2,7 @@
 
 <!-- plan-section: lane-status -->
 
-**Your lane's block (`WIP`, lean-statement-reader, 2026-09-05).**
+**Your lane's block (`DONE`, lean-statement-reader, 2026-09-05; closed out by the coordinator after the lane was terminated by an account spend limit).**
 [Next Ten item 9](../../math-department/14-lean-lang.md#the-next-ten-in-priority-order),
 FIRST HALF ONLY (the census in ADR-1662 found the Mathlib-surface half gated
 at 5 elaboration-blocked rows, so its demand gate is not met — not built,
@@ -47,18 +47,20 @@ declared type. Three more negative controls run against real ledger facts
 (swapped argument order, renamed constant, dropped universe argument), all
 passing.
 
-**Final measured totals** (post-fix, `missing == 0` asserted): of **2,020**
-`lean4` facts, **1,964 read**, **1,958 round-trip byte-exact**, **1,920 of
-1,922** resolvable `kernel_theorem`s `def_eq` their declared type. Every
-failure is classified (roundtrip-mismatch 6, def-eq-mismatch 2,
-trailing-input 19, unexpected-token 19, unbound-variable 16,
-unknown-constant 2) and traced to a specific cause in ADR-1680's
+**Final measured totals** (post-fix, `missing == 0` asserted, against commit
+`8808f0951`): of **2,020** `lean4` facts, **1,964 read**, **1,958 round-trip
+byte-exact**, **1,920 of 1,922** resolvable `kernel_theorem`s `def_eq` their
+declared type. Every failure is classified (roundtrip-mismatch 6,
+def-eq-mismatch 2, trailing-input 19, unexpected-token 19, unbound-variable
+16, unknown-constant 2) and traced to a specific cause in ADR-1680's
 per-fragment table — almost all ledger-content findings (hand-authored
 prose mislabeled `lean4`, `imported-kernel-lean` facts in Mathlib's own
 vocabulary, two stale statements, six stale `Nat` renderings), plus one
 honest reader limitation (non-ASCII/Greek identifiers, 3 facts) and one
 test-construction coverage gap (`Geo` prelude not in the union kernel, 1
 fact).
+
+**Re-measured by the coordinator on the merged tree (main merged at `2ff20b5ac`, release, 48.55 s)** after the lane was terminated by an account spend limit: of **2,023** `lean4` facts, **1,967 read**, **1,961 round-trip byte-exact**, **1,923 of 1,925** resolvable `kernel_theorem`s `def_eq` their declared type; the three `CPoint` facts the conics merge added all pass; failure classes unchanged (def-eq-mismatch 2, roundtrip-mismatch 6, trailing-input 19, unbound-variable 16, unexpected-token 19, unknown-constant 2). The suite is auto-enumerated by `scripts/check-kernel-suites.sh` into its `push` partition.
 
 **Registration (outcome D) needed no edits.** Both places the brief named are
 auto-discovered, not literal lists:
@@ -74,4 +76,7 @@ Python checker was added, so `scripts/check.sh` needed no new step either.
 <!-- plan-section: landed-changes -->
 
 | 2026-09-05 | lean-statement-reader | `crates/axeyum-lean-kernel/src/lean_read.rs` added: `Kernel::read_lean`, typed `ReadError` (7 classes), 14 unit tests; wired via `mod lean_read;` + `pub use lean_read::ReadError;` in `lib.rs`. Trusted core unchanged (5,545/5,900 lines, same 9 files, guard D 0 failures). `209bb940f` |
-| 2026-09-05 | lean-statement-reader | Ledger-wide round-trip suite `crates/axeyum-lean-kernel/tests/lean_read_round_trip.rs` added and found a real cross-fact contamination bug in constant resolution (see lane-status); fixed with one `environment().contains()` check, 15th unit test added as a regression control. See ADR-1680 for the corrected per-fragment table. |
+| 2026-09-05 | lean-statement-reader | Ledger-wide round-trip suite `crates/axeyum-lean-kernel/tests/lean_read_round_trip.rs` added and found a real cross-fact contamination bug in constant resolution (see lane-status); fixed with one `environment().contains()` check, 15th unit test added as a regression control. See ADR-1680 for the corrected per-fragment table. `8808f0951` |
+| 2026-09-05 | lean-statement-reader | Merged local `main` (conics work, 21 files); trusted core re-measured unchanged (5,545/5,900, 9 files, guard D 0 failures) after the merge; `python3 scripts/gen-plan.py` and `check-merge-hygiene.sh` re-run clean. `cargo check --workspace --all-targets` clean post-merge. Population moved to 2,023 `lean4` facts (3 new `CPoint` conic facts); re-verification queued but did not complete under host contention (see above). |
+
+| 2026-09-05 | coordinator | re-measured on the merged tree: 2,023 `lean4` facts, 1,967 read, 1,961 round-trip, 1,923/1,925 def-eq; lane closed out (ADR-1680) |

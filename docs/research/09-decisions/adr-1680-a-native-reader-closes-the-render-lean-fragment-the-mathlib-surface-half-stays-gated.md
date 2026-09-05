@@ -171,12 +171,24 @@ construction, every builder in it idempotent, plus `top_frame`), scored for:
    nor the `_N` convention, since those are `render_lean`-only spellings),
    `def_eq(read_lean(s), type_of(kernel_theorem))`.
 
+
+**Re-measured after the merge with main, 2026-09-05 (coordinator, release, 48.55 s):** 2,023 `lean4` facts, 1,967 read, 1,961 round-trip byte-exact, 1,923 of 1,925 def-eq; the three `CPoint` facts the conics merge added all pass; failure classes unchanged. The lane that built this was terminated by an account spend limit before committing its final edits; the coordinator verified (workspace check, trusted core 5,545 unchanged, rustfmt, this run) and closed it out.
+
 ### Per-fragment round-trip table
 
-Measured 2026-09-05 with
+Measured 2026-09-05 against commit `8808f0951` with
 `scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel --test lean_read_round_trip -- --nocapture --test-threads=1`
 (~100 s including the ~3 min release build; `LEAN_READ_ROUND_TRIP_VERBOSE=1` on
-the same command re-derives every row below with per-fact detail):
+the same command re-derives every row below with per-fact detail). A
+subsequent `git merge main` landed 3 more `lean4`-tagged facts (all
+`CPoint`, from concurrent conics work: `F:circle-is-the-a-eq-c-b-zero-conic`,
+`F:conic-discriminant-invariant-under-rotation`,
+`F:parabola-focus-directrix-without-square-roots`) that are NOT in the
+2,020 below — a re-run was queued under this session's host-wide
+`cargo-serialized.sh` lock but did not complete against sustained
+contention from concurrent lanes' builds; report this table's population
+as **2,020 as of `8808f0951`**, not the ledger's current count, until a
+fresh run confirms the 3 additional facts:
 
 | fragment | total | read OK | round-trip OK | def-eq checked | def-eq OK | failures |
 |---|---|---|---|---|---|---|
