@@ -1858,6 +1858,12 @@ step lean-tactic                   bash scripts/check-lean-tactic.sh
 # 1,077-command `#print axioms` audit (2026-09-05), which no aggregate gate
 # can carry. The full build is `just lean-creal-library`, run deliberately.
 step lean-creal-library            bash scripts/check-lean-creal-library.sh --slice
+# The render -> read -> same-term gate over every `lean4` fact (Next Ten item 9,
+# ADR-1680). Ledger-wide, builds every prelude into one kernel: ~50 s in release,
+# minutes and a stack overflow in the debug profile the push hook runs, so the
+# suite's ledger tests are `#[ignore]`d and run HERE with `-- --ignored`; the
+# push partition runs only its cheap live smoke test.
+step lean-read-round-trip          scripts/cargo-serialized.sh test --release -p axeyum-lean-kernel --test lean_read_round_trip -- --ignored
 step declaration-spec python3 scripts/check-declaration-spec.py
 step proof-plan                    python3 scripts/check-proof-plan.py
 step proof-plan-tests              python3 scripts/tests/test-proof-plan-check.py

@@ -79,6 +79,7 @@ mod ipc_provable;
 mod ipc_soundness;
 mod lean_export;
 mod lean_pp;
+mod lean_read;
 mod level;
 pub mod linarith;
 mod list_prelude;
@@ -164,6 +165,7 @@ pub use lean_pp::{
     LeanPreludeModule, importing_module_banner, self_contained_module_banner,
     shared_prelude_module_banner, split_module_banner,
 };
+pub use lean_read::ReadError;
 pub use level::{LevelId, LevelNode};
 pub use list_prelude::{
     ListNatBridge, ListPerm, ListPrelude, build_list_nat_bridge, build_list_perm,

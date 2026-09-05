@@ -1,3 +1,11 @@
+> **Historical as of 2026-09-05; the live priority list is
+> [docs/math-department/13-computer-algebra.md](../../math-department/13-computer-algebra.md).**
+> This file's July "Prioritized top 15" is reproduced below unedited, each
+> item now carrying a shipped/not-shipped line verified 2026-09-05 by
+> grepping `crates/axeyum-cas/src` for the function the item names (grep
+> command given per item). 14 of 15 have code behind them; the one gap
+> (#15, Lazard–Rioboo–Trager) is the one file 13 also names as still open.
+
 # Next-wave CAS roadmap (beyond G0–G18)
 
 Status: roadmap (2026-07-20)
@@ -37,23 +45,41 @@ elimination, Meijer-G table integration.
 2. **Eigenvectors + characteristic/minimal polynomial** (Faddeev–LeVerrier /
    Berkowitz). `Av=λv` cert. Builds on `Matrix`/`solve`. *(eigenvalues, char-poly
    already shipped — remaining: eigenvectors via nullspace, minimal polynomial.)*
+   > **Shipped.** `grep -rl "pub fn eigenvectors\|pub fn minimal_polynomial" crates/axeyum-cas/src`
+   > → `matrix.rs` (plus `numberfield.rs`/`algebraic.rs`, a different, later sense
+   > of "minimal polynomial").
 3. **Nullspace, rank, exact Bareiss LU.** Thin RREF extension. *(rank shipped.)*
+   > **Shipped.** `grep -rl "pub fn null_space\|pub fn rank\|pub fn lu\b" crates/axeyum-cas/src`
+   > → `matrix.rs`.
 4. **First-order ODEs** — separable, exact, integrating-factor, Bernoulli,
    homogeneous. Substitution cert (mirrors `dsolve_homogeneous`); pure composition
    of `differentiate`/`integrate`/`substitute`. Delegable.
+   > **Shipped.** `grep -rl "pub fn dsolve_separable\|pub fn dsolve_exact\|pub fn dsolve_first_order_linear\|pub fn dsolve_bernoulli" crates/axeyum-cas/src`
+   > → `lib.rs`.
 5. **Inhomogeneous linear ODEs** — undetermined coefficients + variation of
    parameters (uses `Matrix` solve / Wronskian). Builds on `dsolve_homogeneous`.
+   > **Shipped.** `grep -rl "pub fn dsolve_inhomogeneous\|pub fn wronskian" crates/axeyum-cas/src`
+   > → `lib.rs`.
 6. **Number-theory bundle** — discrete log (BSGS/Pohlig–Hellman), Legendre/Jacobi
    symbols & quadratic residues, continued fractions / Pell, primitive roots,
    linear Diophantine. Nearly free given `mod_pow`/`factorize`/`CRT`/`gcd`.
    Delegable — ideal low-risk first module.
+   > **Shipped.** `grep -rl "pub fn discrete_log\|pub fn legendre_symbol\|pub fn jacobi_symbol\|pub fn continued_fraction\|pub fn pell\|pub fn primitive_root" crates/axeyum-cas/src`
+   > → `ntheory_advanced.rs` (plus `numberfield.rs`, the new module's own,
+   > separate Pell-as-unit route).
 7. **Factorization over ℤ/ℚ** — Berlekamp/Cantor–Zassenhaus over 𝔽ₚ + Hensel lift
    + recombination. Multiply-and-`equal` cert. Needs an 𝔽ₚ polynomial layer.
+   > **Shipped.** `grep -rl "pub fn factor_univariate_over_q" crates/axeyum-cas/src`
+   > → `factor_int.rs`.
 8. **Real root isolation (Sturm/Descartes) + RootOf** — algebraic numbers as
    (defining poly + isolating interval). Sturm sign-count *is* the cert. Unblocks
    many downstream items; build the RootOf interface first.
+   > **Shipped.** `grep -rl "pub fn count_real_roots_in\|pub struct AlgebraicReal\|RootOf" crates/axeyum-cas/src`
+   > → `algebraic.rs`/`sturm.rs`/`lib.rs`.
 9. **Smith / Hermite normal form** — `U·A·V=D` unimodularity cert. Unblocks
    Diophantine systems, module theory.
+   > **Shipped.** `grep -rl "pub fn smith_normal_form\|pub fn hermite_normal_form" crates/axeyum-cas/src`
+   > → `normalforms.rs`.
 10. **Laurent series + residues.** ✅ **SHIPPED** — `laurent_series` (rational), and
     `series_at` now expands **transcendental poles** (`1/sin x = 1/x + x/6 + …`,
     `1/(eˣ−1)`, `cot x`) by cancelling the common `xᵏ` and shifting the regular
@@ -61,17 +87,29 @@ elimination, Meijer-G table integration.
 11. **Special functions with known-derivative rules** — Γ, B, erf, Bessel,
     polylog (extend the opaque-atom pattern with *known* derivative identities).
     One function/family per agent.
+    > **Shipped.** `grep -rl "pub fn gamma\b\|pub fn beta\b\|pub fn erf\b" crates/axeyum-cas/src`
+    > → `special.rs`/`lib.rs`.
 12. **trigsimp beyond Pythagorean** — via Euler's formula (rewrite to
     exp/`I²=−1`, reduce in the existing canonical form, rewrite back). Touches the
     `simplify`/`equal` boundary — review, don't blind-delegate.
+    > **Shipped.** `grep -rl "pub fn trigsimp\|pub fn rewrite_exp" crates/axeyum-cas/src`
+    > → `lib.rs`.
 13. **Minimal assumptions system** — three-valued positive/real/integer logic
     gating `sqrt(x²)=|x|`, `logcombine`/`expand_log`/`radsimp`/`powsimp`.
     Cross-cutting; design centrally, then delegate individual gated rules.
+    > **Shipped.** `grep -rl "pub mod assumptions" crates/axeyum-cas/src` → `lib.rs`
+    > (module file: `assumptions.rs`).
 14. **Zeilberger / creative telescoping** — definite hypergeometric sums; calls
     Gosper internally (sequence after #1).
+    > **Shipped.** `grep -rl "pub fn zeilberger" crates/axeyum-cas/src` → `telescoping.rs`.
 15. **Lazard–Rioboo–Trager** — algebraic-number logarithmic integration
     (generalizes the shipped Rothstein–Trager rational-root case). Needs #8
     (RootOf). First real step toward full Risch.
+    > **Not shipped.** `grep -rli "lazard\|rioboo\|trager\|risch" crates/axeyum-cas/src`
+    > → 2 files (`ratint.rs`, `lib.rs`), but every hit is the already-shipped,
+    > narrower **Rothstein–Trager** *rational*-root case (`rothstein_trager_resultant`,
+    > `rothstein_trager_log_part`); zero hits for `lazard`, `rioboo`, or `risch`
+    > specifically. Matches file 13's own finding.
 
 **Beyond 15 / sequenced:** Risch–Norman `heurisch` (cheap win, pairs with #15);
 full Risch (highest ceiling, after #15); multivariate factorization + van
