@@ -4,16 +4,22 @@
 //!
 //! Two subcommands, deliberately narrow:
 //!
-//! - `sweep <cnf_dir> <out.json> <budget_secs>` runs BatSat
+//! - `sweep <cnf_dir> <out.tsv> <budget_secs> [max_files]` runs BatSat
 //!   ([`solve_with_rustsat_batsat_timeout`]) and the native core
-//!   ([`solve_with_drat_proof_within`]) over every `*.cnf` file in `cnf_dir`,
-//!   each under the same per-file wall-clock budget. A `sat` verdict is
-//!   checked against the formula with [`CnfFormula::evaluate`] before being
-//!   recorded — an invalid model is a hard error, not a silent `sat`. The two
-//!   engines' verdicts are cross-checked against each other; a disagreement
-//!   (one says `sat`, the other `unsat`) is reported as `"disagreement"` in
-//!   the row and printed to stderr, since that is a P0 soundness finding, not
-//!   a performance number.
+//!   ([`solve_with_drat_proof_within`]) over `*.cnf` files in `cnf_dir`, each
+//!   under the same per-file wall-clock budget, and **appends** one row per
+//!   file to `out.tsv`. A file whose name already appears in `out.tsv` is
+//!   skipped, so the same command can be re-run in bounded batches
+//!   (`max_files` caps how many new files this invocation processes) until
+//!   the directory is fully covered — a long sweep becomes a sequence of
+//!   short, resumable, foreground tool calls instead of one process that
+//!   outruns any single call's timeout. A `sat` verdict is checked against
+//!   the formula with [`CnfFormula::evaluate`] before being recorded — an
+//!   invalid model is a hard error, not a silent `sat`. The two engines'
+//!   verdicts are cross-checked against each other; a disagreement (one says
+//!   `sat`, the other `unsat`) is printed to stderr and turns the process
+//!   exit into a failure, since that is a P0 soundness finding, not a
+//!   performance number.
 //! - `verify <cnf_file> <assignment_file>` evaluates a DIMACS solution line
 //!   (`v <lit> <lit> ... 0`, possibly spread across multiple `v` lines, as
 //!   CaDiCaL/Kissat emit it) captured from an external solver's stdout
@@ -27,6 +33,7 @@
 #![allow(clippy::doc_markdown)]
 
 use std::fs;
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -34,7 +41,6 @@ use axeyum_cnf::{
     CnfAssignment, CnfFormula, ProofSolveOutcome, SatResult, parse_dimacs,
     solve_with_drat_proof_within, solve_with_rustsat_batsat_timeout,
 };
-use serde_json::json;
 
 fn read_cnf(path: &Path) -> Result<CnfFormula, String> {
     let text =
@@ -119,15 +125,125 @@ fn run_native(formula: &CnfFormula, budget: Duration) -> EngineRow {
     }
 }
 
-fn cmd_sweep(args: &[String]) -> Result<(), String> {
-    let [dir, out, budget_secs] = args else {
-        return Err("usage: gate_b_sweep sweep <cnf_dir> <out.json> <budget_secs>".to_string());
+/// Reads the file names already present in column 1 of an existing sweep TSV
+/// (empty set if the file does not exist yet), so a resumed batch skips work
+/// a prior invocation already committed to disk.
+fn read_done_set(tsv_path: &Path) -> std::collections::HashSet<String> {
+    let mut done = std::collections::HashSet::new();
+    if let Ok(text) = fs::read_to_string(tsv_path) {
+        for (i, line) in text.lines().enumerate() {
+            if i == 0 {
+                continue; // header
+            }
+            if let Some(name) = line.split('\t').next()
+                && !name.is_empty()
+            {
+                done.insert(name.to_string());
+            }
+        }
+    }
+    done
+}
+
+fn parse_sweep_args(
+    args: &[String],
+) -> Result<(PathBuf, PathBuf, Duration, Option<usize>), String> {
+    let (dir, out, budget_secs, max_files) = match args {
+        [dir, out, budget_secs] => (dir, out, budget_secs, None),
+        [dir, out, budget_secs, max_files] => (
+            dir,
+            out,
+            budget_secs,
+            Some(
+                max_files
+                    .parse::<usize>()
+                    .map_err(|error| format!("invalid max_files: {error}"))?,
+            ),
+        ),
+        _ => {
+            return Err(
+                "usage: gate_b_sweep sweep <cnf_dir> <out.tsv> <budget_secs> [max_files]"
+                    .to_string(),
+            );
+        }
     };
-    let dir = PathBuf::from(dir);
     let budget_secs: f64 = budget_secs
         .parse()
         .map_err(|error| format!("invalid budget_secs: {error}"))?;
-    let budget = Duration::from_secs_f64(budget_secs);
+    Ok((
+        PathBuf::from(dir),
+        PathBuf::from(out),
+        Duration::from_secs_f64(budget_secs),
+        max_files,
+    ))
+}
+
+/// Runs both engines on one CNF file, appends its row to `file`, and returns
+/// any disagreement/invalid-model messages found for this file.
+fn process_one_file(
+    path: &Path,
+    name: &str,
+    budget: Duration,
+    file: &mut fs::File,
+) -> Result<Vec<String>, String> {
+    let mut findings = Vec::new();
+    let formula = match read_cnf(path) {
+        Ok(f) => f,
+        Err(error) => {
+            eprintln!("  SKIP: {error}");
+            return Ok(findings);
+        }
+    };
+    let batsat = run_batsat(&formula, budget);
+    let native = run_native(&formula, budget);
+
+    if matches!(
+        (batsat.verdict, native.verdict),
+        ("sat", "unsat") | ("unsat", "sat")
+    ) {
+        let msg = format!(
+            "DISAGREEMENT on {name}: batsat={} native={}",
+            batsat.verdict, native.verdict
+        );
+        eprintln!("  !!! {msg}");
+        findings.push(msg);
+    }
+    for (engine, row) in [("batsat", &batsat), ("native", &native)] {
+        if row.verdict == "sat" && row.model_valid != Some(true) {
+            let msg = format!("{engine} sat with invalid model on {name}");
+            eprintln!("  !!! {msg}");
+            findings.push(msg);
+        }
+    }
+
+    writeln!(
+        file,
+        "{name}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        formula.variable_count(),
+        formula.clauses().len(),
+        batsat.verdict,
+        batsat.wall_ms,
+        batsat.timed_out,
+        batsat
+            .model_valid
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+        native.verdict,
+        native.wall_ms,
+        native.timed_out,
+        native
+            .model_valid
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+    )
+    .map_err(|error| format!("write row: {error}"))?;
+    file.flush().map_err(|error| error.to_string())?;
+    Ok(findings)
+}
+
+fn cmd_sweep(args: &[String]) -> Result<(), String> {
+    let (dir, out_path, budget, max_files) = parse_sweep_args(args)?;
+    let out = out_path.display().to_string();
 
     let mut paths: Vec<PathBuf> = fs::read_dir(&dir)
         .map_err(|error| format!("read {}: {error}", dir.display()))?
@@ -139,87 +255,62 @@ fn cmd_sweep(args: &[String]) -> Result<(), String> {
         return Err(format!("no .cnf files in {}", dir.display()));
     }
 
-    let mut rows = Vec::with_capacity(paths.len());
-    let mut disagreements = Vec::new();
-    for (i, path) in paths.iter().enumerate() {
-        eprintln!("[{}/{}] {}", i + 1, paths.len(), path.display());
-        let formula = match read_cnf(path) {
-            Ok(f) => f,
-            Err(error) => {
-                eprintln!("  SKIP: {error}");
-                rows.push(json!({
-                    "path": path.file_name().map(|n| n.to_string_lossy().into_owned()),
-                    "error": error,
-                }));
-                continue;
-            }
-        };
-        let batsat = run_batsat(&formula, budget);
-        let native = run_native(&formula, budget);
-
-        if matches!(
-            (batsat.verdict, native.verdict),
-            ("sat", "unsat") | ("unsat", "sat")
-        ) {
-            let msg = format!(
-                "DISAGREEMENT on {}: batsat={} native={}",
-                path.display(),
-                batsat.verdict,
-                native.verdict
-            );
-            eprintln!("  !!! {msg}");
-            disagreements.push(msg);
-        }
-        for (engine, row) in [("batsat", &batsat), ("native", &native)] {
-            if row.verdict == "sat" && row.model_valid != Some(true) {
-                eprintln!(
-                    "  !!! {engine} returned sat on {} with an INVALID model",
-                    path.display()
-                );
-                disagreements.push(format!(
-                    "{engine} sat with invalid model on {}",
-                    path.display()
-                ));
-            }
-        }
-
-        rows.push(json!({
-            "path": path.file_name().map(|n| n.to_string_lossy().into_owned()),
-            "variables": formula.variable_count(),
-            "clauses": formula.clauses().len(),
-            "batsat": {
-                "verdict": batsat.verdict,
-                "wall_ms": batsat.wall_ms,
-                "timed_out": batsat.timed_out,
-                "model_valid": batsat.model_valid,
-            },
-            "native": {
-                "verdict": native.verdict,
-                "wall_ms": native.wall_ms,
-                "timed_out": native.timed_out,
-                "model_valid": native.model_valid,
-            },
-        }));
+    let header_needed = !out_path.exists();
+    let done = read_done_set(&out_path);
+    let mut remaining: Vec<PathBuf> = paths
+        .into_iter()
+        .filter(|path| {
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            !done.contains(&name)
+        })
+        .collect();
+    if let Some(max_files) = max_files {
+        remaining.truncate(max_files);
+    }
+    if remaining.is_empty() {
+        eprintln!("nothing to do: all files already present in {out}");
+        return Ok(());
     }
 
-    let report = json!({
-        "schema": "axeyum-gate-b-sweep-v1",
-        "dir": dir,
-        "budget_secs": budget_secs,
-        "disagreements": disagreements,
-        "instances": rows,
-    });
-    fs::write(
-        out,
-        serde_json::to_vec_pretty(&report).map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| format!("write {out}: {error}"))?;
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&out_path)
+        .map_err(|error| format!("open {out}: {error}"))?;
+    if header_needed {
+        writeln!(
+            file,
+            "file\tvariables\tclauses\tbatsat_verdict\tbatsat_ms\tbatsat_timed_out\tbatsat_model_valid\tnative_verdict\tnative_ms\tnative_timed_out\tnative_model_valid"
+        )
+        .map_err(|error| format!("write header {out}: {error}"))?;
+        file.flush().map_err(|error| error.to_string())?;
+    }
+
+    let total = remaining.len();
+    let mut disagreements = Vec::new();
+    for (i, path) in remaining.iter().enumerate() {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        eprintln!("[{}/{total}] {name}", i + 1);
+        disagreements.extend(process_one_file(path, &name, budget, &mut file)?);
+    }
+
     if !disagreements.is_empty() {
         eprintln!(
-            "\n*** {} DISAGREEMENT(S)/INVALID MODEL(S) — see {out} ***",
+            "\n*** {} DISAGREEMENT(S)/INVALID MODEL(S) in this batch — see stderr above ***",
             disagreements.len()
         );
+        return Err(format!(
+            "{} disagreement(s)/invalid model(s), see stderr",
+            disagreements.len()
+        ));
     }
+    eprintln!("batch done: {total} file(s) processed, appended to {out}");
     Ok(())
 }
 
@@ -285,7 +376,7 @@ fn main() {
         Some("sweep") => cmd_sweep(&args[2..]),
         Some("verify") => cmd_verify(&args[2..]),
         _ => Err(
-            "usage: gate_b_sweep sweep <cnf_dir> <out.json> <budget_secs>\n       gate_b_sweep verify <cnf_file> <assignment_file>"
+            "usage: gate_b_sweep sweep <cnf_dir> <out.tsv> <budget_secs> [max_files]\n       gate_b_sweep verify <cnf_file> <assignment_file>"
                 .to_string(),
         ),
     };
